@@ -46,10 +46,10 @@ BEGIN
 
   SELECT b.id INTO v_branch
   FROM public.branches b
-  WHERE b.id = v_grn.branch_id AND b.tenant_id = v_tenant AND b.is_headquarters = true;
+  WHERE b.id = v_grn.branch_id AND b.tenant_id = v_tenant AND b.is_tenant = true;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'grn_not_headquarters_branch' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'grn_not_tenant_branch' USING ERRCODE = '23514';
   END IF;
 
   FOR v_item IN

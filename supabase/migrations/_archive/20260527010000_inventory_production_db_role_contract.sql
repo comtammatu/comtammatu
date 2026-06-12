@@ -81,7 +81,7 @@ CREATE POLICY "production_orders_write" ON public.production_orders
       FROM public.branches b
       WHERE b.id = production_orders.branch_id
         AND b.tenant_id = production_orders.tenant_id
-        AND b.branch_kind = 'central_kitchen'
+        AND b.branch_kind = 'branch'
     )
   )
   WITH CHECK (
@@ -96,7 +96,7 @@ CREATE POLICY "production_orders_write" ON public.production_orders
       FROM public.branches b
       WHERE b.id = production_orders.branch_id
         AND b.tenant_id = production_orders.tenant_id
-        AND b.branch_kind = 'central_kitchen'
+        AND b.branch_kind = 'branch'
     )
   );
 
@@ -116,7 +116,7 @@ CREATE POLICY "production_order_items_write" ON public.production_order_items
         AND po.tenant_id = production_order_items.tenant_id
         AND po.tenant_id = public.auth_tenant_id()
         AND b.tenant_id = po.tenant_id
-        AND b.branch_kind = 'central_kitchen'
+        AND b.branch_kind = 'branch'
         AND (
           public.has_permission(po.branch_id, 'inventory:production_create')
           OR public.has_permission(po.branch_id, 'inventory:production_confirm')
@@ -134,7 +134,7 @@ CREATE POLICY "production_order_items_write" ON public.production_order_items
         AND po.tenant_id = production_order_items.tenant_id
         AND po.tenant_id = public.auth_tenant_id()
         AND b.tenant_id = po.tenant_id
-        AND b.branch_kind = 'central_kitchen'
+        AND b.branch_kind = 'branch'
         AND (
           public.has_permission(po.branch_id, 'inventory:production_create')
           OR public.has_permission(po.branch_id, 'inventory:production_confirm')
@@ -317,8 +317,8 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'branch_not_found' USING ERRCODE = 'P0002';
   END IF;
-  IF v_branch.branch_kind <> 'central_kitchen' THEN
-    RAISE EXCEPTION 'branch_must_be_central_kitchen' USING ERRCODE = '23514';
+  IF v_branch.branch_kind <> 'branch' THEN
+    RAISE EXCEPTION 'branch_must_be_branch' USING ERRCODE = '23514';
   END IF;
 
   INSERT INTO public.production_orders (
@@ -472,8 +472,8 @@ BEGIN
   IF v_order.status <> 'draft' THEN
     RAISE EXCEPTION 'production_order_not_draft' USING ERRCODE = '22023';
   END IF;
-  IF v_order.branch_kind <> 'central_kitchen' THEN
-    RAISE EXCEPTION 'branch_must_be_central_kitchen' USING ERRCODE = '23514';
+  IF v_order.branch_kind <> 'branch' THEN
+    RAISE EXCEPTION 'branch_must_be_branch' USING ERRCODE = '23514';
   END IF;
 
   IF NOT public.has_permission(v_order.branch_id, 'inventory:production_confirm') THEN

@@ -41,7 +41,7 @@ CREATE TABLE public.branches (
   address TEXT,
   phone TEXT,
   is_active BOOLEAN DEFAULT true,
-  is_headquarters BOOLEAN DEFAULT false,
+  is_tenant BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(name, tenant_id)

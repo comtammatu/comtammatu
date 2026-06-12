@@ -265,7 +265,7 @@ BEGIN
   FROM public.branches b
   WHERE b.id = v_grn.branch_id
     AND b.tenant_id = v_tenant
-    AND b.branch_kind IN ('central_warehouse', 'central_kitchen');
+    AND b.branch_kind IN ('branch', 'branch');
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'grn_branch_must_be_procurement' USING ERRCODE = '23514';
@@ -1113,10 +1113,10 @@ REVOKE ALL ON FUNCTION public.consume_stock_for_order_service(BIGINT, UUID) FROM
 GRANT EXECUTE ON FUNCTION public.consume_stock_for_order_service(BIGINT, UUID) TO service_role;
 
 -- ═══════════════════════════════════════════════════════════════
--- PART 11 — RPC: confirm_production_order (location-aware CK)
+-- PART 11 — RPC: confirm_production_order (location-aware branch)
 -- ═══════════════════════════════════════════════════════════════
 -- Latest prior version: 20260423110000_auth_v2_phase2_rpc_gates_residue.sql
--- Change: resolve CK default_receive location (production_storage) and carry
+-- Change: resolve branch default_receive location (production_storage) and carry
 -- it on every stock_movements insert + all stock_levels reads/writes.
 
 CREATE OR REPLACE FUNCTION public.confirm_production_order(p_order_id BIGINT)
@@ -1153,8 +1153,8 @@ BEGIN
   IF v_order.status <> 'draft' THEN
     RAISE EXCEPTION 'production_order_not_draft' USING ERRCODE = '22023';
   END IF;
-  IF v_order.branch_kind <> 'central_kitchen' THEN
-    RAISE EXCEPTION 'branch_must_be_central_kitchen' USING ERRCODE = '23514';
+  IF v_order.branch_kind <> 'branch' THEN
+    RAISE EXCEPTION 'branch_must_be_branch' USING ERRCODE = '23514';
   END IF;
 
   IF NOT public.has_permission(v_order.branch_id, 'inventory:production_confirm') THEN

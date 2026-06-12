@@ -117,7 +117,7 @@ GRANT EXECUTE ON FUNCTION public.update_my_profile TO authenticated;
 -- =====================
 -- P1-2: Fix cross-branch profile leak + office visibility
 -- Drop old tenant-wide SELECT, replace with role-aware scoping
--- office is HQ-wide (no branch), needs tenant-wide read for HR functions
+-- office is tenant-wide (no branch), needs tenant-wide read for HR functions
 -- =====================
 
 DROP POLICY IF EXISTS "Users can view profiles in their tenant" ON public.profiles;
@@ -129,7 +129,7 @@ CREATE POLICY "Users can view profiles branch-scoped"
     AND (
       -- Always see own profile
       id = auth.uid()
-      -- Tenant-wide roles see all (office = HQ staff with HR access)
+      -- Tenant-wide roles see all (office = tenant staff with HR access)
       OR public.auth_role() IN ('owner', 'super_manager', 'area_manager', 'office')
       -- Branch manager sees own branch
       OR (public.auth_role() = 'branch_manager' AND branch_id = public.auth_branch_id())

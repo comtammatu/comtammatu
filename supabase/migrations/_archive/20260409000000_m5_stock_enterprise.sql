@@ -1,7 +1,7 @@
 -- =============================================================
--- M5 Stock Enterprise: HQ procurement (PO/GRN/WAC), transfers HQ→branch,
+-- M5 Stock Enterprise: tenant procurement (PO/GRN/WAC), transfers tenant→branch,
 -- supplier invoices + matching, recipes + consume on order completed.
--- Convention: only branches with is_headquarters = true receive external GRNs.
+-- Convention: only branches with is_tenant = true receive external GRNs.
 -- =============================================================
 
 -- ─── 1. stock_levels: weighted average cost ───
@@ -107,7 +107,7 @@ CREATE TRIGGER trg_purchase_orders_updated_at
 CREATE INDEX idx_po_tenant ON public.purchase_orders(tenant_id);
 CREATE INDEX idx_po_branch ON public.purchase_orders(branch_id);
 
-CREATE OR REPLACE FUNCTION public.enforce_po_branch_is_headquarters()
+CREATE OR REPLACE FUNCTION public.enforce_po_branch_is_tenant()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SET search_path = public
@@ -117,9 +117,9 @@ BEGIN
     SELECT 1 FROM public.branches b
     WHERE b.id = NEW.branch_id
       AND b.tenant_id = NEW.tenant_id
-      AND b.is_headquarters = true
+      AND b.is_tenant = true
   ) THEN
-    RAISE EXCEPTION 'purchase_orders: branch must be headquarters' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'purchase_orders: branch must be tenant' USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
 END;
@@ -128,7 +128,7 @@ $$;
 CREATE TRIGGER trg_po_hq_only
   BEFORE INSERT OR UPDATE OF branch_id ON public.purchase_orders
   FOR EACH ROW
-  EXECUTE FUNCTION public.enforce_po_branch_is_headquarters();
+  EXECUTE FUNCTION public.enforce_po_branch_is_tenant();
 
 ALTER TABLE public.purchase_orders ENABLE ROW LEVEL SECURITY;
 
@@ -208,7 +208,7 @@ CREATE INDEX idx_grn_branch ON public.goods_received_notes(branch_id);
 CREATE TRIGGER trg_grn_hq_only
   BEFORE INSERT OR UPDATE OF branch_id ON public.goods_received_notes
   FOR EACH ROW
-  EXECUTE FUNCTION public.enforce_po_branch_is_headquarters();
+  EXECUTE FUNCTION public.enforce_po_branch_is_tenant();
 
 ALTER TABLE public.goods_received_notes ENABLE ROW LEVEL SECURITY;
 
@@ -304,17 +304,17 @@ BEGIN
     SELECT 1 FROM public.branches b
     WHERE b.id = NEW.from_branch_id
       AND b.tenant_id = NEW.tenant_id
-      AND b.is_headquarters = true
+      AND b.is_tenant = true
   ) THEN
-    RAISE EXCEPTION 'stock_transfers: from_branch must be headquarters' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'stock_transfers: from_branch must be tenant' USING ERRCODE = '23514';
   END IF;
   IF EXISTS (
     SELECT 1 FROM public.branches b
     WHERE b.id = NEW.to_branch_id
       AND b.tenant_id = NEW.tenant_id
-      AND b.is_headquarters = true
+      AND b.is_tenant = true
   ) THEN
-    RAISE EXCEPTION 'stock_transfers: to_branch must not be headquarters' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'stock_transfers: to_branch must not be tenant' USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
 END;
@@ -513,10 +513,10 @@ BEGIN
 
   SELECT b.id INTO v_branch
   FROM public.branches b
-  WHERE b.id = v_grn.branch_id AND b.tenant_id = v_tenant AND b.is_headquarters = true;
+  WHERE b.id = v_grn.branch_id AND b.tenant_id = v_tenant AND b.is_tenant = true;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'grn_not_headquarters_branch' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'grn_not_tenant_branch' USING ERRCODE = '23514';
   END IF;
 
   FOR v_item IN

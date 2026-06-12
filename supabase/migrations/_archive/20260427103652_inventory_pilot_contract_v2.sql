@@ -989,7 +989,7 @@ BEGIN
 
   v_subtype := CASE
     WHEN v_issue.issue_type = 'consumption'
-         AND v_branch_kind IN ('central_warehouse', 'central_kitchen')
+         AND v_branch_kind IN ('branch', 'branch')
       THEN 'storage_loss'
     WHEN v_issue.issue_type = 'consumption'
       THEN 'sale_consumption'

@@ -109,16 +109,16 @@ SELECT
   b.tenant_id,
   b.id,
   CASE
-    WHEN b.branch_kind = 'central_kitchen' THEN 'main_storage'
+    WHEN b.branch_kind = 'branch' THEN 'main_storage'
     ELSE 'main_warehouse'
   END AS code,
   CASE
-    WHEN b.branch_kind = 'headquarters' THEN 'Kho tong'
-    WHEN b.branch_kind = 'central_kitchen' THEN 'Kho bep trung tam'
+    WHEN b.branch_kind = 'tenant' THEN 'Kho tong'
+    WHEN b.branch_kind = 'branch' THEN 'Kho bep trung tam'
     ELSE 'Kho chi nhanh'
   END AS name,
   CASE
-    WHEN b.branch_kind = 'central_kitchen' THEN 'production_storage'
+    WHEN b.branch_kind = 'branch' THEN 'production_storage'
     ELSE 'warehouse'
   END AS location_kind,
   b.is_active,

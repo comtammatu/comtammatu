@@ -12,7 +12,7 @@
 --   decrements on cancel so freed quotas can be re-sold.
 --
 -- Scope: cashier (POS), chef (KDS) and branch_manager can adjust their
---   OWN branch's row; HQ roles (owner, super_manager, area_manager) can
+--   OWN branch's row; tenant roles (owner, super_manager, area_manager) can
 --   adjust any branch in their tenant.
 -- =============================================================
 
@@ -42,7 +42,7 @@ CREATE TRIGGER trg_bmidl_updated_at
 ALTER TABLE public.branch_menu_item_daily_limits ENABLE ROW LEVEL SECURITY;
 
 -- One PERMISSIVE policy avoids the multi-policy OR trap (regression
--- RLS-PERMISSIVE-POLICIES-OR). HQ roles bypass branch_id check; branch
+-- RLS-PERMISSIVE-POLICIES-OR). tenant roles bypass branch_id check; branch
 -- staff (manager/cashier/chef) must be on the same branch as the row.
 CREATE POLICY bmidl_select ON public.branch_menu_item_daily_limits
   FOR SELECT TO authenticated

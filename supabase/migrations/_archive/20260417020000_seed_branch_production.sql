@@ -1,6 +1,6 @@
 -- =============================================================
--- Seed: central kitchen site for comtammatu tenant
--- Ensures Inventory Production has a real central_kitchen branch
+-- Seed: branch site for comtammatu tenant
+-- Ensures Inventory Production has a real branch branch
 -- in dev/staging and keeps the migration idempotent.
 -- =============================================================
 
@@ -15,21 +15,21 @@ INSERT INTO public.branches (
   name,
   address,
   branch_kind,
-  is_headquarters,
+  is_tenant,
   is_active
 )
 SELECT
   v_tenant.id,
-  'Bếp trung tâm',
+  'chi nhánh',
   'Ấp Phước Sơn, Xã Đất Đỏ, TP.HCM',
-  'central_kitchen',
+  'branch',
   FALSE,
   TRUE
 FROM v_tenant
 ON CONFLICT (tenant_id, name) DO UPDATE
 SET
   address = EXCLUDED.address,
-  branch_kind = 'central_kitchen',
-  is_headquarters = FALSE,
+  branch_kind = 'branch',
+  is_tenant = FALSE,
   is_active = TRUE,
   updated_at = now();

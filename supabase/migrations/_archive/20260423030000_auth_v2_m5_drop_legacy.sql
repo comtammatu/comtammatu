@@ -135,14 +135,14 @@ BEGIN
     SELECT branch_kind INTO v_branch_kind
     FROM public.branches WHERE id = v_final_branch AND tenant_id = v_actor_tenant;
     IF v_final_role IN ('cashier','waiter','chef','branch_manager')
-       AND v_branch_kind IN ('warehouse','central_kitchen') THEN
-      RAISE EXCEPTION 'operational roles cannot be assigned to warehouse/central_kitchen branch' USING ERRCODE = 'P0001';
+       AND v_branch_kind IN ('warehouse','branch') THEN
+      RAISE EXCEPTION 'operational roles cannot be assigned to warehouse/branch branch' USING ERRCODE = 'P0001';
     END IF;
     IF v_final_role = 'warehouse_manager' AND v_branch_kind <> 'warehouse' THEN
       RAISE EXCEPTION 'warehouse_manager must be assigned to warehouse branch' USING ERRCODE = 'P0001';
     END IF;
-    IF v_final_role = 'production_manager' AND v_branch_kind <> 'central_kitchen' THEN
-      RAISE EXCEPTION 'production_manager must be assigned to central_kitchen branch' USING ERRCODE = 'P0001';
+    IF v_final_role = 'production_manager' AND v_branch_kind <> 'branch' THEN
+      RAISE EXCEPTION 'production_manager must be assigned to branch branch' USING ERRCODE = 'P0001';
     END IF;
   END IF;
 

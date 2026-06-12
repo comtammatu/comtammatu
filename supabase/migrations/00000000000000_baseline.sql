@@ -365,15 +365,9 @@ BEGIN
       RAISE EXCEPTION 'branch_not_found_in_tenant' USING ERRCODE = 'P0002';
     END IF;
 
-    IF v_final_role IN ('cashier','waiter','chef','branch_manager')
+    IF v_final_role IN ('cashier','waiter','chef','branch_manager','warehouse_manager','production_manager')
        AND v_branch_kind <> 'branch' THEN
       RAISE EXCEPTION 'operational roles must be assigned to branch site' USING ERRCODE = 'P0001';
-    END IF;
-    IF v_final_role = 'warehouse_manager' AND v_branch_kind <> 'central_warehouse' THEN
-      RAISE EXCEPTION 'warehouse_manager must be assigned to central_warehouse branch' USING ERRCODE = 'P0001';
-    END IF;
-    IF v_final_role = 'production_manager' AND v_branch_kind <> 'central_kitchen' THEN
-      RAISE EXCEPTION 'production_manager must be assigned to central_kitchen branch' USING ERRCODE = 'P0001';
     END IF;
   END IF;
 
@@ -4069,7 +4063,7 @@ BEGIN
   FROM public.branches b
   WHERE b.id = v_grn.branch_id
     AND b.tenant_id = v_tenant
-    AND b.branch_kind IN ('central_warehouse', 'central_kitchen');
+    AND b.branch_kind = 'branch';
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'grn_branch_must_be_procurement' USING ERRCODE = '23514';
@@ -4417,8 +4411,8 @@ BEGIN
   IF v_order.status <> 'draft' THEN
     RAISE EXCEPTION 'production_order_not_draft' USING ERRCODE = '22023';
   END IF;
-  IF v_order.branch_kind <> 'central_kitchen' THEN
-    RAISE EXCEPTION 'branch_must_be_central_kitchen' USING ERRCODE = '23514';
+  IF v_order.branch_kind <> 'branch' THEN
+    RAISE EXCEPTION 'branch_must_be_operational' USING ERRCODE = '23514';
   END IF;
 
   IF NOT public.has_permission(v_order.branch_id, 'inventory:production_confirm') THEN
@@ -4676,9 +4670,6 @@ BEGIN
   END IF;
 
   v_subtype := CASE
-    WHEN v_issue.issue_type = 'consumption'
-         AND v_branch_kind IN ('central_warehouse', 'central_kitchen')
-      THEN 'storage_loss'
     WHEN v_issue.issue_type = 'consumption'
       THEN 'sale_consumption'
     WHEN v_issue.issue_type = 'writeoff'
@@ -5420,8 +5411,8 @@ BEGIN
     RAISE EXCEPTION 'create_grn_from_po: branch inactive or out of scope'
       USING ERRCODE = 'check_violation';
   END IF;
-  IF v_branch.branch_kind NOT IN ('central_warehouse', 'central_kitchen') THEN
-    RAISE EXCEPTION 'create_grn_from_po: branch is not a procurement site'
+  IF v_branch.branch_kind <> 'branch' THEN
+    RAISE EXCEPTION 'create_grn_from_po: branch is not active branch'
       USING ERRCODE = 'check_violation';
   END IF;
 
@@ -6150,8 +6141,8 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'branch_not_found' USING ERRCODE = 'P0002';
   END IF;
-  IF v_branch.branch_kind <> 'central_kitchen' THEN
-    RAISE EXCEPTION 'branch_must_be_central_kitchen' USING ERRCODE = '23514';
+  IF v_branch.branch_kind <> 'branch' THEN
+    RAISE EXCEPTION 'branch_must_be_operational' USING ERRCODE = '23514';
   END IF;
 
   INSERT INTO public.production_orders (
@@ -7340,9 +7331,9 @@ BEGIN
     SELECT 1 FROM public.branches b
     WHERE b.id = NEW.branch_id
       AND b.tenant_id = NEW.tenant_id
-      AND b.branch_kind IN ('central_warehouse', 'central_kitchen')
+      AND b.branch_kind = 'branch'
   ) THEN
-    RAISE EXCEPTION 'branch must be central_warehouse or central_kitchen' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'branch must be active branch' USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
 END;
@@ -7378,11 +7369,7 @@ BEGIN
     RAISE EXCEPTION 'stock_transfers: invalid branch reference' USING ERRCODE = '23514';
   END IF;
 
-  -- Whitelist valid inter-branch directions.
-  IF (v_from_kind = 'central_warehouse' AND v_to_kind = 'central_kitchen')
-  OR (v_from_kind = 'central_warehouse' AND v_to_kind = 'branch')
-  OR (v_from_kind = 'central_kitchen'   AND v_to_kind = 'branch')
-  THEN
+  IF v_from_kind = 'branch' AND v_to_kind = 'branch' THEN
     RETURN NEW;
   END IF;
 
@@ -7396,7 +7383,7 @@ $$;
 -- Name: FUNCTION enforce_stock_transfer_direction(); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.enforce_stock_transfer_direction() IS 'Allowed transfers: CW→CK, CW→Branch, CK→Branch, intra-branch. Reject all others.';
+COMMENT ON FUNCTION public.enforce_stock_transfer_direction() IS 'Allowed transfers: branch-to-branch and intra-branch. Reject all others.';
 
 
 --
@@ -16917,7 +16904,7 @@ $$;
 -- Name: set_branch_kind(bigint, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.set_branch_kind(p_branch_id bigint, p_kind text DEFAULT 'central_warehouse'::text) RETURNS void
+CREATE FUNCTION public.set_branch_kind(p_branch_id bigint, p_kind text DEFAULT 'branch'::text) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO ''
     AS $$
@@ -16943,7 +16930,7 @@ BEGIN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  IF p_kind NOT IN ('central_warehouse', 'central_kitchen', 'branch') THEN
+  IF p_kind <> 'branch' THEN
     RAISE EXCEPTION 'invalid branch_kind: %', p_kind USING ERRCODE = '22023';
   END IF;
 
@@ -21792,7 +21779,7 @@ CREATE TABLE public.branches (
     longitude numeric(10,7),
     timezone text DEFAULT 'Asia/Ho_Chi_Minh'::text NOT NULL,
     code text,
-    CONSTRAINT branches_branch_kind_check CHECK ((branch_kind = ANY (ARRAY['central_warehouse'::text, 'central_kitchen'::text, 'branch'::text]))),
+    CONSTRAINT branches_branch_kind_check CHECK ((branch_kind = 'branch'::text)),
     CONSTRAINT branches_code_format_chk CHECK (((branch_kind <> 'branch'::text) OR ((code IS NOT NULL) AND (code ~ '^[A-Z]{2,4}$'::text))))
 );
 
@@ -24692,7 +24679,7 @@ CREATE TABLE public.stock_issues (
 -- Name: COLUMN stock_issues.issue_type; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.stock_issues.issue_type IS 'Type of internal stock issue voucher: consumption (Tiêu hao at branch / Hao hụt kho at CW/CK — label derived via movement_subtype), writeoff (hủy hỏng), other (khác). kitchen_use retired 2026-04-25 — use intra-branch stock_transfer (from_location=warehouse, to_location=kitchen_line) instead.';
+COMMENT ON COLUMN public.stock_issues.issue_type IS 'Type of internal stock issue voucher: consumption (Tiêu hao at branch / Hao hụt kho at branch/branch — label derived via movement_subtype), writeoff (hủy hỏng), other (khác). kitchen_use retired 2026-04-25 — use intra-branch stock_transfer (from_location=warehouse, to_location=kitchen_line) instead.';
 
 
 --
@@ -34756,10 +34743,10 @@ CREATE POLICY production_order_items_select ON public.production_order_items FOR
 CREATE POLICY production_order_items_write ON public.production_order_items TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (EXISTS ( SELECT 1
    FROM (public.production_orders po
      JOIN public.branches b ON ((b.id = po.branch_id)))
-  WHERE ((po.id = production_order_items.production_order_id) AND (po.tenant_id = production_order_items.tenant_id) AND (po.tenant_id = public.auth_tenant_id()) AND (b.tenant_id = po.tenant_id) AND (b.branch_kind = 'central_kitchen'::text) AND (public.has_permission(po.branch_id, 'inventory:production_create'::text) OR public.has_permission(po.branch_id, 'inventory:production_confirm'::text))))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (EXISTS ( SELECT 1
+  WHERE ((po.id = production_order_items.production_order_id) AND (po.tenant_id = production_order_items.tenant_id) AND (po.tenant_id = public.auth_tenant_id()) AND (b.tenant_id = po.tenant_id) AND (b.branch_kind = 'branch'::text) AND (public.has_permission(po.branch_id, 'inventory:production_create'::text) OR public.has_permission(po.branch_id, 'inventory:production_confirm'::text))))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (EXISTS ( SELECT 1
    FROM (public.production_orders po
      JOIN public.branches b ON ((b.id = po.branch_id)))
-  WHERE ((po.id = production_order_items.production_order_id) AND (po.tenant_id = production_order_items.tenant_id) AND (po.tenant_id = public.auth_tenant_id()) AND (b.tenant_id = po.tenant_id) AND (b.branch_kind = 'central_kitchen'::text) AND (public.has_permission(po.branch_id, 'inventory:production_create'::text) OR public.has_permission(po.branch_id, 'inventory:production_confirm'::text)))))));
+  WHERE ((po.id = production_order_items.production_order_id) AND (po.tenant_id = production_order_items.tenant_id) AND (po.tenant_id = public.auth_tenant_id()) AND (b.tenant_id = po.tenant_id) AND (b.branch_kind = 'branch'::text) AND (public.has_permission(po.branch_id, 'inventory:production_create'::text) OR public.has_permission(po.branch_id, 'inventory:production_confirm'::text)))))));
 
 
 --
@@ -34781,9 +34768,9 @@ CREATE POLICY production_orders_select ON public.production_orders FOR SELECT TO
 
 CREATE POLICY production_orders_write ON public.production_orders TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission(branch_id, 'inventory:production_create'::text) OR public.has_permission(branch_id, 'inventory:production_confirm'::text)) AND (EXISTS ( SELECT 1
    FROM public.branches b
-  WHERE ((b.id = production_orders.branch_id) AND (b.tenant_id = production_orders.tenant_id) AND (b.branch_kind = 'central_kitchen'::text)))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission(branch_id, 'inventory:production_create'::text) OR public.has_permission(branch_id, 'inventory:production_confirm'::text)) AND (EXISTS ( SELECT 1
+  WHERE ((b.id = production_orders.branch_id) AND (b.tenant_id = production_orders.tenant_id) AND (b.branch_kind = 'branch'::text)))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission(branch_id, 'inventory:production_create'::text) OR public.has_permission(branch_id, 'inventory:production_confirm'::text)) AND (EXISTS ( SELECT 1
    FROM public.branches b
-  WHERE ((b.id = production_orders.branch_id) AND (b.tenant_id = production_orders.tenant_id) AND (b.branch_kind = 'central_kitchen'::text))))));
+  WHERE ((b.id = production_orders.branch_id) AND (b.tenant_id = production_orders.tenant_id) AND (b.branch_kind = 'branch'::text))))));
 
 
 --

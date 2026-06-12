@@ -5,7 +5,7 @@
 -- - branch_kind = 'branch' must have an active warehouse location.
 -- - branch_kind = 'branch' must have an active kitchen marked
 --   is_default_consumption = true.
--- - central_warehouse and central_kitchen branches are intentionally excluded.
+-- - branch and branch branches are intentionally excluded.
 
 CREATE OR REPLACE FUNCTION public.ensure_branch_inventory_location_defaults(
   p_tenant_id BIGINT,

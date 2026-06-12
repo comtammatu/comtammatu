@@ -1,60 +1,60 @@
 -- =============================================================
--- Inventory rename pass 2: 'warehouse' → 'central_warehouse',
--- retire is_headquarters flag + related HQ lexicon.
+-- Inventory rename pass 2: 'warehouse' → 'branch',
+-- retire is_tenant flag + related tenant lexicon.
 --
 -- Model after this migration:
---   NCC → GRN → Kho Tổng (central_warehouse) OR Bếp Trung Tâm (central_kitchen)
---   Transfers allowed: CW→CK, CW→Branch, CK→Branch, intra-branch (same id)
---   Transfers rejected: CK→CW, CW↔CW, CK↔CK, Branch→*
+--   NCC → GRN → chi nhánh (branch) OR chi nhánh (branch)
+--   Transfers allowed: branch→branch, branch→Branch, branch→Branch, intra-branch (same id)
+--   Transfers rejected: branch→branch, branch↔branch, branch↔branch, Branch→*
 --
 -- Dev data only — big-bang rename approved by project owner.
 -- =============================================================
 
--- ─── 1. Drop triggers/functions that still reference is_headquarters ───
+-- ─── 1. Drop triggers/functions that still reference is_tenant ───
 -- Must run before column drop to avoid function-body invalidation.
 
 DROP TRIGGER IF EXISTS trg_branches_sync_kind_and_hq ON public.branches;
 DROP FUNCTION IF EXISTS public.sync_branch_kind_and_hq() CASCADE;
 
--- set_headquarters compat wrappers (both old signatures from 20260414081707 & 20260416200001)
-DROP FUNCTION IF EXISTS public.set_headquarters(BIGINT) CASCADE;
+-- set_tenant compat wrappers (both old signatures from 20260414081707 & 20260416200001)
+DROP FUNCTION IF EXISTS public.set_tenant(BIGINT) CASCADE;
 
 -- Old PO/GRN branch enforcement function + its triggers (rebuilt below)
 DROP TRIGGER IF EXISTS trg_po_hq_only ON public.purchase_orders;
 DROP TRIGGER IF EXISTS trg_grn_hq_only ON public.goods_received_notes;
-DROP FUNCTION IF EXISTS public.enforce_po_branch_is_headquarters() CASCADE;
+DROP FUNCTION IF EXISTS public.enforce_po_branch_is_tenant() CASCADE;
 
 -- Old transfer direction validator was already dropped in 20260416200001, but
 -- drop again defensively in case local DB is ahead/behind.
 DROP TRIGGER IF EXISTS trg_transfer_hq_to_branch ON public.stock_transfers;
 DROP FUNCTION IF EXISTS public.enforce_transfer_from_hq() CASCADE;
 
--- ─── 2. Rename branch_kind literal 'warehouse' → 'central_warehouse' ───
+-- ─── 2. Rename branch_kind literal 'warehouse' → 'branch' ───
 
 ALTER TABLE public.branches DROP CONSTRAINT IF EXISTS branches_branch_kind_check;
 
 UPDATE public.branches
-SET branch_kind = 'central_warehouse'
+SET branch_kind = 'branch'
 WHERE branch_kind = 'warehouse';
 
--- Safety: anything residual (e.g. stale 'headquarters' in an old dev DB) also maps to central_warehouse.
+-- Safety: anything residual (e.g. stale 'tenant' in an old dev DB) also maps to branch.
 UPDATE public.branches
-SET branch_kind = 'central_warehouse'
-WHERE branch_kind = 'headquarters';
+SET branch_kind = 'branch'
+WHERE branch_kind = 'tenant';
 
 ALTER TABLE public.branches
   ADD CONSTRAINT branches_branch_kind_check
-  CHECK (branch_kind IN ('central_warehouse', 'central_kitchen', 'branch'));
+  CHECK (branch_kind IN ('branch', 'branch', 'branch'));
 
--- ─── 3. Drop is_headquarters column ───
+-- ─── 3. Drop is_tenant column ───
 -- Column is unused after this point; all policies/functions now key on branch_kind.
-ALTER TABLE public.branches DROP COLUMN IF EXISTS is_headquarters CASCADE;
+ALTER TABLE public.branches DROP COLUMN IF EXISTS is_tenant CASCADE;
 
 -- ─── 4. Rebuild set_branch_kind with new enum literals ───
 
 CREATE OR REPLACE FUNCTION public.set_branch_kind(
   p_branch_id BIGINT,
-  p_kind      TEXT DEFAULT 'central_warehouse'
+  p_kind      TEXT DEFAULT 'branch'
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -72,7 +72,7 @@ BEGIN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  IF p_kind NOT IN ('central_warehouse', 'central_kitchen', 'branch') THEN
+  IF p_kind NOT IN ('branch', 'branch', 'branch') THEN
     RAISE EXCEPTION 'invalid branch_kind: %', p_kind USING ERRCODE = '22023';
   END IF;
 
@@ -92,7 +92,7 @@ $$;
 REVOKE ALL ON FUNCTION public.set_branch_kind(BIGINT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.set_branch_kind(BIGINT, TEXT) TO authenticated;
 
--- ─── 5. PO/GRN: enforce branch is CW or CK ───
+-- ─── 5. PO/GRN: enforce branch is branch or branch ───
 
 CREATE OR REPLACE FUNCTION public.enforce_po_grn_branch_is_procurement()
 RETURNS TRIGGER
@@ -104,9 +104,9 @@ BEGIN
     SELECT 1 FROM public.branches b
     WHERE b.id = NEW.branch_id
       AND b.tenant_id = NEW.tenant_id
-      AND b.branch_kind IN ('central_warehouse', 'central_kitchen')
+      AND b.branch_kind IN ('branch', 'branch')
   ) THEN
-    RAISE EXCEPTION 'branch must be central_warehouse or central_kitchen' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'branch must be branch or branch' USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
 END;
@@ -122,8 +122,8 @@ CREATE TRIGGER trg_grn_procurement_branch
   BEFORE INSERT OR UPDATE OF branch_id ON public.goods_received_notes
   FOR EACH ROW EXECUTE FUNCTION public.enforce_po_grn_branch_is_procurement();
 
--- ─── 6. confirm_goods_receipt_note: accept CW + CK, no is_headquarters ───
--- Rewrites 20260419040000 which regressed to is_headquarters check.
+-- ─── 6. confirm_goods_receipt_note: accept branch + branch, no is_tenant ───
+-- Rewrites 20260419040000 which regressed to is_tenant check.
 
 CREATE OR REPLACE FUNCTION public.confirm_goods_receipt_note(p_grn_id BIGINT)
 RETURNS JSONB
@@ -169,7 +169,7 @@ BEGIN
   FROM public.branches b
   WHERE b.id = v_grn.branch_id
     AND b.tenant_id = v_tenant
-    AND b.branch_kind IN ('central_warehouse', 'central_kitchen');
+    AND b.branch_kind IN ('branch', 'branch');
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'grn_branch_must_be_procurement' USING ERRCODE = '23514';
@@ -279,8 +279,8 @@ REVOKE ALL ON FUNCTION public.confirm_goods_receipt_note(BIGINT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.confirm_goods_receipt_note(BIGINT) TO authenticated;
 
 -- ─── 7. Transfer direction matrix ───
--- Allowed: CW→CK, CW→Branch, CK→Branch, intra-branch (same id, enforced at app layer)
--- Rejected: CK→CW, CW↔CW (different CWs), CK↔CK (different CKs), Branch→*
+-- Allowed: branch→branch, branch→Branch, branch→Branch, intra-branch (same id, enforced at app layer)
+-- Rejected: branch→branch, branch↔branch (different CWs), branch↔branch (different CKs), Branch→*
 
 CREATE OR REPLACE FUNCTION public.enforce_stock_transfer_direction()
 RETURNS TRIGGER
@@ -309,9 +309,9 @@ BEGIN
   END IF;
 
   -- Whitelist valid inter-branch directions.
-  IF (v_from_kind = 'central_warehouse' AND v_to_kind = 'central_kitchen')
-  OR (v_from_kind = 'central_warehouse' AND v_to_kind = 'branch')
-  OR (v_from_kind = 'central_kitchen'   AND v_to_kind = 'branch')
+  IF (v_from_kind = 'branch' AND v_to_kind = 'branch')
+  OR (v_from_kind = 'branch' AND v_to_kind = 'branch')
+  OR (v_from_kind = 'branch'   AND v_to_kind = 'branch')
   THEN
     RETURN NEW;
   END IF;
@@ -327,9 +327,9 @@ CREATE TRIGGER trg_stock_transfer_direction
   FOR EACH ROW EXECUTE FUNCTION public.enforce_stock_transfer_direction();
 
 COMMENT ON FUNCTION public.enforce_stock_transfer_direction() IS
-  'Allowed transfers: CW→CK, CW→Branch, CK→Branch, intra-branch. Reject all others.';
+  'Allowed transfers: branch→branch, branch→Branch, branch→Branch, intra-branch. Reject all others.';
 
--- ─── 8. stock_issues: issue_type='kitchen_use' only valid at branch (not CW/CK) ───
+-- ─── 8. stock_issues: issue_type='kitchen_use' only valid at branch (not branch/branch) ───
 
 CREATE OR REPLACE FUNCTION public.enforce_stock_issue_kitchen_use_scope()
 RETURNS TRIGGER
@@ -361,7 +361,7 @@ CREATE TRIGGER trg_stock_issue_kitchen_use_scope
   BEFORE INSERT OR UPDATE OF issue_type, branch_id ON public.stock_issues
   FOR EACH ROW EXECUTE FUNCTION public.enforce_stock_issue_kitchen_use_scope();
 
--- ─── 9. admin_update_profile: rename 'warehouse' → 'central_warehouse' ───
+-- ─── 9. admin_update_profile: rename 'warehouse' → 'branch' ───
 -- Keeps auth_v2 position-based body; only branch_kind literal strings change.
 
 CREATE OR REPLACE FUNCTION public.admin_update_profile(
@@ -421,14 +421,14 @@ BEGIN
     SELECT branch_kind INTO v_branch_kind
     FROM public.branches WHERE id = v_final_branch AND tenant_id = v_actor_tenant;
     IF v_final_role IN ('cashier','waiter','chef','branch_manager')
-       AND v_branch_kind IN ('central_warehouse','central_kitchen') THEN
-      RAISE EXCEPTION 'operational roles cannot be assigned to central_warehouse/central_kitchen branch' USING ERRCODE = 'P0001';
+       AND v_branch_kind IN ('branch','branch') THEN
+      RAISE EXCEPTION 'operational roles cannot be assigned to branch/branch branch' USING ERRCODE = 'P0001';
     END IF;
-    IF v_final_role = 'warehouse_manager' AND v_branch_kind <> 'central_warehouse' THEN
-      RAISE EXCEPTION 'warehouse_manager must be assigned to central_warehouse branch' USING ERRCODE = 'P0001';
+    IF v_final_role = 'warehouse_manager' AND v_branch_kind <> 'branch' THEN
+      RAISE EXCEPTION 'warehouse_manager must be assigned to branch branch' USING ERRCODE = 'P0001';
     END IF;
-    IF v_final_role = 'production_manager' AND v_branch_kind <> 'central_kitchen' THEN
-      RAISE EXCEPTION 'production_manager must be assigned to central_kitchen branch' USING ERRCODE = 'P0001';
+    IF v_final_role = 'production_manager' AND v_branch_kind <> 'branch' THEN
+      RAISE EXCEPTION 'production_manager must be assigned to branch branch' USING ERRCODE = 'P0001';
     END IF;
   END IF;
 
@@ -496,9 +496,9 @@ BEGIN
 END;
 $$;
 
--- handle_new_user: left as-is (auth_v2 manages it; doesn't reference is_headquarters / 'warehouse').
+-- handle_new_user: left as-is (auth_v2 manages it; doesn't reference is_tenant / 'warehouse').
 
--- ─── 10. stock_transfer_list_branches: drop is_headquarters from signature ───
+-- ─── 10. stock_transfer_list_branches: drop is_tenant from signature ───
 
 DROP FUNCTION IF EXISTS public.stock_transfer_list_branches();
 

@@ -1,7 +1,7 @@
 -- =============================================================
 -- A1: P0 Security Fixes
 -- 1. create_order: server-side price re-fetch (price integrity)
--- 2. set_headquarters: role check (owner/super_manager only)
+-- 2. set_tenant: role check (owner/super_manager only)
 -- 3. close_pos_session: branch ownership filter
 -- =============================================================
 
@@ -211,24 +211,24 @@ $$;
 GRANT EXECUTE ON FUNCTION public.create_order(BIGINT, BIGINT, UUID, JSONB, TEXT, BIGINT, BIGINT, INT, TEXT) TO authenticated;
 
 
--- ─── FIX 2: set_headquarters — add role check ───
+-- ─── FIX 2: set_tenant — add role check ───
 
-CREATE OR REPLACE FUNCTION public.set_headquarters(p_branch_id BIGINT)
+CREATE OR REPLACE FUNCTION public.set_tenant(p_branch_id BIGINT)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY INVOKER
 AS $$
 BEGIN
-  -- Only owner and super_manager can change headquarters
+  -- Only owner and super_manager can change tenant
   IF public.auth_role() NOT IN ('owner', 'super_manager') THEN
     RAISE EXCEPTION 'permission_denied' USING ERRCODE = 'P0003';
   END IF;
 
-  -- Unset current HQ and set new one in a single transaction
+  -- Unset current tenant and set new one in a single transaction
   UPDATE public.branches
-    SET is_headquarters = (id = p_branch_id)
+    SET is_tenant = (id = p_branch_id)
     WHERE tenant_id = public.auth_tenant_id()
-      AND (is_headquarters = true OR id = p_branch_id);
+      AND (is_tenant = true OR id = p_branch_id);
 END;
 $$;
 

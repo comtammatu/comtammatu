@@ -1,5 +1,5 @@
 -- =============================================================
--- Branch ingredient allowlist (HQ assigns NL per branch).
+-- Branch ingredient allowlist (tenant assigns NL per branch).
 -- Ingredients write: super_manager only.
 -- Procurement tables write: super_manager only.
 -- Owner governance: operational RLS aligned with app ACL (no DB role enum change).

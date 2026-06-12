@@ -3,7 +3,7 @@
 -- 8 tables: inventory_locations, recipes,
 --           production_orders, production_order_items, production_recipes,
 --           purchase_order_items, supplier_invoices, supplier_payments
--- Structural gates preserved: branch_kind='central_kitchen' on production_*
+-- Structural gates preserved: branch_kind='branch' on production_*
 -- =============================================================
 
 -- ═════════════════════════════════════════════════════
@@ -47,10 +47,10 @@ CREATE POLICY "recipes_write" ON public.recipes
   );
 
 -- ═════════════════════════════════════════════════════
--- production_* — keep branch_kind='central_kitchen' structural gate
+-- production_* — keep branch_kind='branch' structural gate
 -- ═════════════════════════════════════════════════════
 
--- production_orders: scoped to CK branch
+-- production_orders: scoped to branch branch
 DROP POLICY IF EXISTS "production_orders_manage" ON public.production_orders;
 
 CREATE POLICY "production_orders_write" ON public.production_orders
@@ -65,7 +65,7 @@ CREATE POLICY "production_orders_write" ON public.production_orders
       SELECT 1 FROM public.branches b
       WHERE b.id = production_orders.branch_id
         AND b.tenant_id = production_orders.tenant_id
-        AND b.branch_kind = 'central_kitchen'
+        AND b.branch_kind = 'branch'
     )
   )
   WITH CHECK (
@@ -78,7 +78,7 @@ CREATE POLICY "production_orders_write" ON public.production_orders
       SELECT 1 FROM public.branches b
       WHERE b.id = production_orders.branch_id
         AND b.tenant_id = production_orders.tenant_id
-        AND b.branch_kind = 'central_kitchen'
+        AND b.branch_kind = 'branch'
     )
   );
 
@@ -112,7 +112,7 @@ CREATE POLICY "production_order_items_write" ON public.production_order_items
     )
   );
 
--- production_recipes: tenant-scoped catalog for CK
+-- production_recipes: tenant-scoped catalog for branch
 DROP POLICY IF EXISTS "production_recipes_manage" ON public.production_recipes;
 
 CREATE POLICY "production_recipes_write" ON public.production_recipes

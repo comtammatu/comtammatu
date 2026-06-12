@@ -1,5 +1,5 @@
 -- =============================================================
--- Redo: BOM Sườn cọng + Sườn Cốt Lết là PRODUCTION recipe (Bếp Trung Tâm),
+-- Redo: BOM Sườn cọng + Sườn Cốt Lết là PRODUCTION recipe (chi nhánh),
 -- không phải menu recipe. Migration này:
 --   1. Rollback dữ liệu sai trong public.recipes + menu_items 'Sườn cọng'
 --   2. Tạo 2 finished_good ingredients ('Sườn cọng đã ướp', 'Sườn cốt lết đã ướp')
@@ -30,7 +30,7 @@ INSERT INTO public.ingredients (
   tenant_id, name, unit, category, storage_type, is_active,
   purchase_unit, measure_unit, purchase_to_measure_factor, item_kind
 )
-SELECT t.id, fg.name, 'kg', 'Bếp trung tâm', 'refrigerated', TRUE,
+SELECT t.id, fg.name, 'kg', 'chi nhánh', 'refrigerated', TRUE,
        'kg', 'kg', 1, 'finished_good'
 FROM v_tenant t
 CROSS JOIN (VALUES

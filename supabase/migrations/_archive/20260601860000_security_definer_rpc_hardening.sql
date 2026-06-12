@@ -126,11 +126,11 @@ BEGIN
        AND v_branch_kind <> 'branch' THEN
       RAISE EXCEPTION 'operational roles must be assigned to branch site' USING ERRCODE = 'P0001';
     END IF;
-    IF v_final_role = 'warehouse_manager' AND v_branch_kind <> 'central_warehouse' THEN
-      RAISE EXCEPTION 'warehouse_manager must be assigned to central_warehouse branch' USING ERRCODE = 'P0001';
+    IF v_final_role = 'warehouse_manager' AND v_branch_kind <> 'branch' THEN
+      RAISE EXCEPTION 'warehouse_manager must be assigned to branch branch' USING ERRCODE = 'P0001';
     END IF;
-    IF v_final_role = 'production_manager' AND v_branch_kind <> 'central_kitchen' THEN
-      RAISE EXCEPTION 'production_manager must be assigned to central_kitchen branch' USING ERRCODE = 'P0001';
+    IF v_final_role = 'production_manager' AND v_branch_kind <> 'branch' THEN
+      RAISE EXCEPTION 'production_manager must be assigned to branch branch' USING ERRCODE = 'P0001';
     END IF;
   END IF;
 

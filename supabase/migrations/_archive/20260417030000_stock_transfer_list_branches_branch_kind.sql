@@ -1,5 +1,5 @@
 -- Extend transfer branch picker metadata so the UI can distinguish
--- headquarters, central kitchen, and branch warehouses.
+-- tenant, branch, and branch warehouses.
 
 DROP FUNCTION IF EXISTS public.stock_transfer_list_branches();
 
@@ -7,7 +7,7 @@ CREATE FUNCTION public.stock_transfer_list_branches()
 RETURNS TABLE (
   id bigint,
   name text,
-  is_headquarters boolean,
+  is_tenant boolean,
   branch_kind text,
   is_active boolean
 )
@@ -16,7 +16,7 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT b.id, b.name, b.is_headquarters, b.branch_kind, b.is_active
+  SELECT b.id, b.name, b.is_tenant, b.branch_kind, b.is_active
   FROM public.branches b
   WHERE b.tenant_id = public.auth_tenant_id()
     AND b.is_active = true

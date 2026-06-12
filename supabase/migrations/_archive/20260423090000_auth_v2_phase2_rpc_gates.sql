@@ -182,7 +182,7 @@ $$;
 -- ─────────────────────────────────────────────────────────────
 -- set_branch_kind — settings:tenant
 -- ─────────────────────────────────────────────────────────────
-CREATE OR REPLACE FUNCTION public.set_branch_kind(p_branch_id BIGINT, p_kind TEXT DEFAULT 'central_warehouse')
+CREATE OR REPLACE FUNCTION public.set_branch_kind(p_branch_id BIGINT, p_kind TEXT DEFAULT 'branch')
 RETURNS VOID
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = 'public'
 AS $$
@@ -192,7 +192,7 @@ BEGIN
   IF NOT public.has_permission_any('settings:tenant') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
-  IF p_kind NOT IN ('central_warehouse', 'central_kitchen', 'branch') THEN
+  IF p_kind NOT IN ('branch', 'branch', 'branch') THEN
     RAISE EXCEPTION 'invalid branch_kind: %', p_kind USING ERRCODE = '22023';
   END IF;
   UPDATE public.branches SET branch_kind = p_kind, updated_at = now()
@@ -534,8 +534,8 @@ BEGIN
   SELECT id, branch_kind INTO v_branch FROM public.branches
   WHERE id = p_branch_id AND tenant_id = v_tenant AND is_active = TRUE FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'branch_not_found' USING ERRCODE = 'P0002'; END IF;
-  IF v_branch.branch_kind <> 'central_kitchen' THEN
-    RAISE EXCEPTION 'branch_must_be_central_kitchen' USING ERRCODE = '23514';
+  IF v_branch.branch_kind <> 'branch' THEN
+    RAISE EXCEPTION 'branch_must_be_branch' USING ERRCODE = '23514';
   END IF;
 
   INSERT INTO public.production_orders (tenant_id, branch_id, production_number, status, notes, created_by)
@@ -585,8 +585,8 @@ BEGIN
   WHERE po.id = p_order_id AND po.tenant_id = v_tenant FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'production_order_not_found' USING ERRCODE = 'P0002'; END IF;
   IF v_order.status <> 'draft' THEN RAISE EXCEPTION 'production_order_not_draft' USING ERRCODE = '22023'; END IF;
-  IF v_order.branch_kind <> 'central_kitchen' THEN
-    RAISE EXCEPTION 'branch_must_be_central_kitchen' USING ERRCODE = '23514';
+  IF v_order.branch_kind <> 'branch' THEN
+    RAISE EXCEPTION 'branch_must_be_branch' USING ERRCODE = '23514';
   END IF;
   IF public.auth_role() = 'branch_manager'
      AND (public.auth_branch_id() IS NULL OR public.auth_branch_id() <> v_order.branch_id) THEN

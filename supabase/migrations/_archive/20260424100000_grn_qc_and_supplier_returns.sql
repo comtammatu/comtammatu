@@ -257,7 +257,7 @@ BEGIN
   FROM public.branches b
   WHERE b.id = v_grn.branch_id
     AND b.tenant_id = v_tenant
-    AND b.branch_kind IN ('central_warehouse', 'central_kitchen');
+    AND b.branch_kind IN ('branch', 'branch');
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'grn_branch_must_be_procurement' USING ERRCODE = '23514';

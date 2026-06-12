@@ -53,22 +53,22 @@ CREATE POLICY "manager_delete" ON public.system_settings
 -- GRANT
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.system_settings TO authenticated;
 
--- RPC: atomic set_headquarters (avoids TOCTOU race from two separate UPDATEs)
-CREATE OR REPLACE FUNCTION public.set_headquarters(p_branch_id BIGINT)
+-- RPC: atomic set_tenant (avoids TOCTOU race from two separate UPDATEs)
+CREATE OR REPLACE FUNCTION public.set_tenant(p_branch_id BIGINT)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY INVOKER
 AS $$
 BEGIN
-  -- Unset current HQ and set new one in a single transaction
+  -- Unset current tenant and set new one in a single transaction
   UPDATE public.branches
-    SET is_headquarters = (id = p_branch_id)
+    SET is_tenant = (id = p_branch_id)
     WHERE tenant_id = public.auth_tenant_id()
-      AND (is_headquarters = true OR id = p_branch_id);
+      AND (is_tenant = true OR id = p_branch_id);
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.set_headquarters(BIGINT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.set_tenant(BIGINT) TO authenticated;
 
 -- Seed default settings (tenant_id = 1 from seed migration)
 INSERT INTO public.system_settings (tenant_id, key, value, description) VALUES

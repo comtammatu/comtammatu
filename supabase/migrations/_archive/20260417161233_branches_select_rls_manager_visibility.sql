@@ -1,13 +1,13 @@
 -- Fix: branches_select RLS restricted branch_manager / warehouse_manager /
 -- production_manager to their own branch row, breaking cross-branch flows:
 --   1. createStockTransfer → loadBranchKind(other_branch) returned null →
---      "Chi nhánh không hợp lệ" when creating inbound (from HQ/warehouse)
---      or outbound (to HQ/other branch) tickets.
+--      "Chi nhánh không hợp lệ" when creating inbound (from tenant/warehouse)
+--      or outbound (to tenant/other branch) tickets.
 --   2. fetchStockTransfers / fetchStockTransferDetail enrichment showed
 --      "—" or "Chi nhánh #<id>" for the counterpart branch because the
 --      branches table returned only the user's own branch row.
 --   3. fetchInventorySiteContext / fetchProcurementBranches returned empty
---      for managers whose scope differs from the warehouse/central kitchen.
+--      for managers whose scope differs from the warehouse/branch.
 --
 -- The stock_transfer_list_branches RPC already gives these manager roles
 -- tenant-wide branch visibility via SECURITY DEFINER — the table RLS must

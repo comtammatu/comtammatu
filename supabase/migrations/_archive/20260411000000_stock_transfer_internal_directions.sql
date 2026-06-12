@@ -11,11 +11,11 @@ DECLARE
   v_from_hq BOOLEAN;
   v_to_hq   BOOLEAN;
 BEGIN
-  SELECT b.is_headquarters INTO v_from_hq
+  SELECT b.is_tenant INTO v_from_hq
   FROM public.branches b
   WHERE b.id = NEW.from_branch_id AND b.tenant_id = NEW.tenant_id;
 
-  SELECT b.is_headquarters INTO v_to_hq
+  SELECT b.is_tenant INTO v_to_hq
   FROM public.branches b
   WHERE b.id = NEW.to_branch_id AND b.tenant_id = NEW.tenant_id;
 
@@ -24,7 +24,7 @@ BEGIN
   END IF;
 
   IF v_from_hq AND v_to_hq THEN
-    RAISE EXCEPTION 'stock_transfers: cannot transfer between two headquarters branches' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'stock_transfers: cannot transfer between two tenant branches' USING ERRCODE = '23514';
   END IF;
 
   RETURN NEW;
@@ -37,4 +37,4 @@ CREATE TRIGGER trg_transfer_hq_to_branch
   EXECUTE FUNCTION public.enforce_transfer_from_hq();
 
 COMMENT ON FUNCTION public.enforce_transfer_from_hq() IS
-  'Internal transfers: at most one endpoint is headquarters (TS↔CN or CN↔CN).';
+  'Internal transfers: at most one endpoint is tenant (TS↔CN or CN↔CN).';

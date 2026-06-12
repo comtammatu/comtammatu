@@ -1,5 +1,5 @@
 -- =============================================================
--- Seed: finished goods + production recipes for central kitchen
+-- Seed: finished goods + production recipes for branch
 -- Opens up Inventory Production UI with realistic sample data
 -- for comtammatu tenant without inventing unsupported schema.
 -- =============================================================
@@ -14,9 +14,9 @@ seed_finished_goods AS (
   SELECT *
   FROM (
     VALUES
-      ('Nước mắm pha sẵn', 'Chai', 'Bếp trung tâm', 'ambient', 89000::numeric, 3::numeric, 2::numeric),
-      ('Sốt mật ong', 'Chai', 'Bếp trung tâm', 'ambient', 129000::numeric, 2::numeric, 1::numeric),
-      ('Trà lài nấu sẵn', 'Lít', 'Bếp trung tâm', 'ambient', 59000::numeric, 5::numeric, 2::numeric)
+      ('Nước mắm pha sẵn', 'Chai', 'chi nhánh', 'ambient', 89000::numeric, 3::numeric, 2::numeric),
+      ('Sốt mật ong', 'Chai', 'chi nhánh', 'ambient', 129000::numeric, 2::numeric, 1::numeric),
+      ('Trà lài nấu sẵn', 'Lít', 'chi nhánh', 'ambient', 59000::numeric, 5::numeric, 2::numeric)
   ) AS t(name, unit, category, storage_type, unit_cost, min_stock_level, reorder_point)
 )
 INSERT INTO public.ingredients (
@@ -69,7 +69,7 @@ seed_recipes AS (
       ('Nước mắm pha sẵn', 'Nước mắm Hạnh Phúc 60', 1.000::numeric, 'Chai', 1.000::numeric, 'Mẻ nước mắm pha sẵn cơ bản cho chi nhánh'),
       ('Nước mắm pha sẵn', 'Đường cát trắng', 0.250::numeric, 'kg', 1.000::numeric, 'Cân bằng vị'),
       ('Nước mắm pha sẵn', 'Nước tương Lee Kum Kee', 0.150::numeric, 'Chai', 1.000::numeric, 'Tăng vị đậm'),
-      ('Sốt mật ong', 'Mật ong Tây Bắc', 0.600::numeric, 'Chai', 1.000::numeric, 'Nền sốt ngọt cho bếp trung tâm'),
+      ('Sốt mật ong', 'Mật ong Tây Bắc', 0.600::numeric, 'Chai', 1.000::numeric, 'Nền sốt ngọt cho chi nhánh'),
       ('Sốt mật ong', 'Dầu hào Lee Kum Kee', 0.400::numeric, 'Chai', 1.000::numeric, 'Tạo độ dày cho sốt'),
       ('Sốt mật ong', 'Nước tương Lee Kum Kee', 0.250::numeric, 'Chai', 1.000::numeric, 'Cân bằng vị mặn'),
       ('Trà lài nấu sẵn', 'Trà Lài', 1.000::numeric, 'Bịch', 1.000::numeric, 'Cốt trà lài cho chi nhánh'),

@@ -2,29 +2,16 @@
 
 > Log mỗi quyết định kiến trúc quan trọng với rationale.
 
-## D000: Inventory: retire HQ, introduce multi-instance Kho Tổng + Bếp Trung Tâm (2026-04-24)
+## D000: Inventory branch-only operating model (2026-06-13)
 
-**Decision:** Remove the singleton "HQ / headquarters" branch concept. Replace with multi-instance `central_warehouse` (Kho Tổng / CW) and existing multi-instance `central_kitchen` (Bếp Trung Tâm / CK). Both accept direct supplier GRN.
+**Decision:** Inventory, procurement, production, POS, KDS, runner, stocktake, and transfer operations are scoped to `branch` records. `branches.branch_kind` is a compatibility column and must stay `branch`.
 
 **Transfer direction matrix** (enforced by DB trigger `enforce_stock_transfer_direction`):
 
-- Allowed: CW→CK, CW→Branch, CK→Branch, intra-branch.
-- Rejected: CK→CW, CW↔CW, CK↔CK, Branch→\*.
+- Allowed: branch-to-branch transfers and intra-branch location transfers.
+- Rejected: missing branch references or non-branch `branch_kind` values.
 
-**Superseded stock issue kitchen_use rule:** `stock_issue(issue_type = 'kitchen_use')` used to be valid only at `branch_kind = 'branch'`, but this rule is retired. Current contract: `Kho chi nhánh -> Bếp chi nhánh` uses an intra-branch `stock_transfer` with warehouse/source location and kitchen/default-consumption target location.
-
-**Rationale:** Pilot now plans more than one Kho Tổng and more than one Bếp Trung Tâm. The retired `is_headquarters` flag assumed a singleton and does not scale.
-
-**Migration:** `20260424000000_rename_warehouse_to_central_warehouse_retire_hq.sql`
-
-- Renames `branch_kind='warehouse'` → `'central_warehouse'`
-- Drops `branches.is_headquarters` column
-- Replaces `enforce_po_branch_is_headquarters` trigger → `enforce_po_grn_branch_is_procurement` (accepts CW + CK)
-- Drops `set_headquarters` RPC (replace with `set_branch_kind`)
-- Adds `enforce_stock_transfer_direction` trigger with direction matrix above
-- Superseded later by `20260426100100_retire_kitchen_use_issue_type.sql`: no new `kitchen_use`; use intra-branch transfer for `Cấp bếp`
-
-**Current contract:** CW/CK flow uses `branch_kind` plus the direction matrix above; there is no live `set_headquarters` decision in this file.
+**Current contract:** PO, GRN, stock levels, production orders, and stock transfers all reference `branch_id` directly. Role and permission boundaries decide who can operate on a branch; branch kind no longer creates separate operating site classes.
 
 ## D001: Greenfield thay vì refactor (2026-04-01)
 
@@ -184,3 +171,33 @@ Helpers ở `apps/web/` (không ở `packages/ui`) vì: bind với RHF + dự á
 **Decision:** Thanh toán POS KHÔNG trừ kho. Action-layer callsites đã gỡ (commit `9ba83205`); webhook stock leg disable qua migration `20260611001000_disable_payment_stock_leg.sql` (đã applied prod). Amount-recompute và `finalize_paid_order` trong các RPC thanh toán GIỮ NGUYÊN — policy chỉ tắt nhánh stock consumption.
 
 **Consequences:** Smoke chain vận hành = POS → payment → KDS/print → HĐĐT (`docs/runbooks/operations-smoke-gate.md`). Đuôi kỹ thuật còn lại: remove `consume_stock_for_order` + RPC liên quan (owner-gated, tracked `tasks/todo.md`). Đảo policy (khi kho seed xong + owner duyệt) = sửa quyết định này trước; khi re-enable, caller của `complete_payment_and_consume_stock` phải check `stock_consumed_status != ok` → webhook trả HTTP 500 + notification severity `high`.
+
+## D017: Admin là L0 Tenant Command; Branch Manager dùng L1 Branch Command (2026-06-13)
+
+**Context:** Admin Dashboard không thể tiếp tục là nơi gom tất cả thứ "quản trị"
+vì hệ thống đã bao phủ gần trọn vận hành HKD F&B: mua/nhập, kho, sản xuất,
+bán hàng, thanh toán, in, HĐĐT, tài chính vận hành, HR, và báo cáo. Mâu thuẫn
+rõ nhất là `branch_manager`: họ phải thiết lập chi nhánh của họ, nhưng nếu quyền
+đó sống trong `/admin/settings` thì BM bị biến thành một Admin thiếu quyền.
+
+**Decision:**
+
+1. Product framing vẫn là `bộ phần mềm quản lý vận hành và bán hàng` cho HKD
+   Cơm Tấm Má Tư. Có thể dùng `ERP` khi so sánh phạm vi/kiến trúc, nhưng không
+   đổi entrypoint sản phẩm thành ERP đa ngành.
+2. `/admin/*` là L0 tenant command và tenant setup cho `owner` /
+   `super_manager`: dashboard chuỗi, báo cáo điều hành, chi nhánh, nhân sự,
+   quyền, thiết lập tenant, và direct-support accounting.
+3. `branch_manager` không phải Admin user. Home mục tiêu của BM là
+   `/employee`; điều hành và thiết lập chi nhánh sống dưới
+   `/br/[branchId]/dashboard` và `/br/[branchId]/settings/*` khi mở đúng việc.
+4. Domain workspaces (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`) là
+   workflow surface độc lập, không phải tab con của Admin.
+5. Role/route chỉ là gate bề mặt. Action và row-level access tiếp tục phải đi
+   qua permission keys, RPC/RLS, và branch scope.
+
+**Consequences:** Code slice tiếp theo phải sửa đồng bộ `module-acl.ts`,
+`route-resolution.ts`, `route-map.ts`, `nav-config.ts`, `app-discovery.ts`,
+`scope.ts`, và tests. Không thêm workflow branch-scoped mới vào `/admin/*`.
+Ma trận canonical: `docs/spec/role-route-matrix.md`; T3 contract:
+`docs/worklog/role-route-restructure-2026-06-13.md`.

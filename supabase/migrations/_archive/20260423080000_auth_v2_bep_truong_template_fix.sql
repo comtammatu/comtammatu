@@ -3,10 +3,10 @@
 -- =============================================================
 -- Adds 3 permission keys missing from the `bep_truong` role_template:
 --   * menu:write               — CRUD production_recipes (menu_items RLS requires)
---   * inventory:transfer_create — ship finished goods CK → branch warehouses
+--   * inventory:transfer_create — ship finished goods branch → branch warehouses
 --   * procurement:read         — visibility of PO/GRN for arriving ingredients
 --
--- Context: workflow "Bếp trung tâm → chi nhánh" in the current Inventory
+-- Context: workflow "chi nhánh → chi nhánh" in the current Inventory
 -- contract cannot run end-to-end because
 -- the seed template (20260422120001_auth_v2_seed_catalog.sql:178) shipped with
 -- 7 keys and missed the above 3.
@@ -21,7 +21,7 @@
 -- grants directly for users whose position code is bep_truong.
 --
 -- Known blocker (tracked as task α4): 17 SECURITY DEFINER RPCs still gate via
--- auth_role(). After this migration, QL Bếp trung tâm holds the correct grants
+-- auth_role(). After this migration, QL chi nhánh holds the correct grants
 -- but mutating RPCs (create_production_order, upsert_recipe_lines,
 -- create_stock_transfer_draft, …) still reject until Phase 2-RPC cutover lands.
 -- =============================================================

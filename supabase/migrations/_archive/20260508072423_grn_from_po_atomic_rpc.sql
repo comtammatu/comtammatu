@@ -67,7 +67,7 @@ BEGIN
       USING ERRCODE = 'check_violation';
   END IF;
 
-  -- Branch must be a procurement site (central_warehouse / central_kitchen).
+  -- Branch must be a procurement site (branch / branch).
   SELECT id, branch_kind, is_active
     INTO v_branch
     FROM public.branches
@@ -78,7 +78,7 @@ BEGIN
     RAISE EXCEPTION 'create_grn_from_po: branch inactive or out of scope'
       USING ERRCODE = 'check_violation';
   END IF;
-  IF v_branch.branch_kind NOT IN ('central_warehouse', 'central_kitchen') THEN
+  IF v_branch.branch_kind NOT IN ('branch', 'branch') THEN
     RAISE EXCEPTION 'create_grn_from_po: branch is not a procurement site'
       USING ERRCODE = 'check_violation';
   END IF;

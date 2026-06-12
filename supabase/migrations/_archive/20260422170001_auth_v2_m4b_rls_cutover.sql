@@ -1,7 +1,7 @@
 -- =============================================================
 -- Auth v2 — M4b.2: Wholesale RLS cutover for M4 in-scope tables.
 -- Replaces auth_role() checks with has_permission() / has_permission_any().
--- Structural gates (branch_kind = warehouse/central_kitchen, HQ-only triggers)
+-- Structural gates (branch_kind = warehouse/branch, tenant-only triggers)
 -- are preserved as separate predicates; only the role-based check is replaced.
 -- =============================================================
 
@@ -493,7 +493,7 @@ CREATE POLICY "suppliers_write" ON public.suppliers
     AND public.has_permission_any('procurement:supplier_manage')
   );
 
--- ─── purchase_orders (HQ-only enforced by trigger; RLS checks permission) ───
+-- ─── purchase_orders (tenant-only enforced by trigger; RLS checks permission) ───
 DROP POLICY IF EXISTS "purchase_orders_select" ON public.purchase_orders;
 DROP POLICY IF EXISTS "purchase_orders_insert" ON public.purchase_orders;
 DROP POLICY IF EXISTS "purchase_orders_update" ON public.purchase_orders;
@@ -554,7 +554,7 @@ CREATE POLICY "purchase_order_items_write" ON public.purchase_order_items
     AND public.has_permission_any('procurement:po_create')
   );
 
--- ─── goods_received_notes (HQ-only enforced by trigger) ───
+-- ─── goods_received_notes (tenant-only enforced by trigger) ───
 DROP POLICY IF EXISTS "goods_received_notes_select" ON public.goods_received_notes;
 DROP POLICY IF EXISTS "goods_received_notes_insert" ON public.goods_received_notes;
 DROP POLICY IF EXISTS "goods_received_notes_update" ON public.goods_received_notes;

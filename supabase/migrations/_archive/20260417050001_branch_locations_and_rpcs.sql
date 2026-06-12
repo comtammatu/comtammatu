@@ -5,7 +5,7 @@
 
 -- ─── 1. Seed kitchen location per branch-kind branch ───
 -- Each 'branch' gets a second location (kitchen) for consumption tracking.
--- warehouse/central_kitchen branches keep their single default location.
+-- warehouse/branch branches keep their single default location.
 
 -- Step A: Clear is_default_consumption on existing warehouse locations for branch-kind
 -- branches FIRST (before inserting kitchen locations) to avoid unique index violation.
@@ -295,7 +295,7 @@ BEGIN
 END;
 $$;
 
--- ─── 7. confirm_goods_receipt_note: use branch_kind instead of is_headquarters ───
+-- ─── 7. confirm_goods_receipt_note: use branch_kind instead of is_tenant ───
 
 CREATE OR REPLACE FUNCTION public.confirm_goods_receipt_note(p_grn_id BIGINT)
 RETURNS JSONB
@@ -334,15 +334,15 @@ BEGIN
     RAISE EXCEPTION 'grn_not_draft' USING ERRCODE = '22023';
   END IF;
 
-  -- Validate branch is warehouse or central_kitchen
+  -- Validate branch is warehouse or branch
   SELECT b.id, b.branch_kind INTO v_branch
   FROM public.branches b
   WHERE b.id = v_grn.branch_id
     AND b.tenant_id = v_tenant
-    AND b.branch_kind IN ('warehouse', 'central_kitchen');
+    AND b.branch_kind IN ('warehouse', 'branch');
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'grn_branch_must_be_warehouse_or_central_kitchen' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'grn_branch_must_be_warehouse_or_branch' USING ERRCODE = '23514';
   END IF;
 
   -- Resolve default receive location for this branch

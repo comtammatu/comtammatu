@@ -3,7 +3,7 @@
 -- =============================================================
 -- Team decision (2026-04-25, 4-agent debate):
 --
---   D1  Label "Hao hụt kho" (consumption at CW/CK) vs "Tiêu hao"
+--   D1  Label "Hao hụt kho" (consumption at branch/branch) vs "Tiêu hao"
 --       (consumption at branch) derives from
 --       `stock_movements.movement_subtype`, not from stored labels.
 --
@@ -27,7 +27,7 @@ ALTER TABLE public.stock_movements
 ALTER TABLE public.stock_movements
   ADD CONSTRAINT stock_movements_movement_subtype_check CHECK (
     movement_subtype IS NULL OR movement_subtype IN (
-      'storage_loss',     -- consumption at central_warehouse / central_kitchen
+      'storage_loss',     -- consumption at branch / branch
       'sale_consumption', -- consumption at branch (POS recipe / manual at branch)
       'writeoff',         -- hủy hỏng / thanh lý
       'other'             -- other (khác)
@@ -96,7 +96,7 @@ BEGIN
   -- kitchen_use is retired (20260425000000 reject trigger + 2026-04-25 CHECK swap).
   v_subtype := CASE
     WHEN v_issue.issue_type = 'consumption'
-         AND v_branch_kind IN ('central_warehouse', 'central_kitchen')
+         AND v_branch_kind IN ('branch', 'branch')
       THEN 'storage_loss'
     WHEN v_issue.issue_type = 'consumption'
       THEN 'sale_consumption'

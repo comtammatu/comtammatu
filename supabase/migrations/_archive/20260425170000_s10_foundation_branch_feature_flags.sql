@@ -4,7 +4,7 @@
 -- Per-branch feature flag storage for UI wiring rollout
 -- (Tranche 1-3 inventory redesign). Follows pattern from existing
 -- system_settings(key,value) but scoped per-branch for pilot
--- cutover Đất Đỏ + Kho Tổng trước khi rollout all branches.
+-- cutover Đất Đỏ + chi nhánh trước khi rollout all branches.
 --
 -- Flag keys (seeded disabled):
 --   inv_s10_grn_variance

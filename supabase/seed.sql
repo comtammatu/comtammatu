@@ -5,17 +5,16 @@
 -- Apply with: supabase db query --linked --file supabase/seed.sql
 --
 -- Điều kiện:
---   - Tenant slug `comtammatu`; seed tenant có "Trụ sở chính" (HQ), "Chi nhánh Đất Đỏ",
+--   - Tenant slug `comtammatu`; seed tenant có "Chi nhánh Đất Đỏ",
 --     "Chi nhánh Phước Hải" (migration 20260401000002_seed_tenant.sql).
---   - "Bếp trung tâm" (migration 20260417020000_seed_central_kitchen.sql) cho production_manager.
 --
--- Step 0: resolve the central_warehouse branch used as HQ/dev warehouse.
+-- Step 0: normalize seeded branch records to the branch-only model.
 --
 -- Tài khoản QA được seed (password: Test1234!):
---   • owner@comtammatu.vn              – owner (tenant-level, pin HQ)
+--   • owner@comtammatu.vn              – owner (tenant-level, pinned to a dev branch)
 --   • supermanager@comtammatu.vn       – super_manager (keeper, không bị xoá)
---   • warehouse@comtammatu.vn          – warehouse_manager (Trụ sở chính = warehouse)
---   • production@comtammatu.vn        – production_manager (Bếp trung tâm)
+--   • warehouse@comtammatu.vn          – warehouse_manager
+--   • production@comtammatu.vn        – production_manager
 --   • manager.datdo@comtammatu.vn      – branch_manager Đất Đỏ
 --   • cashier.datdo@comtammatu.vn      – cashier Đất Đỏ
 --   • waiter.datdo@comtammatu.vn       – waiter Đất Đỏ
@@ -35,38 +34,21 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 BEGIN;
 
--- ─── 0) Đồng bộ cờ HQ với migration seed ("Trụ sở chính") ───
+-- ─── 0) Đồng bộ branch_kind theo mô hình branch-only ───
 DO $$
 DECLARE
   v_tenant BIGINT;
-  v_hq     BIGINT;
-  v_keeper UUID := 'a0000002-0000-4000-8000-000000000002'::uuid; -- supermanager (will be kept)
 BEGIN
   SELECT id INTO v_tenant FROM public.tenants WHERE slug = 'comtammatu' LIMIT 1;
   IF v_tenant IS NULL THEN
     RAISE EXCEPTION 'Không tìm thấy tenant comtammatu — chạy seed tenant trước.';
   END IF;
 
-  SELECT id INTO v_hq
-  FROM public.branches
-  WHERE tenant_id = v_tenant
-    AND (
-      branch_kind = 'central_warehouse'
-      OR name IN ('Trụ sở chính', 'Trụ sở')
-    )
-  ORDER BY (branch_kind = 'central_warehouse') DESC, (name = 'Trụ sở chính') DESC
-  LIMIT 1;
-
-  IF v_hq IS NULL THEN
-    RAISE EXCEPTION 'Chưa có chi nhánh HQ — chạy SQL trong 20260401000002_seed_tenant.sql trước.';
-  END IF;
-
   UPDATE public.branches
-  SET branch_kind = 'central_warehouse',
+  SET branch_kind = 'branch',
       updated_at = now()
-  WHERE id = v_hq
-    AND tenant_id = v_tenant
-    AND branch_kind IS DISTINCT FROM 'central_warehouse';
+  WHERE tenant_id = v_tenant
+    AND branch_kind IS DISTINCT FROM 'branch';
 END;
 $$;
 
@@ -169,24 +151,14 @@ DECLARE
   v_tenant   BIGINT;
   v_datdo    BIGINT;
   v_phuochai BIGINT;
-  v_hq       BIGINT;
-  v_ck       BIGINT;
+  v_dev_branch BIGINT;
+  v_production_branch BIGINT;
   v_pw       TEXT := 'Test1234!';
   v_crypt    TEXT;
 
   r RECORD;
 BEGIN
   SELECT id INTO v_tenant FROM public.tenants WHERE slug = 'comtammatu' LIMIT 1;
-  SELECT id INTO v_hq
-  FROM public.branches
-  WHERE tenant_id = v_tenant
-    AND branch_kind = 'central_warehouse'
-  ORDER BY (name = 'Trụ sở chính') DESC
-  LIMIT 1;
-
-  IF v_hq IS NULL THEN
-    RAISE EXCEPTION 'Chưa có chi nhánh HQ — chạy seed tenant trước.';
-  END IF;
 
   SELECT id INTO v_datdo FROM public.branches WHERE tenant_id = v_tenant AND name = 'Chi nhánh Đất Đỏ' LIMIT 1;
   SELECT id INTO v_phuochai FROM public.branches WHERE tenant_id = v_tenant AND name = 'Chi nhánh Phước Hải' LIMIT 1;
@@ -195,24 +167,26 @@ BEGIN
     RAISE EXCEPTION 'Thiếu Chi nhánh Đất Đỏ hoặc Chi nhánh Phước Hải.';
   END IF;
 
-  SELECT id INTO v_ck
+  SELECT id INTO v_dev_branch
   FROM public.branches
-  WHERE tenant_id = v_tenant AND branch_kind = 'central_kitchen' AND is_active = true
-  ORDER BY id
+  WHERE tenant_id = v_tenant AND branch_kind = 'branch' AND is_active = true
+  ORDER BY (id = v_datdo) DESC, id
   LIMIT 1;
 
-  IF v_ck IS NULL THEN
-    RAISE EXCEPTION 'Thiếu Bếp trung tâm — chạy migration 20260417020000_seed_central_kitchen.sql trước.';
+  IF v_dev_branch IS NULL THEN
+    RAISE EXCEPTION 'Thiếu chi nhánh active — chạy seed tenant trước.';
   END IF;
+
+  v_production_branch := v_dev_branch;
 
   FOR r IN
     SELECT *
     FROM (
-      -- Owner / Super Manager: tenant-level but we pin branch_id to HQ for dev
+      -- Owner / Super Manager: tenant-level but we pin branch_id to a dev branch
       -- so auth_branch_id() is never NULL (unblocks branch-scoped RLS/RPC).
-      SELECT 'a0000001-0000-4000-8000-000000000001'::uuid AS user_id, 'owner@comtammatu.vn'::text AS email, 'owner'::text AS role, v_hq::bigint AS branch_id, 'Owner'::text AS full_name, 'EMP-OWNER'::text AS emp_code
+      SELECT 'a0000001-0000-4000-8000-000000000001'::uuid AS user_id, 'owner@comtammatu.vn'::text AS email, 'owner'::text AS role, v_dev_branch::bigint AS branch_id, 'Owner'::text AS full_name, 'EMP-OWNER'::text AS emp_code
       UNION ALL
-      SELECT 'a0000002-0000-4000-8000-000000000002'::uuid, 'supermanager@comtammatu.vn'::text, 'super_manager'::text, v_hq::bigint, 'Quản lý tổng'::text, 'EMP-SM'::text
+      SELECT 'a0000002-0000-4000-8000-000000000002'::uuid, 'supermanager@comtammatu.vn'::text, 'super_manager'::text, v_dev_branch::bigint, 'Giám đốc điều hành'::text, 'EMP-SM'::text
       UNION ALL
       SELECT 'a0000003-0000-4000-8000-000000000003'::uuid, 'manager.datdo@comtammatu.vn'::text, 'branch_manager'::text, v_datdo, 'QL Chi nhánh Đất Đỏ'::text, 'EMP-MGR-DD'::text
       UNION ALL
@@ -226,11 +200,11 @@ BEGIN
       UNION ALL
       SELECT 'a0000008-0000-4000-8000-000000000008'::uuid, 'office@comtammatu.vn'::text, 'office'::text, NULL::bigint, 'Văn phòng'::text, 'EMP-OFF'::text
       UNION ALL
-      -- Warehouse manager: must be assigned to a central warehouse.
-      SELECT 'a000000a-0000-4000-8000-00000000000a'::uuid, 'warehouse@comtammatu.vn'::text, 'warehouse_manager'::text, v_hq::bigint, 'QL Kho tổng'::text, 'EMP-WH'::text
+      -- Warehouse manager: must be assigned to a branch.
+      SELECT 'a000000a-0000-4000-8000-00000000000a'::uuid, 'warehouse@comtammatu.vn'::text, 'warehouse_manager'::text, v_dev_branch::bigint, 'QL Kho chi nhánh'::text, 'EMP-WH'::text
       UNION ALL
-      -- Production manager: must be assigned to a central_kitchen branch
-      SELECT 'a000000b-0000-4000-8000-00000000000b'::uuid, 'production@comtammatu.vn'::text, 'production_manager'::text, v_ck::bigint, 'QL Bếp trung tâm'::text, 'EMP-PROD'::text
+      -- Production manager: must be assigned to a branch.
+      SELECT 'a000000b-0000-4000-8000-00000000000b'::uuid, 'production@comtammatu.vn'::text, 'production_manager'::text, v_production_branch::bigint, 'QL Sản xuất'::text, 'EMP-PROD'::text
       UNION ALL
       SELECT 'a000000c-0000-4000-8000-00000000000c'::uuid, 'manager.phuochai@comtammatu.vn'::text, 'branch_manager'::text, v_phuochai, 'QL Chi nhánh Phước Hải'::text, 'EMP-MGR-PH'::text
       UNION ALL

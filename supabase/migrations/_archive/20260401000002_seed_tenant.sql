@@ -12,9 +12,9 @@ VALUES (
   NULL   -- Fill representative name
 );
 
--- Branches: đúng một HQ (trụ sở / văn phòng); còn lại là chi nhánh có POS/KDS.
+-- Branches: đúng một tenant (trụ sở / văn phòng); còn lại là chi nhánh có POS/KDS.
 -- Không hardcode tenant_id = 1 — map theo tenant vừa insert (slug).
-INSERT INTO public.branches (tenant_id, name, address, is_headquarters)
+INSERT INTO public.branches (tenant_id, name, address, is_tenant)
 VALUES
   (
     (SELECT id FROM public.tenants WHERE slug = 'comtammatu' LIMIT 1),

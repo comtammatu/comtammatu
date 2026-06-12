@@ -1,10 +1,10 @@
 -- =============================================================
--- Multi-Warehouse Step 1: Rename headquarters → warehouse,
+-- Multi-Warehouse Step 1: Rename tenant → warehouse,
 -- relax constraints, update triggers & RPCs for multi-warehouse.
 -- =============================================================
 
 -- ─── 1. Update sync trigger FIRST (before data update) ───
--- Must be done before UPDATE so the trigger doesn't revert 'warehouse' → 'headquarters'
+-- Must be done before UPDATE so the trigger doesn't revert 'warehouse' → 'tenant'
 
 CREATE OR REPLACE FUNCTION public.sync_branch_kind_and_hq()
 RETURNS TRIGGER
@@ -12,14 +12,14 @@ LANGUAGE plpgsql
 SET search_path = public
 AS $$
 BEGIN
-  -- is_headquarters is a backward-compat flag: true for ALL warehouse branches
+  -- is_tenant is a backward-compat flag: true for ALL warehouse branches
   IF NEW.branch_kind = 'warehouse' THEN
-    NEW.is_headquarters := true;
-  ELSIF COALESCE(NEW.is_headquarters, false) = true THEN
-    -- Legacy path: setting is_headquarters = true → treat as warehouse
+    NEW.is_tenant := true;
+  ELSIF COALESCE(NEW.is_tenant, false) = true THEN
+    -- Legacy path: setting is_tenant = true → treat as warehouse
     NEW.branch_kind := 'warehouse';
   ELSE
-    NEW.is_headquarters := false;
+    NEW.is_tenant := false;
   END IF;
 
   IF NEW.branch_kind IS NULL OR NEW.branch_kind = '' THEN
@@ -30,26 +30,26 @@ BEGIN
 END;
 $$;
 
--- ─── 2. Rename branch_kind 'headquarters' → 'warehouse' ───
+-- ─── 2. Rename branch_kind 'tenant' → 'warehouse' ───
 
 ALTER TABLE public.branches
   DROP CONSTRAINT IF EXISTS branches_branch_kind_check;
 
 UPDATE public.branches
 SET branch_kind = 'warehouse'
-WHERE branch_kind = 'headquarters';
+WHERE branch_kind = 'tenant';
 
 ALTER TABLE public.branches
   ADD CONSTRAINT branches_branch_kind_check
-  CHECK (branch_kind IN ('warehouse', 'branch', 'central_kitchen'));
+  CHECK (branch_kind IN ('warehouse', 'branch', 'branch'));
 
--- ─── 3. Allow multiple central_kitchen branches ───
+-- ─── 3. Allow multiple branch branches ───
 
-DROP INDEX IF EXISTS idx_one_active_central_kitchen_per_tenant;
+DROP INDEX IF EXISTS idx_one_active_branch_per_tenant;
 
--- ─── 4. PO/GRN: allow warehouse + central_kitchen ───
+-- ─── 4. PO/GRN: allow warehouse + branch ───
 
-CREATE OR REPLACE FUNCTION public.enforce_po_branch_is_headquarters()
+CREATE OR REPLACE FUNCTION public.enforce_po_branch_is_tenant()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SET search_path = public
@@ -59,9 +59,9 @@ BEGIN
     SELECT 1 FROM public.branches b
     WHERE b.id = NEW.branch_id
       AND b.tenant_id = NEW.tenant_id
-      AND b.branch_kind IN ('warehouse', 'central_kitchen')
+      AND b.branch_kind IN ('warehouse', 'branch')
   ) THEN
-    RAISE EXCEPTION 'branch must be warehouse or central_kitchen' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'branch must be warehouse or branch' USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
 END;
@@ -99,7 +99,7 @@ ALTER TABLE public.profiles
     OR area_id IS NULL
   );
 
--- ─── 8. admin_update_profile: support new roles + warehouse/CK assignment ───
+-- ─── 8. admin_update_profile: support new roles + warehouse/branch assignment ───
 
 CREATE OR REPLACE FUNCTION public.admin_update_profile(
   p_target_id UUID,
@@ -170,11 +170,11 @@ BEGIN
     FROM public.branches
     WHERE id = v_final_branch AND tenant_id = v_actor_tenant;
 
-    -- POS/KDS floor roles cannot work at warehouse or central_kitchen
+    -- POS/KDS floor roles cannot work at warehouse or branch
     IF v_final_role IN ('cashier', 'waiter', 'chef', 'branch_manager')
-       AND v_branch_kind IN ('warehouse', 'central_kitchen')
+       AND v_branch_kind IN ('warehouse', 'branch')
     THEN
-      RAISE EXCEPTION 'operational roles cannot be assigned to warehouse/central_kitchen branch'
+      RAISE EXCEPTION 'operational roles cannot be assigned to warehouse/branch branch'
         USING ERRCODE = 'P0001';
     END IF;
 
@@ -184,9 +184,9 @@ BEGIN
         USING ERRCODE = 'P0001';
     END IF;
 
-    -- production_manager must be at a central_kitchen branch
-    IF v_final_role = 'production_manager' AND v_branch_kind <> 'central_kitchen' THEN
-      RAISE EXCEPTION 'production_manager must be assigned to central_kitchen branch'
+    -- production_manager must be at a branch branch
+    IF v_final_role = 'production_manager' AND v_branch_kind <> 'branch' THEN
+      RAISE EXCEPTION 'production_manager must be assigned to branch branch'
         USING ERRCODE = 'P0001';
     END IF;
   END IF;
@@ -295,11 +295,11 @@ BEGIN
     FROM public.branches
     WHERE id = v_branch_id AND tenant_id = v_tenant_id;
 
-    -- POS/KDS floor roles cannot work at warehouse or central_kitchen
+    -- POS/KDS floor roles cannot work at warehouse or branch
     IF v_role IN ('cashier', 'waiter', 'chef', 'branch_manager')
-       AND v_branch_kind IN ('warehouse', 'central_kitchen')
+       AND v_branch_kind IN ('warehouse', 'branch')
     THEN
-      RAISE EXCEPTION 'operational roles cannot be assigned to warehouse/central_kitchen branch'
+      RAISE EXCEPTION 'operational roles cannot be assigned to warehouse/branch branch'
         USING ERRCODE = 'P0001';
     END IF;
 
@@ -309,9 +309,9 @@ BEGIN
         USING ERRCODE = 'P0001';
     END IF;
 
-    -- production_manager must be at central_kitchen
-    IF v_role = 'production_manager' AND v_branch_kind <> 'central_kitchen' THEN
-      RAISE EXCEPTION 'production_manager must be assigned to central_kitchen branch'
+    -- production_manager must be at branch
+    IF v_role = 'production_manager' AND v_branch_kind <> 'branch' THEN
+      RAISE EXCEPTION 'production_manager must be assigned to branch branch'
         USING ERRCODE = 'P0001';
     END IF;
   END IF;
@@ -373,11 +373,11 @@ BEGIN
     RAISE EXCEPTION 'branch_not_found' USING ERRCODE = 'P0002';
   END IF;
 
-  IF v_branch.branch_kind <> 'central_kitchen' THEN
-    RAISE EXCEPTION 'branch_must_be_central_kitchen' USING ERRCODE = '23514';
+  IF v_branch.branch_kind <> 'branch' THEN
+    RAISE EXCEPTION 'branch_must_be_branch' USING ERRCODE = '23514';
   END IF;
 
-  -- Branch-scoped roles must be at the target CK
+  -- Branch-scoped roles must be at the target branch
   IF v_role IN ('branch_manager', 'production_manager')
      AND (v_branch_claim IS NULL OR v_branch_claim <> p_branch_id) THEN
     RAISE EXCEPTION 'branch_scope_violation' USING ERRCODE = '42501';
@@ -468,8 +468,8 @@ BEGIN
     RAISE EXCEPTION 'production_order_not_draft' USING ERRCODE = '22023';
   END IF;
 
-  IF v_order.branch_kind <> 'central_kitchen' THEN
-    RAISE EXCEPTION 'branch_must_be_central_kitchen' USING ERRCODE = '23514';
+  IF v_order.branch_kind <> 'branch' THEN
+    RAISE EXCEPTION 'branch_must_be_branch' USING ERRCODE = '23514';
   END IF;
 
   IF public.auth_role() IN ('branch_manager', 'production_manager')
@@ -728,7 +728,7 @@ CREATE POLICY "production_recipes_manage" ON public.production_recipes
           FROM public.branches b
           WHERE b.id = public.auth_branch_id()
             AND b.tenant_id = public.auth_tenant_id()
-            AND b.branch_kind = 'central_kitchen'
+            AND b.branch_kind = 'branch'
         )
       )
     )
@@ -745,7 +745,7 @@ CREATE POLICY "production_recipes_manage" ON public.production_recipes
           FROM public.branches b
           WHERE b.id = public.auth_branch_id()
             AND b.tenant_id = public.auth_tenant_id()
-            AND b.branch_kind = 'central_kitchen'
+            AND b.branch_kind = 'branch'
         )
       )
     )
@@ -768,7 +768,7 @@ CREATE POLICY "production_orders_manage" ON public.production_orders
           FROM public.branches b
           WHERE b.id = branch_id
             AND b.tenant_id = public.auth_tenant_id()
-            AND b.branch_kind = 'central_kitchen'
+            AND b.branch_kind = 'branch'
         )
       )
     )
@@ -786,7 +786,7 @@ CREATE POLICY "production_orders_manage" ON public.production_orders
           FROM public.branches b
           WHERE b.id = branch_id
             AND b.tenant_id = public.auth_tenant_id()
-            AND b.branch_kind = 'central_kitchen'
+            AND b.branch_kind = 'branch'
         )
       )
     )
@@ -809,7 +809,7 @@ CREATE POLICY "production_order_items_manage" ON public.production_order_items
           JOIN public.branches b ON b.id = po.branch_id
           WHERE po.id = production_order_id
             AND po.tenant_id = public.auth_tenant_id()
-            AND b.branch_kind = 'central_kitchen'
+            AND b.branch_kind = 'branch'
             AND po.branch_id = public.auth_branch_id()
         )
       )
@@ -828,14 +828,14 @@ CREATE POLICY "production_order_items_manage" ON public.production_order_items
           JOIN public.branches b ON b.id = po.branch_id
           WHERE po.id = production_order_id
             AND po.tenant_id = public.auth_tenant_id()
-            AND b.branch_kind = 'central_kitchen'
+            AND b.branch_kind = 'branch'
             AND po.branch_id = public.auth_branch_id()
         )
       )
     )
   );
 
--- ─── 12. Deprecate set_headquarters → set_branch_kind ───
+-- ─── 12. Deprecate set_tenant → set_branch_kind ───
 
 CREATE OR REPLACE FUNCTION public.set_branch_kind(
   p_branch_id BIGINT,
@@ -858,7 +858,7 @@ BEGIN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  IF p_kind NOT IN ('warehouse', 'branch', 'central_kitchen') THEN
+  IF p_kind NOT IN ('warehouse', 'branch', 'branch') THEN
     RAISE EXCEPTION 'invalid branch_kind: %', p_kind USING ERRCODE = '22023';
   END IF;
 
@@ -884,8 +884,8 @@ $$;
 REVOKE ALL ON FUNCTION public.set_branch_kind(BIGINT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.set_branch_kind(BIGINT, TEXT) TO authenticated;
 
--- Keep old set_headquarters as compat wrapper
-CREATE OR REPLACE FUNCTION public.set_headquarters(p_branch_id BIGINT)
+-- Keep old set_tenant as compat wrapper
+CREATE OR REPLACE FUNCTION public.set_tenant(p_branch_id BIGINT)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER

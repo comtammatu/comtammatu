@@ -69,8 +69,8 @@ BEGIN
   IF v_order.status <> 'draft' THEN
     RAISE EXCEPTION 'production_order_not_draft' USING ERRCODE = '22023';
   END IF;
-  IF v_order.branch_kind <> 'central_kitchen' THEN
-    RAISE EXCEPTION 'branch_must_be_central_kitchen' USING ERRCODE = '23514';
+  IF v_order.branch_kind <> 'branch' THEN
+    RAISE EXCEPTION 'branch_must_be_branch' USING ERRCODE = '23514';
   END IF;
 
   IF NOT public.has_permission(v_order.branch_id, 'inventory:production_confirm') THEN

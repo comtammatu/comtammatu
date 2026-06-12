@@ -1,5 +1,5 @@
--- HQ (trụ sở) is office-only: no POS/KDS floor. Operational roles cannot use HQ as branch.
--- 1. admin_update_profile — reject cashier/waiter/chef/branch_manager + HQ branch
+-- tenant (trụ sở) is office-only: no POS/KDS floor. Operational roles cannot use tenant as branch.
+-- 1. admin_update_profile — reject cashier/waiter/chef/branch_manager + tenant branch
 -- 2. handle_new_user — same guard on invite/signup insert
 
 CREATE OR REPLACE FUNCTION public.admin_update_profile(
@@ -55,7 +55,7 @@ BEGIN
     RAISE EXCEPTION 'branch_required_for_operational_role' USING ERRCODE = 'P0001';
   END IF;
 
-  -- Operational / floor roles cannot be assigned to headquarters (no POS/KDS)
+  -- Operational / floor roles cannot be assigned to tenant (no POS/KDS)
   IF v_final_role IN ('cashier', 'waiter', 'chef', 'branch_manager')
      AND v_final_branch IS NOT NULL
   THEN
@@ -63,9 +63,9 @@ BEGIN
       SELECT 1 FROM public.branches
       WHERE id = v_final_branch
         AND tenant_id = v_actor_tenant
-        AND COALESCE(is_headquarters, false) = true
+        AND COALESCE(is_tenant, false) = true
     ) THEN
-      RAISE EXCEPTION 'operational roles cannot be assigned to headquarters branch' USING ERRCODE = 'P0001';
+      RAISE EXCEPTION 'operational roles cannot be assigned to tenant branch' USING ERRCODE = 'P0001';
     END IF;
   END IF;
 
@@ -171,10 +171,10 @@ BEGIN
        SELECT 1 FROM public.branches
        WHERE id = v_branch_id
          AND tenant_id = v_tenant_id
-         AND COALESCE(is_headquarters, false) = true
+         AND COALESCE(is_tenant, false) = true
      )
   THEN
-    RAISE EXCEPTION 'operational roles cannot be assigned to headquarters branch' USING ERRCODE = 'P0001';
+    RAISE EXCEPTION 'operational roles cannot be assigned to tenant branch' USING ERRCODE = 'P0001';
   END IF;
 
   INSERT INTO public.profiles (id, tenant_id, branch_id, role, full_name)

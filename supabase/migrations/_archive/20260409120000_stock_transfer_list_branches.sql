@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION public.stock_transfer_list_branches()
 RETURNS TABLE (
   id bigint,
   name text,
-  is_headquarters boolean,
+  is_tenant boolean,
   is_active boolean
 )
 LANGUAGE sql
@@ -11,7 +11,7 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT b.id, b.name, b.is_headquarters, b.is_active
+  SELECT b.id, b.name, b.is_tenant, b.is_active
   FROM public.branches b
   WHERE b.tenant_id = public.auth_tenant_id()
     AND b.is_active = true

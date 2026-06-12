@@ -11,23 +11,23 @@ ALTER TABLE public.branches
 
 UPDATE public.branches
 SET branch_kind = CASE
-  WHEN is_headquarters = true THEN 'headquarters'
+  WHEN is_tenant = true THEN 'tenant'
   ELSE 'branch'
 END
-WHERE is_headquarters = true
+WHERE is_tenant = true
    OR branch_kind IS NULL
-   OR branch_kind NOT IN ('headquarters', 'branch', 'central_kitchen');
+   OR branch_kind NOT IN ('tenant', 'branch', 'branch');
 
 ALTER TABLE public.branches
   DROP CONSTRAINT IF EXISTS branches_branch_kind_check;
 
 ALTER TABLE public.branches
   ADD CONSTRAINT branches_branch_kind_check
-  CHECK (branch_kind IN ('headquarters', 'branch', 'central_kitchen'));
+  CHECK (branch_kind IN ('tenant', 'branch', 'branch'));
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_one_active_central_kitchen_per_tenant
+CREATE UNIQUE INDEX IF NOT EXISTS idx_one_active_branch_per_tenant
   ON public.branches(tenant_id)
-  WHERE branch_kind = 'central_kitchen' AND is_active = true;
+  WHERE branch_kind = 'branch' AND is_active = true;
 
 CREATE OR REPLACE FUNCTION public.sync_branch_kind_and_hq()
 RETURNS TRIGGER
@@ -35,9 +35,9 @@ LANGUAGE plpgsql
 SET search_path = public
 AS $$
 BEGIN
-  IF COALESCE(NEW.is_headquarters, false) = true THEN
-    NEW.is_headquarters := true;
-    NEW.branch_kind := 'headquarters';
+  IF COALESCE(NEW.is_tenant, false) = true THEN
+    NEW.is_tenant := true;
+    NEW.branch_kind := 'tenant';
     RETURN NEW;
   END IF;
 
@@ -45,10 +45,10 @@ BEGIN
     NEW.branch_kind := 'branch';
   END IF;
 
-  IF NEW.branch_kind = 'headquarters' THEN
-    NEW.is_headquarters := true;
+  IF NEW.branch_kind = 'tenant' THEN
+    NEW.is_tenant := true;
   ELSE
-    NEW.is_headquarters := false;
+    NEW.is_tenant := false;
   END IF;
 
   RETURN NEW;
@@ -58,10 +58,10 @@ $$;
 DROP TRIGGER IF EXISTS trg_branches_sync_kind_and_hq ON public.branches;
 
 CREATE TRIGGER trg_branches_sync_kind_and_hq
-  BEFORE INSERT OR UPDATE OF is_headquarters, branch_kind ON public.branches
+  BEFORE INSERT OR UPDATE OF is_tenant, branch_kind ON public.branches
   FOR EACH ROW EXECUTE FUNCTION public.sync_branch_kind_and_hq();
 
-CREATE OR REPLACE FUNCTION public.set_headquarters(p_branch_id BIGINT)
+CREATE OR REPLACE FUNCTION public.set_tenant(p_branch_id BIGINT)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -90,25 +90,25 @@ BEGIN
     RAISE EXCEPTION 'branch_not_found' USING ERRCODE = 'P0002';
   END IF;
 
-  IF v_branch.branch_kind = 'central_kitchen' THEN
-    RAISE EXCEPTION 'central_kitchen_cannot_be_headquarters' USING ERRCODE = '23514';
+  IF v_branch.branch_kind = 'branch' THEN
+    RAISE EXCEPTION 'branch_cannot_be_tenant' USING ERRCODE = '23514';
   END IF;
 
   UPDATE public.branches
-  SET is_headquarters = (id = p_branch_id),
+  SET is_tenant = (id = p_branch_id),
       branch_kind = CASE
-        WHEN id = p_branch_id THEN 'headquarters'
-        WHEN branch_kind = 'headquarters' THEN 'branch'
+        WHEN id = p_branch_id THEN 'tenant'
+        WHEN branch_kind = 'tenant' THEN 'branch'
         ELSE branch_kind
       END,
       updated_at = now()
   WHERE tenant_id = v_tenant
-    AND (is_headquarters = true OR branch_kind = 'headquarters' OR id = p_branch_id);
+    AND (is_tenant = true OR branch_kind = 'tenant' OR id = p_branch_id);
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.set_headquarters(BIGINT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.set_headquarters(BIGINT) TO authenticated;
+REVOKE ALL ON FUNCTION public.set_tenant(BIGINT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.set_tenant(BIGINT) TO authenticated;
 
 -- ─── 2. ingredients: mark raw vs finished goods ───
 
@@ -174,7 +174,7 @@ CREATE POLICY "production_recipes_manage" ON public.production_recipes
           FROM public.branches b
           WHERE b.id = public.auth_branch_id()
             AND b.tenant_id = public.auth_tenant_id()
-            AND b.branch_kind = 'central_kitchen'
+            AND b.branch_kind = 'branch'
         )
       )
     )
@@ -191,7 +191,7 @@ CREATE POLICY "production_recipes_manage" ON public.production_recipes
           FROM public.branches b
           WHERE b.id = public.auth_branch_id()
             AND b.tenant_id = public.auth_tenant_id()
-            AND b.branch_kind = 'central_kitchen'
+            AND b.branch_kind = 'branch'
         )
       )
     )
@@ -246,7 +246,7 @@ CREATE POLICY "production_orders_manage" ON public.production_orders
           FROM public.branches b
           WHERE b.id = branch_id
             AND b.tenant_id = public.auth_tenant_id()
-            AND b.branch_kind = 'central_kitchen'
+            AND b.branch_kind = 'branch'
         )
       )
     )
@@ -264,7 +264,7 @@ CREATE POLICY "production_orders_manage" ON public.production_orders
           FROM public.branches b
           WHERE b.id = branch_id
             AND b.tenant_id = public.auth_tenant_id()
-            AND b.branch_kind = 'central_kitchen'
+            AND b.branch_kind = 'branch'
         )
       )
     )
@@ -309,7 +309,7 @@ CREATE POLICY "production_order_items_manage" ON public.production_order_items
           JOIN public.branches b ON b.id = po.branch_id
           WHERE po.id = production_order_id
             AND po.tenant_id = public.auth_tenant_id()
-            AND b.branch_kind = 'central_kitchen'
+            AND b.branch_kind = 'branch'
             AND po.branch_id = public.auth_branch_id()
         )
       )
@@ -328,7 +328,7 @@ CREATE POLICY "production_order_items_manage" ON public.production_order_items
           JOIN public.branches b ON b.id = po.branch_id
           WHERE po.id = production_order_id
             AND po.tenant_id = public.auth_tenant_id()
-            AND b.branch_kind = 'central_kitchen'
+            AND b.branch_kind = 'branch'
             AND po.branch_id = public.auth_branch_id()
         )
       )
@@ -411,8 +411,8 @@ BEGIN
     RAISE EXCEPTION 'branch_not_found' USING ERRCODE = 'P0002';
   END IF;
 
-  IF v_branch.branch_kind <> 'central_kitchen' THEN
-    RAISE EXCEPTION 'branch_must_be_central_kitchen' USING ERRCODE = '23514';
+  IF v_branch.branch_kind <> 'branch' THEN
+    RAISE EXCEPTION 'branch_must_be_branch' USING ERRCODE = '23514';
   END IF;
 
   IF v_role = 'branch_manager'
@@ -510,8 +510,8 @@ BEGIN
     RAISE EXCEPTION 'production_order_not_draft' USING ERRCODE = '22023';
   END IF;
 
-  IF v_order.branch_kind <> 'central_kitchen' THEN
-    RAISE EXCEPTION 'branch_must_be_central_kitchen' USING ERRCODE = '23514';
+  IF v_order.branch_kind <> 'branch' THEN
+    RAISE EXCEPTION 'branch_must_be_branch' USING ERRCODE = '23514';
   END IF;
 
   IF public.auth_role() = 'branch_manager'

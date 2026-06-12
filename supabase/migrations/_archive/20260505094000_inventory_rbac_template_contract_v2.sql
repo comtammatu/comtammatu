@@ -32,7 +32,7 @@ BEGIN
 END $$;
 
 -- Bep truong / production_manager owns the central-kitchen transfer loop:
--- receive CW -> CK, create/ship CK -> branch, and manage production recipes.
+-- receive branch -> branch, create/ship branch -> branch, and manage production recipes.
 UPDATE public.role_templates
 SET permission_keys = (
       SELECT ARRAY_AGG(DISTINCT k.permission_key ORDER BY k.permission_key)

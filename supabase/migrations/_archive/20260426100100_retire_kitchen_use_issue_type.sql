@@ -38,6 +38,6 @@ ALTER TABLE public.stock_issues
 
 COMMENT ON COLUMN public.stock_issues.issue_type IS
   'Type of internal stock issue voucher: consumption (Tiêu hao at branch / '
-  'Hao hụt kho at CW/CK — label derived via movement_subtype), writeoff '
+  'Hao hụt kho at branch/branch — label derived via movement_subtype), writeoff '
   '(hủy hỏng), other (khác). kitchen_use retired 2026-04-25 — use intra-branch '
   'stock_transfer (from_location=warehouse, to_location=kitchen_line) instead.';
