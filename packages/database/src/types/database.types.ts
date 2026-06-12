@@ -245,7 +245,6 @@ export type Database = {
           checkout_approved_by: string | null
           checkout_requested_at: string | null
           checkout_requested_by_role: string | null
-          checkout_requested_code_verified: boolean
           code_verified: boolean | null
           created_at: string
           date: string
@@ -273,7 +272,6 @@ export type Database = {
           checkout_approved_by?: string | null
           checkout_requested_at?: string | null
           checkout_requested_by_role?: string | null
-          checkout_requested_code_verified?: boolean
           code_verified?: boolean | null
           created_at?: string
           date: string
@@ -301,7 +299,6 @@ export type Database = {
           checkout_approved_by?: string | null
           checkout_requested_at?: string | null
           checkout_requested_by_role?: string | null
-          checkout_requested_code_verified?: boolean
           code_verified?: boolean | null
           created_at?: string
           date?: string
