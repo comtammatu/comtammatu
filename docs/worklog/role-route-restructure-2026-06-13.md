@@ -74,9 +74,23 @@ Status after first implementation slice:
 - Steps 1-3 are wired in code with auth tests.
 - Root `/` delegates to `getDefaultRedirect`; Branch Manager and non-admin staff
   land on Employee.
-- Step 5 has a minimal Branch Command landing; live branch metrics/readiness are
-  still pending.
-- Step 4 is still pending.
+
+Status after second implementation slice (steps 4-5, T2 note in
+`tasks/todo.md` 2026-06-13):
+
+- Step 4 done: `/admin/dashboard` rebuilt as L0 tenant command — canonical
+  KpiCard grid, per-branch live operating status (paid orders/revenue, open POS
+  session, print-agent health, failed print jobs 24h) with deep links into
+  Branch Command, tenant setup section, and domain handoff cards. The
+  duplicate DashboardFocus layer was removed; dashboard data actions are
+  scoped to owner/super_manager, matching the route ACL.
+- Step 5 done: `/br/[branchId]/dashboard` surfaces branch day metrics
+  (revenue, paid orders, table occupancy, kitchen load) and an operating
+  readiness block (POS session, printer agent + failed jobs, pending checkout
+  approvals) above the command tiles. Reads are RLS-backed; pos_sessions and
+  the checkout queue use the service client with explicit tenant+branch
+  filters behind the route's ACL + branch-match gate.
+- Static contract test: `apps/web/tests/command-dashboards-static.test.ts`.
 
 ## Verification Targets For Code Slice
 

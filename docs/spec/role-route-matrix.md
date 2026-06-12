@@ -115,12 +115,15 @@ Implemented in the first route/auth slice:
 - App discovery exposes domain workspaces, Branch Command, branch settings, and
   branch menu limits for Branch Manager according to ACL.
 
-Remaining product gaps:
+Implemented in the second (dashboard) slice:
 
-| Gap                    | Current shape                                                                                  | Target                                                                                                |
-| ---------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Admin dashboard        | Exists as owner/super_manager landing but does not yet act as full setup/orchestration cockpit | Rebuild around tenant setup checklist, live operating status, and clear links to domain workspaces.   |
-| Branch dashboard depth | `/br/[branchId]/dashboard` is wired as a task landing with links                               | Add live branch day state, POS/KDS/printer/table readiness, staff day flow, and pending branch tasks. |
+- `/admin/dashboard` is the L0 tenant command surface: today KPI grid, live
+  per-branch operating status (paid orders, revenue, POS session, print-agent
+  health) with deep links into Branch Command, a tenant setup section, and
+  domain-workspace handoff cards.
+- `/br/[branchId]/dashboard` surfaces the branch day state: revenue/orders,
+  table occupancy, kitchen load, POS-session/printer/checkout-approval
+  readiness, plus the command tiles.
 
 ## Change Checklist
 

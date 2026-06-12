@@ -11,7 +11,7 @@ const dashboardSource = readFileSync(
 test("Admin dashboard keeps an ACL-scoped HR shortcut", () => {
   assert.match(
     dashboardSource,
-    /canAccess\(claims\.user_role, "hr"\)/,
+    /canAccess\(role, "hr"\)/,
     "HR shortcut must stay gated by module ACL",
   );
   assert.match(
@@ -26,12 +26,7 @@ test("Admin dashboard keeps an ACL-scoped HR shortcut", () => {
   );
   assert.match(
     dashboardSource,
-    /hrCta: "Mở nhân sự"/,
-    "HR shortcut copy should keep the direct admin action wording",
-  );
-  assert.match(
-    dashboardSource,
-    /ctaLabel: ADMIN_DASHBOARD_COPY\.hrCta/,
+    /ctaLabel: ADMIN_DASHBOARD_COPY\.openCta/,
     "HR shortcut should be visible as a direct admin action",
   );
 });

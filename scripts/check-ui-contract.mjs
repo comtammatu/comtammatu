@@ -216,7 +216,6 @@ const checks = [
     pattern:
       /\b(?:function|const)\s+(?:StatCard|SummaryCard|MetricCard|KpiCard)\b/g,
     allowlist: {
-      "apps/web/app/(protected)/admin/dashboard/page.tsx": 1,
       "apps/web/app/(protected)/hr/payroll/[periodId]/payroll-detail-client.tsx": 1,
       "apps/web/app/components/kpi/kpi-card.tsx": 1,
     },
