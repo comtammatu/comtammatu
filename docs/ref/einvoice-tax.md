@@ -3,9 +3,9 @@
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư — mô hình F&B multi-branch
 > Khung pháp lý (đến 06/2026):
 > Hóa đơn chứng từ — NĐ 123/2020 (sửa đổi bởi NĐ 70/2025, hiệu lực 01/06/2025) + TT 32/2025/TT-BTC (thay TT 78/2021, hiệu lực 01/06/2025).
-> Thuế HKD — NQ 198/2025/QH15 (bỏ thuế khoán, miễn lệ phí môn bài từ 01/01/2026) + NĐ 68/2026/NĐ-CP (05/03/2026, chính sách thuế & quản lý thuế HKD/CNKD) + Luật Thuế GTGT 48/2024/QH15 + NQ 204/2025/QH15 (giảm GTGT 01/07/2025–31/12/2026) + Luật Thuế TNCN sửa đổi 2025 (hiệu lực 01/07/2026).
+> Thuế HKD — NQ 198/2025/QH15 (bỏ thuế khoán, miễn lệ phí môn bài từ 01/01/2026) + NĐ 68/2026/NĐ-CP (05/03/2026, chính sách thuế & quản lý thuế HKD/CNKD) + NĐ 141/2026/NĐ-CP (29/04/2026, nâng ngưỡng không chịu GTGT/TNCN lên 1 tỷ/năm, hồi tố 01/01/2026) + Luật Thuế GTGT 48/2024/QH15 + NQ 204/2025/QH15 + NĐ 174/2025/NĐ-CP (giảm GTGT 01/07/2025–31/12/2026) + Luật Thuế TNCN sửa đổi 2025 (hiệu lực 01/07/2026).
 > Kế toán HKD — TT 152/2025/TT-BTC (31/12/2025, thay TT 88/2021 từ 01/01/2026).
-> Last updated: 2026-06-11 (Viettel S-invoice only, HKD model)
+> Last updated: 2026-06-12 (Viettel S-invoice only, HKD model)
 
 ---
 
@@ -23,15 +23,22 @@ Các mốc chính đến tháng 06/2026:
   kê khai.
 - NĐ 68/2026/NĐ-CP (hiệu lực 05/03/2026) chia HKD theo 4 nhóm doanh thu/năm:
   - **Nhóm 1** ≤ 500 triệu: miễn GTGT + TNCN, chỉ thông báo doanh thu năm
-    (trước 31/01 năm sau).
+    (trước 31/01 năm sau) — ngưỡng miễn thuế đã nâng lên 1 tỷ theo NĐ
+    141/2026, xem bullet dưới.
   - **Nhóm 2** > 500 triệu – 3 tỷ: GTGT theo tỷ lệ % trên doanh thu; TNCN
     mặc định theo % doanh thu hoặc tự nguyện chọn tính theo thu nhập; khai
     theo quý.
-  - **Nhóm 3** > 3 – 50 tỷ: TNCN bắt buộc tính theo (doanh thu − chi phí);
-    khai theo quý + quyết toán năm.
+  - **Nhóm 3** > 3 – 50 tỷ: TNCN bắt buộc tính (doanh thu − chi phí) × 17%;
+    khai theo quý + quyết toán năm; bộ sổ kế toán S2b–S2e đầy đủ hơn nhóm 2.
   - **Nhóm 4** > 50 tỷ: khai theo tháng + quyết toán năm.
   - Má Tư thuộc nhóm theo doanh thu thực tế từng năm — kế toán xác nhận nhóm
     và phương pháp TNCN khi chốt hồ sơ kê khai.
+- NĐ 141/2026/NĐ-CP (29/04/2026) nâng ngưỡng doanh thu không chịu thuế
+  GTGT/TNCN của HKD từ 500 triệu lên **1 tỷ đồng/năm**, áp dụng hồi tố từ
+  01/01/2026; số thuế đã nộp thuộc phần được miễn xử lý theo Điều 12 NĐ
+  68/2026. Ngưỡng phân nhóm kê khai/sổ sách NĐ 68/2026 và ngưỡng HĐĐT máy
+  tính tiền 1 tỷ (NĐ 70/2025) là các mốc riêng — kế toán xác nhận cách áp
+  dụng khi chốt hồ sơ.
 - HĐĐT: HKD doanh thu ≥ 1 tỷ/năm bán trực tiếp đến người tiêu dùng (gồm ăn
   uống) bắt buộc dùng HĐĐT khởi tạo từ máy tính tiền kết nối CQT từ 01/06/2025
   (NĐ 70/2025); NĐ 68/2026 giữ yêu cầu HĐĐT có mã CQT/máy tính tiền từ mức
@@ -39,10 +46,12 @@ Các mốc chính đến tháng 06/2026:
 - Kế toán: TT 152/2025/TT-BTC thay TT 88/2021 từ 01/01/2026 — bộ sổ kế toán
   tổ chức theo nhóm doanh thu (mẫu S1a / S2a–S2e / S3a-HKD); export của hệ
   thống phải đối chiếu được với bộ sổ này.
-- NQ 204/2025/QH15 giảm 2% GTGT (10% → 8%) từ 01/07/2025 đến 31/12/2026 cho
-  nhóm hàng hóa/dịch vụ đủ điều kiện. Với HKD tính GTGT theo tỷ lệ % trên
-  doanh thu, mức giảm là 20% của tỷ lệ % khi xuất hóa đơn cho hàng hóa/dịch
-  vụ thuộc diện giảm (ăn uống 3% → hiệu dụng 2,4% trong thời hạn này).
+- NQ 204/2025/QH15 + NĐ 174/2025/NĐ-CP giảm 2% GTGT (10% → 8%) từ 01/07/2025
+  đến 31/12/2026 cho nhóm hàng hóa/dịch vụ đủ điều kiện. Với HKD tính GTGT
+  theo tỷ lệ % trên doanh thu, mức giảm là 20% của tỷ lệ % khi xuất hóa đơn
+  cho hàng hóa/dịch vụ thuộc diện giảm: ăn uống mức gốc **3%**, hiệu dụng
+  **2,4%** CHỈ trong thời hạn giảm; từ 01/01/2027 quay về 3% nếu không có
+  gia hạn.
 
 ### 1.1 Mô hình vận hành
 
@@ -68,15 +77,20 @@ trên doanh thu (NĐ 68/2026 + biểu ngành nghề pháp luật GTGT/TNCN):
 
 | Ngành áp dụng cho Má Tư           | GTGT   | TNCN     | Ghi chú                                                              |
 | --------------------------------- | ------ | -------- | -------------------------------------------------------------------- |
-| Dịch vụ ăn uống (tại chỗ/mang đi) | **3%** | **1,5%** | GTGT hiệu dụng **2,4%** đến 31/12/2026 (NQ 204/2025 giảm 20% tỷ lệ) |
+| Dịch vụ ăn uống (tại chỗ/mang đi) | **3%** | **1,5%** | 2,4% là mức giảm TẠM THỜI 01/07/2025–31/12/2026 (NQ 204/2025 + NĐ 174/2025, giảm 20% của 3%); từ 01/01/2027 về 3% nếu không gia hạn |
 
 - Mẫu HĐ bán hàng từ máy tính tiền (`2/...`): giá trên hóa đơn là giá bán đã
   gồm thuế, KHÔNG có dòng VAT riêng (xem §3.2).
 - Nghĩa vụ GTGT của HKD phương pháp trực tiếp KHÔNG phải "8% trên giá chưa
   thuế". Mức 8%/10% bên dưới chỉ áp dụng nếu HKD đăng ký phương pháp khấu trừ
   với CQT (xuất HĐ GTGT mẫu `1/...`).
-- Nhóm 3 (> 3 tỷ): TNCN không theo 1,5% doanh thu mà theo (doanh thu − chi
-  phí) — chứng từ chi phí đầu vào (§4) trở thành dữ liệu thuế trực tiếp.
+- Doanh thu ≤ 1 tỷ/năm: không chịu GTGT + TNCN theo NĐ 141/2026 (hồi tố từ
+  01/01/2026) — tỷ lệ trên áp dụng khi doanh thu năm vượt ngưỡng; kế toán
+  xác nhận cách tính theo hướng dẫn kê khai hiện hành.
+- ⚠️ Vượt mốc **3 tỷ/năm** (nhóm 3): TNCN bắt buộc chuyển sang (doanh thu −
+  chi phí) × **17%**, không còn 1,5% doanh thu, kèm bộ sổ kế toán S2b–S2e
+  đầy đủ hơn — chứng từ chi phí đầu vào (§4) trở thành dữ liệu thuế trực
+  tiếp.
 
 ### 2.2 Nếu đăng ký phương pháp khấu trừ (HĐ GTGT mẫu `1/...`)
 
@@ -89,8 +103,9 @@ trên doanh thu (NĐ 68/2026 + biểu ngành nghề pháp luật GTGT/TNCN):
 | Dịch vụ vận chuyển nội địa                 | **8%**    | Phí giao hàng nếu có                                           |
 | Xuất khẩu                                  | **0%**    | Không áp dụng                                                  |
 
-> ⚠️ **Lưu ý hậu 31/12/2026**: NQ 204/2025/QH15 hết hiệu lực → các nhóm đang
-> được giảm 2% có thể quay về **10%** nếu không có chính sách gia hạn mới. Cần
+> ⚠️ **Lưu ý hậu 31/12/2026**: NQ 204/2025/QH15 + NĐ 174/2025/NĐ-CP hết hiệu
+> lực → các nhóm đang được giảm 2% quay về **10%** và tỷ lệ trực tiếp ăn uống
+> quay về **3%** (hết mức 2,4%) nếu không có chính sách gia hạn mới. Cần
 > monitor văn bản Bộ Tài chính/Quốc hội trước Q4/2026 và chuẩn bị migration thay
 > đổi `vat_rate` mặc định ở `menu_items` nếu chính sách đổi.
 

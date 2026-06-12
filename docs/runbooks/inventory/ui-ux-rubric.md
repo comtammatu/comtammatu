@@ -89,7 +89,7 @@ Evidence cần chụp:
 
 Pass signals:
 
-- `Receiving` rõ là hub nhập hàng HQ.
+- `Receiving` rõ là hub nhập hàng tenant.
 - `Cấp bếp` được hiểu là bước chuẩn của branch ops, không phải ngoại lệ.
 - `Production` chỉ lộ đúng vai trò.
 - `Danh mục` không trùng entry với `Settings`.
@@ -162,8 +162,8 @@ Evidence cần chụp:
 
 Pass signals:
 
-- `HQ / super_manager`: desktop-first nhưng không vỡ trên tablet.
-- `central_kitchen`: tablet thao tác được với các action chính.
+- `tenant / super_manager`: desktop-first nhưng không vỡ trên tablet.
+- `branch`: tablet thao tác được với các action chính.
 - `branch_manager`: mobile/tablet không mất cột hoặc action quan trọng.
 - Không phụ thuộc hover cho thao tác cần dùng hằng ngày.
 
@@ -213,7 +213,7 @@ Evidence cần chụp:
 | Wave                       | Trục cần ưu tiên                                                |
 | -------------------------- | --------------------------------------------------------------- |
 | Wave 1 — IA/nav            | `Action discoverability`, `Workflow clarity`                    |
-| Wave 2 — HQ journey        | `Workflow clarity`, `State feedback`, `Error prevention`        |
+| Wave 2 — tenant journey        | `Workflow clarity`, `State feedback`, `Error prevention`        |
 | Wave 3 — Central kitchen   | `Workflow clarity`, `Error prevention`, `Responsive ergonomics` |
 | Wave 4 — Branch journey    | cả 6 trục, đặc biệt `Responsive ergonomics`                     |
 | Wave 5 — Oversight         | `Workflow clarity`, `Action discoverability`                    |

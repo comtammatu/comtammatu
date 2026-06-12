@@ -8,9 +8,7 @@ import type { JwtClaims, StaffRole } from "./types";
 import { ADMIN_ROLES } from "./types";
 
 /** Extract claims from Supabase user app_metadata */
-function extractClaims(
-  appMetadata: Record<string, unknown>,
-): JwtClaims | null {
+function extractClaims(appMetadata: Record<string, unknown>): JwtClaims | null {
   const tenantId = appMetadata.tenant_id;
   // JWT hook writes "user_role", raw app_metadata has "role"
   const role = appMetadata.user_role ?? appMetadata.role;
@@ -29,10 +27,11 @@ function extractClaims(
     branch_id: typeof branchId === "number" ? branchId : null,
     user_role: role as StaffRole,
     access_bucket:
-      typeof accessBucket === "string" ? (accessBucket as StaffRole) : undefined,
+      typeof accessBucket === "string"
+        ? (accessBucket as StaffRole)
+        : undefined,
     position: typeof position === "string" ? position : undefined,
-    position_code:
-      typeof positionCode === "string" ? positionCode : undefined,
+    position_code: typeof positionCode === "string" ? positionCode : undefined,
   };
 }
 
@@ -174,19 +173,22 @@ export function resolvePostLoginRedirect(
     moduleKey === "pos" ||
     moduleKey === "kds" ||
     moduleKey === "runner" ||
+    moduleKey === "branch_dashboard" ||
     moduleKey === "branch_settings" ||
     moduleKey === "branch_menu_limits"
   ) {
     const branchMatch = targetUrl.pathname.match(/^\/br\/(\d+)\//);
     const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
 
-    const allowCrossBranchSettings =
-      (moduleKey === "branch_settings" || moduleKey === "branch_menu_limits") &&
+    const allowCrossBranchBranchSurface =
+      (moduleKey === "branch_dashboard" ||
+        moduleKey === "branch_settings" ||
+        moduleKey === "branch_menu_limits") &&
       (claims.user_role === "owner" || claims.user_role === "super_manager");
 
     if (
       routeBranchId === null ||
-      (!allowCrossBranchSettings && claims.branch_id !== routeBranchId)
+      (!allowCrossBranchBranchSurface && claims.branch_id !== routeBranchId)
     ) {
       return fallback;
     }

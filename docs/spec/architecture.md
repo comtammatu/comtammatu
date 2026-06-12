@@ -49,23 +49,26 @@ Tenant (L0, single row: Hộ kinh doanh Cơm Tấm Má Tư)
 ```
 Login → signInWithPassword() → custom_access_token_hook (SECURITY DEFINER)
   → JWT minted with { tenant_id, branch_id, user_role, position }
-  → proxy.ts reads claims (from access_token, not user.app_metadata) → route to role's default page
+  → proxy.ts reads claims (from access_token, not user.app_metadata) → route to post-login target
 
 Every DB query/mutation → RLS → has_permission(branch_id, key) on staff_permissions
 ```
 
 **Auth layer:** `user_role` is derived from `positions.code` and kept for backward compatibility (route-level `canAccess`). Row-level authz runs against the `staff_permissions` grant table via the `has_permission()` SQL helper (owner bypass, temporal validity window, tenant-wide via NULL branch). See `docs/modules/auth.md` for the full model.
 
-### Role → Default Route
+### Role → Post-Login/Fallback Target
 
 Defined in `getDefaultRedirect(claims)` (`packages/shared/src/auth/scope.ts`).
 
-| Role                                                                                                            | Route              |
-| --------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `ADMIN_ROLES` = owner, super_manager                                                                            | `/admin/dashboard` |
-| All others (branch_manager, warehouse_manager, production_manager, cashier, waiter, chef, office) | `/employee`        |
+| Role                                 | Route              |
+| ------------------------------------ | ------------------ |
+| `ADMIN_ROLES` = owner, super_manager | `/admin/dashboard` |
+| All non-admin staff                  | `/employee`        |
 
-POS/KDS are not anyone's default landing — operators reach `/br/[branchId]/pos` or `/kds` via the employee shell or a direct link.
+Root `/` delegates to this same resolver. It does not render a separate hub.
+
+POS/KDS are not anyone's post-login fallback target — operators reach
+`/br/[branchId]/pos` or `/kds` via the employee shell or a direct link.
 
 ## RLS Pattern
 
@@ -118,15 +121,15 @@ flowchart TB
 
 Change ownership:
 
-| Plane       | Owns                                                 | First files to inspect                                                                                                                             |
-| ----------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Control     | Auth, ACL, host/surface routing, branch scope        | `apps/web/proxy.ts`, `packages/shared/src/auth/route-resolution.ts`, `packages/shared/src/auth/module-acl.ts`, `packages/shared/src/auth/scope.ts` |
-| Execution   | Route behavior, Server Actions, realtime UI flows    | `apps/web/app/**`, route-local `actions.ts`, `apps/web/app/_lib/*`                                                                                 |
-| Domain      | Business rules shared across routes/providers        | `packages/shared/src/**`                                                                                                                           |
-| Data        | Schema, RLS, RPCs, generated types, Supabase clients | `supabase/migrations/**`, `packages/database/src/**`                                                                                               |
+| Plane       | Owns                                                       | First files to inspect                                                                                                                             |
+| ----------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Control     | Auth, ACL, host/surface routing, branch scope              | `apps/web/proxy.ts`, `packages/shared/src/auth/route-resolution.ts`, `packages/shared/src/auth/module-acl.ts`, `packages/shared/src/auth/scope.ts` |
+| Execution   | Route behavior, Server Actions, realtime UI flows          | `apps/web/app/**`, route-local `actions.ts`, `apps/web/app/_lib/*`                                                                                 |
+| Domain      | Business rules shared across routes/providers              | `packages/shared/src/**`                                                                                                                           |
+| Data        | Schema, RLS, RPCs, generated types, Supabase clients       | `supabase/migrations/**`, `packages/database/src/**`                                                                                               |
 | UI          | Custom Theme contract, reusable primitives, surface rhythm | `docs/spec/design-system.md`, `packages/ui/src/components/**`, `apps/web/app/components/surface.tsx`                                               |
-| Branch Edge | Local print daemon and branch print/QR behavior      | `apps/print-agent/src/**`, branch settings surfaces                                                                                                |
-| Docs/Ops    | Current source-of-truth, runbooks, active work state | `docs/CODEBASE_MAP.md`, `docs/modules/**`, `docs/runbooks/**`, `tasks/**`                                                                          |
+| Branch Edge | Local print daemon and branch print/QR behavior            | `apps/print-agent/src/**`, branch settings surfaces                                                                                                |
+| Docs/Ops    | Current source-of-truth, runbooks, active work state       | `docs/CODEBASE_MAP.md`, `docs/modules/**`, `docs/runbooks/**`, `tasks/**`                                                                          |
 
 ## Import Boundaries
 
@@ -142,21 +145,26 @@ Change ownership:
 
 Top-level surfaces (see `module-acl.ts` for canonical role lists):
 
-| Surface            | Route                        | Allowed roles (summary)                                                                   |
-| ------------------ | ---------------------------- | ----------------------------------------------------------------------------------------- |
-| Admin              | `/admin/*`                   | owner, super_manager (+ branch_manager on settings sub-routes)                            |
+| Surface            | Route                        | Allowed roles (summary)                                                     |
+| ------------------ | ---------------------------- | --------------------------------------------------------------------------- |
+| Admin              | `/admin/*`                   | owner, super_manager                                                        |
 | Inventory          | `/inventory/*`               | owner, super_manager, branch_manager, warehouse_manager, production_manager |
-| Finance            | `/finance/*`                 | owner, super_manager                                                                      |
-| HR                 | `/hr/*`                      | owner, super_manager                                                                      |
+| Finance            | `/finance/*`                 | owner, super_manager                                                        |
+| HR                 | `/hr/*`                      | owner, super_manager                                                        |
 | Orders             | `/orders`                    | owner, super_manager, branch_manager, cashier                               |
-| Notifications      | `/notifications`             | all staff                                                                                 |
-| POS                | `/br/[branchId]/pos`         | cashier, waiter, branch_manager                                                           |
-| KDS                | `/br/[branchId]/kds`         | chef, branch_manager                                                                      |
+| Notifications      | `/notifications`             | all staff                                                                   |
+| POS                | `/br/[branchId]/pos`         | cashier, waiter, branch_manager                                             |
+| KDS                | `/br/[branchId]/kds`         | chef, branch_manager                                                        |
+| Branch dashboard   | `/br/[branchId]/dashboard`   | owner, super_manager, branch_manager                                        |
 | Branch settings    | `/br/[branchId]/settings/*`  | owner, super_manager, branch_manager                                        |
 | Branch menu limits | `/br/[branchId]/menu-limits` | owner, super_manager, branch_manager, cashier, chef                         |
-| Employee           | `/employee/*`                | all staff                                                                                 |
-| Access denied      | `/access-denied`             | public (rendered with reason copy from `blocked-state.ts`)                                |
-| Payment return     | `/payment/momo/return`       | public (Momo redirect target)                                                             |
+| Employee           | `/employee/*`                | all staff                                                                   |
+| Access denied      | `/access-denied`             | public (rendered with reason copy from `blocked-state.ts`)                  |
+| Payment return     | `/payment/momo/return`       | public (Momo redirect target)                                               |
+
+Role/scope/route boundary is canonical in `docs/spec/role-route-matrix.md`.
+Branch Manager branch setup belongs under `/br/[branchId]/*`, not new
+tenant-admin routes.
 
 ## Infrastructure Strategy
 

@@ -178,7 +178,7 @@ Required fields for producers:
 
 Conditionally required fields:
 
-- `target_branch_id`: required for branch-local work; `null` only for tenant/HQ work.
+- `target_branch_id`: required for branch-local work; `null` only for tenant/tenant work.
 - `body`: required when the title alone does not tell the user what changed.
 - `entity_type` and `entity_id`: required when the event references a business object.
 - `action_url`: required when a safe next-action route exists.
@@ -214,8 +214,8 @@ Producer rules:
 
 - Never trust client-provided `tenant_id`, role, or branch targeting.
 - Branch-local operational tasks should set `target_branch_id`.
-- HQ or tenant-level tasks may set `target_branch_id = null`, but only when all target roles are allowed tenant-wide visibility.
-- If multiple branches need the same work item, create one row per branch unless the work is genuinely HQ-level.
+- tenant or tenant-level tasks may set `target_branch_id = null`, but only when all target roles are allowed tenant-wide visibility.
+- If multiple branches need the same work item, create one row per branch unless the work is genuinely tenant-level.
 
 ## Read State
 

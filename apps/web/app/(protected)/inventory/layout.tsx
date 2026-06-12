@@ -59,15 +59,9 @@ export default async function InventoryLayout({
     (claims.user_role === "super_manager" ||
     claims.user_role === "owner" ||
     claims.user_role === "office"
-      ? "Kho tổng"
+      ? "Kho hàng"
       : "Điểm vận hành");
-  const siteKind: string =
-    defaultBranch?.branch_kind ??
-    (claims.user_role === "super_manager" ||
-    claims.user_role === "owner" ||
-    claims.user_role === "office"
-      ? "central_warehouse"
-      : "branch");
+  const siteKind: string = defaultBranch?.branch_kind ?? "branch";
 
   return (
     <InventoryShell

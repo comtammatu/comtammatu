@@ -1,4 +1,4 @@
-export type SiteKind = "central_warehouse" | "central_kitchen" | "branch";
+export type SiteKind = "branch";
 
 export type ModuleLabelKey =
   | "dashboard"
@@ -17,6 +17,7 @@ export type ModuleLabelKey =
   | "pos"
   | "kds"
   | "runner"
+  | "branch_dashboard"
   | "branch_settings"
   | "branch_menu_limits"
   | "employee"
@@ -44,6 +45,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   pos: "POS",
   kds: "KDS",
   runner: "Màn gọi số",
+  branch_dashboard: "Điều hành chi nhánh",
   branch_settings: "Cài đặt chi nhánh",
   branch_menu_limits: "Hạn mức bán hàng ngày",
   employee: "Trang nhân viên",
@@ -72,6 +74,7 @@ export const APP_COPY_VI = {
   hrWorkspaceSubtitle: "Nhân viên, ca làm, ngày công",
   branchOperationsKds: "Bếp (KDS)",
   branchOperationsRunner: "Màn gọi số",
+  branchCommand: "Điều hành chi nhánh",
   loading: "Đang tải…",
   refresh: "Làm mới",
   noAreaData: "Không có dữ liệu khu vực",
@@ -79,14 +82,10 @@ export const APP_COPY_VI = {
 } as const;
 
 const SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
-  central_warehouse: "Kho tổng",
-  central_kitchen: "Bếp trung tâm",
   branch: "Chi nhánh",
 };
 
 const INVENTORY_SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
-  central_warehouse: "Kho tổng",
-  central_kitchen: "Bếp trung tâm",
   branch: "Kho chi nhánh",
 };
 
@@ -96,21 +95,18 @@ export const ACTIVE_STATE_LABELS_VI = {
 } as const;
 
 export function resolveSiteKind(site: SiteLike): SiteKind {
-  if (site.branch_kind === "central_warehouse") {
-    return "central_warehouse";
-  }
-  if (site.branch_kind === "central_kitchen") {
-    return "central_kitchen";
-  }
+  void site;
   return "branch";
 }
 
 export function getSiteKindLabelVi(siteKind: string): string {
-  return SITE_KIND_LABELS_VI[siteKind as SiteKind] ?? siteKind;
+  void siteKind;
+  return SITE_KIND_LABELS_VI.branch;
 }
 
 export function getInventorySiteKindLabelVi(siteKind: string): string {
-  return INVENTORY_SITE_KIND_LABELS_VI[siteKind as SiteKind] ?? siteKind;
+  void siteKind;
+  return INVENTORY_SITE_KIND_LABELS_VI.branch;
 }
 
 export function getModuleLabelVi(moduleKey: string): string {

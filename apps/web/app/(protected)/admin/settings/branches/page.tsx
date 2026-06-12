@@ -15,7 +15,6 @@ export default async function BranchesPage() {
   const { data: branches } = await supabase
     .from("branches")
     .select("id, name, address, phone, is_active, branch_kind")
-    .order("branch_kind")
     .order("name");
 
   return (

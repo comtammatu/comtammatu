@@ -18,6 +18,7 @@ export default async function FinanceLayout({
           "",
       }}
       role={claims.user_role}
+      branchId={claims.branch_id}
     >
       {children}
     </FinanceShell>

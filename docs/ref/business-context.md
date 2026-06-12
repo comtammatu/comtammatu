@@ -1,6 +1,6 @@
 # Bối cảnh nghiệp vụ — Hộ kinh doanh Cơm Tấm Má Tư
 
-> Last verified: 2026-06-11.
+> Last verified: 2026-06-12.
 
 ## Sản phẩm
 
@@ -87,8 +87,10 @@ Các field này phục vụ HĐĐT, in chứng từ, export kế toán, và đ�
 - Đăng ký HKD: Nghị định 168/2025/NĐ-CP (đăng ký và mã số hộ kinh doanh).
 - Thuế HKD: NQ 198/2025/QH15 (bỏ thuế khoán + miễn lệ phí môn bài từ
   01/01/2026); NĐ 68/2026/NĐ-CP (05/03/2026 — 4 nhóm doanh thu, chính sách
-  thuế + quản lý thuế HKD/CNKD); Luật Thuế GTGT 48/2024/QH15; NQ 204/2025/QH15
-  (giảm GTGT 01/07/2025–31/12/2026).
+  thuế + quản lý thuế HKD/CNKD); NĐ 141/2026/NĐ-CP (29/04/2026 — nâng ngưỡng
+  doanh thu không chịu GTGT/TNCN của HKD lên 1 tỷ/năm, hồi tố 01/01/2026);
+  Luật Thuế GTGT 48/2024/QH15; NQ 204/2025/QH15 + NĐ 174/2025/NĐ-CP (giảm
+  GTGT 01/07/2025–31/12/2026, hết hạn quay về mức gốc nếu không gia hạn).
 - Hóa đơn chứng từ: NĐ 123/2020 (sửa đổi bởi NĐ 70/2025, máy tính tiền từ
   01/06/2025) + TT 32/2025/TT-BTC (thay TT 78/2021 từ 01/06/2025).
 - Kế toán HKD: TT 152/2025/TT-BTC (thay TT 88/2021 từ 01/01/2026, sổ theo

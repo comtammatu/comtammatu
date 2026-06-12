@@ -22,7 +22,7 @@ const VI_DICTIONARY: InventoryDictionary = {
   navigation: {
     home: { long: "Tổng quan" },
     stock: { long: "Tồn kho" },
-    receiving: { short: "Nhập HQ", long: "Nhập hàng HQ" },
+    receiving: { short: "Nhập hàng", long: "Nhập hàng chi nhánh" },
     purchaseOrders: { short: "Đơn đặt hàng", long: "Đơn đặt hàng NCC" },
     grn: { short: "Phiếu nhập", long: "Phiếu nhập kho" },
     supplierInvoices: { long: "Hóa đơn NCC" },
@@ -31,7 +31,7 @@ const VI_DICTIONARY: InventoryDictionary = {
     issues: { short: "Xuất kho", long: "Xuất kho nội bộ" },
     expiry: { short: "Hạn dùng", long: "Hạn sử dụng" },
     reports: { long: "Báo cáo" },
-    production: { long: "Bếp trung tâm" },
+    production: { long: "Sản xuất chi nhánh" },
     ingredients: { long: "Nguyên liệu" },
     suppliers: { long: "Nhà cung cấp" },
     recipes: { short: "Định mức", long: "Định mức món bán" },
@@ -44,7 +44,7 @@ const VI_DICTIONARY: InventoryDictionary = {
   routes: {
     "/inventory": { long: "Tổng quan" },
     "/inventory/stock": { long: "Tồn kho" },
-    "/inventory/receiving": { short: "Nhập HQ", long: "Nhập hàng HQ" },
+    "/inventory/receiving": { short: "Nhập hàng", long: "Nhập hàng chi nhánh" },
     "/inventory/receiving/po": {
       short: "Đơn đặt hàng",
       long: "Danh sách đơn đặt hàng NCC",
@@ -77,7 +77,7 @@ const VI_DICTIONARY: InventoryDictionary = {
       short: "Cảnh báo hạn",
       long: "Cảnh báo hạn sử dụng",
     },
-    "/inventory/production": { long: "Bếp trung tâm" },
+    "/inventory/production": { long: "Sản xuất chi nhánh" },
     "/inventory/reports": { long: "Báo cáo" },
     "/inventory/ingredients": { long: "Nguyên liệu" },
     "/inventory/recipes": { short: "Định mức", long: "Định mức món bán" },

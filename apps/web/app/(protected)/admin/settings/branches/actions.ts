@@ -18,9 +18,6 @@ const branchSchema = z.object({
   name: z.string().min(1, { error: "Tên điểm vận hành không được để trống" }),
   address: optionalText,
   phone: optionalText,
-  branchKind: z
-    .enum(["branch", "central_kitchen", "central_warehouse"])
-    .default("branch"),
 });
 
 const updateBranchSchema = branchSchema.extend({
@@ -41,7 +38,6 @@ export const createBranch = withFormAction(
       name: fd.get("name"),
       address: fd.get("address"),
       phone: fd.get("phone"),
-      branchKind: fd.get("branchKind"),
     }),
   },
   async (data, { supabase, claims }) => {
@@ -50,7 +46,7 @@ export const createBranch = withFormAction(
       name: data.name,
       address: data.address || null,
       phone: data.phone || null,
-      branch_kind: data.branchKind,
+      branch_kind: "branch",
     });
 
     if (error) {
@@ -84,7 +80,6 @@ export const updateBranch = withFormAction(
       name: fd.get("name"),
       address: fd.get("address"),
       phone: fd.get("phone"),
-      branchKind: fd.get("branchKind"),
     }),
   },
   async (data, { supabase, claims }) => {
@@ -94,7 +89,7 @@ export const updateBranch = withFormAction(
         name: data.name,
         address: data.address || null,
         phone: data.phone || null,
-        branch_kind: data.branchKind,
+        branch_kind: "branch",
       })
       .eq("id", data.id)
       .eq("tenant_id", claims.tenant_id);

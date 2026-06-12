@@ -76,7 +76,6 @@ export function CreateTransferDialog({
   branches,
   ingredients,
   locations,
-  hqBranchId,
   userBranchId,
   userRole,
   onCreated,
@@ -86,29 +85,22 @@ export function CreateTransferDialog({
   branches: BranchForTransfer[];
   ingredients: IngredientRow[];
   locations: InventoryLocation[];
-  hqBranchId: number | null;
   userBranchId: number | null;
   userRole: StaffRole;
   onCreated: (id: number) => void;
 }) {
   const isBranchManager = userRole === "branch_manager";
-  const isProcurementBranch = (b: BranchForTransfer) =>
-    b.branch_kind === "central_warehouse" ||
-    b.branch_kind === "central_kitchen";
-  const operational = branches.filter((b) => !isProcurementBranch(b));
+  const operational = branches.filter(
+    (b) => (b.branch_kind ?? "branch") === "branch",
+  );
   const currentBranch =
     userBranchId == null
       ? null
       : (branches.find((b) => b.id === userBranchId) ?? null);
   const currentBranchKind = currentBranch?.branch_kind ?? null;
-  const isCentralWarehouse = currentBranchKind === "central_warehouse";
-  const isCentralKitchen = currentBranchKind === "central_kitchen";
   const canCreateInbound = false;
   const canCreateOutbound =
-    !isBranchManager &&
-    ((userBranchId == null && hqBranchId != null) ||
-      isCentralWarehouse ||
-      isCentralKitchen);
+    !isBranchManager && userBranchId != null && currentBranchKind === "branch";
   const canInternalTransfer =
     userBranchId != null &&
     currentBranchKind === "branch" &&
@@ -140,16 +132,11 @@ export function CreateTransferDialog({
         ? "grid-cols-2"
         : "grid-cols-3";
 
-  const isUserHq = currentBranchKind === "central_warehouse";
   const isUserOperational = currentBranchKind === "branch";
-  const outboundSourceBranchId = userBranchId ?? hqBranchId;
+  const outboundSourceBranchId = userBranchId;
   const outboundDestinationOptions = branches.filter((branch) => {
     if (!branch.is_active || branch.id === outboundSourceBranchId) return false;
-    if (isCentralKitchen) return branch.branch_kind === "branch";
-    return (
-      branch.branch_kind === "central_kitchen" ||
-      branch.branch_kind === "branch"
-    );
+    return (branch.branch_kind ?? "branch") === "branch";
   });
 
   const myBranchName = useMemo(() => {
@@ -373,10 +360,9 @@ export function CreateTransferDialog({
     } else if (slipKind === "inbound") {
       // Inbound: receiving TO user's branch (or selected branch)
       toId = userBranchId ?? (Number(inboundToBranchId) || undefined);
-      fromId = (Number(inboundFromBranchId) || hqBranchId) ?? undefined;
+      fromId = Number(inboundFromBranchId) || undefined;
     } else {
-      // Pilot transfer workflow is source-created: CW/CK creates outbound,
-      // destination branch receives after transit.
+      // Transfer workflow is source-created; destination branch receives after transit.
       fromId = outboundSourceBranchId ?? undefined;
       toId = Number(outboundToBranchId) || undefined;
     }
@@ -408,11 +394,7 @@ export function CreateTransferDialog({
         !intraToLocationId ||
         intraFromLocationId === intraToLocationId)) ||
     (slipKind === "outbound" && (!canCreateOutbound || !outboundToBranchId)) ||
-    (slipKind === "inbound" &&
-      !isUserOperational &&
-      !isUserHq &&
-      !inboundToBranchId) ||
-    (slipKind === "inbound" && isUserHq && !inboundFromBranchId) ||
+    (slipKind === "inbound" && !isUserOperational && !inboundToBranchId) ||
     draftLines.length === 0;
 
   return (
@@ -465,11 +447,9 @@ export function CreateTransferDialog({
                 <p className="text-sm text-muted-foreground">
                   {isUserOperational && myBranchName
                     ? messages.inventory.transfer.inboundToBranch(myBranchName)
-                    : isUserHq
-                      ? messages.inventory.transfer.inboundToHq
-                      : messages.inventory.transfer.inboundToSelected}
+                    : messages.inventory.transfer.inboundToSelected}
                 </p>
-                {!isUserOperational && !isUserHq && (
+                {!isUserOperational && (
                   <div className="space-y-1.5">
                     <Label>
                       {messages.inventory.transfer.receivingWarehouseRequired}
@@ -495,39 +475,13 @@ export function CreateTransferDialog({
                     </Select>
                   </div>
                 )}
-                {isUserHq && (
-                  <div className="space-y-1.5">
-                    <Label>
-                      {messages.inventory.transfer.sendingWarehouseRequired}
-                    </Label>
-                    <Select
-                      value={inboundFromBranchId}
-                      onValueChange={setInboundFromBranchId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            messages.inventory.transfer.chooseSendingWarehouse
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {operational.map((b) => (
-                          <SelectItem key={b.id} value={String(b.id)}>
-                            {formatBranchSiteLabel(b)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
               </TabsContent>
             )}
             <TabsContent value="outbound" className="space-y-3 pt-2">
               <p className="text-sm text-muted-foreground">
                 {myBranchName
                   ? messages.inventory.transfer.outboundFromBranch(myBranchName)
-                  : messages.inventory.transfer.outboundFromHq}
+                  : messages.inventory.transfer.outboundFromSelected}
               </p>
               <div className="space-y-1.5">
                 <Label>

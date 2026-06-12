@@ -87,9 +87,7 @@ function getWorkTone(status: TodayWorkStatus) {
 }
 
 function canRequestCheckout(state: TodayWorkState): boolean {
-  return (
-    state.managerAttendanceOnly || state.checklist.requiredRemaining === 0
-  );
+  return state.managerAttendanceOnly || state.checklist.requiredRemaining === 0;
 }
 
 function getWorkTitle(state: TodayWorkState): string {
@@ -137,7 +135,7 @@ export default async function EmployeePage() {
   const state = await getTodayWorkState();
   const branchId = state.branchId;
 
-  let branchIsHq = false;
+  let branchIsOperational = false;
   if (branchId) {
     const { data } = await supabase
       .from("branches")
@@ -145,9 +143,7 @@ export default async function EmployeePage() {
       .eq("id", branchId)
       .eq("tenant_id", claims.tenant_id)
       .maybeSingle();
-    branchIsHq =
-      data?.branch_kind === "central_warehouse" ||
-      data?.branch_kind === "central_kitchen";
+    branchIsOperational = data?.branch_kind === "branch";
   }
 
   // Checkout requests BLOCK the requesting employee until a manager
@@ -187,7 +183,7 @@ export default async function EmployeePage() {
   // POS/KDS/Runner entry points always render by permission — proxy ACL is
   // the access gate. Hiding them by clock state locks staff out.
   const operationHandoffs =
-    branchId && !branchIsHq
+    branchId && branchIsOperational
       ? OPERATION_HANDOFFS.filter((item) =>
           canAccess(claims.user_role, item.moduleKey),
         ).map((item) => ({

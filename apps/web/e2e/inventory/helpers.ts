@@ -1,6 +1,6 @@
 /**
  * Inventory E2E helpers — service-role Supabase utilities for seeding and
- * verifying Kho Tổng / Bếp Trung Tâm data in tests.
+ * verifying branch inventory data in tests.
  *
  * Uses the same pattern as e2e/helpers/supabase.ts (service-role client,
  * cleanup closures returned alongside data).
@@ -9,7 +9,7 @@
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  *   E2E_CASHIER_EMAIL / E2E_CASHIER_PASSWORD   — used for auth.setup.ts
- *   E2E_INVENTORY_MANAGER_EMAIL (optional)     — warehouse_manager at a CW
+ *   E2E_INVENTORY_MANAGER_EMAIL (optional)     — warehouse_manager at a branch
  *   E2E_INVENTORY_MANAGER_PASSWORD (optional)  — defaults to E2E_CASHIER_PASSWORD
  */
 
@@ -51,7 +51,7 @@ export async function resolveTenantId(
 
 // ─── Branch helpers ───────────────────────────────────────────────────────────
 
-export type BranchKind = "central_warehouse" | "central_kitchen" | "branch";
+export type BranchKind = "branch";
 
 export interface TestBranch {
   id: number;
@@ -209,11 +209,7 @@ export async function ensureInventoryLocation(
   }
 
   const desiredLocationKind =
-    locationKind === "kitchen"
-      ? "kitchen"
-      : locationKind === "receive" && branch.branch_kind === "central_kitchen"
-        ? "kitchen"
-        : "warehouse";
+    locationKind === "kitchen" ? "kitchen" : "warehouse";
 
   let existingQuery = supabase
     .from("inventory_locations")
@@ -602,7 +598,7 @@ export async function resolveUserByEmail(
 }
 
 /**
- * Resolves the inventory manager user (warehouse_manager scoped to a CW).
+ * Resolves the inventory manager user (warehouse_manager scoped to a branch).
  * Falls back to the cashier user (with elevated service-role writes) for
  * test environments that have only one test account seeded.
  */

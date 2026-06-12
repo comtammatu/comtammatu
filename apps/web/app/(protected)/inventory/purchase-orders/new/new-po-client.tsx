@@ -109,7 +109,7 @@ export function NewPoClient({
   const [lines, setLines] = useState<LocalLine[]>([]);
   const [isPending, startTransition] = useTransition();
 
-  // Suggestions state — scoped to a selected procurement branch (CW or CK).
+  // Suggestions state — scoped to a selected branch.
   const [branchId, setBranchId] = useState<number | null>(initialBranchId);
   const [suggestions, setSuggestions] =
     useState<PoSuggestionRow[]>(initialSuggestions);

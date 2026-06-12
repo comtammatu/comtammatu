@@ -1,8 +1,8 @@
-# SOP Inventory Pilot — HQ / Bếp Trung Tâm / Kho Chi Nhánh / Bếp Chi Nhánh
+# SOP Inventory Pilot — tenant / chi nhánh / Kho Chi Nhánh / Bếp Chi Nhánh
 
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư
 > Phạm vi: Luồng vận hành pilot cho nguyên liệu và thành phẩm
-> Mô hình: `Kho Tổng / CW`, `Bếp trung tâm / CK`, `Kho chi nhánh`, `Bếp chi nhánh`
+> Mô hình: `chi nhánh`, `chi nhánh`, `Kho chi nhánh`, `Bếp chi nhánh`
 
 ---
 
@@ -32,80 +32,80 @@ Khi SOP và quyền hệ thống có vẻ mâu thuẫn, ưu tiên đọc thêm:
 Các nhãn dưới đây là **vai trò vận hành** để training.
 Mapping với role thật trong hệ thống:
 
-- HQ procurement / HQ inventory operator: chủ yếu map vào `super_manager`
+- tenant procurement / tenant inventory operator: chủ yếu map vào `super_manager`
 - Central kitchen operator: hiện vẫn map vào `super_manager`
 - Branch receiving / stocktake operator: map vào `branch_manager`
-- Oversight: `` hoặc `super_manager` tùy scope hiện tại
+- Oversight: ``hoặc`super_manager` tùy scope hiện tại
 
 Nếu cần chi tiết quyền xem/tạo/xác nhận, xem [inventory-rbac-matrix.md](inventory-rbac-matrix.md).
 
-| Vai trò                            | Trách nhiệm chính                                                                                  |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Thủ kho Kho Tổng / CW              | Nhập hàng từ NCC, GRN, quản lý tồn nguyên liệu CW, xuất hàng sang bếp trung tâm hoặc kho chi nhánh |
-| Bếp trưởng / Quản lý bếp trung tâm | Nhận nguyên liệu, tạo lệnh sản xuất, xác nhận thành phẩm, xuất thành phẩm sang kho chi nhánh       |
-| Quản lý chi nhánh                  | Nhận hàng vào kho chi nhánh, cấp phát xuống bếp chi nhánh, xác nhận chênh lệch, kiểm kê cuối ngày  |
-| Kế toán / OPS                      | Đối soát giá vốn, hóa đơn NCC, luân chuyển nội bộ, báo cáo chênh lệch                              |
+| Vai trò                        | Trách nhiệm chính                                                                                     |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Thủ kho chi nhánh              | Nhập hàng từ NCC, GRN, quản lý tồn nguyên liệu chi nhánh, xuất hàng sang chi nhánh hoặc kho chi nhánh |
+| Bếp trưởng / Quản lý chi nhánh | Nhận nguyên liệu, tạo lệnh sản xuất, xác nhận thành phẩm, xuất thành phẩm sang kho chi nhánh          |
+| Quản lý chi nhánh              | Nhận hàng vào kho chi nhánh, cấp phát xuống bếp chi nhánh, xác nhận chênh lệch, kiểm kê cuối ngày     |
+| Kế toán / OPS                  | Đối soát giá vốn, hóa đơn NCC, luân chuyển nội bộ, báo cáo chênh lệch                                 |
 
 ## 3. Chứng từ chuẩn
 
 | Bước                                     | Chứng từ / thao tác hệ thống  | Kết quả kho                                                                          |
 | ---------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------ |
-| Mua từ NCC                               | `PO`, `GRN`                   | Tăng tồn nguyên liệu tại CW hoặc CK                                                  |
-| CW cấp phát cho bếp trung tâm            | `stock_transfer`              | CW giảm, bếp trung tâm tăng nguyên liệu                                              |
-| CW cấp phát cho kho chi nhánh            | `stock_transfer`              | CW giảm, kho chi nhánh tăng tồn                                                      |
-| Bếp trung tâm sản xuất                   | `production_order`            | Bếp giảm nguyên liệu, tăng thành phẩm                                                |
-| Bếp trung tâm cấp phát cho kho chi nhánh | `stock_transfer`              | Bếp giảm thành phẩm, kho chi nhánh tăng tồn                                          |
+| Mua từ NCC                               | `PO`, `GRN`                   | Tăng tồn nguyên liệu tại chi nhánh hoặc chi nhánh                                    |
+| chi nhánh cấp phát cho chi nhánh         | `stock_transfer`              | chi nhánh giảm, chi nhánh tăng nguyên liệu                                           |
+| chi nhánh cấp phát cho kho chi nhánh     | `stock_transfer`              | chi nhánh giảm, kho chi nhánh tăng tồn                                               |
+| Sản xuất tại chi nhánh                   | `production_order`            | Tồn nguyên liệu giảm, thành phẩm tăng                                                |
+| chi nhánh cấp phát cho kho chi nhánh     | `stock_transfer`              | Bếp giảm thành phẩm, kho chi nhánh tăng tồn                                          |
 | Kho chi nhánh cấp phát cho bếp chi nhánh | intra-branch `stock_transfer` | Kho chi nhánh giảm; bếp chi nhánh/default consumption tăng trong cùng site chi nhánh |
 | Chi nhánh bán hàng                       | POS / order completed         | Site chi nhánh giảm tồn theo tiêu hao                                                |
 | Kiểm kê                                  | `stocktake` / `adjustment`    | Điều chỉnh về tồn thực tế                                                            |
 
 ## 4. Quy trình chuẩn
 
-### 4.1 Nhập nguyên liệu về Kho Tổng hoặc Bếp Trung Tâm
+### 4.1 Nhập nguyên liệu về chi nhánh
 
-1. Tạo `PO` cho nhà cung cấp, gắn với CW hoặc CK.
-2. Khi hàng tới, tạo `GRN` tại CW hoặc CK.
+1. Tạo `PO` cho nhà cung cấp, gắn với chi nhánh hoặc chi nhánh.
+2. Khi hàng tới, tạo `GRN` tại chi nhánh hoặc chi nhánh.
 3. Kiểm số lượng, đơn giá, batch, hạn dùng, nhiệt độ nhận hàng nếu cần.
-4. Xác nhận `GRN` để cộng tồn CW/CK và cập nhật WAC.
+4. Xác nhận `GRN` để cộng tồn chi nhánh/chi nhánh và cập nhật WAC.
 5. Nếu Finance cần đối soát ngay, nhập `supplier_invoice` để làm 3-way matching với `PO` và `GRN`; đây là handoff Finance P1, không chặn Inventory pilot.
 
 Điểm kiểm soát:
 
-- GRN chỉ được tạo tại site có `branch_kind IN ('central_warehouse', 'central_kitchen')`.
+- GRN chỉ được tạo tại site có `branch_kind IN ('branch', 'branch')`.
 - Không tạo `GRN` ở chi nhánh vận hành.
 - Nếu thực nhận khác PO, vẫn ghi theo số thực nhận trên `GRN`.
 
-### 4.2 Xuất hàng từ Kho Tổng
+### 4.2 Xuất hàng từ kho chi nhánh
 
-CW có thể cấp phát theo hai hướng hợp lệ trong pilot:
+chi nhánh có thể cấp phát theo hai hướng hợp lệ trong pilot:
 
-- **CW → Bếp trung tâm** khi cần sản xuất tập trung.
-- **CW → Kho chi nhánh** khi hàng không cần qua bếp trung tâm.
+- **chi nhánh → chi nhánh** khi cần sản xuất tập trung.
+- **chi nhánh → Kho chi nhánh** khi hàng không cần qua chi nhánh.
 
-#### 4.2.a CW -> Bếp trung tâm
+#### 4.2.a chi nhánh -> chi nhánh
 
-1. Thủ kho CW tạo `stock_transfer` từ CW sang bếp trung tâm.
-2. Xác nhận xuất để hệ thống trừ tồn CW.
-3. Bếp trung tâm xác nhận nhận hàng để hệ thống cộng tồn nguyên liệu tại bếp.
+1. Thủ kho chi nhánh tạo `stock_transfer` từ chi nhánh sang chi nhánh.
+2. Xác nhận xuất để hệ thống trừ tồn chi nhánh.
+3. chi nhánh xác nhận nhận hàng để hệ thống cộng tồn nguyên liệu tại bếp.
 
 Điểm kiểm soát:
 
 - Chỉ chuyển nguyên liệu đầu vào ở bước này.
 - Nếu có thiếu hụt khi nhận, ghi nhận theo số thực nhận và lý do.
 
-#### 4.2.b CW -> Kho chi nhánh
+#### 4.2.b chi nhánh -> Kho chi nhánh
 
-1. Thủ kho CW tạo `stock_transfer` từ CW sang kho chi nhánh.
-2. Xác nhận xuất để hệ thống trừ tồn CW.
+1. Thủ kho chi nhánh tạo `stock_transfer` từ chi nhánh sang kho chi nhánh.
+2. Xác nhận xuất để hệ thống trừ tồn chi nhánh.
 3. Quản lý chi nhánh xác nhận nhận hàng để hệ thống cộng tồn tại site chi nhánh.
 
 Điểm kiểm soát:
 
-- Đây là flow hợp lệ, không bắt buộc phải đi qua bếp trung tâm.
+- Đây là flow hợp lệ, không bắt buộc phải đi qua chi nhánh.
 - Dùng cho nguyên liệu hoặc hàng phù hợp vận hành chi nhánh.
 - Nếu có thiếu hụt khi nhận, ghi đúng số thực nhận và lý do.
 
-### 4.3 Sản xuất tại bếp trung tâm
+### 4.3 Sản xuất tại chi nhánh
 
 1. Bếp trưởng tạo `production_order`.
 2. Chọn thành phẩm `finished_good` và số lượng cần sản xuất.
@@ -118,19 +118,19 @@ CW có thể cấp phát theo hai hướng hợp lệ trong pilot:
 
 Điểm kiểm soát:
 
-- Chỉ site `central_kitchen` mới được xác nhận lệnh sản xuất.
+- Chỉ site `branch` mới được xác nhận lệnh sản xuất.
 - Nếu thiếu nguyên liệu hoặc thiếu BOM, không xác nhận lệnh.
 
-### 4.4 Xuất thành phẩm từ bếp trung tâm sang kho chi nhánh
+### 4.4 Xuất thành phẩm từ chi nhánh sang kho chi nhánh
 
-1. Bếp trung tâm tạo `stock_transfer` từ bếp sang kho chi nhánh.
+1. chi nhánh tạo `stock_transfer` từ bếp sang kho chi nhánh.
 2. Xác nhận xuất để trừ tồn thành phẩm tại bếp.
 3. Chi nhánh xác nhận nhận hàng để cộng tồn tại site chi nhánh.
 
 Điểm kiểm soát:
 
 - Chỉ chuyển `finished_good` ở bước này.
-- Không coi bước này là con đường bắt buộc cho mọi hàng đi chi nhánh; HQ có thể chuyển thẳng về kho chi nhánh nếu phù hợp.
+- Không coi bước này là con đường bắt buộc cho mọi hàng đi chi nhánh; tenant có thể chuyển thẳng về kho chi nhánh nếu phù hợp.
 
 ### 4.5 Kho chi nhánh cấp phát cho bếp chi nhánh
 
@@ -171,24 +171,24 @@ CW có thể cấp phát theo hai hướng hợp lệ trong pilot:
 
 ## 5. Ngoại lệ và cách xử lý
 
-| Tình huống                          | Cách xử lý                                                                     |
-| ----------------------------------- | ------------------------------------------------------------------------------ |
-| NCC giao thiếu / giao dư            | Ghi đúng số thực nhận trên `GRN`, không sửa PO để che lệch                     |
-| Hàng cận date / hỏng                | Dùng `adjustment` hoặc write-off theo lý do rõ ràng                            |
-| Chi nhánh nhận thiếu hàng từ bếp    | Xác nhận theo số thực nhận, ghi chú chênh lệch để OPS đối soát                 |
-| Chi nhánh nhận hàng trực tiếp từ HQ | Flow hợp lệ, không cần tạo bước qua bếp trung tâm chỉ để hợp thức hóa chứng từ |
-| Thiếu BOM cho thành phẩm            | Không xác nhận sản xuất; cập nhật `production_recipes` trước                   |
-| Thiếu nguyên liệu ở bếp trung tâm   | Tạo transfer bổ sung từ HQ, không âm kho thủ công                              |
+| Tình huống                              | Cách xử lý                                                                 |
+| --------------------------------------- | -------------------------------------------------------------------------- |
+| NCC giao thiếu / giao dư                | Ghi đúng số thực nhận trên `GRN`, không sửa PO để che lệch                 |
+| Hàng cận date / hỏng                    | Dùng `adjustment` hoặc write-off theo lý do rõ ràng                        |
+| Chi nhánh nhận thiếu hàng từ bếp        | Xác nhận theo số thực nhận, ghi chú chênh lệch để OPS đối soát             |
+| Chi nhánh nhận hàng trực tiếp từ tenant | Flow hợp lệ, không cần tạo bước qua chi nhánh chỉ để hợp thức hóa chứng từ |
+| Thiếu BOM cho thành phẩm                | Không xác nhận sản xuất; cập nhật `production_recipes` trước               |
+| Thiếu nguyên liệu ở chi nhánh           | Tạo transfer bổ sung từ tenant, không âm kho thủ công                      |
 
 ## 6. Checklist cuối ngày
 
-### Kho Tổng / CW
+### chi nhánh
 
 - Tất cả `GRN` trong ngày đã confirm.
 - `supplier_invoice` mới được ghi nhận nếu Finance P1 đang vận hành; không coi là điều kiện đóng ngày của Inventory pilot.
-- Không còn transfer CW → bếp trung tâm hoặc CW → kho chi nhánh bị treo vô lý.
+- Không còn transfer chi nhánh → chi nhánh hoặc chi nhánh → kho chi nhánh bị treo vô lý.
 
-### Bếp trung tâm / CK
+### chi nhánh
 
 - Tất cả `production_order` trong ngày đã ở `completed` hoặc `cancelled`.
 - Không còn transfer đi chi nhánh treo vô lý.

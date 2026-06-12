@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing inventory issue detail surface keeps localized JSX copy until message-catalog extraction */
+
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -104,26 +106,11 @@ function getWarehouseUnit(ingredient: IngredientRow) {
   return ingredient.purchase_unit || ingredient.unit;
 }
 
-// kitchen_use retired 2026-04-25 (replaced by intra-branch stock_transfer).
-// Label for consumption flips by branch_kind:
-//   central_warehouse / central_kitchen → "Hao hụt kho"
-//   branch                              → "Tiêu hao"
 function getIssueSurface(
   issueType: string,
   branchKind: string | null | undefined,
 ) {
-  const isStorage =
-    branchKind === "central_warehouse" || branchKind === "central_kitchen";
-
-  if (issueType === "consumption" && isStorage) {
-    return {
-      eyebrow: "Hao hụt kho",
-      label: "Phiếu hao hụt",
-      confirmTitle: "Xác nhận hao hụt kho?",
-      confirmAction: "Xác nhận hao hụt",
-      noteLabel: "Ghi chú phiếu hao hụt",
-    };
-  }
+  void branchKind;
 
   if (issueType === "writeoff") {
     return {

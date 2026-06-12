@@ -24,6 +24,7 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Architecture decisions: `docs/plan/decisions.md`
 - Active ADRs: `docs/plan/adr/`
 - System architecture: `docs/spec/architecture.md`
+- Role/scope/route matrix: `docs/spec/role-route-matrix.md`
 - Database schema source ladder: `docs/spec/database-schema.md`
 - Design system contract: `docs/spec/design-system.md`
 - Inventory overview diagrams: `docs/spec/inventory-overview-diagrams.md`

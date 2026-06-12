@@ -241,7 +241,7 @@ export const createGrnDraft = withAction(
     if (!branches.some((branch) => branch.id === targetBranchId)) {
       return {
         success: false,
-        error: "Chi nhánh không hợp lệ (phải là Kho Tổng hoặc Bếp Trung Tâm).",
+        error: "Chi nhánh không hợp lệ.",
       };
     }
 

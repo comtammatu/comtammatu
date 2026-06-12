@@ -206,8 +206,8 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeHomeSource,
-    /const operationHandoffs =\s*branchId && !branchIsHq\s*\?\s*OPERATION_HANDOFFS\.filter/,
-    "Operation handoffs stay ACL-gated and hidden on HQ-kind branches",
+    /const operationHandoffs =\s*branchId && branchIsOperational\s*\?\s*OPERATION_HANDOFFS\.filter/,
+    "Operation handoffs stay ACL-gated and require an operational branch",
   );
   const operationHandoffSource =
     employeeHomeSource.match(

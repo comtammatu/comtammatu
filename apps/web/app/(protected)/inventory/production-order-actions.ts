@@ -13,9 +13,9 @@ import { PRODUCTION_ERROR_CODES } from "./production-types";
 import type { ProductionShortageRow } from "./production-types";
 import {
   idSchema,
-  isCentralKitchenScopedRole,
+  isProductionSiteScopedRole,
   PRODUCTION_ROLES,
-  requireCentralKitchenBranch,
+  requireProductionBranch,
   type RpcClient,
 } from "./_lib/production-shared";
 
@@ -97,14 +97,14 @@ export async function fetchProductionOrders(): Promise<
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  if (isCentralKitchenScopedRole(claims.user_role)) {
+  if (isProductionSiteScopedRole(claims.user_role)) {
     if (claims.branch_id == null) {
       return {
         success: false,
-        error: "Tài khoản chưa được gán bếp trung tâm.",
+        error: "Tài khoản chưa được gán chi nhánh sản xuất.",
       };
     }
-    const access = await requireCentralKitchenBranch(
+    const access = await requireProductionBranch(
       supabase,
       claims.tenant_id,
       claims.branch_id,
@@ -139,10 +139,10 @@ export async function fetchProductionOrders(): Promise<
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });
 
-  // Branch-scoped production managers see only their own CK branch's orders.
+  // Branch-scoped production managers see only their own branch's orders.
   // Tenant-wide roles keep full tenant visibility.
   if (
-    isCentralKitchenScopedRole(claims.user_role) &&
+    isProductionSiteScopedRole(claims.user_role) &&
     claims.branch_id != null
   ) {
     ordersQuery = ordersQuery.eq("branch_id", claims.branch_id);
@@ -195,7 +195,7 @@ export async function fetchProductionOrders(): Promise<
   });
 
   // Draft orders haven't been through the RPC, so unit_cost_at_production is
-  // still null. Estimate as BOM × WAC at the central kitchen (mirrors the
+  // still null. Estimate as BOM × WAC at the branch (mirrors the
   // confirm_production_order RPC) so the UI can show an estimated total
   // cost before confirmation.
   const draftFgIds = new Set<number>();
@@ -219,7 +219,7 @@ export async function fetchProductionOrders(): Promise<
         .from("stock_levels")
         .select("ingredient_id, avg_unit_cost, branches!inner ( branch_kind )")
         .eq("tenant_id", claims.tenant_id)
-        .eq("branches.branch_kind", "central_kitchen")
+        .eq("branches.branch_kind", "branch")
         .not("avg_unit_cost", "is", null),
     ]);
 
@@ -318,7 +318,7 @@ export const createProductionOrder = withAction(
       ) {
         return {
           success: false,
-          error: "Bếp trung tâm hoặc thành phẩm chưa hợp lệ.",
+          error: "Chi nhánh sản xuất hoặc thành phẩm chưa hợp lệ.",
         };
       }
       if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
@@ -358,7 +358,7 @@ export async function confirmProductionOrder(
         return {
           success: false,
           error:
-            "Tài khoản chưa được cấp quyền xác nhận sản xuất tại bếp trung tâm này.",
+            "Tài khoản chưa được cấp quyền xác nhận sản xuất tại chi nhánh này.",
         };
       }
       return {
@@ -372,7 +372,7 @@ export async function confirmProductionOrder(
         return {
           success: false,
           error:
-            "Bếp trung tâm chưa có kho nhận mặc định. Tạo Inventory Location với 'Mặc định nhận hàng'.",
+            "Chi nhánh chưa có kho nhận mặc định. Tạo Inventory Location với 'Mặc định nhận hàng'.",
         };
       }
       if (message.includes("production_order_not_found")) {
@@ -396,8 +396,8 @@ export async function confirmProductionOrder(
         const shortages = parseShortagesDetail(error.details);
         const summary =
           shortages.length > 0
-            ? `Thiếu ${shortages.length} nguyên liệu trong bếp trung tâm.`
-            : "Không đủ tồn kho nguyên liệu trong bếp trung tâm để sản xuất lệnh này.";
+            ? `Thiếu ${shortages.length} nguyên liệu trong chi nhánh.`
+            : "Không đủ tồn kho nguyên liệu trong chi nhánh để sản xuất lệnh này.";
         return {
           success: false,
           error: summary,
@@ -427,10 +427,10 @@ export async function confirmProductionOrder(
           error: "Chi phí sản xuất tính ra giá trị âm.",
         };
       }
-      if (message.includes("branch_must_be_central_kitchen")) {
+      if (message.includes("branch_must_be_operational")) {
         return {
           success: false,
-          error: "Chi nhánh không phải bếp trung tâm.",
+          error: "Chi nhánh sản xuất không hợp lệ.",
         };
       }
       if (message.includes("production_item_must_be_finished_good")) {

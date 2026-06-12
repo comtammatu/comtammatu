@@ -183,13 +183,14 @@ export async function proxy(request: NextRequest) {
     // Branch-scoped protected routes enforce
     // URL branchId matches the user's assigned branch_id. Tenant-level roles
     // (owner/super_manager) may traverse any branch's settings.
-    // POS/KDS also require the branch be operational (not warehouse/central_kitchen).
+    // POS/KDS also require the branch record to be active and usable.
     // The exact Runner customer board path is public and bypasses proxy auth;
     // keep runner here only for any future non-public runner child route.
     if (
       moduleKey === "pos" ||
       moduleKey === "kds" ||
       moduleKey === "runner" ||
+      moduleKey === "branch_dashboard" ||
       moduleKey === "branch_settings" ||
       moduleKey === "branch_menu_limits"
     ) {
@@ -202,7 +203,8 @@ export async function proxy(request: NextRequest) {
           "super_manager",
         ];
         const allowCrossBranch =
-          (moduleKey === "branch_settings" ||
+          (moduleKey === "branch_dashboard" ||
+            moduleKey === "branch_settings" ||
             moduleKey === "branch_menu_limits") &&
           crossBranchRoles.includes(claims.user_role);
 
@@ -229,14 +231,11 @@ export async function proxy(request: NextRequest) {
             .eq("tenant_id", claims.tenant_id)
             .maybeSingle();
           const kind = branchRow?.branch_kind;
-          if (
-            branchRow &&
-            (kind === "central_warehouse" || kind === "central_kitchen")
-          ) {
+          if (branchRow && kind !== "branch") {
             return redirectToAccessDenied(
               request,
               response,
-              "central-warehouse-branch-restricted",
+              "branch-surface-restricted",
             );
           }
 

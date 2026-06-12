@@ -22,8 +22,8 @@ Chạy runbook này cùng với:
 
 Thiết bị ưu tiên:
 
-- `HQ / super_manager`: desktop-first
-- `Bếp trung tâm`: tablet + desktop
+- `tenant / super_manager`: desktop-first
+- `chi nhánh`: tablet + desktop
 - `Chi nhánh / branch_manager`: tablet + mobile trước, desktop sau
 
 ## 0b. Wave 0 — Kickoff bắt buộc
@@ -110,8 +110,8 @@ Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md
 
 Chạy flow smoke theo persona + device, không chỉ theo route rời rạc:
 
-- HQ procurement: desktop
-- Bếp trung tâm: tablet trước, desktop đối chiếu
+- tenant procurement: desktop
+- chi nhánh: tablet trước, desktop đối chiếu
 - Chi nhánh: tablet trước, mobile ergonomics riêng
 - Oversight (``, `owner`): desktop
 
@@ -122,22 +122,22 @@ Mỗi flow phải log:
 - step kế tiếp user có hiểu được không
 - tác động dữ liệu/downstream có quan sát được không
 
-### 3.1 Procurement at HQ
+### 3.1 Procurement at tenant
 
 - Tạo / mở `PO`
 - `draft` có thể `Gửi PO` / `Hủy PO`
 - Từ `PO` đã gửi hoặc nhận dở, tạo `GRN` thật
 - Confirm `GRN`
-- Kiểm tra tồn HQ tăng đúng
+- Kiểm tra tồn tenant tăng đúng
 - Nếu Finance P1 được bật, nhập `supplier_invoice` và recompute matching như một handoff riêng
 - Không coi ghi nhận thanh toán / AP aging là pilot gate của Inventory
 - Kiểm dashboard và `Receiving` có dẫn đúng từng bước PO -> GRN, không bắt user tự đoán bước tồn kho kế tiếp
 
-### 3.2 HQ outbound transfer
+### 3.2 tenant outbound transfer
 
 - Smoke ít nhất một trong hai hướng đang bị ảnh hưởng:
-- `HQ -> Bếp trung tâm`
-- `HQ -> Kho chi nhánh`
+- `tenant -> chi nhánh`
+- `tenant -> Kho chi nhánh`
 - Tạo transfer
 - Confirm ship
 - Mark in transit
@@ -156,7 +156,7 @@ Mỗi flow phải log:
 - Kiểm tra `production_consumption` + `production_output`
 - Kiểm readiness/empty states có chỉ user đúng dependency đang thiếu
 
-### 3.4 Bếp trung tâm -> Kho chi nhánh transfer
+### 3.4 chi nhánh -> Kho chi nhánh transfer
 
 - Tạo transfer thành phẩm
 - Confirm receipt ở chi nhánh
@@ -203,8 +203,8 @@ Mỗi flow phải log:
 | RLS + GRANT                          | Supabase có thể trả `{ data: null, error: null }`                               |
 | `module-acl.ts` vs page-level guards | Rất dễ drift giữa nav, proxy, và page guard                                     |
 | WAC assumptions                      | Docs rất dễ vô tình lẫn với FIFO/lot semantics                                  |
-| HQ-only procurement                  | Chỉ cần một route/guard sai là chi nhánh có thể đi lệch pilot flow              |
-| Production permissions               | Chưa có role riêng cho central kitchen, nên quyền đang phải giữ hẹp             |
+| tenant-only procurement                  | Chỉ cần một route/guard sai là chi nhánh có thể đi lệch pilot flow              |
+| Production permissions               | Chưa có role riêng cho branch production, nên quyền đang phải giữ hẹp             |
 | False-promise CTA                    | UI rất dễ để lại nút giả sau refactor workflow, khiến docs và hành vi lệch nhau |
 | Hover-only actions                   | Desktop có thể pass nhưng mobile/tablet fail nặng                               |
 | Step-to-step mental model            | Sau mỗi thao tác, user có thể không biết phải làm gì tiếp dù backend đúng       |

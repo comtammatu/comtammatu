@@ -5,16 +5,15 @@ import {
 } from "./production-roles";
 
 /**
- * Shared scaffolding for the production (central-kitchen) action modules,
- * split out of production-actions.ts (WS-3) so both production-recipe-actions
- * and production-order-actions can use it without one importing the other.
+ * Shared scaffolding for the production action modules, split out of
+ * production-actions.ts so recipe and order actions can use it independently.
  */
 
 /** Route-level role gate for the production surface (RLS enforces fine authz). */
 export const PRODUCTION_ROLES = PRODUCTION_OPERATOR_ROLES;
 
-/** Roles whose scope is a single branch → must be pinned to a central_kitchen. */
-export const isCentralKitchenScopedRole = isProductionBranchScopedRole;
+/** Roles whose scope is a single production branch. */
+export const isProductionSiteScopedRole = isProductionBranchScopedRole;
 
 export const idSchema = z.coerce.number().int().positive();
 
@@ -32,7 +31,7 @@ export type RpcClient = {
   }>;
 };
 
-export async function requireCentralKitchenBranch(
+export async function requireProductionBranch(
   supabase: unknown,
   tenantId: number,
   branchId: number,
@@ -72,22 +71,21 @@ export async function requireCentralKitchenBranch(
   if (error?.code === "42703") {
     return {
       ok: false,
-      error:
-        "Cần áp dụng migration `branch_kind` trước khi dùng màn Bếp trung tâm.",
+      error: "Cần áp dụng migration điểm vận hành trước khi dùng màn này.",
     };
   }
 
   if (error) {
     return {
       ok: false,
-      error: "Không thể kiểm tra quyền truy cập bếp trung tâm.",
+      error: "Không thể kiểm tra quyền truy cập chi nhánh sản xuất.",
     };
   }
 
-  if (data?.branch_kind !== "central_kitchen") {
+  if (data?.branch_kind !== "branch") {
     return {
       ok: false,
-      error: "Chỉ bếp trung tâm mới được phép thao tác ở màn này.",
+      error: "Chỉ chi nhánh vận hành mới được phép thao tác ở màn này.",
     };
   }
 

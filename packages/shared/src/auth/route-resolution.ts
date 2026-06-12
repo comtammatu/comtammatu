@@ -109,6 +109,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (pathname.startsWith("/orders")) return "orders";
   if (pathname.startsWith("/hr/payroll")) return "hr_payroll";
   if (pathname.startsWith("/hr")) return "hr";
+  if (/^\/br\/\d+\/dashboard/.test(pathname)) return "branch_dashboard";
   if (/^\/br\/\d+\/settings/.test(pathname)) return "branch_settings";
   if (/^\/br\/\d+\/menu-limits/.test(pathname))
     return "branch_menu_limits";

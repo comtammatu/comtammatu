@@ -53,7 +53,7 @@ export {
 } from "./supplier-invoice-actions";
 export {
   fetchRecipes,
-  fetchCentralKitchenWacMap,
+  fetchBranchWacMap,
   upsertRecipeLines,
   exportRecipes,
   importRecipes,

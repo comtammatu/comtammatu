@@ -17,6 +17,18 @@ export const settings = {
     inactive: "Tạm tắt",
     edit: "Chỉnh sửa",
   },
+  branchForm: {
+    createTitle: "Thêm điểm vận hành mới",
+    editTitle: "Chỉnh sửa điểm vận hành",
+    created: "Đã tạo điểm vận hành mới",
+    updated: "Đã cập nhật điểm vận hành",
+    nameLabel: "Tên điểm vận hành",
+    namePlaceholder: "VD: Chi nhánh Quận 1",
+    addressLabel: "Địa chỉ",
+    addressPlaceholder: "VD: 123 Nguyễn Huệ, Quận 1",
+    phoneLabel: "Điện thoại",
+    phonePlaceholder: "VD: 028 1234 5678",
+  },
   pages: {
     branchesTitle: "Điểm vận hành",
     branchCount: (count: number) => `${count} điểm vận hành`,
@@ -189,17 +201,33 @@ export const settings = {
     statAgentOnline: "Agent online",
   },
   branch: {
+    commandTitle: "Điều hành chi nhánh",
+    commandDescription: (branchName: string) =>
+      `${branchName} · Nhịp vận hành hôm nay`,
+    commandOverviewTitle: "Luồng chính",
+    commandOverviewDescription:
+      "Mở đúng bề mặt để vận hành chi nhánh, kiểm tra thiết bị và xử lý công việc trong ngày.",
+    commandBranchSetup: "Thiết lập sàn",
+    commandBranchSetupDescription:
+      "Bàn, máy POS, trạm bếp, máy in và ca POS của chi nhánh.",
+    commandPosDescription: "Bán hàng, gửi bếp, thanh toán và in hóa đơn.",
+    commandKdsDescription: "Nhận món, cập nhật trạng thái bếp và gọi món xong.",
+    commandRunnerDescription:
+      "Màn hình gọi số cho khách theo dõi món đã sẵn sàng.",
+    commandOrdersDescription:
+      "Tra cứu đơn, xử lý sự cố và đối soát theo chi nhánh.",
+    commandHrDescription: "Ngày công, nghỉ phép và duyệt kết ca của nhân viên.",
+    commandInventoryDescription:
+      "Tồn kho, nhận hàng, cấp bếp, kiểm kê và hủy hao.",
+    commandMenuLimitsDescription:
+      "Đặt số phần tối đa hoặc tắt món trong ngày cho POS và bếp.",
     settingsBack: "Thiết lập",
     posBack: "Về POS",
     employeeBack: "Về Cổng",
     branchSettingsBack: "Cài đặt chi nhánh",
     hubTitle: "Thiết lập chi nhánh",
-    hubDescription: (branchName: string, isHq: boolean) =>
-      `${branchName}${isHq ? " · Trụ sở (không dùng POS/Bàn/Máy in)" : ""}`,
+    hubDescription: (branchName: string) => branchName,
     infoTitle: "Thông tin",
-    hqBadge: "Trụ sở",
-    hqDescription:
-      "Chi nhánh trụ sở/kho trung tâm không áp dụng cấu hình Khu vực, Bàn, POS hay Máy in. Chỉ Thực đơn ở đây là có ý nghĩa.",
     attendanceChecklistTitle: "Cấu hình chấm công",
     attendanceChecklistDescription:
       "Checklist template và phân công công việc được quản lý trong HR.",

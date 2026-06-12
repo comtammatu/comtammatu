@@ -23,6 +23,7 @@ export type ModuleKey =
   | "pos"
   | "kds"
   | "runner"
+  | "branch_dashboard"
   | "branch_settings"
   | "branch_menu_limits"
   | "employee"
@@ -61,7 +62,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     ],
     label: getModuleLabelVi("inventory"),
   },
-  /** NCC, PO, GRN, HĐ NCC, công thức — kho tổng + bếp TT */
+  /** NCC, PO, GRN, HĐ NCC, công thức — branch-scoped inventory */
   inventory_procurement: {
     path: "/inventory/suppliers",
     allowedRoles: [
@@ -120,7 +121,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   settings: {
     path: "/admin/settings",
-    allowedRoles: ["owner", "super_manager", "branch_manager"],
+    allowedRoles: ["owner", "super_manager"],
     label: getModuleLabelVi("settings"),
   },
   pos: {
@@ -137,6 +138,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/br/*/runner",
     allowedRoles: ["cashier", "waiter", "chef", "branch_manager"],
     label: getModuleLabelVi("runner"),
+  },
+  branch_dashboard: {
+    path: "/br/*/dashboard",
+    allowedRoles: ["owner", "super_manager", "branch_manager"],
+    label: getModuleLabelVi("branch_dashboard"),
   },
   branch_settings: {
     path: "/br/*/settings",

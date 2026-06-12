@@ -42,11 +42,7 @@ function isAllowedInterSiteDirection(
   fromKind: string,
   toKind: string,
 ): boolean {
-  return (
-    (fromKind === "central_warehouse" &&
-      (toKind === "central_kitchen" || toKind === "branch")) ||
-    (fromKind === "central_kitchen" && toKind === "branch")
-  );
+  return fromKind === "branch" && toKind === "branch";
 }
 
 function enforceTransferActionScope(
@@ -354,7 +350,7 @@ export async function createStockTransfer(
     }
   }
 
-  // Validate branch_kind for inter-branch transfers
+  // Validate branch kind for inter-branch transfers.
   if (!isIntraBranch) {
     const fromKind = await loadBranchKind(
       supabase,
@@ -369,7 +365,7 @@ export async function createStockTransfer(
       return {
         success: false,
         error:
-          "Luồng luân chuyển không hợp lệ. Chỉ hỗ trợ Kho tổng → Bếp trung tâm/Chi nhánh hoặc Bếp trung tâm → Chi nhánh.",
+          "Luồng luân chuyển không hợp lệ. Chỉ hỗ trợ điều chuyển giữa các chi nhánh.",
       };
     }
   }
@@ -672,7 +668,8 @@ export async function fetchBranchesForTransfer(): Promise<ActionResult> {
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
   const { data, error } = await supabase.rpc("stock_transfer_list_branches");
-  if (error) return { success: false, error: "Không thể tải danh sách kho." };
+  if (error)
+    return { success: false, error: "Không thể tải danh sách chi nhánh." };
   const branches = data ?? [];
   if (claims.user_role === "branch_manager") {
     return {

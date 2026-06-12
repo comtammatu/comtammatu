@@ -18,7 +18,7 @@ import {
   PRODUCTION_OPEN_PERMISSIONS,
 } from "../production-data";
 
-type DashboardSiteKind = "central_warehouse" | "central_kitchen" | "branch";
+type DashboardSiteKind = "branch";
 
 type DashboardTransfer = {
   id: number;
@@ -146,21 +146,9 @@ export async function loadInventoryDashboardData(
     (claims.user_role === "super_manager" ||
     claims.user_role === "owner" ||
     claims.user_role === "office"
-      ? "Kho tổng"
+      ? "Kho hàng"
       : "Điểm vận hành");
-  const siteKindRaw =
-    selectedBranch?.branch_kind ??
-    (claims.user_role === "super_manager" ||
-    claims.user_role === "owner" ||
-    claims.user_role === "office"
-      ? "central_warehouse"
-      : "branch");
-  const siteKind: DashboardSiteKind =
-    siteKindRaw === "central_kitchen"
-      ? "central_kitchen"
-      : siteKindRaw === "central_warehouse"
-        ? "central_warehouse"
-        : "branch";
+  const siteKind: DashboardSiteKind = "branch";
 
   const branchFilter = scope.selectedBranchId ?? undefined;
 

@@ -28,10 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import {
-  ACTIVE_STATE_LABELS_VI,
-  getSiteKindLabelVi,
-} from "@comtammatu/shared/labels";
+import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { toggleBranchActive } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
 import { NetworkConfigDialog } from "./network-config-dialog";
@@ -73,9 +70,6 @@ export function BranchTable({ branches }: BranchTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Điểm vận hành</TableHead>
-              <TableHead className="hidden sm:table-cell">
-                {FORM_VI.type}
-              </TableHead>
               <TableHead className="hidden sm:table-cell">Địa chỉ</TableHead>
               <TableHead className="hidden md:table-cell">Điện thoại</TableHead>
               <TableHead>{FORM_VI.status}</TableHead>
@@ -85,7 +79,7 @@ export function BranchTable({ branches }: BranchTableProps) {
           <TableBody>
             {branches.length === 0 && (
               <TableEmptyStateRow
-                colSpan={6}
+                colSpan={5}
                 title="Chưa có điểm vận hành nào"
                 icon={
                   <IconBuilding className="mx-auto size-8 text-muted-foreground" />
@@ -101,11 +95,6 @@ export function BranchTable({ branches }: BranchTableProps) {
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{branch.name}</span>
                   </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  <Badge variant="outline" className="text-xs">
-                    {getSiteKindLabelVi(branch.branch_kind ?? "branch")}
-                  </Badge>
                 </TableCell>
                 <TableCell className="hidden max-w-xs sm:table-cell">
                   <span

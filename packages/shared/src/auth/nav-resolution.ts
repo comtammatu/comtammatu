@@ -29,7 +29,10 @@ export interface ResolvedHomeLink {
   href: string;
 }
 
-export function resolveRoleHomeLink(role: StaffRole): ResolvedHomeLink {
+export function resolveRoleHomeLink(
+  role: StaffRole,
+  _branchId?: number | null,
+): ResolvedHomeLink {
   if (canAccess(role, "dashboard")) {
     return {
       label: APP_COPY_VI.adminSurface,

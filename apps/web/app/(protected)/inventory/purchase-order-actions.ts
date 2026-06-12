@@ -73,7 +73,7 @@ export const createPurchaseOrder = withAction(
     if (!branches.some((branch) => branch.id === targetBranchId)) {
       return {
         success: false,
-        error: "Chi nhánh không hợp lệ (phải là Kho Tổng hoặc Bếp Trung Tâm).",
+        error: "Chi nhánh không hợp lệ.",
       };
     }
 
@@ -461,8 +461,7 @@ export interface PoSuggestionRow {
   below_reorder: boolean;
 }
 
-// branchId is required since PR #24 retired the singleton HQ — callers must
-// pick an explicit procurement branch (CW or CK).
+// branchId is required; callers must pick an explicit procurement branch.
 export const fetchPoSuggestions = withAction(
   {
     roles: ROLES,
@@ -481,7 +480,7 @@ export const fetchPoSuggestions = withAction(
       };
     }
 
-    // Validate branchId points to a procurement branch (CW or CK) in this tenant.
+    // Validate branchId points to a procurement branch in this tenant.
     const procBranches = await fetchProcurementBranches(
       supabase,
       claims.tenant_id,
@@ -490,7 +489,7 @@ export const fetchPoSuggestions = withAction(
     if (!target) {
       return {
         success: false,
-        error: "Chi nhánh không hợp lệ (phải là Kho Tổng hoặc Bếp Trung Tâm).",
+        error: "Chi nhánh không hợp lệ.",
       };
     }
 
@@ -515,12 +514,11 @@ export const fetchPoSuggestions = withAction(
       .not("ingredients.reorder_point", "is", null);
 
     if (e1)
-      return { success: false, error: "Không thể tải tồn kho tại kho tổng." };
+      return { success: false, error: "Không thể tải tồn kho chi nhánh." };
 
     // 2. Consumption aggregated tenant-wide over the period.
     // Proxy until branches.primary_warehouse_id FK exists (see inventory.md §10).
-    // Multi-CW note: the same consumption pool feeds every CW's suggestion —
-    // treat the avg_daily_consumption as an upper-bound hint, not a strict per-CW demand.
+    // The same consumption pool feeds every branch suggestion.
     const { data: movements, error: e2 } = await supabase
       .from("stock_movements")
       .select("ingredient_id, quantity_change")

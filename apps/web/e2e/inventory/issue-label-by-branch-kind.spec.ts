@@ -19,8 +19,7 @@ import { createServiceClient, resolveTenantId } from "./helpers";
  *
  *   3. `stock_movements.movement_subtype` CHECK accepts only:
  *        storage_loss | sale_consumption | writeoff | other | NULL
- *      This is the discriminator that flips the UI label between
- *      "Hao hụt kho" (CW/CK consumption) and "Tiêu hao" (branch).
+ *      This is the reporting discriminator for issue movements.
  *
  * We assert via service-role INSERTs because the CHECK fires regardless of
  * RLS. Full `confirm_stock_issue` RPC flow (auth.uid-scoped) is exercised by

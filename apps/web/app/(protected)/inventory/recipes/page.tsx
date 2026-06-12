@@ -1,7 +1,7 @@
 import {
   fetchRecipes,
   fetchMenuItemsForRecipes,
-  fetchCentralKitchenWacMap,
+  fetchBranchWacMap,
 } from "../procurement-actions";
 import { fetchIngredients } from "../ingredient-actions";
 import { formatDate } from "../_lib/format";
@@ -35,7 +35,7 @@ export default async function RecipesPage() {
     fetchRecipes(),
     fetchMenuItemsForRecipes(),
     fetchIngredients(),
-    fetchCentralKitchenWacMap(),
+    fetchBranchWacMap(),
   ]);
 
   const dbRows = recipesRes.success ? (recipesRes.data as MenuItemRow[]) : [];
@@ -47,7 +47,7 @@ export default async function RecipesPage() {
       const items: RecipeItem[] = (row.recipes ?? []).map((line) => {
         const qty = Number(line.quantity ?? 0);
         const ingredientId = line.ingredients?.id ?? line.ingredient_id ?? 0;
-        // WAC (average received cost at the CK) takes precedence over unit_cost (manual reference price).
+        // WAC (average received branch cost) takes precedence over unit_cost.
         const wac = wacMap[String(ingredientId)];
         const unitCost =
           wac != null ? wac : Number(line.ingredients?.unit_cost ?? 0);

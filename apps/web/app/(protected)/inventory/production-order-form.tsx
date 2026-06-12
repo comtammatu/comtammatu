@@ -56,7 +56,7 @@ const productionLineRowSchema = z.object({
 });
 
 const productionOrderSchema = z.object({
-  branch_id: z.string().min(1, { error: "Vui lòng chọn bếp trung tâm" }),
+  branch_id: z.string().min(1, { error: "Vui lòng chọn chi nhánh sản xuất" }),
   production_number: z
     .string()
     .trim()
@@ -185,13 +185,13 @@ function LineRowCells({
 /* ─── Dialog ─── */
 
 interface ProductionOrderFormProps {
-  centralKitchenBranches: BranchOption[];
+  productionBranches: BranchOption[];
   finishedGoodsOptions: FinishedGoodOption[];
   actionsEnabled: boolean;
 }
 
 export function ProductionOrderForm({
-  centralKitchenBranches,
+  productionBranches,
   finishedGoodsOptions,
   actionsEnabled,
 }: ProductionOrderFormProps) {
@@ -200,8 +200,8 @@ export function ProductionOrderForm({
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const defaultBranchId = centralKitchenBranches[0]?.id
-    ? String(centralKitchenBranches[0].id)
+  const defaultBranchId = productionBranches[0]?.id
+    ? String(productionBranches[0].id)
     : "";
 
   const initialValues = useMemo<ProductionOrderFormValues>(
@@ -341,7 +341,7 @@ export function ProductionOrderForm({
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="branchId">Bếp trung tâm</Label>
+              <Label htmlFor="branchId">Chi nhánh sản xuất</Label>
               <Controller
                 control={form.control}
                 name="branch_id"
@@ -353,10 +353,10 @@ export function ProductionOrderForm({
                       onBlur={field.onBlur}
                       ref={field.ref}
                     >
-                      <SelectValue placeholder="Chọn bếp trung tâm" />
+                      <SelectValue placeholder="Chọn chi nhánh" />
                     </SelectTrigger>
                     <SelectContent>
-                      {centralKitchenBranches.map((branch) => (
+                      {productionBranches.map((branch) => (
                         <SelectItem key={branch.id} value={String(branch.id)}>
                           {branch.name}
                         </SelectItem>

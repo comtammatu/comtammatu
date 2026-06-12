@@ -19,7 +19,7 @@ import {
 
 const ROLES = PROCUREMENT_ROLES;
 
-/* ─── Recipes (central-kitchen WAC + menu-item recipes) ─── */
+/* ─── Recipes (branch WAC + menu-item recipes) ─── */
 
 const recipeLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
@@ -63,10 +63,8 @@ export async function fetchRecipes(): Promise<ActionResult> {
   return { success: true, data: data ?? [] };
 }
 
-// WAC = the actual average cost (avg_unit_cost) in the central kitchen's
-// stock_levels. A CK usually has 1 row per ingredient; with 2 CKs take the
-// mean across rows.
-export async function fetchCentralKitchenWacMap(): Promise<
+// WAC = the actual average cost (avg_unit_cost) in branch stock levels.
+export async function fetchBranchWacMap(): Promise<
   ActionResult<Record<string, number>>
 > {
   const ctx = await getAuthContextWithPermission(
@@ -80,12 +78,12 @@ export async function fetchCentralKitchenWacMap(): Promise<
     .from("stock_levels")
     .select("ingredient_id, avg_unit_cost, branches!inner ( branch_kind )")
     .eq("tenant_id", claims.tenant_id)
-    .eq("branches.branch_kind", "central_kitchen")
+    .eq("branches.branch_kind", "branch")
     .not("avg_unit_cost", "is", null);
 
   if (error) {
-    console.error("fetchCentralKitchenWacMap", error);
-    return { success: false, error: "Không thể tải WAC bếp trung tâm." };
+    console.error("fetchBranchWacMap", error);
+    return { success: false, error: "Không thể tải WAC chi nhánh." };
   }
 
   type WacRow = {

@@ -122,9 +122,7 @@ export default async function ProfilePage() {
   const employee = employeeResult.data;
   const positionLabel =
     positionResult.data?.label_vi ?? positionCode ?? claims.user_role;
-  const branchIsHq =
-    branchKindResult.data?.branch_kind === "central_warehouse" ||
-    branchKindResult.data?.branch_kind === "central_kitchen";
+  const branchIsOperational = branchKindResult.data?.branch_kind === "branch";
 
   const displayName =
     session.user.user_metadata?.["full_name"] ??
@@ -135,7 +133,7 @@ export default async function ProfilePage() {
       ? MANAGER_LINKS.filter((link) => {
           if (!canAccess(claims.user_role, link.moduleKey)) return false;
           if (!link.requiresOperationalBranch) return true;
-          return Boolean(effectiveBranchId) && !branchIsHq;
+          return Boolean(effectiveBranchId) && branchIsOperational;
         }).map((link) => ({
           key: link.moduleKey,
           href: link.href(effectiveBranchId),

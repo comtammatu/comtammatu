@@ -27,7 +27,6 @@ const fetchAllActiveBranches = cache(
       .select("id, name, branch_kind")
       .eq("tenant_id", tenantId)
       .eq("is_active", true)
-      .order("branch_kind")
       .order("id");
     if (error) return [];
     return data ?? [];
@@ -41,17 +40,13 @@ function pickDefault(
   if (preferred != null && branches.some((b) => b.id === preferred)) {
     return preferred;
   }
-  const centralWarehouse = branches.find(
-    (b) => b.branch_kind === "central_warehouse",
-  );
-  if (centralWarehouse) return centralWarehouse.id;
   return branches[0]?.id ?? null;
 }
 
 /**
  * Resolve which branches an inventory user can see + which one is currently
  * selected. URL `?branchId=` wins if allowed; otherwise fall back to the
- * user's home branch, else first central_warehouse, else first allowed.
+ * user's home branch, else first allowed.
  *
  * - owner / super_manager / office → every active tenant branch
  * - other roles                    → locked to `claims.branch_id`

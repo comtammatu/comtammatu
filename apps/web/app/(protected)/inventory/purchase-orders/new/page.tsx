@@ -29,8 +29,8 @@ export default async function NewPurchaseOrderPage({
   }));
 
   // Branch-scoped procurement roles auto-use their assigned branch; others
-  // honor the URL branch IF it is a procurement branch, else fall back to
-  // the first central_warehouse.
+  // honor the URL branch if it is a procurement branch, else fall back to
+  // the first available branch.
   const requestedBranchId = parseBranchIdParam(params.branchId);
   const scope = await resolveInventoryBranchScope(
     supabase,
@@ -48,7 +48,6 @@ export default async function NewPurchaseOrderPage({
     claims.user_role === "production_manager";
   const defaultBranchId =
     (isBranchScoped ? claims.branch_id : scopeProcurementBranchId) ??
-    procBranches.find((b) => b.branch_kind === "central_warehouse")?.id ??
     procBranches[0]?.id ??
     null;
 

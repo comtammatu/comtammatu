@@ -306,6 +306,7 @@ export function InventoryShell({
     <AppShell
       user={user}
       role={userRole}
+      branchId={defaultBranchId}
       brand={{
         icon: IconWarehouse,
         subLabel: messages.inventory.shell.moduleName,

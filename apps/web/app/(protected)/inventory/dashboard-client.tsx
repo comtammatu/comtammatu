@@ -10,9 +10,7 @@ import {
   SquareCheck as IconSquareCheck,
   ClipboardList as IconClipboardList,
   Clock as IconClock,
-  Factory as IconBuildingFactory,
   Hourglass as IconHourglass,
-  Lightbulb as IconBulb,
   Receipt as IconReceipt,
   ShoppingCart as IconShoppingCart,
   Truck as IconTruck,
@@ -42,7 +40,7 @@ import { messages } from "@lib/messages";
 /* ------------------------------------------------------------------ */
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-type DashboardSiteKind = "central_warehouse" | "central_kitchen" | "branch";
+type DashboardSiteKind = "branch";
 
 export type DashboardProps = {
   routeBase: InventoryRouteBase;
@@ -274,16 +272,9 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
       key: "movement",
       title: "3. Điều phối và sản xuất",
       description:
-        props.siteKind === "central_kitchen"
-          ? "Nhận nguyên liệu, chạy lệnh sản xuất, rồi xuất thành phẩm về chi nhánh."
-          : props.siteKind === "branch"
-            ? "Nhận hàng về kho chi nhánh và cấp phát xuống bếp chi nhánh theo ca bán."
-            : "Xuất hàng từ kho tổng sang bếp trung tâm hoặc kho chi nhánh.",
+        "Nhận hàng về kho chi nhánh và cấp phát xuống bếp chi nhánh theo ca bán.",
       href: paths.transfers,
-      icon:
-        props.siteKind === "central_kitchen"
-          ? IconBuildingFactory
-          : IconArrowLeftRight,
+      icon: IconArrowLeftRight,
       metric: String(props.activeTransfers),
       metricLabel: "phiếu đang chạy",
       statusLabel: `${inbound.length} đến / ${outbound.length} đi`,
@@ -321,7 +312,6 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     siteKind,
     siteName,
     showProcurement,
-    pendingPO,
     activeTransfers,
     reorderAlerts,
     expiryAlerts,
@@ -331,7 +321,6 @@ function buildTasks(props: DashboardProps): TaskItem[] {
   const items: TaskItem[] = [];
   const open = transfers.filter((t) => isTransferOpen(t.status));
   const inbound = open.filter((t) => t.toBranch === siteName);
-  const outbound = open.filter((t) => t.fromBranch === siteName);
   const isOversight = isInventoryOversightRole(props.userRole);
 
   if (isOversight) {
@@ -372,47 +361,6 @@ function buildTasks(props: DashboardProps): TaskItem[] {
         severity: "destructive",
       });
     return items.slice(0, 6);
-  }
-
-  if (siteKind === "central_warehouse") {
-    if (pendingPO > 0)
-      items.push({
-        key: "po",
-        title: `${pendingPO} PO cần theo dõi`,
-        description: "Đẩy nhanh đơn mở trước GRN.",
-        href: paths.purchaseOrders,
-        icon: <IconShoppingCart className="size-4" />,
-        severity: "primary",
-      });
-    if (outbound.length > 0 || activeTransfers > 0)
-      items.push({
-        key: "tf-out",
-        title: `${outbound.length || activeTransfers} phiếu xuất đang mở`,
-        description: "Theo dõi phiếu rời kho HQ.",
-        href: paths.transfers,
-        icon: <IconTruck className="size-4" />,
-        severity: "info",
-      });
-  }
-
-  if (siteKind === "central_kitchen") {
-    items.push({
-      key: "ck",
-      title: "Chốt nhịp sản xuất",
-      description: "Tạo/xác nhận lệnh sản xuất.",
-      href: paths.production,
-      icon: <IconBulb className="size-4" />,
-      severity: "primary",
-    });
-    if (inbound.length > 0 || outbound.length > 0)
-      items.push({
-        key: "ck-tf",
-        title: `${inbound.length || outbound.length} phiếu cần theo dõi`,
-        description: "Nhận NL hoặc xuất TP.",
-        href: paths.transfers,
-        icon: <IconTruck className="size-4" />,
-        severity: "info",
-      });
   }
 
   if (siteKind === "branch") {
@@ -490,7 +438,6 @@ export function DashboardClient(props: DashboardProps) {
   const {
     routeBase,
     siteName,
-    siteKind,
     showProcurement,
     totalStockValue,
     pendingPO,
@@ -523,12 +470,9 @@ export function DashboardClient(props: DashboardProps) {
     (s) => s.status === "in_progress",
   );
 
-  const siteKindLabel =
-    siteKind === "central_warehouse"
-      ? "HQ"
-      : siteKind === "central_kitchen"
-        ? "Bếp TT"
-        : "Chi nhánh";
+  const siteKindLabel = "Chi nhánh";
+  const stockValueLabel = "Giá trị tồn kho:";
+  const currencySuffix = "đ";
 
   return (
     <AppPage width={isMobile ? "narrow" : "wide"} contentClassName="gap-6">
@@ -542,9 +486,10 @@ export function DashboardClient(props: DashboardProps) {
         }
         meta={
           <span className="inline-flex items-center gap-2">
-            <span className="text-muted-foreground">Giá trị tồn kho:</span>
+            <span className="text-muted-foreground">{stockValueLabel}</span>
             <span className="font-mono text-base font-semibold tabular-nums text-foreground">
-              {formatVND(totalStockValue)}đ
+              {formatVND(totalStockValue)}
+              {currencySuffix}
             </span>
           </span>
         }

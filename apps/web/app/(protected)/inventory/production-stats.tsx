@@ -38,7 +38,7 @@ interface ProductionStatsProps {
   orders: ProductionOrderRow[];
   readinessMessage: string | null;
   readinessState: ProductionReadinessState;
-  centralKitchenCount: number;
+  productionBranchCount: number;
   finishedGoodCount: number;
   rawMaterialCount: number;
   recipeFinishedGoodCount: number;
@@ -51,7 +51,7 @@ export function ProductionStats({
   orders,
   readinessMessage,
   readinessState,
-  centralKitchenCount,
+  productionBranchCount,
   finishedGoodCount,
   rawMaterialCount,
   recipeFinishedGoodCount,
@@ -76,10 +76,10 @@ export function ProductionStats({
   }, [orders]);
 
   const readinessReady = readinessState === null;
-  const activeCentralKitchenCopy =
-    centralKitchenCount > 0
-      ? `${centralKitchenCount} bếp trung tâm đang hoạt động`
-      : "Chưa có bếp trung tâm được cấu hình";
+  const activeProductionBranchCopy =
+    productionBranchCount > 0
+      ? `${productionBranchCount} chi nhánh sản xuất đang hoạt động`
+      : "Chưa có chi nhánh sản xuất được cấu hình";
   const summaryItems = [
     {
       label: "Lệnh nháp",
@@ -112,7 +112,7 @@ export function ProductionStats({
     readinessState === "missing-finished-good"
       ? canManageCatalog
         ? "Tạo ít nhất một thành phẩm để mở BOM sản xuất, rồi quay lại lập lệnh."
-        : "Cần đội quản trị danh mục tạo ít nhất một thành phẩm trước khi bếp trung tâm lập BOM và lệnh sản xuất."
+        : "Cần đội quản trị danh mục tạo ít nhất một thành phẩm trước khi lập BOM và lệnh sản xuất."
       : readinessState === "missing-raw-material"
         ? canManageCatalog
           ? "Tạo nguyên liệu đầu vào để hoàn thiện BOM trước khi xác nhận sản xuất."
@@ -120,7 +120,7 @@ export function ProductionStats({
         : readinessState === "missing-recipe"
           ? canManageRecipes
             ? "Cấu hình ít nhất một BOM sản xuất trước khi xác nhận lệnh."
-            : "Cần đội quản trị cấu hình BOM sản xuất trước khi bếp trung tâm chạy mẻ này."
+            : "Cần đội quản trị cấu hình BOM sản xuất trước khi chạy mẻ này."
           : null;
 
   function handleFinishedGoodCreated(_good: FinishedGoodOption) {
@@ -172,13 +172,13 @@ export function ProductionStats({
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-background p-3">
             <div className="flex min-w-0 flex-col gap-1">
-              <p className="text-sm font-medium">{activeCentralKitchenCopy}</p>
+              <p className="text-sm font-medium">{activeProductionBranchCopy}</p>
               <p className="text-xs text-muted-foreground">
                 Quy trình chuẩn: nhận nguyên liệu, chốt BOM, xác nhận lệnh để
                 trừ nguyên liệu và nhập thành phẩm.
               </p>
             </div>
-            <Badge variant="outline">CK</Badge>
+            <Badge variant="outline">CN</Badge>
           </div>
 
           {readinessMessage ? (

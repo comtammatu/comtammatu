@@ -172,6 +172,18 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
+    id: "branch-dashboard",
+    label: MODULE_ACL.branch_dashboard.label,
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]/dashboard",
+    matchPrefixes: ["/br/[branchId]/dashboard"],
+    moduleKeys: ["branch_dashboard"],
+    primaryNav: "operational-chrome",
+    backBehavior: "role-home",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
     id: "branch-menu-limits",
     label: MODULE_ACL.branch_menu_limits.label,
     surface: "branch_operation",

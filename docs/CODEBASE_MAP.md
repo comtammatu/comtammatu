@@ -9,7 +9,7 @@
 
 - **Active delivery track:** production đang vận hành in-place trên repo `comtammatu`; ongoing work tập trung vào hardening + bổ sung tính năng theo phản hồi vận hành. Retired rebuild packs are no longer retained in `docs/`; current decisions live in `tasks/todo.md`, `docs/plan/decisions.md`, and active ADRs.
 - **Phiên bản hiện tại:** v1.0.0 — Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print, Payments (Cash + VietQR + Momo) SHIPPED và đang vận hành thực tế. HĐĐT active qua Viettel S-invoice. Finance/HR/Notifications/Reporting vẫn còn phần PARTIAL (xem `tasks/todo.md`).
-- **Mốc tiếp theo:** tiếp tục hardening trên mô hình `Kho Tổng -> Bếp Trung Tâm -> Chi nhánh` đang chạy production; backlog ưu tiên ở `tasks/todo.md`.
+- **Mốc tiếp theo:** tiếp tục hardening trên mô hình `chi nhánh` đang chạy production; backlog ưu tiên ở `tasks/todo.md`.
 - **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
 
 ## Chỉ mục phân hệ
@@ -64,14 +64,14 @@ source-of-truth inputs.
 
 Generated checkout snapshot from 2026-06-10 (`node scripts/project-snapshot.mjs`):
 
-| Area                                                         |               Count |
-| ------------------------------------------------------------ | ------------------: |
-| `apps/web/app/**/page.tsx` routes (committed)                |                 103 |
-| API route handlers (`route.ts`: 10 api + 2 PWA manifest)     |                  12 |
-| Generated DB tables / views / functions / enums              | 115 / 8 / ~255 / 1 (`shift_request_status`) |
-| Active SQL migrations (baseline-first; +379 archived)        |                  26 |
-| Test/spec files (`apps/web/e2e` + `packages/shared/src`)     |                  32 |
-| Test files under `apps/web/tests`                            |                  36 |
+| Area                                                     |                                       Count |
+| -------------------------------------------------------- | ------------------------------------------: |
+| `apps/web/app/**/page.tsx` routes (committed)            |                                         103 |
+| API route handlers (`route.ts`: 10 api + 2 PWA manifest) |                                          12 |
+| Generated DB tables / views / functions / enums          | 115 / 8 / ~255 / 1 (`shift_request_status`) |
+| Active SQL migrations (baseline-first; +379 archived)    |                                          26 |
+| Test/spec files (`apps/web/e2e` + `packages/shared/src`) |                                          32 |
+| Test files under `apps/web/tests`                        |                                          36 |
 
 > Migrations are **baseline-first** since 2026-05-30: `supabase/migrations/00000000000000_baseline.sql` (canonical public-schema install) + forward migrations, with the 379-file historical chain under `supabase/migrations/_archive/` and managed surfaces in `supabase/managed-surfaces.install.sql`. See `docs/spec/database-schema.md`.
 
@@ -128,25 +128,25 @@ Decision rules:
 
 Use this matrix when adding or moving files. It is the practical replacement for "where should this live?"
 
-| Change type                                  | Primary location                                                    | Must check                                                                            | Avoid                                            |
-| -------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| New protected route                          | `apps/web/app/(protected)/...`                                      | `proxy.ts`, `route-resolution.ts`, `module-acl.ts`, module doc                        | Duplicating ACL in layouts/pages                 |
-| New Server Action                            | Adjacent `actions.ts` under route family                            | Zod schema, `withAction`/auth helper, RLS/RPC contract                                | Returning raw Supabase error messages            |
-| New shared business rule                     | `packages/shared/src/<domain>/...`                                  | Existing package exports and tests                                                    | Importing app-only code into shared package      |
-| New database mutation spanning multiple rows | `supabase/migrations/*.sql` RPC + typed caller                      | RLS, GRANTs, `pnpm db:types` after apply                                              | Multi-query partial writes in Server Actions     |
-| New Supabase client usage                    | `packages/database/src/supabase/*` or server-only barrel            | Import boundary table below                                                           | `@comtammatu/database` barrel in `"use client"`  |
-| New reusable UI primitive                    | `packages/ui/src/components/*`                                      | `docs/spec/design-system.md`, active shadcn baseline, `scripts/check-ui-contract.mjs` | Page-local one-off primitive clones              |
-| New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | `docs/spec/design-system.md`, shadcn primitives, surface components                   | New visual language outside design system        |
-| New print behavior                           | `apps/print-agent/src/*` plus branch settings route if configurable | Branch-scoped config, no deploy-only layout changes                                   | Hardcoded receipt/format changes per branch      |
+| Change type                                  | Primary location                                                    | Must check                                                                            | Avoid                                                  |
+| -------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| New protected route                          | `apps/web/app/(protected)/...`                                      | `proxy.ts`, `route-resolution.ts`, `module-acl.ts`, module doc                        | Duplicating ACL in layouts/pages                       |
+| New Server Action                            | Adjacent `actions.ts` under route family                            | Zod schema, `withAction`/auth helper, RLS/RPC contract                                | Returning raw Supabase error messages                  |
+| New shared business rule                     | `packages/shared/src/<domain>/...`                                  | Existing package exports and tests                                                    | Importing app-only code into shared package            |
+| New database mutation spanning multiple rows | `supabase/migrations/*.sql` RPC + typed caller                      | RLS, GRANTs, `pnpm db:types` after apply                                              | Multi-query partial writes in Server Actions           |
+| New Supabase client usage                    | `packages/database/src/supabase/*` or server-only barrel            | Import boundary table below                                                           | `@comtammatu/database` barrel in `"use client"`        |
+| New reusable UI primitive                    | `packages/ui/src/components/*`                                      | `docs/spec/design-system.md`, active shadcn baseline, `scripts/check-ui-contract.mjs` | Page-local one-off primitive clones                    |
+| New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | `docs/spec/design-system.md`, shadcn primitives, surface components                   | New visual language outside design system              |
+| New print behavior                           | `apps/print-agent/src/*` plus branch settings route if configurable | Branch-scoped config, no deploy-only layout changes                                   | Hardcoded receipt/format changes per branch            |
 | New skill/plugin/tool routing rule           | `docs/agent/rules/skills.md` plus relevant entrypoint docs          | `AGENTS.md`, `docs/agent/rules/references.md`, `docs/agent/rules/workflow.md`         | Divergent workspace-only rules, secrets, plugin caches |
-| New operational rule/runbook                 | `docs/modules/*`, `docs/runbooks/*`, `tasks/*`                      | `docs/agent/rules/references.md`                                                      | Separate agent-only doc trees                    |
+| New operational rule/runbook                 | `docs/modules/*`, `docs/runbooks/*`, `tasks/*`                      | `docs/agent/rules/references.md`                                                      | Separate agent-only doc trees                          |
 
 ### Pilot Operating Model
 
 ```mermaid
 flowchart LR
-    supplier["Nhà cung cấp"] --> hq["HQ / Trụ sở"]
-    hq -->|raw transfers| ck["Bếp trung tâm"]
+    supplier["Nhà cung cấp"] --> hq["Tenant"]
+    hq -->|raw transfers| ck["chi nhánh"]
     ck -->|finished-good transfers| br["Chi nhánh"]
     br --> pos["POS / KDS / completed orders"]
 ```
@@ -184,7 +184,7 @@ graph LR
     shared -.->|types only| db
 ```
 
-### Luồng dữ liệu — Đăng nhập vào trang tổng quan
+### Luồng dữ liệu — Đăng nhập vào mục tiêu sau đăng nhập
 
 ```mermaid
 sequenceDiagram
@@ -201,11 +201,13 @@ sequenceDiagram
     S->>H: custom_access_token_hook()
     H->>S: JWT + {tenant_id, branch_id, user_role}
     S->>A: Session + JWT
-    A->>B: Redirect to role default
-    B->>P: GET /admin/dashboard
-    P->>P: extractClaims → canAccess("dashboard")
-    P->>B: Dashboard page
+    A->>B: Redirect to post-login target
+    B->>P: GET /admin/dashboard or /employee
+    P->>P: extractClaims → canAccess(module)
+    P->>B: Target page
 ```
+
+Opening `/` after authentication follows the same shared default resolver.
 
 ## Hub Files (High Blast Radius)
 
@@ -221,14 +223,14 @@ sequenceDiagram
 
 ## Critical Unknowns
 
-| #   | Unknown                                                                                                                                                                                                    | Verification Step                                                             | Impact                                              |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------- |
-| 1   | has tenant-wide access (no intermediate scope table)                                                                                                                                                | Deferred — tracked as item **H3** in `tasks/todo.md` "Deferred to post-pilot" | May need migration later                            |
+| #   | Unknown                                                                                                                                                                                                                                                        | Verification Step                                                             | Impact                                              |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------- |
+| 1   | has tenant-wide access (no intermediate scope table)                                                                                                                                                                                                           | Deferred — tracked as item **H3** in `tasks/todo.md` "Deferred to post-pilot" | May need migration later                            |
 | 2   | Test coverage exists but is still concentrated: current checkout has 32 test/spec files under `apps/web/e2e` + `packages/shared/src` plus 36 files under `apps/web/tests`, with gaps around full POS→payment→stock→print→HĐĐT smoke and live provider behavior | Expand route smoke + end-to-end pilot runbooks before scale                   | Refactor regressions possible on uncovered surfaces |
 
 ## Priority Recommendations
 
-1. **v1.0.0 in production:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print, Payments (Cash + VietQR + Momo) shipped và đang vận hành thực tế trên mô hình `HQ -> Kho Tổng -> Bếp Trung Tâm -> Chi nhánh`. Finance/HR/Notifications/Reporting còn phần PARTIAL — ưu tiên hiện tại là hardening (QA, security follow-ups), bổ sung BHXH/PIT, và đóng các P0 còn mở trong `tasks/todo.md`.
+1. **v1.0.0 in production:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print, Payments (Cash + VietQR + Momo) shipped và đang vận hành thực tế trên mô hình `tenant -> chi nhánh`. Finance/HR/Notifications/Reporting còn phần PARTIAL — ưu tiên hiện tại là hardening (QA, security follow-ups), bổ sung BHXH/PIT, và đóng các P0 còn mở trong `tasks/todo.md`.
 2. **Watch hub files:** Any change to `module-acl.ts` or `types.ts` requires proxy + layout + nav verification.
 3. **RLS pattern:** Every new table must follow the tenant-scoped RLS pattern with explicit GRANTs. See [database.md](modules/database.md).
 

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing inventory issue surface keeps localized JSX copy until message-catalog extraction */
+
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -79,11 +81,6 @@ export type IssueBranchOption = {
   branchKind: string | null;
 };
 
-// Label for `consumption` issue_type flips by branch_kind:
-// - central_warehouse / central_kitchen → "Hao hụt kho" (storage loss)
-// - branch                              → "Tiêu hao" (sale consumption)
-// `writeoff` and `other` keep a single label at all kinds.
-// kitchen_use retired 2026-04-25 (replaced by intra-branch stock_transfer).
 const ISSUE_TYPES = [
   { value: "consumption", label: "Tiêu hao" },
   { value: "writeoff", label: "Hủy hỏng / thanh lý" },
@@ -92,14 +89,8 @@ const ISSUE_TYPES = [
 
 type IssueTypeValue = (typeof ISSUE_TYPES)[number]["value"];
 
-function isStorageBranchKind(kind: string | null | undefined): boolean {
-  return kind === "central_warehouse" || kind === "central_kitchen";
-}
-
 function issueTypeLabel(type: string, branchKind: string | null): string {
-  if (type === "consumption") {
-    return isStorageBranchKind(branchKind) ? "Hao hụt kho" : "Tiêu hao";
-  }
+  void branchKind;
   return ISSUE_TYPES.find((o) => o.value === type)?.label ?? type;
 }
 
@@ -113,7 +104,7 @@ const STATUS_FILTER_OPTIONS = [
 // Filter options show generic labels (no branch context at the filter level).
 const TYPE_FILTER_OPTIONS = [
   { value: "all", label: "Tất cả loại xuất" },
-  { value: "consumption", label: "Tiêu hao / Hao hụt kho" },
+  { value: "consumption", label: "Tiêu hao" },
   { value: "writeoff", label: "Hủy hỏng / thanh lý" },
   { value: "other", label: "Khác" },
 ];
@@ -158,12 +149,10 @@ export function IssuesClient({
   const [issueType, setIssueType] = useState<IssueTypeValue>("consumption");
   const [notes, setNotes] = useState("");
   const [isPending, startTransition] = useTransition();
-  const selectedBranchKind =
-    branches.find((b) => b.id === Number(branchId))?.branchKind ?? null;
   // Capability-gated only — the CSV builds client-side and downloads fine
   // on phones; hiding it by breakpoint forced warehouse staff back to a
   // desktop just to press one button.
-  const showExportAction = selectedBranchKind !== "branch";
+  const showExportAction = true;
 
   const filtered = useMemo(() => {
     let result = issues;
@@ -459,11 +448,7 @@ export function IssuesClient({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {isStorageBranchKind(selectedBranchKind)
-                ? "Tạo phiếu hao hụt kho"
-                : "Tạo phiếu xuất kho"}
-            </DialogTitle>
+            <DialogTitle>Tạo phiếu xuất kho</DialogTitle>
             <DialogDescription>
               {CREATE_ISSUE_DIALOG_DESCRIPTION}
             </DialogDescription>

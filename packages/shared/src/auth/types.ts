@@ -52,11 +52,8 @@ export const MANAGEABLE_STAFF_ROLES: readonly StaffRole[] = [
   "office",
 ] as const;
 
-/**
- * Operational / floor roles that must belong to a store branch — not headquarters
- * (HQ is office-only: no POS/KDS).
- */
-export const HQ_EXCLUDED_OPERATIONAL_ROLES: readonly StaffRole[] = [
+/** Operational roles that must belong to a branch. */
+export const BRANCH_REQUIRED_OPERATIONAL_ROLES: readonly StaffRole[] = [
   "cashier",
   "waiter",
   "chef",
@@ -83,9 +80,9 @@ export function canManageBranchFloorSettings(role: StaffRole): boolean {
  */
 export const ROLE_LABEL_VI: Record<StaffRole, string> = {
   owner: "Chủ sở hữu",
-  super_manager: "Quản lý tổng",
+  super_manager: "Giám đốc điều hành",
   branch_manager: "Quản lý chi nhánh",
-  warehouse_manager: "Quản lý kho tổng",
+  warehouse_manager: "Quản lý kho chi nhánh",
   production_manager: "Quản lý sản xuất",
   cashier: "Thu ngân",
   waiter: "Phục vụ",

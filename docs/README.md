@@ -36,7 +36,7 @@
 
 ### Trạng thái Inventory hiện tại
 
-- Procurement UI đã chốt là `HQ procurement hub`: `Receiving -> PO -> GRN -> supplier invoice`
+- Procurement UI đã chốt là `tenant procurement hub`: `Receiving -> PO -> GRN -> supplier invoice`
 - Branch flow hiện đi theo `Nhận transfer -> Cấp bếp -> Stocktake/alerts`, không dùng `Receiving` như generic inbound hub
 - Dashboard `/inventory` đã chuyển sang `task queue first`
 - `Ingredients / Suppliers / Recipes` đã canonical về `Danh mục`; các route cũ trong `Settings` chỉ còn giữ redirect tương thích

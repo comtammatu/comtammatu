@@ -1,5 +1,5 @@
 /**
- * Barrel for production (central-kitchen) Server Actions.
+ * Barrel for production Server Actions.
  *
  * WS-3 decomposition (2026-05-31): split the ~1.5k-line monolith (production
  * recipes + production orders, with shared scaffolding) into focused modules.

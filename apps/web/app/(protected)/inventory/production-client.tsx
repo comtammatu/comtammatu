@@ -21,7 +21,7 @@ interface ProductionHubClientProps {
   canCreateProduction: boolean;
   canConfirmProduction: boolean;
   canAdjustStock: boolean;
-  centralKitchenBranches: BranchOption[];
+  productionBranches: BranchOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
   orders: ProductionOrderRow[];
@@ -34,7 +34,7 @@ export function ProductionHubClient({
   canCreateProduction,
   canConfirmProduction,
   canAdjustStock,
-  centralKitchenBranches,
+  productionBranches,
   ingredients,
   finishedGoods,
   orders,
@@ -48,12 +48,12 @@ export function ProductionHubClient({
   } = useMemo(
     () =>
       getProductionReadinessSummary({
-        centralKitchenBranches,
+        productionBranches,
         ingredients,
         finishedGoods,
         recipes,
       }),
-    [centralKitchenBranches, finishedGoods, ingredients, recipes],
+    [productionBranches, finishedGoods, ingredients, recipes],
   );
   const rawMaterialCount = useMemo(
     () =>
@@ -71,11 +71,11 @@ export function ProductionHubClient({
     <AppPage>
       <AppPageHeader
         eyebrow="Kho hàng"
-        title="Bếp trung tâm"
-        description="Lệnh sản xuất và BOM thành phẩm"
+        title="Sản xuất chi nhánh"
+        description="Lệnh sản xuất và BOM thành phẩm theo chi nhánh"
         actions={
           <ProductionOrderForm
-            centralKitchenBranches={centralKitchenBranches}
+            productionBranches={productionBranches}
             finishedGoodsOptions={sortedFinishedGoods}
             actionsEnabled={actionsEnabled && canCreateProduction}
           />
@@ -85,7 +85,7 @@ export function ProductionHubClient({
         orders={orders}
         readinessMessage={readinessMessage}
         readinessState={readinessState}
-        centralKitchenCount={centralKitchenBranches.length}
+        productionBranchCount={productionBranches.length}
         finishedGoodCount={finishedGoods.length}
         rawMaterialCount={rawMaterialCount}
         recipeFinishedGoodCount={recipeFinishedGoodCount}

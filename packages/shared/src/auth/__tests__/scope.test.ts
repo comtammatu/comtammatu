@@ -42,9 +42,19 @@ test("getDefaultRedirect → owner and super_manager land on /admin/dashboard", 
   }
 });
 
-test("getDefaultRedirect → all other roles land on /employee", () => {
+test("getDefaultRedirect → branch_manager lands on /employee", () => {
+  assert.equal(
+    getDefaultRedirect(makeClaims("branch_manager", 3)),
+    "/employee",
+  );
+  assert.equal(
+    getDefaultRedirect(makeClaims("branch_manager", null)),
+    "/employee",
+  );
+});
+
+test("getDefaultRedirect → other non-admin roles land on /employee", () => {
   for (const role of [
-    "branch_manager",
     "warehouse_manager",
     "production_manager",
     "cashier",
@@ -65,9 +75,16 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     label: "Quản trị",
     href: "/admin/dashboard",
   });
+  assert.deepEqual(resolveRoleHomeLink("branch_manager", 3), {
+    label: "Trang nhân viên",
+    href: "/employee",
+  });
+  assert.deepEqual(resolveRoleHomeLink("branch_manager"), {
+    label: "Trang nhân viên",
+    href: "/employee",
+  });
 
   for (const role of [
-    "branch_manager",
     "warehouse_manager",
     "production_manager",
     "cashier",
@@ -96,6 +113,10 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
   assert.equal(
     resolveRouteFamilyContract("/admin/settings/tables")?.id,
     "admin",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/br/3/dashboard")?.id,
+    "branch-dashboard",
   );
   assert.equal(
     resolveRouteFamilyContract("/admin/finance/revenue")?.id,
@@ -134,6 +155,10 @@ test("resolvePostLoginRedirect → null returnTo → default", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), null),
     "/admin/dashboard",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("branch_manager", 3), null),
+    "/employee",
   );
 });
 
@@ -208,24 +233,23 @@ test("resolvePostLoginRedirect → retired admin inventory returnTo is not prese
   );
 });
 
-test("resolvePostLoginRedirect → former admin roles cannot keep admin returnTo", () => {
-  for (const role of [
-    "branch_manager",
-    "warehouse_manager",
-    "production_manager",
-  ] as const) {
+test("resolvePostLoginRedirect → branch_manager cannot keep admin returnTo", () => {
+  for (const returnTo of ["/admin/dashboard", "/admin", "/admin/unknown"]) {
     assert.equal(
-      resolvePostLoginRedirect(makeClaims(role, 3), "/admin/dashboard"),
+      resolvePostLoginRedirect(makeClaims("branch_manager", 3), returnTo),
       "/employee",
     );
-    assert.equal(
-      resolvePostLoginRedirect(makeClaims(role, 3), "/admin"),
-      "/employee",
-    );
-    assert.equal(
-      resolvePostLoginRedirect(makeClaims(role, 3), "/admin/unknown"),
-      "/employee",
-    );
+  }
+});
+
+test("resolvePostLoginRedirect → non-branch former admin roles cannot keep admin returnTo", () => {
+  for (const role of ["warehouse_manager", "production_manager"] as const) {
+    for (const returnTo of ["/admin/dashboard", "/admin", "/admin/unknown"]) {
+      assert.equal(
+        resolvePostLoginRedirect(makeClaims(role, 3), returnTo),
+        "/employee",
+      );
+    }
   }
 });
 
@@ -392,6 +416,7 @@ test("resolveModuleFromPath → branch menu limits and finance workspace map to 
   assert.equal(resolveModuleFromPath("/finance/revenue"), "finance");
   assert.equal(resolveModuleFromPath("/hr"), "hr");
   assert.equal(resolveModuleFromPath("/hr/payroll"), "hr_payroll");
+  assert.equal(resolveModuleFromPath("/br/3/dashboard"), "branch_dashboard");
   assert.equal(
     resolveModuleFromPath("/br/3/menu-limits"),
     "branch_menu_limits",
@@ -421,6 +446,20 @@ test("resolvePostLoginRedirect → branch settings follows branch scope", () => 
 
 test("resolvePostLoginRedirect → branch menu limits follows branch scope", () => {
   assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("branch_manager", 3),
+      "/br/3/menu-limits",
+    ),
+    "/br/3/menu-limits",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("branch_manager", 3),
+      "/br/7/menu-limits",
+    ),
+    "/employee",
+  );
+  assert.equal(
     resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/3/menu-limits"),
     "/br/3/menu-limits",
   );
@@ -435,7 +474,7 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
 });
 
 test("canAccess → only owner and super_manager can access tenant admin modules", () => {
-  const adminModules = ["dashboard", "staff", "reports"] as const;
+  const adminModules = ["dashboard", "staff", "reports", "settings"] as const;
   for (const moduleKey of adminModules) {
     assert.equal(canAccess("owner", moduleKey), true);
     assert.equal(canAccess("super_manager", moduleKey), true);
@@ -453,11 +492,30 @@ test("canAccess → only owner and super_manager can access tenant admin modules
   }
 });
 
-test("canAccess → settings includes branch floor setting roles", () => {
+test("canAccess → branch command and branch settings include branch manager", () => {
   for (const role of ["owner", "super_manager", "branch_manager"] as const) {
+    assert.equal(canAccess(role, "branch_dashboard"), true);
+    assert.equal(canAccess(role, "branch_settings"), true);
+  }
+  for (const role of [
+    "warehouse_manager",
+    "production_manager",
+    "cashier",
+    "waiter",
+    "chef",
+    "office",
+  ] as const) {
+    assert.equal(canAccess(role, "branch_dashboard"), false);
+    assert.equal(canAccess(role, "branch_settings"), false);
+  }
+});
+
+test("canAccess → tenant settings excludes branch floor roles", () => {
+  for (const role of ["owner", "super_manager"] as const) {
     assert.equal(canAccess(role, "settings"), true);
   }
   for (const role of [
+    "branch_manager",
     "warehouse_manager",
     "production_manager",
     "cashier",
@@ -524,21 +582,61 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
   assert.ok(
     ownerApps.some((app) => app.moduleKey === "hr" && app.href === "/hr"),
   );
+  assert.ok(
+    ownerApps.some((app) => app.moduleKey === "menu" && app.href === "/menu"),
+  );
+  assert.ok(
+    ownerApps.some(
+      (app) => app.moduleKey === "orders" && app.href === "/orders",
+    ),
+  );
   assert.equal(
     ownerApps.some((app) => app.moduleKey === "hr_payroll"),
     false,
   );
 
   const branchManagerApps = resolveDiscoveredApps("branch_manager", 3);
+  assert.equal(
+    branchManagerApps.some((app) => app.moduleKey === "settings"),
+    false,
+  );
   assert.ok(
     branchManagerApps.some(
-      (app) => app.moduleKey === "settings" && app.href === "/admin/settings",
+      (app) =>
+        app.moduleKey === "branch_dashboard" && app.href === "/br/3/dashboard",
     ),
   );
   assert.ok(
     branchManagerApps.some(
       (app) =>
         app.moduleKey === "branch_settings" && app.href === "/br/3/settings",
+    ),
+  );
+  assert.ok(
+    branchManagerApps.some(
+      (app) =>
+        app.moduleKey === "branch_menu_limits" &&
+        app.href === "/br/3/menu-limits",
+    ),
+  );
+  assert.ok(
+    branchManagerApps.some(
+      (app) => app.moduleKey === "menu" && app.href === "/menu",
+    ),
+  );
+  assert.ok(
+    branchManagerApps.some(
+      (app) => app.moduleKey === "orders" && app.href === "/orders",
+    ),
+  );
+  assert.ok(
+    branchManagerApps.some(
+      (app) => app.moduleKey === "inventory" && app.href === "/inventory",
+    ),
+  );
+  assert.ok(
+    branchManagerApps.some(
+      (app) => app.moduleKey === "hr" && app.href === "/hr",
     ),
   );
 

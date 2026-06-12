@@ -16,9 +16,10 @@ import {
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
-import { HQ_EXCLUDED_OPERATIONAL_ROLES } from "@comtammatu/shared/auth";
+import { BRANCH_REQUIRED_OPERATIONAL_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { SelectField, TextField, valuesToFormData } from "@/components/form";
+import { messages } from "@lib/messages";
 import { createStaff, updateStaff } from "./actions";
 import type { BranchOption, PositionOption, StaffRow } from "./staff-table";
 
@@ -85,17 +86,12 @@ export function StaffFormDialog({
   );
 
   const branchChoices = useMemo(() => {
-    if (selectedRole === "warehouse_manager") {
-      return branches.filter((b) => b.branch_kind === "central_warehouse");
-    }
-    if (selectedRole === "production_manager") {
-      return branches.filter((b) => b.branch_kind === "central_kitchen");
-    }
-    if (HQ_EXCLUDED_OPERATIONAL_ROLES.includes(selectedRole as StaffRole)) {
-      return branches.filter((b) => {
-        const kind = b.branch_kind;
-        return kind !== "central_warehouse" && kind !== "central_kitchen";
-      });
+    if (
+      selectedRole === "warehouse_manager" ||
+      selectedRole === "production_manager" ||
+      BRANCH_REQUIRED_OPERATIONAL_ROLES.includes(selectedRole as StaffRole)
+    ) {
+      return branches.filter((b) => (b.branch_kind ?? "branch") === "branch");
     }
     return branches;
   }, [branches, selectedRole]);
@@ -179,7 +175,7 @@ export function StaffFormDialog({
                   name="password"
                   label="Mật khẩu"
                   type="password"
-                  placeholder="Tối thiểu 8 ký tự"
+                  placeholder={messages.admin.staffForm.passwordPlaceholder}
                   required
                 />
               </>
@@ -189,7 +185,7 @@ export function StaffFormDialog({
               control={form.control}
               name="full_name"
               label="Họ tên"
-              placeholder="Nguyễn Văn A"
+              placeholder={messages.admin.staffForm.fullNamePlaceholder}
               required
             />
 
@@ -206,7 +202,7 @@ export function StaffFormDialog({
               name="role"
               label="Chức vụ"
               options={positionOptions}
-              placeholder="Chọn chức vụ"
+              placeholder={messages.admin.staffForm.rolePlaceholder}
               required
             />
 
@@ -215,11 +211,15 @@ export function StaffFormDialog({
               name="branch_id"
               label="Chi nhánh"
               options={branchOptions}
-              placeholder={isTenantLevel ? "Không áp dụng" : "Chọn chi nhánh"}
+              placeholder={
+                isTenantLevel
+                  ? messages.admin.staffForm.branchNotApplicable
+                  : messages.admin.staffForm.branchPlaceholder
+              }
               disabled={isTenantLevel}
               description={
                 !isTenantLevel
-                  ? "Bắt buộc cho vai trò vận hành (thu ngân, phục vụ, bếp, QL chi nhánh). Kho tổng / bếp trung tâm không có POS/KDS — không chọn cho các vai trò sàn."
+                  ? messages.admin.staffForm.branchDescription
                   : undefined
               }
             />

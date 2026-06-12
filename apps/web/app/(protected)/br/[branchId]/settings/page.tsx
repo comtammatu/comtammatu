@@ -14,12 +14,7 @@ import {
 } from "lucide-react";
 import { canAccess } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import {
-  AppLinkCard,
-  AppPage,
-  AppPageHeader,
-  AppSection,
-} from "@/components/surface";
+import { AppLinkCard, AppPage, AppPageHeader } from "@/components/surface";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
@@ -54,14 +49,19 @@ export default async function BranchSettingsHubPage({
 
   if (!branch || !branch.is_active) notFound();
 
-  const isHq =
-    branch.branch_kind === "central_warehouse" ||
-    branch.branch_kind === "central_kitchen";
   const canEnterEmployeePortal = canAccess(claims.user_role, "employee");
-  const backHref = canEnterEmployeePortal ? "/employee" : "/admin/dashboard";
-  const backLabel = canEnterEmployeePortal
-    ? messages.settings.branch.employeeBack
-    : APP_COPY_VI.adminSurface;
+  const backHref =
+    claims.user_role === "branch_manager"
+      ? `/br/${branchId}/dashboard`
+      : canEnterEmployeePortal
+        ? "/employee"
+        : "/admin/dashboard";
+  const backLabel =
+    claims.user_role === "branch_manager"
+      ? APP_COPY_VI.branchCommand
+      : canEnterEmployeePortal
+        ? messages.settings.branch.employeeBack
+        : APP_COPY_VI.adminSurface;
 
   const operationalTiles: Tile[] = [
     {
@@ -117,14 +117,14 @@ export default async function BranchSettingsHubPage({
       description: "Danh mục, món ăn, giá. (Áp dụng toàn hệ thống.)",
       icon: <IconChecklist />,
     },
-    ...(isHq ? [] : operationalTiles),
+    ...operationalTiles,
   ];
 
   return (
     <AppPage width="default" className="md:p-6">
       <AppPageHeader
         title={messages.settings.branch.hubTitle}
-        description={messages.settings.branch.hubDescription(branch.name, isHq)}
+        description={messages.settings.branch.hubDescription(branch.name)}
         actions={
           <Button asChild variant="outline" size="sm" className="gap-1">
             <Link href={backHref}>
@@ -134,20 +134,6 @@ export default async function BranchSettingsHubPage({
           </Button>
         }
       />
-
-      {isHq ? (
-        <AppSection
-          title={messages.settings.branch.infoTitle}
-          badge={{
-            children: messages.settings.branch.hqBadge,
-            variant: "warning",
-          }}
-        >
-          <p className="text-sm leading-6 text-muted-foreground">
-            {messages.settings.branch.hqDescription}
-          </p>
-        </AppSection>
-      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <AttendanceSettingsCard

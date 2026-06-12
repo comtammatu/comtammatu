@@ -525,7 +525,7 @@ Route-level transition states are part of the design system, not per-page improv
 ## Copy Contract
 
 - Internal UI copy is Vietnamese by default.
-- Keep established acronyms: `POS`, `KDS`, `HQ`, `GRN`, `WAC`.
+- Keep established acronyms: `POS`, `KDS`, `tenant`, `GRN`, `WAC`.
 - Do not introduce new synonyms for business states or workflow objects.
 - Copy source ladder: business meaning and spelling in `docs/ref/glossary.md`; shared domain labels in `packages/shared/src/labels/vi.ts`; generic actions/states/errors in `@comtammatu/shared/messages` or `apps/web/lib/messages/*`; legal-fixed labels in `packages/shared/src/labels/legal-fixed.ts`; route-specific adapters in the relevant domain dictionary.
 - Before adding labels, update or consume the correct source in that ladder rather than adding ad-hoc inline synonyms.

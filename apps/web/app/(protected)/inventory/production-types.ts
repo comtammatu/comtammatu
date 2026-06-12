@@ -40,7 +40,7 @@ export type ProductionRecipeGroup = {
 };
 
 export type ProductionReadinessState =
-  | "missing-central-kitchen"
+  | "missing-production-branch"
   | "missing-finished-good"
   | "missing-raw-material"
   | "missing-recipe"
@@ -63,12 +63,12 @@ export function sortRawIngredients(items: RawIngredientOption[]) {
 }
 
 export function getProductionReadinessSummary({
-  centralKitchenBranches,
+  productionBranches,
   ingredients,
   finishedGoods,
   recipes,
 }: {
-  centralKitchenBranches: BranchOption[];
+  productionBranches: BranchOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
   recipes?: ProductionRecipeRow[];
@@ -85,8 +85,8 @@ export function getProductionReadinessSummary({
   );
 
   const readinessState: ProductionReadinessState =
-    centralKitchenBranches.length === 0
-      ? "missing-central-kitchen"
+    productionBranches.length === 0
+      ? "missing-production-branch"
       : sortedFinishedGoods.length === 0
         ? "missing-finished-good"
         : sortedRawIngredients.length === 0
@@ -96,8 +96,8 @@ export function getProductionReadinessSummary({
             : null;
 
   const readinessMessage =
-    readinessState === "missing-central-kitchen"
-      ? "Chưa có bếp trung tâm nào được cấu hình."
+    readinessState === "missing-production-branch"
+      ? "Chưa có chi nhánh sản xuất nào được cấu hình."
       : readinessState === "missing-finished-good"
         ? "Chưa có thành phẩm nào được gắn `item_kind = finished_good`, nên chưa thể tạo lệnh sản xuất."
         : readinessState === "missing-raw-material"

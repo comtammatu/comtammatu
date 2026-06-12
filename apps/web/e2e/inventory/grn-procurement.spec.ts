@@ -13,22 +13,21 @@ import {
 } from "./helpers";
 
 /**
- * E2E: GRN procurement branch enforcement
+ * E2E: GRN procurement branch workflow
  *
  * Covers:
- *   Scenario 1 — GRN at CW: draft → confirm → stock_levels updated at CW, WAC computed
- *   Scenario 2 — GRN at CK: draft → confirm → stock_levels updated at CK (new flow post-migration)
- *   Scenario 7 — RBAC: warehouse_manager scoped to CW-1 tries GRN at CW-2 → rejected
+ *   Scenario 1 — GRN at branch: draft → confirm → stock_levels updated, WAC computed
+ *   Scenario 7 — RBAC: warehouse_manager scoped to one branch tries another branch → rejected
  *                       with "Bạn chỉ được tạo phiếu nhập cho kho của mình."
  *
  * The DB trigger `enforce_po_grn_branch_is_procurement` (trg_grn_procurement_branch)
- * ensures branch_id must be CW or CK. Scenario 1 and 2 verify the happy path.
+ * ensures branch_id must point at an active branch.
  * Scenario 7 is an app-layer RBAC check in grn-actions.ts `canAccessProcurementBranch`.
  *
  * Pre-conditions (.env.test.local):
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *   E2E_CASHIER_EMAIL, E2E_CASHIER_PASSWORD
- *   E2E_INVENTORY_MANAGER_EMAIL  (optional — warehouse_manager at a CW)
+ *   E2E_INVENTORY_MANAGER_EMAIL  (optional — warehouse_manager at a branch)
  *   E2E_INVENTORY_MANAGER_PASSWORD (optional)
  *   E2E_BASE_URL (default http://localhost:3000)
  */
@@ -37,9 +36,8 @@ import {
 
 interface GrnFixtures {
   tenantId: number;
-  cw1Id: number;
-  cw2Id: number;
-  ckId: number;
+  receiveBranchId: number;
+  otherBranchId: number;
   supplierId: number;
   ingredientId: number;
   adminUserId: string;
@@ -63,19 +61,18 @@ async function buildGrnFixtures(): Promise<GrnFixtures> {
   const supabase = createServiceClient();
   const tenantId = await resolveTenantId(supabase);
 
-  const [cw1, cw2, ck, ingredient, supplierId] = await Promise.all([
-    ensureBranch(supabase, tenantId, "central_warehouse", "1"),
-    ensureBranch(supabase, tenantId, "central_warehouse", "2"),
-    ensureBranch(supabase, tenantId, "central_kitchen", "1"),
-    ensureIngredient(supabase, tenantId, "grn"),
-    ensureSupplier(supabase, tenantId),
-  ]);
+  const [receiveBranch, otherBranch, ingredient, supplierId] =
+    await Promise.all([
+      ensureBranch(supabase, tenantId, "branch", "grn-receive"),
+      ensureBranch(supabase, tenantId, "branch", "grn-other"),
+      ensureIngredient(supabase, tenantId, "grn"),
+      ensureSupplier(supabase, tenantId),
+    ]);
 
   // Ensure receive locations exist so confirm_goods_receipt_note can find them
   await Promise.all([
-    ensureInventoryLocation(supabase, tenantId, cw1.id, "receive"),
-    ensureInventoryLocation(supabase, tenantId, cw2.id, "receive"),
-    ensureInventoryLocation(supabase, tenantId, ck.id, "receive"),
+    ensureInventoryLocation(supabase, tenantId, receiveBranch.id, "receive"),
+    ensureInventoryLocation(supabase, tenantId, otherBranch.id, "receive"),
   ]);
 
   const {
@@ -86,31 +83,34 @@ async function buildGrnFixtures(): Promise<GrnFixtures> {
 
   return {
     tenantId,
-    cw1Id: cw1.id,
-    cw2Id: cw2.id,
-    ckId: ck.id,
+    receiveBranchId: receiveBranch.id,
+    otherBranchId: otherBranch.id,
     supplierId,
     ingredientId: ingredient.id,
     adminUserId: adminUser.id,
   };
 }
 
-// ─── Scenario 1: GRN at CW ───────────────────────────────────────────────────
+// ─── Scenario 1: GRN at branch ───────────────────────────────────────────────
 
-test.describe("GRN at central_warehouse — happy path (Scenario 1)", () => {
-  test("confirming a GRN at CW updates stock_levels and computes WAC", async ({
+test.describe("GRN at branch — happy path", () => {
+  test("confirming a GRN updates stock_levels and computes WAC", async ({
     page,
   }) => {
     const supabase = createServiceClient();
     const fx = await buildGrnFixtures();
 
     const stockBefore =
-      (await getStockLevel(supabase, fx.tenantId, fx.cw1Id, fx.ingredientId)) ??
-      0;
+      (await getStockLevel(
+        supabase,
+        fx.tenantId,
+        fx.receiveBranchId,
+        fx.ingredientId,
+      )) ?? 0;
 
     const grn = await createTestGrnDraft(supabase, {
       tenantId: fx.tenantId,
-      branchId: fx.cw1Id,
+      branchId: fx.receiveBranchId,
       supplierId: fx.supplierId,
       ingredientId: fx.ingredientId,
       quantity: 20,
@@ -149,11 +149,11 @@ test.describe("GRN at central_warehouse — happy path (Scenario 1)", () => {
         })
         .toBe("confirmed");
 
-      // Assert stock_levels updated at CW
+      // Assert stock_levels updated at the receiving branch.
       const stockAfter = await getStockLevel(
         supabase,
         fx.tenantId,
-        fx.cw1Id,
+        fx.receiveBranchId,
         fx.ingredientId,
       );
       expect(stockAfter).not.toBeNull();
@@ -164,7 +164,7 @@ test.describe("GRN at central_warehouse — happy path (Scenario 1)", () => {
         .from("stock_levels")
         .select("avg_unit_cost")
         .eq("tenant_id", fx.tenantId)
-        .eq("branch_id", fx.cw1Id)
+        .eq("branch_id", fx.receiveBranchId)
         .eq("ingredient_id", fx.ingredientId)
         .maybeSingle();
 
@@ -174,122 +174,6 @@ test.describe("GRN at central_warehouse — happy path (Scenario 1)", () => {
       await grn.cleanup();
     }
   });
-
-  test("DB trigger rejects GRN whose branch_id is an operational branch", async ({
-    page: _page,
-  }) => {
-    const supabase = createServiceClient();
-    const fx = await buildGrnFixtures();
-
-    // Create an operational branch and attempt GRN insertion
-    const opBranch = await ensureBranch(
-      supabase,
-      fx.tenantId,
-      "branch",
-      "grn-test",
-    );
-
-    const { error } = await supabase.from("goods_received_notes").insert({
-      tenant_id: fx.tenantId,
-      branch_id: opBranch.id,
-      supplier_id: fx.supplierId,
-      grn_number: `GRN-E2E-OP-${Date.now()}`,
-      status: "draft",
-      created_by: fx.adminUserId,
-    });
-
-    // trg_grn_procurement_branch trigger fires ERRCODE 23514
-    expect(error).not.toBeNull();
-    expect(error!.code).toBe("23514");
-    expect(error!.message).toContain(
-      "branch must be central_warehouse or central_kitchen",
-    );
-  });
-});
-
-// ─── Scenario 2: GRN at CK ───────────────────────────────────────────────────
-
-test.describe("GRN at central_kitchen — new flow (Scenario 2)", () => {
-  test("confirming a GRN at CK updates stock_levels at CK (not HQ)", async ({
-    page,
-  }) => {
-    const supabase = createServiceClient();
-    const fx = await buildGrnFixtures();
-
-    const stockBefore =
-      (await getStockLevel(supabase, fx.tenantId, fx.ckId, fx.ingredientId)) ??
-      0;
-
-    const grn = await createTestGrnDraft(supabase, {
-      tenantId: fx.tenantId,
-      branchId: fx.ckId,
-      supplierId: fx.supplierId,
-      ingredientId: fx.ingredientId,
-      quantity: 10,
-      unitCost: 12000,
-      createdByUserId: fx.adminUserId,
-    });
-
-    try {
-      await page.goto(`/inventory/grn/${grn.id}`);
-      await page.waitForLoadState("networkidle");
-      if (await isAccessDenied(page)) {
-        test.skip(
-          true,
-          "E2E auth user cannot access Inventory GRN UI. Use owner, super_manager, warehouse_manager, or production_manager for UI happy-path coverage.",
-        );
-        return;
-      }
-
-      const confirmBtn = page.getByRole("button", {
-        name: /ch.t nh.p kho|x.c nh.n nh.p|duy.t phi.u/i,
-      });
-      await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
-      await confirmBtn.click();
-      const confirmDialog = page.getByRole("alertdialog");
-      await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
-      await confirmDialog
-        .getByRole("button", { name: /ch.t nh.p kho/i })
-        .click();
-
-      await expect
-        .poll(() => getGrnStatus(supabase, fx.tenantId, grn.id), {
-          timeout: 20_000,
-          message: "GRN at CK should be confirmed",
-        })
-        .toBe("confirmed");
-
-      // Stock update must be at CK, not at CW
-      const stockAtCk = await getStockLevel(
-        supabase,
-        fx.tenantId,
-        fx.ckId,
-        fx.ingredientId,
-      );
-      expect(stockAtCk).toBeCloseTo(stockBefore + 10, 2);
-
-      // CW stock must NOT have changed as a result of this CK GRN
-      const stockAtCw = await getStockLevel(
-        supabase,
-        fx.tenantId,
-        fx.cw1Id,
-        fx.ingredientId,
-      );
-      // We can't assert exact CW value (other tests may affect it) but CK should be > 0
-      expect(stockAtCk).toBeGreaterThan(0);
-      // CK and CW stock must be independently tracked
-      expect(stockAtCk).not.toBe(stockAtCw);
-    } finally {
-      await grn.cleanup();
-    }
-  });
-
-  // Double-guard: confirm_goods_receipt_note also rejects GRNs whose branch
-  // is not CW/CK (raises 'grn_branch_must_be_procurement', ERRCODE 23514).
-  // It cannot be exercised in E2E without bypassing the INSERT trigger
-  // (trg_grn_procurement_branch), which supabase-js cannot disable. The INSERT
-  // trigger test (Scenario 1) provides full coverage of this path; the RPC
-  // body check is belt-and-suspenders after the trigger.
 });
 
 // ─── Scenario 8: Semantic — received_quantity = "Số đã giao" (gross delivered) ─
@@ -305,7 +189,7 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
       .from("goods_received_notes")
       .insert({
         tenant_id: fx.tenantId,
-        branch_id: fx.cw1Id,
+        branch_id: fx.receiveBranchId,
         supplier_id: fx.supplierId,
         grn_number: `GRN-E2E-NET-${Date.now()}`,
         status: "draft",
@@ -346,8 +230,12 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
     const fx = await buildGrnFixtures();
 
     const stockBefore =
-      (await getStockLevel(supabase, fx.tenantId, fx.cw1Id, fx.ingredientId)) ??
-      0;
+      (await getStockLevel(
+        supabase,
+        fx.tenantId,
+        fx.receiveBranchId,
+        fx.ingredientId,
+      )) ?? 0;
 
     // Seed: delivered=10, rejected=3, expect stock += 7
     const grnNumber = `GRN-E2E-NET-${Date.now()}`;
@@ -355,7 +243,7 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
       .from("goods_received_notes")
       .insert({
         tenant_id: fx.tenantId,
-        branch_id: fx.cw1Id,
+        branch_id: fx.receiveBranchId,
         supplier_id: fx.supplierId,
         grn_number: grnNumber,
         status: "draft",
@@ -408,7 +296,7 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
       const stockAfter = await getStockLevel(
         supabase,
         fx.tenantId,
-        fx.cw1Id,
+        fx.receiveBranchId,
         fx.ingredientId,
       );
       expect(stockAfter).toBeCloseTo(stockBefore + 7, 2);
@@ -434,16 +322,16 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
   });
 });
 
-// ─── Scenario 7: RBAC — warehouse_manager scoped to CW-1 attempts GRN at CW-2 ─
+// ─── Scenario 7: RBAC — scoped warehouse_manager attempts another branch ─────
 
-test.describe("RBAC — warehouse_manager cannot create GRN for another CW (Scenario 7)", () => {
-  test("returns 'Bạn chỉ được tạo phiếu nhập cho kho của mình.' when scoped to CW-1 but requesting CW-2", async ({
+test.describe("RBAC — warehouse_manager cannot create GRN for another branch", () => {
+  test("returns 'Bạn chỉ được tạo phiếu nhập cho kho của mình.' when requesting a different branch", async ({
     page,
   }) => {
     const supabase = createServiceClient();
     const fx = await buildGrnFixtures();
 
-    // Resolve the warehouse_manager user (must be scoped to cw1Id via branch_id in profile)
+    // Resolve the warehouse_manager user (must be scoped to receiveBranchId via branch_id in profile)
     let manager;
     try {
       manager = await resolveInventoryManagerUser(supabase);
@@ -451,17 +339,17 @@ test.describe("RBAC — warehouse_manager cannot create GRN for another CW (Scen
       test.skip(
         true,
         "No warehouse_manager profile found. Seed E2E_INVENTORY_MANAGER_EMAIL " +
-          "scoped to CW-1 in .env.test.local to run Scenario 7.",
+          "scoped to the E2E receive branch in .env.test.local to run Scenario 7.",
       );
       return;
     }
 
-    // Guard: ensure the manager is actually scoped to cw1Id
-    if (manager.branchId !== fx.cw1Id) {
+    // Guard: ensure the manager is actually scoped to receiveBranchId
+    if (manager.branchId !== fx.receiveBranchId) {
       test.skip(
         true,
-        `warehouse_manager branch_id (${manager.branchId}) does not match cw1Id (${fx.cw1Id}). ` +
-          "Update E2E_INVENTORY_MANAGER_EMAIL to a user scoped to the E2E CW-1 branch.",
+        `warehouse_manager branch_id (${manager.branchId}) does not match receiveBranchId (${fx.receiveBranchId}). ` +
+          "Update E2E_INVENTORY_MANAGER_EMAIL to a user scoped to the E2E receive branch.",
       );
       return;
     }
@@ -470,7 +358,7 @@ test.describe("RBAC — warehouse_manager cannot create GRN for another CW (Scen
     await page.goto("/inventory/grn/new");
     await page.waitForLoadState("networkidle");
 
-    // Attempt to select CW-2 as the branch
+    // Attempt to select another branch.
     const branchSelect = page
       .locator('[name="branchId"], [data-testid="branch-select"]')
       .first();
@@ -489,17 +377,18 @@ test.describe("RBAC — warehouse_manager cannot create GRN for another CW (Scen
       return;
     }
 
-    // If the select is present, try to pick CW-2 — it may not be in the list (RLS filtered)
-    const cw2Option = branchSelect.locator(`option[value="${fx.cw2Id}"]`);
-    const cw2InList = (await cw2Option.count()) > 0;
+    // If the select is present, try to pick the other branch; it may be hidden.
+    const otherBranchOption = branchSelect.locator(
+      `option[value="${fx.otherBranchId}"]`,
+    );
+    const otherBranchInList = (await otherBranchOption.count()) > 0;
 
-    if (!cw2InList) {
-      // CW-2 is correctly hidden by RLS / the action's fetchProcurementBranches filter
-      // This is the expected secure behaviour — pass.
+    if (!otherBranchInList) {
+      // The other branch is correctly hidden by RLS / the action's filter.
       return;
     }
 
-    await branchSelect.selectOption({ value: String(fx.cw2Id) });
+    await branchSelect.selectOption({ value: String(fx.otherBranchId) });
 
     const supplierSelect = page
       .locator('[name="supplierId"], [data-testid="supplier-select"]')

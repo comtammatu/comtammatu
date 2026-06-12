@@ -2,7 +2,7 @@ export type BlockedStateReasonCode =
   | "insufficient-permission"
   | "missing-auth-context"
   | "branch-scope-mismatch"
-  | "central-warehouse-branch-restricted"
+  | "branch-surface-restricted"
   | "untrusted-network";
 
 export interface BlockedStateCopy {
@@ -51,13 +51,12 @@ const BLOCKED_STATE_REASON_COPY: Record<
     toastMessage: "Bạn không có quyền trên chi nhánh này.",
     tone: "warning",
   },
-  "central-warehouse-branch-restricted": {
-    title: "Khu vực này không mở trên kho tổng",
-    description:
-      "POS và KDS chỉ được mở trên chi nhánh vận hành, không dùng cho kho tổng hoặc bếp trung tâm.",
+  "branch-surface-restricted": {
+    title: "Khu vực này chỉ mở trên chi nhánh",
+    description: "POS và KDS chỉ được mở trên chi nhánh vận hành.",
     nextStep:
-      "Chuyển sang chi nhánh vận hành phù hợp hoặc quay lại phân hệ quản trị.",
-    toastMessage: "POS/KDS không mở trên kho tổng/bếp trung tâm.",
+      "Chuyển sang chi nhánh phù hợp hoặc quay lại phân hệ quản trị.",
+    toastMessage: "POS/KDS chỉ mở trên chi nhánh vận hành.",
     tone: "warning",
   },
   "untrusted-network": {
@@ -78,7 +77,7 @@ function isBlockedStateReasonCode(
     value === "insufficient-permission" ||
     value === "missing-auth-context" ||
     value === "branch-scope-mismatch" ||
-    value === "central-warehouse-branch-restricted" ||
+    value === "branch-surface-restricted" ||
     value === "untrusted-network"
   );
 }

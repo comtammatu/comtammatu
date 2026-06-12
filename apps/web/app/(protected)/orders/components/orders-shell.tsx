@@ -21,15 +21,22 @@ export interface OrdersShellProps {
   children: ReactNode;
   user: { name: string };
   role: StaffRole;
+  branchId?: number | null;
 }
 
-export function OrdersShell({ children, user, role }: OrdersShellProps) {
-  const homeLink = resolveRoleHomeLink(role);
+export function OrdersShell({
+  children,
+  user,
+  role,
+  branchId,
+}: OrdersShellProps) {
+  const homeLink = resolveRoleHomeLink(role, branchId);
 
   return (
     <AppShell
       user={user}
       role={role}
+      branchId={branchId}
       brand={{
         icon: IconReceipt,
         subLabel: "Đối soát",

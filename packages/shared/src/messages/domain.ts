@@ -15,10 +15,7 @@ export const ORDER_VI = {
 } as const;
 export type OrderKey = keyof typeof ORDER_VI;
 
-// Branch entity — operational sales-floor site (branch_kind='branch').
-// For umbrella across central_warehouse + central_kitchen + branch in admin
-// selectors, use getSiteKindLabelVi from this package (each kind labeled
-// separately).
+// Branch entity — operational sales-floor site.
 // glossary §"Tổ chức": canonical "Chi nhánh" / acronym "CN".
 export const BRANCH_VI = {
   long: "Chi nhánh",
@@ -55,7 +52,7 @@ export type TableKey = keyof typeof TABLE_VI;
 //   inventoryItem ("Mặt hàng") — inventory SKU
 //   catalogItem ("Sản phẩm")  — admin catalog
 //   rawIngredient ("Nguyên liệu") — raw material movement
-//   finishedGood ("Thành phẩm")    — central kitchen output
+//   finishedGood ("Thành phẩm")    — prepared inventory item
 export const PRODUCT_VI = {
   posItem: "Món",
   inventoryItem: "Mặt hàng",

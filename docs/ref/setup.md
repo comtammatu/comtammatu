@@ -110,10 +110,10 @@ Mật khẩu tất cả: `Test1234!`. Bao phủ toàn bộ `STAFF_ROLES`:
 
 | Email                            | Role                 | Scope                           |
 | -------------------------------- | -------------------- | ------------------------------- |
-| `owner@comtammatu.vn`            | `owner`              | Tenant (pin HQ)                 |
-| `supermanager@comtammatu.vn`     | `super_manager`      | Tenant (pin HQ, keeper)         |
-| `warehouse@comtammatu.vn`        | `warehouse_manager`  | Trụ sở chính (warehouse)        |
-| `production@comtammatu.vn`       | `production_manager` | Bếp trung tâm (central kitchen) |
+| `owner@comtammatu.vn`            | `owner`              | Tenant (pin tenant)                 |
+| `supermanager@comtammatu.vn`     | `super_manager`      | Tenant (pin tenant, keeper)         |
+| `warehouse@comtammatu.vn`        | `warehouse_manager`  | Chi nhánh        |
+| `production@comtammatu.vn`       | `production_manager` | chi nhánh (branch production) |
 | `manager.datdo@comtammatu.vn`    | `branch_manager`     | Chi nhánh Đất Đỏ                |
 | `cashier.datdo@comtammatu.vn`    | `cashier`            | Chi nhánh Đất Đỏ                |
 | `waiter.datdo@comtammatu.vn`     | `waiter`             | Chi nhánh Đất Đỏ                |

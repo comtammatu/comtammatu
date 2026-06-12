@@ -127,7 +127,7 @@ function isMissingPriorityColumn(error: { message?: string } | null): boolean {
 }
 
 function isRunnerOperationalBranchKind(branchKind: string): boolean {
-  return branchKind !== "central_warehouse" && branchKind !== "central_kitchen";
+  return branchKind === "branch";
 }
 
 function normalizeRunnerOrders(

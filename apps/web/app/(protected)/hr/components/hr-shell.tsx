@@ -25,15 +25,17 @@ export interface HRShellProps {
   children: ReactNode;
   user: { name: string };
   role: StaffRole;
+  branchId?: number | null;
 }
 
-export function HRShell({ children, user, role }: HRShellProps) {
-  const homeLink = resolveRoleHomeLink(role);
+export function HRShell({ children, user, role, branchId }: HRShellProps) {
+  const homeLink = resolveRoleHomeLink(role, branchId);
 
   return (
     <AppShell
       user={user}
       role={role}
+      branchId={branchId}
       brand={{
         icon: IconBriefcase,
         subLabel: copy.brandSubLabel,

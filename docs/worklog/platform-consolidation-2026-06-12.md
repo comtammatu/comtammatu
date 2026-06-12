@@ -7,7 +7,7 @@ Bằng chứng cho quyết định [D015](../plan/decisions.md). Khảo sát đa
 - 50 ngày live (2026-04-24 → 06-12): orders 6.138 (completed 92,1%, cancelled 7,7%), order_items 12.289, order_status_history 16.729.
 - payments 5.676; đã thu 504,6tr VND (cash 81,2%, VietQR 18,8%). MoMo: 0 thành công / 5 failed trong 50 ngày — cần quyết sửa-hay-gỡ.
 - tax_invoices 2.876 (issued 2.820) — phát hành hằng ngày qua Viettel S-Invoice; reconcile_run_log 2.825.
-- print_jobs 16.664 (~2,7 job/đơn). 4 branches (CW Đất Đỏ, CN Đất Đỏ, CN Phước Hải, CK).
+- print_jobs 16.664 (~2,7 job/đơn). 4 branches (chi nhánh Đất Đỏ, CN Đất Đỏ, CN Phước Hải, chi nhánh).
 - Mật độ đơn x2 trong 7 ngày cuối: ~45 → ~101 đơn/ngày, peak 162 (06-07). Run-rate quy năm ≈ 3–3,7 tỷ → vắt ranh Nhóm 2/Nhóm 3 (mốc 3 tỷ, NĐ 68/2026).
 - Module rỗng hoàn toàn trên prod: inventory toàn chuỗi, refunds, payroll, leave, contracts, webhook_events. Bảng expense KHÔNG tồn tại trong schema.
 

@@ -22,9 +22,9 @@ import {
 } from "@/_lib/spreadsheet";
 import {
   idSchema,
-  isCentralKitchenScopedRole,
+  isProductionSiteScopedRole,
   PRODUCTION_ROLES,
-  requireCentralKitchenBranch,
+  requireProductionBranch,
   type RpcClient,
 } from "./_lib/production-shared";
 
@@ -187,14 +187,14 @@ export async function fetchProductionRecipes(): Promise<
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  if (isCentralKitchenScopedRole(claims.user_role)) {
+  if (isProductionSiteScopedRole(claims.user_role)) {
     if (claims.branch_id == null) {
       return {
         success: false,
-        error: "Tài khoản chưa được gán bếp trung tâm.",
+        error: "Tài khoản chưa được gán chi nhánh sản xuất.",
       };
     }
-    const access = await requireCentralKitchenBranch(
+    const access = await requireProductionBranch(
       supabase,
       claims.tenant_id,
       claims.branch_id,
@@ -702,14 +702,14 @@ export const upsertProductionRecipe = withAction(
   },
   async (data, ctx) => {
     const { supabase, claims } = ctx;
-    if (isCentralKitchenScopedRole(claims.user_role)) {
+    if (isProductionSiteScopedRole(claims.user_role)) {
       if (claims.branch_id == null) {
         return {
           success: false,
-          error: "Tài khoản chưa được gán bếp trung tâm.",
+          error: "Tài khoản chưa được gán chi nhánh sản xuất.",
         };
       }
-      const access = await requireCentralKitchenBranch(
+      const access = await requireProductionBranch(
         supabase,
         claims.tenant_id,
         claims.branch_id,
@@ -774,14 +774,14 @@ export const upsertProductionRecipeLines = withAction(
   },
   async (data, ctx) => {
     const { supabase, claims } = ctx;
-    if (isCentralKitchenScopedRole(claims.user_role)) {
+    if (isProductionSiteScopedRole(claims.user_role)) {
       if (claims.branch_id == null) {
         return {
           success: false,
-          error: "Tài khoản chưa được gán bếp trung tâm.",
+          error: "Tài khoản chưa được gán chi nhánh sản xuất.",
         };
       }
-      const access = await requireCentralKitchenBranch(
+      const access = await requireProductionBranch(
         supabase,
         claims.tenant_id,
         claims.branch_id,
@@ -844,14 +844,14 @@ export async function deleteProductionRecipe(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  if (isCentralKitchenScopedRole(claims.user_role)) {
+  if (isProductionSiteScopedRole(claims.user_role)) {
     if (claims.branch_id == null) {
       return {
         success: false,
-        error: "Tài khoản chưa được gán bếp trung tâm.",
+        error: "Tài khoản chưa được gán chi nhánh sản xuất.",
       };
     }
-    const access = await requireCentralKitchenBranch(
+    const access = await requireProductionBranch(
       supabase,
       claims.tenant_id,
       claims.branch_id,
@@ -887,14 +887,14 @@ export async function deleteProductionRecipeGroup(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  if (isCentralKitchenScopedRole(claims.user_role)) {
+  if (isProductionSiteScopedRole(claims.user_role)) {
     if (claims.branch_id == null) {
       return {
         success: false,
-        error: "Tài khoản chưa được gán bếp trung tâm.",
+        error: "Tài khoản chưa được gán chi nhánh sản xuất.",
       };
     }
-    const access = await requireCentralKitchenBranch(
+    const access = await requireProductionBranch(
       supabase,
       claims.tenant_id,
       claims.branch_id,
@@ -916,4 +916,3 @@ export async function deleteProductionRecipeGroup(
 
   return { success: true };
 }
-

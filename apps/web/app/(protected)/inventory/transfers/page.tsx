@@ -50,8 +50,6 @@ export default async function TransfersPage({
   const branches: BranchForTransfer[] = brRes.success
     ? ((brRes.data ?? []) as BranchForTransfer[])
     : [];
-  const hqBranchId =
-    branches.find((b) => b.branch_kind === "central_warehouse")?.id ?? null;
   const ingredients: IngredientRow[] = ingRes.success
     ? ((ingRes.data ?? []) as IngredientRow[])
     : [];
@@ -68,7 +66,6 @@ export default async function TransfersPage({
       branches={branches}
       ingredients={ingredients}
       locations={locations}
-      hqBranchId={hqBranchId}
       userBranchId={userBranchId}
       userRole={claims.user_role}
       basePath="/inventory/transfers"

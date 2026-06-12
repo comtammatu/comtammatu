@@ -100,7 +100,6 @@ export function TransfersListClient({
   branches,
   ingredients,
   locations,
-  hqBranchId,
   userBranchId,
   userRole,
   basePath = "/inventory/transfers",
@@ -110,7 +109,6 @@ export function TransfersListClient({
   branches: BranchForTransfer[];
   ingredients: IngredientRow[];
   locations: InventoryLocation[];
-  hqBranchId: number | null;
   userBranchId: number | null;
   userRole: StaffRole;
   basePath?: string;
@@ -129,10 +127,9 @@ export function TransfersListClient({
     locations.length >= 2;
   const canCreateOutbound =
     !isBranchManager &&
-    branches.length >= 2 &&
-    ((userBranchId == null && hqBranchId != null) ||
-      userBranchKind === "central_warehouse" ||
-      userBranchKind === "central_kitchen");
+    userBranchId != null &&
+    userBranchKind === "branch" &&
+    branches.length >= 2;
   const canCreate = isBranchManager
     ? canCreateInternal
     : canCreateOutbound || canCreateInternal;
@@ -373,7 +370,6 @@ export function TransfersListClient({
         branches={branches}
         ingredients={ingredients}
         locations={locations}
-        hqBranchId={hqBranchId}
         userBranchId={userBranchId}
         userRole={userRole}
         onCreated={handleCreated}

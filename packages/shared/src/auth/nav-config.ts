@@ -66,6 +66,8 @@ export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
 
 /** Adjacent product surfaces accessible from the admin workspace */
 export const DOMAIN_WORKSPACE_ITEMS: WorkspaceNavItemConfig[] = [
+  { moduleKey: "menu", icon: "Utensils", label: "Thực đơn" },
+  { moduleKey: "orders", icon: "ClipboardList", label: "Đơn hàng" },
   { moduleKey: "inventory", icon: "Package", label: "Kho hàng" },
   { moduleKey: "finance", icon: "Wallet", label: "Tài chính" },
   { moduleKey: "hr", icon: "Briefcase", label: APP_COPY_VI.hrWorkspace },
@@ -74,9 +76,20 @@ export const DOMAIN_WORKSPACE_ITEMS: WorkspaceNavItemConfig[] = [
 /** Branch-scoped operational entry points */
 export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
   {
+    moduleKey: "branch_dashboard",
+    icon: "LayoutDashboard",
+    hrefTemplate: "/br/{branchId}/dashboard",
+    label: APP_COPY_VI.branchCommand,
+  },
+  {
     moduleKey: "branch_settings",
     icon: "Settings",
     hrefTemplate: "/br/{branchId}/settings",
+  },
+  {
+    moduleKey: "branch_menu_limits",
+    icon: "Utensils",
+    hrefTemplate: "/br/{branchId}/menu-limits",
   },
   {
     moduleKey: "pos",

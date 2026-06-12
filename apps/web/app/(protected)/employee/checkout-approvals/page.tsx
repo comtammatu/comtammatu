@@ -99,7 +99,7 @@ async function loadVisibleBranchIds({
 export default async function CheckoutApprovalsPage() {
   const { supabase, claims } = await loadAuthState();
   const branchId = claims.branch_id;
-  const homeLink = resolveRoleHomeLink(claims.user_role);
+  const homeLink = resolveRoleHomeLink(claims.user_role, branchId);
   const canUseApprovalRoute = CHECKOUT_APPROVER_ROLES.includes(
     claims.user_role,
   );

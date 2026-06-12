@@ -57,7 +57,7 @@ export interface ProductionSurfaceData {
   canCreateProduction: boolean;
   canConfirmProduction: boolean;
   canAdjustStock: boolean;
-  centralKitchenBranches: BranchOption[];
+  productionBranches: BranchOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
   orders: ProductionOrderRow[];
@@ -105,7 +105,7 @@ export async function hasCurrentProductionBranchAccess(
     .eq("id", claims.branch_id)
     .maybeSingle();
 
-  return !error && data?.branch_kind === "central_kitchen";
+  return !error && data?.branch_kind === "branch";
 }
 
 export async function loadProductionSurfaceData({
@@ -173,14 +173,14 @@ export async function loadProductionSurfaceData({
     ]);
 
   const branches = (branchesRes.data ?? []) as BranchPreviewRow[];
-  let centralKitchenBranches: BranchOption[] = branches
-    .filter((branch) => branch.branch_kind === "central_kitchen")
+  let productionBranches: BranchOption[] = branches
+    .filter((branch) => branch.branch_kind === "branch")
     .map((branch) => ({
       id: branch.id,
       name: branch.name,
     }));
   if (isProductionBranchScopedRole(role) && claims.branch_id != null) {
-    centralKitchenBranches = centralKitchenBranches.filter(
+    productionBranches = productionBranches.filter(
       (branch) => branch.id === claims.branch_id,
     );
   }
@@ -213,7 +213,7 @@ export async function loadProductionSurfaceData({
     canCreateProduction,
     canConfirmProduction,
     canAdjustStock,
-    centralKitchenBranches,
+    productionBranches,
     ingredients,
     finishedGoods,
     orders: ordersRes.success ? (ordersRes.data ?? []) : [],

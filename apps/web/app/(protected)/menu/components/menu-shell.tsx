@@ -22,15 +22,17 @@ export interface MenuShellProps {
   children: ReactNode;
   user: { name: string };
   role: StaffRole;
+  branchId?: number | null;
 }
 
-export function MenuShell({ children, user, role }: MenuShellProps) {
-  const homeLink = resolveRoleHomeLink(role);
+export function MenuShell({ children, user, role, branchId }: MenuShellProps) {
+  const homeLink = resolveRoleHomeLink(role, branchId);
 
   return (
     <AppShell
       user={user}
       role={role}
+      branchId={branchId}
       brand={{
         icon: IconToolsKitchen,
         subLabel: "Chuyên trách",

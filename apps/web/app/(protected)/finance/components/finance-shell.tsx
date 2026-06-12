@@ -50,9 +50,15 @@ export interface FinanceShellProps {
   children: ReactNode;
   user: { name: string };
   role: StaffRole;
+  branchId?: number | null;
 }
 
-export function FinanceShell({ children, user, role }: FinanceShellProps) {
+export function FinanceShell({
+  children,
+  user,
+  role,
+  branchId: homeBranchId,
+}: FinanceShellProps) {
   // Lift the realtime subscription up to the shell so every Finance
   // route shares one Supabase channel (Architect §3 risk #3 + Critic R5).
   // Reading branch from URL keeps the shell agnostic of which route is
@@ -64,12 +70,13 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
   const branchId =
     Number.isFinite(parsedBranch) && parsedBranch > 0 ? parsedBranch : null;
   useFinanceRealtimeRefresh({ branchId });
-  const homeLink = resolveRoleHomeLink(role);
+  const homeLink = resolveRoleHomeLink(role, homeBranchId);
 
   return (
     <AppShell
       user={user}
       role={role}
+      branchId={homeBranchId}
       brand={{
         icon: IconWallet,
         subLabel: financeCopy.shell.subLabel,

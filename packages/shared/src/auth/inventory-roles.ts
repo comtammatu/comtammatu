@@ -25,10 +25,7 @@ export const PROCUREMENT_ROLES: readonly StaffRole[] = [
   "production_manager",
 ];
 
-/**
- * Phiếu trả NCC + credit notes — chi nhánh có thể đề xuất phiếu trả,
- * còn cấp tenant/kho/bếp trung tâm xử lý phần quản trị.
- */
+/** Phiếu trả NCC + credit notes. */
 export const SUPPLIER_RETURN_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",

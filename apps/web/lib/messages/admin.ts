@@ -74,6 +74,14 @@ export const admin = {
       adjustment: "Điều chỉnh",
     },
   },
+  staffForm: {
+    passwordPlaceholder: "Tối thiểu 8 ký tự",
+    fullNamePlaceholder: "Nguyễn Văn A",
+    rolePlaceholder: "Chọn chức vụ",
+    branchPlaceholder: "Chọn chi nhánh",
+    branchNotApplicable: "Không áp dụng",
+    branchDescription: "Bắt buộc cho vai trò vận hành tại chi nhánh.",
+  },
   staffAudit: {
     backToStaff: "Quay lại danh sách nhân viên",
     title: "Nhật ký quyền hạn",

@@ -13,9 +13,9 @@ Updated: `2026-04-17`
 
 ---
 
-## 1. HQ Procurement Loop
+## 1. tenant Procurement Loop
 
-- `persona`: `super_manager` acting as HQ procurement / HQ inventory operator
+- `persona`: `super_manager` acting as tenant procurement / tenant inventory operator
 - `site_kind`: `warehouse`
 - `device`: `desktop`
 - `starting route`: `/inventory`
@@ -42,7 +42,7 @@ Updated: `2026-04-17`
 - `success`:
   - user không phải đoán bước tiếp theo;
   - trạng thái PO/GRN/invoice đổi rõ ràng;
-  - tồn HQ và AP readout phản ánh logic vừa làm.
+  - tồn tenant và AP readout phản ánh logic vừa làm.
 - `blocked states`:
   - chưa có supplier;
   - PO thiếu line item hợp lệ;
@@ -53,13 +53,13 @@ Updated: `2026-04-17`
   - error copy không được mơ hồ;
   - blocked state phải chỉ ra dữ liệu nào đang thiếu.
 
-## 2. HQ Blocked Procurement Path
+## 2. tenant Blocked Procurement Path
 
 - `persona`: `super_manager`
 - `site_kind`: `warehouse`
 - `device`: `desktop`
 - `starting route`: `/inventory/purchase-orders/new`
-- `goal`: xác nhận UI chặn lỗi sớm, không để HQ commit sai dữ liệu procurement
+- `goal`: xác nhận UI chặn lỗi sớm, không để tenant commit sai dữ liệu procurement
 - `preconditions`:
   - có supplier nhưng chưa hoàn tất line item hoặc form thiếu dữ liệu;
   - có ít nhất 1 PO draft và 1 GRN draft để thử negative paths.
@@ -79,15 +79,15 @@ Updated: `2026-04-17`
 
 ## 3. Central Kitchen Production Happy Path
 
-- `persona`: `super_manager` acting as central kitchen operator
-- `site_kind`: `central_kitchen`
+- `persona`: `super_manager` acting as branch production operator
+- `site_kind`: `branch`
 - `device`: `tablet`, đối chiếu lại trên `desktop`
 - `starting route`: `/inventory`
 - `goal`: nhận nguyên liệu, tạo và confirm production order, rồi chuẩn bị xuất thành phẩm
 - `preconditions`:
-  - có transfer nguyên liệu đã đến bếp trung tâm;
+  - có transfer nguyên liệu đã đến chi nhánh;
   - có `finished_good` và `production_recipes` hợp lệ;
-  - site hiện tại là `central_kitchen`.
+  - site hiện tại là `branch`.
 - `steps`:
   1. Từ dashboard, kiểm task card và quick action `Tạo lệnh sản xuất`.
   2. Vào `/inventory/production`, kiểm readiness message.
@@ -95,7 +95,7 @@ Updated: `2026-04-17`
   4. Confirm production order.
   5. Kiểm list order, status, total cost, và CTA tiếp theo để xuất thành phẩm.
 - `expected next step`: sau confirm production, người dùng hiểu phải chuyển sang `transfers` để xuất thành phẩm đi chi nhánh
-- `handoff`: bàn giao thành phẩm cho flow `Bếp trung tâm -> Kho chi nhánh`
+- `handoff`: bàn giao thành phẩm cho flow `chi nhánh -> Kho chi nhánh`
 - `success`:
   - create/confirm production mạch lạc trên tablet;
   - status và cost phản hồi rõ;
@@ -103,20 +103,20 @@ Updated: `2026-04-17`
 - `blocked states`:
   - thiếu BOM;
   - thiếu nguyên liệu;
-  - chưa có `finished_good` hoặc chưa có bếp trung tâm cấu hình.
+  - chưa có `finished_good` hoặc chưa có chi nhánh cấu hình.
 - `recovery`: readiness/error copy phải chỉ user sang `recipes`, `ingredients`, hoặc `transfers` đúng chỗ
 
 ## 4. Central Kitchen Blocked Path
 
 - `persona`: `super_manager`
-- `site_kind`: `central_kitchen`
+- `site_kind`: `branch`
 - `device`: `tablet`
 - `starting route`: `/inventory/production`
 - `goal`: xác nhận màn production không tạo cảm giác “hỏng” khi thực chất là chưa đủ cấu hình
 - `preconditions`:
   - chuẩn bị data khiến một trong các điều kiện readiness thiếu.
 - `steps`:
-  1. Mở production khi thiếu bếp trung tâm cấu hình.
+  1. Mở production khi thiếu chi nhánh cấu hình.
   2. Mở production khi thiếu finished good.
   3. Mở production khi thiếu raw material hoặc BOM.
   4. Thử confirm order thiếu điều kiện.
@@ -150,7 +150,7 @@ Updated: `2026-04-17`
   - sau `received`, UI phải gợi đủ rõ sang `Cấp bếp`;
   - sau intra-branch transfer `Cấp bếp`, user hiểu tồn kho kho chi nhánh giảm và tồn bếp chi nhánh/default consumption tăng;
   - sau stocktake, user hiểu variance/kết quả chốt; conflict/recount S13b không nằm trong daily pilot.
-- `handoff`: báo chênh lệch lớn hoặc expiry risk cho OPS/HQ
+- `handoff`: báo chênh lệch lớn hoặc expiry risk cho OPS/tenant
 - `success`:
   - đây là journey branch quan trọng nhất và không được cần “người biết hệ thống trước” mới dùng được;
   - các action chính luôn thấy được trên tablet;
@@ -203,7 +203,7 @@ Updated: `2026-04-17`
   3. Kiểm data không null im lặng.
   4. Kiểm reports/alerts có thể đọc được như vai trò giám sát.
 - `expected next step`: user thấy rõ đây là oversight flow, không phải operator daily flow
-- `handoff`: chuyển finding cho HQ/branch operator
+- `handoff`: chuyển finding cho tenant/branch operator
 - `success`: đúng quyền, đúng nav, đúng mental model
 - `blocked states`: route vào được nhưng trống/không giải thích, hoặc nav lộ sai vai trò
 - `recovery`: redirect/forbidden và copy phải rõ ràng

@@ -7,7 +7,7 @@ Nhiệm vụ hệ thống: bán đúng, bếp nhận đúng, thu tiền đúng, 
 kho trừ đúng, và chủ/quản lý nhìn được tình trạng vận hành thật theo ngày.
 Không phải nền tảng nhiều merchant, không phải ERP đa ngành.
 
-Mô hình vận hành production: **Trụ sở chính (HQ) → Kho Tổng → Bếp Trung Tâm → Chi nhánh**.
+Mô hình vận hành production: **Tenant → Chi nhánh**.
 
 ## Modules
 
@@ -18,7 +18,7 @@ Mô hình vận hành production: **Trụ sở chính (HQ) → Kho Tổng → B�
 | M2  | POS                  | Cart, table/zone, order lifecycle, bill, PWA installable                                  | SHIPPED |
 | M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket                      | SHIPPED |
 | M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm) + Momo (IPN webhook). All live in production.   | SHIPPED |
-| M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, central kitchen                 | SHIPPED |
+| M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, branch production               | SHIPPED |
 | M6  | Finance              | Finance Basic, HĐĐT HKD, reconciliation, accountant export. Advanced COA/Journal deferred | PARTIAL |
 | M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip. BHXH/PIT calc deferred                         | PARTIAL |
 

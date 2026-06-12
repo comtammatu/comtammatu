@@ -72,6 +72,7 @@ export interface AppShellProps {
   children: ReactNode;
   user: { name: string };
   role: StaffRole;
+  branchId?: number | null;
   brand: BrandConfig;
   navGroups: ShellNavGroup[];
   defaultPageTitle: string;
@@ -89,6 +90,7 @@ export function AppShell({
   children,
   user,
   role,
+  branchId,
   brand,
   navGroups,
   defaultPageTitle,
@@ -113,7 +115,7 @@ export function AppShell({
   const logoVariant =
     brand.logoVariant === undefined ? "seal" : brand.logoVariant;
   const showBackLink = brand.showBackLink ?? true;
-  const defaultBackLink = resolveRoleHomeLink(role);
+  const defaultBackLink = resolveRoleHomeLink(role, branchId);
   const backHref = brand.backHref ?? defaultBackLink.href;
   const backLabel = brand.backLabel ?? defaultBackLink.label;
   const triggerClass = collapsible === "icon" ? undefined : "md:hidden";

@@ -21,6 +21,7 @@ Checklist vận hành và readiness gates.
 
 ## Supabase / Schema / Migration
 
+- [db-data-cleanup-production.md](db-data-cleanup-production.md): owner-run production data cleanup checklist for audited batches
 - [../spec/database-schema.md](../spec/database-schema.md): source ladder, migration status vocabulary, and baseline-first layout
 - [../../supabase/migrations/README.md](../../supabase/migrations/README.md): fresh-env install order for the public baseline and managed surfaces
 
