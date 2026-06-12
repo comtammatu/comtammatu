@@ -8,6 +8,8 @@ Nơi lưu các artefact theo dõi tiến độ và adoption.
 ## Active Notes
 
 - [platform-consolidation-2026-06-12.md](platform-consolidation-2026-06-12.md): bằng chứng khảo sát + harvest checklist cho D015 (một Platform, matu-platform freeze)
+- [supabase-advisor-hardening-2026-06-13.md](supabase-advisor-hardening-2026-06-13.md): T3 contract triage Supabase advisors nền và security-first hardening wave
+- [supabase-authenticated-definer-audit-2026-06-13.md](supabase-authenticated-definer-audit-2026-06-13.md): T3 audit wave 2 cho authenticated-callable SECURITY DEFINER RPC grants
 - [hrm-truc-ngay-cong-2026-06-10.md](hrm-truc-ngay-cong-2026-06-10.md): HRM "1 trục Ngày công" contract (bỏ đăng ký ca/phân ca)
 - [employee-daily-work-2026-06-09.md](employee-daily-work-2026-06-09.md): Employee daily-work contract hiện tại
 - [employee-pwa-shell-2026-06-11.md](employee-pwa-shell-2026-06-11.md): Employee PWA shell và install/offline affordance

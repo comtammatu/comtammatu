@@ -49,8 +49,8 @@ DROP POLICY IF EXISTS "inv_attach_insert" ON storage.objects;
 CREATE POLICY "inv_attach_insert" ON storage.objects FOR INSERT TO authenticated
   WITH CHECK ((bucket_id = 'inventory-attachments') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text) AND (has_permission(NULL::bigint, 'procurement:grn_create') OR has_permission(NULL::bigint, 'supplier_return:create') OR has_permission(NULL::bigint, 'inventory:writeoff')));
 DROP POLICY IF EXISTS "inv_attach_read" ON storage.objects;
-CREATE POLICY "inv_attach_read" ON storage.objects FOR SELECT TO public
-  USING (bucket_id = 'inventory-attachments');
+-- Public bucket object URL access does not require a storage.objects SELECT
+-- policy. Keep object listing closed.
 DROP POLICY IF EXISTS "inv_attach_update" ON storage.objects;
 CREATE POLICY "inv_attach_update" ON storage.objects FOR UPDATE TO authenticated
   USING ((bucket_id = 'inventory-attachments') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text))
@@ -62,8 +62,8 @@ DROP POLICY IF EXISTS "menu_images_insert" ON storage.objects;
 CREATE POLICY "menu_images_insert" ON storage.objects FOR INSERT TO authenticated
   WITH CHECK ((bucket_id = 'menu-images') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text) AND has_permission_any('menu:write'));
 DROP POLICY IF EXISTS "menu_images_read" ON storage.objects;
-CREATE POLICY "menu_images_read" ON storage.objects FOR SELECT TO public
-  USING (bucket_id = 'menu-images');
+-- Public bucket object URL access does not require a storage.objects SELECT
+-- policy. Keep object listing closed.
 DROP POLICY IF EXISTS "menu_images_update" ON storage.objects;
 CREATE POLICY "menu_images_update" ON storage.objects FOR UPDATE TO authenticated
   USING ((bucket_id = 'menu-images') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text))
