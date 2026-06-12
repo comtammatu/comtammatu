@@ -26,13 +26,14 @@ or agent memory.
 - The repo-scoped MCP server in `.mcp.json` points at production with
   `read_only=true`. Org-scoped MCP servers and the Supabase CLI are NOT
   read-only — re-check the ref before any write-capable call.
-- Machine enforcement for Claude Code sessions: `.claude/settings.json`
-  (permission deny list) + `.claude/hooks/guard-prod-db.mjs` (PreToolUse guard
-  blocking write SQL / mutating CLI / write-capable MCP calls against the
-  protected refs above). The hook's ref list and the settings matchers must
-  stay in sync with this table; `pnpm lint:guard-sync` (part of `pnpm lint`)
-  enforces all three. Other agent runtimes need their own equivalent guard;
-  this table remains the single source of truth.
+- Machine enforcement: `scripts/guard-prod-db.mjs` is the single PreToolUse
+  guard (blocks write SQL / mutating CLI / write-capable MCP calls against the
+  protected refs above). Per-runtime wiring runs that one script:
+  `.claude/settings.json` (Claude Code, plus its permission deny list) and
+  `.codex/hooks.json` (Codex). The hook's ref list and every adapter's
+  matchers must stay in sync with this table; `pnpm lint:guard-sync` (part of
+  `pnpm lint`) enforces all of them. A runtime without hook support still
+  follows this table manually; it remains the single source of truth.
 
 ## Query Boundary
 

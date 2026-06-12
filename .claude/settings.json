@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-prod-db.mjs\""
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/guard-prod-db.mjs\""
           }
         ]
       },
@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-prod-db.mjs\""
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/guard-prod-db.mjs\""
           }
         ]
       }

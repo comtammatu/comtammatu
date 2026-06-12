@@ -23,11 +23,12 @@ database policy, copy, or business rules.
   Cursor, or similar tools. Treat it as an adapter to the repo rules, not as a
   competing source of truth.
 - Adapter config MAY carry runtime enforcement for its own agent — permission
-  allow/deny lists, hooks, guard scripts (e.g. `.claude/settings.json` +
-  `.claude/hooks/guard-prod-db.mjs` enforce the Environment Registry in
-  `database.md` for Claude Code sessions). It MUST NOT duplicate rule content:
-  enforcement references the shared rules, the rules stay here. Share facts;
-  enforce per runtime.
+  allow/deny lists and hook wiring. Shared guard logic lives once in
+  `scripts/` (e.g. `scripts/guard-prod-db.mjs` enforces the Environment
+  Registry in `database.md`; `.claude/settings.json` and `.codex/hooks.json`
+  only wire it to their runtime). Adapters MUST NOT duplicate rule content or
+  fork guard scripts: enforcement references the shared rules and shared
+  scripts. Share facts and logic; wire per runtime.
 - Do not commit secrets, MCP tokens, plugin caches, generated sessions,
   worktrees, or per-user local state.
 - Do not vendor external skills into this repo unless the owner explicitly asks

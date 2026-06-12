@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/guard-prod-db.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "^mcp__.+__(apply_migration|execute_sql|deploy_edge_function|pause_project|restore_project|create_branch|merge_branch|reset_branch|rebase_branch|delete_branch)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/guard-prod-db.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}
