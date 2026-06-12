@@ -69,6 +69,20 @@ Recommended action: leave these alone until the explicit ledger-cleanup phase.
 If the future goal is clean `supabase migration list/db push`, prefer no-op
 placeholder files or Supabase migration repair after backup and owner approval.
 
+Follow-up completed after runtime reconcile:
+
+| Cloud version | Local placeholder |
+| --- | --- |
+| `20260609060814` | `supabase/migrations/20260609060814_20260609090000_shift_close_discount_totals.sql` |
+| `20260609060921` | `supabase/migrations/20260609060921_20260609093000_employee_daily_work_v1.sql` |
+| `20260609061120` | `supabase/migrations/20260609061120_20260609094000_pos_item_level_discount.sql` |
+| `20260609125020` | `supabase/migrations/20260609125020_20260609131000_restore_auth_create_user_helper.sql` |
+| `20260609125232` | `supabase/migrations/20260609125232_20260609131100_fix_branch_required_trigger_security.sql` |
+
+These placeholders are local no-op migrations. They align the repo with
+production ledger versions without modifying runtime schema or repairing
+`schema_migrations`.
+
 ### Same-Version Drift Candidates
 
 | Version | Local file | Cloud ledger finding | Object-level result | Classification |
