@@ -858,13 +858,7 @@ function DesyncTable({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant={
-                      r.order_payment_status === "refunded"
-                        ? "destructive"
-                        : "outline"
-                    }
-                  >
+                  <Badge variant="outline">
                     {r.order_payment_status ?? reconciliationCopy.desync.unpaid}
                   </Badge>
                 </TableCell>
