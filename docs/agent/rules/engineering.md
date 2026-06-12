@@ -97,5 +97,9 @@ export function proxy(request: NextRequest) {
 - Subject line: English, imperative, conventional prefix when one fits (`fix(scope): …`, `feat: …`, `chore: …`).
 - Commit body MUST carry a `Verification:` line listing the gates actually run, plus the review-tier note required by `docs/agent/rules/workflow.md` (T1 skip reason, or T2/T3 pointer).
 - Do not commit or push unless the owner asked for it in the current task.
+- Multiple agents may work in this working tree concurrently. Never leave a
+  partially staged index across steps: stage and commit in one atomic step,
+  stage only files your task changed, and re-check `git log -1` immediately
+  before committing.
 
 Use `rg` or `rg --files` for normal text and file searches when available.
