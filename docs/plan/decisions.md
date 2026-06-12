@@ -163,3 +163,16 @@ Helpers ở `apps/web/` (không ở `packages/ui`) vì: bind với RHF + dự á
 3. Mỗi molecule hợp nhất phải kèm: mục contract trong `docs/spec/design-system.md` + check ratchet trong `scripts/check-ui-contract.mjs` với allowlist = baseline hiện trạng, chỉ được giảm.
 
 **Consequences:** Map trạng thái cục bộ mới, formatVND cục bộ mới, `window.confirm`, skeleton/empty ad-hoc mới bị ratchet chặn dần từ W1–W3. Giữ nguyên có chủ đích: `pos/_lib/order-status-display.ts` (collapse 6→5 nhãn cho thu ngân — thiết kế UX), inventory dictionary 31 key (re-model per-entity là wave riêng), employee wrapper layer (family kỷ luật nhất app).
+
+## D015: Một Platform duy nhất — hệ production in-place là system of record; matu-platform đóng băng vĩnh viễn, harvest một chiều (2026-06-12)
+
+**Context:** Owner đặt lại câu hỏi hợp nhất 2 repo về một Platform/một DB/một nguồn số liệu. Khảo sát đối chiếu 2026-06-12 (code 2 repo + dữ liệu prod + kiểm chứng pháp lý web): prod `iexwsuaqqenyjiskawoj` có 50 ngày live (6.138 đơn, 504,6tr VND đã thu, 2.876 tax_invoices với 2.820 issued — dữ liệu pháp lý NĐ 70/2025, 16.664 print jobs), mật độ đơn x2 trong 7 ngày cuối (~101 đơn/ngày, peak 162 ngày 06-07). `matu-platform` (repo `/Users/luongthebinh/matu-platform`, DB `dyksphedgzqsqjqgxzog`): 280 migrations, kiến trúc tốt ở idempotency/PBAC anti-escalation/inventory ledger/e-invoice worker, nhưng 0 deployment production, 0 đơn thật, frozen 2026-06-09. Ước lượng human-pace 1 dev: absorb điểm mạnh vào hệ sống ≈ 11–16 tuần incremental, zero rủi ro dữ liệu; cutover sang matu-platform ≈ 15–23 tuần serial + feature-freeze 4–5 tháng + rủi ro migrate hóa đơn pháp lý. Base rate 5 chương trình rebuild trước đó: 0/5 thành công.
+
+**Decision:**
+
+1. Một Platform duy nhất = hệ production hiện tại (repo này, DB `iexwsuaqqenyjiskawoj`). Không ETL/migrate dữ liệu vận hành sang DB project khác. "Platform" là vai trò của hệ này, không phải tên repo khác.
+2. `matu-platform` đóng băng vĩnh viễn: không deploy, không mở lại bất kỳ feature nào. Repo chuyển archive read-only sau khi trích xong danh mục harvest. DB `dyksphedgzqsqjqgxzog` backup schema rồi pause/xóa — thời điểm do owner xác nhận riêng.
+3. Harvest một chiều từ matu-platform, ở mức spec + migration chọn lọc, viết lại theo convention `with-action.ts`/RPC hiện hành. Danh mục được duyệt: (a) pgTAP harness + CI test-db; (b) idempotency_keys + webhook event-claim-before-side-effect; (c) inventory ledger-based — tận dụng cửa sổ prod inventory 0 dòng; (d) HĐĐT worker pattern (queue/retry/awaiting_lookup, vault credentials, token cache, mock-block prod); (e) PBAC anti-escalation; (f) feedback module khi có nhu cầu; (g) reports net-profit-daily shape. PR harvest bê nguyên khối code không viết lại theo convention là vi phạm quyết định này.
+4. Ưu tiên 0–30 ngày sau quyết định: land đuôi treo (migrations chờ owner + deploy HRM keys + W4.4 còn lại) → daily close UI (chốt ca thu ngân + xác nhận ngày) → expense capture (bảng + form — phòng thủ thuế Nhóm 3 NĐ 68/2026, run-rate đang vắt ranh 3 tỷ/năm) → harvest (a)+(b).
+
+**Consequences:** Chấm dứt re-litigate hướng platform. Mọi đề xuất rebuild/cutover sau này phải sửa quyết định này trước, kèm số liệu chứng minh thắng phương án absorb. Bằng chứng khảo sát + harvest checklist chi tiết: `docs/worklog/platform-consolidation-2026-06-12.md`.
