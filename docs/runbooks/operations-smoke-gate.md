@@ -80,11 +80,10 @@ Ghi lại mọi ID phát sinh: `branch_id`, `terminal_id`, `order_id`, `payment_
    - Expected: order `completed`, payment `completed`, table được release nếu dine-in.
    - Expected: không có payment/order mismatch.
 
-7. ~~Kiểm kho.~~ **[2026-05-28 OBSOLETE per owner policy "không trừ kho"]** POS payment flow KHÔNG còn trừ kho — bước này không apply nữa cho smoke chain. Action-layer callsite (`createPayment` line 768 + `confirmPayment` line 956) sẽ được remove ở slice riêng; webhook stock leg (`complete_payment_and_consume_stock` → `consume_stock_for_order_service`) chờ owner authorize migration. Khi enforcement landed, smoke chain rút thành `POS → payment → KDS/print → HĐĐT`. See memory `project_pos_action_helper_refactor.md` "Owner policy 2026-05-28".
-   - Original expectations (kept as historical record; will be re-enabled if policy reverts after stock data seeded):
-     - Stock movement/consumption được ghi đúng nguyên liệu/site/quantity.
-     - Tồn sau bán giảm đúng theo recipe hoặc consumption contract hiện hành.
-     - Nếu stock fail, order/payment không bị complete fail-soft.
+7. Kiểm kho: KHÔNG áp dụng — thanh toán POS không trừ kho theo D016 (`docs/plan/decisions.md`); smoke chain = `POS → payment → KDS/print → HĐĐT`. Nếu D016 đảo, re-enable bước này với expectations:
+   - Stock movement/consumption được ghi đúng nguyên liệu/site/quantity.
+   - Tồn sau bán giảm đúng theo recipe hoặc consumption contract hiện hành.
+   - Nếu stock fail, order/payment không bị complete fail-soft.
 
 8. Kiểm in.
    - Expected: receipt print job được claim và chuyển `printed`.

@@ -14,6 +14,8 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - UI: `docs/modules/ui.md`
 - Security: `docs/modules/security.md`
 - Infrastructure: `docs/modules/infrastructure.md`
+- Architecture hub: `docs/architecture/README.md`
+- User guides (operator-facing): `docs/user-guides/README.md`
 
 ## Planning And Specs
 
@@ -24,19 +26,17 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - System architecture: `docs/spec/architecture.md`
 - Database schema source ladder: `docs/spec/database-schema.md`
 - Design system contract: `docs/spec/design-system.md`
+- Inventory overview diagrams: `docs/spec/inventory-overview-diagrams.md`
+- Toast/notification UX spec: `docs/spec/toast-notification-system.md`
 
 ## Business Domain
 
-- Reference index: `docs/ref/README.md`
+- Reference index (canonical, full list of `docs/ref/` files): `docs/ref/README.md`
+- Project vocabulary & naming SSoT: `docs/ref/glossary.md`
 - HKD business context: `docs/ref/business-context.md`
-- Setup guide: `docs/ref/setup.md`
-- HĐĐT & Thuế GTGT: `docs/ref/einvoice-tax.md`
-- Hợp đồng lao động: `docs/ref/labor-contracts.md`
-- Kho hàng (Inventory): `docs/ref/inventory.md`
-- Inventory SOP: `docs/ref/inventory-sop.md`
-- Inventory training handoff: `docs/ref/inventory-role-handoff.md`
-- Inventory RBAC matrix: `docs/ref/inventory-rbac-matrix.md`
-- Thuế TNCN & Lương: `docs/ref/payroll-pit.md`
+
+Do not re-enumerate `docs/ref/` here — the index above is the single owner of
+that list.
 
 ## Meta-Learning
 

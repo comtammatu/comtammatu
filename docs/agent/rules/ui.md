@@ -25,11 +25,12 @@ not a second authority:
 - `packages/ui/src/components/*` and `apps/web/app/components/surface.tsx` are
   runtime implementation and adapter evidence, not competing design systems.
 
-The retired Inventory pilot visual layer (`matu-surface`, `matu-*` tokens,
-`font-matu-body`, kitchen-sink route, external design folders) is enforced
-out by `scripts/check-ui-contract.mjs` / `pnpm lint:ui-contract`. Treat any
-new occurrence as a contract violation; do not reintroduce that layer unless
-`docs/spec/design-system.md` is explicitly changed first.
+Legacy `matu-*` visual-layer strings (`matu-surface`, `font-matu-*`,
+`bg/text/border/rounded/spacing/radius-matu*` tokens, and retired design-folder
+paths) are enforced out by `scripts/check-ui-contract.mjs` /
+`pnpm lint:ui-contract`. Treat any new occurrence as a contract violation; do
+not reintroduce that layer unless `docs/spec/design-system.md` is explicitly
+changed first.
 
 External references:
 

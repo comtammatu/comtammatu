@@ -10,7 +10,7 @@ Use this file for repo-wide engineering constraints, commands, architecture, imp
 pnpm dev          # Start dev server (Turbopack)
 pnpm build        # Production build
 pnpm typecheck    # Type checking across all packages
-pnpm lint         # ESLint
+pnpm lint         # Repo guard checks (copy, db-boundary, ui-contract, client-storage, rules-mirror, guard-sync) + ESLint
 pnpm test         # Test suites (turbo test)
 pnpm verify       # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
 pnpm db:types     # Regenerate Supabase types after migration is applied to the type source schema
@@ -92,7 +92,7 @@ export function proxy(request: NextRequest) {
 
 ## Git And Commit Conventions
 
-- Commit with the repo-local identity (`comtammatu@gmail.com`); never override the author per commit.
+- Commits MUST be authored as `comtammatu@gmail.com`. The identity is set repo-locally (`git config user.email comtammatu@gmail.com`, `git config user.name "Luong The Binh"`); never override the author per commit.
 - NEVER add AI attribution to commits or PRs: no `Co-Authored-By:` trailers, no "Generated with" bylines.
 - Subject line: English, imperative, conventional prefix when one fits (`fix(scope): …`, `feat: …`, `chore: …`).
 - Commit body MUST carry a `Verification:` line listing the gates actually run, plus the review-tier note required by `docs/agent/rules/workflow.md` (T1 skip reason, or T2/T3 pointer).

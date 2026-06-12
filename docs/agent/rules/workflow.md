@@ -87,7 +87,7 @@ Before marking implementation work complete:
 2. For T3, re-check the QA/QC and BA reports against the diff: did the test plan get covered? Are the business rules implemented?
 3. For T2, re-read your own self-review block and confirm the diff matches it.
 4. For T1, state why the debate was skipped in the commit body.
-5. CI (`.github/workflows/ci.yml`) runs typecheck, lint, test, and build on every push/PR. Landed work is complete only with green CI.
+5. CI (`.github/workflows/ci.yml`) runs typecheck, lint, test, and build on every PR and on push to `main` — a push to a working branch alone triggers nothing. Landed work is complete only with green CI.
 
 ## Skip Conditions (T1 only)
 
@@ -98,7 +98,3 @@ The ONLY time to skip both T3 and T2:
 - Dependency version bumps (with no API change in the bumped package)
 
 For any skipped task, still verify the changed files and state the skip reason in the commit body.
-
-## Historical Note
-
-Earlier versions of this file referenced an external `oh-my-Codex` agent role suffix (e.g. `oh-my-Codex:planner`). That tool was never wired into this repo's runtime — the roles above are the canonical names. Existing references in `tasks/regressions.md`, ADRs, and worklog entries describe past debates and remain valid as history.

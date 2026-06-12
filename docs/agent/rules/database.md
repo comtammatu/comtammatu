@@ -30,7 +30,8 @@ or agent memory.
   guard (blocks write SQL / mutating CLI / write-capable MCP calls against the
   protected refs above). Per-runtime wiring runs that one script:
   `.claude/settings.json` (Claude Code, plus its permission deny list) and
-  `.codex/hooks.json` (Codex). The hook's ref list and every adapter's
+  `.codex/hooks.json` (Codex; project-local hooks load only after the project
+  is trusted in that Codex session). The hook's ref list and every adapter's
   matchers must stay in sync with this table; `pnpm lint:guard-sync` (part of
   `pnpm lint`) enforces all of them. A runtime without hook support still
   follows this table manually; it remains the single source of truth.
@@ -84,7 +85,7 @@ or agent memory.
   branch_id: number | null,
   user_role: AccessBucket, // compatibility claim derived from positions.code
   access_bucket: AccessBucket,
-  position: string        // canonical — positions.code, "unassigned" if no row
+  position?: string       // canonical — positions.code; claim ABSENT when the user has no profile/active position row (bucket mappers fall back to "unassigned")
 }
 ```
 
