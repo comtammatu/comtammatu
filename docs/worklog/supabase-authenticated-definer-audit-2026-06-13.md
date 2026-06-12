@@ -133,10 +133,80 @@ After apply:
 3. Keep `refresh_finance_views()` signed-in callable and smoke Finance refresh
    action if that surface is in use.
 
+## Wave 3: Internal Helper Grant Drift
+
+T3 synthesis:
+
+PM:
+
+- Goal is another narrow warning reduction without cutting active app RPCs.
+- This wave targets helper functions that should not be first-class browser RPCs.
+- Avoid owner-gated dead RPC candidates and regulated money/HĐĐT mutation flows.
+
+BA:
+
+- Internal helper reads and trigger helpers can remain reachable through SQL
+  wrappers that enforce the real business gate.
+- Direct signed-in browser calls add risk without providing an operator job.
+- POS print entrypoints stay callable; only print metadata resolvers lose direct
+  authenticated EXECUTE.
+
+Senior Dev:
+
+- Migration is grant-only and leaves `service_role` untouched.
+- Local source scan found no direct `.rpc()` caller in `apps/` or `packages/`
+  outside generated database types.
+- Live call graph shows internal callers are `SECURITY DEFINER` wrappers/triggers:
+  print enqueue functions, stocktake/GRN helpers, period-close triggers, and GL
+  auto-posting.
+
+QA/QC:
+
+- Six-channel scan covered app callers, internal SQL callers, trigger execution,
+  RLS policies, DEFAULT/CHECK expressions, and cron jobs.
+- Production catalog before migration: all nine targets were
+  `authenticated=true`, `anon=false`, `service_role=true`.
+- No production apply was performed in this wave without a fresh owner
+  authorization.
+
+Six-channel scan for Wave 3 targets:
+
+| Function | App caller | SQL internal caller | Trigger | RLS policy | DEFAULT/CHECK | Cron |
+| --- | --- | --- | --- | --- | --- | --- |
+| `enforce_period_close()` | none | `enforce_period_close_stock_issues()` | none direct | none | none | none |
+| `ensure_branch_inventory_location_defaults(bigint,bigint)` | none | `trg_ensure_branch_inventory_location_defaults()` | none direct | none | none | none |
+| `finance_views_last_refresh()` | none | none | none | none | none | none |
+| `get_ingredient_abc_class(bigint,bigint)` | none | `start_stocktake(...)` | none | none | none | none |
+| `inventory_requires_manual_review(bigint)` | none | `grn_is_auto_approvable(...)`, `stock_issue_items_compute_waste_tier()` | none | none | none | none |
+| `period_status_at(bigint,timestamptz)` | none | `enforce_period_close()`, `enforce_period_close_stock_issues()` | none | none | none | none |
+| `resolve_branch_printer_for_type(bigint,bigint,text)` | none | `enqueue_provisional_bill(...)`, `enqueue_receipt_print(...)`, `enqueue_shift_close_print(...)` | none | none | none | none |
+| `resolve_print_template_version(bigint,bigint,text)` | none | `attach_print_document_to_payload(...)` | none | none | none | none |
+| `validate_journal_balance(bigint)` | none | `auto_post_journal(...)` | none | none | none | none |
+
+Deliverable:
+
+- `supabase/migrations/20260613103000_authenticated_definer_internal_helper_revoke.sql`
+  revokes `EXECUTE` from `authenticated` for the nine helper functions above and
+  leaves service-role execution intact.
+
+Production apply:
+
+- Owner authorized apply with "Apply" in-session.
+- Applied via Supabase MCP `apply_migration`.
+- Production ledger entry:
+  `20260612200317:20260613103000_authenticated_definer_internal_helper_revoke`.
+
+Post-apply verification:
+
+- All nine target functions now have `authenticated=false`, `anon=false`,
+  `service_role=true`.
+- Public SECURITY DEFINER callable count is now `authenticated=161`, `anon=0`,
+  `service_role=222`.
+
 ## Deferred
 
-- Per-surface audit of the remaining 170 authenticated-callable SECURITY DEFINER
-  functions.
+- Per-surface audit of the remaining 161 authenticated-callable SECURITY DEFINER
+  functions after Wave 3.
 - Separate T3 review for money/HĐĐT/refund/journal functions that are not direct
   app callers but mutate regulated financial state.
 - A future default-privileges migration can make future function grants opt-in,
