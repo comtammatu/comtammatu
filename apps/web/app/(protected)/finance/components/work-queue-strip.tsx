@@ -32,18 +32,10 @@ interface WorkQueueStripProps {
   className?: string;
 }
 
-export type WorkQueueTile =
-  | "period"
-  | "invoices"
-  | "journals"
-  | "reconciliation"
-  | "cash"
-  | "foodCost"
-  | "webhook";
+export type WorkQueueTile = "invoices" | "cash" | "foodCost" | "webhook";
 
 const DEFAULT_TILES: WorkQueueTile[] = [
   "invoices",
-  "reconciliation",
   "cash",
   "foodCost",
   "webhook",
@@ -62,14 +54,6 @@ function formatMoney(value: number | null | undefined): string {
 function formatPercent(value: number | null | undefined): string {
   if (value == null) return messages.finance.common.noValue;
   return `${value.toFixed(1)}%`;
-}
-
-function periodStatusLabel(status: string): string {
-  if (status === "open") return copy.periodStatus.open;
-  if (status === "closing") return copy.periodStatus.closing;
-  if (status === "closed") return copy.periodStatus.closed;
-  if (status === "missing") return copy.periodStatus.missing;
-  return status;
 }
 
 interface MetricProps {
@@ -125,16 +109,6 @@ export function WorkQueueStrip({
         </p>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {visible.includes("period") && (
-          <Metric
-            label={copy.workQueue.period}
-            value={periodStatusLabel(health.currentPeriodStatus)}
-            hint={health.currentPeriodLabel}
-            tone={
-              health.currentPeriodStatus === "missing" ? "warning" : "neutral"
-            }
-          />
-        )}
         {visible.includes("invoices") && (
           <Metric
             label={copy.workQueue.invoicesAttention}
@@ -143,29 +117,6 @@ export function WorkQueueStrip({
             tone={
               (summary?.invoice_attention_count ?? 0) > 0
                 ? "warning"
-                : "neutral"
-            }
-          />
-        )}
-        {visible.includes("journals") && (
-          <Metric
-            label={copy.workQueue.draftJournals}
-            value={formatCount(summary?.journal_draft_count)}
-            hint={copy.workQueue.postedJournalsHint(
-              formatCount(summary?.journal_posted_count),
-            )}
-          />
-        )}
-        {visible.includes("reconciliation") && (
-          <Metric
-            label={copy.workQueue.reconciliationDiff}
-            value={formatCount(health.reconciliationExceptionCount)}
-            hint={copy.workQueue.totalDifferenceHint(
-              formatMoney(health.reconciliationDifference),
-            )}
-            tone={
-              health.reconciliationExceptionCount > 0
-                ? "destructive"
                 : "neutral"
             }
           />

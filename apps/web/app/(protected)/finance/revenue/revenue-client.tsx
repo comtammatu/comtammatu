@@ -23,7 +23,6 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
-import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { formatVND } from "@comtammatu/shared/format";
 import { AppPage, AppPageHeader } from "@/components/surface";
@@ -68,13 +67,11 @@ import type {
   ComparePeriod,
   HourBucket,
   KpiBundle,
-  ReconcileSnippet,
   RollupRow,
 } from "./page";
 
 const filterCopy = messages.finance.filterBar;
 const revCopy = messages.finance.revenue;
-const reconCopy = messages.finance.reconcileCard;
 const cashCopy = messages.finance.cashVarianceCard;
 
 interface Props {
@@ -88,7 +85,6 @@ interface Props {
   hourlyEnabled: boolean;
   cashierEnabled: boolean;
   cashiers: CashierRow[];
-  reconcile: ReconcileSnippet | null;
   cashVariance: CashVarianceSummary | null;
   dashboardSummary: FinanceDashboardSummary | null;
   dashboardHealth: FinanceDashboardHealth;
@@ -234,7 +230,6 @@ export function RevenueClient({
   hourlyEnabled,
   cashierEnabled,
   cashiers,
-  reconcile,
   cashVariance,
   dashboardSummary,
   dashboardHealth,
@@ -836,13 +831,12 @@ export function RevenueClient({
             : null
         }
         health={dashboardHealth}
-        hide={["period", "journals", "foodCost", "webhook"]}
+        hide={["foodCost", "webhook"]}
       />
 
-      {reconcile || cashVariance ? (
+      {cashVariance ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          {reconcile ? <ReconcileCard reconcile={reconcile} /> : null}
-          {cashVariance ? <CashVarianceCard variance={cashVariance} /> : null}
+          <CashVarianceCard variance={cashVariance} />
         </div>
       ) : null}
     </AppPage>
@@ -850,59 +844,6 @@ export function RevenueClient({
 }
 
 // ─── Sub-components (preserved from previous client) ────────────
-
-function ReconcileCard({ reconcile }: { reconcile: ReconcileSnippet }) {
-  const TOLERANCE = 1;
-  const diff = reconcile.difference;
-  const matched = Math.abs(diff) <= TOLERANCE;
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle>{reconCopy.title}</CardTitle>
-        <p className="text-sm text-muted-foreground">{reconCopy.description}</p>
-      </CardHeader>
-      <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {reconCopy.posSubledger}
-          </p>
-          <p className="text-lg font-semibold tabular-nums">
-            {formatVND(reconcile.subledger_total)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {reconCopy.generalLedger}
-          </p>
-          <p className="text-lg font-semibold tabular-nums">
-            {formatVND(reconcile.gl_total)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {reconCopy.difference}
-          </p>
-          <p
-            className={
-              matched
-                ? "text-lg font-semibold tabular-nums text-success"
-                : "text-lg font-semibold tabular-nums text-destructive"
-            }
-          >
-            {matched ? reconCopy.matched : formatVND(diff)}
-          </p>
-        </div>
-        <div className="sm:col-span-3">
-          <Button asChild size="sm" variant="outline">
-            <Link href={`/finance/reconciliation?since=${reconcile.start}`}>
-              {reconCopy.openDetail}
-            </Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
   const hasShortPattern = variance.short_count >= 3;

@@ -48,22 +48,7 @@ export interface InvoiceRow {
   orders: { order_number: string } | null;
 }
 
-export interface FiscalPeriodRow {
-  id: number;
-  period_month: number;
-  period_year: number;
-  status: string;
-  closed_by: string | null;
-  closed_at: string | null;
-  notes: string | null;
-  created_at: string;
-}
-
 export interface FinanceDashboardHealth {
-  currentPeriodLabel: string;
-  currentPeriodStatus: string;
-  reconciliationExceptionCount: number;
-  reconciliationDifference: number;
   cashVarianceSessionCount: number;
   cashVarianceAbsAmount: number;
   foodCostExceptionCount: number;

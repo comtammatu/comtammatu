@@ -11,11 +11,6 @@ import {
   type FinanceDashboardSummary,
 } from "../actions";
 import { fetchFoodCost } from "../accounting-actions";
-import { fetchFiscalPeriods } from "../period-actions";
-import {
-  fetchReconciliation,
-  type ReconciliationReport,
-} from "../reconciliation-actions";
 import {
   parseFinanceParams,
   resolveFinanceRange,
@@ -23,7 +18,6 @@ import {
 import { diffVNDateDays } from "@comtammatu/shared/time";
 import type {
   FinanceDashboardHealth,
-  FiscalPeriodRow,
   TopItemRow,
 } from "../_lib/finance-types";
 import { RevenueClient } from "./revenue-client";
@@ -72,14 +66,6 @@ export interface KpiBundle {
   refreshed_at: string;
 }
 
-export interface ReconcileSnippet {
-  subledger_total: number;
-  gl_total: number;
-  difference: number;
-  start: string;
-  end: string;
-}
-
 export interface ComparePeriod {
   start: string;
   end: string;
@@ -126,7 +112,6 @@ interface FinanceFoodCostRow {
   food_cost_pct: number | null;
 }
 
-const RECONCILIATION_TOLERANCE = 1;
 const FOOD_COST_EXCEPTION_THRESHOLD = 60;
 // Hour-of-day RPC caps at 90d. The contract gives owners up to YTD on
 // the same surface, so when the resolved range exceeds 90d we skip
@@ -158,13 +143,11 @@ export default async function RevenueReportPage({
     rollupRes,
     kpisRes,
     prevKpisRes,
-    reconcileRes,
     cashVarianceRes,
     topItemsRes,
     hourRes,
     cashierRes,
     dashboardSummaryRes,
-    fiscalPeriodsRes,
     foodCostRes,
     invoicesRes,
   ] = await Promise.all([
@@ -183,11 +166,6 @@ export default async function RevenueReportPage({
           resolved.compare.end,
         )
       : Promise.resolve({ success: true as const, data: null }),
-    fetchReconciliation({
-      branchId: params.branch,
-      startDate: resolved.start,
-      endDate: resolved.end,
-    }),
     fetchCashVarianceSummary(params.branch, resolved.start, resolved.end),
     fetchTopItems(params.branch, resolved.start, resolved.end),
     hourlyEnabled
@@ -197,7 +175,6 @@ export default async function RevenueReportPage({
       ? fetchRevenueByCashier(params.branch, resolved.start, resolved.end)
       : Promise.resolve({ success: true as const, data: [] }),
     fetchFinanceDashboardSummary(params.branch, resolved.start, resolved.end),
-    fetchFiscalPeriods(),
     fetchFoodCost({
       startDate: resolved.start,
       endDate: resolved.end,
@@ -233,23 +210,6 @@ export default async function RevenueReportPage({
       }
     : null;
 
-  // Pull the "sales" reconciliation row for the active range — feeds
-  // the inline reconciliation card. If RPC fails we silently degrade.
-  let reconcile: ReconcileSnippet | null = null;
-  if (reconcileRes.success && reconcileRes.data) {
-    const report = reconcileRes.data as ReconciliationReport;
-    const sales = report.categories.find((c) => c.category === "sales");
-    if (sales) {
-      reconcile = {
-        subledger_total: Number(sales.subledger_total ?? 0),
-        gl_total: Number(sales.gl_total ?? 0),
-        difference: Number(sales.difference ?? 0),
-        start: resolved.start,
-        end: resolved.end,
-      };
-    }
-  }
-
   let cashVariance: CashVarianceSummary | null = null;
   if (cashVarianceRes.success && cashVarianceRes.data) {
     const raw = cashVarianceRes.data as CashVarianceSummary;
@@ -269,36 +229,11 @@ export default async function RevenueReportPage({
     }
   }
 
-  // Work-queue health (period status, recon exceptions, cash variance,
-  // food cost exceptions). Owner sees these on every Finance route via
-  // the shared <WorkQueueStrip>.
+  // Work-queue health (cash variance, food cost exceptions) via the
+  // shared <WorkQueueStrip>.
   const dashboardSummary = (
     dashboardSummaryRes.success ? dashboardSummaryRes.data : null
   ) as FinanceDashboardSummary | null;
-
-  const fiscalPeriods = fiscalPeriodsRes.success
-    ? ((fiscalPeriodsRes.data ?? []) as FiscalPeriodRow[])
-    : [];
-  const currentPeriodYear = Number(resolved.end.slice(0, 4));
-  const currentPeriodMonth = Number(resolved.end.slice(5, 7));
-  const currentPeriod = fiscalPeriods.find(
-    (p) =>
-      p.period_year === currentPeriodYear &&
-      p.period_month === currentPeriodMonth,
-  );
-
-  let reconciliationExceptionCount = 0;
-  let reconciliationDifference = 0;
-  if (reconcileRes.success && reconcileRes.data) {
-    const report = reconcileRes.data as ReconciliationReport;
-    reconciliationExceptionCount = report.categories.filter(
-      (c) => Math.abs(Number(c.difference ?? 0)) > RECONCILIATION_TOLERANCE,
-    ).length;
-    reconciliationDifference = report.categories.reduce(
-      (sum, c) => sum + Math.abs(Number(c.difference ?? 0)),
-      0,
-    );
-  }
 
   const cashVarianceSessionCount = cashVariance?.session_count ?? 0;
   const cashVarianceAbsAmount = cashVariance?.abs_variance_total ?? 0;
@@ -316,10 +251,6 @@ export default async function RevenueReportPage({
   const topFoodCostException = foodCostExceptions[0] ?? null;
 
   const dashboardHealth: FinanceDashboardHealth = {
-    currentPeriodLabel: `T${String(currentPeriodMonth).padStart(2, "0")}/${currentPeriodYear}`,
-    currentPeriodStatus: currentPeriod?.status ?? "missing",
-    reconciliationExceptionCount,
-    reconciliationDifference,
     cashVarianceSessionCount,
     cashVarianceAbsAmount,
     foodCostExceptionCount: foodCostExceptions.length,
@@ -348,7 +279,6 @@ export default async function RevenueReportPage({
       hourlyEnabled={hourlyEnabled}
       cashierEnabled={cashierEnabled}
       cashiers={cashiers}
-      reconcile={reconcile}
       cashVariance={cashVariance}
       dashboardSummary={dashboardSummary}
       dashboardHealth={dashboardHealth}
