@@ -179,58 +179,14 @@ function buildKpis({
   };
 }
 
-export async function fetchOperatingExpenseTotal({
-  supabase,
-  tenantId,
-  branchId,
-  startDate,
-  endDate,
-}: {
+export function fetchOperatingExpenseTotal(_params: {
   supabase: SupabaseClient;
   tenantId: number;
   branchId: number | null;
   startDate: string;
   endDate: string;
 }): Promise<number> {
-  let entriesQuery = supabase
-    .from("journal_entries")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .eq("status", "posted")
-    .gte("entry_date", startDate)
-    .lte("entry_date", endDate);
-
-  if (branchId != null) {
-    entriesQuery = entriesQuery.eq("branch_id", branchId);
-  }
-
-  const { data: entries, error: entriesError } = await entriesQuery;
-  if (entriesError || !entries?.length) return 0;
-
-  const entryIds = entries.map((entry) => entry.id);
-  const { data: lines, error: linesError } = await supabase
-    .from("journal_entry_lines")
-    .select(
-      `
-      debit_amount,
-      credit_amount,
-      chart_of_accounts ( account_code, account_type )
-    `,
-    )
-    .eq("tenant_id", tenantId)
-    .in("journal_entry_id", entryIds);
-
-  if (linesError) return 0;
-
-  return (lines ?? []).reduce((sum, line) => {
-    const account = line.chart_of_accounts as {
-      account_code: string;
-      account_type: string;
-    } | null;
-    if (!account || account.account_type !== "expense") return sum;
-    if (account.account_code.startsWith("621")) return sum;
-    return sum + toNumber(line.debit_amount) - toNumber(line.credit_amount);
-  }, 0);
+  return Promise.resolve(0);
 }
 
 async function fetchUnpaidSupplierInvoiceRisk({
