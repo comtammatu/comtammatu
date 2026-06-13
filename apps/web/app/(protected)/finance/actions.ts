@@ -702,8 +702,6 @@ export interface FinanceDashboardSummary {
   invoice_attention_count: number;
   invoice_issued_count: number;
   invoice_not_required_count: number;
-  journal_draft_count: number;
-  journal_posted_count: number;
   failed_webhook_count: number;
 }
 
@@ -772,49 +770,6 @@ export async function fetchOrdersForDay(
 
   if (error) {
     return { success: false, error: "Không thể tải danh sách đơn." };
-  }
-
-  return { success: true, data: data ?? [] };
-}
-
-/* ─── fetchReconciliationByDay — per-day revenue vs ledger ─ */
-
-export async function fetchReconciliationByDay(
-  branchId: number | null,
-  startDate: string,
-  endDate: string,
-): Promise<ActionResult> {
-  const parsedBranch = z.coerce
-    .number()
-    .int()
-    .positive()
-    .nullable()
-    .safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  const parsedStart = z.string().date().safeParse(startDate);
-  const parsedEnd = z.string().date().safeParse(endDate);
-  if (!parsedStart.success || !parsedEnd.success) {
-    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    REPORT_ROLES,
-    PERMISSION_KEYS.FINANCE_VIEW,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  // Same NULL-branch pass-through as get_revenue_rollup.
-  const { data, error } = await ctx.supabase.rpc("fn_reconcile_sales_by_day", {
-    p_branch_id: parsedBranch.data as number,
-    p_start_date: parsedStart.data,
-    p_end_date: parsedEnd.data,
-  });
-
-  if (error) {
-    return { success: false, error: "Không thể tải đối chiếu theo ngày." };
   }
 
   return { success: true, data: data ?? [] };
