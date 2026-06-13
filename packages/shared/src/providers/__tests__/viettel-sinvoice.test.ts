@@ -49,6 +49,11 @@ function assertValidators(
       diff44 < 1,
       `validator 44 failed for "${li.itemName}": expected=${((li.itemTotalAmountWithoutTax - li.itemDiscount) * vatRate) / 100} actual=${li.taxAmount} diff=${diff44}`,
     );
+    // discount is a RATE % in [0,100], never the amount (Viettel DISCOUNT_INVALID).
+    assert.ok(
+      li.discount >= 0 && li.discount <= 100,
+      `discount must be a rate in [0,100], got ${li.discount} for "${li.itemName}"`,
+    );
   }
   // 87: sumOfTotalLineAmountWithoutTax == Σ items.itemTotalAmountWithoutTax
   const sumNetCheck = result.itemInfo.reduce(
@@ -189,10 +194,45 @@ test("direct-sales mode subtracts allocated line discounts from Sinvoice totals"
   assert.equal(line.itemTotalAmountWithoutTax, 100_000);
   assert.equal(line.itemTotalAmountAfterDiscount, 90_000);
   assert.equal(line.itemTotalAmountWithTax, 90_000);
-  assert.equal(line.discount, 10_000);
+  assert.equal(line.discount, 10); // rate %, not the 10_000₫ amount
   assert.equal(line.itemDiscount, 10_000);
   assert.equal(line.taxPercentage, -2);
   assert.equal(line.taxAmount, 0);
+});
+
+test("direct-sales discount serializes as a RATE %, not the amount", () => {
+  // Regression: a fixed-amount line discount must be a RATE in [0,100], not the
+  // amount — Viettel rejects an amount-as-rate with DISCOUNT_INVALID.
+  const result = buildSinvoiceItemInfo(
+    [item("Nước ngọt KM", 1, 15_000, 5_000)],
+    8,
+    true,
+    "direct_sales_gross",
+  );
+  const [line] = result.itemInfo;
+  assert.ok(line);
+  assert.equal(line.itemDiscount, 5_000);
+  assert.ok(
+    line.discount >= 0 && line.discount <= 100,
+    `discount must be a rate, got ${line.discount}`,
+  );
+  assert.ok(Math.abs(line.discount - (5_000 / 15_000) * 100) < 1e-9);
+  assert.equal(line.itemTotalAmountAfterDiscount, 10_000);
+});
+
+test("direct-sales 100% free item: rate = 100, itemDiscount = full amount", () => {
+  // Fully-discounted promo line (e.g. a free drink): rate caps at 100.
+  const result = buildSinvoiceItemInfo(
+    [item("Phần nước miễn phí", 1, 10_000, 10_000)],
+    8,
+    true,
+    "direct_sales_gross",
+  );
+  const [line] = result.itemInfo;
+  assert.ok(line);
+  assert.equal(line.discount, 100);
+  assert.equal(line.itemDiscount, 10_000);
+  assert.equal(line.itemTotalAmountAfterDiscount, 0);
 });
 
 test("VAT mode converts gross line discounts to net itemDiscount", () => {
@@ -213,7 +253,7 @@ test("VAT mode converts gross line discounts to net itemDiscount", () => {
   assert.equal(line.itemTotalAmountWithoutTax, 100_000);
   assert.equal(line.itemTotalAmountAfterDiscount, 90_000);
   assert.equal(line.itemTotalAmountWithTax, 97_200);
-  assert.equal(line.discount, 10_000);
+  assert.equal(line.discount, 10); // rate %, not the 10_000₫ amount
   assert.equal(line.itemDiscount, 10_000);
   assert.equal(line.taxAmount, 7_200);
 });
@@ -579,7 +619,7 @@ test("createInvoice: sends direct-sales line discount and discounted summary", a
     assert.equal(line.itemTotalAmountWithoutTax, 100_000);
     assert.equal(line.itemTotalAmountAfterDiscount, 90_000);
     assert.equal(line.itemTotalAmountWithTax, 90_000);
-    assert.equal(line.discount, 10_000);
+    assert.equal(line.discount, 10); // rate %, not the 10_000₫ amount
     assert.equal(line.itemDiscount, 10_000);
     assert.equal(body.summarizeInfo?.discountAmount, 10_000);
     assert.equal(body.summarizeInfo?.totalAmountAfterDiscount, 90_000);

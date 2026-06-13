@@ -284,7 +284,9 @@ export function buildSinvoiceItemInfo(
         itemTotalAmountWithoutTax: lineAmount,
         itemTotalAmountAfterDiscount: lineAfterDiscount,
         itemTotalAmountWithTax: lineAfterDiscount,
-        discount: lineDiscount,
+        // Viettel `discount` is a RATE (% of line, 0–100); `itemDiscount` is the
+        // amount. Sending an amount as the rate reads as >100% → DISCOUNT_INVALID.
+        discount: lineAmount > 0 ? (lineDiscount / lineAmount) * 100 : 0,
         itemDiscount: lineDiscount,
         itemNote: null,
         isIncreaseItem: null,
@@ -322,7 +324,7 @@ export function buildSinvoiceItemInfo(
       itemTotalAmountWithoutTax: lineNet,
       itemTotalAmountAfterDiscount: taxableAmount,
       itemTotalAmountWithTax: taxableAmount + lineTax,
-      discount: lineDiscount,
+      discount: lineNet > 0 ? (lineDiscount / lineNet) * 100 : 0,
       itemDiscount: lineDiscount,
       itemNote: null,
       isIncreaseItem: null,
