@@ -286,3 +286,72 @@ lạc vào trang hình-Admin. Triệu chứng tầng token (clone status/VND/raw
 thuộc vệ sinh ratchet W1–W4 — burn-down riêng, ngoài W5. Đảo bất kỳ điểm nào (cho
 phép shell thứ 3, đổi padding owner, đổi route home) phải sửa quyết định này
 trước.
+
+## D020: Thoái phân hệ kế toán kép doanh nghiệp (GL / TT 200 / VAS) khỏi sản phẩm HKD — PROPOSAL (2026-06-13)
+
+**Context:** Xác minh bằng CODE + PROD (không từ docs). Nguồn gốc: cụm migration
+`_archive/20260419*` (`gl_*`: posting rules, auto-post journal, fiscal periods,
+close & reconcile, payment/grn/payroll/transfer/production autopost) +
+`finance_chart_of_accounts` + `finance_journal_entries` + `vas_report_lines` —
+một General Ledger kế toán kép hoàn chỉnh. Prod `iexwsuaqqenyjiskawoj`
+(2026-06-13): `journal_entries` ~625 (SALE auto-post ĐANG chạy: 155 bút toán/7
+ngày, mới nhất hôm nay), `journal_entry_lines` ~1138, `chart_of_accounts` 34
+(seed hệ tài khoản DN TT 200/2014: 511/621/622/627/641/642 "CP quản lý doanh
+nghiệp"/911/411), `posting_rules` 20 (511/33311/111/112/621/627/331/334/3383-6),
+`fiscal_periods` 2, `accounting_periods` 1, `payroll_periods` 0,
+`vas_report_lines` 0 (BCTC chưa lập lần nào). HKD theo **TT 152/2025** (thay TT
+88/2021 từ 01/01/2026) chỉ ghi sổ đơn (S1a/S2a–S2e/S3a-HKD), KHÔNG kế toán kép,
+KHÔNG hệ tài khoản TT 200, KHÔNG BCTC/VAS. `docs/modules/finance.md:71-88` đã
+phân loại toàn bộ là "Accounting Advanced — not the pilot default";
+`tasks/todo.md:49` đã ghi vấn đề void-BCTC là "moot — HKD files no BCTC". Áp phễu
+**D012**, nối tiếp **D013** (kế toán ngoài nav), là phần kế toán của **W5/W6**
+trong D014.
+
+**Decision (PROPOSAL — chờ owner ratify):**
+
+1. **THOÁI** toàn bộ GL doanh nghiệp khỏi DB sống + UI: tables
+   `journal_entries`/`journal_entry_lines`, `chart_of_accounts`, `posting_rules`,
+   `fiscal_periods`, `accounting_periods`, `payroll_periods`, `vas_report_lines`;
+   functions `auto_post_journal`, `create_manual_journal_entry`,
+   `close_fiscal_period`, `validate_journal_balance`, B01/B02/B03-DN; routes
+   `finance/{chart-of-accounts,journal,posting-rules,statements,audit-trail,periods}`
+   + `admin/accounting(/periods)`; action files
+   accounting/journal/chart-of-accounts/posting-rules/period/statement-actions.ts;
+   nav/ACL/labels tương ứng.
+2. **GIỮ** (tách hẳn, không đụng): HĐĐT `tax_invoices` + `/finance/invoices` +
+   `reconcile_run_log` (NĐ 70/2025), `/finance/revenue` (nguồn khai thuế =
+   `tax_invoices` status='issued'), `/finance/reconciliation` (đối soát tiền về),
+   `/finance/food-cost`, `supplier_invoices` (chứng từ chi phí — D015).
+3. **THÊM:** expense capture (bảng + form) — phòng thủ thuế Nhóm 3 NĐ 68/2026, là
+   sổ chi phí đơn, KHÔNG phải GL (D015).
+4. **Thứ tự thoái an toàn** (không vỡ payment/GRN/HĐĐT): (1) re-source
+   `finance-cockpit.ts:196-226` khỏi `journal_entries`/`chart_of_accounts` →
+   tính từ `orders`/`payments`/`supplier_invoices`; (2) gỡ `auto_post_journal`
+   khỏi RPC payment/GRN/transfer/refund (đã `EXCEPTION WHEN OTHERS` non-fatal nên
+   không thể làm hỏng đơn) — redefine từ body SỐNG ở
+   `20260611001000_disable_payment_stock_leg.sql` +
+   `20260612120000_refund_keep_order_payment_status.sql`, KHÔNG từ baseline; (3)
+   drop 7 cột `journal_entry_id` (`payments`, `goods_received_notes`,
+   `supplier_invoices`, `stock_transfers`, `production_orders`,
+   `supplier_payments`, `payroll_periods`) + dọn map lỗi
+   `posting_rule_not_found`/`fiscal_period_closed` ở
+   `pos/_lib/payment-messages.ts`; (4) drop functions + tables theo thứ tự FK; (5)
+   xóa route/action/nav/labels + re-baseline ratchet/i18n.
+5. **Dữ liệu:** ~625 `journal_entries` KHÔNG phải sổ pháp lý HKD → xóa thẳng,
+   không archive-forever; DDL/seed giữ lịch sử ở `supabase/migrations/_archive`
+   (đủ cho đường chuyển đổi DN tương lai — DN khi chuyển đổi mở sổ mới, không dùng
+   lại bút toán HKD).
+
+**Scope / Gate:** Đây là PROPOSAL + phân tích, CHƯA đụng code/DB. Cổng
+`finance.md:111` cần CẢ (a) data-retention review — ĐÃ THÔNG: HKD không có nghĩa
+vụ lưu GL, sổ pháp lý là `tax_invoices`/`supplier_invoices` giữ độc lập — LẪN (b)
+accounting review = owner/kế toán KÝ: CHƯA có. Migration là owner-applied (file →
+PR → owner) theo D015. Bằng chứng: truy vấn prod 2026-06-13 + adversarial
+keep-check (không plan nào trong todo/worklog/plan cần GL).
+
+**Consequences:** Khi ratify + ký → thực thi theo thứ tự trên, gắn vào W5/W6
+(D019). Sau thoái: cập nhật `docs/modules/finance.md` (gỡ mục Accounting
+Advanced), `role-route-matrix.md` (Direct Tenant Support `/admin/accounting`), và
+D013 theo. Đảo quyết định (giữ GL / bật lại VAS) phải sửa quyết định này trước,
+kèm lý do nghiệp vụ (vd chuyển đổi sang Doanh nghiệp). Void-BCTC issue
+(`tasks/todo.md:49`) trở thành vô nghĩa sau khi thoái.
