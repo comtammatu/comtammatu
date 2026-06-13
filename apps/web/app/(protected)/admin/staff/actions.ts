@@ -65,8 +65,6 @@ function mapRpcError(msg: string): string {
     return "Nhân viên không tồn tại";
   if (msg.includes("cannot modify owner"))
     return "Không có quyền chỉnh sửa chủ sở hữu";
-  if (msg.includes("cannot modify owner/super_manager"))
-    return "Không có quyền chỉnh sửa cấp trên";
   if (msg.includes("cannot set role above"))
     return "Không có quyền gán vai trò cao hơn";
   if (msg.includes("target not in your branch"))
