@@ -287,7 +287,7 @@ thuộc vệ sinh ratchet W1–W4 — burn-down riêng, ngoài W5. Đảo bất 
 phép shell thứ 3, đổi padding owner, đổi route home) phải sửa quyết định này
 trước.
 
-## D020: Thoái phân hệ kế toán kép doanh nghiệp (GL / TT 200 / VAS) khỏi sản phẩm HKD — PROPOSAL (2026-06-13)
+## D020: Thoái phân hệ kế toán kép doanh nghiệp (GL / TT 200 / VAS) khỏi sản phẩm HKD — DUYỆT (2026-06-13)
 
 **Context:** Xác minh bằng CODE + PROD (không từ docs). Nguồn gốc: cụm migration
 `_archive/20260419*` (`gl_*`: posting rules, auto-post journal, fiscal periods,
@@ -307,7 +307,7 @@ phân loại toàn bộ là "Accounting Advanced — not the pilot default";
 **D012**, nối tiếp **D013** (kế toán ngoài nav), là phần kế toán của **W5/W6**
 trong D014.
 
-**Decision (PROPOSAL — chờ owner ratify):**
+**Decision (owner DUYỆT 2026-06-13):**
 
 1. **THOÁI** toàn bộ GL doanh nghiệp khỏi DB sống + UI: tables
    `journal_entries`/`journal_entry_lines`, `chart_of_accounts`, `posting_rules`,
@@ -342,12 +342,15 @@ trong D014.
    (đủ cho đường chuyển đổi DN tương lai — DN khi chuyển đổi mở sổ mới, không dùng
    lại bút toán HKD).
 
-**Scope / Gate:** Đây là PROPOSAL + phân tích, CHƯA đụng code/DB. Cổng
-`finance.md:111` cần CẢ (a) data-retention review — ĐÃ THÔNG: HKD không có nghĩa
-vụ lưu GL, sổ pháp lý là `tax_invoices`/`supplier_invoices` giữ độc lập — LẪN (b)
-accounting review = owner/kế toán KÝ: CHƯA có. Migration là owner-applied (file →
-PR → owner) theo D015. Bằng chứng: truy vấn prod 2026-06-13 + adversarial
-keep-check (không plan nào trong todo/worklog/plan cần GL).
+**Scope / Gate:** Owner DUYỆT 2026-06-13 → cổng `finance.md:111` thông cả hai
+nửa: (a) data-retention review — HKD không có nghĩa vụ lưu GL, sổ pháp lý là
+`tax_invoices`/`supplier_invoices` giữ độc lập; (b) accounting review — owner ký
+2026-06-13. Thực thi theo slice: bước 1 (cockpit decouple, commit `684d4642`) ✓;
+bước 2a (xóa UI GL: route/action/nav/labels) — code-only, verify build; bước 2b
+(migration thoái GL: redefine money-RPC bỏ `auto_post_journal`, drop cột/fn/table)
+— owner-applied (file → PR → owner) theo D015. KHÔNG có dev/test DB nên owner nên
+apply thử trên Supabase branch trước prod. Bằng chứng: truy vấn prod 2026-06-13 +
+adversarial keep-check (không plan nào trong todo/worklog/plan cần GL).
 
 **Consequences:** Khi ratify + ký → thực thi theo thứ tự trên, gắn vào W5/W6
 (D019). Sau thoái: cập nhật `docs/modules/finance.md` (gỡ mục Accounting
@@ -355,3 +358,44 @@ Advanced), `role-route-matrix.md` (Direct Tenant Support `/admin/accounting`), v
 D013 theo. Đảo quyết định (giữ GL / bật lại VAS) phải sửa quyết định này trước,
 kèm lý do nghiệp vụ (vd chuyển đổi sang Doanh nghiệp). Void-BCTC issue
 (`tasks/todo.md:49`) trở thành vô nghĩa sau khi thoái.
+
+## D021: Chiết khấu theo món đặt ngay trong luồng thêm/gọi-thêm (POS) (2026-06-13)
+
+**Context:** Chiết khấu theo món đã có ở DB (`order_items.discount_*` + trigger
+`pos_normalize_order_item_discount` + RPC `apply_order_item_discount`) nhưng chỉ
+thao tác được HẬU KỲ: thêm món → mở chi tiết đơn → chạm món → "Chiết khấu món"
+(~6 chạm). Owner chạy CTKM định kỳ ("đánh giá 5 sao → miễn phí 1 phần nước") nên
+cần đặt chiết khấu cho TỪNG MÓN ngay trong customizer lúc thêm/gọi thêm. Owner
+chốt: chỉ thêm chiết khấu per-item (KHÔNG promotion engine); "spec rồi code".
+
+**Decision (T3 — debate PM/BA/Dev/QA đã chạy):**
+
+1. **Approach A (in-RPC):** nhồi 3 khóa `discount_type/discount_value/discount_note`
+   vào item JSON của `create_order` + `append_order_items`; INSERT thẳng — trigger
+   `pos_normalize_order_item_discount` (BEFORE INSERT) tự tính `discount_amount`,
+   trigger order tự cộng `item_discount_amount`/`total_amount`. KHÔNG tự tính tiền
+   trong RPC. Approach B (gọi `apply_order_item_discount` nối tiếp) bị loại vì 2 RPC
+   không trả `order_item_id`.
+2. **Schema KHÔNG đổi cột, KHÔNG đổi signature** (`p_items` là `jsonb`) ⇒ generated
+   types không đổi; bỏ khóa discount = byte-identical với hiện tại. RPC chỉ
+   `CREATE OR REPLACE` từ body SỐNG (baseline — không forward nào redefine) + thêm
+   tối thiểu.
+3. **Phạm vi UI:** customizer mode `new` / `append` / `edit` (giỏ chưa gửi).
+   `edit-sent` GIỮ luồng hậu kỳ. Ghi chú ≥3 ký tự BẮT BUỘC khi có chiết khấu
+   (constraint `order_items_discount_metadata_paired`) — Zod `superRefine` chặn
+   client trước; chip lý do sẵn để giảm ma sát. Dòng có chiết khấu nhận cart-key
+   riêng (không gộp số lượng vào dòng không-chiết-khấu).
+4. **Atomicity & deploy guard:** discount ghi cùng transaction tạo/append. RPC trả
+   thêm `item_discount_amount`; server action so kỳ vọng (tính từ giỏ) với giá trị
+   trả về — lệch ⇒ cảnh báo non-fatal (không chặn bán), phủ cả khoảng trống "deploy
+   code trước khi apply migration" (RPC cũ bỏ qua khóa lạ → món nguyên giá).
+5. **Tương tác đã soi:** order-discount lấy base = `subtotal − item_discount` (stack
+   đúng, total ≥0); void/reduce/edit/cancel/split full-move/merge để trigger tính
+   lại (item discount đi theo row). GAP đã biết, NGOÀI phạm vi: split PARTIAL chưa
+   copy discount sang clone; bill in nhiệt gộp discount ở khối tổng (không in
+   per-line). Cả hai là hành vi sẵn có, không do thay đổi này sinh ra.
+
+**Gate:** Migration owner-applied (file → PR → owner) theo D015; KHÔNG có dev DB ⇒
+chỉ chứng minh được typecheck/lint/build + unit; owner phải smoke trên POS thật sau
+apply (free 100%, vnd clamp, append, idempotent, void, in bill). Đảo quyết định
+(quay lại chỉ-hậu-kỳ, hoặc lên promotion engine) phải sửa quyết định này trước.
