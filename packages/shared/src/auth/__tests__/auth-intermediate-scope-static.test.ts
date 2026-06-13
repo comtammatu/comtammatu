@@ -46,6 +46,9 @@ const SKIP_PATH_PARTS = [
   "supabase/migrations/00000000000000_baseline.sql",
   "supabase/migrations/_archive",
   "supabase/migrations/_rollback",
+  // The one-shot dead-role-string cleanup must name the tokens in its strip
+  // regexes; it removes them rather than using them in the active contract.
+  "supabase/migrations/20260613130000_drop_dead_role_strings.sql",
   "packages/shared/src/auth/__tests__/auth-intermediate-scope-static.test.ts",
 ] as const;
 
