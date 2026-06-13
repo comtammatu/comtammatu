@@ -58,6 +58,9 @@ export function useCartActions() {
         sides?: CartSide[];
         note?: string;
         quantity?: number;
+        discountType?: "pct" | "vnd";
+        discountValue?: number;
+        discountNote?: string;
       },
     ) => {
       store.addItem(item, opts);

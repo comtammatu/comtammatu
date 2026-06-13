@@ -33,7 +33,8 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { cn } from "@comtammatu/ui";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import {
-  calcItemSubtotal,
+  calcItemDiscountAmount,
+  calcItemNetSubtotal,
   getPosLineItemDisplayName,
   getPosLineItemSummary,
 } from "../types";
@@ -297,7 +298,14 @@ function CartPaneComponent({
               data-vaul-no-drag
             >
               {cart.items.map((item) => {
-                const subtotal = calcItemSubtotal(item);
+                const discountAmount = calcItemDiscountAmount(item);
+                const netSubtotal = calcItemNetSubtotal(item);
+                const discountLabel =
+                  discountAmount > 0
+                    ? `Giảm món: -${formatVND(discountAmount)}${
+                        item.discount_note ? ` — ${item.discount_note}` : ""
+                      }`
+                    : null;
                 const isDeleteRevealed = swipe.isRevealed(item.key);
                 const isRemoving = removingKeys.has(item.key);
                 const swipeHandlers = swipe.bindings(item.key);
@@ -353,10 +361,11 @@ function CartPaneComponent({
                         <PosLineItemCompact
                           quantity={item.quantity}
                           title={displayName}
-                          total={formatVND(subtotal)}
+                          total={formatVND(netSubtotal)}
                           options={summary.options}
                           modifiers={summary.modifiers}
                           sides={summary.sides}
+                          discount={discountLabel}
                           note={summary.note}
                           isPriority={summary.isPriority}
                         />

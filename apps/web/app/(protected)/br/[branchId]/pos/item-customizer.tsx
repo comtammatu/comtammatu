@@ -15,6 +15,11 @@ import { Separator } from "@comtammatu/ui/components/separator";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Label } from "@comtammatu/ui/components/label";
 import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
+import {
   Sheet,
   SheetClose,
   SheetContent,
@@ -25,10 +30,14 @@ import {
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 import { X as IconX } from "lucide-react";
+import { FormattedNumberInput } from "@/components/form";
 import type { CartItem, CartModifier, CartSide } from "./types";
 import type { MenuItem, MenuVariant } from "./pos-menu-types";
 import { QuickReasonChips } from "./_components/quick-reason-chips";
-import { ITEM_NOTE_PRESETS } from "./_components/quick-reason-presets";
+import {
+  ITEM_DISCOUNT_PRESETS,
+  ITEM_NOTE_PRESETS,
+} from "./_components/quick-reason-presets";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 interface ItemCustomizerProps {
@@ -43,6 +52,9 @@ interface ItemCustomizerProps {
     sides: CartSide[],
     note: string | undefined,
     quantity: number,
+    discountType: "pct" | "vnd" | undefined,
+    discountValue: number | undefined,
+    discountNote: string | undefined,
   ) => void;
   /**
    * - `new`: add an item to a new order's cart
@@ -75,6 +87,10 @@ export function ItemCustomizer({
   >(new Map());
   const [note, setNote] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [discountEnabled, setDiscountEnabled] = useState(false);
+  const [discountType, setDiscountType] = useState<"pct" | "vnd">("pct");
+  const [discountValueText, setDiscountValueText] = useState("");
+  const [discountNote, setDiscountNote] = useState("");
 
   const resetStateForItem = useCallback(
     (nextItem: MenuItem, cartItem?: CartItem | null) => {
@@ -96,6 +112,15 @@ export function ItemCustomizer({
         );
         setNote(cartItem.note ?? "");
         setQuantity(cartItem.quantity);
+        const hasDiscount =
+          cartItem.discount_type !== undefined &&
+          cartItem.discount_value !== undefined;
+        setDiscountEnabled(hasDiscount);
+        setDiscountType(cartItem.discount_type ?? "pct");
+        setDiscountValueText(
+          hasDiscount ? String(cartItem.discount_value) : "",
+        );
+        setDiscountNote(cartItem.discount_note ?? "");
         return;
       }
 
@@ -110,6 +135,10 @@ export function ItemCustomizer({
       );
       setNote("");
       setQuantity(1);
+      setDiscountEnabled(false);
+      setDiscountType("pct");
+      setDiscountValueText("");
+      setDiscountNote("");
     },
     [],
   );
@@ -163,8 +192,35 @@ export function ItemCustomizer({
   const lineUnitPrice = unitPrice + modifierTotal + sideTotal;
   const totalPrice = lineUnitPrice * quantity;
 
+  // Parse + clamp the typed discount value so the preview matches what the
+  // server will store (mirrors compute_discount_amount).
+  const discountValue = useMemo(() => {
+    const trimmed = discountValueText.trim().replace(",", ".");
+    if (trimmed === "") return 0;
+    const n = Number(trimmed);
+    if (!Number.isFinite(n) || n < 0) return 0;
+    if (discountType === "pct") return Math.min(n, 100);
+    return Math.min(n, Math.max(totalPrice, 0));
+  }, [discountValueText, discountType, totalPrice]);
+
+  const discountAmount = useMemo(() => {
+    if (!discountEnabled || discountValue <= 0 || totalPrice <= 0) return 0;
+    if (discountType === "pct") {
+      return Math.floor((totalPrice * discountValue) / 100);
+    }
+    return Math.min(discountValue, totalPrice);
+  }, [discountEnabled, discountValue, discountType, totalPrice]);
+
+  const netTotalPrice = Math.max(0, totalPrice - discountAmount);
+  const discountNoteTrimLen = discountNote.trim().length;
+  // When the discount section is on it must resolve to a real reduction with a
+  // ≥3-char reason, mirroring the order_items_discount_metadata_paired DB rule.
+  const discountValid =
+    !discountEnabled || (discountAmount > 0 && discountNoteTrimLen >= 3);
+
   const handleConfirm = useCallback(() => {
     if (!item) return;
+    if (discountEnabled && !discountValid) return;
 
     const modifiers: CartModifier[] = item.menu_item_modifiers
       .filter((m) => selectedModifierIds.has(m.id))
@@ -181,6 +237,9 @@ export function ItemCustomizer({
       }));
 
     const trimmedNote = note.trim();
+    const trimmedDiscountNote = discountNote.trim();
+    const applyDiscount =
+      discountEnabled && discountAmount > 0 && trimmedDiscountNote.length >= 3;
     onConfirm(
       item,
       selectedVariant?.id,
@@ -190,6 +249,9 @@ export function ItemCustomizer({
       sides,
       trimmedNote.length > 0 ? trimmedNote : undefined,
       quantity,
+      applyDiscount ? discountType : undefined,
+      applyDiscount ? discountValue : undefined,
+      applyDiscount ? trimmedDiscountNote : undefined,
     );
   }, [
     item,
@@ -200,6 +262,12 @@ export function ItemCustomizer({
     note,
     quantity,
     onConfirm,
+    discountEnabled,
+    discountValid,
+    discountAmount,
+    discountType,
+    discountValue,
+    discountNote,
   ]);
 
   const toggleModifier = useCallback((modId: number) => {
@@ -489,6 +557,93 @@ export function ItemCustomizer({
                     maxLength={200}
                   />
                 </div>
+
+                {/* Per-item discount. Hidden in edit-sent: an item already
+                    sent to the kitchen is discounted via the post-hoc
+                    "Chiết khấu món" flow, not here. */}
+                {mode !== "edit-sent" && (
+                  <div>
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <Label
+                        htmlFor="item-discount-toggle"
+                        className="text-base font-semibold"
+                      >
+                        {messages.pos.customizer.discountLabel}
+                      </Label>
+                      <Checkbox
+                        id="item-discount-toggle"
+                        checked={discountEnabled}
+                        onCheckedChange={(checked) =>
+                          setDiscountEnabled(checked === true)
+                        }
+                      />
+                    </div>
+                    {discountEnabled && (
+                      <div className="flex flex-col gap-3">
+                        <Tabs
+                          value={discountType}
+                          onValueChange={(v) => {
+                            setDiscountType(v as "pct" | "vnd");
+                            setDiscountValueText("");
+                          }}
+                        >
+                          <TabsList className="w-full">
+                            <TabsTrigger value="pct" className="flex-1">
+                              {messages.pos.customizer.discountByPercent}
+                            </TabsTrigger>
+                            <TabsTrigger value="vnd" className="flex-1">
+                              {messages.pos.customizer.discountByVnd}
+                            </TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                        <FormattedNumberInput
+                          id="item-discount-value"
+                          maxFractionDigits={discountType === "pct" ? 2 : 0}
+                          value={discountValueText}
+                          onValueChange={setDiscountValueText}
+                          placeholder={
+                            discountType === "pct"
+                              ? messages.pos.customizer
+                                  .discountValuePlaceholderPct
+                              : messages.pos.customizer
+                                  .discountValuePlaceholderVnd
+                          }
+                        />
+                        <QuickReasonChips
+                          presets={ITEM_DISCOUNT_PRESETS}
+                          value={discountNote}
+                          onChange={setDiscountNote}
+                          ariaLabel={
+                            messages.pos.customizer.discountReasonSuggestionsAria
+                          }
+                        />
+                        <Textarea
+                          id="item-discount-note"
+                          value={discountNote}
+                          onChange={(e) => setDiscountNote(e.target.value)}
+                          placeholder={
+                            messages.pos.customizer.discountNotePlaceholder
+                          }
+                          rows={2}
+                          maxLength={200}
+                          aria-invalid={
+                            discountEnabled && discountNoteTrimLen > 0
+                              ? !discountValid
+                              : undefined
+                          }
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          {discountAmount > 0
+                            ? messages.pos.customizer.discountPreview(
+                                formatVND(discountAmount),
+                                formatVND(netTotalPrice),
+                              )
+                            : messages.pos.customizer.discountHint}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </ScrollArea>
 
@@ -499,9 +654,18 @@ export function ItemCustomizer({
                 <p className="text-sm text-muted-foreground">
                   {FORM_VI.subtotal}
                 </p>
-                <p className="text-xl font-bold text-primary tabular-nums">
-                  {formatVND(totalPrice)}
-                </p>
+                {discountAmount > 0 ? (
+                  <p className="text-xl font-bold text-primary tabular-nums">
+                    <span className="mr-2 text-sm font-normal text-muted-foreground line-through">
+                      {formatVND(totalPrice)}
+                    </span>
+                    {formatVND(netTotalPrice)}
+                  </p>
+                ) : (
+                  <p className="text-xl font-bold text-primary tabular-nums">
+                    {formatVND(totalPrice)}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-1">
                 <Button
@@ -529,7 +693,12 @@ export function ItemCustomizer({
                   +
                 </Button>
               </div>
-              <Button size="touch" className="min-w-32" onClick={handleConfirm}>
+              <Button
+                size="touch"
+                className="min-w-32"
+                disabled={!discountValid}
+                onClick={handleConfirm}
+              >
                 {mode === "append"
                   ? messages.pos.customizer.addToOrder
                   : mode === "edit"

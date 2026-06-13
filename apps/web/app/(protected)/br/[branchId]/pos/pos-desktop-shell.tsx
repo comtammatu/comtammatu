@@ -1044,6 +1044,10 @@ function PosDesktopInner({
           if (typeof priorityWarning === "string") {
             toast.warning(priorityWarning);
           }
+          const discountWarning = result.meta?.discountWarning;
+          if (typeof discountWarning === "string") {
+            toast.warning(discountWarning);
+          }
 
           resetDailyLimitHoldToken("pos_cart");
           clearCart();
@@ -1233,7 +1237,12 @@ function PosDesktopInner({
       sides: CartSide[],
       note: string | undefined,
       quantity: number,
+      discountType: "pct" | "vnd" | undefined,
+      discountValue: number | undefined,
+      discountNote: string | undefined,
     ) => {
+      const hasDiscount =
+        discountType !== undefined && discountValue !== undefined;
       if (!editingSentItem) {
         const excludeKey = editingCartItem?.key ?? editingAppendItem?.key;
         const block = getDailyLimitBlock(
@@ -1290,7 +1299,8 @@ function PosDesktopInner({
       if (editingCartItem) {
         const hasNote = note !== undefined && note.length > 0;
         const baseKey = makeCartKey(item.id, variantId, modifiers, sides);
-        const key = hasNote ? makeNotedCartKey(baseKey) : baseKey;
+        const key =
+          hasNote || hasDiscount ? makeNotedCartKey(baseKey) : baseKey;
         const updatedItem: CartItem = {
           key,
           menu_item_id: item.id,
@@ -1302,6 +1312,9 @@ function PosDesktopInner({
           modifiers,
           sides,
           note,
+          discount_type: hasDiscount ? discountType : undefined,
+          discount_value: hasDiscount ? discountValue : undefined,
+          discount_note: hasDiscount ? discountNote : undefined,
         };
         const cartSnapshot = cartStore.getSnapshot();
         const hasCollision = cartSnapshot.items.some(
@@ -1337,7 +1350,8 @@ function PosDesktopInner({
         }
         const hasNote = note !== undefined && note.length > 0;
         const baseKey = makeCartKey(item.id, variantId, modifiers, sides);
-        const key = hasNote ? makeNotedCartKey(baseKey) : baseKey;
+        const key =
+          hasNote || hasDiscount ? makeNotedCartKey(baseKey) : baseKey;
         const updatedItem: CartItem = {
           key,
           menu_item_id: item.id,
@@ -1349,6 +1363,9 @@ function PosDesktopInner({
           modifiers,
           sides,
           note,
+          discount_type: hasDiscount ? discountType : undefined,
+          discount_value: hasDiscount ? discountValue : undefined,
+          discount_note: hasDiscount ? discountNote : undefined,
         };
         setAppendDraftItems((currentItems) => {
           const hasCollision = currentItems.some(
@@ -1379,7 +1396,8 @@ function PosDesktopInner({
         }
         const hasNote = note !== undefined && note.length > 0;
         const baseKey = makeCartKey(item.id, variantId, modifiers, sides);
-        const key = hasNote ? makeNotedCartKey(baseKey) : baseKey;
+        const key =
+          hasNote || hasDiscount ? makeNotedCartKey(baseKey) : baseKey;
         const line: CartItem = {
           key,
           menu_item_id: item.id,
@@ -1391,6 +1409,9 @@ function PosDesktopInner({
           modifiers,
           sides,
           note,
+          discount_type: hasDiscount ? discountType : undefined,
+          discount_value: hasDiscount ? discountValue : undefined,
+          discount_note: hasDiscount ? discountNote : undefined,
         };
         addAppendDraftItem(line);
         setCustomizerItem(null);
@@ -1405,6 +1426,9 @@ function PosDesktopInner({
         sides,
         note,
         quantity,
+        discountType: hasDiscount ? discountType : undefined,
+        discountValue: hasDiscount ? discountValue : undefined,
+        discountNote: hasDiscount ? discountNote : undefined,
       });
       setCustomizerItem(null);
     },

@@ -767,6 +767,15 @@ export const submitOrderRpcMappings: readonly RpcErrorMapping[] = [
     userMessage: "Đang có đơn khác được tạo. Vui lòng thử lại sau vài giây.",
   },
   {
+    match: includesAny(
+      "order_items_discount_metadata_paired",
+      "discount_note_required",
+      "discount_invalid",
+    ),
+    errorCode: POS_ERROR_CODES.INPUT_INVALID_DISCOUNT,
+    userMessage: "Chiết khấu món không hợp lệ — cần ghi chú lý do (≥3 ký tự).",
+  },
+  {
     // Stale `pos_session_id` from RSC props: cashier closed (and re-opened)
     // the shift on another tab/terminal while this tab still holds the old
     // session.id. RPC raises P0002 with this exact wording. Surface a typed
@@ -817,6 +826,15 @@ export const submitOrderRpcFallback: RpcErrorFallback = {
  * adds `order_not_appendable` for orders past the pending state.
  */
 export const appendOrderItemsRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny(
+      "order_items_discount_metadata_paired",
+      "discount_note_required",
+      "discount_invalid",
+    ),
+    errorCode: POS_ERROR_CODES.INPUT_INVALID_DISCOUNT,
+    userMessage: "Chiết khấu món không hợp lệ — cần ghi chú lý do (≥3 ký tự).",
+  },
   {
     match: includesAny("order_not_appendable", "appendable"),
     errorCode: POS_ERROR_CODES.RPC_GENERIC,

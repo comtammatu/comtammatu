@@ -68,7 +68,51 @@ function cartItemsToRpcItems(items: CartItem[]) {
     })),
     subtotal: calcItemSubtotal(item),
     note: item.note ?? null,
+    discount_type: item.discount_type ?? null,
+    discount_value: item.discount_value ?? null,
+    discount_note: item.discount_note ?? null,
   }));
+}
+
+/**
+ * Sum of expected per-line discount across the cart, mirroring the server
+ * `compute_discount_amount`. Used to verify the create/append RPC actually
+ * applied the discounts — guards the window where web ships before the
+ * inline-discount migration is live (old RPC silently drops the keys).
+ */
+function expectedItemDiscountTotal(items: readonly CartItem[]): number {
+  return items.reduce((sum, item) => {
+    if (item.discount_type === undefined || item.discount_value === undefined) {
+      return sum;
+    }
+    const gross = calcItemSubtotal(item);
+    if (gross <= 0 || item.discount_value <= 0) return sum;
+    const amount =
+      item.discount_type === "pct"
+        ? Math.floor((gross * Math.min(item.discount_value, 100)) / 100)
+        : Math.min(item.discount_value, gross);
+    return sum + amount;
+  }, 0);
+}
+
+const ITEM_DISCOUNT_NOT_APPLIED_WARNING =
+  "Chiết khấu món chưa được áp dụng — kiểm tra lại hoặc dùng 'Chiết khấu món' trong chi tiết đơn.";
+
+/**
+ * Non-fatal warning when the RPC did not reflect the expected per-line
+ * discount. `actual === undefined` means the RPC predates the inline-discount
+ * migration (it dropped the keys); `actual < expected` means a partial/missed
+ * apply. The +1 tolerates integer-rounding noise.
+ */
+function buildItemDiscountWarning(
+  expected: number,
+  actual: number | undefined,
+): string | null {
+  if (expected <= 0) return null;
+  if (actual === undefined || actual + 1 < expected) {
+    return ITEM_DISCOUNT_NOT_APPLIED_WARNING;
+  }
+  return null;
 }
 
 function cartItemsToDailyLimitItemLabels(
@@ -314,6 +358,7 @@ export const submitOrder = withActionPositional(
     const result = data as unknown as {
       order_id: number;
       order_number: string;
+      item_discount_amount?: number;
     } | null;
 
     if (!result) {
@@ -329,12 +374,18 @@ export const submitOrder = withActionPositional(
         ? await markInitialOrderPriority(supabase, result.order_id)
         : null;
 
+    const discountWarning = buildItemDiscountWarning(
+      expectedItemDiscountTotal(cart.items),
+      result.item_discount_amount,
+    );
+
     return {
       success: true,
       data: { order_id: result.order_id, order_number: result.order_number },
       meta: {
         prioritySet: cart.is_priority === true && priorityWarning === null,
         ...(priorityWarning ? { priorityWarning } : {}),
+        ...(discountWarning ? { discountWarning } : {}),
       },
     };
   },
@@ -379,6 +430,7 @@ export const appendOrderItems = withActionPositional(
       total_amount: number;
       added_count: number;
       idempotent?: boolean;
+      discountWarning?: string;
     }>
   > => {
     if (claims.branch_id !== branchId) {
@@ -420,6 +472,7 @@ export const appendOrderItems = withActionPositional(
       added_count: number;
       subtotal: number;
       total_amount: number;
+      item_discount_amount?: number;
       idempotent?: boolean;
     } | null;
 
@@ -431,6 +484,16 @@ export const appendOrderItems = withActionPositional(
       };
     }
 
+    // An idempotent replay added nothing this call, so there is no discount to
+    // verify against — only check on a real append.
+    const discountWarning =
+      result.idempotent === true
+        ? null
+        : buildItemDiscountWarning(
+            expectedItemDiscountTotal(items),
+            result.item_discount_amount,
+          );
+
     return {
       success: true,
       data: {
@@ -439,6 +502,7 @@ export const appendOrderItems = withActionPositional(
         total_amount: Number(result.total_amount),
         added_count: Number(result.added_count),
         ...(result.idempotent ? { idempotent: true } : {}),
+        ...(discountWarning ? { discountWarning } : {}),
       },
     };
   },

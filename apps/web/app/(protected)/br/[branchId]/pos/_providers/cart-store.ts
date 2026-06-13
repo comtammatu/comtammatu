@@ -54,18 +54,25 @@ export class CartStore {
       sides?: CartSide[];
       note?: string;
       quantity?: number;
+      discountType?: "pct" | "vnd";
+      discountValue?: number;
+      discountNote?: string;
     } = {},
   ) {
     const modifiers = opts.modifiers ?? [];
     const sides = opts.sides ?? [];
     const price = opts.unitPrice ?? item.base_price;
     const hasNote = opts.note !== undefined && opts.note.length > 0;
+    const hasDiscount =
+      opts.discountType !== undefined && opts.discountValue !== undefined;
     const quantity = opts.quantity ?? 1;
     const baseKey = makeCartKey(item.id, opts.variantId, modifiers, sides);
-    const key = hasNote ? makeNotedCartKey(baseKey) : baseKey;
+    // A discounted line gets a unique key so it never quantity-merges onto an
+    // identical undiscounted line (same as a noted line).
+    const key = hasNote || hasDiscount ? makeNotedCartKey(baseKey) : baseKey;
 
     const items = this.state.items;
-    if (!hasNote) {
+    if (!hasNote && !hasDiscount) {
       const existing = items.find((ci) => ci.key === key);
       if (existing) {
         this.setState({
@@ -89,6 +96,9 @@ export class CartStore {
       modifiers,
       sides,
       note: hasNote ? opts.note : undefined,
+      discount_type: hasDiscount ? opts.discountType : undefined,
+      discount_value: hasDiscount ? opts.discountValue : undefined,
+      discount_note: hasDiscount ? opts.discountNote : undefined,
     };
     this.setState({ ...this.state, items: [...items, newItem] });
   }

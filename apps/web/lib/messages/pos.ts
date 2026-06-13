@@ -235,5 +235,15 @@ export const pos = {
     update: "Cập nhật",
     updateSent: "Cập nhật món đã gửi",
     addToCart: "Thêm vào giỏ",
+    discountLabel: "Chiết khấu món",
+    discountByPercent: "Theo %",
+    discountByVnd: "Theo VNĐ",
+    discountValuePlaceholderPct: "Vd: 100 (tặng miễn phí)",
+    discountValuePlaceholderVnd: "Vd: 15000",
+    discountReasonSuggestionsAria: "Gợi ý lý do chiết khấu món",
+    discountNotePlaceholder: "Lý do chiết khấu (vd: Đánh giá 5 sao)",
+    discountPreview: (amount: string, net: string) =>
+      `Giảm ${amount} → còn ${net}`,
+    discountHint: "Nhập giá trị giảm và lý do (tối thiểu 3 ký tự).",
   },
 } as const;

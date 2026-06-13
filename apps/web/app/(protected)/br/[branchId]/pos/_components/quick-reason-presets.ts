@@ -19,6 +19,13 @@ export const REDUCE_ITEM_PRESETS = [
   "Hết một phần nguyên liệu",
 ] as const;
 
+export const ITEM_DISCOUNT_PRESETS = [
+  "Đánh giá 5 sao",
+  "Khách quen",
+  "Tặng khuyến mãi",
+  "Đền khiếu nại",
+] as const;
+
 export const CANCEL_ORDER_PRESETS = [
   "Khách rời quán",
   "Khách đổi ý",
