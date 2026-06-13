@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { markKdsItemOutOfStock } from "../actions";
+import { isKdsActiveTicketStatus } from "../lib/order-status";
 import type { KdsTicket } from "../types";
 
 export interface UseKdsMutationsArgs {
@@ -183,7 +184,7 @@ export function useKdsMutations({
             .filter(
               (ticket) =>
                 ticketIds.includes(ticket.id) &&
-                (ticket.status === "pending" || ticket.status === "preparing"),
+                isKdsActiveTicketStatus(ticket.status),
             )
             .map((ticket) => ticket.id),
         ),

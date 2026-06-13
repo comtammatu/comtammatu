@@ -274,7 +274,7 @@ test("buildRunnerQueue keeps POS-completed orders while KDS tickets are live", (
   assert.equal(item?.callNumber, "7");
 });
 
-test("buildRunnerQueue puts ready hand-offs first, then KDS queue rank with item-level priority", () => {
+test("buildRunnerQueue ranks active priority before normal active work and ready hand-offs", () => {
   const input: BuildRunnerQueueInput = {
     ...base,
     tickets: [
@@ -366,18 +366,18 @@ test("buildRunnerQueue puts ready hand-offs first, then KDS queue rank with item
   assert.deepEqual(
     queue.map((item) => item.orderNumber),
     [
-      "MV-20260524-030-CN1",
-      "MV-20260524-033-CN1",
       "MV-20260524-032-CN1",
       "MV-20260524-031-CN1",
+      "MV-20260524-033-CN1",
+      "MV-20260524-030-CN1",
     ],
   );
-  assert.equal(queue[0]?.lane, "ready");
-  assert.equal(queue[2]?.isPriority, true);
-  assert.equal(queue[2]?.status, "pending");
+  assert.equal(queue[0]?.isPriority, true);
+  assert.equal(queue[0]?.status, "pending");
+  assert.equal(queue[3]?.lane, "ready");
 });
 
-test("buildRunnerQueue keeps a fully-bumped order on the ready lane ahead of cooking orders", () => {
+test("buildRunnerQueue keeps a fully-bumped order on the ready lane without blocking cooking orders", () => {
   const input: BuildRunnerQueueInput = {
     ...base,
     tickets: [
@@ -425,10 +425,11 @@ test("buildRunnerQueue keeps a fully-bumped order on the ready lane ahead of coo
 
   const queue = buildRunnerQueue(input);
 
-  assert.equal(queue[0]?.orderNumber, "MV-20260524-040-CN1");
-  assert.equal(queue[0]?.lane, "ready");
-  assert.equal(queue[0]?.status, "ready");
-  assert.equal(queue[1]?.lane, "active");
+  assert.equal(queue[0]?.orderNumber, "MV-20260524-041-CN1");
+  assert.equal(queue[0]?.lane, "active");
+  assert.equal(queue[1]?.orderNumber, "MV-20260524-040-CN1");
+  assert.equal(queue[1]?.lane, "ready");
+  assert.equal(queue[1]?.status, "ready");
 });
 
 test("buildRunnerQueue keeps mixed KDS batch statuses in one active row", () => {

@@ -23,28 +23,16 @@ function makeOrder(statuses: string[]): Pick<KdsOrder, "tickets"> {
   };
 }
 
-test("KDS current pending order displays as preparing", () => {
-  assert.equal(
-    getKdsOrderDisplayStatus(makeOrder(["pending"]), { isCurrent: true }),
-    "preparing",
-  );
-  assert.equal(getStatusLabel("preparing"), "Đang chuẩn bị");
-});
-
-test("KDS non-current pending order still displays as waiting", () => {
+test("KDS active orders display as pending", () => {
   assert.equal(getKdsOrderDisplayStatus(makeOrder(["pending"])), "pending");
+  assert.equal(getKdsOrderDisplayStatus(makeOrder(["preparing"])), "pending");
   assert.equal(getStatusLabel("pending"), "Chờ");
+  assert.equal(getStatusLabel("preparing"), "Chờ");
 });
 
 test("KDS terminal order statuses are not overridden by current display", () => {
-  assert.equal(
-    getKdsOrderDisplayStatus(makeOrder(["ready"]), { isCurrent: true }),
-    "ready",
-  );
-  assert.equal(
-    getKdsOrderDisplayStatus(makeOrder(["cancelled"]), { isCurrent: true }),
-    "cancelled",
-  );
+  assert.equal(getKdsOrderDisplayStatus(makeOrder(["ready"])), "ready");
+  assert.equal(getKdsOrderDisplayStatus(makeOrder(["cancelled"])), "cancelled");
 });
 
 test("KDS ticket sequence sort key uses the small visible ticket number", () => {

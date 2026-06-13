@@ -61,7 +61,7 @@ test("KDS batch completion action moves into the compact card title area", () =>
     /size=\{layout === "title" \? "touch" : "touch-lg"\}/,
   );
   assert.match(batchActionsSource, /aria-label=\{fullLabel\}/);
-  assert.match(batchActionsSource, /"Sẵn sàng"/);
+  assert.match(batchActionsSource, /"Hoàn tất"/);
 });
 
 test("KDS compact cards preserve item recall and out-of-stock actions", () => {

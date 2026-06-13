@@ -26,6 +26,7 @@ import {
   pickHigherPriorityKdsSignalTone,
   type KdsNewTicketSignalTone,
 } from "./lib/sound-alerts";
+import { isKdsActiveTicketStatus } from "./lib/order-status";
 import { BoardHeader } from "./components/board-header";
 import { StationToggleBar } from "./components/station-toggle-bar";
 import { FilterBar } from "./components/filter-bar";
@@ -44,13 +45,11 @@ import type {
 /* ─── Helpers ─── */
 
 function orderHasKitchenWork(tickets: KdsTicket[]): boolean {
-  return tickets.some(
-    (ticket) => ticket.status === "pending" || ticket.status === "preparing",
-  );
+  return tickets.some((ticket) => isKdsActiveTicketStatus(ticket.status));
 }
 
 function isActiveKitchenTicket(ticket: KdsTicket): boolean {
-  return ticket.status === "pending" || ticket.status === "preparing";
+  return isKdsActiveTicketStatus(ticket.status);
 }
 
 function getTicketOrderLabel(
@@ -84,12 +83,11 @@ function getTicketBaseGroupKey(ticket: KdsTicket): string {
 
 function getKitchenQueueRank(order: KdsOrder): number {
   const statuses = order.tickets.map((ticket) => ticket.status);
-  if (statuses.some((status) => status === "preparing")) return 0;
-  if (statuses.some((status) => status === "pending")) {
-    return order.isPriority ? 1 : 2;
+  if (statuses.some(isKdsActiveTicketStatus)) {
+    return order.isPriority ? 0 : 1;
   }
-  if (statuses.some((status) => status === "ready")) return 3;
-  return 4;
+  if (statuses.some((status) => status === "ready")) return 2;
+  return 3;
 }
 
 function compareKdsOrdersForKitchenQueue(a: KdsOrder, b: KdsOrder): number {
@@ -480,7 +478,7 @@ export function KdsBoard({
   }, [activeGroupedOrders, filters.orderTypeFilter]);
 
   const pendingCount = useMemo(
-    () => tickets.filter((t) => t.status === "pending").length,
+    () => tickets.filter((t) => isKdsActiveTicketStatus(t.status)).length,
     [tickets],
   );
 

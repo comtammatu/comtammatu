@@ -1,6 +1,7 @@
 import type { SignalTone } from "@lib/audio-signal";
 import type { KdsKitchenSendBatch, KdsOrderItem, KdsTicket } from "../types";
 import { isKdsAddOnItem } from "./order-columns";
+import { isKdsActiveTicketStatus } from "./order-status";
 
 export type KdsNewTicketSignalTone = Extract<
   SignalTone,
@@ -83,7 +84,7 @@ export function getKdsNewTicketAlertGroupKey(
 }
 
 function isActiveKdsNewTicketAlert(ticket: Pick<KdsTicket, "status">): boolean {
-  return ticket.status === "pending" || ticket.status === "preparing";
+  return isKdsActiveTicketStatus(ticket.status);
 }
 
 export function collectReadyKdsNewTicketAlertGroups(args: {

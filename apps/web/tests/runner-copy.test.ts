@@ -49,7 +49,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.doesNotMatch(runnerPageSource, /@\/_lib\/auth/);
   assert.doesNotMatch(runnerPageSource, /claims\.tenant_id/);
   assert.match(runnerPageSource, /eyebrow: MODULE_LABELS_VI\.runner/);
-  assert.match(runnerPageSource, /idleEmptyTitle: "Sẵn sàng nhận món mới\."/);
+  assert.match(runnerPageSource, /idleEmptyTitle: "Đang chờ món mới\."/);
   assert.match(
     runnerPageSource,
     /idleDoneTitle: "Các món đã được phục vụ đầy đủ\."/,
@@ -60,12 +60,11 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   );
   assert.match(runnerPageSource, /wifi: "WiFi: Má Tư"/);
   assert.match(runnerPageSource, /password: "Mật khẩu: xincamon"/);
-  assert.match(
-    runnerPageSource,
-    /const RUNNER_READY_WINDOW_MS = 15 \* 60 \* 1_000;/,
-  );
+  assert.doesNotMatch(runnerPageSource, /RUNNER_READY_WINDOW_MS/);
   assert.doesNotMatch(runnerPageSource, /RUNNER_FEATURED_STATUS/);
-  assert.match(runnerPageSource, /preparing: "Chuẩn bị"/);
+  assert.doesNotMatch(runnerPageSource, /ready: "Sẵn sàng"/);
+  assert.match(runnerPageSource, /pending: "Đang chờ"/);
+  assert.doesNotMatch(runnerPageSource, /preparing: "Chuẩn bị"/);
   assert.match(runnerPageSource, /order: "Đơn"/);
   assert.match(runnerPageSource, /quantity: "Số món"/);
   assert.match(runnerPageSource, /status: "Trạng thái"/);
@@ -75,19 +74,15 @@ test("Runner page follows the KDS order-list vocabulary", () => {
     runnerPageSource,
     /const RUNNER_ACTIVE_STATUSES = \["pending", "preparing"\] as const;/,
   );
-  assert.match(
-    runnerPageSource,
-    /const RUNNER_VISIBLE_STATUSES = \[\s*"pending",\s*"preparing",\s*"ready"\s*\] as const;/,
-  );
+  assert.doesNotMatch(runnerPageSource, /RUNNER_VISIBLE_STATUSES/);
   assert.match(runnerPageSource, /\.in\("status", RUNNER_ACTIVE_STATUSES\)/);
-  assert.match(runnerPageSource, /\.in\("status", RUNNER_VISIBLE_STATUSES\)/);
   assert.match(runnerPageSource, /const RUNNER_ROW_LIMIT_BASE = 4;/);
   assert.match(runnerPageSource, /const RUNNER_ROW_LIMIT_XL = 6;/);
   assert.match(runnerPageSource, /rows\.slice\(0, RUNNER_ROW_LIMIT_XL\)/);
   assert.match(runnerPageSource, /hiddenBelowXl && "hidden xl:grid"/);
   assert.match(
     runnerPageSource,
-    /moreOrders: \(count: number\) => `Còn \$\{String\(count\)\} đơn đang chuẩn bị`/,
+    /moreOrders: \(count: number\) => `Còn \$\{String\(count\)\} đơn đang chờ`/,
   );
   assert.match(runnerPageSource, /className="flex h-dvh min-h-0 w-full/);
   assert.match(runnerPageSource, /className="flex h-full min-h-0 w-full/);
@@ -150,8 +145,11 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   );
   assert.match(runnerPageSource, /featured && "border-l-primary"/);
   assert.doesNotMatch(runnerPageSource, /bg-primary text-primary-foreground/);
-  assert.match(runnerPageSource, /\.eq\("status", "ready"\)/);
-  assert.match(runnerPageSource, /\.gte\("bumped_at", readyAfterIso\)/);
+  assert.doesNotMatch(runnerPageSource, /\.eq\("status", "ready"\)/);
+  assert.doesNotMatch(runnerPageSource, /readyAfterIso/);
+  assert.doesNotMatch(runnerPageSource, /RUNNER_COPY\.ready/);
+  assert.doesNotMatch(runnerPageSource, /RUNNER_COPY\.preparing/);
+  assert.doesNotMatch(runnerPageSource, /border-success\/70/);
   assert.match(runnerPageSource, /getRunnerStatusLabel/);
   assert.match(runnerPageSource, /RunnerOrderCell/);
   assert.match(

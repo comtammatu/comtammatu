@@ -11,7 +11,6 @@ export function getCardBorder(
 ): string {
   if (overallStatus === "cancelled") return "border-destructive/60";
   if (overallStatus === "ready") return "border-success/60";
-  if (overallStatus === "preparing") return "border-warning/60";
   if (ageMinutes >= 10) return "border-destructive/70";
   if (ageMinutes >= 5) return "border-warning/70";
   return "border-border";
@@ -23,7 +22,6 @@ export function getCardLeftAccent(
 ): string {
   if (overallStatus === "cancelled") return "border-l-destructive";
   if (overallStatus === "ready") return "border-l-success";
-  if (overallStatus === "preparing") return "border-l-warning";
   if (ageMinutes >= 10) return "border-l-destructive";
   if (ageMinutes >= 5) return "border-l-warning";
   return "border-l-muted-foreground";

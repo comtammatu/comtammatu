@@ -34,17 +34,12 @@ const RUNNER_ORDER_ITEM_SELECT_WITH_PRIORITY =
   "id, order_id, quantity, is_priority";
 const RUNNER_ORDER_ITEM_SELECT_BASE = "id, order_id, quantity";
 const RUNNER_ACTIVE_STATUSES = ["pending", "preparing"] as const;
-const RUNNER_VISIBLE_STATUSES = ["pending", "preparing", "ready"] as const;
 // 4 rows on small boards, 6 on xl TVs. The server cannot know the
 // breakpoint, so it renders up to the xl limit and rows 5-6 collapse
 // below xl via `hidden xl:grid`; the overflow footer mirrors the same
 // split with responsive visibility.
 const RUNNER_ROW_LIMIT_BASE = 4;
 const RUNNER_ROW_LIMIT_XL = 6;
-// Fully-bumped orders have no active sibling ticket left, so the anchor
-// queries below can no longer reach them; this window keeps them on the
-// board until hand-off (POS marks served) or timeout.
-const RUNNER_READY_WINDOW_MS = 15 * 60 * 1_000;
 const RUNNER_COLUMN_SPAN = {
   order: 4,
   quantity: 3,
@@ -53,14 +48,12 @@ const RUNNER_COLUMN_SPAN = {
 } as const;
 const RUNNER_COPY = {
   eyebrow: MODULE_LABELS_VI.runner,
-  pending: "Chờ",
-  preparing: "Chuẩn bị",
-  ready: "Sẵn sàng",
-  idleEmptyTitle: "Sẵn sàng nhận món mới.",
+  pending: "Đang chờ",
+  idleEmptyTitle: "Đang chờ món mới.",
   idleDoneTitle: "Các món đã được phục vụ đầy đủ.",
   idleBrandLine: "Thịt tươi 100% - chúc quý khách dùng bữa ngon miệng.",
   itemUnit: "món",
-  moreOrders: (count: number) => `Còn ${String(count)} đơn đang chuẩn bị`,
+  moreOrders: (count: number) => `Còn ${String(count)} đơn đang chờ`,
   footer: {
     wifi: "WiFi: Má Tư",
     password: "Mật khẩu: xincamon",
@@ -81,7 +74,7 @@ type RunnerOrderItemQuantityRow = RunnerOrderItemRow & {
   quantity: number | string | null;
 };
 
-type RunnerListStatus = "pending" | "preparing" | "ready";
+type RunnerListStatus = "pending";
 type RunnerColumnSpan =
   (typeof RUNNER_COLUMN_SPAN)[keyof typeof RUNNER_COLUMN_SPAN];
 
@@ -254,9 +247,8 @@ async function fetchRunnerVisibleTickets(args: {
   supabase: RunnerSupabase;
   branchId: number;
   todayStartIso: string;
-  readyAfterIso: string;
 }): Promise<{ tickets: RunnerTicketSnapshot[]; error: boolean }> {
-  const { supabase, branchId, todayStartIso, readyAfterIso } = args;
+  const { supabase, branchId, todayStartIso } = args;
   const activeTicketsResult = await fetchPagedRows<RunnerTicketSnapshot>(
     async (from, to) => {
       const { data, error } = await supabase
@@ -299,7 +291,7 @@ async function fetchRunnerVisibleTickets(args: {
             .from("kds_tickets")
             .select(RUNNER_TICKET_SELECT)
             .eq("branch_id", branchId)
-            .in("status", RUNNER_VISIBLE_STATUSES)
+            .in("status", RUNNER_ACTIVE_STATUSES)
             .gte("created_at", todayStartIso)
             .in("kitchen_send_batch_id", batchIds)
             .order("created_at", { ascending: false })
@@ -326,7 +318,7 @@ async function fetchRunnerVisibleTickets(args: {
             .from("kds_tickets")
             .select(RUNNER_TICKET_SELECT)
             .eq("branch_id", branchId)
-            .in("status", RUNNER_VISIBLE_STATUSES)
+            .in("status", RUNNER_ACTIVE_STATUSES)
             .gte("created_at", todayStartIso)
             .is("kitchen_send_batch_id", null)
             .in("order_id", orderIds)
@@ -344,26 +336,6 @@ async function fetchRunnerVisibleTickets(args: {
     if (ungroupedTicketsResult.error) return { tickets: [], error: true };
     chunks.push(ungroupedTicketsResult.data ?? []);
   }
-
-  const recentReadyResult = await fetchPagedRows<RunnerTicketSnapshot>(
-    async (from, to) => {
-      const { data, error } = await supabase
-        .from("kds_tickets")
-        .select(RUNNER_TICKET_SELECT)
-        .eq("branch_id", branchId)
-        .eq("status", "ready")
-        .gte("bumped_at", readyAfterIso)
-        .gte("created_at", todayStartIso)
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .range(from, to);
-
-      return { data: (data ?? null) as RunnerTicketSnapshot[] | null, error };
-    },
-  );
-
-  if (recentReadyResult.error) return { tickets: [], error: true };
-  chunks.push(recentReadyResult.data ?? []);
 
   return {
     tickets: sortRunnerTicketsNewestFirst(dedupeRowsById(chunks.flat())),
@@ -404,7 +376,6 @@ export default async function RunnerPage({
     supabase,
     branchId: branchIdNum,
     todayStartIso,
-    readyAfterIso: new Date(Date.now() - RUNNER_READY_WINDOW_MS).toISOString(),
   });
 
   if (ticketResult.error) {
@@ -690,7 +661,7 @@ function RunnerOrderListRow({
       role="listitem"
       className={cn(
         "grid h-full min-h-0 w-full grid-cols-12 items-stretch gap-0 divide-x divide-border/70 border-b border-l-4",
-        getRunnerRowClass(row.status),
+        getRunnerRowClass(),
         featured && "border-l-primary",
         hiddenBelowXl && "hidden xl:grid",
       )}
@@ -796,37 +767,15 @@ function countItemQuantity({
   return total > 0 ? total : item.ticketCount;
 }
 
-function resolveRunnerListStatus(item: RunnerQueueItem): RunnerListStatus {
-  if (
-    item.status === "pending" ||
-    item.status === "preparing" ||
-    item.status === "ready"
-  ) {
-    return item.status;
-  }
-
-  return "ready";
+function resolveRunnerListStatus(_item: RunnerQueueItem): RunnerListStatus {
+  return "pending";
 }
 
-function getRunnerStatusLabel(
-  status: RunnerListStatus,
-): "Chờ" | "Chuẩn bị" | "Sẵn sàng" {
-  if (status === "preparing") {
-    return RUNNER_COPY.preparing;
-  }
-
-  if (status === "pending") {
-    return RUNNER_COPY.pending;
-  }
-
-  return RUNNER_COPY.ready;
+function getRunnerStatusLabel(_status: RunnerListStatus): "Đang chờ" {
+  return RUNNER_COPY.pending;
 }
 
-function getRunnerRowClass(status: RunnerListStatus): string {
-  if (status === "ready") {
-    return "border-success/70 bg-success/5";
-  }
-
+function getRunnerRowClass(): string {
   return "border-warning/70 bg-warning/5";
 }
 

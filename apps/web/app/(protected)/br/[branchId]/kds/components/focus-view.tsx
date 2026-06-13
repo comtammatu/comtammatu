@@ -34,7 +34,10 @@ import {
   getStatusVariant,
   shouldShowTicketStatusBadge,
 } from "../lib/status-config";
-import { getKdsOrderDisplayStatus } from "../lib/order-status";
+import {
+  getKdsOrderDisplayStatus,
+  isKdsActiveTicketStatus,
+} from "../lib/order-status";
 import { AgeBadge } from "./age-badge";
 import { CancelledOverlay } from "./cancelled-overlay";
 import { OrderNote } from "./order-note";
@@ -54,6 +57,22 @@ interface FocusViewProps {
 }
 
 const ADVANCE_DELAY_MS = 1500;
+
+const KDS_FOCUS_COPY = {
+  completeBatch: (count: number) =>
+    count > 1 ? `Hoàn tất ${String(count)} món` : "Hoàn tất phiếu bếp",
+  completeItem: "Hoàn tất món",
+  completeNamedItem: (itemName: string) => `Hoàn tất ${itemName}`,
+  nextOrder: "Đơn kế tiếp",
+  outOfStock: "Báo hết món",
+  outOfStockNamedItem: (itemName: string) => `Báo hết món ${itemName}`,
+  previousOrder: "Đơn trước",
+  priority: "Ưu tiên",
+  quantitySuffix: "×",
+  readyAdvance: "Đơn đã sẵn sàng - chuyển đơn kế tiếp",
+  recallItem: "Thu hồi món",
+  recallNamedItem: (itemName: string) => `Thu hồi ${itemName}`,
+} as const;
 
 function isOrderAllReady(order: KdsOrder): boolean {
   if (order.tickets.length === 0) return false;
@@ -235,7 +254,7 @@ function FocusOrderPanel({
   const rowEffects = useKdsRowEffectsValue();
 
   const overallStatus = useMemo(() => {
-    return getKdsOrderDisplayStatus(order, { isCurrent: true });
+    return getKdsOrderDisplayStatus({ tickets: order.tickets });
   }, [order.tickets]);
 
   const handleOutOfStock = useCallback(
@@ -262,11 +281,7 @@ function FocusOrderPanel({
   // Hero tint mirrors the grid card header — keeps urgency signaling
   // consistent across modes; success tint when the order is fully done.
   const ageStyle = getAgeStyle(elapsedMinutes, isComplete);
-  const heroBg = isComplete
-    ? "bg-success/10"
-    : overallStatus === "preparing"
-      ? "bg-warning/25"
-      : ageStyle.bg || "bg-card";
+  const heroBg = isComplete ? "bg-success/10" : ageStyle.bg || "bg-card";
 
   const orphanTickets = useMemo(
     () =>
@@ -276,19 +291,11 @@ function FocusOrderPanel({
     [order.items, order.tickets],
   );
 
-  const pendingTickets = useMemo(
-    () => order.tickets.filter((t) => t.status === "pending"),
-    [order.tickets],
-  );
-  const preparingTickets = useMemo(
-    () => order.tickets.filter((t) => t.status === "preparing"),
+  const activeTickets = useMemo(
+    () => order.tickets.filter((t) => isKdsActiveTicketStatus(t.status)),
     [order.tickets],
   );
 
-  const activeTickets = useMemo(
-    () => [...pendingTickets, ...preparingTickets],
-    [pendingTickets, preparingTickets],
-  );
   const activeTicketIds = useMemo(
     () => activeTickets.map((ticket) => ticket.id),
     [activeTickets],
@@ -296,6 +303,9 @@ function FocusOrderPanel({
   const completeBatchBusy =
     activeTickets.length > 0 &&
     activeTickets.every((ticket) => pendingTicketIds.has(ticket.id));
+  const completeBatchLabel = KDS_FOCUS_COPY.completeBatch(
+    activeTickets.length,
+  );
 
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
@@ -330,7 +340,7 @@ function FocusOrderPanel({
                       variant="warning"
                       className="px-2.5 py-1 text-sm font-semibold"
                     >
-                      Ưu tiên
+                      {KDS_FOCUS_COPY.priority}
                     </Badge>
                   )}
                 </div>
@@ -344,7 +354,7 @@ function FocusOrderPanel({
                       variant="ghost"
                       size="icon-sm"
                       onClick={onPrev}
-                      aria-label="Đơn trước"
+                      aria-label={KDS_FOCUS_COPY.previousOrder}
                     >
                       <IconChevronLeft aria-hidden />
                     </Button>
@@ -356,7 +366,7 @@ function FocusOrderPanel({
                       variant="ghost"
                       size="icon-sm"
                       onClick={onNext}
-                      aria-label="Đơn kế tiếp"
+                      aria-label={KDS_FOCUS_COPY.nextOrder}
                     >
                       <IconChevronRight aria-hidden />
                     </Button>
@@ -379,11 +389,8 @@ function FocusOrderPanel({
                   ? pendingTicketIds.has(ticket.id)
                   : false;
                 const canCompleteByStatus =
-                  !isCancelled &&
-                  (status === "pending" || status === "preparing");
-                const canRecallByStatus =
-                  !isCancelled &&
-                  (status === "preparing" || status === "ready");
+                  !isCancelled && isKdsActiveTicketStatus(status);
+                const canRecallByStatus = !isCancelled && status === "ready";
                 const allowComplete = canCompleteByStatus && canMarkReady;
                 const allowOutOfStock = canCompleteByStatus && canMarkReady;
                 const allowRecall = canRecallByStatus && canRecall;
@@ -408,7 +415,8 @@ function FocusOrderPanel({
                         getQuantityStatusClass(status),
                       )}
                     >
-                      {item.quantity}×
+                      {item.quantity}
+                      {KDS_FOCUS_COPY.quantitySuffix}
                     </span>
                     <div className="flex min-h-9 min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
                       <span className="min-w-0 break-words text-xl font-semibold leading-7">
@@ -419,7 +427,7 @@ function FocusOrderPanel({
                           variant="warning"
                           className="h-6 rounded-md px-2 py-0 text-sm font-semibold leading-none"
                         >
-                          Ưu tiên
+                          {KDS_FOCUS_COPY.priority}
                         </Badge>
                       )}
                       {item.variant_name && (
@@ -462,7 +470,9 @@ function FocusOrderPanel({
                                     item.item_name,
                                   )
                                 }
-                                aria-label={`Báo hết món ${item.item_name}`}
+                                aria-label={KDS_FOCUS_COPY.outOfStockNamedItem(
+                                  item.item_name,
+                                )}
                               >
                                 {isMutating ? (
                                   <Spinner data-icon="inline-start" />
@@ -483,7 +493,9 @@ function FocusOrderPanel({
                                 className="w-12 px-0"
                                 disabled={isMutating}
                                 onClick={() => void onRecall(ticket.id)}
-                                aria-label={`Thu hồi ${item.item_name}`}
+                                aria-label={KDS_FOCUS_COPY.recallNamedItem(
+                                  item.item_name,
+                                )}
                               >
                                 {isMutating ? (
                                   <Spinner data-icon="inline-start" />
@@ -506,7 +518,9 @@ function FocusOrderPanel({
                                 onClick={() =>
                                   void onCompleteTickets([ticket.id])
                                 }
-                                aria-label={`Báo ${item.item_name} sẵn sàng`}
+                                aria-label={KDS_FOCUS_COPY.completeNamedItem(
+                                  item.item_name,
+                                )}
                               >
                                 {isMutating ? (
                                   <Spinner data-icon="inline-start" />
@@ -530,11 +544,8 @@ function FocusOrderPanel({
                 const isCancelled = status === "cancelled";
                 const isMutating = pendingTicketIds.has(ticket.id);
                 const canCompleteByStatus =
-                  !isCancelled &&
-                  (status === "pending" || status === "preparing");
-                const canRecallByStatus =
-                  !isCancelled &&
-                  (status === "preparing" || status === "ready");
+                  !isCancelled && isKdsActiveTicketStatus(status);
+                const canRecallByStatus = !isCancelled && status === "ready";
                 const allowComplete = canCompleteByStatus && canMarkReady;
                 const allowOutOfStock = canCompleteByStatus && canMarkReady;
                 const allowRecall = canRecallByStatus && canRecall;
@@ -576,7 +587,7 @@ function FocusOrderPanel({
                               onClick={() =>
                                 void handleOutOfStock(ticket.id, itemLabel)
                               }
-                              aria-label="Báo hết món"
+                              aria-label={KDS_FOCUS_COPY.outOfStock}
                             >
                               {isMutating ? (
                                 <Spinner data-icon="inline-start" />
@@ -594,7 +605,7 @@ function FocusOrderPanel({
                               className="w-12 px-0"
                               disabled={isMutating}
                               onClick={() => void onRecall(ticket.id)}
-                              aria-label="Thu hồi món"
+                              aria-label={KDS_FOCUS_COPY.recallItem}
                             >
                               {isMutating ? (
                                 <Spinner data-icon="inline-start" />
@@ -617,7 +628,7 @@ function FocusOrderPanel({
                               onClick={() =>
                                 void onCompleteTickets([ticket.id])
                               }
-                              aria-label="Báo món sẵn sàng"
+                              aria-label={KDS_FOCUS_COPY.completeItem}
                             >
                               {isMutating ? (
                                 <Spinner data-icon="inline-start" />
@@ -660,9 +671,7 @@ function FocusOrderPanel({
               ) : (
                 <IconCheckCheck data-icon="inline-start" aria-hidden />
               )}
-              {activeTickets.length > 1
-                ? `Báo sẵn sàng ${activeTickets.length} món`
-                : "Báo phiếu sẵn sàng"}
+              {completeBatchLabel}
             </Button>
           </div>
         </div>
@@ -678,7 +687,7 @@ function FocusOrderPanel({
           <div className="flex flex-col items-center gap-2 rounded-md bg-success/95 px-6 py-4 text-success-foreground shadow-md">
             <IconCheck className="size-10" aria-hidden />
             <span className="font-heading text-base font-semibold">
-              Đơn đã sẵn sàng — chuyển đơn kế tiếp
+              {KDS_FOCUS_COPY.readyAdvance}
             </span>
           </div>
         </div>

@@ -1,10 +1,19 @@
 import type { KdsOrder } from "../types";
 
-export type KdsDisplayStatus = "pending" | "preparing" | "ready" | "cancelled";
+export type KdsDisplayStatus = "pending" | "ready" | "cancelled";
+
+export function isKdsActiveTicketStatus(status: string): boolean {
+  return status === "pending" || status === "preparing";
+}
+
+export function getKdsTicketDisplayStatus(status: string): KdsDisplayStatus {
+  if (status === "ready") return "ready";
+  if (status === "cancelled") return "cancelled";
+  return "pending";
+}
 
 export function getKdsOrderDisplayStatus(
   order: Pick<KdsOrder, "tickets">,
-  options: { isCurrent?: boolean } = {},
 ): KdsDisplayStatus {
   const statuses = order.tickets.map((ticket) => ticket.status);
 
@@ -22,12 +31,7 @@ export function getKdsOrderDisplayStatus(
     return "ready";
   }
 
-  const hasActiveWork = statuses.some(
-    (status) => status === "pending" || status === "preparing",
-  );
-  if (options.isCurrent === true && hasActiveWork) return "preparing";
-  if (statuses.some((status) => status === "preparing")) return "preparing";
-  if (statuses.some((status) => status === "pending")) return "pending";
+  if (statuses.some(isKdsActiveTicketStatus)) return "pending";
   if (statuses.some((status) => status === "ready")) return "ready";
   return "pending";
 }

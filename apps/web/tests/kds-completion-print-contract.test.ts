@@ -22,7 +22,7 @@ const batchActionsSource = readFileSync(
 test("KDS completion sends only active tickets to the completion RPC", () => {
   assert.match(
     useKdsMutationsSource,
-    /ticket\.status === "pending" \|\| ticket\.status === "preparing"/,
+    /isKdsActiveTicketStatus\(ticket\.status\)/,
     "client mutation must filter out ready/cancelled tickets before RPC",
   );
   assert.match(
@@ -32,7 +32,7 @@ test("KDS completion sends only active tickets to the completion RPC", () => {
   );
   assert.match(
     batchActionsSource,
-    /const activeTickets = \[\.\.\.pendingTickets, \.\.\.preparingTickets\]/,
+    /activeTickets: KdsTicket\[\]/,
     "whole-card complete must pass only pending/preparing tickets",
   );
   assert.match(

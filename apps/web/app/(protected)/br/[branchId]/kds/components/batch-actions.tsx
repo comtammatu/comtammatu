@@ -8,8 +8,7 @@ import type { KdsTicket } from "../types";
 
 interface BatchActionsProps {
   orderGroupKey: string;
-  pendingTickets: KdsTicket[];
-  preparingTickets: KdsTicket[];
+  activeTickets: KdsTicket[];
   pendingTicketIds: Set<number>;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
   layout?: "footer" | "title";
@@ -17,28 +16,26 @@ interface BatchActionsProps {
 
 export function BatchActions({
   orderGroupKey,
-  pendingTickets,
-  preparingTickets,
+  activeTickets,
   pendingTicketIds,
   onCompleteTickets,
   layout = "footer",
 }: BatchActionsProps) {
-  if (pendingTickets.length === 0 && preparingTickets.length === 0) return null;
+  if (activeTickets.length === 0) return null;
 
-  const activeTickets = [...pendingTickets, ...preparingTickets];
   const activeTicketIds = activeTickets.map((ticket) => ticket.id);
   const completeBatchBusy =
     activeTickets.length > 0 &&
     activeTickets.every((ticket) => pendingTicketIds.has(ticket.id));
   const fullLabel =
     activeTickets.length > 1
-      ? `Báo sẵn sàng ${activeTickets.length} món`
-      : "Báo phiếu bếp sẵn sàng";
+      ? `Hoàn tất ${activeTickets.length} món`
+      : "Hoàn tất phiếu bếp";
   const visibleLabel =
     layout === "title"
       ? activeTickets.length > 1
-        ? `Sẵn sàng ${activeTickets.length}`
-        : "Sẵn sàng"
+        ? `Hoàn tất ${activeTickets.length}`
+        : "Hoàn tất"
       : fullLabel;
 
   const action = (

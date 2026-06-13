@@ -19,6 +19,7 @@ import {
   getItemRowStatusClass,
   getQuantityStatusClass,
 } from "../lib/item-status-style";
+import { isKdsActiveTicketStatus } from "../lib/order-status";
 import {
   getKdsRowEffectClass,
   useKdsRowEffect,
@@ -26,6 +27,14 @@ import {
 import { CancelledOverlay } from "./cancelled-overlay";
 import { TicketRowMeta } from "./ticket-row-meta";
 import type { KdsOrderItem, KdsTicket } from "../types";
+
+const KDS_TICKET_ROW_COPY = {
+  completeItem: "Hoàn tất món",
+  outOfStock: "Báo hết món",
+  priority: "Ưu tiên",
+  recallItem: "Thu hồi món",
+  quantitySuffix: "×",
+} as const;
 
 interface TicketRowItemProps {
   kind: "item";
@@ -72,10 +81,8 @@ function TicketRowItem({
 }: TicketRowItemProps) {
   const status = ticket?.status ?? "pending";
   const isCancelled = status === "cancelled";
-  const canCompleteByStatus =
-    !isCancelled && (status === "pending" || status === "preparing");
-  const canRecallByStatus =
-    !isCancelled && (status === "preparing" || status === "ready");
+  const canCompleteByStatus = !isCancelled && isKdsActiveTicketStatus(status);
+  const canRecallByStatus = !isCancelled && status === "ready";
   const canComplete = canCompleteByStatus && canMarkReady;
   const canOutOfStock = canCompleteByStatus && canMarkReady;
   const allowRecall = canRecallByStatus && canRecall;
@@ -101,7 +108,8 @@ function TicketRowItem({
         )}
       >
         <span className="font-mono text-2xl font-semibold leading-none tabular-nums">
-          {item.quantity}×
+          {item.quantity}
+          {KDS_TICKET_ROW_COPY.quantitySuffix}
         </span>
       </div>
       <div className="flex min-h-9 min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
@@ -113,7 +121,7 @@ function TicketRowItem({
             variant="warning"
             className="h-6 rounded-md px-2 py-0 text-xs font-semibold leading-none"
           >
-            Ưu tiên
+            {KDS_TICKET_ROW_COPY.priority}
           </Badge>
         )}
         {item.variant_name && (
@@ -166,10 +174,8 @@ function TicketRowOrphan({
 }: TicketRowOrphanProps) {
   const status = ticket.status;
   const isCancelled = status === "cancelled";
-  const canCompleteByStatus =
-    !isCancelled && (status === "pending" || status === "preparing");
-  const canRecallByStatus =
-    !isCancelled && (status === "preparing" || status === "ready");
+  const canCompleteByStatus = !isCancelled && isKdsActiveTicketStatus(status);
+  const canRecallByStatus = !isCancelled && status === "ready";
   const canComplete = canCompleteByStatus && canMarkReady;
   const canOutOfStock = canCompleteByStatus && canMarkReady;
   const allowRecall = canRecallByStatus && canRecall;
@@ -263,7 +269,7 @@ function TicketRowActions({
           variant="destructive"
           size="touch"
           className="w-12 px-0"
-          aria-label="Báo hết món"
+          aria-label={KDS_TICKET_ROW_COPY.outOfStock}
           disabled={isMutating}
           onClick={() => void handleOutOfStock()}
         >
@@ -276,7 +282,7 @@ function TicketRowActions({
           variant="outline"
           size="touch"
           className="w-12 px-0"
-          aria-label="Thu hồi món"
+          aria-label={KDS_TICKET_ROW_COPY.recallItem}
           disabled={isMutating}
           onClick={() => void onRecall(ticket.id)}
         >
@@ -289,7 +295,7 @@ function TicketRowActions({
           variant="default"
           size="touch"
           className="w-12 px-0"
-          aria-label="Báo món sẵn sàng"
+          aria-label={KDS_TICKET_ROW_COPY.completeItem}
           disabled={isMutating}
           onClick={() => void onCompleteTickets([ticket.id])}
         >

@@ -29,7 +29,10 @@ import {
   getKdsOrderLabelOverride,
   groupKdsOrdersByColumn,
 } from "../lib/order-columns";
-import { getKdsOrderDisplayStatus } from "../lib/order-status";
+import {
+  getKdsOrderDisplayStatus,
+  isKdsActiveTicketStatus,
+} from "../lib/order-status";
 import {
   getStatusLabel,
   getStatusVariant,
@@ -43,7 +46,14 @@ import type { KdsOrder, KdsOrderItem, KdsTicket } from "../types";
 import type { KdsOrderColumn } from "../lib/order-columns";
 
 const KDS_HEATMAP_LABELS = {
+  completeItem: "Hoàn tất món",
+  completeNamedItem: (itemName: string) => `Hoàn tất ${itemName}`,
+  outOfStock: "Báo hết món",
+  outOfStockNamedItem: (itemName: string) => `Báo hết món ${itemName}`,
   priority: "Ưu tiên",
+  quantitySuffix: "×",
+  recallItem: "Thu hồi món",
+  recallNamedItem: (itemName: string) => `Thu hồi ${itemName}`,
 } as const;
 
 interface OrderGridProps {
@@ -86,10 +96,8 @@ function CompactItemRow({
   const status = ticket?.status ?? item.status;
   const isMutating = ticket ? pendingTicketIds.has(ticket.id) : false;
   const isCancelled = status === "cancelled";
-  const canCompleteByStatus =
-    !isCancelled && (status === "pending" || status === "preparing");
-  const canRecallByStatus =
-    !isCancelled && (status === "preparing" || status === "ready");
+  const canCompleteByStatus = !isCancelled && isKdsActiveTicketStatus(status);
+  const canRecallByStatus = !isCancelled && status === "ready";
   const canComplete = canCompleteByStatus && canMarkReady && ticket != null;
   const canOutOfStock = canCompleteByStatus && canMarkReady && ticket != null;
   const allowRecall = canRecallByStatus && canRecall && ticket != null;
@@ -126,7 +134,8 @@ function CompactItemRow({
         )}
       >
         <span className="font-mono text-xl font-semibold leading-none tabular-nums xl:text-2xl">
-          {item.quantity}×
+          {item.quantity}
+          {KDS_HEATMAP_LABELS.quantitySuffix}
         </span>
       </div>
       <div className="flex min-h-8 min-w-0 flex-wrap items-center gap-x-1 gap-y-1 xl:min-h-9 xl:gap-x-1.5">
@@ -171,7 +180,7 @@ function CompactItemRow({
             className="w-12 px-0"
             disabled={isMutating}
             onClick={() => void handleOutOfStock()}
-            aria-label={`Báo hết món ${item.item_name}`}
+            aria-label={KDS_HEATMAP_LABELS.outOfStockNamedItem(item.item_name)}
           >
             {isMutating ? <Spinner /> : <IconBan aria-hidden />}
           </Button>
@@ -185,7 +194,7 @@ function CompactItemRow({
             className="w-12 px-0"
             disabled={isMutating}
             onClick={() => void onRecall(ticket.id)}
-            aria-label={`Thu hồi ${item.item_name}`}
+            aria-label={KDS_HEATMAP_LABELS.recallNamedItem(item.item_name)}
           >
             {isMutating ? <Spinner /> : <IconRotate aria-hidden />}
           </Button>
@@ -199,7 +208,7 @@ function CompactItemRow({
             className="w-12 px-0"
             disabled={isMutating}
             onClick={() => void onCompleteTickets([ticket.id])}
-            aria-label={`Báo ${item.item_name} sẵn sàng`}
+            aria-label={KDS_HEATMAP_LABELS.completeNamedItem(item.item_name)}
           >
             {isMutating ? <Spinner /> : <IconCheck aria-hidden />}
           </Button>
@@ -229,11 +238,8 @@ function CompactOrphanRow({
   const isMutating = pendingTicketIds.has(ticket.id);
   const isCancelled = ticket.status === "cancelled";
   const canCompleteByStatus =
-    !isCancelled &&
-    (ticket.status === "pending" || ticket.status === "preparing");
-  const canRecallByStatus =
-    !isCancelled &&
-    (ticket.status === "preparing" || ticket.status === "ready");
+    !isCancelled && isKdsActiveTicketStatus(ticket.status);
+  const canRecallByStatus = !isCancelled && ticket.status === "ready";
   const canComplete = canCompleteByStatus && canMarkReady;
   const canOutOfStock = canCompleteByStatus && canMarkReady;
   const allowRecall = canRecallByStatus && canRecall;
@@ -282,7 +288,7 @@ function CompactOrphanRow({
             className="w-12 px-0"
             disabled={isMutating}
             onClick={() => void handleOutOfStock()}
-            aria-label="Báo hết món"
+            aria-label={KDS_HEATMAP_LABELS.outOfStock}
           >
             {isMutating ? <Spinner /> : <IconBan aria-hidden />}
           </Button>
@@ -296,7 +302,7 @@ function CompactOrphanRow({
             className="w-12 px-0"
             disabled={isMutating}
             onClick={() => void onRecall(ticket.id)}
-            aria-label="Thu hồi món"
+            aria-label={KDS_HEATMAP_LABELS.recallItem}
           >
             {isMutating ? <Spinner /> : <IconRotate aria-hidden />}
           </Button>
@@ -310,7 +316,7 @@ function CompactOrphanRow({
             className="w-12 px-0"
             disabled={isMutating}
             onClick={() => void onCompleteTickets([ticket.id])}
-            aria-label="Báo món sẵn sàng"
+            aria-label={KDS_HEATMAP_LABELS.completeItem}
           >
             {isMutating ? <Spinner /> : <IconCheck aria-hidden />}
           </Button>
@@ -344,7 +350,7 @@ function HeatmapCard({
     () => getOrderElapsedMinutes(order, now),
     [now, order],
   );
-  const status = getKdsOrderDisplayStatus(order, { isCurrent });
+  const status = getKdsOrderDisplayStatus({ tickets: order.tickets });
   const ageStyle = getAgeStyle(elapsed, status === "ready");
   const contextLabel = getKdsOrderLabelOverride(order);
   const showOrderStatusBadge = shouldShowTicketStatusBadge(status);
@@ -363,12 +369,11 @@ function HeatmapCard({
       ),
     [order.items, order.tickets],
   );
-  const pendingTickets = useMemo(
-    () => order.tickets.filter((ticket) => ticket.status === "pending"),
-    [order.tickets],
-  );
-  const preparingTickets = useMemo(
-    () => order.tickets.filter((ticket) => ticket.status === "preparing"),
+  const activeTickets = useMemo(
+    () =>
+      order.tickets.filter((ticket) =>
+        isKdsActiveTicketStatus(ticket.status),
+      ),
     [order.tickets],
   );
 
@@ -415,8 +420,7 @@ function HeatmapCard({
             <BatchActions
               layout="title"
               orderGroupKey={order.groupKey}
-              pendingTickets={pendingTickets}
-              preparingTickets={preparingTickets}
+              activeTickets={activeTickets}
               pendingTicketIds={pendingTicketIds}
               onCompleteTickets={onCompleteTickets}
             />

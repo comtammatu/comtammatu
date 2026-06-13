@@ -6,6 +6,10 @@ import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { useBoardTick } from "./hooks/use-board-tick";
 import { getAgeStyle, getCardBorder, getCardLeftAccent } from "./lib/age-style";
 import { getKdsOrderLabelOverride } from "./lib/order-columns";
+import {
+  getKdsOrderDisplayStatus,
+  isKdsActiveTicketStatus,
+} from "./lib/order-status";
 import { OrderCardHeader } from "./components/order-card-header";
 import { TicketRow } from "./components/ticket-row";
 import { BatchActions } from "./components/batch-actions";
@@ -72,27 +76,15 @@ function OrderCardComponent({
   }, [order.tickets]);
 
   const overallStatus = useMemo(() => {
-    const statuses = order.tickets.map((t) => t.status);
-    if (statuses.length > 0 && statuses.every((s) => s === "cancelled")) {
-      return "cancelled";
-    }
-    if (statuses.every((s) => s === "ready" || s === "cancelled")) {
-      return "ready";
-    }
-    if (statuses.some((s) => s === "preparing")) return "preparing";
-    return "pending";
+    return getKdsOrderDisplayStatus({ tickets: order.tickets });
   }, [order.tickets]);
 
   const isComplete = overallStatus === "ready";
   const ageStyle = getAgeStyle(elapsed, isComplete);
   const borderClass = getCardBorder(overallStatus, elapsed);
 
-  const pendingTickets = useMemo(
-    () => order.tickets.filter((t) => t.status === "pending"),
-    [order.tickets],
-  );
-  const preparingTickets = useMemo(
-    () => order.tickets.filter((t) => t.status === "preparing"),
+  const activeTickets = useMemo(
+    () => order.tickets.filter((t) => isKdsActiveTicketStatus(t.status)),
     [order.tickets],
   );
 
@@ -165,8 +157,7 @@ function OrderCardComponent({
       {canMarkReady && (
         <BatchActions
           orderGroupKey={order.groupKey}
-          pendingTickets={pendingTickets}
-          preparingTickets={preparingTickets}
+          activeTickets={activeTickets}
           pendingTicketIds={pendingTicketIds}
           onCompleteTickets={onCompleteTickets}
         />
