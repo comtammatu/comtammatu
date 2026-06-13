@@ -22,11 +22,10 @@ import {
 
 const CHECKLIST_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "branch_manager",
 ];
 
-const CHECKLIST_OWNER_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const CHECKLIST_OWNER_ROLES: readonly StaffRole[] = ["owner"];
 
 const templateItemSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -150,8 +149,7 @@ async function canManageTemplateScope(
 ) {
   if (branchId == null) {
     return (
-      (ctx.claims.user_role === "owner" ||
-        ctx.claims.user_role === "super_manager") &&
+      ctx.claims.user_role === "owner" &&
       (await probePermission(ctx, PERMISSION_KEYS.STAFF_MANAGE))
     );
   }

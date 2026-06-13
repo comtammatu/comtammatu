@@ -84,25 +84,12 @@ Các field này phục vụ HĐĐT, in chứng từ, export kế toán, và đ�
 
 ## Căn cứ pháp lý theo dõi (đến 06/2026)
 
-- Đăng ký HKD: Nghị định 168/2025/NĐ-CP (đăng ký và mã số hộ kinh doanh).
-- Thuế HKD: NQ 198/2025/QH15 (bỏ thuế khoán + miễn lệ phí môn bài từ
-  01/01/2026); NĐ 68/2026/NĐ-CP (05/03/2026 — 4 nhóm doanh thu, chính sách
-  thuế + quản lý thuế HKD/CNKD); NĐ 141/2026/NĐ-CP (29/04/2026 — nâng ngưỡng
-  doanh thu không chịu GTGT/TNCN của HKD lên 1 tỷ/năm, hồi tố 01/01/2026);
-  Luật Thuế GTGT 48/2024/QH15; NQ 204/2025/QH15 + NĐ 174/2025/NĐ-CP (giảm
-  GTGT 01/07/2025–31/12/2026, hết hạn quay về mức gốc nếu không gia hạn).
-- Hóa đơn chứng từ: NĐ 123/2020 (sửa đổi bởi NĐ 70/2025, máy tính tiền từ
-  01/06/2025) + TT 32/2025/TT-BTC (thay TT 78/2021 từ 01/06/2025).
-- Kế toán HKD: TT 152/2025/TT-BTC (thay TT 88/2021 từ 01/01/2026, sổ theo
-  nhóm doanh thu).
-- TNCN: Luật Thuế TNCN 2025 (109/2025/QH15, hiệu lực 01/07/2026, biểu 5 bậc
-  từ kỳ tính thuế 2026); NQ 110/2025/UBTVQH15 (giảm trừ gia cảnh 15,5tr/6,2tr
-  từ kỳ tính thuế 2026).
-- Lao động/BHXH: Luật BHXH 2024 (41/2024/QH15) + NĐ 158/2025 (chủ hộ KD nộp
-  thuế kê khai thuộc BHXH bắt buộc từ 01/07/2025); NĐ 293/2025 (lương tối
-  thiểu vùng mới từ 01/01/2026).
-- Chi tiết áp dụng: thuế/hóa đơn ở `einvoice-tax.md`; lương/TNCN/BHXH ở
-  `payroll-pit.md`; HĐLĐ ở `labor-contracts.md`.
+Danh mục văn bản pháp lý đầy đủ (căn cứ + hiệu lực + tác động) là **SSoT** ở
+[`legal-framework-2026.md`](legal-framework-2026.md) — gồm đăng ký HKD, thuế
+HKD (NQ 198/2025, NĐ 68/2026, NĐ 141/2026), GTGT, HĐĐT (NĐ 70/2025, TT 32/2025),
+kế toán HKD (TT 152/2025), TNCN (Luật 109/2025, NQ 110/2025), và lao động/BHXH.
+Chi tiết áp dụng: thuế/hóa đơn ở `einvoice-tax.md`; lương/TNCN/BHXH ở
+`payroll-pit.md`; HĐLĐ ở `labor-contracts.md`.
 
 ## Domain: chuỗi nhà hàng F&B
 
@@ -126,10 +113,10 @@ PO (intent) → GRN (actual received) → Supplier Invoice / chứng từ NCC
 Waiter (POS) → KDS (realtime) → Chef bumps → Cashier pays → completed
 ```
 
-### Vai trò nhân sự (9 access bucket)
+### Vai trò nhân sự (8 access bucket)
 
 ```
-owner, super_manager, branch_manager, warehouse_manager, production_manager,
+owner, branch_manager, warehouse_manager, production_manager,
 cashier, waiter, chef, office
 ```
 

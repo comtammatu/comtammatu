@@ -72,7 +72,7 @@ test("bucket không nằm trong target_roles → không nhận", () => {
   );
 });
 
-test("sai chi nhánh → không nhận, trừ owner/super_manager (tenant-wide)", () => {
+test("sai chi nhánh → không nhận, trừ owner (tenant-wide)", () => {
   assert.equal(
     canReceiveNotification(notif(), sub, profileAt(99), position("branch_manager")),
     false,

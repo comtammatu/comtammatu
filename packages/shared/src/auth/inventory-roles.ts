@@ -3,7 +3,6 @@ import type { StaffRole } from "./types";
 /** CRUD danh mục nguyên liệu + allowlist chi nhánh */
 export const INVENTORY_CATALOG_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "warehouse_manager",
   "production_manager",
 ];
@@ -11,7 +10,6 @@ export const INVENTORY_CATALOG_ROLES: readonly StaffRole[] = [
 /** Tồn kho, luân chuyển, điều chỉnh tồn theo chi nhánh */
 export const INVENTORY_OPS_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "branch_manager",
   "warehouse_manager",
   "production_manager",
@@ -20,7 +18,6 @@ export const INVENTORY_OPS_ROLES: readonly StaffRole[] = [
 /** NCC, PO, GRN, HĐ NCC, công thức */
 export const PROCUREMENT_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "warehouse_manager",
   "production_manager",
 ];
@@ -28,7 +25,6 @@ export const PROCUREMENT_ROLES: readonly StaffRole[] = [
 /** Phiếu trả NCC + credit notes. */
 export const SUPPLIER_RETURN_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "branch_manager",
   "warehouse_manager",
   "production_manager",

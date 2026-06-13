@@ -111,7 +111,6 @@ Mật khẩu tất cả: `Test1234!`. Bao phủ toàn bộ `STAFF_ROLES`:
 | Email                            | Role                 | Scope                           |
 | -------------------------------- | -------------------- | ------------------------------- |
 | `owner@comtammatu.vn`            | `owner`              | Tenant (pin tenant)                 |
-| `supermanager@comtammatu.vn`     | `super_manager`      | Tenant (pin tenant, keeper)         |
 | `warehouse@comtammatu.vn`        | `warehouse_manager`  | Chi nhánh        |
 | `production@comtammatu.vn`       | `production_manager` | chi nhánh (branch production) |
 | `manager.datdo@comtammatu.vn`    | `branch_manager`     | Chi nhánh Đất Đỏ                |

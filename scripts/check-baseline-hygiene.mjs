@@ -42,7 +42,7 @@ const CLASSIFIED_FILES = new Map([
   ],
   [
     "packages/shared/src/auth/types.ts",
-    "JwtClaims.user_role doc comment; the legacy RLS bridge it notes is resolved in the greenfield role-bridge cut (Phase 4).",
+    "JwtClaims.user_role doc comment; user_role is the compatibility claim derived from positions.code via the role-bridge mapper.",
   ],
   [
     "packages/shared/src/payroll/calculate.ts",

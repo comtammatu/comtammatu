@@ -22,6 +22,7 @@ Tài liệu tham chiếu dài hạn cho repo này.
 
 ## Các tài liệu khác
 
+- [legal-framework-2026.md](legal-framework-2026.md): **SSoT** danh mục văn bản pháp lý HKD (đăng ký, GTGT, HĐĐT, kế toán, TNCN, BHXH) — các doc khác tham chiếu file này
 - [einvoice-tax.md](einvoice-tax.md)
 - [labor-contracts.md](labor-contracts.md)
 - [payroll-pit.md](payroll-pit.md)

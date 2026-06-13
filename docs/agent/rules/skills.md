@@ -19,9 +19,9 @@ database policy, copy, or business rules.
 
 ## Repository Boundary
 
-- Project-owned Agent Workspace config may live in this repo for Claude, Codex,
-  Cursor, or similar tools. Treat it as an adapter to the repo rules, not as a
-  competing source of truth.
+- Project-owned Agent Workspace config may live in this repo for Claude or
+  Codex (the two supported runtimes). Treat it as an adapter to the repo rules,
+  not as a competing source of truth.
 - Adapter config MAY carry runtime enforcement for its own agent — permission
   allow/deny lists and hook wiring. Shared guard logic lives once in
   `scripts/` (e.g. `scripts/guard-prod-db.mjs` enforces the Environment
@@ -59,7 +59,7 @@ one owns a different risk surface.
 
 Skill names below are capability contracts (see Repository Boundary), not a
 promise that the exact skill is installed. Inventory last re-verified
-2026-06-11. When a named skill is missing, use the closest installed
+2026-06-13. When a named skill is missing, use the closest installed
 equivalent, or `find-skills` if the owner asked for new tooling.
 
 | Task signal                                                                       | Required repo rules/docs                                                                         | Required skills/plugins when available                                                                                                                            | Required verification                                                                                                                |
@@ -71,7 +71,7 @@ equivalent, or `find-skills` if the owner asked for new tooling.
 | UI, UX, route surface, copy, shadcn component, forms, operational POS/KDS UI      | `ui.md`, `docs/spec/design-system.md`, `docs/modules/ui.md`, `tasks/regressions.md`, domain docs | a shadcn skill (e.g. `vercel:shadcn`); a design-polish skill (e.g. `impeccable-design-polish`) only for explicit design/audit/polish work after project UI authority is loaded                                   | Browser/runtime smoke for meaningful UI; no fake primitives or design-system drift                                                   |
 | Landing, marketing, portfolio, or visual concept outside operational ERP surfaces | `ui.md`, `docs/spec/design-system.md` if it touches web runtime                                  | an anti-slop/brand design skill (e.g. `taste-skill`) only when the surface is actually brand/marketing/prototype work                             | Visual/browser verification; do not override the Custom Theme for app surfaces                                                       |
 | Supabase queries, migrations, RLS, grants, auth, storage, generated types, RPCs   | `database.md`, `workflow.md`, `tasks/regressions.md`, `docs/spec/database-schema.md`             | `supabase`, `supabase-postgres-best-practices`; use Supabase MCP/CLI only after target env is verified                                                            | T3 if schema/RLS/money/security-definer/data backfill; migration file before apply; `pnpm db:types` after applied type-source schema |
-| Money, payments, refunds, HĐĐT, journal, payroll/tax                              | `database.md`, `workflow.md`, finance/legal docs, relevant runbooks                              | `supabase`, `supabase-postgres-best-practices`; product/QA perspectives required by T3                                                                            | Full T3 debate; targeted domain tests plus full gates                                                                                |
+| Money, payments, refunds, HĐĐT, journal, payroll/tax                              | `database.md`, `workflow.md`, `docs/ref/legal-framework-2026.md`, finance/legal docs, relevant runbooks | `supabase`, `supabase-postgres-best-practices`; product/QA perspectives required by T3                                                                            | Full T3 debate; targeted domain tests plus full gates                                                                                |
 | Browser QA, route smoke, responsive/layout evidence                               | `workflow.md`, relevant UI/module docs                                                           | `playwright` for repeatable browser interaction; `browse`, `qa`, or `qa-only` for broader QA                         | Capture URL, viewport, route, and observed state; separate auth/env blockers from code regressions                                   |
 | Deployment, Vercel, CI, GitHub PR, release/canary                                 | `engineering.md`, `workflow.md`, deployment/runbook docs                                         | `gh` CLI / GitHub tools, `vercel:*`, `ship`, `land-and-deploy`, `canary` only when owner asks to publish/land/deploy                                                           | Do not mutate production without owner-approved flow; cite CI/deploy evidence                                                        |
 | Documentation, runbooks, lessons, task tracker                                    | `references.md`, relevant module/spec/runbook                                                    | Usually no external skill. Use a docx skill (e.g. `anthropic-skills:docx`) only for Word artifacts; use `make-pdf` only when asked for PDF                                            | Check links/anchors and keep docs in the correct SSOT location                                                                       |
@@ -89,6 +89,21 @@ equivalent, or `find-skills` if the owner asked for new tooling.
   migration policy in `database.md` and `AGENTS.md` controls apply rights.
 - For current Supabase product behavior, verify against official docs/changelog
   when implementation depends on unstable CLI/API behavior.
+
+### HKD Domain (legal / tax / HĐĐT / labor / payroll)
+
+- For any task touching tax rates, HĐĐT/e-invoice rules, the business form (HKD
+  vs company), labor contracts, BHXH, or PIT: load
+  `docs/ref/legal-framework-2026.md` (the SSoT law register) FIRST, then the
+  specific domain doc (`einvoice-tax.md` / `payroll-pit.md` /
+  `labor-contracts.md`) and `docs/ref/business-context.md`.
+- Cite the governing văn bản (NĐ 70/2025, NĐ 68/2026, NĐ 141/2026, TT 152/2025,
+  TT 32/2025, Luật TNCN 109/2025, NQ 110/2025) — never assert a tax/labor rule
+  from memory. When a doc and the code disagree (e.g. PIT bracket count), flag it
+  for owner/accountant; do not silently reconcile either side.
+- Má Tư is a Hộ kinh doanh: no formal BCTC/VAS. Treat enterprise-accounting
+  guidance as an advanced layer reachable by direct permission, not the default
+  surface (D012/D013).
 
 ### Shadcn And UI Design
 

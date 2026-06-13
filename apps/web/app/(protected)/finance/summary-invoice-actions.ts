@@ -30,10 +30,9 @@ import { executeSummaryRun } from "@lib/hddt-daily-summary";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
 const READ_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "branch_manager",
 ];
 

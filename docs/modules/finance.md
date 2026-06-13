@@ -105,7 +105,7 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 | `/finance/posting-rules`         | Advanced accounting          | Hide from default pilot nav                                           |
 | `/finance/periods`               | Advanced accounting          | Hide from default pilot nav                                           |
 | `/finance/statements`            | Advanced accounting          | Hide from default pilot nav                                           |
-| `/finance/audit-trail`           | Audit/admin support          | Keep accessible for owner/super_manager, but not core daily workflow  |
+| `/finance/audit-trail`           | Audit/admin support          | Keep accessible for owner, but not core daily workflow                |
 | `/admin/accounting/periods`      | Advanced accounting admin    | Keep restricted and direct-only; hide from default Admin nav          |
 
 Do not delete advanced routes without a data-retention and accounting review. First step is navigation and landing simplification.

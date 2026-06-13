@@ -1,17 +1,13 @@
 import type { StaffRole } from "./types";
 
-/** Giá trị tồn kho — toàn hệ thống: Owner, Super Manager */
+/** Giá trị tồn kho — toàn hệ thống: Owner */
 function canViewInventoryValueSystem(role: StaffRole): boolean {
-  return role === "owner" || role === "super_manager";
+  return role === "owner";
 }
 
-/** Theo chi nhánh: Owner, Super Manager, Manager (branch_manager) */
+/** Theo chi nhánh: Owner, Manager (branch_manager) */
 function canViewInventoryValueByBranch(role: StaffRole): boolean {
-  return (
-    role === "owner" ||
-    role === "super_manager" ||
-    role === "branch_manager"
-  );
+  return role === "owner" || role === "branch_manager";
 }
 
 export interface InventoryValueVisibility {

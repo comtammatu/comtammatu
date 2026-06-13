@@ -62,7 +62,7 @@
 
 **Mức lương đóng BH** = Lương cơ bản + phụ cấp lương (không tính tiền thưởng, tiền hỗ trợ ăn uống, xăng xe, nhà ở)
 
-**Mức trần BHXH** = 20 × Lương cơ sở nhà nước = 20 × 2,340,000 = **46,800,000 VND/tháng** (năm 2024)
+**Mức trần BHXH** = 20 × Lương cơ sở nhà nước = 20 × 2,340,000 = **46,800,000 VND/tháng** (từ 01/07/2024, áp dụng kỳ 2026)
 
 > ⚠️ **Dev note**: Khi tính lương, trường `insurance_base_salary` trong bảng `employees` là căn cứ đóng BH, có thể khác với `gross_salary`.
 
@@ -199,7 +199,7 @@ Theo luật VN, **mức lương đóng BH** ≠ **lương gross**:
 
 ```
 Mức đóng BH = Lương cơ bản + phụ cấp lương (KHÔNG tính: thưởng, hỗ trợ ăn, xăng xe, nhà ở)
-Trần BHXH   = 20 × Lương cơ sở = 46,800,000 VND/tháng (2024)
+Trần BHXH   = 20 × Lương cơ sở = 46,800,000 VND/tháng (từ 01/07/2024)
 ```
 
 Trường này tồn tại ở 3 bảng với vai trò khác nhau:
@@ -282,10 +282,10 @@ Nếu ngày nghỉ trùng Thứ 7 hoặc CN → được nghỉ bù ngày làm v
 
 | Hành động            | Roles được phép                                                             |
 | -------------------- | --------------------------------------------------------------------------- |
-| Xem hồ sơ nhân viên  | `branch_manager` (chi nhánh mình), ``, `super_manager`, `owner` |
-| Tạo / sửa hợp đồng   | `super_manager`, `owner` (và HR với role `office`)                          |
-| Xem tất cả chi nhánh | `` trở lên                                                      |
-| Terminate nhân viên  | `super_manager`, `owner`                                                    |
+| Xem hồ sơ nhân viên  | `branch_manager` (chi nhánh mình), `owner` |
+| Tạo / sửa hợp đồng   | `owner` (và HR với role `office`)                          |
+| Xem tất cả chi nhánh | `owner`                                         |
+| Terminate nhân viên  | `owner`                                                    |
 
 ---
 

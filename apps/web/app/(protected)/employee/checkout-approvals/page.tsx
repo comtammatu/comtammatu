@@ -30,7 +30,6 @@ import {
 const copy = messages.employee.home;
 const CHECKOUT_APPROVER_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "branch_manager",
 ];
 
@@ -91,7 +90,7 @@ async function loadVisibleBranchIds({
   role: StaffRole;
   branchId: number | null;
 }): Promise<number[] | null> {
-  if (role === "owner" || role === "super_manager") return null;
+  if (role === "owner") return null;
   if (role === "branch_manager") return branchId ? [branchId] : [];
   return [];
 }

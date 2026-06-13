@@ -24,7 +24,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "test": "tsx --test src/auth/__tests__/*.test.ts src/providers/__tests__/*.test.ts src/utils/__tests__/*.test.ts src/hddt/__tests__/*.test.ts src/kds/__tests__/*.test.ts src/runner/__tests__/*.test.ts src/time/__tests__/*.test.ts"
+    "test": "tsx --test src/auth/__tests__/*.test.ts src/providers/__tests__/*.test.ts src/utils/__tests__/*.test.ts src/hddt/__tests__/*.test.ts src/kds/__tests__/*.test.ts src/runner/__tests__/*.test.ts src/time/__tests__/*.test.ts src/payroll/__tests__/*.test.ts"
   },
   "dependencies": {
     "fflate": "^0.8.3"

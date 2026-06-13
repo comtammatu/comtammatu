@@ -8,8 +8,7 @@ import { messages } from "@lib/messages";
 export default async function HrPage() {
   const { supabase, claims } = await loadAuthState();
   const copy = messages.hr.workspace;
-  const canManageEmployees =
-    claims.user_role === "owner" || claims.user_role === "super_manager";
+  const canManageEmployees = claims.user_role === "owner";
   const isBranchManager = claims.user_role === "branch_manager";
   const canViewEmployees = canManageEmployees || isBranchManager;
 

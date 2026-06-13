@@ -19,7 +19,9 @@ function listFiles(command, args) {
 }
 
 function countDatabaseSection(text, sectionName) {
-  const start = text.indexOf(`    ${sectionName}: {`);
+  const publicSchema = text.indexOf("  public: {");
+  const searchFrom = publicSchema === -1 ? 0 : publicSchema;
+  const start = text.indexOf(`    ${sectionName}: {`, searchFrom);
   if (start === -1) return 0;
   const sectionNames = ["Tables", "Views", "Functions", "Enums", "CompositeTypes"];
   const nextStarts = sectionNames

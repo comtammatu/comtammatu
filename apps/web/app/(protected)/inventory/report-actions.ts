@@ -16,7 +16,7 @@ import {
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
-const REPORT_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const REPORT_ROLES: readonly StaffRole[] = ["owner"];
 
 /* ─── Schemas ─── */
 

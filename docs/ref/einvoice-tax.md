@@ -246,7 +246,7 @@ RPC raise `illegal_transition` (ERRCODE 22023) khi cố gắng nhảy ngoài mat
 | `cancelled` / `replaced` | `settings:tenant`   |
 | Tất cả transition khác   | `orders:write`      |
 
-`cancel`/`replace` cần owner/super_manager (kèm biên bản hủy/thay thế theo NĐ 123/2020 sửa đổi + TT 32/2025). Issuance flow (`draft → signing → submitted → issued`) cho phép cashier+ thực hiện.
+`cancel`/`replace` cần owner (kèm biên bản hủy/thay thế theo NĐ 123/2020 sửa đổi + TT 32/2025). Issuance flow (`draft → signing → submitted → issued`) cho phép cashier+ thực hiện.
 
 #### Idempotency
 
@@ -725,23 +725,23 @@ Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-viettel-op
 
 ### 9.2 Module ACL (`packages/shared/src/auth/module-acl.ts:89-93`)
 
-| Module    | Path       | Roles được phép          |
-| --------- | ---------- | ------------------------ |
-| `finance` | `/finance` | `owner`, `super_manager` |
+| Module    | Path       | Roles được phép |
+| --------- | ---------- | --------------- |
+| `finance` | `/finance` | `owner`         |
 
 > **Note**: `/finance/summary` admin trigger UI KHÔNG có entry riêng trong `module-acl.ts` — gate qua permission `settings:tenant` ở action level (`runDailySummaryForBranch`). Cashier/branch_manager sẽ thấy nav nhưng action sẽ reject.
 
 ### 9.3 Role matrix tổng hợp
 
-| Hành động                     | owner | super_manager | | branch_manager | cashier |
-| ----------------------------- | :---: | :-----------: | :----------: | :------------: | :-----: |
-| Xem danh sách HĐĐT            |   ✓   |       ✓       |      ✓       |       ✓        |    ✓    |
-| Xem dashboard `/finance`      |   ✓   |       ✓       |      −       |       −        |    −    |
-| Xuất HĐĐT realtime            |   ✓   |       ✓       |      ✓       |       ✓        |    ✓    |
-| Hủy / thay thế HĐĐT           |   ✓   |       ✓       |      −       |       −        |    −    |
-| Manual trigger daily summary  |   ✓   |       ✓       |      −       |       −        |    −    |
-| Xem queue `summary_run_queue` |   ✓   |       ✓       |      −       |       −        |    −    |
-| Config provider (env var)     |   ✓   |       −       |      −       |       −        |    −    |
+| Hành động                     | owner | branch_manager | cashier |
+| ----------------------------- | :---: | :------------: | :-----: |
+| Xem danh sách HĐĐT            |   ✓   |       ✓        |    ✓    |
+| Xem dashboard `/finance`      |   ✓   |       −        |    −    |
+| Xuất HĐĐT realtime            |   ✓   |       ✓        |    ✓    |
+| Hủy / thay thế HĐĐT           |   ✓   |       −        |    −    |
+| Manual trigger daily summary  |   ✓   |       −        |    −    |
+| Xem queue `summary_run_queue` |   ✓   |       −        |    −    |
+| Config provider (env var)     |   ✓   |       −        |    −    |
 
 ---
 

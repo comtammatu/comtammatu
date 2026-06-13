@@ -5,13 +5,9 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
-const SYSTEM_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const SYSTEM_ROLES: readonly StaffRole[] = ["owner"];
 
-const BRANCH_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "branch_manager",
-];
+const BRANCH_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
 
 function computeLineValue(
   qty: number,

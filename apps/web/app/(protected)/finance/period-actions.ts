@@ -11,8 +11,8 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
  * the `close_fiscal_period` / `gl_reconciliation` SECURITY DEFINER RPCs,
  * both guarded by auth permissions.
  */
-const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
-const REPORT_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
+const REPORT_ROLES: readonly StaffRole[] = ["owner"];
 
 /* ─── Fetch Fiscal Periods ─── */
 

@@ -60,10 +60,10 @@ Every DB query/mutation → RLS → has_permission(branch_id, key) on staff_perm
 
 Defined in `getDefaultRedirect(claims)` (`packages/shared/src/auth/scope.ts`).
 
-| Role                                 | Route              |
-| ------------------------------------ | ------------------ |
-| `ADMIN_ROLES` = owner, super_manager | `/admin/dashboard` |
-| All non-admin staff                  | `/employee`        |
+| Role                  | Route              |
+| --------------------- | ------------------ |
+| `ADMIN_ROLES` = owner | `/admin/dashboard` |
+| All non-admin staff   | `/employee`        |
 
 Root `/` delegates to this same resolver. It does not render a separate hub.
 
@@ -78,7 +78,7 @@ USING (tenant_id = auth_tenant_id())
 
 -- Branch-scoped (with tenant override)
 USING (branch_id = auth_branch_id()
-  OR auth_role() IN ('owner', 'super_manager'))
+  OR auth_role() = 'owner')
 ```
 
 ## Package Dependencies
@@ -145,20 +145,20 @@ Change ownership:
 
 Top-level surfaces (see `module-acl.ts` for canonical role lists):
 
-| Surface            | Route                        | Allowed roles (summary)                                                     |
-| ------------------ | ---------------------------- | --------------------------------------------------------------------------- |
-| Admin              | `/admin/*`                   | owner, super_manager                                                        |
-| Inventory          | `/inventory/*`               | owner, super_manager, branch_manager, warehouse_manager, production_manager |
-| Finance            | `/finance/*`                 | owner, super_manager                                                        |
-| HR                 | `/hr/*`                      | owner, super_manager                                                        |
-| Orders             | `/orders`                    | owner, super_manager, branch_manager, cashier                               |
-| Notifications      | `/notifications`             | all staff                                                                   |
-| POS                | `/br/[branchId]/pos`         | cashier, waiter, branch_manager                                             |
-| KDS                | `/br/[branchId]/kds`         | chef, branch_manager                                                        |
-| Branch dashboard   | `/br/[branchId]/dashboard`   | owner, super_manager, branch_manager                                        |
-| Branch settings    | `/br/[branchId]/settings/*`  | owner, super_manager, branch_manager                                        |
-| Branch menu limits | `/br/[branchId]/menu-limits` | owner, super_manager, branch_manager, cashier, chef                         |
-| Employee           | `/employee/*`                | all staff                                                                   |
+| Surface            | Route                        | Allowed roles (summary)                                       |
+| ------------------ | ---------------------------- | ------------------------------------------------------------- |
+| Admin              | `/admin/*`                   | owner                                                         |
+| Inventory          | `/inventory/*`               | owner, branch_manager, warehouse_manager, production_manager  |
+| Finance            | `/finance/*`                 | owner                                                         |
+| HR                 | `/hr/*`                      | owner, branch_manager                                         |
+| Orders             | `/orders`                    | owner, branch_manager, cashier                               |
+| Notifications      | `/notifications`             | all staff                                                     |
+| POS                | `/br/[branchId]/pos`         | cashier, waiter, branch_manager                               |
+| KDS                | `/br/[branchId]/kds`         | chef, branch_manager                                          |
+| Branch dashboard   | `/br/[branchId]/dashboard`   | owner, branch_manager                                         |
+| Branch settings    | `/br/[branchId]/settings/*`  | owner, branch_manager                                         |
+| Branch menu limits | `/br/[branchId]/menu-limits` | owner, branch_manager, cashier, chef                         |
+| Employee           | `/employee/*`                | all staff                                                     |
 | Access denied      | `/access-denied`             | public (rendered with reason copy from `blocked-state.ts`)                  |
 | Payment return     | `/payment/momo/return`       | public (Momo redirect target)                                               |
 

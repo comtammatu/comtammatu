@@ -201,3 +201,88 @@ rõ nhất là `branch_manager`: họ phải thiết lập chi nhánh của họ
 `scope.ts`, và tests. Không thêm workflow branch-scoped mới vào `/admin/*`.
 Ma trận canonical: `docs/spec/role-route-matrix.md`; T3 contract:
 `docs/worklog/role-route-restructure-2026-06-13.md`.
+
+## D018: Bỏ role `super_manager` — gộp vào `owner` (2026-06-13)
+
+**Context:** HKD đơn (single-tenant) có cả `owner` (Chủ sở hữu) và
+`super_manager` (Giám đốc điều hành) làm hai tầng tenant-admin. Với một HKD,
+tầng thứ hai là dư thừa — `owner` đã xuất hiện cạnh `super_manager` trong mọi
+allowedRoles/RLS list. Prod chỉ có **1 user** mang `super_manager`.
+
+**Decision (supersedes phần `super_manager` của D017 mục 2):**
+
+1. Bỏ hẳn access bucket `super_manager`. Bộ quyền + 1 user prod gộp vào `owner`.
+2. `ACCESS_BUCKETS` còn **8**: `owner`, `branch_manager`, `warehouse_manager`,
+   `production_manager`, `cashier`, `waiter`, `chef`, `office`.
+3. `/admin/*` (L0 tenant command) giờ chỉ `owner`. Mọi list/RLS có
+   `super_manager` cạnh `owner` → xóa `super_manager`, `owner` giữ nguyên quyền.
+4. Cấu hình sàn/bếp (việc trước đây của `super_manager`) gộp vào `owner` +
+   `branch_manager`.
+
+**Consequences:** TS twins sửa cùng PR (`packages/shared/src/auth/types.ts`
+`ACCESS_BUCKETS` + `POSITION_CODE_TO_STAFF_ROLE` + role-constant arrays; 16
+module-acl lists; 64 file `.ts/.tsx`). Migration
+`20260613110000_remove_super_manager_fold_owner.sql` (owner-applied): reassign
+1 profile → owner, drop position + role_template, retarget 83 notifications +
+auth metadata → owner, cập nhật 3 mapper + `notifications_select` policy,
+DO-block self-check. Inline RLS/function dead role-strings (`super_manager`
+cạnh `owner` ở các policy khác + `admin_update_profile` /
+`toggle_profile_active` / `stock_transfer_list_branches`) để lại như dead-code
+(không user nào resolve ra) — dọn ở một migration cleanup riêng (kèm các token
+intermediate-scope đã loại trước). Canonical: `docs/spec/role-route-matrix.md`.
+
+## D019: W5 — Cấu trúc hoá UI (shell · route home · nav · padding), chi tiết hoá D014 W5 (2026-06-13)
+
+**Context:** D014 đặt chương trình W0–W6; W0–W4 đã ship, W5 (IA) + W6 (decompose)
+chưa làm, và D014 chốt hướng W5 = gộp điều hướng về 2 shell ("Văn phòng" /
+"Vận hành") nhưng để "plan chi tiết lập sau W4". Audit đa-tác-tử có kiểm chứng
+(`docs/worklog/ui-surface-workflow-audit-2026-06-13.md`) xác định gốc tái-drift:
+tầng token được máy enforce (1 nguồn `globals.css`, 0 palette raw, palette ban ở
+ESLint), nhưng tầng cấu trúc (chọn shell, route home, nav, padding) chỉ là luật
+chữ trong `docs/agent/rules/ui.md` — 0 check. Bằng chứng code: nav SSoT
+(`nav-config.ts`) chỉ `admin-shell` dùng (5 shell còn lại hardcode nav inline; 3
+resolver `resolveWorkspaceItems` / `resolveQuickLaunchGroups` /
+`resolveBranchOperationItems` có 0 caller ngoài test); 8 route mồ côi;
+branch-floor settings có 2 nhà (`/br/[branchId]/settings/tables` import thẳng
+`TablesClient` của `/admin/settings`); 2 trang "Kỳ kế toán"; `AppShell` main
+`p-4` (`app-shell.tsx:302`) đè lên `AppPage` `p-4` (`surface.tsx:75`) dù
+`design-system.md:213` nói padding thuộc `AppPage`; ratchet status mù regex (đòi
+ký tự trước "STATUS" nên `STATUS_LABELS` / `STATUS_CONFIG` lọt → xanh giả).
+
+**Decision:**
+
+1. Chốt 2 họ chrome (không có họ thứ ba): **Quản trị** = `AppShell` chung (admin +
+   domain workspaces + branch command/setup `/br/[branchId]/*`), một sidebar
+   nhiều nhóm theo role/scope; **Vận hành** = chrome chuyên dụng full-screen
+   (POS, KDS, Runner) + trang nhân viên `/employee`, dùng chung
+   token/typography/status/header/bottom-nav primitives. Mở rộng D014 W5 để đặt
+   rõ branch command/setup vào họ Quản trị.
+2. **Một capability = một route home** theo `role-route-matrix.md`. Giải quyết
+   trùng: (a) branch-floor settings (tables/pos/kds/printers/pos-sessions) nhà
+   canonical = `/br/[branchId]/settings/*` (matrix:49,80); chuyển
+   `/admin/settings/{tables,pos,kds,printers}` thành redirect shim. (b) Kỳ kế
+   toán canonical = `/admin/accounting/periods` (direct-support, ngoài nav —
+   theo D013); `/finance/periods` giải quyết (redirect/gộp) SAU KHI xác minh
+   `accounting_periods` vs `fiscal_periods` không phải hai concept khác nhau.
+3. **Padding một chủ = `AppPage`** (formalize `design-system.md:213`). `AppShell`
+   main bỏ outer padding; `AppPage` nesting-aware; trang lá không tự đặt `p-*`
+   gốc.
+4. **Nav là data, không phải code per-shell**: mọi sidebar/bottom-nav project từ
+   `nav-config.ts` qua resolver chung; cấm `ShellNavGroup[]` literal trong shell.
+5. Hợp đồng cấu trúc chi tiết: `docs/spec/design-system.md` § Structural
+   Governance. Theo pattern D014: mỗi luật kèm ratchet baseline-đóng-băng-chỉ-giảm
+   trong `scripts/check-ui-contract.mjs`. Cổng Stage 0: `shell-registry`,
+   route-manifest reachability, page-padding, `nav-acl`, và gỡ mù regex status.
+
+**Scope của bản ghi này:** chỉ là quyết định + hợp đồng (cập nhật
+`design-system.md` § Structural Governance + bản ghi này). CODE (script ratchet +
+refactor shell/nav + redirect shim + sửa `app-shell.tsx`) là Stage 0/1, CHƯA
+thực thi.
+
+**Consequences:** W5 có plan chi tiết để thực thi theo thứ tự governance-first
+(khoá cổng trước, cleanup sau). Khi cổng land, shell/route/nav mới phải qua cổng.
+Branch Manager trải nghiệm Branch Command + Branch Setup là một luồng L1, không
+lạc vào trang hình-Admin. Triệu chứng tầng token (clone status/VND/raw Table)
+thuộc vệ sinh ratchet W1–W4 — burn-down riêng, ngoài W5. Đảo bất kỳ điểm nào (cho
+phép shell thứ 3, đổi padding owner, đổi route home) phải sửa quyết định này
+trước.

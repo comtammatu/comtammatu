@@ -8,7 +8,6 @@ import { withAction } from "@/_lib/with-action";
 
 const REVIEW_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "branch_manager",
 ];
 

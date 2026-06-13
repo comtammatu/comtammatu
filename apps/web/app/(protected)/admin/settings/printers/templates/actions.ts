@@ -14,7 +14,7 @@ import {
 import { renderDocumentToPng } from "@comtammatu/print-render/png";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 
-const TENANT_TEMPLATE_ROLES = ["owner", "super_manager"] as const;
+const TENANT_TEMPLATE_ROLES = ["owner"] as const;
 
 const kindSchema = z.enum([
   "receipt",

@@ -38,8 +38,7 @@
 
 | Position code       | Label VI           | Access bucket        | Scope vận hành mặc định                                    |
 | ------------------- | ------------------ | -------------------- | ---------------------------------------------------------- |
-| `owner`             | Chủ sở hữu         | `owner`              | Tenant-wide bypass (owner bypass trong `has_permission()`) |
-| `super_manager`     | Giám đốc điều hành | `super_manager`      | Tenant-wide operations + procurement                       |
+| `owner`             | Chủ sở hữu         | `owner`              | Tenant-wide bypass (owner bypass trong `has_permission()`) + tenant-wide operations + procurement |
 | `branch_manager`    | Quản lý chi nhánh  | `branch_manager`     | Branch của mình                                            |
 | `warehouse_manager` | Kho trưởng         | `warehouse_manager`  | chi nhánh (procurement + outbound transfer)            |
 | `head_chef`         | Bếp trưởng         | `production_manager` | chi nhánh (sản xuất + KDS)                             |
@@ -100,35 +99,35 @@ Matrix dưới đây là snapshot template (`role_templates.permission_keys`) m�
 
 Edit template không tự propagate toàn cục. Khi sửa template, quyền của nhân viên cũ chỉ đổi qua thao tác apply/backfill rõ ràng; manual override được giữ lại.
 
-| Permission key                 | owner bypass | super_manager | branch_manager | warehouse_manager | thu_kho¹ | head_chef |
-| ------------------------------ | :----------: | :-----------: | :------------: | :---------------: | :------: | :-------: |
-| `inventory:read`               |      ✅      |      ✅       |       ✅       |     ✅     |   ✅    |     ✅     |
-| `inventory:write`              |      ✅      |      ✅       |       ✅       |     ✅     |   ✅    |     ❌     |
-| `inventory:transfer_create`    |      ✅      |      ✅       |      ✅\*      |     ✅     |   ❌    |     ✅     |
-| `inventory:transfer_ship`      |      ✅      |      ✅       |       ❌       |     ✅     |   ❌    |     ✅     |
-| `inventory:transfer_receive`   |      ✅      |      ✅       |      ✅\*      |     ✅     |   ✅    |     ✅     |
-| `inventory:stocktake_create`   |      ✅      |      ✅       |       ✅       |     ✅     |   ✅    |     ❌     |
-| `inventory:stocktake_complete` |      ✅      |      ✅       |       ✅       |     ✅     |   ✅    |     ❌     |
-| `inventory:writeoff`           |      ✅      |      ✅       |       ✅       |     ✅     |   ❌    |     ❌     |
-| `inventory:production_create`  |      ✅      |      ✅       |       ❌       |     ❌     |   ❌    |     ✅     |
-| `inventory:production_confirm` |      ✅      |      ✅       |       ❌       |     ❌     |   ❌    |     ✅     |
-| `procurement:read`             |      ✅      |      ✅       |       ❌       |     ✅     |   ❌    |     ✅     |
-| `procurement:supplier_manage`  |      ✅      |      ✅       |       ❌       |     ✅     |   ❌    |     ❌     |
-| `procurement:po_create`        |      ✅      |      ✅       |       ❌       |     ✅     |   ❌    |     ❌     |
-| `procurement:po_approve`       |      ✅      |      ✅       |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
-| `procurement:grn_create`       |      ✅      |      ✅       |       ❌       |     ✅     |   ❌    |     ❌     |
-| `procurement:grn_confirm`      |      ✅      |      ✅       |       ❌       |     ✅     |   ❌    |     ❌     |
-| `procurement:invoice_create`   |      ✅      |      ✅       |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
-| `procurement:invoice_match`    |      ✅      |      ✅       |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
-| `menu:read`                    |      ✅      |      ✅       |       ✅       |     ❌     |   ❌    |     ✅     |
-| `menu:write`                   |      ✅      |      ✅       |       ❌       |     ❌     |   ❌    |     ✅     |
+| Permission key                 | owner bypass | branch_manager | warehouse_manager | thu_kho¹ | head_chef |
+| ------------------------------ | :----------: | :------------: | :---------------: | :------: | :-------: |
+| `inventory:read`               |      ✅      |       ✅       |     ✅     |   ✅    |     ✅     |
+| `inventory:write`              |      ✅      |       ✅       |     ✅     |   ✅    |     ❌     |
+| `inventory:transfer_create`    |      ✅      |      ✅\*      |     ✅     |   ❌    |     ✅     |
+| `inventory:transfer_ship`      |      ✅      |       ❌       |     ✅     |   ❌    |     ✅     |
+| `inventory:transfer_receive`   |      ✅      |      ✅\*      |     ✅     |   ✅    |     ✅     |
+| `inventory:stocktake_create`   |      ✅      |       ✅       |     ✅     |   ✅    |     ❌     |
+| `inventory:stocktake_complete` |      ✅      |       ✅       |     ✅     |   ✅    |     ❌     |
+| `inventory:writeoff`           |      ✅      |       ✅       |     ✅     |   ❌    |     ❌     |
+| `inventory:production_create`  |      ✅      |       ❌       |     ❌     |   ❌    |     ✅     |
+| `inventory:production_confirm` |      ✅      |       ❌       |     ❌     |   ❌    |     ✅     |
+| `procurement:read`             |      ✅      |       ❌       |     ✅     |   ❌    |     ✅     |
+| `procurement:supplier_manage`  |      ✅      |       ❌       |     ✅     |   ❌    |     ❌     |
+| `procurement:po_create`        |      ✅      |       ❌       |     ✅     |   ❌    |     ❌     |
+| `procurement:po_approve`       |      ✅      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
+| `procurement:grn_create`       |      ✅      |       ❌       |     ✅     |   ❌    |     ❌     |
+| `procurement:grn_confirm`      |      ✅      |       ❌       |     ✅     |   ❌    |     ❌     |
+| `procurement:invoice_create`   |      ✅      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
+| `procurement:invoice_match`    |      ✅      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
+| `menu:read`                    |      ✅      |       ✅       |     ❌     |   ❌    |     ✅     |
+| `menu:write`                   |      ✅      |       ❌       |     ❌     |   ❌    |     ✅     |
 
 **Legenda:**
 
 - ✅ = có trong template mặc định (hoặc owner bypass)
 - ✅\* = key có trong template nhưng runtime/app/RPC giới hạn hướng hoặc branch scope
 - ❌ = không trong template
-- ⚠️ **held** = cố ý không cấp; việc thuộc super_manager / accounting
+- ⚠️ **held** = cố ý không cấp; việc thuộc owner / accounting
 - ¹ template `thu_kho` đã XÓA (migration `20260610230000`, 0 nhân sự); cột giữ lại để đọc grant lịch sử còn trong `staff_permissions` — tuyển thủ kho mới thì tạo position+template mới thuộc bucket `warehouse_manager`
 
 **Contract notes:**
@@ -136,8 +135,8 @@ Edit template không tự propagate toàn cục. Khi sửa template, quyền c�
 - `branch_manager` giữ `inventory:transfer_create` chỉ để commit one-step intra-branch `Cấp bếp`; không được tạo/ship inter-site outbound.
 - `branch_manager` giữ `inventory:transfer_receive` chỉ để nhận inbound về đúng branch của mình.
 - Multi-branch oversight phải đi qua explicit branch grants hoặc tenant-level permission rõ ràng; không có scope trung gian.
-- `head_chef` / `production_manager` sở hữu vòng chi nhánh: receive chi nhánh → chi nhánh, create/ship chi nhánh → branch, và quản trị production recipes.
-- Production hard-deny `branch_manager` ở Server Actions, RPC và RLS dù có manual grant production/menu; operator production là `super_manager` / `production_manager`, còn `owner` là oversight/emergency access.
+- `head_chef` / `production_manager` sở hữu vòng sản xuất chi nhánh: nhận inbound chi nhánh → chi nhánh, sản xuất, rồi create/ship outbound chi nhánh → chi nhánh, và quản trị production recipes.
+- Production hard-deny `branch_manager` ở Server Actions, RPC và RLS dù có manual grant production/menu; operator production là `production_manager`, còn `owner` là oversight/emergency access.
 
 ---
 
@@ -145,7 +144,7 @@ Edit template không tự propagate toàn cục. Khi sửa template, quyền c�
 
 | Dữ liệu                               | Quy tắc                                                                                 |
 | ------------------------------------- | --------------------------------------------------------------------------------------- |
-| On-hand quantity (`stock_levels`)     | `inventory:read` cần. Scope theo branch grant. Owner + super_manager thấy tenant-wide.  |
+| On-hand quantity (`stock_levels`)     | `inventory:read` cần. Scope theo branch grant. Owner thấy tenant-wide.                   |
 | WAC / Average unit cost               | Cùng scope với stock_levels; UI có thể ẩn cho branch-level role nếu use case không cần. |
 | Supplier invoice detail               | Cần `procurement:read` + scope branch.                                                  |
 | Production BOM (`production_recipes`) | Cần role production operator + `menu:read` (xem) hoặc `menu:write` (CRUD).              |
@@ -166,7 +165,7 @@ Inventory RPC chính hiện đã permission-gated:
 - `stock_transfer_mark_in_transit` → `inventory:transfer_ship`
 - `stock_transfer_confirm_receive` / `stock_transfer_receive` → `inventory:transfer_receive`
 
-Production DB contract dùng helper `is_inventory_production_operator()` cho RPC và RLS của `production_recipes`, `production_orders`, `production_order_items`. Vì vậy manual permission grant không cho `` / `branch_manager` bypass qua direct RPC hoặc PostgREST.
+Production DB contract dùng helper `is_inventory_production_operator()` cho RPC và RLS của `production_recipes`, `production_orders`, `production_order_items`. Vì vậy manual permission grant không cho `branch_manager` bypass qua direct RPC hoặc PostgREST.
 
 Một số RPC vẫn dùng `auth_role()` như guard phụ:
 
@@ -180,7 +179,7 @@ Một số RPC vẫn dùng `auth_role()` như guard phụ:
 
 1. **Template drift** — closed by `20260505094000_inventory_rbac_template_contract_v2.sql`: add missing chi nhánh transfer grants for `bep_truong`, remove procurement keys from `quan_ly_CN`, and keep manual overrides reviewable.
 2. **Intermediate scope** — removed. Multi-branch access is explicit branch grants or tenant-level permission only.
-3. **Held permissions của kho_truong** (`po_approve`, `invoice_*`) — cố ý để super_manager / accounting. Document không ghi là thiếu quyền.
+3. **Held permissions của kho_truong** (`po_approve`, `invoice_*`) — cố ý để owner / accounting. Document không ghi là thiếu quyền.
 4. **Manual permission overrides** — migration contract chỉ expire grant có `source_template` trỏ tới template hệ thống hiện tại. Grant thủ công phải review bằng admin/audit flow nếu muốn thu hồi.
 
 ---

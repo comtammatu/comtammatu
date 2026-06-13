@@ -28,7 +28,7 @@ export interface PushTargetPosition {
   code: string;
 }
 
-const TENANT_WIDE_ROLES = new Set(["owner", "super_manager"]);
+const TENANT_WIDE_ROLES = new Set(["owner"]);
 
 export function canReceiveNotification(
   notification: PushTargetNotification,

@@ -11,6 +11,7 @@ import { getVNDateString, getVNMonthEndDateString } from "../time/vietnam";
  *   - TT 111/2013/TT-BTC: 7-bracket PIT, 11M personal / 4.4M dependent
  *   - NQ 954/2020/UBTVQH14 (2020-07-01): set 11M / 4.4M
  *   - NQ 110/2025/UBTVQH15 (2026-01-01): bump to 15.5M / 6.2M
+ *   - Luật TNCN 109/2025/QH15 (2026-07-01): 5-bracket PIT (5/10/20/30/35% at 10/30/60/100M)
  *   - NĐ 65/2013 + amendments: BHXH/BHYT/BHTN rates (stable)
  *   - Statutory base salary 2.34M (NĐ 73/2024, effective 2024-07-01) → BHXH cap = 46.8M
  *
@@ -76,6 +77,15 @@ const PIT_BRACKETS_2007: readonly PitBracket[] = [
   { limit: Number.POSITIVE_INFINITY, rate: 0.35, deduction: 9_850_000 },
 ] as const;
 
+// Luật Thuế TNCN 109/2025/QH15 — 5-bracket schedule effective 2026-07-01.
+const PIT_BRACKETS_2026: readonly PitBracket[] = [
+  { limit: 10_000_000, rate: 0.05, deduction: 0 },
+  { limit: 30_000_000, rate: 0.1, deduction: 500_000 },
+  { limit: 60_000_000, rate: 0.2, deduction: 3_500_000 },
+  { limit: 100_000_000, rate: 0.3, deduction: 9_500_000 },
+  { limit: Number.POSITIVE_INFINITY, rate: 0.35, deduction: 14_500_000 },
+] as const;
+
 /**
  * Versions in chronological order. Lookup picks the LATEST version whose
  * effectiveFrom ≤ target date.
@@ -110,6 +120,16 @@ export const PAYROLL_LEGAL_VERSIONS: readonly PayrollLegalVersion[] = [
     insuranceCap: 46_800_000,
     ...STANDARD_BHXH_BHYT_BHTN_RATES,
     pitBrackets: PIT_BRACKETS_2007,
+  },
+  {
+    effectiveFrom: "2026-07-01",
+    source:
+      "Luật Thuế TNCN 109/2025/QH15 (biểu 5 bậc, hiệu lực 01/07/2026); giảm trừ 15.5M / 6.2M giữ theo NQ 110/2025; BHXH cap giữ 46.8M",
+    personalDeduction: 15_500_000,
+    dependentDeduction: 6_200_000,
+    insuranceCap: 46_800_000,
+    ...STANDARD_BHXH_BHYT_BHTN_RATES,
+    pitBrackets: PIT_BRACKETS_2026,
   },
 ];
 

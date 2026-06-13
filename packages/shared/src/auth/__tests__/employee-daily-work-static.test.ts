@@ -228,7 +228,6 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
     actionSrc.includes("probePermission") &&
       actionSrc.includes("PERMISSION_KEYS.HR_APPROVE_CHECKOUT") &&
       actionSrc.includes('"owner"') &&
-      actionSrc.includes('"super_manager"') &&
       actionSrc.includes("employee_request_clock_out") &&
       actionSrc.includes("branch_manager_approve_employee_clock_out"),
     "expected approval action to check branch-scoped permission before service-role approval",

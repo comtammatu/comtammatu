@@ -35,7 +35,7 @@ test("admin dashboard actions stay scoped to the dashboard audience", () => {
 
   assert.match(
     actions,
-    /DASHBOARD_ROLES: readonly StaffRole\[\] = \["owner", "super_manager"\]/,
+    /DASHBOARD_ROLES: readonly StaffRole\[\] = \["owner"\]/,
   );
   assert.match(actions, /export async function fetchBranchOperatingStatus/);
 });

@@ -19,7 +19,7 @@ import { getAuthContextWithPermission } from "../_lib/auth";
 
 // Mirrors MODULE_ACL.dashboard.allowedRoles: /admin/dashboard is L0 tenant
 // command; branch managers use /br/[branchId]/dashboard instead (D017).
-const DASHBOARD_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const DASHBOARD_ROLES: readonly StaffRole[] = ["owner"];
 
 // Mirrors PrinterStatusBadge: an agent is online when its heartbeat is
 // younger than this threshold.

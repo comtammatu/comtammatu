@@ -9,12 +9,11 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 
 const FETCH_ROLES: StaffRole[] = [
   "owner",
-  "super_manager",
   "branch_manager",
   "cashier",
 ];
 
-const APPROVE_ROLES: StaffRole[] = ["owner", "super_manager"];
+const APPROVE_ROLES: StaffRole[] = ["owner"];
 
 /* ─── Schemas ─── */
 

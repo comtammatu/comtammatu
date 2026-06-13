@@ -9,7 +9,7 @@ export async function canAccessBranch(
 ): Promise<boolean> {
   void supabase;
 
-  if (claims.user_role === "owner" || claims.user_role === "super_manager") {
+  if (claims.user_role === "owner") {
     return true;
   }
 

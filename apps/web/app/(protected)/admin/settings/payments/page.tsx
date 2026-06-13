@@ -8,7 +8,7 @@ import { messages } from "@lib/messages";
 export default async function PaymentSettingsPage() {
   const { supabase, claims } = await loadAuthState();
 
-  if (!["owner", "super_manager"].includes(claims.user_role)) {
+  if (!["owner"].includes(claims.user_role)) {
     redirect("/admin/settings/tables");
   }
 

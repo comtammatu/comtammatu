@@ -7,7 +7,7 @@ import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { type ActionContext, withAction } from "@/_lib/with-action";
 import { getClientIp } from "@lib/network/client-ip";
 
-const NETWORK_ADMIN_ROLES: StaffRole[] = ["owner", "super_manager"];
+const NETWORK_ADMIN_ROLES: StaffRole[] = ["owner"];
 
 const branchIdSchema = z.object({
   branchId: z.coerce.number().int().positive(),

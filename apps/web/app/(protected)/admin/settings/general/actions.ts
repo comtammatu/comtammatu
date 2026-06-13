@@ -10,7 +10,7 @@ import {
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 
-const SETTINGS_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const SETTINGS_ROLES: readonly StaffRole[] = ["owner"];
 
 const settingsSchema = z.object({
   [SYSTEM_SETTING_KEYS.VAT_RATE]: z

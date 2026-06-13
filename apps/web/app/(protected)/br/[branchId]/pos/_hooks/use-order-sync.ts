@@ -395,8 +395,8 @@ function buildOptimisticOrder(
 }
 
 // Current transport: Supabase Realtime postgres_changes on `orders` + `tables`,
-// branch-scoped via URL branchId. Interface is stable so a Phase-2 local-first
-// swap can replace the implementation without touching callers.
+// branch-scoped via URL branchId. The transport sits behind a stable interface
+// so the implementation can be replaced without touching callers.
 //
 // Auth-await + setAuth-before-subscribe lives in `useRealtimeChannel` so this
 // hook (and every other realtime sub in the app) doesn't repeat the dance.

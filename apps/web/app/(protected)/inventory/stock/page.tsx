@@ -197,10 +197,7 @@ export default async function StockPage({
   });
 
   const role = claims.user_role;
-  const canViewTotal =
-    role === "owner" ||
-    role === "super_manager" ||
-    role === "warehouse_manager";
+  const canViewTotal = role === "owner" || role === "warehouse_manager";
   const canViewBranch = canViewTotal || role === "branch_manager";
 
   const branchValue = canViewBranch

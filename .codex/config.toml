@@ -1,3 +1,10 @@
+# Codex reads AGENTS.md natively as the agent entrypoint
+# (see docs/agent/rules/references.md -> "Agent Entrypoints Per IDE").
+# Prod-DB safety: .codex/hooks.json wires scripts/guard-prod-db.mjs to block writes
+# to protected refs; the Supabase MCP below is pinned read-only to the prod ref.
+# Approval/sandbox posture: migrations are owner-applied (file -> PR -> owner);
+# agents never apply to production. See docs/agent/rules/database.md Environment Registry.
+
 [mcp_servers.supabase]
 url = "https://mcp.supabase.com/mcp?project_ref=iexwsuaqqenyjiskawoj&read_only=true&features=database,debugging,development,docs"
 

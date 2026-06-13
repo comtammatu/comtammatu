@@ -5,7 +5,7 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
 
 /* ─── Fetch Posting Rules ─── */
 

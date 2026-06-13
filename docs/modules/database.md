@@ -47,10 +47,10 @@ Source of truth: generated types from the schema used by app code. Snapshot
 generated from the current checkout on 2026-06-10 with
 `node scripts/project-snapshot.mjs`:
 
-- **115 tables**, **8 views**, **~255 RPC/SQL functions**
-- **26 active migration files** in `supabase/migrations/`: the baseline plus
+- **113 tables**, **8 views**, **253 RPC/SQL functions**
+- **49 active migration files** in `supabase/migrations/`: the baseline plus
   forward migrations
-- **1 enum** (`shift_request_status`) — staff roles vẫn là strings carried in
+- **0 enums** — staff roles vẫn là strings carried in
   JWT claims; `position` is the canonical claim and `user_role` remains the
   compatibility claim
 
@@ -95,7 +95,7 @@ Tables are organized by domain. For per-table columns/constraints, read the migr
 | Procurement   | `suppliers`, `purchase_orders`, `purchase_order_items`, `goods_received_notes`, `grn_items`, `supplier_invoices`, `supplier_returns`                                   |
 | Production    | `production_recipes`, `production_orders`, `production_order_items` — RLS also gates through `is_inventory_production_operator()`                                      |
 | Finance       | `chart_of_accounts`, `journal_entries`, `journal_entry_lines`, `fiscal_periods`, `tax_invoices`, `vas_report_lines`, `audit_logs`                                      |
-| HR            | `employees`, `employment_contracts`, `shifts`, `shift_assignments`, `attendance_records`, `payroll_periods`, `payroll_entries`                                         |
+| HR            | `employees`, `employment_contracts`, `shifts`, `attendance_records`, `payroll_periods`, `payroll_entries`                                                              |
 | Print agent   | `print_jobs` (claim/complete/expire RPCs), `printer_configs`                                                                                                           |
 | Trust / QC    | `branch_trusted_egress_ips`, `branch_override_codes`, `branch_override_attempts`, `inventory_qc_settings`                                                              |
 | Notifications | `notifications`, `notification_reads`, `notification_push_subscriptions`, `notification_push_deliveries`, `notification_outbox`, `branch_feature_flags`                |
@@ -118,7 +118,7 @@ CREATE POLICY "Tenant isolation" ON public.{table}
 CREATE POLICY "Branch scope" ON public.{table}
   FOR SELECT USING (
     branch_id = auth_branch_id()
-    OR auth_role() IN ('owner', 'super_manager')
+    OR auth_role() = 'owner'
   );
 
 -- 4. GRANT (mandatory — RLS without GRANT = silent block)

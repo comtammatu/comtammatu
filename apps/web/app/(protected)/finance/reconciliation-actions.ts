@@ -4,7 +4,7 @@ import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 
-const RECONCILIATION_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const RECONCILIATION_ROLES: readonly StaffRole[] = ["owner"];
 
 const CATEGORY_VALUES = [
   "sales",

@@ -17,7 +17,7 @@ import {
 import { SettingsPageShell } from "../../settings-page-shell";
 import { messages } from "@lib/messages";
 
-const TENANT_TEMPLATE_ROLES = ["owner", "super_manager"] as const;
+const TENANT_TEMPLATE_ROLES = ["owner"] as const;
 
 type TemplateRow = {
   id: number;

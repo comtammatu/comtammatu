@@ -143,9 +143,7 @@ export async function loadInventoryDashboardData(
 
   const siteName =
     selectedBranch?.name ??
-    (claims.user_role === "super_manager" ||
-    claims.user_role === "owner" ||
-    claims.user_role === "office"
+    (claims.user_role === "owner" || claims.user_role === "office"
       ? "Kho hàng"
       : "Điểm vận hành");
   const siteKind: DashboardSiteKind = "branch";

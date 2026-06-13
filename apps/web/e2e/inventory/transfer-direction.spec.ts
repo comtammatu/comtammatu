@@ -31,7 +31,7 @@ import {
  *
  * Pre-conditions (.env.test.local):
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- *   E2E_CASHIER_EMAIL, E2E_CASHIER_PASSWORD  (owner/super_manager account or warehouse_manager)
+ *   E2E_CASHIER_EMAIL, E2E_CASHIER_PASSWORD  (owner account or warehouse_manager)
  *   E2E_BASE_URL  (default http://localhost:3000)
  */
 
@@ -127,7 +127,7 @@ test.describe("Cấp bếp default_consumption warn-only contract", () => {
     const authEmail = process.env.E2E_CASHIER_EMAIL;
     if (authEmail) {
       const authUser = await resolveUserByEmail(supabase, authEmail);
-      const tenantWide = ["owner", "super_manager", "office"].includes(
+      const tenantWide = ["owner", "office"].includes(
         authUser.role,
       );
       if (!tenantWide && authUser.branchId != null) {
@@ -318,7 +318,7 @@ test.describe("Transfer direction — branch-to-branch happy path", () => {
       if (await isAccessDenied(page)) {
         test.skip(
           true,
-          "E2E auth user cannot access Inventory transfer UI. Use owner, super_manager, warehouse_manager, or production_manager for UI happy-path coverage.",
+          "E2E auth user cannot access Inventory transfer UI. Use owner, warehouse_manager, or production_manager for UI happy-path coverage.",
         );
         return;
       }

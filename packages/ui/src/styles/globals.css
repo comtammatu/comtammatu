@@ -414,6 +414,31 @@
   bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
+/* Brand decoration: the three Concept-01 identity patterns as seamless,
+ * tileable SVG (art in /brand/patterns). Use only as decorative footer
+ * strips, packaging trim, or section separators — never as a background
+ * behind body text. `brand-strip` is a ready-made 40px divider band.
+ * Named `brand-` (not the retired `matu-*` layer) per legacy-matu-pilot rule. */
+@utility brand-pattern-caro {
+  background-image: url("/brand/patterns/ke-caro.svg");
+  background-repeat: repeat;
+  background-size: 40px 40px;
+}
+@utility brand-pattern-hat-gao {
+  background-image: url("/brand/patterns/hat-gao.svg");
+  background-repeat: repeat;
+  background-size: 160px 160px;
+}
+@utility brand-pattern-vong-to {
+  background-image: url("/brand/patterns/vong-to.svg");
+  background-repeat: repeat;
+  background-size: 56px 32px;
+}
+@utility brand-strip {
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+}
+
 @layer base {
   html {
     @apply font-sans;

@@ -22,9 +22,9 @@ Chạy runbook này cùng với:
 
 Thiết bị ưu tiên:
 
-- `tenant / super_manager`: desktop-first
-- `chi nhánh`: tablet + desktop
-- `Chi nhánh / branch_manager`: tablet + mobile trước, desktop sau
+- `owner`: desktop-first
+- `warehouse_manager / production_manager`: tablet + desktop
+- `branch_manager`: tablet + mobile trước, desktop sau
 
 ## 0b. Wave 0 — Kickoff bắt buộc
 
@@ -59,14 +59,18 @@ Fail một lệnh là chưa qua gate.
 Kiểm tra ít nhất các surface sau còn mở được:
 
 - `/inventory`
+- `/inventory/stock`
 - `/inventory/transfers`
 - `/inventory/issues`
 - `/inventory/stocktake`
 - `/inventory/expiry`
+- `/inventory/waste`
+- `/inventory/supplier-returns`
 - `/inventory/reports`
-- procurement surfaces đang active trong pilot: `/inventory/receiving`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/supplier-invoices`
+- master-data surfaces: `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`
+- procurement surfaces đang active trong pilot: `/inventory/receiving`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/supplier-invoices`, `/inventory/drafts`
 - `/inventory/production` nếu flow production bị ảnh hưởng
-- verify retired `/admin/inventory*` URLs fail as unsupported routes and no longer behave like a live surface
+- retired `/admin/inventory*` URLs đi qua `inventory_admin` module ACL với `allowedRoles: []`; verify chúng bị deny (không render như surface live), không phải 200
 
 ### Gate C — UI/UX scope sanity
 
@@ -82,20 +86,20 @@ Kiểm tra ít nhất các surface sau còn mở được:
 
 Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md):
 
-| Role                                  | Phải đúng                                                                                                                                    |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `super_manager`                       | Vào được Inventory + procurement + production                                                                                                |
-| ``                        | Vào được Inventory read/ops surfaces, không vào procurement, không vào production                                                            |
-| `branch_manager`                      | Vào được branch ops surfaces (`stock`, `transfers`, `issues`, `stocktake`, `expiry`, `reports`), không vào procurement, không vào production |
-| `owner`                               | Có thể đi qua ACL ở một số inventory routes nhưng không được UX dẫn như operator hằng ngày                                                   |
-| `office`, `cashier`, `waiter`, `chef` | Không vào Inventory route nếu ACL hiện tại chưa cho                                                                                          |
+| Role                                            | Phải đúng                                                                                                                                    |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `warehouse_manager`                             | Vào được Inventory + procurement surfaces (NCC, PO, GRN, HĐ NCC, công thức), không vào production                                          |
+| `production_manager`                            | Vào được Inventory + procurement + production                                                                                                |
+| `branch_manager`                                | Vào được branch ops surfaces (`stock`, `transfers`, `issues`, `stocktake`, `expiry`, `reports`), không vào procurement, không vào production |
+| `owner`                                         | Vào được Inventory + procurement + production qua ACL nhưng không được UX dẫn như operator hằng ngày                                         |
+| `office`, `cashier`, `waiter`, `chef`           | Không vào Inventory route nếu ACL hiện tại chưa cho                                                                                          |
 
 Đặc biệt kiểm:
 
 - route bị cấm phải redirect/forbid đúng
 - nav không lộ link sai role
 - dashboard phải giữ mental model `task queue first`
-- `Production` phải ẩn khỏi ``/`branch_manager` ngay từ nav; `super_manager` và `production_manager` là operator, `owner` là oversight/deep-link access
+- `Production` phải ẩn khỏi `warehouse_manager`/`branch_manager` ngay từ nav; `production_manager` là operator, `owner` là oversight/deep-link access
 - `Ingredients / Suppliers / Recipes` không xuất hiện duplicate giữa menu chính và `Settings`
 - không có page nào “vào được nhưng dữ liệu null im lặng” do thiếu `GRANT` hoặc RLS sai
 - `owner` không được UX dẫn như inventory operator hằng ngày
@@ -110,10 +114,10 @@ Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md
 
 Chạy flow smoke theo persona + device, không chỉ theo route rời rạc:
 
-- tenant procurement: desktop
-- chi nhánh: tablet trước, desktop đối chiếu
-- Chi nhánh: tablet trước, mobile ergonomics riêng
-- Oversight (``, `owner`): desktop
+- `warehouse_manager` (procurement + outbound transfer): desktop, tablet đối chiếu
+- `production_manager` (production + branch → branch cycle): tablet trước, desktop đối chiếu
+- `branch_manager` (inbound receive + Cấp bếp nội bộ): tablet trước, mobile ergonomics riêng
+- Oversight (`owner`): desktop
 
 Mỗi flow phải log:
 
@@ -122,54 +126,54 @@ Mỗi flow phải log:
 - step kế tiếp user có hiểu được không
 - tác động dữ liệu/downstream có quan sát được không
 
-### 3.1 Procurement at tenant
+### 3.1 Procurement (warehouse_manager)
 
 - Tạo / mở `PO`
 - `draft` có thể `Gửi PO` / `Hủy PO`
 - Từ `PO` đã gửi hoặc nhận dở, tạo `GRN` thật
 - Confirm `GRN`
-- Kiểm tra tồn tenant tăng đúng
+- Kiểm tra tồn kho chi nhánh nhận hàng tăng đúng
 - Nếu Finance P1 được bật, nhập `supplier_invoice` và recompute matching như một handoff riêng
 - Không coi ghi nhận thanh toán / AP aging là pilot gate của Inventory
 - Kiểm dashboard và `Receiving` có dẫn đúng từng bước PO -> GRN, không bắt user tự đoán bước tồn kho kế tiếp
 
-### 3.2 tenant outbound transfer
+### 3.2 Inter-branch transfer (chi nhánh → chi nhánh, 5 bước)
 
-- Smoke ít nhất một trong hai hướng đang bị ảnh hưởng:
-- `tenant -> chi nhánh`
-- `tenant -> Kho chi nhánh`
-- Tạo transfer
+- Hướng hợp lệ DUY NHẤT giữa hai site là `chi nhánh → chi nhánh` (cả hai `branch_kind = 'branch'`); trigger `enforce_stock_transfer_direction` raise `invalid direction` (23514) cho mọi hướng khác
+- Tạo transfer (`warehouse_manager` / `production_manager` create + ship)
 - Confirm ship
 - Mark in transit
 - Confirm receive
-- Receive
+- Receive (`branch_manager` chi nhánh nhận chỉ được nhận inbound về đúng branch của mình)
 - Kiểm tra `transfer_out` / `transfer_in` và tồn hai đầu
 - Kiểm stepper/status/primary action có làm user hiểu đúng bước kế tiếp
 
 ### 3.3 Production
 
-- `super_manager` và `production_manager` thấy nav và vào được page; `owner` có thể deep-link để kiểm tra/khẩn cấp; ``/`branch_manager` bị chặn kể cả khi có manual grant
-- Direct DB smoke sau khi apply migration: ``/`branch_manager` có manual production/menu grant vẫn phải bị `42501` khi gọi `create_production_order`, `confirm_production_order`, `cancel_production_order`, `upsert_production_recipe_lines`, hoặc mutate `production_recipes` / `production_orders` / `production_order_items` qua PostgREST
+- `production_manager` thấy nav và vào được page; `owner` có thể deep-link để kiểm tra/khẩn cấp; `warehouse_manager`/`branch_manager` bị chặn kể cả khi có manual grant
+- Direct DB smoke sau khi apply migration: `warehouse_manager`/`branch_manager` có manual production/menu grant vẫn phải bị `42501` khi gọi `create_production_order`, `confirm_production_order`, `cancel_production_order`, `upsert_production_recipe_lines`, hoặc mutate `production_recipes` / `production_orders` / `production_order_items` qua PostgREST
 - Tạo `production_order`
 - Fail đúng khi thiếu BOM hoặc thiếu nguyên liệu
 - Confirm thành công khi đủ điều kiện
 - Kiểm tra `production_consumption` + `production_output`
 - Kiểm readiness/empty states có chỉ user đúng dependency đang thiếu
 
-### 3.4 chi nhánh -> Kho chi nhánh transfer
+### 3.4 Inbound receive tại chi nhánh nhận (đầu cuối của chi nhánh → chi nhánh)
 
-- Tạo transfer thành phẩm
-- Confirm receipt ở chi nhánh
+- Từ một transfer `chi nhánh → chi nhánh` đã ship, đứng ở chi nhánh nhận
+- Confirm receipt ở chi nhánh nhận (`branch_manager` chỉ nhận inbound về đúng branch của mình)
 - Kiểm tra short-receipt / discrepancy flow nếu scope có hỗ trợ
-- Kiểm branch dashboard sau khi nhận hàng có dẫn đủ rõ sang `Cấp bếp`
+- Kiểm branch dashboard sau khi nhận hàng có dẫn đủ rõ sang `Cấp bếp` (Kho CN → Bếp CN)
 
-### 3.5 Kho chi nhánh -> Bếp chi nhánh
+### 3.5 Cấp bếp nội bộ (Kho CN → Bếp CN, một bước)
 
-- Kiểm tra flow `Cấp bếp` bằng intra-branch transfer tại `/inventory/transfers`
+- Kiểm tra flow `Cấp bếp` bằng intra-branch transfer tại `/inventory/transfers` (cùng `branch`, `from_branch_id = to_branch_id`)
+- Đây là transfer MỘT BƯỚC (`from` location_kind `warehouse` → `to` location_kind `kitchen`), KHÔNG đi qua state machine 5 bước của chi nhánh → chi nhánh
+- `branch_manager` được tạo/commit `Cấp bếp` nội bộ; không được tạo/ship inter-site outbound
 - Xác nhận branch dashboard dẫn đúng sang inbound receive và intra-branch `Cấp bếp`, không dẫn sang `receiving`
 - Xác nhận luồng này không bị bỏ quên trong SOP / UI / báo cáo
-- Nếu hiện đang hạch toán trong cùng `branch`, ghi rõ evidence theo `from_location_id` / `to_location_id`
-- Sau intra-branch transfer `Cấp bếp`, user phải hiểu tồn kho location kho đã giảm và location bếp/default consumption đã tăng
+- Ghi rõ evidence theo `from_location_id` / `to_location_id` (cùng một `branch`)
+- Sau khi `Cấp bếp`, user phải hiểu tồn Kho CN đã giảm và tồn Bếp CN / default consumption đã tăng
 
 ### 3.6 Stocktake
 
@@ -203,8 +207,8 @@ Mỗi flow phải log:
 | RLS + GRANT                          | Supabase có thể trả `{ data: null, error: null }`                               |
 | `module-acl.ts` vs page-level guards | Rất dễ drift giữa nav, proxy, và page guard                                     |
 | WAC assumptions                      | Docs rất dễ vô tình lẫn với FIFO/lot semantics                                  |
-| tenant-only procurement                  | Chỉ cần một route/guard sai là chi nhánh có thể đi lệch pilot flow              |
-| Production permissions               | Chưa có role riêng cho branch production, nên quyền đang phải giữ hẹp             |
+| Transfer direction trigger           | Chỉ `chi nhánh → chi nhánh` (inter-site) và `Kho CN → Bếp CN` (intra-branch) hợp lệ; hướng khác raise `invalid direction` 23514 |
+| Production permissions               | Operator là `production_manager`; `warehouse_manager` và `branch_manager` hard-deny ở Server Action + RPC + RLS |
 | False-promise CTA                    | UI rất dễ để lại nút giả sau refactor workflow, khiến docs và hành vi lệch nhau |
 | Hover-only actions                   | Desktop có thể pass nhưng mobile/tablet fail nặng                               |
 | Step-to-step mental model            | Sau mỗi thao tác, user có thể không biết phải làm gì tiếp dù backend đúng       |

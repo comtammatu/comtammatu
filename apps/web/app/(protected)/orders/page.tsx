@@ -35,12 +35,8 @@ export default async function OrdersPage() {
     ? (refundsResult.data?.refunds ?? [])
     : [];
 
-  const isManagerOrAbove = ["owner", "super_manager"].includes(
-    claims.user_role,
-  );
-  const canApproveRefund = ["owner", "super_manager"].includes(
-    claims.user_role,
-  );
+  const isManagerOrAbove = claims.user_role === "owner";
+  const canApproveRefund = claims.user_role === "owner";
 
   const pendingRefundCount = refunds.filter(
     (r) => r.status === "pending",

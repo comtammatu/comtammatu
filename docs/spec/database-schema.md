@@ -13,24 +13,24 @@ node scripts/project-snapshot.mjs
 
 | Area                                        | Count |
 | ------------------------------------------- | ----: |
-| Public tables in generated types            |   115 |
+| Public tables in generated types            |   113 |
 | Public views in generated types             |     8 |
-| Public RPC/SQL functions in generated types |  ~255 |
-| Public enums in generated types             |     1 (`shift_request_status`) |
-| Active SQL migration files                  |    26 |
+| Public RPC/SQL functions in generated types |   253 |
+| Public enums in generated types             |     0 |
+| Active SQL migration files                  |    49 |
 
 The early-2026 hand-written table-by-table reference has been removed. Use the
 source ladder below instead of resurrecting stale schema dumps.
 
 ## Migration layout (baseline-first — 2026-05-30)
 
-The 378-file incremental chain could not replay from an empty DB (ordering bug at
+The pre-baseline incremental chain could not replay from an empty DB (ordering bug at
 `20260508055046`), so it was consolidated:
 
 - `supabase/migrations/00000000000000_baseline.sql` — canonical public-schema
   install; validated to replay on an empty DB (rebuilt matu-dev exactly).
 - `supabase/migrations/<timestamp>_*.sql` after it — forward migrations on the baseline.
-- `supabase/migrations/_archive/` — the 379 historical migrations (retained, NOT applied).
+- `supabase/migrations/_archive/` — the 358 historical migrations (retained, NOT applied).
 - `supabase/managed-surfaces.install.sql` — extensions / storage buckets + RLS
   policies / realtime publication / cron jobs (excluded by `--schema=public`),
   applied after the baseline on a fresh env (storage-policy section needs

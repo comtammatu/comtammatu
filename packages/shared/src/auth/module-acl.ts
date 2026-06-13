@@ -43,19 +43,18 @@ const EMPLOYEE_PORTAL_ROLES: readonly StaffRole[] = STAFF_ROLES.filter(
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   dashboard: {
     path: "/admin/dashboard",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("dashboard"),
   },
   menu: {
     path: "/menu",
-    allowedRoles: ["owner", "super_manager", "branch_manager"],
+    allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("menu"),
   },
   inventory: {
     path: "/inventory",
     allowedRoles: [
       "owner",
-      "super_manager",
       "branch_manager",
       "warehouse_manager",
       "production_manager",
@@ -67,7 +66,6 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/inventory/suppliers",
     allowedRoles: [
       "owner",
-      "super_manager",
       "warehouse_manager",
       "production_manager",
     ],
@@ -85,43 +83,43 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   orders: {
     path: "/orders",
-    allowedRoles: ["owner", "super_manager", "branch_manager", "cashier"],
+    allowedRoles: ["owner", "branch_manager", "cashier"],
     label: getModuleLabelVi("orders"),
   },
   staff: {
     path: "/admin/staff",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("staff"),
   },
   hr: {
     path: "/hr",
-    allowedRoles: ["owner", "super_manager", "branch_manager"],
+    allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("hr"),
   },
   hr_payroll: {
     path: "/hr/payroll",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("hr_payroll"),
   },
   finance: {
     path: "/finance",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("finance"),
   },
   /** Accounting admin — period close / reopen. Gate on period_reopen perm. */
   accounting: {
     path: "/admin/accounting",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("accounting"),
   },
   reports: {
     path: "/admin/reports",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("reports"),
   },
   settings: {
     path: "/admin/settings",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("settings"),
   },
   pos: {
@@ -141,12 +139,12 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   branch_dashboard: {
     path: "/br/*/dashboard",
-    allowedRoles: ["owner", "super_manager", "branch_manager"],
+    allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("branch_dashboard"),
   },
   branch_settings: {
     path: "/br/*/settings",
-    allowedRoles: ["owner", "super_manager", "branch_manager"],
+    allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("branch_settings"),
   },
   /**
@@ -158,7 +156,6 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/br/*/menu-limits",
     allowedRoles: [
       "owner",
-      "super_manager",
       "branch_manager",
       "cashier",
       "chef",
@@ -172,7 +169,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   employee_checkout_approvals: {
     path: "/employee/checkout-approvals",
-    allowedRoles: ["owner", "super_manager", "branch_manager"],
+    allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("employee_checkout_approvals"),
   },
   notifications: {

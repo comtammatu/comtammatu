@@ -182,7 +182,7 @@ export async function proxy(request: NextRequest) {
 
     // Branch-scoped protected routes enforce
     // URL branchId matches the user's assigned branch_id. Tenant-level roles
-    // (owner/super_manager) may traverse any branch's settings.
+    // (owner) may traverse any branch's settings.
     // POS/KDS also require the branch record to be active and usable.
     // The exact Runner customer board path is public and bypasses proxy auth;
     // keep runner here only for any future non-public runner child route.
@@ -198,15 +198,11 @@ export async function proxy(request: NextRequest) {
       if (pathMatch) {
         const routeBranchId = Number(pathMatch[1]);
 
-        const crossBranchRoles: readonly string[] = [
-          "owner",
-          "super_manager",
-        ];
         const allowCrossBranch =
           (moduleKey === "branch_dashboard" ||
             moduleKey === "branch_settings" ||
             moduleKey === "branch_menu_limits") &&
-          crossBranchRoles.includes(claims.user_role);
+          claims.user_role === "owner";
 
         if (
           !allowCrossBranch &&

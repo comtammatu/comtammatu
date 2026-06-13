@@ -12,7 +12,7 @@
 --
 -- Tài khoản QA được seed (password: Test1234!):
 --   • owner@comtammatu.vn              – owner (tenant-level, pinned to a dev branch)
---   • supermanager@comtammatu.vn       – super_manager (keeper, không bị xoá)
+--   • keeper@comtammatu.vn       – owner (keeper, không bị xoá)
 --   • warehouse@comtammatu.vn          – warehouse_manager
 --   • production@comtammatu.vn        – production_manager
 --   • manager.datdo@comtammatu.vn      – branch_manager Đất Đỏ
@@ -54,11 +54,11 @@ $$;
 
 -- ─── 0.5) Idempotent cleanup: reassign FKs to a keeper profile ───
 -- Some audit tables reference profiles(id) with NOT NULL FK. Reassign those rows
--- to the keeper (supermanager) so we can recreate other users safely.
+-- to the keeper so we can recreate other users safely.
 DO $$
 DECLARE
   v_tenant BIGINT;
-  v_keeper UUID := 'a0000002-0000-4000-8000-000000000002'::uuid; -- supermanager
+  v_keeper UUID := 'a0000002-0000-4000-8000-000000000002'::uuid; -- keeper
   v_to_delete UUID[] := ARRAY[
     'a0000001-0000-4000-8000-000000000001'::uuid, -- owner
     'a0000003-0000-4000-8000-000000000003'::uuid, -- manager.datdo
@@ -186,7 +186,7 @@ BEGIN
       -- so auth_branch_id() is never NULL (unblocks branch-scoped RLS/RPC).
       SELECT 'a0000001-0000-4000-8000-000000000001'::uuid AS user_id, 'owner@comtammatu.vn'::text AS email, 'owner'::text AS role, v_dev_branch::bigint AS branch_id, 'Owner'::text AS full_name, 'EMP-OWNER'::text AS emp_code
       UNION ALL
-      SELECT 'a0000002-0000-4000-8000-000000000002'::uuid, 'supermanager@comtammatu.vn'::text, 'super_manager'::text, v_dev_branch::bigint, 'Giám đốc điều hành'::text, 'EMP-SM'::text
+      SELECT 'a0000002-0000-4000-8000-000000000002'::uuid, 'keeper@comtammatu.vn'::text, 'owner'::text, v_dev_branch::bigint, 'Owner (keeper)'::text, 'EMP-KEEPER'::text
       UNION ALL
       SELECT 'a0000003-0000-4000-8000-000000000003'::uuid, 'manager.datdo@comtammatu.vn'::text, 'branch_manager'::text, v_datdo, 'QL Chi nhánh Đất Đỏ'::text, 'EMP-MGR-DD'::text
       UNION ALL
@@ -215,7 +215,7 @@ BEGIN
   LOOP
     v_crypt := crypt(v_pw, gen_salt('bf'));
 
-    -- Idempotent: if keeper (supermanager) exists, rotate password + app metadata
+    -- Idempotent: if keeper exists, rotate password + app metadata
     IF r.user_id = 'a0000002-0000-4000-8000-000000000002'::uuid
        AND EXISTS (SELECT 1 FROM auth.users u WHERE u.id = r.user_id) THEN
       UPDATE auth.users

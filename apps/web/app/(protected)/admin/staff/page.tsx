@@ -66,7 +66,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   }));
 
   const staff: StaffRow[] = allStaff.filter((s) => {
-    if (s.role === "owner" || s.role === "super_manager") return false;
+    if (s.role === "owner") return false;
     if (
       params.role &&
       (STAFF_ROLES as readonly string[]).includes(params.role)
@@ -83,7 +83,6 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     if (
       bucket === "unassigned" ||
       bucket === "owner" ||
-      bucket === "super_manager" ||
       seenBuckets.has(bucket)
     ) {
       return [];

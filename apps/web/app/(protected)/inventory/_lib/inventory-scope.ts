@@ -15,7 +15,7 @@ export type InventoryBranchScope = {
   defaultBranchId: number | null;
 };
 
-const TENANT_WIDE_ROLES = new Set(["owner", "super_manager", "office"]);
+const TENANT_WIDE_ROLES = new Set(["owner", "office"]);
 
 const fetchAllActiveBranches = cache(
   async (
@@ -48,8 +48,8 @@ function pickDefault(
  * selected. URL `?branchId=` wins if allowed; otherwise fall back to the
  * user's home branch, else first allowed.
  *
- * - owner / super_manager / office → every active tenant branch
- * - other roles                    → locked to `claims.branch_id`
+ * - owner / office → every active tenant branch
+ * - other roles    → locked to `claims.branch_id`
  */
 export const resolveInventoryBranchScope = cache(
   async (

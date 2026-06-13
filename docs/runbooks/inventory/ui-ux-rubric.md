@@ -4,7 +4,7 @@
 >
 > Áp dụng cho toàn bộ `/inventory/*` đang live và các cầu nối vận hành có ảnh hưởng trực tiếp đến cảm nhận tồn kho hằng ngày.
 
-Updated: `2026-04-17`
+Updated: `2026-06-13`
 
 ---
 
@@ -17,6 +17,18 @@ source of truth. Khi kết luận, đối chiếu theo nhóm authority này:
 - UI design-system: [docs/spec/design-system.md](../../spec/design-system.md)
 - UI implementation guide: [docs/modules/ui.md](../../modules/ui.md)
 - Canonical Inventory context: [docs/ref/inventory.md](../../ref/inventory.md), [docs/ref/inventory-sop.md](../../ref/inventory-sop.md), and [docs/modules/web-app.md](../../modules/web-app.md)
+
+Live route map (mọi route nằm dưới `apps/web/app/(protected)/inventory/*`; không còn surface `/admin/inventory*` — key `inventory_admin` đã retired, `allowedRoles: []`):
+
+- Tổng quan / điều hướng: `/inventory`, `/inventory/dashboard`, `/inventory/stock`, `/inventory/reports`, `/inventory/settings` (+ `expiry`, `qc`, `thresholds`).
+- Danh mục: `/inventory/ingredients`, `/inventory/recipes`.
+- Nhập hàng (procurement intake): `/inventory/receiving`, `/inventory/suppliers`, `/inventory/purchase-orders` (+ `new`, `[id]`), `/inventory/grn` (+ `new`, `[id]`), `/inventory/supplier-invoices`, `/inventory/supplier-returns` (+ `new`, `[id]`), `/inventory/drafts`.
+- Điều chuyển: `/inventory/transfers` (+ `[id]`, `[id]/receive`) — gồm cả `Cấp bếp` (Kho CN → Bếp CN, một bước) lẫn điều chuyển chi nhánh → chi nhánh (5 bước).
+- Sản xuất: `/inventory/production`.
+- Kiểm kê: `/inventory/stocktake` (+ `new`, `[id]`, `[id]/count`).
+- Hao hụt / hạn dùng: `/inventory/waste` (+ `new`, `approvals`), `/inventory/expiry`, `/inventory/issues` (+ `[id]`).
+
+Route cố ý trả `notFound()` (reserved, chưa build) — đúng, KHÔNG tính là fail: `/inventory/waste/auto`, `/inventory/stocktake/conflicts`, `/inventory/stocktake/[id]/escalate`. Các trang detail (`grn/[id]`, `purchase-orders/[id]`, `transfers/[id]`, …) 404 khi id sai là guard hợp lệ.
 
 Boundary:
 
@@ -89,16 +101,17 @@ Evidence cần chụp:
 
 Pass signals:
 
-- `Receiving` rõ là hub nhập hàng tenant.
-- `Cấp bếp` được hiểu là bước chuẩn của branch ops, không phải ngoại lệ.
-- `Production` chỉ lộ đúng vai trò.
+- `Receiving` rõ là hub nhập hàng của chi nhánh (PO/GRN/HĐ NCC theo chi nhánh đang chọn).
+- `Cấp bếp` (Kho CN → Bếp CN, một bước) được hiểu là bước chuẩn nội bộ chi nhánh, không phải ngoại lệ.
+- Điều chuyển chi nhánh → chi nhánh (5 bước: nháp → xuất kho → vận chuyển → kiểm nhận → đã nhận) tách bạch rõ với `Cấp bếp`.
+- `Production` chỉ lộ đúng vai trò (`production_manager`).
 - `Danh mục` không trùng entry với `Settings`.
 
 Fail patterns:
 
 - wording làm user hiểu nhầm flow;
 - một bước nghiệp vụ bị tách quá xa khỏi bước ngay trước/sau;
-- chi nhánh bị dẫn sang procurement;
+- gộp nhầm `Cấp bếp` nội bộ với điều chuyển chi nhánh → chi nhánh;
 - oversight role bị kéo vào thao tác operator.
 
 Evidence cần chụp:
@@ -162,8 +175,8 @@ Evidence cần chụp:
 
 Pass signals:
 
-- `tenant / super_manager`: desktop-first nhưng không vỡ trên tablet.
-- `branch`: tablet thao tác được với các action chính.
+- `owner`: desktop-first nhưng không vỡ trên tablet.
+- `warehouse_manager / production_manager`: tablet thao tác được với các action chính.
 - `branch_manager`: mobile/tablet không mất cột hoặc action quan trọng.
 - Không phụ thuộc hover cho thao tác cần dùng hằng ngày.
 
@@ -210,14 +223,14 @@ Evidence cần chụp:
 
 ## 5. Cách dùng rubric trong từng wave
 
-| Wave                       | Trục cần ưu tiên                                                |
-| -------------------------- | --------------------------------------------------------------- |
-| Wave 1 — IA/nav            | `Action discoverability`, `Workflow clarity`                    |
-| Wave 2 — tenant journey        | `Workflow clarity`, `State feedback`, `Error prevention`        |
-| Wave 3 — Central kitchen   | `Workflow clarity`, `Error prevention`, `Responsive ergonomics` |
-| Wave 4 — Branch journey    | cả 6 trục, đặc biệt `Responsive ergonomics`                     |
-| Wave 5 — Oversight         | `Workflow clarity`, `Action discoverability`                    |
-| Wave 6 — Placeholder sweep | `Workflow clarity`, `Error prevention`                          |
+| Wave                                | Trục cần ưu tiên                                                |
+| ----------------------------------- | --------------------------------------------------------------- |
+| Wave 1 — IA/nav                     | `Action discoverability`, `Workflow clarity`                    |
+| Wave 2 — Nhập hàng (Receiving)      | `Workflow clarity`, `State feedback`, `Error prevention`        |
+| Wave 3 — Cấp bếp + điều chuyển CN→CN | `Workflow clarity`, `Error prevention`, `Responsive ergonomics` |
+| Wave 4 — Branch ops journey         | cả 6 trục, đặc biệt `Responsive ergonomics`                     |
+| Wave 5 — Oversight                  | `Workflow clarity`, `Action discoverability`                    |
+| Wave 6 — Placeholder sweep          | `Workflow clarity`, `Error prevention`                          |
 
 ---
 

@@ -30,8 +30,8 @@ export default async function TransfersPage({
   const requested = await resolveRequestedBranchId(params.branchId);
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
   // Sidebar-selected branch drives action context. For branch-scoped roles it
-  // collapses to claims.branch_id; for owner/super_manager it
-  // reflects the sidebar picker (URL ?branchId=).
+  // collapses to claims.branch_id; for owner it reflects the sidebar picker
+  // (URL ?branchId=).
   const userBranchId = scope.selectedBranchId;
   const branchFilter = userBranchId ?? undefined;
 

@@ -29,9 +29,11 @@ Instruction memory and learning memory stay separate:
 - Regression lessons live in `tasks/regressions.md`.
 - Retrospectives and durable learnings live in `tasks/lessons.md`.
 - Current work tracking lives in `tasks/todo.md`.
-- Project-owned Agent Workspace config may live in the repo for Claude, Codex,
-  Cursor, or similar tools. Keep secrets, MCP tokens, plugin caches, generated
-  sessions, worktrees, and per-user local state out of version control.
+- Project-owned Agent Workspace config may live in the repo for Claude and
+  Codex (the two supported runtimes). Keep secrets, MCP tokens, plugin caches,
+  generated sessions, worktrees, and per-user local state out of version
+  control. See `docs/agent/rules/references.md` → "Agent Entrypoints Per IDE"
+  for the per-runtime entrypoint + prod-DB guard-adapter map.
 
 ## Critical Constraints
 

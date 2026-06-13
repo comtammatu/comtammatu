@@ -125,7 +125,7 @@ test.describe("GRN at branch — happy path", () => {
       if (await isAccessDenied(page)) {
         test.skip(
           true,
-          "E2E auth user cannot access Inventory GRN UI. Use owner, super_manager, warehouse_manager, or production_manager for UI happy-path coverage.",
+          "E2E auth user cannot access Inventory GRN UI. Use owner, warehouse_manager, or production_manager for UI happy-path coverage.",
         );
         return;
       }

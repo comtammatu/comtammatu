@@ -43,7 +43,6 @@ const copy = messages.employee.home;
 // the card and its destination route gate on the same set.
 const CHECKOUT_APPROVER_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "branch_manager",
 ];
 

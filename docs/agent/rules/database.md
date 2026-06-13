@@ -91,8 +91,8 @@ or agent memory.
 
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
 - Do not create a second auth policy layer in UI helpers.
-- Position codes are canonical English ONLY (11 codes) since
-  `20260610230000_canonical_position_codes_lean`: owner, super_manager,
+- Position codes are canonical English ONLY (10 codes) since
+  `20260610230000_canonical_position_codes_lean`: owner,
   branch_manager, warehouse_manager, production_manager, head_chef,
   kitchen_helper, chef, cashier, waiter, office. NEVER add aliases or new codes
   without updating BOTH `POSITION_CODE_TO_STAFF_ROLE`

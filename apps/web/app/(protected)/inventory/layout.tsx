@@ -56,9 +56,7 @@ export default async function InventoryLayout({
   );
   const siteName =
     defaultBranch?.name ??
-    (claims.user_role === "super_manager" ||
-    claims.user_role === "owner" ||
-    claims.user_role === "office"
+    (claims.user_role === "owner" || claims.user_role === "office"
       ? "Kho hàng"
       : "Điểm vận hành");
   const siteKind: string = defaultBranch?.branch_kind ?? "branch";

@@ -9,21 +9,21 @@
 > - [pre-release-qa.md](./pre-release-qa.md)
 > - Ghi evidence trực tiếp vào ticket/PR hoặc worklog hiện hành nếu chưa promote được vào canonical docs.
 
-Updated: `2026-04-17`
+Updated: `2026-06-13`
 
 ---
 
-## 1. tenant Procurement Loop
+## 1. Procurement Loop
 
-- `persona`: `super_manager` acting as tenant procurement / tenant inventory operator
-- `site_kind`: `warehouse`
+- `persona`: `warehouse_manager` (hoặc `production_manager`) chạy procurement chi nhánh
+- `site_kind`: `branch`
 - `device`: `desktop`
 - `starting route`: `/inventory`
 - `goal`: đi trọn vòng `Dashboard -> Receiving -> PO -> GRN -> Supplier Invoice`
 - `preconditions`:
   - có ít nhất 1 supplier active;
   - có ingredient master đủ để lập PO;
-  - role có quyền `inventory_procurement`;
+  - role thuộc `PROCUREMENT_ROLES` (owner, warehouse_manager, production_manager) và có quyền `inventory_procurement`;
   - dữ liệu test không làm nhiễu bởi PO/GRN nháp cũ.
 - `steps`:
   1. Từ dashboard, xác nhận quick action và task queue dẫn về đúng procurement surfaces.
@@ -42,7 +42,7 @@ Updated: `2026-04-17`
 - `success`:
   - user không phải đoán bước tiếp theo;
   - trạng thái PO/GRN/invoice đổi rõ ràng;
-  - tồn tenant và AP readout phản ánh logic vừa làm.
+  - tồn chi nhánh và AP readout phản ánh logic vừa làm.
 - `blocked states`:
   - chưa có supplier;
   - PO thiếu line item hợp lệ;
@@ -53,13 +53,13 @@ Updated: `2026-04-17`
   - error copy không được mơ hồ;
   - blocked state phải chỉ ra dữ liệu nào đang thiếu.
 
-## 2. tenant Blocked Procurement Path
+## 2. Blocked Procurement Path
 
-- `persona`: `super_manager`
-- `site_kind`: `warehouse`
+- `persona`: `warehouse_manager` (hoặc `owner`)
+- `site_kind`: `branch`
 - `device`: `desktop`
 - `starting route`: `/inventory/purchase-orders/new`
-- `goal`: xác nhận UI chặn lỗi sớm, không để tenant commit sai dữ liệu procurement
+- `goal`: xác nhận UI chặn lỗi sớm, không để operator commit sai dữ liệu procurement
 - `preconditions`:
   - có supplier nhưng chưa hoàn tất line item hoặc form thiếu dữ liệu;
   - có ít nhất 1 PO draft và 1 GRN draft để thử negative paths.
@@ -77,9 +77,9 @@ Updated: `2026-04-17`
 - `blocked states`: bất kỳ thao tác nào im lặng hoặc chỉ báo “không thể” mà thiếu nguyên nhân
 - `recovery`: user quay lại đúng field/section và hoàn tất được trong lần thử tiếp theo
 
-## 3. Central Kitchen Production Happy Path
+## 3. Branch Production Happy Path
 
-- `persona`: `super_manager` acting as branch production operator
+- `persona`: `production_manager` (hoặc `owner` theo `PRODUCTION_OPERATOR_ROLES`)
 - `site_kind`: `branch`
 - `device`: `tablet`, đối chiếu lại trên `desktop`
 - `starting route`: `/inventory`
@@ -87,28 +87,28 @@ Updated: `2026-04-17`
 - `preconditions`:
   - có transfer nguyên liệu đã đến chi nhánh;
   - có `finished_good` và `production_recipes` hợp lệ;
-  - site hiện tại là `branch`.
+  - site hiện tại là `branch` (mọi site đều là chi nhánh).
 - `steps`:
   1. Từ dashboard, kiểm task card và quick action `Tạo lệnh sản xuất`.
-  2. Vào `/inventory/production`, kiểm readiness message.
+  2. Vào `/inventory/production` (`Sản xuất chi nhánh`), kiểm readiness message.
   3. Tạo production order với ít nhất 1 thành phẩm.
   4. Confirm production order.
   5. Kiểm list order, status, total cost, và CTA tiếp theo để xuất thành phẩm.
-- `expected next step`: sau confirm production, người dùng hiểu phải chuyển sang `transfers` để xuất thành phẩm đi chi nhánh
-- `handoff`: bàn giao thành phẩm cho flow `chi nhánh -> Kho chi nhánh`
+- `expected next step`: sau confirm production, người dùng hiểu phải chuyển sang `/inventory/transfers` để xuất thành phẩm sang chi nhánh khác
+- `handoff`: bàn giao thành phẩm cho flow điều chuyển `chi nhánh → chi nhánh` (5 bước) hoặc cấp nội bộ `Kho CN → Bếp CN`
 - `success`:
   - create/confirm production mạch lạc trên tablet;
   - status và cost phản hồi rõ;
-  - không lộ `Production` cho role sai.
+  - không lộ `Sản xuất chi nhánh` cho role sai (chỉ owner/production_manager).
 - `blocked states`:
   - thiếu BOM;
   - thiếu nguyên liệu;
-  - chưa có `finished_good` hoặc chưa có chi nhánh cấu hình.
+  - chưa có `finished_good` hoặc chi nhánh chưa cấu hình.
 - `recovery`: readiness/error copy phải chỉ user sang `recipes`, `ingredients`, hoặc `transfers` đúng chỗ
 
-## 4. Central Kitchen Blocked Path
+## 4. Branch Production Blocked Path
 
-- `persona`: `super_manager`
+- `persona`: `production_manager` (hoặc `owner`)
 - `site_kind`: `branch`
 - `device`: `tablet`
 - `starting route`: `/inventory/production`
@@ -116,7 +116,7 @@ Updated: `2026-04-17`
 - `preconditions`:
   - chuẩn bị data khiến một trong các điều kiện readiness thiếu.
 - `steps`:
-  1. Mở production khi thiếu chi nhánh cấu hình.
+  1. Mở production khi chi nhánh chưa cấu hình.
   2. Mở production khi thiếu finished good.
   3. Mở production khi thiếu raw material hoặc BOM.
   4. Thử confirm order thiếu điều kiện.
@@ -134,13 +134,13 @@ Updated: `2026-04-17`
 - `starting route`: `/inventory`
 - `goal`: nhận hàng, cấp bếp, kiểm tác động tồn, chốt stocktake cuối ca
 - `preconditions`:
-  - có transfer đến branch ở trạng thái cần nhận;
+  - có transfer `chi nhánh → chi nhánh` đến branch ở trạng thái cần nhận;
   - có ingredient/stock data nhìn thấy được ở branch;
   - có order hoàn tất hoặc data bridge tiêu hao để đối chiếu.
 - `steps`:
   1. Từ dashboard, mở task `Nhận transfer`.
-  2. Trên transfer detail, đi đủ `confirmed_receive -> received`.
-  3. Quay lại dashboard hoặc `/inventory/transfers`, tạo intra-branch transfer `Cấp bếp`.
+  2. Trên transfer detail (phiếu `chi nhánh → chi nhánh`), đi đủ máy trạng thái 5 bước tới `confirmed_receive -> received`.
+  3. Quay lại dashboard hoặc `/inventory/transfers`, tạo phiếu cấp nội bộ `Cấp bếp` (`Kho CN → Bếp CN`, một bước).
   4. Thêm line, commit một bước, kiểm reasoning visibility và feedback.
   5. Vào `/inventory/stock`, kiểm user có hiểu tồn vừa thay đổi không.
   6. Chạy hoặc đối chiếu bridge `POS/KDS completed -> consumption`.
@@ -148,9 +148,9 @@ Updated: `2026-04-17`
   8. Kiểm `/inventory/expiry` cho lô cần xử lý.
 - `expected next step`:
   - sau `received`, UI phải gợi đủ rõ sang `Cấp bếp`;
-  - sau intra-branch transfer `Cấp bếp`, user hiểu tồn kho kho chi nhánh giảm và tồn bếp chi nhánh/default consumption tăng;
+  - sau phiếu `Cấp bếp` (`Kho CN → Bếp CN`), user hiểu tồn Kho CN giảm và tồn Bếp CN/default consumption tăng;
   - sau stocktake, user hiểu variance/kết quả chốt; conflict/recount S13b không nằm trong daily pilot.
-- `handoff`: báo chênh lệch lớn hoặc expiry risk cho OPS/tenant
+- `handoff`: báo chênh lệch lớn hoặc expiry risk cho OPS/owner
 - `success`:
   - đây là journey branch quan trọng nhất và không được cần “người biết hệ thống trước” mới dùng được;
   - các action chính luôn thấy được trên tablet;
@@ -169,13 +169,14 @@ Updated: `2026-04-17`
 - `starting route`: `/inventory`
 - `goal`: đảm bảo các action dùng nhiều nhất vẫn thao tác được khi cầm máy
 - `preconditions`:
-  - branch có dữ liệu transfer, issue, stocktake, expiry tối thiểu.
+  - branch có dữ liệu transfer, issue, stocktake, expiry, waste, supplier-return tối thiểu.
 - `steps`:
   1. Kiểm dashboard quick actions và task cards trên mobile.
   2. Kiểm `/inventory/transfers`, `/inventory/issues`, `/inventory/stocktake` ở mobile layout.
-  3. Thử tạo phiếu cấp bếp và mở phiếu detail.
+  3. Thử tạo phiếu `Cấp bếp` (`Kho CN → Bếp CN`) và mở phiếu detail.
   4. Thử nhập count ở stocktake detail.
-  5. Kiểm row actions, icon buttons, dialog footer, và vùng chạm.
+  5. Kiểm `/inventory/waste/new` và `/inventory/supplier-returns` ở mobile layout.
+  6. Kiểm row actions, icon buttons, dialog footer, và vùng chạm.
 - `expected next step`: user vẫn hoàn tất được flow chính mà không cần desktop rescue
 - `handoff`: không có; đây là wave ergonomics
 - `success`:
@@ -188,22 +189,22 @@ Updated: `2026-04-17`
   - modal dài, khó đóng, khó submit.
 - `recovery`: nếu màn chưa đủ tốt cho mobile, phải log rõ là limitation, không ngầm coi là pass
 
-## 7. Area Manager Oversight Path
+## 7. Cross-Branch Operator Review Path
 
-- `persona`: ``
-- `site_kind`: tenant-wide oversight tạm thời
+- `persona`: `owner`
+- `site_kind`: cross-branch (mọi site đều là chi nhánh; scope rộng theo tenant)
 - `device`: `desktop`
 - `starting route`: `/inventory`
-- `goal`: đọc inventory ops surfaces mà không bị dẫn vào procurement hay production sai scope
+- `goal`: đọc inventory ops surfaces nhiều chi nhánh mà không bị dẫn vào procurement hay production sai scope
 - `preconditions`:
-  - role có quyền inventory read/ops surfaces theo ACL hiện tại.
+  - role thuộc ACL `inventory` (owner, branch_manager, warehouse_manager, production_manager) và thấy được nhiều chi nhánh qua branch scope.
 - `steps`:
-  1. Kiểm nav không lộ `Receiving`, `PO`, `GRN`, `Supplier Invoice`, `Production`.
+  1. Kiểm nav lộ đúng surface theo quyền (`Receiving`, `PO`, `GRN`, `Supplier Invoice` chỉ khi có `inventory_procurement`; `Sản xuất chi nhánh` chỉ khi thuộc production roles).
   2. Mở dashboard, stock, transfers, stocktake, expiry, reports.
   3. Kiểm data không null im lặng.
-  4. Kiểm reports/alerts có thể đọc được như vai trò giám sát.
-- `expected next step`: user thấy rõ đây là oversight flow, không phải operator daily flow
-- `handoff`: chuyển finding cho tenant/branch operator
+  4. Kiểm reports/alerts đọc được khi review nhiều chi nhánh.
+- `expected next step`: user thấy rõ đây là review nhiều chi nhánh, không phải operator daily flow của một chi nhánh
+- `handoff`: chuyển finding cho operator chi nhánh đúng vai
 - `success`: đúng quyền, đúng nav, đúng mental model
 - `blocked states`: route vào được nhưng trống/không giải thích, hoặc nav lộ sai vai trò
 - `recovery`: redirect/forbidden và copy phải rõ ràng
@@ -211,12 +212,12 @@ Updated: `2026-04-17`
 ## 8. Owner Oversight Path
 
 - `persona`: `owner`
-- `site_kind`: tenant oversight
+- `site_kind`: oversight (mọi site đều là chi nhánh)
 - `device`: `desktop`
 - `starting route`: `/inventory`
 - `goal`: xác nhận owner không bị UX dẫn thành operator kho hằng ngày
 - `preconditions`:
-  - owner có thể qua ACL ở một số route inventory theo current boundary.
+  - owner qua ACL `inventory` nhưng layout ẩn procurement + production (`isOversightRole === owner`).
 - `steps`:
   1. Mở dashboard và reports.
   2. Kiểm quick actions, nav emphasis, task queue wording.
@@ -224,5 +225,5 @@ Updated: `2026-04-17`
 - `expected next step`: owner nên được dẫn về giám sát, không phải thao tác live workflow
 - `handoff`: escalation cho operator đúng vai
 - `success`: owner vẫn đọc được phần cần đọc nhưng UI không cổ vũ hành vi operator
-- `blocked states`: dashboard và CTA trông y như `super_manager` operator
+- `blocked states`: dashboard và CTA trông y như branch operator
 - `recovery`: log issue ở lớp UX/nav/task framing

@@ -17,6 +17,34 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Architecture hub: `docs/architecture/README.md`
 - User guides (operator-facing): `docs/user-guides/README.md`
 
+## Agent Entrypoints Per IDE
+
+Supported runtimes are **Claude Code** and **Codex**. Each loads its own
+entrypoint and wires the same canonical prod-DB guard; adding another IDE means
+adding an adapter, not duplicating rules.
+
+| IDE         | Auto-loaded entrypoint        | MCP config           | Prod-DB guard adapter                                    |
+| ----------- | ----------------------------- | -------------------- | ------------------------------------------------------- |
+| Claude Code | `CLAUDE.md` (shim → `AGENTS.md`) | `.mcp.json`        | `.claude/settings.json` → `scripts/guard-prod-db.mjs`   |
+| Codex       | `AGENTS.md` (native)          | `.codex/config.toml` | `.codex/hooks.json` → `scripts/guard-prod-db.mjs`       |
+
+`scripts/guard-prod-db.mjs` is the single guard; the adapter configs only wire it
+per runtime. `pnpm lint:guard-sync` enforces that every adapter in `ADAPTER_PATHS`
+(`scripts/check-guard-sync.mjs`) wires the canonical hook with matching matchers.
+A new IDE without a registered adapter runs **UNGUARDED against the production
+DB** — add the adapter and register it in `check-guard-sync.mjs` before using it.
+
+## Intentional Mirrors
+
+Two duplications are deliberate and machine-enforced — do NOT "de-duplicate" them:
+
+- `MIRROR:constraints` / `MIRROR:architecture` / `MIRROR:commands` blocks are
+  copied byte-for-byte between `AGENTS.md` and `docs/agent/rules/engineering.md`
+  (each runtime auto-loads only its entrypoint). `pnpm lint:rules-mirror`
+  enforces equality — edit BOTH identically.
+- The prod-DB guard triad (`scripts/guard-prod-db.mjs` + `.claude/settings.json`
+  + `.codex/hooks.json`) is kept in sync by `pnpm lint:guard-sync`.
+
 ## Planning And Specs
 
 - Active work tracker: `tasks/todo.md`
@@ -35,6 +63,7 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Reference index (canonical, full list of `docs/ref/` files): `docs/ref/README.md`
 - Project vocabulary & naming SSoT: `docs/ref/glossary.md`
 - HKD business context: `docs/ref/business-context.md`
+- HKD legal framework register (SSoT for laws/decrees): `docs/ref/legal-framework-2026.md`
 
 Do not re-enumerate `docs/ref/` here — the index above is the single owner of
 that list.

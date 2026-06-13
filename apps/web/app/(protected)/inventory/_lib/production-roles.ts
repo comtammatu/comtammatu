@@ -2,7 +2,6 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 
 export const PRODUCTION_OPERATOR_ROLES = [
   "owner",
-  "super_manager",
   "production_manager",
 ] as const satisfies readonly StaffRole[];
 

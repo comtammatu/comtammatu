@@ -52,10 +52,6 @@ function canAssignRole(
   targetRole: StaffRole,
 ): string | null {
   if (actorRole === "owner") return null; // unrestricted
-  if (actorRole === "super_manager") {
-    if (targetRole === "owner") return "Không có quyền tạo chủ sở hữu";
-    return null;
-  }
   if (actorRole === "branch_manager") {
     if (!["cashier", "waiter", "chef"].includes(targetRole))
       return "Bạn chỉ có thể tạo thu ngân/phục vụ/bếp";

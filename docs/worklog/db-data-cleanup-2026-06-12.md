@@ -87,8 +87,8 @@ Explicitly out of scope for batch 1:
   payroll/attendance rows.
 - Workflow notifications such as GRN/PO/transfer/stocktake until there is a
   retention policy for unresolved operational tasks.
-- Migration ledger cleanup; that remains tracked separately in
-  `docs/worklog/migration-drift-audit-2026-06-12.md`.
+- Migration ledger reconciliation, which is a separate concern from data
+  cleanup.
 
 ## Owner-Run Preflight
 

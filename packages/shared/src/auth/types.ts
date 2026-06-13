@@ -1,11 +1,9 @@
 /**
  * Access buckets — ordered by privilege level (highest to lowest).
  * These are compatibility auth buckets, not mutable HR position labels.
- * Customer role is handled by Flutter app only.
  */
 export const ACCESS_BUCKETS = [
   "owner",
-  "super_manager",
   "branch_manager",
   "warehouse_manager",
   "production_manager",
@@ -22,10 +20,7 @@ export const STAFF_ROLES = ACCESS_BUCKETS;
 export type StaffRole = AccessBucket;
 
 /** Roles that can access /admin/ routes */
-export const ADMIN_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-] as const;
+export const ADMIN_ROLES: readonly StaffRole[] = ["owner"] as const;
 
 /** Roles that operate at branch level (POS/KDS) */
 export const BRANCH_ROLES: readonly StaffRole[] = [
@@ -37,7 +32,6 @@ export const BRANCH_ROLES: readonly StaffRole[] = [
 /** Roles that do not require branch scope */
 export const TENANT_LEVEL_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "office",
 ] as const;
 
@@ -62,14 +56,14 @@ export const BRANCH_REQUIRED_OPERATIONAL_ROLES: readonly StaffRole[] = [
 
 /**
  * Settings → Bàn, Trạm bếp (cấu hình sàn, không phải chiến lược chuỗi).
- * Owner không gồm — chủ sở hữu xem tổng thể vận hành; chi tiết sàn/bếp do quản lý điều hành.
+ * owner + branch_manager quản lý cấu hình sàn/bếp.
  */
 export const BRANCH_FLOOR_SETTINGS_ROLES: readonly StaffRole[] = [
-  "super_manager",
+  "owner",
   "branch_manager",
 ] as const;
 
-/** Settings → Bàn, trạm bếp (owner không tham gia) */
+/** Settings → Bàn, trạm bếp */
 export function canManageBranchFloorSettings(role: StaffRole): boolean {
   return BRANCH_FLOOR_SETTINGS_ROLES.some((r) => r === role);
 }
@@ -80,7 +74,6 @@ export function canManageBranchFloorSettings(role: StaffRole): boolean {
  */
 export const ROLE_LABEL_VI: Record<StaffRole, string> = {
   owner: "Chủ sở hữu",
-  super_manager: "Giám đốc điều hành",
   branch_manager: "Quản lý chi nhánh",
   warehouse_manager: "Quản lý kho chi nhánh",
   production_manager: "Quản lý sản xuất",
@@ -93,12 +86,11 @@ export const ROLE_LABEL_VI: Record<StaffRole, string> = {
 /**
  * Canonical HR position code → StaffRole bucket. TS mirror of the SQL
  * `private.staff_role_from_position_code()` — change both in the same PR
- * (migration 20260610230000 is the current twin). Only the 11 canonical
- * English codes below; unknown codes return "unassigned" (fail-safe).
+ * (the SQL twin is the latest position-mapper migration). Only the 10
+ * canonical English codes below; unknown codes return "unassigned" (fail-safe).
  */
 const POSITION_CODE_TO_STAFF_ROLE: Record<string, StaffRole> = {
   owner: "owner",
-  super_manager: "super_manager",
   branch_manager: "branch_manager",
   office: "office",
   warehouse_manager: "warehouse_manager",

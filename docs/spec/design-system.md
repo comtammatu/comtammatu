@@ -176,6 +176,8 @@ Rules:
 - Use semantic Tailwind token classes (`bg-background`, `text-muted-foreground`, `border-border`, `bg-success`, etc.).
 - Use `BrandMark` / `BrandLockup` for web runtime logo rendering; do not reference `/brand/logo-*` directly from route components.
 - Purpose-specific mascot assets may be used as decorative public images in customer-facing empty or splash states; they must not replace core workflow content.
+- Use `BrandGlyph` (`@comtammatu/ui/components/brand-glyph`) for the five Concept-01 sub-symbols (`hat-gao`, `to-com`, `dia-tron`, `mai-nha`, `dua`). They are brand DECORATION (packaging, storefront, empty-state accents), never an interactive affordance — `lucide-react` remains the only UI-icon source. It inherits `currentColor`; pass `tone` to paint the glyph's semantic brand color (terracotta=`text-primary`, navy=`text-foreground`, green=`text-success`, gold=`text-warning`). Do not give it a raw color.
+- The three brand patterns (`ke-caro`, `hat-gao`, `vong-to`) ship as tileable SVG under `/brand/patterns` with the `brand-pattern-caro` / `brand-pattern-hat-gao` / `brand-pattern-vong-to` and `brand-strip` utilities in `globals.css`. Use them only as decorative footer strips, packaging trim, or section separators — never as a background behind body text. Do not reintroduce the retired `matu-*` visual-layer prefix for these.
 - Do not hardcode raw palette classes for status meaning (`amber`, `emerald`, `zinc`, etc.) when a semantic token exists.
 - Do not add arbitrary dimensions such as `text-[10px]`, `w-[200px]`, or `h-[3rem]`.
 - Do not add static inline styles for presentation.
@@ -511,6 +513,126 @@ Forbidden wrappers:
 - Search, filters, counts, and bulk actions should live together.
 - Empty, loading, error, and blocked states must use approved primitives or wrappers.
 - Do not repeat the same workflow state in header, rail, sidebar, gate, and board.
+
+## Structural Governance
+
+Everything above governs how a surface looks. This section governs how a surface
+is assembled: which chrome shell it mounts, where its route lives, where its
+navigation comes from, and who owns page padding. These rules were prose-only
+until now; per `D014` (W5) and `D019` they become contract, enforced by
+frozen-baseline ratchets in `scripts/check-ui-contract.mjs` — the same
+contract-plus-ratchet pattern used for the W1–W4 molecule waves.
+
+Route IA ownership (which family owns which capability, role gating) is governed
+by `docs/spec/role-route-matrix.md`; navigation data is single-sourced in
+`packages/shared/src/auth/nav-config.ts`. This section does not restate those —
+it locks the UI assembly contract on top of them, and the gates that keep all
+three in sync. The gates land in Stage 0; until each ships, the rule is
+prose-only and held by review.
+
+### A. Chrome Archetypes (two families)
+
+Per D014 W5 every route mounts exactly one of two chrome families. There is no
+third.
+
+1. Management chrome — the shared `AppShell`
+   (`apps/web/app/components/app-shell.tsx`) with a role/scope-aware multi-group
+   sidebar and one top header. Covers tenant Admin (`/admin/*`), the domain
+   workspaces (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`), and branch
+   command/setup (`/br/[branchId]/dashboard`, `/br/[branchId]/settings/*`). One
+   shell, one sidebar, one header — sidebar groups differ by role/scope, the
+   chrome does not.
+2. Operations chrome — purpose-built, full-screen, single-job surfaces that
+   legitimately cannot wear the management sidebar: POS (`/br/[branchId]/pos`),
+   KDS and Runner (`/br/[branchId]/{kds,runner}`), and the staff task surface
+   (`/employee/*`). These keep bespoke layout, but consume the same tokens,
+   typography, status vocabulary, header lockup, and bottom-nav primitives as
+   Management — a different layout, never a second visual language.
+
+A surface that is neither is drift: a route may not invent a third chrome (a
+hand-rolled `<main>` + back-button container, a per-page header lockup, or a
+second sidebar idiom).
+
+### B. Shell Registry
+
+"Shell" means a component that owns chrome (sidebar, header, full-screen frame,
+or outer padding). It is governed by an allowlist, not by the `-shell` filename.
+
+- The only chrome shells permitted are: `app-shell.tsx` (canonical Management
+  chrome); the transitional Management module wrappers that compose it
+  (admin/inventory/finance/hr/menu/orders shells — W5 collapses these toward
+  one `AppShell`-driven nav, the count only shrinks); and the approved
+  Operations chrome (the POS desktop shell, the operational PWA toolbar, the
+  employee header + bottom-nav).
+- The canonical header lockup and bottom-nav MUST be exported primitives that
+  both families consume, not re-implemented per surface. (Stage 0 extracts
+  `AppHeader` / `AppBottomNav` from `AppShell`.)
+- Naming: reserve the `*-shell` suffix for components in the allowlist above. A
+  component that only composes `AppPageHeader` / `AppEmptyState` inside an
+  existing shell is a page section, not a shell, and must not carry the suffix.
+- Gate (Stage 0): a `shell-registry` ratchet freezes the current chrome-shell
+  set as baseline; a new `*-shell` file or new bespoke chrome
+  (`SidebarProvider` / page-owned `<main>`) outside the allowlist fails CI. The
+  baseline only decreases.
+
+### C. Route Home + IA
+
+- One capability has exactly one route home; the home per family is defined in
+  `docs/spec/role-route-matrix.md`. A second page rendering another family's
+  client is drift (e.g. a `/br/[branchId]/settings/*` page importing an
+  `/admin/settings/*` client, or a duplicate periods page).
+- A route that loses its single home becomes a redirect shim to the canonical
+  home (the pattern already used for `/admin/finance` → `/finance`), never a
+  parallel copy. Removal follows the no-tombstone rule — replace the body with
+  the redirect, leave no stub.
+- Every `(protected)/**/page.tsx` MUST resolve to exactly one route family and
+  be reachable from at least one navigation entry. Orphan routes (live page,
+  zero inbound link) are drift; triage to either wire nav or delete, after
+  confirming there is no dynamic-only entry (`router.push`, redirect,
+  `revalidatePath`).
+- Gate (Stage 0): a route-manifest reachability check globs the route tree and
+  asserts (a) each page resolves via `module-acl` to one family, (b) each
+  navigable leaf has an inbound nav entry, (c) no two nav items in a shell share
+  an `href`.
+
+### D. Navigation Single-Source
+
+- Navigation is data, not per-shell code. Every Management sidebar group and
+  every bottom-nav item set MUST be projected from
+  `packages/shared/src/auth/nav-config.ts` through a shared resolver, the way
+  `admin-shell` already calls `resolveAdminNavGroups`. Inline `ShellNavGroup[]`
+  literals inside a shell are forbidden.
+- Desktop sidebar and mobile bottom-nav render from the same resolved model for
+  a role; they may differ in density and item count, never in membership source.
+- Active-state matching uses the single `isNavItemActive` helper
+  (`apps/web/app/lib/shell-primitives.ts`); per-surface `startsWith` / `isActive`
+  reimplementations are forbidden.
+- The matrix → ACL → nav-config chain is a deliberate mirror. A Stage-0
+  `nav-acl` check asserts every rendered nav `href` resolves to a known
+  `MODULE_ACL` path and that nav-config covers the matrix families, so the
+  matrix is materialized, not aspirational.
+
+### E. Page Padding Authority
+
+- Outer page padding has exactly one owner: `AppPage`
+  (`apps/web/app/components/surface.tsx`), per the Rhythm Contract above
+  ("Page padding MUST come from `AppPage`").
+- `AppShell` `<main>` MUST NOT apply outer page padding. `AppPage` is
+  nesting-aware: an `AppPage` mounted inside another `AppPage` or inside
+  `AppShell` main drops its own padding and max-width so containers never
+  compound.
+- Leaf pages MUST NOT set ad-hoc root padding (`p-*` / `px-*` / `py-*` on the
+  page root); route spacing through `AppPage` density.
+- Gate (Stage 0): a page-padding ratchet baselines the current offenders under
+  `**/page.tsx` and forbids new ones, paired with the removal of the `AppShell`
+  main padding so the single owner is real, not contradicted by the primitive.
+
+### Enforcement Status
+
+This section is contract today; the behavioral gates land in Stage 0 (`D019`).
+Each structural rule is tracked here as gated or prose-only so the distance
+between documented and enforced stays visible — closing that gap is the point,
+because an unenforced structural rule is exactly how this layer drifted.
 
 ## Loading / Error / Not-found Frame
 

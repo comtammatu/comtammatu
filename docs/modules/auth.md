@@ -36,15 +36,14 @@ navigation, and default-landing changes must keep the spec, `module-acl.ts`,
 | `apps/web/app/_lib/permissions.ts`                           | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
 
 Discovery invariant: `MODULE_ACL.hr_payroll` vẫn gate `/hr/payroll/*` cho
-owner/super_manager, nhưng không nằm trong `DOMAIN_WORKSPACE_ITEMS` hoặc app
+owner, nhưng không nằm trong `DOMAIN_WORKSPACE_ITEMS` hoặc app
 discovery mặc định. HKD pilot mở `/hr` cho nhân viên/ca/ngày công trước; payroll
 chỉ là direct-support khi cần đối soát/chốt lương.
 
 ## Role Hierarchy
 
 ```
-owner                          ← governance + tenant-wide oversight, including orders and inventory
-├── super_manager              ← Tenant: vận hành + catalog NL, procurement
+owner                          ← governance + tenant-wide oversight, vận hành + catalog NL, procurement
 ├── branch_manager             ← single branch command + operations
 ├── warehouse_manager          ← branch procurement workflow
 ├── production_manager         ← branch production workflow
@@ -113,28 +112,28 @@ Owner is protected: RPCs refuse to touch a user whose position code is `owner` (
 
 Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — proxy.ts, admin shell, and layouts all read from here.
 
-| Module                                                     | owner | super_mgr | branch_mgr | wh_mgr | prod_mgr | cashier | waiter | chef | office |
-| ---------------------------------------------------------- | ----- | --------- | ---------- | ------ | -------- | ------- | ------ | ---- | ------ |
-| dashboard                                                  | ✓     | ✓         |            |        |          |         |        |      |        |
-| menu                                                       | ✓     | ✓         | ✓          |        |          |         |        |      |        |
-| inventory                                                  | ✓     | ✓         | ✓          | ✓      | ✓        |         |        |      |        |
-| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức)    | ✓     | ✓         |            | ✓      | ✓        |         |        |      |        |
-| inventory_admin (retired — empty allowed_roles)            |       |           |            |        |          |         |        |      |        |
-| orders                                                     | ✓     | ✓         | ✓          |        |          | ✓       |        |      |        |
-| staff                                                      | ✓     | ✓         |            |        |          |         |        |      |        |
-| hr                                                         | ✓     | ✓         | ✓          |        |          |         |        |      |        |
-| finance                                                    | ✓     | ✓         |            |        |          |         |        |      |        |
-| accounting (direct-only period close/reopen)               | ✓     | ✓         |            |        |          |         |        |      |        |
-| reports                                                    | ✓     | ✓         |            |        |          |         |        |      |        |
-| settings                                                   | ✓     | ✓         |            |        |          |         |        |      |        |
-| pos                                                        |       |           | ✓          |        |          | ✓       | ✓      |      |        |
-| kds                                                        |       |           | ✓          |        |          |         |        | ✓    |        |
-| runner (staff nav/discovery only; display route is public) |       |           | ✓          |        |          | ✓       | ✓      | ✓    |        |
-| branch_dashboard                                           | ✓     | ✓         | ✓          |        |          |         |        |      |        |
-| branch_settings                                            | ✓     | ✓         | ✓          |        |          |         |        |      |        |
-| branch_menu_limits                                         | ✓     | ✓         | ✓          |        |          | ✓       |        | ✓    |        |
-| employee                                                   |       |           | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
-| notifications                                              | ✓     | ✓         | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
+| Module                                                     | owner | branch_mgr | wh_mgr | prod_mgr | cashier | waiter | chef | office |
+| ---------------------------------------------------------- | ----- | ---------- | ------ | -------- | ------- | ------ | ---- | ------ |
+| dashboard                                                  | ✓     |            |        |          |         |        |      |        |
+| menu                                                       | ✓     | ✓          |        |          |         |        |      |        |
+| inventory                                                  | ✓     | ✓          | ✓      | ✓        |         |        |      |        |
+| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức)    | ✓     |            | ✓      | ✓        |         |        |      |        |
+| inventory_admin (retired — empty allowed_roles)            |       |            |        |          |         |        |      |        |
+| orders                                                     | ✓     | ✓          |        |          | ✓       |        |      |        |
+| staff                                                      | ✓     |            |        |          |         |        |      |        |
+| hr                                                         | ✓     | ✓          |        |          |         |        |      |        |
+| finance                                                    | ✓     |            |        |          |         |        |      |        |
+| accounting (direct-only period close/reopen)               | ✓     |            |        |          |         |        |      |        |
+| reports                                                    | ✓     |            |        |          |         |        |      |        |
+| settings                                                   | ✓     |            |        |          |         |        |      |        |
+| pos                                                        |       | ✓          |        |          | ✓       | ✓      |      |        |
+| kds                                                        |       | ✓          |        |          |         |        | ✓    |        |
+| runner (staff nav/discovery only; display route is public) |       | ✓          |        |          | ✓       | ✓      | ✓    |        |
+| branch_dashboard                                           | ✓     | ✓          |        |          |         |        |      |        |
+| branch_settings                                            | ✓     | ✓          |        |          |         |        |      |        |
+| branch_menu_limits                                         | ✓     | ✓          |        |          | ✓       |        | ✓    |        |
+| employee                                                   |       | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
+| notifications                                              | ✓     | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
 
 > `wh_mgr` = `warehouse_manager`, `prod_mgr` = `production_manager`. Route-level ACL đọc `user_role` từ JWT, derived từ `positions.code`. Row-level authz vẫn đi qua `has_permission(branch_id, key)` — matrix này chỉ là fast gate.
 >
@@ -142,11 +141,11 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 >
 > Runner exception: `/br/[branchId]/runner` is an exact public customer display path. `MODULE_ACL.runner` remains for staff discovery/navigation metadata, not for forcing Account Login on the board.
 
-**Trang nhân viên boundary:** `employee` là bề mặt self-service / bàn giao vận hành cho staff không thuộc `ADMIN_ROLES`. `owner` và `super_manager` không vào `/employee/*`; request trực tiếp được đưa về Admin default route.
+**Trang nhân viên boundary:** `employee` là bề mặt self-service / bàn giao vận hành cho staff không thuộc `ADMIN_ROLES`. `owner` không vào `/employee/*`; request trực tiếp được đưa về Admin default route.
 
-**Owner (chủ sở hữu):** ngoài các module quản trị / giám sát còn có thể vào `orders` và `inventory` để kiểm tra trực tiếp vận hành tenant-level. Tuy vậy owner không được coi là operator hằng ngày trong inventory docs/UI; các bề mặt Inventory hiện tối ưu cho `super_manager`, `branch_manager`, `warehouse_manager`, `production_manager`.
+**Owner (chủ sở hữu):** ngoài các module quản trị / giám sát còn có thể vào `orders` và `inventory` để kiểm tra trực tiếp vận hành tenant-level. Tuy vậy owner không được coi là operator hằng ngày trong inventory docs/UI; các bề mặt Inventory hiện tối ưu cho `branch_manager`, `warehouse_manager`, `production_manager`.
 
-**Inventory sub-route ACL:** `inventory` allows `owner`, `super_manager`, `branch_manager`, `warehouse_manager`, `production_manager` cho tồn kho, điều chuyển, stocktake, expiry, reports, và branch operations. `inventory_procurement` ở cấp chi nhánh: `owner`, `super_manager`, `warehouse_manager`, `production_manager` vào `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, và `receiving` theo `route-resolution.ts`. `inventory_admin` (`/admin/inventory/*`) đã retired qua `allowedRoles: []`: page files đã removed, nhưng URL space vẫn map qua module này để proxy chặn bằng ACL chuẩn thay vì xem như admin route chưa phân loại. `production` không dùng module riêng; Server Actions và DB/RPC/RLS hard-deny `branch_manager` dù có manual production/menu grant. Operator production là `super_manager` / `production_manager`; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày. `branch_manager` vì vậy chỉ nên thấy nhịp branch ops: nhận inbound transfer, tạo intra-branch transfer `Cấp bếp`, stocktake, adjustment/write-off.
+**Inventory sub-route ACL:** `inventory` allows `owner`, `branch_manager`, `warehouse_manager`, `production_manager` cho tồn kho, điều chuyển, stocktake, expiry, reports, và branch operations. `inventory_procurement` ở cấp chi nhánh: `owner`, `warehouse_manager`, `production_manager` vào `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, và `receiving` theo `route-resolution.ts`. `inventory_admin` (`/admin/inventory/*`) đã retired qua `allowedRoles: []`: page files đã removed, nhưng URL space vẫn map qua module này để proxy chặn bằng ACL chuẩn thay vì xem như admin route chưa phân loại. `production` không dùng module riêng; Server Actions và DB/RPC/RLS hard-deny `branch_manager` dù có manual production/menu grant. Operator production là `production_manager`; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày. `branch_manager` vì vậy chỉ nên thấy nhịp branch ops: nhận inbound transfer, tạo intra-branch transfer `Cấp bếp`, stocktake, adjustment/write-off.
 
 **UX boundary quan trọng:** nav có thể hẹp hơn module-level ACL để giảm nhiễu vận hành. Ví dụ `branch_manager` vẫn vào được `/inventory/transfers` để nhận hàng, nhưng UI không nên quảng bá action tạo inter-site transfer như tác vụ mặc định của vai trò này.
 
@@ -160,13 +159,13 @@ Inventory route contract dùng danh sách active prefixes; unknown Inventory URL
 không được giữ trong post-login `returnTo`.
 
 **Settings surface boundary:** Tenant setup belongs under `/admin/settings/*`
-and is for owner/super_manager. Branch setup belongs under
+and is for owner. Branch setup belongs under
 `/br/[branchId]/settings/*` and may include branch_manager for their own branch.
 The runtime `settings` module excludes branch_manager; branch-scoped setup must
 use `branch_dashboard` / `branch_settings` route families.
 
-- `/admin/settings/branches` — owner, super_manager only (page-level redirect)
-- `/admin/settings/general` — owner, super_manager only (page-level redirect)
+- `/admin/settings/branches` — owner only (page-level redirect)
+- `/admin/settings/general` — owner only (page-level redirect)
 - `/br/[branchId]/settings/tables`, `/br/[branchId]/settings/kds`, `/br/[branchId]/settings/pos`, `/br/[branchId]/settings/pos-sessions`, `/br/[branchId]/settings/printers` — branch setup roles with branch-scope enforcement
 
 ## Proxy Routing Logic — Single Gate

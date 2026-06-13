@@ -13,7 +13,6 @@ import { getEmployeeContext } from "../_lib/employee-context";
 
 const CHECKOUT_APPROVAL_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "branch_manager",
 ];
 const MANAGER_SIMPLE_ATTENDANCE_ROLES: readonly StaffRole[] = [

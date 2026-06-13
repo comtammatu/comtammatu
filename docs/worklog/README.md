@@ -8,19 +8,14 @@ Nơi lưu các artefact theo dõi tiến độ và adoption.
 ## Active Notes
 
 - [platform-consolidation-2026-06-12.md](platform-consolidation-2026-06-12.md): bằng chứng khảo sát + harvest checklist cho D015 (một Platform, matu-platform freeze)
-- [role-route-restructure-2026-06-13.md](role-route-restructure-2026-06-13.md): T3 contract tách L0 Admin/Tenant Command khỏi L1 Branch Command cho Branch Manager
-- [supabase-advisor-hardening-2026-06-13.md](supabase-advisor-hardening-2026-06-13.md): T3 contract triage Supabase advisors nền và security-first hardening wave
+- [role-route-restructure-2026-06-13.md](role-route-restructure-2026-06-13.md): T3 contract tách L0 Admin/Tenant Command khỏi L1 Branch Command cho Branch Manager (D017)
+- [ui-surface-workflow-audit-2026-06-13.md](ui-surface-workflow-audit-2026-06-13.md): audit route/shell/component/workflow drift trước khi gom UI về surface contract
+- [supabase-advisor-hardening-2026-06-13.md](supabase-advisor-hardening-2026-06-13.md): T3 triage Supabase advisors nền + security-first hardening wave
 - [supabase-authenticated-definer-audit-2026-06-13.md](supabase-authenticated-definer-audit-2026-06-13.md): T3 audit wave 2 cho authenticated-callable SECURITY DEFINER RPC grants
-- [daily-close-2026-06-12.md](daily-close-2026-06-12.md): T3 contract màn chốt ngày chi nhánh (PM/BA/Dev/QA) + form paper-trial cho Hoàng
-- [hrm-truc-ngay-cong-2026-06-10.md](hrm-truc-ngay-cong-2026-06-10.md): HRM "1 trục Ngày công" contract (bỏ đăng ký ca/phân ca)
-- [employee-daily-work-2026-06-09.md](employee-daily-work-2026-06-09.md): Employee daily-work contract hiện tại
-- [employee-pwa-shell-2026-06-11.md](employee-pwa-shell-2026-06-11.md): Employee PWA shell và install/offline affordance
-- [db-data-cleanup-2026-06-12.md](db-data-cleanup-2026-06-12.md): DB data cleanup retention, April order test-data audit, and applied Inventory full reset
-- [employee-leave-requests-2026-06-10.md](employee-leave-requests-2026-06-10.md): Employee leave request + HRM approval contract
-- [employee-checkout-approval-2026-06-09.md](employee-checkout-approval-2026-06-09.md): checkout approval contract cho Employee daily work
-- [pos-daily-limit-holds-2026-06-10.md](pos-daily-limit-holds-2026-06-10.md): daily-limit hold reservation contract cho POS order create/append
-- [hr-checklist-template-library-2026-06-10.md](hr-checklist-template-library-2026-06-10.md): HR checklist template library + employee daily checklist contract
-- [notifications-pwa-cleanup-2026-06-10.md](notifications-pwa-cleanup-2026-06-10.md): Notification inbox + PWA push cleanup contract
+- [supabase-definer-classification-2026-06-13.md](supabase-definer-classification-2026-06-13.md): Wave 4 read-only classification SECURITY DEFINER RPC trên prod (sau Wave 3 internal-helper revoke)
+- [daily-close-2026-06-12.md](daily-close-2026-06-12.md): T3 contract màn chốt ngày chi nhánh (PM/BA/Dev/QA) + form paper-trial
+- [db-data-cleanup-2026-06-12.md](db-data-cleanup-2026-06-12.md): DB data cleanup retention, April order test-data audit, và applied Inventory full reset
+- [hrm-truc-ngay-cong-2026-06-10.md](hrm-truc-ngay-cong-2026-06-10.md): HRM "1 trục Ngày công" T3 contract (bỏ đăng ký ca/phân ca) — contract nguồn được migrations `20260610234500` + `20260611103000` + static test trỏ tới
 
 ## Quy tắc
 

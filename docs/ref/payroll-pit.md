@@ -56,6 +56,8 @@ Biểu 5 bậc theo Luật Thuế TNCN 2025 (109/2025/QH15), áp dụng từ k�
 > Biểu 7 bậc cũ (Luật 2007) chỉ còn dùng khi quyết toán các kỳ ≤ 2025; cách
 > khấu trừ chuyển tiếp trong năm 2026 theo hướng dẫn của cơ quan thuế.
 
+> **Đồng bộ với mã nguồn:** payroll engine = `packages/shared/src/payroll/calculate.ts` + `legal-versions.ts` (versioned theo `effectiveFrom`). Kỳ **2026-01 → 2026-06** tính **7 bậc** (`PIT_BRACKETS_2007`); kỳ **≥ 2026-07** tính **biểu 5 bậc** ở §2 (`PIT_BRACKETS_2026`, version `effectiveFrom: 2026-07-01`, owner xác nhận hiệu lực 01/07/2026 theo Luật 109/2025/QH15). Giảm trừ 15.5M/6.2M + trần BHXH 46.8M giữ nguyên qua cả hai. Test khoá: `packages/shared/src/payroll/__tests__/legal-versions.test.ts`.
+
 ### Ví dụ tính thuế
 
 ```
@@ -276,7 +278,7 @@ export function calculatePayrollEntry(params: {
   } = params;
 
   // BH NLĐ đóng
-  const insuranceCap = 46_800_000; // Mức trần BH 2024
+  const insuranceCap = 46_800_000; // Mức trần BH kỳ 2026 (NĐ 73/2024, vẫn áp dụng)
   const insuranceBase = Math.min(insuranceBaseSalary, insuranceCap);
   const bhxh = Math.round(insuranceBase * 0.08);
   const bhyt = Math.round(insuranceBase * 0.015);
@@ -284,8 +286,8 @@ export function calculatePayrollEntry(params: {
   const totalInsuranceEmployee = bhxh + bhyt + bhtn;
 
   // Giảm trừ thuế
-  const personalDeduction = 11_000_000;
-  const dependentDeduction = dependentCount * 4_400_000;
+  const personalDeduction = 15_500_000; // kỳ 2026 (NQ 110/2025)
+  const dependentDeduction = dependentCount * 6_200_000;
 
   // Thu nhập tính thuế
   const taxableIncome = Math.max(
@@ -409,9 +411,9 @@ TP.HCM): **5,310,000 VND/tháng** (Vùng II 4,730,000; Vùng III 4,140,000).
 | ---------------------------- | --------------------------------------------------- |
 | Xem bảng lương của mình      | Tất cả nhân viên (employee portal)                  |
 | Xem bảng lương chi nhánh     | `branch_manager`                                    |
-| Tạo / tính bảng lương        | `super_manager`, `owner` (và `office` với quyền HR) |
+| Tạo / tính bảng lương        | `owner` (và `office` với quyền HR)                  |
 | Duyệt bảng lương             | `owner`                                             |
-| Xuất dữ liệu quyết toán thuế | `owner`, `super_manager`                            |
+| Xuất dữ liệu quyết toán thuế | `owner`                                             |
 
 ---
 

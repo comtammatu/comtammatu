@@ -66,14 +66,14 @@ Generated checkout snapshot from 2026-06-10 (`node scripts/project-snapshot.mjs`
 
 | Area                                                     |                                       Count |
 | -------------------------------------------------------- | ------------------------------------------: |
-| `apps/web/app/**/page.tsx` routes (committed)            |                                         103 |
-| API route handlers (`route.ts`: 10 api + 2 PWA manifest) |                                          12 |
-| Generated DB tables / views / functions / enums          | 115 / 8 / ~255 / 1 (`shift_request_status`) |
-| Active SQL migrations (baseline-first; +379 archived)    |                                          26 |
+| `apps/web/app/**/page.tsx` routes (committed)            |                                         106 |
+| API route handlers (`route.ts`: 10 api + 3 PWA manifest) |                                          13 |
+| Generated DB tables / views / functions / enums          | 113 / 8 / 253 / 0 |
+| Active SQL migrations (baseline-first; +358 archived)    |                                          49 |
 | Test/spec files (`apps/web/e2e` + `packages/shared/src`) |                                          32 |
-| Test files under `apps/web/tests`                        |                                          36 |
+| Test files under `apps/web/tests`                        |                                          39 |
 
-> Migrations are **baseline-first** since 2026-05-30: `supabase/migrations/00000000000000_baseline.sql` (canonical public-schema install) + forward migrations, with the 379-file historical chain under `supabase/migrations/_archive/` and managed surfaces in `supabase/managed-surfaces.install.sql`. See `docs/spec/database-schema.md`.
+> Migrations are **baseline-first** since 2026-05-30: `supabase/migrations/00000000000000_baseline.sql` (canonical public-schema install) + forward migrations, with the 358-file historical chain under `supabase/migrations/_archive/` and managed surfaces in `supabase/managed-surfaces.install.sql`. See `docs/spec/database-schema.md`.
 
 The repo is not a flat "apps/packages" map. The operational shape is:
 

@@ -153,8 +153,7 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 
 | Code role (`user_role` legacy) | Nhãn tiếng Việt chuẩn | Boundary                                        |
 | ------------------------------ | --------------------- | ----------------------------------------------- |
-| `owner`                        | chủ sở hữu            | Vai trò cao nhất cấp tenant                     |
-| `super_manager`                | quản lý tổng          | Vận hành cấp tenant (chi nhánh + chi nhánh)     |
+| `owner`                        | chủ sở hữu            | Vai trò cao nhất cấp tenant, gồm vận hành tenant-wide |
 | `branch_manager`               | quản lý chi nhánh     | Quản trị một chi nhánh vận hành                 |
 | `warehouse_manager`            | quản lý kho chi nhánh | Procurement + tồn kho chi nhánh                 |
 | `production_manager`           | quản lý sản xuất      | Sản xuất tại chi nhánh                          |
@@ -168,7 +167,7 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 Position code tiếng Việt legacy (`quan_ly_CN`, `kho_truong`, `thu_kho`,
 `bep_truong`, `phu_bep`, `ke_toan`, `ke_toan_truong`, `tro_ly_giam_doc`) đã được
 rename/loại bỏ tận gốc bởi migration `20260610230000_canonical_position_codes_lean`.
-Bộ mã canonical CHỈ gồm 11 mã English: `owner`, `super_manager`, `branch_manager`,
+Bộ mã canonical CHỈ gồm 10 mã English: `owner`, `branch_manager`,
 `warehouse_manager`, `production_manager`, `head_chef`, `kitchen_helper`, `chef`,
 `cashier`, `waiter`, `office`. Thêm mã mới = cập nhật ĐỒNG THỜI
 `POSITION_CODE_TO_STAFF_ROLE` (shared TS) + SQL twin
@@ -178,7 +177,7 @@ Bộ mã canonical CHỈ gồm 11 mã English: `owner`, `super_manager`, `branch
 
 | Thuật ngữ                   | Code identifier                                         | Ý nghĩa                                                                                                                        |
 | --------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| position (chức vụ)          | `positions(code, label_vi, label_en)`                   | Nhãn HR của nhân viên. Không gate authz trực tiếp. Code thuộc bộ 11 mã English canonical, vd `head_chef`, `warehouse_manager`. |
+| position (chức vụ)          | `positions(code, label_vi, label_en)`                   | Nhãn HR của nhân viên. Không gate authz trực tiếp. Code thuộc bộ 10 mã English canonical, vd `head_chef`, `warehouse_manager`. |
 | permission key (khóa quyền) | `permission_keys(key)`                                  | Chuỗi canonical cho hành động, vd `inventory:production_create`. Đơn vị authz nhỏ nhất.                                        |
 | template (bộ quyền mẫu)     | `role_templates(position_code, permission_keys[])`      | Preset quyền gắn với 1 position; snapshot, không propagate khi edit.                                                           |
 | grant (cấp quyền)           | `staff_permissions(user_id, branch_id, permission_key)` | Quyền thật của user tại branch cụ thể. `branch_id IS NULL` = tenant-wide.                                                      |
@@ -280,8 +279,8 @@ Canonical rule (áp dụng 2026-04-24): payment confirmation → `orders.status=
 | `gross_salary`          | lương gộp (gross)            | Lương thỏa thuận trước BHXH + PIT                                                                                     |
 | `net_salary`            | lương thực lĩnh              | Gross − BHXH NLĐ − PIT − khấu trừ khác + phụ cấp miễn thuế                                                            |
 | `insurance_base_salary` | mức lương đóng BH            | Source `employment_contracts` → sync `employees` → snapshot `payroll_entries.insurance_base`. **Khác `gross_salary`** |
-| `personal_deduction`    | giảm trừ bản thân            | 11,000,000 VND/tháng (từ 01/07/2020)                                                                                  |
-| `dependent_deduction`   | giảm trừ người phụ thuộc     | 4,400,000 VND/người/tháng                                                                                             |
+| `personal_deduction`    | giảm trừ bản thân            | 15,500,000 VND/tháng (từ 01/01/2026; trước đó 11,000,000)                                                                                  |
+| `dependent_deduction`   | giảm trừ người phụ thuộc     | 6,200,000 VND/người/tháng (từ 01/01/2026; trước đó 4,400,000)                                                                                             |
 | `payroll_period`        | kỳ lương                     | (tháng, năm); status `draft` → `calculated` → `approved` → `paid`                                                     |
 | `payroll_entry`         | dòng lương                   | 1 nhân viên × 1 kỳ, `UNIQUE(period, employee)`                                                                        |
 | `working_days`          | ngày công thực tế            |                                                                                                                       |

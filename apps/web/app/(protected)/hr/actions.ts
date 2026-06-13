@@ -14,15 +14,13 @@ import { getAuthContext, probePermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { canAccessBranch } from "@/_lib/branch-scope";
 
-const HR_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const HR_ROLES: readonly StaffRole[] = ["owner"];
 const HR_EMPLOYEE_VIEW_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "branch_manager",
 ];
 const SHIFT_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "branch_manager",
 ];
 const ATTENDANCE_PHOTO_BUCKET = "attendance-photos";

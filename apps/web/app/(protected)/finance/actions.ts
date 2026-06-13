@@ -21,17 +21,15 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
 const INVOICE_CREATE_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "branch_manager",
   "cashier",
   "waiter",
 ];
 const REPORT_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
   "branch_manager",
 ];
 
@@ -954,7 +952,7 @@ export async function fetchRevenueByCashier(
 }
 
 /* ─── fetchAccessibleBranches — branches with finance:view ─ */
-// Branch picker source. Owner/super_manager: all active operational branches.
+// Branch picker source. Owner: all active operational branches.
 // Branch-scoped users only see their own branch. Filter by
 // `branch_kind='branch'` to drop non-operational rows with no revenue.
 export async function fetchAccessibleBranches(): Promise<ActionResult> {
@@ -967,7 +965,7 @@ export async function fetchAccessibleBranches(): Promise<ActionResult> {
   const { supabase, claims } = ctx;
 
   // Tenant-wide roles see all operational branches.
-  if (claims.user_role === "owner" || claims.user_role === "super_manager") {
+  if (claims.user_role === "owner") {
     const { data, error } = await supabase
       .from("branches")
       .select("id, name")
