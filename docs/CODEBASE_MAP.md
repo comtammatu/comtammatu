@@ -62,7 +62,7 @@ source-of-truth inputs.
 | Tests               | Playwright route coverage and shared unit tests                                       |
 | Core                | Repository metadata, E2E helpers, cross-cutting supporting files                      |
 
-Generated checkout snapshot from 2026-06-10 (`node scripts/project-snapshot.mjs`):
+Generated checkout snapshot from 2026-06-13 (`node scripts/project-snapshot.mjs`):
 
 | Area                                                     |                                       Count |
 | -------------------------------------------------------- | ------------------------------------------: |

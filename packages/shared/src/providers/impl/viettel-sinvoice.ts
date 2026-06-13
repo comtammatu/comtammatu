@@ -136,8 +136,8 @@ export function buildSinvoiceTransactionUuid(invoiceId: number): string {
  *   - Template `2/...` → invoiceType `"2"` (HĐ bán hàng — F&B/MTT)
  *   - Template `3/...` → invoiceType `"3"` ...
  *
- * Legacy TT32-era (pre-2026) templates like `01GTKT0/001` map to the
- * `"01GTKT"` form; we do NOT support those (TT78-style codes only since 2026).
+ * Older pre-2026 (TT78-era) templates like `01GTKT0/001` map to the
+ * `"01GTKT"` form; we do NOT support those (TT32-style codes only since 2026).
  *
  * Throws if templateCode shape is unrecognised so misconfigured env
  * surfaces loudly at boot rather than producing rejected invoices.

@@ -86,7 +86,7 @@ export const createPurchaseOrder = withAction(
       return { success: false, error: "Không thể cấp số PO." };
     }
     const displayId = String(nextDisplay);
-    // Keep po_number == display_id; the legacy column is still referenced
+    // Keep po_number == display_id; the po_number column is still referenced elsewhere
     // by audit_logs/exports/e-invoices.
     const poNumber = displayId;
 

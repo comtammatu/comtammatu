@@ -1,5 +1,5 @@
 /**
- * Local fallback: build a schema_version=1 PrintDocument from a legacy typed
+ * Local fallback: build a schema_version=1 PrintDocument from a typed
  * payload when the SQL trigger failed to attach `document`
  * (attach_print_document_to_payload is fail-soft by design). Uses the same
  * materializer + default content as the admin editor preview.
