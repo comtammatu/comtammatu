@@ -359,6 +359,18 @@ D013 theo. Đảo quyết định (giữ GL / bật lại VAS) phải sửa quy�
 kèm lý do nghiệp vụ (vd chuyển đổi sang Doanh nghiệp). Void-BCTC issue
 (`tasks/todo.md:49`) trở thành vô nghĩa sau khi thoái.
 
+**Cập nhật 2026-06-13 (trong lúc gỡ slice 2a-2):** Bản đồ keep/remove ban đầu
+phân loại NHẦM `/finance/reconciliation` là GIỮ ("đối soát tiền về") — lỗi sinh từ
+lens keep-check bị treo trong workflow. Kiểm code: `reconciliation-actions.ts` gọi
+`fn_reconcile_period`/`fn_reconcile_drilldown` so `subledger_total` vs `gl_total`
+→ đây là đối chiếu sổ-phụ↔sổ-cái (GL reconciliation), phụ thuộc `journal_entries`.
+`/finance/revenue` cũng có thẻ reconciliation + work-queue period-health/recon
+dùng GL. Phân loại lại: REMOVE thêm `/finance/reconciliation` +
+`reconciliation-actions.ts` + `fn_reconcile_period`/`fn_reconcile_drilldown` +
+gỡ thẻ reconciliation/period-health khỏi `/finance/revenue`. "Đối soát tiền về"
+thật (settle MoMo/VietQR vs payment đã ghi) KHÔNG tồn tại trong hệ → backlog ADD
+cùng expense capture. Owner duyệt mở rộng phạm vi (phương án gỡ trọn) 2026-06-13.
+
 ## D021: Chiết khấu theo món đặt ngay trong luồng thêm/gọi-thêm (POS) (2026-06-13)
 
 **Context:** Chiết khấu theo món đã có ở DB (`order_items.discount_*` + trigger
