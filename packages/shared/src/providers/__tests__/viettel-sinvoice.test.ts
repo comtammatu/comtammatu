@@ -826,3 +826,198 @@ test("randomised: validators hold across 200 random (qty, gross, vatRate) trios"
     assertValidators(result, vatRate);
   }
 });
+
+const batchProviderConfig = {
+  username: "0100109106-509",
+  password: "test-password",
+  taxCode: "0100109106-509",
+  templateCode: "2/001",
+  invoiceSeries: "C22TYY",
+  baseUrl: "https://example.test",
+} as const;
+
+const batchRequest = (orderId: number) => ({
+  orderId,
+  orderNumber: `B-${orderId}`,
+  sellerName: "Com Tam Ma Tu",
+  sellerTaxCode: "0100109106-509",
+  sellerAddress: "Sandbox",
+  buyerName: "Khach le",
+  items: [item("Com tam", 1, 100_000)],
+  subtotal: 100_000,
+  vatRate: 8,
+  vatAmount: 0,
+  totalAmount: 100_000,
+});
+
+const batchInputUuids = (init: NonNullable<Parameters<typeof fetch>[1]>) => {
+  const parsed = JSON.parse(String(init.body ?? "{}")) as {
+    commonInvoiceInputs?: Array<{
+      generalInvoiceInfo?: { transactionUuid?: string };
+    }>;
+  };
+  return (parsed.commonInvoiceInputs ?? []).map(
+    (b) => b.generalInvoiceInfo?.transactionUuid ?? "",
+  );
+};
+
+test("createBatchInvoice: wraps commonInvoiceInputs and maps outputs by transactionUuid", async () => {
+  const originalFetch = globalThis.fetch;
+  let inputsLen = -1;
+
+  globalThis.fetch = (async (input, init) => {
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (String(input).includes("/createBatchInvoice/")) {
+      const uuids = batchInputUuids(init ?? {});
+      inputsLen = uuids.length;
+      return new Response(
+        JSON.stringify({
+          // returned out of order to prove uuid mapping (not positional)
+          createInvoiceOutputs: [
+            {
+              transactionUuid: uuids[1],
+              errorCode: 200,
+              result: { invoiceNo: "K2" },
+            },
+            {
+              transactionUuid: uuids[0],
+              errorCode: 200,
+              result: { invoiceNo: "K1", codeOfTax: "MA-CQT-1" },
+            },
+          ],
+          lstMapError: [],
+          totalSuccess: 2,
+          totalFail: 0,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+
+  try {
+    const provider = new ViettelSinvoiceProvider(batchProviderConfig);
+    const results = await provider.createBatchInvoice([
+      batchRequest(1),
+      batchRequest(2),
+    ]);
+
+    assert.equal(inputsLen, 2, "request must wrap both in commonInvoiceInputs");
+    assert.equal(results.length, 2);
+
+    // order 1: codeOfTax present → issued (MTT got CQT code back)
+    assert.equal(results[0]?.transactionUuid, buildSinvoiceTransactionUuid(1));
+    assert.equal(results[0]?.status, "issued");
+    assert.equal(results[0]?.invoiceNumber, "K1");
+    assert.equal(results[0]?.codeOfTax, "MA-CQT-1");
+
+    // order 2: no codeOfTax → submitted (awaiting CQT)
+    assert.equal(results[1]?.transactionUuid, buildSinvoiceTransactionUuid(2));
+    assert.equal(results[1]?.status, "submitted");
+    assert.equal(results[1]?.invoiceNumber, "K2");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createBatchInvoice: marks an item failed without failing the whole batch", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = (async (input, init) => {
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (String(input).includes("/createBatchInvoice/")) {
+      const uuids = batchInputUuids(init ?? {});
+      // only the first invoice succeeds; second is reported in lstMapError
+      return new Response(
+        JSON.stringify({
+          createInvoiceOutputs: [
+            {
+              transactionUuid: uuids[0],
+              errorCode: 200,
+              result: { invoiceNo: "K1" },
+            },
+          ],
+          lstMapError: [
+            {
+              msg: "Tên hàng hóa bắt buộc nhập",
+              errorCode: "INVOICE_VALID_INPUT_REQUIRED_ITEMNAME_ITEM",
+            },
+          ],
+          totalSuccess: 1,
+          totalFail: 1,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+
+  try {
+    const provider = new ViettelSinvoiceProvider(batchProviderConfig);
+    const results = await provider.createBatchInvoice([
+      batchRequest(1),
+      batchRequest(2),
+    ]);
+
+    assert.equal(results.length, 2);
+    assert.equal(results[0]?.status, "submitted");
+    assert.equal(results[0]?.invoiceNumber, "K1");
+    assert.equal(results[1]?.status, "failed");
+    assert.equal(results[1]?.invoiceNumber, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createBatchInvoice: splits requests into chunks of 50", async () => {
+  const originalFetch = globalThis.fetch;
+  const chunkSizes: number[] = [];
+
+  globalThis.fetch = (async (input, init) => {
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (String(input).includes("/createBatchInvoice/")) {
+      const uuids = batchInputUuids(init ?? {});
+      chunkSizes.push(uuids.length);
+      return new Response(
+        JSON.stringify({
+          createInvoiceOutputs: uuids.map((u, i) => ({
+            transactionUuid: u,
+            errorCode: 200,
+            result: { invoiceNo: `K${i}` },
+          })),
+          lstMapError: [],
+          totalSuccess: uuids.length,
+          totalFail: 0,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+
+  try {
+    const provider = new ViettelSinvoiceProvider(batchProviderConfig);
+    const requests = Array.from({ length: 120 }, (_, i) => batchRequest(i + 1));
+    const results = await provider.createBatchInvoice(requests);
+
+    assert.equal(results.length, 120);
+    assert.deepEqual(chunkSizes, [50, 50, 20]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

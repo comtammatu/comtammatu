@@ -1,6 +1,7 @@
 import { unzipSync } from "fflate";
 import {
   BUYER_NOT_GET_INVOICE_NAME,
+  type BatchInvoiceItemResult,
   type InvoiceArchive,
   type InvoiceArtifact,
   type InvoiceDownloadRequest,
@@ -64,6 +65,8 @@ const LOGIN_PATH = "/auth/login";
 const TX_UUID_LENGTH = 32;
 const TOKEN_SAFETY_MARGIN_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 30_000;
+// Sinvoice createBatchInvoice cap (HDSD v2.50: ≤50/lô to avoid timeout).
+const SINVOICE_BATCH_MAX = 50;
 
 export interface ViettelSinvoiceConfig {
   username: string;
@@ -109,6 +112,35 @@ interface SinvoiceStatusSearchResult {
   exchangeStatus?: string | null;
   exchangeDes?: string | null;
   codeOfTax?: string | null;
+}
+
+// createBatchInvoice response (HDSD v2.50). Top-level (NOT wrapped in the
+// `result` envelope that single createInvoice uses). Per-invoice outcomes in
+// `createInvoiceOutputs` keyed by `transactionUuid`; input-validation failures
+// in `lstMapError`. A JSON/token-level failure returns `{code,message,data}`.
+interface SinvoiceBatchOutput {
+  transactionUuid?: string | null;
+  errorCode?: number | string | null;
+  description?: string | null;
+  result?: {
+    invoiceNo?: string | null;
+    reservationCode?: string | null;
+    transactionID?: string | null;
+    supplierTaxCode?: string | null;
+    codeOfTax?: string | null;
+  } | null;
+}
+
+interface SinvoiceBatchResponse {
+  createInvoiceOutputs?: SinvoiceBatchOutput[] | null;
+  lstMapError?:
+    | { msg?: string; invoiceSeri?: string; errorCode?: string }[]
+    | null;
+  totalSuccess?: number;
+  totalFail?: number;
+  code?: number;
+  message?: string;
+  data?: string;
 }
 
 /**
@@ -484,7 +516,15 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
     return distToGross <= distToNet;
   }
 
-  async createInvoice(request: InvoiceRequest): Promise<InvoiceResult> {
+  /**
+   * Build the per-invoice request body shared by createInvoice (single) and
+   * createBatchInvoice (the `commonInvoiceInputs[]` elements). Same shape; the
+   * batch endpoint just wraps an array of these.
+   */
+  private buildInvoiceBody(request: InvoiceRequest): {
+    body: Record<string, unknown>;
+    transactionUuid: string;
+  } {
     const transactionUuid = buildSinvoiceTransactionUuid(request.orderId);
     const callerPassesGross = this.detectGrossInput(request);
     const invoiceType = deriveInvoiceTypeFromTemplate(this.templateCode);
@@ -569,6 +609,12 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       ],
     };
 
+    return { body, transactionUuid };
+  }
+
+  async createInvoice(request: InvoiceRequest): Promise<InvoiceResult> {
+    const { body, transactionUuid } = this.buildInvoiceBody(request);
+
     try {
       const res = await this.authedFetch(
         `/InvoiceAPI/InvoiceWS/createInvoice/${this.taxCode}`,
@@ -630,6 +676,121 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         },
       };
     }
+  }
+
+  /**
+   * Issue many invoices in one Sinvoice call (HDSD v2.50
+   * `createBatchInvoice`). Request wraps the per-invoice bodies in
+   * `commonInvoiceInputs`; response returns per-invoice outcomes in
+   * `createInvoiceOutputs` (keyed by transactionUuid) + `lstMapError`. Chunks
+   * at SINVOICE_BATCH_MAX. Never throws — a whole-chunk failure marks every
+   * item in that chunk failed so the caller reconciles per transactionUuid.
+   */
+  async createBatchInvoice(
+    requests: InvoiceRequest[],
+  ): Promise<BatchInvoiceItemResult[]> {
+    const results: BatchInvoiceItemResult[] = [];
+
+    const fail = (
+      uuid: string,
+      description: string,
+      extra?: Record<string, unknown>,
+    ): BatchInvoiceItemResult => ({
+      transactionUuid: uuid,
+      status: "failed",
+      invoiceNumber: null,
+      providerRef: uuid,
+      codeOfTax: null,
+      providerData: { transactionUuid: uuid, description, ...extra },
+    });
+
+    for (let i = 0; i < requests.length; i += SINVOICE_BATCH_MAX) {
+      const chunk = requests.slice(i, i + SINVOICE_BATCH_MAX);
+      const built = chunk.map((r) => this.buildInvoiceBody(r));
+      const reqBody = { commonInvoiceInputs: built.map((b) => b.body) };
+
+      try {
+        const res = await this.authedFetch(
+          `/InvoiceAPI/InvoiceWS/createBatchInvoice/${this.taxCode}`,
+          { method: "POST", body: JSON.stringify(reqBody) },
+        );
+        const env = (await this.readEnvelope<unknown>(
+          res,
+        )) as unknown as SinvoiceBatchResponse;
+
+        // JSON/token-level rejection ({code,message,data}) → whole chunk failed.
+        if (!Array.isArray(env.createInvoiceOutputs)) {
+          const description =
+            env.message ??
+            env.data ??
+            this.describeError(
+              env as SinvoiceEnvelope<unknown>,
+              "batch_invoice_failed",
+            );
+          for (const b of built) {
+            results.push(fail(b.transactionUuid, description, {
+              httpStatus: res.status,
+            }));
+          }
+          continue;
+        }
+
+        const outputs = env.createInvoiceOutputs;
+        for (let k = 0; k < built.length; k++) {
+          const b = built[k];
+          if (!b) continue;
+          // Map by transactionUuid; fall back to positional order (HDSD: outputs
+          // align with commonInvoiceInputs; examples sometimes echo uuid=null).
+          const out =
+            outputs.find(
+              (o) => o?.transactionUuid && o.transactionUuid === b.transactionUuid,
+            ) ??
+            outputs[k] ??
+            null;
+          const invoiceNo = out?.result?.invoiceNo ?? null;
+          const codeOfTax = out?.result?.codeOfTax ?? null;
+          const okCode =
+            out != null &&
+            (out.errorCode === 200 ||
+              out.errorCode === "200" ||
+              out.errorCode == null);
+
+          if (out && okCode && invoiceNo) {
+            results.push({
+              transactionUuid: b.transactionUuid,
+              // codeOfTax present (MTT) = issued; else submitted, reconcile cron polls.
+              status: codeOfTax ? "issued" : "submitted",
+              invoiceNumber: invoiceNo,
+              providerRef: b.transactionUuid,
+              codeOfTax,
+              providerData: {
+                transactionUuid: b.transactionUuid,
+                reservationCode: out.result?.reservationCode,
+                transactionID: out.result?.transactionID,
+                codeOfTax,
+              },
+            });
+          } else {
+            const errMsg =
+              out?.description ??
+              env.lstMapError?.[k]?.msg ??
+              env.lstMapError?.[0]?.msg ??
+              "batch_item_failed";
+            results.push(
+              fail(b.transactionUuid, errMsg, {
+                errorCode: out?.errorCode ?? null,
+              }),
+            );
+          }
+        }
+      } catch (err) {
+        const description =
+          err instanceof Error ? err.message : "sinvoice_batch_call_failed";
+        for (const b of built) results.push(fail(b.transactionUuid, description));
+      }
+    }
+
+    return results;
   }
 
   async getStatus(providerRef: string): Promise<InvoiceStatus> {

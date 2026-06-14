@@ -96,6 +96,22 @@ export interface InvoiceResult {
   providerData?: Record<string, unknown>;
 }
 
+/**
+ * Per-invoice outcome from a batch issue call. One entry per input request,
+ * reconcilable by `transactionUuid`. Never represents a thrown error — a failed
+ * item has `status='failed'` with the reason in `providerData`.
+ */
+export interface BatchInvoiceItemResult {
+  /** Provider key echoed for reconcile (= providerRef). */
+  transactionUuid: string;
+  status: "submitted" | "issued" | "failed";
+  invoiceNumber: string | null;
+  providerRef: string;
+  /** CQT code — present for MTT invoices once issued. */
+  codeOfTax?: string | null;
+  providerData?: Record<string, unknown>;
+}
+
 export interface InvoiceStatus {
   status:
     | "draft"
@@ -158,6 +174,15 @@ export interface InvoiceProvider {
 
   /** Create and submit invoice to CQT */
   createInvoice(request: InvoiceRequest): Promise<InvoiceResult>;
+
+  /**
+   * Issue many invoices in one provider call (batch). Returns one result per
+   * input request (same order); never throws — per-item failures surface as
+   * `status='failed'`. Caller reconciles by `transactionUuid`.
+   */
+  createBatchInvoice(
+    requests: InvoiceRequest[],
+  ): Promise<BatchInvoiceItemResult[]>;
 
   /** Check invoice status (for async providers) */
   getStatus(providerRef: string): Promise<InvoiceStatus>;

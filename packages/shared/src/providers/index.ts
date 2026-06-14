@@ -19,6 +19,7 @@ export type {
   InvoiceResult,
   InvoiceStatus,
   InvoiceLineItem,
+  BatchInvoiceItemResult,
 } from "./invoice";
 export {
   BUYER_NOT_GET_INVOICE_NAME,
