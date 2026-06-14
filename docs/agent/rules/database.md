@@ -59,6 +59,7 @@ or agent memory.
 - NEVER apply migrations directly to production.
 - Production flow: open a PR, merge the PR, then the owner applies the migration manually.
 - After the migration is applied to the schema used for generated types, run `pnpm db:types`.
+- Clean up data that would violate a new CHECK constraint BEFORE adding it: `ALTER TABLE ADD CONSTRAINT` fails on dirty data and aborts every later statement in the same migration.
 
 ## DB Type Boundaries
 
@@ -73,6 +74,8 @@ or agent memory.
 - UNIQUE constraints must include tenant scope: `UNIQUE(field, tenant_id)`, not `UNIQUE(field)`.
 - RLS permissive policies combine with OR. Avoid accidentally widening access with separate permissive policies.
 - When writing self-scope plus admin-scope policies, gate admin-scope policies behind the correct permission check.
+- When locking a table to RPC-only, `REVOKE INSERT, UPDATE, DELETE` — all three, not just UPDATE. Leftover INSERT/DELETE grants are bypass paths that orphan related rows (e.g. `auth.users` without `profiles` breaks the JWT hook).
+- A role's scope (tenant-wide vs branch-scoped) must agree across the role table, its RLS policies, and docs/spec. A mismatch (e.g. `office` tenant-wide in the role table but branch-scoped in a SELECT policy) silently narrows or widens access.
 
 ## Auth And ACL
 
