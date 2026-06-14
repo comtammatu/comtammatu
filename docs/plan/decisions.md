@@ -386,6 +386,14 @@ LẠI: owner apply file lên prod (file → PR → owner) + `pnpm db:types` rege
 riêng (ngoài GL):** ledger prod = 458 entry, KHÔNG khớp baseline-first 49 file →
 branch-testing hỏng cho MỌI migration tới khi squash/sửa lịch sử prod.
 
+**ĐÃ ÁP DỤNG PROD 2026-06-14 ✓** (owner paste qua SQL Editor + `migration repair
+--status applied 20260614100000`). Verify trên prod: 6 bảng GL + 21 function + 2
+trigger + 7 cột `journal_entry_id` đã drop; 8 RPC rewrite hiện diện; **0 function
+còn tham chiếu GL**; `accounting_periods` + `close_period_*` còn nguyên; migration
+có trong `schema_migrations`. `pnpm db:types` regen (−547 dòng GL, commit
+`dbce1d86`); typecheck/lint/169 tests/build xanh. **D020 hoàn tất.** Backlog ADD
+(tương lai): expense capture + money-settlement reconciliation thật.
+
 ## D021: Chiết khấu theo món đặt ngay trong luồng thêm/gọi-thêm (POS) (2026-06-13)
 
 **Context:** Chiết khấu theo món đã có ở DB (`order_items.discount_*` + trigger
