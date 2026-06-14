@@ -88,6 +88,10 @@ Before marking implementation work complete:
 3. For T2, re-read your own self-review block and confirm the diff matches it.
 4. For T1, state why the debate was skipped in the commit body.
 5. CI (`.github/workflows/ci.yml`) runs typecheck, lint, test, and build on every PR and on push to `main` — a push to a working branch alone triggers nothing. Landed work is complete only with green CI.
+6. Learning-loop hygiene (T2/T3) — one pass before closing, so the loop stays bounded:
+   - A recurring failure surfaced → add a `tasks/regressions.md` rule. If its detection is a deterministic code pattern, add a guard row to `scripts/check-regression-guards.mjs` instead of relying on prose — an enforced rule costs zero context.
+   - The task's worklog has landed → promote any durable rule to its canonical doc (`docs/agent/rules/`, a module/ref doc) and delete the worklog; git history is the archive.
+   - State the learning (or "none") in the commit/PR body.
 
 ## Skip Conditions (T1 only)
 
