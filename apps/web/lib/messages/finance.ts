@@ -5,6 +5,19 @@ export const finance = {
     reissueSuccess: "Đã phát hành lại HĐĐT",
     reissueFailed: "Không thể phát hành lại HĐĐT",
     reissueNoOrder: "Hóa đơn không gắn đơn hàng — không thể phát hành lại",
+    reissueAll: (count: number) => `Phát hành lại tất cả nháp (${count})`,
+    reissueAllTitle: "Phát hành lại tất cả HĐĐT nháp",
+    reissueAllDescription: (count: number) =>
+      `Phát hành lại ${count} hóa đơn đang ở trạng thái nháp (bị nhà cung cấp từ chối). Mỗi đơn gửi lại lên Viettel. Tiếp tục?`,
+    reissueAllConfirm: "Phát hành lại tất cả",
+    reissueAllCancel: "Không",
+    reissueAllResult: (issued: number, failed: number, remaining: number) =>
+      remaining > 0
+        ? `Đã phát hành ${issued}, lỗi ${failed}, còn ${remaining} nháp — bấm lại để tiếp tục.`
+        : failed > 0
+          ? `Đã phát hành ${issued}, còn ${failed} đơn vẫn lỗi.`
+          : `Đã phát hành ${issued} hóa đơn.`,
+    reissueAllError: "Không thể phát hành lại hàng loạt.",
   },
   common: {
     noValue: "—",

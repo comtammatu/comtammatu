@@ -25,7 +25,11 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { formatVND } from "@comtammatu/shared/format";
-import { cancelTaxInvoice, createTaxInvoice } from "./actions";
+import {
+  cancelTaxInvoice,
+  createTaxInvoice,
+  reissueAllDraftInvoices,
+} from "./actions";
 import { forceResyncTaxInvoice } from "./reconcile-invoice-actions";
 import { getArchiveDownloadUrl } from "./archive-actions";
 import { replaceTaxInvoice } from "./replace-invoice-actions";
@@ -70,6 +74,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
   const [isPending, startTransition] = useTransition();
   const [resyncingId, setResyncingId] = useState<number | null>(null);
   const [reissuingId, setReissuingId] = useState<number | null>(null);
+  const [reissueAllOpen, setReissueAllOpen] = useState(false);
   const [replaceTarget, setReplaceTarget] = useState<InvoiceRow | null>(null);
   const [replaceReason, setReplaceReason] = useState("");
   const [replaceAgreementRef, setReplaceAgreementRef] = useState("");
@@ -273,6 +278,37 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
     });
   }
 
+  const draftCount = invoices.filter((inv) => inv.status === "draft").length;
+
+  function handleReissueAll() {
+    startTransition(async () => {
+      try {
+        const result = await reissueAllDraftInvoices();
+        if (!result.success) {
+          toast.error(messages.finance.invoiceList.reissueAllError);
+          return;
+        }
+        const d = result.data as {
+          issued?: number;
+          failed?: number;
+          remaining?: number;
+        } | null;
+        setReissueAllOpen(false);
+        toast.success(
+          messages.finance.invoiceList.reissueAllResult(
+            d?.issued ?? 0,
+            d?.failed ?? 0,
+            d?.remaining ?? 0,
+          ),
+        );
+        // Statuses changed server-side; reload to reflect the fresh list.
+        setTimeout(() => window.location.reload(), 1500);
+      } catch {
+        toast.error(messages.finance.invoiceList.reissueAllError);
+      }
+    });
+  }
+
   function renderActions(inv: InvoiceRow, variant: "card" | "table") {
     const dense = variant === "table";
     const size = dense ? "icon" : "sm";
@@ -439,7 +475,20 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
   return (
     <>
       <div className="space-y-4">
-<DataTable
+        {draftCount > 0 ? (
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReissueAllOpen(true)}
+              disabled={isPending}
+            >
+              <IconRefreshCw className="size-4" />
+              {messages.finance.invoiceList.reissueAll(draftCount)}
+            </Button>
+          </div>
+        ) : null}
+        <DataTable
           columns={columns}
           data={invoices}
           getRowKey={(inv) => inv.id}
@@ -637,6 +686,30 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
               disabled={isPending || !replaceFormValid}
             >
               Tạo HĐ thay thế
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={reissueAllOpen}
+        onOpenChange={(open) => !open && setReissueAllOpen(false)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {messages.finance.invoiceList.reissueAllTitle}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {messages.finance.invoiceList.reissueAllDescription(draftCount)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>
+              {messages.finance.invoiceList.reissueAllCancel}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleReissueAll} disabled={isPending}>
+              {messages.finance.invoiceList.reissueAllConfirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
