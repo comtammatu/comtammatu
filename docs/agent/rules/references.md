@@ -86,6 +86,12 @@ that list.
 - Do not create separate agent-only docs such as `docs/llm-wiki/`; place durable content in the normal source-of-truth docs above.
 - Put incident-specific failure prevention in `tasks/regressions.md`.
 - Put retrospective explanations in `tasks/lessons.md`.
+- One fact lives in exactly one store. `tasks/lessons.md` and
+  `tasks/regressions.md` are staging areas that shrink as rules mature: prefer
+  enforcement over prose — when a rule can be a lint, test, or hook, write the
+  guard and delete the prose (an enforced rule costs zero context; a prose rule
+  is re-read every session). Promote a stable lesson to a canonical doc, then
+  delete it from the staging file.
 - Keep secrets, generated sessions, cache files, and per-user local notes out of
   version-controlled shared rule files.
 - Keep rules concrete and verifiable. Avoid vague guidance such as "write good code" or "be careful".

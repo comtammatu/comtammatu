@@ -1,6 +1,11 @@
 # Regressions — Named Failure Rules
 
-> Loaded at the start of every session. Each line prevents a past mistake from recurring.
+> Consult before risky work — each rule prevents a past mistake from recurring.
+> The file is large: do NOT load it whole. Rule names are domain-prefixed, so
+> grep by domain keyword and read only matching rows — e.g.
+> `grep -niE 'RLS|DEFINER|policy' tasks/regressions.md` for RLS/grants work,
+> `POS|KDS|payment` for POS/KDS, `HDDT|invoice` for e-invoice, `migration|DROP`
+> for schema changes. (No static TOC by design — see retire policy item 4.)
 > Format: `- [DATE] [RULE NAME] — short description`
 >
 > **Retire policy** — keep this file lean:
