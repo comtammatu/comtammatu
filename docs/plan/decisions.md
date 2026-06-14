@@ -259,8 +259,13 @@ ký tự trước "STATUS" nên `STATUS_LABELS` / `STATUS_CONFIG` lọt → xanh
    rõ branch command/setup vào họ Quản trị.
 2. **Một capability = một route home** theo `role-route-matrix.md`. Giải quyết
    trùng: (a) branch-floor settings (tables/pos/kds/printers/pos-sessions) nhà
-   canonical = `/br/[branchId]/settings/*` (matrix:49,80); chuyển
-   `/admin/settings/{tables,pos,kds,printers}` thành redirect shim. (b) Kỳ kế
+   canonical = `/br/[branchId]/settings/*` (matrix:49,80);
+   `/admin/settings/{tables,pos,kds}` thành redirect shim → `/admin/settings/branches`
+   (owner cấu hình theo từng chi nhánh qua link "Thiết lập chi nhánh" mỗi branch).
+   `/admin/settings/printers` KHÔNG redirect thuần được (là cha của tenant-infra
+   `printers/templates` owner-only + `printers/jobs`) → thành hub tenant "Máy in":
+   bỏ config cross-branch (canonical = branch), tile → templates/jobs + cấu hình
+   theo CN. (b) Kỳ kế
    toán canonical = `/admin/accounting/periods` (direct-support, ngoài nav —
    theo D013); `/finance/periods` giải quyết (redirect/gộp) SAU KHI xác minh
    `accounting_periods` vs `fiscal_periods` không phải hai concept khác nhau.

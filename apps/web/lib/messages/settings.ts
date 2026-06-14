@@ -49,6 +49,9 @@ export const settings = {
     printTemplatesEntry: "Mẫu phiếu",
     printJobsTitle: "Giám sát in",
     printJobsDescription: "Trạng thái hàng đợi in và máy in đang kết nối",
+    printHubDescription:
+      "Mẫu phiếu, giám sát job in, và cấu hình máy in theo từng chi nhánh.",
+    printBranchConfigTitle: "Cấu hình theo chi nhánh",
     tablesTitle: "Sơ đồ bàn",
     tablesDescription: "Quản lý sơ đồ bàn ăn theo chi nhánh",
   },

@@ -2,12 +2,14 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing settings branch table keeps Vietnamese operational copy inline */
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
   Building as IconBuilding,
   Ellipsis as IconDots,
   Pencil as IconPencil,
   Shield as IconShield,
+  SlidersHorizontal as IconSliders,
   ToggleLeft as IconToggleLeft,
   ToggleRight as IconToggleRight,
 } from "lucide-react";
@@ -36,6 +38,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
 export interface BranchRow {
   id: number;
   name: string;
@@ -125,6 +128,17 @@ export function BranchTable({ branches }: BranchTableProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {branch.is_active !== false && (
+                        <>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/br/${branch.id}/settings`}>
+                              <IconSliders className="mr-2 size-4" />
+                              {messages.settings.branch.hubTitle}
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
                       <DropdownMenuItem onClick={() => setEditBranch(branch)}>
                         <IconPencil className="mr-2 size-4" />
                         Chỉnh sửa

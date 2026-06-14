@@ -39,21 +39,6 @@ const TABS: Tab[] = [
     allowedRoles: TENANT_STRATEGY_ROLES,
   },
   {
-    href: "/admin/settings/tables",
-    label: copy.tables,
-    allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
-  },
-  {
-    href: "/admin/settings/pos",
-    label: copy.pos,
-    allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
-  },
-  {
-    href: "/admin/settings/kds",
-    label: copy.kds,
-    allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
-  },
-  {
     href: "/admin/settings/printers",
     label: copy.printers,
     allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
