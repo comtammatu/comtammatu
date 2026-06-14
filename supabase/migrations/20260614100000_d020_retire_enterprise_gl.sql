@@ -12,7 +12,7 @@
 --
 -- Owner-applies to prod (no dev/test target). After applying, run
 -- `pnpm db:types` to regenerate database.types.ts, then typecheck/lint/build.
--- See docs/plan/decisions.md D020 and docs/worklog/d020-retire-enterprise-gl-draft.md.
+-- See docs/plan/decisions.md D020.
 
 BEGIN;
 

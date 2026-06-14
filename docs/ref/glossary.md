@@ -86,6 +86,19 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 - Khi sửa docs hoặc status artifact, ưu tiên một cách gọi tiếng Việt xuyên suốt trong cùng tài liệu.
 - Khi một cụm thuộc denylist xuất hiện lại trong PR, phải sửa về nhãn chuẩn ngay trong cùng PR đó.
 
+## Copy source ladder
+
+Mỗi loại copy có đúng một nguồn sở hữu. Khi thêm/sửa copy, cập nhật nguồn đúng (trước hoặc trong cùng PR), rồi chạy `pnpm lint:copy`:
+
+- Nghĩa business + quy tắc đặt tên → `docs/ref/glossary.md` (file này).
+- Nhãn tiếng Việt domain dùng chung → `packages/shared/src/labels/vi.ts`.
+- Action/state/error chung → `@comtammatu/shared/messages` hoặc `apps/web/lib/messages/*`.
+- Chuỗi cố định theo luật → `packages/shared/src/labels/legal-fixed.ts`.
+- Adapter route/thuật ngữ Inventory → `apps/web/app/(protected)/inventory/_lib/dictionary.ts`.
+- Adapter route-specific khác → dictionary domain tương ứng.
+
+`tasks/regressions.md` §TERMINOLOGY-SOURCE-OF-TRUTH trỏ về mục này; đừng nhân bản ladder ở nơi khác.
+
 ## Canonical terms
 
 ### Tổ chức và địa điểm vận hành
