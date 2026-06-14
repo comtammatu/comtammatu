@@ -73,13 +73,6 @@ function mapRefundRpcError(message: string): string {
   if (normalized.includes("not found")) {
     return "Không tìm thấy yêu cầu hoặc thanh toán";
   }
-  if (
-    normalized.includes("chart_of_accounts") ||
-    normalized.includes("posting") ||
-    normalized.includes("journal")
-  ) {
-    return "Chưa thể xử lý do cấu hình kế toán chưa sẵn sàng";
-  }
   if (normalized.includes("restore_stock_for_order")) {
     return "Không thể khôi phục tồn kho khi hoàn tiền";
   }
