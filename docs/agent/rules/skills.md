@@ -64,14 +64,14 @@ equivalent, or `find-skills` if the owner asked for new tooling.
 
 | Task signal                                                                       | Required repo rules/docs                                                                         | Required skills/plugins when available                                                                                                                            | Required verification                                                                                                                |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Broad repo audit, onboarding, "read all source", architecture orientation         | `engineering.md`, `references.md`, `docs/CODEBASE_MAP.md`                                        | a repo-understanding/codebase-graph skill when installed; `health` or `review` only when the user asks for audit/review | Summarize evidence paths; do not claim runtime state without smoke evidence                                                          |
+| Broad repo audit, onboarding, "read all source", architecture orientation         | `engineering.md`, `references.md`, `docs/CODEBASE_MAP.md`                                        | if `.codegraph/` exists, `codegraph_explore` first (both runtimes — verbatim source + blast radius in one call; treat its output as already Read), else a read-only Explore/search subagent (see Subagents, Debate, And Read Delegation); `understand-anything` plugin optional; `health`/`review` for audit and `cso` for a security/threat-model audit only when the user asks | Summarize evidence paths; do not claim runtime state without smoke evidence                                                          |
 | Code review, PR review, regression hunt                                           | `engineering.md`, `workflow.md`, relevant module docs, `tasks/regressions.md`                    | `review`; an external second-opinion reviewer (e.g. `codex`) only when requested; a diff-understanding skill for large diffs when installed                                                     | Findings first with file/line refs; run targeted checks when feasible                                                                |
 | Next.js App Router, RSC, Server Actions, routing, proxy                           | `engineering.md`, `database.md` if data/auth touched, relevant module doc                        | `vercel:nextjs`, `vercel:react-best-practices` when available                                                                              | `pnpm typecheck && pnpm lint && pnpm build` for implementation                                                                       |
 | React component performance or bundle risk                                        | `engineering.md`, `ui.md` if UI changes                                                          | `vercel:react-best-practices` or the closest installed React best-practices skill                                                                                              | Typecheck/lint/build; inspect imports for barrel/client boundary drift                                                               |
 | UI, UX, route surface, copy, shadcn component, forms, operational POS/KDS UI      | `ui.md`, `docs/spec/design-system.md`, `docs/modules/ui.md`, `tasks/regressions.md`, domain docs | a shadcn skill (e.g. `vercel:shadcn`); a design-polish skill (e.g. `impeccable-design-polish`) only for explicit design/audit/polish work after project UI authority is loaded                                   | Browser/runtime smoke for meaningful UI; no fake primitives or design-system drift                                                   |
 | Landing, marketing, portfolio, or visual concept outside operational ERP surfaces | `ui.md`, `docs/spec/design-system.md` if it touches web runtime                                  | an anti-slop/brand design skill (e.g. `taste-skill`) only when the surface is actually brand/marketing/prototype work                             | Visual/browser verification; do not override the Custom Theme for app surfaces                                                       |
 | Supabase queries, migrations, RLS, grants, auth, storage, generated types, RPCs   | `database.md`, `workflow.md`, `tasks/regressions.md`, `docs/spec/database-schema.md`             | `supabase`, `supabase-postgres-best-practices`; use Supabase MCP/CLI only after target env is verified                                                            | T3 if schema/RLS/money/security-definer/data backfill; migration file before apply; `pnpm db:types` after applied type-source schema |
-| Money, payments, refunds, HĐĐT, journal, payroll/tax                              | `database.md`, `workflow.md`, `docs/ref/legal-framework-2026.md`, finance/legal docs, relevant runbooks | `supabase`, `supabase-postgres-best-practices`; product/QA perspectives required by T3                                                                            | Full T3 debate; targeted domain tests plus full gates                                                                                |
+| Money, payments, refunds, HĐĐT, journal, payroll/tax                              | `database.md`, `workflow.md`, `docs/ref/legal-framework-2026.md`, finance/legal docs, relevant runbooks | `tax-vn` (repo skill: routes the legal/tax/HĐĐT/payroll docs and names the real compute functions); `supabase`, `supabase-postgres-best-practices`; product/QA perspectives required by T3                                                                            | Full T3 debate; targeted domain tests plus full gates                                                                                |
 | Browser QA, route smoke, responsive/layout evidence                               | `workflow.md`, relevant UI/module docs                                                           | `playwright` for repeatable browser interaction; `browse`, `qa`, or `qa-only` for broader QA                         | Capture URL, viewport, route, and observed state; separate auth/env blockers from code regressions                                   |
 | Deployment, Vercel, CI, GitHub PR, release/canary                                 | `engineering.md`, `workflow.md`, deployment/runbook docs                                         | `gh` CLI / GitHub tools, `vercel:*`, `ship`, `land-and-deploy`, `canary` only when owner asks to publish/land/deploy                                                           | Do not mutate production without owner-approved flow; cite CI/deploy evidence                                                        |
 | Documentation, runbooks, lessons, task tracker                                    | `references.md`, relevant module/spec/runbook                                                    | Usually no external skill. Use a docx skill (e.g. `anthropic-skills:docx`) only for Word artifacts; use `make-pdf` only when asked for PDF                                            | Check links/anchors and keep docs in the correct SSOT location                                                                       |
@@ -104,6 +104,11 @@ equivalent, or `find-skills` if the owner asked for new tooling.
 - Má Tư is a Hộ kinh doanh: no formal BCTC/VAS. Treat enterprise-accounting
   guidance as an advanced layer reachable by direct permission, not the default
   surface (D012/D013).
+- Execution entry point: the `tax-vn` repo skill (`.claude/skills/tax-vn/`)
+  routes these docs in order and names the real compute functions in
+  `packages/shared/src/payroll/` and the HĐĐT helpers. It restates no rule and
+  no number — authority stays in the docs above. (Claude runtime; Codex follows
+  the same doc order directly.)
 
 ### Shadcn And UI Design
 
@@ -127,14 +132,27 @@ equivalent, or `find-skills` if the owner asked for new tooling.
   screenshots, responsive checks, form flows, or route matrices.
 - After significant frontend changes, collect runtime evidence when a dev server
   is available. If auth/env blocks the smoke, report that blocker separately.
+- `browse` / `open-gstack-browser` run a standalone Chromium daemon that
+  persists across commands. Point it only at a safe local dev target — never at
+  a dev server whose `.env.local` resolves to a production database or live
+  S-invoice credentials. Stop the daemon when done.
 
-### Repo Understanding And Graph Skills
+### Repo Understanding, Search, And Context Economy
 
-- Use a repo-understanding/graph skill (e.g. `understand-anything:*` when
-  installed) for broad repo orientation, graph-backed analysis, large refactors,
-  domain extraction, onboarding, and large diff explanation.
-- Do not use graph artifacts as a substitute for reading current source files
-  before editing. Treat graphs as navigation aids.
+- For broad repo orientation, "where/how/which" questions, naming-convention
+  sweeps, large-refactor mapping, domain extraction, onboarding, and large diff
+  explanation: if `.codegraph/` exists, call `codegraph_explore` first. One
+  capped call returns verbatim, line-numbered source grouped by file plus the
+  blast radius (callers/dependents) — cheaper and more accurate than a Read/grep
+  loop or a search subagent, and it serves both the Claude and Codex runtimes.
+  Run `codegraph init` if the index is missing. With no index, delegate to a
+  read-only Explore/search subagent (see Subagents, Debate, And Read Delegation)
+  rather than reading many files on the main thread.
+- Treat `codegraph_explore` / `codegraph_node` source output as already Read —
+  do not re-open those files. `understand-anything` is an optional alternative;
+  its output dir is gitignored (`.understand-anything/`, alongside `.codegraph/`).
+  A graph is a navigation aid, never a substitute for reading the current source
+  of the specific symbol you are about to edit.
 
 ### GStack Workflow Skills
 
@@ -145,6 +163,19 @@ equivalent, or `find-skills` if the owner asked for new tooling.
   when the user explicitly asks to ship, land, deploy, or monitor.
 - Use `context-save` / `context-restore` only for continuity work, not as product
   documentation.
+- Use `cso` for a security audit / threat model (OWASP, STRIDE, secrets,
+  dependency and skill supply-chain). It fits this repo's `packages/security`
+  and prod-guard posture; route here for "security review", not a generic
+  `review`.
+- Use `careful` / `guard` / `freeze` for destructive or prod-adjacent work
+  (migrations, data backfill, anything touching the production DB) — they warn
+  before `DROP`/`rm -rf`/force-push and can scope edits to one directory. They
+  complement, never replace, the migration policy in `database.md`.
+- `learn`, `retro`, and `setup-deploy` keep their own gstack-side stores. Do not
+  let them fork a parallel learning or config source: this repo's SSoT stays
+  `tasks/lessons.md`, `tasks/regressions.md`, `docs/worklog/`, and `AGENTS.md`
+  (see Anti-Patterns). `setup-deploy` must not rewrite `CLAUDE.md` (a stable
+  pointer to `AGENTS.md`).
 
 ### GitHub, Vercel, And CI
 
@@ -155,8 +186,18 @@ equivalent, or `find-skills` if the owner asked for new tooling.
 - Do not use Chrome or Computer Use as the first option for GitHub/Vercel if a
   dedicated connector, CLI, or API path is available.
 
-## Subagents And Debate
+## Subagents, Debate, And Read Delegation
 
+- Read delegation (context economy): before reading more than roughly three
+  files to answer a question, or to do any broad orientation/search, delegate to
+  a read-only Explore/search subagent and consume only its conclusion. The main
+  context window is the scarce resource; burning it on line-by-line reading a
+  subagent could absorb is the default failure mode to avoid. This applies at
+  every risk tier — it governs reads, not writes. Reserve main-thread reading
+  for files you will edit or must quote/match verbatim (e.g. before an `Edit`).
+  When `.codegraph/` exists, prefer `codegraph_explore` even over spawning a
+  search subagent — it is the pre-built index, so a subagent search just repeats
+  work it already did (see Repo Understanding, Search, And Context Economy).
 - T3 tasks must follow `workflow.md`: four perspectives before implementation.
 - T2 tasks use the self-review block. Include the skill plan above it or inside
   it.

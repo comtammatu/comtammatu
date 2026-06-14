@@ -91,9 +91,8 @@ pos-after*.png
 .gstack/
 .omc/
 .understand-anything/
+.codegraph/
 
-# context-graph (large JSON, regenerate with: context-graph analyze .)
-.context-graph/graph.json
 .vercel
 
 # Supabase live baseline snapshots (local, regenerable via supabase db dump)
