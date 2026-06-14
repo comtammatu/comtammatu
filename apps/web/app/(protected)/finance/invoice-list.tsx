@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import {
+  ArrowRightLeft as IconSwap,
   Download as IconDownload,
   FileEdit as IconFileEdit,
   FileX as IconFileX,
@@ -26,6 +27,8 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { formatVND } from "@comtammatu/shared/format";
+import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
+import type { PaymentMethod } from "@comtammatu/shared/providers";
 import {
   cancelTaxInvoice,
   createTaxInvoice,
@@ -35,6 +38,7 @@ import { forceResyncTaxInvoice } from "./reconcile-invoice-actions";
 import { getArchiveDownloadUrl } from "./archive-actions";
 import { replaceTaxInvoice } from "./replace-invoice-actions";
 import { refundOrderPayment } from "./refund-actions";
+import { correctPaymentMethod } from "./payment-method-actions";
 import type { InvoiceRow } from "./_lib/finance-types";
 import {
   DataTable,
@@ -62,6 +66,7 @@ const CANCEL_REASON_MIN = 20;
 const CANCEL_REASON_MAX = 500;
 const REFUND_REASON_MIN = 5;
 const REFUND_REASON_MAX = 500;
+const METHOD_OPTIONS: PaymentMethod[] = ["cash", "vietqr", "momo"];
 const REPLACE_REASON_MIN = 20;
 const REPLACE_REASON_MAX = 255;
 const REPLACE_AGREEMENT_MAX = 225;
@@ -77,6 +82,13 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
   const [cancelReason, setCancelReason] = useState("");
   const [refundTarget, setRefundTarget] = useState<InvoiceRow | null>(null);
   const [refundReason, setRefundReason] = useState("");
+  const [methodFixTarget, setMethodFixTarget] = useState<InvoiceRow | null>(
+    null,
+  );
+  const [methodFixMethod, setMethodFixMethod] = useState<PaymentMethod | null>(
+    null,
+  );
+  const [methodFixReason, setMethodFixReason] = useState("");
   const [isPending, startTransition] = useTransition();
   const [resyncingId, setResyncingId] = useState<number | null>(null);
   const [reissuingId, setReissuingId] = useState<number | null>(null);
@@ -222,6 +234,43 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
       }
       toast.success(messages.finance.invoiceList.refundSuccess);
       resetRefundDialog();
+    });
+  }
+
+  const trimmedMethodFixReason = methodFixReason.trim();
+  const methodFixValid =
+    methodFixMethod !== null &&
+    trimmedMethodFixReason.length >= REFUND_REASON_MIN &&
+    trimmedMethodFixReason.length <= REFUND_REASON_MAX;
+
+  function resetMethodFixDialog() {
+    setMethodFixTarget(null);
+    setMethodFixMethod(null);
+    setMethodFixReason("");
+  }
+
+  function handleMethodFix() {
+    if (!methodFixTarget || !methodFixMethod || !methodFixValid) return;
+    const orderId = methodFixTarget.order_id;
+    if (!orderId) {
+      toast.error(messages.finance.invoiceList.methodFixFailed);
+      return;
+    }
+    const newMethod = methodFixMethod;
+    startTransition(async () => {
+      const result = await correctPaymentMethod({
+        orderId,
+        newMethod,
+        reason: trimmedMethodFixReason,
+      });
+      if (!result.success) {
+        toast.error(
+          result.error ?? messages.finance.invoiceList.methodFixFailed,
+        );
+        return;
+      }
+      toast.success(messages.finance.invoiceList.methodFixSuccess);
+      resetMethodFixDialog();
     });
   }
 
@@ -443,6 +492,21 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
                 </span>
               ) : (
                 messages.finance.invoiceList.refund
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size={size}
+              onClick={() => setMethodFixTarget(inv)}
+              title={messages.finance.invoiceList.methodFixDialogTitle}
+            >
+              <IconSwap className="size-4" />
+              {dense ? (
+                <span className="sr-only">
+                  {messages.finance.invoiceList.methodFix}
+                </span>
+              ) : (
+                messages.finance.invoiceList.methodFix
               )}
             </Button>
             <Button
@@ -675,6 +739,73 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {messages.finance.invoiceList.refundConfirm}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!methodFixTarget}
+        onOpenChange={(open) => !open && resetMethodFixDialog()}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {messages.finance.invoiceList.methodFixDialogTitle}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {messages.finance.invoiceList.methodFixWarning}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-3">
+            <div className="grid gap-2">
+              <Label>{messages.finance.invoiceList.methodFixNewLabel}</Label>
+              <div className="flex gap-2">
+                {METHOD_OPTIONS.map((m) => (
+                  <Button
+                    key={m}
+                    type="button"
+                    variant={methodFixMethod === m ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setMethodFixMethod(m)}
+                    disabled={isPending}
+                  >
+                    {PAYMENT_METHOD_LABELS_VI[m]}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="invoice-methodfix-reason">
+                {messages.finance.invoiceList.methodFixReasonLabel(
+                  REFUND_REASON_MIN,
+                )}
+              </Label>
+              <Textarea
+                id="invoice-methodfix-reason"
+                value={methodFixReason}
+                onChange={(e) => setMethodFixReason(e.target.value)}
+                placeholder={
+                  messages.finance.invoiceList.methodFixReasonPlaceholder
+                }
+                rows={3}
+                maxLength={REFUND_REASON_MAX}
+                disabled={isPending}
+              />
+              <p className="text-xs text-muted-foreground">
+                {trimmedMethodFixReason.length}/{REFUND_REASON_MAX}
+              </p>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>
+              {messages.finance.invoiceList.methodFixCancel}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleMethodFix}
+              disabled={isPending || !methodFixValid}
+            >
+              {messages.finance.invoiceList.methodFixConfirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -31,6 +31,18 @@ export const finance = {
     refundCancel: "Không",
     refundSuccess: "Đã hoàn tiền / đảo thanh toán",
     refundFailed: "Không thể hoàn tiền",
+    methodFix: "Sửa phương thức",
+    methodFixDialogTitle: "Sửa phương thức thanh toán",
+    methodFixWarning:
+      "Chỉ sửa bản ghi nội bộ (báo cáo doanh thu theo phương thức). Không ảnh hưởng HĐĐT đã phát hành.",
+    methodFixNewLabel: "Phương thức đúng",
+    methodFixReasonLabel: (min: number) => `Lý do sửa (tối thiểu ${min} ký tự)`,
+    methodFixReasonPlaceholder:
+      "Ví dụ: Khách chuyển khoản nhưng thu ngân bấm tiền mặt.",
+    methodFixConfirm: "Lưu",
+    methodFixCancel: "Không",
+    methodFixSuccess: "Đã sửa phương thức thanh toán",
+    methodFixFailed: "Không thể sửa phương thức",
   },
   common: {
     noValue: "—",

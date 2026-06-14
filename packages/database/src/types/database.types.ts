@@ -8057,6 +8057,10 @@ export type Database = {
         Args: { p_actor_id?: string; p_order_id: number }
         Returns: Json
       }
+      correct_payment_method: {
+        Args: { p_new_method: string; p_payment_id: number; p_reason: string }
+        Returns: Json
+      }
       count_unread_notifications: { Args: never; Returns: number }
       create_grn_from_po: { Args: { p_po_id: number }; Returns: Json }
       create_order: {
