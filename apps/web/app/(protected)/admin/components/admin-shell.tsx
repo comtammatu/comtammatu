@@ -3,27 +3,8 @@
 import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ChartBar as IconChartBar,
-  Briefcase as IconBriefcase,
-  ChefHat as IconChefHat,
-  LayoutDashboard as IconLayoutDashboard,
-  MessageSquare as IconMessageSquare,
-  Monitor as IconDeviceDesktop,
-  Package as IconPackage,
-  Receipt as IconReceipt,
-  Settings as IconSettings,
-  ShieldCheck as IconShieldCheck,
-  Users as IconUsers,
-  Utensils as IconToolsKitchen,
-  Wallet as IconWallet,
-} from "lucide-react";
-import {
-  canAccess,
-  resolveAdminNavGroups,
-  type ResolvedNavGroup as SharedResolvedNavGroup,
-  type StaffRole,
-} from "@comtammatu/shared/auth";
+import { ShieldCheck as IconShieldCheck } from "lucide-react";
+import { canAccess, type StaffRole } from "@comtammatu/shared/auth";
 import { APP_COPY_VI, MODULE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppShell } from "@/components/app-shell";
@@ -32,36 +13,7 @@ import {
   formatPathSegment,
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
-
-const ADMIN_ICON_MAP: Record<string, React.ElementType> = {
-  LayoutDashboard: IconLayoutDashboard,
-  BarChart3: IconChartBar,
-  Users: IconUsers,
-  Wallet: IconWallet,
-  Package: IconPackage,
-  Briefcase: IconBriefcase,
-  Monitor: IconDeviceDesktop,
-  Settings: IconSettings,
-  ChefHat: IconChefHat,
-  Receipt: IconReceipt,
-  ToolsKitchen: IconToolsKitchen,
-  ShieldCheck: IconShieldCheck,
-  MessageSquare: IconMessageSquare,
-};
-
-function mapResolvedNavGroups(
-  groups: SharedResolvedNavGroup[],
-): ShellNavGroup[] {
-  return groups.map((group) => ({
-    title: group.title,
-    items: group.items.map((item) => ({
-      href: item.href,
-      label: item.label,
-      icon: (ADMIN_ICON_MAP[item.icon] ??
-        IconLayoutDashboard) as typeof IconLayoutDashboard,
-    })),
-  }));
-}
+import { resolveOfficeNavGroups } from "@/lib/office-nav";
 
 function buildBreadcrumbTrail(
   pathname: string,
@@ -95,10 +47,7 @@ export function AdminShell({
 }) {
   const pathname = usePathname();
 
-  const navGroups = useMemo(
-    () => mapResolvedNavGroups(resolveAdminNavGroups(role)),
-    [role],
-  );
+  const navGroups = useMemo(() => resolveOfficeNavGroups(role), [role]);
   const breadcrumbSegments = useMemo(
     () => buildBreadcrumbTrail(pathname, navGroups).slice(0, -1),
     [navGroups, pathname],

@@ -322,13 +322,7 @@ const checks = [
       "Navigation is data: ShellNavGroup[] literals inside a shell are frozen; new inline nav must project from nav-config.ts through a shared resolver (design-system.md § D / D019).",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern: /ShellNavGroup\[\]\s*=\s*\[/g,
-    allowlist: {
-      "apps/web/app/(protected)/finance/components/finance-shell.tsx": 1,
-      "apps/web/app/(protected)/hr/components/hr-shell.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/inventory-shell.tsx": 1,
-      "apps/web/app/(protected)/menu/components/menu-shell.tsx": 1,
-      "apps/web/app/(protected)/orders/components/orders-shell.tsx": 1,
-    },
+    allowlist: {},
   },
 ];
 
@@ -338,13 +332,11 @@ const checks = [
 // the two chrome families.
 const SHELL_REGISTRY_BASELINE = new Set([
   "apps/web/app/components/app-shell.tsx",
+  "apps/web/app/components/office-module-shell.tsx",
   "apps/web/app/(protected)/admin/components/admin-shell.tsx",
   "apps/web/app/(protected)/admin/settings/settings-page-shell.tsx",
   "apps/web/app/(protected)/finance/components/finance-shell.tsx",
-  "apps/web/app/(protected)/hr/components/hr-shell.tsx",
   "apps/web/app/(protected)/inventory/_components/inventory-shell.tsx",
-  "apps/web/app/(protected)/menu/components/menu-shell.tsx",
-  "apps/web/app/(protected)/orders/components/orders-shell.tsx",
   "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx",
   "apps/web/app/(protected)/br/[branchId]/pos/pos-status-shell.tsx",
 ]);

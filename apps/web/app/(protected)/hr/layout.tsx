@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 import { loadAuthState } from "@/_lib/auth";
-import { HRShell } from "./components/hr-shell";
+import { OfficeModuleShell } from "@/components/office-module-shell";
 
 export default async function HRLayout({ children }: { children: ReactNode }) {
   const { session, claims } = await loadAuthState();
 
   return (
-    <HRShell
+    <OfficeModuleShell
+      module="hr"
       user={{
         name:
           session.user.user_metadata?.["display_name"] ??
@@ -17,6 +18,6 @@ export default async function HRLayout({ children }: { children: ReactNode }) {
       branchId={claims.branch_id}
     >
       {children}
-    </HRShell>
+    </OfficeModuleShell>
   );
 }

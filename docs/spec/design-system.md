@@ -598,11 +598,15 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
 
 ### D. Navigation Single-Source
 
-- Navigation is data, not per-shell code. Every Management sidebar group and
-  every bottom-nav item set MUST be projected from
-  `packages/shared/src/auth/nav-config.ts` through a shared resolver, the way
-  `admin-shell` already calls `resolveAdminNavGroups`. Inline `ShellNavGroup[]`
-  literals inside a shell are forbidden.
+- Navigation is data, not per-shell code. Every Management route renders the
+  same role/scope-filtered office nav from `resolveOfficeNavGroups`
+  (`apps/web/app/lib/office-nav.ts`, projected from
+  `packages/shared/src/auth/nav-config.ts` via the shared `resolveAdminNavGroups`
+  / `resolveWorkspaceItems` resolvers). Modules with deeper nav append a
+  module-local resolver under the same contract (`finance/components/finance-nav.ts`,
+  `inventory/_lib/inventory-nav.ts`); trivial modules (hr/menu/orders) mount the
+  generic `OfficeModuleShell`. Inline `ShellNavGroup[]` literals inside a shell
+  are forbidden (gate `nav-shell-inline-literal`, baseline 0).
 - Desktop sidebar and mobile bottom-nav render from the same resolved model for
   a role; they may differ in density and item count, never in membership source.
 - Active-state matching uses the single `isNavItemActive` helper

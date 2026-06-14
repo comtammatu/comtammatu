@@ -2,49 +2,17 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import {
-  BarChart3 as IconBarChart3,
-  Boxes as IconBoxes,
-  TrendingUp as IconTrendingUp,
-  Wallet as IconWallet,
-} from "lucide-react";
+import { Wallet as IconWallet } from "lucide-react";
 import type { ReactNode } from "react";
 import { resolveRoleHomeLink, type StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppShell } from "@/components/app-shell";
 import { messages } from "@lib/messages";
-import type { ShellNavGroup } from "@/lib/shell-primitives";
+import { resolveOfficeNavGroups } from "@/lib/office-nav";
+import { resolveFinanceNav } from "./finance-nav";
 import { useFinanceRealtimeRefresh } from "../use-finance-realtime-refresh";
 
 const financeCopy = messages.finance;
-
-const NAV_GROUPS: ShellNavGroup[] = [
-  {
-    title: financeCopy.nav.groups.basic,
-    items: [
-      {
-        href: "/finance",
-        label: financeCopy.nav.items.todayMoney,
-        icon: IconWallet,
-      },
-      {
-        href: "/finance/revenue",
-        label: financeCopy.nav.items.revenue,
-        icon: IconBarChart3,
-      },
-      {
-        href: "/admin/reports/inventory-value",
-        label: financeCopy.nav.items.inventoryValue,
-        icon: IconBoxes,
-      },
-      {
-        href: "/finance/food-cost",
-        label: financeCopy.nav.items.grossProfit,
-        icon: IconTrendingUp,
-      },
-    ],
-  },
-];
 
 export interface FinanceShellProps {
   children: ReactNode;
@@ -82,7 +50,7 @@ export function FinanceShell({
         subLabel: financeCopy.shell.subLabel,
         mainLabel: financeCopy.shell.mainLabel,
       }}
-      navGroups={NAV_GROUPS}
+      navGroups={[...resolveOfficeNavGroups(role), ...resolveFinanceNav()]}
       defaultPageTitle={financeCopy.shell.defaultPageTitle}
       pageHeader={{
         crumbLabel: financeCopy.shell.crumbLabel,

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { loadAuthState } from "@/_lib/auth";
-import { OrdersShell } from "./components/orders-shell";
+import { OfficeModuleShell } from "@/components/office-module-shell";
 
 export default async function OrdersLayout({
   children,
@@ -10,7 +10,8 @@ export default async function OrdersLayout({
   const { session, claims } = await loadAuthState();
 
   return (
-    <OrdersShell
+    <OfficeModuleShell
+      module="orders"
       user={{
         name:
           session.user.user_metadata?.["display_name"] ??
@@ -21,6 +22,6 @@ export default async function OrdersLayout({
       branchId={claims.branch_id}
     >
       {children}
-    </OrdersShell>
+    </OfficeModuleShell>
   );
 }
