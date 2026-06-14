@@ -371,6 +371,21 @@ gỡ thẻ reconciliation/period-health khỏi `/finance/revenue`. "Đối soát
 thật (settle MoMo/VietQR vs payment đã ghi) KHÔNG tồn tại trong hệ → backlog ADD
 cùng expense capture. Owner duyệt mở rộng phạm vi (phương án gỡ trọn) 2026-06-13.
 
+**Thực thi 2b (2026-06-14):** Migration đã viết —
+`supabase/migrations/20260614100000_d020_retire_enterprise_gl.sql` (1 transaction:
+8 RPC rewrite + reshape `get_finance_dashboard_summary` → drop 22 fn / 2 trigger /
+6 bảng GL / 7 cột `journal_entry_id`). **Branch-validation bất khả thi**: Supabase
+branch replay lịch sử migration prod (458 entry) fail ở `20260425140000` — lỗi infra
+có sẵn, không liên quan GL (branch không tái tạo được prod). Thay bằng
+**diff-validation**: cả 8 RPC rewrite đối chiếu định nghĩa SỐNG của prod
+(`pg_get_functiondef`) — chỉ gỡ leg GL, mọi logic non-GL giữ nguyên byte (4 RPC
+tiền: byte-verified; 4 RPC mua-hàng: verified); drop manifest introspect từ prod;
+Layer-1 marker scan sạch. Companion code đã ship: `fcf8ad93` (bỏ journal counts +
+`fetchReconciliationByDay`) + gỡ nhánh lỗi GL chết trong `refund-actions.ts`. CÒN
+LẠI: owner apply file lên prod (file → PR → owner) + `pnpm db:types` regen. **Flag
+riêng (ngoài GL):** ledger prod = 458 entry, KHÔNG khớp baseline-first 49 file →
+branch-testing hỏng cho MỌI migration tới khi squash/sửa lịch sử prod.
+
 ## D021: Chiết khấu theo món đặt ngay trong luồng thêm/gọi-thêm (POS) (2026-06-13)
 
 **Context:** Chiết khấu theo món đã có ở DB (`order_items.discount_*` + trigger
