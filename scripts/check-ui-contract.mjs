@@ -158,19 +158,38 @@ const checks = [
   {
     id: "status-label-ssot",
     description:
-      "Status label/variant maps are single-sourced in @comtammatu/shared labels + apps/web/app/components/status-badge.tsx; page-local STATUS_* maps must not spread.",
+      "Status label/variant maps are single-sourced in @comtammatu/shared labels + apps/web/app/components/status-badge.tsx; page-local STATUS* maps (including names that start with STATUS) must not spread.",
     roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
     pattern:
-      /\bconst\s+[A-Z][A-Z0-9_]*STATUS[A-Z0-9_]*(?:\s*:\s*[^=\n]+)?\s*=\s*[{[]/g,
+      /\bconst\s+[A-Z0-9_]*STATUS[A-Z0-9_]*(?:\s*:\s*[^=\n]+)?\s*=\s*[{[]/g,
     allowlist: {
+      // SSoT registry + exceptions documented in design-system.md
+      // "Status vocabulary": status-badge.tsx is the registry itself;
+      // kds/lib/status-config.ts is the hot path; inventory/_lib/ui.ts is the
+      // per-entity re-model deferred to a later wave.
+      "apps/web/app/components/status-badge.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/lib/status-config.ts": 1,
+      "apps/web/app/(protected)/inventory/_lib/ui.ts": 1,
+      // Page-local STATUS* maps frozen at baseline (W1 status-registry
+      // burn-down); the un-blinded regex now also blocks new STATUS-first names.
+      "apps/web/app/(protected)/admin/settings/printers/jobs/page.tsx": 1,
       "apps/web/app/(protected)/admin/settings/tables/constants.ts": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/actions.ts": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/hooks/use-kds-realtime.ts": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-actions-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/order-history.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 2,
+      "apps/web/app/(protected)/employee/leave/leave-client.tsx": 1,
       "apps/web/app/(protected)/employee/payslip/payslip-client.tsx": 1,
       "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 2,
+      "apps/web/app/(protected)/finance/summary/summary-client.tsx": 1,
+      "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
+      "apps/web/app/(protected)/hr/leave-requests-table.tsx": 1,
+      "apps/web/app/(protected)/inventory/issues/issues-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx": 1,
       "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 2,
     },
   },
@@ -268,7 +287,67 @@ const checks = [
       "apps/web/app/components/data-table/data-table.tsx": 2,
     },
   },
+  {
+    id: "shell-registry-sidebar-provider",
+    description:
+      "SidebarProvider (Management chrome) is owned only by app-shell.tsx; a new bespoke sidebar mount is drift (design-system.md § B / D019).",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern: /<SidebarProvider\b/g,
+    allowlist: {
+      "apps/web/app/components/app-shell.tsx": 1,
+    },
+  },
+  {
+    id: "shell-registry-bespoke-main",
+    description:
+      "Page-owned <main> chrome is frozen to the current shell/layout/frame set; a new bespoke <main> outside the allowlist fails CI (design-system.md § B / D019).",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern: /<main\b/g,
+    allowlist: {
+      "apps/web/app/components/app-shell.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/layout.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/layout.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/runner/layout.tsx": 1,
+      "apps/web/app/(protected)/employee/layout.tsx": 1,
+      "apps/web/app/(public)/(auth)/login/page.tsx": 1,
+      "apps/web/app/(public)/access-denied/layout.tsx": 1,
+      "apps/web/app/(public)/payment/momo/return/page.tsx": 1,
+      "apps/web/app/error.tsx": 1,
+      "apps/web/app/not-found.tsx": 1,
+    },
+  },
+  {
+    id: "nav-shell-inline-literal",
+    description:
+      "Navigation is data: ShellNavGroup[] literals inside a shell are frozen; new inline nav must project from nav-config.ts through a shared resolver (design-system.md § D / D019).",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern: /ShellNavGroup\[\]\s*=\s*\[/g,
+    allowlist: {
+      "apps/web/app/(protected)/finance/components/finance-shell.tsx": 1,
+      "apps/web/app/(protected)/hr/components/hr-shell.tsx": 1,
+      "apps/web/app/(protected)/inventory/_components/inventory-shell.tsx": 1,
+      "apps/web/app/(protected)/menu/components/menu-shell.tsx": 1,
+      "apps/web/app/(protected)/orders/components/orders-shell.tsx": 1,
+    },
+  },
 ];
+
+// shell-registry (Stage 0, design-system.md § B / D019): freeze the chrome-shell
+// file set. Reserve the `-shell` suffix for the allowlist below; a new
+// *-shell.tsx fails CI. The baseline only decreases as shells collapse toward
+// the two chrome families.
+const SHELL_REGISTRY_BASELINE = new Set([
+  "apps/web/app/components/app-shell.tsx",
+  "apps/web/app/(protected)/admin/components/admin-shell.tsx",
+  "apps/web/app/(protected)/admin/settings/settings-page-shell.tsx",
+  "apps/web/app/(protected)/finance/components/finance-shell.tsx",
+  "apps/web/app/(protected)/hr/components/hr-shell.tsx",
+  "apps/web/app/(protected)/inventory/_components/inventory-shell.tsx",
+  "apps/web/app/(protected)/menu/components/menu-shell.tsx",
+  "apps/web/app/(protected)/orders/components/orders-shell.tsx",
+  "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx",
+  "apps/web/app/(protected)/br/[branchId]/pos/pos-status-shell.tsx",
+]);
 
 const failures = [];
 
@@ -590,6 +669,119 @@ for (const check of checks) {
         `${check.id}: ${filePath} has ${count} hit(s), allowed ${allowed}`,
       );
     }
+  }
+}
+
+for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
+  const normalized = toPosix(filePath);
+  if (!normalized.endsWith("-shell.tsx")) continue;
+  if (!SHELL_REGISTRY_BASELINE.has(normalized)) {
+    failures.push(
+      `shell-registry: ${normalized} is a new *-shell.tsx outside the frozen baseline (design-system.md § B / D019). Mount one of the two chrome families instead of inventing a third shell; expanding the baseline needs an owner decision.`,
+    );
+  }
+}
+
+// route-manifest (Stage 0, design-system.md § C/D / D019): every protected page
+// resolves to exactly one MODULE_ACL family, and every family-root has a
+// landing page. Keeps the route tree inside the declared taxonomy so a new
+// route cannot escape the family/nav contract. ACL paths are read live from
+// the SSoT so the gate never drifts from the access map.
+const MODULE_ACL_SOURCE = "packages/shared/src/auth/module-acl.ts";
+const ACL_PATHS = [
+  ...fs
+    .readFileSync(path.join(REPO_ROOT, MODULE_ACL_SOURCE), "utf8")
+    .matchAll(/\bpath:\s*"([^"]+)"/g),
+].map((match) => match[1]);
+
+// Redirect shims legitimately resolve to no family (they only call redirect()).
+const ROUTE_MANIFEST_SHIM_ROUTES = new Set([
+  "/admin",
+  "/admin/finance/[[...slug]]",
+]);
+// ACL family-roots intentionally without a landing page (retired surface, kept
+// only so old URLs resolve through the shared ACL instead of 404-ing raw).
+const ROUTE_MANIFEST_NO_PAGE_ACL = new Set(["/admin/inventory"]);
+
+function routePathFromPageFile(normalizedFile) {
+  const segments = normalizedFile
+    .replace(/^apps\/web\/app/, "")
+    .replace(/\/page\.tsx$/, "")
+    .split("/")
+    .filter((segment) => segment && !(segment.startsWith("(") && segment.endsWith(")")));
+  const route = "/" + segments.join("/");
+  return route.replace(/\/\[branchId\](?=\/|$)/g, "/*") || "/";
+}
+
+function resolveFamilyPath(route) {
+  let best = null;
+  for (const aclPath of ACL_PATHS) {
+    if (route === aclPath || route.startsWith(aclPath + "/")) {
+      if (best === null || aclPath.length > best.length) best = aclPath;
+    }
+  }
+  return best;
+}
+
+const protectedPages = walkFiles("apps/web/app/(protected)", [".tsx"])
+  .map(toPosix)
+  .filter((file) => file.endsWith("/page.tsx"));
+const landingRouteSet = new Set(protectedPages.map(routePathFromPageFile));
+
+for (const file of protectedPages) {
+  const route = routePathFromPageFile(file);
+  if (!resolveFamilyPath(route) && !ROUTE_MANIFEST_SHIM_ROUTES.has(route)) {
+    failures.push(
+      `route-manifest: ${file} (${route}) resolves to no MODULE_ACL family. Place it under a declared family in ${MODULE_ACL_SOURCE} or make it a redirect shim (design-system.md § C / D019).`,
+    );
+  }
+}
+
+for (const aclPath of ACL_PATHS) {
+  if (ROUTE_MANIFEST_NO_PAGE_ACL.has(aclPath)) continue;
+  if (!landingRouteSet.has(aclPath)) {
+    failures.push(
+      `route-manifest: MODULE_ACL family-root ${aclPath} has no landing page.tsx — nav can point at it but nothing renders (design-system.md § D / D019).`,
+    );
+  }
+}
+
+const seenAclPaths = new Set();
+for (const aclPath of ACL_PATHS) {
+  if (seenAclPaths.has(aclPath)) {
+    failures.push(
+      `route-manifest: duplicate MODULE_ACL path ${aclPath}; one capability = one route home (design-system.md § C / D019).`,
+    );
+  }
+  seenAclPaths.add(aclPath);
+}
+
+// page-padding (Stage 0, design-system.md § E / D019): outer page padding is
+// owned by AppPage. A page.tsx that composes its own centered, padded outer
+// container (max-w-* + p-*) is an ad-hoc AppPage clone; current offenders are
+// baselined and new ones fail CI. Route page spacing through AppPage density.
+const PAGE_PADDING_BASELINE = {
+  "apps/web/app/(protected)/br/[branchId]/settings/tables/page.tsx": 1,
+  "apps/web/app/(protected)/br/[branchId]/settings/printers/page.tsx": 1,
+  "apps/web/app/(protected)/br/[branchId]/settings/kds/page.tsx": 1,
+  "apps/web/app/(protected)/br/[branchId]/settings/pos/page.tsx": 1,
+  "apps/web/app/(protected)/br/[branchId]/settings/pos-sessions/page.tsx": 1,
+};
+const PAGE_PADDING_TOKEN = /(?<![\w-])(?:(?:sm|md|lg|xl|2xl):)?p[xy]?-\d/;
+for (const file of walkFiles("apps/web/app", [".tsx"])) {
+  const normalized = toPosix(file);
+  if (!normalized.endsWith("/page.tsx")) continue;
+  const content = fs.readFileSync(file, "utf8");
+  let count = 0;
+  for (const match of content.matchAll(/className="([^"]*)"/g)) {
+    const cls = match[1];
+    if (/\bmax-w-/.test(cls) && PAGE_PADDING_TOKEN.test(cls)) count++;
+  }
+  const allowed = PAGE_PADDING_BASELINE[normalized] ?? 0;
+  if (count > allowed) {
+    failures.push(
+      `page-padding: ${normalized} composes ${count} ad-hoc page container(s) (max-w + padding), allowed ${allowed}. Outer page padding is owned by AppPage (design-system.md § E / D019).`,
+    );
   }
 }
 

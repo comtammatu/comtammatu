@@ -39,6 +39,7 @@ import {
   isNavItemActive,
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
+import { AppShellPaddingBoundary } from "@/components/surface";
 import { BrandMark, type BrandMarkVariant } from "@/components/brand";
 import { WorkspaceBottomNav } from "@/components/workspace-bottom-nav";
 import { messages } from "@lib/messages";
@@ -301,7 +302,9 @@ export function AppShell({
           id="main-content"
           className={cn("flex-1 p-4", bottomNav && "pb-24 lg:pb-4")}
         >
-          <div className="space-y-4">{children}</div>
+          <AppShellPaddingBoundary>
+            <div className="space-y-4">{children}</div>
+          </AppShellPaddingBoundary>
         </main>
       </SidebarInset>
       {bottomNav ? <WorkspaceBottomNav role={role} /> : null}

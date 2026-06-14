@@ -527,8 +527,9 @@ Route IA ownership (which family owns which capability, role gating) is governed
 by `docs/spec/role-route-matrix.md`; navigation data is single-sourced in
 `packages/shared/src/auth/nav-config.ts`. This section does not restate those —
 it locks the UI assembly contract on top of them, and the gates that keep all
-three in sync. The gates land in Stage 0; until each ships, the rule is
-prose-only and held by review.
+three in sync. The gates land incrementally in Stage 0; until a rule's gate
+ships it stays prose-only and held by review. Live vs prose-only status is
+tracked under Enforcement Status below.
 
 ### A. Chrome Archetypes (two families)
 
@@ -614,18 +615,22 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
 
 ### E. Page Padding Authority
 
-- Outer page padding has exactly one owner: `AppPage`
-  (`apps/web/app/components/surface.tsx`), per the Rhythm Contract above
-  ("Page padding MUST come from `AppPage`").
-- `AppShell` `<main>` MUST NOT apply outer page padding. `AppPage` is
-  nesting-aware: an `AppPage` mounted inside another `AppPage` or inside
-  `AppShell` main drops its own padding and max-width so containers never
-  compound.
+- Outer page padding is applied exactly once and never compounds. `AppPage`
+  (`apps/web/app/components/surface.tsx`) owns the page-padding scale (`p-4`,
+  `p-3` compact — per the Rhythm Contract above) and is nesting-aware.
+- The Management frame padding is applied once by `AppShell` `<main>`;
+  `AppPage` defers to it through `AppShellPaddingBoundary`. An `AppPage` mounted
+  inside `AppShell` main drops its own padding while keeping its centered
+  max-width; an `AppPage` mounted inside another `AppPage` drops both padding and
+  max-width; a standalone `AppPage` (operations, employee, public) applies both
+  itself. Surfaces therefore never double-pad.
 - Leaf pages MUST NOT set ad-hoc root padding (`p-*` / `px-*` / `py-*` on the
   page root); route spacing through `AppPage` density.
-- Gate (Stage 0): a page-padding ratchet baselines the current offenders under
-  `**/page.tsx` and forbids new ones, paired with the removal of the `AppShell`
-  main padding so the single owner is real, not contradicted by the primitive.
+- Gate (Stage 0): a page-padding ratchet baselines the current ad-hoc
+  page-container offenders under `**/page.tsx` (a centered `max-w-*` + `p-*`
+  outer container that clones `AppPage`) and fails new ones; `AppPage`
+  nesting-awareness is what keeps padding from compounding, so no surface owns it
+  twice.
 
 ### Enforcement Status
 
@@ -633,6 +638,31 @@ This section is contract today; the behavioral gates land in Stage 0 (`D019`).
 Each structural rule is tracked here as gated or prose-only so the distance
 between documented and enforced stays visible — closing that gap is the point,
 because an unenforced structural rule is exactly how this layer drifted.
+
+Stage 0 gate status (each flips to **live** as its ratchet lands in
+`scripts/check-ui-contract.mjs`):
+
+- `shell-registry` (§ B) — **live**: the `*-shell.tsx` file set, `<SidebarProvider>`,
+  and page-owned `<main>` are frozen to baseline; additions fail CI.
+- route-manifest (§ C) — **live**: every `(protected)/**/page.tsx` resolves to
+  exactly one MODULE_ACL family (redirect shims allowlisted), and every
+  family-root has a landing page; a new unclassified route fails CI.
+  Orphan-route reachability (a live page with zero inbound link) is a separate
+  cleanup pass — the link graph is not yet machine-traced.
+- navigation single-source / `nav-acl` (§ D) — **partial/live**: inline
+  `ShellNavGroup[]` literals are frozen (baseline only shrinks as shells collapse
+  to the shared resolver), and the MODULE_ACL → page chain keeps nav from
+  pointing at a dead route. Full projection of every shell's nav from
+  `nav-config.ts` is the remaining W5 shell-collapse work.
+- page-padding (§ E) — **live**: a ratchet freezes the current ad-hoc
+  page-container offenders (page.tsx cloning `max-w-* + p-*`) and fails new ones,
+  and `AppPage` is nesting-aware via `AppShellPaddingBoundary` so Management
+  pages stop double-padding without un-padding pages that rely on `AppShell`
+  main.
+- `status-label-ssot` regex un-blinding (W1 ratchet) — **live**: the ratchet
+  now also catches `STATUS`-first names (`STATUS_LABELS`, `STATUS_CONFIG`, …)
+  that the old regex missed; current page-local maps are baselined for the W1
+  status-registry burn-down.
 
 ## Loading / Error / Not-found Frame
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import {
   ArrowRight as IconArrowRight,
   ChevronDown as IconChevronDown,
@@ -45,6 +45,32 @@ const TONE_CLASSNAME: Record<SurfaceTone, string> = {
   secondary: "bg-secondary text-secondary-foreground",
 };
 
+// Page-padding ownership (design-system.md § E): outer page padding is applied
+// once and never compounds. `padded` marks an ancestor that already applied the
+// page padding (AppShell main or another AppPage); `constrained` marks an
+// ancestor AppPage that already applied the centered max-width. A nested AppPage
+// reads these and drops whatever an ancestor already owns.
+type SurfaceNesting = { padded: boolean; constrained: boolean };
+
+const SURFACE_NESTING_NONE: SurfaceNesting = { padded: false, constrained: false };
+const SURFACE_NESTING_SHELL: SurfaceNesting = { padded: true, constrained: false };
+const SURFACE_NESTING_PAGE: SurfaceNesting = { padded: true, constrained: true };
+
+const SurfaceNestingContext = createContext<SurfaceNesting>(SURFACE_NESTING_NONE);
+
+/**
+ * Marks the AppShell main region as the owner of the Management frame padding so
+ * a nested AppPage drops its own padding (keeping its centered max-width). Keeps
+ * page padding from compounding into the double-padding the audit flagged.
+ */
+export function AppShellPaddingBoundary({ children }: { children: ReactNode }) {
+  return (
+    <SurfaceNestingContext.Provider value={SURFACE_NESTING_SHELL}>
+      {children}
+    </SurfaceNestingContext.Provider>
+  );
+}
+
 export type AppPageProps = {
   children: ReactNode;
   className?: string;
@@ -67,27 +93,36 @@ export function AppPage({
   mobile = false,
 }: AppPageProps) {
   const isCompact = density === "compact";
+  const nesting = useContext(SurfaceNestingContext);
+  const applyPadding = padded && !nesting.padded;
+  const applyMaxWidth = !nesting.constrained;
   return (
-    <div
-      className={cn(
-        "min-h-0 flex-1",
-        scroll ? "no-scrollbar overflow-auto" : "overflow-visible",
-        padded && (isCompact ? "p-3" : "p-4"),
-        mobile && "pb-28",
-        className,
-      )}
-    >
+    <SurfaceNestingContext.Provider value={SURFACE_NESTING_PAGE}>
       <div
         className={cn(
-          "mx-auto flex w-full flex-col",
-          isCompact ? "gap-3" : "gap-4",
-          mobile ? "max-w-2xl" : PAGE_WIDTH_CLASSNAME[width],
-          contentClassName,
+          "min-h-0 flex-1",
+          scroll ? "no-scrollbar overflow-auto" : "overflow-visible",
+          applyPadding && (isCompact ? "p-3" : "p-4"),
+          mobile && "pb-28",
+          className,
         )}
       >
-        {children}
+        <div
+          className={cn(
+            "mx-auto flex w-full flex-col",
+            isCompact ? "gap-3" : "gap-4",
+            applyMaxWidth
+              ? mobile
+                ? "max-w-2xl"
+                : PAGE_WIDTH_CLASSNAME[width]
+              : "max-w-none",
+            contentClassName,
+          )}
+        >
+          {children}
+        </div>
       </div>
-    </div>
+    </SurfaceNestingContext.Provider>
   );
 }
 
