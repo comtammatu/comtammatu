@@ -434,3 +434,45 @@ chốt: chỉ thêm chiết khấu per-item (KHÔNG promotion engine); "spec r�
 chỉ chứng minh được typecheck/lint/build + unit; owner phải smoke trên POS thật sau
 apply (free 100%, vnd clamp, append, idempotent, void, in bill). Đảo quyết định
 (quay lại chỉ-hậu-kỳ, hoặc lên promotion engine) phải sửa quyết định này trước.
+
+## D022: HĐĐT "hàng chờ" — nháp-local → phát hành theo lô cuối ngày (createBatchInvoice) (2026-06-14) — PROPOSAL chờ kế toán
+
+**Context:** Hiện mọi payment POS trong chế độ HĐĐT active **auto-phát-hành HĐĐT
+per-order realtime** (`createInvoice` 1-shot, `viettel-sinvoice.ts`) — không có
+cửa sổ sửa. Hệ quả vận hành (xác nhận từ code): sai phương thức (CK bấm tiền
+mặt), lỡ bấm thanh toán, sai số tiền → chỉ sửa được qua **hủy/thay thế** (owner +
+biên bản, TT 32/2025) hoặc không sửa được; `createRefund` còn thiếu khỏi UI; tiền
+mặt `completed` tức thì không có trạng thái `pending` để hủy. Đã xác minh tài liệu
+**Viettel S-invoice WS v2.50**: tồn tại endpoint nháp + phát hành lô.
+
+**Decision (PROPOSAL — kỹ thuật chốt, chờ kế toán xác nhận thời điểm lập):**
+
+1. **Mô hình hàng chờ:** lúc thanh toán → tạo **nháp LOCAL** (`tax_invoices
+   status='draft'`, có `transactionUuid`, **KHÔNG gọi provider**); khách nhận
+   receipt, chưa phải HĐĐT. Cửa sổ trong ngày: sửa/xóa nháp tự do. Cuối ngày
+   (cron) hoặc khi bấm "chốt" → **phát hành theo lô** → sync **mã CQT + số** về →
+   `issued`.
+2. **Endpoint:** dùng `InvoiceAPI/InvoiceWS/createBatchInvoice/{supplierTaxCode}`
+   (≤50 HĐ/lô; với HĐ máy tính tiền **trả `codeOfTax` (mã CQT) + số theo
+   `transactionUuid`** → sync được). **KHÔNG** dùng `createOrUpdateInvoiceDraft`
+   (nháp chỉ phát hành thủ công trên web + **số không sync về** phần mềm tích
+   hợp). `createInvoiceDraftPreview` (trả PDF, không lưu) cho bước xem-trước.
+3. **State machine** ([einvoice-tax.md:204](../ref/einvoice-tax.md)) đã có
+   `draft` → chỉ cần **dừng ở `draft`** thay vì chạy thẳng
+   `draft→signing→submitted→issued`. Phát hành lô đẩy `draft→issued`.
+4. **Sau phát hành** chỉ sửa qua **điều chỉnh/thay thế** (API
+   `cancelTransactionInvoice` đã bỏ từ 01/06 theo NĐ 70/2025) — giữ luồng
+   cancel/replace owner hiện có.
+
+**Cổng pháp lý (FLAG kế toán — KHÔNG tự quyết):** "thời điểm lập HĐĐT khởi tạo từ
+máy tính tiền cho dịch vụ ăn uống" — phát hành **theo lô cuối ngày** có khớp
+**NĐ 123/2020 Đ9 (sửa NĐ 70/2025) + TT 32/2025** không? Viettel cung cấp hẳn API
+batch cho HĐ MTT (trả mã CQT) ⇒ *kỹ thuật* rõ là được phép; nhưng *thời điểm lập*
+là quy tắc luật → kế toán + điều khoản đăng ký MTT với CQT phải xác nhận trước khi
+bật. Không recite quy tắc từ trí nhớ (guardrail `tax-vn`).
+
+**Gate:** T3 (money + HĐĐT). Debate 4 góc nhìn trước khi code; migration
+file→PR→owner (D015). Nối với gap **sửa/hoàn payment đã completed** — cửa sổ chỉ
+hữu dụng nếu sửa được đơn trong ngày. Spec kỹ thuật:
+`docs/plan/hddt-hang-cho-spec.md`. Đảo quyết định (giữ realtime per-order mặc
+định) phải sửa quyết định này trước.
