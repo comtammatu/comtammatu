@@ -1005,63 +1005,6 @@ export type Database = {
           },
         ]
       }
-      chart_of_accounts: {
-        Row: {
-          account_code: string
-          account_name: string
-          account_type: string
-          cashflow_section: string
-          created_at: string
-          id: number
-          is_active: boolean
-          level: number
-          parent_id: number | null
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          account_code: string
-          account_name: string
-          account_type: string
-          cashflow_section?: string
-          created_at?: string
-          id?: never
-          is_active?: boolean
-          level?: number
-          parent_id?: number | null
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          account_code?: string
-          account_name?: string
-          account_type?: string
-          cashflow_section?: string
-          created_at?: string
-          id?: never
-          is_active?: boolean
-          level?: number
-          parent_id?: number | null
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chart_of_accounts_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "chart_of_accounts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       employees: {
         Row: {
           bank_account: string | null
@@ -1228,53 +1171,6 @@ export type Database = {
           },
         ]
       }
-      fiscal_periods: {
-        Row: {
-          closed_at: string | null
-          closed_by: string | null
-          created_at: string
-          id: number
-          notes: string | null
-          period_month: number
-          period_year: number
-          status: string
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          closed_at?: string | null
-          closed_by?: string | null
-          created_at?: string
-          id?: never
-          notes?: string | null
-          period_month: number
-          period_year: number
-          status?: string
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          closed_at?: string | null
-          closed_by?: string | null
-          created_at?: string
-          id?: never
-          notes?: string | null
-          period_month?: number
-          period_year?: number
-          status?: string
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fiscal_periods_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       goods_received_notes: {
         Row: {
           branch_id: number
@@ -1283,7 +1179,6 @@ export type Database = {
           express_approved: boolean | null
           grn_number: string
           id: number
-          journal_entry_id: number | null
           notes: string | null
           po_id: number | null
           received_by: string | null
@@ -1300,7 +1195,6 @@ export type Database = {
           express_approved?: boolean | null
           grn_number: string
           id?: never
-          journal_entry_id?: number | null
           notes?: string | null
           po_id?: number | null
           received_by?: string | null
@@ -1317,7 +1211,6 @@ export type Database = {
           express_approved?: boolean | null
           grn_number?: string
           id?: never
-          journal_entry_id?: number | null
           notes?: string | null
           po_id?: number | null
           received_by?: string | null
@@ -1347,13 +1240,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "goods_received_notes_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
           {
@@ -1996,153 +1882,6 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      journal_entries: {
-        Row: {
-          branch_id: number | null
-          created_at: string
-          created_by: string | null
-          description: string
-          entry_date: string
-          entry_number: string
-          id: number
-          posted_at: string | null
-          posted_by: string | null
-          reference_id: number | null
-          reference_type: string
-          status: string
-          tenant_id: number
-          updated_at: string
-          void_journal_entry_id: number | null
-          voided_at: string | null
-          voided_by: string | null
-          voided_reason: string | null
-        }
-        Insert: {
-          branch_id?: number | null
-          created_at?: string
-          created_by?: string | null
-          description: string
-          entry_date: string
-          entry_number: string
-          id?: never
-          posted_at?: string | null
-          posted_by?: string | null
-          reference_id?: number | null
-          reference_type?: string
-          status?: string
-          tenant_id: number
-          updated_at?: string
-          void_journal_entry_id?: number | null
-          voided_at?: string | null
-          voided_by?: string | null
-          voided_reason?: string | null
-        }
-        Update: {
-          branch_id?: number | null
-          created_at?: string
-          created_by?: string | null
-          description?: string
-          entry_date?: string
-          entry_number?: string
-          id?: never
-          posted_at?: string | null
-          posted_by?: string | null
-          reference_id?: number | null
-          reference_type?: string
-          status?: string
-          tenant_id?: number
-          updated_at?: string
-          void_journal_entry_id?: number | null
-          voided_at?: string | null
-          voided_by?: string | null
-          voided_reason?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "journal_entries_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entries_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "journal_entries_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entries_void_journal_entry_id_fkey"
-            columns: ["void_journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      journal_entry_lines: {
-        Row: {
-          account_id: number
-          created_at: string
-          credit_amount: number
-          debit_amount: number
-          description: string | null
-          id: number
-          journal_entry_id: number
-          tenant_id: number
-        }
-        Insert: {
-          account_id: number
-          created_at?: string
-          credit_amount?: number
-          debit_amount?: number
-          description?: string | null
-          id?: never
-          journal_entry_id: number
-          tenant_id: number
-        }
-        Update: {
-          account_id?: number
-          created_at?: string
-          credit_amount?: number
-          debit_amount?: number
-          description?: string | null
-          id?: never
-          journal_entry_id?: number
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "journal_entry_lines_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entry_lines_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entry_lines_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -3510,7 +3249,6 @@ export type Database = {
           created_at: string
           created_by: string
           id: number
-          journal_entry_id: number | null
           method: string
           order_id: number
           paid_at: string | null
@@ -3527,7 +3265,6 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: never
-          journal_entry_id?: number | null
           method: string
           order_id: number
           paid_at?: string | null
@@ -3544,7 +3281,6 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: never
-          journal_entry_id?: number | null
           method?: string
           order_id?: number
           paid_at?: string | null
@@ -3575,13 +3311,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
           {
@@ -3739,7 +3468,6 @@ export type Database = {
           approved_by: string | null
           created_at: string
           id: number
-          journal_entry_id: number | null
           paid_at: string | null
           period_month: number
           period_year: number
@@ -3752,7 +3480,6 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           id?: never
-          journal_entry_id?: number | null
           paid_at?: string | null
           period_month: number
           period_year: number
@@ -3765,7 +3492,6 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           id?: never
-          journal_entry_id?: number | null
           paid_at?: string | null
           period_month?: number
           period_year?: number
@@ -3774,13 +3500,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "payroll_periods_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "payroll_periods_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -4084,53 +3803,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "positions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      posting_rules: {
-        Row: {
-          created_at: string
-          credit_account_code: string
-          debit_account_code: string
-          description: string
-          id: number
-          is_active: boolean
-          rule_code: string
-          tenant_id: number
-          transaction_type: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          credit_account_code: string
-          debit_account_code: string
-          description: string
-          id?: never
-          is_active?: boolean
-          rule_code: string
-          tenant_id: number
-          transaction_type: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          credit_account_code?: string
-          debit_account_code?: string
-          description?: string
-          id?: never
-          is_active?: boolean
-          rule_code?: string
-          tenant_id?: number
-          transaction_type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "posting_rules_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -4706,7 +4378,6 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: number
-          journal_entry_id: number | null
           notes: string | null
           production_number: string
           status: string
@@ -4719,7 +4390,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
-          journal_entry_id?: number | null
           notes?: string | null
           production_number: string
           status?: string
@@ -4732,7 +4402,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
-          journal_entry_id?: number | null
           notes?: string | null
           production_number?: string
           status?: string
@@ -4759,13 +4428,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_orders_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
           {
@@ -6007,7 +5669,6 @@ export type Database = {
           from_branch_id: number
           from_location_id: number | null
           id: number
-          journal_entry_id: number | null
           notes: string | null
           receive_started_at: string | null
           received_at: string | null
@@ -6026,7 +5687,6 @@ export type Database = {
           from_branch_id: number
           from_location_id?: number | null
           id?: never
-          journal_entry_id?: number | null
           notes?: string | null
           receive_started_at?: string | null
           received_at?: string | null
@@ -6045,7 +5705,6 @@ export type Database = {
           from_branch_id?: number
           from_location_id?: number | null
           id?: never
-          journal_entry_id?: number | null
           notes?: string | null
           receive_started_at?: string | null
           received_at?: string | null
@@ -6085,13 +5744,6 @@ export type Database = {
             columns: ["from_location_id"]
             isOneToOne: false
             referencedRelation: "inventory_locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_transfers_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
           {
@@ -6664,7 +6316,6 @@ export type Database = {
           id: number
           invoice_date: string
           invoice_number: string
-          journal_entry_id: number | null
           matching_notes: string | null
           matching_status: string
           paid_amount: number
@@ -6688,7 +6339,6 @@ export type Database = {
           id?: never
           invoice_date: string
           invoice_number: string
-          journal_entry_id?: number | null
           matching_notes?: string | null
           matching_status?: string
           paid_amount?: number
@@ -6712,7 +6362,6 @@ export type Database = {
           id?: never
           invoice_date?: string
           invoice_number?: string
-          journal_entry_id?: number | null
           matching_notes?: string | null
           matching_status?: string
           paid_amount?: number
@@ -6740,13 +6389,6 @@ export type Database = {
             columns: ["grn_id"]
             isOneToOne: false
             referencedRelation: "goods_received_notes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_invoices_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
           {
@@ -6845,7 +6487,6 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: number
-          journal_entry_id: number | null
           payment_date: string
           payment_method: string
           reference_note: string | null
@@ -6858,7 +6499,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
-          journal_entry_id?: number | null
           payment_date?: string
           payment_method: string
           reference_note?: string | null
@@ -6871,7 +6511,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
-          journal_entry_id?: number | null
           payment_date?: string
           payment_method?: string
           reference_note?: string | null
@@ -6880,13 +6519,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "supplier_payments_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "supplier_payments_supplier_invoice_id_fkey"
             columns: ["supplier_invoice_id"]
@@ -7742,59 +7374,6 @@ export type Database = {
           },
         ]
       }
-      vas_report_lines: {
-        Row: {
-          created_at: string
-          display_order: number
-          form_code: string
-          formula: Json
-          formula_version: string
-          id: number
-          is_total: boolean
-          level: number
-          line_code: string
-          line_label_vi: string
-          parent_line: string | null
-          tenant_id: number | null
-        }
-        Insert: {
-          created_at?: string
-          display_order: number
-          form_code: string
-          formula: Json
-          formula_version?: string
-          id?: never
-          is_total?: boolean
-          level?: number
-          line_code: string
-          line_label_vi: string
-          parent_line?: string | null
-          tenant_id?: number | null
-        }
-        Update: {
-          created_at?: string
-          display_order?: number
-          form_code?: string
-          formula?: Json
-          formula_version?: string
-          id?: never
-          is_total?: boolean
-          level?: number
-          line_code?: string
-          line_label_vi?: string
-          parent_line?: string | null
-          tenant_id?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vas_report_lines_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       webhook_events: {
         Row: {
           created_at: string
@@ -8325,19 +7904,6 @@ export type Database = {
       auth_role_to_position: { Args: { p_role: string }; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
       auto_close_periods: { Args: never; Returns: number }
-      auto_post_journal: {
-        Args: {
-          p_branch_id: number
-          p_description: string
-          p_entry_date?: string
-          p_lines: Json
-          p_posted_by?: string
-          p_reference_id: number
-          p_reference_type: string
-          p_tenant_id: number
-        }
-        Returns: number
-      }
       branch_manager_approve_employee_clock_out: {
         Args: {
           p_approved_by: string
@@ -8383,15 +7949,6 @@ export type Database = {
       clear_order_discount: { Args: { p_order_id: number }; Returns: Json }
       clear_order_item_discount: {
         Args: { p_order_item_id: number; p_reason: string }
-        Returns: Json
-      }
-      close_fiscal_period: {
-        Args: {
-          p_month: number
-          p_notes?: string
-          p_tenant_id: number
-          p_year: number
-        }
         Returns: Json
       }
       close_period_hard: {
@@ -8502,17 +8059,6 @@ export type Database = {
       }
       count_unread_notifications: { Args: never; Returns: number }
       create_grn_from_po: { Args: { p_po_id: number }; Returns: Json }
-      create_manual_journal_entry: {
-        Args: {
-          p_branch_id?: number
-          p_description: string
-          p_entry_date: string
-          p_lines: Json
-          p_reference_id?: number
-          p_reference_type?: string
-        }
-        Returns: Json
-      }
       create_order: {
         Args: {
           p_branch_id: number
@@ -8731,10 +8277,6 @@ export type Database = {
         Args: { p_branch_id: number; p_tenant_id: number }
         Returns: undefined
       }
-      ensure_journal_write_permission: {
-        Args: { p_branch_id?: number }
-        Returns: undefined
-      }
       escalate_round_4: {
         Args: {
           p_final_qty: number
@@ -8781,68 +8323,6 @@ export type Database = {
           tenant_id: number
         }[]
       }
-      fn_eval_account_expr: {
-        Args: {
-          p_end_date: string
-          p_expr: Json
-          p_start_date: string
-          p_tenant_id: number
-        }
-        Returns: number
-      }
-      fn_generate_b01_dn: {
-        Args: { p_as_of_date: string; p_tenant_id: number }
-        Returns: Json
-      }
-      fn_generate_b02_dn: {
-        Args: { p_end_date: string; p_start_date: string; p_tenant_id: number }
-        Returns: Json
-      }
-      fn_generate_b03_dn: {
-        Args: { p_end_date: string; p_start_date: string; p_tenant_id: number }
-        Returns: Json
-      }
-      fn_generate_form_01_gtgt: {
-        Args: { p_month: number; p_tenant_id: number; p_year: number }
-        Returns: Json
-      }
-      fn_reconcile_drilldown: {
-        Args: {
-          p_branch_id?: number
-          p_category: string
-          p_end_date: string
-          p_limit?: number
-          p_side: string
-          p_start_date: string
-          p_tenant_id: number
-        }
-        Returns: {
-          amount: number
-          branch_id: number
-          description: string
-          ref_date: string
-          ref_id: number
-          ref_label: string
-        }[]
-      }
-      fn_reconcile_period: {
-        Args: {
-          p_branch_id?: number
-          p_end_date: string
-          p_start_date: string
-          p_tenant_id: number
-        }
-        Returns: Json
-      }
-      fn_reconcile_sales_by_day: {
-        Args: { p_branch_id: number; p_end_date: string; p_start_date: string }
-        Returns: {
-          date: string
-          diff: number
-          gl_credit: number
-          revenue_paid: number
-        }[]
-      }
       get_branch_menu_daily_limits_for_pos: {
         Args: { p_branch_id: number }
         Returns: {
@@ -8886,8 +8366,6 @@ export type Database = {
           invoice_attention_count: number
           invoice_issued_count: number
           invoice_not_required_count: number
-          journal_draft_count: number
-          journal_posted_count: number
         }[]
       }
       get_food_cost: {
@@ -9090,10 +8568,6 @@ export type Database = {
               tenant_id: number
             }[]
           }
-      gl_reconciliation: {
-        Args: { p_month: number; p_tenant_id: number; p_year: number }
-        Returns: Json
-      }
       grant_permission: {
         Args: {
           p_branch_id: number
@@ -9188,10 +8662,6 @@ export type Database = {
         }
         Returns: Json
       }
-      next_manual_journal_entry_number: {
-        Args: { p_entry_date: string; p_tenant_id: number }
-        Returns: string
-      }
       next_po_display_id: { Args: { p_tenant_id: number }; Returns: string }
       override_grn_hardblock: {
         Args: {
@@ -9226,11 +8696,6 @@ export type Database = {
       }
       position_id_from_access_bucket: {
         Args: { p_access_bucket: string; p_tenant: number }
-        Returns: number
-      }
-      post_manual_journal_entry: { Args: { p_entry_id: number }; Returns: Json }
-      post_payroll_journal: {
-        Args: { p_payroll_period_id: number }
         Returns: number
       }
       print_template_block_visible: {
@@ -9512,10 +8977,6 @@ export type Database = {
           low_stock_count: number
         }[]
       }
-      seed_chart_of_accounts: {
-        Args: { p_tenant_id: number }
-        Returns: undefined
-      }
       set_branch_kind: {
         Args: { p_branch_id: number; p_kind?: string }
         Returns: undefined
@@ -9717,17 +9178,9 @@ export type Database = {
         }
         Returns: number
       }
-      validate_journal_balance: {
-        Args: { p_entry_id: number }
-        Returns: boolean
-      }
       verify_branch_override_code: {
         Args: { p_branch_id: number; p_code: string }
         Returns: boolean
-      }
-      void_manual_journal_entry: {
-        Args: { p_entry_id: number; p_reason: string }
-        Returns: Json
       }
       void_order_item: {
         Args: { p_order_item_id: number; p_reason: string }
