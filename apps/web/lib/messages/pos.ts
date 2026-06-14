@@ -75,6 +75,13 @@ export const pos = {
     cancelQr: "Hủy QR",
     cancelQrSuccess: "Đã hủy QR — có thể tạo mới",
     cancelQrFailed: "Không thể hủy QR",
+    confirmIssueTitle: "Xác nhận thanh toán?",
+    confirmIssueMethod: "Phương thức",
+    confirmIssueAmount: "Số tiền",
+    confirmIssueWarning:
+      "HĐĐT phát hành ngay khi xác nhận — sau chỉ sửa được bằng hủy/thay thế.",
+    confirmIssueConfirm: "Thanh toán",
+    confirmIssueCancel: "Quay lại",
   },
   receipt: {
     paymentCancelled: "Đã hủy",

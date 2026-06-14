@@ -435,7 +435,7 @@ chỉ chứng minh được typecheck/lint/build + unit; owner phải smoke trê
 apply (free 100%, vnd clamp, append, idempotent, void, in bill). Đảo quyết định
 (quay lại chỉ-hậu-kỳ, hoặc lên promotion engine) phải sửa quyết định này trước.
 
-## D022: HĐĐT "hàng chờ" — nháp-local → phát hành theo lô cuối ngày (createBatchInvoice) (2026-06-14) — PROPOSAL chờ kế toán
+## D022: HĐĐT "hàng chờ" — nháp-local → phát hành theo lô cuối ngày (createBatchInvoice) (2026-06-14) — RESOLVED: owner chốt realtime, defer việc-lập bị bác
 
 **Context:** Hiện mọi payment POS trong chế độ HĐĐT active **auto-phát-hành HĐĐT
 per-order realtime** (`createInvoice` 1-shot, `viettel-sinvoice.ts`) — không có
@@ -476,3 +476,53 @@ file→PR→owner (D015). Nối với gap **sửa/hoàn payment đã completed**
 hữu dụng nếu sửa được đơn trong ngày. Spec kỹ thuật:
 `docs/plan/hddt-hang-cho-spec.md`. Đảo quyết định (giữ realtime per-order mặc
 định) phải sửa quyết định này trước.
+
+**Phán quyết owner (2026-06-14) — cổng pháp lý ĐÓNG, đề xuất §1 BỊ BÁC:** thời
+điểm lập HĐĐT = **tại thời điểm thanh toán hoàn tất** (khớp model POS realtime
+per-order, einvoice-tax.md §1.1). ⇒ KHÔNG defer *việc lập* đến cuối ngày. Gộp lô
+cuối ngày chỉ áp dụng cho **chuyển dữ liệu HĐĐT MTT lên CQT** (bảng tổng hợp),
+KHÔNG phải cấp số/giao HĐ cho khách. Hệ quả:
+- Phát hành giữ **realtime per-order tại payment** (`createInvoice` không đổi).
+- `hddt_issuance_mode='deferred_batch'` + `createDraftTaxInvoice`/`issueDraftBatch`
+  + cron cuối ngày: **không triển khai**.
+- Provider `createBatchInvoice` (đã build + test 2026-06-14, mặc định không caller)
+  **giữ làm hạ tầng** cho backfill/tổng hợp B2C nếu sau cần — không dùng để defer.
+- 'Cửa sổ sửa' không thể nằm SAU khi lập (realtime, bất khả hồi) → dời thành: xác
+  nhận **TRƯỚC khi bấm thanh toán** + sửa **phương thức thanh toán** + **hủy/thay
+  thế** sau phát hành (TT 32/2025; đã có ở `finance/invoice-list.tsx`). Hướng UI:
+  xem **D023**.
+- `hddt-hang-cho-spec.md`: phần deferral superseded; phần phân biệt endpoint +
+  provider batch vẫn đúng làm tham chiếu.
+
+## D023: Sửa-sai POS realtime — guardrail TRƯỚC thanh toán (cashier) + correction ở owner/accountant (2026-06-14)
+
+**Context:** D022 chốt HĐĐT lập realtime tại payment ⇒ không còn cửa sổ sửa SAU khi
+lập. 3 gap vận hành owner nêu — sai phương thức (CK bấm tiền mặt); lỡ bấm thanh
+toán khi khách chưa kiểm tra; sai HĐ đã phát hành — phải giải bằng UI, không bằng
+deferral.
+
+**Phán quyết owner (2026-06-14):**
+1. **KHÔNG đưa hủy/thay thế HĐĐT ra màn POS** — "quá nhiều thao tác cho thu ngân,
+   gây khó dễ và khó sử dụng". Correction (hủy/thay thế, sửa/hoàn payment) **chỉ ở
+   Owner** (đã có `finance/invoice-list.tsx`, owner-gated) + **Kế toán (sau)**.
+2. **Cashier-facing chỉ là guardrail NGĂN lỗi, không phải công cụ SỬA lỗi:** chặn
+   nút thanh toán bằng xác nhận tóm tắt (phương thức + số tiền + cảnh báo "HĐĐT
+   phát hành ngay, sau chỉ hủy/thay thế"). 1 tap, chặn lỡ-bấm + sai-phương-thức từ
+   gốc; không tăng gánh sửa-sai cho thu ngân.
+
+**Đã làm (2026-06-14):**
+- Guardrail `confirm()` trước `handleConfirmPaid` (cash + VietQR,
+  [bill-receipt-sheet.tsx](../../apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx)); UX: thêm prop `details` vào `confirm()`
+  chung ([confirm-dialog.tsx](../../packages/ui/src/components/confirm-dialog.tsx)) hiển thị hàng phương thức + số tiền; copy
+  `messages.pos.payment.confirmIssue*`.
+- Refund/đảo thanh toán owner-level: action `refundOrderPayment` (resolve payment
+  → `create_refund` → `reverse_payment_and_post`,
+  [refund-actions.ts](../../apps/web/app/(protected)/finance/refund-actions.ts)) + nút "Hoàn tiền" cạnh hủy/thay thế trong
+  [invoice-list.tsx](../../apps/web/app/(protected)/finance/invoice-list.tsx); copy `messages.finance.invoiceList.refund*`. Dùng RPC sẵn
+  (không migration). Lưu ý: refund KHÔNG tự hủy HĐĐT (cancel/thay thế riêng); post-D020
+  order giữ `payment_status='paid'`. Gate T3: typecheck/eslint/build xanh; **chưa
+  smoke-test live** (DB prod read-only) → owner verify đường tiền thật.
+
+**Còn lại (owner-level, chờ owner ưu tiên):** **sửa phương thức thanh toán**
+(CK↔tiền mặt) khi tiền đã nhận đúng nhưng ghi sai method — chưa có RPC sửa
+`payments.method` → cần migration (file→PR→owner), tách riêng.

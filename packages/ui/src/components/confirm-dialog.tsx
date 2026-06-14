@@ -16,6 +16,12 @@ import {
 export interface ConfirmOptions {
   title: string;
   description?: string;
+  /**
+   * Key/value rows rendered as a highlighted block between the description and
+   * the buttons — surfaces the exact values the user must verify before an
+   * irreversible action (e.g. payment method + amount).
+   */
+  details?: Array<{ label: string; value: string }>;
   confirmText?: string;
   cancelText?: string;
   variant?: "default" | "destructive";
@@ -84,6 +90,19 @@ export function ConfirmDialogProvider() {
             <AlertDialogDescription>{opts.description}</AlertDialogDescription>
           ) : null}
         </AlertDialogHeader>
+        {opts?.details?.length ? (
+          <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+            {opts.details.map((row) => (
+              <div
+                key={row.label}
+                className="flex items-baseline justify-between gap-3 py-0.5"
+              >
+                <span className="text-muted-foreground">{row.label}</span>
+                <span className="font-medium">{row.value}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => settle(false)}>
             {opts?.cancelText ?? "Hủy"}

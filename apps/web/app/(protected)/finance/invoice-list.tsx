@@ -7,6 +7,7 @@ import {
   FileX as IconFileX,
   Receipt as IconReceipt,
   RefreshCw as IconRefreshCw,
+  Undo2 as IconUndo,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -33,6 +34,7 @@ import {
 import { forceResyncTaxInvoice } from "./reconcile-invoice-actions";
 import { getArchiveDownloadUrl } from "./archive-actions";
 import { replaceTaxInvoice } from "./replace-invoice-actions";
+import { refundOrderPayment } from "./refund-actions";
 import type { InvoiceRow } from "./_lib/finance-types";
 import {
   DataTable,
@@ -58,6 +60,8 @@ interface InvoiceListProps {
 
 const CANCEL_REASON_MIN = 20;
 const CANCEL_REASON_MAX = 500;
+const REFUND_REASON_MIN = 5;
+const REFUND_REASON_MAX = 500;
 const REPLACE_REASON_MIN = 20;
 const REPLACE_REASON_MAX = 255;
 const REPLACE_AGREEMENT_MAX = 225;
@@ -71,6 +75,8 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
   const [invoices, setInvoices] = useState(initialInvoices);
   const [cancelTarget, setCancelTarget] = useState<InvoiceRow | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [refundTarget, setRefundTarget] = useState<InvoiceRow | null>(null);
+  const [refundReason, setRefundReason] = useState("");
   const [isPending, startTransition] = useTransition();
   const [resyncingId, setResyncingId] = useState<number | null>(null);
   const [reissuingId, setReissuingId] = useState<number | null>(null);
@@ -185,6 +191,37 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
         ),
       );
       resetCancelDialog();
+    });
+  }
+
+  const trimmedRefundReason = refundReason.trim();
+  const refundReasonValid =
+    trimmedRefundReason.length >= REFUND_REASON_MIN &&
+    trimmedRefundReason.length <= REFUND_REASON_MAX;
+
+  function resetRefundDialog() {
+    setRefundTarget(null);
+    setRefundReason("");
+  }
+
+  function handleRefund() {
+    if (!refundTarget || !refundReasonValid) return;
+    const orderId = refundTarget.order_id;
+    if (!orderId) {
+      toast.error(messages.finance.invoiceList.refundFailed);
+      return;
+    }
+    startTransition(async () => {
+      const result = await refundOrderPayment({
+        orderId,
+        reason: trimmedRefundReason,
+      });
+      if (!result.success) {
+        toast.error(result.error ?? messages.finance.invoiceList.refundFailed);
+        return;
+      }
+      toast.success(messages.finance.invoiceList.refundSuccess);
+      resetRefundDialog();
     });
   }
 
@@ -396,6 +433,21 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
             <Button
               variant="ghost"
               size={size}
+              onClick={() => setRefundTarget(inv)}
+              title={messages.finance.invoiceList.refundTitle}
+            >
+              <IconUndo className="size-4" />
+              {dense ? (
+                <span className="sr-only">
+                  {messages.finance.invoiceList.refund}
+                </span>
+              ) : (
+                messages.finance.invoiceList.refund
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size={size}
               className="text-destructive hover:text-destructive"
               onClick={() => setCancelTarget(inv)}
               title="Hủy hóa đơn"
@@ -576,6 +628,53 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Hủy hóa đơn
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!refundTarget}
+        onOpenChange={(open) => !open && resetRefundDialog()}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {messages.finance.invoiceList.refundDialogTitle}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {messages.finance.invoiceList.refundWarning}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="invoice-refund-reason">
+              {messages.finance.invoiceList.refundReasonLabel(
+                REFUND_REASON_MIN,
+              )}
+            </Label>
+            <Textarea
+              id="invoice-refund-reason"
+              value={refundReason}
+              onChange={(e) => setRefundReason(e.target.value)}
+              placeholder={messages.finance.invoiceList.refundReasonPlaceholder}
+              rows={3}
+              maxLength={REFUND_REASON_MAX}
+              disabled={isPending}
+            />
+            <p className="text-xs text-muted-foreground">
+              {trimmedRefundReason.length}/{REFUND_REASON_MAX}
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>
+              {messages.finance.invoiceList.refundCancel}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRefund}
+              disabled={isPending || !refundReasonValid}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {messages.finance.invoiceList.refundConfirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

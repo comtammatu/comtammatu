@@ -24,6 +24,7 @@ import {
 } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -865,8 +866,31 @@ export function BillReceipt({
     handleSelectMethod,
   ]);
 
-  const handleConfirmPaid = useCallback(() => {
+  const handleConfirmPaid = useCallback(async () => {
     if (!order || orderId === null || !canConfirmPaid) return;
+
+    // HĐĐT issues realtime the instant payment confirms — there is no post-issue
+    // edit, only cancel/replace. Gate the irreversible action behind a summary
+    // the cashier verifies with the customer (catches wrong method + premature
+    // tap, the two reported error classes).
+    const confirmed = await confirm({
+      title: messages.pos.payment.confirmIssueTitle,
+      details: [
+        {
+          label: messages.pos.payment.confirmIssueMethod,
+          value: PAYMENT_METHOD_LABELS_VI[selectedMethod],
+        },
+        {
+          label: messages.pos.payment.confirmIssueAmount,
+          value: formatVND(totalAmount),
+        },
+      ],
+      description: messages.pos.payment.confirmIssueWarning,
+      confirmText: messages.pos.payment.confirmIssueConfirm,
+      cancelText: messages.pos.payment.confirmIssueCancel,
+    });
+    if (!confirmed) return;
+
     // Freeze the invoice payload at click — guards against the cashier
     // editing the form while the submit is in flight.
     const invoicePayload = buildInvoicePayload(invoiceForm);
@@ -1344,7 +1368,7 @@ export function BillReceipt({
                   selectedMethod === "cash" ? "bill-confirm-cash" : undefined
                 }
                 type="button"
-                onClick={handleConfirmPaid}
+                onClick={() => void handleConfirmPaid()}
                 disabled={
                   isPending || methodPending || actionPending || !canConfirmPaid
                 }

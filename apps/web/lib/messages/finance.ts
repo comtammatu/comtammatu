@@ -18,6 +18,19 @@ export const finance = {
           ? `Đã phát hành ${issued}, còn ${failed} đơn vẫn lỗi.`
           : `Đã phát hành ${issued} hóa đơn.`,
     reissueAllError: "Không thể phát hành lại hàng loạt.",
+    refund: "Hoàn tiền",
+    refundTitle: "Hoàn tiền / đảo thanh toán",
+    refundDialogTitle: "Xác nhận hoàn tiền",
+    refundReasonLabel: (min: number) =>
+      `Lý do hoàn tiền (tối thiểu ${min} ký tự)`,
+    refundReasonPlaceholder:
+      "Ví dụ: Thu ngân bấm thanh toán nhầm khi khách chưa đồng ý.",
+    refundWarning:
+      "Đảo thanh toán đã hoàn tất (hoàn tiền cho khách) và phục hồi kho. HĐĐT đã phát hành KHÔNG tự hủy — hủy/thay thế riêng nếu cần.",
+    refundConfirm: "Hoàn tiền",
+    refundCancel: "Không",
+    refundSuccess: "Đã hoàn tiền / đảo thanh toán",
+    refundFailed: "Không thể hoàn tiền",
   },
   common: {
     noValue: "—",
