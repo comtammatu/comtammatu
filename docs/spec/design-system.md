@@ -698,19 +698,24 @@ false-positive):
   locale formatters (counts/quantities/dates). See `docs/plan/decisions.md` D029.
 - `status-label-ssot` — **reframe**: ~3 real label maps, all HR-deferred
   (D026/D027); ~20 are status value-arrays / variant-only / already-shared.
-- `card-content-classname-baseline` — **reframe**: 1 of ~92 maps to
-  `flush`/`scroll`; ~31 are KpiCard-migration debt (`p-N` stat cards), not this
-  primitive; the rest are orthogonal child layout.
+- `card-content-classname-baseline` — **reframe (count 81, D030)**: the named
+  `flush`/`scroll` variants absorb ~0 of the remaining hits; 14 KpiCard-debt
+  `p-N` stat cards migrated to `KpiCard` (92→81); the rest are orthogonal child
+  layout (panels, grids, spacing) the gate can't single-source.
 - `card-title-classname-baseline` — **mixed (count 13, D030)**: `CardTitle` now
   has a `size` variant (`sm`=text-sm, `lg`=text-2xl, `default`=text-base); the 8
   pure heading-scale hits migrated to it (21→13). The remaining 13 are
   layout-only (`flex`/`truncate`, can't migrate), eyebrow small-caps (→ a
   `SectionLabel` primitive, deferred), or active-zone (finance D028).
-- `use-is-mobile-budget` — **mixed**: 5 of 44 are list/table forks migratable to
-  the DataTable adapter; ~32 are legit composition switches.
-- `stat-card-ssot` — **has-false-negative**: `FinanceSummaryCard`
-  (`finance/page.tsx`) escapes via name-prefix + `cn()`; widen the pattern when
-  its zone is free.
+- `use-is-mobile-budget` — **mixed (D030)**: 3 of the 5 flagged list-forks
+  migrated to the DataTable adapter (`supplier-invoices` faithful; `issues` +
+  `receiving` with an owner-approved small mobile spacing/frame delta); 2 can't
+  migrate (`stock` master-detail, `inventory-value` custom SummaryBox layout).
+  The other ~32 hits are legit composition switches.
+- `stat-card-ssot` — **resolved (D030)**: the `\w*`-prefix widening surfaced
+  `FinanceSummaryCard`, now migrated to the shared `KpiCard` and deleted (local
+  stat-card def gone). Allowlist back to 2 (the `KpiCard` SSoT itself +
+  HR-deferred payroll `SummaryCard`).
 
 **Systemic false-negative — the `cn()` blind spot (partially closed
 2026-06-15).** Every className-anchored gate used `className=\{?['"]…`, which

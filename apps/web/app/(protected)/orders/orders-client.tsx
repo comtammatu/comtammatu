@@ -15,6 +15,7 @@ import {
   getPaymentMethodLabelVi,
 } from "@comtammatu/shared/labels";
 import { StatusBadge } from "@/components/status-badge";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -171,45 +172,21 @@ export function OrdersClient({
   return (
     <>
       <div className="grid gap-3 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Đang xử lý
-            </p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {orderSummary.pending}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Đơn đang chờ hoặc đang làm cần theo dõi.
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              {STATES_VI.completed}
-            </p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {orderSummary.completed}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Đơn đã hoàn tất trong tập kết quả hiện tại.
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Giá trị đơn
-            </p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {formatVND(orderSummary.revenue)}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Tổng doanh thu hiển thị sau khi áp bộ lọc.
-            </p>
-          </CardContent>
-        </Card>
+        <KpiCard
+          label="Đang xử lý"
+          value={orderSummary.pending}
+          hint="Đơn đang chờ hoặc đang làm cần theo dõi."
+        />
+        <KpiCard
+          label={STATES_VI.completed}
+          value={orderSummary.completed}
+          hint="Đơn đã hoàn tất trong tập kết quả hiện tại."
+        />
+        <KpiCard
+          label="Giá trị đơn"
+          value={formatVND(orderSummary.revenue)}
+          hint="Tổng doanh thu hiển thị sau khi áp bộ lọc."
+        />
       </div>
 
       {/* ─── Filter bar ─── */}

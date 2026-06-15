@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   Empty,
   EmptyHeader,
@@ -235,30 +236,9 @@ export default async function RevenueDrillPage({
       >
         <TabsContent value="tong-quan">
           <div className="grid gap-4 sm:grid-cols-3">
-            <Card>
-              <CardContent className="p-5">
-                <p className="text-xs text-muted-foreground">Doanh thu</p>
-                <p className="text-2xl font-semibold tabular-nums">
-                  {formatVND(totalRevenue)}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-5">
-                <p className="text-xs text-muted-foreground">Giảm giá</p>
-                <p className="text-2xl font-semibold tabular-nums">
-                  {formatVND(totalDiscount)}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-5">
-                <p className="text-xs text-muted-foreground">VAT</p>
-                <p className="text-2xl font-semibold tabular-nums">
-                  {formatVND(totalTax)}
-                </p>
-              </CardContent>
-            </Card>
+            <KpiCard label="Doanh thu" value={formatVND(totalRevenue)} />
+            <KpiCard label="Giảm giá" value={formatVND(totalDiscount)} />
+            <KpiCard label="VAT" value={formatVND(totalTax)} />
           </div>
         </TabsContent>
 

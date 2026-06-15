@@ -15,12 +15,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import {
   Dialog,
   DialogContent,
@@ -42,14 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
@@ -57,9 +43,12 @@ import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { downloadCsv } from "@/_lib/download-file";
 import { matchesSearch } from "@lib/search";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
-import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tNav } from "../_lib/dictionary";
 import { createStockIssueDraft } from "../issue-actions";
 
@@ -301,6 +290,82 @@ export function IssuesClient({
     </AppToolbar>
   );
 
+  const issueColumns: DataTableColumn<IssueRow>[] = [
+    {
+      key: "code",
+      header: "Mã phiếu",
+      render: (item) => (
+        <Link
+          href={`/inventory/issues/${item.id}`}
+          className="text-sm font-semibold text-primary hover:underline"
+        >
+          {item.code}
+        </Link>
+      ),
+    },
+    {
+      key: "type",
+      header: "Loại xuất",
+      render: (item) => (
+        <span className="text-sm font-medium">
+          {issueTypeLabel(item.type, item.branchKind)}
+        </span>
+      ),
+    },
+    {
+      key: "branchName",
+      header: BRANCH_VI.long,
+      render: (item) => (
+        <span className="text-sm text-muted-foreground">{item.branchName}</span>
+      ),
+    },
+    {
+      key: "date",
+      header: "Ngày tạo",
+      render: (item) => (
+        <span className="text-sm text-muted-foreground">{item.date}</span>
+      ),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (item) => <StatusBadge status={item.status} size="sm" />,
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "w-10",
+      render: (item) => (
+        <Button variant="ghost" size="icon-sm" asChild>
+          <Link href={`/inventory/issues/${item.id}`}>
+            <IconDotsVertical className="size-4" />
+          </Link>
+        </Button>
+      ),
+    },
+  ];
+
+  const renderIssueCard = (item: IssueRow) => (
+    <InteractiveCard asChild minHeight="mobile" padding="default">
+      <Link href={`/inventory/issues/${item.id}`} className="block">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-sm font-semibold">{item.code}</span>
+            <StatusBadge status={item.status} size="sm" />
+          </div>
+          <p className="truncate text-xs text-muted-foreground">
+            {item.branchName}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {issueTypeLabel(item.type, item.branchKind)} &middot;{" "}
+            {item.date}
+          </p>
+        </div>
+        <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
+      </Link>
+    </InteractiveCard>
+  );
+
   return (
     <AppPage width={isMobile ? "narrow" : "wide"}>
       <AppPageHeader
@@ -327,113 +392,19 @@ export function IssuesClient({
       />
       {filterBar}
 
-      {/* Desktop: Table / Mobile: Cards */}
-      {isMobile ? (
-        <div className="flex flex-col gap-2">
-          {filtered.length === 0 ? (
-            <Empty className="py-8">
-              <EmptyHeader>
-                <EmptyTitle className="text-sm font-semibold">
-                  {hasActiveFilters
-                    ? "Không tìm thấy phiếu xuất phù hợp"
-                    : "Chưa có phiếu xuất kho nào"}
-                </EmptyTitle>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            filtered.map((item) => (
-              <InteractiveCard
-                key={item.id}
-                asChild
-                minHeight="mobile"
-                padding="default"
-              >
-                <Link href={`/inventory/issues/${item.id}`} className="block">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-semibold">
-                        {item.code}
-                      </span>
-                      <StatusBadge status={item.status} size="sm" />
-                    </div>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {item.branchName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {issueTypeLabel(item.type, item.branchKind)} &middot;{" "}
-                      {item.date}
-                    </p>
-                  </div>
-                  <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
-                </Link>
-              </InteractiveCard>
-            ))
-          )}
-        </div>
-      ) : (
-        <Card>
-          <CardContent flush>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Mã phiếu</TableHead>
-                  <TableHead>Loại xuất</TableHead>
-                  <TableHead>{BRANCH_VI.long}</TableHead>
-                  <TableHead>Ngày tạo</TableHead>
-                  <TableHead>{FORM_VI.status}</TableHead>
-                  <TableHead className="w-10" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.length === 0 && (
-                  <TableEmptyStateRow
-                    colSpan={6}
-                    title={
-                      hasActiveFilters
-                        ? "Không tìm thấy phiếu xuất phù hợp"
-                        : "Chưa có phiếu xuất kho nào"
-                    }
-                    description="Điều chỉnh bộ lọc hoặc tạo phiếu xuất mới để bắt đầu."
-                  />
-                )}
-                {filtered.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <Link
-                        href={`/inventory/issues/${item.id}`}
-                        className="text-sm font-semibold text-primary hover:underline"
-                      >
-                        {item.code}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm font-medium">
-                        {issueTypeLabel(item.type, item.branchKind)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {item.branchName}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {item.date}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={item.status} size="sm" />
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon-sm" asChild>
-                        <Link href={`/inventory/issues/${item.id}`}>
-                          <IconDotsVertical className="size-4" />
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      <DataTable
+        columns={issueColumns}
+        data={filtered}
+        getRowKey={(item) => item.id}
+        emptyTitle={
+          hasActiveFilters
+            ? "Không tìm thấy phiếu xuất phù hợp"
+            : "Chưa có phiếu xuất kho nào"
+        }
+        emptyDescription="Điều chỉnh bộ lọc hoặc tạo phiếu xuất mới để bắt đầu."
+        emptyMode={hasActiveFilters ? "no-results" : "no-data"}
+        mobileCardRender={renderIssueCard}
+      />
 
       <Dialog
         open={createOpen}

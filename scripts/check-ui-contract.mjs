@@ -228,9 +228,6 @@ const checks = [
     allowlist: {
       "apps/web/app/(protected)/hr/payroll/[periodId]/payroll-detail-client.tsx": 1,
       "apps/web/app/components/kpi/kpi-card.tsx": 1,
-      // FinanceSummaryCard surfaced by the prefix-widened regex; D028 finance
-      // active zone — migrate to @comtammatu kpi/ KpiCard when that zone frees.
-      "apps/web/app/(protected)/finance/page.tsx": 1,
     },
   },
   {
@@ -274,7 +271,6 @@ const checks = [
       "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 2,
       "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx": 2,
       "apps/web/app/(protected)/inventory/stocktake/stocktake-list-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 2,
       "apps/web/app/(protected)/inventory/suppliers/suppliers-client.tsx": 2,
       "apps/web/app/_components/responsive-toaster.tsx": 2,
       "apps/web/app/components/data-table/data-table-toolbar.tsx": 2,
@@ -580,7 +576,7 @@ const countBudgets = [
       "CardContent className overrides are composition debt and must not increase.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern: /<CardContent\b[^\n]*\bclassName=/g,
-    maxCount: 92,
+    maxCount: 81,
   },
   {
     id: "card-title-classname-baseline",

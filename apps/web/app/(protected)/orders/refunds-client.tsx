@@ -28,6 +28,7 @@ import {
 
 import { BRANCH_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { StatusBadge } from "@/components/status-badge";
+import { KpiCard } from "@/components/kpi/kpi-card";
 /* ─── Props ─── */
 
 interface RefundsClientProps {
@@ -187,45 +188,21 @@ export function RefundsClient({
   return (
     <>
       <div className="grid gap-3 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Chờ duyệt
-            </p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {pendingCount}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Các yêu cầu cần quyết định ngay.
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              {STATES_VI.approved}
-            </p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {approvedCount}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Yêu cầu đã được xử lý trong danh sách hiện tại.
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Tổng giá trị
-            </p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {formatVND(totalRefundAmount)}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Tổng số tiền hoàn của tập kết quả đang xem.
-            </p>
-          </CardContent>
-        </Card>
+        <KpiCard
+          label="Chờ duyệt"
+          value={pendingCount}
+          hint="Các yêu cầu cần quyết định ngay."
+        />
+        <KpiCard
+          label={STATES_VI.approved}
+          value={approvedCount}
+          hint="Yêu cầu đã được xử lý trong danh sách hiện tại."
+        />
+        <KpiCard
+          label="Tổng giá trị"
+          value={formatVND(totalRefundAmount)}
+          hint="Tổng số tiền hoàn của tập kết quả đang xem."
+        />
       </div>
 
       <Card>

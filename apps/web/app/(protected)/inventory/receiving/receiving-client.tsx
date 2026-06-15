@@ -11,20 +11,6 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
-import {
   diffVNDateDays,
   formatVNDate,
   formatVNTime,
@@ -33,9 +19,12 @@ import {
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { AppPage, AppPageHeader } from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
-import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tNav, tRoute } from "../_lib/dictionary";
 import { formatVND } from "../_lib/format";
 import type { RecentActivityItem } from "../procurement-actions";
@@ -109,6 +98,78 @@ export function ReceivingClient({
     grn: grnCount,
     invoice: invoiceCount,
   } satisfies Record<(typeof WORKFLOW_STEPS)[number]["key"], number>;
+
+  const activityColumns: DataTableColumn<RecentActivityItem>[] = [
+    {
+      key: "code",
+      header: "Mã phiếu",
+      className: "min-w-36",
+      render: (item) => (
+        <Link
+          href={activityHref(item)}
+          className="font-mono font-medium text-primary transition hover:underline"
+        >
+          {item.code}
+        </Link>
+      ),
+    },
+    {
+      key: "supplier",
+      header: "Nhà cung cấp",
+      className: "min-w-44",
+      render: (item) => item.supplier,
+    },
+    {
+      key: "date",
+      header: "Thời gian",
+      className: "min-w-32",
+      render: (item) => (
+        <span className="text-sm text-muted-foreground">
+          {formatActivityDate(item.date)}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      className: "min-w-32",
+      render: (item) => <StatusBadge status={item.status} size="sm" />,
+    },
+    {
+      key: "total",
+      header: FORM_VI.totalAmount,
+      className: "min-w-28 text-right",
+      render: (item) => (
+        <span className="font-mono font-semibold">
+          {item.total != null ? formatVND(item.total) : "—"}
+        </span>
+      ),
+    },
+  ];
+
+  const renderActivityCard = (item: RecentActivityItem) => (
+    <InteractiveCard asChild minHeight="tap" padding="default">
+      <Link href={activityHref(item)} className="block">
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="font-mono text-sm font-semibold">{item.code}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {item.supplier}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <StatusBadge status={item.status} size="sm" />
+          <span className="text-xs text-muted-foreground">
+            {formatActivityDate(item.date)}
+          </span>
+          {item.total != null ? (
+            <span className="font-mono text-xs font-semibold">
+              {formatVND(item.total)}
+            </span>
+          ) : null}
+        </div>
+      </Link>
+    </InteractiveCard>
+  );
 
   return (
     <AppPage width={isMobile ? "narrow" : "wide"}>
@@ -199,103 +260,15 @@ export function ReceivingClient({
       {/* Recent activity */}
       <Card>
         <CardContent flush>
-          {isMobile ? (
-            <div className="divide-y">
-              <div className="px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Hoạt động gần đây
-                </p>
-              </div>
-              {recentActivity.length === 0 ? (
-                <Empty className="py-8">
-                  <EmptyHeader>
-                    <EmptyTitle className="text-sm font-semibold">
-                      Chưa có hoạt động nào
-                    </EmptyTitle>
-                    <EmptyDescription className="text-xs leading-5">
-                      PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh.
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              ) : (
-                recentActivity.map((item) => (
-                  <InteractiveCard
-                    key={`${item.type}-${item.id}`}
-                    asChild
-                    minHeight="tap"
-                    padding="default"
-                  >
-                    <Link href={activityHref(item)} className="block">
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <p className="font-mono text-sm font-semibold">
-                          {item.code}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {item.supplier}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 flex-col items-end gap-1">
-                        <StatusBadge status={item.status} size="sm" />
-                        <span className="text-xs text-muted-foreground">
-                          {formatActivityDate(item.date)}
-                        </span>
-                        {item.total != null ? (
-                          <span className="font-mono text-xs font-semibold">
-                            {formatVND(item.total)}₫
-                          </span>
-                        ) : null}
-                      </div>
-                    </Link>
-                  </InteractiveCard>
-                ))
-              )}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-36">Mã phiếu</TableHead>
-                  <TableHead className="min-w-44">Nhà cung cấp</TableHead>
-                  <TableHead className="min-w-32">Thời gian</TableHead>
-                  <TableHead className="min-w-32">{FORM_VI.status}</TableHead>
-                  <TableHead className="min-w-28 text-right">
-                    {FORM_VI.totalAmount}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentActivity.length === 0 ? (
-                  <TableEmptyStateRow
-                    colSpan={5}
-                    title="Chưa có hoạt động nào"
-                    description="PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh."
-                  />
-                ) : null}
-                {recentActivity.map((item) => (
-                  <TableRow key={`${item.type}-${item.id}`}>
-                    <TableCell className="font-mono font-medium">
-                      <Link
-                        href={activityHref(item)}
-                        className="text-primary transition hover:underline"
-                      >
-                        {item.code}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{item.supplier}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatActivityDate(item.date)}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={item.status} size="sm" />
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-semibold">
-                      {item.total != null ? `${formatVND(item.total)}₫` : "—"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          <DataTable
+            columns={activityColumns}
+            data={recentActivity}
+            getRowKey={(item) => `${item.type}-${item.id}`}
+            emptyTitle="Chưa có hoạt động nào"
+            emptyDescription="PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh."
+            emptyMode="no-data"
+            mobileCardRender={renderActivityCard}
+          />
         </CardContent>
       </Card>
     </AppPage>

@@ -42,22 +42,16 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form";
 import { matchesSearch } from "@lib/search";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
-import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import {
   createSupplierInvoice,
   fetchSupplierInvoices,
@@ -165,7 +159,6 @@ export function SupplierInvoicesClient({
   const [vatRate, setVatRate] = useState("8");
   const [matchingNotes, setMatchingNotes] = useState("");
   const [isPending, startTransition] = useTransition();
-  const isMobile = useIsMobile();
   const copy = messages.inventory.supplierInvoices;
 
   const supplierOptions = useMemo(() => {
@@ -361,6 +354,182 @@ export function SupplierInvoicesClient({
     });
   }
 
+  const renderInvoiceCard = (invoice: SupplierInvoiceRow) => {
+    const outstandingAmount = getOutstandingAmount(invoice);
+    const overdue = isInvoiceOverdue(invoice);
+    const isActive = selectedInvoice?.id === invoice.id;
+
+    return (
+      <Card
+        className={cn(
+          "bg-muted/30 transition",
+          isActive && "ring-primary/40 shadow-md",
+        )}
+      >
+        <CardContent>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 space-y-1">
+              <p className="font-mono text-base font-semibold">
+                {invoice.code}
+              </p>
+              <p className="truncate text-sm text-muted-foreground">
+                {invoice.supplierName}
+              </p>
+            </div>
+            {overdue ? (
+              <Badge variant={getInventoryStatusBadgeVariant("overdue")}>
+                {getInventoryStatusLabel("overdue")}
+              </Badge>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Badge variant={getInventoryStatusBadgeVariant(invoice.matchStatus)}>
+              {getInventoryStatusLabel(invoice.matchStatus)}
+            </Badge>
+            <Badge
+              variant={getInventoryStatusBadgeVariant(invoice.paymentStatus)}
+            >
+              {getInventoryStatusLabel(invoice.paymentStatus)}
+            </Badge>
+          </div>
+
+          <div className="mt-4 grid gap-2 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{copy.invoiceDate}</span>
+              <span>{formatDate(invoice.invoiceDate)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{copy.dueDate}</span>
+              <span>{formatDate(invoice.dueDate)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">{copy.remaining}</span>
+              <span className="font-mono font-semibold">
+                {messages.inventory.common.currencyCompact(
+                  formatVND(outstandingAmount),
+                )}
+              </span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant={isActive ? "default" : "outline"}
+            className="mt-4 w-full"
+            onClick={() => setSelectedInvoiceId(invoice.id)}
+          >
+            {isActive ? copy.analyzing : copy.viewAnalysis}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const invoiceColumns: DataTableColumn<SupplierInvoiceRow>[] = [
+    {
+      key: "code",
+      header: copy.invoiceNumber,
+      className: "min-w-40",
+      render: (invoice) => (
+        <div className="space-y-1">
+          <p className="font-mono font-semibold text-foreground">
+            {invoice.code}
+          </p>
+          {invoice.grnCode ? (
+            <p className="text-xs text-muted-foreground">
+              GRN: {invoice.grnCode}
+            </p>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "supplier",
+      header: copy.supplier,
+      className: "min-w-52",
+      render: (invoice) => (
+        <span className="text-muted-foreground">{invoice.supplierName}</span>
+      ),
+    },
+    {
+      key: "dateDue",
+      header: copy.dateDue,
+      className: "min-w-44",
+      render: (invoice) => (
+        <div className="space-y-1 text-sm">
+          <p>{formatDate(invoice.invoiceDate)}</p>
+          <p
+            className={cn(
+              "text-muted-foreground",
+              isInvoiceOverdue(invoice) && "font-medium text-destructive",
+            )}
+          >
+            {copy.duePrefix(formatDate(invoice.dueDate))}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "matchStatus",
+      header: copy.matchingPlaceholder,
+      className: "min-w-36",
+      render: (invoice) => (
+        <Badge variant={getInventoryStatusBadgeVariant(invoice.matchStatus)}>
+          {getInventoryStatusLabel(invoice.matchStatus)}
+        </Badge>
+      ),
+    },
+    {
+      key: "paymentStatus",
+      header: copy.paymentPlaceholder,
+      className: "min-w-36",
+      render: (invoice) => (
+        <div className="flex flex-wrap gap-2">
+          <Badge
+            variant={getInventoryStatusBadgeVariant(invoice.paymentStatus)}
+          >
+            {getInventoryStatusLabel(invoice.paymentStatus)}
+          </Badge>
+          {isInvoiceOverdue(invoice) ? (
+            <Badge variant={getInventoryStatusBadgeVariant("overdue")}>
+              {getInventoryStatusLabel("overdue")}
+            </Badge>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "remaining",
+      header: copy.remaining,
+      className: "min-w-32 text-right",
+      render: (invoice) => (
+        <span className="font-mono font-semibold">
+          {messages.inventory.common.currencyCompact(
+            formatVND(getOutstandingAmount(invoice)),
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "action",
+      header: FORM_VI.action,
+      className: "w-28 text-right",
+      render: (invoice) => (
+        <Button
+          type="button"
+          size="sm"
+          variant={selectedInvoice?.id === invoice.id ? "default" : "outline"}
+          onClick={() => setSelectedInvoiceId(invoice.id)}
+        >
+          {selectedInvoice?.id === invoice.id
+            ? copy.analyzingShort
+            : copy.analysis}
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <AppPage width="full">
       <AppPageHeader
@@ -463,242 +632,26 @@ export function SupplierInvoicesClient({
               </Badge>
             </div>
 
-            {isMobile ? (
-              <div className="space-y-3">
-                {filteredInvoices.length === 0 ? (
-                  <Card>
-                    <CardContent className="py-10 text-center">
-                      <p className="text-base font-semibold">
-                        {showEmptyResults
-                          ? copy.emptyMatchedTitle
-                          : copy.emptyInitialTitle}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {showEmptyResults
-                          ? copy.emptyMatchedDescription
-                          : copy.emptyInitialDescription}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ) : null}
-
-                {filteredInvoices.map((invoice) => {
-                  const outstandingAmount = getOutstandingAmount(invoice);
-                  const overdue = isInvoiceOverdue(invoice);
-                  const isActive = selectedInvoice?.id === invoice.id;
-
-                  return (
-                    <Card
-                      key={invoice.id}
-                      className={cn(
-                        "bg-muted/30 transition",
-                        isActive && "ring-primary/40 shadow-md",
-                      )}
-                    >
-                      <CardContent>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 space-y-1">
-                            <p className="font-mono text-base font-semibold">
-                              {invoice.code}
-                            </p>
-                            <p className="truncate text-sm text-muted-foreground">
-                              {invoice.supplierName}
-                            </p>
-                          </div>
-                          {overdue ? (
-                            <Badge
-                              variant={getInventoryStatusBadgeVariant(
-                                "overdue",
-                              )}
-                            >
-                              {getInventoryStatusLabel("overdue")}
-                            </Badge>
-                          ) : null}
-                        </div>
-
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <Badge
-                            variant={getInventoryStatusBadgeVariant(
-                              invoice.matchStatus,
-                            )}
-                          >
-                            {getInventoryStatusLabel(invoice.matchStatus)}
-                          </Badge>
-                          <Badge
-                            variant={getInventoryStatusBadgeVariant(
-                              invoice.paymentStatus,
-                            )}
-                          >
-                            {getInventoryStatusLabel(invoice.paymentStatus)}
-                          </Badge>
-                        </div>
-
-                        <div className="mt-4 grid gap-2 text-sm">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-muted-foreground">
-                              {copy.invoiceDate}
-                            </span>
-                            <span>{formatDate(invoice.invoiceDate)}</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-muted-foreground">
-                              {copy.dueDate}
-                            </span>
-                            <span>{formatDate(invoice.dueDate)}</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-muted-foreground">
-                              {copy.remaining}
-                            </span>
-                            <span className="font-mono font-semibold">
-                              {messages.inventory.common.currencyCompact(
-                                formatVND(outstandingAmount),
-                              )}
-                            </span>
-                          </div>
-                        </div>
-
-                        <Button
-                          type="button"
-                          variant={isActive ? "default" : "outline"}
-                          className="mt-4 w-full"
-                          onClick={() => setSelectedInvoiceId(invoice.id)}
-                        >
-                          {isActive ? copy.analyzing : copy.viewAnalysis}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-40">
-                      {copy.invoiceNumber}
-                    </TableHead>
-                    <TableHead className="min-w-52">{copy.supplier}</TableHead>
-                    <TableHead className="min-w-44">{copy.dateDue}</TableHead>
-                    <TableHead className="min-w-36">
-                      {copy.matchingPlaceholder}
-                    </TableHead>
-                    <TableHead className="min-w-36">
-                      {copy.paymentPlaceholder}
-                    </TableHead>
-                    <TableHead className="min-w-32 text-right">
-                      {copy.remaining}
-                    </TableHead>
-                    <TableHead className="w-28 text-right">
-                      {FORM_VI.action}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredInvoices.length === 0 ? (
-                    <TableEmptyStateRow
-                      colSpan={7}
-                      title={
-                        showEmptyResults
-                          ? copy.emptyMatchedTitle
-                          : copy.emptyInitialTitle
-                      }
-                      description={
-                        showEmptyResults
-                          ? copy.emptyMatchedDescription
-                          : copy.emptyInitialDescription
-                      }
-                    />
-                  ) : null}
-
-                  {filteredInvoices.map((invoice) => {
-                    const outstandingAmount = getOutstandingAmount(invoice);
-                    const overdue = isInvoiceOverdue(invoice);
-                    const isActive = selectedInvoice?.id === invoice.id;
-
-                    return (
-                      <TableRow
-                        key={invoice.id}
-                        className={cn(isActive && "bg-primary/5")}
-                      >
-                        <TableCell>
-                          <div className="space-y-1">
-                            <p className="font-mono font-semibold text-foreground">
-                              {invoice.code}
-                            </p>
-                            {invoice.grnCode ? (
-                              <p className="text-xs text-muted-foreground">
-                                GRN: {invoice.grnCode}
-                              </p>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {invoice.supplierName}
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1 text-sm">
-                            <p>{formatDate(invoice.invoiceDate)}</p>
-                            <p
-                              className={cn(
-                                "text-muted-foreground",
-                                overdue && "font-medium text-destructive",
-                              )}
-                            >
-                              {copy.duePrefix(formatDate(invoice.dueDate))}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={getInventoryStatusBadgeVariant(
-                              invoice.matchStatus,
-                            )}
-                          >
-                            {getInventoryStatusLabel(invoice.matchStatus)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-2">
-                            <Badge
-                              variant={getInventoryStatusBadgeVariant(
-                                invoice.paymentStatus,
-                              )}
-                            >
-                              {getInventoryStatusLabel(invoice.paymentStatus)}
-                            </Badge>
-                            {overdue ? (
-                              <Badge
-                                variant={getInventoryStatusBadgeVariant(
-                                  "overdue",
-                                )}
-                              >
-                                {getInventoryStatusLabel("overdue")}
-                              </Badge>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-mono font-semibold">
-                          {messages.inventory.common.currencyCompact(
-                            formatVND(outstandingAmount),
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={isActive ? "default" : "outline"}
-                            onClick={() => setSelectedInvoiceId(invoice.id)}
-                          >
-                            {isActive ? copy.analyzingShort : copy.analysis}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            )}
+            <DataTable
+              columns={invoiceColumns}
+              data={filteredInvoices}
+              getRowKey={(invoice) => invoice.id}
+              emptyTitle={
+                showEmptyResults
+                  ? copy.emptyMatchedTitle
+                  : copy.emptyInitialTitle
+              }
+              emptyDescription={
+                showEmptyResults
+                  ? copy.emptyMatchedDescription
+                  : copy.emptyInitialDescription
+              }
+              emptyMode={showEmptyResults ? "no-results" : "no-data"}
+              rowClassName={(invoice) =>
+                selectedInvoice?.id === invoice.id ? "bg-primary/5" : undefined
+              }
+              mobileCardRender={renderInvoiceCard}
+            />
           </CardContent>
         </Card>
 

@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import {
   AlertTriangle as IconAlertTriangle,
-  ArrowUpRight as IconArrowUpRight,
   Boxes as IconBoxes,
   PiggyBank as IconPiggyBank,
   ReceiptText as IconReceiptText,
@@ -11,19 +9,10 @@ import {
 } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { cn } from "@comtammatu/ui/lib/utils";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
-import {
-  buildCompareDelta,
-  CompareChip,
-  type CompareDelta,
-} from "@/components/kpi/compare-chip";
+import { buildCompareDelta } from "@/components/kpi/compare-chip";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import { FilterBar } from "./components/filter-bar";
 import {
   parseFinanceParams,
@@ -76,76 +65,6 @@ function MetricInline({
         {value}
       </p>
     </div>
-  );
-}
-
-type ValueTone = "default" | "primary" | "success" | "warning";
-
-const VALUE_TONE_CLASSNAME: Record<ValueTone, string> = {
-  default: "text-foreground",
-  primary: "text-primary",
-  success: "text-success",
-  warning: "text-warning",
-};
-
-function FinanceSummaryCard({
-  icon,
-  title,
-  value,
-  helper,
-  valueTone = "default",
-  href,
-  delta,
-}: {
-  icon: ReactNode;
-  title: string;
-  value: string;
-  helper: string;
-  valueTone?: ValueTone;
-  href?: string;
-  delta?: CompareDelta | null;
-}) {
-  const content = (
-    <Card size="sm" className="h-full min-w-0">
-      <CardHeader>
-        <div className="flex min-w-0 items-start justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 text-muted-foreground">{icon}</span>
-            <CardTitle className="truncate">{title}</CardTitle>
-          </div>
-          {href ? (
-            <IconArrowUpRight
-              className="size-3.5 shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-          ) : null}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <p
-          className={cn(
-            "truncate font-mono text-2xl font-semibold tabular-nums",
-            VALUE_TONE_CLASSNAME[valueTone],
-          )}
-        >
-          {value}
-        </p>
-        {delta ? <CompareChip label={delta.label} tone={delta.tone} /> : null}
-        <p className="text-xs text-muted-foreground">{helper}</p>
-      </CardContent>
-    </Card>
-  );
-
-  if (!href) return content;
-
-  return (
-    <Link
-      href={href}
-      className="block h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      aria-label={`${title}: ${value}`}
-    >
-      {content}
-    </Link>
   );
 }
 
@@ -284,15 +203,15 @@ export default async function FinancePage({
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <FinanceSummaryCard
+        <KpiCard
           icon={<IconWallet className="size-4 text-muted-foreground" />}
-          title={financeCopy.basic.kpis.revenue}
+          label={financeCopy.basic.kpis.revenue}
           value={formatVND(cockpit.kpis.totalCollected)}
-          helper={financeCopy.basic.kpis.revenueHint(
+          hint={financeCopy.basic.kpis.revenueHint(
             formatCount(cockpit.kpis.orderCount),
             formatVND(cockpit.kpis.netRevenueBeforeVat),
           )}
-          valueTone="primary"
+          tone="primary"
           href="/finance/revenue"
           delta={
             cockpit.compareKpis
@@ -305,31 +224,31 @@ export default async function FinancePage({
           }
         />
 
-        <FinanceSummaryCard
+        <KpiCard
           icon={<IconBoxes className="size-4 text-muted-foreground" />}
-          title={financeCopy.basic.kpis.inventoryValue}
+          label={financeCopy.basic.kpis.inventoryValue}
           value={formatVND(cockpit.kpis.inventoryValue)}
-          helper={financeCopy.basic.kpis.inventoryValueHint}
+          hint={financeCopy.basic.kpis.inventoryValueHint}
           href="/admin/reports/inventory-value"
         />
 
-        <FinanceSummaryCard
+        <KpiCard
           icon={<IconReceiptText className="size-4 text-muted-foreground" />}
-          title={financeCopy.basic.kpis.operatingExpense}
+          label={financeCopy.basic.kpis.operatingExpense}
           value={formatVND(cockpit.kpis.operatingExpense)}
-          helper={financeCopy.basic.kpis.operatingExpenseHint}
+          hint={financeCopy.basic.kpis.operatingExpenseHint}
           href="/finance/expenses"
         />
 
-        <FinanceSummaryCard
+        <KpiCard
           icon={<IconTrendingUp className="size-4 text-muted-foreground" />}
-          title={financeCopy.basic.kpis.grossProfit}
+          label={financeCopy.basic.kpis.grossProfit}
           value={formatVND(cockpit.kpis.grossProfit)}
-          helper={financeCopy.basic.kpis.grossProfitHint(
+          hint={financeCopy.basic.kpis.grossProfitHint(
             formatVND(cockpit.kpis.ingredientCost),
             formatPercent(cockpit.kpis.grossMargin),
           )}
-          valueTone={cockpit.kpis.grossProfit >= 0 ? "success" : "warning"}
+          tone={cockpit.kpis.grossProfit >= 0 ? "success" : "warning"}
           href="/finance/food-cost"
           delta={
             cockpit.compareKpis
@@ -342,15 +261,15 @@ export default async function FinancePage({
           }
         />
 
-        <FinanceSummaryCard
+        <KpiCard
           icon={<IconPiggyBank className="size-4 text-muted-foreground" />}
-          title={financeCopy.basic.kpis.netProfit}
+          label={financeCopy.basic.kpis.netProfit}
           value={formatVND(cockpit.kpis.netProfit)}
-          helper={financeCopy.basic.kpis.netProfitHint(
+          hint={financeCopy.basic.kpis.netProfitHint(
             formatVND(cockpit.kpis.grossProfit),
             formatVND(cockpit.kpis.operatingExpense),
           )}
-          valueTone={cockpit.kpis.netProfit >= 0 ? "success" : "warning"}
+          tone={cockpit.kpis.netProfit >= 0 ? "success" : "warning"}
           delta={
             cockpit.compareKpis
               ? buildCompareDelta(
