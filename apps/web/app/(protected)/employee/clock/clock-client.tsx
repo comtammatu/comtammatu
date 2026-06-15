@@ -31,6 +31,7 @@ import { messages } from "@lib/messages";
 import { EmployeeDetailList, EmployeePanel } from "../components/employee-page";
 import type { TodayWorkState } from "../_lib/today-work-state";
 import {
+  cancelCheckoutRequest,
   clockInWithPhoto,
   clockOutManagerShift,
   requestCheckoutApproval,
@@ -251,6 +252,22 @@ export function ClockClient({ state }: ClockClientProps) {
     });
   }, [managerAttendanceOnly, router]);
 
+  const cancelCheckout = useCallback(() => {
+    setCheckoutState("submitting");
+    setError(null);
+    startTransition(async () => {
+      const result = await cancelCheckoutRequest();
+      if (result.success) {
+        if (navigator.vibrate) navigator.vibrate(80);
+        router.push("/employee");
+        router.refresh();
+      } else {
+        setCheckoutState("error");
+        setError(result.error ?? "Không thể rút yêu cầu kết ca.");
+      }
+    });
+  }, [router]);
+
   const cameraActive =
     cameraState === "starting" ||
     cameraState === "ready" ||
@@ -363,6 +380,18 @@ export function ClockClient({ state }: ClockClientProps) {
             },
           ]}
         />
+        {error ? <ErrorAlert message={error} /> : null}
+        <Button
+          variant="outline"
+          size="touch"
+          className="w-full sm:w-fit"
+          disabled={checkoutState === "submitting"}
+          onClick={cancelCheckout}
+        >
+          {checkoutState === "submitting"
+            ? clockCopy.cancelCheckoutPending
+            : clockCopy.cancelCheckoutButton}
+        </Button>
       </EmployeePanel>
     );
   }

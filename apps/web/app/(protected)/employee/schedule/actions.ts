@@ -13,18 +13,14 @@ const monthStartSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Ngày không hợp lệ (YYYY-MM-DD)" });
 
-export interface ScheduleShift {
-  date: string;
-  shift_name: string;
-  start_time: string;
-  end_time: string;
-}
-
 export interface ScheduleAttendance {
   date: string;
   check_in: string | null;
   check_out: string | null;
   status: string;
+  shift_name: string | null;
+  start_time: string | null;
+  end_time: string | null;
 }
 
 export interface ScheduleLeave {
@@ -34,7 +30,6 @@ export interface ScheduleLeave {
 }
 
 export interface ScheduleMonthData {
-  shifts: ScheduleShift[];
   attendance: ScheduleAttendance[];
   leaves: ScheduleLeave[];
 }
@@ -110,7 +105,7 @@ export async function fetchMySchedule(
     return { success: false, error: "Không tải được lịch ca." };
   }
 
-  const shifts: ScheduleShift[] = (attendanceResult.data ?? []).flatMap(
+  const attendance: ScheduleAttendance[] = (attendanceResult.data ?? []).map(
     (row) => {
       // supabase-js typegen infers M:1 FK as array, but PostgREST returns
       // a single object at runtime. Cast through unknown to match runtime.
@@ -119,26 +114,16 @@ export async function fetchMySchedule(
         start_time: string;
         end_time: string;
       } | null;
-      return shift
-        ? [
-            {
-              date: row.date,
-              shift_name: shift.name,
-              start_time: shift.start_time,
-              end_time: shift.end_time,
-            },
-          ]
-        : [];
+      return {
+        date: row.date,
+        check_in: row.check_in,
+        check_out: row.check_out,
+        status: row.status,
+        shift_name: shift?.name ?? null,
+        start_time: shift?.start_time ?? null,
+        end_time: shift?.end_time ?? null,
+      };
     },
-  );
-
-  const attendance: ScheduleAttendance[] = (attendanceResult.data ?? []).map(
-    (row) => ({
-      date: row.date,
-      check_in: row.check_in,
-      check_out: row.check_out,
-      status: row.status,
-    }),
   );
 
   const leaves: ScheduleLeave[] = (leaveResult.data ?? []).flatMap((row) =>
@@ -153,5 +138,5 @@ export async function fetchMySchedule(
       : [],
   );
 
-  return { success: true, data: { shifts, attendance, leaves } };
+  return { success: true, data: { attendance, leaves } };
 }

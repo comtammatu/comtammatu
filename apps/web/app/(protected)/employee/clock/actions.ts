@@ -186,29 +186,37 @@ export async function clockInWithPhoto(
   const today = getTodayVN();
   const service = createServiceClient();
 
+  // Attendance is keyed per shift; resolve the shift for the current VN time
+  // first so the morning and evening shifts are independent records. Shifts are
+  // global (branch_id NULL) but a branch may still define its own.
+  const { data: branchShifts } = await service
+    .from("shifts")
+    .select("id, start_time, end_time")
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .or(`branch_id.is.null,branch_id.eq.${ctx.branchId}`)
+    .eq("is_active", true);
+  const shiftId = resolveDefaultShiftId(branchShifts ?? []);
+
+  if (shiftId == null) {
+    return {
+      success: false,
+      error: "Chi nhánh chưa khai ca làm. Liên hệ quản lý.",
+    };
+  }
+
   const { data: existing } = await service
     .from("attendance_records")
     .select("id, check_in, check_out, checkout_requested_at")
     .eq("employee_id", ctx.employeeId)
     .eq("tenant_id", ctx.claims.tenant_id)
     .eq("date", today)
+    .eq("shift_id", shiftId)
     .maybeSingle();
 
   if (existing) {
     return reuseExistingClockIn(existing, ctx.claims.user_role);
   }
 
-  // Attach the branch shift matching current VN time so the timesheet
-  // still records a shift (there is no shift registration).
-  const { data: branchShifts } = await service
-    .from("shifts")
-    .select("id, start_time, end_time")
-    .eq("tenant_id", ctx.claims.tenant_id)
-    .eq("branch_id", ctx.branchId)
-    .eq("is_active", true);
-  const shiftId = resolveDefaultShiftId(branchShifts ?? []);
-
-  const rpcShiftId = shiftId ?? 0;
   const managerAttendanceOnly = isManagerSimpleAttendanceRole(
     ctx.claims.user_role,
   );
@@ -288,6 +296,7 @@ export async function clockInWithPhoto(
           .eq("employee_id", ctx.employeeId)
           .eq("tenant_id", ctx.claims.tenant_id)
           .eq("date", today)
+          .eq("shift_id", shiftId)
           .maybeSingle();
 
         if (duplicate) {
@@ -318,7 +327,7 @@ export async function clockInWithPhoto(
       p_tenant_id: ctx.claims.tenant_id,
       p_employee_id: ctx.employeeId,
       p_branch_id: ctx.branchId,
-      p_shift_id: rpcShiftId,
+      p_shift_id: shiftId,
       p_business_date: today,
       p_photo_path: photoPath,
     },
@@ -334,6 +343,7 @@ export async function clockInWithPhoto(
         .eq("employee_id", ctx.employeeId)
         .eq("tenant_id", ctx.claims.tenant_id)
         .eq("date", today)
+        .eq("shift_id", shiftId)
         .maybeSingle();
 
       if (duplicate) {
@@ -471,6 +481,48 @@ export async function requestCheckoutApproval(): Promise<
 
   revalidateEmployeeWorkPaths();
   return { success: true, data: { requestedAt } };
+}
+
+export async function cancelCheckoutRequest(): Promise<
+  ActionResult<{ cancelled: true }>
+> {
+  const ctx = await getEmployeeContext();
+  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+
+  const now = new Date().toISOString();
+  // check_out / checkout_approved_at NOT NULL ⇒ an approval already won the
+  // race; the guarded predicate makes the update a no-op (result null) then.
+  const { data: result, error } = await createServiceClient()
+    .from("attendance_records")
+    .update({
+      checkout_requested_at: null,
+      checkout_requested_by_role: null,
+      checkout_approval_target_roles: [],
+      updated_at: now,
+    })
+    .eq("employee_id", ctx.employeeId)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .eq("date", getTodayVN())
+    .is("check_out", null)
+    .is("checkout_approved_at", null)
+    .not("checkout_requested_at", "is", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !result) {
+    if (error) {
+      console.error("[employee/clock] cancel checkout request failed", {
+        code: error.code,
+      });
+    }
+    return {
+      success: false,
+      error: "Không thể rút yêu cầu kết ca. Có thể đã được duyệt.",
+    };
+  }
+
+  revalidateEmployeeWorkPaths();
+  return { success: true, data: { cancelled: true } };
 }
 
 export async function clockOutManagerShift(

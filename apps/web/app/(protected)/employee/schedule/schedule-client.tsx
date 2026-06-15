@@ -26,13 +26,12 @@ import {
   RefreshCw as IconRefresh,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
-import { EmployeePanel } from "../components/employee-page";
+import { EmployeePanel, EmployeeStatusStrip } from "../components/employee-page";
 import {
   fetchMySchedule,
   type ScheduleAttendance,
   type ScheduleLeave,
   type ScheduleMonthData,
-  type ScheduleShift,
 } from "./actions";
 import {
   formatISODateParts,
@@ -95,8 +94,12 @@ function formatTime(iso: string | null | undefined): string {
   return iso ? formatVNTime(iso) : "\u2014";
 }
 
-function formatShiftTime(shift: ScheduleShift): string {
-  return `${shift.start_time.slice(0, 5)} - ${shift.end_time.slice(0, 5)}`;
+function formatShiftWindow(
+  start: string | null,
+  end: string | null,
+): string {
+  if (!start) return "—";
+  return `${start.slice(0, 5)} - ${end ? end.slice(0, 5) : "—"}`;
 }
 
 function getMonthStartForOffset(monthStartStr: string, delta: number): string {
@@ -124,10 +127,8 @@ function getDefaultSelectedDate(
   const todayStr = getVNDateString();
   if (isDateInViewedMonth(todayStr, monthStartStr)) return todayStr;
 
-  const firstActiveDate = [
-    ...data.shifts.map((shift) => shift.date),
-    ...data.attendance.map((attendance) => attendance.date),
-  ]
+  const firstActiveDate = data.attendance
+    .map((attendance) => attendance.date)
     .filter((dateStr) => isDateInViewedMonth(dateStr, monthStartStr))
     .sort()[0];
 
@@ -222,14 +223,12 @@ function expandLeavesByDate(
 }
 
 function createScheduleMaps(data: ScheduleMonthData, monthStartStr: string) {
-  const shiftsByDate = new Map<string, ScheduleShift>();
-  for (const shift of data.shifts) {
-    shiftsByDate.set(shift.date, shift);
-  }
-
-  const attendanceByDate = new Map<string, ScheduleAttendance>();
+  // Per-shift (D027): a day can hold the morning and the evening record.
+  const attendanceByDate = new Map<string, ScheduleAttendance[]>();
   for (const attendance of data.attendance) {
-    attendanceByDate.set(attendance.date, attendance);
+    const list = attendanceByDate.get(attendance.date) ?? [];
+    list.push(attendance);
+    attendanceByDate.set(attendance.date, list);
   }
 
   const monthParts = parseISODateParts(monthStartStr);
@@ -242,60 +241,38 @@ function createScheduleMaps(data: ScheduleMonthData, monthStartStr: string) {
     monthEndStr,
   );
 
-  return { attendanceByDate, leaveByDate, shiftsByDate };
+  return { attendanceByDate, leaveByDate };
 }
 
 const EMPTY_MONTH: ScheduleMonthData = {
-  shifts: [],
   attendance: [],
   leaves: [],
 };
 const SCHEDULE_SKELETON_FIXTURE_MONTH = "2026-01-01";
-const SCHEDULE_SKELETON_FIXTURE_SHIFTS: ScheduleShift[] = [
-  {
-    date: "2026-01-05",
-    shift_name: "Ca s\u00e1ng",
-    start_time: "07:00",
-    end_time: "14:00",
-  },
-  {
-    date: "2026-01-06",
-    shift_name: "Ca chi\u1ec1u",
-    start_time: "14:00",
-    end_time: "22:00",
-  },
-  {
-    date: "2026-01-15",
-    shift_name: "Ca s\u00e1ng",
-    start_time: "07:00",
-    end_time: "14:00",
-  },
-  {
-    date: "2026-01-30",
-    shift_name: "Ca t\u1ed1i",
-    start_time: "16:00",
-    end_time: "23:00",
-  },
-];
 const SCHEDULE_SKELETON_FIXTURE_ATTENDANCE: ScheduleAttendance[] = [
   {
     date: "2026-01-05",
     check_in: "2026-01-05T00:05:00.000Z",
     check_out: "2026-01-05T07:00:00.000Z",
     status: "present",
+    shift_name: "Ca s\u00e1ng",
+    start_time: "06:00",
+    end_time: "13:00",
   },
   {
-    date: "2026-01-06",
-    check_in: "2026-01-06T07:10:00.000Z",
+    date: "2026-01-05",
+    check_in: "2026-01-05T09:05:00.000Z",
     check_out: null,
-    status: "late",
+    status: "present",
+    shift_name: "Ca chi\u1ec1u",
+    start_time: "16:00",
+    end_time: "21:00",
   },
 ];
 const SCHEDULE_SKELETON_FIXTURE_LEAVES: ScheduleLeave[] = [
   { start_date: "2026-01-20", end_date: "2026-01-21", status: "approved" },
 ];
 const SCHEDULE_SKELETON_FIXTURE: ScheduleMonthData = {
-  shifts: SCHEDULE_SKELETON_FIXTURE_SHIFTS,
   attendance: SCHEDULE_SKELETON_FIXTURE_ATTENDANCE,
   leaves: SCHEDULE_SKELETON_FIXTURE_LEAVES,
 };
@@ -344,19 +321,17 @@ function getLeaveLabel(leave: LeaveDayStatus): string {
 }
 
 function CalendarCellContent({
-  attendance,
+  attendances,
   cell,
   leave,
   onSelectDate,
   selected,
-  shift,
 }: {
-  attendance: ScheduleAttendance | undefined;
+  attendances: ScheduleAttendance[];
   cell: CalendarCell;
   leave: LeaveDayStatus | undefined;
   onSelectDate: (dateStr: string) => void;
   selected: boolean;
-  shift: ScheduleShift | undefined;
 }) {
   if (!cell.dateStr || cell.dayNumber == null) {
     return (
@@ -367,14 +342,15 @@ function CalendarCellContent({
     );
   }
 
-  const hasClock = Boolean(attendance?.check_in || attendance?.check_out);
   const ariaParts = [
     formatDate(cell.dateStr),
-    shift
-      ? `${copy.rowShift}: ${shift.shift_name} ${formatShiftTime(shift)}`
-      : copy.noShiftForDay,
-    attendance
-      ? `${copy.rowAttendance}: ${getAttendanceLabel(attendance)}`
+    attendances.length > 0
+      ? attendances
+          .map(
+            (att) =>
+              `${att.shift_name ?? copy.rowShift}: ${getAttendanceLabel(att)}`,
+          )
+          .join(". ")
       : copy.noAttendance,
     ...(leave ? [getLeaveLabel(leave)] : []),
   ];
@@ -410,51 +386,24 @@ function CalendarCellContent({
         ) : null}
       </div>
 
-      <div className="flex min-w-0 flex-col gap-1">
-        {shift ? (
-          <>
-            <span className="hidden line-clamp-1 text-xs font-medium leading-5 sm:block">
-              {shift.shift_name}
-            </span>
-            <span className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:block">
-              {formatShiftTime(shift)}
-            </span>
-          </>
-        ) : null}
-      </div>
-
-      <div className="mt-auto flex min-w-0 items-center gap-1.5">
-        {shift ? (
-          <span
-            className="size-1.5 shrink-0 rounded-full bg-primary"
-            aria-hidden="true"
-          />
-        ) : null}
-        {attendance ? (
-          <>
+      <div className="mt-auto flex min-w-0 flex-col gap-0.5">
+        {attendances.map((att, index) => (
+          <div key={index} className="flex min-w-0 items-center gap-1">
             <span
               className={cn(
                 "size-1.5 shrink-0 rounded-full",
-                getAttendanceDotClassName(attendance),
+                getAttendanceDotClassName(att),
               )}
               aria-hidden="true"
             />
-            <Badge
-              variant={getAttendanceVariant(attendance)}
-              className="hidden max-w-full truncate sm:inline-flex"
-            >
-              {getAttendanceLabel(attendance)}
-            </Badge>
-            {hasClock ? (
-              <span className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:inline">
-                {copy.checkInShort} {formatTime(attendance.check_in)} {"\u00b7"}{" "}
-                {copy.checkOutShort} {formatTime(attendance.check_out)}
-              </span>
-            ) : null}
-          </>
-        ) : null}
+            <span className="hidden min-w-0 truncate text-2xs leading-4 text-muted-foreground sm:inline">
+              {att.shift_name ?? "\u2014"}
+              {att.check_in ? ` ${formatTime(att.check_in)}` : ""}
+            </span>
+          </div>
+        ))}
         {leave ? (
-          <>
+          <div className="flex min-w-0 items-center gap-1">
             <span
               className={cn(
                 "size-1.5 shrink-0 rounded-full",
@@ -462,15 +411,10 @@ function CalendarCellContent({
               )}
               aria-hidden="true"
             />
-            {!attendance ? (
-              <Badge
-                variant={leave === "approved" ? "info" : "outline"}
-                className="hidden max-w-full truncate sm:inline-flex"
-              >
-                {getLeaveLabel(leave)}
-              </Badge>
-            ) : null}
-          </>
+            <span className="hidden min-w-0 truncate text-2xs leading-4 text-muted-foreground sm:inline">
+              {getLeaveLabel(leave)}
+            </span>
+          </div>
         ) : null}
       </div>
     </button>
@@ -483,14 +427,12 @@ function ScheduleMonthCalendarTable({
   monthStart,
   onSelectDate,
   selectedDate,
-  shiftsByDate,
 }: {
-  attendanceByDate: Map<string, ScheduleAttendance>;
+  attendanceByDate: Map<string, ScheduleAttendance[]>;
   leaveByDate: Map<string, LeaveDayStatus>;
   monthStart: string;
   onSelectDate: (dateStr: string) => void;
   selectedDate: string;
-  shiftsByDate: Map<string, ScheduleShift>;
 }) {
   const rows = chunkCalendarRows(generateMonthCalendarCells(monthStart));
 
@@ -519,10 +461,10 @@ function ScheduleMonthCalendarTable({
                   className="border-l border-t p-1 align-top whitespace-normal first:border-l-0"
                 >
                   <CalendarCellContent
-                    attendance={
+                    attendances={
                       cell.dateStr
-                        ? attendanceByDate.get(cell.dateStr)
-                        : undefined
+                        ? (attendanceByDate.get(cell.dateStr) ?? [])
+                        : []
                     }
                     cell={cell}
                     leave={
@@ -530,9 +472,6 @@ function ScheduleMonthCalendarTable({
                     }
                     onSelectDate={onSelectDate}
                     selected={cell.dateStr === selectedDate}
-                    shift={
-                      cell.dateStr ? shiftsByDate.get(cell.dateStr) : undefined
-                    }
                   />
                 </TableCell>
               ))}
@@ -545,18 +484,14 @@ function ScheduleMonthCalendarTable({
 }
 
 function SelectedDayDetail({
-  attendance,
+  attendances,
   dateStr,
   leave,
-  shift,
 }: {
-  attendance: ScheduleAttendance | undefined;
+  attendances: ScheduleAttendance[];
   dateStr: string;
   leave: LeaveDayStatus | undefined;
-  shift: ScheduleShift | undefined;
 }) {
-  const hasClock = Boolean(attendance?.check_in || attendance?.check_out);
-
   return (
     <div className="flex flex-col gap-3 rounded-md border bg-background p-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200">
       <div className="flex min-w-0 items-start justify-between gap-2">
@@ -578,52 +513,42 @@ function SelectedDayDetail({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="min-w-0 rounded-md border px-2 py-2 transition-[background-color,border-color] duration-150">
-          <p className="truncate text-2xs font-medium text-muted-foreground">
-            {copy.rowShift}
-          </p>
-          <p className="mt-1 truncate text-sm font-semibold">
-            {shift?.shift_name ?? copy.noShiftForDay}
-          </p>
+      {attendances.length === 0 ? (
+        <p className="rounded-md border px-3 py-4 text-center text-sm text-muted-foreground">
+          {copy.noAttendance}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {attendances.map((att, index) => {
+            const hasClock = Boolean(att.check_in || att.check_out);
+            return (
+              <div
+                key={index}
+                className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md border px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">
+                    {att.shift_name ?? copy.rowShift}
+                  </p>
+                  <p className="font-mono text-xs tabular-nums text-muted-foreground">
+                    {formatShiftWindow(att.start_time, att.end_time)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                    {hasClock
+                      ? `${copy.checkInShort} ${formatTime(att.check_in)} · ${copy.checkOutShort} ${formatTime(att.check_out)}`
+                      : "—"}
+                  </span>
+                  <Badge variant={getAttendanceVariant(att)}>
+                    {getAttendanceLabel(att)}
+                  </Badge>
+                </div>
+              </div>
+            );
+          })}
         </div>
-        <div className="min-w-0 rounded-md border px-2 py-2 transition-[background-color,border-color] duration-150">
-          <p className="truncate text-2xs font-medium text-muted-foreground">
-            {copy.timeRange}
-          </p>
-          <p className="mt-1 truncate font-mono text-sm font-semibold tabular-nums">
-            {shift ? formatShiftTime(shift) : "\u2014"}
-          </p>
-        </div>
-        <div className="min-w-0 rounded-md border px-2 py-2 transition-[background-color,border-color] duration-150">
-          <p className="truncate text-2xs font-medium text-muted-foreground">
-            {copy.rowAttendance}
-          </p>
-          <p
-            className={cn(
-              "mt-1 truncate text-sm font-semibold",
-              !attendance && "text-muted-foreground",
-            )}
-          >
-            {attendance ? getAttendanceLabel(attendance) : copy.noAttendance}
-          </p>
-        </div>
-        <div className="min-w-0 rounded-md border px-2 py-2 transition-[background-color,border-color] duration-150">
-          <p className="truncate text-2xs font-medium text-muted-foreground">
-            {copy.clockRange}
-          </p>
-          <p
-            className={cn(
-              "mt-1 truncate font-mono text-sm font-semibold tabular-nums",
-              !hasClock && "text-muted-foreground",
-            )}
-          >
-            {hasClock
-              ? `${copy.checkInShort} ${formatTime(attendance?.check_in)} · ${copy.checkOutShort} ${formatTime(attendance?.check_out)}`
-              : "\u2014"}
-          </p>
-        </div>
-      </div>
+      )}
 
       <Button
         asChild
@@ -692,13 +617,28 @@ export function ScheduleClient({
     loadMonth(currentMonthStart);
   }
 
-  const { attendanceByDate, leaveByDate, shiftsByDate } = createScheduleMaps(
+  const { attendanceByDate, leaveByDate } = createScheduleMaps(
     monthData,
     monthStart,
   );
-  const selectedShift = shiftsByDate.get(selectedDate);
-  const selectedAttendance = attendanceByDate.get(selectedDate);
+  const selectedAttendance = attendanceByDate.get(selectedDate) ?? [];
   const selectedLeave = leaveByDate.get(selectedDate);
+
+  // Per-shift (D027): 2 ca/ngày = 1 công, 1 ca = 0.5.
+  const shiftCountByDate = new Map<string, number>();
+  for (const item of monthData.attendance) {
+    shiftCountByDate.set(item.date, (shiftCountByDate.get(item.date) ?? 0) + 1);
+  }
+  let workdaysCount = 0;
+  for (const count of shiftCountByDate.values()) {
+    workdaysCount += Math.min(count, 2) * 0.5;
+  }
+  const openShiftsCount = monthData.attendance.filter(
+    (item) => !item.check_out,
+  ).length;
+  const leaveDaysCount = monthData.leaves.filter(
+    (item) => item.status === "approved",
+  ).length;
 
   return (
     <EmployeePanel
@@ -749,6 +689,22 @@ export function ScheduleClient({
         </Button>
       </div>
 
+      <EmployeeStatusStrip
+        items={[
+          { label: copy.summaryWorkdays, value: String(workdaysCount) },
+          {
+            label: copy.summaryOpenShifts,
+            value: String(openShiftsCount),
+            muted: openShiftsCount === 0,
+          },
+          {
+            label: copy.summaryLeaveDays,
+            value: String(leaveDaysCount),
+            muted: leaveDaysCount === 0,
+          },
+        ]}
+      />
+
       {error ? (
         <div className="flex flex-col gap-2">
           <Alert variant="destructive">
@@ -793,14 +749,12 @@ export function ScheduleClient({
             monthStart={monthStart}
             onSelectDate={setSelectedDate}
             selectedDate={selectedDate}
-            shiftsByDate={shiftsByDate}
           />
           <SelectedDayDetail
             key={selectedDate}
-            attendance={selectedAttendance}
+            attendances={selectedAttendance}
             dateStr={selectedDate}
             leave={selectedLeave}
-            shift={selectedShift}
           />
         </AppBoneyardSkeleton>
       )}

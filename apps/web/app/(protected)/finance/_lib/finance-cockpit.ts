@@ -75,6 +75,7 @@ export interface FinanceCockpitKpis {
   ingredientCost: number;
   grossProfit: number;
   grossMargin: number;
+  netProfit: number;
   cashRevenue: number;
   vietqrRevenue: number;
   momoRevenue: number;
@@ -116,7 +117,7 @@ export interface FinanceCockpitData {
   kpis: FinanceCockpitKpis;
   compareKpis: Pick<
     FinanceCockpitKpis,
-    "totalCollected" | "operatingExpense" | "grossProfit"
+    "totalCollected" | "operatingExpense" | "grossProfit" | "netProfit"
   > | null;
   revenueTrend: FinanceTrendPoint[];
   grossProfitTrend: FinanceTrendPoint[];
@@ -163,6 +164,7 @@ function buildKpis({
   const grossProfit = netRevenueBeforeVat - ingredientCost;
   const grossMargin =
     netRevenueBeforeVat > 0 ? (grossProfit / netRevenueBeforeVat) * 100 : 0;
+  const netProfit = grossProfit - operatingExpense;
 
   return {
     totalCollected,
@@ -173,20 +175,40 @@ function buildKpis({
     ingredientCost,
     grossProfit,
     grossMargin,
+    netProfit,
     cashRevenue: toNumber(kpis?.cash_revenue),
     vietqrRevenue: toNumber(kpis?.vietqr_revenue),
     momoRevenue: toNumber(kpis?.momo_revenue),
   };
 }
 
-export function fetchOperatingExpenseTotal(_params: {
+export async function fetchOperatingExpenseTotal({
+  supabase,
+  tenantId,
+  branchId,
+  startDate,
+  endDate,
+}: {
   supabase: SupabaseClient;
   tenantId: number;
   branchId: number | null;
   startDate: string;
   endDate: string;
 }): Promise<number> {
-  return Promise.resolve(0);
+  let query = supabase
+    .from("expenses")
+    .select("amount")
+    .eq("tenant_id", tenantId)
+    .gte("expense_date", startDate)
+    .lte("expense_date", endDate);
+
+  if (branchId != null) {
+    query = query.eq("branch_id", branchId);
+  }
+
+  const { data, error } = await query;
+  if (error) return 0;
+  return (data ?? []).reduce((sum, row) => sum + toNumber(row.amount), 0);
 }
 
 async function fetchUnpaidSupplierInvoiceRisk({
@@ -589,6 +611,7 @@ export async function fetchFinanceCockpit(
           totalCollected: compareKpis.totalCollected,
           operatingExpense: compareKpis.operatingExpense,
           grossProfit: compareKpis.grossProfit,
+          netProfit: compareKpis.netProfit,
         }
       : null,
     revenueTrend,

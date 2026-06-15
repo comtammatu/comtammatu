@@ -1,11 +1,15 @@
-export const CHECKLIST_PHASES = ["dau_ca", "trong_ca", "cuoi_ca"] as const;
+export const CHECKLIST_PHASES = [
+  "start_of_shift",
+  "during_shift",
+  "end_of_shift",
+] as const;
 
 export type ChecklistPhase = (typeof CHECKLIST_PHASES)[number];
 
 export const CHECKLIST_PHASE_LABELS: Record<ChecklistPhase, string> = {
-  dau_ca: "Đầu ca",
-  trong_ca: "Trong ca",
-  cuoi_ca: "Cuối ca",
+  start_of_shift: "Đầu ca",
+  during_shift: "Trong ca",
+  end_of_shift: "Cuối ca",
 };
 
 export interface ChecklistTemplateItem {

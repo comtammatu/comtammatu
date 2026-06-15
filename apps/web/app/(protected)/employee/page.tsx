@@ -32,6 +32,7 @@ import {
 } from "./components/employee-page";
 import {
   getTodayWorkState,
+  type TodayShiftEntry,
   type TodayWorkState,
   type TodayWorkStatus,
 } from "./_lib/today-work-state";
@@ -75,6 +76,18 @@ const OPERATION_HANDOFFS: Array<{
     description: copy.runnerDescription,
   },
 ];
+
+function getShiftStateBadge(shift: TodayShiftEntry): {
+  label: string;
+  variant: "success" | "warning" | "info" | "secondary";
+} {
+  if (shift.checkOut) return { label: copy.shiftDone, variant: "success" };
+  if (shift.checkoutRequestedAt) {
+    return { label: copy.shiftPending, variant: "warning" };
+  }
+  if (shift.checkIn) return { label: copy.shiftWorking, variant: "info" };
+  return { label: copy.shiftNotStarted, variant: "secondary" };
+}
 
 function getWorkTone(status: TodayWorkStatus) {
   if (status === "done") return "success" as const;
@@ -404,6 +417,49 @@ export default async function EmployeePage() {
             <EmployeeStatusStrip items={todaySummaryItems} />
           </div>
         </EmployeePanel>
+
+        {state.todayShifts.length > 0 ? (
+          <EmployeePanel icon={IconClock} title={copy.shiftsTodayTitle} size="sm">
+            <div className="flex flex-col gap-2">
+              {state.todayShifts.map((shift) => {
+                const badge = getShiftStateBadge(shift);
+                return (
+                  <div
+                    key={shift.shiftId}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span className="text-sm font-medium">
+                      {shift.shiftName ?? "—"}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                        {shift.checkIn ? formatTimeVN(shift.checkIn) : "—"}
+                        {" – "}
+                        {shift.checkOut ? formatTimeVN(shift.checkOut) : "—"}
+                      </span>
+                      <Badge variant={badge.variant}>{badge.label}</Badge>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </EmployeePanel>
+        ) : null}
+
+        {state.staleOpenShift ? (
+          <EmployeePanel
+            icon={IconClock}
+            title={copy.staleShiftTitle}
+            tone="warning"
+            size="sm"
+          >
+            <p className="text-sm text-muted-foreground">
+              {copy.staleShiftDescription(
+                formatDateVN(state.staleOpenShift.date),
+              )}
+            </p>
+          </EmployeePanel>
+        ) : null}
 
         {pendingCheckouts > 0 ? (
           <EmployeePanel

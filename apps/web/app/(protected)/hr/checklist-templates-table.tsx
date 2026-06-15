@@ -68,7 +68,7 @@ interface DraftState {
 
 const EMPTY_ITEM: DraftItem = {
   title: "",
-  phase: "dau_ca",
+  phase: "start_of_shift",
   doneDefinition: "",
   isRequired: true,
   sortOrder: 1,
@@ -158,7 +158,7 @@ export function ChecklistTemplatesTable({
           ...current.items,
           {
             ...EMPTY_ITEM,
-            phase: "trong_ca",
+            phase: "during_shift",
             sortOrder: current.items.length + 1,
           },
         ],

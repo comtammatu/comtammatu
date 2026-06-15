@@ -30,25 +30,24 @@ import {
 } from "@comtammatu/ui/components/table";
 import { ShiftFormDialog } from "./shift-form-dialog";
 import { deactivateShift } from "./actions";
-import type { BranchOption, ShiftRow } from "./page";
+import type { ShiftRow } from "./page";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 
-import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI } from "@comtammatu/shared/messages";
+
 interface ShiftsTableProps {
   shifts: ShiftRow[];
-  branches: BranchOption[];
-  selectedBranchId: number | null;
   isPending: boolean;
+  canManage: boolean;
   onShiftSaved: (shift: ShiftRow) => void;
 }
 
 export function ShiftsTable({
   shifts,
-  branches,
-  selectedBranchId,
   isPending,
+  canManage,
   onShiftSaved,
 }: ShiftsTableProps) {
   const [addOpen, setAddOpen] = useState(false);
@@ -59,12 +58,9 @@ export function ShiftsTable({
   const [isDeactivating, setIsDeactivating] = useState(false);
 
   async function handleDeactivateShift() {
-    if (!deactivateTarget || selectedBranchId === null) return;
+    if (!deactivateTarget) return;
     setIsDeactivating(true);
-    const result = await deactivateShift({
-      branchId: selectedBranchId,
-      shiftId: deactivateTarget.id,
-    });
+    const result = await deactivateShift({ shiftId: deactivateTarget.id });
     setIsDeactivating(false);
     if (!result.success) {
       toast.error(result.error ?? "Không thể ngưng dùng ca");
@@ -84,15 +80,16 @@ export function ShiftsTable({
     <>
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {isPending ? "Đang tải..." : `${shifts.length} ca làm việc`}
+          {isPending
+            ? "Đang tải..."
+            : `${shifts.length} ca làm việc · dùng chung mọi chi nhánh`}
         </p>
-        <Button
-          onClick={() => setAddOpen(true)}
-          disabled={selectedBranchId === null}
-        >
-          <IconPlus data-icon="inline-start" />
-          Thêm ca
-        </Button>
+        {canManage ? (
+          <Button onClick={() => setAddOpen(true)}>
+            <IconPlus data-icon="inline-start" />
+            Thêm ca
+          </Button>
+        ) : null}
       </div>
 
       <div className="rounded-md border">
@@ -100,54 +97,46 @@ export function ShiftsTable({
           <TableHeader>
             <TableRow>
               <TableHead>Tên ca</TableHead>
-              <TableHead>{BRANCH_VI.long}</TableHead>
               <TableHead>Giờ bắt đầu</TableHead>
               <TableHead>Giờ kết thúc</TableHead>
               <TableHead>{FORM_VI.status}</TableHead>
-              <TableHead className="text-right">Thao tác</TableHead>
+              {canManage ? (
+                <TableHead className="text-right">Thao tác</TableHead>
+              ) : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {shifts.length === 0 && !isPending && (
               <TableEmptyStateRow
-                colSpan={6}
-                title={
-                  selectedBranchId === null
-                    ? "Chọn chi nhánh để xem ca làm việc"
-                    : "Chưa có ca làm việc nào"
-                }
+                colSpan={canManage ? 5 : 4}
+                title="Chưa có ca làm việc nào"
                 icon={
                   <IconCalendarClock className="mx-auto size-8 text-muted-foreground" />
                 }
               />
             )}
-            {shifts.map((shift) => {
-              const branchName =
-                branches.find((b) => b.id === selectedBranchId)?.name ?? "—";
-              return (
-                <TableRow
-                  key={shift.id}
-                  className={isPending ? "opacity-60" : ""}
-                >
-                  <TableCell>
-                    <span className="font-medium">{shift.name}</span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {branchName}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {shift.start_time}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {shift.end_time}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={shift.is_active ? "default" : "outline"}>
-                      {shift.is_active
-                        ? ACTIVE_STATE_LABELS_VI.active
-                        : ACTIVE_STATE_LABELS_VI.inactive}
-                    </Badge>
-                  </TableCell>
+            {shifts.map((shift) => (
+              <TableRow
+                key={shift.id}
+                className={isPending ? "opacity-60" : ""}
+              >
+                <TableCell>
+                  <span className="font-medium">{shift.name}</span>
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {shift.start_time}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {shift.end_time}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={shift.is_active ? "default" : "outline"}>
+                    {shift.is_active
+                      ? ACTIVE_STATE_LABELS_VI.active
+                      : ACTIVE_STATE_LABELS_VI.inactive}
+                  </Badge>
+                </TableCell>
+                {canManage ? (
                   <TableCell>
                     <div className="flex justify-end gap-1">
                       <Button
@@ -174,24 +163,24 @@ export function ShiftsTable({
                       </Button>
                     </div>
                   </TableCell>
-                </TableRow>
-              );
-            })}
+                ) : null}
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>
 
-      <ShiftFormDialog
-        open={addOpen}
-        onOpenChange={(open) => {
-          setAddOpen(open);
-          if (!open) setEditingShift(null);
-        }}
-        branches={branches}
-        defaultBranchId={selectedBranchId}
-        shift={editingShift}
-        onShiftSaved={onShiftSaved}
-      />
+      {canManage ? (
+        <ShiftFormDialog
+          open={addOpen}
+          onOpenChange={(open) => {
+            setAddOpen(open);
+            if (!open) setEditingShift(null);
+          }}
+          shift={editingShift}
+          onShiftSaved={onShiftSaved}
+        />
+      ) : null}
 
       <AlertDialog
         open={deactivateTarget !== null}
@@ -204,13 +193,11 @@ export function ShiftsTable({
             <AlertDialogTitle>Ngưng dùng ca?</AlertDialogTitle>
             <AlertDialogDescription>
               Ca <strong>{deactivateTarget?.name ?? ""}</strong> sẽ không còn
-              xuất hiện trong phân ca mới. Lịch sử cũ được giữ nguyên.
+              xuất hiện khi nhân viên chấm công. Lịch sử cũ được giữ nguyên.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeactivating}>
-              Hủy
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeactivating}>Hủy</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeactivateShift}
               disabled={isDeactivating}

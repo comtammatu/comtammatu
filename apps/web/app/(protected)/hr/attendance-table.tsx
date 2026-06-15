@@ -38,6 +38,7 @@ import {
   STAFF_VI,
 } from "@comtammatu/shared/messages";
 import {
+  getVNDateString,
   getVNMonthSequenceBack,
   getVNMonthString,
   formatVNTime,
@@ -90,11 +91,8 @@ interface AttendanceSummaryRow {
   employee_id: number;
   employee_code: string;
   full_name: string;
-  present: number;
-  late: number;
-  absent: number;
-  half_day: number;
-  total: number;
+  workdays: number;
+  open: number;
 }
 
 interface ApprovedLeaveRow {
@@ -341,17 +339,8 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
           <TableRow>
             <TableHead>{attendanceCopy.employeeCode}</TableHead>
             <TableHead>{attendanceCopy.fullName}</TableHead>
-            <TableHead className="text-center">
-              {attendanceCopy.present}
-            </TableHead>
-            <TableHead className="text-center">{attendanceCopy.late}</TableHead>
-            <TableHead className="text-center">
-              {attendanceCopy.absent}
-            </TableHead>
-            <TableHead className="text-center">
-              {attendanceCopy.halfDay}
-            </TableHead>
-            <TableHead className="text-center">{FORM_VI.total}</TableHead>
+            <TableHead className="text-center">Số công</TableHead>
+            <TableHead className="text-center">Ca chưa kết</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -359,20 +348,17 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
             <TableRow key={row.employee_id}>
               <TableCell className="font-mono">{row.employee_code}</TableCell>
               <TableCell>{row.full_name}</TableCell>
-              <TableCell className="text-center font-medium text-success">
-                {row.present}
-              </TableCell>
-              <TableCell className="text-center font-medium text-warning-foreground">
-                {row.late}
-              </TableCell>
-              <TableCell className="text-center font-medium text-destructive">
-                {row.absent}
-              </TableCell>
-              <TableCell className="text-center font-medium text-info">
-                {row.half_day}
-              </TableCell>
               <TableCell className="text-center font-bold">
-                {row.total}
+                {row.workdays}
+              </TableCell>
+              <TableCell
+                className={
+                  row.open > 0
+                    ? "text-center font-medium text-warning-foreground"
+                    : "text-center text-muted-foreground"
+                }
+              >
+                {row.open}
               </TableCell>
             </TableRow>
           ))}
@@ -397,6 +383,7 @@ function DetailView({
   } | null>(null);
   const [pendingPhotoId, setPendingPhotoId] = useState<number | null>(null);
   const [, startPhotoTransition] = useTransition();
+  const todayStr = getVNDateString();
 
   function openPhoto(record: AttendanceRecord) {
     if (!record.check_in_photo_path) return;
@@ -451,6 +438,10 @@ function DetailView({
           <TableBody>
             {data.map((record) => {
               const photoPending = pendingPhotoId === record.id;
+              const isStale =
+                !!record.check_in &&
+                !record.check_out &&
+                record.date < todayStr;
               return (
                 <TableRow key={record.id}>
                   <TableCell className="font-mono text-sm">
@@ -480,12 +471,24 @@ function DetailView({
                     {record.check_out ? formatVNTime(record.check_out) : "—"}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={STATUS_COLORS[record.status] ?? "secondary"}>
-                      {record.check_out
-                        ? attendanceCopy.checkedOut
-                        : record.check_in
-                          ? attendanceCopy.inShift
-                          : (STATUS_LABELS[record.status] ?? record.status)}
+                    <Badge
+                      variant={
+                        isStale
+                          ? "destructive"
+                          : record.check_out
+                            ? "default"
+                            : record.check_in
+                              ? "secondary"
+                              : (STATUS_COLORS[record.status] ?? "secondary")
+                      }
+                    >
+                      {isStale
+                        ? "Treo (chưa kết ca)"
+                        : record.check_out
+                          ? attendanceCopy.checkedOut
+                          : record.check_in
+                            ? attendanceCopy.inShift
+                            : (STATUS_LABELS[record.status] ?? record.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -577,7 +580,7 @@ function DetailView({
 function normalizePhase(value: string): ChecklistPhase {
   return CHECKLIST_PHASES.includes(value as ChecklistPhase)
     ? (value as ChecklistPhase)
-    : "trong_ca";
+    : "during_shift";
 }
 
 function checklistProgress(record: AttendanceRecord) {

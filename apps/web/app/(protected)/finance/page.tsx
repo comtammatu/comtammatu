@@ -4,6 +4,7 @@ import {
   AlertTriangle as IconAlertTriangle,
   ArrowUpRight as IconArrowUpRight,
   Boxes as IconBoxes,
+  PiggyBank as IconPiggyBank,
   ReceiptText as IconReceiptText,
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
@@ -34,6 +35,8 @@ import {
   type FinanceException,
   type FinanceInventoryItem,
 } from "./_lib/finance-cockpit";
+import { fetchCashSummary } from "./_lib/cash-cockpit";
+import { CashPanel } from "./components/cash-panel";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -254,7 +257,14 @@ export default async function FinancePage({
   const rawParams = searchParams ? await searchParams : {};
   const params = parseFinanceParams(rawParams);
   const resolved = resolveFinanceRange(params);
-  const cockpit = await fetchFinanceCockpit(params, resolved);
+  const [cockpit, cash] = await Promise.all([
+    fetchFinanceCockpit(params, resolved),
+    fetchCashSummary(params, resolved),
+  ]);
+  const cashProfit = cockpit.kpis.totalCollected - cash.expensesPaidPeriod;
+  const todayBusinessDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+  }).format(new Date());
 
   return (
     <AppPage width="wide" density="compact">
@@ -273,7 +283,7 @@ export default async function FinancePage({
         hide={["granularity", "compare", "payment"]}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <FinanceSummaryCard
           icon={<IconWallet className="size-4 text-muted-foreground" />}
           title={financeCopy.basic.kpis.revenue}
@@ -308,6 +318,7 @@ export default async function FinancePage({
           title={financeCopy.basic.kpis.operatingExpense}
           value={formatVND(cockpit.kpis.operatingExpense)}
           helper={financeCopy.basic.kpis.operatingExpenseHint}
+          href="/finance/expenses"
         />
 
         <FinanceSummaryCard
@@ -330,7 +341,38 @@ export default async function FinancePage({
               : null
           }
         />
+
+        <FinanceSummaryCard
+          icon={<IconPiggyBank className="size-4 text-muted-foreground" />}
+          title={financeCopy.basic.kpis.netProfit}
+          value={formatVND(cockpit.kpis.netProfit)}
+          helper={financeCopy.basic.kpis.netProfitHint(
+            formatVND(cockpit.kpis.grossProfit),
+            formatVND(cockpit.kpis.operatingExpense),
+          )}
+          valueTone={cockpit.kpis.netProfit >= 0 ? "success" : "warning"}
+          delta={
+            cockpit.compareKpis
+              ? buildCompareDelta(
+                  cockpit.kpis.netProfit,
+                  cockpit.compareKpis.netProfit,
+                  "higher_better",
+                )
+              : null
+          }
+        />
       </div>
+
+      <CashPanel
+        cashOnHand={cash.hasOpening ? cash.cashOnHand : null}
+        openingBalance={cash.openingBalance}
+        openingDate={cash.openingDate}
+        cashInSince={cash.cashInSince}
+        cashOutSince={cash.cashOutSince}
+        cashProfit={cashProfit}
+        netProfit={cockpit.kpis.netProfit}
+        todayBusinessDate={todayBusinessDate}
+      />
 
       <div className="grid gap-4 xl:grid-cols-2">
         <QuickPanel

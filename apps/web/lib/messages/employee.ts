@@ -139,6 +139,14 @@ export const employee = {
     managerCheckoutApprovalsTitle: "Duyệt kết ca",
     managerCheckoutApprovalsDescription: "Duyệt yêu cầu ra ca của nhân viên",
     checkoutApprovalsTitle: "Duyệt kết ca",
+    staleShiftTitle: "Còn ca chưa kết",
+    staleShiftDescription: (date: string) =>
+      `Ca ngày ${date} chưa được kết. Báo quản lý để chốt công.`,
+    shiftsTodayTitle: "Ca hôm nay",
+    shiftDone: "Đã xong",
+    shiftWorking: "Đang làm",
+    shiftPending: "Chờ duyệt",
+    shiftNotStarted: "Chưa vào",
     checkoutApprovalsDescription:
       "Yêu cầu kết ca đang chờ quản lý chi nhánh duyệt.",
     checkoutApprovalsDescriptionAll:
@@ -171,6 +179,8 @@ export const employee = {
     checkoutPendingDescriptionPrefix: "Yêu cầu kết ca đã gửi đến",
     checkoutPendingBadge: "Chờ duyệt",
     checkoutRequestLabel: "Yêu cầu ra",
+    cancelCheckoutButton: "Rút yêu cầu kết ca",
+    cancelCheckoutPending: "Đang rút...",
     tasksTitle: "Việc trong ca",
     tasksDescription: "Hoàn thành checklist trước khi kết ca.",
     tasksButton: "Việc trong ca",
@@ -234,6 +244,9 @@ export const employee = {
   },
   schedule: {
     currentMonth: "Tháng này",
+    summaryWorkdays: "Ngày công",
+    summaryOpenShifts: "Ca chưa kết",
+    summaryLeaveDays: "Nghỉ phép",
     days: [
       "Chủ Nhật",
       "Thứ Hai",

@@ -1171,6 +1171,76 @@ export type Database = {
           },
         ]
       }
+      expenses: {
+        Row: {
+          amount: number
+          branch_id: number | null
+          category: string
+          created_at: string
+          created_by: string | null
+          expense_date: string
+          id: number
+          note: string | null
+          paid_at: string | null
+          payment_method: string
+          tenant_id: number
+          updated_at: string
+          vendor_name: string | null
+        }
+        Insert: {
+          amount: number
+          branch_id?: number | null
+          category: string
+          created_at?: string
+          created_by?: string | null
+          expense_date: string
+          id?: never
+          note?: string | null
+          paid_at?: string | null
+          payment_method?: string
+          tenant_id: number
+          updated_at?: string
+          vendor_name?: string | null
+        }
+        Update: {
+          amount?: number
+          branch_id?: number | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          expense_date?: string
+          id?: never
+          note?: string | null
+          paid_at?: string | null
+          payment_method?: string
+          tenant_id?: number
+          updated_at?: string
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "expenses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goods_received_notes: {
         Row: {
           branch_id: number

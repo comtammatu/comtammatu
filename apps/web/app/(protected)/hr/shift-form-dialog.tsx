@@ -15,14 +15,13 @@ import {
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ACTIONS_VI, BRANCH_VI, ERRORS_VI } from "@comtammatu/shared/messages";
-import { SelectField, TextField } from "@/components/form";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import { TextField } from "@/components/form";
 import { createShift, updateShift } from "./actions";
-import type { BranchOption, ShiftRow } from "./page";
+import type { ShiftRow } from "./page";
 
 const shiftSchema = z.object({
   name: z.string().trim().min(1, { error: "Tên ca không được trống" }),
-  branch_id: z.string().min(1, { error: "Vui lòng chọn chi nhánh" }),
   start_time: z.string().min(1, { error: "Giờ bắt đầu không được trống" }),
   end_time: z.string().min(1, { error: "Giờ kết thúc không được trống" }),
 });
@@ -32,8 +31,6 @@ type ShiftFormValues = z.infer<typeof shiftSchema>;
 interface ShiftFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  branches: BranchOption[];
-  defaultBranchId: number | null;
   shift: ShiftRow | null;
   onShiftSaved: (shift: ShiftRow) => void;
 }
@@ -41,8 +38,6 @@ interface ShiftFormDialogProps {
 export function ShiftFormDialog({
   open,
   onOpenChange,
-  branches,
-  defaultBranchId,
   shift,
   onShiftSaved,
 }: ShiftFormDialogProps) {
@@ -51,36 +46,24 @@ export function ShiftFormDialog({
 
   const form = useForm<ShiftFormValues>({
     resolver: zodResolver(shiftSchema),
-    defaultValues: {
-      name: "",
-      branch_id: defaultBranchId?.toString() ?? "",
-      start_time: "",
-      end_time: "",
-    },
+    defaultValues: { name: "", start_time: "", end_time: "" },
   });
 
   useEffect(() => {
     if (open) {
       form.reset({
         name: shift?.name ?? "",
-        branch_id: defaultBranchId?.toString() ?? "",
         start_time: shift?.start_time?.slice(0, 5) ?? "",
         end_time: shift?.end_time?.slice(0, 5) ?? "",
       });
       setServerError(null);
     }
-  }, [open, defaultBranchId, form, shift]);
-
-  const branchOptions = branches.map((b) => ({
-    value: b.id.toString(),
-    label: b.name,
-  }));
+  }, [open, form, shift]);
 
   function onValid(values: ShiftFormValues) {
     startTransition(async () => {
       setServerError(null);
       const payload = {
-        branchId: Number(values.branch_id),
         name: values.name,
         startTime: values.start_time,
         endTime: values.end_time,
@@ -96,7 +79,9 @@ export function ShiftFormDialog({
         setServerError(result.error ?? ERRORS_VI.fallback);
         return;
       }
-      toast.success(shift ? "Đã cập nhật ca làm việc" : "Đã tạo ca làm việc mới");
+      toast.success(
+        shift ? "Đã cập nhật ca làm việc" : "Đã tạo ca làm việc mới",
+      );
       const saved = result.data as ShiftRow | null;
       onShiftSaved({
         id: saved?.id ?? shift?.id ?? 0,
@@ -113,7 +98,9 @@ export function ShiftFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{shift ? "Sửa ca làm việc" : "Thêm ca làm việc"}</DialogTitle>
+          <DialogTitle>
+            {shift ? "Sửa ca làm việc" : "Thêm ca làm việc"}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onValid)} noValidate>
@@ -123,16 +110,6 @@ export function ShiftFormDialog({
               name="name"
               label="Tên ca"
               placeholder="Ca sáng, Ca chiều, Ca tối..."
-              required
-            />
-
-            <SelectField
-              control={form.control}
-              name="branch_id"
-              label="Chi nhánh"
-              options={branchOptions}
-              placeholder={BRANCH_VI.select}
-              disabled={Boolean(shift)}
               required
             />
 
@@ -150,7 +127,7 @@ export function ShiftFormDialog({
                 name="end_time"
                 label="Giờ kết thúc"
                 type="time"
-                placeholder="14:00"
+                placeholder="21:00"
                 required
               />
             </div>

@@ -18,6 +18,10 @@ export const SYSTEM_SETTING_KEYS = {
   PAYMENT_VIETQR_ACCOUNT_NO: "payment_vietqr_account_no",
   /** Account holder name printed on QR. Per-tenant override of VIETQR_ACCOUNT_NAME env. */
   PAYMENT_VIETQR_ACCOUNT_NAME: "payment_vietqr_account_name",
+  /** Cash-book anchor — owner-counted opening cash balance (VND integer as string). */
+  CASH_OPENING_BALANCE: "cash_opening_balance",
+  /** Cash-book anchor date (YYYY-MM-DD); running cash-on-hand sums cash in/out from here. */
+  CASH_OPENING_DATE: "cash_opening_date",
 } as const;
 
 export type SystemSettingKey =
@@ -47,4 +51,6 @@ export const SYSTEM_SETTING_DEFAULTS: Record<SystemSettingKey, string> = {
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE]: "",
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO]: "",
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME]: "",
+  [SYSTEM_SETTING_KEYS.CASH_OPENING_BALANCE]: "",
+  [SYSTEM_SETTING_KEYS.CASH_OPENING_DATE]: "",
 };

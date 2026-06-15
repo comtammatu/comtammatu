@@ -2,17 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import {
-  PERMISSION_KEYS,
-  type JwtClaims,
-  type StaffRole,
-} from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNMonthEndDateString } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getAuthContext, probePermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
-import { canAccessBranch } from "@/_lib/branch-scope";
 
 const HR_ROLES: readonly StaffRole[] = ["owner"];
 const HR_EMPLOYEE_VIEW_ROLES: readonly StaffRole[] = [
@@ -200,10 +195,9 @@ export const createEmployee = withAction(
   },
 );
 
-/* ─── Shifts ─── */
+/* ─── Shifts (global config — D027) ─── */
 
 const shiftSchema = z.object({
-  branchId: z.coerce.number().int().positive(),
   name: z.string().min(1, { error: "Tên ca không được để trống" }),
   startTime: z
     .string()
@@ -219,24 +213,8 @@ const updateShiftSchema = shiftSchema.extend({
 });
 
 const deactivateShiftSchema = z.object({
-  branchId: z.coerce.number().int().positive(),
   shiftId: z.coerce.number().int().positive(),
 });
-
-const fetchShiftsSchema = z.object({
-  branchId: z.coerce.number().int().positive(),
-});
-
-async function ensureBranchAccess(
-  supabase: Parameters<typeof canAccessBranch>[0],
-  claims: JwtClaims,
-  branchId: number,
-): Promise<ActionResult | null> {
-  if (!(await canAccessBranch(supabase, claims, branchId))) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-  return null;
-}
 
 function revalidateHrPaths() {
   revalidatePath("/hr");
@@ -244,49 +222,37 @@ function revalidateHrPaths() {
   revalidatePath("/employee/schedule");
 }
 
-export const fetchShifts = withAction(
-  {
-    roles: SHIFT_ROLES,
-    schema: fetchShiftsSchema,
-    permission: PERMISSION_KEYS.STAFF_MANAGE,
-    permissionBranchId: (data) => data.branchId,
-  },
-  async (data, { supabase, claims }) => {
-    const accessError = await ensureBranchAccess(supabase, claims, data.branchId);
-    if (accessError) return accessError;
+// Shifts are global (branch_id NULL): one set shared across every branch.
+// Service client read/write, gated by role at the action layer — RLS is
+// branch-scoped and would not match null-branch rows.
+export async function fetchShifts(): Promise<ActionResult> {
+  const ctx = await getAuthContext(HR_EMPLOYEE_VIEW_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
 
-    const { data: result, error } = await supabase
-      .from("shifts")
-      .select("id, name, start_time, end_time, is_active")
-      .eq("branch_id", data.branchId)
-      .eq("tenant_id", claims.tenant_id)
-      .order("start_time");
+  const { data, error } = await createServiceClient()
+    .from("shifts")
+    .select("id, name, start_time, end_time, is_active")
+    .is("branch_id", null)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .order("start_time");
 
-    if (error) {
-      return { success: false, error: "Không thể tải danh sách ca." };
-    }
+  if (error) {
+    return { success: false, error: "Không thể tải danh sách ca." };
+  }
 
-    return { success: true, data: result ?? [] };
-  },
-);
+  return { success: true, data: data ?? [] };
+}
 
 export const createShift = withAction(
-  {
-    roles: SHIFT_ROLES,
-    schema: shiftSchema,
-    permission: PERMISSION_KEYS.STAFF_MANAGE,
-    permissionBranchId: (data) => data.branchId,
-    requireBranchScope: true,
-  },
-  async (data, { supabase, claims }) => {
-    const accessError = await ensureBranchAccess(supabase, claims, data.branchId);
-    if (accessError) return accessError;
-
-    const { data: result, error } = await supabase
+  { roles: HR_ROLES, schema: shiftSchema },
+  async (data, { claims }) => {
+    const { data: result, error } = await createServiceClient()
       .from("shifts")
       .insert({
         tenant_id: claims.tenant_id,
-        branch_id: data.branchId,
+        // branch_id NULL = global shift; column is nullable after migration
+        // 20260615130000. Drop cast once `pnpm db:types` runs post-apply.
+        branch_id: null as unknown as number,
         name: data.name,
         start_time: data.startTime,
         end_time: data.endTime,
@@ -307,34 +273,9 @@ export const createShift = withAction(
 );
 
 export const updateShift = withAction(
-  {
-    roles: SHIFT_ROLES,
-    schema: updateShiftSchema,
-    permission: PERMISSION_KEYS.STAFF_MANAGE,
-    permissionBranchId: (data) => data.branchId,
-    requireBranchScope: true,
-  },
-  async (data, { supabase, claims }) => {
-    const accessError = await ensureBranchAccess(supabase, claims, data.branchId);
-    if (accessError) return accessError;
-
-    const { data: attendanceRows } = await supabase
-      .from("attendance_records")
-      .select("id")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", data.branchId)
-      .eq("shift_id", data.shiftId)
-      .limit(1);
-
-    if ((attendanceRows?.length ?? 0) > 0) {
-      return {
-        success: false,
-        error:
-          "Ca đã có lịch sử ngày công. Hãy ngưng dùng ca này rồi tạo ca mới.",
-      };
-    }
-
-    const { data: result, error } = await supabase
+  { roles: HR_ROLES, schema: updateShiftSchema },
+  async (data, { claims }) => {
+    const { data: result, error } = await createServiceClient()
       .from("shifts")
       .update({
         name: data.name,
@@ -345,7 +286,7 @@ export const updateShift = withAction(
       })
       .eq("id", data.shiftId)
       .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", data.branchId)
+      .is("branch_id", null)
       .select("id, name, start_time, end_time, is_active")
       .maybeSingle();
 
@@ -359,18 +300,9 @@ export const updateShift = withAction(
 );
 
 export const deactivateShift = withAction(
-  {
-    roles: SHIFT_ROLES,
-    schema: deactivateShiftSchema,
-    permission: PERMISSION_KEYS.STAFF_MANAGE,
-    permissionBranchId: (data) => data.branchId,
-    requireBranchScope: true,
-  },
-  async (data, { supabase, claims }) => {
-    const accessError = await ensureBranchAccess(supabase, claims, data.branchId);
-    if (accessError) return accessError;
-
-    const { data: result, error } = await supabase
+  { roles: HR_ROLES, schema: deactivateShiftSchema },
+  async (data, { claims }) => {
+    const { data: result, error } = await createServiceClient()
       .from("shifts")
       .update({
         is_active: false,
@@ -378,7 +310,7 @@ export const deactivateShift = withAction(
       })
       .eq("id", data.shiftId)
       .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", data.branchId)
+      .is("branch_id", null)
       .select("id, name, start_time, end_time, is_active")
       .maybeSingle();
 
@@ -495,80 +427,6 @@ export const getAttendancePhotoUrl = withAction(
   },
 );
 
-const checkInSchema = z.object({
-  branchId: z.coerce.number().int().positive(),
-  employeeId: z.coerce.number().int().positive(),
-  shiftId: z.coerce.number().int().positive().optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-});
-
-export const checkIn = withAction(
-  { roles: SHIFT_ROLES, schema: checkInSchema, requireBranchScope: true },
-  async (data, { claims }) => {
-    if (
-      claims.user_role === "branch_manager" &&
-      claims.branch_id !== data.branchId
-    ) {
-      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-    }
-
-    // Service client: direct INSERT on attendance_records is revoked from
-    // `authenticated` (migration 20260602009000). This action is already gated
-    // by SHIFT_ROLES + the branch-scope check above, so the elevated write is
-    // authorised at the action layer.
-    const { data: result, error } = await createServiceClient()
-      .from("attendance_records")
-      .upsert(
-        {
-          tenant_id: claims.tenant_id,
-          branch_id: data.branchId,
-          employee_id: data.employeeId,
-          shift_id: data.shiftId ?? null,
-          date: data.date,
-          check_in: new Date().toISOString(),
-          status: "present",
-        },
-        { onConflict: "employee_id,date,tenant_id" },
-      )
-      .select("id")
-      .single();
-
-    if (error) {
-      return { success: false, error: "Không thể chấm công vào." };
-    }
-
-    return { success: true, data: result };
-  },
-);
-
-const checkOutSchema = z.object({
-  attendanceId: z.coerce.number().int().positive(),
-});
-
-export const checkOut = withAction(
-  { roles: SHIFT_ROLES, schema: checkOutSchema, requireBranchScope: true },
-  async (data, { claims }) => {
-    let query = createServiceClient()
-      .from("attendance_records")
-      .update({ check_out: new Date().toISOString() })
-      .eq("id", data.attendanceId)
-      .eq("tenant_id", claims.tenant_id);
-
-    // Branch manager can only check out attendance in their own branch
-    if (claims.branch_id) {
-      query = query.eq("branch_id", claims.branch_id);
-    }
-
-    const { data: result, error } = await query.select("id");
-
-    if (error || !result || result.length === 0) {
-      return { success: false, error: "Không thể chấm công ra." };
-    }
-
-    return { success: true };
-  },
-);
-
 /* ─── Attendance Summary ─── */
 
 const fetchAttendanceSummarySchema = z.object({
@@ -594,7 +452,7 @@ export const fetchAttendanceSummary = withAction(
       .from("attendance_records")
       .select(
         `
-      employee_id, status,
+      employee_id, date, check_out,
       employees (
         id, employee_code,
         profiles ( full_name )
@@ -610,17 +468,17 @@ export const fetchAttendanceSummary = withAction(
       return { success: false, error: "Không thể tải tổng hợp chấm công." };
     }
 
+    // Per-shift attendance (D027): count shifts per day, then workdays =
+    // Σ min(shifts/day, 2) × 0.5 (2 shifts = 1 công, 1 shift = 0.5). open =
+    // shifts not yet closed (check_out NULL).
     const summaryMap = new Map<
       number,
       {
         employee_id: number;
         employee_code: string;
         full_name: string;
-        present: number;
-        late: number;
-        absent: number;
-        half_day: number;
-        total: number;
+        days: Map<string, number>;
+        open: number;
       }
     >();
 
@@ -636,64 +494,29 @@ export const fetchAttendanceSummary = withAction(
           employee_id: empId,
           employee_code: emp?.employee_code ?? "",
           full_name: emp?.profiles?.full_name ?? "",
-          present: 0,
-          late: 0,
-          absent: 0,
-          half_day: 0,
-          total: 0,
+          days: new Map(),
+          open: 0,
         });
       }
       const s = summaryMap.get(empId)!;
-      s.total++;
-      if (record.status === "present") s.present++;
-      else if (record.status === "late") s.late++;
-      else if (record.status === "absent") s.absent++;
-      else if (record.status === "half_day") s.half_day++;
+      s.days.set(record.date, (s.days.get(record.date) ?? 0) + 1);
+      if (!record.check_out) s.open++;
     }
 
-    return { success: true, data: Array.from(summaryMap.values()) };
-  },
-);
+    const summary = Array.from(summaryMap.values()).map((s) => {
+      let workdays = 0;
+      for (const count of s.days.values()) {
+        workdays += Math.min(count, 2) * 0.5;
+      }
+      return {
+        employee_id: s.employee_id,
+        employee_code: s.employee_code,
+        full_name: s.full_name,
+        workdays,
+        open: s.open,
+      };
+    });
 
-/* ─── Bulk Check-in ─── */
-
-const bulkCheckInSchema = z.object({
-  branchId: z.coerce.number().int().positive(),
-  employeeIds: z.array(z.coerce.number().int().positive()).min(1),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  shiftId: z.coerce.number().int().positive().optional(),
-});
-
-export const bulkCheckIn = withAction(
-  { roles: SHIFT_ROLES, schema: bulkCheckInSchema, requireBranchScope: true },
-  async (data, { claims }) => {
-    if (
-      claims.user_role === "branch_manager" &&
-      claims.branch_id !== data.branchId
-    ) {
-      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-    }
-
-    const rows = data.employeeIds.map((employeeId) => ({
-      tenant_id: claims.tenant_id,
-      branch_id: data.branchId,
-      employee_id: employeeId,
-      shift_id: data.shiftId ?? null,
-      date: data.date,
-      check_in: new Date().toISOString(),
-      status: "present" as const,
-    }));
-
-    // Service client: see checkIn — direct INSERT is revoked from
-    // `authenticated`; this action is gated by SHIFT_ROLES + branch-scope above.
-    const { error } = await createServiceClient()
-      .from("attendance_records")
-      .upsert(rows, { onConflict: "employee_id,date,tenant_id" });
-
-    if (error) {
-      return { success: false, error: "Không thể chấm công hàng loạt." };
-    }
-
-    return { success: true, meta: { count: rows.length } };
+    return { success: true, data: summary };
   },
 );

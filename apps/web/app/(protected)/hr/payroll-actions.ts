@@ -186,7 +186,7 @@ export const calculatePayroll = withAction(
 
     const { data: attendance, error: attendanceErr } = await supabase
       .from("attendance_records")
-      .select("employee_id, status")
+      .select("employee_id, date")
       .eq("tenant_id", claims.tenant_id)
       .gte("date", startDate)
       .lte("date", endDate);
@@ -198,20 +198,26 @@ export const calculatePayroll = withAction(
       };
     }
 
-    const attendanceMap = new Map<number, { present: number; half: number }>();
+    // Per-shift attendance (D027): 2 shifts/day = 1 workday, 1 shift = 0.5.
+    const shiftsByEmpDay = new Map<number, Map<string, number>>();
     for (const rec of attendance ?? []) {
-      const cur = attendanceMap.get(rec.employee_id) ?? {
-        present: 0,
-        half: 0,
-      };
-      if (rec.status === "present" || rec.status === "late") cur.present++;
-      else if (rec.status === "half_day") cur.half++;
-      attendanceMap.set(rec.employee_id, cur);
+      let days = shiftsByEmpDay.get(rec.employee_id);
+      if (!days) {
+        days = new Map();
+        shiftsByEmpDay.set(rec.employee_id, days);
+      }
+      days.set(rec.date, (days.get(rec.date) ?? 0) + 1);
     }
+    const workdaysFor = (empId: number): number => {
+      const days = shiftsByEmpDay.get(empId);
+      if (!days) return 0;
+      let total = 0;
+      for (const count of days.values()) total += Math.min(count, 2) * 0.5;
+      return total;
+    };
 
     const entries = eligibleEmployees.map((emp) => {
-      const att = attendanceMap.get(emp.id) ?? { present: 0, half: 0 };
-      const workingDays = att.present + att.half * 0.5;
+      const workingDays = workdaysFor(emp.id);
       const contract = contractByEmployee.get(emp.id)!;
       // Base salary fallback chain: employees.base_salary → contract.gross_salary
       const baseSalary = Number(emp.base_salary ?? contract.gross_salary ?? 0);

@@ -1,6 +1,7 @@
 import {
   BarChart3 as IconBarChart3,
   Boxes as IconBoxes,
+  Receipt as IconReceipt,
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
 } from "lucide-react";
@@ -36,6 +37,11 @@ export function resolveFinanceNav(): ShellNavGroup[] {
           href: "/finance/food-cost",
           label: financeNav.items.grossProfit,
           icon: IconTrendingUp,
+        },
+        {
+          href: "/finance/expenses",
+          label: financeNav.items.expenses,
+          icon: IconReceipt,
         },
       ],
     },

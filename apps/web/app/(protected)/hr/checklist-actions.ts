@@ -92,7 +92,7 @@ function revalidateChecklistPaths() {
 function normalizePhase(value: string): ChecklistPhase {
   return CHECKLIST_PHASES.includes(value as ChecklistPhase)
     ? (value as ChecklistPhase)
-    : "trong_ca";
+    : "during_shift";
 }
 
 function normalizeTemplates(

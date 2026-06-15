@@ -7,13 +7,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import { fetchShifts } from "./actions";
 import { EmployeeTable } from "./employee-table";
 import { EmployeeFormDialog } from "./employee-form-dialog";
@@ -27,7 +20,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
 import { UserPlus as IconUserPlus } from "lucide-react";
 
-import { BRANCH_VI, STAFF_VI } from "@comtammatu/shared/messages";
+import { STAFF_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 
 const copy = messages.hr.client;
@@ -51,18 +44,16 @@ export function HrClient({
 }: HrClientProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
-    branches[0]?.id ?? null,
-  );
+  const [shiftsLoaded, setShiftsLoaded] = useState(false);
   const [isPending, startTransition] = useTransition();
   const defaultTab = canViewEmployees ? "employees" : "attendance";
 
-  function loadShifts(branchId: number) {
-    setSelectedBranchId(branchId);
+  function loadShifts() {
     startTransition(async () => {
-      const result = await fetchShifts({ branchId });
+      const result = await fetchShifts();
       if (result.success) {
         setShifts((result.data as ShiftRow[]) ?? []);
+        setShiftsLoaded(true);
       } else {
         toast.error(result.error ?? "Không thể tải ca làm việc");
       }
@@ -70,12 +61,8 @@ export function HrClient({
   }
 
   function handleTabChange(value: string) {
-    if (
-      value === "shifts" &&
-      selectedBranchId !== null &&
-      shifts.length === 0
-    ) {
-      loadShifts(selectedBranchId);
+    if (value === "shifts" && !shiftsLoaded) {
+      loadShifts();
     }
   }
 
@@ -88,7 +75,7 @@ export function HrClient({
         <TabsTrigger value="shifts">{copy.tabs.shifts}</TabsTrigger>
         <TabsTrigger value="checklist">{copy.tabs.checklist}</TabsTrigger>
         {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: static HR attendance tab contract */}
-        <TabsTrigger value="attendance">Chấm công</TabsTrigger>
+        <TabsTrigger value="attendance">Ngày công</TabsTrigger>
         <TabsTrigger value="leave">{copy.tabs.leave}</TabsTrigger>
       </TabsList>
 
@@ -122,28 +109,10 @@ export function HrClient({
       ) : null}
 
       <TabsContent value="shifts" className="mt-4 flex flex-col gap-4">
-        <div className="flex items-center gap-3">
-          <Select
-            value={selectedBranchId?.toString() ?? ""}
-            onValueChange={(v) => loadShifts(Number(v))}
-          >
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder={BRANCH_VI.select} />
-            </SelectTrigger>
-            <SelectContent>
-              {branches.map((b) => (
-                <SelectItem key={b.id} value={b.id.toString()}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
         <ShiftsTable
           shifts={shifts}
-          branches={branches}
-          selectedBranchId={selectedBranchId}
           isPending={isPending}
+          canManage={canManageEmployees}
           onShiftSaved={(shift) =>
             setShifts((prev) => {
               const exists = prev.some((item) => item.id === shift.id);

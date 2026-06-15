@@ -652,3 +652,72 @@ không commit).
 
 **Status:** RESOLVED 2026-06-15 — owner chốt "lấy ý tưởng, không cài tool"; 4 nhóm reform
 đã land. Pilot tier-guard warn-only. Agent Teams bật cho Claude như capability tùy chọn (addendum).
+
+## D026: HRM redesign — trục Người · Ngày công · Lương + 4 quyết định nền (2026-06-15)
+
+**Context:** Owner phản hồi UX HRM vẫn khó cho cả quản lý lẫn nhân viên. Debate đa tác tử (workflow `hrm-debate`, 18 agents, phản biện đối kháng) verify code + prod (`iexwsuaqqenyjiskawoj`, 2026-06-15): 46/46 attendance `present` (taxonomy late/absent/half_day là code chết), 33/46 `shift_id` NULL, 16 ca treo, `employment_contracts`/`payroll_periods`/`payroll_entries` = 0 (lương 100% Excel), `standard_days` đếm chỉ T2–T6 (sai vì quán mở 7 ngày), 6/32 NV có checklist, payroll mồ côi nav. Contract đầy đủ: `docs/worklog/hrm-redesign-2026-06-15.md`.
+
+**Decision:**
+
+1. **Ngày công chuẩn:** `standard_days` = số công chuẩn CỐ ĐỊNH owner nhập theo tháng (thay vì đếm T2–T6) + **clamp** `working/standard ≤ 1` (lương prorate KHÔNG vượt base trừ khi có chính sách trả thêm cuối tuần). Trích thành helper shared dùng chung payroll + hiển thị ngày công.
+2. **Checklist:** GIỮ. Gán theo `positions.code` làm **mặc định** + override theo người (`employees.default_checklist_template_id`). Dựng cơ chế gán theo vị trí (RPC `apply_checklist_template_to_role` hiện chỉ match template Global → mở rộng nếu cần template chi nhánh).
+3. **Lương vào app qua `employees.base_salary`:** thêm UI nhập `base_salary` + `dependents_count` vào hồ sơ NV; gỡ phụ thuộc 0-contract trong `calculatePayroll` (eligibility theo base_salary, KHÔNG khôi phục UI `employment_contracts`). BHXH đơn giản; contract/BHXH đầy đủ để sau nếu cần. → ĐẢO phần "LOẠI field salary trong form" của debate (owner quyết).
+4. **Ca làm:** GIỮ nhưng hạ xuống nhóm "Thiết lập" (ít chạm), KHÔNG ngang hàng tab hằng ngày. Màn nhân viên hiện giờ check-in/out THỰC; ca chỉ là nhãn phụ, ẩn khi `shift_id` NULL. KHÔNG bỏ ca, KHÔNG xây lại phân ca.
+
+**IA:** gom 5 tab `/hr` (theo bảng) → **3 trục theo công việc**: Người · Ngày công · Lương. Ca + mẫu checklist → "Thiết lập". `defaultTab` động (owner→Người, BM→Ngày công). Khi W5 gộp `/hr`→`/ops` (Hoàng): mang Người+Ngày công+Thiết lập, tách Lương ở lớp Quản trị owner.
+
+**Consequences:** Đợt 1 (dọn UI lừa dối + ca treo + `cancelCheckoutRequest` + nhắc ca treo + xóa dead code + card ngày công) tiến hành ngay; bug `standard_days` unblocked theo §1. Đợt 2 = checklist theo `positions.code` + NV CRUD (tạo 1 bước, `updateEmployee`, ngưng việc) + nghỉ phép notification 2 chiều. Đợt 3 = payroll qua `base_salary` (không còn defer thuần Phase 3 cho phần base_salary). Phễu D012 vẫn áp: KHÔNG rostering/auto-late/auto-absent/số dư phép/duyệt nhiều tầng. Đảo quyết định phải sửa D026 trước.
+
+**Còn mở (chưa chốt — owner trả lời sau):** (a) payroll thêm vào nav hay ghi quyết định ẩn-có-chủ-đích như D013 (hiện orphan VÔ TÌNH); (b) gộp `/admin/staff` + `/hr`-employees ngay hay chờ W5 blueprint; (c) ảnh selfie check-in có ai xem/dùng không (nếu không → cân nhắc bỏ).
+
+## D027: Chấm công theo CA (per-shift), không theo ngày — 2 ca/ngày là mô hình thật của Má Tư (2026-06-15)
+
+**Context:** Owner xác nhận sự thật vận hành chưa từng ghi trong repo: **toàn bộ nhân viên Má Tư làm 2 ca/ngày** (sáng 06:00–13:00, chiều 16:00–21:00, nghỉ trưa 13:00–16:00). Mô hình hiện tại ràng buộc **1 bản ghi chấm công/người/ngày** (unique `employee_id,date,tenant_id`) → KHÔNG ghi nổi 2 ca. Bằng chứng prod (`iexwsuaqqenyjiskawoj`, SELECT-only, 2026-06-15, 47 bản ghi / 14 NV / 7 ngày): span vào→ra TB **7.0h** (= một ca, không phải 6→21), **23/47 (49%) không check-out**, check-in tách 2 cụm (5–7h và 18–21h) nhưng mỗi người/ngày chỉ ghi được MỘT, tổng bản ghi 47 (lẽ ra ~196 phiên) → adoption thấp vì hệ không khớp cách làm. Việc này ĐẢO giả định nền của D026 (1 lần chấm/ngày = 1 công) và GỠ phán đoán "Ca làm gần như vô nghĩa" của debate ban đầu.
+
+**Decision:**
+
+1. **Đơn vị chấm công = CA, không phải NGÀY.** Mỗi ca = 1 bản ghi `attendance_records`. Unique đổi `(employee_id, date, tenant_id)` → `(employee_id, date, shift_id, tenant_id)`; `shift_id` NOT NULL cho dòng mới. Migration: backfill `shift_id` cho dòng cũ (theo `resolveDefaultShiftId` từ `check_in`) trước khi đổi constraint.
+2. **Ca làm = XƯƠNG SỐNG, đặt ở "Thiết lập", phạm vi Global.** 1 bộ ca dùng chung cả 4 chi nhánh (owner chốt giống nhau). `shifts.branch_id` cho phép NULL = global (như checklist template); seed 2 ca global. `resolveDefaultShiftId` đọc ca global (+ override chi nhánh nếu sau này có). Auto-nhận ca theo giờ check-in. GỠ phán đoán "ca ít giá trị" của D026 §4 (vẫn đặt ở Thiết lập vì ít-chạm, nhưng vai trò là NỀN).
+3. **Ngày công:** đủ 2 ca = **1 công**; 1 ca = **nửa công (0.5)**. `half_day` lần đầu có nghĩa thật. `working_days = Σ_ngày( min(số_ca_có_mặt, 2) × 0.5 )`. `standard_days` = số ngày công chuẩn/tháng owner nhập (D026 §1, đếm theo NGÀY) + clamp ≤ standard.
+4. **Chấm công UX = mỗi ca vào/ra riêng (4 mốc/ngày):** vào sáng → ra trưa → vào chiều → ra tối. `today-work-state` thành máy trạng thái 2-ca/ngày (mỗi ca có vòng not_started→working→pending→done riêng). checkout/`cancelCheckoutRequest` thao tác trên ca đang mở. clock-in: tìm ca theo giờ → nếu ca đó chưa có bản ghi hôm nay thì tạo mới (không còn "đã chấm hôm nay" chặn ca thứ 2).
+5. **Checklist theo từng ca:** snapshot checklist riêng cho mỗi bản ghi ca (sáng/chiều khác nhau được). Hợp với D026 §2 (gán theo `positions.code`).
+
+**Consequences:** Đảo thứ tự ưu tiên HRM: **Thiết lập Ca (Global, đủ 2 ca) → chấm công per-shift → ngày công → lương** — Ca là bước 1, không phải mục bị hạ. T3 schema-changing migration → file → PR → owner applies (env dev trỏ prod, KHÔNG test local). Refine D026: §1 giữ (standard_days config), §4 "ca ít giá trị" GỠ. Đợt-1 (a) "Số công = số dòng" tạm thời chưa đúng (1 dòng giờ = 1 ca) → sửa thành công = Σ ca/2 sau rework; nhãn tạm thời ở SummaryView cần ghi chú. Đảo quyết định phải sửa D027 trước. Mở rộng (không đảo) D026; chi tiết: `docs/worklog/hrm-redesign-2026-06-15.md`.
+
+## D028: Kiểm soát nguyên liệu = đếm thực tế (giữ D016) + lát "tài chính trước" — sổ chi phí, lợi nhuận ròng/thực tế, tiền mặt hiện hữu (2026-06-15)
+
+**Context:** Owner nêu 2 nhu cầu: (1) kiểm soát nguyên liệu tiêu hao 1 ngày + cập nhật tồn kho; (2) chỉ số tài chính: lợi nhuận ròng, lợi nhuận thực tế, tiền mặt hiện hữu. Khảo sát CODE + PROD (`iexwsuaqqenyjiskawoj`, SELECT-only, 2026-06-15):
+
+- **Kho:** hạ tầng đầy đủ (ingredients/recipes/stock_levels/stock_movements/stocktake/stock_issues/transfers/PO-GRN) nhưng **prod 0 dòng mọi bảng** (ingredients=0, recipes=0, stock_levels=0, stocktake_sessions=0) → module **chưa từng chạy thật**. Đúng tiền đề **D016** (POS không trừ kho vì kho rỗng).
+- **Tài chính:** doanh thu thật (5.898 payment completed, 4.990 tiền mặt ~85%); **bảng `expense`/`expenses` KHÔNG tồn tại** (`fetchOperatingExpenseTotal` [finance-cockpit.ts:182] hardcode `0`; ô "Chi vận hành" đã render sẵn ở `/finance` + `/admin/dashboard` nhưng nguồn rỗng); cockpit **chưa có field `netProfit`** (`grossProfit` mới = net_revenue − giá vốn); giá vốn hiện = 0 (food-cost MV rỗng vì recipes/GRN trống); lương chưa vào hệ (D026: `payroll_entries`=0, còn Excel); **0 sổ tiền-ra / 0 quỹ chạy** (`cash_movements`/`cash_reconciliation`/`cash_ledger` đều không tồn tại) dù đầu-vào tiền mặt giàu dữ liệu (356 ca đóng có `closing_cash`). NCC đã có `supplier_invoices` (chứng từ chi phí NCC) riêng.
+
+**Phán quyết owner (2026-06-15, qua 2 câu hỏi định hướng — chọn 2 phương án "đề xuất"):**
+
+1. **Nguyên liệu tiêu hao = ĐẾM THỰC TẾ, KHÔNG định-mức-POS-tự-trừ.** Đo bằng kiểm kê: tiêu hao = tồn đầu + nhập − tồn cuối, dùng đúng module stocktake (mode `daily`) + stock_issues đã có. **GIỮ D016** — KHÔNG bật `consume_stock_for_order`/recipe-based auto-deduct (Approach "định mức" owner đã loại; muốn bật sau phải sửa D016 + có định mức chuẩn). Kích hoạt module = bài toán **seed dữ liệu** (vài món chủ lực + tồn đầu), không phải viết tính năng.
+2. **Thứ tự: TÀI CHÍNH TRƯỚC** (nhịp 1-dev). Phạm vi lát này:
+   - (a) **Bảng `expense`** — sổ chi phí đơn (KHÔNG GL, đúng D020), cho chi phí vận hành NGOÀI NCC. Là P0-2 blueprint, nối D015 §gap-2 + D020 §3. Implement `fetchOperatingExpenseTotal` đọc bảng này → "Chi vận hành" bật ở cả 2 dashboard.
+   - (b) **Lợi nhuận ròng** (theo phát sinh) = lãi gộp − chi vận hành − lương − thuế → thêm field `netProfit` + card vào cockpit.
+   - (c) **Lợi nhuận thực tế** (theo tiền mặt) = tiền thực thu − tiền thực chi trong kỳ (hợp ghi sổ đơn HKD TT 152/2025).
+   - (d) **Tiền mặt hiện hữu** = quỹ đầu kỳ + thu tiền mặt − chi tiền mặt (tổng hợp từ `closing_cash` + vế chi tiền mặt của `expense`/trả NCC).
+   - Tạm thời: **giá vốn nhập tay** tới khi module kho (mục 1) chạy; **lương** tạm là một danh mục của `expense` tới khi D026 đợt-3 populate `payroll_entries` rồi cockpit chuyển nguồn.
+
+**Quan hệ quyết định:** Mở rộng (KHÔNG đảo) D015 P0-2 + D020 §3. GIỮ D016 (không đụng POS stock leg). Nối D026/D027 (payroll vào hệ = nguồn "lương" tương lai cho P&L). Định nghĩa metric quản trị ("doanh thu" cho P&L = HĐĐT issued vs tiền thu; các khoản trừ của "lợi nhuận") vẫn là việc 4 co-founder chốt (blueprint §7.3) — tạm dùng net (subtotal−discount, trước VAT) cho lãi theo phát sinh + tiền thu cho lãi tiền mặt để không chặn build; chốt chính thức trước khi khóa số.
+
+**Gate:** T3 (finance + money + schema mới + RLS). "Spec rồi code" (chuẩn D021). Migration **file → PR → owner applies trên prod** (không dev DB — D015); chỉ chứng minh được typecheck/lint/build + unit, owner smoke-test số thật sau apply. Đảo quyết định (chọn định-mức-POS / đổi thứ tự / bỏ expense) phải sửa D028 trước.
+
+**Thực thi (2026-06-15) — Deliverable 1+2 (sổ chi phí + lợi nhuận ròng):** Owner xác nhận danh mục + quy trình file→PR→owner. ĐÃ code:
+- Migration `supabase/migrations/20260615140000_add_expenses_table.sql` (bảng `expenses` + 4 RLS policy `has_permission_any('finance:view'|'finance:expense_create')` + CHECK category/method/amount + GRANT). Mirror nguyên mẫu `20260610110000_employee_leave_requests.sql`. Key `finance:expense_create` đã cấp owner (prod-verified) ⇒ KHÔNG backfill role_template.
+- `fetchOperatingExpenseTotal` (finance-cockpit) thôi hardcode 0 → SUM `expenses` theo kỳ/CN ⇒ "Chi vận hành" bật ở `/finance` + `/admin/dashboard`.
+- Field + card **Lợi nhuận ròng** = lãi gộp − chi vận hành (cockpit `netProfit` + card `/finance` + delta so-kỳ).
+- UI nhập/xóa: `/finance/expenses` (page + client FormDialog: ngày·CN·khoản mục·số tiền·phương thức·nơi chi·ghi chú) + nav item + `expense-actions.ts` (create/delete/fetch, owner-gated) + `_lib/expense-categories.ts` + copy `messages.finance.expenses` + types hand-add `expenses` vào `database.types.ts` (tạm tới khi `pnpm db:types`).
+
+Gate T3: typecheck ✓ / lint ✓ (ui-contract, i18n, rules-mirror, guard-sync) / build ✓ (route `/finance/expenses` compiled). **CÒN LẠI: owner apply migration `20260615140000` lên prod (file→PR→owner, không dev DB) + `pnpm db:types` regen + smoke-test nhập 1 khoản chi → kiểm "Chi vận hành"/"Lợi nhuận ròng" lên số.** Test branch có 2 fail HRM redesign (D026/D027) có sẵn — KHÔNG do slice này.
+
+**Thực thi Deliverable 3 (2026-06-15) — tiền mặt hiện hữu + lợi nhuận thực tế:** KHÔNG migration (neo qua `system_settings`).
+- **Quỹ tiền mặt chạy** = tồn quỹ đầu (owner đếm, lưu 2 key `cash_opening_balance`/`cash_opening_date` trong `system_settings`) + tiền mặt thu (RPC `get_revenue_kpis` từ ngày neo, tenant-level) − chi tiền mặt (`expenses` method='cash' từ ngày neo). Chỉ hiện khi đã đặt mốc; chưa đặt → prompt (không đoán bừa = cộng dồn cash từ epoch).
+- **Lợi nhuận thực tế (kỳ)** = tiền thực thu (`totalCollected`) − chi đã trả (`expenses` method ∈ cash/transfer, bỏ 'unpaid') — phân biệt với lợi nhuận ròng (gồm cả chưa trả).
+- Files: `_lib/cash-cockpit.ts` (`fetchCashSummary`), `cash-actions.ts` (`setCashOpening`, gate `settings:tenant`), `components/cash-panel.tsx` (2 card + dialog đặt tồn quỹ), +2 key/default `@comtammatu/shared/settings`, copy `messages.finance.cash`, render `/finance`. Degrade an toàn trước khi apply migration (expenses lỗi → 0).
+
+Gate T3: typecheck ✓ / lint ✓ / build ✓; 2 test fail là HRM redesign có sẵn (không do slice).
+
+**Status:** Deliverable 1+2+3 code xong (sổ chi phí · lợi nhuận ròng · tiền mặt hiện hữu · lợi nhuận thực tế). **CHỜ owner apply migration `20260615140000` + `pnpm db:types` + smoke** (D3 chạy ngay khi bảng `expenses` có). Track **nguyên liệu đếm-thực-tế** (D028 §1) là pha kế theo thứ tự "tài chính trước".

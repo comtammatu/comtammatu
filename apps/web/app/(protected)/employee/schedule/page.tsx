@@ -1,10 +1,6 @@
 import { getEmployeeContext } from "../_lib/employee-context";
 import { ScheduleClient } from "./schedule-client";
-import type {
-  ScheduleAttendance,
-  ScheduleLeave,
-  ScheduleShift,
-} from "./actions";
+import type { ScheduleAttendance, ScheduleLeave } from "./actions";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
@@ -59,35 +55,26 @@ export default async function SchedulePage() {
       .order("start_date"),
   ]);
 
-  const initialShifts: ScheduleShift[] = (attendanceResult.data ?? []).flatMap(
-    (row) => {
-      // supabase-js typegen infers M:1 FK as array, but PostgREST returns
-      // a single object at runtime. Cast through unknown to match runtime.
-      const shift = row.shifts as unknown as {
-        name: string;
-        start_time: string;
-        end_time: string;
-      } | null;
-      return shift
-        ? [
-            {
-              date: row.date,
-              shift_name: shift.name,
-              start_time: shift.start_time,
-              end_time: shift.end_time,
-            },
-          ]
-        : [];
-    },
-  );
   const initialAttendance: ScheduleAttendance[] = (
     attendanceResult.data ?? []
-  ).map((row) => ({
-    date: row.date,
-    check_in: row.check_in,
-    check_out: row.check_out,
-    status: row.status,
-  }));
+  ).map((row) => {
+    // supabase-js typegen infers M:1 FK as array, but PostgREST returns
+    // a single object at runtime. Cast through unknown to match runtime.
+    const shift = row.shifts as unknown as {
+      name: string;
+      start_time: string;
+      end_time: string;
+    } | null;
+    return {
+      date: row.date,
+      check_in: row.check_in,
+      check_out: row.check_out,
+      status: row.status,
+      shift_name: shift?.name ?? null,
+      start_time: shift?.start_time ?? null,
+      end_time: shift?.end_time ?? null,
+    };
+  });
   const initialLeaves: ScheduleLeave[] = (leaveResult.data ?? []).flatMap(
     (row) =>
       row.status === "pending" || row.status === "approved"
@@ -105,7 +92,6 @@ export default async function SchedulePage() {
     <EmployeePage title={copy.scheduleTitle} hideHeaderOnMobile>
       <ScheduleClient
         initialData={{
-          shifts: initialShifts,
           attendance: initialAttendance,
           leaves: initialLeaves,
         }}

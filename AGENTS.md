@@ -35,6 +35,17 @@ Instruction memory and learning memory stay separate:
   control. See `docs/agent/rules/references.md` → "Agent Entrypoints Per IDE"
   for the per-runtime entrypoint + prod-DB guard-adapter map.
 
+## Communication Protocol
+
+Optimize for context economy between agents and clarity for the owner. This is
+the single source of truth for which language each surface uses; do not restate
+it elsewhere — point here.
+
+- **Agent-to-agent text → English.** Subagent prompts, T3/T2 debate transcripts, multi-agent handoffs, structured tool I/O, and any reasoning exchanged between agents are English. English keeps the shared context window dense and reads identically across every runtime (Claude Code, Codex).
+- **Code, identifiers, comments, and commit subjects → English** (see Critical Constraints). Comments state only non-obvious constraints.
+- **Owner-facing chat replies → Vietnamese.** Answer the owner in Vietnamese — concise but complete (gọn gàng, không bỏ chi tiết cần truyền đạt). Keep code, symbols, commands, file paths, identifiers, and log/error excerpts verbatim; never translate them.
+- **Persisted docs keep their established language.** Owner/human planning and domain docs stay Vietnamese where already written (`docs/plan/decisions.md`, `tasks/todo.md`, `docs/ref/`, business/legal docs). Agent-internal staging stays English (`docs/worklog/` debate transcripts, `tasks/lessons.md`, `tasks/regressions.md`). Match the file you are editing — never flip an existing file's language as a side effect.
+
 ## Critical Constraints
 
 <!-- MIRROR:constraints:begin — intentional synced copy in AGENTS.md and docs/agent/rules/engineering.md (other agents auto-load only their entrypoint). Edit BOTH identically; `pnpm lint:rules-mirror` enforces. -->
