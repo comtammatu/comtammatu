@@ -1,5 +1,4 @@
 import {
-  FISCAL_PERIOD_STATUS_LABELS_VI,
   ORDER_PAYMENT_STATUS_LABELS_VI,
   ORDER_STATUS_LABELS_VI,
   PAYMENT_RECORD_STATUS_LABELS_VI,
@@ -86,14 +85,6 @@ const STATUS_DOMAINS = {
       cancelled: "destructive",
       replaced: "secondary",
       not_required: "secondary",
-    },
-  },
-  "fiscal-period": {
-    labels: FISCAL_PERIOD_STATUS_LABELS_VI,
-    variants: {
-      open: "success",
-      closing: "warning",
-      closed: "outline",
     },
   },
   "summary-run": {

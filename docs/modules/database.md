@@ -94,7 +94,7 @@ Tables are organized by domain. For per-table columns/constraints, read the migr
 | Inventory     | `ingredients`, `recipes`, `stock_levels`, `stock_movements`, `inventory_locations`, `stocktake_sessions`, `stocktake_lines`, `stock_transfers`, `stock_transfer_items` |
 | Procurement   | `suppliers`, `purchase_orders`, `purchase_order_items`, `goods_received_notes`, `grn_items`, `supplier_invoices`, `supplier_returns`                                   |
 | Production    | `production_recipes`, `production_orders`, `production_order_items` — RLS also gates through `is_inventory_production_operator()`                                      |
-| Finance       | `chart_of_accounts`, `journal_entries`, `journal_entry_lines`, `fiscal_periods`, `tax_invoices`, `vas_report_lines`, `audit_logs`                                      |
+| Finance       | `tax_invoices`, `accounting_periods`, `audit_logs`                                      |
 | HR            | `employees`, `employment_contracts`, `shifts`, `attendance_records`, `payroll_periods`, `payroll_entries`                                                              |
 | Print agent   | `print_jobs` (claim/complete/expire RPCs), `printer_configs`                                                                                                           |
 | Trust / QC    | `branch_trusted_egress_ips`, `branch_override_codes`, `branch_override_attempts`, `inventory_qc_settings`                                                              |

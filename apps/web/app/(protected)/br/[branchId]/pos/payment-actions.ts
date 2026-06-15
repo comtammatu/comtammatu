@@ -90,14 +90,6 @@ function mapPaymentRpcError(message: string): string | null {
     return POS_CONSUMPTION_SETUP_ERROR;
   }
 
-  if (
-    normalized.includes("posting_rule_not_found") ||
-    normalized.includes("gl_account_not_found") ||
-    normalized.includes("fiscal_period_closed")
-  ) {
-    return "Thanh toán tạm thời chưa thể hoàn tất do cấu hình kế toán chưa sẵn sàng. Vui lòng liên hệ quản lý.";
-  }
-
   if (normalized.includes("tenant_mismatch")) {
     return "Không thể xử lý thanh toán cho chi nhánh này.";
   }
@@ -882,8 +874,7 @@ export interface ConfirmPaymentResult {
 
 /**
  * Confirm a pending VietQR/MoMo payment (called by webhook or poll).
- * Uses atomic RPC: update payment → update order → auto-post GL journal.
- * Stock consumption remains non-fatal secondary call.
+ * Uses atomic RPC `confirm_payment_and_post`: update payment → update order.
  * Receipt print is enqueued failsoft after RPC succeeds.
  */
 export async function confirmPayment(
@@ -925,8 +916,7 @@ export async function confirmPayment(
     return { success: false, error: "Thanh toán không ở trạng thái chờ." };
   }
 
-  // Atomic RPC: confirm payment + update order + auto-post GL journal
-  // Must run BEFORE stock consumption so if it fails, no stock is deducted.
+  // Atomic RPC: confirm payment + update order.
   const { error: rpcError } = await supabase.rpc("confirm_payment_and_post", {
     p_payment_id: parsedId.data,
     p_tenant_id: claims.tenant_id,
@@ -954,14 +944,7 @@ export async function confirmPayment(
   // No stock deduction per owner policy 2026-05-28 — see
   // `tasks/regressions.md` STOCK-CONSUME-MUST-CHECK-RESULT policy
   // override note + memory `project_pos_action_helper_refactor.md`
-  // "Owner policy 2026-05-28" section. Pre-policy code called
-  // `consumeStockForOrderCompat(supabase, payment.order_id)` here
-  // non-fatally after the e-wallet confirm RPC succeeded. COGS in GL
-  // journal previously used stock_movements from `create_payment`
-  // cash branch (also removed) or was 0 for e-wallet (period-close
-  // reconciliation). With stock removed, COGS reconciliation moves
-  // entirely to period-close for ALL payment methods until policy
-  // reverts (which would require stock data seeding first).
+  // "Owner policy 2026-05-28" section.
 
   // Enqueue receipt print. Cash flow does this atomically inside
   // confirm_cash_payment; the e-wallet RPC (confirm_payment_and_post)

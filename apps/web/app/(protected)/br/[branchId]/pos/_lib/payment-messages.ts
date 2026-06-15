@@ -68,14 +68,6 @@ export function mapPaymentRpcMessage(message: string): string | null {
     return "Chi nhánh chưa cấu hình Bếp chi nhánh cho POS. Thiết lập vị trí bếp trước khi thanh toán.";
   }
 
-  if (
-    normalized.includes("posting_rule_not_found") ||
-    normalized.includes("gl_account_not_found") ||
-    normalized.includes("fiscal_period_closed")
-  ) {
-    return "Thanh toán tạm thời chưa thể hoàn tất do cấu hình kế toán chưa sẵn sàng. Vui lòng liên hệ quản lý.";
-  }
-
   if (normalized.includes("tenant_mismatch")) {
     return "Không thể xử lý thanh toán cho chi nhánh này.";
   }
@@ -149,16 +141,6 @@ export const confirmCashPaymentRpcMappings: readonly RpcErrorMapping[] = [
     errorCode: POS_ERROR_CODES.RPC_GENERIC,
     userMessage:
       "Chi nhánh chưa cấu hình Bếp chi nhánh cho POS. Thiết lập vị trí bếp trước khi thanh toán.",
-  },
-  {
-    match: includesAny(
-      "posting_rule_not_found",
-      "gl_account_not_found",
-      "fiscal_period_closed",
-    ),
-    errorCode: POS_ERROR_CODES.RPC_GENERIC,
-    userMessage:
-      "Thanh toán tạm thời chưa thể hoàn tất do cấu hình kế toán chưa sẵn sàng. Vui lòng liên hệ quản lý.",
   },
   {
     match: includesAny(
@@ -255,16 +237,6 @@ export const createPaymentRpcMappings: readonly RpcErrorMapping[] = [
     errorCode: POS_ERROR_CODES.RPC_GENERIC,
     userMessage:
       "Chi nhánh chưa cấu hình Bếp chi nhánh cho POS. Thiết lập vị trí bếp trước khi thanh toán.",
-  },
-  {
-    match: includesAny(
-      "posting_rule_not_found",
-      "gl_account_not_found",
-      "fiscal_period_closed",
-    ),
-    errorCode: POS_ERROR_CODES.RPC_GENERIC,
-    userMessage:
-      "Thanh toán tạm thời chưa thể hoàn tất do cấu hình kế toán chưa sẵn sàng. Vui lòng liên hệ quản lý.",
   },
   {
     match: includesAny("tenant_mismatch"),

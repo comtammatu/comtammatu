@@ -68,24 +68,20 @@ Supporting workflows remain available but are not the first screen:
 - Supplier payable review.
 - Accountant export.
 
-### Accounting Advanced
+### Accounting Advanced — retired (D020)
 
-Accounting Advanced is not the pilot default surface. It includes:
+The enterprise double-entry GL (TT 200 / VAS) was retired on 2026-06-14 (**D020**)
+because Má Tư operates as a Hộ kinh doanh on single-entry bookkeeping (TT 152/2025).
+Dropped from prod: `chart_of_accounts`, `journal_entries`, `journal_entry_lines`,
+`posting_rules`, `fiscal_periods`, `vas_report_lines` plus the GL functions/triggers
+and everything built on them (B01/B02/B03-DN statements, VAS report-line config,
+payroll GL posting, subledger-to-GL reconciliation). The GL history is preserved under
+`supabase/migrations/_archive/` for a possible future conversion-to-company path.
 
-- Chart of accounts.
-- Manual journal entries.
-- Posting rules.
-- Fiscal period close/reopen.
-- B01-DN balance sheet.
-- B02-DN income statement.
-- B03-DN cashflow statement.
-- VAS report line configuration.
-- Payroll GL posting.
-- Full subledger-to-GL reconciliation.
-
-These capabilities may remain in code and database because they protect
-accounting continuity and a future conversion-to-company path, but they must
-not define the HKD pilot UX until Finance Basic is stable.
+What remains is operational period close/reopen on `accounting_periods` (KEPT by design
+— `close_period_*` / `reopen_period`, surfaced at `/admin/accounting/periods`). That is
+month-close discipline, NOT general-ledger accounting. Do not reintroduce GL
+capabilities while Má Tư is HKD; reopening that scope requires a new decision.
 
 ## Route Contract
 
@@ -100,15 +96,10 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 | `/finance/reconciliation`        | Payment/order recovery       | Keep as support workflow, not primary Finance nav                     |
 | `/finance/invoices`              | HĐĐT queue                   | Keep as support workflow                                              |
 | `/finance/summary`               | HĐĐT summary trigger         | Keep admin-only by action permission                                  |
-| `/finance/chart-of-accounts`     | Advanced accounting          | Hide from default pilot nav                                           |
-| `/finance/journal`               | Advanced accounting          | Hide from default pilot nav                                           |
-| `/finance/posting-rules`         | Advanced accounting          | Hide from default pilot nav                                           |
-| `/finance/periods`               | Advanced accounting          | Hide from default pilot nav                                           |
-| `/finance/statements`            | Advanced accounting          | Hide from default pilot nav                                           |
 | `/finance/audit-trail`           | Audit/admin support          | Keep accessible for owner, but not core daily workflow                |
 | `/admin/accounting/periods`      | Advanced accounting admin    | Keep restricted and direct-only; hide from default Admin nav          |
 
-Do not delete advanced routes without a data-retention and accounting review. First step is navigation and landing simplification.
+The enterprise GL routes were retired in D020 after a data-retention review (history archived under `supabase/migrations/_archive/`). The remaining advanced routes — `/admin/accounting/periods` (period close/reopen) and `/finance/audit-trail` — stay direct-only, not default nav.
 
 ## Acceptance Criteria
 

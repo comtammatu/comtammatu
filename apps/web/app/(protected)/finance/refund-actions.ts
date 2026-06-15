@@ -5,7 +5,7 @@
  *
  * Reverses a completed payment (money back to customer) for a mistaken or
  * cancelled sale: `create_refund` (pending, orders:refund) →
- * `reverse_payment_and_post` (approve + GL reversal + stock restore,
+ * `reverse_payment_and_post` (approve + reverse the completed payment,
  * orders:refund_approve). Both RPCs are SECURITY DEFINER + permission-gated;
  * this action resolves the order's single completed payment and runs the
  * two-step reversal as the owner.

@@ -331,13 +331,6 @@ export const TAX_INVOICE_STATUS_LABELS_VI = {
   not_required: "Không bắt buộc",
 } as const;
 
-/** fiscal_periods.status (DB fiscal_periods_status_check). */
-export const FISCAL_PERIOD_STATUS_LABELS_VI = {
-  open: "Đang mở",
-  closing: "Đang đóng",
-  closed: "Đã đóng",
-} as const;
-
 /** summary_run_queue.status (DB summary_run_queue_status_check). */
 export const SUMMARY_RUN_STATUS_LABELS_VI = {
   queued: "Đang chờ",
