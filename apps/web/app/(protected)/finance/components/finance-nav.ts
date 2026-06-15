@@ -20,6 +20,7 @@ export function resolveFinanceNav(): ShellNavGroup[] {
           href: "/finance",
           label: financeNav.items.todayMoney,
           icon: IconWallet,
+          exact: true,
         },
         {
           href: "/finance/revenue",
