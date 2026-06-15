@@ -40,6 +40,34 @@ function countMatches(content, pattern) {
   return [...content.matchAll(pattern)].length;
 }
 
+// Extract JSX opening tags for a component, brace/paren/bracket/string aware so
+// that `=>` arrows and `{...}` expression props (which contain `>`) do not
+// terminate the tag. Lets a gate inspect a whole opening tag — including a
+// multi-line `className={cn("…")}` — which a className-literal regex cannot.
+function extractJsxOpeningTags(content, tagName) {
+  const tags = [];
+  const re = new RegExp(`<${tagName}\\b`, "g");
+  let match;
+  while ((match = re.exec(content))) {
+    let i = match.index + match[0].length;
+    let depth = 0;
+    let inString = null;
+    while (i < content.length) {
+      const ch = content[i];
+      if (inString) {
+        if (ch === inString && content[i - 1] !== "\\") inString = null;
+      } else if (ch === '"' || ch === "'" || ch === "`") {
+        inString = ch;
+      } else if (ch === "{" || ch === "(" || ch === "[") depth += 1;
+      else if (ch === "}" || ch === ")" || ch === "]") depth -= 1;
+      else if (ch === ">" && depth === 0) break;
+      i += 1;
+    }
+    tags.push(content.slice(match.index, i + 1));
+  }
+  return tags;
+}
+
 const checks = [
   {
     id: "legacy-matu-pilot-layer",
@@ -59,7 +87,7 @@ const checks = [
       "Locked heading scale forbids app-surface text-4xl/text-5xl/font-black drift.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
-      /className=\{?['"][^'"]*\b(text-4xl|text-5xl|font-black)\b/g,
+      /className=\{?(?:cn\()?['"][^'"]*\b(text-4xl|text-5xl|font-black)\b/g,
     allowlist: {},
   },
   {
@@ -68,42 +96,10 @@ const checks = [
       "Banned icon-size classes size-7/9/11 must not spread; size-14/16 stay limited to media thumbnails.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
-      /className=\{?['"][^'"]*\b(size-(7|9|11|14|16))\b/g,
+      /className=\{?(?:cn\()?['"][^'"]*\b(size-(7|9|11|14|16))\b/g,
     allowlist: {
       "apps/web/app/(protected)/inventory/_components/photo-upload-input.tsx": 2,
       "apps/web/app/(protected)/menu/menu-image-input.tsx": 1,
-    },
-  },
-  {
-    id: "button-height",
-    description:
-      "Raw button/touch heights h-10/11/12/14/16 and min-h-12/14/16 must not spread.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
-    pattern:
-      /className=\{?['"][^'"]*\b(h-(10|11|12|14|16)|min-h-(12|14|16))\b/g,
-    allowlist: {
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 7,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-summary.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/close-session/denomination-input.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/merge-orders-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-list-pane.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-page-skeleton.tsx": 6,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-sidebar-panel.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/mobile/mobile-top-bar.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/searchable-select.tsx": 1,
-      "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx": 2,
-      "apps/web/app/(protected)/menu/page.tsx": 1,
-      "apps/web/app/(public)/(auth)/login/login-form.tsx": 2,
     },
   },
   {
@@ -112,18 +108,8 @@ const checks = [
       "App surfaces use only rounded-md, rounded-lg, rounded-full, or rounded-none.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
-      /className=\{?['"][^'"]*(\brounded\b(?!-(?:md|lg|full|none|t|b|l|r))|\brounded-(sm|xl|2xl|3xl|4xl)\b)/g,
-    allowlist: {
-      "apps/web/app/(protected)/admin/settings/payments/payments-form.tsx": 3,
-      "apps/web/app/(protected)/admin/staff/[id]/permissions/page.tsx": 1,
-      "apps/web/app/(protected)/admin/staff/audit/page.tsx": 1,
-      "apps/web/app/components/kpi/trend-sparkline.tsx": 1,
-      "apps/web/app/(protected)/hr/shift-assignments-table.tsx": 1,
-      "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 1,
-      "apps/web/app/(protected)/menu/import-export-menu.tsx": 1,
-      "apps/web/app/(protected)/menu/item-table.tsx": 2,
-      "apps/web/app/(protected)/menu/menu-image-input.tsx": 1,
-    },
+      /className=\{?(?:cn\()?['"][^'"]*(\brounded\b(?!-(?:md|lg|full|none|t|b|l|r))|\brounded-(sm|xl|2xl|3xl|4xl)\b)/g,
+    allowlist: {},
   },
   {
     id: "card-content-named-layout-props",
@@ -149,7 +135,7 @@ const checks = [
       "Arbitrary app sizing remains baseline debt and must not spread.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
-      /className=\{?['"][^'"]*\b(?:w|h|max-w|max-h|min-w|min-h|text)-\[[^\]]+\]/g,
+      /className=\{?(?:cn\()?['"][^'"]*\b(?:w|h|max-w|max-h|min-w|min-h|text)-\[[^\]]+\]/g,
     allowlist: {
       "apps/web/app/(protected)/finance/revenue/revenue-client.tsx": 1,
       "apps/web/app/components/app-shell.tsx": 1,
@@ -178,7 +164,7 @@ const checks = [
       "apps/web/app/(protected)/br/[branchId]/kds/hooks/use-kds-realtime.ts": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/order-history.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
       "apps/web/app/(protected)/employee/leave/leave-client.tsx": 1,
       "apps/web/app/(protected)/employee/payslip/payslip-client.tsx": 1,
       "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 2,
@@ -228,7 +214,7 @@ const checks = [
       "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx": 1,
       "apps/web/app/(protected)/inventory/ingredient-table.tsx": 1,
       "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/production-order-list.tsx": 2,
+      "apps/web/app/(protected)/inventory/production-order-list.tsx": 1,
       "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 16,
     },
   },
@@ -238,10 +224,13 @@ const checks = [
       "KPI/stat metric cards are single-sourced in apps/web/app/components/kpi/; page-local StatCard/SummaryCard/MetricCard definitions must not spread.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
-      /\b(?:function|const)\s+(?:StatCard|SummaryCard|MetricCard|KpiCard)\b/g,
+      /\b(?:function|const)\s+\w*(?:StatCard|SummaryCard|MetricCard|KpiCard)\b/g,
     allowlist: {
       "apps/web/app/(protected)/hr/payroll/[periodId]/payroll-detail-client.tsx": 1,
       "apps/web/app/components/kpi/kpi-card.tsx": 1,
+      // FinanceSummaryCard surfaced by the prefix-widened regex; D028 finance
+      // active zone — migrate to @comtammatu kpi/ KpiCard when that zone frees.
+      "apps/web/app/(protected)/finance/page.tsx": 1,
     },
   },
   {
@@ -483,7 +472,12 @@ const textChecks = [
   {
     id: "card-title-runtime-contract",
     file: "packages/ui/src/components/card.tsx",
-    includes: ['className={cn("font-heading text-base font-semibold", className)}'],
+    includes: [
+      '"font-heading font-semibold"',
+      'default: "text-base"',
+      'sm: "text-sm"',
+      'lg: "text-2xl"',
+    ],
   },
   {
     id: "app-page-header-eyebrow-contract",
@@ -586,7 +580,7 @@ const countBudgets = [
       "CardContent className overrides are composition debt and must not increase.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern: /<CardContent\b[^\n]*\bclassName=/g,
-    maxCount: 107,
+    maxCount: 92,
   },
   {
     id: "card-title-classname-baseline",
@@ -594,7 +588,7 @@ const countBudgets = [
       "CardTitle className overrides are heading-scale debt and must not increase.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern: /<CardTitle\b[^\n]*\bclassName=/g,
-    maxCount: 25,
+    maxCount: 13,
   },
 ];
 
@@ -757,13 +751,7 @@ for (const aclPath of ACL_PATHS) {
 // owned by AppPage. A page.tsx that composes its own centered, padded outer
 // container (max-w-* + p-*) is an ad-hoc AppPage clone; current offenders are
 // baselined and new ones fail CI. Route page spacing through AppPage density.
-const PAGE_PADDING_BASELINE = {
-  "apps/web/app/(protected)/br/[branchId]/settings/tables/page.tsx": 1,
-  "apps/web/app/(protected)/br/[branchId]/settings/printers/page.tsx": 1,
-  "apps/web/app/(protected)/br/[branchId]/settings/kds/page.tsx": 1,
-  "apps/web/app/(protected)/br/[branchId]/settings/pos/page.tsx": 1,
-  "apps/web/app/(protected)/br/[branchId]/settings/pos-sessions/page.tsx": 1,
-};
+const PAGE_PADDING_BASELINE = {};
 const PAGE_PADDING_TOKEN = /(?<![\w-])(?:(?:sm|md|lg|xl|2xl):)?p[xy]?-\d/;
 for (const file of walkFiles("apps/web/app", [".tsx"])) {
   const normalized = toPosix(file);
@@ -778,6 +766,43 @@ for (const file of walkFiles("apps/web/app", [".tsx"])) {
   if (count > allowed) {
     failures.push(
       `page-padding: ${normalized} composes ${count} ad-hoc page container(s) (max-w + padding), allowed ${allowed}. Outer page padding is owned by AppPage (design-system.md § E / D019).`,
+    );
+  }
+}
+
+// button-height-on-button (D030): the touch-height ratchet is scoped to the
+// shared <Button>/<TouchButton>. A raw h-10/11/12/14/16 or min-h-12/14/16 on a
+// button is height drift that should use a size variant; raw heights on
+// non-button elements (Input/Select/Skeleton/layout containers) are out of
+// scope by design (design-system.md § Enforcement Status — the old "any raw
+// height" gate was ~37 non-button false-positives). The tag scanner is
+// brace/string-aware, so cn() and multi-line className props are covered — the
+// four allowlisted hits are exactly the form-control trigger buttons the old
+// className-literal regex missed.
+const BUTTON_HEIGHT_BASELINE = {
+  // Form-control trigger buttons (combobox / multi-select / date-picker) matched
+  // to the 40px field-row height. No Button size variant renders 40px (lg=h-9
+  // 36px, touch=min-h-12 48px), so these stay raw until a shared trigger-height
+  // token exists.
+  "apps/web/app/components/form/business-date-field.tsx": 1,
+  "apps/web/app/components/form/combobox-field.tsx": 1,
+  "apps/web/app/components/form/combobox.tsx": 1,
+  "apps/web/app/components/form/multi-select-combobox.tsx": 1,
+};
+const BUTTON_HEIGHT_TOKEN = /\b(?:h-(?:10|11|12|14|16)|min-h-(?:12|14|16))\b/;
+for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
+  const normalized = toPosix(filePath);
+  const content = fs.readFileSync(filePath, "utf8");
+  let count = 0;
+  for (const tagName of ["Button", "TouchButton"]) {
+    for (const tag of extractJsxOpeningTags(content, tagName)) {
+      if (BUTTON_HEIGHT_TOKEN.test(tag)) count += 1;
+    }
+  }
+  const allowed = BUTTON_HEIGHT_BASELINE[normalized] ?? 0;
+  if (count > allowed) {
+    failures.push(
+      `button-height-on-button: ${normalized} has ${count} <Button> raw height(s), allowed ${allowed}. Use a Button size variant; non-button heights are out of scope (design-system.md § Enforcement Status / D030).`,
     );
   }
 }

@@ -334,7 +334,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-sm">
+                    <CardTitle size="sm">
                       {messages.inventory.waste.lineTitle(idx + 1)}
                     </CardTitle>
                     <div className="flex items-center gap-2">

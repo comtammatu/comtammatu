@@ -55,7 +55,7 @@ export default async function InventoryThresholdsPage() {
       />
 
       <Card>
-        <CardContent className="px-0 py-0">
+        <CardContent flush>
           {rows.length === 0 ? (
             <div className="px-5 py-10">
               <AppEmptyState title={copy.empty} />

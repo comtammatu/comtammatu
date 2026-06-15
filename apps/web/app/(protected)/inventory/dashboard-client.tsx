@@ -685,7 +685,7 @@ export function DashboardClient(props: DashboardProps) {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-sm">
+                    <CardTitle size="sm">
                       {messages.inventory.dashboard.shiftTasksTitle}
                     </CardTitle>
                     <CardDescription className="text-xs">
@@ -743,7 +743,7 @@ export function DashboardClient(props: DashboardProps) {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-sm">
+                    <CardTitle size="sm">
                       {messages.inventory.dashboard.priorityAlertsTitle}
                     </CardTitle>
                   </div>
@@ -855,7 +855,7 @@ export function DashboardClient(props: DashboardProps) {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-sm">
+                    <CardTitle size="sm">
                       {isOversight
                         ? "Luồng đang xử lý"
                         : messages.inventory.dashboard.transferTrackingTitle}
@@ -909,7 +909,7 @@ export function DashboardClient(props: DashboardProps) {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-sm">
+                    <CardTitle size="sm">
                       {isOversight
                         ? "Tiến độ đối soát tồn"
                         : messages.inventory.dashboard.stocktakeProgress}

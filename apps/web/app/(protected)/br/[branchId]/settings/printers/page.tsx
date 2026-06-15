@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
-import { AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
@@ -94,7 +94,7 @@ export default async function BranchPrintersPage({
   }));
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
+    <AppPage width="default">
       <div className="flex items-center gap-3">
         <Button asChild variant="outline" size="sm" className="gap-1">
           <Link href={`/br/${branchId}/pos`}>
@@ -114,6 +114,6 @@ export default async function BranchPrintersPage({
         agents={(agentRes.data ?? []) as Agent[]}
         categories={(categoriesRes.data ?? []) as Category[]}
       />
-    </div>
+    </AppPage>
   );
 }

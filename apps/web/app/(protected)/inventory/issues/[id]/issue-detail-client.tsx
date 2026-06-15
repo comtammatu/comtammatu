@@ -340,7 +340,7 @@ export function IssueDetailClient({
                     },
                     {
                       label: "Tổng giá trị",
-                      value: `${formatVND(totalAmount)}đ`,
+                      value: formatVND(totalAmount),
                     },
                   ].map((item) => (
                     <Card key={item.label}>

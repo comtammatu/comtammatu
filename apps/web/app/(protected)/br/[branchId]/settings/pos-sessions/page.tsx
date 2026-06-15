@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
-import { AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import {
@@ -171,7 +171,7 @@ export default async function BranchPosSessionsPage({
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
+    <AppPage width="wide">
       <div className="flex items-center gap-3">
         <Button asChild variant="outline" size="sm" className="gap-1">
           <Link href={`/br/${branchId}/settings`}>
@@ -193,7 +193,7 @@ export default async function BranchPosSessionsPage({
         orders={orders}
         report={report}
       />
-    </div>
+    </AppPage>
   );
 }
 

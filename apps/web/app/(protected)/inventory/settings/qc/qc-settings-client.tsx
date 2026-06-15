@@ -89,7 +89,7 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Tolerance số lượng & giá</CardTitle>
+            <CardTitle size="sm">Tolerance số lượng & giá</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-3">
             <div className="space-y-1">
@@ -149,7 +149,7 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Cảnh báo realtime</CardTitle>
+            <CardTitle size="sm">Cảnh báo realtime</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1">

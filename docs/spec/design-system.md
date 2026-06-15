@@ -669,6 +669,66 @@ Stage 0 gate status (each flips to **live** as its ratchet lands in
   that the old regex missed; current page-local maps are baselined for the W1
   status-registry burn-down.
 
+#### Ratchet allowlist semantics — real-debt floor, not a zero backlog (gate-precision audit, 2026-06-15)
+
+A multi-agent audit (verified against code) classified every ratchet/count
+allowlist. **Most allowlists conflate two things the regex cannot tell apart:
+genuine SSoT debt and permanent false-positives** (legit patterns the regex
+happens to match). Treat an allowlist as a *floor of accepted false-positives*,
+not a backlog to drive to zero — chasing zero on a `reframe` gate is impossible
+by design. Reconcile a stale allowlist (allowlist > actual) for free; never
+lower an entry below its actual count; only the named real-debt is migratable,
+and only when its files are outside an active redesign zone.
+
+Real-debt = hits still migratable to the SSoT (everything else is a permanent
+false-positive):
+
+- `app-arbitrary-sizing`, `shell-registry-bespoke-main`, `page-padding`, and
+  every empty-allowlist gate — **healthy**: allowlist == actual, entries are
+  irreducible (calc/chart px; chrome-family `<main>` roots). Do not migrate.
+- `icon-size` — **reframe**: 0 migratable; the entries are media thumbnails
+  (real `<Image>`), not icons.
+- `button-height-on-button` — **Button-scoped (D030)**: flags raw heights only
+  on `<Button>`/`<TouchButton>` via a brace/string-aware tag scanner (covers
+  `cn()` + multi-line). 4 allowlisted = form-control trigger buttons (h-10; no
+  40px Button variant exists). The ~37 non-button heights (Input/Select/
+  Skeleton/container) the old "any raw height" gate flagged are out of scope —
+  they were never debt.
+- `vnd-format-ssot` — **reframe**: ~1 of ~28 migratable; the rest are non-money
+  locale formatters (counts/quantities/dates). See `docs/plan/decisions.md` D029.
+- `status-label-ssot` — **reframe**: ~3 real label maps, all HR-deferred
+  (D026/D027); ~20 are status value-arrays / variant-only / already-shared.
+- `card-content-classname-baseline` — **reframe**: 1 of ~92 maps to
+  `flush`/`scroll`; ~31 are KpiCard-migration debt (`p-N` stat cards), not this
+  primitive; the rest are orthogonal child layout.
+- `card-title-classname-baseline` — **mixed (count 13, D030)**: `CardTitle` now
+  has a `size` variant (`sm`=text-sm, `lg`=text-2xl, `default`=text-base); the 8
+  pure heading-scale hits migrated to it (21→13). The remaining 13 are
+  layout-only (`flex`/`truncate`, can't migrate), eyebrow small-caps (→ a
+  `SectionLabel` primitive, deferred), or active-zone (finance D028).
+- `use-is-mobile-budget` — **mixed**: 5 of 44 are list/table forks migratable to
+  the DataTable adapter; ~32 are legit composition switches.
+- `stat-card-ssot` — **has-false-negative**: `FinanceSummaryCard`
+  (`finance/page.tsx`) escapes via name-prefix + `cn()`; widen the pattern when
+  its zone is free.
+
+**Systemic false-negative — the `cn()` blind spot (partially closed
+2026-06-15).** Every className-anchored gate used `className=\{?['"]…`, which
+requires a literal quote, so it missed `className={cn("…")}`, size/variant maps,
+and multi-line className. **Closed:** `icon-size`, `heading-scale`,
+`radius-scale`, `app-arbitrary-sizing` now also match `className={cn("…")}`
+(broadened anchor `\{?(?:cn\()?['"]`; 0 current hits, purely preventive);
+`stat-card-ssot` now matches prefix-named defs (`\w*SummaryCard` →
+`FinanceSummaryCard`, allowlisted as D028-deferred); `button-height` is
+**replaced** by `button-height-on-button`, which uses the brace/string-aware
+`extractJsxOpeningTags` scanner to read each `<Button>` opening tag in full —
+so `cn()` and multi-line className are covered structurally, not by widening a
+regex. **Left open by intent:**
+`card-content`/`card-title` multi-line misses are the SSoT components themselves
+(`surface.tsx`/`kpi-card.tsx`) and should be exempt, not counted. Const-map size
+tokens (`brand.tsx`) and multi-arg `cn()` (token in a later arg) remain
+uncaught — preventive-only, low value.
+
 ## Loading / Error / Not-found Frame
 
 Route-level transition states are part of the design system, not per-page improvisation.

@@ -95,7 +95,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                 <Badge variant="outline" className="w-fit">
                   {messages.pos.sessionGate.branch(branchId)}
                 </Badge>
-                <CardTitle className="text-2xl">
+                <CardTitle size="lg">
                   {messages.pos.sessionGate.title}
                 </CardTitle>
               </div>

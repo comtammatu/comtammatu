@@ -33,11 +33,25 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+const CARD_TITLE_SIZE_CLASS = {
+  default: "text-base",
+  sm: "text-sm",
+  lg: "text-2xl",
+} as const;
+
+function CardTitle({
+  className,
+  size = "default",
+  ...props
+}: React.ComponentProps<"div"> & { size?: "default" | "sm" | "lg" }) {
   return (
     <div
       data-slot="card-title"
-      className={cn("font-heading text-base font-semibold", className)}
+      className={cn(
+        "font-heading font-semibold",
+        CARD_TITLE_SIZE_CLASS[size],
+        className,
+      )}
       {...props}
     />
   );

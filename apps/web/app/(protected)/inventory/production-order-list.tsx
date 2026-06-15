@@ -63,6 +63,7 @@ import type {
   ProductionShortageRow,
 } from "./production-types";
 
+import { formatVND } from "@comtammatu/shared/format";
 import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 interface ProductionOrderListProps {
@@ -73,10 +74,6 @@ interface ProductionOrderListProps {
 
 function formatOrderDate(value: string) {
   return formatVNDateTime(value);
-}
-
-function formatCost(value: number) {
-  return `${value.toLocaleString("vi-VN")}đ`;
 }
 
 export function ProductionOrderList({
@@ -288,7 +285,7 @@ function ProductionOrderItemBadges({ order }: { order: ProductionOrderRow }) {
 function ProductionOrderCost({ order }: { order: ProductionOrderRow }) {
   return (
     <>
-      {formatCost(order.total_cost)}
+      {formatVND(order.total_cost)}
       {order.status === "draft" ? (
         <span className="ml-1 text-xs font-normal text-muted-foreground">
           (tạm tính)

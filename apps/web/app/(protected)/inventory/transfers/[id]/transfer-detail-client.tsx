@@ -375,7 +375,7 @@ export function TransferDetailClient({
                   {[
                     {
                       label: copy.totalValue,
-                      value: `${formatVND(transfer.total)}đ`,
+                      value: formatVND(transfer.total),
                       icon: null,
                     },
                     {
