@@ -45,8 +45,11 @@ import {
 import {
   CHECKLIST_PHASE_LABELS,
   CHECKLIST_PHASES,
+  CHECKLIST_SCOPE_LABELS,
+  CHECKLIST_SCOPES,
   checklistTemplateLabel,
   type ChecklistPhase,
+  type ChecklistScope,
   type ChecklistTemplateItem,
   type ChecklistTemplateRow,
 } from "./checklist-types";
@@ -69,6 +72,7 @@ interface DraftState {
 const EMPTY_ITEM: DraftItem = {
   title: "",
   phase: "start_of_shift",
+  scope: "every_shift",
   doneDefinition: "",
   isRequired: true,
   sortOrder: 1,
@@ -91,6 +95,7 @@ function toDraft(template: ChecklistTemplateRow, cloneToBranchId?: number): Draf
     items: template.items.map((item, index) => ({
       title: item.title,
       phase: item.phase,
+      scope: item.scope,
       doneDefinition: item.doneDefinition,
       isRequired: item.isRequired,
       sortOrder: index + 1,
@@ -189,6 +194,7 @@ export function ChecklistTemplatesTable({
       .map((item) => ({
         title: item.title.trim(),
         phase: item.phase,
+        scope: item.scope,
         doneDefinition: item.doneDefinition.trim(),
         isRequired: item.isRequired,
       }))
@@ -437,7 +443,7 @@ export function ChecklistTemplatesTable({
                 <div className="space-y-3">
                   {draft.items.map((item, index) => (
                     <div key={index} className="rounded-md border p-3">
-                      <div className="grid gap-3 lg:grid-cols-[1fr_150px_120px_auto]">
+                      <div className="grid gap-3 lg:grid-cols-[1fr_150px_150px_120px_auto]">
                         <div className="space-y-2">
                           <Label htmlFor={`checklist-item-${index}`}>
                             Việc
@@ -469,6 +475,29 @@ export function ChecklistTemplatesTable({
                               {CHECKLIST_PHASES.map((phase) => (
                                 <SelectItem key={phase} value={phase}>
                                   {CHECKLIST_PHASE_LABELS[phase]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Phạm vi</Label>
+                          <Select
+                            value={item.scope}
+                            onValueChange={(value) =>
+                              updateItem(index, {
+                                scope: value as ChecklistScope,
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {CHECKLIST_SCOPES.map((scope) => (
+                                <SelectItem key={scope} value={scope}>
+                                  {CHECKLIST_SCOPE_LABELS[scope]}
                                 </SelectItem>
                               ))}
                             </SelectContent>

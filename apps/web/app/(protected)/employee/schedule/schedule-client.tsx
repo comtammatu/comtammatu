@@ -524,22 +524,38 @@ function SelectedDayDetail({
             return (
               <div
                 key={index}
-                className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md border px-3 py-2"
+                className="grid min-w-0 gap-2 rounded-md border px-3 py-2 sm:grid-cols-2"
               >
                 <div className="min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {copy.rowShift}
+                  </p>
                   <p className="truncate text-sm font-semibold">
-                    {att.shift_name ?? copy.rowShift}
+                    {att.shift_name ?? copy.noShiftForDay}
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {copy.timeRange}
                   </p>
                   <p className="font-mono text-xs tabular-nums text-muted-foreground">
                     {formatShiftWindow(att.start_time, att.end_time)}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {copy.clockRange}
+                  </p>
+                  <p className="font-mono text-xs tabular-nums text-muted-foreground">
                     {hasClock
                       ? `${copy.checkInShort} ${formatTime(att.check_in)} · ${copy.checkOutShort} ${formatTime(att.check_out)}`
                       : "—"}
-                  </span>
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {copy.rowAttendance}
+                  </p>
                   <Badge variant={getAttendanceVariant(att)}>
                     {getAttendanceLabel(att)}
                   </Badge>

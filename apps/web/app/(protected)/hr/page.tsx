@@ -1,5 +1,9 @@
 import { fetchEmployees } from "./actions";
-import { fetchChecklistTemplates } from "./checklist-actions";
+import {
+  fetchChecklistTemplates,
+  fetchPositionDefaults,
+} from "./checklist-actions";
+import type { PositionDefaultRow } from "./checklist-types";
 import { HrClient } from "./hr-client";
 import { loadAuthState } from "@/_lib/auth";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
@@ -30,13 +34,17 @@ export default async function HrPage() {
           return query;
         })();
 
-  const [employeesResult, checklistResult, { data: branches }] = await Promise.all([
-    canViewEmployees
-      ? fetchEmployees()
-      : Promise.resolve({ success: true, data: [] }),
-    fetchChecklistTemplates(),
-    branchesPromise,
-  ]);
+  const [employeesResult, checklistResult, positionDefaultsResult, { data: branches }] =
+    await Promise.all([
+      canViewEmployees
+        ? fetchEmployees()
+        : Promise.resolve({ success: true, data: [] }),
+      fetchChecklistTemplates(),
+      canManageEmployees
+        ? fetchPositionDefaults()
+        : Promise.resolve({ success: true, data: [] }),
+      branchesPromise,
+    ]);
 
   const employees = employeesResult.success
     ? ((employeesResult.data as EmployeeRow[]) ?? [])
@@ -45,6 +53,9 @@ export default async function HrPage() {
   const branchOptions = (branches ?? []) as BranchOption[];
   const checklistTemplates = checklistResult.success
     ? (checklistResult.data ?? [])
+    : [];
+  const positionDefaults = positionDefaultsResult.success
+    ? ((positionDefaultsResult.data as PositionDefaultRow[]) ?? [])
     : [];
 
   return (
@@ -66,6 +77,7 @@ export default async function HrPage() {
           canViewEmployees={canViewEmployees}
           checklistTemplates={checklistTemplates}
           canManageGlobalChecklist={canManageEmployees}
+          positionDefaults={positionDefaults}
         />
       </AppSection>
     </AppPage>
@@ -96,6 +108,7 @@ export interface EmployeeRow {
     phone: string | null;
     positions: {
       label_vi: string | null;
+      default_checklist_template_id: number | null;
     } | null;
     branch_id: number | null;
     branches: { name: string } | null;

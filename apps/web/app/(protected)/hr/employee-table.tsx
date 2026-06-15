@@ -100,6 +100,15 @@ export function EmployeeTable({
               checklistTemplates,
               emp.profiles?.branch_id ?? null,
             );
+            const positionDefaultId =
+              emp.profiles?.positions?.default_checklist_template_id ?? null;
+            const positionDefaultName = positionDefaultId
+              ? (checklistTemplates.find((t) => t.id === positionDefaultId)
+                  ?.name ?? null)
+              : null;
+            const inheritedLabel = positionDefaultName
+              ? `Theo vị trí: ${positionDefaultName}`
+              : "Chưa gán";
 
             return (
               <TableRow key={emp.id}>
@@ -128,10 +137,10 @@ export function EmployeeTable({
                     onValueChange={(value) => updateDefaultChecklist(emp.id, value)}
                   >
                     <SelectTrigger className="w-full min-w-48">
-                      <SelectValue placeholder="Chưa gán" />
+                      <SelectValue placeholder={inheritedLabel} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Chưa gán</SelectItem>
+                      <SelectItem value="none">{inheritedLabel}</SelectItem>
                       {options.map((option) => (
                         <SelectItem key={option.id} value={option.id.toString()}>
                           {option.label}

@@ -41,9 +41,14 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
     "Owner HR page should keep the HR workspace title",
   );
   assert.match(
-    hrClientSource,
-    /<TabsTrigger value="attendance">Chấm công<\/TabsTrigger>/,
+    hrMessagesSource,
+    /attendance:\s*"Chấm công"/,
     "HR attendance tab should use Chấm công wording",
+  );
+  assert.match(
+    hrClientSource,
+    /<TabsTrigger value="attendance">\{copy\.tabs\.attendance\}<\/TabsTrigger>/,
+    "HR attendance tab should read from the HR message dictionary",
   );
   assert.match(
     attendanceTableSource,

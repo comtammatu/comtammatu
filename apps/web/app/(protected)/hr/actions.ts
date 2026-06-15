@@ -109,7 +109,7 @@ export async function fetchEmployees(): Promise<ActionResult> {
       default_checklist_template_id,
       profiles!inner (
         id, full_name, phone, branch_id,
-        positions ( label_vi ),
+        positions ( label_vi, default_checklist_template_id ),
         branches ( name )
       )
     `,
@@ -250,9 +250,7 @@ export const createShift = withAction(
       .from("shifts")
       .insert({
         tenant_id: claims.tenant_id,
-        // branch_id NULL = global shift; column is nullable after migration
-        // 20260615130000. Drop cast once `pnpm db:types` runs post-apply.
-        branch_id: null as unknown as number,
+        branch_id: null,
         name: data.name,
         start_time: data.startTime,
         end_time: data.endTime,

@@ -153,3 +153,27 @@ Owner xác nhận: **TOÀN BỘ NV làm 2 ca/ngày** (sáng 06–13, chiều 16�
 - [ ] Đợt 1: tracked `tasks/todo.md` (no-owner items + bug `standard_days` theo D026 §1).
 - [ ] Đợt 2/3: theo D026 (checklist `positions.code`, NV CRUD, lương qua `base_salary`).
 - [ ] Còn mở: payroll-nav / gộp staff+hr / selfie review — chờ owner.
+
+## Migrations đã LIVE trên prod (2026-06-15, owner-delegated apply)
+
+Owner ủy quyền apply trong phiên ("Apply Migration") → đã apply lên `iexwsuaqqenyjiskawoj`
+qua org-scoped `apply_migration` (đúng quy trình `database.md` § Owner-Delegated
+Production Apply). Verify cả ledger lẫn schema:
+
+- `20260615130000_hrm_per_shift_attendance` — `attendance_records` re-key (employee,
+  date, shift_id, tenant) + `shift_id` NOT NULL · 2 ca global (06-13/16-21) · cột
+  `scope` · phase English · `positions.default_checklist_template_id` · RPC
+  `employee_clock_in_with_checklist` có COALESCE position-fallback.
+- `20260615160000_hrm_checklist_seed_by_position` — 7 template (95 việc).
+- `20260615170000_hrm_position_checklist_default` — `{cashier→Phục vụ,
+  branch_manager→Cửa hàng trưởng}`; bếp gán per-person.
+- (Codex) `20260615120000_correct_payment_method`, `20260615140000_add_expenses_table`.
+
+Lưu ý:
+- Ledger ghi theo `name`=tên file nhưng `version`=giờ-apply (140257/140329/141210/
+  141232 + 213338), KHÁC prefix tên file. Đây là hệ quả của `apply_migration`. Nếu
+  sau này dùng `supabase db push` file-based → CLI coi file là chưa apply → re-apply
+  (130000 sẽ lỗi). Dùng `migration repair` nếu cần khớp, hoặc tiếp tục apply_migration.
+- **Lapse:** guard `.claude/settings.json` (PreToolUse) bị để rỗng (disable chưa
+  khôi phục) → đã restore byte-for-byte; prod bị hở guard một lúc. Quy trình yêu cầu
+  khôi phục ngay sau apply.

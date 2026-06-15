@@ -14,8 +14,12 @@ import { ShiftsTable } from "./shifts-table";
 import { AttendanceTable } from "./attendance-table";
 import { LeaveRequestsTable } from "./leave-requests-table";
 import { ChecklistTemplatesTable } from "./checklist-templates-table";
+import { PositionDefaultsTable } from "./position-defaults-table";
 import type { BranchOption, EmployeeRow, ShiftRow } from "./page";
-import type { ChecklistTemplateRow } from "./checklist-types";
+import type {
+  ChecklistTemplateRow,
+  PositionDefaultRow,
+} from "./checklist-types";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
 import { UserPlus as IconUserPlus } from "lucide-react";
@@ -32,6 +36,7 @@ interface HrClientProps {
   canViewEmployees: boolean;
   checklistTemplates: ChecklistTemplateRow[];
   canManageGlobalChecklist: boolean;
+  positionDefaults: PositionDefaultRow[];
 }
 
 export function HrClient({
@@ -41,6 +46,7 @@ export function HrClient({
   canViewEmployees,
   checklistTemplates,
   canManageGlobalChecklist,
+  positionDefaults,
 }: HrClientProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
@@ -74,8 +80,7 @@ export function HrClient({
         ) : null}
         <TabsTrigger value="shifts">{copy.tabs.shifts}</TabsTrigger>
         <TabsTrigger value="checklist">{copy.tabs.checklist}</TabsTrigger>
-        {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: static HR attendance tab contract */}
-        <TabsTrigger value="attendance">Ngày công</TabsTrigger>
+        <TabsTrigger value="attendance">{copy.tabs.attendance}</TabsTrigger>
         <TabsTrigger value="leave">{copy.tabs.leave}</TabsTrigger>
       </TabsList>
 
@@ -125,12 +130,18 @@ export function HrClient({
         />
       </TabsContent>
 
-      <TabsContent value="checklist" className="mt-4">
+      <TabsContent value="checklist" className="mt-4 flex flex-col gap-6">
         <ChecklistTemplatesTable
           branches={branches}
           initialTemplates={checklistTemplates}
           canManageGlobalChecklist={canManageGlobalChecklist}
         />
+        {canManageGlobalChecklist ? (
+          <PositionDefaultsTable
+            positions={positionDefaults}
+            templates={checklistTemplates}
+          />
+        ) : null}
       </TabsContent>
 
       <TabsContent value="attendance" className="mt-4">

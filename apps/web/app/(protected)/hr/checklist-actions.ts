@@ -15,9 +15,12 @@ import { canAccessBranch } from "@/_lib/branch-scope";
 import { withAction } from "@/_lib/with-action";
 import {
   CHECKLIST_PHASES,
+  CHECKLIST_SCOPES,
   type ChecklistPhase,
+  type ChecklistScope,
   type ChecklistTemplateItem,
   type ChecklistTemplateRow,
+  type PositionDefaultRow,
 } from "./checklist-types";
 
 const CHECKLIST_ROLES: readonly StaffRole[] = [
@@ -30,6 +33,7 @@ const CHECKLIST_OWNER_ROLES: readonly StaffRole[] = ["owner"];
 const templateItemSchema = z.object({
   title: z.string().trim().min(1).max(120),
   phase: z.enum(CHECKLIST_PHASES),
+  scope: z.enum(CHECKLIST_SCOPES).default("every_shift"),
   doneDefinition: z.string().trim().max(240).default(""),
   isRequired: z.boolean().default(true),
 });
@@ -50,6 +54,11 @@ const archiveChecklistTemplateSchema = z.object({
   templateId: z.coerce.number().int().positive(),
 });
 
+const setPositionDefaultChecklistSchema = z.object({
+  positionId: z.coerce.number().int().positive(),
+  templateId: z.coerce.number().int().positive().nullable(),
+});
+
 const applyCashierChecklistTemplateSchema = z.object({});
 
 const CASHIER_ROLE_CODE = "cashier";
@@ -64,6 +73,7 @@ type ChecklistItemRow = {
   template_id: number;
   title: string;
   phase: string;
+  scope: string;
   done_definition: string;
   is_required: boolean;
   sort_order: number;
@@ -95,6 +105,12 @@ function normalizePhase(value: string): ChecklistPhase {
     : "during_shift";
 }
 
+function normalizeScope(value: string): ChecklistScope {
+  return CHECKLIST_SCOPES.includes(value as ChecklistScope)
+    ? (value as ChecklistScope)
+    : "every_shift";
+}
+
 function normalizeTemplates(
   templates: ChecklistTemplateDbRow[],
   items: ChecklistItemRow[],
@@ -111,6 +127,7 @@ function normalizeTemplates(
       id: item.id,
       title: item.title,
       phase: normalizePhase(item.phase),
+      scope: normalizeScope(item.scope),
       doneDefinition: item.done_definition,
       isRequired: item.is_required,
       sortOrder: item.sort_order,
@@ -232,7 +249,7 @@ export async function fetchChecklistTemplates(): Promise<
       ? service
           .from("shift_checklist_template_items")
           .select(
-            "id, template_id, title, phase, done_definition, is_required, sort_order",
+            "id, template_id, title, phase, scope, done_definition, is_required, sort_order",
           )
           .eq("tenant_id", ctx.claims.tenant_id)
           .eq("is_active", true)
@@ -292,6 +309,7 @@ export const saveChecklistTemplate = withAction(
     const payload = data.items.map((item, index) => ({
       title: item.title,
       phase: item.phase,
+      scope: item.scope,
       doneDefinition: item.doneDefinition,
       isRequired: item.isRequired,
       sortOrder: index + 1,
@@ -362,6 +380,63 @@ export const setEmployeeDefaultChecklist = withAction(
 
     if (error) {
       return { success: false, error: "Không thể cập nhật checklist mặc định." };
+    }
+
+    revalidateChecklistPaths();
+    return { success: true };
+  },
+);
+
+export async function fetchPositionDefaults(): Promise<
+  ActionResult<PositionDefaultRow[]>
+> {
+  const ctx = await getAuthContext(CHECKLIST_OWNER_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data, error } = await createServiceClient()
+    .from("positions")
+    .select("id, code, label_vi, default_checklist_template_id")
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .eq("is_active", true)
+    .order("label_vi", { ascending: true });
+
+  if (error) {
+    return { success: false, error: "Không thể tải danh sách vị trí." };
+  }
+  return { success: true, data: (data ?? []) as PositionDefaultRow[] };
+}
+
+export const setPositionDefaultChecklist = withAction(
+  {
+    roles: CHECKLIST_OWNER_ROLES,
+    schema: setPositionDefaultChecklistSchema,
+    permission: PERMISSION_KEYS.STAFF_MANAGE,
+  },
+  async (data, { claims }) => {
+    if (data.templateId != null) {
+      const scope = await loadTemplateScope(claims.tenant_id, data.templateId);
+      if (scope === undefined) {
+        return { success: false, error: "Checklist template không tồn tại." };
+      }
+      if (scope !== null) {
+        return {
+          success: false,
+          error: "Chỉ gán được checklist Global cho vị trí.",
+        };
+      }
+    }
+
+    const { error } = await createServiceClient()
+      .from("positions")
+      .update({ default_checklist_template_id: data.templateId })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("id", data.positionId);
+
+    if (error) {
+      return {
+        success: false,
+        error: "Không thể cập nhật checklist theo vị trí.",
+      };
     }
 
     revalidateChecklistPaths();
