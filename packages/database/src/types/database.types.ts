@@ -2588,7 +2588,7 @@ export type Database = {
           sort_order?: number
           tenant_id: number
           updated_at?: string
-          vat_rate?: number
+          vat_rate: number
         }
         Update: {
           base_price?: number
@@ -3006,7 +3006,7 @@ export type Database = {
           updated_at?: string
           variant_id?: number | null
           variant_name?: string | null
-          vat_rate?: number
+          vat_rate: number
         }
         Update: {
           cancel_reason?: string | null
@@ -7237,7 +7237,7 @@ export type Database = {
           total_amount: number
           updated_at?: string
           vat_amount: number
-          vat_rate?: number
+          vat_rate: number
           xml_sha256?: string | null
           xml_url?: string | null
         }
