@@ -38,7 +38,6 @@ interface OrderRow {
   paid_at: string;
   paid_hour: number;
   order_type: "dine_in" | "takeaway";
-  customer_count: number;
   subtotal: number;
   discount_amount: number;
   tax_amount: number;
@@ -307,7 +306,6 @@ export default async function RevenueDrillPage({
                       <TableHead>Mã đơn</TableHead>
                       <TableHead>Loại</TableHead>
                       <TableHead>Chi nhánh</TableHead>
-                      <TableHead className="text-right">Khách</TableHead>
                       <TableHead className="text-right">Món</TableHead>
                       <TableHead>Thanh toán</TableHead>
                       <TableHead className="text-right">Giảm</TableHead>
@@ -342,9 +340,6 @@ export default async function RevenueDrillPage({
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {o.branch_name?.replace(/^Chi nhánh\s+/, "") ?? "—"}
-                          </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums">
-                            {o.customer_count}
                           </TableCell>
                           <TableCell className="text-right font-mono tabular-nums">
                             {o.item_count}
@@ -383,7 +378,7 @@ export default async function RevenueDrillPage({
                   </TableBody>
                   <TableFooter>
                     <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={7} className="font-medium">
+                      <TableCell colSpan={6} className="font-medium">
                         Tổng
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums">

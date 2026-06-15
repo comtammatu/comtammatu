@@ -293,8 +293,7 @@ export const settings = {
     bill: "Bill",
     time: "Giờ",
     payment: "Thanh toán",
-    tableContext: (tableNumber: number | string, customerCount: number) =>
-      `Bàn ${tableNumber}${customerCount > 0 ? ` · ${customerCount} khách` : ""}`,
+    tableContext: (tableNumber: number | string) => `Bàn ${tableNumber}`,
     takeaway: "Mang về",
     unpaidShort: "Chưa TT",
     noBills: "Ca này chưa có bill.",
@@ -363,8 +362,6 @@ export const settings = {
     orderStatus: "Trạng thái đơn",
     paidWithMethod: (method: string) => `Đã thanh toán · ${method}`,
     unpaid: "Chưa thanh toán",
-    customerCountLabel: "Số khách",
-    customerCount: (count: number) => `${count} khách`,
     quantityPrefix: (quantity: number) => `×${quantity}`,
     linePrice: (unitPrice: string, quantity: number) =>
       `${unitPrice} ×${quantity}`,

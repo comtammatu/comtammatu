@@ -325,7 +325,6 @@ const RECEIPT_LOADING_ORDER: OrderData = {
   discount_value: null,
   discount_note: null,
   total_amount: 138000,
-  customer_count: 2,
   note: null,
   is_priority: false,
   created_at: "2026-04-26T00:00:00.000Z",

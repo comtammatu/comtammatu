@@ -106,7 +106,6 @@ export const pos = {
     thanks: "Cảm ơn quý khách!",
     lineUnitPrice: (quantity: number, unitPrice: string) =>
       `${quantity} × ${unitPrice}`,
-    customerCount: "Số khách",
     cashier: "Thu ngân",
     splitFrom: "Đơn tách",
     cashReceived: "Tiền nhận",

@@ -113,9 +113,6 @@ function renderBillMeta(p: BillBase): RenderOp[] {
   out.push(ops.line(pair48("Đơn hàng:", p.order_number)));
   out.push(ops.line(pair48("Ngày:", `${created.time} ${created.date}`.trim())));
   out.push(ops.line(pair48("Loại:", orderKind)));
-  if (p.order_type === "dine_in" && (p.customer_count ?? 0) > 0) {
-    out.push(ops.line(pair48("Số khách:", String(p.customer_count))));
-  }
   if (p.cashier_name) out.push(ops.line(pair48("Thu ngân:", p.cashier_name)));
   if (p.split_from_order_number)
     out.push(ops.line(pair48("Tách từ đơn:", `#${p.split_from_order_number}`)));

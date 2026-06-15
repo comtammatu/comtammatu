@@ -60,7 +60,6 @@ export type BillBase = {
   order_number: string;
   order_type: "dine_in" | "takeaway";
   table_number?: number | null;
-  customer_count?: number | null;
   cashier_name?: string;
   split_from_order_number?: string | null;
   note?: string | null;

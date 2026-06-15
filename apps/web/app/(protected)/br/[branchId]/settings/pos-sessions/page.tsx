@@ -118,7 +118,6 @@ export default async function BranchPosSessionsPage({
         service_charge,
         discount_amount,
         total_amount,
-        customer_count,
         note,
         created_at,
         table_id,

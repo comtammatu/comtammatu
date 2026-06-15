@@ -287,9 +287,6 @@ function applyOrderUpdate(
     }
   }
 
-  const customerCount = coerceNullableNumber(payload.customer_count);
-  if (customerCount !== undefined) next.customer_count = customerCount;
-
   const note = coerceNullableString(payload.note);
   if (note !== undefined) next.note = note;
 
@@ -379,7 +376,6 @@ function buildOptimisticOrder(
         : null,
     total_amount: Number(payload.total_amount ?? 0),
     table_id: safeTableId,
-    customer_count: coerceNullableNumber(payload.customer_count) ?? null,
     note: typeof payload.note === "string" ? payload.note : null,
     is_priority: payload.is_priority === true,
     merged_into_order_id:

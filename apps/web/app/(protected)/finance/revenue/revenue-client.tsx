@@ -109,7 +109,6 @@ interface PeriodAggregateRow {
   cash_revenue: number;
   vietqr_revenue: number;
   momo_revenue: number;
-  total_covers: number;
   branch_ids: number[];
 }
 
@@ -127,7 +126,6 @@ function aggregateByPeriod(rows: RollupRow[]): PeriodAggregateRow[] {
       existing.cash_revenue += r.cash_revenue ?? 0;
       existing.vietqr_revenue += r.vietqr_revenue ?? 0;
       existing.momo_revenue += r.momo_revenue ?? 0;
-      existing.total_covers += r.total_covers;
       if (!existing.branch_ids.includes(r.branch_id)) {
         existing.branch_ids.push(r.branch_id);
       }
@@ -144,7 +142,6 @@ function aggregateByPeriod(rows: RollupRow[]): PeriodAggregateRow[] {
         cash_revenue: r.cash_revenue ?? 0,
         vietqr_revenue: r.vietqr_revenue ?? 0,
         momo_revenue: r.momo_revenue ?? 0,
-        total_covers: r.total_covers,
         branch_ids: [r.branch_id],
       });
     }
@@ -263,10 +260,6 @@ export function RevenueClient({
     kpis && kpis.order_count > 0
       ? Math.round(netRevenuePreVat / kpis.order_count)
       : 0;
-  const aovPerCover =
-    kpis && kpis.total_covers > 0
-      ? Math.round(netRevenuePreVat / kpis.total_covers)
-      : 0;
   const discountPct =
     grossSales > 0 ? ((kpis?.discount_amount ?? 0) / grossSales) * 100 : 0;
   const voidedPct =
@@ -279,10 +272,6 @@ export function RevenueClient({
   const prevAovOrder =
     prev && prev.order_count > 0
       ? Math.round(prevNetPreVat / prev.order_count)
-      : 0;
-  const prevAovCover =
-    prev && prev.total_covers > 0
-      ? Math.round(prevNetPreVat / prev.total_covers)
       : 0;
   const prevDiscountPct =
     prevGross > 0 ? ((prev?.discount_amount ?? 0) / prevGross) * 100 : 0;
@@ -352,7 +341,6 @@ export function RevenueClient({
       header: [
         revCopy.csvHeaders.colPeriod,
         revCopy.csvHeaders.colOrders,
-        revCopy.csvHeaders.colCustomers,
         revCopy.csvHeaders.colNetRevenue,
         revCopy.csvHeaders.colCash,
         revCopy.csvHeaders.colVietqr,
@@ -362,7 +350,6 @@ export function RevenueClient({
       rows: periodRows.map((r) => [
         r.period_label,
         r.order_count,
-        r.total_covers,
         Math.round(netRevenuePreVatFor(r)),
         Math.round(r.cash_revenue),
         Math.round(r.vietqr_revenue),
@@ -373,7 +360,6 @@ export function RevenueClient({
         ? [
             revCopy.csvHeaders.total,
             kpis.order_count,
-            kpis.total_covers,
             Math.round(netRevenuePreVat),
             Math.round(kpis.cash_revenue),
             Math.round(kpis.vietqr_revenue),
@@ -469,9 +455,7 @@ export function RevenueClient({
         <KpiCard
           label={revCopy.kpi.orderCount}
           value={(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
-          hint={revCopy.kpi.orderCountHint(
-            (kpis?.total_covers ?? 0).toLocaleString("vi-VN"),
-          )}
+          hint={revCopy.kpi.orderCountHint}
           delta={delta(
             kpis?.order_count ?? 0,
             prev?.order_count ?? 0,
@@ -486,13 +470,7 @@ export function RevenueClient({
         />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <KpiCard
-          label={revCopy.kpi.aovCover}
-          value={aovPerCover > 0 ? formatVND(aovPerCover) : "—"}
-          hint={revCopy.kpi.aovCoverHint}
-          delta={delta(aovPerCover, prevAovCover, "higher_better")}
-        />
+      <div className="grid gap-3 sm:grid-cols-2">
         <KpiCard
           label={revCopy.kpi.discountRate}
           value={`${discountPct.toFixed(1)}%`}
@@ -608,9 +586,6 @@ export function RevenueClient({
                     {revCopy.periodTable.colOrders}
                   </TableHead>
                   <TableHead className="text-right">
-                    {revCopy.periodTable.colCustomers}
-                  </TableHead>
-                  <TableHead className="text-right">
                     {revCopy.periodTable.colNetRevenue}
                   </TableHead>
                   <TableHead className="text-right">
@@ -650,9 +625,6 @@ export function RevenueClient({
                       <TableCell className="text-right font-mono tabular-nums">
                         {r.order_count.toLocaleString("vi-VN")}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
-                        {r.total_covers.toLocaleString("vi-VN")}
-                      </TableCell>
                       <TableCell className="text-right font-mono tabular-nums font-medium">
                         {formatVND(netRevenuePreVatFor(r))}
                       </TableCell>
@@ -679,9 +651,6 @@ export function RevenueClient({
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums font-medium">
                     {(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums font-medium">
-                    {(kpis?.total_covers ?? 0).toLocaleString("vi-VN")}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums font-bold">
                     {formatVND(netRevenuePreVat)}

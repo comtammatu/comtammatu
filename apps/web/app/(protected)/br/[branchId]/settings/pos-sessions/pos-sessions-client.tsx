@@ -109,7 +109,6 @@ export interface PosSessionOrder {
   service_charge: number;
   discount_amount: number;
   total_amount: number;
-  customer_count: number;
   note: string | null;
   created_at: string;
   table_id: number | null;
@@ -264,7 +263,6 @@ export function PosSessionsClient({
                           {order.order_type === "dine_in"
                             ? messages.settings.posSessions.tableContext(
                                 order.tables?.number ?? "-",
-                                order.customer_count,
                               )
                             : messages.settings.posSessions.takeaway}
                         </div>
@@ -826,7 +824,6 @@ function OrderDetailSheet({
                 {order.order_type === "dine_in"
                   ? messages.settings.posSessions.tableContext(
                       order.tables?.number ?? "-",
-                      0,
                     )
                   : messages.settings.posSessions.takeaway}
                 {" · "}
@@ -851,7 +848,6 @@ function OrderDetailSheet({
                     order.order_type === "dine_in"
                       ? messages.settings.posSessions.tableContext(
                           order.tables?.number ?? "-",
-                          0,
                         )
                       : messages.settings.posSessions.takeaway
                   }
@@ -860,16 +856,6 @@ function OrderDetailSheet({
                   label={messages.settings.posSessions.orderCreatedAt}
                   value={formatDateTime(order.created_at)}
                   mono
-                />
-                <DetailFact
-                  label={messages.settings.posSessions.customerCountLabel}
-                  value={
-                    order.customer_count > 0
-                      ? messages.settings.posSessions.customerCount(
-                          order.customer_count,
-                        )
-                      : messages.settings.posSessions.noValue
-                  }
                 />
               </div>
 

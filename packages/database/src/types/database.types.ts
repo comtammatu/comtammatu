@@ -3138,7 +3138,6 @@ export type Database = {
           cash_received: number | null
           created_at: string
           created_by: string
-          customer_count: number
           discount_amount: number
           discount_note: string | null
           discount_type: string | null
@@ -3177,7 +3176,6 @@ export type Database = {
           cash_received?: number | null
           created_at?: string
           created_by: string
-          customer_count?: number
           discount_amount?: number
           discount_note?: string | null
           discount_type?: string | null
@@ -3216,7 +3214,6 @@ export type Database = {
           cash_received?: number | null
           created_at?: string
           created_by?: string
-          customer_count?: number
           discount_amount?: number
           discount_note?: string | null
           discount_type?: string | null
@@ -8153,7 +8150,6 @@ export type Database = {
         Args: {
           p_branch_id: number
           p_created_by: string
-          p_customer_count?: number
           p_idempotency_key?: string
           p_items: Json
           p_note?: string
@@ -8168,7 +8164,6 @@ export type Database = {
         Args: {
           p_branch_id: number
           p_created_by: string
-          p_customer_count?: number
           p_daily_limit_hold_token?: string
           p_idempotency_key?: string
           p_items: Json
@@ -8515,7 +8510,6 @@ export type Database = {
         Returns: {
           branch_id: number
           branch_name: string
-          customer_count: number
           discount_amount: number
           invoice_number: string
           invoice_status: string

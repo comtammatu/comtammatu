@@ -42,7 +42,6 @@ export interface SessionOrder {
   discount_note: string | null;
   total_amount: number;
   table_id: number | null;
-  customer_count: number | null;
   note: string | null;
   is_priority: boolean;
   merged_into_order_id: number | null;

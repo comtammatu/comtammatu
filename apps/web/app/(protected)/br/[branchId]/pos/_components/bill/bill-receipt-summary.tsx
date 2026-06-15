@@ -105,12 +105,6 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
             <span>{order.tables.number}</span>
           </div>
         )}
-        {order.order_type === "dine_in" && order.customer_count > 0 && (
-          <div className="flex justify-between">
-            <span>{messages.pos.receipt.customerCount}</span>
-            <span>{order.customer_count}</span>
-          </div>
-        )}
         {order.profiles?.full_name && (
           <div className="flex justify-between">
             <span>{messages.pos.receipt.cashier}</span>

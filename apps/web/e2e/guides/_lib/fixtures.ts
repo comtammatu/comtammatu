@@ -256,7 +256,6 @@ export async function ensureOccupiedTableWithOrder(
       service_charge: 0,
       discount_amount: 0,
       total_amount: unitPrice,
-      customer_count: 2,
       created_by: ctx.userId,
       pos_session_id: openSession.id,
     })
@@ -371,7 +370,6 @@ export async function ensureSecondOrderSameTable(
       service_charge: 0,
       discount_amount: 0,
       total_amount: unitPrice,
-      customer_count: 1,
       created_by: ctx.userId,
       pos_session_id: openSession.id,
     })

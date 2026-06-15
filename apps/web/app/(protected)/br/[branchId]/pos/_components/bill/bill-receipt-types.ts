@@ -36,7 +36,6 @@ export interface OrderData {
   /** Discount reason note (≥ 3 chars after trim). */
   discount_note: string | null;
   total_amount: number;
-  customer_count: number;
   note: string | null;
   is_priority: boolean;
   created_at: string;

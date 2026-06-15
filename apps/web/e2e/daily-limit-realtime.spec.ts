@@ -155,7 +155,6 @@ test.describe("Daily limit — realtime + enforcement", () => {
         service_charge: 0,
         discount_amount: 0,
         total_amount: 0,
-        customer_count: 1,
         created_by: ctx.cashier.userId,
         pos_session_id: ctx.posSessionId,
       })

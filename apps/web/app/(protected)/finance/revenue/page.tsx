@@ -44,7 +44,6 @@ export interface RollupRow {
   momo_revenue: number | null;
   dine_in_revenue: number | null;
   takeaway_revenue: number | null;
-  total_covers: number;
 }
 
 export interface KpiBundle {
@@ -55,7 +54,6 @@ export interface KpiBundle {
   vat_8_amount: number;
   vat_10_amount: number;
   order_count: number;
-  total_covers: number;
   cash_revenue: number;
   vietqr_revenue: number;
   momo_revenue: number;
