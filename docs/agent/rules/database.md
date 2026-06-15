@@ -81,8 +81,16 @@ session; never as a default. The mechanics that work in practice:
   dirty-data counts), apply files in timestamp order, then verify the ledger and
   row counts after each apply.
 - Finish with `pnpm db:types`, run `get_advisors` (security) to confirm no new
-  RLS/search_path findings, and commit the migration files plus regenerated types
-  so the file chain matches the prod ledger.
+  RLS/search_path findings, and commit the migration files plus regenerated types.
+- `apply_migration` stamps the ledger `version` with the apply time, not the file
+  timestamp, so `schema_migrations.version` does not match the file name (464 ledger
+  rows as of 2026-06-15; of the 33 timestamp-named rows, 13 are version-drifted, the
+  rest are slug-named). The forward file chain stays the source of truth for
+  provisioning a fresh environment; the prod ledger only records what ran, keyed by
+  `name`. NEVER run file-based `supabase db push` / branch-replay against prod — it
+  keys on `version`, will not find the file timestamp, and will try to re-apply. A
+  full ledger re-baseline is owner-gated (see D020); until then apply via
+  `apply_migration` only.
 
 ## DB Type Boundaries
 
