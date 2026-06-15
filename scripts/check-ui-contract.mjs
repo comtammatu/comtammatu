@@ -187,7 +187,6 @@ const checks = [
       "apps/web/app/(protected)/inventory/issues/issues-client.tsx": 1,
       "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx": 1,
       "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx": 1,
       "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 2,
     },
   },

@@ -11,6 +11,7 @@ import {
   CircleX as IconCircleX,
 } from "lucide-react";
 import { formatVNDateTime } from "@comtammatu/shared/time";
+import { STOCKTAKE_SESSION_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -95,21 +96,6 @@ interface StocktakeLine {
   } | null;
 }
 
-const STATUS_META: Record<string, { label: string; className: string }> = {
-  in_progress: {
-    label: stocktakeDetailCopy.status.inProgress,
-    className: "bg-warning/10 text-warning border-warning/30",
-  },
-  completed: {
-    label: stocktakeDetailCopy.status.completed,
-    className: "bg-success/10 text-success border-success/30",
-  },
-  cancelled: {
-    label: stocktakeDetailCopy.status.cancelled,
-    className: "bg-muted text-muted-foreground",
-  },
-};
-
 export function StocktakeDetailClient({
   session: initialSession,
   lines: initialLines,
@@ -130,10 +116,10 @@ export function StocktakeDetailClient({
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
-  const meta = STATUS_META[session.status] ?? {
-    label: session.status,
-    className: "bg-muted text-muted-foreground",
-  };
+  const statusLabel =
+    (STOCKTAKE_SESSION_STATUS_LABELS_VI as Record<string, string>)[
+      session.status
+    ] ?? session.status;
 
   const countedCount = useMemo(
     () => lines.filter((l) => l.counted_quantity != null).length,
@@ -246,7 +232,7 @@ export function StocktakeDetailClient({
         eyebrow="Kho hàng"
         title={`KK-${session.id}`}
         description={headerDescription}
-        badge={{ children: meta.label }}
+        badge={{ children: statusLabel }}
         breadcrumb={
           <Link
             href={`${routeBase}?branchId=${session.branch_id}`}
@@ -291,7 +277,7 @@ export function StocktakeDetailClient({
                   {[
                     {
                       label: stocktakeDetailCopy.metrics.status,
-                      value: meta.label,
+                      value: statusLabel,
                     },
                     {
                       label: stocktakeDetailCopy.metrics.counted,

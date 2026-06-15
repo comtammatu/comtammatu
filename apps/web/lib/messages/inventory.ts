@@ -775,11 +775,6 @@ export const inventory = {
     zoneLockLost: "Mất zone lock — ngừng nhập số đếm",
     detail: {
       title: "Chi tiết kiểm kê",
-      status: {
-        inProgress: "Đang thực hiện",
-        completed: "Hoàn tất",
-        cancelled: "Đã hủy",
-      },
       createdAt: (date: string) => `Ngày tạo: ${date}`,
       completedAt: (date: string) => `Hoàn tất: ${date}`,
       notes: (notes: string) => `Ghi chú: ${notes}`,
