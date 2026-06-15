@@ -129,14 +129,6 @@ export async function savePrintTemplate(
   );
 
   if (error) {
-    const message = String(error.message ?? "").toLowerCase();
-    if (message.includes("could not find the function")) {
-      return {
-        success: false,
-        error:
-          "Máy chủ chưa được cập nhật chức năng lưu mẫu (migration chưa apply).",
-      };
-    }
     return { success: false, error: "Không thể lưu mẫu phiếu" };
   }
 
@@ -264,7 +256,7 @@ export async function testPrintTemplate(
       branch_id: branchId,
       printer_id: printer.id,
       job_type: kind,
-      payload: payload as never,
+      payload: toSupabaseJson(payload),
       idempotency_key: `template-test:${kind}:${branchId}:${Date.now()}`,
     })
     .select("id")
