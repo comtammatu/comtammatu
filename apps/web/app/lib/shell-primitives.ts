@@ -13,7 +13,18 @@ export interface ShellNavGroup {
   items: ShellNavItem[];
 }
 
-export function isNavItemActive(item: ShellNavItem, pathname: string): boolean {
+// Only the match-relevant fields are read here, so the parameter is the
+// `Pick` of those — letting icon-less navs (settings tabs) route their
+// active-state through this single helper without inventing placeholder data.
+export type NavMatchTarget = Pick<
+  ShellNavItem,
+  "href" | "exact" | "matchPrefixes"
+>;
+
+export function isNavItemActive(
+  item: NavMatchTarget,
+  pathname: string,
+): boolean {
   if (pathname === item.href) return true;
   if (item.exact) {
     return item.matchPrefixes?.some((p) => pathname.startsWith(p)) ?? false;

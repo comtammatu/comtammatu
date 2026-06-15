@@ -9,6 +9,7 @@ import {
 } from "@comtammatu/shared/auth";
 import { Separator } from "@comtammatu/ui/components/separator";
 import { messages } from "@lib/messages";
+import { isNavItemActive } from "@/lib/shell-primitives";
 
 const copy = messages.settings.nav;
 
@@ -57,7 +58,7 @@ export function SettingsNav({ role }: { role: StaffRole }) {
         aria-label={copy.ariaLabel}
       >
         {visibleTabs.map((tab) => {
-          const isActive = pathname.startsWith(tab.href);
+          const isActive = isNavItemActive({ href: tab.href }, pathname);
           return (
             <Link
               key={tab.href}

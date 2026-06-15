@@ -21,6 +21,7 @@ import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { useSidebar } from "@comtammatu/ui/components/sidebar";
 import { messages } from "@lib/messages";
+import { isNavItemActive } from "@/lib/shell-primitives";
 
 const copy = messages.admin.nav;
 
@@ -36,10 +37,6 @@ const NAV_ITEMS: ReadonlyArray<{
   { moduleKey: "inventory", label: copy.inventory, icon: IconPackage },
   { moduleKey: "finance", label: copy.finance, icon: IconWallet },
 ];
-
-function isActive(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(href + "/");
-}
 
 /**
  * Mobile bottom navbar for the back-office workspace (admin, reports,
@@ -61,7 +58,7 @@ export function WorkspaceBottomNav({ role }: { role: StaffRole }) {
       <div className="no-scrollbar mx-auto flex max-w-lg items-stretch gap-1 overflow-x-auto">
         {items.map((item) => {
           const href = MODULE_ACL[item.moduleKey].path;
-          const active = isActive(pathname, href);
+          const active = isNavItemActive({ href }, pathname);
           const Icon = item.icon;
           return (
             <Button

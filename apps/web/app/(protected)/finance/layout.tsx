@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
+import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { FinanceShell } from "./components/finance-shell";
 
 export default async function FinanceLayout({
@@ -8,6 +10,10 @@ export default async function FinanceLayout({
   children: ReactNode;
 }) {
   const { session, claims } = await loadAuthState();
+  const [showInvoices, showSummary] = await Promise.all([
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
+    currentUserHasPermissionAny(PERMISSION_KEYS.SETTINGS_TENANT),
+  ]);
 
   return (
     <FinanceShell
@@ -19,6 +25,8 @@ export default async function FinanceLayout({
       }}
       role={claims.user_role}
       branchId={claims.branch_id}
+      showInvoices={showInvoices}
+      showSummary={showSummary}
     >
       {children}
     </FinanceShell>

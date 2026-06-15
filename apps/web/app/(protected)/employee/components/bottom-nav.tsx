@@ -11,6 +11,7 @@ import {
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { messages } from "@lib/messages";
+import { isNavItemActive } from "@/lib/shell-primitives";
 
 const copy = messages.employee.nav;
 
@@ -36,11 +37,6 @@ const NAV_ITEMS = [
   },
 ] as const;
 
-function isActive(pathname: string, href: string, exact: boolean): boolean {
-  if (exact) return pathname === href;
-  return pathname === href || pathname.startsWith(href + "/");
-}
-
 export function BottomNav() {
   const pathname = usePathname();
 
@@ -51,7 +47,7 @@ export function BottomNav() {
     >
       <div className="no-scrollbar mx-auto flex max-w-lg items-stretch gap-1 overflow-x-auto">
         {NAV_ITEMS.map((item) => {
-          const active = isActive(pathname, item.href, item.exact);
+          const active = isNavItemActive(item, pathname);
           const Icon = item.icon;
           return (
             <Button
@@ -87,7 +83,7 @@ export function EmployeeDesktopNav() {
       aria-label={copy.ariaLabel}
     >
       {NAV_ITEMS.map((item) => {
-        const active = isActive(pathname, item.href, item.exact);
+        const active = isNavItemActive(item, pathname);
         const Icon = item.icon;
 
         return (

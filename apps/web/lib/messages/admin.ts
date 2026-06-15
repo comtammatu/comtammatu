@@ -84,6 +84,7 @@ export const admin = {
   },
   staffAudit: {
     backToStaff: "Quay lại danh sách nhân viên",
+    linkLabel: "Nhật ký quyền hạn",
     title: "Nhật ký quyền hạn",
     description:
       "Mọi thao tác gán/thu hồi quyền + áp dụng template. Ghi log không thay đổi được.",

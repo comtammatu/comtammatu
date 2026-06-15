@@ -23,6 +23,7 @@ interface InventoryShellProps {
   showProduction: boolean;
   showCatalogManagement: boolean;
   showSettings: boolean;
+  showWasteApprovals: boolean;
   allowedBranches: InventoryBranchOption[];
   defaultBranchId: number | null;
 }
@@ -44,6 +45,7 @@ export function InventoryShell({
   showProduction,
   showCatalogManagement,
   showSettings,
+  showWasteApprovals,
   allowedBranches,
   defaultBranchId,
 }: InventoryShellProps) {
@@ -82,6 +84,7 @@ export function InventoryShell({
         showProduction,
         showCatalogManagement,
         showSettings,
+        showWasteApprovals,
         siteKind: effectiveSiteKind,
       }),
     ],
@@ -91,6 +94,7 @@ export function InventoryShell({
       showProcurement,
       showProduction,
       showSettings,
+      showWasteApprovals,
       userRole,
     ],
   );

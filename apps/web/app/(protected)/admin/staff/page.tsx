@@ -1,8 +1,12 @@
 import { Suspense } from "react";
+import Link from "next/link";
+import { ScrollText as IconScrollText } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { STAFF_ROLES, staffRoleFromPositionCode } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import { messages } from "@lib/messages";
 import { StaffTable } from "./staff-table";
 import { StaffFilters } from "./staff-filters";
 import { AddStaffButton } from "./add-staff-button";
@@ -102,10 +106,18 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
         title="Nhân viên"
         description="Quản lý tài khoản, chức vụ hiển thị và phân quyền nhân viên theo chi nhánh."
         actions={
-          <AddStaffButton
-            branches={branchOptions}
-            positionOptions={positionOptions}
-          />
+          <>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/staff/audit">
+                <IconScrollText className="mr-1 size-4" />
+                {messages.admin.staffAudit.linkLabel}
+              </Link>
+            </Button>
+            <AddStaffButton
+              branches={branchOptions}
+              positionOptions={positionOptions}
+            />
+          </>
         }
       />
       <AppToolbar>

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@comtammatu/ui";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { SUPPLIER_RETURN_ROLES, type StaffRole } from "@comtammatu/shared/auth";
+import { isNavItemActive } from "@/lib/shell-primitives";
 import { tRoute } from "../_lib/dictionary";
 
 interface Tab {
@@ -14,6 +15,7 @@ interface Tab {
 const TABS: Tab[] = [
   { href: "/inventory/settings/expiry" },
   { href: "/inventory/settings/thresholds" },
+  { href: "/inventory/settings/qc", allowedRoles: SUPPLIER_RETURN_ROLES },
 ];
 
 export function SettingsSectionNav({ role }: { role: StaffRole }) {
@@ -27,7 +29,7 @@ export function SettingsSectionNav({ role }: { role: StaffRole }) {
     <nav className="overflow-x-auto pb-1" aria-label="Mục cài đặt kho">
       <div className="flex min-w-max items-center gap-2 border-b border-border/40 pb-2">
         {visibleTabs.map((tab) => {
-          const isActive = pathname.startsWith(tab.href);
+          const isActive = isNavItemActive({ href: tab.href }, pathname);
           return (
             <Link
               key={tab.href}

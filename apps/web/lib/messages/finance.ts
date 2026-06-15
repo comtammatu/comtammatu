@@ -176,6 +176,7 @@ export const finance = {
   nav: {
     groups: {
       basic: "Cơ bản",
+      invoices: "Hóa đơn",
     },
     items: {
       finance: "Tài chính",
@@ -186,6 +187,7 @@ export const finance = {
       expenses: "Chi vận hành",
       reconciliation: "Đối chiếu",
       invoices: "Hóa đơn điện tử",
+      summary: "HĐ tổng hợp B2C",
       chartOfAccounts: "Hệ thống tài khoản",
       journal: "Sổ nhật ký",
       postingRules: "Quy tắc hạch toán",

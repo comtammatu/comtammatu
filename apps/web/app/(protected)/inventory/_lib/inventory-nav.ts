@@ -1,7 +1,9 @@
 import {
   ChartBar as IconChartBar,
+  CheckCircle as IconCheckCircle,
   ClipboardList as IconClipboardList,
   Factory as IconBuildingFactory,
+  FileCheck as IconFileCheck,
   FileText as IconFileText,
   Hourglass as IconHourglass,
   LayoutDashboard as IconLayoutDashboard,
@@ -27,6 +29,7 @@ export function resolveInventoryNav({
   showProduction,
   showCatalogManagement,
   showSettings,
+  showWasteApprovals,
   siteKind,
 }: {
   userRole: StaffRole;
@@ -34,6 +37,7 @@ export function resolveInventoryNav({
   showProduction: boolean;
   showCatalogManagement: boolean;
   showSettings: boolean;
+  showWasteApprovals: boolean;
   siteKind: string;
 }): ShellNavGroup[] {
   const isBranchSite = siteKind === "branch";
@@ -108,6 +112,15 @@ export function resolveInventoryNav({
         label: "Hao hụt/điều chỉnh",
         icon: IconFileText,
       },
+      ...(showWasteApprovals
+        ? [
+            {
+              href: "/inventory/waste/approvals",
+              label: "Duyệt hao hụt",
+              icon: IconCheckCircle,
+            },
+          ]
+        : []),
       {
         href: "/inventory/reports",
         label: tNav("reports", "navigation"),
@@ -129,6 +142,11 @@ export function resolveInventoryNav({
           href: "/inventory/grn",
           label: tNav("grn", "navigation"),
           icon: IconReceipt,
+        },
+        {
+          href: "/inventory/supplier-invoices",
+          label: tNav("supplierInvoices", "navigation"),
+          icon: IconFileCheck,
         },
       ],
     });

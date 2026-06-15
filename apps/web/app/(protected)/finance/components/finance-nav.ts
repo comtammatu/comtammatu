@@ -1,6 +1,8 @@
 import {
   BarChart3 as IconBarChart3,
   Boxes as IconBoxes,
+  FileSpreadsheet as IconFileSpreadsheet,
+  FileText as IconFileText,
   Receipt as IconReceipt,
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
@@ -12,8 +14,14 @@ import { messages } from "@lib/messages";
 // appended under the shared office nav. Labels stay in the finance copy layer.
 const financeNav = messages.finance.nav;
 
-export function resolveFinanceNav(): ShellNavGroup[] {
-  return [
+export function resolveFinanceNav({
+  showInvoices,
+  showSummary,
+}: {
+  showInvoices: boolean;
+  showSummary: boolean;
+}): ShellNavGroup[] {
+  const groups: ShellNavGroup[] = [
     {
       title: financeNav.groups.basic,
       items: [
@@ -46,4 +54,33 @@ export function resolveFinanceNav(): ShellNavGroup[] {
       ],
     },
   ];
+
+  const invoiceItems: ShellNavGroup["items"] = [
+    ...(showInvoices
+      ? [
+          {
+            href: "/finance/invoices",
+            label: financeNav.items.invoices,
+            icon: IconFileText,
+          },
+        ]
+      : []),
+    ...(showSummary
+      ? [
+          {
+            href: "/finance/summary",
+            label: financeNav.items.summary,
+            icon: IconFileSpreadsheet,
+          },
+        ]
+      : []),
+  ];
+  if (invoiceItems.length > 0) {
+    groups.push({
+      title: financeNav.groups.invoices,
+      items: invoiceItems,
+    });
+  }
+
+  return groups;
 }
