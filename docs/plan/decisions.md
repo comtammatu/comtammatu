@@ -527,7 +527,128 @@ deferral.
   (không migration). Lưu ý: refund KHÔNG tự hủy HĐĐT (cancel/thay thế riêng); post-D020
   order giữ `payment_status='paid'`. Gate T3: typecheck/eslint/build xanh; **chưa
   smoke-test live** (DB prod read-only) → owner verify đường tiền thật.
+- Sửa phương thức thanh toán (CK↔tiền mặt khi tiền nhận đúng, ghi sai method):
+  RPC mới `correct_payment_method` ([migration 20260615120000](../../supabase/migrations/20260615120000_correct_payment_method.sql),
+  completed-payment + `orders:refund_approve` + audit) + action `correctPaymentMethod`
+  ([payment-method-actions.ts](../../apps/web/app/(protected)/finance/payment-method-actions.ts)) + nút "Sửa phương thức" trong invoice-list (picker
+  cash/vietqr/momo + lý do); copy `messages.finance.invoiceList.methodFix*`. **Pure
+  record fix**: post-D020 không GL; method "3"=TM/CK hardcode trên HĐĐT ⇒ HĐĐT đã
+  phát hành KHÔNG bị ảnh hưởng (xác minh `viettel-sinvoice.ts:591`). Gate T3:
+  typecheck/lint/build xanh. ⚠️ **Migration chưa apply** (không dev DB) → file→PR→
+  owner; type hand-add tạm vào `database.types.ts` (owner chạy `pnpm db:types` sau
+  apply sẽ khớp). Chưa smoke-test live.
 
-**Còn lại (owner-level, chờ owner ưu tiên):** **sửa phương thức thanh toán**
-(CK↔tiền mặt) khi tiền đã nhận đúng nhưng ghi sai method — chưa có RPC sửa
-`payments.method` → cần migration (file→PR→owner), tách riêng.
+**Còn lại:** không còn hạng mục correction owner-level tồn đọng. Đường refund +
+sửa-phương-thức cần owner **apply migration `20260615120000` + smoke-test** trước
+khi dùng thật.
+
+## D024: Trợ lý Telegram — mặt tiền chat cho xương sống Điều phối (4 co-founder) (2026-06-15) — DRAFT, chờ co-founder duyệt
+
+**Context:** Owner đặt câu hỏi về một "AI Agent riêng cho Má Tư" để chủ/quản lý/nhân
+viên giao tiếp, theo dõi, giao việc, kiểm tra, điều phối qua Telegram/Zalo. Đối chiếu
+CODE + blueprint (không dựng từ ý tưởng rời):
+
+- `docs/plan/platform-rearchitecture-blueprint.md` §4.4 đã đặt **xương sống ③ Điều
+  phối** và ghi rõ: phối hợp liên miền hôm nay diễn ra *ngoài hệ* (chat/gọi điện/Excel).
+  Một trợ lý chat chính là **kênh** kéo việc đó vào hệ — không phải miền mới.
+- Hạ tầng tái dùng được đã có: `notifications` SHIPPED (bảng + policy
+  `notifications_select` + `severity`, dẫn chứng D016/D018), realtime, RPC;
+  `proxy.ts` một cổng auth+ACL+branch-scope (D003/D015); định danh Position⟂Permission
+  + `has_permission(branch, key)` ở RLS (blueprint §3.1).
+- Owner chốt (2026-06-15): đối tượng phiên đầu = **4 co-founder + quản lý** (KHÔNG
+  nhân viên đại trà ở v1) ⇒ kênh = **Telegram** (API mở, không cần duyệt Zalo OA);
+  Zalo defer tới khi chạm nhân viên/khách.
+
+**Decision (PROPOSAL — định hướng, CHƯA code):**
+
+1. **Đóng khung:** trợ lý Telegram KHÔNG phải sản phẩm AI mới mà là **mặt tiền chat
+   của xương sống ③ Điều phối**. Tái dùng `notifications`/`proxy.ts`/RPC; CẤM lối
+   dữ liệu/định danh/LLM song song (đúng "một schema, một cổng, một nguồn sự thật" — D015).
+2. **Ba lớp, làm theo thứ tự, rủi ro tăng dần:**
+   - **① Đẩy thông báo (read, một chiều):** chốt ca/ngày, alert HĐĐT bị Viettel từ
+     chối, lệch kiểm kê, ngưỡng thuế/dòng tiền. ROI cao nhất, rủi ro ~0.
+   - **② Hỏi-đáp read-only:** NL → chọn 1 trong N tool truy vấn **đã định nghĩa**
+     (KHÔNG free-form SQL, KHÔNG để LLM tự duyệt DB).
+   - **③ Hành động/điều phối (write — giao việc, duyệt):** DEFER — cần audit + xác
+     nhận + quyền; là mở rộng phạm vi → ratify riêng (xem §4).
+3. **Guardrails BẮT BUỘC:**
+   - **Trust-boundary:** LLM KHÔNG tự tính/bịa số tài chính. Mọi con số đến từ RPC
+     thật; LLM chỉ *diễn đạt lại*. (HKD — số đụng thuế Nhóm 2/3 NĐ 68/2026, D020.)
+   - **Định danh & RLS:** map `telegram_user_id ↔ profile/position`; trợ lý gọi RPC
+     dưới danh nghĩa user đã định danh + áp `has_permission(branch, key)`; KHÔNG
+     service-role vượt RLS. Lọc alert theo domain-head (Phương án A blueprint §4.3:
+     `growth:*`/`ops:*`/`build:*`/`platform:*`).
+   - **Secret:** bot token là secret owner-quản (vault/env), KHÔNG commit (D005 +
+     rule không commit secrets).
+4. **Phạm vi & phễu D012:**
+   - Lớp **①/②** KHÔNG mở rộng phạm vi D012 — chỉ là kênh mới cho `notifications` đã
+     shipped ⇒ không cần một quyết định mở-rộng riêng để khởi động.
+   - Lớp **③** (write/điều phối/giao việc) LÀ nghi thức điều phối mới ⇒ phải qua phễu
+     D012 + ratify một `D0xx` riêng (kèm bằng chứng nhu cầu thật) TRƯỚC khi code.
+5. **Thứ tự lộ trình:** thuộc **Điều phối v1 = Phase 1** blueprint. Phụ thuộc Phase 0
+   (daily-close P0-1 + `expense` P0-2) — KHÔNG làm trước Phase 0 (bot rỗng nội dung
+   nếu chưa có chốt ngày + sổ chi phí).
+
+**Consequences:** Khi co-founder duyệt → khởi động bằng PoC lớp ① (báo cáo cuối ngày
++ alert HĐĐT từ chối) ăn theo `notifications`, đo 2–3 tuần adoption của 4 co-founder
+trước khi mở lớp ②. Zalo + lớp ③ là nhánh sau, mỗi nhánh một quyết định riêng. Đảo
+định hướng (chọn Zalo trước / cho LLM ghi dữ liệu trực tiếp / bỏ ràng buộc RLS) phải
+sửa quyết định này trước.
+
+**Status:** DRAFT 2026-06-15 — chờ 4 co-founder rà. Nguồn: hội thoại định hướng +
+đối chiếu `platform-rearchitecture-blueprint.md` §4.4/§3.1, D005/D012/D015/D016/D018/D020,
+hạ tầng `notifications`.
+
+## D025: Đánh giá `revfactory/harness` — lấy ý tưởng, KHÔNG cài tool; cải tổ 6 rule governance (2026-06-15)
+
+**Context:** Cân nhắc adopt `revfactory/harness` (meta-skill Claude Code sinh agent-team
++ skill) để tối ưu AI Agent System Structure & Workflow. Đánh giá bằng dynamic workflow
+17-agent + ý kiến ngoài Codex (gpt-5.5, read-only sandbox) + red-team kiểm chứng filesystem.
+Ba nguồn hội tụ độc lập.
+
+**Decision — KHÔNG cài harness làm tool/runtime:**
+1. Pattern lõi harness bắt buộc `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
+   (`TeamCreate`/`SendMessage`/`TaskCreate` flag-gated). Codex — nửa runtime surface — không
+   set được ⇒ vỡ "neither runtime privileged".
+2. Harness ghi authority vào `.claude/agents`+`.claude/skills` (Codex không đọc) ⇒
+   **governance-capture/split-brain**, vi phạm "policy runtime-neutral; `.claude/`+`.codex/`
+   chỉ WIRING". Tệ hơn vendor lock-in.
+3. Mandate prose của harness yếu hơn guard `exit non-zero` mình đã có; `model:opus`-mọi-call
+   = 0 footprint hôm nay (đừng tạo phantom mandate).
+4. `+60%/n=15` là benchmark tác giả tự chấm ⇒ chỉ là prior cho pilot tự đo.
+
+**Lấy ý tưởng (design-time, vào shared docs):** QA cross-boundary taxonomy + incremental
+coherence (`workflow.md`); re-runnable-skill descriptions, generalize-don't-overfit,
+per-call-model, near-miss routing tax-vn (`skills.md`).
+
+**Cải tổ rule (rule là mutable):**
+- `workflow.md`: Skill Plan Gate → MUST(T3)/SHOULD(T2); Verification 2-3 → advisory +
+  attestation bắt buộc (gate thật chỉ `pnpm` + CI xanh); Four Perspectives → chọn lens theo
+  risk type.
+- `scripts/check-review-tier.mjs` (`pnpm lint:review-tier`) — floor tier deterministic theo
+  blast-radius, **warn-only** trong pilot; flip `REVIEW_TIER_STRICT=1` fail-closed sau khi tune.
+- `tasks/regressions.md`: bỏ framing "low retire = fail"; `pnpm regressions:retire-candidates`
+  lister read-only (KHÔNG auto-gate item-3 dead-ref).
+- Promote `feedback_refactor_goal_separation_not_loc` từ memory Claude-private → `skills.md`.
+
+**Gate:** `pnpm lint` xanh (gồm guard mới + rules-mirror in-sync). Không đổi TS/schema ⇒
+typecheck/build không bị ảnh hưởng.
+
+**Open (chờ owner):** (a) tập path forced-T3 của tier guard (đề xuất: `supabase/migrations`,
+`SECURITY DEFINER`, auth/RLS, finance/payments/invoice/hddt/payroll); (b) thời điểm flip tier
+guard sang fail-closed. Đảo quyết định (muốn cài harness/Agent-Teams) phải sửa quyết định này
+trước.
+
+**Addendum 2026-06-15 — bật Agent Teams cho Claude (capability tùy chọn, KHÔNG phải adopt
+harness):** Owner bật `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` ở `.claude/settings.json` (`env`)
+để Claude DÙNG ĐƯỢC `TeamCreate`/`SendMessage`/`TaskCreate` cho live multi-agent coordination.
+Đây là runtime-specific wiring (đúng chỗ: adapter Claude), không phải policy. **Invariant giữ
+nguyên:** không rule/workflow nào được PHỤ THUỘC Agent Teams — Codex không có tương đương, nên
+four-perspective debate + mọi orchestration phải runtime-neutral với fallback single-agent/
+written-transcript (pin ở `skills.md` → Subagents). Cờ experimental ⇒ kỳ vọng churn; không gắn
+governance load-bearing vào nó. Không đụng `check-guard-sync` (chỉ đọc `hooks.PreToolUse`). Caveat:
+nếu feature-gate đọc biến TRƯỚC khi load settings, owner có thể cần `export` ở shell profile (per-user,
+không commit).
+
+**Status:** RESOLVED 2026-06-15 — owner chốt "lấy ý tưởng, không cài tool"; 4 nhóm reform
+đã land. Pilot tier-guard warn-only. Agent Teams bật cho Claude như capability tùy chọn (addendum).

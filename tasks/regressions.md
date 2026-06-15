@@ -8,14 +8,14 @@
 > for schema changes. (No static TOC by design — see retire policy item 4.)
 > Format: `- [DATE] [RULE NAME] — short description`
 >
-> **Retire policy** — keep this file lean:
+> **Retire policy** — opportunistic, owner-gated, judgment-driven:
 >
 > 1. When a rule's enforcement moves into `pnpm lint:*`, `scripts/check-*.mjs`, or another CI gate, the rule is redundant — delete it (or move the documentation into the relevant `docs/` file).
 > 2. When a rule is explicitly superseded by a later rule (the supersedor states `Supersedes [date] OLD-NAME`), delete the old rule once the supersedor has been in place long enough to validate.
-> 3. When a rule references a file or concept that no longer exists, delete the rule.
+> 3. When a rule references a file or concept that no longer exists, delete the rule. This stays a manual judgment — there is no automated dead-reference gate, because a naive path scan false-positives on relative paths, column refs, and section anchors and would pressure deleting still-valid rules.
 > 4. Group ad-hoc by domain only at the time of retire — do not invent a TOC that re-introduces drift.
 >
-> Retire passes happen opportunistically (e.g. at the end of a docs cleanup slice). Last pass: 2026-05-27 — removed 7 rules (3 lint-enforced UI rules, 1 redundant process rule, 2 explicitly-superseded POS rules, 1 redundant copy rule). `DESIGN-SYSTEM-ONE-SOURCE-ONLY` is intentionally kept because `scripts/check-ui-contract.mjs` requires its presence as a regressions-file anchor — see note in the rule body.
+> Retire passes happen opportunistically (e.g. at the end of an owner-gated docs cleanup slice). A low removal count is EXPECTED and fine — most rules are still load-bearing, and the file is grepped by domain (never loaded whole), so on-disk size is not the cost metric. `pnpm regressions:retire-candidates` prints supersession and guard-covered candidates for human review (advisory, read-only, never auto-deletes). Last pass: 2026-05-27 — removed 7 rules (3 lint-enforced UI rules, 1 redundant process rule, 2 explicitly-superseded POS rules, 1 redundant copy rule). `DESIGN-SYSTEM-ONE-SOURCE-ONLY` is intentionally kept because `scripts/check-ui-contract.mjs` requires its presence as a regressions-file anchor — see note in the rule body.
 >
 > **Lint-anchor rules** — some rules look "lint-enforced" but their NAME is itself a check (the lint script greps for the rule name in this file to assert the rule was authored). Those rules cannot be retired without also updating the lint script. Currently: `DESIGN-SYSTEM-ONE-SOURCE-ONLY`.
 >

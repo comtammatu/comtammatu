@@ -41,8 +41,11 @@ database policy, copy, or business rules.
 
 ## Skill Plan Gate
 
-Before coding or changing docs for any non-trivial task, state a short skill
-plan in the task notes, PR body, or worklog:
+T3 tasks MUST state a short skill plan before coding — it feeds the
+four-perspective debate and has a reviewer-inspectable home in the PR body or a
+`docs/worklog/` note. T2 tasks SHOULD state one, but may omit it when routing is
+obvious (engineering + the single topic rule, no external skills). State it in
+the task notes, PR body, or worklog:
 
 ```text
 Skill plan: repo rules = engineering + <topic rules>; external skills = <names>;
@@ -109,6 +112,14 @@ equivalent, or `find-skills` if the owner asked for new tooling.
   `packages/shared/src/payroll/` and the HĐĐT helpers. It restates no rule and
   no number — authority stays in the docs above. (Claude runtime; Codex follows
   the same doc order directly.)
+- Boundary cases — when `tax-vn` FIRES vs when to ROUTE ELSEWHERE (identical for
+  both runtimes):
+  - FIRES: "what PIT bracket applies to this payroll run", "is this HĐĐT error
+    code retryable", "does this revenue cross the 1 tỷ threshold".
+  - ROUTE ELSEWHERE: "add an index to the payroll table" → `database.md`/supabase;
+    "fix payslip PDF spacing" → `ui.md`/print; "where is the PIT compute function
+    defined" → codegraph. `tax-vn` routes legal/tax/HĐĐT *rules*, not schema,
+    layout, or code-location lookups.
 
 ### Shadcn And UI Design
 
@@ -186,6 +197,26 @@ equivalent, or `find-skills` if the owner asked for new tooling.
 - Do not use Chrome or Computer Use as the first option for GitHub/Vercel if a
   dedicated connector, CLI, or API path is available.
 
+### Re-Runnable Skills
+
+A project-owned skill meant to be re-run (improve / update / partial re-run /
+correct) MUST name those follow-up phrasings in its `description`, or the trigger
+silently dies after a cold start. Stateless doc-routers like `tax-vn` are exempt
+(every invocation is fresh). Do NOT introduce a parallel `_workspace/` store or a
+Phase-0 self-context check to fake resumability unless the owner approves an
+artifact-producing orchestrator — and any such resume contract MUST be
+runtime-neutral (readable by Claude AND Codex), never a Claude-skill convention.
+
+### Evolving Skills And Rules From Feedback
+
+When feedback shows a skill or rule misbehaved, fix at the *principle* level, not
+the one failing example — but stop at the intended responsibility boundary. The
+goal of a decompose/refactor is separation by concern, not a line count. Do not
+"generalize" a focused skill past its domain (never widen `tax-vn` into a generic
+tax/PDF helper). Before widening any skill's scope, check its dependents and
+update its `description` to match. Durable separation/feedback principles live
+here in the shared rules, not in a single runtime's private memory.
+
 ## Subagents, Debate, And Read Delegation
 
 - Read delegation (context economy): before reading more than roughly three
@@ -205,6 +236,19 @@ equivalent, or `find-skills` if the owner asked for new tooling.
   full T3 debate and the runtime supports spawning them.
 - If subagents are unavailable, write the four-perspective debate yourself and
   call out that subagents were unavailable.
+- Model tier is chosen per call by task complexity, not fixed: cheap/deterministic
+  routing and read-only delegation may use a lighter model; reserve the strongest
+  model for genuinely hard reasoning. Any borrowed orchestrator/harness template
+  that hardcodes a single tier (e.g. `model: "opus"` on every call) must have that
+  mandate stripped before adoption.
+- Agent Teams (`TeamCreate` / `SendMessage` / `TaskCreate`) is enabled for the
+  Claude runtime (`.claude/settings.json` → `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`)
+  and MAY be used for live multi-agent coordination. It is an OPTIONAL capability:
+  Codex has no equivalent, so no rule or workflow may DEPEND on it. The
+  four-perspective debate and any orchestration MUST stay runtime-neutral with a
+  graceful single-agent / written-transcript fallback (see `workflow.md`). It is an
+  experimental flag — expect it to churn; never make load-bearing governance
+  contingent on it.
 
 ## Anti-Patterns
 
