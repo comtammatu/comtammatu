@@ -328,3 +328,12 @@ export const FISCAL_PERIOD_STATUS_LABELS_VI = {
   closing: "Đang đóng",
   closed: "Đã đóng",
 } as const;
+
+/** summary_run_queue.status (DB summary_run_queue_status_check). */
+export const SUMMARY_RUN_STATUS_LABELS_VI = {
+  queued: "Đang chờ",
+  running: "Đang chạy",
+  issued: "Đã phát hành",
+  failed: "Thất bại",
+  skipped: "Bỏ qua",
+} as const;

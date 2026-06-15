@@ -8,7 +8,6 @@ import {
   RefreshCcw as IconRefresh,
   PlayCircle as IconPlay,
 } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Table,
@@ -19,6 +18,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { StatusBadge } from "@/components/status-badge";
 import { AppSection } from "@/components/surface";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { BusinessDateField, SelectField } from "@/components/form";
@@ -31,25 +31,6 @@ import {
   runDailySummaryForBranch,
 } from "../summary-invoice-actions";
 import type { AccessibleBranch, SummaryQueueRow } from "./types";
-
-const STATUS_LABEL: Record<SummaryQueueRow["status"], string> = {
-  queued: "Đang chờ",
-  running: "Đang chạy",
-  issued: "Đã phát hành",
-  failed: "Thất bại",
-  skipped: "Bỏ qua",
-};
-
-const STATUS_VARIANT: Record<
-  SummaryQueueRow["status"],
-  "secondary" | "default" | "destructive" | "outline"
-> = {
-  queued: "outline",
-  running: "secondary",
-  issued: "default",
-  failed: "destructive",
-  skipped: "secondary",
-};
 
 const TRIGGER_LABEL: Record<SummaryQueueRow["trigger_source"], string> = {
   cron: "Tự động",
@@ -241,9 +222,7 @@ export function SummaryClient({ initialBranches, initialQueue }: Props) {
                         `CN #${row.branch_id}`}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={STATUS_VARIANT[row.status]}>
-                        {STATUS_LABEL[row.status]}
-                      </Badge>
+                      <StatusBadge domain="summary-run" value={row.status} />
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {TRIGGER_LABEL[row.trigger_source]}

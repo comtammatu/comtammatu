@@ -183,7 +183,6 @@ const checks = [
       "apps/web/app/(protected)/employee/leave/leave-client.tsx": 1,
       "apps/web/app/(protected)/employee/payslip/payslip-client.tsx": 1,
       "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 2,
-      "apps/web/app/(protected)/finance/summary/summary-client.tsx": 1,
       "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
       "apps/web/app/(protected)/hr/leave-requests-table.tsx": 1,
       "apps/web/app/(protected)/inventory/issues/issues-client.tsx": 1,

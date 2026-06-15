@@ -5,6 +5,7 @@ import {
   PAYMENT_RECORD_STATUS_LABELS_VI,
   PRINT_JOB_STATUS_LABELS_VI,
   REFUND_STATUS_LABELS_VI,
+  SUMMARY_RUN_STATUS_LABELS_VI,
   TABLE_STATUS_LABELS_VI,
   TAX_INVOICE_STATUS_LABELS_VI,
 } from "@comtammatu/shared/labels";
@@ -93,6 +94,16 @@ const STATUS_DOMAINS = {
       open: "success",
       closing: "warning",
       closed: "outline",
+    },
+  },
+  "summary-run": {
+    labels: SUMMARY_RUN_STATUS_LABELS_VI,
+    variants: {
+      queued: "outline",
+      running: "secondary",
+      issued: "default",
+      failed: "destructive",
+      skipped: "secondary",
     },
   },
 } satisfies Record<string, DomainConfig>;
