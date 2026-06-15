@@ -289,9 +289,12 @@ const ADMIN_DASHBOARD_COPY = {
   ordersHelper: "Số đơn đã thanh toán.",
   avgOrderHelper: "Giá trị trung bình mỗi đơn.",
   grossProfitLabel: "Lợi nhuận gộp",
-  grossProfitHelper: "Doanh thu trước VAT trừ chi phí nguyên liệu hôm nay.",
-  costLabel: "Chi phí",
-  costHelper: "Nguyên liệu và chi vận hành hôm nay.",
+  grossProfitHelper: "Doanh thu trước VAT trừ chi nguyên liệu hôm nay.",
+  netProfitLabel: "Lợi nhuận ròng",
+  netProfitHelper: (gross: string, expense: string) =>
+    `Lãi gộp ${gross} − chi vận hành ${expense}`,
+  ingredientCostLabel: "Chi nguyên liệu",
+  ingredientCostHelper: "Giá vốn nguyên liệu tiêu hao hôm nay.",
   inventoryValueLabel: "Giá trị tồn kho",
   inventoryValueHelper: "Giá trị tồn kho hiện tại trong phạm vi quản trị.",
   compareHint: "vs hôm qua",
@@ -423,6 +426,13 @@ export default async function DashboardPage() {
           {overview.finance ? (
             <>
               <KpiCard
+                label={ADMIN_DASHBOARD_COPY.ingredientCostLabel}
+                value={formatVND(Math.round(overview.finance.ingredientCost))}
+                hint={ADMIN_DASHBOARD_COPY.ingredientCostHelper}
+                icon={<IconWallet />}
+                href={foodCostHref}
+              />
+              <KpiCard
                 label={ADMIN_DASHBOARD_COPY.grossProfitLabel}
                 value={formatVND(Math.round(overview.finance.grossProfit))}
                 hint={ADMIN_DASHBOARD_COPY.grossProfitHelper}
@@ -430,16 +440,19 @@ export default async function DashboardPage() {
                 href={financeHref}
               />
               <KpiCard
-                label={ADMIN_DASHBOARD_COPY.costLabel}
+                label={ADMIN_DASHBOARD_COPY.netProfitLabel}
                 value={formatVND(
                   Math.round(
-                    overview.finance.ingredientCost +
+                    overview.finance.grossProfit -
                       overview.finance.operatingExpense,
                   ),
                 )}
-                hint={ADMIN_DASHBOARD_COPY.costHelper}
-                icon={<IconWallet />}
-                href={foodCostHref}
+                hint={ADMIN_DASHBOARD_COPY.netProfitHelper(
+                  formatVND(Math.round(overview.finance.grossProfit)),
+                  formatVND(Math.round(overview.finance.operatingExpense)),
+                )}
+                icon={<IconTrendingUp />}
+                href={financeHref}
               />
             </>
           ) : null}

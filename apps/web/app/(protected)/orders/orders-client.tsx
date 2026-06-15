@@ -4,12 +4,7 @@ import { useState, useTransition, useMemo } from "react";
 import { ShoppingBag as IconShoppingBag } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
-import {
-  BRANCH_VI,
-  FORM_VI,
-  STAFF_VI,
-  STATES_VI,
-} from "@comtammatu/shared/messages";
+import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import {
   ORDER_STATUS_LABELS_VI,
   getPaymentMethodLabelVi,
@@ -36,7 +31,11 @@ import {
 } from "@comtammatu/ui/components/select";
 import { fetchOrders } from "./actions";
 import { OrderDetailSheet } from "./order-detail-sheet";
-import type { OrderRow, FetchOrdersFilters } from "./actions";
+import type {
+  OrderRow,
+  OrdersSummary,
+  FetchOrdersFilters,
+} from "./actions";
 import {
   DataTable,
   type DataTableColumn,
@@ -99,10 +98,26 @@ const ORDER_COLUMNS: DataTableColumn<OrderRow>[] = [
   },
 ];
 
+/* ─── Copy ─── */
+
+const ORDERS_COPY = {
+  inProgressLabel: "Đang xử lý",
+  inProgressHint: "Đơn chưa hoàn tất, trên toàn bộ kết quả lọc.",
+  paidLabel: "Đơn đã thanh toán",
+  paidHint: "Số đơn đã thu tiền, trên toàn bộ kết quả lọc.",
+  revenueLabel: "Doanh thu đã thu",
+  revenueHint: "Chỉ tính đơn đã thanh toán, trên toàn bộ kết quả lọc.",
+  listCountNote: (shown: number, total: number) =>
+    total > shown
+      ? `Hiển thị 50 đơn mới nhất trong ${String(total)} đơn`
+      : `${String(total)} đơn hàng`,
+} as const;
+
 /* ─── Props ─── */
 
 interface OrdersClientProps {
   initialOrders: OrderRow[];
+  initialSummary: OrdersSummary;
   branches: { id: number; name: string }[];
   showBranchFilter: boolean;
 }
@@ -111,10 +126,12 @@ interface OrdersClientProps {
 
 export function OrdersClient({
   initialOrders,
+  initialSummary,
   branches,
   showBranchFilter,
 }: OrdersClientProps) {
   const [orders, setOrders] = useState<OrderRow[]>(initialOrders);
+  const [summary, setSummary] = useState<OrdersSummary>(initialSummary);
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -135,6 +152,7 @@ export function OrdersClient({
       const result = await fetchOrders(filters);
       if (result.success && result.data) {
         setOrders(result.data.orders);
+        setSummary(result.data.summary);
       }
     });
   }
@@ -148,6 +166,7 @@ export function OrdersClient({
       const result = await fetchOrders();
       if (result.success && result.data) {
         setOrders(result.data.orders);
+        setSummary(result.data.summary);
       }
     });
   }
@@ -155,37 +174,24 @@ export function OrdersClient({
   const hasFilters = !!(dateFrom || dateTo || status || branchId);
 
   const displayOrders = useMemo(() => orders, [orders]);
-  const orderSummary = useMemo(() => {
-    const pending = displayOrders.filter(
-      (order) => order.status !== "completed" && order.status !== "cancelled",
-    ).length;
-    const completed = displayOrders.filter(
-      (order) => order.status === "completed",
-    ).length;
-    const revenue = displayOrders
-      .filter((order) => order.status !== "cancelled")
-      .reduce((sum, order) => sum + Number(order.total_amount), 0);
-
-    return { pending, completed, revenue };
-  }, [displayOrders]);
 
   return (
     <>
       <div className="grid gap-3 md:grid-cols-3">
         <KpiCard
-          label="Đang xử lý"
-          value={orderSummary.pending}
-          hint="Đơn đang chờ hoặc đang làm cần theo dõi."
+          label={ORDERS_COPY.inProgressLabel}
+          value={summary.inProgressCount}
+          hint={ORDERS_COPY.inProgressHint}
         />
         <KpiCard
-          label={STATES_VI.completed}
-          value={orderSummary.completed}
-          hint="Đơn đã hoàn tất trong tập kết quả hiện tại."
+          label={ORDERS_COPY.paidLabel}
+          value={summary.paidCount}
+          hint={ORDERS_COPY.paidHint}
         />
         <KpiCard
-          label="Giá trị đơn"
-          value={formatVND(orderSummary.revenue)}
-          hint="Tổng doanh thu hiển thị sau khi áp bộ lọc."
+          label={ORDERS_COPY.revenueLabel}
+          value={formatVND(summary.paidRevenue)}
+          hint={ORDERS_COPY.revenueHint}
         />
       </div>
 
@@ -285,7 +291,7 @@ export function OrdersClient({
 
       <div className="rounded-lg border bg-muted/30 text-card-foreground flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <p className="text-sm text-muted-foreground">
-          {displayOrders.length} đơn hàng
+          {ORDERS_COPY.listCountNote(displayOrders.length, summary.totalCount)}
         </p>
         {hasFilters && (
           <Badge variant="info" className="rounded-full px-3 py-1.5">

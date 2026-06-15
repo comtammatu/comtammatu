@@ -1,5 +1,6 @@
 import { canAccess, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { getVNDateStringDaysAgo } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import {
   currentUserHasAnyPermissionAny,
@@ -154,6 +155,29 @@ export async function loadInventoryDashboardData(
   // getInventoryDashboard replaces fetchInventoryValueSystem — single RPC
   // instead of a multi-join query — and preserves cost-gated NULL for users
   // lacking reports:view_branch/tenant (rule INVENTORY-WAC-STRICT-OVERRIDE).
+  // Price-review exception count is only surfaced on the procurement view;
+  // skip the query otherwise. Counts confirmed-GRN lines flagged for price
+  // review (confirm_goods_receipt_note sets requires_review when the received
+  // unit price deviates from the PO price beyond the QC tolerance) within the
+  // last 30 days — matching the "(30d)" KPI label and the exception copy.
+  const priceReviewSince = getVNDateStringDaysAgo(30);
+  let priceReviewQuery = supabase
+    .from("grn_items")
+    .select("id, goods_received_notes!inner(branch_id, received_date, status)", {
+      count: "exact",
+      head: true,
+    })
+    .eq("tenant_id", claims.tenant_id)
+    .eq("requires_review", true)
+    .eq("goods_received_notes.status", "confirmed")
+    .gte("goods_received_notes.received_date", priceReviewSince);
+  if (branchFilter !== undefined) {
+    priceReviewQuery = priceReviewQuery.eq(
+      "goods_received_notes.branch_id",
+      branchFilter,
+    );
+  }
+
   const [
     dashboardRes,
     poRes,
@@ -161,6 +185,7 @@ export async function loadInventoryDashboardData(
     stocktakeRes,
     reorderRes,
     expiryRes,
+    priceReviewRes,
   ] = await Promise.all([
     scope.selectedBranchId != null
       ? getInventoryDashboard(scope.selectedBranchId)
@@ -170,7 +195,14 @@ export async function loadInventoryDashboardData(
     fetchStocktakeSessions(branchFilter),
     fetchReorderAlerts(branchFilter),
     fetchExpiryAlerts(branchFilter),
+    showProcurement
+      ? priceReviewQuery
+      : Promise.resolve({ count: 0, error: null }),
   ]);
+
+  const priceReviewCount = priceReviewRes.error
+    ? 0
+    : (priceReviewRes.count ?? 0);
 
   // totalStockValue: prefer MV-backed RPC value (cost-gated NULL preserved).
   // Falls back to 0 if branch scope is unresolved or user lacks cost permission.
@@ -261,7 +293,7 @@ export async function loadInventoryDashboardData(
     pendingPO,
     activeTransfers,
     activeStocktakes,
-    priceReviewCount: 0,
+    priceReviewCount,
     reorderAlerts,
     expiryAlerts,
     transfers,

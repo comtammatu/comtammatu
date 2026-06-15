@@ -243,15 +243,29 @@ export default async function FinancePage({
         <KpiCard
           icon={<IconTrendingUp className="size-4 text-muted-foreground" />}
           label={financeCopy.basic.kpis.grossProfit}
-          value={formatVND(cockpit.kpis.grossProfit)}
-          hint={financeCopy.basic.kpis.grossProfitHint(
-            formatVND(cockpit.kpis.ingredientCost),
-            formatPercent(cockpit.kpis.grossMargin),
-          )}
-          tone={cockpit.kpis.grossProfit >= 0 ? "success" : "warning"}
+          value={
+            cockpit.kpis.costAvailable
+              ? formatVND(cockpit.kpis.grossProfit)
+              : financeCopy.common.noValue
+          }
+          hint={
+            cockpit.kpis.costAvailable
+              ? financeCopy.basic.kpis.grossProfitHint(
+                  formatVND(cockpit.kpis.ingredientCost),
+                  formatPercent(cockpit.kpis.grossMargin),
+                )
+              : powerLiteCopy.exceptions.missingCostHint
+          }
+          tone={
+            cockpit.kpis.costAvailable
+              ? cockpit.kpis.grossProfit >= 0
+                ? "success"
+                : "warning"
+              : undefined
+          }
           href="/finance/food-cost"
           delta={
-            cockpit.compareKpis
+            cockpit.kpis.costAvailable && cockpit.compareKpis
               ? buildCompareDelta(
                   cockpit.kpis.grossProfit,
                   cockpit.compareKpis.grossProfit,
@@ -264,14 +278,28 @@ export default async function FinancePage({
         <KpiCard
           icon={<IconPiggyBank className="size-4 text-muted-foreground" />}
           label={financeCopy.basic.kpis.netProfit}
-          value={formatVND(cockpit.kpis.netProfit)}
-          hint={financeCopy.basic.kpis.netProfitHint(
-            formatVND(cockpit.kpis.grossProfit),
-            formatVND(cockpit.kpis.operatingExpense),
-          )}
-          tone={cockpit.kpis.netProfit >= 0 ? "success" : "warning"}
+          value={
+            cockpit.kpis.costAvailable
+              ? formatVND(cockpit.kpis.netProfit)
+              : financeCopy.common.noValue
+          }
+          hint={
+            cockpit.kpis.costAvailable
+              ? financeCopy.basic.kpis.netProfitHint(
+                  formatVND(cockpit.kpis.grossProfit),
+                  formatVND(cockpit.kpis.operatingExpense),
+                )
+              : powerLiteCopy.exceptions.missingCostHint
+          }
+          tone={
+            cockpit.kpis.costAvailable
+              ? cockpit.kpis.netProfit >= 0
+                ? "success"
+                : "warning"
+              : undefined
+          }
           delta={
-            cockpit.compareKpis
+            cockpit.kpis.costAvailable && cockpit.compareKpis
               ? buildCompareDelta(
                   cockpit.kpis.netProfit,
                   cockpit.compareKpis.netProfit,
@@ -329,11 +357,19 @@ export default async function FinancePage({
             />
             <MetricInline
               label={powerLiteCopy.labels.ingredientCost}
-              value={formatVND(cockpit.kpis.ingredientCost)}
+              value={
+                cockpit.kpis.costAvailable
+                  ? formatVND(cockpit.kpis.ingredientCost)
+                  : financeCopy.common.noValue
+              }
             />
             <MetricInline
               label={powerLiteCopy.labels.grossMargin}
-              value={formatPercent(cockpit.kpis.grossMargin)}
+              value={
+                cockpit.kpis.costAvailable
+                  ? formatPercent(cockpit.kpis.grossMargin)
+                  : financeCopy.common.noValue
+              }
             />
           </div>
         </QuickPanel>

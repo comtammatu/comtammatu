@@ -76,6 +76,7 @@ export interface FinanceCockpitKpis {
   grossProfit: number;
   grossMargin: number;
   netProfit: number;
+  costAvailable: boolean;
   cashRevenue: number;
   vietqrRevenue: number;
   momoRevenue: number;
@@ -165,6 +166,10 @@ function buildKpis({
   const grossMargin =
     netRevenueBeforeVat > 0 ? (grossProfit / netRevenueBeforeVat) * 100 : 0;
   const netProfit = grossProfit - operatingExpense;
+  // Food cost is unreliable when there are sales but zero ingredient cost
+  // (empty recipes/GRN, or a sub-week range that misses the weekly mv_food_cost
+  // bucket). Gross/net profit must not render an inflated ~100% margin then.
+  const costAvailable = !(ingredientCost <= 0 && netRevenueBeforeVat > 0);
 
   return {
     totalCollected,
@@ -176,6 +181,7 @@ function buildKpis({
     grossProfit,
     grossMargin,
     netProfit,
+    costAvailable,
     cashRevenue: toNumber(kpis?.cash_revenue),
     vietqrRevenue: toNumber(kpis?.vietqr_revenue),
     momoRevenue: toNumber(kpis?.momo_revenue),

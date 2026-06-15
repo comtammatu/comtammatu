@@ -90,6 +90,18 @@ export type FetchOrdersFilters = {
   dateTo?: string;
 };
 
+/**
+ * Server-side aggregates over the FULL filtered set (not just the 50-row
+ * list window). `paidRevenue` is paid, non-cancelled orders only — unpaid
+ * orders are never counted as revenue.
+ */
+export interface OrdersSummary {
+  totalCount: number;
+  inProgressCount: number;
+  paidCount: number;
+  paidRevenue: number;
+}
+
 /* ─── Audit log types ─── */
 
 /** Hành động đã được parse từ `order_status_history.note` thành dạng người dùng đọc được. */
@@ -133,7 +145,11 @@ const auditOrderIdSchema = z.coerce.number().int().positive();
 export async function fetchOrders(
   filters?: FetchOrdersFilters,
 ): Promise<
-  ActionResult<{ orders: OrderRow[]; branches: { id: number; name: string }[] }>
+  ActionResult<{
+    orders: OrderRow[];
+    branches: { id: number; name: string }[];
+    summary: OrdersSummary;
+  }>
 > {
   const parsed = fetchOrdersSchema.safeParse(filters ?? {});
   if (!parsed.success) {
@@ -236,6 +252,65 @@ export async function fetchOrders(
     };
   });
 
+  // Aggregates over the FULL filtered set, not the 50-row list window.
+  // Each query re-applies the same status/branch/date scope as the list.
+  const buildOrdersQuery = () => {
+    let q = supabase.from("orders").select("*", {
+      count: "exact",
+      head: true,
+    });
+    if (parsed.data.status) q = q.eq("status", parsed.data.status);
+    if (effectiveBranchId) q = q.eq("branch_id", effectiveBranchId);
+    if (parsed.data.dateFrom)
+      q = q.gte("created_at", getVNDayUtcRange(parsed.data.dateFrom).startIso);
+    if (parsed.data.dateTo)
+      q = q.lt("created_at", getVNDayUtcRange(parsed.data.dateTo).endIso);
+    return q;
+  };
+
+  // Revenue = paid, non-cancelled orders only. PostgREST aggregates are not
+  // enabled, so sum the single column over the full filtered paid set;
+  // count: "exact" gives the authoritative paid-order count from the header.
+  let paidRevenueQuery = supabase
+    .from("orders")
+    .select("total_amount", { count: "exact" });
+  if (parsed.data.status)
+    paidRevenueQuery = paidRevenueQuery.eq("status", parsed.data.status);
+  if (effectiveBranchId)
+    paidRevenueQuery = paidRevenueQuery.eq("branch_id", effectiveBranchId);
+  if (parsed.data.dateFrom)
+    paidRevenueQuery = paidRevenueQuery.gte(
+      "created_at",
+      getVNDayUtcRange(parsed.data.dateFrom).startIso,
+    );
+  if (parsed.data.dateTo)
+    paidRevenueQuery = paidRevenueQuery.lt(
+      "created_at",
+      getVNDayUtcRange(parsed.data.dateTo).endIso,
+    );
+  paidRevenueQuery = paidRevenueQuery
+    .eq("payment_status", "paid")
+    .neq("status", "cancelled");
+
+  const [totalRes, inProgressRes, paidRevenueRes] = await Promise.all([
+    buildOrdersQuery(),
+    buildOrdersQuery().neq("status", "completed").neq("status", "cancelled"),
+    paidRevenueQuery,
+  ]);
+
+  const paidRevenueRows = (paidRevenueRes.data ?? []) as Array<{
+    total_amount: number | string | null;
+  }>;
+  const summary: OrdersSummary = {
+    totalCount: totalRes.count ?? 0,
+    inProgressCount: inProgressRes.count ?? 0,
+    paidCount: paidRevenueRes.count ?? paidRevenueRows.length,
+    paidRevenue: paidRevenueRows.reduce(
+      (sum, row) => sum + Number(row.total_amount ?? 0),
+      0,
+    ),
+  };
+
   // Fetch branches list (for filter select — managers see all, branch_manager sees only theirs)
   let branchesData: { id: number; name: string }[] = [];
 
@@ -258,7 +333,10 @@ export async function fetchOrders(
     }
   }
 
-  return { success: true, data: { orders, branches: branchesData } };
+  return {
+    success: true,
+    data: { orders, branches: branchesData, summary },
+  };
 }
 
 /* ─── fetchOrderAuditLog — timeline cho admin order detail ─── */

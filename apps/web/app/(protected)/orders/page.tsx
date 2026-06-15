@@ -30,7 +30,7 @@ export default async function OrdersPage() {
     );
   }
 
-  const { orders, branches } = ordersResult.data;
+  const { orders, branches, summary } = ordersResult.data;
   const refunds = refundsResult.success
     ? (refundsResult.data?.refunds ?? [])
     : [];
@@ -67,6 +67,7 @@ export default async function OrdersPage() {
             <TabsContent value="orders" className="mt-4 space-y-4">
               <OrdersClient
                 initialOrders={orders}
+                initialSummary={summary}
                 branches={branches}
                 showBranchFilter={isManagerOrAbove}
               />
