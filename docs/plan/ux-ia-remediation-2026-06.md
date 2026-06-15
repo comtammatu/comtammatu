@@ -171,7 +171,7 @@ Dùng `calculatePayrollEntry` (versioned legal tables, KHÔNG hardcode). **Debt 
 
 ## Cổng chờ (block scope, không block bắt đầu)
 
-- **VAT (D5b):** kế toán xác nhận Má Tư đã vượt 1 tỷ/năm chưa → chốt 3.00/2.40/0.
+- **VAT (D5b):** owner xác nhận doanh thu cả năm > 1 tỷ (2 tháng gần nhất ~400tr/tháng) → chịu GTGT → ăn uống **2,4%** (giảm tạm đến 31/12/2026, về 3% sau). Còn lại = code change trong D5 (đổi `SYSTEM_SETTING_DEFAULTS.vat_rate` khỏi 8 + guard chặn 8); set live qua `/admin/settings/general`.
 - **Payroll chủ HKD:** hồ sơ owner có lập HĐ + payroll entry? (tax-vn: BHXH chủ hộ doc-only).
 - **Viettel `sellerInfo`:** chỉ mở T3 provider-body nếu HDSD Viettel xác nhận chấp nhận override (mặc định: KHÔNG làm).
 - **Tách hóa đơn:** xác nhận quy tắc split/merge/refund cho đơn trả-một-phần trước khi mở rộng split-by-item.
@@ -181,3 +181,23 @@ Dùng `calculatePayrollEntry` (versioned legal tables, KHÔNG hardcode). **Debt 
 - HĐĐT sellerName, POS/refund/KDS/checkout concurrency → đã verify an toàn, đóng.
 - ₫-glyph app-wide → wave riêng D029. Allowlist ratchet `reframe` → không đuổi về 0 (D030).
 - `tables.capacity` → đã bỏ, test-guard.
+
+## Tiến độ thực thi (cập nhật 2026-06-16)
+
+Branch `codex/continue-ts` (chưa push):
+
+| Track | Commit | Trạng thái |
+| --- | --- | --- |
+| A — money-safety | `50af5c6b` | ✅ gated, committed |
+| D3 — bỏ customer_count | `c191cce4` (+ migration `20260616100000`) | ✅ code gated; **chờ owner apply migration + `pnpm db:types`** |
+| docs — D031 + plan | `edb55b79` | ✅ |
+| B — confirm() wave | `94a6bc5d` | ✅ gated (B2 HR hoãn) |
+| C — số liệu sai | `b4bf47d3` | ✅ gated: C2 net-profit · C3 priceReview thật · C5 orders revenue full-set/loại unpaid · **C1-2a interim** (gross/net/biên = "—" khi thiếu giá vốn, hết margin ~100% ảo) |
+| E wave 1 — IA nav | đang chạy | E1 wire orphan nav + E5 active-state SSoT |
+
+**Hoãn có chủ đích:**
+- **C1-2b** (daily-grain `mv_food_cost_daily` migration): no-op tới khi inventory có recipe/GRN (giá vốn=0 dù grain nào); khi làm phải mirror `mv_daily_revenue` (paid_at + VN-local + payment join), KHÔNG chỉ week→day; rebase `refresh_finance_views()` lúc apply. C1-2a đã chặn số ảo nên không gấp.
+- **E wave 2:** E2 landing launcher ACL-driven (branch_manager→Branch Command, warehouse/production→Inventory), E3 expiry single-home, E4 dọn 3 stub `notFound()` + stale `revalidatePath` — đổi hành vi/xóa nên cẩn trọng wave sau.
+- **B2 HR (payroll/leave confirm) · D1 payroll · F3 hr DataTable:** chờ HRM redesign D026/D027 settle (off-limits).
+
+**Owner action tồn:** apply migration `20260616100000`; chốt VAT 2,4% set live (`/admin/settings/general`); nhắn "push" để mở PR.
