@@ -172,7 +172,6 @@ export const settings = {
   },
   general: {
     taxFeesTitle: "Thuế & Phí",
-    vatLabel: "Thuế GTGT (%)",
     currencyLabel: "Đơn vị tiền tệ",
     saveSettings: "Lưu cài đặt",
     saved: "Đã lưu cài đặt",

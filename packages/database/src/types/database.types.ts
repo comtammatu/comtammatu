@@ -8568,8 +8568,8 @@ export type Database = {
           takeaway_revenue: number
           total_covers: number
           total_tax: number
-          vat_10_amount: number
-          vat_8_amount: number
+          vat_by_rate: Json
+          vat_total: number
           vietqr_revenue: number
           voided_amount: number
           voided_count: number
@@ -8967,6 +8967,10 @@ export type Database = {
       }
       resolve_branch_printer_for_type: {
         Args: { p_branch_id: number; p_print_type: string; p_tenant_id: number }
+        Returns: number
+      }
+      resolve_gtgt_rate: {
+        Args: { p_at_date?: string; p_tenant_id: number }
         Returns: number
       }
       resolve_po_price: {

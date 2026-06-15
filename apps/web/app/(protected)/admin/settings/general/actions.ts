@@ -13,12 +13,6 @@ import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 const SETTINGS_ROLES: readonly StaffRole[] = ["owner"];
 
 const settingsSchema = z.object({
-  [SYSTEM_SETTING_KEYS.VAT_RATE]: z
-    .string()
-    .min(1, { error: "Thuế VAT không được để trống" })
-    .refine((v) => !isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 100, {
-      error: "Thuế VAT phải từ 0-100%",
-    }),
   [SYSTEM_SETTING_KEYS.CURRENCY]: z
     .string()
     .min(1, { error: "Đơn vị tiền tệ không được để trống" }),

@@ -24,17 +24,6 @@ import { updateSettings, updateTenantIdentity } from "./actions";
 const copy = messages.settings.general;
 
 const settingsSchema = z.object({
-  vat_rate: z
-    .string()
-    .trim()
-    .refine(
-      (v) => {
-        if (!v) return true;
-        const n = Number(v);
-        return Number.isFinite(n) && n >= 0 && n <= 100;
-      },
-      { error: "Thuế GTGT phải trong khoảng 0-100" },
-    ),
   currency: z.string().trim(),
 });
 
@@ -67,7 +56,6 @@ export function SettingsForm({ settings, identity }: SettingsFormProps) {
   const form = useForm<SettingsFormValues, unknown, SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
-      vat_rate: settings[SYSTEM_SETTING_KEYS.VAT_RATE] ?? "8",
       currency: settings[SYSTEM_SETTING_KEYS.CURRENCY] ?? "VND",
     },
   });
@@ -125,15 +113,6 @@ export function SettingsForm({ settings, identity }: SettingsFormProps) {
           </CardHeader>
           <CardContent>
             <FieldGroup className="grid gap-4 sm:grid-cols-2">
-              <TextField
-                control={form.control}
-                name="vat_rate"
-                label={copy.vatLabel}
-                type="number"
-                min={0}
-                max={100}
-                step="0.1"
-              />
               <TextField
                 control={form.control}
                 name="currency"

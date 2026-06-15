@@ -51,8 +51,8 @@ export interface KpiBundle {
   subtotal_revenue: number;
   discount_amount: number;
   total_tax: number;
-  vat_8_amount: number;
-  vat_10_amount: number;
+  vat_by_rate: Record<string, number>;
+  vat_total: number;
   order_count: number;
   cash_revenue: number;
   vietqr_revenue: number;

@@ -30,15 +30,13 @@ import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getInvoiceProvider } from "@comtammatu/shared/providers";
-import {
-  SYSTEM_SETTING_KEYS,
-  SYSTEM_SETTING_DEFAULTS,
-} from "@comtammatu/shared/settings";
+import { resolveSalesTaxProfile } from "@comtammatu/shared/tax";
 import {
   applyInvoiceLineDiscount,
   buildInvoiceLineItemsFromOrderItems,
 } from "@comtammatu/shared/hddt";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
+import { estimateAnnualRevenue } from "@lib/estimate-annual-revenue";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
@@ -191,17 +189,13 @@ export async function replaceTaxInvoice(
     vatAmount = sumVat;
     vatRate = predRate;
   } else {
-    const { data: vatSetting } = await supabase
-      .from("system_settings")
-      .select("value")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("key", SYSTEM_SETTING_KEYS.VAT_RATE)
-      .maybeSingle();
-    vatRate = Number(
-      vatSetting?.value ??
-        SYSTEM_SETTING_DEFAULTS[SYSTEM_SETTING_KEYS.VAT_RATE],
-    );
-    subtotal = orderTotal / (1 + vatRate / 100);
+    // Derive the header rate from the HKD revenue-tier GTGT resolver
+    // (annual-revenue group), consistent with createTaxInvoice.
+    vatRate = resolveSalesTaxProfile({
+      annualRevenue: await estimateAnnualRevenue(supabase, claims.tenant_id),
+      effectiveDate: new Date(),
+    }).gtgtRate;
+    subtotal = vatRate > 0 ? orderTotal / (1 + vatRate / 100) : orderTotal;
     vatAmount = orderTotal - subtotal;
   }
 
