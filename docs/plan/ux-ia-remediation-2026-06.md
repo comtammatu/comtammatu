@@ -189,7 +189,7 @@ Branch `codex/continue-ts` (chưa push):
 | Track | Commit | Trạng thái |
 | --- | --- | --- |
 | A — money-safety | `50af5c6b` | ✅ gated, committed |
-| D3 — bỏ customer_count | `c191cce4` (+ migration `20260616100000`) | ✅ code gated; **chờ owner apply migration + `pnpm db:types`** |
+| D3 — bỏ customer_count | `c191cce4` (+ migration `20260616100000`) | ✅ code gated + **migration ĐÃ APPLY prod 2026-06-16** (owner-delegated, 6-chunk, verify: column gone · mv_daily_revenue 86 rows · signatures mới đúng · advisors 0 finding mới · db:types regen 0 diff) |
 | docs — D031 + plan | `edb55b79` | ✅ |
 | B — confirm() wave | `94a6bc5d` | ✅ gated (B2 HR hoãn) |
 | C — số liệu sai | `b4bf47d3` | ✅ gated: C2 net-profit · C3 priceReview thật · C5 orders revenue full-set/loại unpaid · **C1-2a interim** (gross/net/biên = "—" khi thiếu giá vốn, hết margin ~100% ảo) |
@@ -200,4 +200,4 @@ Branch `codex/continue-ts` (chưa push):
 - **E wave 2:** E2 landing launcher ACL-driven (branch_manager→Branch Command, warehouse/production→Inventory), E3 expiry single-home, E4 dọn 3 stub `notFound()` + stale `revalidatePath` — đổi hành vi/xóa nên cẩn trọng wave sau.
 - **B2 HR (payroll/leave confirm) · D1 payroll · F3 hr DataTable:** chờ HRM redesign D026/D027 settle (off-limits).
 
-**Owner action tồn:** apply migration `20260616100000`; chốt VAT 2,4% set live (`/admin/settings/general`); nhắn "push" để mở PR.
+**Owner action tồn:** chốt VAT 2,4% set live (`/admin/settings/general` — cần kế toán xác nhận vs prod `vat_rate=0`); nhắn "push" để mở PR. *(migration `20260616100000` đã apply prod 2026-06-16.)*
