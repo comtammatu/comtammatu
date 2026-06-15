@@ -16,7 +16,7 @@ M0–M7 + Auth + POS PWA + Realtime hardening + Shadcn primitive migration M1–
 - [~] **HRM Đợt 2** (D026, không cần owner) — ✅ (a) tạo NV 1 bước (commit `dc8a756f`: `createEmployeeAccount` + saga rollback, bỏ field Profile UUID, lưu cả SĐT) → **chờ owner runtime-verify** create+login trên env thật. Còn: `updateEmployee` + ngưng việc (cần migration thêm `employees.end_date`); (c) nghỉ phép notify 2 chiều + quick-action "Xin nghỉ" + gộp pending toàn-CN; (d) đổi nhãn `/admin/staff` → "Tài khoản & phân quyền".
 - [ ] **α4c — gỡ `can_access_branch`** — còn ~10 ref trong baseline; `20260609103000` còn re-create. 1 RLS-policy batch (α4b đã ship `20260601810000`). Agent soạn migration (T3 RLS); owner apply.
 - [ ] **Ops reconciliation Momo desync** ở `/admin/finance` — query read-only (payments ↔ orders ↔ provider_ref); verify được trên prod SELECT-only. Có giá trị vì webhook stock-leg OFF + POS gọi provider trước DB lock.
-- [ ] **L6 Finance migration-chain ADR** — docs thuần, không chặn gì; ghi thứ tự 5 migration finance + rollback deps (`docs/plan/adr/`).
+- [x] **L6 Finance migration-chain ADR** — ✅ `docs/plan/adr/0006-finance-migration-chain.md`: thứ tự retire GL (D020, 5 bước) + rollback deps + ranh giới operating-finance giữ lại.
 - [ ] **Print: gỡ cast + error-matcher chết** — drop `as never` ở `templates/actions.ts:267` (chỉ còn 1, không phải 2) + bỏ matcher "migration chưa apply" (RPC đã typed sau `db:types`). (Deploy bundle = ops, xem "Chờ owner/ops".)
 
 ## Đang làm (mostly done — tail nhỏ)
