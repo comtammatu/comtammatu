@@ -171,6 +171,7 @@ export type Database = {
           is_done: boolean
           is_required: boolean
           phase: string
+          scope: string
           sort_order: number
           template_item_id: number | null
           tenant_id: number
@@ -186,6 +187,7 @@ export type Database = {
           is_done?: boolean
           is_required?: boolean
           phase?: string
+          scope?: string
           sort_order: number
           template_item_id?: number | null
           tenant_id: number
@@ -201,6 +203,7 @@ export type Database = {
           is_done?: boolean
           is_required?: boolean
           phase?: string
+          scope?: string
           sort_order?: number
           template_item_id?: number | null
           tenant_id?: number
@@ -254,7 +257,7 @@ export type Database = {
           lng: number | null
           method: string | null
           note: string | null
-          shift_id: number | null
+          shift_id: number
           status: string
           tenant_id: number
           updated_at: string
@@ -281,7 +284,7 @@ export type Database = {
           lng?: number | null
           method?: string | null
           note?: string | null
-          shift_id?: number | null
+          shift_id: number
           status?: string
           tenant_id: number
           updated_at?: string
@@ -308,7 +311,7 @@ export type Database = {
           lng?: number | null
           method?: string | null
           note?: string | null
-          shift_id?: number | null
+          shift_id?: number
           status?: string
           tenant_id?: number
           updated_at?: string
@@ -3843,6 +3846,7 @@ export type Database = {
         Row: {
           code: string
           created_at: string
+          default_checklist_template_id: number | null
           id: number
           is_active: boolean
           is_system: boolean
@@ -3853,6 +3857,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          default_checklist_template_id?: number | null
           id?: never
           is_active?: boolean
           is_system?: boolean
@@ -3863,6 +3868,7 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          default_checklist_template_id?: number | null
           id?: never
           is_active?: boolean
           is_system?: boolean
@@ -3871,6 +3877,13 @@ export type Database = {
           tenant_id?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "positions_default_checklist_template_id_fkey"
+            columns: ["default_checklist_template_id"]
+            isOneToOne: false
+            referencedRelation: "shift_checklist_templates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "positions_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -5049,6 +5062,7 @@ export type Database = {
           is_active: boolean
           is_required: boolean
           phase: string
+          scope: string
           sort_order: number
           template_id: number
           tenant_id: number
@@ -5061,6 +5075,7 @@ export type Database = {
           is_active?: boolean
           is_required?: boolean
           phase?: string
+          scope?: string
           sort_order: number
           template_id: number
           tenant_id: number
@@ -5073,6 +5088,7 @@ export type Database = {
           is_active?: boolean
           is_required?: boolean
           phase?: string
+          scope?: string
           sort_order?: number
           template_id?: number
           tenant_id?: number
@@ -5152,7 +5168,7 @@ export type Database = {
       }
       shifts: {
         Row: {
-          branch_id: number
+          branch_id: number | null
           created_at: string
           end_time: string
           id: number
@@ -5163,7 +5179,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          branch_id: number
+          branch_id?: number | null
           created_at?: string
           end_time: string
           id?: never
@@ -5174,7 +5190,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          branch_id?: number
+          branch_id?: number | null
           created_at?: string
           end_time?: string
           id?: never
