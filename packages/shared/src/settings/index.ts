@@ -4,10 +4,7 @@
  */
 export const SYSTEM_SETTING_KEYS = {
   VAT_RATE: "vat_rate",
-  SERVICE_CHARGE: "service_charge",
   CURRENCY: "currency",
-  STORE_PHONE: "store_phone",
-  STORE_EMAIL: "store_email",
   /** "true" | "false" — POS shows VietQR when env credentials exist */
   PAYMENT_ENABLE_VIETQR: "payment_enable_vietqr",
   /** "true" | "false" — POS shows MoMo when env credentials exist */
@@ -30,10 +27,7 @@ export type SystemSettingKey =
 /** Keys edited on Admin → Settings → Chung (excludes payment toggles) */
 export const GENERAL_SYSTEM_SETTING_KEYS = [
   SYSTEM_SETTING_KEYS.VAT_RATE,
-  SYSTEM_SETTING_KEYS.SERVICE_CHARGE,
   SYSTEM_SETTING_KEYS.CURRENCY,
-  SYSTEM_SETTING_KEYS.STORE_PHONE,
-  SYSTEM_SETTING_KEYS.STORE_EMAIL,
 ] as const satisfies readonly SystemSettingKey[];
 
 export type GeneralSystemSettingKey =
@@ -42,10 +36,7 @@ export type GeneralSystemSettingKey =
 /** Default values for settings (used when no DB row exists) */
 export const SYSTEM_SETTING_DEFAULTS: Record<SystemSettingKey, string> = {
   [SYSTEM_SETTING_KEYS.VAT_RATE]: "8",
-  [SYSTEM_SETTING_KEYS.SERVICE_CHARGE]: "5",
   [SYSTEM_SETTING_KEYS.CURRENCY]: "VND",
-  [SYSTEM_SETTING_KEYS.STORE_PHONE]: "",
-  [SYSTEM_SETTING_KEYS.STORE_EMAIL]: "",
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]: "false",
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]: "false",
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE]: "",

@@ -9228,6 +9228,15 @@ export type Database = {
         Args: { p_new_status: string; p_order_id: number }
         Returns: Json
       }
+      update_tenant_identity: {
+        Args: {
+          p_legal_address: string
+          p_legal_name: string
+          p_representative: string
+          p_tax_code: string
+        }
+        Returns: undefined
+      }
       upsert_printer_with_routes: {
         Args: {
           p_branch_id?: number

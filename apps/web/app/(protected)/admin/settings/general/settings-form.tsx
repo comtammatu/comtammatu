@@ -9,15 +9,19 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { TextField, valuesToFormData } from "@/components/form";
-import { updateSettings } from "./actions";
+import { messages } from "@lib/messages";
+import { updateSettings, updateTenantIdentity } from "./actions";
+
+const copy = messages.settings.general;
 
 const settingsSchema = z.object({
   vat_rate: z
@@ -31,45 +35,54 @@ const settingsSchema = z.object({
       },
       { error: "Thuế GTGT phải trong khoảng 0-100" },
     ),
-  service_charge: z
-    .string()
-    .trim()
-    .refine(
-      (v) => {
-        if (!v) return true;
-        const n = Number(v);
-        return Number.isFinite(n) && n >= 0 && n <= 100;
-      },
-      { error: "Phí dịch vụ phải trong khoảng 0-100" },
-    ),
   currency: z.string().trim(),
-  store_phone: z.string().trim(),
-  store_email: z
+});
+
+const identitySchema = z.object({
+  legal_name: z.string().trim(),
+  tax_code: z
     .string()
     .trim()
-    .refine((v) => !v || /.+@.+\..+/.test(v), {
-      error: "Email không hợp lệ",
+    .refine((v) => !v || /^\d{10}(-?\d{3})?$/.test(v), {
+      error: "Mã số thuế phải là 10 hoặc 13 chữ số",
     }),
+  legal_address: z.string().trim(),
+  representative: z.string().trim(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
+type IdentityFormValues = z.infer<typeof identitySchema>;
 
 interface SettingsFormProps {
   settings: Record<string, string>;
+  identity: IdentityFormValues;
 }
 
-export function SettingsForm({ settings }: SettingsFormProps) {
+export function SettingsForm({ settings, identity }: SettingsFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [isIdentityPending, startIdentityTransition] = useTransition();
+  const [identityError, setIdentityError] = useState<string | null>(null);
 
   const form = useForm<SettingsFormValues, unknown, SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
       vat_rate: settings[SYSTEM_SETTING_KEYS.VAT_RATE] ?? "8",
-      service_charge: settings[SYSTEM_SETTING_KEYS.SERVICE_CHARGE] ?? "5",
       currency: settings[SYSTEM_SETTING_KEYS.CURRENCY] ?? "VND",
-      store_phone: settings[SYSTEM_SETTING_KEYS.STORE_PHONE] ?? "",
-      store_email: settings[SYSTEM_SETTING_KEYS.STORE_EMAIL] ?? "",
+    },
+  });
+
+  const identityForm = useForm<
+    IdentityFormValues,
+    unknown,
+    IdentityFormValues
+  >({
+    resolver: zodResolver(identitySchema),
+    defaultValues: {
+      legal_name: identity.legal_name,
+      tax_code: identity.tax_code,
+      legal_address: identity.legal_address,
+      representative: identity.representative,
     },
   });
 
@@ -82,85 +95,118 @@ export function SettingsForm({ settings }: SettingsFormProps) {
         setServerError(result.error ?? ERRORS_VI.fallback);
         return;
       }
-      toast.success(`${ACTIONS_VI.save} cài đặt`);
+      toast.success(copy.saved);
+    });
+  }
+
+  function onIdentityValid(values: IdentityFormValues) {
+    startIdentityTransition(async () => {
+      setIdentityError(null);
+      const fd = valuesToFormData(values);
+      const result = await updateTenantIdentity(null, fd);
+      if (!result.success) {
+        setIdentityError(result.error ?? ERRORS_VI.fallback);
+        return;
+      }
+      toast.success(copy.identitySaved);
     });
   }
 
   return (
-    <form
-      onSubmit={form.handleSubmit(onValid)}
-      noValidate
-      className="space-y-6"
-    >
-      <Card>
-        <CardHeader>
-          <CardTitle>Thuế & Phí</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <FieldGroup className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              control={form.control}
-              name="vat_rate"
-              label="Thuế GTGT (%)"
-              type="number"
-              min={0}
-              max={100}
-              step="0.1"
-            />
-            <TextField
-              control={form.control}
-              name="service_charge"
-              label="Phí dịch vụ (%)"
-              type="number"
-              min={0}
-              max={100}
-              step="0.1"
-            />
-            <TextField
-              control={form.control}
-              name="currency"
-              label="Đơn vị tiền tệ"
-            />
-          </FieldGroup>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <form
+        onSubmit={form.handleSubmit(onValid)}
+        noValidate
+        className="space-y-6"
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>{copy.taxFeesTitle}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup className="grid gap-4 sm:grid-cols-2">
+              <TextField
+                control={form.control}
+                name="vat_rate"
+                label={copy.vatLabel}
+                type="number"
+                min={0}
+                max={100}
+                step="0.1"
+              />
+              <TextField
+                control={form.control}
+                name="currency"
+                label={copy.currencyLabel}
+              />
+            </FieldGroup>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Thông tin liên hệ</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <FieldGroup className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              control={form.control}
-              name="store_phone"
-              label="Số điện thoại"
-              type="tel"
-              placeholder="028 1234 5678"
-            />
-            <TextField
-              control={form.control}
-              name="store_email"
-              label="Email"
-              type="email"
-              placeholder="info@comtammatu.com"
-            />
-          </FieldGroup>
-        </CardContent>
-      </Card>
+        {serverError && (
+          <p className="text-sm text-destructive" role="alert">
+            {serverError}
+          </p>
+        )}
 
-      {serverError && (
-        <p className="text-sm text-destructive" role="alert">
-          {serverError}
-        </p>
-      )}
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isPending}>
+            {isPending && <Spinner className="mr-2" />}
+            {copy.saveSettings}
+          </Button>
+        </div>
+      </form>
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={isPending}>
-          {isPending && <Spinner className="mr-2" />}
-          {ACTIONS_VI.save} cài đặt
-        </Button>
-      </div>
-    </form>
+      <form
+        onSubmit={identityForm.handleSubmit(onIdentityValid)}
+        noValidate
+        className="space-y-6"
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>{copy.identityTitle}</CardTitle>
+            <CardDescription>{copy.identityDescription}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup className="grid gap-4 sm:grid-cols-2">
+              <TextField
+                control={identityForm.control}
+                name="legal_name"
+                label={copy.legalNameLabel}
+              />
+              <TextField
+                control={identityForm.control}
+                name="tax_code"
+                label={copy.taxCodeLabel}
+                placeholder="077200004194"
+              />
+              <TextField
+                control={identityForm.control}
+                name="legal_address"
+                label={copy.legalAddressLabel}
+              />
+              <TextField
+                control={identityForm.control}
+                name="representative"
+                label={copy.representativeLabel}
+              />
+            </FieldGroup>
+          </CardContent>
+        </Card>
+
+        {identityError && (
+          <p className="text-sm text-destructive" role="alert">
+            {identityError}
+          </p>
+        )}
+
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isIdentityPending}>
+            {isIdentityPending && <Spinner className="mr-2" />}
+            {copy.saveIdentity}
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }
