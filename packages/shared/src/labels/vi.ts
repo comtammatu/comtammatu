@@ -311,6 +311,15 @@ export const KDS_TICKET_STATUS_LABELS_VI = {
   cancelled: "Đã hủy",
 } as const;
 
+/** order_items.status (DB order_items_status_check). */
+export const ORDER_ITEM_STATUS_LABELS_VI = {
+  pending: "Chờ",
+  preparing: "Đang làm",
+  ready: "Sẵn sàng",
+  served: "Đã phục vụ",
+  cancelled: "Đã hủy",
+} as const;
+
 /** tax_invoices.status (DB tax_invoices_status_check). */
 export const TAX_INVOICE_STATUS_LABELS_VI = {
   draft: "Nháp",

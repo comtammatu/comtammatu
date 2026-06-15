@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
+import { ORDER_ITEM_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
@@ -51,11 +52,17 @@ const ITEM_STATUS_META: Record<
   string,
   { label: string; variant: StatusBadgeVariant }
 > = {
-  pending: { label: "Chờ", variant: "warning" },
-  preparing: { label: "Đang làm", variant: "warning" },
-  ready: { label: "Sẵn sàng", variant: "success" },
-  served: { label: "Đã phục vụ", variant: "success" },
-  cancelled: { label: "Đã hủy", variant: "destructive" },
+  pending: { label: ORDER_ITEM_STATUS_LABELS_VI.pending, variant: "warning" },
+  preparing: {
+    label: ORDER_ITEM_STATUS_LABELS_VI.preparing,
+    variant: "warning",
+  },
+  ready: { label: ORDER_ITEM_STATUS_LABELS_VI.ready, variant: "success" },
+  served: { label: ORDER_ITEM_STATUS_LABELS_VI.served, variant: "success" },
+  cancelled: {
+    label: ORDER_ITEM_STATUS_LABELS_VI.cancelled,
+    variant: "destructive",
+  },
 };
 
 function getItemStatusToneClass(status: string): string {

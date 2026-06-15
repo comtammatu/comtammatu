@@ -22,13 +22,7 @@ import { PosLineItemCompact } from "../pos-line-item-compact";
 import type { OrderItemRowData } from "./order-item-row";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-const STATUS_LABELS: Record<string, string> = {
-  pending: "Chờ",
-  preparing: "Đang làm",
-  ready: "Sẵn sàng",
-  served: "Đã phục vụ",
-  cancelled: "Đã hủy",
-};
+import { ORDER_ITEM_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 
 interface OrderItemActionsSheetProps {
   item: OrderItemRowData | null;
@@ -96,7 +90,10 @@ export function OrderItemActionsSheet({
         note: null,
         isPriority: false,
       };
-  const statusLabel = item ? (STATUS_LABELS[item.status] ?? item.status) : "";
+  const statusLabel = item
+    ? ((ORDER_ITEM_STATUS_LABELS_VI as Record<string, string>)[item.status] ??
+      item.status)
+    : "";
   const discountAmount = Math.max(0, Number(item?.discount_amount ?? 0));
   const netSubtotal =
     item == null ? 0 : Math.max(0, item.subtotal - discountAmount);

@@ -25,7 +25,10 @@ import {
 /* ─── Helpers ─── */
 
 import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
-import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
+import {
+  getPaymentMethodLabelVi,
+  ORDER_ITEM_STATUS_LABELS_VI,
+} from "@comtammatu/shared/labels";
 import { StatusBadge } from "@/components/status-badge";
 
 type ItemStatusBadge =
@@ -39,11 +42,17 @@ const ITEM_STATUS_META: Record<
   string,
   { label: string; variant: ItemStatusBadge }
 > = {
-  pending: { label: "Chờ", variant: "warning" },
-  preparing: { label: "Đang làm", variant: "warning" },
-  ready: { label: "Sẵn sàng", variant: "info" },
-  served: { label: "Đã phục vụ", variant: "success" },
-  cancelled: { label: "Đã hủy", variant: "destructive" },
+  pending: { label: ORDER_ITEM_STATUS_LABELS_VI.pending, variant: "warning" },
+  preparing: {
+    label: ORDER_ITEM_STATUS_LABELS_VI.preparing,
+    variant: "warning",
+  },
+  ready: { label: ORDER_ITEM_STATUS_LABELS_VI.ready, variant: "info" },
+  served: { label: ORDER_ITEM_STATUS_LABELS_VI.served, variant: "success" },
+  cancelled: {
+    label: ORDER_ITEM_STATUS_LABELS_VI.cancelled,
+    variant: "destructive",
+  },
 };
 
 function itemStatusToneClass(status: string): string {

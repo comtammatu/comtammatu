@@ -177,7 +177,6 @@ const checks = [
       "apps/web/app/(protected)/br/[branchId]/kds/actions.ts": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/hooks/use-kds-realtime.ts": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-actions-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/order-history.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 2,
       "apps/web/app/(protected)/employee/leave/leave-client.tsx": 1,
