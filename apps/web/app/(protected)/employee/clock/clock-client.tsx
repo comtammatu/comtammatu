@@ -25,6 +25,7 @@ import {
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNTime } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
@@ -233,7 +234,26 @@ export function ClockClient({ state }: ClockClientProps) {
     });
   }, [photo, router, stopCamera]);
 
-  const submitCheckout = useCallback(() => {
+  const submitCheckout = useCallback(async () => {
+    const checkInValue = formatTime(state.attendance?.checkIn ?? null);
+    const ok = managerAttendanceOnly
+      ? await confirm({
+          title: "Đóng ca của bạn?",
+          description:
+            "Thao tác này chốt ca làm việc và ghi giờ ra ngay, không thể hoàn tác.",
+          details: [{ label: "Giờ vào ca", value: checkInValue }],
+          confirmText: "Đóng ca",
+          variant: "destructive",
+        })
+      : await confirm({
+          title: "Gửi yêu cầu kết ca?",
+          description:
+            "Giờ ra sẽ được ghi nhận và gửi quản lý duyệt. Không thể tự sửa sau khi gửi.",
+          details: [{ label: "Giờ vào ca", value: checkInValue }],
+          confirmText: "Gửi kết ca",
+          variant: "destructive",
+        });
+    if (!ok) return;
     setCheckoutState("submitting");
     setError(null);
     startTransition(async () => {
@@ -250,7 +270,7 @@ export function ClockClient({ state }: ClockClientProps) {
         setError(result.error ?? "Kết ca thất bại.");
       }
     });
-  }, [managerAttendanceOnly, router]);
+  }, [managerAttendanceOnly, router, state.attendance?.checkIn]);
 
   const cancelCheckout = useCallback(() => {
     setCheckoutState("submitting");

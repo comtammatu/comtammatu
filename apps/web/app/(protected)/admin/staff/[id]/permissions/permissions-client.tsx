@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   applyTemplateAction,
   grantPermissionAction,
@@ -126,7 +127,22 @@ export function PermissionsClient({
     });
   }
 
-  function handleRevoke(grant: Grant) {
+  async function handleRevoke(grant: Grant) {
+    const description = permissionKeys.find(
+      (p) => p.key === grant.permissionKey,
+    )?.description;
+    const ok = await confirm({
+      title: "Thu hồi quyền này?",
+      description:
+        "Nhân viên sẽ mất quyền truy cập tương ứng ngay sau khi thu hồi.",
+      details: [
+        { label: "Permission key", value: grant.permissionKey },
+        ...(description ? [{ label: "Mô tả", value: description }] : []),
+      ],
+      confirmText: "Thu hồi",
+      variant: "destructive",
+    });
+    if (!ok) return;
     startTransition(async () => {
       const res = await revokePermissionAction({
         target_user_id: targetUserId,

@@ -22,6 +22,7 @@ import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { toggleStaffActive } from "./actions";
 import { StaffFormDialog } from "./staff-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   DataTable,
   type DataTableColumn,
@@ -75,7 +76,7 @@ function StaffActionsMenu({
   member: StaffRow;
   variant: "card" | "table";
   onEdit: (member: StaffRow) => void;
-  onToggle: (id: string) => void;
+  onToggle: (member: StaffRow) => void;
 }) {
   return (
     <DropdownMenu>
@@ -103,7 +104,7 @@ function StaffActionsMenu({
             Quyền hạn
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onToggle(member.id)}>
+        <DropdownMenuItem onSelect={() => onToggle(member)}>
           {member.is_active !== false ? (
             <>
               <IconToggleLeft className="mr-2 size-4" />
@@ -129,9 +130,20 @@ export function StaffTable({
   const [editStaff, setEditStaff] = useState<StaffRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function handleToggleActive(id: string) {
+  async function handleToggleActive(member: StaffRow) {
+    if (member.is_active !== false) {
+      const ok = await confirm({
+        title: "Ngừng kích hoạt nhân viên?",
+        description:
+          "Nhân viên sẽ không thể đăng nhập hoặc thao tác cho đến khi được kích hoạt lại.",
+        details: [{ label: STAFF_VI.long, value: member.full_name }],
+        confirmText: "Ngừng kích hoạt",
+        variant: "destructive",
+      });
+      if (!ok) return;
+    }
     startTransition(async () => {
-      const result = await toggleStaffActive(id);
+      const result = await toggleStaffActive(member.id);
       if (!result.success) {
         toast.error(result.error);
       }

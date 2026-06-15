@@ -35,6 +35,7 @@ import { toggleBranchActive } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
 import { NetworkConfigDialog } from "./network-config-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
@@ -57,9 +58,20 @@ export function BranchTable({ branches }: BranchTableProps) {
   const [networkBranch, setNetworkBranch] = useState<BranchRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function handleToggleActive(id: number) {
+  async function handleToggleActive(branch: BranchRow) {
+    if (branch.is_active !== false) {
+      const ok = await confirm({
+        title: "Tạm ngừng điểm vận hành?",
+        description:
+          "Điểm vận hành sẽ ngừng hoạt động cho đến khi được kích hoạt lại.",
+        details: [{ label: "Điểm vận hành", value: branch.name }],
+        confirmText: "Tạm ngừng",
+        variant: "destructive",
+      });
+      if (!ok) return;
+    }
     startTransition(async () => {
-      const result = await toggleBranchActive({ id });
+      const result = await toggleBranchActive({ id: branch.id });
       if (!result.success) {
         toast.error(result.error);
       }
@@ -144,7 +156,7 @@ export function BranchTable({ branches }: BranchTableProps) {
                         Chỉnh sửa
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => handleToggleActive(branch.id)}
+                        onClick={() => handleToggleActive(branch)}
                       >
                         {branch.is_active !== false ? (
                           <>

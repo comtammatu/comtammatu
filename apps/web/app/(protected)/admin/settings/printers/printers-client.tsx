@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { deletePrinter, upsertPrinter } from "./actions";
 
 export type Branch = { id: number; name: string };
@@ -352,8 +353,22 @@ function PrinterForm({
     });
   };
 
-  const remove = () => {
+  const remove = async () => {
     if (!initial) return;
+    const ok = await confirm({
+      title: "Xóa máy in này?",
+      description: "Cấu hình máy in sẽ bị xóa và không thể khôi phục.",
+      details: [
+        { label: FORM_VI.name, value: initial.name },
+        { label: PRINTER_COPY.slotLabel, value: ROLE_LABEL[initialRole] },
+        ...(initial.lan_host
+          ? [{ label: "LAN host / IP", value: initial.lan_host }]
+          : []),
+      ],
+      confirmText: "Xóa",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setErr(null);
     startTransition(async () => {
       const res = await deletePrinter(initial.id);

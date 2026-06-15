@@ -26,6 +26,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { approveCheckoutRequest } from "../clock/actions";
 
 export interface CheckoutApprovalItem {
@@ -53,7 +54,19 @@ export function CheckoutApprovalsClient({
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function approve(item: CheckoutApprovalItem) {
+  async function approve(item: CheckoutApprovalItem) {
+    const ok = await confirm({
+      title: "Duyệt kết ca?",
+      description:
+        "Giờ ra sẽ được ghi vào bảng công của nhân viên và không thể hoàn tác.",
+      details: [
+        { label: "Nhân viên", value: item.employeeName },
+        { label: "Giờ ra", value: item.requestedLabel },
+      ],
+      confirmText: "Duyệt",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setPendingId(item.id);
     startTransition(async () => {
       const result = await approveCheckoutRequest({ attendanceId: item.id });

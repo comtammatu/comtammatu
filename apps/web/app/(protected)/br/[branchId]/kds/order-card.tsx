@@ -157,6 +157,7 @@ function OrderCardComponent({
       {canMarkReady && (
         <BatchActions
           orderGroupKey={order.groupKey}
+          orderNumber={order.orderNumber}
           activeTickets={activeTickets}
           pendingTicketIds={pendingTicketIds}
           onCompleteTickets={onCompleteTickets}

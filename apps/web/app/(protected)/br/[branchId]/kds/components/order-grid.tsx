@@ -420,6 +420,7 @@ function HeatmapCard({
             <BatchActions
               layout="title"
               orderGroupKey={order.groupKey}
+              orderNumber={order.orderNumber}
               activeTickets={activeTickets}
               pendingTicketIds={pendingTicketIds}
               onCompleteTickets={onCompleteTickets}
