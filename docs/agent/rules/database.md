@@ -82,6 +82,16 @@ session; never as a default. The mechanics that work in practice:
   row counts after each apply.
 - Finish with `pnpm db:types`, run `get_advisors` (security) to confirm no new
   RLS/search_path findings, and commit the migration files plus regenerated types.
+- DEPLOY COUPLING — sequence by migration type. A **destructive** migration
+  (DROP COLUMN, narrowing a RETURNS, rename) breaks the *currently-deployed* app
+  if its code still reads the old shape, so deploy the code that stops reading it
+  FIRST, then apply. **Additive** migrations (new column/RPC, new RETURNS field)
+  are safe to apply before the code that uses them deploys. The prod Vercel
+  project `comtammatu-web` builds from `codex/continue-ts`, but the owner's
+  primary usage is local dev pointed at prod DB and unpushed local commits are
+  NOT deployed — so an applied destructive migration can leave the dormant Vercel
+  deploy broken-in-waiting until the branch is pushed + promoted (see
+  decisions.md D031, 2026-06-16).
 - `apply_migration` stamps the ledger `version` with the apply time, not the file
   timestamp, so `schema_migrations.version` does not match the file name (464 ledger
   rows as of 2026-06-15; of the 33 timestamp-named rows, 13 are version-drifted, the

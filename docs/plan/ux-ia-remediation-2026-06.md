@@ -200,4 +200,6 @@ Branch `codex/continue-ts` (chưa push):
 - **E wave 2:** E2 landing launcher ACL-driven (branch_manager→Branch Command, warehouse/production→Inventory), E3 expiry single-home, E4 dọn 3 stub `notFound()` + stale `revalidatePath` — đổi hành vi/xóa nên cẩn trọng wave sau.
 - **B2 HR (payroll/leave confirm) · D1 payroll · F3 hr DataTable:** chờ HRM redesign D026/D027 settle (off-limits).
 
-**Owner action tồn:** chốt VAT 2,4% set live (`/admin/settings/general` — cần kế toán xác nhận vs prod `vat_rate=0`); nhắn "push" để mở PR. *(migration `20260616100000` đã apply prod 2026-06-16.)*
+**VAT (D031e) — XONG, KHÔNG còn set tay:** rate giờ **tự suy theo bậc** (`resolve_gtgt_rate`, mirror `packages/shared/src/tax`). Prod hiện = **2,4%** (Má Tư annualized ≥1 tỷ, group2, giảm tạm) — tự về 0 nếu <1 tỷ, sang 17% TNCN nếu >3 tỷ, 2,4%→3% sau 31/12/2026. `vat_rate` setting đã gỡ. Emit mẫu 2 (gross) không đổi; HĐ cũ 8% sửa-tiến.
+
+**Owner action tồn:** **push + promote 1 production deploy** khi tiện (Vercel deploy đang ngủ; local-dev đã chạy code mới nên không gấp). Migration đã apply hết qua delegation: `20260616100000` (D3 drop customer_count) · `20260616110000` (identity RPC) · `20260616130000` (derive-VAT). Follow-up nhỏ: gộp revoke anon-execute cho `resolve_gtgt_rate`/`update_tenant_identity` vào sweep `20260616120000`.
