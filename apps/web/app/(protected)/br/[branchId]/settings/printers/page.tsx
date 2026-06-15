@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { AppPage, AppPageHeader } from "@/components/surface";
@@ -23,7 +24,11 @@ export default async function BranchPrintersPage({
     notFound();
   }
 
-  const { supabase } = await loadAuthState();
+  const { supabase, claims } = await loadAuthState();
+
+  if (!canManageBranchFloorSettings(claims.user_role)) {
+    redirect(`/br/${branchId}/settings`);
+  }
 
   const [
     branchRes,
@@ -37,6 +42,7 @@ export default async function BranchPrintersPage({
       .from("branches")
       .select("id, name")
       .eq("id", branchId)
+      .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
       .maybeSingle(),
     supabase
@@ -97,9 +103,9 @@ export default async function BranchPrintersPage({
     <AppPage width="default">
       <div className="flex items-center gap-3">
         <Button asChild variant="outline" size="sm" className="gap-1">
-          <Link href={`/br/${branchId}/pos`}>
+          <Link href={`/br/${branchId}/settings`}>
             <IconArrowLeft className="size-4" />
-            {messages.settings.branch.posBack}
+            {messages.settings.branch.settingsBack}
           </Link>
         </Button>
         <AppPageHeader

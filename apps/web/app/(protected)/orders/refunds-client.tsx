@@ -11,6 +11,7 @@ import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   Card,
   CardContent,
@@ -66,7 +67,25 @@ export function RefundsClient({
     });
   }
 
-  function handleApprove(refundId: number, approved: boolean) {
+  async function handleApprove(refundId: number, approved: boolean) {
+    if (approved) {
+      const refund = refunds.find((item) => item.id === refundId);
+      const ok = await confirm({
+        title: "Duyệt hoàn tiền?",
+        description:
+          "Hành động này đảo bút toán thanh toán và không thể hoàn tác.",
+        details: refund
+          ? [
+              { label: "Mã đơn", value: refund.order_number },
+              { label: "Số tiền", value: formatVND(refund.amount) },
+              { label: FORM_VI.reason, value: refund.reason },
+            ]
+          : undefined,
+        confirmText: "Duyệt hoàn tiền",
+        variant: "destructive",
+      });
+      if (!ok) return;
+    }
     setActioningId(refundId);
     setErrorMsg(null);
     startTransition(async () => {

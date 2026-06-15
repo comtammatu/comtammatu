@@ -63,6 +63,33 @@ export async function updatePaymentSettings(
     };
   }
 
+  // Block enabling VietQR without a fully-configured payee — otherwise the QR
+  // printed at POS carries no payee/account. Effective value mirrors the POS
+  // resolver precedence (setting || env) in pos/payment-actions.ts.
+  if (parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR] === "true") {
+    const effective = {
+      bankCode:
+        parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ||
+        process.env.VIETQR_BANK_ID ||
+        "",
+      accountNo:
+        parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ||
+        process.env.VIETQR_ACCOUNT_NO ||
+        "",
+      accountName:
+        parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME] ||
+        process.env.VIETQR_ACCOUNT_NAME ||
+        "",
+    };
+    if (!effective.bankCode || !effective.accountNo || !effective.accountName) {
+      return {
+        success: false,
+        error:
+          "Cần điền đủ ngân hàng, số tài khoản và tên chủ tài khoản trước khi bật VietQR.",
+      };
+    }
+  }
+
   const ctx = await getAuthContextWithPermission(
     SETTINGS_ROLES,
     PERMISSION_KEYS.SETTINGS_TENANT,
