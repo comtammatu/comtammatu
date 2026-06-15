@@ -158,10 +158,10 @@ const checks = [
   {
     id: "status-label-ssot",
     description:
-      "Status label/variant maps are single-sourced in @comtammatu/shared labels + apps/web/app/components/status-badge.tsx; page-local STATUS* maps (including names that start with STATUS) must not spread.",
+      "Status label/variant maps are single-sourced in @comtammatu/shared labels + apps/web/app/components/status-badge.tsx; page-local STATUS* maps (including STATUS-first names and multi-line type annotations) must not spread.",
     roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
     pattern:
-      /\bconst\s+[A-Z0-9_]*STATUS[A-Z0-9_]*(?:\s*:\s*[^=\n]+)?\s*=\s*[{[]/g,
+      /\bconst\s+[A-Z0-9_]*STATUS[A-Z0-9_]*(?:\s*:[^=]*?)?\s*=\s*[{[]/g,
     allowlist: {
       // SSoT registry + exceptions documented in design-system.md
       // "Status vocabulary": status-badge.tsx is the registry itself;
@@ -182,12 +182,20 @@ const checks = [
       "apps/web/app/(protected)/employee/leave/leave-client.tsx": 1,
       "apps/web/app/(protected)/employee/payslip/payslip-client.tsx": 1,
       "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 2,
-      "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
+      "apps/web/app/(protected)/hr/attendance-table.tsx": 2,
       "apps/web/app/(protected)/hr/leave-requests-table.tsx": 1,
       "apps/web/app/(protected)/inventory/issues/issues-client.tsx": 1,
       "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx": 1,
       "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 1,
       "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 2,
+      // Multi-line-typed STATUS* maps surfaced by the hardened regex: these are
+      // variant/tone maps (or label+variant maps already sourced from
+      // @comtammatu/shared *_STATUS_LABELS_VI), not new label duplication.
+      // Folding the variants into status-badge.tsx domains is a later wave.
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-row.tsx": 1,
+      "apps/web/app/(protected)/finance/revenue/[date]/page.tsx": 1,
+      "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx": 1,
+      "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 1,
     },
   },
   {

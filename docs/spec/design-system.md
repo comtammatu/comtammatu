@@ -665,6 +665,7 @@ Stage 0 gate status (each flips to **live** as its ratchet lands in
   main.
 - `status-label-ssot` regex un-blinding (W1 ratchet) — **live**: the ratchet
   now also catches `STATUS`-first names (`STATUS_LABELS`, `STATUS_CONFIG`, …)
+  and multi-line type annotations (`const X_STATUS: Record<…> = {`)
   that the old regex missed; current page-local maps are baselined for the W1
   status-registry burn-down.
 
