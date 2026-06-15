@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, STAFF_ROLES, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNMonthEndDateString } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
@@ -23,32 +23,32 @@ const ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS = 300;
 
 /* ─── Employees ─── */
 
-const employeeSchema = z.object({
-  profileId: z.string().uuid(),
-  employeeCode: z.string().optional(),
-  idNumber: z.string().optional(),
-  bankAccount: z.string().optional(),
-  bankName: z.string().optional(),
-  baseSalary: z.coerce.number().min(0).optional(),
+// Operational roles must be attached to a real branch site (mirror of
+// admin/staff createStaff — keep the two in sync).
+const OPS_ROLES: readonly string[] = [
+  "cashier",
+  "waiter",
+  "chef",
+  "branch_manager",
+];
+
+const createEmployeeAccountSchema = z.object({
+  fullName: z.string().trim().min(1, { error: "Họ tên không được để trống" }),
+  email: z.string().email({ error: "Email không hợp lệ" }),
+  password: z.string().min(8, { error: "Mật khẩu phải có ít nhất 8 ký tự" }),
+  phone: z.string().trim().optional(),
+  role: z.string().min(1, { error: "Chọn vai trò" }),
+  branchId: z.coerce.number().int().positive().optional(),
+  employeeCode: z.string().trim().optional(),
   startDate: z.string().optional(),
-  contractType: z.enum(["probation", "fixed_term", "indefinite"]).optional(),
-  dependentsCount: z.coerce.number().int().min(0).default(0),
-  defaultChecklistTemplateId: z.coerce.number().int().positive().nullable().optional(),
+  defaultChecklistTemplateId: z
+    .coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .optional(),
 });
-
-async function loadEmployeeProfileBranch(
-  tenantId: number,
-  profileId: string,
-): Promise<number | null | undefined> {
-  const { data } = await createServiceClient()
-    .from("profiles")
-    .select("branch_id")
-    .eq("tenant_id", tenantId)
-    .eq("id", profileId)
-    .maybeSingle();
-
-  return data?.branch_id;
-}
 
 async function loadChecklistTemplateBranch(
   tenantId: number,
@@ -133,18 +133,39 @@ export async function fetchEmployees(): Promise<ActionResult> {
   return { success: true, data: data ?? [] };
 }
 
-export const createEmployee = withAction(
-  { roles: HR_ROLES, schema: employeeSchema },
-  async (data, { supabase, claims }) => {
-    const employeeBranchId = await loadEmployeeProfileBranch(
-      claims.tenant_id,
-      data.profileId,
-    );
-    if (employeeBranchId === undefined) {
-      return {
-        success: false,
-        error: "Không thể xác định chi nhánh của nhân viên.",
-      };
+// One-step onboarding: create the login account (profile auto-created by the
+// `handle_new_user` trigger) AND the employee record in one submit. The auth
+// user is created via the Auth Admin API, which cannot share a Postgres
+// transaction with the employee INSERT, so a post-create failure is rolled back
+// by deleting the orphan auth user (cascades to the profile via FK).
+export const createEmployeeAccount = withAction(
+  { roles: HR_ROLES, schema: createEmployeeAccountSchema },
+  async (data, { claims }) => {
+    if (!(STAFF_ROLES as readonly string[]).includes(data.role)) {
+      return { success: false, error: "Vai trò không hợp lệ." };
+    }
+    if (data.role === "owner") {
+      return { success: false, error: "Không thể tạo tài khoản chủ sở hữu ở đây." };
+    }
+    if (OPS_ROLES.includes(data.role) && !data.branchId) {
+      return { success: false, error: "Vai trò vận hành phải thuộc một chi nhánh." };
+    }
+
+    const service = createServiceClient();
+
+    if (data.branchId != null) {
+      const { data: branch } = await service
+        .from("branches")
+        .select("branch_kind")
+        .eq("id", data.branchId)
+        .eq("tenant_id", claims.tenant_id)
+        .maybeSingle();
+      if (!branch) {
+        return { success: false, error: "Chi nhánh không hợp lệ." };
+      }
+      if (OPS_ROLES.includes(data.role) && branch.branch_kind !== "branch") {
+        return { success: false, error: "Vai trò vận hành cần gắn với chi nhánh." };
+      }
     }
 
     if (data.defaultChecklistTemplateId != null) {
@@ -158,7 +179,7 @@ export const createEmployee = withAction(
           error: "Checklist template không tồn tại hoặc đã bị ngưng sử dụng.",
         };
       }
-      if (templateBranchId != null && templateBranchId !== employeeBranchId) {
+      if (templateBranchId != null && templateBranchId !== (data.branchId ?? null)) {
         return {
           success: false,
           error: "Checklist template không thuộc phạm vi chi nhánh này.",
@@ -166,31 +187,65 @@ export const createEmployee = withAction(
       }
     }
 
-    const { data: result, error } = await supabase
+    const { data: created, error: authError } = await service.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+      app_metadata: {
+        tenant_id: claims.tenant_id,
+        branch_id: data.branchId ?? null,
+        role: data.role,
+        full_name: data.fullName,
+      },
+      user_metadata: { full_name: data.fullName },
+    });
+
+    if (authError || !created?.user) {
+      if (
+        authError?.message?.includes("already been registered") ||
+        authError?.message?.includes("already exists")
+      ) {
+        return { success: false, error: "Email này đã được sử dụng." };
+      }
+      return { success: false, error: "Không thể tạo tài khoản. Vui lòng thử lại." };
+    }
+
+    const userId = created.user.id;
+
+    if (data.phone) {
+      const { error: phoneError } = await service
+        .from("profiles")
+        .update({ phone: data.phone })
+        .eq("id", userId)
+        .eq("tenant_id", claims.tenant_id);
+      if (phoneError) {
+        await service.auth.admin.deleteUser(userId);
+        return { success: false, error: "Không thể lưu số điện thoại." };
+      }
+    }
+
+    const { data: result, error } = await service
       .from("employees")
       .insert({
         tenant_id: claims.tenant_id,
-        profile_id: data.profileId,
+        profile_id: userId,
         employee_code: data.employeeCode ?? null,
-        id_number: data.idNumber ?? null,
-        bank_account: data.bankAccount ?? null,
-        bank_name: data.bankName ?? null,
-        base_salary: data.baseSalary ?? null,
         start_date: data.startDate ?? null,
-        contract_type: data.contractType ?? null,
-        dependents_count: data.dependentsCount,
+        dependents_count: 0,
         default_checklist_template_id: data.defaultChecklistTemplateId ?? null,
       })
       .select("id")
       .single();
 
-    if (error) {
-      if (error.code === "23505") {
-        return { success: false, error: "Nhân viên này đã có hồ sơ." };
+    if (error || !result) {
+      await service.auth.admin.deleteUser(userId);
+      if (error?.code === "23505") {
+        return { success: false, error: "Mã nhân viên đã tồn tại." };
       }
       return { success: false, error: "Không thể tạo hồ sơ nhân viên." };
     }
 
+    revalidateHrPaths();
     return { success: true, data: result };
   },
 );

@@ -19,17 +19,23 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { SelectField, TextField } from "@/components/form";
-import { createEmployee } from "./actions";
+import { createEmployeeAccount } from "./actions";
 import {
   checklistTemplateLabel,
   type ChecklistTemplateRow,
 } from "./checklist-types";
+import type { BranchOption } from "./page";
+
+const NO_BRANCH = "none";
+const NO_TEMPLATE = "none";
 
 const employeeSchema = z.object({
-  profile_id: z
-    .string()
-    .trim()
-    .min(1, { error: "Profile UUID không được trống" }),
+  full_name: z.string().trim().min(1, { error: "Họ tên không được để trống" }),
+  email: z.string().email({ error: "Email không hợp lệ" }),
+  password: z.string().min(8, { error: "Mật khẩu phải có ít nhất 8 ký tự" }),
+  phone: z.string().trim().optional(),
+  role: z.string().min(1, { error: "Chọn vai trò" }),
+  branch_id: z.string().optional(),
   employee_code: z.string().trim().optional(),
   start_date: z.string().optional(),
   default_checklist_template_id: z.string().optional(),
@@ -38,21 +44,30 @@ const employeeSchema = z.object({
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
 
 const DEFAULT_VALUES: EmployeeFormValues = {
-  profile_id: "",
+  full_name: "",
+  email: "",
+  password: "",
+  phone: "",
+  role: "",
+  branch_id: NO_BRANCH,
   employee_code: "",
   start_date: "",
-  default_checklist_template_id: "none",
+  default_checklist_template_id: NO_TEMPLATE,
 };
 
 interface EmployeeFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  branches: BranchOption[];
+  positionOptions: { value: string; label: string }[];
   checklistTemplates?: ChecklistTemplateRow[];
 }
 
 export function EmployeeFormDialog({
   open,
   onOpenChange,
+  branches,
+  positionOptions,
   checklistTemplates,
 }: EmployeeFormDialogProps) {
   const [isPending, startTransition] = useTransition();
@@ -76,21 +91,29 @@ export function EmployeeFormDialog({
       setServerError(null);
       const defaultTemplateId =
         values.default_checklist_template_id &&
-        values.default_checklist_template_id !== "none"
+        values.default_checklist_template_id !== NO_TEMPLATE
           ? Number(values.default_checklist_template_id)
           : null;
-      const result = await createEmployee({
-        profileId: values.profile_id,
+      const branchId =
+        values.branch_id && values.branch_id !== NO_BRANCH
+          ? Number(values.branch_id)
+          : undefined;
+      const result = await createEmployeeAccount({
+        fullName: values.full_name,
+        email: values.email,
+        password: values.password,
+        phone: values.phone || undefined,
+        role: values.role,
+        branchId,
         employeeCode: values.employee_code || undefined,
         startDate: values.start_date || undefined,
         defaultChecklistTemplateId: defaultTemplateId,
-        dependentsCount: 0,
       });
       if (!result.success) {
         setServerError(result.error ?? ERRORS_VI.fallback);
         return;
       }
-      toast.success("Đã tạo hồ sơ nhân viên mới");
+      toast.success("Đã tạo tài khoản và hồ sơ nhân viên mới");
       onOpenChange(false);
     });
   }
@@ -106,33 +129,76 @@ export function EmployeeFormDialog({
           <FieldGroup>
             <TextField
               control={form.control}
-              name="profile_id"
-              label="Profile UUID"
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              description="Liên kết với tài khoản đăng nhập đã tạo sẵn."
+              name="full_name"
+              label="Họ tên"
+              placeholder="Nguyễn Văn A"
               required
             />
 
             <div className="grid grid-cols-2 gap-4">
               <TextField
                 control={form.control}
+                name="email"
+                label="Email đăng nhập"
+                type="email"
+                placeholder="nhanvien@comtammatu.vn"
+                required
+              />
+              <TextField
+                control={form.control}
+                name="password"
+                label="Mật khẩu"
+                type="password"
+                placeholder="Tối thiểu 8 ký tự"
+                required
+              />
+
+              <TextField
+                control={form.control}
+                name="phone"
+                label="Số điện thoại"
+                placeholder="0901234567"
+              />
+              <SelectField
+                control={form.control}
+                name="role"
+                label="Vai trò"
+                options={positionOptions}
+                placeholder="Chọn vai trò"
+              />
+
+              <SelectField
+                control={form.control}
+                name="branch_id"
+                label="Chi nhánh"
+                options={[
+                  { value: NO_BRANCH, label: "Không thuộc chi nhánh" },
+                  ...branches.map((branch) => ({
+                    value: branch.id.toString(),
+                    label: branch.name,
+                  })),
+                ]}
+                placeholder="Không thuộc chi nhánh"
+              />
+              <TextField
+                control={form.control}
                 name="employee_code"
                 label="Mã nhân viên"
                 placeholder="NV001"
               />
+
               <TextField
                 control={form.control}
                 name="start_date"
                 label="Ngày bắt đầu"
                 type="date"
               />
-
               <SelectField
                 control={form.control}
                 name="default_checklist_template_id"
                 label="Checklist mặc định"
                 options={[
-                  { value: "none", label: "Không gán mặc định" },
+                  { value: NO_TEMPLATE, label: "Không gán mặc định" },
                   ...availableTemplates.map((template) => ({
                     value: template.id.toString(),
                     label: checklistTemplateLabel(template),

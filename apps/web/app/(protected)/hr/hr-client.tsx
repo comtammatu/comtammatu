@@ -24,6 +24,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
 import { UserPlus as IconUserPlus } from "lucide-react";
 
+import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
 import { STAFF_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 
@@ -53,6 +54,18 @@ export function HrClient({
   const [shiftsLoaded, setShiftsLoaded] = useState(false);
   const [isPending, startTransition] = useTransition();
   const defaultTab = canViewEmployees ? "employees" : "attendance";
+
+  // One role option per access bucket (label = its Vietnamese position label),
+  // mirroring /admin/staff. Owner/unassigned are not creatable here.
+  const seenBuckets = new Set<string>();
+  const positionOptions = positionDefaults.flatMap((position) => {
+    const bucket = staffRoleFromPositionCode(position.code);
+    if (bucket === "unassigned" || bucket === "owner" || seenBuckets.has(bucket)) {
+      return [];
+    }
+    seenBuckets.add(bucket);
+    return [{ value: bucket, label: position.label_vi ?? position.code }];
+  });
 
   function loadShifts() {
     startTransition(async () => {
@@ -107,6 +120,8 @@ export function HrClient({
             <EmployeeFormDialog
               open={addOpen}
               onOpenChange={setAddOpen}
+              branches={branches}
+              positionOptions={positionOptions}
               checklistTemplates={checklistTemplates}
             />
           ) : null}
