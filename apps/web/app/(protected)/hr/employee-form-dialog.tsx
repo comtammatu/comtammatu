@@ -39,6 +39,32 @@ const employeeSchema = z.object({
   employee_code: z.string().trim().optional(),
   start_date: z.string().optional(),
   default_checklist_template_id: z.string().optional(),
+  base_salary: z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (value) => {
+        if (!value) return true;
+        const n = Number(value);
+        return Number.isInteger(n) && n >= 0;
+      },
+      { error: "Lương không hợp lệ" },
+    ),
+  dependents_count: z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (value) => {
+        if (!value) return true;
+        const n = Number(value);
+        return Number.isInteger(n) && n >= 0 && n <= 20;
+      },
+      { error: "Số người phụ thuộc không hợp lệ" },
+    ),
+  id_number: z.string().trim().optional(),
+  bank_account: z.string().trim().optional(),
 });
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -53,6 +79,10 @@ const DEFAULT_VALUES: EmployeeFormValues = {
   employee_code: "",
   start_date: "",
   default_checklist_template_id: NO_TEMPLATE,
+  base_salary: "",
+  dependents_count: "0",
+  id_number: "",
+  bank_account: "",
 };
 
 interface EmployeeFormDialogProps {
@@ -108,6 +138,12 @@ export function EmployeeFormDialog({
         employeeCode: values.employee_code || undefined,
         startDate: values.start_date || undefined,
         defaultChecklistTemplateId: defaultTemplateId,
+        baseSalary: values.base_salary ? Number(values.base_salary) : undefined,
+        dependentsCount: values.dependents_count
+          ? Number(values.dependents_count)
+          : 0,
+        idNumber: values.id_number || undefined,
+        bankAccount: values.bank_account || undefined,
       });
       if (!result.success) {
         setServerError(result.error ?? ERRORS_VI.fallback);
@@ -207,6 +243,35 @@ export function EmployeeFormDialog({
                 placeholder="Không gán mặc định"
               />
             </div>
+
+            <FieldGroup className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <TextField
+                control={form.control}
+                name="base_salary"
+                label="Lương tháng (VND)"
+                type="number"
+                placeholder="12000000"
+                description="Lương gộp/tháng — dùng để tính lương"
+              />
+              <TextField
+                control={form.control}
+                name="dependents_count"
+                label="Số người phụ thuộc"
+                type="number"
+                placeholder="0"
+                description="Chỉ ảnh hưởng thuế TNCN"
+              />
+              <TextField
+                control={form.control}
+                name="id_number"
+                label="CMND/CCCD"
+              />
+              <TextField
+                control={form.control}
+                name="bank_account"
+                label="Số tài khoản"
+              />
+            </FieldGroup>
 
             {serverError && (
               <p className="text-sm text-destructive" role="alert">

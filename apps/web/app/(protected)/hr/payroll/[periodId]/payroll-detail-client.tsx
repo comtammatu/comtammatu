@@ -27,6 +27,7 @@ import type { PayrollEntryRow } from "./page";
 import { useState } from "react";
 import { ERRORS_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
+import { KpiCard } from "@/components/kpi/kpi-card";
 
 const fmt = (n: number) =>
   n.toLocaleString("vi-VN", { maximumFractionDigits: 0 });
@@ -99,10 +100,6 @@ export function PayrollDetailClient({
   );
   const totalPit = entries.reduce((s, e) => s + Number(e.pit_tax), 0);
   const totalNet = entries.reduce((s, e) => s + Number(e.net_salary), 0);
-  const totalInsEmployer = entries.reduce(
-    (s, e) => s + Number(e.total_insurance_employer),
-    0,
-  );
 
   return (
     <div className="space-y-4">
@@ -135,17 +132,14 @@ export function PayrollDetailClient({
 
       {/* Summary */}
       {entries.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-5">
-          <SummaryCard label={copy.summary.gross} value={totalGross} />
-          <SummaryCard
-            label={copy.summary.employeeInsurance}
-            value={totalInsEmp}
-          />
-          <SummaryCard label={copy.summary.pit} value={totalPit} />
-          <SummaryCard label={copy.summary.net} value={totalNet} highlight />
-          <SummaryCard
-            label={copy.summary.employerInsurance}
-            value={totalInsEmployer}
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+          <KpiCard label={copy.summary.gross} value={fmt(totalGross)} />
+          <KpiCard label={copy.summary.headcount} value={entries.length} />
+          <KpiCard label={copy.summary.pit} value={fmt(totalPit)} />
+          <KpiCard
+            label={copy.summary.net}
+            value={fmt(totalNet)}
+            tone="primary"
           />
         </div>
       )}
@@ -247,29 +241,6 @@ export function PayrollDetailClient({
           </TableBody>
         </Table>
       </div>
-    </div>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  highlight,
-}: {
-  label: string;
-  value: number;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-lg border p-3 ${highlight ? "border-primary bg-primary/5" : ""}`}
-    >
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p
-        className={`mt-1 font-mono text-lg font-bold ${highlight ? "text-primary" : ""}`}
-      >
-        {fmt(value)}
-      </p>
     </div>
   );
 }

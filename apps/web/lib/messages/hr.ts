@@ -116,6 +116,7 @@ export const hr = {
         pit: "Thuế TNCN",
         net: "Thực lĩnh",
         employerInsurance: "BH NSDLĐ",
+        headcount: "Số NV tính lương",
       },
       table: {
         workingDays: "Ngày công",

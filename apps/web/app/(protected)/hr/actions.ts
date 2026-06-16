@@ -8,6 +8,7 @@ import { getVNMonthEndDateString } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getAuthContext, probePermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
+import { logAudit } from "@/_lib/audit";
 
 const HR_ROLES: readonly StaffRole[] = ["owner"];
 const HR_EMPLOYEE_VIEW_ROLES: readonly StaffRole[] = [
@@ -48,6 +49,10 @@ const createEmployeeAccountSchema = z.object({
     .positive()
     .nullable()
     .optional(),
+  baseSalary: z.coerce.number().int().nonnegative().optional(),
+  dependentsCount: z.coerce.number().int().min(0).max(20).default(0),
+  idNumber: z.string().trim().optional(),
+  bankAccount: z.string().trim().optional(),
 });
 
 async function loadChecklistTemplateBranch(
@@ -115,7 +120,8 @@ export async function fetchEmployees(): Promise<ActionResult> {
     `,
       )
     .eq("tenant_id", claims.tenant_id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   if (claims.user_role === "branch_manager") {
     if (branchManagerBranchId == null) {
@@ -140,7 +146,7 @@ export async function fetchEmployees(): Promise<ActionResult> {
 // by deleting the orphan auth user (cascades to the profile via FK).
 export const createEmployeeAccount = withAction(
   { roles: HR_ROLES, schema: createEmployeeAccountSchema },
-  async (data, { claims }) => {
+  async (data, { claims, supabase }) => {
     if (!(STAFF_ROLES as readonly string[]).includes(data.role)) {
       return { success: false, error: "Vai trò không hợp lệ." };
     }
@@ -231,7 +237,11 @@ export const createEmployeeAccount = withAction(
         profile_id: userId,
         employee_code: data.employeeCode ?? null,
         start_date: data.startDate ?? null,
-        dependents_count: 0,
+        dependents_count: data.dependentsCount,
+        // owner-only PII (action gated by HR_ROLES=['owner'])
+        base_salary: data.baseSalary ?? null,
+        id_number: data.idNumber ?? null,
+        bank_account: data.bankAccount ?? null,
         default_checklist_template_id: data.defaultChecklistTemplateId ?? null,
       })
       .select("id")
@@ -244,6 +254,16 @@ export const createEmployeeAccount = withAction(
       }
       return { success: false, error: "Không thể tạo hồ sơ nhân viên." };
     }
+
+    logAudit(supabase, {
+      action: "create",
+      entityType: "employee",
+      entityId: result.id,
+      newData: {
+        base_salary: data.baseSalary ?? null,
+        dependents_count: data.dependentsCount,
+      },
+    });
 
     revalidateHrPaths();
     return { success: true, data: result };

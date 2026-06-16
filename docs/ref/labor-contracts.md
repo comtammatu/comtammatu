@@ -232,6 +232,29 @@ payroll_entries.insurance_base (immutable snapshot)
 
 > ⚠️ **Dev note**: Khi implement M7 (Nhân sự & tiền lương), `employees.insurance_base_salary` PHẢI được sync tự động từ `employment_contracts` active. KHÔNG cho phép update trực tiếp. `payroll_entries.insurance_base` là snapshot — KHÔNG bao giờ thay đổi sau khi payroll approved.
 
+### 5.4 Mô hình tính lương HKD đơn giản (đang áp dụng)
+
+Theo phán quyết owner (D031 quyết định 1), payroll trong app chạy theo mô hình
+**Hộ kinh doanh đơn giản**, KHÔNG dùng `employment_contracts`:
+
+- `calculatePayroll` (`apps/web/app/(protected)/hr/payroll-actions.ts`) đọc
+  **trực tiếp** `employees.base_salary` làm lương gộp; nhân viên đủ điều kiện =
+  `is_active = true` AND `base_salary > 0`.
+- Lương theo ngày công (per-shift attendance) → prorate theo `standard_days`.
+- **BHXH tắt:** gọi `calculatePayrollEntry` với `insuranceBaseSalary = 0` →
+  toàn bộ cột BHXH/BHYT/BHTN = 0 (`payroll_entries` các cột này NOT NULL, không
+  có CHECK dương → 0 hợp lệ). `payroll_entries.insurance_base` cũng = 0.
+- **TNCN giữ nguyên:** vẫn tính qua bộ legal-version có version
+  (`packages/shared/src/payroll/legal-versions.ts`) — giảm trừ bản thân + người
+  phụ thuộc + biểu thuế lũy tiến theo `effectiveDate`.
+
+`employment_contracts` và cơ chế sync `insurance_base_salary` ở §5.2–§5.3 KHÔNG
+được payroll dùng tới; chúng là hạ tầng giữ lại ở trạng thái nghỉ cho khả năng
+mở rộng BHXH theo nhân viên sau này. Đây là **quyết định có chủ đích của owner
+cho mô hình HKD**, không phải thiếu sót. Nếu sau này owner muốn đóng BHXH cho
+tầng quản lý, engine đã hỗ trợ `insuranceBaseSalary` theo từng nhân viên nên
+không cần migration.
+
 ---
 
 ## 6. Quy trình onboarding nhân viên
