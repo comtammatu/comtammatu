@@ -353,7 +353,7 @@ if (fs.existsSync(path.join(REPO_ROOT, "docs/archive"))) {
 }
 
 const legacyDocReferencePattern =
-  /docs\/archive(?:\/|$)|(?:^|[\s('"`])(?:\.{1,2}\/)*archive\//g;
+  /docs\/archive(?:\/|$)|(?:^|[\s('"`])(?:\.{1,2}\/)*archive\/[^\s)\]'"`]*\.mdx?/g;
 
 const legacyDocReferenceFiles = [
   path.join(REPO_ROOT, "AGENTS.md"),
