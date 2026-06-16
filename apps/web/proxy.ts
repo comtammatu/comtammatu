@@ -23,6 +23,14 @@ import { getClientIp } from "@lib/network/client-ip";
 // in proxy startup"). Vercel log drain captures this for SIEM ingestion.
 let NETWORK_GATE_OFF_WARNED = false;
 
+// Per-warm-instance cache of the POS/KDS branch-surface gate lookup.
+// branch_kind is immutable (a CHECK pins it to 'branch' and create/update paths
+// hard-code it), so the branches read on every POS/KDS/runner request returns a
+// constant — cache it instead of hitting the DB each time. Key includes
+// tenant_id so an entry can never be reused across tenants. Value: branch_kind,
+// or null when no matching branch row exists for that tenant.
+const BRANCH_KIND_CACHE = new Map<string, string | null>();
+
 /** Create a redirect that preserves Set-Cookie from updateSession response */
 function redirectWithCookies(
   url: URL,
@@ -220,14 +228,20 @@ export async function proxy(request: NextRequest) {
           moduleKey === "kds" ||
           moduleKey === "runner"
         ) {
-          const { data: branchRow } = await supabase
-            .from("branches")
-            .select("id, branch_kind")
-            .eq("id", routeBranchId)
-            .eq("tenant_id", claims.tenant_id)
-            .maybeSingle();
-          const kind = branchRow?.branch_kind;
-          if (branchRow && kind !== "branch") {
+          const branchKindKey = `${String(claims.tenant_id)}:${String(routeBranchId)}`;
+          let branchKind = BRANCH_KIND_CACHE.get(branchKindKey);
+          if (branchKind === undefined) {
+            const { data: branchRow } = await supabase
+              .from("branches")
+              .select("branch_kind")
+              .eq("id", routeBranchId)
+              .eq("tenant_id", claims.tenant_id)
+              .maybeSingle();
+            branchKind =
+              (branchRow?.branch_kind as string | undefined) ?? null;
+            BRANCH_KIND_CACHE.set(branchKindKey, branchKind);
+          }
+          if (branchKind !== null && branchKind !== "branch") {
             return redirectToAccessDenied(
               request,
               response,

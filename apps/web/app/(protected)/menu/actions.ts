@@ -1337,6 +1337,9 @@ export async function importMenu(
   }
 
   revalidateSurfacePath("/menu");
+  // Bulk import writes items/variants/modifiers/sides — bust the POS cached menu
+  // structure like the single-row menu mutations do (tag: menu-structure).
+  updateTag("menu-structure");
   return { success: true, data: { summary, warnings: [] } };
 }
 

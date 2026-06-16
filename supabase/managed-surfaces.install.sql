@@ -71,9 +71,9 @@ CREATE POLICY "menu_images_update" ON storage.objects FOR UPDATE TO authenticate
 
 -- ── Section D: realtime publication membership (fresh env only — ADD errors if already a member) ──
 ALTER PUBLICATION supabase_realtime ADD TABLE
-  public.branch_menu_item_daily_limits, public.kds_tickets, public.kitchen_send_batches,
+  public.branch_menu_item_daily_limits, public.kds_tickets,
   public.notifications, public.order_status_history, public.orders, public.payments,
-  public.pos_sessions, public.print_jobs, public.printer_agents, public.tables;
+  public.pos_sessions, public.print_jobs, public.tables;
 
 -- ── Section E: cron jobs (pg_cron; cron.schedule upserts by jobname) ──
 SELECT cron.schedule('auto_close_periods',                 '0 19 * * *',  'SELECT public.auto_close_periods();');
@@ -81,7 +81,7 @@ SELECT cron.schedule('cleanup-abandoned-payments',         '0 * * * *',   'SELEC
 SELECT cron.schedule('compute_branch_daily_waste_caps',    '30 17 * * *', 'SELECT public.compute_branch_daily_waste_caps();');
 SELECT cron.schedule('refresh_abc_classification',         '0 19 * * 6',  'SELECT public.refresh_abc_classification();');
 SELECT cron.schedule('refresh_mv_grn_price_baseline',      '5 * * * *',   'REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_grn_price_baseline;');
-SELECT cron.schedule('refresh_mv_inventory_stock_current', '*/5 * * * *', 'REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_inventory_stock_current;');
+SELECT cron.schedule('refresh_mv_inventory_stock_current', '*/15 * * * *', 'SET LOCAL statement_timeout = ''2min''; REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_inventory_stock_current;');
 SELECT cron.schedule('refresh-finance-views-daily',        '15 23 * * *', 'SET LOCAL statement_timeout = ''5min''; SELECT public.refresh_finance_views();');
 SELECT cron.schedule('scan-inventory-alerts-daily',        '0 23 * * *',  'SELECT public.scan_inventory_alerts();');
 SELECT cron.schedule('weekly_grn_override_report',         '0 2 * * 5',   'SELECT public.weekly_grn_override_report();');

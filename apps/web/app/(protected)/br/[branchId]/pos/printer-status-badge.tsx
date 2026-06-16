@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/client";
-import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import {
   Printer as IconPrinter,
   PrinterX as IconPrinterOff,
@@ -59,10 +58,10 @@ export function PrinterStatusBadge({
   });
   const [failedCount, setFailedCount] = useState(0);
 
-  // Fetch + 30s poll. Stays separate from the realtime channel so the
-  // helper can own the auth-await dance. Uses its own short-lived
-  // Supabase client (matches existing pattern; both clients share
-  // supabase-js's underlying connection pool internally).
+  // Fetch + 30s poll. printer_agents is intentionally NOT in the realtime
+  // publication (its 30s heartbeat would fan out per-row RLS WAL work to every
+  // POS tab); the poll + visibility-resume refetch below is the freshness path,
+  // and the heartbeat cadence is itself 30s so push would add no freshness.
   const fetchStatus = useCallback(async () => {
     const supabase = createClient();
     const sinceIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -97,9 +96,8 @@ export function PrinterStatusBadge({
     void fetchStatus();
     const pollId = setInterval(() => {
       // Skip the polled fetch when the tab is hidden — wasted work on
-      // backgrounded iPads / sleeping tabs. The realtime channel above
-      // still pushes UPDATE/INSERT events when a row changes; on resume
-      // the visibility-change handler below catches up immediately.
+      // backgrounded iPads / sleeping tabs. The visibility-change handler
+      // below catches up immediately on resume.
       if (document.visibilityState === "hidden") return;
       void fetchStatusRef.current();
     }, POLL_INTERVAL_MS);
@@ -118,46 +116,6 @@ export function PrinterStatusBadge({
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [fetchStatus]);
-
-  const initialSubscribeSeenRef = useRef(false);
-
-  useRealtimeChannel(
-    (supabase) =>
-      supabase
-        .channel(`printer_agents:branch=${String(branchId)}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "printer_agents",
-            filter: `branch_id=eq.${String(branchId)}`,
-          },
-          (payload) => {
-            const row = payload.new as {
-              agent_id?: string;
-              last_seen_at?: string;
-            } | null;
-            if (!row) return;
-            setStatus(
-              computeStatus(row.agent_id ?? null, row.last_seen_at ?? null),
-            );
-          },
-        )
-        .subscribe((status) => {
-          if (status !== "SUBSCRIBED") return;
-          // Skip the FIRST SUBSCRIBED — fetchStatus() ran on mount above.
-          // Every SUBSCRIBED after that is a reconnect: refetch so the
-          // badge reflects any agent state change that fired during the
-          // WS disconnect window (otherwise we'd wait up to POLL_INTERVAL_MS).
-          if (!initialSubscribeSeenRef.current) {
-            initialSubscribeSeenRef.current = true;
-            return;
-          }
-          void fetchStatusRef.current();
-        }),
-    [branchId],
-  );
 
   // A failed job outranks the heartbeat tone: agent online + dead printer
   // looked healthy before — the count is the actual paper-out-of-tray truth.
