@@ -9,6 +9,7 @@
     "build": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\" && esbuild src/index.ts --bundle --platform=node --target=node24 --format=esm --outfile=dist/index.js --external:bufferutil --external:utf-8-validate --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/__tests__/*.test.ts",
     "presence:provision": "tsx src/ops/provision-presence-token.ts",
     "test:print": "tsx scripts/test-print.ts"
   },

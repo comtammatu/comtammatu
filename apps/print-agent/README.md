@@ -96,6 +96,9 @@ Uninstall:
 | `AGENT_VERSION`              | no                           | Reported in heartbeat row                                                                                                                                                                                                                               |
 | `WEB_BASE_URL`               | no                           | Web app base URL for branch-presence registration.                                                                                                                                                                                                      |
 | `PRINT_AGENT_PRESENCE_TOKEN` | required with `WEB_BASE_URL` | Raw per-agent bearer token for `/api/branch-presence`. Store only its SHA-256 hash in `printer_agent_presence_tokens`.                                                                                                                                  |
+| `PRINT_TIMEOUT_MS`           | no                           | Per-attempt socket timeout. Default `5000`.                                                                                                                                                                                                            |
+| `PRINT_MAX_ATTEMPTS`         | no                           | Total send attempts before a job is marked `failed`. Default `3`. A resend stops the moment any bytes reach the printer, so a half-sent ticket is never duplicated.                                                                                       |
+| `PRINT_RETRY_BACKOFF_MS`     | no                           | Linear backoff base between attempts. Default `750` (750ms, 1500ms, …).                                                                                                                                                                                 |
 
 Provision or rotate the token from the repo CLI:
 

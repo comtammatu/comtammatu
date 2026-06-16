@@ -46,6 +46,13 @@ const requireEnv = (k: string): string => {
   return v;
 };
 
+const numEnv = (k: string, fallback: number): number => {
+  const raw = process.env[k];
+  if (raw === undefined || raw === "") return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+};
+
 const webBaseUrl = process.env.WEB_BASE_URL ?? null;
 const presenceToken = process.env.PRINT_AGENT_PRESENCE_TOKEN ?? null;
 const agentId = process.env.AGENT_ID ?? `agent-${process.pid}`;
@@ -75,6 +82,11 @@ const config = {
   // Optional — leave WEB_BASE_URL unset to disable presence registration.
   webBaseUrl,
   presenceToken,
+  // Transient LAN blips during a rush used to drop the ticket on the first
+  // timeout. Resend a few times with backoff before marking the job failed.
+  printTimeoutMs: numEnv("PRINT_TIMEOUT_MS", 5000),
+  printMaxAttempts: numEnv("PRINT_MAX_ATTEMPTS", 3),
+  printRetryBackoffMs: numEnv("PRINT_RETRY_BACKOFF_MS", 750),
 };
 
 const printerCache = new Map<number, PrinterRow>();
@@ -219,7 +231,11 @@ async function dispatch(job: PrintJobRow): Promise<void> {
 
   const bytes = await renderPayloadBitmap(job.payload);
 
-  await sendRawLAN(printer.lan_host, printer.lan_port ?? 9100, bytes);
+  await sendRawLAN(printer.lan_host, printer.lan_port ?? 9100, bytes, {
+    timeoutMs: config.printTimeoutMs,
+    maxAttempts: config.printMaxAttempts,
+    backoffMs: config.printRetryBackoffMs,
+  });
 }
 
 async function processJob(
