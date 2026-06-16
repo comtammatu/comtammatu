@@ -2588,7 +2588,7 @@ export type Database = {
           sort_order?: number
           tenant_id: number
           updated_at?: string
-          vat_rate: number
+          vat_rate?: number
         }
         Update: {
           base_price?: number
@@ -3138,6 +3138,7 @@ export type Database = {
           cash_received: number | null
           created_at: string
           created_by: string
+          customer_count: number
           discount_amount: number
           discount_note: string | null
           discount_type: string | null
@@ -3176,6 +3177,7 @@ export type Database = {
           cash_received?: number | null
           created_at?: string
           created_by: string
+          customer_count?: number
           discount_amount?: number
           discount_note?: string | null
           discount_type?: string | null
@@ -3214,6 +3216,7 @@ export type Database = {
           cash_received?: number | null
           created_at?: string
           created_by?: string
+          customer_count?: number
           discount_amount?: number
           discount_note?: string | null
           discount_type?: string | null

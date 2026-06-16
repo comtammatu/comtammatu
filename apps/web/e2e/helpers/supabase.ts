@@ -518,6 +518,7 @@ export async function createTestOrder(): Promise<TestOrder> {
       modifiers: [],
       sides: [],
       subtotal: context.unitPrice,
+      vat_rate: 0,
       status: "pending",
     })
     .select("id")
@@ -657,6 +658,7 @@ export async function createKdsTestTicket(
       modifiers: [],
       sides: [],
       subtotal: context.unitPrice,
+      vat_rate: 0,
       status: "pending",
     })
     .select("id")
@@ -787,6 +789,7 @@ export async function createKdsTestOrderWithTickets(
         modifiers: [],
         sides: [],
         subtotal: context.unitPrice,
+        vat_rate: 0,
         status: status === "cancelled" ? "cancelled" : status,
       })
       .select("id")
@@ -1014,6 +1017,7 @@ export async function addOrderItemToTestOrder(opts: {
       modifiers: [],
       sides: [],
       subtotal: context.unitPrice,
+      vat_rate: 0,
       status: "pending",
     })
     .select("id")

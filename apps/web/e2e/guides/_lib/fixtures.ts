@@ -275,6 +275,7 @@ export async function ensureOccupiedTableWithOrder(
         modifiers: [],
         sides: [],
         subtotal: unitPrice,
+        vat_rate: 0,
         status: "pending",
       },
       {
@@ -287,6 +288,7 @@ export async function ensureOccupiedTableWithOrder(
         modifiers: [],
         sides: [],
         subtotal: unitPrice,
+        vat_rate: 0,
         status: "pending",
       },
     ]);
@@ -387,6 +389,7 @@ export async function ensureSecondOrderSameTable(
       modifiers: [],
       sides: [],
       subtotal: unitPrice,
+      vat_rate: 0,
       status: "pending",
     });
   }
