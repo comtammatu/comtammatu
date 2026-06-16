@@ -628,45 +628,6 @@ export async function fetchTaxInvoicesPage(
   return { success: true, data: { items, hasMore, nextCursor } };
 }
 
-/* ─── Revenue Dashboard ─── */
-
-export async function fetchDailyRevenue(
-  branchId: number,
-  startDate: string,
-  endDate: string,
-): Promise<ActionResult> {
-  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  const parsedStart = z.string().date().safeParse(startDate);
-  const parsedEnd = z.string().date().safeParse(endDate);
-  if (!parsedStart.success || !parsedEnd.success) {
-    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    REPORT_ROLES,
-    PERMISSION_KEYS.FINANCE_VIEW,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase } = ctx;
-
-  const { data, error } = await supabase.rpc("get_daily_revenue", {
-    p_branch_id: parsedBranch.data,
-    p_start_date: parsedStart.data,
-    p_end_date: parsedEnd.data,
-  });
-
-  if (error) {
-    return { success: false, error: "Không thể tải dữ liệu doanh thu." };
-  }
-
-  return { success: true, data: data ?? [] };
-}
-
 /* ─── fetchRevenueRollup — aggregate mv_daily_revenue theo day/week/month ─ */
 
 const REVENUE_GRANULARITY = ["day", "week", "month"] as const;

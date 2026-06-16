@@ -836,3 +836,23 @@ Tiến độ wave (đối chiếu code thật trên `main`, KHÔNG từ baseline
 **Pending / follow-up:** (1) **Retire `codex/continue-ts`** (xoá local+remote) CHỈ sau khi có ≥1 production deploy xanh từ `main`. (2) Cập nhật mọi tham chiếu "Branch chuẩn = `codex/continue-ts`" (gồm D032 Status) + AGENTS.md/rules nếu còn nhắc Go-port → `main`. (3) Dọn branch stale `fix/print-agent-retry-backoff`.
 
 **Rollback:** `git push --force origin archive/main-go-port:main` (đưa main về Go-port cũ trong vài giây).
+
+## D034: Xóa server action scaffold chưa wire (E4 stocktake conflict/escalation, supplier-returns write, dashboard/PO/archive analytics) — bỏ scaffold, build lại khi có yêu cầu thật (2026-06-17)
+
+**Decision:** Xóa 18 server action exported-but-unwired (0 caller mọi hình thức, adversarial-verified) + các type return dùng riêng cho chúng. GIỮ anh em LIVE cùng file và GIỮ `DashboardSummary` (return type của `getInventoryDashboard` đang live — scan Pha B nhầm). RPC giữ nguyên: 6-channel scan Pha B cho 13 ứng viên = 0 cái Tier-A `total=0` an toàn → Dead-RPC drop để wave riêng khi prod bật function-tracking (xem todo.md "Dead-RPC drop wave 2").
+
+**Why (verify vs CODE + decisions; nguồn: audit + Codex outside-voice + 6-channel Pha B):**
+- 18 action không caller nào (static/dynamic import, form action, prop, re-export, test — `rg -U` multiline đều 0).
+- Phần lớn là scaffold feature đã park (E4 "Inventory unbuilt scaffolds" — D031 Track E4; supplier returns P1-deferred — regression `INVENTORY-PILOT-CONTRACT-V2`). Owner chốt **bỏ scaffold** thay vì giữ chờ wire: git history là bản lưu, build lại từ đầu khi có yêu cầu thật. Đính chính hướng D031-E4 "chỉ build lại khi cần" = KHÔNG giữ scaffold chết trong cây.
+
+**Danh sách xóa (function + type dùng riêng):**
+- `finance/actions.ts`: `fetchDailyRevenue`
+- `finance/archive-actions.ts`: `forceArchiveTaxInvoice`, `backfillArchiveByDateRange`
+- `inventory/dashboard-actions.ts`: `getInventoryAlerts`, `refreshDashboardMv` (giữ `getInventoryDashboard` + type family `Dashboard*`/`InventoryDashboard`)
+- `inventory/purchase-order-actions.ts`: `fetchPriceDeviations`+`PriceDeviationRow`, `fetchIngredientPriceHistory`+`PriceHistoryRow` (giữ `fetchSinglePriceDeviation`+`SinglePriceDeviation`)
+- `inventory/stocktake-actions.ts`: `closeRecountRound`+`CloseRecountResult`, `escalateRound4`, `finalizeStocktake`, `listStocktakeConflicts`+`StocktakeConflictRow`, `resolveStocktakeConflict`
+- `inventory/supplier-return-actions.ts`: `createSupplierReturnFromGrn`, `createSupplierReturnFromStock`, `confirmSupplierReturn`, `transitionSupplierReturn` (giữ `fetchSupplierReturns`/`fetchSupplierReturnDetail` — supplier-returns list/detail pages dùng)
+- `pos/payment-actions.ts`: `confirmPayment` (base, đã bị thay bởi `confirm{Cash,VietQr}PaymentWithInvoice`) + `ConfirmPaymentResult` (giữ `CashPaymentResult`/`ConfirmVietQrPaymentResult`/`InvoiceOutcome` — live qua `confirm{Cash,VietQr}Payment`)
+- `pos/print-actions.ts`: `sendToKitchen`
+
+**Không đụng:** RPC baseline (defer wave có telemetry); `resolve_stocktake_conflict` RPC vẫn dùng inline ở stocktake session detail (giữ). **Gate:** `pnpm verify` sau xóa + regen i18n baseline nếu line shift.
