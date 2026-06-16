@@ -821,3 +821,21 @@ Tiến độ wave (đối chiếu code thật trên `codex/continue-ts`, KHÔNG 
 - **W1 (G) — XONG.** P0 keyset-pagination tax + supplier invoices đã có sẵn (`60a33f54`); phần Revenue còn lại (bỏ re-fetch unbounded, dùng `invoice_attention_count` period-scoped, xóa hàm dead) = `b5609d27`. Gate tsc+eslint+ui-contract xanh.
 - **W4 (F) — XONG (stream song song).** Fold order-item + tax-invoice badge → StatusBadge registry = `6793b539`.
 - **W2/W3/W5 — còn lại; PHẢI reconcile với `codex/continue-ts` trước khi làm** (baseline stale; spot-check inventory `45.000đđ` vẫn còn → W2 còn hiệu lực). Mục [OPEN] (dark-mode scope, radius) → sửa D032 trước khi apply.
+
+## D033: `main` bị thay hoàn toàn bằng `codex/continue-ts` — bỏ Go-port (2026-06-16)
+
+**Decision:** `main` được ghi đè bằng nội dung `codex/continue-ts`. Nhánh Go-port (port BE sang Go + plain-Postgres, rời Supabase) bị bỏ hẳn. Trunk giữ tên `main`; `codex/continue-ts` sẽ retire sau khi prod deploy từ `main` xanh.
+
+**Why (verify vs CODE + PROD + Vercel, KHÔNG từ docs cũ):**
+- 2 nhánh phân kỳ từ `cf052df8` (2026-05-13): `main` = +61 commit Go-only (HEAD `0767b59e`, đông cứng từ 2026-05-18, 84 file `.go` + `backend/`); `codex/continue-ts` = +241 commit TS (HEAD hôm nay, 0 file Go).
+- **Prod DB ledger** (Supabase `iexwsuaqqenyjiskawoj`) tail trùng khít HEAD codex (`…250000_revoke_sync_missing_permissions` + `…260000_gate_refresh_finance_views`); **không** migration Go nào của main (Phase A `public.users` superset / repoint FK / profiles→view / JWT-claims pgxpool / plain-postgres seed) có trong ledger → Go-port chưa từng chạm prod.
+- **Vercel production** = project `comtammatu-web`, production branch = `main`; trước swap main đông cứng nên prod chạy bằng **promote thủ công** các preview của codex. Sau swap, push `main` auto-deploy production (xác nhận: `dpl_AyEHmWoRMhe7…` ref=main target=production) → hết cần promote tay.
+
+**Mechanism (force-overwrite, no tombstone — owner chọn xoá khỏi trunk + archive tag):**
+- Go-port lưu lại để khôi phục: tag `archive/go-port-2026-05` + branch `archive/main-go-port` (cả hai → `0767b59e`) trên origin.
+- `git push --force-with-lease=main:0767b59e origin codex/continue-ts:main` → `origin/main` = `d4ac4c14` (= codex, diff rỗng). PR #59 ("Greenfield rebuild") tự **MERGED** (codex commits reachable từ main).
+- WIP payroll-2026 (PIT 5 bậc từ kỳ tính thuế + BHXH cap step 2026-07) committed lên codex trước swap = `d4ac4c14`; verify 235/235 test shared + typecheck + regression-guards xanh.
+
+**Pending / follow-up:** (1) **Retire `codex/continue-ts`** (xoá local+remote) CHỈ sau khi có ≥1 production deploy xanh từ `main`. (2) Cập nhật mọi tham chiếu "Branch chuẩn = `codex/continue-ts`" (gồm D032 Status) + AGENTS.md/rules nếu còn nhắc Go-port → `main`. (3) Dọn branch stale `fix/print-agent-retry-backoff`.
+
+**Rollback:** `git push --force origin archive/main-go-port:main` (đưa main về Go-port cũ trong vài giây).
