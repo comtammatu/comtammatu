@@ -245,6 +245,26 @@ async function fetchUnpaidSupplierInvoiceRisk({
   );
 }
 
+// Payment/order desync ops alert: completed payments whose order is not marked
+// paid (the orphan-gateway risk from POS calling the provider before the DB
+// lock). Reuses the tenant-wide, finance:view-gated RPC; branch filter N/A.
+async function fetchPaymentOrderDesync({
+  supabase,
+  since,
+}: {
+  supabase: SupabaseClient;
+  since: string;
+}): Promise<{ count: number; amount: number }> {
+  const { data, error } = await supabase.rpc("find_payment_order_desync", {
+    p_since: since,
+  });
+  if (error || !data) return { count: 0, amount: 0 };
+  return {
+    count: data.length,
+    amount: data.reduce((sum, row) => sum + toNumber(row.amount), 0),
+  };
+}
+
 async function fetchInventoryCashTiedItems({
   supabase,
   tenantId,
@@ -401,12 +421,14 @@ function buildExceptions({
   cashVariance,
   foodCostRows,
   unpaidSupplierInvoices,
+  paymentDesync,
 }: {
   kpis: FinanceCockpitKpis;
   dashboardSummary: { invoice_attention_count: number } | null;
   cashVariance: CashVarianceSummary | null;
   foodCostRows: FoodCostRow[];
   unpaidSupplierInvoices: { count: number; amount: number };
+  paymentDesync: { count: number; amount: number };
 }): FinanceException[] {
   const missingCostCount = foodCostRows.filter(
     (row) => toNumber(row.revenue) > 0 && toNumber(row.ingredient_cost) <= 0,
@@ -476,6 +498,15 @@ function buildExceptions({
       href: "/inventory/supplier-invoices",
       tone: unpaidSupplierInvoices.count > 0 ? "warning" : "neutral",
     },
+    {
+      label: copy.exceptions.paymentDesyncLabel,
+      value: formatCount(paymentDesync.count),
+      hint:
+        paymentDesync.count > 0
+          ? copy.exceptions.paymentDesyncHint(formatCount(paymentDesync.count))
+          : copy.exceptions.paymentDesyncClear,
+      tone: paymentDesync.count > 0 ? "warning" : "neutral",
+    },
   ];
 }
 
@@ -499,6 +530,7 @@ export async function fetchFinanceCockpit(
     operatingExpense,
     compareOperatingExpense,
     unpaidSupplierInvoices,
+    paymentDesync,
   ] = await Promise.all([
     fetchAccessibleBranches(),
     fetchRevenueKpis(params.branch, resolved.start, resolved.end),
@@ -546,6 +578,7 @@ export async function fetchFinanceCockpit(
       supabase,
       tenantId: claims.tenant_id,
     }),
+    fetchPaymentOrderDesync({ supabase, since: resolved.start }),
   ]);
 
   const branches = (
@@ -650,6 +683,7 @@ export async function fetchFinanceCockpit(
         : null,
       foodCostRows,
       unpaidSupplierInvoices,
+      paymentDesync,
     }),
   };
 }

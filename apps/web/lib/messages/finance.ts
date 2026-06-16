@@ -146,6 +146,10 @@ export const finance = {
       invoiceAttentionHint: "Có hóa đơn còn nháp, đang ký hoặc chưa hoàn tất.",
       supplierInvoiceLabel: "Hóa đơn nhà cung cấp chưa thanh toán",
       supplierInvoiceHint: (count: string) => `${count} hóa đơn đang mở`,
+      paymentDesyncLabel: "Lệch thanh toán với đơn",
+      paymentDesyncHint: (count: string) =>
+        `${count} thanh toán đã thu nhưng đơn chưa ghi "đã thanh toán"`,
+      paymentDesyncClear: "Không có thanh toán nào lệch với đơn",
       unnamedMenuItem: "Món chưa đặt tên",
     },
   },
