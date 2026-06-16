@@ -56,7 +56,7 @@ export function BatchActions({
       variant: "destructive",
     });
     if (!ok) return;
-    await onCompleteTickets(activeTicketIds);
+    void onCompleteTickets(activeTicketIds);
   };
 
   const action = (

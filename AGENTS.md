@@ -19,6 +19,7 @@ Before implementation, read the applicable rule files:
 - Read `docs/agent/rules/database.md` for Supabase, migrations, RLS, ACL, auth, Server Actions, RPCs, or database type work.
 - Read `docs/agent/rules/ui.md` before any UI, UX, route surface, component, styling, or copy change.
 - Read `docs/agent/rules/workflow.md` for review-tier rules (T3 full debate / T2 self-review / T1 skip), verification, and completion gates.
+- Read `docs/agent/rules/team.md` for the standing operating-team roles and missions, the end-to-end task loop, and the cross-runtime (Codex) review pass.
 - Read `docs/agent/rules/references.md` when onboarding or choosing the source-of-truth docs for a task.
 
 Instruction memory and learning memory stay separate:
@@ -117,3 +118,5 @@ Pick review depth by blast radius (full rules in `docs/agent/rules/workflow.md`)
 - **T3 — full debate** (auth/RLS, money, multi-row writes, new `SECURITY DEFINER` RPC, schema-changing migration, data backfill). Write or spawn all four perspectives (PM / BA / Senior Dev / QA) before coding.
 - **T2 — self-review** (everything else that changes behavior). Write 2–4 lines per perspective in the task notes / PR body before coding.
 - **T1 — skip** allowed only for typo fixes under 3 changed lines, doc-only changes, and dependency version bumps with no API change. State the skip reason in the commit body.
+
+For how these tiers sit inside the end-to-end team loop (intake → land → learn) and the cross-runtime Codex review pass, see `docs/agent/rules/team.md`.

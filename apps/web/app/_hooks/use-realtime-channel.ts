@@ -61,21 +61,52 @@ export function useRealtimeChannel(
     // callback evicts from `socket.channels`. realtime-js's
     // `channel(topic)` dedups by topic and returns the existing channel
     // from that list, so any re-subscribe (auth event race, navigation
-    // remount, strict-mode double-mount) that runs before the leave
-    // round-trip completes hands back the stale, already-subscribed
-    // channel — calling `.on('postgres_changes', ...)` on it then
-    // throws "cannot add `postgres_changes` callbacks for ... after
-    // `subscribe()`". Mirror what `_onClose` does (filter the channels
-    // array by topic) NOW so the next `supabase.channel(topic)` builds
-    // a fresh channel. The async leave still runs, idempotent.
+    // remount, Fast Refresh / strict-mode double-mount) that runs before
+    // the leave round-trip completes hands back the stale,
+    // already-subscribed channel — calling `.on('postgres_changes', ...)`
+    // on it then throws "cannot add `postgres_changes` callbacks for ...
+    // after `subscribe()`". `evict` mirrors what `_onClose` does (drop the
+    // channel from `socket.channels` synchronously) so the next
+    // `supabase.channel(topic)` builds fresh. The async leave still runs,
+    // idempotent.
     type RealtimeInternals = { _remove: (c: RealtimeChannel) => void };
+    const evict = (stale: RealtimeChannel) => {
+      void supabase.removeChannel(stale);
+      (supabase.realtime as unknown as RealtimeInternals)._remove(stale);
+    };
+
     const teardownChannel = () => {
       if (channel === null) return;
       const stale = channel;
       channel = null;
-      void supabase.removeChannel(stale);
-      (supabase.realtime as unknown as RealtimeInternals)._remove(stale);
+      evict(stale);
     };
+
+    // `teardownChannel` only evicts the channel THIS effect created. A
+    // channel left in the process-global singleton socket (one socket for
+    // the whole tab via `@supabase/ssr`'s `createBrowserClient`) by an
+    // overlapping mount/unmount, a Fast Refresh remount, or a second live
+    // subscriber on the same topic is invisible to it — and realtime-js's
+    // topic dedup would hand that already-joined channel to the builder's
+    // `.channel(topic)`, throwing on the chained `.on(...)`. Wrap the
+    // client so the builder's `.channel(topic)` force-evicts any same-topic
+    // channel before creating a fresh one. `_remove` stays internal and
+    // the topic naming convention is unchanged.
+    const freshChannelClient = new Proxy(supabase, {
+      get(target, prop, receiver) {
+        if (prop !== "channel") return Reflect.get(target, prop, receiver);
+        return (
+          name: string,
+          opts?: Parameters<SupabaseClient["channel"]>[1],
+        ): RealtimeChannel => {
+          const topic = `realtime:${name}`;
+          for (const existing of target.realtime.getChannels()) {
+            if (existing.topic === topic) evict(existing);
+          }
+          return target.channel(name, opts);
+        };
+      },
+    });
 
     const subscribeWithToken = (token: string | null) => {
       if (cancelled) return;
@@ -89,7 +120,7 @@ export function useRealtimeChannel(
         // yet — explicit setAuth ensures the JOIN frame carries it.
         void supabase.realtime.setAuth(token);
       }
-      channel = setupRef.current(supabase);
+      channel = setupRef.current(freshChannelClient);
     };
 
     void supabase.auth

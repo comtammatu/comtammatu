@@ -631,7 +631,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'branch_manager', 'cashier', 'waiter')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -676,7 +676,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role = 'owner' THEN
     SELECT b.code INTO v_branch_code
       FROM public.branches b
      WHERE b.id = v_source.branch_id AND b.tenant_id = v_prof_tenant;
