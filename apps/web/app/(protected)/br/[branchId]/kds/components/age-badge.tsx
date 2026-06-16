@@ -2,12 +2,17 @@
 
 import { cn } from "@comtammatu/ui";
 
-type AgeBadgeSize = "default" | "lg";
+type AgeBadgeSize = "compact" | "default" | "lg";
 
 const SIZE_CLASS: Record<
   AgeBadgeSize,
   { container: string; number: string; label: string }
 > = {
+  compact: {
+    container: "rounded-md px-2 py-0.5 xl:px-2.5 xl:py-1",
+    number: "text-xs xl:text-sm",
+    label: "text-xs xl:text-sm",
+  },
   default: {
     container: "rounded-full px-3 py-1",
     number: "text-base",
@@ -32,9 +37,16 @@ export function AgeBadge({
   size = "default",
 }: AgeBadgeProps) {
   const sizeClass = SIZE_CLASS[size];
+  const tierSuffix = isComplete
+    ? ""
+    : elapsedMinutes >= 10
+      ? ", quá hạn"
+      : elapsedMinutes >= 5
+        ? ", trễ"
+        : "";
   return (
     <div
-      aria-label={`${elapsedMinutes} phút`}
+      aria-label={`${elapsedMinutes} phút${tierSuffix}`}
       className={cn(
         "flex shrink-0 items-baseline justify-center gap-1 border text-center",
         sizeClass.container,

@@ -1,4 +1,5 @@
 import {
+  ORDER_ITEM_STATUS_LABELS_VI,
   ORDER_PAYMENT_STATUS_LABELS_VI,
   ORDER_STATUS_LABELS_VI,
   PAYMENT_RECORD_STATUS_LABELS_VI,
@@ -27,6 +28,16 @@ const STATUS_DOMAINS = {
       ready: "success",
       served: "success",
       completed: "secondary",
+      cancelled: "destructive",
+    },
+  },
+  "order-item": {
+    labels: ORDER_ITEM_STATUS_LABELS_VI,
+    variants: {
+      pending: "warning",
+      preparing: "warning",
+      ready: "success",
+      served: "success",
       cancelled: "destructive",
     },
   },

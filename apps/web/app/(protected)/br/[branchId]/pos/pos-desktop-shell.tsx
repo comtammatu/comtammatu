@@ -1645,7 +1645,8 @@ function PosDesktopInner({
     <ToggleGroup
       type="single"
       value={cartOrderType}
-      className="grid h-10 w-full grid-cols-2 overflow-hidden !rounded-none bg-muted/60"
+      size="touch"
+      className="grid w-full grid-cols-2 overflow-hidden !rounded-none bg-muted/60"
       aria-label={messages.pos.desktop.serviceModeAria}
       onValueChange={(value) => {
         if (value === "dine_in" || value === "takeaway") {

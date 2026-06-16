@@ -71,9 +71,10 @@ const TableButton = memo(function TableButton({
     <Button
       type="button"
       variant={isSelected ? "default" : "outline"}
+      size="tile"
       aria-label={messages.pos.tableGate.tableAria(table.number, statusLabel)}
       className={cn(
-        "h-32 w-full min-w-0 flex-col items-stretch justify-start gap-2 p-2.5 text-left whitespace-normal hover:shadow-md sm:h-36 sm:gap-3 sm:p-3 lg:h-40 lg:p-4 xl:h-44",
+        "w-full min-w-0 flex-col items-stretch justify-start gap-2 p-2.5 text-left whitespace-normal hover:shadow-sm sm:gap-3 sm:p-3 lg:p-4",
         isSelected
           ? "shadow-md"
           : tileVisualState === "empty"
@@ -115,7 +116,7 @@ const TableButton = memo(function TableButton({
       </div>
 
       <div className="mt-auto flex w-full min-w-0 items-end justify-between gap-2">
-        <p className="text-3xl font-semibold leading-none tabular-nums">
+        <p className="text-2xl font-semibold leading-none tabular-nums">
           {table.number}
         </p>
         {orderCount >= 2 && (

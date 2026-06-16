@@ -178,7 +178,6 @@ const checks = [
       // variant/tone maps (or label+variant maps already sourced from
       // @comtammatu/shared *_STATUS_LABELS_VI), not new label duplication.
       // Folding the variants into status-badge.tsx domains is a later wave.
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-row.tsx": 1,
       "apps/web/app/(protected)/finance/revenue/[date]/page.tsx": 1,
       "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx": 1,
       "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 1,
@@ -312,6 +311,24 @@ const checks = [
       "Navigation is data: ShellNavGroup[] literals inside a shell are frozen; new inline nav must project from nav-config.ts through a shared resolver (design-system.md § D / D019).",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern: /ShellNavGroup\[\]\s*=\s*\[/g,
+    allowlist: {},
+  },
+  {
+    id: "hover-shadow-rung",
+    description:
+      "Hover elevation caps at the shadow-sm Hover rung; hover:shadow-md/lg/xl/2xl is an over-elevated rung (design-system.md § Elevation / Shadow).",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern:
+      /className=\{?(?:cn\()?['"][^'"]*\bhover:shadow-(?:md|lg|xl|2xl)\b/g,
+    allowlist: {},
+  },
+  {
+    id: "motion-color-duration",
+    description:
+      "Color/border feedback uses duration-150; duration-300 is the overlay enter/exit token. transition-colors paired with duration-300 is the wrong locked duration (design-system.md § Motion Contract).",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern:
+      /className=\{?(?:cn\()?['"][^'"]*\btransition-colors\b[^'"]*\bduration-300\b/g,
     allowlist: {},
   },
 ];
@@ -767,14 +784,14 @@ for (const file of walkFiles("apps/web/app", [".tsx"])) {
 }
 
 // button-height-on-button (D030): the touch-height ratchet is scoped to the
-// shared <Button>/<TouchButton>. A raw h-10/11/12/14/16 or min-h-12/14/16 on a
+// shared <Button>/<TouchButton>. A raw h-10..h-44 or min-h-12..min-h-24 on a
 // button is height drift that should use a size variant; raw heights on
 // non-button elements (Input/Select/Skeleton/layout containers) are out of
 // scope by design (design-system.md § Enforcement Status — the old "any raw
 // height" gate was ~37 non-button false-positives). The tag scanner is
-// brace/string-aware, so cn() and multi-line className props are covered — the
-// four allowlisted hits are exactly the form-control trigger buttons the old
-// className-literal regex missed.
+// brace/string-aware, so cn() and multi-line className props are covered. The
+// baseline = form-control trigger buttons (40px field row) plus a few bespoke
+// single-use tap tiles (≥h-20) that do not warrant a shared size variant.
 const BUTTON_HEIGHT_BASELINE = {
   // Form-control trigger buttons (combobox / multi-select / date-picker) matched
   // to the 40px field-row height. No Button size variant renders 40px (lg=h-9
@@ -784,8 +801,16 @@ const BUTTON_HEIGHT_BASELINE = {
   "apps/web/app/components/form/combobox-field.tsx": 1,
   "apps/web/app/components/form/combobox.tsx": 1,
   "apps/web/app/components/form/multi-select-combobox.tsx": 1,
+  // Bespoke single-use tap targets (full-row / stacked icon-over-label tiles ≥
+  // h-20) that do not warrant a shared Button size variant. Frozen so a new raw
+  // ≥h-20 height on a Button still fails CI.
+  "apps/web/app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx": 1,
+  "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
+  "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-row.tsx": 1,
+  "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 3,
 };
-const BUTTON_HEIGHT_TOKEN = /\b(?:h-(?:10|11|12|14|16)|min-h-(?:12|14|16))\b/;
+const BUTTON_HEIGHT_TOKEN =
+  /\b(?:h-(?:10|11|12|14|16|20|24|28|32|36|40|44)|min-h-(?:12|14|16|20|24))\b/;
 for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
   const normalized = toPosix(filePath);
   const content = fs.readFileSync(filePath, "utf8");

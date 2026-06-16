@@ -143,7 +143,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
           <CardFooter>
             <Button
               className="w-full"
-              size="lg"
+              size="touch-lg"
               disabled={!canOpen}
               onClick={handleOpen}
             >

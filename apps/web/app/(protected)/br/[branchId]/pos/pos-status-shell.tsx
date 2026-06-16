@@ -28,7 +28,7 @@ export function PosStatusShell({
       icon={icon}
       iconClassName="size-12 border border-border/70 bg-background/80 text-primary shadow-sm"
       title={title}
-      titleClassName="text-3xl font-semibold tracking-tight"
+      titleClassName="text-xl font-semibold tracking-tight sm:text-2xl"
     >
       <Badge variant={badge.variant ?? "info"}>
         {badge.icon}

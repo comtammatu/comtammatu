@@ -100,7 +100,7 @@ function OrderCardComponent({
     <Card
       data-testid={`kds-order-card-${order.groupKey}`}
       className={cn(
-        "min-w-0 gap-0 overflow-hidden border-l-2 py-0 transition-shadow hover:shadow-md",
+        "min-w-0 gap-0 overflow-hidden border-l-2 py-0",
         borderClass,
         getCardLeftAccent(overallStatus, elapsed),
         className,

@@ -16,6 +16,7 @@ import {
   RotateCcw as IconRotate,
 } from "lucide-react";
 import { useBoardTick } from "../hooks/use-board-tick";
+import { AgeBadge } from "./age-badge";
 import { getAgeStyle, getCardLeftAccent } from "../lib/age-style";
 import {
   getItemRowStatusClass,
@@ -122,7 +123,7 @@ function CompactItemRow({
       data-testid={`kds-heatmap-item-${String(item.id)}`}
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-1.5 gap-y-1 border-t border-border/40 py-1.5 transition-colors duration-300 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[3.5rem_minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
+        "grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-1.5 gap-y-1 border-t border-border/40 py-1.5 transition-colors duration-150 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[3.5rem_minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
         getItemRowStatusClass(status),
         getKdsRowEffectClass(rowEffect),
       )}
@@ -262,7 +263,7 @@ function CompactOrphanRow({
     <div
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-1.5 border-t border-border/40 py-1.5 transition-colors duration-300 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
+        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-1.5 border-t border-border/40 py-1.5 transition-colors duration-150 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
         getItemRowStatusClass(ticket.status),
         getKdsRowEffectClass(rowEffect),
       )}
@@ -385,7 +386,7 @@ function HeatmapCard({
         "min-w-0 gap-0 overflow-hidden border-l-2 p-2 xl:p-3",
         ageStyle.bg,
         isCurrent &&
-          "relative z-10 border-warning bg-warning/25 shadow-xl ring-2 ring-warning/70",
+          "relative z-10 border-warning bg-warning/25 ring-2 ring-warning/70",
         getCardLeftAccent(status, elapsed),
       )}
     >
@@ -434,12 +435,11 @@ function HeatmapCard({
               {getStatusLabel(status)}
             </Badge>
           )}
-          <Badge
-            variant={getStatusVariant(status)}
-            className="shrink-0 px-2 py-0.5 text-xs font-semibold xl:px-2.5 xl:py-1 xl:text-sm"
-          >
-            {elapsed}p
-          </Badge>
+          <AgeBadge
+            elapsedMinutes={elapsed}
+            isComplete={status === "ready"}
+            size="compact"
+          />
         </div>
       </div>
       <div className="mt-2 min-w-0 rounded-md border border-border/50 bg-card/70 p-1.5 xl:mt-3 xl:p-2">

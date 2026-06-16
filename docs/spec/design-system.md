@@ -269,10 +269,12 @@ Eyebrow tracking is locked per surface: `tracking-wide` for the single page-head
 | `icon-sm`  | `size-7`   | Icon-only compact                                                                        |
 | `icon`     | `size-8`   | Icon-only default                                                                        |
 | `icon-lg`  | `size-9`   | Icon-only large                                                                          |
+| `icon-touch` | `size-12` | Icon-only touch target (POS header overflow) — 48px WCAG 2.5.5 enhanced |
+| `tile`     | `min-h-32`→`min-h-44` (responsive) | Oversized selectable tile (POS table-gate); `min-h-` so wrapped labels grow |
 
 Fixed heights `h-10`, `h-11`, `h-12`, `h-14`, `h-16` MUST NOT be applied to `<button>`, `<Link>`, or `<Button>` acting as a button. Min-heights `min-h-12`, `min-h-14`, `min-h-16` MUST come from the `touch` / `touch-lg` variants — do not override on a different variant via `className`. Touch CTAs use `min-h-` rather than fixed `h-` so wrapped labels grow vertically without clipping.
 
-If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove targets), add a variant to `Button` cva once. Never fake a button by setting `<button className="min-h-12 ...">` outside the primitive.
+If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove targets), add a variant to `Button` cva once. Never fake a button by setting `<button className="min-h-12 ...">` outside the primitive. The `tile` (POS table-gate selectable tile) and `icon-touch` (48px icon-only) `Button` sizes, and the `touch` / `touch-lg` sizes on the `Toggle` / `ToggleGroup` cva (POS segmented service-mode control), were added under this rule — consume them via `size=`, never a raw `h-*` / `min-h-*` on the group or item `className`. The `button-height-on-button` gate (below) enforces this for `<Button>`.
 
 `Input` (the bare primitive) is fixed at `h-7`. Composite form controls rendered through the `apps/web/app/components/form/*` layer use a taller `h-10` so labels, addons, and touch targets sit comfortably — set once in that layer, never per page.
 
@@ -668,6 +670,17 @@ Stage 0 gate status (each flips to **live** as its ratchet lands in
   and multi-line type annotations (`const X_STATUS: Record<…> = {`)
   that the old regex missed; current page-local maps are baselined for the W1
   status-registry burn-down.
+- `button-height-on-button` (§ D / Height Scale) — **live, widened**: the
+  raw-height token now spans `h-10`–`h-44` and `min-h-12`–`min-h-24` on
+  `<Button>`/`<TouchButton>`. The POS table-gate tile moved to a `tile` Button
+  size; a few bespoke single-use tap tiles (≥`h-20`: append-draft, cart row,
+  order-item ghost, bill payment tiles) are baselined as the accepted floor.
+- `hover-shadow-rung` (§ Elevation / Shadow) — **live**: `hover:shadow-md` /
+  `lg` / `xl` / `2xl` in app code fails CI. Hover elevation caps at the
+  `shadow-sm` Hover rung; resting surfaces separate with `--border`.
+- `motion-color-duration` (§ Motion Contract) — **live**: a `transition-colors`
+  className paired with `duration-300` fails CI. Color/border feedback is locked
+  to `duration-150`; `duration-300` is the overlay enter/exit token.
 
 #### Ratchet allowlist semantics — real-debt floor, not a zero backlog (gate-precision audit, 2026-06-15)
 

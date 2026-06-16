@@ -177,7 +177,7 @@ export function PrinterStatusBadge({
     <Badge
       variant="outline"
       className="gap-1 text-muted-foreground"
-      title="Chưa có print-agent nào kết nối cho chi nhánh này"
+      title="Chưa có máy in nào kết nối cho chi nhánh này"
     >
       <IconPrinter className="size-3.5" />
       <span className="hidden sm:inline">Máy in: chưa đăng ký</span>

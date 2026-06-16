@@ -18,7 +18,7 @@ export function CancelledOverlay() {
   return (
     <div
       className={cn(
-        "pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-destructive/20 motion-safe:transition-opacity motion-safe:duration-500",
+        "pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-destructive/20 motion-safe:transition-opacity motion-safe:duration-300",
         faded && "opacity-40",
       )}
       aria-hidden

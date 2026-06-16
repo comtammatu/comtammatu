@@ -108,7 +108,7 @@ const MenuItemButton = memo(function MenuItemButton({
         // aspect-[4/5] keeps the card scaling with width — a fixed min-h
         // gets too tall on mobile (390px width → 2-col gap-3 → ~181×226px
         // per card).
-        "group relative aspect-[4/5] h-auto min-w-0 w-full overflow-hidden p-0 text-left shadow-sm transition-transform hover:shadow-md active:scale-[0.97]",
+        "group relative aspect-[4/5] h-auto min-w-0 w-full overflow-hidden p-0 text-left transition-transform hover:shadow-sm active:scale-[0.97]",
         sparseMenu && "md:aspect-[3/2]",
         blocked && "opacity-60 grayscale hover:shadow-sm",
       )}
@@ -430,7 +430,7 @@ function PosMenuGridComponent({
                   className="flex min-w-0 flex-col gap-3"
                 >
                   <div className="sticky top-0 z-10 -mx-2 flex min-w-0 items-center justify-between gap-3 bg-background/95 px-2 py-2 backdrop-blur md:static md:mx-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none">
-                    <h2 className="font-heading truncate text-base font-bold text-foreground md:text-base md:font-semibold">
+                    <h2 className="font-heading truncate text-base font-semibold text-foreground">
                       {category.name}
                     </h2>
                     <Badge variant="outline" className="shrink-0 text-sm">

@@ -34,6 +34,8 @@ const buttonVariants = cva(
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-7",
         "icon-lg": "size-9",
+        "icon-touch": "size-12 [&_svg:not([class*='size-'])]:size-5",
+        tile: "h-auto min-h-32 sm:min-h-36 lg:min-h-40 xl:min-h-44",
       },
     },
     defaultVariants: {

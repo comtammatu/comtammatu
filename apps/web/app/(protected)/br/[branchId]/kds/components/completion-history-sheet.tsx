@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { formatVNDateTime } from "@comtammatu/shared/time";
+import { ORDER_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
@@ -38,8 +39,8 @@ const KDS_COMPLETION_HISTORY_COPY = {
 } as const;
 
 const ORDER_TYPE_LABELS: Record<string, string> = {
-  dine_in: "Ăn tại bàn",
-  takeaway: "Mang về",
+  dine_in: ORDER_TYPE_LABELS_VI.dine_in,
+  takeaway: ORDER_TYPE_LABELS_VI.takeaway,
   delivery: "Giao hàng",
 } as const;
 

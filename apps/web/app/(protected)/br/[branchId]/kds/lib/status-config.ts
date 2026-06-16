@@ -1,4 +1,7 @@
-import { KDS_TICKET_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
+import {
+  KDS_TICKET_STATUS_LABELS_VI,
+  ORDER_TYPE_LABELS_VI,
+} from "@comtammatu/shared/labels";
 import { getKdsTicketDisplayStatus } from "./order-status";
 
 export const STATUS_CONFIG = {
@@ -24,8 +27,8 @@ export function shouldShowTicketStatusBadge(status: string): boolean {
 }
 
 export const ORDER_TYPE_CONFIG: Record<string, { label: string }> = {
-  dine_in: { label: "Tại bàn" },
-  takeaway: { label: "Mang về" },
+  dine_in: { label: ORDER_TYPE_LABELS_VI.dine_in },
+  takeaway: { label: ORDER_TYPE_LABELS_VI.takeaway },
 };
 
 export function getOrderTypeLabel(orderType: string): string {

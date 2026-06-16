@@ -242,8 +242,8 @@ function CartPaneComponent({
           <ToggleGroup
             type="single"
             value={cart.orderType}
-            size="lg"
-            className="grid h-14 w-full grid-cols-2 overflow-hidden rounded-none bg-muted/60"
+            size="touch"
+            className="grid w-full grid-cols-2 overflow-hidden rounded-none bg-muted/60"
             aria-label="Chọn hình thức phục vụ"
             onValueChange={(value) => {
               if (
@@ -302,7 +302,7 @@ function CartPaneComponent({
                 const netSubtotal = calcItemNetSubtotal(item);
                 const discountLabel =
                   discountAmount > 0
-                    ? `Giảm món: -${formatVND(discountAmount)}${
+                    ? `Chiết khấu món: -${formatVND(discountAmount)}${
                         item.discount_note ? ` — ${item.discount_note}` : ""
                       }`
                     : null;
@@ -331,7 +331,7 @@ function CartPaneComponent({
                     <Item
                       variant="outline"
                       className={cn(
-                        "relative touch-pan-y rounded-none bg-card p-0 text-left shadow-sm transition-all duration-150 ease-out hover:shadow-md",
+                        "relative touch-pan-y rounded-none bg-card p-0 text-left transition-all duration-150 ease-out hover:shadow-sm",
                         isRemoving &&
                           "bg-destructive/10 opacity-0 motion-safe:scale-95",
                       )}
@@ -391,7 +391,7 @@ function CartPaneComponent({
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="pos-order-note"
-                className="text-sm font-semibold uppercase tracking-wide text-muted-foreground"
+                className="text-sm font-semibold uppercase tracking-wider text-muted-foreground"
               >
                 Ghi chú đơn
               </label>
@@ -416,7 +416,7 @@ function CartPaneComponent({
             <Card size="sm" className="mt-2 sm:mt-3">
               <CardContent className="relative flex flex-col gap-2 p-2.5 sm:gap-3 sm:p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                     Tổng tạm tính
                   </p>
                   <p className="ml-auto text-xl font-bold text-primary tabular-nums sm:text-2xl">

@@ -98,7 +98,7 @@ export function OrderItemActionsSheet({
   const netSubtotal =
     item == null ? 0 : Math.max(0, item.subtotal - discountAmount);
   const discountLine =
-    discountAmount > 0 ? `Giảm món: -${formatVND(discountAmount)}` : null;
+    discountAmount > 0 ? `Chiết khấu món: -${formatVND(discountAmount)}` : null;
 
   return (
     <Sheet

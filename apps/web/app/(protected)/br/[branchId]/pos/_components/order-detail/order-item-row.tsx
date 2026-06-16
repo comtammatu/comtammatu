@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
-import { ORDER_ITEM_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
@@ -40,30 +40,6 @@ interface OrderItemRowProps {
 }
 
 type RowChangeTone = "content" | "quantity" | "status" | "removed" | null;
-
-type StatusBadgeVariant =
-  | "warning"
-  | "info"
-  | "success"
-  | "destructive"
-  | "outline";
-
-const ITEM_STATUS_META: Record<
-  string,
-  { label: string; variant: StatusBadgeVariant }
-> = {
-  pending: { label: ORDER_ITEM_STATUS_LABELS_VI.pending, variant: "warning" },
-  preparing: {
-    label: ORDER_ITEM_STATUS_LABELS_VI.preparing,
-    variant: "warning",
-  },
-  ready: { label: ORDER_ITEM_STATUS_LABELS_VI.ready, variant: "success" },
-  served: { label: ORDER_ITEM_STATUS_LABELS_VI.served, variant: "success" },
-  cancelled: {
-    label: ORDER_ITEM_STATUS_LABELS_VI.cancelled,
-    variant: "destructive",
-  },
-};
 
 function getItemStatusToneClass(status: string): string {
   switch (status) {
@@ -169,16 +145,13 @@ function getRowChangeToneClass(tone: RowChangeTone): string | false {
 export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
   const cancelled = row.status === "cancelled";
   const displayName = getPosLineItemDisplayName(row);
-  const statusInfo = ITEM_STATUS_META[row.status] ?? {
-    label: row.status,
-    variant: "outline",
-  };
+  const statusInfo = getStatusBadgeMeta("order-item", row.status);
   const summary = getPosLineItemSummary(row);
   const changeTone = useOrderItemChangeTone(row);
   const discountAmount = Math.max(0, Number(row.discount_amount ?? 0));
   const netSubtotal = Math.max(0, row.subtotal - discountAmount);
   const discountLine =
-    discountAmount > 0 ? `Giảm món: -${formatVND(discountAmount)}` : null;
+    discountAmount > 0 ? `Chiết khấu món: -${formatVND(discountAmount)}` : null;
 
   return (
     <li className="w-full min-w-0 max-w-full">
@@ -186,7 +159,7 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
         variant="outline"
         size="sm"
         className={cn(
-          "w-full min-w-0 max-w-full rounded-none p-0 shadow-sm transition-colors duration-300",
+          "w-full min-w-0 max-w-full rounded-none p-0 shadow-sm transition-colors duration-150",
           getItemStatusToneClass(row.status),
           getRowChangeToneClass(changeTone),
           cancelled && "border-dashed",

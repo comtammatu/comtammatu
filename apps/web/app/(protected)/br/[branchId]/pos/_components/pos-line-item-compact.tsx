@@ -164,7 +164,7 @@ export function PosLineItemCompact({
   return (
     <div
       className={cn(
-        "flex w-full min-w-0 max-w-full gap-3 rounded-md p-1 transition-colors duration-300",
+        "flex w-full min-w-0 max-w-full gap-3 rounded-md p-1 transition-colors duration-150",
         getLineChangeToneClass(tone),
         className,
       )}

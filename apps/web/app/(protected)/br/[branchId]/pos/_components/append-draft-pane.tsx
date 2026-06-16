@@ -125,7 +125,7 @@ function AppendDraftPaneComponent({
                     variant="outline"
                     size="sm"
                     className={cn(
-                      "rounded-none bg-card p-0 pr-12 shadow-sm transition-all duration-150 hover:shadow-md sm:pr-14",
+                      "rounded-none bg-card p-0 pr-12 transition-all duration-150 hover:shadow-sm sm:pr-14",
                       isRemoving &&
                         "bg-destructive/10 opacity-0 motion-safe:scale-95",
                     )}

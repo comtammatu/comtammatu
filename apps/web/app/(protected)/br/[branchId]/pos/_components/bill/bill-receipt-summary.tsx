@@ -219,24 +219,32 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
       <div className="flex flex-col gap-1 text-xs">
         <div className="flex justify-between">
           <span>{messages.pos.receipt.subtotal}</span>
-          <span>{formatVND(order.subtotal)}</span>
+          <span className="font-mono tabular-nums">
+            {formatVND(order.subtotal)}
+          </span>
         </div>
         {order.tax_amount > 0 && (
           <div className="flex justify-between">
             <span>{messages.pos.receipt.tax}</span>
-            <span>{formatVND(order.tax_amount)}</span>
+            <span className="font-mono tabular-nums">
+              {formatVND(order.tax_amount)}
+            </span>
           </div>
         )}
         {order.service_charge > 0 && (
           <div className="flex justify-between">
             <span>{messages.pos.receipt.serviceCharge}</span>
-            <span>{formatVND(order.service_charge)}</span>
+            <span className="font-mono tabular-nums">
+              {formatVND(order.service_charge)}
+            </span>
           </div>
         )}
         {itemDiscountAmount > 0 && (
           <div className="flex justify-between">
             <span>Chiết khấu món</span>
-            <span>-{formatVND(itemDiscountAmount)}</span>
+            <span className="font-mono tabular-nums">
+              -{formatVND(itemDiscountAmount)}
+            </span>
           </div>
         )}
         {orderDiscountAmount > 0 && (
@@ -249,7 +257,9 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
                 ? ` (${order.discount_value}%)`
                 : ""}
             </span>
-            <span>-{formatVND(orderDiscountAmount)}</span>
+            <span className="font-mono tabular-nums">
+              -{formatVND(orderDiscountAmount)}
+            </span>
           </div>
         )}
         {orderDiscountAmount > 0 && order.discount_note && (
@@ -260,7 +270,9 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
         <Separator className="my-1" />
         <div className="flex justify-between text-sm font-bold">
           <span>{messages.pos.receipt.total}</span>
-          <span>{formatVND(order.total_amount)}</span>
+          <span className="font-mono tabular-nums">
+            {formatVND(order.total_amount)}
+          </span>
         </div>
         {isPaid &&
           order.payment_method === "cash" &&
@@ -269,13 +281,13 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
               <Separator className="my-1" />
               <div className="flex justify-between">
                 <span>{messages.pos.receipt.cashReceived}</span>
-                <span className="tabular-nums">
+                <span className="font-mono tabular-nums">
                   {formatVND(order.cash_received)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>{messages.pos.receipt.cashChange}</span>
-                <span className="tabular-nums font-medium">
+                <span className="font-mono tabular-nums font-medium">
                   {formatVND(order.cash_change ?? 0)}
                 </span>
               </div>

@@ -314,10 +314,17 @@ export const KDS_TICKET_STATUS_LABELS_VI = {
 /** order_items.status (DB order_items_status_check). */
 export const ORDER_ITEM_STATUS_LABELS_VI = {
   pending: "Chờ",
-  preparing: "Đang làm",
+  preparing: "Đang chuẩn bị",
   ready: "Sẵn sàng",
   served: "Đã phục vụ",
   cancelled: "Đã hủy",
+} as const;
+
+/** orders.order_type. Receipt invariant duplicates these strings in
+ * legal-fixed.ts — keep identical. */
+export const ORDER_TYPE_LABELS_VI = {
+  dine_in: "Tại bàn",
+  takeaway: "Mang về",
 } as const;
 
 /** tax_invoices.status (DB tax_invoices_status_check). */

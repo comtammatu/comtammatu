@@ -49,8 +49,8 @@ interface OrderRow {
 }
 
 const ORDER_TYPE_LABEL: Record<string, string> = {
-  dine_in: "Tại quán",
-  takeaway: "Mang đi",
+  dine_in: "Tại bàn",
+  takeaway: "Mang về",
 };
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = {

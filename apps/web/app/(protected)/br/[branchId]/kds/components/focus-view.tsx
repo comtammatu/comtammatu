@@ -402,7 +402,7 @@ function FocusOrderPanel({
                     data-testid={`kds-focus-item-${String(item.id)}`}
                     data-kds-effect={rowEffect ?? undefined}
                     className={cn(
-                      "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2 transition-colors duration-300 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 md:px-4",
+                      "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2 transition-colors duration-150 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 md:px-4",
                       getItemRowStatusClass(status),
                       getKdsRowEffectClass(rowEffect ?? null),
                       isCancelled && "opacity-100",
@@ -557,7 +557,7 @@ function FocusOrderPanel({
                     key={ticket.id}
                     data-kds-effect={rowEffect ?? undefined}
                     className={cn(
-                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-1.5 transition-colors duration-300 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
+                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-1.5 transition-colors duration-150 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
                       getItemRowStatusClass(status),
                       getKdsRowEffectClass(rowEffect),
                     )}

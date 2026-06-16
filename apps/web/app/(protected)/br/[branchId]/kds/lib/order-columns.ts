@@ -1,3 +1,4 @@
+import { ORDER_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
 import type { KdsOrder, KdsOrderItem } from "../types";
 
 const ADD_ON_CATEGORY_NAME = "thêm";
@@ -19,13 +20,13 @@ export interface KdsOrderColumn extends KdsOrderColumnDefinition {
 export const KDS_ORDER_COLUMN_DEFINITIONS = [
   {
     id: "dine_in",
-    title: "Tại bàn",
+    title: ORDER_TYPE_LABELS_VI.dine_in,
     emptyTitle: "Chưa có đơn tại bàn",
     widthClass: "xl:col-span-4",
   },
   {
     id: "takeaway",
-    title: "Mang về",
+    title: ORDER_TYPE_LABELS_VI.takeaway,
     emptyTitle: "Chưa có đơn mang về",
     widthClass: "xl:col-span-4",
   },

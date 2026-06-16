@@ -122,8 +122,8 @@ function PosMoreMenu({
         <Button
           type="button"
           variant="ghost"
-          size="icon"
-          className="size-10 shrink-0"
+          size="icon-touch"
+          className="shrink-0"
           aria-label={messages.pos.sessionHeader.moreMenuAria}
         >
           <IconMoreVertical />

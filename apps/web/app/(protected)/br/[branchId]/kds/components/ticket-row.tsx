@@ -93,7 +93,7 @@ function TicketRowItem({
       data-testid={`kds-order-item-${String(item.id)}`}
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 transition-colors duration-300 md:px-4",
+        "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 transition-colors duration-150 md:px-4",
         getItemRowStatusClass(status),
         getKdsRowEffectClass(rowEffect),
         isCancelled && "opacity-100",
@@ -186,7 +186,7 @@ function TicketRowOrphan({
     <div
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "relative grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 transition-colors duration-300 md:px-4",
+        "relative grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 transition-colors duration-150 md:px-4",
         getItemRowStatusClass(status),
         getKdsRowEffectClass(rowEffect),
       )}
