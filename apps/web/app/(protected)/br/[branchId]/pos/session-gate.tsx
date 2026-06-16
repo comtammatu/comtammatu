@@ -41,9 +41,8 @@ interface PosTerminal {
 interface SessionGateProps {
   branchId: number;
   /**
-   * Per-branch model (Owner D7, 2026-04-27): list dùng để cảnh báo "branch
-   * chưa có máy POS nào" (block mở ca). KHÔNG còn picker chọn máy — ca POS
-   * giờ thuộc branch, không thuộc terminal.
+   * Per-branch model (D7): list dùng để cảnh báo "branch chưa có máy POS
+   * nào" (block mở ca). POS session thuộc branch, không thuộc terminal.
    */
   terminals: PosTerminal[];
 }

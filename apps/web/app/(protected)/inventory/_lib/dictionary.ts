@@ -119,7 +119,7 @@ const VI_DICTIONARY: InventoryDictionary = {
     expired: { short: "Hết hạn", long: "Đã hết hạn" },
     critical: { short: "Sắp hết hạn", long: "Sắp hết hạn" },
     warning: { long: "Theo dõi" },
-    // kitchen_use retired 2026-04-25 — replaced by intra-branch stock_transfer.
+    // kitchen_use is not a valid stock-issue reason; use intra-branch stock_transfer.
     write_off: { short: "Ghi giảm", long: "Ghi giảm" },
     consumption: { long: "Tiêu hao" },
     storage_loss: { short: "Hao hụt kho", long: "Hao hụt kho" },

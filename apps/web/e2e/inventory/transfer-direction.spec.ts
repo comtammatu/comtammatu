@@ -422,8 +422,7 @@ test.describe("Transfer direction — branch-to-branch happy path", () => {
   });
 });
 
-// kitchen_use was retired 2026-04-25 (CHECK constraint + Zod enum drop).
-// Any attempt to persist `issue_type='kitchen_use'` now trips the CHECK.
+// Persisting `issue_type='kitchen_use'` trips the DB CHECK constraint.
 test.describe("stock_issue kitchen_use retired (Scenario 6)", () => {
   test("DB CHECK constraint rejects kitchen_use issue_type at any branch kind", async ({
     page: _page,

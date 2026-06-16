@@ -1,9 +1,9 @@
 /**
  * Single source for cashier-facing order status labels.
  *
- * Per 4-agent debate (synthesis 2026-04-26): UI-display collapse only.
- * DB enum keeps full 6-state lifecycle (new/confirmed/preparing/ready/served/
- * completed/cancelled) — chef KDS + reports + audit need that granularity.
+ * UI-display collapse only. DB enum keeps full 6-state lifecycle
+ * (new/confirmed/preparing/ready/served/completed/cancelled) — chef KDS +
+ * reports + audit need that granularity.
  *
  * Cashier rule of thumb: chỉ show 5 labels.
  *   - active (new/confirmed/preparing) → relative age "X phút" / "X tiếng"

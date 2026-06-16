@@ -1,5 +1,5 @@
 /**
- * HĐĐT reconcile cron — Path B (audit 2026-05-13).
+ * HĐĐT reconcile cron — Path B.
  *
  * Auth: Bearer CRON_SECRET (timing-safe compare). Same pattern as
  *       /api/cron/hddt-daily-summary.

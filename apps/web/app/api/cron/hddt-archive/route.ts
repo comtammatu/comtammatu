@@ -1,5 +1,5 @@
 /**
- * HĐĐT PDF/XML archive cron — Path D (audit 2026-05-13).
+ * HĐĐT PDF/XML archive cron — Path D.
  *
  * Auth: Bearer CRON_SECRET (timing-safe). Same pattern as
  *       /api/cron/hddt-{daily-summary,reconcile}.

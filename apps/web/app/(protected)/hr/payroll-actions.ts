@@ -243,7 +243,6 @@ export const calculatePayroll = withAction(
       return { success: false, error: "Không thể lưu bảng lương." };
     }
 
-    // TODO: migrate to atomic RPC (upsert entries + update status in one transaction)
     const { error: statusErr } = await supabase
       .from("payroll_periods")
       .update({ status: "calculated" })

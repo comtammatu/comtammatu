@@ -22,14 +22,16 @@
    - Rule: For M:1 embeds, treat the FK field as `{ ... } | null` (object), matching runtime. Use `row.parent as unknown as { ... } | null` (or pre-typed interface) to bridge supabase-js typegen quirk. Match `apps/web/app/(protected)/hr/attendance-table.tsx` (`record.shifts?.name`).
    - Prevention: Whenever you write `?.[0]?` on a select-embed, stop and check direction: if `child.fk → parent.pk` (M:1) it is an object, not an array; reserve `[0]` for reverse 1:M embeds.
 
-4. **`pnpm db:types` after every migration — turbo cache hides a stale type**
-   - The rule lives in `AGENTS.md`; the non-obvious failure: a stale `database.types.ts` passes turbo-cached `pnpm typecheck` yet fails Next.js build's stricter inline pass (saw `fn_generate_b03_dn` "not assignable"). Treat `supabase db push → pnpm db:types` as one atomic step before running gates.
-
-5. **Next.js 16.2 webpack + serwist intermittent cache poisoning**
+4. **Next.js 16.2 webpack + serwist intermittent cache poisoning**
    - Pattern: After regenerating `database.types.ts` mid-session, `pnpm build` failed with `uncaughtException TypeError: Cannot read properties of undefined (reading 'length') at ignore-listed frames` — error originates in Next.js / serwist internals, not user code. Compile passed; the failure was in the post-compile manifest step. Clearing `.next` + `.turbo` resolved.
    - Rule: When `pnpm build` fails with a `TypeError ... ignore-listed frames` from inside Next.js / serwist after a types regeneration, the cause is webpack/serwist manifest desync — not code. Clear `apps/web/.next` and `apps/web/.turbo` and rebuild. Use `pnpm clean:web && pnpm build` as the single recovery sequence.
    - Prevention: Added `pnpm clean:web` script at root (uses `node scripts/clean-web.mjs`, cross-platform). When changing types in mid-session, default to clean rebuild to avoid the trap.
 
-6. **Bash `run_in_background` notification exit-code is unreliable; ALWAYS read the output file**
+5. **Bash `run_in_background` notification exit-code is unreliable; ALWAYS read the output file**
    - Rule: Treat the bg-completion notification as "done", not "succeeded" — for chained pnpm/turbo invocations the notification can report exit 0 while the output contains `ELIFECYCLE ... exit code 1` / `Failed to type check`. The output file's own summary (`Tasks: N successful` / `Failed:` token) is authoritative.
    - Prevention: `tail -10 <output_file>` after every bg notification; exit-0 + `Failed:` line = real failure.
+
+6. **turbo `test` cache masks cross-package source-introspection failures**
+   - Pattern: A test in package A reads ANOTHER package's source via `readFileSync` and asserts on its content (e.g. `packages/shared/src/kds/__tests__/auto-kitchen-print-trigger.test.ts` reads `apps/web/.../pos/print-actions.ts` and asserts it keeps `deferred_to: "kds_completion"`). Deleting/moving code in `apps/web` does NOT invalidate `@comtammatu/shared#test`'s turbo cache (cache key is package-scoped), so local `pnpm test`/`pnpm verify` replays a STALE pass while fresh CI fails.
+   - Rule: When a change deletes/moves source that a cross-package source-introspection test reads, the per-package turbo cache will not catch the break locally — caught a `sendToKitchen` deletion only at CI (2026-06-17).
+   - Prevention: After deletions/moves of code that any test reads as a file, run `pnpm exec turbo run test --force` locally before pushing. Treat a green cached `pnpm test` as "inputs unchanged", not "verified". CI runs fresh and is authoritative.

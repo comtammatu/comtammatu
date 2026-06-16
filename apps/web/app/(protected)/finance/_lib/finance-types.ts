@@ -4,9 +4,6 @@
 // Keep this file in `_lib/` (private to the finance module) per the
 // `apps/web/app/_lib`, `apps/web/app/(protected)/admin/_lib` convention.
 
-// NOTE: InvoiceRow lives below — extended with `archived_at` 2026-05-13
-// for the Path D PDF/XML archive feature.
-
 export interface TopItemRow {
   period_start: string;
   period_end: string;

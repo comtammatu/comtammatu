@@ -22,8 +22,7 @@ import type { ActionContext } from "@/_lib/with-action";
  * POS operators allowed to void / cancel / reduce order flows. Mirrors
  * `MODULE_ACL.pos.allowedRoles` — kept as a named alias so refactoring the
  * role list in one place does not silently re-scope void/cancel beyond the
- * original intent. WS-1b will dedupe the local `POS_VOID_ROLES` constant
- * still living inside `order-actions.ts` against this one.
+ * original intent.
  */
 const POS_VOID_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
 
@@ -34,10 +33,6 @@ const POS_VOID_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
  * that to a `Không có quyền` ActionResult upstream, then the void
  * RPC's own server-side gate provides defense-in-depth (per the
  * POS-KDS-RPC-SERVER-SIDE-ROLE-GATE regression note).
- *
- * Used by `voidOrderItem` (WS-1a) and `reduceOrderItemQuantity` /
- * `cancelOrder` / `editPendingOrderItem` (WS-1b batch 1). WS-1b batch 2+
- * will reuse for any future void path.
  *
  * Signature: accepts but ignores the schema input. `withActionPositional`
  * passes the parsed input to every `customAuth` callable; resolvers that

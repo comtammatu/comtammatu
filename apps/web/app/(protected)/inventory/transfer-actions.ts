@@ -509,7 +509,9 @@ export async function transferConfirmShip(
     p_transfer_id: id.data,
   });
   if (error) {
-    console.error("transferConfirmShip", error);
+    console.error("inventory.transfer.confirm_ship_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return {
       success: false,
       error: "Không thể xác nhận xuất (kiểm tra tồn kho gửi).",
@@ -533,7 +535,9 @@ export async function transferMarkInTransit(
     p_transfer_id: id.data,
   });
   if (error) {
-    console.error("transferMarkInTransit", error);
+    console.error("inventory.transfer.mark_in_transit_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, error: "Không thể chuyển trạng thái vận chuyển." };
   }
   return { success: true };
@@ -554,7 +558,9 @@ export async function transferConfirmReceive(
     p_transfer_id: id.data,
   });
   if (error) {
-    console.error("transferConfirmReceive", error);
+    console.error("inventory.transfer.confirm_receive_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return {
       success: false,
       error: "Không thể bắt đầu kiểm nhận (phiếu phải đang vận chuyển).",
@@ -594,7 +600,9 @@ export async function transferReceive(
     p_items: items ?? null,
   });
   if (error) {
-    console.error("transferReceive", error);
+    console.error("inventory.transfer.receive_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, error: "Không thể xác nhận nhập kho đích." };
   }
   return { success: true };

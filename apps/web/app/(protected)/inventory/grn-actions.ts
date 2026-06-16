@@ -555,7 +555,9 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
     p_grn_id: id.data,
   });
   if (error) {
-    console.error("confirmGrn", error);
+    console.error("inventory.grn.confirm_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, error: "Không thể xác nhận phiếu nhập." };
   }
 
@@ -575,7 +577,9 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
   // Errors are swallowed — outbox row remains pending and will be retried on next dispatch.
   if (reviewCount > 0) {
     void dispatchNotificationOutbox().catch((e) => {
-      console.error("dispatchNotificationOutbox post-confirmGrn", e);
+      console.error("inventory.grn.notification_dispatch_failed", {
+        error: e instanceof Error ? e.message : String(e),
+      });
     });
   }
 
@@ -625,7 +629,9 @@ export const amendGrnLine = withAction(
     });
 
     if (error) {
-      console.error("amendGrnLine", error);
+      console.error("inventory.grn.amend_line_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       // Map known PG error codes to friendly messages.
       const msg = error.message || "";
       if (msg.includes("forbidden_owner_only")) {

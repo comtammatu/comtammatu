@@ -85,10 +85,9 @@ export const createSupplierInvoice = withAction(
         { p_invoice_id: row.id },
       );
       if (matchErr) {
-        console.error(
-          "[createSupplierInvoice] auto-matching failed:",
-          matchErr.message,
-        );
+        console.error("inventory.supplier_invoice.auto_matching_failed", {
+          error: matchErr instanceof Error ? matchErr.message : String(matchErr),
+        });
       }
     }
 
@@ -238,7 +237,9 @@ export async function recomputeInvoiceMatching(
     { p_invoice_id: id.data },
   );
   if (error) {
-    console.error("recomputeInvoiceMatching", error);
+    console.error("inventory.supplier_invoice.recompute_matching_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, error: "Không thể tính khớp." };
   }
   return { success: true, data };

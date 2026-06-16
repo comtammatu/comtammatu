@@ -2,10 +2,6 @@
  * Zod input schemas for POS payment-actions. Separated from `schemas.ts`
  * (order lifecycle) so each module stays focused and < 400 LoC; both still
  * live under `pos/_lib/` since payment is part of the POS surface.
- *
- * Schemas accrete here as WS-1b batch 4 migrates payment-actions.ts to the
- * extended withAction helper. WS-1b batch 4 starts with
- * `cancelPendingPayment` as the proving slice; the rest follow.
  */
 
 import { z } from "zod";
@@ -47,9 +43,9 @@ export const cashConfirmSchema = z.object({
  * / `confirmVietQrPaymentWithInvoice`) and does not flow through this
  * action.
  *
- * Field order matches the pre-WS-1b parse order (branchId first, then the
- * remaining three via `paymentSchema`) so the first-issue message stays
- * identical when multiple fields fail validation simultaneously.
+ * Field order: branchId first, then the remaining three via
+ * `paymentSchema`, so the first-issue message stays identical when multiple
+ * fields fail validation simultaneously.
  *
  * `amount.positive()`: server-side amount-vs-`order.total_amount` equality
  * check lives INSIDE the handler — schema only rejects zero/negative.
@@ -86,8 +82,7 @@ export const branchOnlyReadSchema = z.object({
  * the latest non-failed payment row for an order so the bill sheet can
  * decide whether to resume an in-flight MoMo QR session or start fresh.
  *
- * `orderId` carries the explicit "Order ID không hợp lệ" error message
- * matching the pre-WS-1b hand-rolled `safeParse` fallback string —
+ * `orderId` carries the explicit "Order ID không hợp lệ" error message;
  * field order branchId first so the first-issue message stays identical
  * when both fields are invalid.
  */

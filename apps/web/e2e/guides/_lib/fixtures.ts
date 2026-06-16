@@ -99,9 +99,9 @@ export async function closeAllOpenSessions(ctx: CashierContext): Promise<void> {
  * Đảm bảo cashier có 1 ca POS đang mở duy nhất (đóng các ca khác).
  * Dùng cho mọi flow sau POS-01 — landing trực tiếp lên màn POS chính.
  *
- * Per-branch model (Owner D7, 2026-04-27): branch chỉ có 1 session active.
- * `terminal_id` nullable — fixture không cần lookup terminal, set null để
- * giảm coupling với pos_terminals seed.
+ * Per-branch model (D7): branch chỉ có 1 session active. `terminal_id`
+ * nullable — fixture không cần lookup terminal, set null để giảm coupling
+ * với pos_terminals seed.
  */
 export async function ensureSingleOpenSession(
   ctx: CashierContext,
