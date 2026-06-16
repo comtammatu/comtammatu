@@ -34,6 +34,7 @@ import { toggleItemActive } from "./actions";
 import { ItemFormDialog } from "./item-form-dialog";
 import { ItemDetailDialog } from "./item-detail-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import type { CategoryRow } from "./category-table";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 
@@ -62,12 +63,25 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
   const [detailItem, setDetailItem] = useState<ItemRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function handleToggleActive(id: number) {
+  async function handleToggleActive(item: ItemRow) {
+    if (item.is_active) {
+      const ok = await confirm({
+        title: "Vô hiệu hóa món này?",
+        description: `"${item.name}" sẽ bị ẩn khỏi POS cho tới khi kích hoạt lại.`,
+        confirmText: "Vô hiệu hóa",
+        variant: "destructive",
+      });
+      if (!ok) return;
+    }
     startTransition(async () => {
-      const result = await toggleItemActive({ id });
+      const result = await toggleItemActive({ id: item.id });
       if (!result.success) {
         toast.error(result.error);
+        return;
       }
+      toast.success(
+        item.is_active ? "Đã vô hiệu hóa món" : "Đã kích hoạt món",
+      );
     });
   }
 
@@ -171,7 +185,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() => handleToggleActive(item.id)}
+                        onClick={() => void handleToggleActive(item)}
                       >
                         {item.is_active ? (
                           <>

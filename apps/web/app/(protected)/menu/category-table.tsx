@@ -28,6 +28,7 @@ import {
 import { toggleCategoryActive } from "./actions";
 import { CategoryFormDialog } from "./category-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { CATEGORY_TYPE_LABELS } from "./category-labels";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 
@@ -48,12 +49,25 @@ export function CategoryTable({ categories }: CategoryTableProps) {
   const [editCategory, setEditCategory] = useState<CategoryRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function handleToggleActive(id: number) {
+  async function handleToggleActive(cat: CategoryRow) {
+    if (cat.is_active) {
+      const ok = await confirm({
+        title: "Vô hiệu hóa danh mục này?",
+        description: `"${cat.name}" sẽ bị ẩn khỏi POS cho tới khi kích hoạt lại.`,
+        confirmText: "Vô hiệu hóa",
+        variant: "destructive",
+      });
+      if (!ok) return;
+    }
     startTransition(async () => {
-      const result = await toggleCategoryActive({ id });
+      const result = await toggleCategoryActive({ id: cat.id });
       if (!result.success) {
         toast.error(result.error);
+        return;
       }
+      toast.success(
+        cat.is_active ? "Đã vô hiệu hóa danh mục" : "Đã kích hoạt danh mục",
+      );
     });
   }
 
@@ -130,7 +144,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                         Chỉnh sửa
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => handleToggleActive(cat.id)}
+                        onClick={() => void handleToggleActive(cat)}
                       >
                         {cat.is_active ? (
                           <>

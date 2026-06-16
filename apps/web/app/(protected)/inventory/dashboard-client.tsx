@@ -472,7 +472,6 @@ export function DashboardClient(props: DashboardProps) {
 
   const siteKindLabel = "Chi nhánh";
   const stockValueLabel = "Giá trị tồn kho:";
-  const currencySuffix = "đ";
 
   return (
     <AppPage width={isMobile ? "narrow" : "wide"} contentClassName="gap-6">
@@ -489,7 +488,6 @@ export function DashboardClient(props: DashboardProps) {
             <span className="text-muted-foreground">{stockValueLabel}</span>
             <span className="font-mono text-base font-semibold tabular-nums text-foreground">
               {formatVND(totalStockValue)}
-              {currencySuffix}
             </span>
           </span>
         }
