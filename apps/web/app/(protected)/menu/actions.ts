@@ -232,17 +232,6 @@ export const createItem = withFormAction(
     }),
   },
   async (data, { supabase, claims }) => {
-    // menu_items.vat_rate is NOT NULL but vestigial: order_items derives the live
-    // rate from resolve_gtgt_rate at order time, so writers only snapshot the
-    // tenant's current GTGT rate from the same canonical resolver.
-    const { data: vatRate, error: vatRateError } = await supabase.rpc(
-      "resolve_gtgt_rate",
-      { p_tenant_id: claims.tenant_id },
-    );
-    if (vatRateError || vatRate == null) {
-      return { success: false, error: mapDbError(vatRateError?.code) };
-    }
-
     const { error } = await supabase.from("menu_items").insert({
       tenant_id: claims.tenant_id,
       category_id: data.category_id,
@@ -250,7 +239,6 @@ export const createItem = withFormAction(
       base_price: data.base_price,
       description: data.description || null,
       image_url: data.image_url || null,
-      vat_rate: vatRate,
     });
 
     if (error) {
@@ -983,19 +971,6 @@ export async function importMenu(
       categoryIdByName.set(c.name.toLowerCase(), c.id);
     }
 
-    // menu_items.vat_rate is NOT NULL but vestigial (see createItem) — snapshot
-    // the tenant's current GTGT rate for the upsert insert path.
-    const { data: importVatRate, error: importVatRateError } =
-      await supabase.rpc("resolve_gtgt_rate", {
-        p_tenant_id: claims.tenant_id,
-      });
-    if (importVatRateError || importVatRate == null) {
-      return {
-        success: false,
-        error: "Không thể xác định thuế suất để import món.",
-      };
-    }
-
     const itemRowsToUpsert: {
       tenant_id: number;
       category_id: number;
@@ -1004,7 +979,6 @@ export async function importMenu(
       description: string | null;
       sort_order: number;
       is_active: boolean;
-      vat_rate: number;
     }[] = [];
 
     itemSheet.rows.forEach((raw, idx) => {
@@ -1048,7 +1022,6 @@ export async function importMenu(
         description: parsedRow.data.description || null,
         sort_order: parsedRow.data.sort_order,
         is_active: parsedRow.data.is_active,
-        vat_rate: importVatRate,
       });
     });
 
