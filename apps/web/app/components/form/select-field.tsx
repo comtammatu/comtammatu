@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 
-export interface SelectFieldOption {
+interface SelectFieldOption {
   value: string;
   label: string;
   disabled?: boolean;

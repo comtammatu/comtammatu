@@ -64,8 +64,9 @@ test("HKD payroll: list queries are bounded", () => {
 // Regression: shared engine math under the HKD model (insuranceBaseSalary=0).
 // Numbers are derived from the versioned legal tables — do NOT hardcode rates
 // here; these assert the end-to-end output the action persists.
-// effectiveDate 2026-06-30 resolves to NQ 110/2025 (15.5M personal / 6.2M dep,
-// PIT 2007 brackets).
+// effectiveDate 2026-06-30 resolves to the 2026 tax-year version: 15.5M personal
+// / 6.2M dependent (NQ 110/2025) + 5-bracket PIT (Luật 109/2025, áp dụng từ kỳ
+// tính thuế 2026).
 const HKD = {
   insuranceBaseSalary: 0,
   taxExemptAllowances: 0,
@@ -106,5 +107,6 @@ test("HKD engine: 35M / 0 dependents → taxable 19.5M, BHXH 0", () => {
   });
   assert.equal(r.totalInsuranceEmployee, 0);
   assert.equal(r.taxableIncome, 19_500_000);
-  assert.equal(r.pitTax, 2_250_000);
+  // 5-bracket (kỳ tính thuế 2026): 19.5M in the ≤30M @ 10% band → 19.5M×10% − 500k
+  assert.equal(r.pitTax, 1_450_000);
 });

@@ -8,12 +8,15 @@ import { getVNDateString, getVNMonthEndDateString } from "../time/vietnam";
  * date ≤ the period's effective date.
  *
  * Sources:
- *   - TT 111/2013/TT-BTC: 7-bracket PIT, 11M personal / 4.4M dependent
+ *   - TT 111/2013/TT-BTC: 7-bracket PIT, 11M personal / 4.4M dependent (kỳ ≤ 2025 finalization)
  *   - NQ 954/2020/UBTVQH14 (2020-07-01): set 11M / 4.4M
  *   - NQ 110/2025/UBTVQH15 (2026-01-01): bump to 15.5M / 6.2M
- *   - Luật TNCN 109/2025/QH15 (2026-07-01): 5-bracket PIT (5/10/20/30/35% at 10/30/60/100M)
+ *   - Luật TNCN 109/2025/QH15: 5-bracket PIT (5/10/20/30/35% at 10/30/60/100M).
+ *     Law general effect 01/07/2026, but wage/business-income provisions apply
+ *     from kỳ tính thuế 2026 (01/01/2026) → 5-bracket covers the whole 2026 year.
  *   - NĐ 65/2013 + amendments: BHXH/BHYT/BHTN rates (stable)
- *   - Statutory base salary 2.34M (NĐ 73/2024, effective 2024-07-01) → BHXH cap = 46.8M
+ *   - Statutory base salary 2.34M (NĐ 73/2024) → BHXH cap 46.8M through 2026-06-30;
+ *     2.53M (NĐ 161/2026, from 2026-07-01) → BHXH cap 50.6M (20× base)
  *
  * Adding a new version:
  *   1. Append entry to PAYROLL_LEGAL_VERSIONS in chronological order.
@@ -77,7 +80,9 @@ const PIT_BRACKETS_2007: readonly PitBracket[] = [
   { limit: Number.POSITIVE_INFINITY, rate: 0.35, deduction: 9_850_000 },
 ] as const;
 
-// Luật Thuế TNCN 109/2025/QH15 — 5-bracket schedule effective 2026-07-01.
+// Luật Thuế TNCN 109/2025/QH15 — 5-bracket schedule. Applies from kỳ tính thuế
+// 2026 (01/01/2026) for wage/business income, though the law's general effective
+// date is 01/07/2026.
 const PIT_BRACKETS_2026: readonly PitBracket[] = [
   { limit: 10_000_000, rate: 0.05, deduction: 0 },
   { limit: 30_000_000, rate: 0.1, deduction: 500_000 },
@@ -114,20 +119,20 @@ export const PAYROLL_LEGAL_VERSIONS: readonly PayrollLegalVersion[] = [
   {
     effectiveFrom: "2026-01-01",
     source:
-      "NQ 110/2025/UBTVQH15 (giảm trừ 15.5M / 6.2M); BHXH cap giữ 46.8M cho đến NĐ mới",
+      "Luật TNCN 109/2025/QH15 biểu 5 bậc từ kỳ tính thuế 2026; giảm trừ 15.5M / 6.2M (NQ 110/2025/UBTVQH15); BHXH cap 46.8M (lương cơ sở 2.34M) đến 30/06/2026",
     personalDeduction: 15_500_000,
     dependentDeduction: 6_200_000,
     insuranceCap: 46_800_000,
     ...STANDARD_BHXH_BHYT_BHTN_RATES,
-    pitBrackets: PIT_BRACKETS_2007,
+    pitBrackets: PIT_BRACKETS_2026,
   },
   {
     effectiveFrom: "2026-07-01",
     source:
-      "Luật Thuế TNCN 109/2025/QH15 (biểu 5 bậc, hiệu lực 01/07/2026); giảm trừ 15.5M / 6.2M giữ theo NQ 110/2025; BHXH cap giữ 46.8M",
+      "NĐ 161/2026/NĐ-CP: lương cơ sở 2.53M → BHXH cap 50.6M (20×); biểu 5 bậc + giảm trừ 15.5M / 6.2M giữ nguyên",
     personalDeduction: 15_500_000,
     dependentDeduction: 6_200_000,
-    insuranceCap: 46_800_000,
+    insuranceCap: 50_600_000,
     ...STANDARD_BHXH_BHYT_BHTN_RATES,
     pitBrackets: PIT_BRACKETS_2026,
   },

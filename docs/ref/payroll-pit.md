@@ -2,11 +2,17 @@
 
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư
 > Khung pháp lý (đến 06/2026): Luật Thuế TNCN 2025 (109/2025/QH15, hiệu lực
-> 01/07/2026, biểu thuế mới áp dụng từ kỳ tính thuế 2026); NQ
-> 110/2025/UBTVQH15 (giảm trừ gia cảnh mới từ kỳ tính thuế 2026); Luật BHXH
-> 2024 (41/2024/QH15) + NĐ 158/2025 (BHXH bắt buộc, gồm chủ hộ kinh doanh);
-> NĐ 293/2025 (lương tối thiểu vùng từ 01/01/2026). Luật Thuế TNCN
-> 2007/TT 111/2013 chỉ còn dùng cho quyết toán các kỳ ≤ 2025.
+> chung 01/07/2026, biểu thuế + giảm trừ mới áp dụng **từ kỳ tính thuế 2026 =
+> 01/01/2026**); NQ 110/2025/UBTVQH15 (giảm trừ gia cảnh mới từ kỳ tính thuế
+> 2026); Luật BHXH 2024 (41/2024/QH15) + NĐ 158/2025 (BHXH bắt buộc, gồm chủ
+> hộ kinh doanh); NĐ 73/2024 (lương cơ sở 2,34tr → trần BHXH 46,8tr, đến
+> 30/06/2026) → **NĐ 161/2026 (lương cơ sở 2,53tr → trần BHXH 50,6tr từ
+> 01/07/2026)**; NĐ 293/2025 (lương tối thiểu vùng từ 01/01/2026). Luật Thuế
+> TNCN 2007/TT 111/2013 chỉ còn dùng cho quyết toán các kỳ ≤ 2025.
+>
+> ⚠️ Hai mốc cần kế toán xác nhận trước khi sửa code (T3): (1) hiệu lực biểu 5
+> bậc cho T1–T6/2026; (2) trần BHXH 50,6tr từ 01/07/2026. Chi tiết:
+> `tax-audit-2026-06.md` §2.1–§2.2.
 
 ---
 
@@ -56,7 +62,9 @@ Biểu 5 bậc theo Luật Thuế TNCN 2025 (109/2025/QH15), áp dụng từ k�
 > Biểu 7 bậc cũ (Luật 2007) chỉ còn dùng khi quyết toán các kỳ ≤ 2025; cách
 > khấu trừ chuyển tiếp trong năm 2026 theo hướng dẫn của cơ quan thuế.
 
-> **Đồng bộ với mã nguồn:** payroll engine = `packages/shared/src/payroll/calculate.ts` + `legal-versions.ts` (versioned theo `effectiveFrom`). Kỳ **2026-01 → 2026-06** tính **7 bậc** (`PIT_BRACKETS_2007`); kỳ **≥ 2026-07** tính **biểu 5 bậc** ở §2 (`PIT_BRACKETS_2026`, version `effectiveFrom: 2026-07-01`, owner xác nhận hiệu lực 01/07/2026 theo Luật 109/2025/QH15). Giảm trừ 15.5M/6.2M + trần BHXH 46.8M giữ nguyên qua cả hai. Test khoá: `packages/shared/src/payroll/__tests__/legal-versions.test.ts`.
+> **Đồng bộ với mã nguồn:** payroll engine = `packages/shared/src/payroll/calculate.ts` + `legal-versions.ts` (versioned theo `effectiveFrom`). Code hiện tính kỳ **2026-01 → 2026-06** bằng **7 bậc** (`PIT_BRACKETS_2007`); kỳ **≥ 2026-07** bằng **biểu 5 bậc** ở §2 (`PIT_BRACKETS_2026`, version `effectiveFrom: 2026-07-01`). Giảm trừ 15.5M/6.2M áp dụng từ 2026-01; trần BHXH 46.8M đúng đến 30/06/2026. Test khoá: `packages/shared/src/payroll/__tests__/legal-versions.test.ts`.
+>
+> ⚠️ **Cần kế toán xác nhận (T3):** căn cứ Luật 109/2025/QH15, biểu 5 bậc áp dụng cho **cả kỳ tính thuế 2026 (từ 01/01/2026)**, không phải chỉ từ 01/07/2026. Nếu chốt vậy thì version `effectiveFrom: "2026-01-01"` cần trỏ `PIT_BRACKETS_2026`. Hiện code tính dư thuế khấu trừ T1–T6/2026 cho thu nhập tính thuế > 10tr/tháng. Xem `tax-audit-2026-06.md` §2.1.
 
 ### Ví dụ tính thuế
 
@@ -177,9 +185,11 @@ CREATE TABLE payroll_entries (
   total_insurance_employer NUMERIC(15,2) NOT NULL,
 
   -- Giảm trừ thuế TNCN
+  -- ⚠️ DEFAULT 11000000 là fallback legacy (kỳ ≤ 2025). Engine luôn GHI ĐÈ bằng
+  --    giá trị versioned: từ kỳ 2026 là 15.500.000 / 6.200.000 (legal-versions.ts).
   personal_deduction  NUMERIC(15,2) NOT NULL DEFAULT 11000000,
   dependent_count     INT NOT NULL DEFAULT 0,
-  dependent_deduction NUMERIC(15,2) NOT NULL DEFAULT 0,  -- 4,400,000 × dependent_count
+  dependent_deduction NUMERIC(15,2) NOT NULL DEFAULT 0,  -- 6.200.000 × count (kỳ 2026); 4.400.000 cho kỳ ≤ 2025
   charity_deduction   NUMERIC(15,2) DEFAULT 0,
 
   -- Thuế TNCN
@@ -222,7 +232,9 @@ payroll_entries.insurance_base              (immutable — KHÔNG đổi sau app
 Khi tính lương, logic phải:
 
 1. Lấy `insurance_base` từ `employees.insurance_base_salary` (đã sync từ HĐ active)
-2. Apply trần BHXH: `MIN(insurance_base, 46_800_000)`
+2. Apply trần BHXH version-aware: `MIN(insurance_base, version.insuranceCap)` —
+   **46,8tr đến 30/06/2026**, **50,6tr từ 01/07/2026** (NĐ 161/2026). KHÔNG
+   hardcode `46_800_000` cho mọi kỳ (xem `tax-audit-2026-06.md` §2.2).
 3. Ghi snapshot vào `payroll_entries.insurance_base`
 
 > Xem chi tiết rủi ro và luồng dữ liệu tại `docs/ref/labor-contracts.md` § 5.3
@@ -231,89 +243,32 @@ Khi tính lương, logic phải:
 
 ## 5. Logic tính thuế TNCN (TypeScript)
 
+Engine thật là **version-aware** — KHÔNG hardcode tỷ lệ/bậc/trần trong app. Gọi
+`calculatePayrollEntry`, truyền `effectiveDate` (ngày cuối kỳ lương) để resolve
+đúng version theo `legal-versions.ts`:
+
+- `packages/shared/src/payroll/calculate.ts` — `calculatePayrollEntry(input)`
+- `packages/shared/src/payroll/legal-versions.ts` — bảng hằng số theo `effectiveFrom`
+  (biểu thuế, giảm trừ, trần BHXH, tỷ lệ BH). Số thật nằm ở đây.
+
 ```typescript
-/**
- * Tính thuế TNCN theo biểu lũy tiến 7 bậc
- * @param taxableIncome - Thu nhập tính thuế (sau giảm trừ), đơn vị VND/tháng
- * @returns Số thuế TNCN phải nộp
- */
-export function calculatePIT(taxableIncome: number): number {
-  if (taxableIncome <= 0) return 0;
+import { calculatePayrollEntry } from "@comtammatu/shared/payroll";
 
-  // Công thức tính nhanh: tax = income * rate - deduction
-  const brackets = [
-    { limit: 5_000_000, rate: 0.05, deduction: 0 },
-    { limit: 10_000_000, rate: 0.1, deduction: 250_000 },
-    { limit: 18_000_000, rate: 0.15, deduction: 750_000 },
-    { limit: 32_000_000, rate: 0.2, deduction: 1_650_000 },
-    { limit: 52_000_000, rate: 0.25, deduction: 3_250_000 },
-    { limit: 80_000_000, rate: 0.3, deduction: 5_850_000 },
-    { limit: Infinity, rate: 0.35, deduction: 9_850_000 },
-  ] as const;
-
-  for (const bracket of brackets) {
-    if (taxableIncome <= bracket.limit) {
-      return Math.round(taxableIncome * bracket.rate - bracket.deduction);
-    }
-  }
-  return 0; // unreachable
-}
-
-/**
- * Tính đầy đủ một dòng payroll cho 1 nhân viên
- */
-export function calculatePayrollEntry(params: {
-  grossSalary: number; // Tổng thu nhập chịu thuế
-  insuranceBaseSalary: number; // Mức lương đóng BH
-  taxExemptAllowances: number; // Phụ cấp miễn thuế
-  dependentCount: number; // Số người phụ thuộc
-  charityDeduction: number; // Đóng góp từ thiện
-}) {
-  const {
-    grossSalary,
-    insuranceBaseSalary,
-    taxExemptAllowances,
-    dependentCount,
-    charityDeduction,
-  } = params;
-
-  // BH NLĐ đóng
-  const insuranceCap = 46_800_000; // Mức trần BH kỳ 2026 (NĐ 73/2024, vẫn áp dụng)
-  const insuranceBase = Math.min(insuranceBaseSalary, insuranceCap);
-  const bhxh = Math.round(insuranceBase * 0.08);
-  const bhyt = Math.round(insuranceBase * 0.015);
-  const bhtn = Math.round(insuranceBase * 0.01);
-  const totalInsuranceEmployee = bhxh + bhyt + bhtn;
-
-  // Giảm trừ thuế
-  const personalDeduction = 15_500_000; // kỳ 2026 (NQ 110/2025)
-  const dependentDeduction = dependentCount * 6_200_000;
-
-  // Thu nhập tính thuế
-  const taxableIncome = Math.max(
-    0,
-    grossSalary -
-      totalInsuranceEmployee -
-      personalDeduction -
-      dependentDeduction -
-      charityDeduction,
-  );
-
-  const pit = calculatePIT(taxableIncome);
-
-  return {
-    totalInsuranceEmployee,
-    bhxh,
-    bhyt,
-    bhtn,
-    personalDeduction,
-    dependentDeduction,
-    taxableIncome,
-    pitTax: pit,
-    netSalary: grossSalary + taxExemptAllowances - totalInsuranceEmployee - pit,
-  };
-}
+const row = calculatePayrollEntry({
+  grossTotal,            // tổng thu nhập chịu thuế
+  insuranceBaseSalary,   // mức lương đóng BH (trần áp theo version)
+  taxExemptAllowances,
+  dependentCount,
+  charityDeduction,
+  advanceDeduction,
+  otherDeductions,
+  effectiveDate: "2026-07-31", // T7/2026 → biểu 5 bậc + trần BHXH 50,6tr
+});
+// row.pitTax, row.totalInsuranceEmployee, row.netSalary, row.legalVersionEffectiveFrom
 ```
+
+Công thức biểu 5 bậc (kỳ tính thuế 2026) ở §2; biểu 7 bậc cũ chỉ dùng khi quyết
+toán các kỳ ≤ 2025 (version `effectiveFrom` ≤ `2024-07-01`).
 
 ---
 
@@ -381,11 +336,24 @@ Ví dụ: Nhân viên lương gross 10 triệu → HKD/NSDLĐ thực tế chi kh
 
 Theo Luật BHXH 2024 + NĐ 158/2025/NĐ-CP: chủ hộ của HKD có đăng ký kinh
 doanh **nộp thuế theo phương pháp kê khai** thuộc diện BHXH bắt buộc từ
-01/07/2025 (trừ người đang hưởng lương hưu/trợ cấp BHXH hoặc đã đủ tuổi nghỉ
-hưu). Chủ hộ tự chọn mức tiền lương làm căn cứ đóng, không thấp hơn mức tham
-chiếu (hiện 2,340,000 VND) và không quá 20 lần mức tham chiếu; tự đóng toàn
-bộ (BHXH + BHYT ≈ 29.5% mức đã chọn). Khoản này nằm ngoài bảng lương nhân
-viên — theo dõi như chi phí của chủ hộ.
+01/07/2025 (chủ hộ HKD khác: từ 01/07/2029; trừ người đang hưởng lương
+hưu/trợ cấp BHXH hoặc đã đủ tuổi nghỉ hưu). Chủ hộ tự chọn mức tiền lương làm
+căn cứ đóng, không thấp hơn mức tham chiếu và không quá 20 lần mức tham chiếu.
+
+Tỷ lệ tự đóng toàn bộ (chủ hộ chịu cả phần NLĐ lẫn NSDLĐ):
+
+| Khoản | Tỷ lệ | Ghi chú |
+| --- | --- | --- |
+| BHXH | **25%** | 3% ốm đau-thai sản + 22% hưu trí-tử tuất |
+| BHYT | **4,5%** | |
+| **Tổng** | **29,5%** | trên mức tiền lương đã chọn |
+
+- Mức tham chiếu = lương cơ sở: **2,34tr đến 30/06/2026** → **2,53tr từ
+  01/07/2026** (NĐ 161/2026). BHXH tối thiểu = 25% × mức tham chiếu (585.000đ →
+  632.500đ); trần = 20× mức tham chiếu (46,8tr → 50,6tr).
+- Khoản này nằm **ngoài bảng lương nhân viên** — theo dõi như chi phí của chủ hộ.
+  Lưu ý: lương chủ hộ **không** là chi phí được trừ khi tính TNCN theo (doanh thu
+  − chi phí) ở nhóm > 3 tỷ (NĐ 68/2026 — xem `einvoice-tax.md` §4).
 
 ---
 
@@ -402,6 +370,10 @@ viên — theo dõi như chi phí của chủ hộ.
 TP.HCM): **5,310,000 VND/tháng** (Vùng II 4,730,000; Vùng III 4,140,000).
 
 > Lương trong HĐ phải ≥ lương tối thiểu vùng.
+
+> ⚠️ **Đừng nhầm 2 mức:** *lương tối thiểu vùng* (sàn lương HĐLĐ, theo NĐ
+> 293/2025) khác *lương cơ sở* (căn cứ tính **trần BHXH** = 20×, theo NĐ 73/2024
+> → NĐ 161/2026). Lương cơ sở: 2,34tr đến 30/06/2026, **2,53tr từ 01/07/2026**.
 
 ---
 

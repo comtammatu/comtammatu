@@ -5,7 +5,7 @@
 > Hóa đơn chứng từ — NĐ 123/2020 (sửa đổi bởi NĐ 70/2025, hiệu lực 01/06/2025) + TT 32/2025/TT-BTC (thay TT 78/2021, hiệu lực 01/06/2025).
 > Thuế HKD — NQ 198/2025/QH15 (bỏ thuế khoán, miễn lệ phí môn bài từ 01/01/2026) + NĐ 68/2026/NĐ-CP (05/03/2026, chính sách thuế & quản lý thuế HKD/CNKD) + NĐ 141/2026/NĐ-CP (29/04/2026, nâng ngưỡng không chịu GTGT/TNCN lên 1 tỷ/năm, hồi tố 01/01/2026) + Luật Thuế GTGT 48/2024/QH15 + NQ 204/2025/QH15 + NĐ 174/2025/NĐ-CP (giảm GTGT 01/07/2025–31/12/2026) + Luật Thuế TNCN sửa đổi 2025 (hiệu lực 01/07/2026).
 > Kế toán HKD — TT 152/2025/TT-BTC (31/12/2025, thay TT 88/2021 từ 01/01/2026).
-> Last updated: 2026-06-12 (Viettel S-invoice only, HKD model)
+> Last updated: 2026-06-16 (Viettel S-invoice only, HKD model; audit thuế — xem `tax-audit-2026-06.md`)
 
 ---
 
@@ -191,6 +191,9 @@ backfill hoặc khi chủ trương vận hành chuyển sang template tổng h�
   vẫn lưu `vat_rate/vat_amount` nội bộ để báo cáo nhưng gửi provider theo giá gross
 - Tổng tiền thanh toán
 - Chữ ký số của người bán
+    + ⚠️ HĐĐT GTGT thường (mẫu `1/...`): BẮT BUỘC chữ ký số người bán
+    + HĐĐT khởi tạo từ máy tính tiền (mẫu `2/...`, NĐ 70/2025): KHÔNG bắt buộc
+      chữ ký số — phù hợp đặc thù bán lẻ; mã CQT cấp tự động khi gửi
 ```
 
 > ⚠️ **Chiết khấu cấp đơn**: HĐĐT phải phân bổ chiết khấu cấp đơn xuống từng
@@ -489,6 +492,26 @@ CREATE TABLE supplier_invoices (
 );
 ```
 
+### 4.3 Chi phí được trừ / không được trừ (NĐ 68/2026 — nhóm tính theo doanh thu − chi phí)
+
+Chỉ áp dụng khi HKD tính TNCN theo **(Doanh thu − Chi phí) × thuế suất** — bắt
+buộc với nhóm doanh thu **> 3 tỷ/năm** (TNCN **17%**), hoặc nhóm 500tr–3 tỷ tự
+nguyện chọn. Khi đó chứng từ đầu vào (`supplier_invoices` + 3-way matching) trở
+thành **dữ liệu thuế trực tiếp**, không chỉ là hồ sơ tham chiếu.
+
+| Được trừ | Không được trừ |
+| --- | --- |
+| Nguyên liệu, hàng hóa phục vụ SXKD | Chi phí không liên quan hoạt động SXKD |
+| Lương công nhân viên **có đóng BHXH bắt buộc** | Chi phí **không có hóa đơn/chứng từ** |
+| Khấu hao TSCĐ | **Lương/thù lao của chủ hộ** |
+| Lãi vay phục vụ SXKD | Tiền phạt vi phạm hành chính |
+| Dịch vụ mua ngoài **có hóa đơn, thanh toán không tiền mặt nếu ≥ 5tr** | Chi tiêu cá nhân/gia đình của chủ hộ |
+
+> Với HKD ≤ 3 tỷ tính theo tỷ lệ % trên doanh thu (mặc định của Má Tư hiện tại),
+> chi phí đầu vào KHÔNG trực tiếp giảm thuế — nhưng vẫn cần lưu đủ để xác định
+> giá vốn, đối soát, và phòng khi doanh thu chạm ngưỡng > 3 tỷ phải chuyển phương
+> pháp. Kế toán xác nhận nhóm doanh thu thực tế từng năm.
+
 ---
 
 ## 5. Provider HĐĐT
@@ -644,6 +667,22 @@ WHERE ti.invoice_kind = 'daily_summary'
   AND (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date <> ti.summary_date;
 -- Expected: 0
 ```
+
+### 6.4 Chế tài / xử phạt (rủi ro tuân thủ)
+
+Hệ thống nêu **loại nghĩa vụ** để cảnh báo vận hành; **mức phạt cụ thể do kế toán
+chốt** theo văn bản xử phạt hiện hành (không hardcode mức trong app).
+
+| Hành vi | Căn cứ | Hệ quả |
+| --- | --- | --- |
+| Không lập HĐĐT khi bán hàng / không dùng HĐĐT máy tính tiền (HKD > 1 tỷ) | NĐ 70/2025 + NĐ 125/2020 (xử phạt hóa đơn) và sửa đổi | Phạt vi phạm về hóa đơn theo từng hành vi |
+| Chậm nộp **tiền thuế** | Luật Quản lý thuế | Tiền chậm nộp **0,03%/ngày** trên số thuế chậm nộp |
+| Chậm nộp **tờ khai** | Luật Quản lý thuế + NĐ xử phạt | Phạt theo số ngày chậm |
+| Kê khai sai dẫn đến thiếu thuế | Luật Quản lý thuế | Truy thu + tiền chậm nộp + phạt 20% số thiếu (tùy hành vi) |
+
+> Đây là dữ liệu để Finance/POS cảnh báo (vd: order chưa phát hành HĐĐT, kỳ kê khai
+> sắp đến hạn). Hệ thống **không** tự tính/áp mức phạt — chỉ surface rủi ro cho
+> kế toán xử lý.
 
 ---
 
