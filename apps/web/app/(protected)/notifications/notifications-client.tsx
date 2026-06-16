@@ -6,9 +6,18 @@ import { NotificationList } from "@/_components/notification-list";
 import { NotificationPushControl } from "@/_components/notification-push-control";
 
 export function NotificationsClient({ tenantId }: { tenantId: number }) {
-  const { items, unreadCount, loading, markRead, markAll } = useNotifications({
-    tenantId,
-  });
+  const {
+    items,
+    unreadCount,
+    loading,
+    loadingMore,
+    hasMore,
+    unreadOnly,
+    markRead,
+    markAll,
+    loadMore,
+    setUnreadOnly,
+  } = useNotifications({ tenantId });
 
   return (
     <div className="flex flex-col gap-3">
@@ -18,9 +27,15 @@ export function NotificationsClient({ tenantId }: { tenantId: number }) {
           items={items}
           unreadCount={unreadCount}
           loading={loading}
+          loadingMore={loadingMore}
+          hasMore={hasMore}
+          unreadOnly={unreadOnly}
           onRead={markRead}
           onMarkAll={markAll}
+          onLoadMore={loadMore}
+          onUnreadOnlyChange={setUnreadOnly}
           showViewAll={false}
+          scrollClassName="max-h-[70vh]"
         />
       </Card>
     </div>

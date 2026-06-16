@@ -11,6 +11,10 @@ import {
 } from "@comtammatu/ui/components/empty";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { Inbox as IconInbox } from "lucide-react";
 import type { NotificationItem as NotificationItemModel } from "@/_actions/notifications";
 import { messages, m } from "@lib/messages";
@@ -21,10 +25,17 @@ interface Props {
   items: NotificationItemModel[];
   unreadCount: number;
   loading: boolean;
+  loadingMore?: boolean;
+  hasMore?: boolean;
+  unreadOnly?: boolean;
   onRead: (id: number) => void;
   onMarkAll: () => void;
+  onLoadMore?: () => void;
+  onUnreadOnlyChange?: (next: boolean) => void;
   onItemNavigate?: () => void;
   showViewAll?: boolean;
+  /** Constrain the scroll viewport height; omit to grow with content. */
+  scrollClassName?: string;
 }
 
 const NOTIFICATION_SKELETON_ITEMS: NotificationItemModel[] = [
@@ -124,12 +135,19 @@ export function NotificationList({
   items,
   unreadCount,
   loading,
+  loadingMore = false,
+  hasMore = false,
+  unreadOnly = false,
   onRead,
   onMarkAll,
+  onLoadMore,
+  onUnreadOnlyChange,
   onItemNavigate,
   showViewAll = true,
+  scrollClassName = "max-h-[28rem]",
 }: Props) {
   const hasUnread = unreadCount > 0;
+  const showFilter = typeof onUnreadOnlyChange === "function";
 
   return (
     <div className="flex flex-col">
@@ -155,7 +173,29 @@ export function NotificationList({
         ) : null}
       </div>
 
-      <ScrollArea className="h-90">
+      {showFilter ? (
+        <div className="border-b px-3 py-2">
+          <ToggleGroup
+            type="single"
+            size="sm"
+            variant="outline"
+            value={unreadOnly ? "unread" : "all"}
+            onValueChange={(value) => {
+              if (value) onUnreadOnlyChange(value === "unread");
+            }}
+            className="h-7"
+          >
+            <ToggleGroupItem value="all" className="h-7 px-3 text-xs">
+              {messages.notifications.filters.all}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="unread" className="h-7 px-3 text-xs">
+              {messages.notifications.filters.unread}
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+      ) : null}
+
+      <ScrollArea className={scrollClassName}>
         <AppBoneyardSkeleton
           name="notifications-list"
           loading={loading}
@@ -191,6 +231,20 @@ export function NotificationList({
             />
           )}
         </AppBoneyardSkeleton>
+        {hasMore && onLoadMore && !loading ? (
+          <div className="px-3 pb-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 w-full text-xs"
+              onClick={onLoadMore}
+              disabled={loadingMore}
+            >
+              {messages.notifications.loadMore}
+            </Button>
+          </div>
+        ) : null}
       </ScrollArea>
 
       {showViewAll ? (

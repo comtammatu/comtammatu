@@ -20,11 +20,18 @@ interface UseNotificationsResult {
   items: NotificationItem[];
   unreadCount: number;
   loading: boolean;
+  loadingMore: boolean;
+  hasMore: boolean;
+  unreadOnly: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+  loadMore: () => Promise<void>;
+  setUnreadOnly: (next: boolean) => void;
   markRead: (id: number) => Promise<void>;
   markAll: () => Promise<void>;
 }
+
+const PAGE_SIZE = 20;
 
 /**
  * Subscribes to new INSERTs on the `notifications` table filtered by tenant.
@@ -39,8 +46,12 @@ export function useNotifications({
   const [items, setItems] = useState<NotificationItem[]>(initialItems);
   const [unreadCount, setUnreadCount] = useState<number>(initialUnread);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [unreadOnly, setUnreadOnlyState] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inflightRef = useRef(false);
+  const unreadOnlyRef = useRef(unreadOnly);
   const refreshRef = useRef<() => Promise<void>>(() => Promise.resolve());
   const initialSubscribeSeenRef = useRef(false);
 
@@ -50,11 +61,12 @@ export function useNotifications({
     setLoading(true);
     try {
       const [list, count] = await Promise.all([
-        listNotifications({ limit: 20, unreadOnly: false }),
+        listNotifications({ limit: PAGE_SIZE, unreadOnly: unreadOnlyRef.current }),
         getUnreadCount(),
       ]);
       if (list.success && list.data) {
         setItems(list.data.items);
+        setHasMore(list.data.hasMore);
         setError(null);
       } else if (!list.success) {
         setError(list.error ?? "Không thể tải thông báo");
@@ -66,6 +78,41 @@ export function useNotifications({
       inflightRef.current = false;
       setLoading(false);
     }
+  }, []);
+
+  const loadMore = useCallback(async () => {
+    if (inflightRef.current) return;
+    const cursor = items.at(-1)?.created_at;
+    if (!cursor) return;
+    inflightRef.current = true;
+    setLoadingMore(true);
+    try {
+      const list = await listNotifications({
+        limit: PAGE_SIZE,
+        before: cursor,
+        unreadOnly: unreadOnlyRef.current,
+      });
+      if (list.success && list.data) {
+        setItems((prev) => {
+          const seen = new Set(prev.map((n) => n.id));
+          const next = list.data!.items.filter((n) => !seen.has(n.id));
+          return [...prev, ...next];
+        });
+        setHasMore(list.data.hasMore);
+        setError(null);
+      } else if (!list.success) {
+        setError(list.error ?? "Không thể tải thông báo");
+      }
+    } finally {
+      inflightRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [items]);
+
+  const setUnreadOnly = useCallback((next: boolean) => {
+    unreadOnlyRef.current = next;
+    setUnreadOnlyState(next);
+    void refreshRef.current();
   }, []);
 
   const markRead = useCallback(
@@ -94,6 +141,9 @@ export function useNotifications({
         prev.map((n) => (n.read_at ? n : { ...n, read_at: now })),
       );
       setUnreadCount(0);
+      // In the unread-only view the now-read rows would otherwise linger;
+      // refetch so the filtered list reflects the cleared state.
+      if (unreadOnlyRef.current) void refreshRef.current();
     }
   }, []);
 
@@ -145,5 +195,18 @@ export function useNotifications({
     };
   }, []);
 
-  return { items, unreadCount, loading, error, refresh, markRead, markAll };
+  return {
+    items,
+    unreadCount,
+    loading,
+    loadingMore,
+    hasMore,
+    unreadOnly,
+    error,
+    refresh,
+    loadMore,
+    setUnreadOnly,
+    markRead,
+    markAll,
+  };
 }
