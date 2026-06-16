@@ -815,12 +815,12 @@ Doanh thu năm = **ước lượng từ dữ liệu** (HĐ issued / paid revenue
 
 **Quan hệ:** A = D031 (+ D026/D027 HRM); kế thừa D019 (UI structural governance), D029/D030 (DataTable/StatusBadge/KpiCard waves). B nằm trên cùng — không chặn A.
 
-**Status:** Hướng chốt (owner chọn A+B). Branch chuẩn = **`codex/continue-ts`** (fix/print-agent-retry-backoff đã merge + xóa). **Phase 0 đo XONG (2026-06-16)** — baseline ở [docs/worklog/ui-baseline-phase0-2026-06-16.md](../worklog/ui-baseline-phase0-2026-06-16.md): frontline POS/KDS/Runner = 3.00 hoàn hảo; nợ tập trung Finance over-fetch + vài Track-H lẻ; ratchet drift ≈ sàn false-positive (D030), real-debt migrate được rất ít.
+**Status:** Hướng chốt (owner chọn A+B). Branch chuẩn = **`main`** (codex/continue-ts đã retire sau D033; fix/print-agent-retry-backoff đã xóa). **Phase 0 đo XONG (2026-06-16)** — baseline ở [docs/worklog/ui-baseline-phase0-2026-06-16.md](../worklog/ui-baseline-phase0-2026-06-16.md): frontline POS/KDS/Runner = 3.00 hoàn hảo; nợ tập trung Finance over-fetch + vài Track-H lẻ; ratchet drift ≈ sàn false-positive (D030), real-debt migrate được rất ít.
 
-Tiến độ wave (đối chiếu code thật trên `codex/continue-ts`, KHÔNG từ baseline — baseline đo trên branch stale fix/print-agent):
+Tiến độ wave (đối chiếu code thật trên `main`, KHÔNG từ baseline — baseline đo trên branch stale fix/print-agent):
 - **W1 (G) — XONG.** P0 keyset-pagination tax + supplier invoices đã có sẵn (`60a33f54`); phần Revenue còn lại (bỏ re-fetch unbounded, dùng `invoice_attention_count` period-scoped, xóa hàm dead) = `b5609d27`. Gate tsc+eslint+ui-contract xanh.
 - **W4 (F) — XONG (stream song song).** Fold order-item + tax-invoice badge → StatusBadge registry = `6793b539`.
-- **W2/W3/W5 — còn lại; PHẢI reconcile với `codex/continue-ts` trước khi làm** (baseline stale; spot-check inventory `45.000đđ` vẫn còn → W2 còn hiệu lực). Mục [OPEN] (dark-mode scope, radius) → sửa D032 trước khi apply.
+- **W2/W3/W5 — còn lại; PHẢI reconcile với `main` trước khi làm** (baseline stale; spot-check inventory `45.000đđ` vẫn còn → W2 còn hiệu lực). Mục [OPEN] (dark-mode scope, radius) → sửa D032 trước khi apply.
 
 ## D033: `main` bị thay hoàn toàn bằng `codex/continue-ts` — bỏ Go-port (2026-06-16)
 

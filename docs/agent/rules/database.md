@@ -87,11 +87,11 @@ session; never as a default. The mechanics that work in practice:
   if its code still reads the old shape, so deploy the code that stops reading it
   FIRST, then apply. **Additive** migrations (new column/RPC, new RETURNS field)
   are safe to apply before the code that uses them deploys. The prod Vercel
-  project `comtammatu-web` builds from `codex/continue-ts`, but the owner's
+  project `comtammatu-web` auto-deploys production from `main`, but the owner's
   primary usage is local dev pointed at prod DB and unpushed local commits are
   NOT deployed — so an applied destructive migration can leave the dormant Vercel
-  deploy broken-in-waiting until the branch is pushed + promoted (see
-  decisions.md D031, 2026-06-16).
+  deploy broken-in-waiting until the code is pushed to `main` (see
+  decisions.md D031/D033, 2026-06-16).
 - `apply_migration` stamps the ledger `version` with the apply time, not the file
   timestamp, so `schema_migrations.version` does not match the file name (464 ledger
   rows as of 2026-06-15; of the 33 timestamp-named rows, 13 are version-drifted, the

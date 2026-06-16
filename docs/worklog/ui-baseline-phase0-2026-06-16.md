@@ -9,8 +9,8 @@
 
 ## 0. Cập nhật thực thi
 
-- **W1 (Track G) — XONG.** ⚠️ Baseline dưới đây đo trên `fix/print-agent-retry-backoff` (stale, 144 file dirty của stream khác). Đối chiếu lại với **production `codex/continue-ts`**: P0 fetch ~3.185 HĐ **đã fix sẵn** (commit `2a5f33d1` — `fetchTaxInvoicesPage` keyset-pagination, cả supplier-invoices). Phần Revenue còn lại fix ở **`b5609d27`** (codex/continue-ts): bỏ `fetchTaxInvoices` unbounded re-fetch, dùng `invoice_attention_count` period-scoped có thẩm quyền từ `fetchFinanceDashboardSummary`, xóa hàm dead. Gate: tsc + eslint + ui-contract xanh; net −65 dòng. Chưa push.
-- **⚠️ Hệ quả cho W2–W5:** baseline phản ánh branch stale, KHÔNG phải production. **Trước khi làm W2–W5, đối chiếu từng finding với `codex/continue-ts`** — vài thứ có thể đã fix sẵn ở đó. (Đã spot-check: inventory double-glyph `45.000đđ` VẪN còn trên codex → W2 còn hiệu lực.)
+- **W1 (Track G) — XONG.** ⚠️ Baseline dưới đây đo trên `fix/print-agent-retry-backoff` (stale, 144 file dirty của stream khác). Đối chiếu lại với **production `main`**: P0 fetch ~3.185 HĐ **đã fix sẵn** (commit `2a5f33d1` — `fetchTaxInvoicesPage` keyset-pagination, cả supplier-invoices). Phần Revenue còn lại fix ở **`b5609d27`** (main): bỏ `fetchTaxInvoices` unbounded re-fetch, dùng `invoice_attention_count` period-scoped có thẩm quyền từ `fetchFinanceDashboardSummary`, xóa hàm dead. Gate: tsc + eslint + ui-contract xanh; net −65 dòng.
+- **⚠️ Hệ quả cho W2–W5:** baseline phản ánh branch stale, KHÔNG phải production. **Trước khi làm W2–W5, đối chiếu từng finding với `main`** — vài thứ có thể đã fix sẵn ở đó. (Đã spot-check: inventory double-glyph `45.000đđ` VẪN còn trên main → W2 còn hiệu lực.)
 
 ## 1. Scorecard (0–3/trục)
 

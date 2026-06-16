@@ -184,7 +184,7 @@ Dùng `calculatePayrollEntry` (versioned legal tables, KHÔNG hardcode). **Debt 
 
 ## Tiến độ thực thi (cập nhật 2026-06-16)
 
-Branch `codex/continue-ts` (chưa push):
+Branch `main`:
 
 | Track | Commit | Trạng thái |
 | --- | --- | --- |
