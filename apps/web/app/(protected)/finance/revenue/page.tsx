@@ -6,7 +6,6 @@ import {
   fetchRevenueByHour,
   fetchRevenueKpis,
   fetchRevenueRollup,
-  fetchTaxInvoices,
   fetchTopItems,
   type FinanceDashboardSummary,
 } from "../actions";
@@ -147,7 +146,6 @@ export default async function RevenueReportPage({
     cashierRes,
     dashboardSummaryRes,
     foodCostRes,
-    invoicesRes,
   ] = await Promise.all([
     fetchAccessibleBranches(),
     fetchRevenueRollup(
@@ -178,7 +176,6 @@ export default async function RevenueReportPage({
       endDate: resolved.end,
       ...(params.branch != null ? { branchId: params.branch } : {}),
     }),
-    fetchTaxInvoices(params.branch ?? undefined),
   ]);
 
   const branches = (
@@ -259,12 +256,6 @@ export default async function RevenueReportPage({
         : Number(topFoodCostException.food_cost_pct),
   };
 
-  const invoiceAttentionCount = invoicesRes.success
-    ? ((invoicesRes.data as { status: string }[] | null) ?? []).filter((i) =>
-        ["draft", "signing", "submitted"].includes(i.status),
-      ).length
-    : 0;
-
   return (
     <RevenueClient
       params={params}
@@ -280,7 +271,6 @@ export default async function RevenueReportPage({
       cashVariance={cashVariance}
       dashboardSummary={dashboardSummary}
       dashboardHealth={dashboardHealth}
-      invoiceAttentionCount={invoiceAttentionCount}
       resolvedStart={resolved.start}
       resolvedEnd={resolved.end}
     />

@@ -88,7 +88,6 @@ interface Props {
   cashVariance: CashVarianceSummary | null;
   dashboardSummary: FinanceDashboardSummary | null;
   dashboardHealth: FinanceDashboardHealth;
-  invoiceAttentionCount: number;
   resolvedStart: string;
   resolvedEnd: string;
 }
@@ -230,7 +229,6 @@ export function RevenueClient({
   cashVariance,
   dashboardSummary,
   dashboardHealth,
-  invoiceAttentionCount,
   resolvedStart,
   resolvedEnd,
 }: Props) {
@@ -791,14 +789,7 @@ export function RevenueClient({
       />
 
       <WorkQueueStrip
-        summary={
-          dashboardSummary
-            ? {
-                ...dashboardSummary,
-                invoice_attention_count: invoiceAttentionCount,
-              }
-            : null
-        }
+        summary={dashboardSummary}
         health={dashboardHealth}
         hide={["foodCost", "webhook"]}
       />

@@ -594,56 +594,10 @@ const fetchTaxInvoicesPaginatedSchema = z.object({
 });
 
 /**
- * Non-paginated read of every tax invoice (optionally branch-scoped).
- * Aggregate consumers (revenue dashboard attention count) rely on the
- * full list, so the default return shape stays a flat array. The list
- * page uses `fetchTaxInvoicesPage` for keyset pagination instead.
- */
-export async function fetchTaxInvoices(
-  branchId?: number,
-): Promise<ActionResult> {
-  const parsedBranch = z.coerce
-    .number()
-    .int()
-    .positive()
-    .optional()
-    .safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    FINANCE_ROLES,
-    PERMISSION_KEYS.FINANCE_VIEW,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  let query = supabase
-    .from("tax_invoices")
-    .select(TAX_INVOICE_LIST_SELECT)
-    .eq("tenant_id", claims.tenant_id)
-    .order("created_at", { ascending: false });
-
-  if (parsedBranch.data) {
-    query = query.eq("branch_id", parsedBranch.data);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    return { success: false, error: "Không thể tải danh sách hóa đơn." };
-  }
-
-  return { success: true, data: data ?? [] };
-}
-
-/**
  * Keyset-paginated tax-invoice list (created_at desc, id desc tiebreaker).
  * Mirrors fetchArchivedOrders: fetch pageSize+1 to probe hasMore without a
  * count round-trip, slice to pageSize, expose the last row as nextCursor.
- * Same tenant + optional branch scope as fetchTaxInvoices.
+ * Same tenant + optional branch scope (tenant_id + branch_id).
  */
 export async function fetchTaxInvoicesPage(
   input: z.input<typeof fetchTaxInvoicesPaginatedSchema> = {},
