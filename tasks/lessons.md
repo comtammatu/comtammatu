@@ -30,3 +30,8 @@
 5. **Bash `run_in_background` notification exit-code is unreliable; ALWAYS read the output file**
    - Rule: Treat the bg-completion notification as "done", not "succeeded" — for chained pnpm/turbo invocations the notification can report exit 0 while the output contains `ELIFECYCLE ... exit code 1` / `Failed to type check`. The output file's own summary (`Tasks: N successful` / `Failed:` token) is authoritative.
    - Prevention: `tail -10 <output_file>` after every bg notification; exit-0 + `Failed:` line = real failure.
+
+6. **turbo `test` cache masks cross-package source-introspection failures**
+   - Pattern: A test in package A reads ANOTHER package's source via `readFileSync` and asserts on its content (e.g. `packages/shared/src/kds/__tests__/auto-kitchen-print-trigger.test.ts` reads `apps/web/.../pos/print-actions.ts` and asserts it keeps `deferred_to: "kds_completion"`). Deleting/moving code in `apps/web` does NOT invalidate `@comtammatu/shared#test`'s turbo cache (cache key is package-scoped), so local `pnpm test`/`pnpm verify` replays a STALE pass while fresh CI fails.
+   - Rule: When a change deletes/moves source that a cross-package source-introspection test reads, the per-package turbo cache will not catch the break locally — caught a `sendToKitchen` deletion only at CI (2026-06-17).
+   - Prevention: After deletions/moves of code that any test reads as a file, run `pnpm exec turbo run test --force` locally before pushing. Treat a green cached `pnpm test` as "inputs unchanged", not "verified". CI runs fresh and is authoritative.
