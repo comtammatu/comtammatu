@@ -678,7 +678,6 @@ export async function resolveStocktakeConflict(
   }
 
   const raw = (data ?? {}) as Record<string, unknown>;
-  revalidatePath(`/inventory/stocktake/conflicts`);
   return {
     success: true,
     data: {

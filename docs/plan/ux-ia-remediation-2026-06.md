@@ -194,10 +194,11 @@ Branch `codex/continue-ts` (chưa push):
 | B — confirm() wave | `94a6bc5d` | ✅ gated (B2 HR hoãn) |
 | C — số liệu sai | `b4bf47d3` | ✅ gated: C2 net-profit · C3 priceReview thật · C5 orders revenue full-set/loại unpaid · **C1-2a interim** (gross/net/biên = "—" khi thiếu giá vốn, hết margin ~100% ảo) |
 | E wave 1 — IA nav | đang chạy | E1 wire orphan nav + E5 active-state SSoT |
+| E wave 2 — IA behavior/deletions | đang chạy | ✅ gated (typecheck app + lint clean, scoped): E2 landing launcher ACL-driven (thay `MANAGER_LINKS` thủ công bằng `EmployeeActionSection` "Khu vực làm việc" dựng từ `resolveQuickLaunchGroups` cho MỌI vai trò non-admin — branch_manager→Branch Command, warehouse/production→Inventory, cashier→Orders+POS, waiter→POS, chef→KDS; xóa `manager-tools-sheet.tsx`) · E3 gộp tile "Khu vực"+"Bàn"→"Bàn & khu vực" · E4 xóa 3 stub `notFound()` + gỡ `revalidatePath` chết + KDS banner→`/br/[id]/settings/kds` + fallback non-owner→`/access-denied`. E3-expiry single-home HOÃN sang H6 (inventory-settings pass) |
 
 **Hoãn có chủ đích:**
 - **C1-2b** (daily-grain `mv_food_cost_daily` migration): no-op tới khi inventory có recipe/GRN (giá vốn=0 dù grain nào); khi làm phải mirror `mv_daily_revenue` (paid_at + VN-local + payment join), KHÔNG chỉ week→day; rebase `refresh_finance_views()` lúc apply. C1-2a đã chặn số ảo nên không gấp.
-- **E wave 2:** E2 landing launcher ACL-driven (branch_manager→Branch Command, warehouse/production→Inventory), E3 expiry single-home, E4 dọn 3 stub `notFound()` + stale `revalidatePath` — đổi hành vi/xóa nên cẩn trọng wave sau.
+- **E3 expiry single-home:** `/inventory/expiry` là home đơn, `settings/expiry`→trang ngưỡng thật hoặc xóa — gộp vào inventory-settings pass **H6** (không làm ở E wave 2).
 - **B2 HR (payroll/leave confirm) · D1 payroll · F3 hr DataTable:** chờ HRM redesign D026/D027 settle (off-limits).
 
 **VAT (D031e) — XONG, KHÔNG còn set tay:** rate giờ **tự suy theo bậc** (`resolve_gtgt_rate`, mirror `packages/shared/src/tax`). Prod hiện = **2,4%** (Má Tư annualized ≥1 tỷ, group2, giảm tạm) — tự về 0 nếu <1 tỷ, sang 17% TNCN nếu >3 tỷ, 2,4%→3% sau 31/12/2026. `vat_rate` setting đã gỡ. Emit mẫu 2 (gross) không đổi; HĐ cũ 8% sửa-tiến.

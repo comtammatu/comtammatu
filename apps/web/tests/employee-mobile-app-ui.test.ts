@@ -42,9 +42,6 @@ const employeeScheduleClientSource = readWebSource(
 const employeeProfileSource = readWebSource(
   "app/(protected)/employee/profile/page.tsx",
 );
-const employeeProfileManagerSheetSource = readWebSource(
-  "app/(protected)/employee/profile/manager-tools-sheet.tsx",
-);
 const employeeMessagesSource = readWebSource("lib/messages/employee.ts");
 
 test("Employee shell is phone-first and touch-safe", () => {
@@ -334,32 +331,12 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeProfileSource,
-    /ManagerToolsSheet links=\{managerLinks\}/,
-    "Profile should collapse Branch Manager tools into the manager sheet entry",
-  );
-  assert.match(
-    employeeProfileManagerSheetSource,
-    /SheetContent[\s\S]*side="bottom"/,
-    "Manager tools should open from a bottom sheet rather than crowding the profile viewport",
-  );
-  assert.match(
-    employeeProfileManagerSheetSource,
-    /motion-safe:slide-in-from-bottom-1[\s\S]*managerToolsEntryTitle/,
-    "Manager tools collapsed entry should feel tappable without exposing the tool list in the first viewport",
-  );
-  assert.match(
-    employeeProfileManagerSheetSource,
-    /group\/manager-tool[\s\S]*motion-safe:hover:-translate-y-px/,
-    "Manager tool rows should keep app-like touch feedback inside the sheet",
-  );
-  assert.match(
-    employeeProfileManagerSheetSource,
-    /copy\.managerToolsEntryTitle/,
-    "Manager tools should have a single collapsed profile entry",
+    /title=\{copy\.workspaceLauncherTitle\}[\s\S]*links=\{workspaceLinks\}/,
+    "Profile should surface the ACL-driven workspace launcher via EmployeeActionSection",
   );
   assert.doesNotMatch(
     employeeProfileSource,
-    /personalToolsDescription|managerToolsDescription|title=\{homeCopy\.managerToolsTitle\}/,
-    "Profile hub link groups should stay compact and avoid duplicate explanatory copy",
+    /ManagerToolsSheet|MANAGER_LINKS/,
+    "Profile should no longer use the hand-maintained manager-tools sheet",
   );
 });

@@ -56,6 +56,7 @@ M0–M7 + Auth + POS PWA + Realtime hardening + Shadcn primitive migration M1–
 - [ ] **P3 Login rate-limit fail-open** — fail-open + log đã có; chỉ thiếu bảng `security_events` (chờ wave đó). Agent làm được nếu owner duyệt kéo wave lên.
 - [ ] **Audit `insurance_base_salary`/`gross_salary`** — defer tới khi payroll vào app (Đợt 3); hiện `employment_contracts`=0, payroll Excel → audit surface rỗng. Hạ tầng `log_audit()` đã có.
 - [ ] **M5-Ext S8 / M7 residual** — calc + reports (AP aging, consumption variance, yield_factor, PIT 5 bậc, BHXH) ĐÃ wire & UI. Chỉ còn GL posting formal — moot khi còn HKD (D012/D013). Re-scope hoặc đóng.
+- [ ] **Inventory unbuilt scaffolds (E4)** — stocktake conflict-resolution dashboard, stocktake escalation flow, và auto-waste listing chưa build. 3 stub route `notFound()` đã xóa (D031 Track E4) — chỉ build lại khi có yêu cầu thật (conflict resolve hiện làm inline ở stocktake session detail qua `resolve_stocktake_conflict`).
 - [ ] Automated E2E + staging env + inventory smoke runbook periodically — xem "Chặn: cần env".
 
 ## N/A while Má Tư is a Hộ kinh doanh (no formal BCTC)

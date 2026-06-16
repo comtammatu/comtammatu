@@ -10,10 +10,15 @@ import {
 
 interface UnassignedBannerProps {
   count: number;
+  branchId: number;
   onFilter: () => void;
 }
 
-export function UnassignedBanner({ count, onFilter }: UnassignedBannerProps) {
+export function UnassignedBanner({
+  count,
+  branchId,
+  onFilter,
+}: UnassignedBannerProps) {
   if (count <= 0) return null;
 
   return (
@@ -30,7 +35,7 @@ export function UnassignedBanner({ count, onFilter }: UnassignedBannerProps) {
           {messages.pos.kds.viewUnassigned}
         </Button>
         <Button asChild variant="outline" size="xs">
-          <Link href="/admin/settings/kds">
+          <Link href={`/br/${branchId}/settings/kds`}>
             {messages.pos.kds.openStationConfig}
             <IconArrowRight data-icon="inline-end" aria-hidden />
           </Link>

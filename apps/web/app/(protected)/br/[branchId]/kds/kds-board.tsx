@@ -555,6 +555,7 @@ export function KdsBoard({
 
           <UnassignedBanner
             count={showUnassignedBanner ? unassignedCount : 0}
+            branchId={branchId}
             onFilter={filterUnassigned}
           />
         </div>

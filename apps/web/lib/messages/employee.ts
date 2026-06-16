@@ -309,9 +309,9 @@ export const employee = {
     startDate: "Ngày bắt đầu",
     noStartDate: "Chưa có",
     personalToolsTitle: "Cá nhân",
-    managerToolsEntryTitle: "Quản lý chi nhánh",
-    managerToolsSheetTitle: "Quản lý chi nhánh",
-    managerToolsSheetDescription: "Công cụ quản lý chi nhánh được cấp quyền.",
+    workspaceLauncherTitle: "Khu vực làm việc",
+    workspaceLauncherDescription:
+      "Mở đúng khu vực theo vai trò và chi nhánh hiện tại.",
     missingProfileTitle: "Chưa có hồ sơ nhân viên",
     missingProfileDescription:
       "Tài khoản chưa được liên kết hồ sơ nhân viên. Kiểm tra thông tin cá nhân hoặc liên hệ quản lý.",

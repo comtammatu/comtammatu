@@ -9,7 +9,7 @@ export default async function GeneralSettingsPage() {
   const { supabase, claims } = await loadAuthState();
 
   if (!["owner"].includes(claims.user_role)) {
-    redirect("/admin/settings/tables");
+    redirect("/access-denied?reason=insufficient-permission");
   }
 
   const { data: rows } = await supabase

@@ -8,7 +8,6 @@ import {
   Gauge as IconGauge,
   ListChecks as IconChecklist,
   Monitor as IconDeviceDesktop,
-  LayoutGrid as IconLayoutGrid,
   Printer as IconPrinter,
   ReceiptText as IconReceipt2,
 } from "lucide-react";
@@ -66,14 +65,8 @@ export default async function BranchSettingsHubPage({
   const operationalTiles: Tile[] = [
     {
       href: `/br/${branchId}/settings/tables`,
-      title: "Khu vực",
-      description: "Khu vực ăn uống trong chi nhánh (Tầng 1, Sân vườn…).",
-      icon: <IconLayoutGrid />,
-    },
-    {
-      href: `/br/${branchId}/settings/tables`,
-      title: "Bàn",
-      description: "Danh sách bàn, khu vực và trạng thái.",
+      title: "Bàn & khu vực",
+      description: "Khu vực ăn uống (Tầng 1, Sân vườn…), danh sách bàn và trạng thái.",
       icon: <IconArmchair />,
     },
     {

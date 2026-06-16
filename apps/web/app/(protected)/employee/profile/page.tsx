@@ -1,12 +1,28 @@
 import {
+  BarChart3 as IconBarChart3,
+  Briefcase as IconBriefcase,
   CalendarX as IconCalendarX,
+  ChefHat as IconChefHat,
+  ClipboardList as IconClipboardList,
+  LayoutDashboard as IconLayoutDashboard,
   LogOut as IconLogout,
+  Monitor as IconMonitor,
+  MonitorUp as IconMonitorUp,
+  Package as IconPackage,
+  Settings as IconSettings,
   ShieldCheck as IconShieldCheck,
   User as IconUser,
+  Users as IconUsers,
+  Utensils as IconUtensils,
+  Wallet as IconWallet,
   WalletCards as IconPayslip,
   type LucideIcon,
 } from "lucide-react";
-import { canAccess, type ModuleKey } from "@comtammatu/shared/auth";
+import {
+  isAdminRole,
+  resolveQuickLaunchGroups,
+  type ResolvedNavLink,
+} from "@comtammatu/shared/auth";
 import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
@@ -18,15 +34,9 @@ import {
   EmployeeStatusStrip,
 } from "../components/employee-page";
 import { getEmployeeContext } from "../_lib/employee-context";
-import {
-  ManagerToolsSheet,
-  type ManagerToolIcon,
-  type ManagerToolSheetLink,
-} from "./manager-tools-sheet";
 
 const employeeCopy = messages.employee;
 const copy = employeeCopy.profile;
-const homeCopy = employeeCopy.home;
 
 type ProfileLink = {
   key: string;
@@ -36,12 +46,19 @@ type ProfileLink = {
   description?: string;
 };
 
-type ManagerLink = {
-  moduleKey: ModuleKey;
-  href: (branchId: number | null) => string;
-  icon: ManagerToolIcon;
-  title: string;
-  requiresOperationalBranch?: boolean;
+const WORKSPACE_ICON_MAP: Record<string, LucideIcon> = {
+  LayoutDashboard: IconLayoutDashboard,
+  BarChart3: IconBarChart3,
+  Users: IconUsers,
+  Settings: IconSettings,
+  Utensils: IconUtensils,
+  ClipboardList: IconClipboardList,
+  Package: IconPackage,
+  Wallet: IconWallet,
+  Briefcase: IconBriefcase,
+  Monitor: IconMonitor,
+  MonitorUp: IconMonitorUp,
+  ChefHat: IconChefHat,
 };
 
 const PERSONAL_LINKS: ProfileLink[] = [
@@ -65,27 +82,14 @@ const PERSONAL_LINKS: ProfileLink[] = [
   },
 ];
 
-const MANAGER_LINKS: ManagerLink[] = [
-  {
-    moduleKey: "hr",
-    href: () => "/hr",
-    icon: "hr",
-    title: homeCopy.managerHrTitle,
-  },
-  {
-    moduleKey: "employee_checkout_approvals",
-    href: () => "/employee/checkout-approvals",
-    icon: "checkout",
-    title: homeCopy.managerCheckoutApprovalsTitle,
-  },
-  {
-    moduleKey: "branch_settings",
-    href: (branchId) => `/br/${branchId}/settings`,
-    icon: "branchHub",
-    title: homeCopy.managerBranchSettingsTitle,
-    requiresOperationalBranch: true,
-  },
-];
+function mapWorkspaceLink(item: ResolvedNavLink): ProfileLink {
+  return {
+    key: `${item.moduleKey}:${item.href}`,
+    href: item.href,
+    icon: WORKSPACE_ICON_MAP[item.icon] ?? IconLayoutDashboard,
+    title: item.label,
+  };
+}
 
 export default async function ProfilePage() {
   const { session, claims, supabase } = await loadAuthState();
@@ -93,7 +97,7 @@ export default async function ProfilePage() {
   const positionCode = claims.position ?? claims.position_code ?? null;
   const effectiveBranchId = ctx?.branchId ?? claims.branch_id ?? null;
 
-  const [employeeResult, positionResult, branchKindResult] = await Promise.all([
+  const [employeeResult, positionResult] = await Promise.all([
     ctx
       ? supabase
           .from("employees")
@@ -110,37 +114,25 @@ export default async function ProfilePage() {
           .eq("code", positionCode)
           .maybeSingle()
       : Promise.resolve({ data: null }),
-    effectiveBranchId
-      ? supabase
-          .from("branches")
-          .select("branch_kind")
-          .eq("id", effectiveBranchId)
-          .eq("tenant_id", claims.tenant_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
   ]);
   const employee = employeeResult.data;
   const positionLabel =
     positionResult.data?.label_vi ?? positionCode ?? claims.user_role;
-  const branchIsOperational = branchKindResult.data?.branch_kind === "branch";
 
   const displayName =
     session.user.user_metadata?.["full_name"] ??
     session.user.email ??
     copy.fallbackName;
-  const managerLinks: ManagerToolSheetLink[] =
-    claims.user_role === "branch_manager"
-      ? MANAGER_LINKS.filter((link) => {
-          if (!canAccess(claims.user_role, link.moduleKey)) return false;
-          if (!link.requiresOperationalBranch) return true;
-          return Boolean(effectiveBranchId) && branchIsOperational;
-        }).map((link) => ({
-          key: link.moduleKey,
-          href: link.href(effectiveBranchId),
-          icon: link.icon,
-          title: link.title,
-        }))
-      : [];
+
+  // ACL-driven workspace launcher: each non-admin role surfaces its
+  // matrix-defined direct links (Branch Command, Inventory, POS, KDS, …) gated
+  // through MODULE_ACL via the shared nav resolvers. Branch-scoped links resolve
+  // only when a branch is in scope.
+  const workspaceLinks: ProfileLink[] = isAdminRole(claims.user_role)
+    ? []
+    : resolveQuickLaunchGroups(claims.user_role, effectiveBranchId)
+        .flatMap((group) => group.items)
+        .map(mapWorkspaceLink);
 
   return (
     <EmployeePage
@@ -171,12 +163,17 @@ export default async function ProfilePage() {
       </EmployeePanel>
 
       <EmployeeActionSection
+        title={copy.workspaceLauncherTitle}
+        description={copy.workspaceLauncherDescription}
+        links={workspaceLinks}
+        columns={1}
+      />
+
+      <EmployeeActionSection
         title={copy.personalToolsTitle}
         links={PERSONAL_LINKS}
         columns={1}
       />
-
-      <ManagerToolsSheet links={managerLinks} />
 
       <form action="/api/auth/signout" method="post">
         <Button

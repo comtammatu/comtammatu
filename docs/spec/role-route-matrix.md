@@ -130,6 +130,23 @@ Implemented in the second (dashboard) slice:
   table occupancy, kitchen load, POS-session/printer/checkout-approval
   readiness, plus the command tiles.
 
+Implemented in the IA remediation slice (D031 Track E):
+
+- The `/employee` profile renders an ACL-driven "Khu vực làm việc" launcher built
+  from the shared nav resolvers (`resolveQuickLaunchGroups`), so every non-admin
+  role gets its Role-Boundaries "Home target" direct link automatically:
+  `branch_manager` → Branch Command (`/br/[branchId]/dashboard`),
+  `warehouse_manager`/`production_manager` → Inventory (`/inventory`),
+  `cashier` → Orders + POS, `waiter` → POS, `chef` → KDS. Branch-scoped links
+  resolve only when a branch is in scope; all links gate through `MODULE_ACL`.
+- The KDS unassigned-stations banner deep-links to the live branch KDS setup
+  (`/br/[branchId]/settings/kds`).
+- Non-owner fallbacks on `/admin/settings/{general,branches,payments}` redirect
+  to `/access-denied` instead of the `/admin/settings/tables` shim.
+- Unbuilt stocktake/waste scaffolds (`/inventory/stocktake/conflicts`,
+  `/inventory/stocktake/[id]/escalate`, `/inventory/waste/auto`) are removed;
+  the work is tracked in `tasks/todo.md`, not behind always-404 routes.
+
 ## Change Checklist
 
 Any PR that changes role/surface behavior must update these together:

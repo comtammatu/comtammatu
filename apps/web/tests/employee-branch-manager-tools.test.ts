@@ -11,13 +11,6 @@ const employeeProfileSource = readFileSync(
   join(process.cwd(), "app/(protected)/employee/profile/page.tsx"),
   "utf8",
 );
-const employeeProfileManagerSheetSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/employee/profile/manager-tools-sheet.tsx",
-  ),
-  "utf8",
-);
 const employeeClockActionSource = readFileSync(
   join(process.cwd(), "app/(protected)/employee/clock/actions.ts"),
   "utf8",
@@ -39,58 +32,32 @@ test("Employee home keeps Branch Manager tools out of the hot path", () => {
   );
 });
 
-test("Employee profile exposes Branch Manager tools outside personal attendance state", () => {
+test("Employee profile launcher is ACL-driven for all non-admin roles", () => {
   assert.match(
     employeeProfileSource,
     /const effectiveBranchId = ctx\?\.branchId \?\? claims\.branch_id \?\? null;/,
-    "Branch Manager tools must fall back to JWT branch scope when employee context is missing",
+    "Workspace launcher must fall back to JWT branch scope when employee context is missing",
   );
   assert.match(
     employeeProfileSource,
-    /claims\.user_role === "branch_manager"/,
-    "Branch Manager visibility must be explicit and role-scoped",
+    /resolveQuickLaunchGroups\(claims\.user_role, effectiveBranchId\)/,
+    "Workspace launcher must derive direct links from the shared ACL nav resolvers",
   );
   assert.match(
     employeeProfileSource,
-    /const managerLinks(?::[^=]+)? =[\s\S]*canAccess\(claims\.user_role, link\.moduleKey\)/,
-    "Branch Manager tools should still flow through the shared ACL",
+    /isAdminRole\(claims\.user_role\)/,
+    "Workspace launcher must skip admin roles (they land in Tenant Command)",
   );
   assert.match(
     employeeProfileSource,
-    /<ManagerToolsSheet links=\{managerLinks\} \/>/,
-    "Branch Manager tools should be collapsed behind the Profile manager sheet row",
+    /title=\{copy\.workspaceLauncherTitle\}[\s\S]*links=\{workspaceLinks\}/,
+    "Workspace launcher should render through the shared EmployeeActionSection",
   );
-  assert.match(
-    employeeProfileManagerSheetSource,
-    /Sheet[\s\S]*SheetTrigger[\s\S]*SheetContent/,
-    "Collapsed manager tools row should open a Sheet with the approved links",
-  );
-  assert.match(
-    employeeProfileManagerSheetSource,
-    /copy\.managerToolsEntryTitle/,
-    "Collapsed manager tools row should use the compact Profile entry label",
-  );
-
-  const managerToolsBlock =
-    employeeProfileSource.match(
-      /const managerLinks(?::[^=]+)? =[\s\S]*?: \[\];\n/,
-    )?.[0] ?? "";
   assert.doesNotMatch(
-    managerToolsBlock,
-    /attendance/,
-    "Branch Manager management links must not disappear when the manager has not clocked in",
+    employeeProfileSource,
+    /MANAGER_LINKS|ManagerToolsSheet/,
+    "Hand-maintained MANAGER_LINKS array must be gone — links come from the ACL resolvers",
   );
-
-  for (const expected of [
-    'moduleKey: "employee_checkout_approvals"',
-    'moduleKey: "hr"',
-    'moduleKey: "branch_settings"',
-  ]) {
-    assert.ok(
-      employeeProfileSource.includes(expected),
-      `expected Branch Manager entry point ${expected}`,
-    );
-  }
 });
 
 test("Branch Manager self-attendance is only clock in and clock out", () => {
