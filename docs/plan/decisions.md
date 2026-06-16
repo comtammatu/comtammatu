@@ -795,3 +795,29 @@ Doanh thu năm = **ước lượng từ dữ liệu** (HĐ issued / paid revenue
 - **Cuối năm 05/QTT-TNCN sẽ hiện BHXH = 0:** BHXH của chủ hộ xử lý riêng theo NĐ 158/2025 (ngoài app).
 - **PII rough-edge (pre-existing, follow-up):** `branch_manager` hiện vẫn xem được `base_salary` qua `fetchEmployees` (service-role read path) — không thuộc phạm vi quyết định này, theo dõi riêng.
 - **Phương án thay thế (migration-free) nếu owner muốn sau này:** engine đã hỗ trợ `insuranceBaseSalary` theo từng nhân viên, nên có thể bật BHXH cho riêng tầng quản lý mà không cần migration.
+
+## D032: Redesign UI = Hợp nhất (A) + Nâng cấp thị giác trong contract (B) — KHÔNG đổi ngôn ngữ Concept 01 (2026-06-16)
+
+**Context:** Owner yêu cầu "redesign UI/UX/layout/shell/styles/colors/typo/components/patterns/spacing/radius — hướng đi rõ ràng, đầy đủ giải pháp". Verify vs CODE (`globals.css`, shell, design-system v14.7) + các worklog đang chạy: dự án KHÔNG thiếu DS — đã có Concept 01 khoá (token OKLCH semantic, light+dark token hoá đủ, rhythm/motion/elevation contract, CI ratchet, 2 chrome family, ~45 primitive + adapter). Vấn đề thật = (1) drift/độ phủ chưa 100%, (2) vài trục còn "khô kiểu ERP" + dark mode bị tắt dù đã token, (3) surface chủ lực chưa polish. ⇒ "redesign" đúng = hợp nhất + nâng cấp có kiểm soát, KHÔNG đập đi vẽ lại.
+
+**Phán quyết owner (2026-06-16):** chọn **A + B**, tránh C (rebrand).
+
+- **Hướng A (nền, bắt buộc) = thực thi D031.** Không tạo track mới: A chính là đợt remediation UX/IA toàn app đang chạy (track E nav/IA, F status/DataTable, G pagination, H surface) + HRM (D026/D027). Acceptance theo `docs/plan/ux-ia-remediation-2026-06.md`. 1 trạng thái = 1 màu/nhãn (StatusBadge SSoT), DataTable phủ mọi bảng, KpiCard/Empty SSoT, enforce `AppPage` padding (bỏ self-pad branch-settings), gộp 6 module-shell về 1 `AppShell` (W5).
+- **Hướng B (lớp khác biệt, MỚI — phần D032 này thật sự quyết) — chỉ làm SAU khi A đủ phủ, và cập nhật `docs/spec/design-system.md` TRƯỚC khi apply token (governance: không tạo ngôn ngữ thị giác thứ 2):**
+  1. **Tách `info`-hue.** Hiện `--info` == `--foreground` (navy y hệt màu chữ) ⇒ `text-info`/viền info tàng hình. Cấp info một hue riêng (xanh dương dịu), giữ light+dark.
+  2. **Bật lại dark mode** (token `.dark` đã đủ; đang bị `forcedTheme="light"` chặn ở `layout.tsx`). Re-enable rẻ. **[OPEN]** phạm vi: KDS/POS-bếp-tối trước hay toàn app — chốt khi vào Phase 2.
+  3. **Chiều sâu dashboard + chuẩn `chart-1..5`** (border-first vẫn là nền; thêm depth có kiểm soát, không phá elevation contract).
+  4. **⌘K command palette toàn cục** (đã có `command.tsx` + `Kbd`, thiếu launcher).
+  5. **[OPEN — taste]** nâng `--radius` 0.625rem → 0.75rem (1 dòng, token-driven, an toàn) — chờ owner chốt.
+- **GIỮ nguyên (không đụng):** `primary` đỏ gạch + palette Concept 01; typo Inter/Montserrat/JetBrains + base 17px; Rhythm Contract (p-3/p-4, gap 1–6, heading-by-role); Radius 4-token; Motion functional-only.
+
+**Roadmap:** Phase 0 đo (rubric `ui-ux-rubric.md` cho ~10 surface chủ lực + liệt kê clone còn lại) → Phase 1 = A → Phase 2 = B (sửa contract trước) → Phase 3 polish POS/KDS/Runner/Dashboard. Mỗi PR = 1 route family hoặc 1 primitive rollout (Rebuild Rule).
+
+**Quan hệ:** A = D031 (+ D026/D027 HRM); kế thừa D019 (UI structural governance), D029/D030 (DataTable/StatusBadge/KpiCard waves). B nằm trên cùng — không chặn A.
+
+**Status:** Hướng chốt (owner chọn A+B). Branch chuẩn = **`codex/continue-ts`** (fix/print-agent-retry-backoff đã merge + xóa). **Phase 0 đo XONG (2026-06-16)** — baseline ở [docs/worklog/ui-baseline-phase0-2026-06-16.md](../worklog/ui-baseline-phase0-2026-06-16.md): frontline POS/KDS/Runner = 3.00 hoàn hảo; nợ tập trung Finance over-fetch + vài Track-H lẻ; ratchet drift ≈ sàn false-positive (D030), real-debt migrate được rất ít.
+
+Tiến độ wave (đối chiếu code thật trên `codex/continue-ts`, KHÔNG từ baseline — baseline đo trên branch stale fix/print-agent):
+- **W1 (G) — XONG.** P0 keyset-pagination tax + supplier invoices đã có sẵn (`60a33f54`); phần Revenue còn lại (bỏ re-fetch unbounded, dùng `invoice_attention_count` period-scoped, xóa hàm dead) = `b5609d27`. Gate tsc+eslint+ui-contract xanh.
+- **W4 (F) — XONG (stream song song).** Fold order-item + tax-invoice badge → StatusBadge registry = `6793b539`.
+- **W2/W3/W5 — còn lại; PHẢI reconcile với `codex/continue-ts` trước khi làm** (baseline stale; spot-check inventory `45.000đđ` vẫn còn → W2 còn hiệu lực). Mục [OPEN] (dark-mode scope, radius) → sửa D032 trước khi apply.
