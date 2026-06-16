@@ -35,7 +35,7 @@ export interface StationRow {
   category_ids: number[];
 }
 
-export interface BranchOption {
+interface BranchOption {
   id: number;
   name: string;
   is_active: boolean | null;

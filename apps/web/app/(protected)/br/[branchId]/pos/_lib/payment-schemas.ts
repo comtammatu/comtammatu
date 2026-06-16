@@ -26,10 +26,6 @@ export const cancelPendingPaymentSchema = z.object({
     .positive({ error: "Payment ID không hợp lệ" }),
 });
 
-export type CancelPendingPaymentInput = z.infer<
-  typeof cancelPendingPaymentSchema
->;
-
 /**
  * Schema for `confirmCashPayment(orderId, cashReceived)`. The cashier UI
  * clamps `cashReceived >= total` client-side, but the server-side RPC is
@@ -42,8 +38,6 @@ export const cashConfirmSchema = z.object({
     .number()
     .nonnegative({ error: "Số tiền nhận không được âm" }),
 });
-
-export type CashConfirmInput = z.infer<typeof cashConfirmSchema>;
 
 /**
  * Schema for `createPayment(branchId, orderId, method, amount)`.
@@ -70,8 +64,6 @@ export const createPaymentSchema = z.object({
   amount: z.coerce.number().positive({ error: "Số tiền không hợp lệ" }),
 });
 
-export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;
-
 /**
  * Shared schema for branch-only read actions:
  *   - `fetchPaymentMethodsForPos(branchId)` — RSC seed for POS bill sheet.
@@ -88,8 +80,6 @@ export const branchOnlyReadSchema = z.object({
     .int()
     .positive({ error: "Branch ID không hợp lệ" }),
 });
-
-export type BranchOnlyReadInput = z.infer<typeof branchOnlyReadSchema>;
 
 /**
  * Schema for `fetchPendingRemotePaymentForBill(branchId, orderId)`. Reads
@@ -111,7 +101,3 @@ export const fetchPendingRemotePaymentSchema = z.object({
     .int()
     .positive({ error: "Order ID không hợp lệ" }),
 });
-
-export type FetchPendingRemotePaymentInput = z.infer<
-  typeof fetchPendingRemotePaymentSchema
->;

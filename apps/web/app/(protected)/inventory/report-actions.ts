@@ -61,16 +61,6 @@ export interface BranchMovementSummaryRow {
   adjustment: number;
 }
 
-export interface InTransitTransfer {
-  id: number;
-  transfer_number: string;
-  status: string;
-  from_branch_name: string;
-  to_branch_name: string;
-  shipped_at: string | null;
-  item_count: number;
-}
-
 export async function fetchFoodCost(
   input?: z.infer<typeof fetchFoodCostSchema>,
 ): Promise<ActionResult> {
@@ -383,73 +373,11 @@ export async function fetchBranchMovementSummary(
   return { success: true, data: rows };
 }
 
-/* ─── fetchInTransitTransfers ─── */
-
-export async function fetchInTransitTransfers(): Promise<
-  ActionResult<InTransitTransfer[]>
-> {
-  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  const { data: transfers, error } = await supabase
-    .from("stock_transfers")
-    .select(
-      "id, transfer_number, status, shipped_at, from_branch_id, to_branch_id",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .in("status", ["confirmed_ship", "in_transit"])
-    .order("shipped_at", { ascending: false });
-
-  if (error) return { success: false, error: "Không tải được phiếu chuyển." };
-  if (!transfers || transfers.length === 0) {
-    return { success: true, data: [] };
-  }
-
-  // Get branch names
-  const { data: branches } = await supabase
-    .from("branches")
-    .select("id, name, branch_kind")
-    .eq("tenant_id", claims.tenant_id);
-  const nameById = new Map(
-    (branches ?? []).map((b) => [b.id, getBranchSiteDisplayName(b)] as const),
-  );
-
-  // Get item counts per transfer
-  const transferIds = transfers.map((t) => t.id);
-  const { data: items } = await supabase
-    .from("stock_transfer_items")
-    .select("transfer_id")
-    .eq("tenant_id", claims.tenant_id)
-    .in("transfer_id", transferIds);
-
-  const countByTransfer = new Map<number, number>();
-  for (const item of items ?? []) {
-    countByTransfer.set(
-      item.transfer_id,
-      (countByTransfer.get(item.transfer_id) ?? 0) + 1,
-    );
-  }
-
-  const result: InTransitTransfer[] = transfers.map((t) => ({
-    id: t.id,
-    transfer_number: t.transfer_number,
-    status: t.status,
-    from_branch_name: nameById.get(t.from_branch_id) ?? "—",
-    to_branch_name: nameById.get(t.to_branch_id) ?? "—",
-    shipped_at: t.shipped_at,
-    item_count: countByTransfer.get(t.id) ?? 0,
-  }));
-
-  return { success: true, data: result };
-}
-
 // ---------------------------------------------------------------------------
 // AP Aging Report — unpaid/partial invoices bucketed by days overdue
 // ---------------------------------------------------------------------------
 
-export interface ApAgingBucket {
+interface ApAgingBucket {
   current: { count: number; total: number };
   days_1_30: { count: number; total: number };
   days_31_60: { count: number; total: number };

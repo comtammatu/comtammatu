@@ -1,6 +1,5 @@
 "use server";
 
-import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   addVNDateDays,
@@ -12,53 +11,6 @@ import { getAuthContext } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
 /* ─── Inventory alerts (low-stock / expiry / reorder) ─── */
-
-export async function fetchStockAlerts(
-  branchId: number,
-): Promise<ActionResult> {
-  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  const { data, error } = await supabase
-    .from("stock_levels")
-    .select(
-      `
-      id, current_quantity, ingredient_id,
-      ingredients (
-        id, name, unit, min_stock_level, max_stock_level, is_active
-      )
-    `,
-    )
-    .eq("branch_id", parsedBranch.data)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (error) {
-    return { success: false, error: "Không thể tải cảnh báo tồn kho." };
-  }
-
-  const alerts = (data ?? []).filter((sl) => {
-    const ing = sl.ingredients as unknown as {
-      min_stock_level: number;
-      max_stock_level: number | null;
-      is_active: boolean;
-    } | null;
-    if (!ing || !ing.is_active) return false;
-    if (sl.current_quantity < ing.min_stock_level) return true;
-    if (ing.max_stock_level && sl.current_quantity > ing.max_stock_level)
-      return true;
-    return false;
-  });
-
-  return { success: true, data: alerts };
-}
-
 
 export async function fetchExpiryAlerts(
   branchId?: number,

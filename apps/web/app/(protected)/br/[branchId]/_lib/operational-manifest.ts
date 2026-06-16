@@ -22,9 +22,9 @@ const APP_LABELS: Record<
   },
 };
 
-export const OPERATIONAL_MANIFEST_REVALIDATE_SECONDS = 3600;
+const OPERATIONAL_MANIFEST_REVALIDATE_SECONDS = 3600;
 
-export function normalizeManifestBranchId(rawBranchId: string): string | null {
+function normalizeManifestBranchId(rawBranchId: string): string | null {
   const branchNum = Number.parseInt(rawBranchId, 10);
   // Reject any segment that isn't a clean positive integer string. parseInt
   // accepts "123abc" -> 123, but reflecting the raw segment into start_url /
@@ -39,10 +39,7 @@ export function normalizeManifestBranchId(rawBranchId: string): string | null {
   return String(branchNum);
 }
 
-export function buildOperationalManifest(
-  app: OperationalApp,
-  branchId: string,
-) {
+function buildOperationalManifest(app: OperationalApp, branchId: string) {
   const appConfig = APP_LABELS[app];
 
   return {

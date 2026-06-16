@@ -37,12 +37,12 @@ export interface DataTableColumn<T> {
 /* Filter definition                                                   */
 /* ------------------------------------------------------------------ */
 
-export interface DataTableFilterOption {
+interface DataTableFilterOption {
   value: string;
   label: string;
 }
 
-export interface DataTableFilter {
+interface DataTableFilter {
   key: string;
   placeholder: string;
   options: DataTableFilterOption[];

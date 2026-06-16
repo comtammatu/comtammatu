@@ -11,7 +11,7 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
   return buffer;
 }
 
-export function downloadBase64(base64: string, filename: string, mime: string) {
+function downloadBase64(base64: string, filename: string, mime: string) {
   const buffer = base64ToArrayBuffer(base64);
   const blob = new Blob([buffer], { type: mime });
   const url = URL.createObjectURL(blob);

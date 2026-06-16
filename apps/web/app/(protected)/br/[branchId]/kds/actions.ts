@@ -6,10 +6,6 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 import { getAuthContext } from "../../_lib/auth";
 import {
-  clearBranchMenuDailyLimit,
-  setBranchMenuDailyLimit,
-} from "../menu-limits/actions";
-import {
   buildKdsCompletionHistory,
   type KdsCompletionHistoryBatch,
   type KdsCompletionHistoryEntry,
@@ -172,26 +168,6 @@ export async function markKdsItemOutOfStock(
       soldToday: row.sold_today,
     },
   };
-}
-
-export async function setKdsMenuDailyLimit(
-  input: Parameters<typeof setBranchMenuDailyLimit>[0],
-): ReturnType<typeof setBranchMenuDailyLimit> {
-  const result = await setBranchMenuDailyLimit(input);
-  if (result.success) {
-    revalidatePath(`/br/${input.branchId}/kds`);
-  }
-  return result;
-}
-
-export async function clearKdsMenuDailyLimit(
-  input: Parameters<typeof clearBranchMenuDailyLimit>[0],
-): ReturnType<typeof clearBranchMenuDailyLimit> {
-  const result = await clearBranchMenuDailyLimit(input);
-  if (result.success) {
-    revalidatePath(`/br/${input.branchId}/kds`);
-  }
-  return result;
 }
 
 export async function fetchKdsCompletionHistory(

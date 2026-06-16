@@ -47,60 +47,12 @@ export const cancelPendingPaymentRpcFallback: RpcErrorFallback = {
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Map the cross-cutting payment-RPC error vocabulary used by
- * `createPayment` / `confirmCashPayment` / VietQR confirmation paths.
- * Returns a plain string — the caller chooses whether to wrap in
- * `ActionResult` or surface as a console warning. Mirrors the pre-WS-1b
- * inline `if`-chain in `payment-actions.ts`.
- *
- * Returns `null` when the message does not match any known sentinel — the
- * caller falls back to its own copy ("Không thể tạo thanh toán." etc.).
- */
-export function mapPaymentRpcMessage(message: string): string | null {
-  const normalized = message.toLowerCase();
-
-  if (
-    normalized.includes("default_consumption_location_missing") ||
-    normalized.includes("consumption_location_missing") ||
-    normalized.includes("consume_location_missing") ||
-    normalized.includes("default_consumption")
-  ) {
-    return "Chi nhánh chưa cấu hình Bếp chi nhánh cho POS. Thiết lập vị trí bếp trước khi thanh toán.";
-  }
-
-  if (normalized.includes("tenant_mismatch")) {
-    return "Không thể xử lý thanh toán cho chi nhánh này.";
-  }
-
-  if (
-    normalized.includes("stock_consumption_failed") ||
-    normalized.includes("stock_failed") ||
-    normalized.includes("out_of_stock") ||
-    normalized.includes("recipe_missing")
-  ) {
-    return "Chưa thể hoàn tất thanh toán vì tồn kho hoặc định mức món chưa sẵn sàng. Quản lý đã được thông báo.";
-  }
-
-  if (normalized.includes("amount_mismatch_recomputed")) {
-    return "Tổng tiền đơn đã thay đổi so với dữ liệu món. Vui lòng tải lại đơn và kiểm tra trước khi thanh toán.";
-  }
-
-  return null;
-}
-
-/**
  * Mappings for `supabase.rpc("confirm_cash_payment", ...)` failures.
  * Order: under-payment / sane-bound checks first (most common operator
  * errors), then permission/tenant defence-in-depth (server-side gates
  * should never raise these in practice but UI must still show stable
- * copy), then the shared payment vocabulary via `mapPaymentRpcMessage`,
- * then a printer-config edge case.
- *
- * `mapPaymentRpcMessage` returns a Vietnamese string OR null. Mappings
- * that depend on it short-circuit via a predicate that calls the helper
- * — when null, the next mapping gets a chance. The shared vocabulary
- * lives in `mapPaymentRpcMessage` so VietQR / createPayment can reuse it
- * once those sub-batches migrate.
+ * copy), then the shared payment vocabulary, then a printer-config edge
+ * case.
  */
 export const confirmCashPaymentRpcMappings: readonly RpcErrorMapping[] = [
   // Cash-specific sentinels first.
@@ -128,9 +80,8 @@ export const confirmCashPaymentRpcMappings: readonly RpcErrorMapping[] = [
     errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
     userMessage: "Không có quyền truy cập đơn này",
   },
-  // Shared payment vocabulary (inlined so the mapping table is the single
-  // source. `mapPaymentRpcMessage` is also exported for non-cash callers
-  // — createPayment / VietQR — that follow when their sub-batches land).
+  // Shared payment vocabulary, inlined so the mapping table is the single
+  // source.
   {
     match: includesAny(
       "default_consumption_location_missing",
@@ -190,12 +141,8 @@ export const confirmCashPaymentRpcFallback: RpcErrorFallback = {
  *    shadow. The longer sentinel ("đơn đã thay đổi so với dữ liệu món…")
  *    is the shared payment vocabulary; the shorter `amount_mismatch`
  *    is the `create_payment` RPC's own check ("Số tiền không khớp.").
- * 3. Shared payment vocabulary — mirrors `mapPaymentRpcMessage` so the
- *    handler can drop its call to the older local helper. Vocabulary
- *    is inlined (not via the helper) so the mapping table is the single
- *    source of truth; `mapPaymentRpcMessage` remains exported for VietQR
- *    + confirmPayment callers that still flow through the local helper
- *    until their sub-batches migrate.
+ * 3. Shared payment vocabulary — inlined so the mapping table is the
+ *    single source of truth.
  *
  * `tenant_mismatch` here uses the GENERIC copy ("Không thể xử lý thanh
  * toán cho chi nhánh này.") — different from `confirmCashPaymentRpcMappings`

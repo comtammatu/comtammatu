@@ -44,7 +44,7 @@ const rawText = (payload: LoosePayload, field: string): string => {
   return "";
 };
 
-export const payloadNumber = (
+const payloadNumber = (
   payload: LoosePayload,
   field: string,
 ): number => {

@@ -7,8 +7,6 @@ export const TABLE_STATUSES = [
   "maintenance",
 ] as const;
 
-export type TableStatus = (typeof TABLE_STATUSES)[number];
-
 export const STATUS_OPTIONS = TABLE_STATUSES.map((value) => ({
   value,
   label: TABLE_STATUS_LABELS_VI[value],

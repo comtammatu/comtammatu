@@ -3,7 +3,7 @@
   "rule": "i18n/no-inline-vietnamese",
   "description": "Baseline for existing inline Vietnamese JSX copy. New occurrences not listed here fail pnpm lint.",
   "generatedAt": "2026-06-16",
-  "count": 763,
+  "count": 761,
   "entries": [
     "app/(protected)/admin/settings/branches/add-branch-button.tsx:16:25",
     "app/(protected)/admin/settings/kds/station-form-dialog.tsx:153:27",
@@ -765,8 +765,6 @@
     "app/(public)/access-denied/page.tsx:66:78",
     "app/(public)/access-denied/page.tsx:75:51",
     "app/(public)/access-denied/page.tsx:80:41",
-    "app/components/data-table/data-table-pagination.tsx:47:22",
-    "app/components/data-table/data-table-toolbar.tsx:100:47",
-    "app/components/data-table/data-table-toolbar.tsx:81:39"
+    "app/components/data-table/data-table-pagination.tsx:47:22"
   ]
 }

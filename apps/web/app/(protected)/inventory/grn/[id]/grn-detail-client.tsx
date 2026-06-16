@@ -75,7 +75,7 @@ import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const grnCopy = messages.inventory.grn;
 const inventoryCommon = messages.inventory.common;
 
-export type GRNDetailItem = {
+type GRNDetailItem = {
   lineId: number;
   ingredientId: number;
   name: string;

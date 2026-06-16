@@ -680,34 +680,6 @@ export const amendGrnLine = withAction(
   },
 );
 
-/* ─── fetchGrnsForPo ─── */
-
-export interface LinkedGrnRow {
-  id: number;
-  grn_number: string;
-  status: string;
-  received_date: string;
-}
-
-export async function fetchGrnsForPo(poId: number): Promise<ActionResult> {
-  const id = z.coerce.number().int().positive().safeParse(poId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-  const { data, error } = await supabase
-    .from("goods_received_notes")
-    .select("id, grn_number, status, received_date")
-    .eq("po_id", id.data)
-    .eq("tenant_id", claims.tenant_id)
-    .order("received_date", { ascending: false });
-  if (error) return { success: false, error: "Không thể tải phiếu nhập." };
-  return { success: true, data: data ?? [] };
-}
-
 /* ─── createGrnFromPo ───
  * Sprint 5 #2: collapsed to a single atomic Postgres RPC call.
  * The RPC `create_grn_from_po` (migration 20260508072423) validates PO

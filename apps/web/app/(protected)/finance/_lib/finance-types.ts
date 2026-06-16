@@ -7,18 +7,6 @@
 // NOTE: InvoiceRow lives below — extended with `archived_at` 2026-05-13
 // for the Path D PDF/XML archive feature.
 
-export interface DailyRevenueRow {
-  date: string;
-  branch_id: number;
-  tenant_id: number;
-  order_count: number;
-  total_revenue: number | null;
-  total_tax: number | null;
-  cash_revenue: number | null;
-  vietqr_revenue: number | null;
-  momo_revenue: number | null;
-}
-
 export interface TopItemRow {
   period_start: string;
   period_end: string;

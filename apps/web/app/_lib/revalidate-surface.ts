@@ -29,9 +29,3 @@ export function revalidateSurfacePath(pathname: string): void {
     revalidatePath(target);
   }
 }
-
-export function revalidateSurfacePaths(pathnames: readonly string[]): void {
-  for (const pathname of pathnames) {
-    revalidateSurfacePath(pathname);
-  }
-}

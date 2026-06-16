@@ -33,15 +33,6 @@ const PRODUCTION_RECIPE_READ_PERMISSIONS = [
   PERMISSION_KEYS.MENU_WRITE,
 ] as const;
 
-const productionRecipeSchema = z.object({
-  finishedGoodId: z.coerce.number().int().positive(),
-  ingredientId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().positive(),
-  unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
-  yieldFactor: z.coerce.number().positive().default(1),
-  note: z.string().optional(),
-});
-
 const productionRecipeLineUpsertSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
@@ -693,78 +684,6 @@ export async function importProductionRecipes(
   };
 }
 
-
-export const upsertProductionRecipe = withAction(
-  {
-    roles: PRODUCTION_ROLES,
-    schema: productionRecipeSchema,
-    permission: PERMISSION_KEYS.MENU_WRITE,
-  },
-  async (data, ctx) => {
-    const { supabase, claims } = ctx;
-    if (isProductionSiteScopedRole(claims.user_role)) {
-      if (claims.branch_id == null) {
-        return {
-          success: false,
-          error: "Tài khoản chưa được gán chi nhánh sản xuất.",
-        };
-      }
-      const access = await requireProductionBranch(
-        supabase,
-        claims.tenant_id,
-        claims.branch_id,
-      );
-      if (!access.ok) {
-        return { success: false, error: access.error };
-      }
-    }
-    const { data: ingredients, error: ingredientError } = await supabase
-      .from("ingredients")
-      .select("id, item_kind")
-      .eq("tenant_id", claims.tenant_id)
-      .in("id", [data.finishedGoodId, data.ingredientId]);
-
-    if (ingredientError) {
-      return { success: false, error: "Không thể kiểm tra nguyên liệu." };
-    }
-
-    const finishedGood = (ingredients ?? []).find(
-      (item) => item.id === data.finishedGoodId,
-    );
-    const ingredient = (ingredients ?? []).find(
-      (item) => item.id === data.ingredientId,
-    );
-
-    if (
-      finishedGood?.item_kind !== "finished_good" ||
-      ingredient?.item_kind !== "raw_material"
-    ) {
-      return {
-        success: false,
-        error: "Công thức phải nối thành phẩm với nguyên liệu.",
-      };
-    }
-
-    const { error } = await supabase.from("production_recipes").upsert(
-      {
-        tenant_id: claims.tenant_id,
-        finished_good_id: data.finishedGoodId,
-        ingredient_id: data.ingredientId,
-        quantity: data.quantity,
-        unit: data.unit,
-        yield_factor: data.yieldFactor,
-        note: data.note ?? null,
-      },
-      { onConflict: "finished_good_id,ingredient_id,tenant_id" },
-    );
-
-    if (error) {
-      return { success: false, error: "Không thể lưu công thức." };
-    }
-
-    return { success: true };
-  },
-);
 
 export const upsertProductionRecipeLines = withAction(
   {

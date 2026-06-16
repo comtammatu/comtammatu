@@ -25,7 +25,7 @@ import type {
   IngredientOption,
 } from "./production-types";
 
-export { canAccessProductionSurface, isProductionBranchScopedRole };
+export { canAccessProductionSurface };
 
 export const PRODUCTION_OPEN_PERMISSIONS = [
   PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,

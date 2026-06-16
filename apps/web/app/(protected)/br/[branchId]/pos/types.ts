@@ -3,7 +3,7 @@ import { z } from "zod";
 
 /* ─── Order Types ─── */
 
-export const ORDER_TYPES = ["dine_in", "takeaway"] as const;
+const ORDER_TYPES = ["dine_in", "takeaway"] as const;
 export type OrderType = (typeof ORDER_TYPES)[number];
 
 /* ─── Cart Modifier ─── */

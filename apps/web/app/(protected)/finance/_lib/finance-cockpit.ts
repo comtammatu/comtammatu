@@ -66,7 +66,7 @@ interface BranchOption {
   name: string;
 }
 
-export interface FinanceCockpitKpis {
+interface FinanceCockpitKpis {
   totalCollected: number;
   orderCount: number;
   netRevenueBeforeVat: number;
@@ -82,12 +82,12 @@ export interface FinanceCockpitKpis {
   momoRevenue: number;
 }
 
-export interface FinanceTrendPoint {
+interface FinanceTrendPoint {
   x: string;
   y: number | null;
 }
 
-export interface FinanceBranchRow {
+interface FinanceBranchRow {
   branchId: number;
   branchName: string;
   revenue: number;

@@ -25,10 +25,10 @@ export const FINANCE_RANGES = [
 ] as const;
 export type FinanceRange = (typeof FINANCE_RANGES)[number];
 
-export const FINANCE_GRANULARITIES = ["day", "week", "month"] as const;
+const FINANCE_GRANULARITIES = ["day", "week", "month"] as const;
 export type FinanceGranularity = (typeof FINANCE_GRANULARITIES)[number];
 
-export const FINANCE_COMPARE_MODES = [
+const FINANCE_COMPARE_MODES = [
   "none",
   "prev_period",
   "prev_week",
@@ -37,7 +37,7 @@ export const FINANCE_COMPARE_MODES = [
 ] as const;
 export type FinanceCompareMode = (typeof FINANCE_COMPARE_MODES)[number];
 
-export const FINANCE_PAYMENTS = ["all", "cash", "vietqr", "momo"] as const;
+const FINANCE_PAYMENTS = ["all", "cash", "vietqr", "momo"] as const;
 export type FinancePayment = (typeof FINANCE_PAYMENTS)[number];
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -51,14 +51,14 @@ const branchSchema = z
     return Number.isFinite(n) && n > 0 ? n : null;
   });
 
-export const FINANCE_DEFAULTS = {
+const FINANCE_DEFAULTS = {
   range: "mtd" as FinanceRange,
   granularity: "day" as FinanceGranularity,
   compare: "prev_period" as FinanceCompareMode,
   payment: "all" as FinancePayment,
 } as const;
 
-export const financeParamsSchema = z.object({
+const financeParamsSchema = z.object({
   branch: branchSchema,
   range: z.enum(FINANCE_RANGES).default(FINANCE_DEFAULTS.range),
   from: isoDate.optional(),
@@ -253,7 +253,7 @@ export function getPresetRange(
 //   prev_year    = shift exactly 1 year back
 //
 // Returns null when mode = none or current range is empty.
-export function getComparePeriod(
+function getComparePeriod(
   current: DateRange,
   mode: FinanceCompareMode,
 ): DateRange | null {
@@ -335,15 +335,4 @@ export function resolveFinanceRange(
     end: range.end,
     compare: getComparePeriod(range, params.compare),
   };
-}
-
-// Same-time-of-day cutoff (Q1 + BA §3): when range=today, server actions
-// pass cutoff=now ISO so today-vs-yesterday compares the same hours.
-// Returns null otherwise — RPCs must accept null = full-day.
-export function getCutoffTime(
-  params: FinanceParams,
-  now: Date = new Date(),
-): string | null {
-  if (params.range === "today") return now.toISOString();
-  return null;
 }

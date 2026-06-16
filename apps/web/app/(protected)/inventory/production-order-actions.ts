@@ -65,7 +65,7 @@ function parseShortagesDetail(
   }
 }
 
-export interface ProductionOrderItemRow {
+interface ProductionOrderItemRow {
   id: number;
   finished_good_id: number;
   finished_good_name: string;

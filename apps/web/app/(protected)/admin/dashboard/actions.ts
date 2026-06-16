@@ -25,7 +25,7 @@ const DASHBOARD_ROLES: readonly StaffRole[] = ["owner"];
 // younger than this threshold.
 const AGENT_OFFLINE_THRESHOLD_MS = 60_000;
 
-export interface RecentOrder {
+interface RecentOrder {
   id: number;
   order_number: string;
   branch_name: string;
@@ -44,7 +44,7 @@ export interface DashboardStats {
   recentOrders: RecentOrder[];
 }
 
-export interface AdminOverviewFinance {
+interface AdminOverviewFinance {
   netRevenueBeforeVat: number;
   ingredientCost: number;
   operatingExpense: number;

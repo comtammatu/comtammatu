@@ -185,7 +185,7 @@ export function deriveKdsRowEffects(
   return { nextSnapshots, effects };
 }
 
-export function classifyKdsRowEffect(
+function classifyKdsRowEffect(
   previous: KdsRowSnapshot | undefined,
   next: KdsRowSnapshot,
 ): KdsRowEffectTone | null {

@@ -19,7 +19,7 @@ import { TrendSparkline, type TrendPoint } from "./trend-sparkline";
 //   │ ░░░░░░░░░░░░░░░░░░░░░ sparkline  │
 //   └──────────────────────────────────┘
 
-export type KpiTone =
+type KpiTone =
   | "neutral"
   | "primary"
   | "success"

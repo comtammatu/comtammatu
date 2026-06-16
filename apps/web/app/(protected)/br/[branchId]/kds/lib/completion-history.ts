@@ -35,7 +35,7 @@ export interface KdsCompletionHistoryBatch {
   created_at: string;
 }
 
-export interface KdsCompletionHistoryEntryItem {
+interface KdsCompletionHistoryEntryItem {
   id: number;
   name: string;
   quantity: number;

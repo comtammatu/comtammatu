@@ -5,7 +5,7 @@ import { TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { UrlTabs } from "@/_components/url-tabs";
 
-export type AppPageTabItem = {
+type AppPageTabItem = {
   value: string;
   label: ReactNode;
   count?: number;

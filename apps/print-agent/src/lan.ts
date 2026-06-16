@@ -17,7 +17,7 @@ export interface SendOptions {
  * a resend could double-print a partially-sent ticket, so the caller must
  * NOT retry.
  */
-export class PrintTransportError extends Error {
+class PrintTransportError extends Error {
   readonly wrote: boolean;
   constructor(message: string, wrote: boolean) {
     super(message);

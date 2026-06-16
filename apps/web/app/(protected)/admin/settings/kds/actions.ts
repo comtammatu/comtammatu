@@ -8,8 +8,6 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { TablesUpdate } from "@comtammatu/database/types";
-import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import {
   withAction,
@@ -81,77 +79,6 @@ const saveStationCategoriesSchema = z.object({
 });
 
 /* ─── Actions ─── */
-
-/**
- * Fetch KDS stations with their category assignments.
- * Optionally filter by branchId. Kept manual (auth-only + complex optional filter).
- */
-export async function fetchStations(branchId?: number): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    SETTINGS_ROLES,
-    PERMISSION_KEYS.SETTINGS_BRANCH,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  if (branchId !== undefined) {
-    const parsedBranchId = z.coerce
-      .number()
-      .int()
-      .positive()
-      .safeParse(branchId);
-    if (!parsedBranchId.success) {
-      return { success: false, error: "Branch ID không hợp lệ" };
-    }
-
-    if (!canOperateBranch(claims.branch_id, parsedBranchId.data)) {
-      return {
-        success: false,
-        error: "Không có quyền truy cập chi nhánh này",
-      };
-    }
-  }
-
-  let query = supabase
-    .from("kds_stations")
-    .select(
-      `
-      id,
-      name,
-      branch_id,
-      position,
-      is_active,
-      created_at,
-      updated_at,
-      kds_station_categories (
-        id,
-        category_id
-      )
-    `,
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .order("position", { ascending: true });
-
-  if (branchId !== undefined) {
-    query = query.eq("branch_id", branchId);
-  }
-
-  if (claims.branch_id !== null && branchId === undefined) {
-    query = query.eq("branch_id", claims.branch_id);
-  }
-
-  const { data: stations, error } = await query;
-
-  if (error) {
-    return {
-      success: false,
-      error: "Không thể tải danh sách trạm KDS. Vui lòng thử lại.",
-    };
-  }
-
-  return { success: true, data: stations ?? [] };
-}
 
 export const createStation = withFormAction(
   {

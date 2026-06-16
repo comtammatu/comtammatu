@@ -74,8 +74,6 @@ export const cancelOrderSchema = z.object({
     .min(5, { error: "Lý do hủy đơn tối thiểu 5 ký tự" }),
 });
 
-export type CancelOrderInput = z.infer<typeof cancelOrderSchema>;
-
 /**
  * Schema for `editPendingOrderItem(orderItemId, input)`.
  *
@@ -108,8 +106,6 @@ export const priorityInputSchema = z.object({
   note: z.string().trim().max(120).optional(),
 });
 
-export type PriorityInput = z.infer<typeof priorityInputSchema>;
-
 /**
  * Schema for `transferOrderTable(orderId, newTableId, idempotencyKey?)`.
  * `idempotencyKey` is a per-click mint by the cashier UI — covers the
@@ -126,8 +122,6 @@ export const transferTableSchema = z.object({
     .optional(),
 });
 
-export type TransferTableInput = z.infer<typeof transferTableSchema>;
-
 /**
  * Schema for `updateOrderStatus(orderId, newStatus)`. POS only ever
  * transitions to `served`; other states come from KDS / kitchen flow.
@@ -139,8 +133,6 @@ export const updateOrderStatusSchema = z.object({
   newStatus: z.enum(["served"]),
 });
 
-export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
-
 /**
  * Schema for `markOrderItemServed(itemId)`. POS waiter per-item serve
  * confirmation. RPC enforces "preparing|ready → served" transition.
@@ -148,8 +140,6 @@ export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
 export const markOrderItemServedSchema = z.object({
   itemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
 });
-
-export type MarkOrderItemServedInput = z.infer<typeof markOrderItemServedSchema>;
 
 /**
  * Schema for `submitOrder(branchId, cart, posSessionId?, idempotencyKey?)`.
@@ -179,8 +169,6 @@ export const submitOrderSchema = z.object({
     .optional(),
 });
 
-export type SubmitOrderInput = z.infer<typeof submitOrderSchema>;
-
 /**
  * Schema for `appendOrderItems(branchId, orderId, items, idempotencyKey?)`.
  *
@@ -207,8 +195,6 @@ export const appendOrderItemsSchema = z.object({
     .optional(),
 });
 
-export type AppendOrderItemsInput = z.infer<typeof appendOrderItemsSchema>;
-
 const dailyLimitHoldSourceSchema = z.enum(["pos_cart", "pos_append"]);
 
 export const reserveDailyLimitHoldsSchema = z.object({
@@ -221,10 +207,6 @@ export const reserveDailyLimitHoldsSchema = z.object({
   source: dailyLimitHoldSourceSchema,
 });
 
-export type ReserveDailyLimitHoldsInput = z.infer<
-  typeof reserveDailyLimitHoldsSchema
->;
-
 export const releaseDailyLimitHoldsSchema = z.object({
   branchId: z.coerce
     .number()
@@ -232,7 +214,3 @@ export const releaseDailyLimitHoldsSchema = z.object({
     .positive({ error: "Branch ID không hợp lệ" }),
   holdToken: z.string().uuid({ error: "Mã giữ suất không hợp lệ" }),
 });
-
-export type ReleaseDailyLimitHoldsInput = z.infer<
-  typeof releaseDailyLimitHoldsSchema
->;

@@ -39,10 +39,6 @@ const bulkUpdateThresholdsSchema = z.object({
   updates: z.array(thresholdItem).min(1).max(500),
 });
 
-export type BulkUpdateThresholdsInput = z.infer<
-  typeof bulkUpdateThresholdsSchema
->;
-
 export const bulkUpdateIngredientThresholds = withAction(
   {
     roles: INVENTORY_CATALOG_ROLES,

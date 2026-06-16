@@ -5,7 +5,7 @@ type BranchSiteLike = {
   branch_kind?: string | null;
 };
 
-export function getBranchSiteLabel(branch: BranchSiteLike): string {
+function getBranchSiteLabel(branch: BranchSiteLike): string {
   return getInventorySiteLabelVi(branch);
 }
 

@@ -60,7 +60,7 @@ export type PosErrorCode =
  *   - DB_LOCK_NOT_AVAILABLE — pg advisory lock contention, transient
  *   - RPC_GENERIC — uncategorized RPC failure (could be network)
  */
-export const RETRYABLE_POS_ERROR_CODES: ReadonlySet<PosErrorCode> = new Set([
+const RETRYABLE_POS_ERROR_CODES: ReadonlySet<PosErrorCode> = new Set([
   POS_ERROR_CODES.DB_LOCK_NOT_AVAILABLE,
   POS_ERROR_CODES.RPC_GENERIC,
 ]);

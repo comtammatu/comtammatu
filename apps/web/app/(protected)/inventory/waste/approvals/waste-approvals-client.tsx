@@ -24,7 +24,7 @@ import { formatVNDateTime } from "@comtammatu/shared/time";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 
-export type PendingWasteItem = {
+type PendingWasteItem = {
   itemId: number;
   ingredientId: number;
   ingredientName: string;

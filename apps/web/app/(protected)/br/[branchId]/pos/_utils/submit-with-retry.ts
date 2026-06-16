@@ -14,7 +14,7 @@ import { buildSubmitOrderCart } from "./submit-payload";
  * The server dedupes same-key retries via `orders.idempotency_key`
  * (see migration 20260408100000_pos_order_counter_idempotency.sql).
  */
-export const SUBMIT_RETRY_BACKOFF_MS = [0, 400, 1000] as const;
+const SUBMIT_RETRY_BACKOFF_MS = [0, 400, 1000] as const;
 
 /**
  * Vietnamese substrings that indicate a NON-retryable submit error.
@@ -45,9 +45,9 @@ const NON_RETRYABLE_ERROR_SUBSTRINGS: readonly string[] = [
  *   1. If `errorCode` is set, branch on that — stable contract.
  *   2. Otherwise fall back to substring matching against `error`.
  *
- * Pure — no side effects. Exported for tests.
+ * Pure — no side effects.
  */
-export function shouldRetrySubmit(
+function shouldRetrySubmit(
   errorCode: string | undefined,
   error: string | undefined,
 ): boolean {

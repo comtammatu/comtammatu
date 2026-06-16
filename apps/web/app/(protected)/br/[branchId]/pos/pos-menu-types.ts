@@ -1,6 +1,3 @@
-import type { CategoryType } from "@comtammatu/shared";
-import { formatVNTime } from "@comtammatu/shared/time";
-
 /* ─── Menu data types (derived from fetchMenuForPos action) ─── */
 
 export interface MenuVariant {
@@ -10,14 +7,14 @@ export interface MenuVariant {
   sort_order: number;
 }
 
-export interface MenuModifier {
+interface MenuModifier {
   id: number;
   name: string;
   price: number;
   sort_order: number;
 }
 
-export interface MenuAvailableSide {
+interface MenuAvailableSide {
   id: number;
   is_default: boolean;
   side_item: { id: number; name: string; base_price: number };
@@ -49,24 +46,6 @@ export interface MenuItem {
   daily_limit: MenuItemDailyLimit | null;
 }
 
-/** UI helper: how many portions may still be added to the cart. */
-export function remainingDailyQuota(
-  limit: MenuItemDailyLimit | null,
-): number | null {
-  if (!limit) return null;
-  if (limit.limit_quantity == null) return null;
-  return Math.max(0, limit.limit_quantity - limit.sold_today);
-}
-
-export function isItemBlockedByDailyLimit(
-  limit: MenuItemDailyLimit | null,
-): boolean {
-  if (!limit) return false;
-  if (limit.is_disabled) return true;
-  const remaining = remainingDailyQuota(limit);
-  return remaining !== null && remaining <= 0;
-}
-
 export interface MenuCategory {
   id: number;
   name: string;
@@ -75,23 +54,3 @@ export interface MenuCategory {
   menu_items: MenuItem[];
 }
 
-export const MENU_ZONE_ORDER: CategoryType[] = [
-  "main_dish",
-  "side_dish",
-  "drink",
-  "dessert",
-];
-
-/* ─── Helpers ─── */
-
-export function formatTime(dateStr: string): string {
-  return formatVNTime(dateStr);
-}
-
-export type PosFlowStepState = "done" | "current" | "todo";
-
-export interface PosFlowStep {
-  label: string;
-  meta: string;
-  state: PosFlowStepState;
-}

@@ -1,6 +1,6 @@
 import type { CartModifier, CartSide } from "../../types";
 
-export interface OrderItem {
+interface OrderItem {
   id: number;
   item_name: string;
   variant_name: string | null;

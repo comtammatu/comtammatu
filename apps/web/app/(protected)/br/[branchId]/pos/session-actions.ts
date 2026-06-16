@@ -363,24 +363,10 @@ const closeSessionSchema = z.object({
 
 /**
  * D8: variance gate retired — close no longer blocks. The RPC only raises
- * real errors (session_not_found, session_already_closed, unknown); the UI
- * branches on `meta.code`, and variance breaches arrive via notifications.
+ * real errors (session_not_found, session_already_closed, unknown); on
+ * failure `meta.code` carries one of those sentinels for the UI to branch
+ * on, and variance breaches arrive via notifications instead.
  */
-export type CloseSessionErrorCode =
-  | "session_not_found"
-  | "session_already_closed"
-  | "unknown";
-
-export interface CloseSessionErrorPayload {
-  code: CloseSessionErrorCode;
-}
-
-// On failure, `meta` matches CloseSessionErrorPayload (`Record<string, unknown>`
-// in the base type — narrowed by callers via meta.code).
-//
-// D8 (2026-04-27): variance note retired — RPC no longer requires it. UI
-// no longer renders the variance approval sub-step. Variance breach now
-// emits a notification to managers via trg_notify_pos_shift_variance.
 export const closePosSession = withActionPositional(
   {
     argsToInput: (sessionId: number, closingCash: number, note?: string) => ({

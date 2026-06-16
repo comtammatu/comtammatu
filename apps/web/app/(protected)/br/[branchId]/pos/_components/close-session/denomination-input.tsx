@@ -12,7 +12,7 @@ import {
 import { Label } from "@comtammatu/ui/components/label";
 import { FormattedNumberInput } from "@/components/form";
 
-export const DENOMINATIONS = [
+const DENOMINATIONS = [
   500_000, 200_000, 100_000, 50_000, 20_000, 10_000, 5_000, 2_000, 1_000,
 ] as const;
 

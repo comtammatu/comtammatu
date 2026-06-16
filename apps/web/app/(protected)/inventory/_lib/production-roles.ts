@@ -5,7 +5,7 @@ export const PRODUCTION_OPERATOR_ROLES = [
   "production_manager",
 ] as const satisfies readonly StaffRole[];
 
-export const PRODUCTION_BRANCH_SCOPED_ROLES = [
+const PRODUCTION_BRANCH_SCOPED_ROLES = [
   "production_manager",
 ] as const satisfies readonly StaffRole[];
 

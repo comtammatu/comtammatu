@@ -27,12 +27,6 @@ export type RawIngredientOption = {
   unit: string;
 };
 
-export type DraftLine = {
-  finishedGoodId: number;
-  quantity: string;
-  unit: string;
-};
-
 export type ProductionRecipeGroup = {
   finishedGoodId: number;
   finishedGoodName: string;

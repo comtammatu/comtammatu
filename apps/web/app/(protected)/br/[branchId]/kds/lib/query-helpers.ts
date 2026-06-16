@@ -1,7 +1,7 @@
 import type { KdsTicket } from "../types";
 
-export const KDS_QUERY_CHUNK_SIZE = 200;
-export const KDS_TICKET_PAGE_SIZE = 500;
+const KDS_QUERY_CHUNK_SIZE = 200;
+const KDS_TICKET_PAGE_SIZE = 500;
 
 export interface KdsRowsResult<T> {
   data: T[] | null;

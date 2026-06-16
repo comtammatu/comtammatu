@@ -25,7 +25,7 @@ type PermissionLike = PermissionKey | string;
  * (canonical helper: `lacksRequiredBranchScope` is intentionally private to
  * this file; copy the predicate inline if needed).
  */
-export type CustomAuthResolver<TInput> = (
+type CustomAuthResolver<TInput> = (
   input: TInput,
 ) => Promise<ActionContext | null>;
 

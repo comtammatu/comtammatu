@@ -14,8 +14,7 @@ import type { ToasterProps } from "@comtammatu/ui/components/sonner";
 export type ToasterPreset = ToasterProps;
 
 /** POS/KDS branch routes (any viewport) get the compact operational toaster. */
-export const OPERATIONAL_TOAST_ROUTE_PATTERN =
-  /^\/br\/[^/]+\/(?:pos|kds)(?:\/|$)/;
+const OPERATIONAL_TOAST_ROUTE_PATTERN = /^\/br\/[^/]+\/(?:pos|kds)(?:\/|$)/;
 
 const TOAST_CLASS_NAMES = {
   toast: "cn-toast",

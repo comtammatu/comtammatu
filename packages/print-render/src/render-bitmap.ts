@@ -34,7 +34,7 @@ const FONT_SIZE_NORMAL = 20;
 const FONT_SIZE_DOUBLE = 40;
 
 export const LINE_HEIGHT_NORMAL = 26;
-export const LINE_HEIGHT_DOUBLE = 52;
+const LINE_HEIGHT_DOUBLE = 52;
 
 /** Max chars per line at normal size (matches PD805KL Font A = 48). */
 export const CHARS_PER_LINE_NORMAL = 48;

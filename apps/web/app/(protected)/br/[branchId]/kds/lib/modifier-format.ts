@@ -11,12 +11,3 @@ export function classifyModifier(label: string): ModifierTone {
   }
   return "neutral";
 }
-
-export interface FormattedModifier {
-  label: string;
-  tone: ModifierTone;
-}
-
-export function formatModifier(label: string): FormattedModifier {
-  return { label, tone: classifyModifier(label) };
-}

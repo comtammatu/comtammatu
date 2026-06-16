@@ -1,51 +1,10 @@
 "use server";
 
 import { z } from "zod";
-import type { ActionResult } from "@comtammatu/shared/types";
 import { INVENTORY_OPS_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { PG_ERR } from "./_lib/constants";
-
-/* ─── Stock levels + manual adjustment ─── */
-
-export async function fetchStockLevels(
-  branchId: number,
-): Promise<ActionResult> {
-  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  const { data, error } = await supabase
-    .from("stock_levels")
-    .select(
-      `
-      id,
-      current_quantity,
-      avg_unit_cost,
-      last_counted_at,
-      ingredient_id,
-      ingredients (
-        id, name, unit, category, min_stock_level, max_stock_level, is_active
-      )
-    `,
-    )
-    .eq("branch_id", parsedBranch.data)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (error) {
-    return { success: false, error: "Không thể tải tồn kho." };
-  }
-
-  return { success: true, data: data ?? [] };
-}
 
 /* ─── adjustStock ─── */
 
@@ -116,6 +75,3 @@ export const adjustStock = withAction(
     return { success: true };
   },
 );
-
-/* ─── fetchStockAlerts ─── */
-

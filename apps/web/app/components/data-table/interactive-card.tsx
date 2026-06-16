@@ -49,5 +49,4 @@ export function InteractiveCard({
   );
 }
 
-export { interactiveCardVariants };
 export type { InteractiveCardProps };

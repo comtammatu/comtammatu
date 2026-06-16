@@ -4,7 +4,7 @@ import {
 } from "@comtammatu/shared/labels";
 import { getKdsTicketDisplayStatus } from "./order-status";
 
-export const STATUS_CONFIG = {
+const STATUS_CONFIG = {
   pending: { label: KDS_TICKET_STATUS_LABELS_VI.pending, variant: "warning" as const },
   ready: { label: KDS_TICKET_STATUS_LABELS_VI.ready, variant: "success" as const },
   cancelled: { label: KDS_TICKET_STATUS_LABELS_VI.cancelled, variant: "destructive" as const },
@@ -26,7 +26,7 @@ export function shouldShowTicketStatusBadge(status: string): boolean {
   return getKdsTicketDisplayStatus(status) !== "pending";
 }
 
-export const ORDER_TYPE_CONFIG: Record<string, { label: string }> = {
+const ORDER_TYPE_CONFIG: Record<string, { label: string }> = {
   dine_in: { label: ORDER_TYPE_LABELS_VI.dine_in },
   takeaway: { label: ORDER_TYPE_LABELS_VI.takeaway },
 };
@@ -35,14 +35,7 @@ export function getOrderTypeLabel(orderType: string): string {
   return ORDER_TYPE_CONFIG[orderType]?.label ?? orderType;
 }
 
-export function shouldShowOrderTypeBadge(
-  orderType: string,
-  tableNumber: number | null,
-): boolean {
-  return orderType !== "dine_in" || tableNumber === null;
-}
-
-export function formatKitchenTicketDisplay(ticketNumber: string): string {
+function formatKitchenTicketDisplay(ticketNumber: string): string {
   const trimmed = ticketNumber.trim();
   const orderBasedTicket = formatOrderBasedKitchenTicketDisplay(trimmed);
   if (orderBasedTicket) return orderBasedTicket;

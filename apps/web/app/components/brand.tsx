@@ -24,7 +24,7 @@ const BRAND_ASSETS = {
   },
 } as const;
 
-export type BrandAssetVariant = keyof typeof BRAND_ASSETS;
+type BrandAssetVariant = keyof typeof BRAND_ASSETS;
 export type BrandMarkVariant = Extract<BrandAssetVariant, "seal">;
 export type BrandLockupVariant = Extract<
   BrandAssetVariant,

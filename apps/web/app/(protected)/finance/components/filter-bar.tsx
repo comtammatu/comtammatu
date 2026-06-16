@@ -54,7 +54,7 @@ interface FilterBarProps {
   className?: string;
 }
 
-export type FilterBarControl =
+type FilterBarControl =
   | "branch"
   | "range"
   | "granularity"

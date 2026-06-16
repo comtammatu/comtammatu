@@ -32,7 +32,7 @@ interface WorkQueueStripProps {
   className?: string;
 }
 
-export type WorkQueueTile = "invoices" | "cash" | "foodCost" | "webhook";
+type WorkQueueTile = "invoices" | "cash" | "foodCost" | "webhook";
 
 const DEFAULT_TILES: WorkQueueTile[] = [
   "invoices",

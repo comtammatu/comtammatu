@@ -1,9 +1,9 @@
 import ExcelJS from "exceljs";
 
-export const MAX_FILE_SIZE = 4 * 1024 * 1024;
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
 export const MAX_ROWS_PER_SHEET = 5000;
 
-export interface SheetColumn {
+interface SheetColumn {
   header: string;
   key: string;
   width?: number;

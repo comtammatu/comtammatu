@@ -53,23 +53,6 @@ export const QuantityInput = React.forwardRef<
 });
 QuantityInput.displayName = "QuantityInput";
 
-export type TaxRateBpsInputProps = LockedIntegerInputProps;
-
-export const TaxRateBpsInput = React.forwardRef<
-  HTMLInputElement,
-  TaxRateBpsInputProps
->(function TaxRateBpsInput(props, ref) {
-  return (
-    <FormattedNumberInput
-      {...props}
-      ref={ref}
-      inputMode="numeric"
-      maxFractionDigits={0}
-    />
-  );
-});
-TaxRateBpsInput.displayName = "TaxRateBpsInput";
-
 export type MoneyVndFieldProps<TFieldValues extends FieldValues> = Omit<
   NumberFieldProps<TFieldValues>,
   "maxFractionDigits"
@@ -93,15 +76,4 @@ export function QuantityField<TFieldValues extends FieldValues>({
   ...props
 }: QuantityFieldProps<TFieldValues>) {
   return <NumberField {...props} maxFractionDigits={maxFractionDigits} />;
-}
-
-export type TaxRateBpsFieldProps<TFieldValues extends FieldValues> = Omit<
-  NumberFieldProps<TFieldValues>,
-  "maxFractionDigits"
->;
-
-export function TaxRateBpsField<TFieldValues extends FieldValues>(
-  props: TaxRateBpsFieldProps<TFieldValues>,
-) {
-  return <NumberField {...props} maxFractionDigits={0} />;
 }

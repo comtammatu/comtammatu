@@ -26,7 +26,7 @@ function padDatePart(value: number) {
   return String(value).padStart(2, "0");
 }
 
-export function formatBusinessDate(value?: string | null) {
+function formatBusinessDate(value?: string | null) {
   if (!value) {
     return "";
   }
@@ -40,11 +40,11 @@ export function formatBusinessDate(value?: string | null) {
   return `${day}/${month}/${year}`;
 }
 
-export function dateToBusinessDate(date: Date) {
+function dateToBusinessDate(date: Date) {
   return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
 }
 
-export function businessDateToDate(value?: string | null) {
+function businessDateToDate(value?: string | null) {
   if (!value) {
     return undefined;
   }

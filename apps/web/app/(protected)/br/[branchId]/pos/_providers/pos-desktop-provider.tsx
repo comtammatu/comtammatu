@@ -82,11 +82,6 @@ export function usePosCartStore(): CartStore {
 
 /* ─── Order list / tables: split data vs dispatch ─── */
 
-type OperationalData = {
-  orders: SessionOrder[];
-  tables: BranchTable[];
-};
-
 type OperationalDispatch = {
   /** Raw promise-returning full refresh (orders + tables). */
   refreshAll: () => Promise<void>;
@@ -133,12 +128,6 @@ const DailyLimitStoreContext = createContext<DailyLimitStore | null>(null);
 // pushing rows into a paginated cursor stream (which would create
 // ordering hazards across page boundaries).
 const ArchivedInvalidationContext = createContext<number>(0);
-
-export function usePosOperationalData(): OperationalData {
-  const orders = usePosOrders();
-  const tables = usePosTables();
-  return useMemo(() => ({ orders, tables }), [orders, tables]);
-}
 
 export function usePosOrders(): SessionOrder[] {
   const ctx = useContext(OrdersContext);

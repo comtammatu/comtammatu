@@ -67,7 +67,7 @@ export function getKdsScopedGroupKey(
   return columnId === "add_on" ? `${baseGroupKey}:add_on` : baseGroupKey;
 }
 
-export function getKdsOrderColumnId(order: KdsOrder): KdsOrderColumnId {
+function getKdsOrderColumnId(order: KdsOrder): KdsOrderColumnId {
   if (order.items.length > 0 && order.items.every(isKdsAddOnItem)) {
     return "add_on";
   }

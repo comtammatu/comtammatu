@@ -20,7 +20,7 @@ import {
   PopoverTrigger,
 } from "@comtammatu/ui/components/popover";
 
-export interface MultiSelectComboboxOption {
+interface MultiSelectComboboxOption {
   value: string;
   label: string;
   hint?: string;

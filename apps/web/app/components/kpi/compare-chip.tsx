@@ -8,7 +8,7 @@ import { cn } from "@comtammatu/ui/lib/utils";
 //
 // Sizes: "xs" pairs with KpiCard inline delta; "sm" stands alone in
 // section headers. No "lg" — finance UI doesn't need a hero delta chip.
-export type CompareTone = "good" | "bad" | "neutral";
+type CompareTone = "good" | "bad" | "neutral";
 
 interface CompareChipProps {
   /** Display text e.g. "+12,3%" or "Mới" */

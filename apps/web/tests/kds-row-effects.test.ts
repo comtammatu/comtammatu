@@ -18,14 +18,6 @@ const kdsBoardSource = readFileSync(
   "utf8",
 );
 
-const ticketRowSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/kds/components/ticket-row.tsx",
-  ),
-  "utf8",
-);
-
 const orderGridSource = readFileSync(
   join(
     process.cwd(),
@@ -175,11 +167,9 @@ test("KDS row effect classes use semantic tokens and motion-safe animation", () 
   assert.match(getKdsRowEffectClass("removed") || "", /ring-destructive\/40/);
 });
 
-test("KDS row effects are wired across board, comprehensive, focus, and ticket rows", () => {
+test("KDS row effects are wired across board, comprehensive, and focus rows", () => {
   assert.match(kdsBoardSource, /useKdsRowEffects\(\{/);
   assert.match(kdsBoardSource, /<KdsRowEffectsProvider value=\{rowEffects\}>/);
-  assert.match(ticketRowSource, /useKdsRowEffect\(ticket\?\.id\)/);
-  assert.match(ticketRowSource, /data-kds-effect=\{rowEffect \?\? undefined\}/);
   assert.match(orderGridSource, /useKdsRowEffect\(ticket\?\.id\)/);
   assert.match(orderGridSource, /data-kds-effect=\{rowEffect \?\? undefined\}/);
   assert.match(focusViewSource, /useKdsRowEffectsValue\(\)/);

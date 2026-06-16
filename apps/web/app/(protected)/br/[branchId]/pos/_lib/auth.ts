@@ -18,13 +18,6 @@ import {
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import type { ActionContext } from "@/_lib/with-action";
 
-// Re-exports — keep route-local imports tidy.
-export {
-  getAuthContext,
-  getAuthContextWithAnyPermission,
-  getAuthContextWithPermission,
-} from "@/_lib/auth";
-
 /**
  * POS operators allowed to void / cancel / reduce order flows. Mirrors
  * `MODULE_ACL.pos.allowedRoles` — kept as a named alias so refactoring the
@@ -32,7 +25,7 @@ export {
  * original intent. WS-1b will dedupe the local `POS_VOID_ROLES` constant
  * still living inside `order-actions.ts` against this one.
  */
-export const POS_VOID_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
+const POS_VOID_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
 
 /**
  * `customAuth` resolver for POS void / cancel / reduce actions. Composite
@@ -63,7 +56,7 @@ export async function posVoidAuth(): Promise<ActionContext | null> {
  * future split (e.g. removing chef from non-kitchen lifecycle actions)
  * can land without re-scoping void.
  */
-export const POS_USE_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
+const POS_USE_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
 
 /**
  * `customAuth` resolver for POS lifecycle actions: composite gate

@@ -178,7 +178,6 @@ App-local form helpers song tai `apps/web/app/components/form/`. Dung cho moi di
 - `NumberField` — `FormattedNumberInput` (VND format) + RHF
 - `MoneyVndInput` / `MoneyVndField` — VND integer amount, grouped display, raw numeric-string submit
 - `QuantityInput` / `QuantityField` — inventory quantity, default 3 decimal places, grouped display
-- `TaxRateBpsInput` / `TaxRateBpsField` — tax basis points integer, raw numeric-string submit
 - `BusinessDateField` — RHF date picker, displays `dd/mm/yyyy`, stores `yyyy-mm-dd`, optional branch timezone note
 - `SelectField` — Select voi `options={[{value, label}]}`
 - `TextareaField` — Textarea + RHF

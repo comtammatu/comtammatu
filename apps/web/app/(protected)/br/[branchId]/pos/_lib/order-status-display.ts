@@ -19,7 +19,7 @@
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import type { BadgeProps } from "@comtammatu/ui/components/badge";
 
-export type OrderStatusVariant = NonNullable<BadgeProps["variant"]>;
+type OrderStatusVariant = NonNullable<BadgeProps["variant"]>;
 
 export interface OrderStatusInfo {
   label: string;
@@ -35,7 +35,7 @@ export interface OrderStatusInput {
 /** Vietnamese age string. < 1 phút = "vừa tạo", < 60 phút = "X phút",
  * >= 60 phút = "X tiếng". Stale across renders unless the parent re-renders;
  * acceptable for the order list which refreshes on realtime / refetch. */
-export function formatOrderAge(createdAtIso: string): string {
+function formatOrderAge(createdAtIso: string): string {
   const elapsedMs = Date.now() - new Date(createdAtIso).getTime();
   const minutes = Math.floor(elapsedMs / 60_000);
   if (minutes < 1) return "vừa tạo";

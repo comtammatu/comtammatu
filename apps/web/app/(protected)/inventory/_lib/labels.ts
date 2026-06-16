@@ -12,7 +12,7 @@ export interface LabelVariants {
   long: string;
 }
 
-export const LABEL_LENGTH_BY_CONTEXT: Record<LabelContext, LabelLength> = {
+const LABEL_LENGTH_BY_CONTEXT: Record<LabelContext, LabelLength> = {
   button: "short",
   tab: "short",
   badge: "short",

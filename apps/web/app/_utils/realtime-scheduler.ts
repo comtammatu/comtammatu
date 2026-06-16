@@ -17,7 +17,7 @@ export interface RealtimeSchedulerMetric {
   triggerCount: number;
 }
 
-export interface RealtimeSchedulerMetricsRegistry {
+interface RealtimeSchedulerMetricsRegistry {
   reset: () => void;
   snapshot: () => Record<string, RealtimeSchedulerMetric>;
 }

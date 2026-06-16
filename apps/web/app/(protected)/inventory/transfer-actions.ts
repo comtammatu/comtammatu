@@ -10,7 +10,6 @@ import {
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
-import { withAction } from "@/_lib/with-action";
 import type { TenantSupabase } from "./_lib/types";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { PG_ERR } from "./_lib/constants";
@@ -491,65 +490,6 @@ export async function createStockTransfer(
 
   return { success: true, data: { id: result.id } };
 }
-
-const transferLineSchema = z.object({
-  transferId: z.coerce.number().int().positive(),
-  ingredientId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().positive(),
-  unit: z.string().min(1),
-});
-
-export const upsertTransferLine = withAction(
-  { roles: ROLES, schema: transferLineSchema, requireBranchScope: true },
-  async (d, { supabase, claims }) => {
-    const { data: transfer, error: transferError } = await supabase
-      .from("stock_transfers")
-      .select(
-        "id, tenant_id, from_branch_id, to_branch_id, from_location_id, to_location_id, status",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .eq("id", d.transferId)
-      .single();
-    if (transferError || !transfer) {
-      return { success: false, error: "Không tìm thấy phiếu chuyển." };
-    }
-    if (transfer.status !== "draft") {
-      return { success: false, error: "Chỉ được sửa dòng khi phiếu còn nháp." };
-    }
-    const scopeError = enforceTransferActionScope(
-      claims,
-      transfer,
-      "from",
-      PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
-    );
-    if (scopeError) return { success: false, error: scopeError };
-    const { data: allowed, error: permissionError } = await supabase.rpc(
-      "has_permission",
-      {
-        p_branch_id: transfer.from_branch_id,
-        p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
-      },
-    );
-    if (permissionError || allowed !== true) {
-      return { success: false, error: "Không có quyền" };
-    }
-
-    const { error } = await supabase.from("stock_transfer_items").upsert(
-      {
-        tenant_id: claims.tenant_id,
-        transfer_id: d.transferId,
-        ingredient_id: d.ingredientId,
-        quantity: d.quantity,
-        unit: d.unit,
-      },
-      { onConflict: "transfer_id,ingredient_id,tenant_id" },
-    );
-    if (error) {
-      return { success: false, error: "Không thể lưu dòng chuyển." };
-    }
-    return { success: true };
-  },
-);
 
 export async function transferConfirmShip(
   transferId: number,

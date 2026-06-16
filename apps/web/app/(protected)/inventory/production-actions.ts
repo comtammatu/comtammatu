@@ -10,7 +10,6 @@ export {
   exportProductionRecipes,
   downloadProductionRecipeTemplate,
   importProductionRecipes,
-  upsertProductionRecipe,
   upsertProductionRecipeLines,
   deleteProductionRecipe,
   deleteProductionRecipeGroup,
@@ -26,7 +25,4 @@ export {
   confirmProductionOrder,
   cancelProductionOrder,
 } from "./production-order-actions";
-export type {
-  ProductionOrderItemRow,
-  ProductionOrderRow,
-} from "./production-order-actions";
+export type { ProductionOrderRow } from "./production-order-actions";

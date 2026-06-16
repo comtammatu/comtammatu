@@ -5,7 +5,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { appendOrderItems } from "../order-actions";
 import type { CartItem } from "../types";
 
-export interface AppendTargetLike {
+interface AppendTargetLike {
   orderId: number;
   orderNumber: string;
 }
@@ -16,7 +16,7 @@ export interface UsePosAppendArgs {
   refreshOperational: () => Promise<void> | void;
 }
 
-export interface PerformAppendOptions {
+interface PerformAppendOptions {
   /** Caller-specific cleanup after a successful append (e.g. close customizer). */
   onSuccess?: () => void;
 }

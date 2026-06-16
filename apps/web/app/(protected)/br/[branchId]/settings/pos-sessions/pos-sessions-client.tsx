@@ -84,7 +84,7 @@ function resolveSessionLabel(session: PosSessionRow): string {
   return messages.settings.posSessions.branchSharedSession;
 }
 
-export interface PosSessionOrderItem {
+interface PosSessionOrderItem {
   id: number;
   item_name: string;
   variant_name: string | null;

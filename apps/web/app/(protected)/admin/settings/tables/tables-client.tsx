@@ -25,7 +25,7 @@ import type { ZoneRow } from "./zone-table";
 import type { TableRow } from "./table-table";
 
 import { BRANCH_VI } from "@comtammatu/shared/messages";
-export interface BranchOption {
+interface BranchOption {
   id: number;
   name: string;
   is_active: boolean | null;

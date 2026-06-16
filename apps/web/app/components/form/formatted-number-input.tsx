@@ -22,7 +22,7 @@ function looksLikeGroupedInteger(value: string) {
   return /^\d{1,3}(\.\d{3})+$/.test(value);
 }
 
-export function sanitizeNumericInput(
+function sanitizeNumericInput(
   input: string,
   {
     allowNegative = false,
@@ -87,7 +87,7 @@ export function sanitizeNumericInput(
   return `${negative ? "-" : ""}${normalizedInteger}${hasTrailingSeparator || fractionPart.length > 0 ? `.${fractionPart}` : ""}`;
 }
 
-export function formatDisplayValue(raw: string) {
+function formatDisplayValue(raw: string) {
   if (!raw || raw === "-") {
     return raw;
   }

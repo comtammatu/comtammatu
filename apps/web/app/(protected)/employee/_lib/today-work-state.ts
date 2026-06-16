@@ -1,6 +1,6 @@
 import { getEmployeeContext } from "./employee-context";
 import { resolveDefaultShiftId } from "./default-shift";
-import { formatTimeShort, getTodayVN } from "./vn-business-date";
+import { getTodayVN } from "./vn-business-date";
 import type { StaffRole } from "@comtammatu/shared/auth";
 
 export type TodayWorkStatus =
@@ -23,7 +23,7 @@ export interface TodayChecklistItem {
   completedAt: string | null;
 }
 
-export interface TodayAttendance {
+interface TodayAttendance {
   id: number;
   date: string;
   branchId: number;
@@ -87,9 +87,7 @@ function isDefaultAttendanceRole(role: StaffRole): boolean {
   return DEFAULT_ATTENDANCE_ROLES.includes(role);
 }
 
-export function isManagerSimpleAttendanceRole(
-  role: StaffRole | null,
-): boolean {
+function isManagerSimpleAttendanceRole(role: StaffRole | null): boolean {
   return role !== null && MANAGER_SIMPLE_ATTENDANCE_ROLES.includes(role);
 }
 
@@ -119,16 +117,6 @@ function normalizeShift(shift: unknown): {
     start_time: typeof maybe.start_time === "string" ? maybe.start_time : null,
     end_time: typeof maybe.end_time === "string" ? maybe.end_time : null,
   };
-}
-
-export function formatAttendanceShiftRange(
-  attendance: Pick<
-    TodayAttendance,
-    "shiftStartTime" | "shiftEndTime"
-  > | null,
-): string {
-  if (!attendance?.shiftStartTime) return "—";
-  return `${formatTimeShort(attendance.shiftStartTime)} - ${formatTimeShort(attendance.shiftEndTime)}`;
 }
 
 export async function getTodayWorkState(): Promise<TodayWorkState> {

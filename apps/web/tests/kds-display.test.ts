@@ -52,14 +52,6 @@ const orderTitleLineSource = readFileSync(
   "utf8",
 );
 
-const orderCardHeaderSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/kds/components/order-card-header.tsx",
-  ),
-  "utf8",
-);
-
 const focusViewSource = readFileSync(
   join(
     process.cwd(),
@@ -261,9 +253,6 @@ test("KDS title context keeps table target and ticket code visible", () => {
   assert.doesNotMatch(orderTitleLineSource, /truncate|line-clamp/);
   assert.doesNotMatch(orderNoteSource, /truncate|line-clamp|overflow-hidden/);
   assert.match(orderGridSource, /contextLabel=\{contextLabel\}/);
-  assert.doesNotMatch(orderCardHeaderSource, /sendKind === "append"/);
-  assert.doesNotMatch(orderCardHeaderSource, /resolvedContextLabel/);
-  assert.match(orderCardHeaderSource, /contextLabel=\{contextLabel\}/);
   assert.match(focusViewSource, /contextLabel=\{getKdsOrderLabelOverride/);
 });
 

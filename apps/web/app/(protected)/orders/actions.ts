@@ -58,7 +58,7 @@ export interface OrderItem {
   sides: OrderItemSide[];
 }
 
-export interface OrderPayment {
+interface OrderPayment {
   method: string;
   amount: number;
   status: string;
@@ -105,7 +105,7 @@ export interface OrdersSummary {
 /* ─── Audit log types ─── */
 
 /** Hành động đã được parse từ `order_status_history.note` thành dạng người dùng đọc được. */
-export type AuditAction =
+type AuditAction =
   | "create"
   | "status_change"
   | "cancel"

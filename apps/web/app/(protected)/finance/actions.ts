@@ -522,38 +522,6 @@ export async function cancelTaxInvoice(
   };
 }
 
-/* ─── Fetch Invoice Audit Trail ─── */
-
-export async function fetchTaxInvoiceEvents(
-  invoiceId: number,
-): Promise<ActionResult> {
-  const parsed = z.coerce.number().int().positive().safeParse(invoiceId);
-  if (!parsed.success) {
-    return { success: false, error: "Invoice ID không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    FINANCE_ROLES,
-    PERMISSION_KEYS.FINANCE_VIEW,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  const { data, error } = await supabase
-    .from("tax_invoice_events")
-    .select("id, from_status, to_status, payload, note, actor_id, created_at")
-    .eq("tax_invoice_id", parsed.data)
-    .eq("tenant_id", claims.tenant_id)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    return { success: false, error: "Không thể tải nhật ký hóa đơn." };
-  }
-
-  return { success: true, data: data ?? [] };
-}
-
 /* ─── Fetch Invoices ─── */
 
 const TAX_INVOICE_LIST_SELECT = `
@@ -1134,51 +1102,4 @@ export async function refreshMaterializedViews(): Promise<ActionResult> {
   }
 
   return { success: true };
-}
-
-/* ─── Audit Logs ─── */
-
-export async function fetchAuditLogs(
-  entityType?: string,
-  limitCount?: number,
-): Promise<ActionResult> {
-  const parsedLimit = z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(500)
-    .optional()
-    .safeParse(limitCount);
-
-  const ctx = await getAuthContextWithPermission(
-    FINANCE_ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  // Explicit column list — drop ip_address (request-level PII) and
-  // raw `old_data`/`new_data` blobs (buyer addresses, MST, salaries
-  // depending on entity_type). The action+entity_id pair is enough to
-  // reconstruct who did what to which row; if a deeper audit is needed,
-  // a future RPC can return diffs gated on a per-event permission.
-  let query = supabase
-    .from("audit_logs")
-    .select("id, action, entity_type, entity_id, user_id, created_at")
-    .eq("tenant_id", claims.tenant_id)
-    .order("created_at", { ascending: false })
-    .limit(parsedLimit.success && parsedLimit.data ? parsedLimit.data : 100);
-
-  if (entityType) {
-    query = query.eq("entity_type", entityType);
-  }
-
-  const { data: logs, error: logErr } = await query;
-
-  if (logErr) {
-    return { success: false, error: "Không thể tải nhật ký hoạt động." };
-  }
-
-  return { success: true, data: logs ?? [] };
 }

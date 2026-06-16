@@ -38,8 +38,7 @@ export interface ComboboxProps {
   "aria-invalid"?: boolean;
 }
 
-/** Standalone controlled Combobox (no RHF). Use `ComboboxField` when inside
- * a react-hook-form. Shared UI primitive. */
+/** Standalone controlled Combobox (no RHF). Shared UI primitive. */
 export function Combobox({
   value,
   onValueChange,
