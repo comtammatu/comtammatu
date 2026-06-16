@@ -58,7 +58,7 @@ export default async function MenuPage() {
       />
 
       <Card>
-        <CardContent className="p-5 sm:p-6">
+        <CardContent>
           <UrlTabs defaultValue="items">
             <TabsList className="h-11 rounded-lg bg-muted/60">
               <TabsTrigger value="items" className="px-5">

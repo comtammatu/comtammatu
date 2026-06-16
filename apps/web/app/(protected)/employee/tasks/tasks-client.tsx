@@ -22,11 +22,6 @@ const CHECKLIST_PHASES = [
   "during_shift",
   "end_of_shift",
 ] as const;
-const CHECKLIST_PHASE_LABELS = {
-  start_of_shift: "Đầu ca",
-  during_shift: "Trong ca",
-  end_of_shift: "Cuối ca",
-} as const;
 
 interface TasksClientProps {
   items: TodayChecklistItem[];
@@ -53,7 +48,7 @@ export function TasksClient({ items, disabled = false }: TasksClientProps) {
       const result = await toggleChecklistItem({ itemId, done });
       if (!result.success) {
         setLocalItems(previous);
-        toast.error(result.error ?? "Không thể cập nhật việc trong ca.");
+        toast.error(result.error ?? taskCopy.updateError);
       }
     });
   }
@@ -67,7 +62,7 @@ export function TasksClient({ items, disabled = false }: TasksClientProps) {
         return (
           <div key={phase} className="space-y-2">
             <div className="text-sm font-medium">
-              {CHECKLIST_PHASE_LABELS[phase]}
+              {taskCopy.phaseLabels[phase]}
             </div>
             <ItemGroup className="gap-2">
               {phaseItems.map((item) => {

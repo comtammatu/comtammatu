@@ -206,7 +206,7 @@ export default async function BranchCommandPage({
   );
 
   return (
-    <AppPage width="default" className="md:p-6">
+    <AppPage width="default">
       <AppPageHeader
         eyebrow="Theo chi nhánh"
         title={copy.commandTitle}

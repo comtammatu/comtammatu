@@ -297,6 +297,12 @@ export const employee = {
     done: "Xong",
     markTodo: "Đánh dấu chưa làm",
     markDone: "Đánh dấu xong",
+    phaseLabels: {
+      start_of_shift: "Đầu ca",
+      during_shift: "Trong ca",
+      end_of_shift: "Cuối ca",
+    },
+    updateError: "Không thể cập nhật việc trong ca.",
   },
   profile: {
     title: "Hồ sơ",
