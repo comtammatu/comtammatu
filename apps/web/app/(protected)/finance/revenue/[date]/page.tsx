@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import {
   Card,
   CardContent,
@@ -57,17 +57,6 @@ const PAYMENT_METHOD_LABEL: Record<string, string> = {
   cash: "Tiền mặt",
   vietqr: "VietQR",
   momo: "MoMo",
-};
-
-const INVOICE_STATUS_VARIANT: Record<
-  string,
-  "default" | "secondary" | "outline" | "destructive"
-> = {
-  issued: "default",
-  not_required: "secondary",
-  draft: "outline",
-  signing: "outline",
-  submitted: "outline",
 };
 
 function isValidIsoDate(value: string): boolean {
@@ -317,16 +306,9 @@ export default async function RevenueDrillPage({
                   <TableBody>
                     {orders.map((o) => {
                       const invoiceLabel =
-                        o.invoice_status === "not_required"
-                          ? "Không yêu cầu"
-                          : o.invoice_status === "issued"
-                            ? `Đã phát hành${o.invoice_number ? ` · ${o.invoice_number}` : ""}`
-                            : (o.invoice_status ?? "—");
-                      const invoiceVariant =
-                        o.invoice_status &&
-                        INVOICE_STATUS_VARIANT[o.invoice_status]
-                          ? INVOICE_STATUS_VARIANT[o.invoice_status]
-                          : "outline";
+                        o.invoice_status === "issued" && o.invoice_number
+                          ? `${getStatusBadgeMeta("tax-invoice", o.invoice_status).label} · ${o.invoice_number}`
+                          : undefined;
                       return (
                         <TableRow key={o.order_id}>
                           <TableCell className="font-mono tabular-nums">
@@ -363,9 +345,11 @@ export default async function RevenueDrillPage({
                           </TableCell>
                           <TableCell>
                             {o.invoice_status ? (
-                              <Badge variant={invoiceVariant}>
-                                {invoiceLabel}
-                              </Badge>
+                              <StatusBadge
+                                domain="tax-invoice"
+                                value={o.invoice_status}
+                                label={invoiceLabel}
+                              />
                             ) : (
                               <span className="text-xs text-muted-foreground">
                                 Chưa xuất

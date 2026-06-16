@@ -178,9 +178,7 @@ const checks = [
       // variant/tone maps (or label+variant maps already sourced from
       // @comtammatu/shared *_STATUS_LABELS_VI), not new label duplication.
       // Folding the variants into status-badge.tsx domains is a later wave.
-      "apps/web/app/(protected)/finance/revenue/[date]/page.tsx": 1,
       "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx": 1,
-      "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 1,
     },
   },
   {

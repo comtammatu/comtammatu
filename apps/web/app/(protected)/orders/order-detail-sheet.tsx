@@ -25,35 +25,8 @@ import {
 /* ─── Helpers ─── */
 
 import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
-import {
-  getPaymentMethodLabelVi,
-  ORDER_ITEM_STATUS_LABELS_VI,
-} from "@comtammatu/shared/labels";
+import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import { StatusBadge } from "@/components/status-badge";
-
-type ItemStatusBadge =
-  | "warning"
-  | "info"
-  | "success"
-  | "destructive"
-  | "outline";
-
-const ITEM_STATUS_META: Record<
-  string,
-  { label: string; variant: ItemStatusBadge }
-> = {
-  pending: { label: ORDER_ITEM_STATUS_LABELS_VI.pending, variant: "warning" },
-  preparing: {
-    label: ORDER_ITEM_STATUS_LABELS_VI.preparing,
-    variant: "warning",
-  },
-  ready: { label: ORDER_ITEM_STATUS_LABELS_VI.ready, variant: "info" },
-  served: { label: ORDER_ITEM_STATUS_LABELS_VI.served, variant: "success" },
-  cancelled: {
-    label: ORDER_ITEM_STATUS_LABELS_VI.cancelled,
-    variant: "destructive",
-  },
-};
 
 function itemStatusToneClass(status: string): string {
   switch (status) {
@@ -61,7 +34,7 @@ function itemStatusToneClass(status: string): string {
     case "preparing":
       return "border-warning/30 bg-warning/5";
     case "ready":
-      return "border-info/30 bg-info/5";
+      return "border-success/30 bg-success/5";
     case "served":
       return "border-success/30 bg-success/5";
     case "cancelled":
@@ -288,10 +261,6 @@ export function OrderDetailSheet({
               <ul className="space-y-2">
                 {items.map((item) => {
                   const isCancelled = item.status === "cancelled";
-                  const statusInfo = ITEM_STATUS_META[item.status] ?? {
-                    label: item.status,
-                    variant: "outline" as ItemStatusBadge,
-                  };
                   const modifierLine =
                     item.modifiers.length > 0
                       ? `Tuỳ chọn: ${item.modifiers.map(formatModifier).join(", ")}`
@@ -321,12 +290,11 @@ export function OrderDetailSheet({
                             >
                               {item.item_name}
                             </span>
-                            <Badge
-                              variant={statusInfo.variant}
+                            <StatusBadge
+                              domain="order-item"
+                              value={item.status}
                               className="h-5 px-1.5 text-xs font-semibold uppercase tracking-wide"
-                            >
-                              {statusInfo.label}
-                            </Badge>
+                            />
                           </div>
                           {item.variant_name && (
                             <p
