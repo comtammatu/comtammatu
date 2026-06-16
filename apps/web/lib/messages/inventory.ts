@@ -723,6 +723,8 @@ export const inventory = {
     matchingNotes: "Ghi chú đối soát",
     matchingNotesPlaceholder: "Ghi chú thêm cho bước matching",
     saveInvoice: "Lưu hóa đơn",
+    loadMore: "Tải thêm",
+    loadMoreFailed: "Không thể tải thêm hóa đơn",
   },
   stocktake: {
     created: "Tạo phiếu kiểm kê {code} thành công",

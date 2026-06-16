@@ -43,6 +43,8 @@ export const finance = {
     methodFixCancel: "Không",
     methodFixSuccess: "Đã sửa phương thức thanh toán",
     methodFixFailed: "Không thể sửa phương thức",
+    loadMore: "Tải thêm",
+    loadMoreFailed: "Không thể tải thêm hóa đơn",
   },
   common: {
     noValue: "—",

@@ -55,8 +55,10 @@ import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import {
   createSupplierInvoice,
   fetchSupplierInvoices,
+  fetchSupplierInvoicesPage,
   recomputeInvoiceMatching,
 } from "../procurement-actions";
+import type { SupplierInvoiceCursor } from "../procurement-actions";
 
 import { formatVND } from "../_lib/format";
 import {
@@ -86,6 +88,35 @@ export type SupplierInvoiceRow = {
   invoiceDate: string | null;
   dueDate: string | null;
 };
+
+export function mapSupplierInvoiceRow(
+  row: Record<string, unknown>,
+): SupplierInvoiceRow {
+  return {
+    id: row.id as number,
+    supplierId: Number(row.supplier_id ?? 0),
+    grnId: row.grn_id != null ? Number(row.grn_id) : null,
+    code: (row.invoice_number as string) ?? "",
+    supplierName:
+      ((row.suppliers as Record<string, unknown>)?.name as string) ?? "—",
+    grnCode:
+      ((row.goods_received_notes as Record<string, unknown>)
+        ?.grn_number as string) ?? null,
+    matchStatus:
+      (row.matching_status as string | undefined) ??
+      (row.match_status as string | undefined) ??
+      "pending",
+    paymentStatus: (row.payment_status as string) ?? "unpaid",
+    amount: Number(row.total_amount ?? 0),
+    paidAmount: Number(row.paid_amount ?? 0),
+    variance:
+      (row.variance_pct as number | null | undefined) != null
+        ? Number(row.variance_pct)
+        : null,
+    invoiceDate: (row.invoice_date as string) ?? null,
+    dueDate: (row.due_date as string) ?? null,
+  };
+}
 
 type SupplierOption = {
   id: number;
@@ -135,12 +166,23 @@ export function SupplierInvoicesClient({
   invoices,
   suppliers,
   grns,
+  initialHasMore = false,
+  initialNextCursor = null,
+  branchId,
 }: {
   invoices: SupplierInvoiceRow[];
   suppliers: SupplierOption[];
   grns: GrnOption[];
+  initialHasMore?: boolean;
+  initialNextCursor?: SupplierInvoiceCursor | null;
+  branchId?: number;
 }) {
   const [rows, setRows] = useState(invoices);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [nextCursor, setNextCursor] = useState<SupplierInvoiceCursor | null>(
+    initialNextCursor,
+  );
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
   const [supplierFilter, setSupplierFilter] = useState(ALL_FILTER_VALUE);
   const [matchStatusFilter, setMatchStatusFilter] = useState(ALL_FILTER_VALUE);
@@ -266,37 +308,47 @@ export function SupplierInvoicesClient({
     const again = await fetchSupplierInvoices();
     if (!again.success) return;
 
-    const nextRows = ((again.data ?? []) as Array<Record<string, unknown>>).map(
-      (row) => ({
-        id: row.id as number,
-        supplierId: Number(row.supplier_id ?? 0),
-        grnId: row.grn_id != null ? Number(row.grn_id) : null,
-        code: (row.invoice_number as string) ?? "",
-        supplierName:
-          ((row.suppliers as Record<string, unknown>)?.name as string) ?? "—",
-        grnCode:
-          ((row.goods_received_notes as Record<string, unknown>)
-            ?.grn_number as string) ?? null,
-        matchStatus:
-          (row.matching_status as string | undefined) ??
-          (row.match_status as string | undefined) ??
-          "pending",
-        paymentStatus: (row.payment_status as string) ?? "unpaid",
-        amount: Number(row.total_amount ?? 0),
-        paidAmount: Number(row.paid_amount ?? 0),
-        variance:
-          (row.variance_pct as number | null | undefined) != null
-            ? Number(row.variance_pct)
-            : null,
-        invoiceDate: (row.invoice_date as string) ?? null,
-        dueDate: (row.due_date as string) ?? null,
-      }),
-    );
+    const nextRows = (
+      (again.data ?? []) as Array<Record<string, unknown>>
+    ).map(mapSupplierInvoiceRow);
 
     setRows(nextRows);
+    // Full reload returns every invoice, so keyset paging no longer applies.
+    setHasMore(false);
+    setNextCursor(null);
     if (typeof nextSelectedId === "number") {
       setSelectedInvoiceId(nextSelectedId);
     }
+  }
+
+  function handleLoadMore() {
+    if (loadingMore || !hasMore || !nextCursor) return;
+    setLoadingMore(true);
+    startTransition(async () => {
+      try {
+        const result = await fetchSupplierInvoicesPage({
+          branchId,
+          before: nextCursor,
+        });
+        if (!result.success || !result.data) {
+          toast.error(result.error ?? copy.loadMoreFailed);
+          return;
+        }
+        const { items, hasMore: more, nextCursor: cursor } = result.data;
+        const mapped = (items as Array<Record<string, unknown>>).map(
+          mapSupplierInvoiceRow,
+        );
+        setRows((prev) => {
+          const seen = new Set(prev.map((row) => row.id));
+          const next = mapped.filter((row) => !seen.has(row.id));
+          return [...prev, ...next];
+        });
+        setHasMore(more);
+        setNextCursor(cursor);
+      } finally {
+        setLoadingMore(false);
+      }
+    });
   }
 
   function handleCreateInvoice() {
@@ -652,6 +704,19 @@ export function SupplierInvoicesClient({
               }
               mobileCardRender={renderInvoiceCard}
             />
+            {hasMore ? (
+              <div className="mt-4 flex justify-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                >
+                  {copy.loadMore}
+                </Button>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

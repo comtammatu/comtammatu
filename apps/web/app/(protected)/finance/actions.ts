@@ -556,6 +556,49 @@ export async function fetchTaxInvoiceEvents(
 
 /* ─── Fetch Invoices ─── */
 
+const TAX_INVOICE_LIST_SELECT = `
+  id, order_id, invoice_number, status, buyer_name, buyer_tax_code,
+  subtotal, vat_rate, vat_amount, total_amount,
+  issued_at, cancelled_at, archived_at, created_at,
+  orders ( order_number )
+` as const;
+
+const TAX_INVOICE_PAGE_SIZE = 50;
+
+export interface TaxInvoiceCursor {
+  createdAt: string;
+  id: number;
+}
+
+export interface TaxInvoicePage {
+  items: unknown[];
+  hasMore: boolean;
+  nextCursor: TaxInvoiceCursor | null;
+}
+
+const taxInvoiceCursorSchema = z.object({
+  createdAt: z.string(),
+  id: z.coerce.number().int().positive(),
+});
+
+const fetchTaxInvoicesPaginatedSchema = z.object({
+  branchId: z.coerce.number().int().positive().optional(),
+  before: taxInvoiceCursorSchema.optional(),
+  pageSize: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(200)
+    .optional()
+    .default(TAX_INVOICE_PAGE_SIZE),
+});
+
+/**
+ * Non-paginated read of every tax invoice (optionally branch-scoped).
+ * Aggregate consumers (revenue dashboard attention count) rely on the
+ * full list, so the default return shape stays a flat array. The list
+ * page uses `fetchTaxInvoicesPage` for keyset pagination instead.
+ */
 export async function fetchTaxInvoices(
   branchId?: number,
 ): Promise<ActionResult> {
@@ -579,14 +622,7 @@ export async function fetchTaxInvoices(
 
   let query = supabase
     .from("tax_invoices")
-    .select(
-      `
-      id, order_id, invoice_number, status, buyer_name, buyer_tax_code,
-      subtotal, vat_rate, vat_amount, total_amount,
-      issued_at, cancelled_at, archived_at, created_at,
-      orders ( order_number )
-    `,
-    )
+    .select(TAX_INVOICE_LIST_SELECT)
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });
 
@@ -601,6 +637,73 @@ export async function fetchTaxInvoices(
   }
 
   return { success: true, data: data ?? [] };
+}
+
+/**
+ * Keyset-paginated tax-invoice list (created_at desc, id desc tiebreaker).
+ * Mirrors fetchArchivedOrders: fetch pageSize+1 to probe hasMore without a
+ * count round-trip, slice to pageSize, expose the last row as nextCursor.
+ * Same tenant + optional branch scope as fetchTaxInvoices.
+ */
+export async function fetchTaxInvoicesPage(
+  input: z.input<typeof fetchTaxInvoicesPaginatedSchema> = {},
+): Promise<ActionResult<TaxInvoicePage>> {
+  const parsed = fetchTaxInvoicesPaginatedSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Tham số tải hóa đơn không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+  const { branchId, before, pageSize } = parsed.data;
+
+  let query = supabase
+    .from("tax_invoices")
+    .select(TAX_INVOICE_LIST_SELECT)
+    .eq("tenant_id", claims.tenant_id);
+
+  if (branchId) {
+    query = query.eq("branch_id", branchId);
+  }
+
+  if (before) {
+    // Keyset: rows STRICTLY after the cursor under (created_at desc, id desc).
+    // PostgREST has no composite "<", so OR two disjoint half-spaces:
+    //   created_at < cursor.createdAt
+    //   OR (created_at = cursor.createdAt AND id < cursor.id)
+    query = query.or(
+      `created_at.lt.${before.createdAt},and(created_at.eq.${before.createdAt},id.lt.${String(before.id)})`,
+    );
+  }
+
+  const { data, error } = await query
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(pageSize + 1);
+
+  if (error) {
+    return { success: false, error: "Không thể tải danh sách hóa đơn." };
+  }
+
+  const fetched = (data ?? []) as Array<{
+    id: number;
+    created_at: string;
+    [k: string]: unknown;
+  }>;
+  const hasMore = fetched.length > pageSize;
+  const items = hasMore ? fetched.slice(0, pageSize) : fetched;
+  const last = items.at(-1);
+  const nextCursor =
+    hasMore && last !== undefined
+      ? { createdAt: last.created_at, id: last.id }
+      : null;
+
+  return { success: true, data: { items, hasMore, nextCursor } };
 }
 
 /* ─── Revenue Dashboard ─── */

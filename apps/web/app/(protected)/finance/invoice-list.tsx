@@ -32,8 +32,10 @@ import type { PaymentMethod } from "@comtammatu/shared/providers";
 import {
   cancelTaxInvoice,
   createTaxInvoice,
+  fetchTaxInvoicesPage,
   reissueAllDraftInvoices,
 } from "./actions";
+import type { TaxInvoiceCursor } from "./actions";
 import { forceResyncTaxInvoice } from "./reconcile-invoice-actions";
 import { getArchiveDownloadUrl } from "./archive-actions";
 import { replaceTaxInvoice } from "./replace-invoice-actions";
@@ -60,6 +62,9 @@ function formatDate(iso: string): string {
 
 interface InvoiceListProps {
   initialInvoices: InvoiceRow[];
+  initialHasMore?: boolean;
+  initialNextCursor?: TaxInvoiceCursor | null;
+  branchId?: number;
 }
 
 const CANCEL_REASON_MIN = 20;
@@ -76,8 +81,18 @@ function todayISODate(): string {
   return getVNDateString();
 }
 
-export function InvoiceList({ initialInvoices }: InvoiceListProps) {
+export function InvoiceList({
+  initialInvoices,
+  initialHasMore = false,
+  initialNextCursor = null,
+  branchId,
+}: InvoiceListProps) {
   const [invoices, setInvoices] = useState(initialInvoices);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [nextCursor, setNextCursor] = useState<TaxInvoiceCursor | null>(
+    initialNextCursor,
+  );
+  const [loadingMore, setLoadingMore] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<InvoiceRow | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [refundTarget, setRefundTarget] = useState<InvoiceRow | null>(null);
@@ -366,6 +381,37 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
 
   const draftCount = invoices.filter((inv) => inv.status === "draft").length;
 
+  function handleLoadMore() {
+    if (loadingMore || !hasMore || !nextCursor) return;
+    setLoadingMore(true);
+    startTransition(async () => {
+      try {
+        const result = await fetchTaxInvoicesPage({
+          branchId,
+          before: nextCursor,
+        });
+        if (!result.success || !result.data) {
+          toast.error(
+            result.error ?? messages.finance.invoiceList.loadMoreFailed,
+          );
+          return;
+        }
+        const { items, hasMore: more, nextCursor: cursor } = result.data;
+        setInvoices((prev) => {
+          const seen = new Set(prev.map((row) => row.id));
+          const next = (items as InvoiceRow[]).filter(
+            (row) => !seen.has(row.id),
+          );
+          return [...prev, ...next];
+        });
+        setHasMore(more);
+        setNextCursor(cursor);
+      } finally {
+        setLoadingMore(false);
+      }
+    });
+  }
+
   function handleReissueAll() {
     startTransition(async () => {
       try {
@@ -649,6 +695,22 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
             </div>
           )}
         />
+        {hasMore ? (
+          <div className="flex justify-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+            >
+              {loadingMore ? (
+                <Spinner className="size-4" />
+              ) : null}
+              {messages.finance.invoiceList.loadMore}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <AlertDialog

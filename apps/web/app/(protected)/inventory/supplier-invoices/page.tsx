@@ -1,8 +1,11 @@
-import { fetchGrns, fetchSupplierInvoices } from "../procurement-actions";
+import { fetchGrns, fetchSupplierInvoicesPage } from "../procurement-actions";
+import type { SupplierInvoiceCursor } from "../procurement-actions";
 import { fetchSuppliers } from "../supplier-actions";
 import { resolveRequestedBranchId } from "../_lib/inventory-scope";
-import { SupplierInvoicesClient } from "./supplier-invoices-client";
-import type { SupplierInvoiceRow } from "./supplier-invoices-client";
+import {
+  SupplierInvoicesClient,
+  mapSupplierInvoiceRow,
+} from "./supplier-invoices-client";
 
 export default async function SupplierInvoicesPage({
   searchParams,
@@ -14,35 +17,19 @@ export default async function SupplierInvoicesPage({
     (await resolveRequestedBranchId(params.branchId)) ?? undefined;
 
   const [res, suppliersRes, grnsRes] = await Promise.all([
-    fetchSupplierInvoices(branchFilter),
+    fetchSupplierInvoicesPage({ branchId: branchFilter }),
     fetchSuppliers(),
     fetchGrns(branchFilter),
   ]);
-  const dbRows = res.success
-    ? (res.data as Array<Record<string, unknown>>)
-    : [];
+  const page = res.success
+    ? res.data
+    : { items: [], hasMore: false, nextCursor: null };
+  const dbRows = (page?.items ?? []) as Array<Record<string, unknown>>;
+  const initialHasMore = page?.hasMore ?? false;
+  const initialNextCursor = (page?.nextCursor ??
+    null) as SupplierInvoiceCursor | null;
 
-  const invoices: SupplierInvoiceRow[] = dbRows.map((row) => ({
-    id: row.id as number,
-    supplierId: Number(row.supplier_id ?? 0),
-    grnId: row.grn_id != null ? Number(row.grn_id) : null,
-    code: (row.invoice_number as string) ?? "",
-    supplierName:
-      ((row.suppliers as Record<string, unknown>)?.name as string) ?? "—",
-    grnCode:
-      ((row.goods_received_notes as Record<string, unknown>)
-        ?.grn_number as string) ?? null,
-    matchStatus:
-      (row.matching_status as string | undefined) ??
-      (row.match_status as string | undefined) ??
-      "pending",
-    paymentStatus: (row.payment_status as string) ?? "unpaid",
-    amount: Number(row.total_amount ?? 0),
-    paidAmount: Number(row.paid_amount ?? 0),
-    variance: row.variance_pct != null ? Number(row.variance_pct) : null,
-    invoiceDate: (row.invoice_date as string) ?? null,
-    dueDate: (row.due_date as string) ?? null,
-  }));
+  const invoices = dbRows.map(mapSupplierInvoiceRow);
 
   const suppliers = suppliersRes.success
     ? ((suppliersRes.data ?? []) as Array<Record<string, unknown>>).map(
@@ -70,6 +57,9 @@ export default async function SupplierInvoicesPage({
       invoices={invoices}
       suppliers={suppliers}
       grns={grns}
+      initialHasMore={initialHasMore}
+      initialNextCursor={initialNextCursor}
+      branchId={branchFilter}
     />
   );
 }

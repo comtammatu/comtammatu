@@ -49,7 +49,12 @@ export {
 export {
   createSupplierInvoice,
   fetchSupplierInvoices,
+  fetchSupplierInvoicesPage,
   recomputeInvoiceMatching,
+} from "./supplier-invoice-actions";
+export type {
+  SupplierInvoiceCursor,
+  SupplierInvoicePage,
 } from "./supplier-invoice-actions";
 export {
   fetchRecipes,

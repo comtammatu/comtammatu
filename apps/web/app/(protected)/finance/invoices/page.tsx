@@ -1,6 +1,7 @@
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
-import { fetchTaxInvoices } from "../actions";
+import { fetchTaxInvoicesPage } from "../actions";
+import type { TaxInvoiceCursor } from "../actions";
 import type { InvoiceRow } from "../_lib/finance-types";
 import { InvoiceList } from "../invoice-list";
 
@@ -18,8 +19,13 @@ export default async function InvoicesPage({
       ? parsedBranch
       : undefined;
 
-  const res = await fetchTaxInvoices(branchId);
-  const invoices = (res.success ? (res.data ?? []) : []) as InvoiceRow[];
+  const res = await fetchTaxInvoicesPage({ branchId });
+  const page = res.success
+    ? res.data
+    : { items: [], hasMore: false, nextCursor: null };
+  const invoices = (page?.items ?? []) as InvoiceRow[];
+  const initialHasMore = page?.hasMore ?? false;
+  const initialNextCursor = (page?.nextCursor ?? null) as TaxInvoiceCursor | null;
 
   return (
     <AppPage>
@@ -28,7 +34,12 @@ export default async function InvoicesPage({
         title={copy.title}
         description={copy.description}
       />
-      <InvoiceList initialInvoices={invoices} />
+      <InvoiceList
+        initialInvoices={invoices}
+        initialHasMore={initialHasMore}
+        initialNextCursor={initialNextCursor}
+        branchId={branchId}
+      />
     </AppPage>
   );
 }
