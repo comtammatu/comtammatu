@@ -34,7 +34,7 @@ const GIVEUP_SECONDS = 24 * 60 * 60;
  * Map (current DB status, provider getStatus return, age) to a
  * reconcile decision.
  *
- * Rules (per 4-agent debate 2026-05-13):
+ * Rules:
  *   - Provider `error` field set → provider_error (no state change,
  *     retry next tick). Never trust the bundled status field when
  *     error is present — see InvoiceStatus.error doc.

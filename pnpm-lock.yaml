@@ -160,9 +160,6 @@ importers:
       dotenv-cli:
         specifier: ^11.0.0
         version: 11.0.0
-      esbuild:
-        specifier: ^0.28.0
-        version: 0.28.0
       eslint:
         specifier: ^10.4.0
         version: 10.4.0(jiti@2.6.1)

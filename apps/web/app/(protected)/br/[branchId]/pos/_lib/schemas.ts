@@ -6,10 +6,6 @@
  * pre-validation. The client `void-item-dialog.tsx` / `reduce-quantity-dialog.tsx`
  * already mirror the server `min(5)` rule by hand; long term those mirrors
  * should re-import the same schema instead of duplicating the constant.
- *
- * Originally inlined in `order-actions.ts`. Moved here as part of the
- * WS-1a / WS-1b refactor (see
- * the POS action-helper cleanup).
  */
 
 import { z } from "zod";
@@ -172,8 +168,8 @@ export const submitOrderSchema = z.object({
 /**
  * Schema for `appendOrderItems(branchId, orderId, items, idempotencyKey?)`.
  *
- * Aggregates all 4 positional args. The `items.min(1)` clause mirrors the
- * pre-WS-1b inline `appendItemsSchema`; cashier UI also clamps client-side.
+ * Aggregates all 4 positional args. Cashier UI also clamps `items.min(1)`
+ * client-side.
  */
 export const appendOrderItemsSchema = z.object({
   branchId: z.coerce

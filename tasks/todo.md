@@ -11,6 +11,7 @@ M0–M7 + Auth + POS PWA + Realtime hardening + Shadcn primitive migration M1–
 
 > Việc agent làm được ngay; migration vẫn đi flow file→PR→owner apply. Gate `typecheck/lint/build` trước khi đóng.
 
+- [ ] **Payroll upsert atomic RPC** — `hr/payroll-actions.ts` ghi 2 bước rời (upsert `payroll_entries` rồi update `payroll_periods.status='calculated'`); bước 2 fail → status lệch với entries đã ghi. Gom 2 ghi vào 1 RPC transaction. T3 (payroll/money); migration file→PR→owner.
 - [ ] **WS-3 — tách `grn-detail-client` (1548 dòng)** — file KHÔNG có realtime (0 `.channel()`) → split `_hooks/` + `views/` theo concern, không cần running-app verify. (2 shell còn lại có realtime → mục "Chặn: cần env".)
 - [~] **Residual broad grants** — ✅ migration `20260616120000_revoke_cosmetic_grants_anon_authenticated.sql` đã viết (REVOKE 3 priv trên bảng hiện hữu + `ALTER DEFAULT PRIVILEGES` cho bảng mới + self-check) → **chờ owner apply** (prod: anon giữ trên 101 bảng, authenticated 102; cosmetic, KHÔNG exploit qua PostgREST). `bmidl_write` legacy `auth_role()` gộp vào α4c.
 - [~] **HRM Đợt 2** (D026, không cần owner) — ✅ (a) tạo NV 1 bước (commit `dc8a756f`: `createEmployeeAccount` + saga rollback, bỏ field Profile UUID, lưu cả SĐT) → **chờ owner runtime-verify** create+login trên env thật. Còn: `updateEmployee` + ngưng việc (cần migration thêm `employees.end_date`); (c) nghỉ phép notify 2 chiều + quick-action "Xin nghỉ" + gộp pending toàn-CN; (d) đổi nhãn `/admin/staff` → "Tài khoản & phân quyền".
@@ -30,6 +31,7 @@ M0–M7 + Auth + POS PWA + Realtime hardening + Shadcn primitive migration M1–
 
 - [ ] **WS-3 `pos-desktop-shell` (1989) + `order-detail-sheet` (1654)** — có realtime `.channel()` → split `_hooks/`+`views/` cần running-app verify. One PR per file. Goal = một concern rõ mỗi file (cohesion, KHÔNG đếm dòng).
 - [ ] **E2E POS→payment→stock** — spec đã có (`e2e/payment-cash.spec.ts` assert stock_movements + fail-soft); thiếu wire vào CI (`ci.yml` chỉ chạy `pnpm test`) + staging/Preview + seeded test tenant. Runbook `docs/runbooks/inventory/pre-release-qa.md`.
+- [ ] **E2E modifier-aware pricing** — `e2e/edit-pending-pricing.spec.ts` thiếu ca assert `unit_price = base + variant + modifier + side`; cần fixtures `menu_item_modifiers` trong `e2e/helpers/supabase.ts` + env chạy app.
 - [ ] **Unused indexes (~231 prod)** — cần ≥1 chu kỳ (gồm month-end) `pg_stat_user_indexes` thật rồi mới DROP (`stats_reset` từng NULL → chưa đại diện).
 - [ ] **Dead-RPC drop wave 2** — prod hiện `track_functions = none` → `pg_stat_user_functions` không tin được; cần bật tracking + traffic thật → 6-channel scan → wave ≤10. Tiers B/C/D per `RPC-DROP-MUST-SCAN-6-CHANNELS`.
 - [ ] **Real POS→payment→KDS/print→HĐĐT smoke** — cần dev/test/staging + live provider creds. Stock leg out per **D016** (`20260611001000` live). Tail `consume_stock_for_order` removal: dưới Dead-RPC.

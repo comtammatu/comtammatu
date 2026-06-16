@@ -119,7 +119,9 @@ export const createSupplierReturnFromGrn = withAction(
       },
     );
     if (error) {
-      console.error("createSupplierReturnFromGrn", error);
+      console.error("inventory.supplier_return.create_from_grn_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       const message = mapReturnRpcError(error.message);
       return { success: false, error: message };
     }
@@ -176,7 +178,9 @@ export const createSupplierReturnFromStock = withAction(
       },
     );
     if (error) {
-      console.error("createSupplierReturnFromStock", error);
+      console.error("inventory.supplier_return.create_from_stock_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return { success: false, error: mapReturnRpcError(error.message) };
     }
     revalidatePath("/inventory/supplier-returns");
@@ -203,7 +207,9 @@ export async function confirmSupplierReturn(
     p_return_id: id.data,
   });
   if (error) {
-    console.error("confirmSupplierReturn", error);
+    console.error("inventory.supplier_return.confirm_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, error: mapReturnRpcError(error.message) };
   }
   revalidatePath("/inventory/supplier-returns");
@@ -236,7 +242,9 @@ export const transitionSupplierReturn = withAction(
       },
     );
     if (error) {
-      console.error("transitionSupplierReturn", error);
+      console.error("inventory.supplier_return.transition_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return { success: false, error: mapTransitionError(error.message) };
     }
     revalidatePath("/inventory/supplier-returns");

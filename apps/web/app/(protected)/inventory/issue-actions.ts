@@ -104,7 +104,7 @@ export const createStockIssueDraft = withAction(
       "issue",
     );
 
-    // kitchen_use retired 2026-04-25 — use intra-branch stock_transfer instead.
+    // kitchen_use is not a valid stock-issue reason; use intra-branch stock_transfer.
     // target_location_id is always NULL for single-site issues.
     const { data, error } = await supabase
       .from("stock_issues")
@@ -273,7 +273,9 @@ export async function confirmStockIssue(
         error: "Tồn kho không đủ để xuất. Kiểm tra lại số lượng.",
       };
     }
-    console.error("confirmStockIssue", error);
+    console.error("inventory.issue.confirm_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, error: "Không thể xác nhận phiếu xuất." };
   }
 

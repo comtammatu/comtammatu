@@ -1,9 +1,6 @@
 /**
- * Barrel for POS order Server Actions.
- *
- * WS-3 decomposition (2026-05-31): the implementations were split by concern
- * out of the former ~1.6k-line monolith into focused modules. This file keeps
- * the public `./order-actions` import path stable for existing callers.
+ * Barrel for POS order Server Actions. Keeps the public `./order-actions`
+ * import path stable for existing callers.
  *
  * - order-reads          — queries (active / archived / by-table / bill / detail / reorder)
  * - order-lifecycle      — submit, append, advance status, mark served

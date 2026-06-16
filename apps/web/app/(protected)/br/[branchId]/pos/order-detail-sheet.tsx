@@ -619,10 +619,9 @@ export function OrderDetailSheet({
             : messages.pos.item.voided,
         );
         // Cancel-ticket print warning rides on result.meta.warning (set by
-        // the afterSuccess hook in pos/_lib/messages.ts) per WS-1a. Pre-WS-1a
-        // this lived on `r.data.printWarning`; the move keeps `data` to the
-        // operator-facing result and moves non-fatal side-effect outcomes
-        // to `meta`.
+        // the afterSuccess hook in pos/_lib/messages.ts): `data` carries the
+        // operator-facing result, `meta` carries non-fatal side-effect
+        // outcomes.
         const printWarning = r.meta?.warning;
         if (typeof printWarning === "string") {
           notify.warning(printWarning);
@@ -649,9 +648,8 @@ export function OrderDetailSheet({
       const r = await cancelOrder(orderId, reason);
       if (r.success) {
         notify.success(messages.pos.order.voided);
-        // Per-item cancel-ticket skip warning now lives on r.meta.warning
-        // (set by cancelSkipReasonsToWarning inside the action handler) per
-        // WS-1b. Pre-WS-1b this was r.data.printWarning.
+        // Per-item cancel-ticket skip warning lives on r.meta.warning (set
+        // by cancelSkipReasonsToWarning inside the action handler).
         const cancelWarning = r.meta?.warning;
         if (typeof cancelWarning === "string") {
           notify.warning(cancelWarning);
@@ -810,9 +808,8 @@ export function OrderDetailSheet({
         notify.success(
           `Đã giảm SL: ${target.quantity} → ${r.data?.newQuantity ?? reduceNewQty}`,
         );
-        // Partial-cancel print warning now lives on r.meta.warning (set by
-        // enqueuePartialCancelTicketPrintHook in pos/_lib/messages.ts) per
-        // WS-1b. Pre-WS-1b this was r.data.printWarning.
+        // Partial-cancel print warning lives on r.meta.warning (set by
+        // enqueuePartialCancelTicketPrintHook in pos/_lib/messages.ts).
         const reduceWarning = r.meta?.warning;
         if (typeof reduceWarning === "string") {
           notify.warning(reduceWarning);

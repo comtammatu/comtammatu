@@ -22,14 +22,11 @@
    - Rule: For M:1 embeds, treat the FK field as `{ ... } | null` (object), matching runtime. Use `row.parent as unknown as { ... } | null` (or pre-typed interface) to bridge supabase-js typegen quirk. Match `apps/web/app/(protected)/hr/attendance-table.tsx` (`record.shifts?.name`).
    - Prevention: Whenever you write `?.[0]?` on a select-embed, stop and check direction: if `child.fk → parent.pk` (M:1) it is an object, not an array; reserve `[0]` for reverse 1:M embeds.
 
-4. **`pnpm db:types` after every migration — turbo cache hides a stale type**
-   - The rule lives in `AGENTS.md`; the non-obvious failure: a stale `database.types.ts` passes turbo-cached `pnpm typecheck` yet fails Next.js build's stricter inline pass (saw `fn_generate_b03_dn` "not assignable"). Treat `supabase db push → pnpm db:types` as one atomic step before running gates.
-
-5. **Next.js 16.2 webpack + serwist intermittent cache poisoning**
+4. **Next.js 16.2 webpack + serwist intermittent cache poisoning**
    - Pattern: After regenerating `database.types.ts` mid-session, `pnpm build` failed with `uncaughtException TypeError: Cannot read properties of undefined (reading 'length') at ignore-listed frames` — error originates in Next.js / serwist internals, not user code. Compile passed; the failure was in the post-compile manifest step. Clearing `.next` + `.turbo` resolved.
    - Rule: When `pnpm build` fails with a `TypeError ... ignore-listed frames` from inside Next.js / serwist after a types regeneration, the cause is webpack/serwist manifest desync — not code. Clear `apps/web/.next` and `apps/web/.turbo` and rebuild. Use `pnpm clean:web && pnpm build` as the single recovery sequence.
    - Prevention: Added `pnpm clean:web` script at root (uses `node scripts/clean-web.mjs`, cross-platform). When changing types in mid-session, default to clean rebuild to avoid the trap.
 
-6. **Bash `run_in_background` notification exit-code is unreliable; ALWAYS read the output file**
+5. **Bash `run_in_background` notification exit-code is unreliable; ALWAYS read the output file**
    - Rule: Treat the bg-completion notification as "done", not "succeeded" — for chained pnpm/turbo invocations the notification can report exit 0 while the output contains `ELIFECYCLE ... exit code 1` / `Failed to type check`. The output file's own summary (`Tasks: N successful` / `Failed:` token) is authoritative.
    - Prevention: `tail -10 <output_file>` after every bg notification; exit-0 + `Failed:` line = real failure.

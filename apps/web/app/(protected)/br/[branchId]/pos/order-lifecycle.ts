@@ -258,11 +258,7 @@ export const releaseDailyLimitHolds = withActionPositional(
  * Submit a new order from the POS cart. Calls the `create_order` RPC which
  * atomically creates order + items + status history.
  *
- * Migrated to `withActionPositional` in WS-1b batch 3 (2026-05-28). Helper
- * extensions (`validationErrorCode`, `forbiddenErrorCode`, code-based
- * `mapRpcError` predicates) landed alongside so submitOrder's stable
- * errorCode catalogue is preserved. Per-input-field codes
- * (`INPUT_INVALID_BRANCH` / `INPUT_INVALID_SESSION` /
+ * Per-input-field codes (`INPUT_INVALID_BRANCH` / `INPUT_INVALID_SESSION` /
  * `INPUT_INVALID_IDEMPOTENCY`) intentionally collapse to
  * `INPUT_INVALID_CART` at the helper layer — none are members of
  * `RETRYABLE_POS_ERROR_CODES`, so client retry logic is unaffected. The
@@ -398,8 +394,6 @@ export const submitOrder = withActionPositional(
  * Append more items to an existing pending order. Same pattern as
  * `submitOrder` but targets `append_order_items` RPC; no priority/print
  * follow-up needed.
- *
- * Migrated to `withActionPositional` in WS-1b batch 3 (2026-05-28).
  */
 export const appendOrderItems = withActionPositional(
   {
@@ -515,8 +509,6 @@ export const appendOrderItems = withActionPositional(
  * Transition order to `served`. POS only — KDS/kitchen drives the other
  * states. Schema enum locks the input to `served` so a buggy caller
  * cannot drive the order to `paid` or `completed` via this surface.
- *
- * Migrated to `withActionPositional` in WS-1b batch 2 (2026-05-27).
  */
 export const updateOrderStatus = withActionPositional(
   {
@@ -548,8 +540,6 @@ export const updateOrderStatus = withActionPositional(
 /**
  * Waiter confirmation that a single order item reached the table. RPC
  * enforces the `preparing|ready → served` transition.
- *
- * Migrated to `withActionPositional` in WS-1b batch 2 (2026-05-27).
  */
 export const markOrderItemServed = withActionPositional(
   {

@@ -371,8 +371,8 @@ export async function POST(request: Request) {
   const detail = (result?.detail ?? "") as string;
 
   switch (status) {
-    // Payments never consume stock (policy 2026-05-28, migration
-    // 20260611001000): completed is accepted unconditionally.
+    // Payments never consume stock (D016): completed is accepted
+    // unconditionally.
     case "completed":
     case "already_completed":
       await markWebhookEvent(supabase, webhookEventId, {

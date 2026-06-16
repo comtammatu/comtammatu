@@ -410,18 +410,17 @@ const getCachedPaymentSettings = unstable_cache(
  * Methods available on POS for this tenant: cash + enabled e-wallets
  * with registered providers (env credentials).
  *
- * Migrated to `withActionPositional` in WS-1b reads sub-batch
- * (2026-05-28). Auth `posUseAuth` (POS_USE). Branch-claim guard stays
+ * Auth `posUseAuth` (POS_USE). Branch-claim guard stays
  * inline to preserve "Không có quyền truy cập chi nhánh này" (helper's
  * null-from-customAuth path collapses to the generic "Không có quyền").
  *
- * Behavior preserved:
+ * Behavior:
  *   - `ensurePaymentProvidersRegistered()` side effect runs after auth.
  *   - `getCachedPaymentSettings(tenant)` try/catch returns
  *     "Không thể tải cấu hình thanh toán. Vui lòng thử lại." on throw.
  *   - Method list build order (cash → vietqr → momo) and gating rules
  *     (registered provider × system setting × bank/account env presence
- *     for VietQR) byte-identical.
+ *     for VietQR).
  */
 export const fetchPaymentMethodsForPos = withActionPositional(
   {
@@ -486,19 +485,18 @@ export const fetchPaymentMethodsForPos = withActionPositional(
  * MoMo / VietQR start as pending and complete via webhook + a separate
  * `confirmPayment` / `confirmVietQrPayment` call.
  *
- * Migrated to `withActionPositional` in WS-1b batch 5a (2026-05-28). Auth
- * is `posUseAuth` (POS_USE — any POS operator) — looser than
+ * Auth is `posUseAuth` (POS_USE — any POS operator) — looser than
  * `confirmCashPayment`'s `posConfirmPaymentAuth` (POS_CONFIRM_PAYMENT,
  * cashier-only cash-drawer gate). Waiters with POS_USE can therefore start
  * a MoMo / VietQR payment session (no cash drawer involved) but cannot
  * confirm cash.
  *
- * Behavior preserved byte-identical to pre-WS-1b:
- *   - Same RPC `create_payment` with identical arg shape (p_tenant_id,
+ * Behavior:
+ *   - RPC `create_payment` arg shape (p_tenant_id,
  *     p_branch_id, p_order_id, p_method, p_amount, p_created_by,
  *     p_provider_ref, p_status).
  *   - Branch-claim guard (`claims.branch_id !== branchId`) returns
- *     "Không có quyền truy cập chi nhánh này" — same copy as pre-WS-1b.
+ *     "Không có quyền truy cập chi nhánh này".
  *   - Inline DB `orders` select returns "Đơn hàng không tồn tại." on miss,
  *     "Đơn hàng đã thanh toán." when `payment_status === "paid"`. Both
  *     checks live inside the handler — server-side amount-vs-total equality
@@ -514,29 +512,13 @@ export const fetchPaymentMethodsForPos = withActionPositional(
  *     thanh toán chờ xử lý." Neither outcome fits the `RpcErrorMapping`
  *     shape so it lives outside the mapping table.
  *   - `persistPendingProviderData` fires for remote (MoMo) payments AFTER
- *     RPC success AND inside the 23505-retry branch — preserves the
- *     pre-WS-1b idempotent-replay semantics where the second
- *     `createPayment` call overwrites the stored provider blob with the
- *     fresh QR.
+ *     RPC success AND inside the 23505-retry branch — idempotent-replay
+ *     semantics where the second `createPayment` call overwrites the
+ *     stored provider blob with the fresh QR.
  *   - Cash auto-completes (`status === "completed"`) inside the RPC
- *     atomically. Stock consumption was REMOVED 2026-05-28 per owner
- *     policy "không trừ kho" — pre-WS-1b code (and the batch 5a
- *     migration commit `35e885ea`) called `consumeStockForOrderCompat`
- *     here non-fatally; the call has since been deleted alongside the
- *     helper. Behavior change is intentional; see
- *     `tasks/regressions.md` STOCK-CONSUME-MUST-CHECK-RESULT policy
- *     override note + memory `project_pos_action_helper_refactor.md`
- *     "Owner policy 2026-05-28" section for rationale.
- *   - Local `mapPaymentRpcError` call replaced with
- *     `createPaymentRpcMappings` table (same sentinels + Vietnamese copy,
- *     ordering preserved so `amount_mismatch_recomputed` shadows
- *     `amount_mismatch`). Single `[createPayment] rpc failed:` log line
- *     replaces the pre-WS-1b mapped/[unmapped] split — the differentiation
- *     was observability only, not user-facing.
- *
- * Local `mapPaymentRpcError` (defined above) remains in the file for
- * `confirmPayment` + VietQR family which still call it — those migrate
- * in the next sub-batches.
+ *     atomically. Payments never consume stock (D016).
+ *   - `createPaymentRpcMappings` ordering must keep
+ *     `amount_mismatch_recomputed` shadowing `amount_mismatch`.
  */
 export const createPayment = withActionPositional(
   {
@@ -757,12 +739,7 @@ export const createPayment = withActionPositional(
       });
     }
 
-    // No stock deduction per owner policy 2026-05-28 — see
-    // `tasks/regressions.md` STOCK-CONSUME-MUST-CHECK-RESULT policy
-    // override note + memory `project_pos_action_helper_refactor.md`
-    // "Owner policy 2026-05-28" section. Pre-policy code called
-    // `consumeStockForOrderCompat(supabase, orderId)` here for cash
-    // payments after `result.status === "completed" && !result.idempotent`.
+    // Payments never consume stock (D016).
 
     const qrInfo = pickVietQrInfo(providerResult.providerData);
 
@@ -789,12 +766,11 @@ export const createPayment = withActionPositional(
  * when there's no pending row to resume — caller (bill sheet) uses that
  * signal to start a fresh QR session vs reuse the existing one.
  *
- * Migrated to `withActionPositional` in WS-1b reads sub-batch
- * (2026-05-28). Auth `posUseAuth` (POS_USE). Branch-claim guard stays
+ * Auth `posUseAuth` (POS_USE). Branch-claim guard stays
  * inline for "Không có quyền truy cập chi nhánh này" copy preservation.
  *
- * Behavior preserved:
- *   - Same SELECT shape on `payments` (id, method, status,
+ * Behavior:
+ *   - SELECT shape on `payments` (id, method, status,
  *     provider_ref, provider_data) with the `neq("status", "failed")`
  *     filter + `order("id", desc).limit(1).maybeSingle()` chain.
  *   - DB error returns "Không thể tải phiên thanh toán."
@@ -941,10 +917,7 @@ export async function confirmPayment(
     return { success: false, error: "Không thể xác nhận thanh toán." };
   }
 
-  // No stock deduction per owner policy 2026-05-28 — see
-  // `tasks/regressions.md` STOCK-CONSUME-MUST-CHECK-RESULT policy
-  // override note + memory `project_pos_action_helper_refactor.md`
-  // "Owner policy 2026-05-28" section.
+  // Payments never consume stock (D016).
 
   // Enqueue receipt print. Cash flow does this atomically inside
   // confirm_cash_payment; the e-wallet RPC (confirm_payment_and_post)
@@ -1004,15 +977,13 @@ export interface CashPaymentResult {
  * Blocks under-payment hard (use order discount for employee meals).
  */
 /**
- * Migrated to `withActionPositional` in WS-1b batch 4b (2026-05-28).
- * Cash confirm yêu cầu POS_CONFIRM_PAYMENT (cashier / branch_manager+) —
- * waiter chỉ có POS_USE + POS_PRINT → in bill tạm tính OK, nhưng KHÔNG
- * được chạm két. VietQR / MoMo giữ POS_USE ở createPayment /
- * confirmPayment (e-wallet = webhook source of truth, không chạm cash
- * drawer).
+ * Cash confirm requires POS_CONFIRM_PAYMENT (cashier / branch_manager+) —
+ * waiter has only POS_USE + POS_PRINT (provisional bill OK, no cash
+ * drawer). VietQR / MoMo keep POS_USE at createPayment / confirmPayment
+ * (e-wallet = webhook source of truth, no cash drawer).
  *
- * Behavior preserved:
- *   - Same RPC `confirm_cash_payment` (p_order_id + p_cash_received).
+ * Behavior:
+ *   - RPC `confirm_cash_payment` (p_order_id + p_cash_received).
  *   - All 8 error sentinels mapped via `confirmCashPaymentRpcMappings`
  *     in identical order so cash-specific copy beats the shared
  *     payment vocabulary (e.g. `tenant mismatch` → "Không có quyền truy
@@ -1243,14 +1214,6 @@ export async function confirmCashPaymentWithInvoice(
  * Cancel a pending MoMo payment. Flips payment → failed and resets
  * orders.payment_method/payment_status so the order can be split, merged,
  * or start a fresh payment session.
- */
-/**
- * Migrated to `withActionPositional` in WS-1b batch 4 (2026-05-28) —
- * proving sub-slice for payment-actions migration. Behavior preserved:
- * same RPC + same args (paymentId + tenant + branch), same role/permission
- * gate (POS_USE), same branch-scope defence in depth, same RPC error
- * mapping. The Vietnamese copy and result shape (`ActionResult<void>`
- * with `data: undefined`) are byte-identical.
  */
 export const cancelPendingPayment = withActionPositional(
   {

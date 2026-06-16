@@ -478,8 +478,7 @@ bật. Không recite quy tắc từ trí nhớ (guardrail `tax-vn`).
 
 **Gate:** T3 (money + HĐĐT). Debate 4 góc nhìn trước khi code; migration
 file→PR→owner (D015). Nối với gap **sửa/hoàn payment đã completed** — cửa sổ chỉ
-hữu dụng nếu sửa được đơn trong ngày. Spec kỹ thuật:
-`docs/plan/hddt-hang-cho-spec.md`. Đảo quyết định (giữ realtime per-order mặc
+hữu dụng nếu sửa được đơn trong ngày. Đảo quyết định (giữ realtime per-order mặc
 định) phải sửa quyết định này trước.
 
 **Phán quyết owner (2026-06-14) — cổng pháp lý ĐÓNG, đề xuất §1 BỊ BÁC:** thời
@@ -496,8 +495,6 @@ KHÔNG phải cấp số/giao HĐ cho khách. Hệ quả:
   nhận **TRƯỚC khi bấm thanh toán** + sửa **phương thức thanh toán** + **hủy/thay
   thế** sau phát hành (TT 32/2025; đã có ở `finance/invoice-list.tsx`). Hướng UI:
   xem **D023**.
-- `hddt-hang-cho-spec.md`: phần deferral superseded; phần phân biệt endpoint +
-  provider batch vẫn đúng làm tham chiếu.
 
 ## D023: Sửa-sai POS realtime — guardrail TRƯỚC thanh toán (cashier) + correction ở owner/accountant (2026-06-14)
 

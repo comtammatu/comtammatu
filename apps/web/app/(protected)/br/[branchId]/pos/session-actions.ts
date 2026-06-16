@@ -362,10 +362,10 @@ const closeSessionSchema = z.object({
 });
 
 /**
- * D8: variance gate retired — close no longer blocks. The RPC only raises
- * real errors (session_not_found, session_already_closed, unknown); on
- * failure `meta.code` carries one of those sentinels for the UI to branch
- * on, and variance breaches arrive via notifications instead.
+ * Variance gate does not block close (D8). The RPC only raises real errors
+ * (session_not_found, session_already_closed, unknown); on failure
+ * `meta.code` carries one of those sentinels for the UI to branch on, and
+ * variance breaches arrive via notifications instead.
  */
 export const closePosSession = withActionPositional(
   {

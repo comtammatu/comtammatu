@@ -46,7 +46,7 @@ const CLASSIFIED_FILES = new Map([
   ],
   [
     "packages/shared/src/payroll/calculate.ts",
-    "Transitional @deprecated payroll field pointing to PayrollLegalVersion; retained for back-compat pending a separate payroll cleanup.",
+    "brackets @param documents the LATEST_VERSION default for backward compatibility; a live API default, not cruft.",
   ],
   [
     "packages/shared/src/auth/__tests__/employee-daily-work-static.test.ts",

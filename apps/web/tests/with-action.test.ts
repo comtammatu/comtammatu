@@ -361,7 +361,7 @@ test("withAction forbiddenError overrides the default denial copy", async () => 
 });
 
 test("withActionPositional forbiddenError + forbiddenErrorCode together", async () => {
-  // openPosSession pattern (WS-1b tail): custom denial copy AND a stable code.
+  // openPosSession pattern: custom denial copy AND a stable code.
   const action = withActionPositional(
     {
       argsToInput: (orderItemId: number, reason: string) => ({
@@ -383,8 +383,8 @@ test("withActionPositional forbiddenError + forbiddenErrorCode together", async 
 });
 
 test("forbiddenError unset keeps the default denial copy (backward compat)", async () => {
-  // The ~20 existing callers that never set forbiddenError must still get
-  // the shared FORBIDDEN_ERROR — the WS-1b-tail extension is additive.
+  // Callers that never set forbiddenError must get the shared
+  // FORBIDDEN_ERROR — the option is additive.
   const result = await withAction(
     { schema: sampleSchema, customAuth: async () => null },
     async () => ({ success: true }),
@@ -394,7 +394,7 @@ test("forbiddenError unset keeps the default denial copy (backward compat)", asy
 
 test("withAction option codes default to undefined (backward compat)", async () => {
   // Callers that do not opt in must not see any errorCode surface on
-  // failure — preserves the pre-WS-1b shape (existing 23 tests).
+  // failure.
   const validation = await withAction(
     { schema: sampleSchema, customAuth: async () => fakeCtx() },
     async () => ({ success: true }),

@@ -124,8 +124,7 @@ const inputSchema = z.object({
 /**
  * Trả aggregate báo cáo của 1 ca POS — top items decompose combo, category
  * breakdown, peak hour (Asia/Ho_Chi_Minh), AOV bins, payment mix, discount
- * detail. Gate: super/area/branch_manager (cashier không xem báo cáo —
- * owner D6 2026-04-30).
+ * detail. Gate: super/area/branch_manager (cashier không xem báo cáo — D6).
  */
 export async function getPosSessionReport(
   sessionId: number,

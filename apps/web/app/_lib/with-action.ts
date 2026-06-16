@@ -251,7 +251,7 @@ async function runAfterSuccess<TInput, TData>(
  * context. `customAuth` swaps the auth resolver wholesale; `afterSuccess`
  * runs a non-fatal hook after a successful handler return.
  *
- * @example Custom auth + afterSuccess (POS void pattern — see WS-1a):
+ * @example Custom auth + afterSuccess (POS void pattern):
  *   export const voidOrderItem = withActionPositional(
  *     {
  *       argsToInput: (orderItemId, reason) => ({ orderItemId, reason }),
