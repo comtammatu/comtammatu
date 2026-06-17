@@ -25,33 +25,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import { Progress } from "@comtammatu/ui/components/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
-import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
   cancelStocktake,
@@ -272,7 +265,7 @@ export function StocktakeDetailClient({
             ]}
           >
             <TabsContent value="overview" className="mt-4">
-              <div className="space-y-6">
+              <div className="flex flex-col gap-6">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {[
                     {
@@ -292,20 +285,20 @@ export function StocktakeDetailClient({
                       value: String(varianceCount).padStart(2, "0"),
                     },
                   ].map((item) => (
-                    <Card key={item.label}>
-                      <CardContent>
-                        <Badge variant="secondary">{item.label}</Badge>
-                        <p className="mt-3 text-xl font-semibold">
-                          {item.value}
-                        </p>
-                      </CardContent>
-                    </Card>
+                    <AppSection
+                      key={item.label}
+                      size="sm"
+                      contentClassName="gap-3"
+                    >
+                      <Badge variant="secondary">{item.label}</Badge>
+                      <p className="text-xl font-semibold">{item.value}</p>
+                    </AppSection>
                   ))}
                 </div>
 
                 {/* Progress (in_progress only) */}
                 {session.status === "in_progress" && (
-                  <AppSection contentClassName="pt-6">
+                  <AppSection>
                     <div className="flex items-center gap-3 text-sm">
                       <IconClipboardCheck className="size-4 text-muted-foreground" />
                       <span className="text-muted-foreground">
@@ -325,23 +318,21 @@ export function StocktakeDetailClient({
 
                 {/* Cancelled state */}
                 {session.status === "cancelled" && (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-                      <IconCircleX className="size-8 text-muted-foreground" />
-                      <p className="text-base font-semibold">
-                        {stocktakeDetailCopy.cancelledTitle}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {stocktakeDetailCopy.cancelledDescription}
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <AppSection contentClassName="items-center justify-center gap-2 py-10 text-center">
+                    <IconCircleX className="size-8 text-muted-foreground" />
+                    <p className="text-base font-semibold">
+                      {stocktakeDetailCopy.cancelledTitle}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {stocktakeDetailCopy.cancelledDescription}
+                    </p>
+                  </AppSection>
                 )}
               </div>
             </TabsContent>
 
             <TabsContent value="lines" className="mt-4">
-              <div className="space-y-6">
+              <div className="flex flex-col gap-6">
                 {/* Counting phase (in_progress) */}
                 {session.status === "in_progress" && (
                   <CountingPhase
@@ -443,24 +434,82 @@ function CountingPhase({
   onLineBlur: (lineId: number, value: string) => void;
   onReasonBlur: (lineId: number, reason: string) => void;
 }) {
+  const countingColumns: DataTableColumn<StocktakeLine>[] = [
+    {
+      key: "ingredient",
+      header: tTerm("ingredient"),
+      render: (line) => (
+        <div className="flex items-center gap-2 text-sm font-medium">
+          {line.ingredients?.name ?? `#${line.ingredient_id}`}
+          {savedLines.has(line.id) && (
+            <span className="inline-flex items-center gap-0.5 text-xs text-success">
+              <IconCheck className="size-3" />
+              {stocktakeDetailCopy.saved}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "unit",
+      header: FORM_VI.unit,
+      render: (line) => (
+        <span className="text-sm text-muted-foreground">
+          {line.ingredients?.purchase_unit ??
+            line.ingredients?.unit ??
+            inventoryCommon.noValue}
+        </span>
+      ),
+    },
+    {
+      key: "counted",
+      header: stocktakeDetailCopy.countedQtyPlaceholder,
+      render: (line) => (
+        <FormattedNumberInput
+          key={`stocktake-desktop-${line.id}-${line.counted_quantity ?? ""}`}
+          defaultValue={
+            line.counted_quantity != null ? String(line.counted_quantity) : ""
+          }
+          placeholder="0"
+          className="h-8 w-24 tabular-nums"
+          onValueBlur={(value) => onLineBlur(line.id, value)}
+          maxFractionDigits={3}
+          disabled={isPending}
+        />
+      ),
+    },
+    {
+      key: "reason",
+      header: stocktakeDetailCopy.varianceReason,
+      render: (line) => (
+        <Input
+          type="text"
+          defaultValue={line.variance_reason ?? ""}
+          placeholder={stocktakeDetailCopy.optionalReasonPlaceholder}
+          className="h-8 w-48 text-sm"
+          onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
+          disabled={isPending}
+        />
+      ),
+    },
+  ];
+
   if (isMobile) {
     return (
       <AppSection className="overflow-hidden" contentFlush>
         {lines.length === 0 ? (
-          <Empty className="py-8">
-            <EmptyHeader>
-              <EmptyTitle className="text-sm font-semibold">
-                {stocktakeDetailCopy.emptyCountTitle}
-              </EmptyTitle>
-              <EmptyDescription className="text-xs leading-5">
-                {stocktakeDetailCopy.emptyCountDescription}
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+          <AppEmptyState
+            compact
+            title={stocktakeDetailCopy.emptyCountTitle}
+            description={stocktakeDetailCopy.emptyCountDescription}
+          />
         ) : (
           <div className="-m-4 divide-y md:-m-5">
             {lines.map((line) => (
-              <div key={line.id} className="space-y-2 px-4 py-3 md:px-5">
+              <div
+                key={line.id}
+                className="flex flex-col gap-2 px-4 py-3 md:px-5"
+              >
                 <div className="flex items-center justify-between gap-2">
                   <span className="truncate text-sm font-medium">
                     {line.ingredients?.name ?? `#${line.ingredient_id}`}
@@ -510,81 +559,26 @@ function CountingPhase({
 
   return (
     <AppSection className="overflow-hidden" contentFlush>
-      <div className="-m-4 md:-m-5">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/20 hover:bg-muted/20">
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                {tTerm("ingredient")}
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                {FORM_VI.unit}
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                {stocktakeDetailCopy.countedQtyPlaceholder}
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                {stocktakeDetailCopy.varianceReason}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {lines.length === 0 && (
-              <TableEmptyStateRow
-                colSpan={4}
-                paddingClassName="py-14"
-                title={stocktakeDetailCopy.emptyCountTitle}
-                description={stocktakeDetailCopy.emptyCountDescription}
-              />
-            )}
-            {lines.map((line) => (
-              <TableRow key={line.id}>
-                <TableCell className="text-sm font-medium">
-                  <div className="flex items-center gap-2">
-                    {line.ingredients?.name ?? `#${line.ingredient_id}`}
-                    {savedLines.has(line.id) && (
-                      <span className="inline-flex items-center gap-0.5 text-xs text-success">
-                        <IconCheck className="size-3" />
-                        {stocktakeDetailCopy.saved}
-                      </span>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {line.ingredients?.purchase_unit ??
-                    line.ingredients?.unit ??
-                    inventoryCommon.noValue}
-                </TableCell>
-                <TableCell>
-                  <FormattedNumberInput
-                    key={`stocktake-desktop-${line.id}-${line.counted_quantity ?? ""}`}
-                    defaultValue={
-                      line.counted_quantity != null
-                        ? String(line.counted_quantity)
-                        : ""
-                    }
-                    placeholder="0"
-                    className="h-8 w-24 tabular-nums"
-                    onValueBlur={(value) => onLineBlur(line.id, value)}
-                    maxFractionDigits={3}
-                    disabled={isPending}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="text"
-                    defaultValue={line.variance_reason ?? ""}
-                    placeholder={stocktakeDetailCopy.optionalReasonPlaceholder}
-                    className="h-8 w-48 text-sm"
-                    onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
-                    disabled={isPending}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={countingColumns}
+        data={lines}
+        getRowKey={(line) => line.id}
+        emptyTitle={stocktakeDetailCopy.emptyCountTitle}
+        emptyDescription={stocktakeDetailCopy.emptyCountDescription}
+        emptyMode="no-data"
+        mobileCardRender={(line) => (
+          <div className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">
+              {line.ingredients?.name ?? `#${line.ingredient_id}`}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {line.ingredients?.purchase_unit ??
+                line.ingredients?.unit ??
+                inventoryCommon.noValue}
+            </span>
+          </div>
+        )}
+      />
     </AppSection>
   );
 }
@@ -614,8 +608,76 @@ function ResultsPhase({
   lines: StocktakeLine[];
   isMobile: boolean;
 }) {
+  const resultColumns: DataTableColumn<StocktakeLine>[] = [
+    {
+      key: "ingredient",
+      header: tTerm("ingredient"),
+      render: (line) => (
+        <span className="text-sm font-medium">
+          {line.ingredients?.name ?? `#${line.ingredient_id}`}
+        </span>
+      ),
+    },
+    {
+      key: "unit",
+      header: FORM_VI.unit,
+      render: (line) => (
+        <span className="text-sm text-muted-foreground">
+          {line.ingredients?.purchase_unit ??
+            line.ingredients?.unit ??
+            inventoryCommon.noValue}
+        </span>
+      ),
+    },
+    {
+      key: "system",
+      header: stocktakeDetailCopy.results.systemQty,
+      render: (line) => (
+        <span className="text-sm font-mono tabular-nums">
+          {line.system_quantity}
+        </span>
+      ),
+    },
+    {
+      key: "counted",
+      header: stocktakeDetailCopy.results.countedQty,
+      render: (line) => (
+        <span className="text-sm font-mono tabular-nums">
+          {line.counted_quantity ?? inventoryCommon.noValue}
+        </span>
+      ),
+    },
+    {
+      key: "variance",
+      header: stocktakeDetailCopy.results.variance,
+      render: (line) => {
+        const variance = line.variance ?? 0;
+        return (
+          <span
+            className={cn(
+              "text-sm font-medium font-mono tabular-nums",
+              getVarianceColor(line),
+            )}
+          >
+            {variance > 0 && "+"}
+            {variance}
+          </span>
+        );
+      },
+    },
+    {
+      key: "reason",
+      header: FORM_VI.reason,
+      render: (line) => (
+        <span className="text-sm text-muted-foreground">
+          {line.variance_reason ?? inventoryCommon.noValue}
+        </span>
+      ),
+    },
+  ];
+
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       {/* Variance legend */}
       <div className="flex flex-wrap items-center gap-4 text-xs">
         <span className="text-muted-foreground font-medium">
@@ -638,16 +700,11 @@ function ResultsPhase({
       {isMobile ? (
         <AppSection className="overflow-hidden" contentFlush>
           {lines.length === 0 ? (
-            <Empty className="py-8">
-              <EmptyHeader>
-                <EmptyTitle className="text-sm font-semibold">
-                  {stocktakeDetailCopy.results.emptyTitle}
-                </EmptyTitle>
-                <EmptyDescription className="text-xs leading-5">
-                  {stocktakeDetailCopy.results.emptyDescription}
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+            <AppEmptyState
+              compact
+              title={stocktakeDetailCopy.results.emptyTitle}
+              description={stocktakeDetailCopy.results.emptyDescription}
+            />
           ) : (
             <div className="-m-4 divide-y md:-m-5">
               {lines.map((line) => {
@@ -657,7 +714,7 @@ function ResultsPhase({
                   <div
                     key={line.id}
                     className={cn(
-                      "space-y-1 px-4 py-3 md:px-5",
+                      "flex flex-col gap-1 px-4 py-3 md:px-5",
                       getVarianceBg(line),
                     )}
                   >
@@ -694,77 +751,27 @@ function ResultsPhase({
         </AppSection>
       ) : (
         <AppSection className="overflow-hidden" contentFlush>
-          <div className="-m-4 md:-m-5">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/20 hover:bg-muted/20">
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    {tTerm("ingredient")}
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    {FORM_VI.unit}
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    {stocktakeDetailCopy.results.systemQty}
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    {stocktakeDetailCopy.results.countedQty}
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    {stocktakeDetailCopy.results.variance}
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    {FORM_VI.reason}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lines.length === 0 && (
-                  <TableEmptyStateRow
-                    colSpan={6}
-                    paddingClassName="py-14"
-                    title={stocktakeDetailCopy.results.emptyTitle}
-                    description={stocktakeDetailCopy.results.emptyDescription}
-                  />
-                )}
-                {lines.map((line) => {
-                  const varianceColor = getVarianceColor(line);
-                  const variance = line.variance ?? 0;
-
-                  return (
-                    <TableRow key={line.id} className={getVarianceBg(line)}>
-                      <TableCell className="text-sm font-medium">
-                        {line.ingredients?.name ?? `#${line.ingredient_id}`}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {line.ingredients?.purchase_unit ??
-                          line.ingredients?.unit ??
-                          inventoryCommon.noValue}
-                      </TableCell>
-                      <TableCell className="text-sm font-mono tabular-nums">
-                        {line.system_quantity}
-                      </TableCell>
-                      <TableCell className="text-sm font-mono tabular-nums">
-                        {line.counted_quantity ?? inventoryCommon.noValue}
-                      </TableCell>
-                      <TableCell
-                        className={cn(
-                          "text-sm font-medium font-mono tabular-nums",
-                          varianceColor,
-                        )}
-                      >
-                        {variance > 0 && "+"}
-                        {variance}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {line.variance_reason ?? inventoryCommon.noValue}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable
+            columns={resultColumns}
+            data={lines}
+            getRowKey={(line) => line.id}
+            emptyTitle={stocktakeDetailCopy.results.emptyTitle}
+            emptyDescription={stocktakeDetailCopy.results.emptyDescription}
+            emptyMode="no-data"
+            rowClassName={(line) => getVarianceBg(line)}
+            mobileCardRender={(line) => (
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">
+                  {line.ingredients?.name ?? `#${line.ingredient_id}`}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {line.ingredients?.purchase_unit ??
+                    line.ingredients?.unit ??
+                    inventoryCommon.noValue}
+                </span>
+              </div>
+            )}
+          />
         </AppSection>
       )}
     </div>

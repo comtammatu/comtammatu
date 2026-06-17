@@ -3,15 +3,10 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { STOCKTAKE_SESSION_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppPageHeader } from "@/components/surface";
+import { AppPageHeader, AppSection } from "@/components/surface";
 import { InventoryPageContent } from "../../../_components/inventory-page-layout";
 import {
   BlindCountingGrid,
@@ -123,8 +118,8 @@ export function StocktakeCountClient({
   return (
     <InventoryPageContent>
       <AppPageHeader
-        eyebrow="Kiểm kê"
-        title={`Đếm kiểm kê #${sessionId}`}
+        eyebrow={messages.inventory.stocktake.title}
+        title={`${messages.inventory.stocktake.startCounting} #${sessionId}`}
         description={`CN #${branchId} · Round R${currentRound}`}
       />
       <div className="flex flex-wrap items-center gap-3">
@@ -145,41 +140,43 @@ export function StocktakeCountClient({
         />
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {currentRound === 1 ? "Danh sách đếm" : `Vòng đếm R${currentRound}`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <BlindCountingGrid
-            lines={currentRoundLines}
-            counts={counts}
-            onCountChange={onCountChange}
-            blindMode={blindMode}
-            readOnly={!editable}
-            onlyNeedsRecount={currentRound > 1 ? true : undefined}
-          />
-          <BlindCountingGridToolbar
-            onSubmit={submit}
-            submitting={pending}
-            canSubmit={editable && Object.keys(counts).length > 0}
-          >
-            <Button type="button" variant="outline" size="sm" asChild>
-              <Link
-                href={`/inventory/stocktake/${sessionId}?branchId=${branchId}&view=detail`}
-              >
-                Chốt kiểm kê
-              </Link>
+      <AppSection
+        title={
+          currentRound === 1
+            ? messages.inventory.stocktake.startCounting
+            : `R${currentRound}`
+        }
+        contentClassName="gap-3"
+      >
+        <BlindCountingGrid
+          lines={currentRoundLines}
+          counts={counts}
+          onCountChange={onCountChange}
+          blindMode={blindMode}
+          readOnly={!editable}
+          onlyNeedsRecount={currentRound > 1 ? true : undefined}
+        />
+        <BlindCountingGridToolbar
+          onSubmit={submit}
+          submitting={pending}
+          canSubmit={editable && Object.keys(counts).length > 0}
+        >
+          <Button type="button" variant="outline" size="sm" asChild>
+            <Link
+              href={`/inventory/stocktake/${sessionId}?branchId=${branchId}&view=detail`}
+            >
+              {messages.inventory.stocktake.detail.completeAction}
+            </Link>
+          </Button>
+          {!editable ? (
+            <Button variant="outline" size="sm" disabled>
+              {status === "completed"
+                ? STOCKTAKE_SESSION_STATUS_LABELS_VI.completed
+                : messages.inventory.stocktake.detail.updateFailed}
             </Button>
-            {!editable ? (
-              <Button variant="outline" size="sm" disabled>
-                {status === "completed" ? "Đã hoàn thành" : "Không thể sửa"}
-              </Button>
-            ) : null}
-          </BlindCountingGridToolbar>
-        </CardContent>
-      </Card>
+          ) : null}
+        </BlindCountingGridToolbar>
+      </AppSection>
     </InventoryPageContent>
   );
 }

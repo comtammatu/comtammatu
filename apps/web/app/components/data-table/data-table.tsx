@@ -96,6 +96,8 @@ interface DataTableProps<T> {
   currentPage?: number;
   onPageChange?: (page: number) => void;
   onRowClick?: (row: T) => void;
+  getRowAriaLabel?: (row: T, index: number) => string | undefined;
+  getRowDataState?: (row: T, index: number) => string | undefined;
   rowClassName?: (row: T, index: number) => string | undefined;
   className?: string;
   /**
@@ -135,6 +137,8 @@ export function DataTable<T>({
   currentPage,
   onPageChange,
   onRowClick,
+  getRowAriaLabel,
+  getRowDataState,
   rowClassName,
   className,
   desktopFooter,
@@ -149,6 +153,16 @@ export function DataTable<T>({
     searchable === true ||
     (filters != null && filters.length > 0) ||
     actions != null;
+
+  function handleRowKeyDown(
+    event: React.KeyboardEvent<HTMLTableRowElement>,
+    row: T,
+  ) {
+    if (!onRowClick) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onRowClick(row);
+  }
 
   const toolbar = hasToolbar ? (
     <AppToolbar
@@ -223,7 +237,7 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn("space-y-0", className)}>
+    <div className={cn("flex flex-col gap-0", className)}>
       {toolbar}
       <Table>
         <TableHeader>
@@ -245,22 +259,37 @@ export function DataTable<T>({
               mode={emptyMode}
             />
           ) : (
-            data.map((row, index) => (
-              <TableRow
-                key={getRowKey(row)}
-                className={cn(
-                  onRowClick && "cursor-pointer hover:bg-muted/45",
-                  rowClassName?.(row, index),
-                )}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-              >
-                {columns.map((col) => (
-                  <TableCell key={col.key} className={col.className}>
-                    {col.render(row, index)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+            data.map((row, index) => {
+              const dataState = getRowDataState?.(row, index);
+              const interactive = onRowClick != null;
+
+              return (
+                <TableRow
+                  key={getRowKey(row)}
+                  role={interactive ? "button" : undefined}
+                  tabIndex={interactive ? 0 : undefined}
+                  data-state={dataState}
+                  aria-label={getRowAriaLabel?.(row, index)}
+                  className={cn(
+                    interactive &&
+                      "cursor-pointer hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                    rowClassName?.(row, index),
+                  )}
+                  onClick={interactive ? () => onRowClick(row) : undefined}
+                  onKeyDown={
+                    interactive
+                      ? (event) => handleRowKeyDown(event, row)
+                      : undefined
+                  }
+                >
+                  {columns.map((col) => (
+                    <TableCell key={col.key} className={col.className}>
+                      {col.render(row, index)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
         {(desktopFooter != null || desktopFooterRows?.length) &&

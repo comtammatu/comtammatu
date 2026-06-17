@@ -321,7 +321,7 @@ export function StocktakeListClient({
               {messages.inventory.stocktake.chooseBranchTitle}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             <Label htmlFor="branch-select">{BRANCH_VI.long}</Label>
             <Select
               value={selectedBranchId}
