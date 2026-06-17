@@ -28,6 +28,7 @@
     "@comtammatu/ui": "workspace:*",
     "@hookform/resolvers": "^5.4.0",
     "@lottiefiles/dotlottie-react": "^0.19.4",
+    "@vercel/analytics": "^2.0.1",
     "boneyard-js": "^1.8.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

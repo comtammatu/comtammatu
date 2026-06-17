@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Inter, JetBrains_Mono, Montserrat } from "next/font/google";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { getThemeScriptHtml } from "@comtammatu/ui/components/theme-script";
@@ -105,6 +106,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <ResponsiveToaster />
           <ConfirmDialogProvider />
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
