@@ -92,6 +92,12 @@ export interface InvoiceResult {
   status: "draft" | "signing" | "submitted" | "issued" | "failed";
   invoiceNumber: string | null;
   providerRef: string;
+  /**
+   * CQT code (Mã của cơ quan thuế) when the provider returns it on the create
+   * response. Distinct from the lookup secret `reservationCode`. Null while
+   * submitted/signing or when the template does not return it synchronously.
+   */
+  codeOfTax?: string | null;
   /** Raw provider response for storage */
   providerData?: Record<string, unknown>;
 }
@@ -129,6 +135,13 @@ export interface InvoiceStatus {
    * is null/undefined, `status` is provider-confirmed truth.
    */
   error?: string | null;
+  /**
+   * CQT code (Mã của cơ quan thuế) returned by the status lookup once issued.
+   * Distinct from `reservationCode` (customer lookup secret). Null when the
+   * status is non-issued or the provider does not return it. Callers MUST NOT
+   * couple the `status` decision to this field.
+   */
+  codeOfTax?: string | null;
 }
 
 /**

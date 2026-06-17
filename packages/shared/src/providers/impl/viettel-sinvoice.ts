@@ -104,6 +104,7 @@ interface SinvoiceCreateResult {
   reservationCode?: string;
   transactionID?: string;
   supplierTaxCode?: string;
+  codeOfTax?: string | null;
 }
 
 interface SinvoiceStatusSearchResult {
@@ -640,11 +641,14 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
 
       const result = envelope.result;
       const invoiceNo = result?.invoiceNo ?? null;
+      const codeOfTax = result?.codeOfTax ?? null;
 
-      // Sinvoice returns invoiceNo synchronously; CQT code (reservationCode)
-      // arrives async per BU spec. Treat invoiceNo presence as 'submitted'
-      // (sent to CQT, awaiting code) — reconcile cron polls getStatus.
-      // No invoiceNo = still 'signing'.
+      // Sinvoice returns invoiceNo synchronously; the CQT code (codeOfTax / Mã
+      // của cơ quan thuế) usually arrives later and is read by the reconcile
+      // cron via getStatus. Treat invoiceNo presence as 'submitted' (sent to
+      // CQT, awaiting code); no invoiceNo = still 'signing'. Status is NOT
+      // coupled to codeOfTax here — synchronous instant-issue is a separate,
+      // gated change.
       const status: InvoiceResult["status"] = invoiceNo
         ? "submitted"
         : "signing";
@@ -652,15 +656,17 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       return {
         status,
         invoiceNumber: invoiceNo,
+        codeOfTax,
         // providerRef stores transactionUuid (the key WE generated) so cancel
-        // can reference the same submission — reservationCode is what
-        // Sinvoice generated, useful for audit but not for cancel lookup.
+        // can reference the same submission. reservationCode is the customer
+        // lookup secret (Mã tra cứu) — distinct from codeOfTax — kept for audit.
         providerRef: transactionUuid,
         providerData: {
           transactionUuid,
           reservationCode: result?.reservationCode,
           transactionID: result?.transactionID,
           supplierTaxCode: result?.supplierTaxCode,
+          codeOfTax,
         },
       };
     } catch (err) {
@@ -860,7 +866,12 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         (exchangeStatus.includes("APPROVED") &&
           !exchangeStatus.includes("DIS_APPROVED"))
       ) {
-        return { status: "issued", invoiceNumber, error: null };
+        return {
+          status: "issued",
+          invoiceNumber,
+          codeOfTax: r.codeOfTax ?? null,
+          error: null,
+        };
       }
       if (invoiceNumber) {
         return { status: "submitted", invoiceNumber, error: null };
@@ -904,13 +915,59 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
   }
 
   /**
+   * Fetch one representation file (fileType "PDF" or "ZIP") for an issued
+   * invoice. Returns the decoded bytes verbatim (never re-encoded) or an error
+   * string.
+   *
+   * Endpoint: POST /InvoiceAPI/InvoiceUtilsWS/getInvoiceRepresentationFile.
+   * Response is a FLAT JSON envelope { errorCode, description, fileName,
+   * fileToBytes, paymentStatus } — fields at top level, NOT under `result`.
+   * This endpoint signals success with errorCode 200 (number), unlike
+   * createInvoice/getStatus where success is a null errorCode; a present
+   * top-level fileToBytes is the reliable success signal.
+   */
+  private async fetchRepresentationFile(
+    invoiceNumber: string,
+    transactionUuid: string,
+    fileType: "PDF" | "ZIP",
+  ): Promise<{ bytes: Uint8Array; fileName: string | null } | { error: string }> {
+    const res = await this.authedFetch(
+      `/InvoiceAPI/InvoiceUtilsWS/getInvoiceRepresentationFile`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          supplierTaxCode: this.taxCode,
+          invoiceNo: invoiceNumber,
+          templateCode: this.templateCode,
+          transactionUuid,
+          fileType,
+        }),
+      },
+    );
+    const envelope = (await res.json()) as {
+      errorCode?: number | string | null;
+      description?: string | null;
+      fileName?: string | null;
+      fileToBytes?: string | null;
+    };
+    const base64 = envelope.fileToBytes;
+    if (!res.ok || typeof base64 !== "string" || base64.length === 0) {
+      return {
+        error: `${fileType}:${envelope.errorCode ?? res.status}:${envelope.description ?? "download_failed"}`,
+      };
+    }
+    return {
+      bytes: new Uint8Array(Buffer.from(base64, "base64")),
+      fileName: envelope.fileName ?? null,
+    };
+  }
+
+  /**
    * Download signed PDF + XML for an issued invoice.
    *
-   * Endpoint (per HDSD §III.7): POST /InvoiceAPI/InvoiceUtilsWS/getInvoiceRepresentationFile
-   * Body: { supplierTaxCode, invoiceNo, templateCode, transactionUuid?, fileType: "ZIP" }
-   * Response: JSON envelope { errorCode, description, fileName, fileToBytes }
-   *   - fileToBytes: base64 of a ZIP archive
-   *   - ZIP contents: .xml, .xsl, .pdf, logo/watermark/qrcode images
+   * The PDF comes back directly as a base64 PDF (fileType=PDF); the signed XML
+   * (the legal original) ships only inside the ZIP representation (fileType=ZIP)
+   * for the MTT template — so this makes TWO calls and combines them.
    *
    * Per Viettel HDSD §III.7 timing note: "request lấy file hóa đơn nên
    * được thực hiện sau từ 2-5 giây sau khi phát hành hóa đơn." Cron
@@ -920,9 +977,9 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
    * hóa đơn có trạng thái khả dụng (state = 1)" — only fully-signed
    * invoices are downloadable. Caller filters status='issued'.
    *
-   * NEVER re-encodes bytes — extracts .pdf and .xml entries verbatim
-   * from the ZIP. Caller hashes pre-Storage upload to verify signature
-   * integrity.
+   * NEVER re-encodes bytes — the PDF is used as returned and the XML is
+   * extracted verbatim from the ZIP. Caller hashes pre-Storage upload to
+   * verify signature integrity.
    */
   async downloadInvoice(
     request: InvoiceDownloadRequest,
@@ -936,44 +993,46 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
     }
 
     try {
-      const res = await this.authedFetch(
-        `/InvoiceAPI/InvoiceUtilsWS/getInvoiceRepresentationFile`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            supplierTaxCode: this.taxCode,
-            invoiceNo: request.invoiceNumber,
-            templateCode: this.templateCode,
-            transactionUuid: request.providerRef,
-            fileType: "ZIP",
-          }),
-        },
+      // 1) PDF — fileType=PDF returns the signed PDF directly as base64.
+      const pdfRes = await this.fetchRepresentationFile(
+        request.invoiceNumber,
+        request.providerRef,
+        "PDF",
       );
-
-      const envelope = (await res.json()) as SinvoiceEnvelope<{
-        fileName?: string;
-        fileToBytes?: string;
-      }>;
-
-      if (!res.ok || envelope.errorCode) {
+      if ("error" in pdfRes) {
         return {
           pdf: null,
           xml: null,
-          error: `${envelope.errorCode ?? res.status}:${envelope.description ?? "download_failed"}`,
+          error: pdfRes.error,
           providerData: { invoiceNo: request.invoiceNumber },
         };
       }
+      const pdfBytes = pdfRes.bytes;
+      const pdfStart = String.fromCharCode(
+        pdfBytes[0] ?? 0,
+        pdfBytes[1] ?? 0,
+        pdfBytes[2] ?? 0,
+        pdfBytes[3] ?? 0,
+      );
+      if (pdfStart !== "%PDF") {
+        return { pdf: null, xml: null, error: `bad_pdf_magic:got=${pdfStart}` };
+      }
 
-      const base64 = envelope.result?.fileToBytes;
-      if (!base64 || typeof base64 !== "string") {
+      // 2) XML — the signed XML ships only inside the ZIP representation.
+      const zipRes = await this.fetchRepresentationFile(
+        request.invoiceNumber,
+        request.providerRef,
+        "ZIP",
+      );
+      if ("error" in zipRes) {
         return {
           pdf: null,
           xml: null,
-          error: "empty_filetobytes",
+          error: zipRes.error,
+          providerData: { invoiceNo: request.invoiceNumber },
         };
       }
-
-      const zipBuffer = Buffer.from(base64, "base64");
+      const zipBuffer = Buffer.from(zipRes.bytes);
       // Magic byte check for ZIP: PK\x03\x04 = 0x50 0x4B 0x03 0x04
       if (
         zipBuffer.length < 4 ||
@@ -1000,55 +1059,31 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         };
       }
 
-      // Find first .pdf and .xml entries (case-insensitive). ZIP may
-      // contain xsl/qrcode/logo — ignore those.
-      let pdfEntry: { name: string; bytes: Uint8Array } | null = null;
+      // The ZIP carries the signed .xml (plus xsl/qrcode/logo we ignore).
       let xmlEntry: { name: string; bytes: Uint8Array } | null = null;
       for (const [name, bytes] of Object.entries(entries)) {
-        const lower = name.toLowerCase();
-        if (!pdfEntry && lower.endsWith(".pdf")) {
-          pdfEntry = { name, bytes };
-        } else if (!xmlEntry && lower.endsWith(".xml")) {
+        if (name.toLowerCase().endsWith(".xml")) {
           xmlEntry = { name, bytes };
+          break;
         }
       }
-
-      if (!pdfEntry || !xmlEntry) {
+      if (!xmlEntry) {
         return {
           pdf: null,
           xml: null,
-          error: `missing_entry:pdf=${!!pdfEntry},xml=${!!xmlEntry}`,
+          error: "missing_xml_in_zip",
           providerData: { zipEntries: Object.keys(entries) },
-        };
-      }
-
-      // Magic byte sanity: PDF must start with "%PDF" and XML with "<?xml" or "<".
-      const pdfStart = String.fromCharCode(
-        pdfEntry.bytes[0] ?? 0,
-        pdfEntry.bytes[1] ?? 0,
-        pdfEntry.bytes[2] ?? 0,
-        pdfEntry.bytes[3] ?? 0,
-      );
-      if (pdfStart !== "%PDF") {
-        return {
-          pdf: null,
-          xml: null,
-          error: `bad_pdf_magic:got=${pdfStart}`,
         };
       }
       const xmlHead = Buffer.from(xmlEntry.bytes.slice(0, 5)).toString("utf8");
       if (!xmlHead.startsWith("<?xml") && !xmlHead.startsWith("<")) {
-        return {
-          pdf: null,
-          xml: null,
-          error: `bad_xml_magic:got=${xmlHead}`,
-        };
+        return { pdf: null, xml: null, error: `bad_xml_magic:got=${xmlHead}` };
       }
 
       const pdf: InvoiceArtifact = {
-        bytes: pdfEntry.bytes,
+        bytes: pdfBytes,
         contentType: "application/pdf",
-        filename: pdfEntry.name,
+        filename: pdfRes.fileName ?? `${request.invoiceNumber}.pdf`,
       };
       const xml: InvoiceArtifact = {
         bytes: xmlEntry.bytes,
@@ -1061,9 +1096,9 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         xml,
         error: null,
         providerData: {
-          zipFileName: envelope.result?.fileName ?? null,
-          pdfFileName: pdfEntry.name,
+          pdfFileName: pdf.filename,
           xmlFileName: xmlEntry.name,
+          zipFileName: zipRes.fileName,
         },
       };
     } catch (e) {
