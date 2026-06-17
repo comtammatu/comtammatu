@@ -70,6 +70,36 @@ type Props = {
 
 const DEFAULT_VARIANCE_WARNING = 0.2;
 
+const GRN_CREATE_COPY = {
+  changeSupplier: "Đổi nhà cung cấp",
+  newReceiptEyebrow: "Phiếu nhập mới",
+  newReceiptDescription:
+    "Thêm nguyên liệu rồi lưu nháp. Bước chốt nhập kho nằm ở màn hình chi tiết.",
+  discardDraft: "Hủy nháp",
+  addItemToContinue: "Thêm mặt hàng để tiếp tục",
+  unitCostTitle: "Đơn giá nhập",
+  editItem: "Sửa mặt hàng",
+  addItem: "Thêm mặt hàng",
+  editLineAria: "Sửa dòng",
+  deleteLineAria: "Xóa dòng",
+  searchPlaceholder: "Tìm theo tên hoặc mã SKU",
+  emptyTitle: "Không thấy nguyên liệu",
+  emptyDescription: "Thử từ khóa khác hoặc kiểm tra lại danh mục.",
+  optionalNote: "Ghi chú (tùy chọn)",
+  notePlaceholder: "Tình trạng, lô, nhiệt độ...",
+  addedSummary: (lineCount: number) => `Đã thêm ${lineCount} mặt hàng`,
+  saveDraft: (lineCount: number, total: number) =>
+    `Lưu phiếu nháp · ${lineCount} mặt hàng · ${formatVND(total)} đ`,
+  lineUnitCost: (quantity: number, unit: string, unitCost: number) =>
+    `${quantity} ${unit} · ${formatVND(unitCost)} đ/${unit} ·`,
+  unitLabel: (unit: string) => `Đơn vị: ${unit}`,
+  unitPriceUnit: (unit: string) => `đ / ${unit}`,
+  moneyVnd: (value: number) => `${formatVND(value)} đ`,
+  lastCost: (value: number, unit: string) => `${formatVND(value)} đ/${unit}`,
+  varianceWarning: (variance: number) =>
+    `Giá chênh ${(variance * 100).toFixed(0)}% so với lần trước — kiểm tra lại trước khi lưu.`,
+};
+
 type EditState = {
   ingredient: Ingredient;
   line: GrnDraftLine | null;
@@ -286,10 +316,10 @@ export function GrnCreateClient({
     <MobilePage>
       <MobileSectionHeader
         backHref="/inventory/grn/new"
-        backLabel="Đổi nhà cung cấp"
-        eyebrow="Phiếu nhập mới"
+        backLabel={GRN_CREATE_COPY.changeSupplier}
+        eyebrow={GRN_CREATE_COPY.newReceiptEyebrow}
         title={supplier.name}
-        description="Thêm nguyên liệu rồi lưu nháp. Bước chốt nhập kho nằm ở màn hình chi tiết."
+        description={GRN_CREATE_COPY.newReceiptDescription}
         action={
           lineCount > 0 ? (
             <Button
@@ -300,7 +330,7 @@ export function GrnCreateClient({
               onClick={discardDraft}
             >
               <IconTrash className="size-4" />
-              Hủy nháp
+              {GRN_CREATE_COPY.discardDraft}
             </Button>
           ) : undefined
         }
@@ -309,8 +339,10 @@ export function GrnCreateClient({
       {lineCount > 0 ? (
         <Card className="gap-2 p-3">
           <div className="flex items-center justify-between text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-            <span>Đã thêm {lineCount} mặt hàng</span>
-            <span className="text-foreground">{formatVND(total)} đ</span>
+            <span>{GRN_CREATE_COPY.addedSummary(lineCount)}</span>
+            <span className="text-foreground">
+              {GRN_CREATE_COPY.moneyVnd(total)}
+            </span>
           </div>
           <div className="flex flex-col gap-2">
             {draft.lines.map((line) => (
@@ -323,10 +355,15 @@ export function GrnCreateClient({
                     {line.ingredientName}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {line.quantity} {line.unit} · {formatVND(line.unitCost)} đ/
-                    {line.unit} ·{" "}
+                    {GRN_CREATE_COPY.lineUnitCost(
+                      line.quantity,
+                      line.unit,
+                      line.unitCost,
+                    )}{" "}
                     <span className="font-medium text-foreground">
-                      {formatVND(line.quantity * line.unitCost)} đ
+                      {GRN_CREATE_COPY.moneyVnd(
+                        line.quantity * line.unitCost,
+                      )}
                     </span>
                   </p>
                 </div>
@@ -341,7 +378,7 @@ export function GrnCreateClient({
                       );
                       if (ingredient) openEdit(ingredient);
                     }}
-                    aria-label="Sửa dòng"
+                    aria-label={GRN_CREATE_COPY.editLineAria}
                   >
                     <IconPencil className="size-4" />
                   </Button>
@@ -351,7 +388,7 @@ export function GrnCreateClient({
                     size="icon-lg"
                     className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => removeLine(line.ingredientId)}
-                    aria-label="Xóa dòng"
+                    aria-label={GRN_CREATE_COPY.deleteLineAria}
                   >
                     <IconTrash className="size-4" />
                   </Button>
@@ -370,7 +407,7 @@ export function GrnCreateClient({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Tìm theo tên hoặc mã SKU"
+          placeholder={GRN_CREATE_COPY.searchPlaceholder}
           className="text-base"
           inputMode="search"
         />
@@ -381,8 +418,8 @@ export function GrnCreateClient({
           <AppEmptyState
             compact
             icon={<IconSearch />}
-            title="Không thấy nguyên liệu"
-            description="Thử từ khóa khác hoặc kiểm tra lại danh mục."
+            title={GRN_CREATE_COPY.emptyTitle}
+            description={GRN_CREATE_COPY.emptyDescription}
           />
         ) : (
           filtered.map((ingredient) => {
@@ -432,7 +469,6 @@ export function GrnCreateClient({
           type="button"
           onClick={submit}
           disabled={!canSubmit}
-          className="shadow-lg"
         >
           {submitting ? (
             <>
@@ -440,11 +476,9 @@ export function GrnCreateClient({
               {STATES_VI.saving}
             </>
           ) : lineCount === 0 ? (
-            "Thêm mặt hàng để tiếp tục"
+            GRN_CREATE_COPY.addItemToContinue
           ) : (
-            <>
-              Lưu phiếu nháp · {lineCount} mặt hàng · {formatVND(total)} đ
-            </>
+            GRN_CREATE_COPY.saveDraft(lineCount, total)
           )}
         </TouchButton>
       </div>
@@ -480,7 +514,7 @@ export function GrnCreateClient({
       <NumberPadSheet
         open={numpad === "cost"}
         onOpenChange={(next) => setNumpad(next ? "cost" : null)}
-        title="Đơn giá nhập"
+        title={GRN_CREATE_COPY.unitCostTitle}
         initialValue={edit?.unitCost ?? 0}
         suffix="đ"
         onConfirm={(value) =>
@@ -541,14 +575,14 @@ function LineEditSheet({
           <>
             <SheetHeader className="border-b p-4">
               <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-                {edit.line ? "Sửa mặt hàng" : "Thêm mặt hàng"}
+                {edit.line ? GRN_CREATE_COPY.editItem : GRN_CREATE_COPY.addItem}
               </p>
               <SheetTitle className="text-lg font-semibold">
                 {edit.ingredient.name}
               </SheetTitle>
               <p className="text-xs text-muted-foreground">
                 {edit.ingredient.sku ? `${edit.ingredient.sku} · ` : ""}
-                Đơn vị: {edit.ingredient.unit}
+                {GRN_CREATE_COPY.unitLabel(edit.ingredient.unit)}
               </p>
             </SheetHeader>
 
@@ -603,7 +637,7 @@ function LineEditSheet({
                       {formatVND(edit.unitCost)}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      đ / {edit.ingredient.unit}
+                      {GRN_CREATE_COPY.unitPriceUnit(edit.ingredient.unit)}
                     </span>
                   </button>
                 ) : (
@@ -620,7 +654,7 @@ function LineEditSheet({
                       className="h-auto border-0 bg-transparent p-0 text-2xl font-semibold tabular-nums shadow-none ring-0 focus-visible:border-0 focus-visible:ring-0"
                     />
                     <span className="text-xs text-muted-foreground">
-                      đ / {edit.ingredient.unit}
+                      {GRN_CREATE_COPY.unitPriceUnit(edit.ingredient.unit)}
                     </span>
                   </label>
                 )}
@@ -632,13 +666,15 @@ function LineEditSheet({
                     {FORM_VI.amount}
                   </span>
                   <span className="text-base font-semibold">
-                    {formatVND(lineTotal)} đ
+                    {GRN_CREATE_COPY.moneyVnd(lineTotal)}
                   </span>
                 </div>
                 {referenceCost ? (
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Giá gần nhất: {formatVND(referenceCost)} đ/
-                    {edit.ingredient.unit}
+                    {GRN_CREATE_COPY.lastCost(
+                      referenceCost,
+                      edit.ingredient.unit,
+                    )}
                   </p>
                 ) : null}
               </div>
@@ -647,8 +683,7 @@ function LineEditSheet({
                 <Alert variant="destructive">
                   <IconAlertTriangle className="size-4" />
                   <AlertDescription>
-                    Giá chênh {(variance * 100).toFixed(0)}% so với lần trước —
-                    kiểm tra lại trước khi lưu.
+                    {GRN_CREATE_COPY.varianceWarning(variance)}
                   </AlertDescription>
                 </Alert>
               ) : null}
@@ -658,7 +693,7 @@ function LineEditSheet({
                   htmlFor="line-note"
                   className="text-2xs font-medium uppercase tracking-wider text-muted-foreground"
                 >
-                  Ghi chú (tùy chọn)
+                  {GRN_CREATE_COPY.optionalNote}
                 </label>
                 <Textarea
                   id="line-note"
@@ -666,7 +701,7 @@ function LineEditSheet({
                   onChange={(e) => onPatch({ note: e.target.value })}
                   rows={2}
                   maxLength={200}
-                  placeholder="Tình trạng, lô, nhiệt độ..."
+                  placeholder={GRN_CREATE_COPY.notePlaceholder}
                   className="mt-1"
                 />
               </div>

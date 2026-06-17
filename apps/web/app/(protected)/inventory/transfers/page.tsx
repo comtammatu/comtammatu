@@ -1,5 +1,5 @@
+import { redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
-import { fetchIngredients } from "../ingredient-actions";
 import {
   fetchStockTransfers,
   fetchBranchesForTransfer,
@@ -15,7 +15,6 @@ import type {
   TransferListRow,
 } from "./transfers-list-client";
 import { TransfersListClient } from "./transfers-list-client";
-import type { IngredientRow } from "../page";
 
 export default async function TransfersPage({
   searchParams,
@@ -34,11 +33,18 @@ export default async function TransfersPage({
   // (URL ?branchId=).
   const userBranchId = scope.selectedBranchId;
   const branchFilter = userBranchId ?? undefined;
+  const createParam = Array.isArray(params.create)
+    ? params.create[0]
+    : params.create;
 
-  const [trRes, brRes, ingRes, locRes] = await Promise.all([
+  if (createParam === "cap-bep") {
+    const scopeQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
+    redirect(`/inventory/transfers/new${scopeQuery}`);
+  }
+
+  const [trRes, brRes, locRes] = await Promise.all([
     fetchStockTransfers(branchFilter),
     fetchBranchesForTransfer(),
-    fetchIngredients(),
     userBranchId != null
       ? fetchInventoryLocationsForBranch(userBranchId)
       : Promise.resolve({ success: true as const, data: [] as never[] }),
@@ -50,26 +56,18 @@ export default async function TransfersPage({
   const branches: BranchForTransfer[] = brRes.success
     ? ((brRes.data ?? []) as BranchForTransfer[])
     : [];
-  const ingredients: IngredientRow[] = ingRes.success
-    ? ((ingRes.data ?? []) as IngredientRow[])
-    : [];
   const locations: InventoryLocation[] = locRes.success
     ? ((locRes.data ?? []) as InventoryLocation[])
     : [];
-  const createParam = Array.isArray(params.create)
-    ? params.create[0]
-    : params.create;
 
   return (
     <TransfersListClient
       initial={rows}
       branches={branches}
-      ingredients={ingredients}
       locations={locations}
       userBranchId={userBranchId}
       userRole={claims.user_role}
       basePath="/inventory/transfers"
-      initialCreateOpen={createParam === "cap-bep"}
     />
   );
 }

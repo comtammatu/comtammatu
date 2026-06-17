@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import {
   ArrowRight as IconArrowRight,
   ChevronDown as IconChevronDown,
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
   CardAction,
@@ -52,11 +59,21 @@ const TONE_CLASSNAME: Record<SurfaceTone, string> = {
 // reads these and drops whatever an ancestor already owns.
 type SurfaceNesting = { padded: boolean; constrained: boolean };
 
-const SURFACE_NESTING_NONE: SurfaceNesting = { padded: false, constrained: false };
-const SURFACE_NESTING_SHELL: SurfaceNesting = { padded: true, constrained: false };
-const SURFACE_NESTING_PAGE: SurfaceNesting = { padded: true, constrained: true };
+const SURFACE_NESTING_NONE: SurfaceNesting = {
+  padded: false,
+  constrained: false,
+};
+const SURFACE_NESTING_SHELL: SurfaceNesting = {
+  padded: true,
+  constrained: false,
+};
+const SURFACE_NESTING_PAGE: SurfaceNesting = {
+  padded: true,
+  constrained: true,
+};
 
-const SurfaceNestingContext = createContext<SurfaceNesting>(SURFACE_NESTING_NONE);
+const SurfaceNestingContext =
+  createContext<SurfaceNesting>(SURFACE_NESTING_NONE);
 
 /**
  * Marks the AppShell main region as the owner of the Management frame padding so
@@ -369,6 +386,7 @@ export function AppSection({
 export type AppToolbarProps = {
   children?: ReactNode;
   className?: string;
+  variant?: "card" | "inline";
   search?: ReactNode;
   filters?: ReactNode;
   bulk?: ReactNode;
@@ -379,6 +397,7 @@ export type AppToolbarProps = {
 export function AppToolbar({
   children,
   className,
+  variant = "card",
   search,
   filters,
   bulk,
@@ -392,42 +411,182 @@ export function AppToolbar({
     actions != null ||
     reset != null;
 
+  const content = hasSlots ? (
+    <>
+      {search ? (
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          {search}
+        </div>
+      ) : null}
+      {filters ? (
+        <div className="flex flex-wrap items-center gap-2">{filters}</div>
+      ) : null}
+      {bulk ? (
+        <>
+          <Separator orientation="vertical" className="h-6" />
+          <div className="flex flex-wrap items-center gap-2">{bulk}</div>
+        </>
+      ) : null}
+      {actions ? (
+        <>
+          <Separator orientation="vertical" className="h-6" />
+          <div className="flex flex-wrap items-center gap-2">{actions}</div>
+        </>
+      ) : null}
+      {reset ? (
+        <div className="flex flex-wrap items-center gap-2">{reset}</div>
+      ) : null}
+    </>
+  ) : (
+    children
+  );
+
+  if (variant === "inline") {
+    return (
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-3 border-b bg-muted/25 p-3",
+          className,
+        )}
+      >
+        {content}
+      </div>
+    );
+  }
+
   return (
     <Card size="sm" className="py-0">
       <CardContent
         className={cn("flex flex-wrap items-center gap-3 p-3", className)}
       >
-        {hasSlots ? (
-          <>
-            {search ? (
-              <div className="flex flex-wrap items-center gap-2">{search}</div>
-            ) : null}
-            {filters ? (
-              <div className="flex flex-wrap items-center gap-2">{filters}</div>
-            ) : null}
-            {bulk ? (
-              <>
-                <Separator orientation="vertical" className="h-6" />
-                <div className="flex flex-wrap items-center gap-2">{bulk}</div>
-              </>
-            ) : null}
-            {actions ? (
-              <>
-                <Separator orientation="vertical" className="h-6" />
-                <div className="flex flex-wrap items-center gap-2">
-                  {actions}
-                </div>
-              </>
-            ) : null}
-            {reset ? (
-              <div className="flex flex-wrap items-center gap-2">{reset}</div>
-            ) : null}
-          </>
-        ) : (
-          children
-        )}
+        {content}
       </CardContent>
     </Card>
+  );
+}
+
+export type FilterToolbarProps = AppToolbarProps;
+
+export function FilterToolbar(props: FilterToolbarProps) {
+  return <AppToolbar {...props} />;
+}
+
+export type DocumentFormShellProps = {
+  header?: ReactNode;
+  children: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+  contentClassName?: string;
+  bodyClassName?: string;
+  scroll?: boolean;
+  width?: SurfaceWidth;
+  padded?: boolean;
+  density?: AppPageProps["density"];
+  mobile?: boolean;
+};
+
+export function DocumentFormShell({
+  header,
+  children,
+  footer,
+  className,
+  contentClassName,
+  bodyClassName,
+  scroll = false,
+  width = "wide",
+  padded = true,
+  density = "comfortable",
+  mobile = false,
+}: DocumentFormShellProps) {
+  return (
+    <AppPage
+      scroll={scroll}
+      width={width}
+      padded={padded}
+      density={density}
+      mobile={mobile}
+      className={className}
+      contentClassName={contentClassName}
+    >
+      {header}
+      <div className={cn("flex min-w-0 flex-col gap-4", bodyClassName)}>
+        {children}
+      </div>
+      {footer}
+    </AppPage>
+  );
+}
+
+type OperationalTileTone = "default" | "success" | "warning" | "muted";
+
+const OPERATIONAL_TILE_TONE_CLASSNAME: Record<OperationalTileTone, string> = {
+  default: "bg-card hover:border-primary/25",
+  success:
+    "border-success/35 bg-success/10 text-foreground hover:border-success/50 hover:bg-success/20",
+  warning:
+    "border-warning/35 bg-warning/10 text-foreground hover:border-warning/50 hover:bg-warning/20",
+  muted: "bg-muted/55 text-muted-foreground hover:border-border",
+};
+
+export type OperationalTileProps = ComponentProps<typeof Button> & {
+  selected?: boolean;
+  tone?: OperationalTileTone;
+};
+
+export function OperationalTile({
+  selected = false,
+  tone = "default",
+  variant,
+  className,
+  ...props
+}: OperationalTileProps) {
+  return (
+    <Button
+      variant={variant ?? (selected ? "default" : "outline")}
+      className={cn(
+        "transition-[background-color,border-color,color,box-shadow,transform]",
+        selected
+          ? "border-primary/50 ring-2 ring-primary/40"
+          : OPERATIONAL_TILE_TONE_CLASSNAME[tone],
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+const OPERATIONAL_BOARD_CURRENT_CLASSNAME: Record<SurfaceTone, string> = {
+  primary: "relative z-10 border-primary bg-primary/10 ring-2 ring-primary/50",
+  success: "relative z-10 border-success bg-success/10 ring-2 ring-success/50",
+  warning: "relative z-10 border-warning bg-warning/25 ring-2 ring-warning/70",
+  info: "relative z-10 border-info bg-info/10 ring-2 ring-info/50",
+  secondary:
+    "relative z-10 border-secondary bg-secondary/50 ring-2 ring-secondary",
+};
+
+export type OperationalBoardCardProps = ComponentProps<typeof Card> & {
+  current?: boolean;
+  currentTone?: SurfaceTone;
+  interactive?: boolean;
+};
+
+export function OperationalBoardCard({
+  current = false,
+  currentTone = "primary",
+  interactive = false,
+  className,
+  ...props
+}: OperationalBoardCardProps) {
+  return (
+    <Card
+      className={cn(
+        "transition-[background-color,border-color,box-shadow]",
+        interactive && "hover:shadow-sm",
+        current && OPERATIONAL_BOARD_CURRENT_CLASSNAME[currentTone],
+        className,
+      )}
+      {...props}
+    />
   );
 }
 
@@ -444,7 +603,12 @@ const EMPTY_STATE_COPY: Record<AppEmptyStateMode, string> = {
   error: "Không thể tải dữ liệu",
 };
 
-export type AppEmptyStateProps = {
+type AppEmptyRootProps = Omit<
+  ComponentProps<typeof Empty>,
+  "children" | "className" | "title"
+>;
+
+export type AppEmptyStateProps = AppEmptyRootProps & {
   title?: string;
   mode?: AppEmptyStateMode;
   description?: string;
@@ -470,6 +634,7 @@ export function AppEmptyState({
   descriptionClassName,
   compact = false,
   align = "center",
+  ...props
 }: AppEmptyStateProps) {
   return (
     <Empty
@@ -479,6 +644,7 @@ export function AppEmptyState({
         align === "start" && "items-start text-left",
         className,
       )}
+      {...props}
     >
       {icon ? (
         <EmptyMedia variant="icon" className={iconClassName}>

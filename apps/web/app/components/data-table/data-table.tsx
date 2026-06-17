@@ -10,9 +10,18 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { Input } from "@comtammatu/ui/components/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
-import { AppEmptyState } from "../surface";
+import { Search as IconSearch } from "lucide-react";
+import { AppEmptyState, AppToolbar } from "../surface";
 import { TableEmptyStateRow } from "../table-empty-state-row";
 import { DataTablePagination } from "./data-table-pagination";
 import type { ReactNode } from "react";
@@ -31,6 +40,19 @@ export interface DataTableColumn<T> {
    */
   render: (row: T, index: number) => ReactNode;
   hideOnMobile?: boolean;
+}
+
+export interface DataTableFooterCell {
+  key: string;
+  content: ReactNode;
+  className?: string;
+  colSpan?: number;
+}
+
+export interface DataTableFooterRow {
+  key: string;
+  className?: string;
+  cells: DataTableFooterCell[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -79,10 +101,11 @@ interface DataTableProps<T> {
   /**
    * Document-table totals (e.g. PO/transfer/issue line sheets). Rendered
    * as `<TableFooter>` rows on desktop and as a block under the card
-   * list on mobile — pass `<TableRow>`s for desktop via this prop and a
-   * mobile-friendly block via `mobileFooter`.
+   * list on mobile. Prefer `desktopFooterRows` so route code does not import
+   * raw Table primitives; `desktopFooter` is kept for existing call sites.
    */
   desktopFooter?: ReactNode;
+  desktopFooterRows?: DataTableFooterRow[];
   mobileFooter?: ReactNode;
 }
 
@@ -94,12 +117,20 @@ export function DataTable<T>({
   columns,
   data,
   getRowKey,
+  searchable,
+  searchPlaceholder,
+  filters,
+  filterValues,
+  onFilterChange,
+  searchValue,
+  onSearchChange,
   emptyTitle,
   emptyDescription,
   emptyIcon,
   emptyMode,
   totalCount,
   mobileCardRender,
+  actions,
   pageSize,
   currentPage,
   onPageChange,
@@ -107,16 +138,64 @@ export function DataTable<T>({
   rowClassName,
   className,
   desktopFooter,
+  desktopFooterRows,
   mobileFooter,
 }: DataTableProps<T>) {
   const isMobile = useIsMobile();
   const colSpan = columns.length;
   const total = totalCount ?? data.length;
   const showPagination = pageSize != null && total > pageSize;
+  const hasToolbar =
+    searchable === true ||
+    (filters != null && filters.length > 0) ||
+    actions != null;
+
+  const toolbar = hasToolbar ? (
+    <AppToolbar
+      variant="inline"
+      search={
+        searchable === true ? (
+          <div className="relative min-w-0 flex-1 sm:min-w-64">
+            <IconSearch className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchValue ?? ""}
+              onChange={(event) => onSearchChange?.(event.target.value)}
+              placeholder={searchPlaceholder}
+              className="pl-9"
+            />
+          </div>
+        ) : null
+      }
+      filters={
+        filters != null && filters.length > 0
+          ? filters.map((filter) => (
+              <Select
+                key={filter.key}
+                value={filterValues?.[filter.key] ?? ""}
+                onValueChange={(value) => onFilterChange?.(filter.key, value)}
+              >
+                <SelectTrigger className="min-w-36">
+                  <SelectValue placeholder={filter.placeholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {filter.options.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ))
+          : null
+      }
+      actions={actions}
+    />
+  ) : null;
 
   if (isMobile) {
     return (
       <div className={cn("flex flex-col gap-3", className)}>
+        {toolbar}
         {data.length === 0 ? (
           <AppEmptyState
             compact
@@ -145,6 +224,7 @@ export function DataTable<T>({
 
   return (
     <div className={cn("space-y-0", className)}>
+      {toolbar}
       <Table>
         <TableHeader>
           <TableRow>
@@ -183,8 +263,24 @@ export function DataTable<T>({
             ))
           )}
         </TableBody>
-        {desktopFooter != null && data.length > 0 ? (
-          <TableFooter>{desktopFooter}</TableFooter>
+        {(desktopFooter != null || desktopFooterRows?.length) &&
+        data.length > 0 ? (
+          <TableFooter>
+            {desktopFooter}
+            {desktopFooterRows?.map((row) => (
+              <TableRow key={row.key} className={row.className}>
+                {row.cells.map((cell) => (
+                  <TableCell
+                    key={cell.key}
+                    className={cell.className}
+                    colSpan={cell.colSpan}
+                  >
+                    {cell.content}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableFooter>
         ) : null}
       </Table>
       {showPagination && (

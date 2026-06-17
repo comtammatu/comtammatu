@@ -8,24 +8,15 @@ import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@comtammatu/ui/components/sheet";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { PhotoUploadInput } from "../../_components/photo-upload-input";
 import {
@@ -47,6 +38,10 @@ import {
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { notify } from "@comtammatu/ui/lib/notify";
 import { Combobox } from "@/components/form";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import {
   AppDetailFooter,
   AppPage,
@@ -524,16 +519,15 @@ export function GRNDetailClient({
                       />
                     </AppSection>
 
-                    <Card className="border-primary/20 bg-primary/5">
-                      <CardContent className="space-y-3 pt-6">
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                          {grnCopy.totalStockValue}
-                        </p>
-                        <p className="font-mono text-xl font-semibold tabular-nums text-primary">
-                          {inventoryCommon.currency(formatVND(stats.total))}
-                        </p>
-                      </CardContent>
-                    </Card>
+                    <AppSection
+                      tone="info"
+                      size="sm"
+                      title={grnCopy.totalStockValue}
+                    >
+                      <p className="font-mono text-xl font-semibold tabular-nums text-primary">
+                        {inventoryCommon.currency(formatVND(stats.total))}
+                      </p>
+                    </AppSection>
                   </div>
                 </div>
 
@@ -724,13 +718,13 @@ function AmendOwnerDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{grnCopy.amend.title}</DialogTitle>
-        </DialogHeader>
+    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
+      <SheetContent className="gap-0 overflow-y-auto sm:max-w-lg">
+        <SheetHeader className="border-b p-4">
+          <SheetTitle>{grnCopy.amend.title}</SheetTitle>
+        </SheetHeader>
         {line ? (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 p-4">
             <Alert>
               <IconAlertTriangle className="size-4" />
               <AlertDescription>{grnCopy.amend.warning}</AlertDescription>
@@ -783,7 +777,7 @@ function AmendOwnerDialog({
               />
             </div>
 
-            <DialogFooter>
+            <SheetFooter className="border-t p-0 pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -796,11 +790,11 @@ function AmendOwnerDialog({
                 <IconDeviceFloppy className="size-4" />
                 {grnCopy.amend.saveAction}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
         ) : null}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -930,18 +924,18 @@ function AddGrnLineDialog({
   }
 
   return (
-    <Dialog
+    <Sheet
       open={isOpen}
       onOpenChange={(open) => {
         onOpenChange(open);
         if (!open) resetForm();
       }}
     >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{grnCopy.addDialog.title}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <SheetContent className="gap-0 overflow-y-auto sm:max-w-lg">
+        <SheetHeader className="border-b p-4">
+          <SheetTitle>{grnCopy.addDialog.title}</SheetTitle>
+        </SheetHeader>
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 p-4">
           <div className="flex flex-col gap-1.5">
             <Label>{grnCopy.addDialog.ingredientLabel}</Label>
             <Combobox
@@ -1024,7 +1018,7 @@ function AddGrnLineDialog({
             </div>
           </div>
 
-          <DialogFooter>
+          <SheetFooter className="border-t p-0 pt-4">
             <Button
               type="button"
               variant="outline"
@@ -1036,21 +1030,42 @@ function AddGrnLineDialog({
               <IconPlus className="size-4" />
               {grnCopy.addDialog.saveAction}
             </Button>
-          </DialogFooter>
+          </SheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 
 const PREVIEW_LIMIT = 10;
+
+type GrnOverviewPreviewRow = {
+  line: GRNDetailItem;
+  acceptedQty: number;
+  lineTotal: number;
+};
+
+function getGrnOverviewStatus({ line }: GrnOverviewPreviewRow): {
+  label: string;
+  variant: "destructive" | "warning" | "success";
+} {
+  const variance = deriveVariance(line.cost, line.poUnitPrice);
+  const reviewFlagged =
+    line.requiresReview || (variance != null && Math.abs(variance) > 10);
+  const isRejected = line.qualityStatus === "rejected";
+  return isRejected
+    ? { label: grnCopy.rejectedLines, variant: "destructive" }
+    : reviewFlagged
+      ? { label: grnCopy.priceReviewNeeded, variant: "warning" }
+      : { label: grnCopy.acceptedLines, variant: "success" };
+}
 
 function OverviewLinesPreview({ lines }: { lines: GRNDetailItem[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const sorted = useMemo(() => {
+  const sorted = useMemo<GrnOverviewPreviewRow[]>(() => {
     return [...lines]
       .map((line) => {
         const acceptedQty = Math.max(0, line.actual - line.rejected);
@@ -1065,6 +1080,61 @@ function OverviewLinesPreview({ lines }: { lines: GRNDetailItem[] }) {
 
   const preview = sorted.slice(0, PREVIEW_LIMIT);
   const hasMore = sorted.length > PREVIEW_LIMIT;
+  const columns: DataTableColumn<GrnOverviewPreviewRow>[] = [
+    {
+      key: "name",
+      header: grnCopy.lineHeaderName,
+      render: ({ line }) => (
+        <div>
+          <div className="font-medium">{line.name}</div>
+          {line.sku ? (
+            <div className="font-mono text-xs text-muted-foreground">
+              {line.sku}
+            </div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "quantity",
+      header: grnCopy.lineHeaderQty,
+      className: "text-right",
+      render: ({ line, acceptedQty }) => (
+        <span className="font-mono tabular-nums">
+          {acceptedQty} {line.unit}
+        </span>
+      ),
+    },
+    {
+      key: "cost",
+      header: grnCopy.lineHeaderCost,
+      className: "text-right",
+      render: ({ line }) => (
+        <span className="font-mono tabular-nums">
+          {inventoryCommon.currency(formatVND(line.cost))}
+        </span>
+      ),
+    },
+    {
+      key: "total",
+      header: grnCopy.lineHeaderTotal,
+      className: "text-right",
+      render: ({ lineTotal }) => (
+        <span className="font-mono font-semibold tabular-nums">
+          {inventoryCommon.currency(formatVND(lineTotal))}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: grnCopy.lineHeaderStatus,
+      className: "w-24 text-right",
+      render: (row) => {
+        const status = getGrnOverviewStatus(row);
+        return <Badge variant={status.variant}>{status.label}</Badge>;
+      },
+    },
+  ];
 
   function goToLinesTab() {
     const params = new URLSearchParams(searchParams.toString());
@@ -1090,69 +1160,56 @@ function OverviewLinesPreview({ lines }: { lines: GRNDetailItem[] }) {
       }
       contentFlush
     >
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{grnCopy.lineHeaderName}</TableHead>
-            <TableHead className="text-right">
-              {grnCopy.lineHeaderQty}
-            </TableHead>
-            <TableHead className="text-right">
-              {grnCopy.lineHeaderCost}
-            </TableHead>
-            <TableHead className="text-right">
-              {grnCopy.lineHeaderTotal}
-            </TableHead>
-            <TableHead className="w-24 text-right">
-              {grnCopy.lineHeaderStatus}
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {preview.map(({ line, acceptedQty, lineTotal }) => {
-            const variance = deriveVariance(line.cost, line.poUnitPrice);
-            const reviewFlagged =
-              line.requiresReview ||
-              (variance != null && Math.abs(variance) > 10);
-            const isRejected = line.qualityStatus === "rejected";
-            const statusVariant: "destructive" | "warning" | "success" =
-              isRejected
-                ? "destructive"
-                : reviewFlagged
-                  ? "warning"
-                  : "success";
-            const statusLabel = isRejected
-              ? grnCopy.rejectedLines
-              : reviewFlagged
-                ? grnCopy.priceReviewNeeded
-                : grnCopy.acceptedLines;
-            return (
-              <TableRow key={line.lineId}>
-                <TableCell>
-                  <div className="font-medium">{line.name}</div>
-                  {line.sku ? (
+      <DataTable
+        columns={columns}
+        data={preview}
+        getRowKey={({ line }) => line.lineId}
+        emptyTitle={grnCopy.overviewLinesEmpty}
+        mobileCardRender={(row) => {
+          const status = getGrnOverviewStatus(row);
+          return (
+            <div className="flex flex-col gap-2 rounded-lg border bg-card p-3">
+              <div className="flex min-w-0 items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{row.line.name}</div>
+                  {row.line.sku ? (
                     <div className="font-mono text-xs text-muted-foreground">
-                      {line.sku}
+                      {row.line.sku}
                     </div>
                   ) : null}
-                </TableCell>
-                <TableCell className="text-right font-mono tabular-nums">
-                  {acceptedQty} {line.unit}
-                </TableCell>
-                <TableCell className="text-right font-mono tabular-nums">
-                  {inventoryCommon.currency(formatVND(line.cost))}
-                </TableCell>
-                <TableCell className="text-right font-mono tabular-nums font-semibold">
-                  {inventoryCommon.currency(formatVND(lineTotal))}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Badge variant={statusVariant}>{statusLabel}</Badge>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+                </div>
+                <Badge variant={status.variant}>{status.label}</Badge>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <div className="text-muted-foreground">
+                    {grnCopy.lineHeaderQty}
+                  </div>
+                  <div className="font-mono tabular-nums">
+                    {row.acceptedQty} {row.line.unit}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">
+                    {grnCopy.lineHeaderCost}
+                  </div>
+                  <div className="font-mono tabular-nums">
+                    {inventoryCommon.currency(formatVND(row.line.cost))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">
+                    {grnCopy.lineHeaderTotal}
+                  </div>
+                  <div className="font-mono font-semibold tabular-nums">
+                    {inventoryCommon.currency(formatVND(row.lineTotal))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }}
+      />
       {hasMore ? (
         <div className="border-t px-4 py-3">
           <Button
@@ -1238,83 +1295,75 @@ function LineRow({
 
   if (!isDraft) {
     return (
-      <Card className="bg-muted/30">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-bold">{line.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {grnCopy.line.orderedDeliveredAccepted(
-                  line.required,
-                  line.actual,
-                  line.actual - line.rejected,
-                  line.rejected,
-                  line.unit,
-                )}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {showAmendAffordance ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={onAmend}
-                >
-                  {grnCopy.amend.action}
-                </Button>
-              ) : null}
-              {line.qualityStatus === "rejected" || line.rejected > 0 ? (
-                <IconAlertTriangle className="size-5 text-warning" />
-              ) : (
-                <IconCircleCheck className="size-5 text-success" />
+      <div className="rounded-md border bg-muted/30 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-bold">{line.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {grnCopy.line.orderedDeliveredAccepted(
+                line.required,
+                line.actual,
+                line.actual - line.rejected,
+                line.rejected,
+                line.unit,
               )}
-            </div>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
-            <Stat label={grnCopy.line.importPrice}>
-              {inventoryCommon.currency(formatVND(line.cost))}
-            </Stat>
-            <Stat label={grnCopy.line.poPrice}>
-              {line.poUnitPrice != null
-                ? inventoryCommon.currency(formatVND(line.poUnitPrice))
-                : inventoryCommon.noValue}
-            </Stat>
-            <Stat label={grnCopy.line.priceVariance}>
-              <span className={varianceTone}>{variancesLabel}</span>
-            </Stat>
-            <Stat label={grnCopy.line.expiry}>{line.expiryDisplay}</Stat>
-          </div>
-          {line.rejectionReason ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              <span className="font-semibold">
-                {grnCopy.line.rejectionReason}
-              </span>{" "}
-              {line.rejectionReason}
             </p>
-          ) : null}
-          {line.priceOverrideNote ? (
-            <p className="mt-1 text-xs text-muted-foreground">
-              <span className="font-semibold">
-                {grnCopy.line.priceOverrideReason}
-              </span>{" "}
-              {line.priceOverrideNote}
-            </p>
-          ) : null}
-          {line.requiresReview ? (
-            <Badge variant="destructive" className="mt-2">
-              {grnCopy.line.reviewNeeded}
-            </Badge>
-          ) : null}
-        </CardContent>
-      </Card>
+          </div>
+          <div className="flex items-center gap-2">
+            {showAmendAffordance ? (
+              <Button type="button" variant="outline" size="sm" onClick={onAmend}>
+                {grnCopy.amend.action}
+              </Button>
+            ) : null}
+            {line.qualityStatus === "rejected" || line.rejected > 0 ? (
+              <IconAlertTriangle className="size-5 text-warning" />
+            ) : (
+              <IconCircleCheck className="size-5 text-success" />
+            )}
+          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+          <Stat label={grnCopy.line.importPrice}>
+            {inventoryCommon.currency(formatVND(line.cost))}
+          </Stat>
+          <Stat label={grnCopy.line.poPrice}>
+            {line.poUnitPrice != null
+              ? inventoryCommon.currency(formatVND(line.poUnitPrice))
+              : inventoryCommon.noValue}
+          </Stat>
+          <Stat label={grnCopy.line.priceVariance}>
+            <span className={varianceTone}>{variancesLabel}</span>
+          </Stat>
+          <Stat label={grnCopy.line.expiry}>{line.expiryDisplay}</Stat>
+        </div>
+        {line.rejectionReason ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            <span className="font-semibold">
+              {grnCopy.line.rejectionReason}
+            </span>{" "}
+            {line.rejectionReason}
+          </p>
+        ) : null}
+        {line.priceOverrideNote ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            <span className="font-semibold">
+              {grnCopy.line.priceOverrideReason}
+            </span>{" "}
+            {line.priceOverrideNote}
+          </p>
+        ) : null}
+        {line.requiresReview ? (
+          <Badge variant="destructive" className="mt-2">
+            {grnCopy.line.reviewNeeded}
+          </Badge>
+        ) : null}
+      </div>
     );
   }
 
   // Draft mode — editable
   return (
-    <Card>
-      <CardContent className="space-y-3 p-4">
+    <div className="flex flex-col gap-3 rounded-md border bg-card p-4">
         <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="font-bold">{line.name}</p>
@@ -1508,8 +1557,7 @@ function LineRow({
             onChange={(e) => onChange({ lot: e.target.value })}
           />
         </Field>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 
@@ -1523,7 +1571,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1">
+    <div className="flex flex-col gap-1">
       <Label htmlFor={id} className="text-xs text-muted-foreground">
         {label}
       </Label>

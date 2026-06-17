@@ -14,21 +14,12 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@comtammatu/ui/components/tooltip";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import {
   DataTable,
   type DataTableColumn,
@@ -514,43 +505,31 @@ export function PODetailClient({
             ]}
           >
             <TabsContent value="overview" className="mt-4">
-              <div className="space-y-6">
+              <div className="flex flex-col gap-4">
                 <div className="grid gap-3 md:grid-cols-3">
-                  <Card>
-                    <CardContent>
-                      <Badge variant="secondary">
-                        {poCopy.supplierRequired}
-                      </Badge>
-                      <p className="mt-3 text-xl font-semibold">
-                        {po.supplier}
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent>
-                      <Badge variant="secondary">
-                        {poDetailCopy.goodsTotal}
-                      </Badge>
-                      <p className="mt-3 text-xl font-semibold">
-                        {messages.inventory.common.currency(
-                          formatVND(totalAmount),
-                        )}
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent>
-                      <Badge variant="secondary">{FORM_VI.totalAmount}</Badge>
-                      <p className="mt-3 text-2xl font-semibold text-primary">
-                        {messages.inventory.common.currency(
-                          formatVND(grandTotal),
-                        )}
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <div className="rounded-md border bg-card p-4">
+                    <Badge variant="secondary">
+                      {poCopy.supplierRequired}
+                    </Badge>
+                    <p className="mt-3 text-xl font-semibold">{po.supplier}</p>
+                  </div>
+                  <div className="rounded-md border bg-card p-4">
+                    <Badge variant="secondary">{poDetailCopy.goodsTotal}</Badge>
+                    <p className="mt-3 text-xl font-semibold">
+                      {messages.inventory.common.currency(
+                        formatVND(totalAmount),
+                      )}
+                    </p>
+                  </div>
+                  <div className="rounded-md border bg-card p-4">
+                    <Badge variant="secondary">{FORM_VI.totalAmount}</Badge>
+                    <p className="mt-3 text-2xl font-semibold text-primary">
+                      {messages.inventory.common.currency(formatVND(grandTotal))}
+                    </p>
+                  </div>
                 </div>
 
-                <AppSection contentClassName="py-6">
+                <AppSection contentClassName="py-4">
                   <div className="flex justify-center">
                     <TimelineStepper
                       steps={[
@@ -596,7 +575,7 @@ export function PODetailClient({
             </TabsContent>
 
             <TabsContent value="lines" className="mt-4">
-              <div className="space-y-6">
+              <div className="flex flex-col gap-4">
                 <div className="grid gap-6 lg:grid-cols-3">
                   <div className="lg:col-span-2">
                     <AppSection
@@ -637,52 +616,72 @@ export function PODetailClient({
                             </div>
                           </div>
                         }
-                        desktopFooter={
-                          <>
-                            <TableRow className="border-border">
-                              <TableCell
-                                colSpan={3}
-                                className="text-right text-sm text-muted-foreground"
-                              >
-                                {poDetailCopy.goodsTotal}
-                              </TableCell>
-                              <TableCell className="text-right font-mono tabular-nums font-semibold">
-                                {inventoryCommon.currencyCompact(
+                        desktopFooterRows={[
+                          {
+                            key: "goods-total",
+                            className: "border-border",
+                            cells: [
+                              {
+                                key: "label",
+                                colSpan: 3,
+                                className:
+                                  "text-right text-sm text-muted-foreground",
+                                content: poDetailCopy.goodsTotal,
+                              },
+                              {
+                                key: "value",
+                                className:
+                                  "text-right font-mono font-semibold tabular-nums",
+                                content: inventoryCommon.currencyCompact(
                                   formatVND(totalAmount),
-                                )}
-                              </TableCell>
-                              <TableCell colSpan={2} />
-                            </TableRow>
-                            <TableRow className="border-border">
-                              <TableCell
-                                colSpan={3}
-                                className="text-right text-sm text-muted-foreground"
-                              >
-                                {FORM_VI.tax}
-                              </TableCell>
-                              <TableCell className="text-right font-mono tabular-nums">
-                                {inventoryCommon.currencyCompact(
+                                ),
+                              },
+                              { key: "actions", colSpan: 2, content: null },
+                            ],
+                          },
+                          {
+                            key: "tax",
+                            className: "border-border",
+                            cells: [
+                              {
+                                key: "label",
+                                colSpan: 3,
+                                className:
+                                  "text-right text-sm text-muted-foreground",
+                                content: FORM_VI.tax,
+                              },
+                              {
+                                key: "value",
+                                className: "text-right font-mono tabular-nums",
+                                content: inventoryCommon.currencyCompact(
                                   formatVND(taxAmount),
-                                )}
-                              </TableCell>
-                              <TableCell colSpan={2} />
-                            </TableRow>
-                            <TableRow className="border-border">
-                              <TableCell
-                                colSpan={3}
-                                className="text-right text-sm font-bold"
-                              >
-                                {FORM_VI.totalAmount}
-                              </TableCell>
-                              <TableCell className="text-right font-mono tabular-nums font-bold text-primary">
-                                {inventoryCommon.currencyCompact(
+                                ),
+                              },
+                              { key: "actions", colSpan: 2, content: null },
+                            ],
+                          },
+                          {
+                            key: "grand-total",
+                            className: "border-border",
+                            cells: [
+                              {
+                                key: "label",
+                                colSpan: 3,
+                                className: "text-right text-sm font-bold",
+                                content: FORM_VI.totalAmount,
+                              },
+                              {
+                                key: "value",
+                                className:
+                                  "text-right font-mono font-bold tabular-nums text-primary",
+                                content: inventoryCommon.currencyCompact(
                                   formatVND(grandTotal),
-                                )}
-                              </TableCell>
-                              <TableCell colSpan={2} />
-                            </TableRow>
-                          </>
-                        }
+                                ),
+                              },
+                              { key: "actions", colSpan: 2, content: null },
+                            ],
+                          },
+                        ]}
                       />
 
                       {canEditLines ? (
@@ -747,10 +746,10 @@ export function PODetailClient({
                     </AppSection>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="flex flex-col gap-4">
                     <AppSection
                       title={poDetailCopy.summaryTitle}
-                      contentClassName="space-y-3 text-sm"
+                      contentClassName="flex flex-col gap-3 text-sm"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-muted-foreground">
@@ -792,7 +791,7 @@ export function PODetailClient({
 
                     <AppSection title={poDetailCopy.supplierInfoTitle}>
                       {supplierInfoAvailable ? (
-                        <div className="space-y-3 text-sm">
+                        <div className="flex flex-col gap-3 text-sm">
                           <div>
                             <p className="text-xs uppercase tracking-wider text-muted-foreground">
                               {poDetailCopy.invoiceAddress}
@@ -846,7 +845,7 @@ export function PODetailClient({
                       type="button"
                       disabled={isPending || (!canSendPo && !canCreateGrn)}
                       size="touch"
-                      className="rounded-full px-10 font-bold shadow-lg"
+                      className="rounded-full px-10 font-bold"
                       onClick={canSendPo ? handleSendPo : handleCreateGrn}
                     >
                       <IconCircleCheck className="size-5" />
@@ -887,102 +886,100 @@ function PoLineMobileCard({
   onDeleteLine: (line: EditablePoLine) => void;
 }) {
   return (
-    <Card className="bg-muted/20">
-      <CardContent>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="font-bold">{item.name}</p>
-            <p className="text-xs text-muted-foreground">{item.sku}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <VarianceBadge variance={item.variance} />
-            {canEditLines ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                disabled={isPending}
-                onClick={() => onDeleteLine(item)}
-                className="text-muted-foreground hover:text-destructive"
-                aria-label={poDetailCopy.deleteLineAria}
-              >
-                <IconTrash className="size-4" />
-              </Button>
-            ) : null}
-          </div>
+    <div className="rounded-md border bg-muted/20 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-bold">{item.name}</p>
+          <p className="text-xs text-muted-foreground">{item.sku}</p>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <p className="text-muted-foreground">{FORM_VI.quantity}</p>
-            {canEditLines ? (
-              <FormattedNumberInput
-                value={String(item.qty)}
-                onValueChange={(value) =>
-                  patchLine(index, { qty: Number(value || 0) })
-                }
-                maxFractionDigits={3}
-                className="h-9"
-              />
-            ) : (
-              <p className="font-semibold">
-                {item.qty} {item.unit}
-              </p>
-            )}
-          </div>
-          <div>
-            <p className="text-muted-foreground">{FORM_VI.unitPrice}</p>
-            {canEditLines ? (
-              <FormattedNumberInput
-                value={item.price != null ? String(item.price) : ""}
-                onValueChange={(value) =>
-                  patchLine(index, { price: value ? Number(value) : null })
-                }
-                maxFractionDigits={0}
-                className="h-9"
-              />
-            ) : (
-              <p className="font-semibold">
-                {item.price != null
-                  ? inventoryCommon.currencyCompact(formatVND(item.price))
-                  : inventoryCommon.noValue}
-              </p>
-            )}
-          </div>
+        <div className="flex items-center gap-2">
+          <VarianceBadge variance={item.variance} />
           {canEditLines ? (
-            <div className="col-span-2">
-              <p className="text-muted-foreground">{FORM_VI.unit}</p>
-              <Input
-                value={item.unit}
-                readOnly
-                aria-readonly="true"
-                className="h-9"
-              />
-            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              disabled={isPending}
+              onClick={() => onDeleteLine(item)}
+              className="text-muted-foreground hover:text-destructive"
+              aria-label={poDetailCopy.deleteLineAria}
+            >
+              <IconTrash className="size-4" />
+            </Button>
           ) : null}
-          <div className="col-span-2">
-            <p className="text-muted-foreground">{FORM_VI.amount}</p>
-            <p className="font-semibold text-primary">
-              {inventoryCommon.currencyCompact(
-                formatVND(computePoLineTotal(item)),
-              )}
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <p className="text-muted-foreground">{FORM_VI.quantity}</p>
+          {canEditLines ? (
+            <FormattedNumberInput
+              value={String(item.qty)}
+              onValueChange={(value) =>
+                patchLine(index, { qty: Number(value || 0) })
+              }
+              maxFractionDigits={3}
+              className="h-9"
+            />
+          ) : (
+            <p className="font-semibold">
+              {item.qty} {item.unit}
             </p>
-          </div>
+          )}
+        </div>
+        <div>
+          <p className="text-muted-foreground">{FORM_VI.unitPrice}</p>
+          {canEditLines ? (
+            <FormattedNumberInput
+              value={item.price != null ? String(item.price) : ""}
+              onValueChange={(value) =>
+                patchLine(index, { price: value ? Number(value) : null })
+              }
+              maxFractionDigits={0}
+              className="h-9"
+            />
+          ) : (
+            <p className="font-semibold">
+              {item.price != null
+                ? inventoryCommon.currencyCompact(formatVND(item.price))
+                : inventoryCommon.noValue}
+            </p>
+          )}
         </div>
         {canEditLines ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isPending || !item.dirty}
-            className="mt-4"
-            onClick={() => onSaveLine(index)}
-          >
-            <IconSave className="size-4" />
-            {poDetailCopy.saveLine}
-          </Button>
+          <div className="col-span-2">
+            <p className="text-muted-foreground">{FORM_VI.unit}</p>
+            <Input
+              value={item.unit}
+              readOnly
+              aria-readonly="true"
+              className="h-9"
+            />
+          </div>
         ) : null}
-      </CardContent>
-    </Card>
+        <div className="col-span-2">
+          <p className="text-muted-foreground">{FORM_VI.amount}</p>
+          <p className="font-semibold text-primary">
+            {inventoryCommon.currencyCompact(
+              formatVND(computePoLineTotal(item)),
+            )}
+          </p>
+        </div>
+      </div>
+      {canEditLines ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={isPending || !item.dirty}
+          className="mt-4"
+          onClick={() => onSaveLine(index)}
+        >
+          <IconSave className="size-4" />
+          {poDetailCopy.saveLine}
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
@@ -1000,6 +997,54 @@ function PoOverviewLinesPreview({
   const sorted = [...lines].sort((a, b) => b.total - a.total);
   const preview = sorted.slice(0, PO_PREVIEW_LIMIT);
   const hasMore = sorted.length > PO_PREVIEW_LIMIT;
+  const columns: DataTableColumn<EditablePoLine>[] = [
+    {
+      key: "name",
+      header: FORM_VI.name,
+      render: (line) => (
+        <div>
+          <div className="font-medium">{line.name}</div>
+          {line.sku ? (
+            <div className="font-mono text-xs text-muted-foreground">
+              {line.sku}
+            </div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "quantity",
+      header: FORM_VI.quantity,
+      className: "text-right",
+      render: (line) => (
+        <span className="font-mono tabular-nums">
+          {line.qty} {line.unit}
+        </span>
+      ),
+    },
+    {
+      key: "unitPrice",
+      header: FORM_VI.unitPrice,
+      className: "text-right",
+      render: (line) => (
+        <span className="font-mono tabular-nums">
+          {line.price != null
+            ? inventoryCommon.currencyCompact(formatVND(line.price))
+            : inventoryCommon.noValue}
+        </span>
+      ),
+    },
+    {
+      key: "amount",
+      header: FORM_VI.amount,
+      className: "text-right",
+      render: (line) => (
+        <span className="font-mono font-semibold tabular-nums">
+          {inventoryCommon.currencyCompact(formatVND(line.total))}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <AppSection
@@ -1011,41 +1056,46 @@ function PoOverviewLinesPreview({
       }
       contentFlush
     >
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{FORM_VI.name}</TableHead>
-            <TableHead className="text-right">{FORM_VI.quantity}</TableHead>
-            <TableHead className="text-right">{FORM_VI.unitPrice}</TableHead>
-            <TableHead className="text-right">{FORM_VI.amount}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {preview.map((line) => (
-            <TableRow key={line.lineId}>
-              <TableCell>
-                <div className="font-medium">{line.name}</div>
-                {line.sku ? (
-                  <div className="font-mono text-xs text-muted-foreground">
-                    {line.sku}
-                  </div>
-                ) : null}
-              </TableCell>
-              <TableCell className="text-right font-mono tabular-nums">
-                {line.qty} {line.unit}
-              </TableCell>
-              <TableCell className="text-right font-mono tabular-nums">
-                {line.price != null
-                  ? inventoryCommon.currencyCompact(formatVND(line.price))
-                  : inventoryCommon.noValue}
-              </TableCell>
-              <TableCell className="text-right font-mono tabular-nums font-semibold">
-                {inventoryCommon.currencyCompact(formatVND(line.total))}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <DataTable
+        columns={columns}
+        data={preview}
+        getRowKey={(line) => line.lineId}
+        emptyTitle={poDetailCopy.overviewLinesTitle}
+        mobileCardRender={(line) => (
+          <div className="flex flex-col gap-2 rounded-lg border bg-card p-3">
+            <div className="min-w-0">
+              <div className="truncate font-medium">{line.name}</div>
+              {line.sku ? (
+                <div className="font-mono text-xs text-muted-foreground">
+                  {line.sku}
+                </div>
+              ) : null}
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <div className="text-muted-foreground">{FORM_VI.quantity}</div>
+                <div className="font-mono tabular-nums">
+                  {line.qty} {line.unit}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">{FORM_VI.unitPrice}</div>
+                <div className="font-mono tabular-nums">
+                  {line.price != null
+                    ? inventoryCommon.currencyCompact(formatVND(line.price))
+                    : inventoryCommon.noValue}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">{FORM_VI.amount}</div>
+                <div className="font-mono font-semibold tabular-nums">
+                  {inventoryCommon.currencyCompact(formatVND(line.total))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      />
       {hasMore ? (
         <div className="border-t px-4 py-3">
           <Button

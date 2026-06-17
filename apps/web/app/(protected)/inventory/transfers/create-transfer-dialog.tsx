@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus as IconPlus,
   Trash as IconTrash,
@@ -8,18 +10,12 @@ import {
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -32,8 +28,8 @@ import {
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
+import { AppEmptyState, AppSection } from "@/components/surface";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { createStockTransfer } from "../transfer-actions";
@@ -41,6 +37,7 @@ import type { IngredientRow } from "../page";
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+
 export interface BranchForTransfer {
   id: number;
   name: string;
@@ -70,33 +67,34 @@ function getWarehouseUnit(ingredient: IngredientRow) {
   return ingredient.purchase_unit || ingredient.unit;
 }
 
-export function CreateTransferDialog({
-  open,
-  onOpenChange,
+function withBranchQuery(path: string, branchId: number | null) {
+  return branchId == null ? path : `${path}?branchId=${branchId}`;
+}
+
+export function CreateTransferForm({
   branches,
   ingredients,
   locations,
   userBranchId,
   userRole,
-  onCreated,
+  basePath = "/inventory/transfers",
 }: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
   branches: BranchForTransfer[];
   ingredients: IngredientRow[];
   locations: InventoryLocation[];
   userBranchId: number | null;
   userRole: StaffRole;
-  onCreated: (id: number) => void;
+  basePath?: string;
 }) {
+  const router = useRouter();
   const isBranchManager = userRole === "branch_manager";
   const operational = branches.filter(
-    (b) => (b.branch_kind ?? "branch") === "branch",
+    (branch) => (branch.branch_kind ?? "branch") === "branch",
   );
   const currentBranch =
     userBranchId == null
       ? null
-      : (branches.find((b) => b.id === userBranchId) ?? null);
+      : (branches.find((branch) => branch.id === userBranchId) ?? null);
   const currentBranchKind = currentBranch?.branch_kind ?? null;
   const canCreateInbound = false;
   const canCreateOutbound =
@@ -141,12 +139,12 @@ export function CreateTransferDialog({
 
   const myBranchName = useMemo(() => {
     if (userBranchId == null) return null;
-    const branch = branches.find((b) => b.id === userBranchId);
+    const branch = branches.find((item) => item.id === userBranchId);
     return branch ? formatBranchSiteLabel(branch) : null;
   }, [branches, userBranchId]);
 
   const activeIngredients = useMemo(
-    () => ingredients.filter((i) => i.is_active),
+    () => ingredients.filter((ingredient) => ingredient.is_active),
     [ingredients],
   );
   const internalSourceLocations = useMemo(
@@ -165,14 +163,14 @@ export function CreateTransferDialog({
     [locations],
   );
   const defaultInternalFromLocationId = useMemo(() => {
-    const loc = internalSourceLocations[0];
-    return loc ? String(loc.id) : "";
+    const location = internalSourceLocations[0];
+    return location ? String(location.id) : "";
   }, [internalSourceLocations]);
   const defaultInternalToLocationId = useMemo(() => {
-    const loc = internalKitchenLocations.find(
+    const location = internalKitchenLocations.find(
       (item) => String(item.id) !== defaultInternalFromLocationId,
     );
-    return loc ? String(loc.id) : "";
+    return location ? String(location.id) : "";
   }, [internalKitchenLocations, defaultInternalFromLocationId]);
   const canSubmitInternalTransfer =
     defaultInternalFromLocationId.length > 0 &&
@@ -185,7 +183,7 @@ export function CreateTransferDialog({
   const selectedInternalKitchen = useMemo(
     () =>
       internalKitchenLocations.find(
-        (loc) => String(loc.id) === intraToLocationId,
+        (location) => String(location.id) === intraToLocationId,
       ) ?? null,
     [internalKitchenLocations, intraToLocationId],
   );
@@ -196,14 +194,14 @@ export function CreateTransferDialog({
       : null;
 
   useEffect(() => {
-    if (!open || slipKind !== "internal") return;
+    if (slipKind !== "internal") return;
     setIntraFromLocationId((current) =>
-      internalSourceLocations.some((loc) => String(loc.id) === current)
+      internalSourceLocations.some((location) => String(location.id) === current)
         ? current
         : defaultInternalFromLocationId,
     );
     setIntraToLocationId((current) =>
-      internalKitchenLocations.some((loc) => String(loc.id) === current)
+      internalKitchenLocations.some((location) => String(location.id) === current)
         ? current
         : defaultInternalToLocationId,
     );
@@ -212,7 +210,6 @@ export function CreateTransferDialog({
     defaultInternalToLocationId,
     internalKitchenLocations,
     internalSourceLocations,
-    open,
     slipKind,
   ]);
 
@@ -228,39 +225,41 @@ export function CreateTransferDialog({
   }
 
   function addIngredientLine() {
-    const iid = Number(pickerIngredientId);
-    const ing = ingredients.find((x) => x.id === iid);
-    if (!ing) {
+    const ingredientId = Number(pickerIngredientId);
+    const ingredient = ingredients.find((item) => item.id === ingredientId);
+    if (!ingredient) {
       toast.error("Chọn nguyên liệu");
       return;
     }
-    if (draftLines.some((l) => l.ingredientId === iid)) {
+    if (draftLines.some((line) => line.ingredientId === ingredientId)) {
       toast.error("Nguyên liệu đã có trong danh sách");
       return;
     }
-    setDraftLines((prev) => [
-      ...prev,
+    setDraftLines((current) => [
+      ...current,
       {
-        key: `${ing.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        ingredientId: ing.id,
-        name: ing.name,
+        key: `${ingredient.id}-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2)}`,
+        ingredientId: ingredient.id,
+        name: ingredient.name,
         quantity: "",
-        unit: getWarehouseUnit(ing),
+        unit: getWarehouseUnit(ingredient),
       },
     ]);
     setPickerIngredientId("");
   }
 
   function removeLine(key: string) {
-    setDraftLines((prev) => prev.filter((l) => l.key !== key));
+    setDraftLines((current) => current.filter((line) => line.key !== key));
   }
 
   function updateLine(
     key: string,
     patch: Partial<Pick<DraftLine, "quantity" | "unit">>,
   ) {
-    setDraftLines((prev) =>
-      prev.map((l) => (l.key === key ? { ...l, ...patch } : l)),
+    setDraftLines((current) =>
+      current.map((line) => (line.key === key ? { ...line, ...patch } : line)),
     );
   }
 
@@ -268,14 +267,14 @@ export function CreateTransferDialog({
     lines: DraftLine[],
   ): { ingredientId: number; quantity: number; unit: string }[] | undefined {
     const out: { ingredientId: number; quantity: number; unit: string }[] = [];
-    for (const l of lines) {
-      const q = Number(l.quantity);
-      const u = l.unit.trim();
-      if (!Number.isFinite(q) || q <= 0 || !u) {
+    for (const line of lines) {
+      const quantity = Number(line.quantity);
+      const unit = line.unit.trim();
+      if (!Number.isFinite(quantity) || quantity <= 0 || !unit) {
         toast.error("Kiểm tra số lượng và đơn vị cho từng dòng");
         return undefined;
       }
-      out.push({ ingredientId: l.ingredientId, quantity: q, unit: u });
+      out.push({ ingredientId: line.ingredientId, quantity, unit });
     }
     return out.length > 0 ? out : undefined;
   }
@@ -303,36 +302,35 @@ export function CreateTransferDialog({
         toast.error(res.error ?? "Không tạo được phiếu");
         return;
       }
-      const msg =
+      const message =
         slipKind === "internal"
           ? "Đã cấp bếp"
           : slipKind === "inbound"
             ? "Đã tạo phiếu nhập"
             : "Đã tạo phiếu xuất";
-      toast.success(msg);
-      onOpenChange(false);
+      toast.success(message);
       resetForm();
       const id = (res.data as { id: number }).id;
-      onCreated(id);
+      router.push(withBranchQuery(`${basePath}/${id}`, userBranchId));
+      router.refresh();
     });
   }
 
-  function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const notes = String(fd.get("notes") ?? "") || undefined;
-    const vehicleInfo = String(fd.get("vehicleInfo") ?? "") || undefined;
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const notes = String(formData.get("notes") ?? "") || undefined;
+    const vehicleInfo = String(formData.get("vehicleInfo") ?? "") || undefined;
 
     if (isBranchManager && slipKind !== "internal") {
       toast.error("Quản lý chi nhánh chỉ tạo Cấp bếp nội bộ.");
       return;
     }
 
-    // Resolve fromBranchId / toBranchId based on slip direction
     let fromId: number | undefined;
     let toId: number | undefined;
-    let fromLocId: number | undefined;
-    let toLocId: number | undefined;
+    let fromLocationId: number | undefined;
+    let toLocationId: number | undefined;
 
     if (slipKind === "internal") {
       if (!userBranchId) {
@@ -345,24 +343,22 @@ export function CreateTransferDialog({
         );
         return;
       }
-      fromLocId = Number(intraFromLocationId) || undefined;
-      toLocId = Number(intraToLocationId) || undefined;
-      if (!fromLocId || !toLocId) {
+      fromLocationId = Number(intraFromLocationId) || undefined;
+      toLocationId = Number(intraToLocationId) || undefined;
+      if (!fromLocationId || !toLocationId) {
         toast.error("Chọn vị trí kho gửi và kho nhận.");
         return;
       }
-      if (fromLocId === toLocId) {
+      if (fromLocationId === toLocationId) {
         toast.error("Vị trí gửi và nhận phải khác nhau.");
         return;
       }
       fromId = userBranchId;
       toId = userBranchId;
     } else if (slipKind === "inbound") {
-      // Inbound: receiving TO user's branch (or selected branch)
       toId = userBranchId ?? (Number(inboundToBranchId) || undefined);
       fromId = Number(inboundFromBranchId) || undefined;
     } else {
-      // Transfer workflow is source-created; destination branch receives after transit.
       fromId = outboundSourceBranchId ?? undefined;
       toId = Number(outboundToBranchId) || undefined;
     }
@@ -381,8 +377,8 @@ export function CreateTransferDialog({
       linesPayload,
       notes,
       vehicleInfo,
-      fromLocId,
-      toLocId,
+      fromLocationId,
+      toLocationId,
     );
   }
 
@@ -398,59 +394,53 @@ export function CreateTransferDialog({
     draftLines.length === 0;
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        onOpenChange(o);
-        if (!o) resetForm();
-      }}
-    >
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {isBranchManager
-              ? messages.inventory.transfer.createKitchenTitle
-              : messages.inventory.transfer.createTransferTitle}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={submit} className="space-y-4">
-          {/* Step 1: Direction */}
-          <Tabs
-            value={slipKind}
-            onValueChange={(v) => {
-              const next = v as SlipKind;
-              if (next === "inbound" && !canCreateInbound) return;
-              if (next === "outbound" && !canCreateOutbound) return;
-              if (next === "internal" && !canInternalTransfer) return;
-              setSlipKind(next);
-            }}
-          >
-            <TabsList className={`grid w-full ${tabsGridClass}`}>
-              {canCreateInbound && (
-                <TabsTrigger value="inbound">
-                  {messages.inventory.transfer.tabs.inbound}
-                </TabsTrigger>
-              )}
-              {canCreateOutbound && (
-                <TabsTrigger value="outbound">
-                  {messages.inventory.transfer.tabs.outbound}
-                </TabsTrigger>
-              )}
-              {canInternalTransfer && (
-                <TabsTrigger value="internal">
-                  {messages.inventory.transfer.tabs.internal}
-                </TabsTrigger>
-              )}
-            </TabsList>
-            {canCreateInbound && (
-              <TabsContent value="inbound" className="space-y-3 pt-2">
+    <form onSubmit={submit} className="flex min-w-0 flex-col gap-4">
+      <AppSection
+        title={
+          isBranchManager
+            ? messages.inventory.transfer.createKitchenTitle
+            : messages.inventory.transfer.createTransferTitle
+        }
+        contentClassName="gap-4"
+      >
+        <Tabs
+          value={slipKind}
+          onValueChange={(value) => {
+            const next = value as SlipKind;
+            if (next === "inbound" && !canCreateInbound) return;
+            if (next === "outbound" && !canCreateOutbound) return;
+            if (next === "internal" && !canInternalTransfer) return;
+            setSlipKind(next);
+          }}
+        >
+          <TabsList className={`grid w-full ${tabsGridClass}`}>
+            {canCreateInbound ? (
+              <TabsTrigger value="inbound">
+                {messages.inventory.transfer.tabs.inbound}
+              </TabsTrigger>
+            ) : null}
+            {canCreateOutbound ? (
+              <TabsTrigger value="outbound">
+                {messages.inventory.transfer.tabs.outbound}
+              </TabsTrigger>
+            ) : null}
+            {canInternalTransfer ? (
+              <TabsTrigger value="internal">
+                {messages.inventory.transfer.tabs.internal}
+              </TabsTrigger>
+            ) : null}
+          </TabsList>
+
+          {canCreateInbound ? (
+            <TabsContent value="inbound" className="pt-2">
+              <div className="flex flex-col gap-3">
                 <p className="text-sm text-muted-foreground">
                   {isUserOperational && myBranchName
                     ? messages.inventory.transfer.inboundToBranch(myBranchName)
                     : messages.inventory.transfer.inboundToSelected}
                 </p>
-                {!isUserOperational && (
-                  <div className="space-y-1.5">
+                {!isUserOperational ? (
+                  <div className="flex flex-col gap-1.5">
                     <Label>
                       {messages.inventory.transfer.receivingWarehouseRequired}
                     </Label>
@@ -466,24 +456,32 @@ export function CreateTransferDialog({
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {operational.map((b) => (
-                          <SelectItem key={b.id} value={String(b.id)}>
-                            {formatBranchSiteLabel(b)}
-                          </SelectItem>
-                        ))}
+                        <SelectGroup>
+                          {operational.map((branch) => (
+                            <SelectItem
+                              key={branch.id}
+                              value={String(branch.id)}
+                            >
+                              {formatBranchSiteLabel(branch)}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </div>
-                )}
-              </TabsContent>
-            )}
-            <TabsContent value="outbound" className="space-y-3 pt-2">
+                ) : null}
+              </div>
+            </TabsContent>
+          ) : null}
+
+          <TabsContent value="outbound" className="pt-2">
+            <div className="flex flex-col gap-3">
               <p className="text-sm text-muted-foreground">
                 {myBranchName
                   ? messages.inventory.transfer.outboundFromBranch(myBranchName)
                   : messages.inventory.transfer.outboundFromSelected}
               </p>
-              <div className="space-y-1.5">
+              <div className="flex flex-col gap-1.5">
                 <Label>
                   {messages.inventory.transfer.receivingWarehouseRequired}
                 </Label>
@@ -499,29 +497,34 @@ export function CreateTransferDialog({
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {outboundDestinationOptions.map((b) => (
-                      <SelectItem key={b.id} value={String(b.id)}>
-                        {formatBranchSiteLabel(b)}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+                      {outboundDestinationOptions.map((branch) => (
+                        <SelectItem key={branch.id} value={String(branch.id)}>
+                          {formatBranchSiteLabel(branch)}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
-            </TabsContent>
-            <TabsContent value="internal" className="space-y-3 pt-2">
+            </div>
+          </TabsContent>
+
+          <TabsContent value="internal" className="pt-2">
+            <div className="flex flex-col gap-3">
               <p className="text-sm text-muted-foreground">
                 {messages.inventory.transfer.internalDescription}
               </p>
               {internalSetupMessage ? (
                 <NoteCallout
                   tone="warning"
-                  icon={<IconTriangleAlert className="size-4" />}
+                  icon={<IconTriangleAlert />}
                   label={messages.inventory.transfer.internalUnavailableTitle}
                 >
                   {internalSetupMessage}
                 </NoteCallout>
               ) : null}
-              <div className="space-y-1.5">
+              <div className="flex flex-col gap-1.5">
                 <Label>
                   {messages.inventory.transfer.sourceLocationRequired}
                 </Label>
@@ -541,15 +544,20 @@ export function CreateTransferDialog({
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {internalSourceLocations.map((loc) => (
-                      <SelectItem key={loc.id} value={String(loc.id)}>
-                        {loc.name}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+                      {internalSourceLocations.map((location) => (
+                        <SelectItem
+                          key={location.id}
+                          value={String(location.id)}
+                        >
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
+              <div className="flex flex-col gap-1.5">
                 <Label>
                   {messages.inventory.transfer.destinationLocationRequired}
                 </Label>
@@ -566,168 +574,170 @@ export function CreateTransferDialog({
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {internalKitchenLocations
-                      .filter((loc) => String(loc.id) !== intraFromLocationId)
-                      .map((loc) => (
-                        <SelectItem key={loc.id} value={String(loc.id)}>
-                          {loc.name}
-                          {loc.is_default_consumption
-                            ? messages.inventory.transfer.defaultKitchenSuffix
-                            : ""}
-                        </SelectItem>
-                      ))}
+                    <SelectGroup>
+                      {internalKitchenLocations
+                        .filter(
+                          (location) =>
+                            String(location.id) !== intraFromLocationId,
+                        )
+                        .map((location) => (
+                          <SelectItem
+                            key={location.id}
+                            value={String(location.id)}
+                          >
+                            {location.name}
+                            {location.is_default_consumption
+                              ? messages.inventory.transfer.defaultKitchenSuffix
+                              : ""}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
               {selectedInternalKitchenWarning ? (
                 <NoteCallout
                   tone="warning"
-                  icon={<IconTriangleAlert className="size-4" />}
+                  icon={<IconTriangleAlert />}
                   label={messages.inventory.transfer.kitchenConfigReviewTitle}
                 >
                   {selectedInternalKitchenWarning}
                 </NoteCallout>
               ) : null}
-            </TabsContent>
-          </Tabs>
-
-          {/* Step 2: Ingredients — inline picker */}
-          <div className="space-y-2">
-            <Label>{messages.inventory.transfer.ingredientsQtyRequired}</Label>
-            <div className="flex items-end gap-2">
-              <div className="min-w-0 flex-1">
-                <Select
-                  value={pickerIngredientId}
-                  onValueChange={setPickerIngredientId}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue
-                      placeholder={messages.inventory.transfer.chooseIngredient}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {activeIngredients.map((i) => (
-                      <SelectItem
-                        key={i.id}
-                        value={String(i.id)}
-                        textValue={`${i.name} ${getWarehouseUnit(i)} ${i.id}`}
-                      >
-                        {i.name} ({getWarehouseUnit(i)})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={addIngredientLine}
-                disabled={!pickerIngredientId}
-                aria-label={messages.inventory.transfer.addIngredientAria}
-              >
-                <IconPlus className="size-4" />
-              </Button>
             </div>
+          </TabsContent>
+        </Tabs>
+      </AppSection>
 
-            {draftLines.length === 0 ? (
-              <Card className="rounded-lg border-dashed bg-muted/10">
-                <CardContent className="py-6 text-center">
-                  <div className="space-y-1.5">
-                    <h3 className="font-heading text-2xl font-semibold">
-                      {messages.inventory.transfer.emptyIngredientsTitle}
-                    </h3>
-                    <p className="max-w-md text-sm leading-6 text-muted-foreground mx-auto">
-                      {messages.inventory.transfer.emptyIngredientsDescription}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2">
-                {draftLines.map((l) => (
-                  <div
-                    key={l.key}
-                    className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2"
-                  >
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                      {l.name}
-                    </span>
-                    <FormattedNumberInput
-                      className="h-8 w-20"
-                      placeholder={messages.inventory.common.quantityShort}
-                      value={l.quantity}
-                      onValueChange={(value) =>
-                        updateLine(l.key, { quantity: value })
-                      }
-                      maxFractionDigits={3}
-                      required
-                    />
-                    <Input
-                      className="h-8 w-16"
-                      value={l.unit}
-                      readOnly
-                      aria-readonly="true"
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="shrink-0"
-                      onClick={() => removeLine(l.key)}
-                      aria-label={messages.inventory.transfer.removeLineAria}
-                    >
-                      <IconTrash className="size-3.5" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {slipKind !== "internal" && (
-            <div className="space-y-1.5">
-              <Label htmlFor="vehicleInfo">
-                {messages.inventory.transfer.vehicleInfo}
-              </Label>
-              <Input id="vehicleInfo" name="vehicleInfo" />
-            </div>
-          )}
-          <div className="space-y-1.5">
-            <Label htmlFor="notes">{FORM_VI.notes}</Label>
-            <Textarea
-              id="notes"
-              name="notes"
-              rows={3}
-              placeholder={messages.inventory.transfer.notesPlaceholder}
-              className="min-h-24"
-            />
-          </div>
-
-          {isBranchManager && (
-            <p className="text-xs text-muted-foreground">
-              {messages.inventory.transfer.branchManagerHint}
-            </p>
-          )}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
+      <AppSection title={messages.inventory.transfer.ingredientsQtyRequired}>
+        <div className="flex items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <Select
+              value={pickerIngredientId}
+              onValueChange={setPickerIngredientId}
             >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button type="submit" disabled={submitDisabled}>
-              {isPending
-                ? messages.inventory.transfer.creating
-                : messages.inventory.transfer.createSlip}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+              <SelectTrigger className="h-9">
+                <SelectValue
+                  placeholder={messages.inventory.transfer.chooseIngredient}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {activeIngredients.map((ingredient) => (
+                    <SelectItem
+                      key={ingredient.id}
+                      value={String(ingredient.id)}
+                      textValue={`${ingredient.name} ${getWarehouseUnit(
+                        ingredient,
+                      )} ${ingredient.id}`}
+                    >
+                      {ingredient.name} ({getWarehouseUnit(ingredient)})
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={addIngredientLine}
+            disabled={!pickerIngredientId}
+            aria-label={messages.inventory.transfer.addIngredientAria}
+          >
+            <IconPlus data-icon="inline-start" />
+          </Button>
+        </div>
+
+        {draftLines.length === 0 ? (
+          <AppEmptyState
+            compact
+            title={messages.inventory.transfer.emptyIngredientsTitle}
+            description={messages.inventory.transfer.emptyIngredientsDescription}
+          />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {draftLines.map((line) => (
+              <div
+                key={line.key}
+                className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2"
+              >
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {line.name}
+                </span>
+                <FormattedNumberInput
+                  className="h-8 w-20"
+                  placeholder={messages.inventory.common.quantityShort}
+                  value={line.quantity}
+                  onValueChange={(value) =>
+                    updateLine(line.key, { quantity: value })
+                  }
+                  maxFractionDigits={3}
+                  required
+                />
+                <Input
+                  className="h-8 w-16"
+                  value={line.unit}
+                  readOnly
+                  aria-readonly="true"
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0"
+                  onClick={() => removeLine(line.key)}
+                  aria-label={messages.inventory.transfer.removeLineAria}
+                >
+                  <IconTrash />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </AppSection>
+
+      <AppSection title={FORM_VI.notes}>
+        {slipKind !== "internal" ? (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="vehicleInfo">
+              {messages.inventory.transfer.vehicleInfo}
+            </Label>
+            <Input id="vehicleInfo" name="vehicleInfo" />
+          </div>
+        ) : null}
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="notes">{FORM_VI.notes}</Label>
+          <Textarea
+            id="notes"
+            name="notes"
+            rows={3}
+            placeholder={messages.inventory.transfer.notesPlaceholder}
+            className="min-h-24"
+          />
+        </div>
+        {isBranchManager ? (
+          <p className="text-xs text-muted-foreground">
+            {messages.inventory.transfer.branchManagerHint}
+          </p>
+        ) : null}
+      </AppSection>
+
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button variant="outline" asChild>
+          <Link href={withBranchQuery(basePath, userBranchId)}>
+            {ACTIONS_VI.cancel}
+          </Link>
+        </Button>
+        <Button type="submit" disabled={submitDisabled}>
+          {isPending
+            ? messages.inventory.transfer.creating
+            : messages.inventory.transfer.createSlip}
+        </Button>
+      </div>
+    </form>
   );
 }
