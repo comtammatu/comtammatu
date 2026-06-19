@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.7.0 | Updated: 2026-06-11 | Status: locked single source for UI agents
+> Version: 14.7.1 | Updated: 2026-06-19 | Status: locked single source for UI agents
 
 ## Single Source Decision
 
@@ -322,7 +322,7 @@ Arbitrary `duration-[…]` is NOT allowed in app code.
 
 **Press feedback.** `active:scale-[…]` (≥ `0.97`) is allowed on tap targets for tactile press feedback. `hover:scale-*` grow/shrink on hover is forbidden on ERP surfaces — it reads as decorative.
 
-**Reduced motion (locked).** Any looping or attention-drawing animation (`animate-pulse` on non-skeleton elements, `animate-bounce`, urgency/age pulses, kinetic idle visuals) MUST be gated with `motion-safe:` (or a `prefers-reduced-motion` check) so it stops when the OS requests reduced motion. One-shot Radix enter/exit (`animate-in` / `animate-out`) and the loading `Spinner` are exempt — they are brief and non-looping. Prefer `motion-safe:` on the animated class over `motion-reduce:animate-none` on the static one.
+**Reduced motion (locked).** A global `@media (prefers-reduced-motion: reduce)` reset in `packages/ui/src/styles/globals.css` neutralizes all animation and transition app-wide when the OS requests reduced motion — including one-shot Radix enter/exit (`animate-in` / `animate-out`), the loading `Spinner`, and `tw-animate-css` `data-state` animations. No animation is exempt at runtime; the reset is the backstop. Looping or attention-drawing animation (`animate-pulse` on non-skeleton elements, `animate-bounce`, urgency/age pulses, kinetic idle visuals) MUST still also be gated with `motion-safe:` as defense-in-depth and intent signalling. Prefer `motion-safe:` on the animated class over `motion-reduce:animate-none` on the static one.
 
 **Forbidden:**
 
