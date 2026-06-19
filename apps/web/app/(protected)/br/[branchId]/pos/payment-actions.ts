@@ -852,7 +852,7 @@ export interface CashPaymentResult {
  *   - `confirmCashPaymentRpcMappings` order matters so cash-specific copy
  *     beats the shared payment vocabulary (e.g. `tenant mismatch` →
  *     "Không có quyền truy cập đơn này", not the shared "Không thể xử lý...").
- *   - Status-based result branching for legacy `stock_failed` and
+ *   - Status-based result branching for `stock_failed` and
  *     `amount_mismatch_recomputed` stays inside the handler: the RPC can
  *     RETURN those even when the SQL does not raise, so they cannot be
  *     mapped via `RpcErrorMapping` (which only inspects `error.message`).
