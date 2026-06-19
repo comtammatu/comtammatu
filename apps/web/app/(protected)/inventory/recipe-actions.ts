@@ -46,7 +46,9 @@ export async function fetchRecipes(): Promise<ActionResult> {
     .eq("is_active", true)
     .order("name");
   if (error) {
-    console.error("fetchRecipes", error);
+    console.error("inventory.recipe.fetch_recipes_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, error: "Không thể tải định mức món bán." };
   }
   return { success: true, data: data ?? [] };
@@ -71,7 +73,9 @@ export async function fetchBranchWacMap(): Promise<
     .not("avg_unit_cost", "is", null);
 
   if (error) {
-    console.error("fetchBranchWacMap", error);
+    console.error("inventory.recipe.fetch_branch_wac_map_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, error: "Không thể tải WAC chi nhánh." };
   }
 
@@ -114,7 +118,9 @@ export const upsertRecipeLines = withAction(
       })),
     });
     if (error) {
-      console.error("upsertRecipeLines", error);
+      console.error("inventory.recipe.upsert_recipe_lines_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return { success: false, error: "Không thể lưu định mức món bán." };
     }
     return { success: true };

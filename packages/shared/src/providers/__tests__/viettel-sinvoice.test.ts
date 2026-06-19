@@ -7,6 +7,7 @@ import {
   deriveInvoiceTypeFromTemplate,
   ViettelSinvoiceProvider,
 } from "../impl/viettel-sinvoice";
+import { strToU8, zipSync } from "fflate";
 
 const item = (
   name: string,
@@ -741,6 +742,7 @@ test("getStatus: searches by transactionUuid with form body", async () => {
     assert.deepEqual(status, {
       status: "issued",
       invoiceNumber: "C26TYY308",
+      codeOfTax: "ABC123",
       error: null,
     });
 
@@ -759,6 +761,121 @@ test("getStatus: searches by transactionUuid with form body", async () => {
     assert.equal(
       statusCall.init.body.toString(),
       "supplierTaxCode=0100109106-509&transactionUuid=HDDT0000000000000000000000000001",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("getStatus: APPROVED without codeOfTax still maps to issued, codeOfTax null", async () => {
+  // Template-2 (HĐ bán hàng từ MTT) reaches issued on exchangeStatus~APPROVED
+  // even when the status lookup carries no codeOfTax. Issuance MUST NOT be
+  // coupled to codeOfTax; codeOfTax surfaces as null in that case.
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input) => {
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response(
+      JSON.stringify({
+        errorCode: null,
+        description: null,
+        result: [{ invoiceNo: "C26TYY309", exchangeStatus: "APPROVED" }],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  try {
+    const provider = new ViettelSinvoiceProvider({
+      username: "0100109106-509",
+      password: "test-password",
+      taxCode: "0100109106-509",
+      templateCode: "2/001",
+      invoiceSeries: "C22TYY",
+      baseUrl: "https://example.test",
+    });
+
+    const status = await provider.getStatus(
+      "HDDT0000000000000000000000000002",
+    );
+
+    assert.deepEqual(status, {
+      status: "issued",
+      invoiceNumber: "C26TYY309",
+      codeOfTax: null,
+      error: null,
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("downloadInvoice: PDF from fileType=PDF + XML from the ZIP (errorCode 200 = success)", async () => {
+  // getInvoiceRepresentationFile is a flat envelope and returns errorCode 200
+  // on success; the PDF comes back directly (fileType=PDF) while the signed XML
+  // ships only inside the ZIP (fileType=ZIP) for the MTT template.
+  const originalFetch = globalThis.fetch;
+  const pdfB64 = Buffer.from(strToU8("%PDF-1.4\n%mock\n")).toString("base64");
+  const zipB64 = Buffer.from(
+    zipSync({ "077200004194-INV1.xml": strToU8('<?xml version="1.0"?><I/>') }),
+  ).toString("base64");
+
+  globalThis.fetch = (async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "t", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (
+      url.includes("/InvoiceAPI/InvoiceUtilsWS/getInvoiceRepresentationFile")
+    ) {
+      const body = JSON.parse(String(init?.body ?? "{}")) as {
+        fileType?: string;
+      };
+      const fileToBytes = body.fileType === "PDF" ? pdfB64 : zipB64;
+      return new Response(
+        JSON.stringify({
+          errorCode: 200,
+          description: null,
+          fileName: `f.${(body.fileType ?? "").toLowerCase()}`,
+          fileToBytes,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+
+  try {
+    const provider = new ViettelSinvoiceProvider({
+      username: "u",
+      password: "p",
+      taxCode: "077200004194",
+      templateCode: "2/001",
+      invoiceSeries: "C26MAA",
+      baseUrl: "https://example.test",
+    });
+    const archive = await provider.downloadInvoice({
+      providerRef: "HDDT0000000000000000000000000001",
+      invoiceNumber: "C26MAA1",
+    });
+    assert.equal(archive.error, null);
+    assert.ok(archive.pdf, "expected pdf artifact");
+    assert.equal(
+      Buffer.from(archive.pdf.bytes.slice(0, 4)).toString("utf8"),
+      "%PDF",
+    );
+    assert.ok(archive.xml, "expected xml artifact");
+    assert.ok(
+      Buffer.from(archive.xml.bytes.slice(0, 5))
+        .toString("utf8")
+        .startsWith("<?xml"),
     );
   } finally {
     globalThis.fetch = originalFetch;

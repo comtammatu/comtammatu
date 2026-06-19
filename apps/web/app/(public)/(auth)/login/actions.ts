@@ -79,7 +79,6 @@ export async function login(
       // Cannot persist via log_audit RPC: caller is anonymous (no auth.uid()),
       // RPC raises insufficient_privilege (regressions.md AUDIT-LOG-INSERT-RPC-ONLY).
       // MVP: structured console.error → Vercel log drain.
-      // TODO: persist via dedicated `security_events` table when that wave ships.
       console.error("auth.login.rate_limit_failopen", {
         ip,
         error:

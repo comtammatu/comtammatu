@@ -175,8 +175,7 @@ export function TransfersListClient({
   );
 
   // One filtering model for every breakpoint: the job-based tabs
-  // (Nhận / Chuyển / Lịch sử). The desktop-only status Select duplicated
-  // the lifecycle with a second vocabulary and is retired.
+  // (Nhận / Chuyển / Lịch sử).
   const searchFiltered = useMemo(() => {
     let list = tabGroups[activeTab];
     const q = search.trim();

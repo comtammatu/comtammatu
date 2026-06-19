@@ -62,14 +62,18 @@ source-of-truth inputs.
 | Tests               | Playwright route coverage and shared unit tests                                       |
 | Core                | Repository metadata, E2E helpers, cross-cutting supporting files                      |
 
-Migrations are **baseline-first** since 2026-05-30:
-`supabase/migrations/00000000000000_baseline.sql` (canonical public-schema
-install) + forward migrations, with the historical chain under
-`supabase/migrations/_archive/` and managed surfaces in
-`supabase/managed-surfaces.install.sql`. See `docs/spec/database-schema.md`.
-Current checkout snapshot: 91 `page.tsx` route files, 13 `route.ts` handlers
-(including PWA manifests), 48 `apps/web/tests` files, 17 `apps/web/e2e` files,
-26 `packages/shared/src` test files, and 108 non-archive SQL migration files.
+Generated checkout snapshot from 2026-06-16 (`node scripts/project-snapshot.mjs`):
+
+| Area                                                     |                                       Count |
+| -------------------------------------------------------- | ------------------------------------------: |
+| `apps/web/app/**/page.tsx` routes (committed)            |                                          97 |
+| API route handlers (`route.ts`: 10 api + 3 PWA manifest) |                                          13 |
+| Generated DB tables / views / functions / enums          | 108 / 8 / 237 / 0 |
+| Active SQL migrations (baseline-first; +358 archived)    |                                          81 |
+| Test/spec files (`apps/web/e2e` + `packages/shared/src`) |                                          35 |
+| Test files under `apps/web/tests`                        |                                          41 |
+
+> Migrations are **baseline-first** since 2026-05-30: `supabase/migrations/00000000000000_baseline.sql` (canonical public-schema install) + forward migrations, with the 358-file historical chain under `supabase/migrations/_archive/` and managed surfaces in `supabase/managed-surfaces.install.sql`. See `docs/spec/database-schema.md`.
 
 The repo is not a flat "apps/packages" map. The operational shape is:
 

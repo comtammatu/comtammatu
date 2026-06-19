@@ -6,9 +6,8 @@
  * Counterpart to /api/cron/hddt-reconcile. Both share
  * apps/web/lib/hddt-reconcile.ts::reconcileSingleInvoice().
  *
- * Permission: settings:tenant (owner only — per owner
- * decision 2026-05-13). Reconcile is sensitive enough that we siết
- * gating to the same level as cancelTaxInvoice.
+ * Permission: settings:tenant (owner only). Reconcile is sensitive enough
+ * that gating matches cancelTaxInvoice.
  *
  * Feature flag: HDDT_RECONCILE_ENABLED=true required.
  *

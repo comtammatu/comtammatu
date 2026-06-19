@@ -79,7 +79,9 @@ export const saveQcSettings = withAction(
       { onConflict: "tenant_id" },
     );
     if (error) {
-      console.error("saveQcSettings", error);
+      console.error("inventory.notifications.save_qc_settings_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return { success: false, error: "Không thể lưu cấu hình QC." };
     }
     revalidatePath("/inventory/settings/qc");

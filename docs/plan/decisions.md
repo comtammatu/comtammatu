@@ -370,8 +370,32 @@ tạo từ máy tính tiền cho dịch vụ ăn uống là **tại thời đi�
    chỉnh theo TT 32/2025. Cashier-facing chỉ được thêm guardrail trước payment;
    chi tiết ở D023.
 
-**Gate:** Đảo quyết định này là T3 money + tax workflow, phải có xác nhận kế
-toán và cập nhật `docs/ref/einvoice-tax.md` trước khi code.
+**Cổng pháp lý (FLAG kế toán — KHÔNG tự quyết):** "thời điểm lập HĐĐT khởi tạo từ
+máy tính tiền cho dịch vụ ăn uống" — phát hành **theo lô cuối ngày** có khớp
+**NĐ 123/2020 Đ9 (sửa NĐ 70/2025) + TT 32/2025** không? Viettel cung cấp hẳn API
+batch cho HĐ MTT (trả mã CQT) ⇒ *kỹ thuật* rõ là được phép; nhưng *thời điểm lập*
+là quy tắc luật → kế toán + điều khoản đăng ký MTT với CQT phải xác nhận trước khi
+bật. Không recite quy tắc từ trí nhớ (guardrail `tax-vn`).
+
+**Gate:** T3 (money + HĐĐT). Debate 4 góc nhìn trước khi code; migration
+file→PR→owner (D015). Nối với gap **sửa/hoàn payment đã completed** — cửa sổ chỉ
+hữu dụng nếu sửa được đơn trong ngày. Đảo quyết định (giữ realtime per-order mặc
+định) phải sửa quyết định này trước.
+
+**Phán quyết owner (2026-06-14) — cổng pháp lý ĐÓNG, đề xuất §1 BỊ BÁC:** thời
+điểm lập HĐĐT = **tại thời điểm thanh toán hoàn tất** (khớp model POS realtime
+per-order, einvoice-tax.md §1.1). ⇒ KHÔNG defer *việc lập* đến cuối ngày. Gộp lô
+cuối ngày chỉ áp dụng cho **chuyển dữ liệu HĐĐT MTT lên CQT** (bảng tổng hợp),
+KHÔNG phải cấp số/giao HĐ cho khách. Hệ quả:
+- Phát hành giữ **realtime per-order tại payment** (`createInvoice` không đổi).
+- `hddt_issuance_mode='deferred_batch'` + `createDraftTaxInvoice`/`issueDraftBatch`
+  + cron cuối ngày: **không triển khai**.
+- Provider `createBatchInvoice` (đã build + test 2026-06-14, mặc định không caller)
+  **giữ làm hạ tầng** cho backfill/tổng hợp B2C nếu sau cần — không dùng để defer.
+- 'Cửa sổ sửa' không thể nằm SAU khi lập (realtime, bất khả hồi) → dời thành: xác
+  nhận **TRƯỚC khi bấm thanh toán** + sửa **phương thức thanh toán** + **hủy/thay
+  thế** sau phát hành (TT 32/2025; đã có ở `finance/invoice-list.tsx`). Hướng UI:
+  xem **D023**.
 
 ## D023: Sửa-sai POS realtime — guardrail TRƯỚC thanh toán (cashier) + correction ở owner/accountant (2026-06-14)
 
@@ -621,7 +645,28 @@ Doanh thu năm = **ước lượng từ dữ liệu** (HĐ issued / paid revenue
 
 **Decision:** `main` là trunk hiện hành cho TypeScript/Supabase product. Go-port không thuộc current product architecture. Active docs, plans, runbooks, and branch references must treat `main` as the source branch unless a new owner decision changes trunk.
 
-## D034: Gỡ hẳn bề mặt accounting/khóa-kỳ khỏi app (đảo chiều D013) (2026-06-19)
+**Rollback:** `git push --force origin archive/main-go-port:main` (đưa main về Go-port cũ trong vài giây).
+
+## D034: Xóa server action scaffold chưa wire (E4 stocktake conflict/escalation, supplier-returns write, dashboard/PO/archive analytics) — bỏ scaffold, build lại khi có yêu cầu thật (2026-06-17)
+
+**Decision:** Xóa 17 server action exported-but-unwired (0 caller mọi hình thức, adversarial-verified) + các type return dùng riêng cho chúng. GIỮ anh em LIVE cùng file và GIỮ `DashboardSummary` (return type của `getInventoryDashboard` đang live — scan Pha B nhầm). RPC giữ nguyên: 6-channel scan Pha B cho 13 ứng viên = 0 cái Tier-A `total=0` an toàn → Dead-RPC drop để wave riêng khi prod bật function-tracking (xem todo.md "Dead-RPC drop wave 2").
+
+**Why (verify vs CODE + decisions; nguồn: audit + Codex outside-voice + 6-channel Pha B):**
+- 18 action không caller nào (static/dynamic import, form action, prop, re-export, test — `rg -U` multiline đều 0).
+- Phần lớn là scaffold feature đã park (E4 "Inventory unbuilt scaffolds" — D031 Track E4; supplier returns P1-deferred — regression `INVENTORY-PILOT-CONTRACT-V2`). Owner chốt **bỏ scaffold** thay vì giữ chờ wire: git history là bản lưu, build lại từ đầu khi có yêu cầu thật. Đính chính hướng D031-E4 "chỉ build lại khi cần" = KHÔNG giữ scaffold chết trong cây.
+
+**Danh sách xóa (function + type dùng riêng):**
+- `finance/actions.ts`: `fetchDailyRevenue`
+- `finance/archive-actions.ts`: `forceArchiveTaxInvoice`, `backfillArchiveByDateRange`
+- `inventory/dashboard-actions.ts`: `getInventoryAlerts`, `refreshDashboardMv` (giữ `getInventoryDashboard` + type family `Dashboard*`/`InventoryDashboard`)
+- `inventory/purchase-order-actions.ts`: `fetchPriceDeviations`+`PriceDeviationRow`, `fetchIngredientPriceHistory`+`PriceHistoryRow` (giữ `fetchSinglePriceDeviation`+`SinglePriceDeviation`)
+- `inventory/stocktake-actions.ts`: `closeRecountRound`+`CloseRecountResult`, `escalateRound4`, `finalizeStocktake`, `listStocktakeConflicts`+`StocktakeConflictRow`, `resolveStocktakeConflict`
+- `inventory/supplier-return-actions.ts`: `createSupplierReturnFromGrn`, `createSupplierReturnFromStock`, `confirmSupplierReturn`, `transitionSupplierReturn` (giữ `fetchSupplierReturns`/`fetchSupplierReturnDetail` — supplier-returns list/detail pages dùng)
+- `pos/payment-actions.ts`: `confirmPayment` (base, đã bị thay bởi `confirm{Cash,VietQr}PaymentWithInvoice`) + `ConfirmPaymentResult` (giữ `CashPaymentResult`/`ConfirmVietQrPaymentResult`/`InvoiceOutcome` — live qua `confirm{Cash,VietQr}Payment`)
+
+**Không đụng:** RPC baseline (defer wave có telemetry); `resolve_stocktake_conflict` RPC vẫn dùng inline ở stocktake session detail (giữ). `sendToKitchen` (`pos/print-actions.ts`) GIỮ — KHÔNG dead: 0 runtime caller nhưng là compatibility stub có hợp đồng, regression test `packages/shared/src/kds/__tests__/auto-kitchen-print-trigger.test.ts` assert print-actions.ts chứa `deferred_to: "kds_completion"` (guard chống "revive broad kitchen paper enqueueing"). **Gate:** `pnpm exec turbo run test --force` (cache per-package che fail của source-introspection test cross-package) + `pnpm verify`.
+
+## D035: Gỡ hẳn bề mặt accounting/khóa-kỳ khỏi app (đảo chiều D013) (2026-06-19)
 
 **Context:** Audit Admin (đa tác tử, có kiểm chứng) cho thấy `/admin/accounting` ("Khóa kỳ hỗ trợ kế toán" — soft-close ngày 5 / hard-close ngày 15, khung audit-trail) là nghi thức kế toán doanh nghiệp HKD không dùng (đóng thuế khoán, không sổ sách formal). Tính năng build đủ RPC nhưng đã bị ẩn khỏi nav (D013) và là entry trùng: cùng cơ chế period-close lại được render duy nhất ở đây. Owner chốt: "Xoá hẳn" thay vì giữ ẩn.
 

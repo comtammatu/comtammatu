@@ -4,7 +4,7 @@ import { createServiceClient, resolveTenantId } from "./helpers";
 /**
  * E2E: Stock-issue label & movement_subtype wiring
  *
- * Covers the 2026-04-25 cutover migrations:
+ * Covers the cutover migrations:
  *   - 20260426100000_stock_issue_wac_strict_and_subtype.sql
  *   - 20260426100100_retire_kitchen_use_issue_type.sql
  *
@@ -14,8 +14,8 @@ import { createServiceClient, resolveTenantId } from "./helpers";
  *      `kitchen_use` — any surface that re-introduces the enum will
  *      fail INSERT with ERRCODE 23514.
  *
- *   2. `reject_stock_issue_kitchen_use` trigger has been retired (the
- *      CHECK above is now the single source of truth).
+ *   2. No `reject_stock_issue_kitchen_use` trigger — the CHECK above is
+ *      the single source of truth.
  *
  *   3. `stock_movements.movement_subtype` CHECK accepts only:
  *        storage_loss | sale_consumption | writeoff | other | NULL

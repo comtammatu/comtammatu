@@ -476,8 +476,8 @@ export const fetchPaymentMethodsForPos = withActionPositional(
 /**
  * Create a payment record for an order. Cash payments are immediately
  * completed (status=completed) inside the RPC; MoMo / VietQR start as
- * pending and complete via webhook + a separate `confirmPayment` /
- * `confirmVietQrPayment` call.
+ * pending and complete via webhook + a separate `confirmVietQrPayment`
+ * call.
  *
  * Auth is `posUseAuth` (POS_USE — any POS operator) — looser than
  * `confirmCashPayment`'s `posConfirmPaymentAuth` (POS_CONFIRM_PAYMENT,
@@ -508,7 +508,7 @@ export const fetchPaymentMethodsForPos = withActionPositional(
  *     `amount_mismatch_recomputed` must shadow `amount_mismatch`.
  *
  * Local `mapPaymentRpcError` (defined above) remains in the file for
- * `confirmPayment` + the VietQR family, which still call it.
+ * the VietQR family, which still calls it.
  */
 export const createPayment = withActionPositional(
   {
@@ -820,125 +820,6 @@ function pickVietQrInfo(
   return Object.values(info).some((v) => v !== undefined) ? info : null;
 }
 
-/* ─── confirmPayment ─── */
-
-export interface ConfirmPaymentResult {
-  /**
-   * Receipt-print outcome. E-wallet money has already settled to the bank
-   * account by the time the cashier confirms — printer queue failure must
-   * NOT roll back the payment (mirrors HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN
-   * regression rule). UI surfaces this as a soft warning toast instead.
-   */
-  print: { jobId?: number; failed: boolean; error?: string };
-}
-
-/**
- * Confirm a pending VietQR/MoMo payment (called by webhook or poll).
- * Uses atomic RPC `confirm_payment_and_post`: update payment → update order.
- * Receipt print is enqueued failsoft after RPC succeeds.
- */
-export async function confirmPayment(
-  paymentId: number,
-  providerRef: string,
-): Promise<ActionResult<ConfirmPaymentResult>> {
-  const idSchema = z.coerce.number().int().positive();
-  const parsedId = idSchema.safeParse(paymentId);
-  if (!parsedId.success) {
-    return { success: false, error: "Payment ID không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  if (claims.branch_id === null) {
-    return { success: false, error: "Không xác định được chi nhánh" };
-  }
-
-  // Fetch order_id for fail-soft receipt print after the RPC.
-  const { data: payment, error: fetchErr } = await supabase
-    .from("payments")
-    .select("id, order_id, status")
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .eq("branch_id", claims.branch_id)
-    .single();
-
-  if (fetchErr || !payment) {
-    return { success: false, error: "Thanh toán không tồn tại." };
-  }
-
-  if (payment.status !== "pending") {
-    return { success: false, error: "Thanh toán không ở trạng thái chờ." };
-  }
-
-  // Atomic RPC: confirm payment + update order.
-  const { error: rpcError } = await supabase.rpc("confirm_payment_and_post", {
-    p_payment_id: parsedId.data,
-    p_tenant_id: claims.tenant_id,
-    p_branch_id: claims.branch_id,
-    p_provider_ref: providerRef,
-  });
-
-  if (rpcError) {
-    const msg = rpcError.message ?? "";
-    if (msg.includes("payment_not_found")) {
-      return { success: false, error: "Thanh toán không tồn tại." };
-    }
-    if (msg.includes("payment_not_pending")) {
-      return { success: false, error: "Thanh toán không ở trạng thái chờ." };
-    }
-    const mappedError = mapPaymentRpcError(msg);
-    if (mappedError) {
-      console.error("[confirmPayment] rpc failed:", msg);
-      return { success: false, error: mappedError };
-    }
-    console.error("[confirmPayment] [unmapped] rpc error:", msg);
-    return { success: false, error: "Không thể xác nhận thanh toán." };
-  }
-
-  // No stock deduction under D016.
-
-  // Enqueue receipt print. Cash flow does this atomically inside
-  // confirm_cash_payment; the e-wallet RPC (confirm_payment_and_post)
-  // does not, so the cashier never got a printed receipt for VietQR/MoMo
-  // payments before this fix. Failsoft on purpose — see HDDT-PAYMENT-
-  // FIRST-FAILSOFT-ORPHAN: money has already settled, refusing the close
-  // because of a printer queue fault loses a real sale for a paper fault.
-  let printOutcome: ConfirmPaymentResult["print"] = { failed: false };
-  const { data: printRes, error: printErr } = await supabase.rpc(
-    "enqueue_receipt_print",
-    { p_order_id: payment.order_id },
-  );
-  if (printErr) {
-    const printMsg = String(printErr.message ?? "").toLowerCase();
-    let userError: string;
-    if (printMsg.includes("no active") && printMsg.includes("printer")) {
-      userError = "Chi nhánh chưa cấu hình máy in hóa đơn.";
-    } else if (printMsg.includes("permission denied")) {
-      userError = "Không có quyền in hóa đơn.";
-    } else {
-      userError = "Không thể gửi hóa đơn tới máy in.";
-    }
-    console.error(
-      "[confirmPayment] enqueue_receipt_print failed:",
-      printErr.message,
-    );
-    printOutcome = { failed: true, error: userError };
-  } else {
-    const printData = printRes as { job_id?: number } | null;
-    if (printData?.job_id != null) {
-      printOutcome = { failed: false, jobId: printData.job_id };
-    }
-  }
-
-  return { success: true, data: { print: printOutcome } };
-}
-
 // ─── Confirm cash payment (atomic mark-paid + enqueue receipt) ───────────
 
 export interface CashPaymentResult {
@@ -964,7 +845,8 @@ export interface CashPaymentResult {
  * Auth requires POS_CONFIRM_PAYMENT (cashier / branch_manager+); a waiter
  * with only POS_USE + POS_PRINT can print a provisional bill but MUST NOT
  * touch the cash drawer. VietQR / MoMo keep POS_USE at createPayment /
- * confirmPayment (e-wallet is the webhook source of truth, no cash drawer).
+ * confirmVietQrPayment (e-wallet is the webhook source of truth, no cash
+ * drawer).
  *
  * Non-obvious constraints:
  *   - `confirmCashPaymentRpcMappings` order matters so cash-specific copy

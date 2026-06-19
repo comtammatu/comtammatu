@@ -113,9 +113,6 @@ test.describe("Edit pending order item — pricing recompute", () => {
       await testOrder.cleanup();
     }
   });
-
-  // TODO: modifier-aware pricing e2e — needs menu_item_modifiers fixtures in
-  // helpers/supabase.ts (assert unit_price = base + variant + modifier + side).
 });
 
 async function resolveOrderItemId(orderId: number): Promise<number> {

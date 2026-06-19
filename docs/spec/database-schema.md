@@ -5,14 +5,22 @@ a hand-maintained per-column schema dump.
 
 ## Current Snapshot
 
-Regenerate checkout counts when needed with:
+Generated from the current checkout on 2026-06-16 with:
 
 ```bash
 node scripts/project-snapshot.mjs
 ```
 
-Use the source ladder below for schema facts; do not recreate hand-written
-table-by-table schema dumps.
+| Area                                        | Count |
+| ------------------------------------------- | ----: |
+| Public tables in generated types            |   108 |
+| Public views in generated types             |     8 |
+| Public RPC/SQL functions in generated types |   237 |
+| Public enums in generated types             |     0 |
+| Active SQL migration files                  |    81 |
+
+The early-2026 hand-written table-by-table reference has been removed. Use the
+source ladder below instead of resurrecting stale schema dumps.
 
 ## Migration layout (baseline-first — 2026-05-30)
 
