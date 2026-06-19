@@ -9,7 +9,6 @@ import {
   createTestTransferDraft,
   getTransferStatus,
   getStockLevel,
-  resolveUserByEmail,
 } from "./helpers";
 
 /**
@@ -80,7 +79,7 @@ async function buildFixtures(): Promise<InventoryFixtures> {
       supabase,
       tenantId,
       destinationBranch.id,
-      "kitchen",
+      "receive",
     ),
   ]);
 
@@ -116,171 +115,22 @@ async function buildFixtures(): Promise<InventoryFixtures> {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-test.describe("Cấp bếp default_consumption warn-only contract", () => {
-  test("dialog allows an active kitchen even when no kitchen is marked default_consumption", async ({
+test.describe("Branch consumption redirect", () => {
+  test("legacy transfer create URL opens the consumption surface", async ({
     page,
   }) => {
-    const supabase = createServiceClient();
     const fx = await buildFixtures();
 
-    let targetBranchId = fx.branchId;
-    const authEmail = process.env.E2E_CASHIER_EMAIL;
-    if (authEmail) {
-      const authUser = await resolveUserByEmail(supabase, authEmail);
-      const tenantWide = ["owner", "office"].includes(
-        authUser.role,
-      );
-      if (!tenantWide && authUser.branchId != null) {
-        targetBranchId = authUser.branchId;
-      }
-    }
-
-    const { data: branch, error: branchErr } = await supabase
-      .from("branches")
-      .select("branch_kind")
-      .eq("tenant_id", fx.tenantId)
-      .eq("id", targetBranchId)
-      .single();
-    if (branchErr || !branch || branch.branch_kind !== "branch") {
-      test.skip(true, "Cấp bếp UI needs an operational branch context.");
+    await page.goto(`/inventory/transfers?branchId=${fx.branchId}&create=cap-bep`);
+    await page.waitForLoadState("networkidle");
+    if (await isAccessDenied(page)) {
+      test.skip(true, "E2E auth user cannot access Inventory.");
       return;
     }
 
-    await ensureInventoryLocation(
-      supabase,
-      fx.tenantId,
-      targetBranchId,
-      "issue",
-    );
-    await ensureInventoryLocation(
-      supabase,
-      fx.tenantId,
-      targetBranchId,
-      "kitchen",
-    );
-
-    const { data: previousDefaults, error: defaultsErr } = await supabase
-      .from("inventory_locations")
-      .select("id")
-      .eq("tenant_id", fx.tenantId)
-      .eq("branch_id", targetBranchId)
-      .eq("location_kind", "kitchen")
-      .eq("is_active", true)
-      .eq("is_default_consumption", true);
-    if (defaultsErr) {
-      throw new Error(
-        `Failed to resolve default kitchens: ${defaultsErr.message}`,
-      );
-    }
-
-    let nonDefaultKitchenId: number | null = null;
-    const marker = Date.now();
-    const nonDefaultKitchenName = `E2E Non-default kitchen ${marker}`;
-    try {
-      const { data: nonDefaultKitchen, error: insertErr } = await supabase
-        .from("inventory_locations")
-        .insert({
-          tenant_id: fx.tenantId,
-          branch_id: targetBranchId,
-          name: nonDefaultKitchenName,
-          code: `E2E-NONDEF-${targetBranchId}-${marker}`,
-          location_kind: "kitchen",
-          is_active: true,
-          is_default_receive: false,
-          is_default_issue: false,
-          is_default_consumption: false,
-          sort_order: 998,
-        })
-        .select("id")
-        .single();
-      if (insertErr || !nonDefaultKitchen) {
-        throw new Error(
-          `Failed to create non-default kitchen: ${insertErr?.message}`,
-        );
-      }
-      nonDefaultKitchenId = nonDefaultKitchen.id;
-
-      const { error: clearDefaultErr } = await supabase
-        .from("inventory_locations")
-        .update({ is_default_consumption: false })
-        .eq("tenant_id", fx.tenantId)
-        .eq("branch_id", targetBranchId)
-        .eq("location_kind", "kitchen")
-        .eq("is_active", true);
-      if (clearDefaultErr) {
-        throw new Error(
-          `Failed to clear default kitchen flag: ${clearDefaultErr.message}`,
-        );
-      }
-
-      await page.goto(
-        `/inventory/transfers?branchId=${targetBranchId}&create=cap-bep`,
-      );
-      await page.waitForLoadState("networkidle");
-      if (await isAccessDenied(page)) {
-        test.skip(true, "E2E auth user cannot access Inventory transfer UI.");
-        return;
-      }
-
-      const dialog = page.getByRole("dialog");
-      if (!(await dialog.isVisible({ timeout: 10_000 }).catch(() => false))) {
-        test.skip(
-          true,
-          "Transfer create dialog is not available to this E2E user.",
-        );
-        return;
-      }
-
-      const capBepTab = dialog.getByRole("tab", { name: /Cấp bếp/i });
-      if (await capBepTab.isVisible({ timeout: 1_000 }).catch(() => false)) {
-        await capBepTab.click();
-      }
-
-      await expect(dialog.getByText("Cấu hình bếp cần rà soát")).toBeVisible({
-        timeout: 10_000,
-      });
-      await expect(
-        dialog.getByText("Chi nhánh chưa có Bếp mặc định"),
-      ).toHaveCount(0);
-
-      const receiveLocationSelect = dialog.getByRole("combobox").nth(1);
-      await expect(receiveLocationSelect).toBeEnabled();
-      await receiveLocationSelect.click();
-      await expect(
-        page.getByRole("option", { name: new RegExp(nonDefaultKitchenName) }),
-      ).toBeVisible({ timeout: 5_000 });
-      await page.keyboard.press("Escape");
-
-      const ingredientSelect = dialog.getByRole("combobox").nth(2);
-      await ingredientSelect.click();
-      await page
-        .getByRole("option", { name: /E2E Ingredient transfer/i })
-        .first()
-        .click();
-      await dialog.getByRole("button", { name: "Thêm nguyên liệu" }).click();
-      await dialog.getByPlaceholder("SL").fill("1");
-
-      await expect(
-        dialog.getByRole("button", { name: "Tạo phiếu" }),
-      ).toBeEnabled();
-    } finally {
-      if (nonDefaultKitchenId != null) {
-        await supabase
-          .from("inventory_locations")
-          .delete()
-          .eq("id", nonDefaultKitchenId)
-          .eq("tenant_id", fx.tenantId);
-      }
-
-      const restoreDefaultId = previousDefaults?.[0]?.id;
-      if (restoreDefaultId != null) {
-        await supabase
-          .from("inventory_locations")
-          .update({ is_default_consumption: true })
-          .eq("id", restoreDefaultId)
-          .eq("tenant_id", fx.tenantId);
-      }
-    }
+    await expect(page).toHaveURL(/\/inventory\/consumption/);
+    await expect(page.getByRole("heading", { name: /Tiêu hao/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Cấp bếp/i })).toHaveCount(0);
   });
 });
 

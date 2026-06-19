@@ -133,6 +133,16 @@ function getIssueSurface(
     };
   }
 
+  if (issueType === "consumption") {
+    return {
+      eyebrow: "Tiêu hao",
+      label: "Phiếu tiêu hao",
+      confirmTitle: "Xác nhận tiêu hao?",
+      confirmAction: "Xác nhận tiêu hao",
+      noteLabel: "Ghi chú tiêu hao",
+    };
+  }
+
   return {
     eyebrow: "Xuất kho",
     label: "Phiếu xuất",
@@ -364,10 +374,11 @@ export function IssueDetailClient({
         }}
         breadcrumb={
           <Link
-            href="/inventory/issues"
+            href="/inventory/consumption"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
-            <IconArrowLeft className="size-4" /> {tRoute("/inventory/issues")}
+            <IconArrowLeft className="size-4" />{" "}
+            {tRoute("/inventory/consumption")}
           </Link>
         }
         tabs={

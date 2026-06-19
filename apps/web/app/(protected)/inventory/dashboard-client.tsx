@@ -37,7 +37,7 @@ import { messages } from "@lib/messages";
 /* ------------------------------------------------------------------ */
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-type DashboardSiteKind = "branch";
+type DashboardSiteKind = "branch" | "central_supply" | "central_kitchen";
 
 export type DashboardProps = {
   routeBase: InventoryRouteBase;
@@ -200,7 +200,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     {
       label:
         props.siteKind === "branch"
-          ? "Nhận hàng & cấp bếp"
+          ? "Nhận/điều chuyển hàng"
           : tNav("transfers", "navigation"),
       href: paths.transfers,
       primary: true,
@@ -213,8 +213,8 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
 
   if (props.siteKind === "branch") {
     movementActions.push({
-      label: "Cấp bếp",
-      href: `${paths.transfers}?create=cap-bep`,
+      label: "Tiêu hao",
+      href: paths.consumption,
     });
   }
 
@@ -269,7 +269,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
       key: "movement",
       title: "3. Điều phối và sản xuất",
       description:
-        "Nhận hàng về kho chi nhánh và cấp phát xuống bếp chi nhánh theo ca bán.",
+        "Theo dõi phiếu hàng còn giữ tồn sau khi nhận và lệnh sản xuất trung tâm.",
       href: paths.transfers,
       icon: IconArrowLeftRight,
       metric: String(props.activeTransfers),
@@ -397,9 +397,9 @@ function buildTasks(props: DashboardProps): TaskItem[] {
       });
     items.push({
       key: "issues",
-      title: "Cấp bếp cho ca bán",
-      description: "Chuyển từ kho chi nhánh sang bếp chi nhánh trước giờ bán.",
-      href: `${paths.transfers}?create=cap-bep`,
+      title: "Tiêu hao trong ngày",
+      description: "Duyệt nguyên liệu đã dùng để ghi giá vốn thực tế.",
+      href: paths.consumption,
       icon: <IconSquareCheck className="size-4" />,
       severity: "info",
     });

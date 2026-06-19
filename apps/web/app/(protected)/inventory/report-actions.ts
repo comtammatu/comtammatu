@@ -15,6 +15,7 @@ import {
 } from "@comtammatu/shared/time";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
+import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
 
 const REPORT_ROLES: readonly StaffRole[] = ["owner"];
 
@@ -118,6 +119,11 @@ export async function fetchStockMovementReport(
     claims.user_role === "branch_manager" && claims.branch_id != null
       ? claims.branch_id
       : branchId;
+  const stockBearingLocationIds = await fetchStockBearingLocationIds({
+    supabase,
+    tenantId: claims.tenant_id,
+    ...(effectiveBranchId != null ? { branchId: effectiveBranchId } : {}),
+  });
 
   // 1. Get all ingredients
   const { data: ingredients, error: ingErr } = await supabase
@@ -130,14 +136,20 @@ export async function fetchStockMovementReport(
   if (ingErr) return { success: false, error: "Không tải được nguyên liệu." };
 
   // 2. Get current stock levels (for computing opening balance)
-  let levelsQuery = supabase
-    .from("stock_levels")
-    .select("ingredient_id, current_quantity")
-    .eq("tenant_id", claims.tenant_id);
-  if (effectiveBranchId) {
+  let levelsQuery =
+    stockBearingLocationIds.length > 0
+      ? supabase
+          .from("stock_levels")
+          .select("ingredient_id, current_quantity")
+          .eq("tenant_id", claims.tenant_id)
+          .in("location_id", stockBearingLocationIds)
+      : null;
+  if (levelsQuery && effectiveBranchId) {
     levelsQuery = levelsQuery.eq("branch_id", effectiveBranchId);
   }
-  const { data: levels, error: levErr } = await levelsQuery;
+  const { data: levels, error: levErr } = levelsQuery
+    ? await levelsQuery
+    : { data: [], error: null };
   if (levErr) return { success: false, error: "Không tải được tồn kho." };
 
   // Sum current_quantity per ingredient (across branches if no filter)
@@ -151,31 +163,43 @@ export async function fetchStockMovementReport(
   }
 
   // 3. Get movements in the period
-  let movQuery = supabase
-    .from("stock_movements")
-    .select("ingredient_id, type, quantity_change")
-    .eq("tenant_id", claims.tenant_id)
-    .gte("created_at", startRange.startIso)
-    .lt("created_at", endRange.endIso);
-  if (effectiveBranchId) {
+  let movQuery =
+    stockBearingLocationIds.length > 0
+      ? supabase
+          .from("stock_movements")
+          .select("ingredient_id, type, quantity_change")
+          .eq("tenant_id", claims.tenant_id)
+          .in("location_id", stockBearingLocationIds)
+          .gte("created_at", startRange.startIso)
+          .lt("created_at", endRange.endIso)
+      : null;
+  if (movQuery && effectiveBranchId) {
     movQuery = movQuery.eq("branch_id", effectiveBranchId);
   }
-  const { data: movements, error: movErr } = await movQuery;
+  const { data: movements, error: movErr } = movQuery
+    ? await movQuery
+    : { data: [], error: null };
   if (movErr) return { success: false, error: "Không tải được biến động kho." };
 
   // 4. Get movements AFTER the period (to compute opening balance)
   // opening = current_quantity - sum(movements from startDate to now)
   // But more accurately: opening = current - movements_in_and_after_period
   // closing = opening + movements_in_period = current - movements_after_period
-  let afterQuery = supabase
-    .from("stock_movements")
-    .select("ingredient_id, quantity_change")
-    .eq("tenant_id", claims.tenant_id)
-    .gte("created_at", endRange.endIso);
-  if (effectiveBranchId) {
+  let afterQuery =
+    stockBearingLocationIds.length > 0
+      ? supabase
+          .from("stock_movements")
+          .select("ingredient_id, quantity_change")
+          .eq("tenant_id", claims.tenant_id)
+          .in("location_id", stockBearingLocationIds)
+          .gte("created_at", endRange.endIso)
+      : null;
+  if (afterQuery && effectiveBranchId) {
     afterQuery = afterQuery.eq("branch_id", effectiveBranchId);
   }
-  const { data: afterMovements, error: afterErr } = await afterQuery;
+  const { data: afterMovements, error: afterErr } = afterQuery
+    ? await afterQuery
+    : { data: [], error: null };
   if (afterErr)
     return { success: false, error: "Không tải được biến động kho." };
 

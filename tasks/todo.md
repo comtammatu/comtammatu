@@ -71,7 +71,7 @@ this checkout.
 
 - [ ] **POS calls provider trước DB lock** — RPC fail = orphan gateway order. DEFER-WITH-MITIGATION (idempotency 23505 đã có).
 - [ ] **HĐĐT e-invoice post-pilot** — reconcile cron orphan `signing` (admin retry covers pilot); replace flow TT 78 (pilot cancel + manual portal); provider config encrypted `system_settings` (env-only OK single-tenant); PDF/XML persist + download UI (portal link OK). 3-way matching `supplier_invoices` ĐÃ SHIP (bỏ khỏi đây).
-- [ ] **Branch Kitchen site split Phase 2** — dual-write + cutover; seed `inventory_locations` kitchen/warehouse per branch. RPC `commit_intra_branch_transfer` + `confirm_stock_issue` (draft→confirmed) đã có; chỉ chạy khi mở chi nhánh 2.
+- [ ] **Inventory legacy backfill — Kho CN -> Bếp CN** — milestone riêng sau PR behavior-fix: dry-run/audit bằng `scripts/inventory-legacy-kitchen-backfill.mjs` cho các transfer cùng branch từ `warehouse` sang `kitchen`, tính phantom kitchen stock theo ingredient/location, sinh consumption correction để zero kitchen stock và đưa chi phí vào `sale_consumption`. Không sửa/xóa transfer history cũ; owner duyệt report trước/sau trước khi chạy prod.
 - [ ] **Refund partial-refund T3** — duyệt partial flip cả `payments.status='refunded'` → chặn refund phần còn lại (`create_refund` cần `completed`) + overstate `get_revenue_kpis.voided_amount`. `20260612120000` chỉ sửa nhãn `orders.payment_status`. (Gộp "Refunds flow gaps" cũ vào đây — không có gap riêng.)
 - [ ] **H3b** `has_permission()` dual-source flip — tripwire, chỉ flip nếu có incident silent-demote thứ 2 (`tenants.owner_user_id` ship `20260601500000`). Per ADR 0005.
 - [ ] **F-009 Stock master-detail drawer** — side-panel `stock-client.tsx` hiện chấp nhận được; chỉ làm nếu thành vấn đề UX.

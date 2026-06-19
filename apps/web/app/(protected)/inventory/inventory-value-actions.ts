@@ -4,6 +4,7 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
+import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
 
 const SYSTEM_ROLES: readonly StaffRole[] = ["owner"];
 
@@ -35,6 +36,15 @@ export async function fetchInventoryValueSystem(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
+  const stockBearingLocationIds = await fetchStockBearingLocationIds({
+    supabase,
+    tenantId: claims.tenant_id,
+    ...(branchId != null ? { branchId } : {}),
+  });
+
+  if (stockBearingLocationIds.length === 0) {
+    return { success: true, data: { totalValue: 0 } };
+  }
 
   let query = supabase
     .from("stock_levels")
@@ -45,7 +55,8 @@ export async function fetchInventoryValueSystem(
       ingredients ( unit_cost )
     `,
     )
-    .eq("tenant_id", claims.tenant_id);
+    .eq("tenant_id", claims.tenant_id)
+    .in("location_id", stockBearingLocationIds);
 
   if (branchId != null) {
     query = query.eq("branch_id", branchId);
@@ -120,19 +131,27 @@ export async function fetchInventoryValueByBranch(): Promise<
   if (branchIds.length === 0) {
     return { success: true, data: { rows: [] } };
   }
+  const stockBearingLocationIds = await fetchStockBearingLocationIds({
+    supabase,
+    tenantId: claims.tenant_id,
+  });
 
-  const { data: stockRows, error: stockError } = await supabase
-    .from("stock_levels")
-    .select(
-      `
-      branch_id,
-      current_quantity,
-      avg_unit_cost,
-      ingredients ( unit_cost )
-    `,
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .in("branch_id", branchIds);
+  const { data: stockRows, error: stockError } =
+    stockBearingLocationIds.length > 0
+      ? await supabase
+          .from("stock_levels")
+          .select(
+            `
+            branch_id,
+            current_quantity,
+            avg_unit_cost,
+            ingredients ( unit_cost )
+          `,
+          )
+          .eq("tenant_id", claims.tenant_id)
+          .in("branch_id", branchIds)
+          .in("location_id", stockBearingLocationIds)
+      : { data: [], error: null };
 
   if (stockError) {
     return { success: false, error: "Không thể tải tồn kho." };

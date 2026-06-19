@@ -196,9 +196,9 @@ Không dùng một từ `hóa đơn` cho cả HĐĐT bán ra và hóa đơn NCC.
 | `stock_transfer` | điều chuyển nội bộ | Hàng vẫn còn tồn, chỉ đổi location/site. | consumption |
 | `stock_issue` | phiếu xuất kho | Xuất dùng nội bộ nếu runtime có chứng từ issue. | transfer có location nhận |
 
-Với runtime hiện tại, `Kho CN -> Bếp CN` là intra-branch stock transfer khi có
-phiếu cấp bếp thật. Khi xử lý dữ liệu lịch sử/import, phân loại theo nghĩa vận
-hành: hàng còn tồn ở bếp hay thực chất là tiêu hao/food cost.
+Với runtime hiện tại, `Kho CN -> Bếp CN` là tiêu hao chi nhánh, không phải stock
+transfer. Khi xử lý dữ liệu lịch sử/import, phân loại theo nghĩa vận hành: hàng
+còn tồn ở site nhận hay thực chất là tiêu hao/food cost.
 
 ## Tài chính vận hành
 

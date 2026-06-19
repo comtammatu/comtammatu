@@ -29,9 +29,10 @@ const VI_DICTIONARY: InventoryDictionary = {
     transfers: { short: "Điều chuyển", long: "Điều chuyển nội bộ" },
     stocktake: { long: "Kiểm kê" },
     issues: { short: "Xuất kho", long: "Xuất kho nội bộ" },
+    consumption: { long: "Tiêu hao" },
     expiry: { short: "Hạn dùng", long: "Hạn sử dụng" },
     reports: { long: "Báo cáo" },
-    production: { long: "Sản xuất chi nhánh" },
+    production: { long: "Sản xuất Bếp Trung Tâm" },
     ingredients: { long: "Nguyên liệu" },
     suppliers: { long: "Nhà cung cấp" },
     recipes: { short: "Định mức", long: "Định mức món bán" },
@@ -68,6 +69,7 @@ const VI_DICTIONARY: InventoryDictionary = {
       long: "Cài đặt QC nhập kho",
     },
     "/inventory/issues": { short: "Xuất kho", long: "Xuất kho nội bộ" },
+    "/inventory/consumption": { long: "Tiêu hao" },
     "/inventory/transfers": {
       short: "Điều chuyển",
       long: "Điều chuyển nội bộ",
@@ -77,7 +79,7 @@ const VI_DICTIONARY: InventoryDictionary = {
       short: "Cảnh báo hạn",
       long: "Cảnh báo hạn sử dụng",
     },
-    "/inventory/production": { long: "Sản xuất chi nhánh" },
+    "/inventory/production": { long: "Sản xuất Bếp Trung Tâm" },
     "/inventory/reports": { long: "Báo cáo" },
     "/inventory/ingredients": { long: "Nguyên liệu" },
     "/inventory/recipes": { short: "Định mức", long: "Định mức món bán" },
@@ -119,7 +121,7 @@ const VI_DICTIONARY: InventoryDictionary = {
     expired: { short: "Hết hạn", long: "Đã hết hạn" },
     critical: { short: "Sắp hết hạn", long: "Sắp hết hạn" },
     warning: { long: "Theo dõi" },
-    // kitchen_use is not a valid stock-issue reason; use intra-branch stock_transfer.
+    // kitchen_use is not a valid stock-issue reason; sale usage posts as consumption.
     write_off: { short: "Ghi giảm", long: "Ghi giảm" },
     consumption: { long: "Tiêu hao" },
     storage_loss: { short: "Hao hụt kho", long: "Hao hụt kho" },

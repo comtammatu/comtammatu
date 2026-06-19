@@ -2,16 +2,16 @@
 
 > Log mỗi quyết định kiến trúc quan trọng với rationale.
 
-## D000: Inventory branch-only operating model (2026-06-13)
+## D000: Inventory branch and central site operating model (2026-06-19)
 
-**Decision:** Inventory, procurement, production, POS, KDS, runner, stocktake, and transfer operations are scoped to `branch` records. `branches.branch_kind` is a compatibility column and must stay `branch`.
+**Decision:** Inventory still uses `branches` as the site table, but `branches.branch_kind` is active with `branch`, `central_supply`, and `central_kitchen`.
 
 **Transfer direction matrix** (enforced by DB trigger `enforce_stock_transfer_direction`):
 
-- Allowed: branch-to-branch transfers and intra-branch location transfers.
-- Rejected: missing branch references or non-branch `branch_kind` values.
+- Allowed: `central_supply -> branch`, `central_kitchen -> branch`, and `branch -> branch`.
+- Rejected: missing branch references, unsupported central direction, and same-branch transfers.
 
-**Current contract:** PO, GRN, stock levels, production orders, and stock transfers all reference `branch_id` directly. Role and permission boundaries decide who can operate on a branch; branch kind no longer creates separate operating site classes.
+**Current contract:** PO, GRN, stock levels, production orders, and stock transfers all reference `branch_id` directly. Branch kind decides site behavior: Kho CN keeps branch stock, Kho Tổng keeps supply stock, Bếp Trung Tâm keeps production stock, and Bếp CN consumption is posted as approved consumption movements instead of transfer.
 
 ## D001: Greenfield thay vì refactor (2026-04-01)
 

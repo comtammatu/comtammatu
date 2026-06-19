@@ -13,6 +13,7 @@ import {
 } from "../actions";
 import { fetchFoodCost } from "../accounting-actions";
 import type { FinanceParams, ResolvedFinanceRange } from "./finance-params";
+import { fetchStockBearingLocationIds } from "../../inventory/_lib/stock-bearing-locations";
 
 type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
@@ -153,19 +154,19 @@ function formatPercent(value: number): string {
 
 function buildKpis({
   kpis,
-  foodCostRows,
+  actualFoodCostRows,
   inventoryValue,
   operatingExpense,
 }: {
   kpis: KpiBundle | null;
-  foodCostRows: FoodCostRow[];
+  actualFoodCostRows: FoodCostRow[];
   inventoryValue: number;
   operatingExpense: number;
 }): FinanceCockpitKpis {
   const totalCollected = toNumber(kpis?.net_revenue);
   const netRevenueBeforeVat =
     toNumber(kpis?.subtotal_revenue) - toNumber(kpis?.discount_amount);
-  const ingredientCost = foodCostRows.reduce(
+  const ingredientCost = actualFoodCostRows.reduce(
     (sum, row) => sum + toNumber(row.ingredient_cost),
     0,
   );
@@ -173,9 +174,7 @@ function buildKpis({
   const grossMargin =
     netRevenueBeforeVat > 0 ? (grossProfit / netRevenueBeforeVat) * 100 : 0;
   const netProfit = grossProfit - operatingExpense;
-  // Food cost is unreliable when there are sales but zero ingredient cost
-  // (empty recipes/GRN, or a sub-week range that misses the weekly mv_food_cost
-  // bucket). Gross/net profit must not render an inflated ~100% margin then.
+  // Actual food cost is posted only after manager-approved consumption.
   const costAvailable = !(ingredientCost <= 0 && netRevenueBeforeVat > 0);
 
   return {
@@ -284,6 +283,16 @@ async function fetchInventoryCashTiedItems({
   branches: BranchOption[];
 }): Promise<FinanceInventoryItem[]> {
   const branchNames = new Map(branches.map((b) => [b.id, b.name]));
+  const stockBearingLocationIds = await fetchStockBearingLocationIds({
+    supabase,
+    tenantId,
+    ...(branchId != null ? { branchId } : {}),
+  });
+
+  if (stockBearingLocationIds.length === 0) {
+    return [];
+  }
+
   let query = supabase
     .from("stock_levels")
     .select(
@@ -294,7 +303,8 @@ async function fetchInventoryCashTiedItems({
       ingredients ( name, unit_cost )
     `,
     )
-    .eq("tenant_id", tenantId);
+    .eq("tenant_id", tenantId)
+    .in("location_id", stockBearingLocationIds);
 
   if (branchId != null) {
     query = query.eq("branch_id", branchId);
@@ -324,6 +334,65 @@ async function fetchInventoryCashTiedItems({
     .filter((row) => row.value > 0)
     .sort((a, b) => b.value - a.value)
     .slice(0, 5);
+}
+
+function nextDate(date: string): string {
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  parsed.setUTCDate(parsed.getUTCDate() + 1);
+  return parsed.toISOString().slice(0, 10);
+}
+
+async function fetchActualFoodCostRows({
+  supabase,
+  tenantId,
+  branchId,
+  startDate,
+  endDate,
+}: {
+  supabase: SupabaseClient;
+  tenantId: number;
+  branchId: number | null;
+  startDate: string;
+  endDate: string;
+}): Promise<FoodCostRow[]> {
+  let query = supabase
+    .from("stock_movements")
+    .select("branch_id, quantity_change, unit_cost, created_at")
+    .eq("tenant_id", tenantId)
+    .eq("type", "consumption")
+    .eq("movement_subtype", "sale_consumption")
+    .gte("created_at", startDate)
+    .lt("created_at", nextDate(endDate));
+
+  if (branchId != null) {
+    query = query.eq("branch_id", branchId);
+  }
+
+  const { data, error } = await query;
+  if (error) return [];
+
+  const rows = new Map<string, FoodCostRow>();
+  for (const row of data ?? []) {
+    const period = String(row.created_at ?? "").slice(0, 10);
+    if (!period || row.branch_id == null) continue;
+    const key = `${period}:${row.branch_id}`;
+    const current =
+      rows.get(key) ??
+      ({
+        period_start: period,
+        branch_id: row.branch_id,
+        item_name: "Actual consumption",
+        revenue: null,
+        ingredient_cost: 0,
+        food_cost_pct: null,
+      } satisfies FoodCostRow);
+    current.ingredient_cost =
+      toNumber(current.ingredient_cost) +
+      Math.abs(toNumber(row.quantity_change)) * toNumber(row.unit_cost);
+    rows.set(key, current);
+  }
+
+  return Array.from(rows.values());
 }
 
 function buildTrends(rollups: RollupRow[], foodCostRows: FoodCostRow[]) {
@@ -531,7 +600,8 @@ export async function fetchFinanceCockpit(
     compareKpisRes,
     rollupRes,
     foodCostRes,
-    compareFoodCostRes,
+    actualFoodCostRows,
+    compareActualFoodCostRows,
     inventoryValueRes,
     cashVarianceRes,
     dashboardSummaryRes,
@@ -556,13 +626,22 @@ export async function fetchFinanceCockpit(
       endDate: resolved.end,
       ...(params.branch != null ? { branchId: params.branch } : {}),
     }),
+    fetchActualFoodCostRows({
+      supabase,
+      tenantId: claims.tenant_id,
+      branchId: params.branch,
+      startDate: resolved.start,
+      endDate: resolved.end,
+    }),
     resolved.compare
-      ? fetchFoodCost({
+      ? fetchActualFoodCostRows({
+          supabase,
+          tenantId: claims.tenant_id,
+          branchId: params.branch,
           startDate: resolved.compare.start,
           endDate: resolved.compare.end,
-          ...(params.branch != null ? { branchId: params.branch } : {}),
         })
-      : Promise.resolve({ success: true as const, data: [] }),
+      : Promise.resolve([]),
     fetchInventoryValueByBranch(),
     fetchCashVarianceSummary(params.branch, resolved.start, resolved.end),
     fetchFinanceDashboardSummary(params.branch, resolved.start, resolved.end),
@@ -596,9 +675,6 @@ export async function fetchFinanceCockpit(
   const foodCostRows = (
     foodCostRes.success ? (foodCostRes.data ?? []) : []
   ) as FoodCostRow[];
-  const compareFoodCostRows = (
-    compareFoodCostRes.success ? (compareFoodCostRes.data ?? []) : []
-  ) as FoodCostRow[];
   const inventoryRows = inventoryValueRes.success
     ? (inventoryValueRes.data?.rows ?? [])
     : [];
@@ -610,7 +686,7 @@ export async function fetchFinanceCockpit(
 
   const kpis = buildKpis({
     kpis: kpisRes.success ? (kpisRes.data as KpiBundle | null) : null,
-    foodCostRows,
+    actualFoodCostRows,
     inventoryValue,
     operatingExpense,
   });
@@ -620,7 +696,7 @@ export async function fetchFinanceCockpit(
         kpis: compareKpisRes.success
           ? (compareKpisRes.data as KpiBundle | null)
           : null,
-        foodCostRows: compareFoodCostRows,
+        actualFoodCostRows: compareActualFoodCostRows,
         inventoryValue,
         operatingExpense: compareOperatingExpense,
       })
@@ -629,7 +705,10 @@ export async function fetchFinanceCockpit(
   const rollups = (
     rollupRes.success ? (rollupRes.data ?? []) : []
   ) as RollupRow[];
-  const { revenueTrend, grossProfitTrend } = buildTrends(rollups, foodCostRows);
+  const { revenueTrend, grossProfitTrend } = buildTrends(
+    rollups,
+    actualFoodCostRows,
+  );
 
   const branchCashVariance = new Map<number, number>();
   if (branches.length > 1) {
@@ -672,7 +751,7 @@ export async function fetchFinanceCockpit(
     branchRows: buildBranchRows({
       branches,
       rollups,
-      foodCostRows,
+      foodCostRows: actualFoodCostRows,
       inventoryRows,
       cashVarianceByBranch: branchCashVariance,
     }),

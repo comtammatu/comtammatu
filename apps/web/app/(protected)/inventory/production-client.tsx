@@ -71,8 +71,8 @@ export function ProductionHubClient({
     <AppPage>
       <AppPageHeader
         eyebrow="Kho hàng"
-        title="Sản xuất chi nhánh"
-        description="Lệnh sản xuất và BOM thành phẩm theo chi nhánh"
+        title="Sản xuất Bếp Trung Tâm"
+        description="Lệnh sản xuất và BOM thành phẩm"
         actions={
           <ProductionOrderForm
             productionBranches={productionBranches}

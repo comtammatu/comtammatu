@@ -82,10 +82,10 @@ export async function requireProductionBranch(
     };
   }
 
-  if (data?.branch_kind !== "branch") {
+  if (data?.branch_kind !== "central_kitchen") {
     return {
       ok: false,
-      error: "Chỉ chi nhánh vận hành mới được phép thao tác ở màn này.",
+      error: "Chỉ Bếp Trung Tâm mới được phép tạo lệnh sản xuất.",
     };
   }
 

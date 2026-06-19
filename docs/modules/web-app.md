@@ -126,9 +126,10 @@ apps/web/app/
 │   ├── receiving/          # tenant procurement hub (PO/GRN/invoice), not generic receiving
 │   ├── grn/                # Goods received notes list + [id] detail, GRN confirm wired
 │   ├── transfers/          # Internal transfers list + [id] detail
-│   ├── production/         # Branch production surface — sản xuất tại chi nhánh (production_manager operator; owner deep-link oversight)
+│   ├── production/         # Central kitchen production surface (production_manager operator; owner deep-link oversight)
 │   ├── stocktake/          # Stocktake list + count + [id] detail; new + conflicts + escalate child routes
-│   ├── issues/             # Stock issue list + [id] detail for consumption/writeoff/other; Cấp bếp lives in transfers
+│   ├── consumption/        # Consumption list + [id] detail for approved branch food cost
+│   ├── issues/             # Compatibility stock issue list + [id] detail for consumption/writeoff/other
 │   ├── expiry/             # Expiry tracking
 │   ├── waste/              # Waste flow — auto, new, approvals
 │   ├── reports/            # Inventory reporting with live data
@@ -194,8 +195,8 @@ Inventory không còn dùng sidebar kiểu liệt kê chứng từ phẳng. `inv
 Các nguyên tắc đang được code phản ánh:
 
 - `Receiving` là hub procurement của tenant, không phải hub nhận hàng chung cho chi nhánh
-- `Production` chỉ hiện trên nav cho `production_manager`; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày
-- `Issues` không còn là `Cấp bếp`; branch `Cấp bếp` đi qua intra-branch transfer tại `/inventory/transfers?create=cap-bep`
+- `Production` chỉ là happy path cho `central_kitchen`; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày
+- `Consumption` là actual branch food cost; `/inventory/transfers?create=cap-bep` chỉ còn là compat redirect sang `/inventory/consumption`
 - `Ingredients / Suppliers / Định mức món bán` chỉ còn một cửa vào chính trong `Danh mục`
 
 ### Workflow đã wire thật ở UI

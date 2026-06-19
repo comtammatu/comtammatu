@@ -458,17 +458,17 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `consumption` | tiêu hao | Trừ tồn vì bán hàng, sản xuất, hư hỏng, hoặc sử dụng bếp đã được duyệt. | transfer, PO, hóa đơn NCC |
 | `stocktake` | kiểm kê | Đếm thực tế và điều chỉnh. | kiểm kho nếu cần term chuẩn |
 | `raw_material` | nguyên liệu | Item đầu vào. | vật tư nếu không phải ngữ cảnh rộng |
-| `finished_good` | thành phẩm | Hàng sản xuất tại chi nhánh hoặc giữ tồn để cấp xuống bếp. | món bán nếu đang nói menu |
+| `finished_good` | thành phẩm | Hàng sản xuất tại Bếp Trung Tâm hoặc giữ tồn để cấp về chi nhánh. | món bán nếu đang nói menu |
 | `recipe` | công thức món | Định mức nguyên liệu cho món bán. | BOM nếu không phải production context |
 | `production_recipe` | công thức sản xuất | BOM cho thành phẩm. | recipe khi cần phân biệt |
-| `production_order` | lệnh sản xuất | Lệnh sản xuất tại chi nhánh. | work order |
+| `production_order` | lệnh sản xuất | Lệnh sản xuất tại Bếp Trung Tâm. | work order |
 | `three_way_matching` | đối soát 3 chứng từ | Đối chiếu `PO`, `GRN`, `supplier_invoice`. | matching chung |
 | `weighted_average_cost` | giá vốn bình quân gia quyền (`WAC`) | Costing chuẩn hiện tại. | FIFO nếu hệ thống không dùng |
 
-`Kho CN -> Bếp CN` trong runtime hiện tại là intra-branch `stock_transfer` một
-bước theo `docs/ref/inventory.md`. Khi import hoặc diễn giải dữ liệu lịch sử,
-không được chỉ nhìn tên nguồn rồi kết luận là transfer; phải phân loại theo
-nghĩa vận hành: hàng còn tồn ở bếp, hay thực chất là tiêu hao/food cost.
+`Kho CN -> Bếp CN` trong contract hiện tại là tiêu hao chi nhánh, không phải
+`stock_transfer`. Khi import hoặc diễn giải dữ liệu lịch sử, không được chỉ
+nhìn tên nguồn rồi kết luận là transfer; phải phân loại theo nghĩa vận hành:
+hàng còn tồn ở site nhận, hay thực chất là tiêu hao/food cost.
 
 ### Thanh toán và tiền mặt
 
@@ -747,12 +747,12 @@ viết tắt tiếng Việt chính thức. UI chỉ được dùng một biến 
 
 ### `stock_transfer` vs `stock_issue` vs `consumption`
 
-- `stock_transfer` giữ hàng trong hệ thống tồn kho nhưng đổi location/site.
+- `stock_transfer` giữ hàng trong hệ thống tồn kho nhưng đổi site/location stock-bearing.
 - `stock_issue` là xuất nội bộ khi runtime có chứng từ issue và không còn tồn ở
   location nhận.
 - `consumption` là tiêu hao/giá vốn/hao hụt làm giảm tồn vì sử dụng hoặc bán.
-- `Kho CN -> Bếp CN` hiện là intra-branch `stock_transfer`; nhưng dữ liệu nhập
-  từ nguồn khác phải xét nghĩa vận hành, không xét tên cũ.
+- `Kho CN -> Bếp CN` là tiêu hao chi nhánh trong contract mới; dữ liệu nhập từ
+  nguồn khác phải xét nghĩa vận hành, không xét tên cũ.
 
 ### `order` vs `purchase_order`
 

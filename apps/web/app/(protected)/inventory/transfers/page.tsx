@@ -3,7 +3,6 @@ import { loadAuthState } from "@/_lib/auth";
 import {
   fetchStockTransfers,
   fetchBranchesForTransfer,
-  fetchInventoryLocationsForBranch,
 } from "../transfer-actions";
 import {
   resolveInventoryBranchScope,
@@ -11,7 +10,6 @@ import {
 } from "../_lib/inventory-scope";
 import type {
   BranchForTransfer,
-  InventoryLocation,
   TransferListRow,
 } from "./transfers-list-client";
 import { TransfersListClient } from "./transfers-list-client";
@@ -39,15 +37,12 @@ export default async function TransfersPage({
 
   if (createParam === "cap-bep") {
     const scopeQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
-    redirect(`/inventory/transfers/new${scopeQuery}`);
+    redirect(`/inventory/consumption${scopeQuery}`);
   }
 
-  const [trRes, brRes, locRes] = await Promise.all([
+  const [trRes, brRes] = await Promise.all([
     fetchStockTransfers(branchFilter),
     fetchBranchesForTransfer(),
-    userBranchId != null
-      ? fetchInventoryLocationsForBranch(userBranchId)
-      : Promise.resolve({ success: true as const, data: [] as never[] }),
   ]);
 
   const rows: TransferListRow[] = trRes.success
@@ -56,15 +51,11 @@ export default async function TransfersPage({
   const branches: BranchForTransfer[] = brRes.success
     ? ((brRes.data ?? []) as BranchForTransfer[])
     : [];
-  const locations: InventoryLocation[] = locRes.success
-    ? ((locRes.data ?? []) as InventoryLocation[])
-    : [];
 
   return (
     <TransfersListClient
       initial={rows}
       branches={branches}
-      locations={locations}
       userBranchId={userBranchId}
       userRole={claims.user_role}
       basePath="/inventory/transfers"

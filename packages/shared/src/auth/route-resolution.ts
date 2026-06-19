@@ -23,6 +23,7 @@ export const INVENTORY_PROCUREMENT_PREFIXES = [
 
 export const INVENTORY_ROUTE_PREFIXES = [
   "/inventory/dashboard",
+  "/inventory/consumption",
   "/inventory/drafts",
   "/inventory/expiry",
   "/inventory/grn",

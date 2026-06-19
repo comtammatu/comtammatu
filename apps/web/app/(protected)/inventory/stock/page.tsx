@@ -8,6 +8,7 @@ import {
   resolveInventoryBranchScope,
   resolveRequestedBranchId,
 } from "../_lib/inventory-scope";
+import { fetchStockBearingLocationIds } from "../_lib/stock-bearing-locations";
 import { formatDate } from "../_lib/format";
 import { StockClient } from "./stock-client";
 import type {
@@ -46,6 +47,11 @@ export default async function StockPage({
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
   const branchId = scope.selectedBranchId;
   if (!branchId) redirect("/inventory");
+  const stockBearingLocationIds = await fetchStockBearingLocationIds({
+    supabase,
+    tenantId: claims.tenant_id,
+    branchId,
+  });
 
   // Fetch the stock workbench data in parallel. Extra counts are read-only
   // hints for the compact operations strip.
@@ -65,12 +71,17 @@ export default async function StockPage({
     canAdjustException,
   ] = await Promise.all([
     fetchIngredients(),
-    supabase
-      .from("stock_levels")
-      .select("ingredient_id, current_quantity, avg_unit_cost, last_counted_at")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .order("ingredient_id"),
+    stockBearingLocationIds.length > 0
+      ? supabase
+          .from("stock_levels")
+          .select(
+            "ingredient_id, current_quantity, avg_unit_cost, last_counted_at",
+          )
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", branchId)
+          .in("location_id", stockBearingLocationIds)
+          .order("ingredient_id")
+      : Promise.resolve({ data: [], error: null }),
     fetchExpiryAlerts(branchId),
     supabase
       .from("goods_received_notes")
@@ -130,7 +141,6 @@ export default async function StockPage({
     : [];
 
   const stockRows = stockRes.data ?? [];
-  // Aggregate across locations (warehouse + kitchen) per ingredient.
   const stockMap = new Map<
     number,
     {
@@ -206,10 +216,18 @@ export default async function StockPage({
 
   let totalValue: number | null = null;
   if (canViewTotal) {
-    const { data: tenantRows } = await supabase
-      .from("stock_levels")
-      .select("current_quantity, avg_unit_cost")
-      .eq("tenant_id", claims.tenant_id);
+    const tenantStockBearingLocationIds = await fetchStockBearingLocationIds({
+      supabase,
+      tenantId: claims.tenant_id,
+    });
+    const { data: tenantRows } =
+      tenantStockBearingLocationIds.length > 0
+        ? await supabase
+            .from("stock_levels")
+            .select("current_quantity, avg_unit_cost")
+            .eq("tenant_id", claims.tenant_id)
+            .in("location_id", tenantStockBearingLocationIds)
+        : { data: [] };
     totalValue = (tenantRows ?? []).reduce(
       (sum, r) => sum + (r.current_quantity ?? 0) * (r.avg_unit_cost ?? 0),
       0,

@@ -29,7 +29,6 @@ import {
 import { matchesSearch } from "@lib/search";
 import type {
   BranchForTransfer,
-  InventoryLocation,
 } from "./create-transfer-dialog";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
@@ -37,7 +36,7 @@ import { StatusBadge } from "../_components/status-badge";
 import { messages } from "@lib/messages";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
-export type { BranchForTransfer, InventoryLocation };
+export type { BranchForTransfer };
 
 export interface TransferListRow {
   id: number;
@@ -94,14 +93,12 @@ function classifyTransfer(
 export function TransfersListClient({
   initial,
   branches,
-  locations,
   userBranchId,
   userRole,
   basePath = "/inventory/transfers",
 }: {
   initial: TransferListRow[];
   branches: BranchForTransfer[];
-  locations: InventoryLocation[];
   userBranchId: number | null;
   userRole: StaffRole;
   basePath?: string;
@@ -112,35 +109,21 @@ export function TransfersListClient({
       ? null
       : (branches.find((branch) => branch.id === userBranchId)?.branch_kind ??
         null);
-  const canCreateInternal =
-    userBranchId != null &&
-    userBranchKind === "branch" &&
-    locations.length >= 2;
   const canCreateOutbound =
     !isBranchManager &&
     userBranchId != null &&
-    userBranchKind === "branch" &&
+    (userBranchKind === "branch" ||
+      userBranchKind === "central_supply" ||
+      userBranchKind === "central_kitchen") &&
     branches.length >= 2;
-  const canCreate = isBranchManager
-    ? canCreateInternal
-    : canCreateOutbound || canCreateInternal;
+  const canCreate = canCreateOutbound;
   const rows = initial;
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("receive");
 
-  const createLabel = isBranchManager
-    ? copy.createKitchenShort
-    : copy.createSlip;
-  const pageTitle = isBranchManager
-    ? copy.receiveKitchenTitle
-    : copy.internalTransferTitle;
-  const tabLabels: Record<Tab, string> = isBranchManager
-    ? {
-        receive: copy.list.tabs.receive,
-        dispatch: copy.list.tabs.kitchen,
-        history: copy.list.tabs.history,
-      }
-    : TAB_LABELS;
+  const createLabel = copy.createSlip;
+  const pageTitle = copy.internalTransferTitle;
+  const tabLabels: Record<Tab, string> = TAB_LABELS;
   const createHref =
     userBranchId == null
       ? `${basePath}/new`

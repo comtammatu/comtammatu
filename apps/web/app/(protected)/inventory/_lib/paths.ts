@@ -14,6 +14,7 @@ export type InventoryPaths = {
   expiry: string;
   reports: string;
   production: string;
+  consumption: string;
   issues: string;
   suppliers: string;
   recipes: string;
@@ -40,6 +41,7 @@ export function getInventoryPaths(base: InventoryRouteBase): InventoryPaths {
     expiry: joinInventoryPath(base, "/expiry"),
     reports: joinInventoryPath(base, "/reports"),
     production: joinInventoryPath(base, "/production"),
+    consumption: joinInventoryPath(base, "/consumption"),
     issues: joinInventoryPath(base, "/issues"),
     suppliers: joinInventoryPath(base, "/suppliers"),
     recipes: joinInventoryPath(base, "/recipes"),

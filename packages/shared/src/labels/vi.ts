@@ -1,4 +1,4 @@
-export type SiteKind = "branch";
+export type SiteKind = "branch" | "central_supply" | "central_kitchen";
 
 export type ModuleLabelKey =
   | "dashboard"
@@ -82,10 +82,14 @@ export const APP_COPY_VI = {
 
 const SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
   branch: "Chi nhánh",
+  central_supply: "Kho Tổng",
+  central_kitchen: "Bếp Trung Tâm",
 };
 
 const INVENTORY_SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
   branch: "Kho chi nhánh",
+  central_supply: "Kho Tổng",
+  central_kitchen: "Bếp Trung Tâm",
 };
 
 export const ACTIVE_STATE_LABELS_VI = {
@@ -118,18 +122,21 @@ export const PAYROLL_PERIOD_STATUS_LABELS_VI = {
 } as const;
 
 export function resolveSiteKind(site: SiteLike): SiteKind {
-  void site;
+  if (
+    site.branch_kind === "central_supply" ||
+    site.branch_kind === "central_kitchen"
+  ) {
+    return site.branch_kind;
+  }
   return "branch";
 }
 
 export function getSiteKindLabelVi(siteKind: string): string {
-  void siteKind;
-  return SITE_KIND_LABELS_VI.branch;
+  return SITE_KIND_LABELS_VI[siteKind as SiteKind] ?? SITE_KIND_LABELS_VI.branch;
 }
 
 export function getInventorySiteKindLabelVi(siteKind: string): string {
-  void siteKind;
-  return INVENTORY_SITE_KIND_LABELS_VI.branch;
+  return INVENTORY_SITE_KIND_LABELS_VI[siteKind as SiteKind] ?? siteKind;
 }
 
 export function getModuleLabelVi(moduleKey: string): string {

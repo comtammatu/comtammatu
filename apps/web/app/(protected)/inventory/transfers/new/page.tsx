@@ -7,7 +7,6 @@ import { messages } from "@lib/messages";
 import { fetchIngredients } from "../../ingredient-actions";
 import {
   fetchBranchesForTransfer,
-  fetchInventoryLocationsForBranch,
 } from "../../transfer-actions";
 import {
   resolveInventoryBranchScope,
@@ -17,7 +16,6 @@ import type { IngredientRow } from "../../page";
 import {
   CreateTransferForm,
   type BranchForTransfer,
-  type InventoryLocation,
 } from "../create-transfer-dialog";
 
 function withBranchQuery(path: string, branchId: number | null) {
@@ -37,12 +35,9 @@ export default async function NewTransferPage({
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
   const userBranchId = scope.selectedBranchId;
 
-  const [brRes, ingRes, locRes] = await Promise.all([
+  const [brRes, ingRes] = await Promise.all([
     fetchBranchesForTransfer(),
     fetchIngredients(),
-    userBranchId != null
-      ? fetchInventoryLocationsForBranch(userBranchId)
-      : Promise.resolve({ success: true as const, data: [] as never[] }),
   ]);
 
   const branches: BranchForTransfer[] = brRes.success
@@ -51,13 +46,7 @@ export default async function NewTransferPage({
   const ingredients: IngredientRow[] = ingRes.success
     ? ((ingRes.data ?? []) as IngredientRow[])
     : [];
-  const locations: InventoryLocation[] = locRes.success
-    ? ((locRes.data ?? []) as InventoryLocation[])
-    : [];
-  const title =
-    claims.user_role === "branch_manager"
-      ? messages.inventory.transfer.createKitchenTitle
-      : messages.inventory.transfer.createTransferTitle;
+  const title = messages.inventory.transfer.createTransferTitle;
 
   return (
     <DocumentFormShell
@@ -66,7 +55,7 @@ export default async function NewTransferPage({
         <AppPageHeader
           eyebrow={messages.inventory.shell.moduleName}
           title={title}
-          description={messages.inventory.transfer.internalDescription}
+          description={messages.inventory.transfer.transferDescription}
           actions={
             <Button variant="outline" size="sm" asChild>
               <Link href={withBranchQuery("/inventory/transfers", userBranchId)}>
@@ -81,7 +70,6 @@ export default async function NewTransferPage({
       <CreateTransferForm
         branches={branches}
         ingredients={ingredients}
-        locations={locations}
         userBranchId={userBranchId}
         userRole={claims.user_role}
       />

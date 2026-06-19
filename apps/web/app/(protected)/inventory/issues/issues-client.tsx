@@ -165,7 +165,7 @@ export function IssuesClient({
 
     if (res.success && res.data) {
       const newId = (res.data as { id: number }).id;
-      router.push(`/inventory/issues/${newId}`);
+      router.push(`/inventory/consumption/${newId}`);
     }
 
     return res;
@@ -282,7 +282,7 @@ export function IssuesClient({
       header: "Mã phiếu",
       render: (item) => (
         <Link
-          href={`/inventory/issues/${item.id}`}
+          href={`/inventory/consumption/${item.id}`}
           className="text-sm font-semibold text-primary hover:underline"
         >
           {item.code}
@@ -323,7 +323,7 @@ export function IssuesClient({
       className: "w-10",
       render: (item) => (
         <Button variant="ghost" size="icon-sm" asChild>
-          <Link href={`/inventory/issues/${item.id}`}>
+          <Link href={`/inventory/consumption/${item.id}`}>
             <IconDotsVertical className="size-4" />
           </Link>
         </Button>
@@ -333,7 +333,7 @@ export function IssuesClient({
 
   const renderIssueCard = (item: IssueRow) => (
     <InteractiveCard asChild minHeight="mobile" padding="default">
-      <Link href={`/inventory/issues/${item.id}`} className="block">
+      <Link href={`/inventory/consumption/${item.id}`} className="block">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="font-mono text-sm font-semibold">{item.code}</span>
@@ -355,7 +355,7 @@ export function IssuesClient({
     <AppPage width="wide">
       <AppPageHeader
         eyebrow="Kho hàng"
-        title={tNav("issues", "navigation")}
+        title={tNav("consumption", "navigation")}
         actions={
           <>
             {showExportAction && (
@@ -370,7 +370,7 @@ export function IssuesClient({
             )}
             <Button type="button" onClick={() => setCreateOpen(true)}>
               <IconPlus className="size-4" />
-              Tạo phiếu xuất kho
+              Tạo phiếu
             </Button>
           </>
         }
@@ -394,7 +394,7 @@ export function IssuesClient({
       <FormDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        title="Tạo phiếu xuất kho"
+        title="Tạo phiếu"
         description={CREATE_ISSUE_DIALOG_DESCRIPTION}
         schema={createIssueSchema}
         defaultValues={createIssueDefaultValues}

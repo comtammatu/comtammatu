@@ -8257,10 +8257,6 @@ export type Database = {
       }
       cancel_production_order: { Args: { p_order_id: number }; Returns: Json }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
-      claim_print_job: {
-        Args: { p_agent_id: string; p_job_id: number }
-        Returns: boolean
-      }
       claim_notification_push_delivery: {
         Args: {
           p_max_attempts?: number
@@ -8269,6 +8265,10 @@ export type Database = {
           p_subscription_id: number
         }
         Returns: Json
+      }
+      claim_print_job: {
+        Args: { p_agent_id: string; p_job_id: number }
+        Returns: boolean
       }
       cleanup_abandoned_payments: {
         Args: { p_threshold?: string }

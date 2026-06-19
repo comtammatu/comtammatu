@@ -8,7 +8,7 @@
 --   - Tenant slug `comtammatu`; seed tenant có "Chi nhánh Đất Đỏ",
 --     "Chi nhánh Phước Hải" (migration 20260401000002_seed_tenant.sql).
 --
--- Step 0: normalize seeded branch records to the branch-only model.
+-- Step 0: normalize seeded operating branch records without touching central sites.
 --
 -- Tài khoản QA được seed (password: Test1234!):
 --   • owner@comtammatu.vn              – owner (tenant-level, pinned to a dev branch)
@@ -34,7 +34,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 BEGIN;
 
--- ─── 0) Đồng bộ branch_kind theo mô hình branch-only ───
+-- ─── 0) Đồng bộ branch_kind cho các chi nhánh vận hành trong seed ───
 DO $$
 DECLARE
   v_tenant BIGINT;
@@ -48,6 +48,7 @@ BEGIN
   SET branch_kind = 'branch',
       updated_at = now()
   WHERE tenant_id = v_tenant
+    AND name IN ('Chi nhánh Đất Đỏ', 'Chi nhánh Phước Hải')
     AND branch_kind IS DISTINCT FROM 'branch';
 END;
 $$;

@@ -104,7 +104,7 @@ export const createStockIssueDraft = withAction(
       "issue",
     );
 
-    // kitchen_use is not a valid stock-issue reason; use intra-branch stock_transfer.
+    // kitchen_use is not a valid stock-issue reason; sale usage posts as consumption.
     // target_location_id is always NULL for single-site issues.
     const { data, error } = await supabase
       .from("stock_issues")
