@@ -1,6 +1,7 @@
 "use client";
 
 import { formatVND } from "@comtammatu/shared/format";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
   BrandLockup,
@@ -15,17 +16,6 @@ import type { OrderData } from "./bill-receipt-types";
 
 interface BillReceiptSummaryProps {
   order: OrderData;
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleString("vi-VN", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
@@ -89,7 +79,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
         </div>
         <div className="flex justify-between">
           <span>{messages.pos.receipt.date}</span>
-          <span>{formatDate(order.created_at)}</span>
+          <span>{formatVNDateTime(order.created_at)}</span>
         </div>
         <div className="flex justify-between">
           <span>{messages.pos.receipt.orderType}</span>

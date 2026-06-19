@@ -27,6 +27,7 @@ import { MobileSectionHeader } from "../_components/mobile/mobile-section-header
 import { discardGrnDraft } from "../grn-actions";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 
 export type ServerDraftRow = {
   grnId: number;
@@ -38,10 +39,7 @@ export type ServerDraftRow = {
 };
 
 function formatUpdatedAt(value: string): string {
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return formatVNDateTime(value);
 }
 
 export function MobileDraftsClient({ drafts }: { drafts: ServerDraftRow[] }) {

@@ -12,6 +12,7 @@ import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
+import { getVNDateString } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 
@@ -37,9 +38,7 @@ export async function setCashOpening(
     };
   }
 
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Ho_Chi_Minh",
-  }).format(new Date());
+  const today = getVNDateString();
   if (parsed.data.date > today) {
     return { success: false, error: "Ngày tồn quỹ không thể ở tương lai." };
   }

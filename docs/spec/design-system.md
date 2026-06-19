@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.7.0 | Updated: 2026-06-11 | Status: locked single source for UI agents
+> Version: 14.7.1 | Updated: 2026-06-19 | Status: locked single source for UI agents
 
 ## Single Source Decision
 
@@ -309,7 +309,7 @@ Arbitrary `duration-[…]` is NOT allowed in app code.
 
 **Press feedback.** `active:scale-[…]` (≥ `0.97`) is allowed on tap targets for tactile press feedback. `hover:scale-*` grow/shrink on hover is forbidden on ERP surfaces — it reads as decorative.
 
-**Reduced motion (locked).** Any looping or attention-drawing animation (`animate-pulse` on non-skeleton elements, `animate-bounce`, urgency/age pulses, kinetic idle visuals) MUST be gated with `motion-safe:` (or a `prefers-reduced-motion` check) so it stops when the OS requests reduced motion. One-shot Radix enter/exit (`animate-in` / `animate-out`) and the loading `Spinner` are exempt — they are brief and non-looping. Prefer `motion-safe:` on the animated class over `motion-reduce:animate-none` on the static one.
+**Reduced motion (locked).** A global `@media (prefers-reduced-motion: reduce)` reset in `packages/ui/src/styles/globals.css` neutralizes all animation and transition app-wide when the OS requests reduced motion — including one-shot Radix enter/exit (`animate-in` / `animate-out`), the loading `Spinner`, and `tw-animate-css` `data-state` animations. No animation is exempt at runtime; the reset is the backstop. Looping or attention-drawing animation (`animate-pulse` on non-skeleton elements, `animate-bounce`, urgency/age pulses, kinetic idle visuals) MUST still also be gated with `motion-safe:` as defense-in-depth and intent signalling. Prefer `motion-safe:` on the animated class over `motion-reduce:animate-none` on the static one.
 
 **Forbidden:**
 
@@ -428,6 +428,8 @@ Money, quantity, unit-price, tax-rate, ID/code, and timestamp cells render with 
 | Right-aligned non-numeric label | `text-right` (no `tabular-nums`)                |
 
 Money values render through `formatVND` from `@comtammatu/shared/format` (single style `45.000đ`); page-local VND formatters and raw `toLocaleString("vi-VN")` money calls are ratcheted by `vnd-format-ssot`. `font-mono` is mandatory on any numeric cell that participates in vertical column comparison (the Typography Contract applied to table bodies). A money/quantity cell written as `text-right tabular-nums` WITHOUT `font-mono` is contract drift — JetBrains Mono is the locked operational-data face, not Inter. These classes go on `TableCell` / `TableHead`, never on a page-specific Table clone; a shared numeric-cell wrapper is allowed only if it renders the shared `Table` primitive and emits exactly this class set. Forbidden: `text-left` money columns, numeric columns missing `tabular-nums`, money/quantity cells missing `font-mono`.
+
+Date and time values render through `@comtammatu/shared/time` (`formatVNDate`, `formatVNDateTime`, `formatVNTime`, `getVNDateString`, …), which pin `Asia/Ho_Chi_Minh` so server-rendered receipts and reports never drift to the host zone. Page-local `Intl.DateTimeFormat` / `toLocaleDateString` / `toLocaleTimeString` in app code are ratcheted by `date-format-ssot`. The `packages/ui` calendar/chart primitives are locale-param-driven UI and stay out of scope.
 
 Allowed app wrappers:
 

@@ -471,3 +471,20 @@
     max-width: none !important;
   }
 }
+
+/* Reduced motion: when the OS requests reduced motion, neutralize all
+ * animation and transition app-wide — including one-shot Radix enter/exit
+ * (dialog/sheet/drawer) and tw-animate-css data-state animations, which the
+ * motion-safe: opt-in does not cover. WCAG 2.2 2.3.3. This is the backstop;
+ * looping/attention motion should still also carry motion-safe: per the
+ * design-system Motion Contract. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
