@@ -20,6 +20,7 @@ Before implementation, read the applicable rule files:
 - Read `docs/agent/rules/ui.md` before any UI, UX, route surface, component, styling, or copy change.
 - Read `docs/agent/rules/workflow.md` for review-tier rules (T3 full debate / T2 self-review / T1 skip), verification, and completion gates.
 - Read `docs/agent/rules/team.md` for the standing operating-team roles and missions, the end-to-end task loop, and the cross-runtime (Codex) review pass.
+- Read `docs/agent/rules/notifications.md` before adding any notification, alert, anomaly detector, or scheduled report (the producer / dedup / routing contract).
 - Read `docs/agent/rules/references.md` when onboarding or choosing the source-of-truth docs for a task.
 
 Instruction memory and learning memory stay separate:
