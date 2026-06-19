@@ -71,6 +71,7 @@ supabase/.branches/
 
 # Local agent lockfiles / caches
 skills-lock.json
+engineering-os/
 
 # IDE
 .vscode/
