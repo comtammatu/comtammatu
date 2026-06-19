@@ -129,33 +129,33 @@ Brand Concept 01 runtime mapping:
 - `ring` / chart accent: vang gao.
 - `success`: xanh la diu.
 - `muted-foreground` / supporting tone: nau go or xam am depending on theme.
-- Heading font: Montserrat.
-- Body font: Inter.
-- Mono font: JetBrains Mono for tabular operational data.
+- Heading font: Geist.
+- Body font: Geist.
+- Mono font: Geist Mono for tabular operational data.
 
 ## Typography Contract
 
 Runtime typography source:
 
-- `apps/web/app/layout.tsx` loads `Inter`, `Montserrat`, and `JetBrains_Mono` through `next/font/google`.
+- `apps/web/app/layout.tsx` loads `GeistSans` and `GeistMono` through the `geist` package (next/font/local under the hood; full Vietnamese glyph coverage, self-hosted, offline). Geist Sans serves both body and headings (single-family roster).
 - `packages/ui/src/styles/globals.css` maps those font variables into Tailwind utilities.
 
 Required utility mapping:
 
-| Purpose           | Utility / variable                | Font           |
-| ----------------- | --------------------------------- | -------------- |
-| body/content text | `font-sans` / `--font-sans`       | Inter          |
-| headings/titles   | `font-heading` / `--font-heading` | Montserrat     |
-| operational data  | `font-mono` / `--font-mono`       | JetBrains Mono |
+| Purpose           | Utility / variable                | Font       |
+| ----------------- | --------------------------------- | ---------- |
+| body/content text | `font-sans` / `--font-sans`       | Geist      |
+| headings/titles   | `font-heading` / `--font-heading` | Geist      |
+| operational data  | `font-mono` / `--font-mono`       | Geist Mono |
 
 Rules:
 
-- `--font-heading-runtime` is an internal `next/font` bridge in `apps/web/app/layout.tsx`; app code consumes only `font-heading` / `--font-heading`.
+- The `geist` package exposes `--font-geist-sans` / `--font-geist-mono`; `globals.css` binds `--font-sans` + `--font-heading` to `--font-geist-sans` and `--font-mono` to `--font-geist-mono`. App code consumes only `font-sans` / `font-heading` / `font-mono`.
 - Route/page headings, card titles, dialog titles, sheet titles, section titles, and brand lockup text use `font-heading` unless a shadcn primitive already applies it.
 - Body text, controls, labels, descriptions, table text, and workflow copy inherit `font-sans`.
 - Use `font-mono` only for tabular operational data, IDs, codes, receipt/order numbers, prices, quantities, timestamps, and audit hashes.
-- Do not add route-specific `font-family`, custom font variables, or extra Google font families.
-- Do not reintroduce `Be Vietnam Pro`, Geist, system-only stacks, custom font variables, or per-surface typography exceptions unless the design-system contract is explicitly changed first.
+- Do not add route-specific `font-family`, custom font variables, or extra font families.
+- Do not reintroduce `Be Vietnam Pro`, `Inter`, `Montserrat`, `JetBrains Mono`, system-only stacks, custom font variables, or per-surface typography exceptions unless the design-system contract is explicitly changed first. The roster is Geist (sans — body + headings) + Geist Mono (data) only.
 - When changing typography runtime, update `apps/web/app/layout.tsx`, `packages/ui/src/styles/globals.css`, this contract, `docs/modules/ui.md`, `docs/agent/rules/ui.md`, and `tasks/regressions.md`.
 
 Rules:
@@ -261,7 +261,7 @@ Eyebrow tracking is locked per surface: `tracking-wide` for the single page-head
 
 Fixed heights `h-10`, `h-11`, `h-12`, `h-14`, `h-16` MUST NOT be applied to `<button>`, `<Link>`, or `<Button>` acting as a button. Min-heights `min-h-12`, `min-h-14`, `min-h-16` MUST come from the `touch` / `touch-lg` variants — do not override on a different variant via `className`. Touch CTAs use `min-h-` rather than fixed `h-` so wrapped labels grow vertically without clipping.
 
-If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove targets), add a variant to `Button` cva once. Never fake a button by setting `<button className="min-h-12 ...">` outside the primitive. The `tile` (POS table-gate selectable tile) and `icon-touch` (48px icon-only) `Button` sizes, and the `touch` / `touch-lg` sizes on the `Toggle` / `ToggleGroup` cva (POS segmented service-mode control), were added under this rule — consume them via `size=`, never a raw `h-*` / `min-h-*` on the group or item `className`. The `button-height-on-button` gate (below) enforces this for `<Button>`.
+If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove targets), add a variant to `Button` cva once. Never fake a button by setting `<button className="min-h-12 ...">` outside the primitive. The `tile` (POS table-gate selectable tile) and `icon-touch` (48px icon-only) `Button` sizes, and the `touch` / `touch-lg` sizes on the `Toggle` / `ToggleGroup` cva (POS segmented service-mode control), were added under this rule — consume them via `size=`, never a raw `h-*` / `min-h-*` on the group or item `className`. The `button-height-on-button` gate (below) enforces this for `<Button>`. The bare form-control primitives `Select` (trigger), `Switch`, `Checkbox`, and `RadioGroupItem` expose a `touch` value on their own cva `size` prop (`min-h-12` trigger / enlarged 20px box + ≥44px hit area), added under this same rule for POS/KDS order-flow controls — consume via `size="touch"`, never a raw `h-*` / `size-*` on the control `className`.
 
 `Input` (the bare primitive) is fixed at `h-7`. Composite form controls rendered through the `apps/web/app/components/form/*` layer use a taller `h-10` so labels, addons, and touch targets sit comfortably — set once in that layer, never per page.
 
@@ -427,7 +427,7 @@ Money, quantity, unit-price, tax-rate, ID/code, and timestamp cells render with 
 | ID / code / order / receipt no. | `font-mono tabular-nums` (left-aligned allowed) |
 | Right-aligned non-numeric label | `text-right` (no `tabular-nums`)                |
 
-Money values render through `formatVND` from `@comtammatu/shared/format` (single style `45.000đ`); page-local VND formatters and raw `toLocaleString("vi-VN")` money calls are ratcheted by `vnd-format-ssot`. `font-mono` is mandatory on any numeric cell that participates in vertical column comparison (the Typography Contract applied to table bodies). A money/quantity cell written as `text-right tabular-nums` WITHOUT `font-mono` is contract drift — JetBrains Mono is the locked operational-data face, not Inter. These classes go on `TableCell` / `TableHead`, never on a page-specific Table clone; a shared numeric-cell wrapper is allowed only if it renders the shared `Table` primitive and emits exactly this class set. Forbidden: `text-left` money columns, numeric columns missing `tabular-nums`, money/quantity cells missing `font-mono`.
+Money values render through `formatVND` from `@comtammatu/shared/format` (single style `45.000đ`); page-local VND formatters and raw `toLocaleString("vi-VN")` money calls are ratcheted by `vnd-format-ssot`. `font-mono` is mandatory on any numeric cell that participates in vertical column comparison (the Typography Contract applied to table bodies). A money/quantity cell written as `text-right tabular-nums` WITHOUT `font-mono` is contract drift — Geist Mono is the locked operational-data face, not Geist sans. These classes go on `TableCell` / `TableHead`, never on a page-specific Table clone; a shared numeric-cell wrapper is allowed only if it renders the shared `Table` primitive and emits exactly this class set. Forbidden: `text-left` money columns, numeric columns missing `tabular-nums`, money/quantity cells missing `font-mono`.
 
 Date and time values render through `@comtammatu/shared/time` (`formatVNDate`, `formatVNDateTime`, `formatVNTime`, `getVNDateString`, …), which pin `Asia/Ho_Chi_Minh` so server-rendered receipts and reports never drift to the host zone. Page-local `Intl.DateTimeFormat` / `toLocaleDateString` / `toLocaleTimeString` in app code are ratcheted by `date-format-ssot`. The `packages/ui` calendar/chart primitives are locale-param-driven UI and stay out of scope.
 

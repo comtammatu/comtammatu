@@ -86,6 +86,7 @@ codex-*.log
 codex-*.err.log
 
 # local screenshots (manual QA)
+output/
 pos-after*.png
 
 # vercel

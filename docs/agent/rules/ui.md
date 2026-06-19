@@ -60,10 +60,10 @@ External references:
 
 ## Typography Rules
 
-- Ma Tu Concept 01 typography is fixed: Inter for body/content, Montserrat for headings/titles, and JetBrains Mono for tabular operational data.
-- Runtime source is `apps/web/app/layout.tsx` plus `packages/ui/src/styles/globals.css`; use `font-sans`, `font-heading`, and `font-mono` instead of raw `font-family`.
-- NEVER add route-specific fonts, per-surface font variables, extra Google font families, or hardcoded fallback stacks.
-- NEVER reintroduce `Be Vietnam Pro`, Geist, system-only typography, route-specific font variables, or `font-heading → font-sans` unless the design-system contract is explicitly changed first.
+- Ma Tu Concept 01 typography is fixed: Geist for body/content and headings/titles, and Geist Mono for tabular operational data (D037 reverses D032).
+- Runtime source is `apps/web/app/layout.tsx` (the `geist` package) plus `packages/ui/src/styles/globals.css`; use `font-sans`, `font-heading`, and `font-mono` instead of raw `font-family`.
+- NEVER add route-specific fonts, per-surface font variables, extra font families, or hardcoded fallback stacks.
+- NEVER reintroduce `Be Vietnam Pro`, `Inter`, `Montserrat`, `JetBrains Mono`, system-only typography, or route-specific font variables unless the design-system contract is explicitly changed first.
 - When changing typography, update `docs/spec/design-system.md`, `docs/modules/ui.md`, `tasks/regressions.md`, and runtime artifacts in the same change.
 
 ## Operational UI Philosophy

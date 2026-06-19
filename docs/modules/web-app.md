@@ -43,7 +43,7 @@ should not step through every filter tweak.
 
 ```
 apps/web/app/
-├── layout.tsx              # Root: HTML, fonts (Inter/Montserrat/JetBrains Mono), metadata
+├── layout.tsx              # Root: HTML, fonts (Geist / Geist Mono via geist pkg), metadata
 ├── page.tsx                # / → shared role default redirect
 ├── globals.css             # Tailwind 4.2 base styles
 │

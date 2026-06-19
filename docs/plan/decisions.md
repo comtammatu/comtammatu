@@ -704,3 +704,213 @@ Doanh thu năm = **ước lượng từ dữ liệu** (HĐ issued / paid revenue
 **Quan hệ với D024:** D024 (trợ lý Telegram = **mặt tiền CHAT** tương tác, DRAFT) khác phần này (**Telegram OUTBOUND alerting** — dispatcher đẩy notification vào topic). Bổ trợ, không trùng: alerting outbound ship trước; chat-front-end (đọc lệnh, ack/snooze) là việc sau, off-scope S0–S7.
 
 **Consequences / phasing:** S0 spine+shadow (wedge) → S1 Web Push live + severity gate + retune trigger → S2 Telegram dark → S3 Telegram live + rate-valve + void-after-pay → S4 Đóng ngày → S5 mua hàng/kho/tài chính → S6 POS tail+HR+tuần → S7+ migration batch + LLM digest. Critical path S0→S2→S3→S4; S1 ∥ S2. Tài liệu này (D036) + `notifications.md` + `agentic-os-blueprint.md` là of-record; mọi producer/agent code theo đó.
+
+## D036: Import `m-tu-design-system` bundle — eval gate + touch tier cho form control (2026-06-20)
+
+**Context:** Owner đưa bundle `m-t-design-system` (export từ Claude Design, **derive ra từ chính repo này**). Chạy dynamic workflow diff (49 agent, adversarial-verify từng delta) bundle ⟷ codebase. Kết luận: ~85% circular — token/brand asset/3 logo/mascot/pattern/5 symbol **md5-identical** với `apps/web/public/brand` + `brand-glyph.tsx`; palette lệch ΔE<0.018 (chỉ hex-vs-OKLCH); cả 4 template (admin shell, POS, list, edit) tả màn hình app **đã ship**. Không màn hình mới, không token mới.
+
+**Decisions (owner 2026-06-20):**
+1. **Touch tier form control — THÊM (gated):** thêm value `touch` vào `size` cva của `Select`(trigger)/`Switch`/`Checkbox`/`RadioGroupItem` (`packages/ui/src/components/{select,switch,checkbox,radio-group}.tsx`), theo đúng precedent spec §"Button is the single source of truth for button height" (Toggle/ToggleGroup đã thêm touch cùng rule). `min-h-12` cho trigger, box 20px + hit-area ≥44px cho check/radio. Consumer **opt-in** qua `size="touch"` — POS order-flow đã dùng các control này (`pos/item-customizer.tsx` Checkbox, `pos/_components/order-detail/merge-orders-sheet.tsx` Radio, `.../transfer-table-dialog.tsx` Select, `kds/.../filter-bar.tsx` Select). Spec §Button-height cập nhật cùng đợt liệt kê 4 control này.
+2. **bo-slide deck → standalone:** deck 16:9 thương hiệu KHÔNG vào route surface của app (không dựng report-export capability trong product). Giữ là asset bundle độc lập.
+3. **Glossary casing → vi.ts authoritative:** `packages/shared/src/labels/vi.ts` TitleCase ("Bếp Trung Tâm") là label SSoT (feeds runtime + test pin) — KHÔNG đổi. Bundle phải mirror TitleCase đã ship, không fork sang sentence-case.
+4. **Font Geist → REJECT** *(→ ĐẢO NGƯỢC bởi D037 cùng ngày: owner chốt dùng Geist theo Design System)*: tại thời điểm gate này bundle ép Geist/Geist Mono = fork ngược typography đã khóa (D032 + spec v14.7.1 mandate Inter/Montserrat/JetBrains). Owner sau đó đảo quyết định — xem D037.
+
+**Không làm (out of scope phiên này):** các net-new prop khác bundle quảng cáo (`Button rice`, `Avatar` fill/status/active, `Progress` size/label/showValue/indeterminate, `Textarea showCount`) **chưa được duyệt** — đụng contract khóa (ac899cff), để governance riêng nếu có nhu cầu thật (`Progress` là cái giá trị nhất vì app đang hand-roll). Reconcile docs bên trong bundle (Geist→fonts khóa, version v14.3.0→v14.7.1, 4 hue lệch `--tier-note`/`--muted-foreground`/`--tier-elite`, hạ self-claim "SSoT"→"mirror", guard date-SSoT cho Money/DateText mock) = housekeeping ở folder bundle ngoài repo, không phải app code.
+
+**Gate:** `node scripts/check-ui-contract.mjs` + `pnpm --filter @comtammatu/ui typecheck` + lint. Default render của 4 control **không đổi** (size="default" giữ nguyên class cũ) → không regression consumer hiện hữu.
+
+## D037: Đảo ngược D032 — chuyển typography sang Geist theo Má Tư Design System (2026-06-20)
+
+**Decision (owner 2026-06-20):** Đảo ngược **D032** (và supersede D036 mục 4 "Geist → REJECT" cùng ngày). App-UI typography chuyển sang roster của Design System: **Geist** cho cả body + heading (single-family), **Geist Mono** cho dữ liệu (tiền, mã, ngày giờ, số đơn). Bỏ Inter/Montserrat/JetBrains Mono khỏi runtime UI. Print pipeline (`packages/print-render`, RobotoMono bitmap nhiệt) KHÔNG đụng — pipeline riêng, pixel-locked.
+
+**Cơ chế load (verify vs code, không đoán):** `next/font/google` Geist/Geist Mono **chỉ có subset cyrillic/latin/latin-ext, KHÔNG có `vietnamese`** (Inter/JetBrains thì có) → app tiếng Việt sẽ vỡ glyph dấu. Vì vậy dùng **`geist` package** (Vercel official, next/font/local, full glyph tiếng Việt, self-hosted/offline) — khớp luôn ý đồ "local variable font, no Google Fonts dependency" của bundle. Package expose `--font-geist-sans` / `--font-geist-mono`; `globals.css` bind `--font-sans`+`--font-heading` → `--font-geist-sans`, `--font-mono` → `--font-geist-mono`. **App code không đổi** (vẫn `font-sans`/`font-heading`/`font-mono`).
+
+**Files (đồng bộ theo spec §Typography Contract "When changing typography runtime"):** `apps/web/package.json` (+`geist`), `apps/web/app/layout.tsx`, `packages/ui/src/styles/globals.css`, `docs/spec/design-system.md`, `docs/agent/rules/ui.md`, `docs/modules/web-app.md`, `tasks/regressions.md` (PRESET Zone C). Spec forbid-list lật: giờ cấm tái nhập Inter/Montserrat/JetBrains/Be Vietnam Pro thay vì cấm Geist.
+
+**Gate:** `lint:ui-contract` + `typecheck` + `lint` + build web (next/font resolve).
+
+## D038: HĐĐT realtime instant-issue khi provider trả mã CQT đồng bộ (2026-06-20)
+
+**Context:** `createInvoice` (luồng POS per-order realtime) trước đây luôn trả
+status `submitted` khi có `invoiceNo`, KỂ CẢ khi Viettel trả `codeOfTax` (Mã của
+cơ quan thuế) ngay trong response. Với HĐ bán hàng từ MTT (mẫu `2/...`, mặc định
+F&B Má Tư) mã CQT cấp đồng bộ ⇒ hóa đơn đã phát hành hợp pháp ngay, nhưng app
+hiển thị `submitted` tới khi reconcile cron promote (≤15') và archive PDF cũng
+chờ tới đó. `createBatchInvoice` (viettel-sinvoice.ts) và `getStatus` đã coi
+`codeOfTax` có mặt = `issued`; chỉ `createInvoice` lệch.
+
+**Decision (T3 — debate PM/BA/Dev/QA đã chạy, 4/4 ship-with-conditions):** trong
+`createInvoice`, khi có CẢ `invoiceNo` LẪN `codeOfTax` non-empty (đã trim) → trả
+`issued` (mirror batch + getStatus). `codeOfTax` rỗng/whitespace nhưng có
+`invoiceNo` → `submitted`; không `invoiceNo` → `signing`. HĐ GTGT mẫu `1/...` (mã
+async) KHÔNG đổi hành vi (chưa có codeOfTax ⇒ submitted → reconcile cron).
+
+**Đã làm (2026-06-20):**
+- `viettel-sinvoice.ts createInvoice`: guard strict non-empty `codeOfTax` → status
+  `issued`/`submitted`/`signing`.
+- `finance/actions.ts createTaxInvoice`: capture `result.codeOfTax` → ghi cột
+  `tax_invoices.cqt_code` (cột first-class trước đây CHẾT — không path nào ghi;
+  giờ quyết định issued dựa trên codeOfTax nên persist luôn). Caller đã set
+  `issued_at`/`signing_started_at` cho `issued` từ trước → archive cron nhặt sớm
+  hơn, reconcile cron bỏ qua (`status IN (signing,submitted)`).
+- Test provider: thêm ma trận codeOfTax (non-empty→issued, ''→submitted,
+  whitespace→submitted, no-invoiceNo→signing). 245/245 pass.
+- **KHÔNG migration** (state machine đã cho `signing/submitted → issued`; INSERT
+  trực tiếp đặt status ban đầu, không qua RPC — hành vi sẵn có).
+
+**Trade đã chốt trong scope này (conservative):** realtime direct-INSERT KHÔNG ghi
+`tax_invoice_events` (đúng như hành vi cũ cho submitted/signing) — instant-issue
+mở rộng điều đó sang `issued`. Issuance vẫn được audit qua `audit_logs` +
+`provider_data.codeOfTax` + cột `cqt_code`. Đã sửa invariant doc cho khớp (xem
+einvoice-tax.md §3.3).
+
+**Open (chờ owner sign-off):**
+- (a) Có muốn ghi 1 row `tax_invoice_events` cho thời điểm phát hành realtime
+  không (cần RPC riêng vì `authenticated` không INSERT thẳng được) — hay chấp
+  nhận `audit_logs`-only cho row instant-issue? Hiện chọn audit_logs-only.
+- (b) Instant-issue rút mẫu-2 khỏi pool reconcile re-poll ⇒ create-response
+  `codeOfTax` thành nguồn issuance duy nhất (không còn lưới an toàn 15' đối soát
+  lại CQT). Cùng rủi ro batch path đã chấp nhận.
+- (c) mẫu-1 mà có codeOfTax đồng bộ (hiếm) cũng sẽ instant-issue — debate cho là
+  đúng (codeOfTax = CQT chấp nhận); xác nhận owner.
+- (d) Owner smoke trên Viettel sandbox (acct `0100109106-509`, template `2/001`):
+  xác nhận mẫu-2 trả codeOfTax đồng bộ và archive bucket nhận PDF ở tick kế.
+
+## D039: ⚠️ OPEN — `taxPercentage = -2` cho mẫu `2/...` là khai sai loại thuế GTGT (2026-06-20)
+
+**Context:** Rà lại S-invoice phát hiện `viettel-sinvoice.ts` gửi
+`taxPercentage: -2` + `taxAmount: 0` cho mọi dòng mẫu `2/...` (HĐ bán hàng từ
+MTT, direct method). Research đa nguồn + phản biện đối kháng (workflow
+`sinvoice-taxpct-and-instant-issue`, 3/3 lens REFUTED "-2 đúng"):
+
+- Spec Viettel chính thức (`Technical_webservice_Sinvoice_en.pdf`) liệt kê
+  `taxPercentage` (Double, `[0-9.]+`): `0%→0, 5%→5, 10%→10, Tax exemption→-1,
+  Non-taxable→-2`. KHÔNG có -3/-4. Nguồn phụ (TLPtech) lệch nhãn -1/-2 (KCT vs
+  KKKNT) nhưng MỌI nguồn đồng ý **-2 là sentinel "không có thuế / ngoài phạm vi
+  GTGT"**, KHÔNG phải mã cho doanh thu chịu thuế theo tỷ lệ %.
+- Mâu thuẫn nội bộ: engine thuế của chính repo
+  (`packages/shared/src/tax/sales-tax-versions.ts` + `resolve-sales-tax`) phân
+  loại `food_service` direct method `gtgtRate` 2,4% (trong cửa sổ)/3,0%,
+  `vatExempt:false` cho mọi nhóm chịu thuế (chỉ ≤1 tỷ mới exempt/0). Hệ thống
+  BIẾT món ăn chịu thuế nhưng provider gửi -2 (không chịu thuế).
+- Hệ quả: taxBreakdown trong XML là phân loại CQT-authoritative (không chỉ hiển
+  thị PDF). Mỗi HĐ mẫu-2 đang khai với CQT rằng doanh thu món ăn là "không chịu
+  thuế" → có thể bị nhặt sai bucket "doanh thu chịu thuế theo tỷ lệ %". HĐ vẫn
+  được CHẤP NHẬN (sentinel hợp lệ) nên sai âm thầm tới khi đối chiếu/thanh tra.
+
+**KHÔNG tự sửa code (guardrail tax-vn: doc↔code lệch → STOP + flag owner/kế
+toán):** giá trị đúng phụ thuộc (1) nhóm doanh thu — ≤1 tỷ miễn GTGT (NĐ
+141/2026) thì -2/exempt mới hợp lý, >1 tỷ thì chịu 2,4%/3%; (2) cửa sổ tạm 2,4%
+đến 31/12/2026 rồi về 3%; (3) cách Viettel encode percentage-method (rate dương
+vs mã KHAC) trên template mẫu-2 ĐÃ ĐĂNG KÝ với CQT. Hardcode -2 bỏ qua cả 3.
+
+**Hướng sửa đề xuất (chờ owner/kế toán + Viettel BU xác nhận):** wire `gtgtRate`/
+`vatExempt` từ `resolve-sales-tax` xuống provider thay vì hardcode; xác nhận
+encoding mẫu-2 đúng với template đăng ký; smoke sandbox; rồi mới đổi hằng số +
+test đang pin -2 (`viettel-sinvoice.test.ts`). T3 (money), migration không cần
+nhưng debate + verify bắt buộc.
+
+**Status:** OPEN — cần owner + kế toán + đối chiếu HDSD Viettel/template CQT trước
+khi đổi. Không recite giá trị từ trí nhớ.
+
+**Addendum 2026-06-20 — bằng chứng sơ cấp (XML iPOS thật của Má Tư) + research mẫu-2:**
+Owner cung cấp 2 XML hóa đơn THẬT từ iPOS (provider cũ trước khi tự build), đã
+được CQT cấp mã: `2C26MAQ00000855` + `2C26MAQ00000876`, mẫu số 2 ("Hoá đơn bán
+hàng"), serial `C26MAQ`, MST `077200004194`, `MCCQT M2-26-...` (mã máy tính tiền).
+
+- **Cách iPOS encode thuế (chuẩn NĐ123 XML):** mỗi dòng `HHDVu` CHỈ có
+  `DGia/SLuong/ThTien` — **KHÔNG có thẻ `<TSuat>` (thuế suất)**. Khối `TToan`
+  CHỈ có `TgTTTBSo` (tổng thanh toán) — **không** `TgTThue`, không bảng
+  `THTTLTSuat`. `VATRate=0`/`VATAmount=0` chỉ nằm trong `TTKhac` (metadata riêng
+  iPOS, không phải trường pháp lý). ⇒ hóa đơn bán hàng MTT của Má Tư khai **không
+  thể hiện thuế suất/tiền thuế per-dòng**, tổng = Σ giá gross.
+- **Kết luận hòa giải iPOS ↔ research (verdict workflow `...mau2-taxpercentage-resolve`):**
+  câu trả lời **phụ thuộc nhóm doanh thu**, không phải 1 hằng số:
+  - **≤ 1 tỷ/năm** (miễn GTGT, NĐ 141/2026 hồi tố 01/01/2026): món ăn KHÔNG chịu
+    thuế ⇒ `-2`/KCT (hoặc no-rate kiểu iPOS) **đúng**. Đây có thể là lý do iPOS
+    để VATRate=0.
+  - **> 1 tỷ/năm** (chịu thuế tỷ lệ %): phải là **rate thực** — `KHAC:2.4%`
+    (trong cửa sổ tới 31/12/2026) / `KHAC:3%` (sau) theo QĐ 1450/QĐ-TCT Phụ lục V
+    + TT 32/2025; `-2` (=không chịu thuế) khai SAI ⇒ understate doanh thu chịu
+    thuế. (Viettel spec ví dụ hóa đơn bán hàng `02GTTT` dùng rate dương 5.0.)
+- **Giả thuyết owner "= 0":** đúng phần bác `-2`, nhưng `0` = "thuế suất 0%"
+  (zero-rate kiểu xuất khẩu) — danh mục khác, cũng không phải "chịu thuế theo tỷ
+  lệ %". `0` chỉ đúng nếu là hàng 0%; không đúng cho ăn uống ở bất kỳ nhóm nào.
+- **`taxAmount`:** dù sửa thế nào, **tổng tiền khách KHÔNG đổi** (giá menu là
+  gross, không có dòng VAT tách; % là nghĩa vụ của hộ tính trên doanh thu lúc kê
+  khai). iPOS để tiền thuế trống — khớp ràng buộc "không thổi tổng". Nếu template
+  đăng ký đòi `taxAmount` ≠ 0 thì phải gửi giá NET (coi menu đã gồm thuế, mirror
+  nhánh `vat_deductible_net`) để total vẫn = gross.
+- **Bằng chứng phụ — XML iPOS VALIDATE phần còn lại của build hiện tại:** tách
+  dòng topping (Cơm sườn + Chả + Bì + Trứng riêng dòng), giá gross theo menu,
+  buyer mặc định "Người mua không lấy hóa đơn", `HTTToan=TM/CK`, MTT có `MCCQT`
+  (⇒ codeOfTax đồng bộ — củng cố D038 instant-issue), `DSCKS` rỗng (MTT mẫu-2
+  KHÔNG chữ ký số — khớp kết luận eSign). Identity người bán đã đăng ký: "HỘ KINH
+  DOANH CƠM TẤM MÁ TƯ", địa chỉ "371, Võ Thị Sáu, ấp Hải Phúc, Xã Phước Hải, TP
+  Hồ Chí Minh", MCHang 146149.
+- **Câu hỏi quyết định (chờ owner/kế toán):** doanh thu/năm của Má Tư **> 1 tỷ**
+  (chịu thuế % ⇒ KHAC:2.4%) hay **≤ 1 tỷ** (miễn ⇒ KCT/-2 đúng)? Và iPOS để
+  no-tax là vì miễn hay vì convention — kế toán xác nhận. Sau đó: wire
+  `gtgtRate`/`vatExempt` từ `resolve-sales-tax` (đã tính sẵn theo nhóm + ngày)
+  xuống provider thay hardcode; xác nhận encoding (Double vs KHAC) + `taxAmount`
+  với Viettel BU; smoke sandbox; rồi đổi hằng số + test.
+
+**Addendum 2 — KẾT QUẢ TEST SANDBOX VIETTEL (2026-06-20) → hạ mức nghiêm trọng:**
+Đã chạy test thật trên sandbox Viettel (tài khoản test công khai `0100109106-509`,
+template `2/001`, KHÔNG đụng tài khoản Má Tư). Tạo 4 biến thể cùng 1 món
+45.000đ, tải XML đã render, so sánh:
+
+| Gửi `taxPercentage` | `<DGia>` | `<TSuat>` trong XML | `<TgTTTBSo>` |
+| --- | --- | --- | --- |
+| bỏ trống (omit) | 45000 | **KHÔNG có** | 45000 |
+| `-2` (code hiện tại) | 45000 | **KHÔNG có** | 45000 |
+| `0` (giả thuyết owner) | 45000 | **KHÔNG có** | 45000 |
+| `2.4` + giá NET | 43945 ⚠️ | không có | 45000 |
+
+- **Phát hiện quyết định:** template "Hóa đơn bán hàng" (mẫu-2) của Viettel
+  **STRIP toàn bộ `taxPercentage` khỏi XML gửi CQT**. `omit`/`-2`/`0` cho XML
+  **byte-identical** ở phần kinh tế (dòng hàng + tổng) — không `<TSuat>`, không
+  tiền thuế, total = gross — **giống hệt iPOS**. Tức là `-2` **KHÔNG** lọt tới
+  CQT dưới dạng "không chịu thuế": giả định gốc của D039 (taxBreakdown là
+  CQT-authoritative cho mẫu-2) bị **bằng chứng thực tế bác bỏ**. Research web tự
+  tin "−2 sai" đã lý luận từ spec/schema chung, KHÔNG đúng với hành vi template
+  hóa đơn bán hàng thật → bài học: verify against prod/runtime, không chỉ docs.
+- **Bẫy đã xác nhận:** chỉ biến thể gửi giá NET (để có taxAmount≠0) mới hỏng —
+  dòng hiện 43945 nhưng tổng 45000, lệch 1.055 không có dòng thuế bắc cầu (template
+  strip). ⇒ mẫu-2 **PHẢI gửi giá GROSS + `taxAmount=0`** (đúng như code đang làm).
+- **eSign re-confirm:** XML sandbox **được Viettel-CA ký server-side** (cert test
+  `CN=TEST, MST:0100109106-509`) — khớp kết luận eSign (ký phía Viettel, không cần
+  cert client).
+- **Mã CQT đồng bộ:** ⚠️ tài khoản 509 trả `codeOfTax=null` (test account không
+  nối CQT thật) — KHÔNG xác nhận được instant-issue đồng bộ qua sandbox này; bằng
+  chứng đồng bộ vẫn là `MCCQT` trên XML iPOS prod thật (D038 giữ nguyên).
+
+**Status → DOWNGRADED:** `-2` **KHÔNG phải defect khai sai CQT** (render giống hệt
+iPOS/0/omit, bị strip). KHÔNG cần đổi code để đúng ở tầng CQT. Còn lại (P3/optional):
+(1) owner xác nhận **prod thật đang phát hành OK với `-2`** (nếu có thì xong); (2)
+caveat: test trên account NO-VALIDATION — validator strict/prod trên template ĐÃ
+ĐĂNG KÝ của Má Tư có thể khác (account strict sandbox không có mẫu-2 để test);
+(3) dọn dẹp cosmetic `-2`→omit (0 tác dụng tới CQT, rủi ro thấp, không gấp). Nghĩa
+vụ % (nếu >1 tỷ) khai ở **tờ khai trên tổng doanh thu**, KHÔNG trên hóa đơn.
+
+**Addendum 3 — QUYẾT ĐỊNH OWNER + ĐÃ IMPLEMENT (2026-06-20):** Owner chốt "phải
+chuẩn, không để giá trị giả `-2`": **TẮT `taxPercentage` cho mẫu-2**, mẫu-1 HĐ GTGT
+giữ rate thật (điền sau khi có nhu cầu GTGT).
+
+- **Đã làm (`viettel-sinvoice.ts`):** nhánh `direct_sales_gross` (mẫu-2) KHÔNG còn
+  gửi `taxPercentage`/`taxAmount` trên `itemInfo`, và `taxBreakdowns: []`. Type
+  `SinvoiceItemInfo.taxPercentage/taxAmount` → optional. Nhánh `vat_deductible_net`
+  (mẫu-1) KHÔNG đổi (vẫn gửi `request.vatRate` + tiền thuế thật). Test cập nhật
+  (assert omitted thay vì `-2`); 245/245 pass; typecheck/lint/build xanh.
+- **Verify end-to-end trên sandbox Viettel (provider thật, code mới):**
+  `createInvoice` body không có taxPercentage → **CHẤP NHẬN** (issue HĐ
+  `C26TYY371/372/373`); tải XML đã ký về: `THDon=Hóa đơn bán hàng`, **không
+  `<TSuat>`**, **không `<TgTThue>`**, `ThTien` = giá gross (45000, 7000), tổng
+  `TgTTTBSo`=52000 đúng, **ký server-side Viettel-CA** — cấu trúc **giống hệt XML
+  iPOS thật của Má Tư**.
+- **Caveat còn lại:** verify trên account no-validation `0100109106-509` (strict
+  sandbox không đăng ký mẫu-2). Validator prod trên template thật của Má Tư về lý
+  thuyết có thể khác → owner **smoke hóa đơn thật đầu tiên** sau deploy để chắc.
+  Nghĩa vụ % (nếu >1 tỷ) vẫn khai ở tờ khai trên doanh thu, không trên hóa đơn.
+
+**Status → RESOLVED (chờ owner smoke prod):** mẫu-2 không còn gửi taxPercentage giả.

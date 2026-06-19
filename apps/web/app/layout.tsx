@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Inter, JetBrains_Mono, Montserrat } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import Script from "next/script";
 import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
@@ -12,24 +13,6 @@ import { SerwistProvider } from "./serwist-provider";
 import "@comtammatu/ui/globals.css";
 import { cn } from "@/lib/utils";
 import { messages } from "@lib/messages";
-
-const fontSans = Inter({
-  subsets: ["latin", "latin-ext", "vietnamese"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-const fontHeading = Montserrat({
-  subsets: ["latin", "latin-ext", "vietnamese"],
-  variable: "--font-heading-runtime",
-  display: "swap",
-});
-
-const fontMono = JetBrains_Mono({
-  subsets: ["latin", "latin-ext"],
-  variable: "--font-mono",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Cơm Tấm Má Tư",
@@ -65,12 +48,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="vi"
-      className={cn(
-        fontSans.variable,
-        fontHeading.variable,
-        fontMono.variable,
-        "font-sans",
-      )}
+      className={cn(GeistSans.variable, GeistMono.variable, "font-sans")}
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
