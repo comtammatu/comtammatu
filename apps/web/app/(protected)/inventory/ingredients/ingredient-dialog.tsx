@@ -1,21 +1,12 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing inventory ingredient form keeps operational copy inline until message-catalog extraction */
+
+import { useMemo } from "react";
 import { z } from "zod";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import { FieldGroup } from "@comtammatu/ui/components/field";
-import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
+  FormDialog,
   MoneyVndField,
   NumberField,
   QuantityField,
@@ -26,7 +17,7 @@ import { createIngredient, updateIngredient } from "../ingredient-actions";
 import type { IngredientRow } from "../_lib/types";
 import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "../_lib/constants";
 import { parseOptionalNumber } from "../_lib/format";
-import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 
 const ingredientSchema = z.object({
   name: z.string().trim().min(1, { error: "Tên nguyên liệu không được trống" }),
@@ -108,102 +99,86 @@ interface IngredientDialogProps {
   onSaved: () => void | Promise<void>;
 }
 
-function IngredientFormContent({
+export function IngredientDialog({
   open,
-  ingredient,
   onOpenChange,
+  ingredient,
   onSaved,
 }: IngredientDialogProps) {
   const isEdit = ingredient !== null;
-  const [isPending, startTransition] = useTransition();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const defaultValues = useMemo(() => toFormValues(ingredient), [ingredient]);
 
-  const form = useForm<IngredientFormValues>({
-    resolver: zodResolver(ingredientSchema),
-    defaultValues: toFormValues(ingredient),
-  });
+  async function handleSubmit(values: IngredientFormValues) {
+    const payload = {
+      name: values.name,
+      purchase_unit: values.purchase_unit,
+      measure_unit: values.measure_unit,
+      purchase_to_measure_factor:
+        parseOptionalNumber(values.purchase_to_measure_factor) ?? 1,
+      sku: values.sku || undefined,
+      category: values.category || undefined,
+      unit_cost: parseOptionalNumber(values.unit_cost),
+      item_kind: values.item_kind,
+      storage_type: values.storage_type,
+      min_stock_level: parseOptionalNumber(values.min_stock_level),
+      max_stock_level: parseOptionalNumber(values.max_stock_level),
+      reorder_point: parseOptionalNumber(values.reorder_point),
+      shelf_life_days: parseOptionalNumber(values.shelf_life_days),
+    };
 
-  useEffect(() => {
-    if (open) {
-      form.reset(toFormValues(ingredient));
-      setServerError(null);
-    }
-  }, [open, ingredient, form]);
+    try {
+      const result =
+        isEdit && ingredient
+          ? await updateIngredient(ingredient.id, payload)
+          : await createIngredient({
+              name: payload.name,
+              purchase_unit: payload.purchase_unit,
+              measure_unit: payload.measure_unit,
+              purchase_to_measure_factor: payload.purchase_to_measure_factor,
+              sku: payload.sku,
+              unit_cost: payload.unit_cost,
+              category: payload.category,
+              item_kind: payload.item_kind,
+              storage_type: payload.storage_type,
+              min_stock_level: payload.min_stock_level ?? 0,
+              max_stock_level: payload.max_stock_level,
+              reorder_point: payload.reorder_point,
+              shelf_life_days: payload.shelf_life_days,
+            });
 
-  function onValid(values: IngredientFormValues) {
-    startTransition(async () => {
-      setServerError(null);
-
-      const payload = {
-        name: values.name,
-        purchase_unit: values.purchase_unit,
-        measure_unit: values.measure_unit,
-        purchase_to_measure_factor:
-          parseOptionalNumber(values.purchase_to_measure_factor) ?? 1,
-        sku: values.sku || undefined,
-        category: values.category || undefined,
-        unit_cost: parseOptionalNumber(values.unit_cost),
-        item_kind: values.item_kind,
-        storage_type: values.storage_type,
-        min_stock_level: parseOptionalNumber(values.min_stock_level),
-        max_stock_level: parseOptionalNumber(values.max_stock_level),
-        reorder_point: parseOptionalNumber(values.reorder_point),
-        shelf_life_days: parseOptionalNumber(values.shelf_life_days),
-      };
-
-      try {
-        if (isEdit) {
-          const result = await updateIngredient(ingredient.id, payload);
-          if (!result.success) {
-            setServerError(result.error ?? ERRORS_VI.fallback);
-            return;
-          }
-          toast.success("Đã cập nhật nguyên liệu");
-        } else {
-          const result = await createIngredient({
-            name: payload.name,
-            purchase_unit: payload.purchase_unit,
-            measure_unit: payload.measure_unit,
-            purchase_to_measure_factor: payload.purchase_to_measure_factor,
-            sku: payload.sku,
-            unit_cost: payload.unit_cost,
-            category: payload.category,
-            item_kind: payload.item_kind,
-            storage_type: payload.storage_type,
-            min_stock_level: payload.min_stock_level ?? 0,
-            max_stock_level: payload.max_stock_level,
-            reorder_point: payload.reorder_point,
-            shelf_life_days: payload.shelf_life_days,
-          });
-          if (!result.success) {
-            setServerError(result.error ?? ERRORS_VI.fallback);
-            return;
-          }
-          toast.success("Đã thêm nguyên liệu mới");
+      if (result.success) {
+        try {
+          await onSaved();
+        } catch {
+          toast.error("Đã lưu nhưng chưa tải lại được danh sách nguyên liệu.");
         }
-      } catch {
-        setServerError("Không thể lưu nguyên liệu. Vui lòng thử lại.");
-        return;
       }
-      onOpenChange(false);
-      try {
-        await onSaved();
-      } catch {
-        toast.error("Đã lưu nhưng chưa tải lại được danh sách nguyên liệu.");
-      }
-    });
+      return result;
+    } catch {
+      return {
+        success: false,
+        error: "Không thể lưu nguyên liệu. Vui lòng thử lại.",
+      };
+    }
   }
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>
-          {isEdit ? "Chỉnh sửa nguyên liệu" : "Thêm nguyên liệu mới"}
-        </DialogTitle>
-      </DialogHeader>
-
-      <form onSubmit={form.handleSubmit(onValid)} noValidate>
-        <FieldGroup>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      schema={ingredientSchema}
+      defaultValues={defaultValues}
+      entityKey={ingredient?.id ?? "new-ingredient"}
+      title={isEdit ? "Chỉnh sửa nguyên liệu" : "Thêm nguyên liệu mới"}
+      submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
+      successMessage={
+        isEdit ? "Đã cập nhật nguyên liệu" : "Đã thêm nguyên liệu mới"
+      }
+      contentClassName="sm:max-w-lg"
+      onSubmit={handleSubmit}
+    >
+      {(form) => (
+        <>
           <div className="grid grid-cols-2 gap-4">
             <TextField
               control={form.control}
@@ -305,52 +280,8 @@ function IngredientFormContent({
             maxFractionDigits={0}
             placeholder="VD: 7"
           />
-
-          {serverError && (
-            <p className="text-sm text-destructive" role="alert">
-              {serverError}
-            </p>
-          )}
-        </FieldGroup>
-
-        <DialogFooter className="pt-6">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isPending}
-          >
-            {ACTIONS_VI.cancel}
-          </Button>
-          <Button type="submit" disabled={isPending}>
-            {isPending && <Spinner className="mr-2" />}
-            {isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
-          </Button>
-        </DialogFooter>
-      </form>
-    </>
-  );
-}
-
-export function IngredientDialog({
-  open,
-  onOpenChange,
-  ingredient,
-  onSaved,
-}: IngredientDialogProps) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-lg"
-        key={ingredient?.id ?? "new-ingredient"}
-      >
-        <IngredientFormContent
-          open={open}
-          ingredient={ingredient}
-          onOpenChange={onOpenChange}
-          onSaved={onSaved}
-        />
-      </DialogContent>
-    </Dialog>
+        </>
+      )}
+    </FormDialog>
   );
 }

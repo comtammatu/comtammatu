@@ -114,7 +114,7 @@ export async function fetchEmployees(): Promise<ActionResult> {
       default_checklist_template_id,
       profiles!inner (
         id, full_name, phone, branch_id,
-        positions ( label_vi, default_checklist_template_id ),
+        positions ( code, label_vi, default_checklist_template_id ),
         branches ( name )
       )
     `,

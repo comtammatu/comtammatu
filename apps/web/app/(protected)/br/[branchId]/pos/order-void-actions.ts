@@ -33,8 +33,9 @@ import {
 /**
  * Void a single pending / kitchen-sent order item with audit reason.
  *
- * Print warning lives on `result.meta.warning` (set by the afterSuccess
- * hook), not in `data`.
+ * The non-fatal cancel-ticket print warning lives on `result.meta.warning`
+ * (set by the `enqueueCancelTicketPrintHook` afterSuccess hook), not on
+ * `data`.
  */
 export const voidOrderItem = withActionPositional(
   {
@@ -85,8 +86,9 @@ export const voidOrderItem = withActionPositional(
 /**
  * Reduce a single kitchen-sent order item's quantity with audit reason.
  *
- * Print warning lives on `result.meta.warning` (set by the afterSuccess
- * hook), not in `data`.
+ * The partial-cancel print warning lives on `result.meta.warning` (set by
+ * the `enqueuePartialCancelTicketPrintHook` afterSuccess hook), not on
+ * `data`.
  */
 export const reduceOrderItemQuantity = withActionPositional(
   {
@@ -170,10 +172,11 @@ export const reduceOrderItemQuantity = withActionPositional(
  * tăng SL dùng kitchen_ticket/GỌI THÊM; giảm SL dùng cancel_ticket. Các edit
  * khác vẫn chỉ bump KDS realtime và nhắc cashier báo bếp thủ công.
  *
- * Print logic stays in the handler (not in an `afterSuccess` hook) because
- * `quantityPrintQueued` is a data-level outcome the caller branches on —
- * `afterSuccess` only returns `{ warning? }`, which would lose that signal.
- * The caller `pos-desktop-shell.tsx` reads all three (`printWarning`,
+ * Print logic stays in the handler
+ * (not in an `afterSuccess` hook) because `quantityPrintQueued` is a
+ * data-level outcome the caller branches on — `afterSuccess` only returns
+ * `{ warning? }`, which would lose that signal. The caller
+ * `pos-desktop-shell.tsx` reads all three (`printWarning`,
  * `quantityPrintQueued`, `wasSentToKitchen`) from `r.data`, so we keep them
  * there.
  */
@@ -316,7 +319,7 @@ export const editPendingOrderItem = withActionPositional(
  * `result.skip_reasons[]` and get reduced to a single operator toast by
  * `cancelSkipReasonsToWarning`.
  *
- * Print warning lives on `result.meta.warning`, not in `data`.
+ * The skip warning lives on `result.meta.warning`, not on `data`.
  */
 export const cancelOrder = withActionPositional(
   {

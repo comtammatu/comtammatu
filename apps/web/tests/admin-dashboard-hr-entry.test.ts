@@ -7,26 +7,25 @@ const dashboardSource = readFileSync(
   join(process.cwd(), "app/(protected)/admin/dashboard/page.tsx"),
   "utf8",
 );
+const navConfigSource = readFileSync(
+  join(process.cwd(), "../../packages/shared/src/auth/nav-config.ts"),
+  "utf8",
+);
 
-test("Admin dashboard keeps an ACL-scoped HR shortcut", () => {
+test("Admin dashboard keeps workspace navigation in the nav source", () => {
   assert.match(
+    navConfigSource,
+    /moduleKey: "hr"/,
+    "HR workspace must stay in the shared workspace nav",
+  );
+  assert.match(
+    dashboardSource,
+    /workQueueTitle/,
+    "dashboard should stay focused on owner work, not workspace launchers",
+  );
+  assert.doesNotMatch(
     dashboardSource,
     /canAccess\(role, "hr"\)/,
-    "HR shortcut must stay gated by module ACL",
-  );
-  assert.match(
-    dashboardSource,
-    /href: MODULE_ACL\.hr\.path/,
-    "HR shortcut must use the canonical HR path from MODULE_ACL",
-  );
-  assert.match(
-    dashboardSource,
-    /title: MODULE_ACL\.hr\.label/,
-    "HR shortcut must use the canonical HR label from MODULE_ACL",
-  );
-  assert.match(
-    dashboardSource,
-    /ctaLabel: ADMIN_DASHBOARD_COPY\.openCta/,
-    "HR shortcut should be visible as a direct admin action",
+    "workspace shortcuts belong to shared nav, not the dashboard page",
   );
 });

@@ -62,7 +62,7 @@ one owns a different risk surface.
 
 Skill names below are capability contracts (see Repository Boundary), not a
 promise that the exact skill is installed. Inventory last re-verified
-2026-06-13. When a named skill is missing, use the closest installed
+2026-06-17. When a named skill is missing, use the closest installed
 equivalent, or `find-skills` if the owner asked for new tooling.
 
 | Task signal                                                                       | Required repo rules/docs                                                                         | Required skills/plugins when available                                                                                                                            | Required verification                                                                                                                |
@@ -71,8 +71,8 @@ equivalent, or `find-skills` if the owner asked for new tooling.
 | Code review, PR review, regression hunt                                           | `engineering.md`, `workflow.md`, relevant module docs, `tasks/regressions.md`                    | `review`; an external second-opinion reviewer (e.g. `codex`) only when requested; a diff-understanding skill for large diffs when installed                                                     | Findings first with file/line refs; run targeted checks when feasible                                                                |
 | Next.js App Router, RSC, Server Actions, routing, proxy                           | `engineering.md`, `database.md` if data/auth touched, relevant module doc                        | `vercel:nextjs`, `vercel:react-best-practices` when available                                                                              | `pnpm typecheck && pnpm lint && pnpm build` for implementation                                                                       |
 | React component performance or bundle risk                                        | `engineering.md`, `ui.md` if UI changes                                                          | `vercel:react-best-practices` or the closest installed React best-practices skill                                                                                              | Typecheck/lint/build; inspect imports for barrel/client boundary drift                                                               |
-| UI, UX, route surface, copy, shadcn component, forms, operational POS/KDS UI      | `ui.md`, `docs/spec/design-system.md`, `docs/modules/ui.md`, `tasks/regressions.md`, domain docs | a shadcn skill (e.g. `vercel:shadcn`); a design-polish skill (e.g. `impeccable-design-polish`) only for explicit design/audit/polish work after project UI authority is loaded                                   | Browser/runtime smoke for meaningful UI; no fake primitives or design-system drift                                                   |
-| Landing, marketing, portfolio, or visual concept outside operational ERP surfaces | `ui.md`, `docs/spec/design-system.md` if it touches web runtime                                  | an anti-slop/brand design skill (e.g. `taste-skill`) only when the surface is actually brand/marketing/prototype work                             | Visual/browser verification; do not override the Custom Theme for app surfaces                                                       |
+| UI, UX, route surface, copy, shadcn component, forms, operational POS/KDS UI      | `ui.md`, `docs/spec/design-system.md`, `docs/modules/ui.md`, `tasks/regressions.md`, domain docs | a shadcn skill (e.g. `vercel:shadcn`); `ui-ux-pro-max` as a checklist/reasoning aid when available; `impeccable` for explicit product-UI audit/polish after project UI authority is loaded | Browser/runtime smoke for meaningful UI; no fake primitives or design-system drift                                                   |
+| Landing, marketing, portfolio, or visual concept outside operational ERP surfaces | `ui.md`, `docs/spec/design-system.md` if it touches web runtime                                  | an anti-slop/brand design skill (e.g. `taste-skill`) only when the surface is actually brand/marketing/prototype work; `impeccable` brand/polish when useful | Visual/browser verification; do not override the Custom Theme for app surfaces                                                       |
 | Supabase queries, migrations, RLS, grants, auth, storage, generated types, RPCs   | `database.md`, `workflow.md`, `tasks/regressions.md`, `docs/spec/database-schema.md`             | `supabase`, `supabase-postgres-best-practices`; use Supabase MCP/CLI only after target env is verified                                                            | T3 if schema/RLS/money/security-definer/data backfill; migration file before apply; `pnpm db:types` after applied type-source schema |
 | Money, payments, refunds, HĐĐT, journal, payroll/tax                              | `database.md`, `workflow.md`, `docs/ref/legal-framework-2026.md`, finance/legal docs, relevant runbooks | `tax-vn` (repo skill: routes the legal/tax/HĐĐT/payroll docs and names the real compute functions); `supabase`, `supabase-postgres-best-practices`; product/QA perspectives required by T3                                                                            | Full T3 debate; targeted domain tests plus full gates                                                                                |
 | Browser QA, route smoke, responsive/layout evidence                               | `workflow.md`, relevant UI/module docs                                                           | `playwright` for repeatable browser interaction; `browse`, `qa`, or `qa-only` for broader QA                         | Capture URL, viewport, route, and observed state; separate auth/env blockers from code regressions                                   |
@@ -125,15 +125,85 @@ equivalent, or `find-skills` if the owner asked for new tooling.
 
 - Use `shadcn` for primitives, component composition, registry/preset questions,
   and form/control structure.
-- Use a design-polish skill (e.g. `impeccable-design-polish`) only when the user
-  asks for design, redesign, critique, audit, polish, UX hardening, or visual
-  craft. Even then, load `docs/spec/design-system.md` first and keep operational
-  ERP surfaces inside the Custom Theme contract.
+- Use `ui-ux-pro-max` only as a supplemental UI/UX checklist and reasoning aid:
+  accessibility, touch targets, responsive behavior, forms, navigation, charts,
+  motion meaning, and pre-delivery quality control. Never let it generate or
+  persist a parallel `design-system/MASTER.md`, page override tree,
+  `PRODUCT.md`, `DESIGN.md`, route-local theme, or any other competing UI source
+  of truth in this repo.
+- Use `impeccable` for product-UI critique, audit, polish, hardening, layout,
+  typography, and copy refinement when the user asks for design work. If the
+  skill asks for root `PRODUCT.md` / `DESIGN.md`, map that context to existing
+  repo sources instead: `docs/ref/business-context.md`,
+  `docs/spec/design-system.md`, `docs/modules/ui.md`, and the relevant module
+  docs.
 - Do not use anti-slop/brand design skills (e.g. `taste-skill`) for Admin, POS,
   KDS, Inventory, Employee, Finance, HR, or other operational app surfaces. They
   are allowed for landing, portfolio, campaign, and brand concept work only.
 - Product Design plugin skills are for prototypes and product direction. They do
   not replace the runtime design-system SSOT.
+- Do not install, vendor, or copy external skills into the repo silently. If an
+  exact skill such as `ui-ux-pro-max` is not installed, use the closest installed
+  equivalent, or use the owner-provided GitHub reference only for the current
+  task. Use `find-skills` / `skill-installer` only when the owner explicitly asks
+  to install or update tooling.
+
+#### External Design-Skill Context Map
+
+When an external UI/design skill asks for its own project context files, do not
+create them in this repo. Map the request to existing project sources:
+
+- Product/business context: `docs/ref/business-context.md`, relevant
+  `docs/ref/*`, and the route family module doc.
+- UI/design contract: `docs/spec/design-system.md`.
+- UI implementation patterns: `docs/modules/ui.md`,
+  `apps/web/app/components/surface.tsx`, and `packages/ui/src/components/*`.
+- Negative rules and known drift: `tasks/regressions.md`.
+- Current work state: `tasks/todo.md`.
+
+If a skill reports missing `PRODUCT.md`, `DESIGN.md`, or
+`design-system/MASTER.md`, treat that as a tooling mismatch, not a repo gap.
+Continue with the map above and state the substitution in the skill plan or
+final note. External skill outputs are advisory: translate them back into route
+family, primary user job, approved primitives, regression rules at risk, and the
+verification that the repo expects.
+
+### Ma Tu UI/UX Workflow
+
+Use this workflow for UI/UX design tasks in this repo:
+
+1. Classify the surface first. Admin, POS, KDS, Inventory, Employee, Finance,
+   HR, Menu, Orders, and authenticated tools are product UI: design serves the
+   operator workflow. Landing pages, campaigns, portfolios, brand concepts, and
+   launch assets are brand/marketing UI.
+2. Load authority before external skills: `docs/spec/design-system.md`,
+   `docs/modules/ui.md`, `tasks/regressions.md`, and the domain docs for the
+   route family. The Custom Theme contract wins over every external skill,
+   generated design system, preset suggestion, color palette, font pairing, or
+   motion recipe.
+3. Write the UI rebuild gate before implementation: surface, primary user job,
+   route family, change type (visual refactor / UX flow / copy / behavior),
+   primitives to use, and regression rules at risk.
+4. For product UI, use this skill stack in order:
+   `shadcn` for primitive and form/control composition;
+   `ui-ux-pro-max` for checklist coverage;
+   `impeccable` for product-UI critique/polish/harden;
+   skip `taste-skill` unless the task has a brand/landing/prototype surface.
+5. For brand/marketing UI, use this skill stack in order:
+   `taste-skill` for design-read and anti-slop direction;
+   `impeccable` for brand critique/polish;
+   `ui-ux-pro-max` for accessibility/responsive/pre-flight coverage;
+   still keep any runtime touch inside the Custom Theme contract.
+6. Reject external-skill output that conflicts with app constraints: no new
+   fonts, dark-mode strategy, arbitrary color ramps, kinetic/GSAP/motion
+   libraries, fake primitives, fake screenshots, route-local themes, or
+   decorative page structures on ERP surfaces unless the owner explicitly
+   changes `docs/spec/design-system.md` first.
+7. Verify by route behavior, not aesthetics alone: mobile first viewport exposes
+   the next safe action or live queue where relevant, desktop adds density
+   without changing IA, empty/loading/error states use approved primitives, and
+   meaningful UI changes get browser/runtime smoke when a safe dev target is
+   available.
 
 ### Browser And QA
 

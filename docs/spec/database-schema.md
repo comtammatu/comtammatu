@@ -65,7 +65,7 @@ Current high-level groups:
 - Menu, POS, orders, KDS, and runner.
 - Payments, refunds, webhooks, HĐĐT, and reconciliation.
 - Inventory, procurement, production, QC, and waste.
-- Finance, HĐĐT, accountant export, advanced journal/fiscal-period/VAS reporting, and audit.
+- Finance, expenses, HĐĐT, accountant export, period-close support, and audit.
 - HR, contracts, shifts, attendance, leave requests, payroll, and employee portal.
 - Print agent, printer fleet, print jobs, and document templates.
 - Notifications, trust, and security perimeter tables.

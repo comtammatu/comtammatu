@@ -23,13 +23,15 @@ import { getClientIp } from "@lib/network/client-ip";
 // in proxy startup"). Vercel log drain captures this for SIEM ingestion.
 let NETWORK_GATE_OFF_WARNED = false;
 
-// Per-warm-instance cache of the POS/KDS branch-surface gate lookup.
-// branch_kind is immutable (a CHECK pins it to 'branch' and create/update paths
-// hard-code it), so the branches read on every POS/KDS/runner request returns a
-// constant — cache it instead of hitting the DB each time. Key includes
-// tenant_id so an entry can never be reused across tenants. Value: branch_kind,
-// or null when no matching branch row exists for that tenant.
-const BRANCH_KIND_CACHE = new Map<string, string | null>();
+type BranchSurfaceGate = {
+  branchKind: string | null;
+  isActive: boolean | null;
+};
+
+// Per-warm-instance cache of the POS/KDS/runner branch-surface gate lookup.
+// Key includes tenant_id so an entry can never be reused across tenants. Value
+// is null when no matching branch row exists for that tenant.
+const BRANCH_SURFACE_CACHE = new Map<string, BranchSurfaceGate | null>();
 
 /** Create a redirect that preserves Set-Cookie from updateSession response */
 function redirectWithCookies(
@@ -228,20 +230,32 @@ export async function proxy(request: NextRequest) {
           moduleKey === "kds" ||
           moduleKey === "runner"
         ) {
-          const branchKindKey = `${String(claims.tenant_id)}:${String(routeBranchId)}`;
-          let branchKind = BRANCH_KIND_CACHE.get(branchKindKey);
-          if (branchKind === undefined) {
+          const branchSurfaceKey = `${String(claims.tenant_id)}:${String(routeBranchId)}`;
+          let branchSurface = BRANCH_SURFACE_CACHE.get(branchSurfaceKey);
+          if (branchSurface === undefined) {
             const { data: branchRow } = await supabase
               .from("branches")
-              .select("branch_kind")
+              .select("branch_kind, is_active")
               .eq("id", routeBranchId)
               .eq("tenant_id", claims.tenant_id)
               .maybeSingle();
-            branchKind =
-              (branchRow?.branch_kind as string | undefined) ?? null;
-            BRANCH_KIND_CACHE.set(branchKindKey, branchKind);
+            branchSurface = branchRow
+              ? {
+                  branchKind:
+                    (branchRow.branch_kind as string | undefined) ?? null,
+                  isActive:
+                    typeof branchRow.is_active === "boolean"
+                      ? branchRow.is_active
+                      : null,
+                }
+              : null;
+            BRANCH_SURFACE_CACHE.set(branchSurfaceKey, branchSurface);
           }
-          if (branchKind !== null && branchKind !== "branch") {
+          if (
+            branchSurface === null ||
+            branchSurface.branchKind !== "branch" ||
+            branchSurface.isActive !== true
+          ) {
             return redirectToAccessDenied(
               request,
               response,

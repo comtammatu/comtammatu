@@ -14,6 +14,13 @@ const runnerWaitTimeSource = readFileSync(
   ),
   "utf8",
 );
+const runnerRealtimeRefreshSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/runner/runner-realtime-refresh.tsx",
+  ),
+  "utf8",
+);
 const runnerIdleVisualSource = readFileSync(
   join(
     process.cwd(),
@@ -35,6 +42,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
     runnerPageSource,
     /import \{ createServiceClient \} from "@comtammatu\/database\/supabase\/service";/,
   );
+  assert.match(runnerPageSource, /import \{ notFound \} from "next\/navigation";/);
   assert.match(
     runnerPageSource,
     /type RunnerSupabase = ReturnType<typeof createServiceClient>;/,
@@ -45,6 +53,12 @@ test("Runner page follows the KDS order-list vocabulary", () => {
     /if \(!Number\.isInteger\(branchIdNum\) \|\| branchIdNum <= 0\)/,
   );
   assert.match(runnerPageSource, /isRunnerOperationalBranchKind/);
+  assert.match(runnerPageSource, /branch\.is_active !== true/);
+  assert.match(runnerPageSource, /const tenantId = branch\.tenant_id;/);
+  assert.match(runnerPageSource, /\.eq\("tenant_id", tenantId\)/);
+  assert.match(runnerPageSource, /notFound\(\);/);
+  assert.doesNotMatch(runnerPageSource, /runner_public_slug/);
+  assert.doesNotMatch(runnerPageSource, /RUNNER_DISPLAY_TOKEN_RE/);
   assert.doesNotMatch(runnerPageSource, /loadAuthState/);
   assert.doesNotMatch(runnerPageSource, /@\/_lib\/auth/);
   assert.doesNotMatch(runnerPageSource, /claims\.tenant_id/);
@@ -98,6 +112,14 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /divide-x divide-border\/70/);
   assert.match(runnerPageSource, /role="list"/);
   assert.match(runnerPageSource, /role="listitem"/);
+  assert.match(
+    runnerPageSource,
+    /aria-current=\{featured \? "true" : undefined\}/,
+  );
+  assert.match(
+    runnerPageSource,
+    /data-runner-featured=\{featured \? "true" : undefined\}/,
+  );
   assert.match(runnerPageSource, /flex-1 grid-rows-4 overflow-hidden xl:grid-rows-6/);
   assert.match(runnerPageSource, /text-runner-header/);
   assert.match(runnerPageSource, /text-runner-board/);
@@ -144,6 +166,10 @@ test("Runner page follows the KDS order-list vocabulary", () => {
     /const statusLabel = getRunnerStatusLabel\(row\.status\);/,
   );
   assert.match(runnerPageSource, /featured && "border-l-primary"/);
+  assert.match(
+    runnerPageSource,
+    /featured && "bg-warning\/15 ring-1 ring-inset ring-warning\/40"/,
+  );
   assert.doesNotMatch(runnerPageSource, /bg-primary text-primary-foreground/);
   assert.doesNotMatch(runnerPageSource, /\.eq\("status", "ready"\)/);
   assert.doesNotMatch(runnerPageSource, /readyAfterIso/);
@@ -240,6 +266,18 @@ test("Runner page follows the KDS order-list vocabulary", () => {
     /\.filter\(\(item\) => item\.lane === "served"\)/,
   );
   assert.doesNotMatch(runnerPageSource, /aria-label=\{`Runner/);
+});
+
+test("Runner public board uses polling, not raw Realtime changes", () => {
+  assert.match(runnerPageSource, /<RunnerRealtimeRefresh \/>/);
+  assert.match(runnerRealtimeRefreshSource, /"use client";/);
+  assert.match(runnerRealtimeRefreshSource, /const POLL_INTERVAL_MS = 15_000;/);
+  assert.match(runnerRealtimeRefreshSource, /router\.refresh\(\)/);
+  assert.match(runnerRealtimeRefreshSource, /window\.setInterval/);
+  assert.match(runnerRealtimeRefreshSource, /visibilitychange/);
+  assert.doesNotMatch(runnerRealtimeRefreshSource, /useRealtimeChannel/);
+  assert.doesNotMatch(runnerRealtimeRefreshSource, /postgres_changes/);
+  assert.doesNotMatch(runnerRealtimeRefreshSource, /\.channel\(/);
 });
 
 test("Runner idle visual uses local dotLottie asset with static mascot fallback", () => {

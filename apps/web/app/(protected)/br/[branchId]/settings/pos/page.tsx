@@ -1,15 +1,15 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
-import { Button } from "@comtammatu/ui/components/button";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { AppPage } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
+import { messages } from "@lib/messages";
+import { BranchManagementShell } from "../../_components/branch-management-chrome";
 import {
   TerminalsClient,
   type BranchOption,
   type TerminalRow,
-} from "@/(protected)/admin/settings/pos/terminals-client";
+} from "@/(protected)/branch-settings/_shared/pos/terminals-client";
 
 export default async function BranchPosSettingsPage({
   params,
@@ -20,7 +20,7 @@ export default async function BranchPosSettingsPage({
   const branchId = Number(branchIdStr);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  const { supabase, claims } = await loadAuthState();
+  const { supabase, claims, session } = await loadAuthState();
 
   if (!canManageBranchFloorSettings(claims.user_role)) {
     redirect(`/br/${branchId}/settings`);
@@ -43,27 +43,34 @@ export default async function BranchPosSettingsPage({
 
   if (branchRes.error || !branchRes.data) notFound();
   if (terminalsRes.error) throw new Error("Không thể tải máy POS");
+  const displayName =
+    session.user.user_metadata?.["full_name"] ??
+    session.user.email ??
+    claims.user_role;
 
   return (
-    <AppPage width="default">
-      <div className="flex items-center gap-3">
-        <Button asChild variant="outline" size="sm" className="gap-1">
-          <Link href={`/br/${branchId}/settings`}>
-            <IconArrowLeft className="size-4" />
-            Thiết lập
-          </Link>
-        </Button>
-        <AppPageHeader
-          className="min-w-0 flex-1"
-          title="POS"
-          description={branchRes.data.name}
+    <BranchManagementShell
+      user={{ name: displayName }}
+      role={claims.user_role}
+      branchId={branchId}
+      branchName={branchRes.data.name}
+      defaultPageTitle={messages.settings.nav.pos}
+      description={branchRes.data.name}
+      breadcrumbSegments={[
+        { label: APP_COPY_VI.branchCommand, href: `/br/${branchId}/dashboard` },
+        {
+          label: messages.settings.branch.hubTitle,
+          href: `/br/${branchId}/settings`,
+        },
+        messages.settings.nav.pos,
+      ]}
+    >
+      <AppPage width="wide">
+        <TerminalsClient
+          branches={[branchRes.data] as BranchOption[]}
+          terminals={(terminalsRes.data ?? []) as TerminalRow[]}
         />
-      </div>
-
-      <TerminalsClient
-        branches={[branchRes.data] as BranchOption[]}
-        terminals={(terminalsRes.data ?? []) as TerminalRow[]}
-      />
-    </AppPage>
+      </AppPage>
+    </BranchManagementShell>
   );
 }

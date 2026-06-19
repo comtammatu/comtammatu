@@ -3,11 +3,10 @@
 import { useMemo } from "react";
 import { PRODUCT_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
-import { AppEmptyState } from "@/components/surface";
+import { AppEmptyState, OperationalBoardCard } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { Card } from "@comtammatu/ui/components/card";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Ban as IconBan,
@@ -183,7 +182,11 @@ function CompactItemRow({
             onClick={() => void handleOutOfStock()}
             aria-label={KDS_HEATMAP_LABELS.outOfStockNamedItem(item.item_name)}
           >
-            {isMutating ? <Spinner /> : <IconBan aria-hidden />}
+            {isMutating ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <IconBan data-icon="inline-start" aria-hidden />
+            )}
           </Button>
         )}
         {ticket && allowRecall && (
@@ -197,7 +200,11 @@ function CompactItemRow({
             onClick={() => void onRecall(ticket.id)}
             aria-label={KDS_HEATMAP_LABELS.recallNamedItem(item.item_name)}
           >
-            {isMutating ? <Spinner /> : <IconRotate aria-hidden />}
+            {isMutating ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <IconRotate data-icon="inline-start" aria-hidden />
+            )}
           </Button>
         )}
         {canComplete && (
@@ -211,7 +218,11 @@ function CompactItemRow({
             onClick={() => void onCompleteTickets([ticket.id])}
             aria-label={KDS_HEATMAP_LABELS.completeNamedItem(item.item_name)}
           >
-            {isMutating ? <Spinner /> : <IconCheck aria-hidden />}
+            {isMutating ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <IconCheck data-icon="inline-start" aria-hidden />
+            )}
           </Button>
         )}
       </div>
@@ -291,7 +302,11 @@ function CompactOrphanRow({
             onClick={() => void handleOutOfStock()}
             aria-label={KDS_HEATMAP_LABELS.outOfStock}
           >
-            {isMutating ? <Spinner /> : <IconBan aria-hidden />}
+            {isMutating ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <IconBan data-icon="inline-start" aria-hidden />
+            )}
           </Button>
         )}
         {allowRecall && (
@@ -305,7 +320,11 @@ function CompactOrphanRow({
             onClick={() => void onRecall(ticket.id)}
             aria-label={KDS_HEATMAP_LABELS.recallItem}
           >
-            {isMutating ? <Spinner /> : <IconRotate aria-hidden />}
+            {isMutating ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <IconRotate data-icon="inline-start" aria-hidden />
+            )}
           </Button>
         )}
         {canComplete && (
@@ -319,7 +338,11 @@ function CompactOrphanRow({
             onClick={() => void onCompleteTickets([ticket.id])}
             aria-label={KDS_HEATMAP_LABELS.completeItem}
           >
-            {isMutating ? <Spinner /> : <IconCheck aria-hidden />}
+            {isMutating ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <IconCheck data-icon="inline-start" aria-hidden />
+            )}
           </Button>
         )}
       </div>
@@ -379,14 +402,14 @@ function HeatmapCard({
   );
 
   return (
-    <Card
+    <OperationalBoardCard
       data-testid={`kds-heatmap-card-${order.groupKey}`}
       data-kds-current={isCurrent ? "true" : undefined}
+      current={isCurrent}
+      currentTone="warning"
       className={cn(
-        "min-w-0 gap-0 overflow-hidden border-l-2 p-2 xl:p-3",
+        "min-w-0 gap-0 overflow-hidden border-l-2 p-2 transition-colors duration-150 xl:p-3",
         ageStyle.bg,
-        isCurrent &&
-          "relative z-10 border-warning bg-warning/25 ring-2 ring-warning/70",
         getCardLeftAccent(status, elapsed),
       )}
     >
@@ -421,7 +444,6 @@ function HeatmapCard({
             <BatchActions
               layout="title"
               orderGroupKey={order.groupKey}
-              orderNumber={order.orderNumber}
               activeTickets={activeTickets}
               pendingTicketIds={pendingTicketIds}
               onCompleteTickets={onCompleteTickets}
@@ -469,7 +491,7 @@ function HeatmapCard({
           />
         ))}
       </div>
-    </Card>
+    </OperationalBoardCard>
   );
 }
 
@@ -492,11 +514,6 @@ function OrderColumn({
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
   currentGroupKey: string | null;
 }) {
-  // Peak relief: a long lane packs two cards per row on xl so the cook can
-  // scan 8-10 orders without scrolling. The narrow add-on lane (col-span-2)
-  // cannot fit two readable cards, so it always stays a single column.
-  const dense = column.orders.length > 5 && column.id !== "add_on";
-
   return (
     <section
       data-testid={`kds-column-${column.id}`}
@@ -508,19 +525,15 @@ function OrderColumn({
     >
       <div
         data-testid={`kds-column-list-${column.id}`}
-        className={cn(
-          "min-h-0 flex-1 space-y-1.5 overflow-y-auto xl:space-y-2",
-          dense &&
-            "xl:grid xl:grid-cols-2 xl:content-start xl:gap-2 xl:space-y-0",
-        )}
+        className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto xl:gap-2"
       >
         {column.orders.length === 0 ? (
-          <div
+          <AppEmptyState
             data-testid={`kds-column-empty-${column.id}`}
-            className="flex items-center justify-center rounded-md border border-dashed border-border/60 bg-muted/20 px-3 py-3 text-center text-base font-medium text-muted-foreground"
-          >
-            {column.emptyTitle}
-          </div>
+            compact
+            className="border-dashed bg-muted/20 px-3 py-3"
+            title={column.emptyTitle}
+          />
         ) : (
           column.orders.map((order) => (
             <HeatmapCard

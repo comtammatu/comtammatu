@@ -1,5 +1,4 @@
--- D026 §2: seed 7 per-position checklist templates from the normalized doc
--- (docs/plan/hrm-checklist-chuanhoa-2026-06-15.md). Depends on migration
+-- D026 §2: seed 7 per-position checklist templates. Depends on migration
 -- 20260615130000 (scope column + English phase). Owner decisions applied:
 -- drop 'Chấm công' items (clock-in is a system event), drop the weekly
 -- revenue task, drop the inferred manager during-shift item; non-manager

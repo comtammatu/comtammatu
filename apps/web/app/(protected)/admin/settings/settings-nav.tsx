@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@comtammatu/ui";
 import {
   BRANCH_FLOOR_SETTINGS_ROLES,
   type StaffRole,
 } from "@comtammatu/shared/auth";
-import { Separator } from "@comtammatu/ui/components/separator";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { messages } from "@lib/messages";
 import { isNavItemActive } from "@/lib/shell-primitives";
 
@@ -50,33 +53,36 @@ export function SettingsNav({ role }: { role: StaffRole }) {
   const pathname = usePathname();
 
   const visibleTabs = TABS.filter((tab) => tab.allowedRoles.includes(role));
+  const activeTab =
+    visibleTabs.find((tab) => isNavItemActive({ href: tab.href }, pathname))
+      ?.href ?? visibleTabs[0]?.href;
+
+  if (!activeTab) return null;
 
   return (
-    <>
-      <nav
-        className="flex items-center gap-1 overflow-x-auto"
-        aria-label={copy.ariaLabel}
-      >
-        {visibleTabs.map((tab) => {
-          const isActive = isNavItemActive({ href: tab.href }, pathname);
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={cn(
-                "inline-flex h-9 items-center whitespace-nowrap rounded-md px-3 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-              aria-current={isActive ? "page" : undefined}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </nav>
-      <Separator />
-    </>
+    <nav aria-label={copy.ariaLabel}>
+      <Tabs value={activeTab} className="w-full">
+        <TabsList variant="toolbar" className="w-full">
+          {visibleTabs.map((tab) => {
+            const isActive = isNavItemActive({ href: tab.href }, pathname);
+            return (
+              <TabsTrigger
+                key={tab.href}
+                value={tab.href}
+                asChild
+                className="flex-none px-3"
+              >
+                <Link
+                  href={tab.href}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {tab.label}
+                </Link>
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+      </Tabs>
+    </nav>
   );
 }

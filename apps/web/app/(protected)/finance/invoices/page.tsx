@@ -20,9 +20,10 @@ export default async function InvoicesPage({
       : undefined;
 
   const res = await fetchTaxInvoicesPage({ branchId });
-  const page = res.success
-    ? res.data
-    : { items: [], hasMore: false, nextCursor: null };
+  if (!res.success) {
+    throw new Error(res.error ?? "Failed to load tax invoices");
+  }
+  const page = res.data;
   const invoices = (page?.items ?? []) as InvoiceRow[];
   const initialHasMore = page?.hasMore ?? false;
   const initialNextCursor = (page?.nextCursor ?? null) as TaxInvoiceCursor | null;

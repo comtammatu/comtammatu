@@ -12,7 +12,6 @@ import {
   releaseDailyLimitHoldsSchema,
   reserveDailyLimitHoldsSchema,
   submitOrderSchema,
-  updateOrderStatusSchema,
 } from "./_lib/schemas";
 import { posUseAuth } from "./_lib/auth";
 import {
@@ -28,8 +27,6 @@ import {
   submitOrderRpcFallback,
   submitOrderRpcMappings,
   type DailyLimitItemLabel,
-  updateOrderStatusRpcFallback,
-  updateOrderStatusRpcMappings,
 } from "./_lib/messages";
 
 async function markInitialOrderPriority(
@@ -503,38 +500,6 @@ export const appendOrderItems = withActionPositional(
 );
 
 
-/* ─── updateOrderStatus (POS) ─── */
-
-/**
- * Transition order to `served`. POS only — KDS/kitchen drives the other
- * states. Schema enum locks the input to `served` so a buggy caller
- * cannot drive the order to `paid` or `completed` via this surface.
- */
-export const updateOrderStatus = withActionPositional(
-  {
-    argsToInput: (orderId: number, newStatus: "served") => ({
-      orderId,
-      newStatus,
-    }),
-    schema: updateOrderStatusSchema,
-    customAuth: posUseAuth,
-  },
-  async ({ orderId, newStatus }, { supabase }) => {
-    const { error } = await supabase.rpc("update_pos_order_status", {
-      p_order_id: orderId,
-      p_new_status: newStatus,
-    });
-    if (error) {
-      return mapRpcError(
-        error,
-        updateOrderStatusRpcMappings,
-        updateOrderStatusRpcFallback,
-      );
-    }
-    return { success: true, data: null };
-  },
-);
-
 /* ─── markOrderItemServed (POS waiter per-item) ─── */
 
 /**
@@ -543,7 +508,7 @@ export const updateOrderStatus = withActionPositional(
  */
 export const markOrderItemServed = withActionPositional(
   {
-    argsToInput: (itemId: number) => ({ itemId }),
+    argsToInput: (branchId: number, itemId: number) => ({ branchId, itemId }),
     schema: markOrderItemServedSchema,
     customAuth: posUseAuth,
   },

@@ -1,32 +1,42 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { z } from "zod";
 import { Save as IconSave } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { QuantityInput } from "@/components/form";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
+import { FormDialog, QuantityField, QuantityInput } from "@/components/form";
 import { messages } from "@lib/messages";
 import { bulkUpdateIngredientThresholds } from "./actions";
 
 const copy = messages.inventory.settings.thresholds;
+
+const bulkThresholdSchema = z.object({
+  min: z.string(),
+  reorder: z.string(),
+  max: z.string(),
+});
+
+type BulkThresholdValues = z.infer<typeof bulkThresholdSchema>;
+
+const BULK_THRESHOLD_DEFAULT_VALUES: BulkThresholdValues = {
+  min: "",
+  reorder: "",
+  max: "",
+};
 
 export type ThresholdRow = {
   id: number;
@@ -192,6 +202,97 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
 
   const allSelected = editable.length > 0 && selected.size === editable.length;
   const someSelected = selected.size > 0 && !allSelected;
+  const columns: DataTableColumn<EditableRow>[] = [
+    {
+      key: "select",
+      header: (
+        <Checkbox
+          checked={allSelected ? true : someSelected ? "indeterminate" : false}
+          onCheckedChange={(value) => toggleAll(value === true)}
+          aria-label={copy.selectAllAria}
+        />
+      ),
+      className: "w-10",
+      render: (row) => (
+        <Checkbox
+          checked={selected.has(row.id)}
+          onCheckedChange={(value) => toggleRow(row.id, value === true)}
+          aria-label={`Chọn ${row.name}`}
+        />
+      ),
+    },
+    {
+      key: "ingredient",
+      header: copy.cols.ingredient,
+      render: (row) => {
+        const error = rowError(row);
+        return (
+          <div>
+            <div className="font-medium">{row.name}</div>
+            <div className="font-mono text-xs text-muted-foreground">
+              {row.sku ?? "—"}
+              {error ? (
+                <span className="ml-2 text-destructive" role="alert">
+                  · {error}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: "unit",
+      header: copy.cols.unit,
+      className: "w-28 text-xs text-muted-foreground",
+      render: (row) => row.unit,
+    },
+    {
+      key: "min",
+      header: copy.cols.min,
+      className: "w-32 text-right",
+      render: (row) => (
+        <QuantityInput
+          value={row.minStock}
+          onValueChange={(value) => patchRow(row.id, "minStock", value)}
+          maxFractionDigits={3}
+          placeholder="0"
+          className="h-8 text-right tabular-nums"
+          aria-label={`${copy.cols.min} ${row.name}`}
+        />
+      ),
+    },
+    {
+      key: "reorder",
+      header: copy.cols.reorder,
+      className: "w-32 text-right",
+      render: (row) => (
+        <QuantityInput
+          value={row.reorderPoint}
+          onValueChange={(value) => patchRow(row.id, "reorderPoint", value)}
+          maxFractionDigits={3}
+          placeholder="—"
+          className="h-8 text-right tabular-nums"
+          aria-label={`${copy.cols.reorder} ${row.name}`}
+        />
+      ),
+    },
+    {
+      key: "max",
+      header: copy.cols.max,
+      className: "w-32 text-right",
+      render: (row) => (
+        <QuantityInput
+          value={row.maxStock}
+          onValueChange={(value) => patchRow(row.id, "maxStock", value)}
+          maxFractionDigits={3}
+          placeholder="—"
+          className="h-8 text-right tabular-nums"
+          aria-label={`${copy.cols.max} ${row.name}`}
+        />
+      ),
+    },
+  ];
 
   return (
     <div className="flex flex-col">
@@ -208,94 +309,30 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
         </Button>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-10">
-              <Checkbox
-                checked={
-                  allSelected ? true : someSelected ? "indeterminate" : false
-                }
-                onCheckedChange={(v) => toggleAll(v === true)}
-                aria-label={copy.selectAllAria}
-              />
-            </TableHead>
-            <TableHead>{copy.cols.ingredient}</TableHead>
-            <TableHead className="w-28">{copy.cols.unit}</TableHead>
-            <TableHead className="w-32 text-right">{copy.cols.min}</TableHead>
-            <TableHead className="w-32 text-right">
-              {copy.cols.reorder}
-            </TableHead>
-            <TableHead className="w-32 text-right">{copy.cols.max}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {editable.map((row) => {
-            const error = rowError(row);
-            const dirty = rowIsDirty(row);
-            return (
-              <TableRow
-                key={row.id}
-                data-dirty={dirty || undefined}
-                data-invalid={error != null || undefined}
-                className="data-[dirty]:bg-warning/5 data-[invalid]:bg-destructive/10"
-              >
-                <TableCell>
-                  <Checkbox
-                    checked={selected.has(row.id)}
-                    onCheckedChange={(v) => toggleRow(row.id, v === true)}
-                    aria-label={`Chọn ${row.name}`}
-                  />
-                </TableCell>
-                <TableCell>
-                  <div className="font-medium">{row.name}</div>
-                  <div className="font-mono text-xs text-muted-foreground">
-                    {row.sku ?? "—"}
-                    {error ? (
-                      <span className="ml-2 text-destructive" role="alert">
-                        · {error}
-                      </span>
-                    ) : null}
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {row.unit}
-                </TableCell>
-                <TableCell className="text-right">
-                  <QuantityInput
-                    value={row.minStock}
-                    onValueChange={(v) => patchRow(row.id, "minStock", v)}
-                    maxFractionDigits={3}
-                    placeholder="0"
-                    className="h-8 text-right tabular-nums"
-                    aria-label={`${copy.cols.min} ${row.name}`}
-                  />
-                </TableCell>
-                <TableCell className="text-right">
-                  <QuantityInput
-                    value={row.reorderPoint}
-                    onValueChange={(v) => patchRow(row.id, "reorderPoint", v)}
-                    maxFractionDigits={3}
-                    placeholder="—"
-                    className="h-8 text-right tabular-nums"
-                    aria-label={`${copy.cols.reorder} ${row.name}`}
-                  />
-                </TableCell>
-                <TableCell className="text-right">
-                  <QuantityInput
-                    value={row.maxStock}
-                    onValueChange={(v) => patchRow(row.id, "maxStock", v)}
-                    maxFractionDigits={3}
-                    placeholder="—"
-                    className="h-8 text-right tabular-nums"
-                    aria-label={`${copy.cols.max} ${row.name}`}
-                  />
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      <DataTable
+        columns={columns}
+        data={editable}
+        getRowKey={(row) => row.id}
+        emptyTitle="Chưa có nguyên liệu cần cấu hình ngưỡng"
+        emptyMode="no-data"
+        rowClassName={(row) =>
+          rowIsDirty(row)
+            ? rowError(row)
+              ? "bg-destructive/10"
+              : "bg-warning/5"
+            : rowError(row)
+              ? "bg-destructive/10"
+              : undefined
+        }
+        mobileCardRender={(row) => (
+          <ThresholdItem
+            row={row}
+            selected={selected.has(row.id)}
+            onSelectedChange={(checked) => toggleRow(row.id, checked)}
+            onPatch={(key, value) => patchRow(row.id, key, value)}
+          />
+        )}
+      />
 
       <div className="sticky bottom-0 flex items-center justify-between border-t bg-card/95 px-4 py-3 backdrop-blur">
         <span className="text-xs text-muted-foreground">
@@ -328,6 +365,86 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
   );
 }
 
+function ThresholdItem({
+  row,
+  selected,
+  onSelectedChange,
+  onPatch,
+}: {
+  row: EditableRow;
+  selected: boolean;
+  onSelectedChange: (checked: boolean) => void;
+  onPatch: (key: FieldKey, value: string) => void;
+}) {
+  const error = rowError(row);
+  const dirty = rowIsDirty(row);
+
+  return (
+    <Item
+      variant="outline"
+      className={
+        error ? "bg-destructive/10" : dirty ? "bg-warning/5" : undefined
+      }
+    >
+      <ItemHeader>
+        <div>
+          <ItemTitle>{row.name}</ItemTitle>
+          <ItemDescription>
+            {row.sku ?? "—"} · {row.unit}
+            {error ? (
+              <span className="ml-2 text-destructive" role="alert">
+                · {error}
+              </span>
+            ) : null}
+          </ItemDescription>
+        </div>
+        <Checkbox
+          checked={selected}
+          onCheckedChange={(value) => onSelectedChange(value === true)}
+          aria-label={`Chọn ${row.name}`}
+        />
+      </ItemHeader>
+      <ItemContent className="basis-full">
+        <div className="grid grid-cols-3 gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium">{copy.cols.min}</span>
+            <QuantityInput
+              value={row.minStock}
+              onValueChange={(value) => onPatch("minStock", value)}
+              maxFractionDigits={3}
+              placeholder="0"
+              className="h-8 text-right tabular-nums"
+              aria-label={`${copy.cols.min} ${row.name}`}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium">{copy.cols.reorder}</span>
+            <QuantityInput
+              value={row.reorderPoint}
+              onValueChange={(value) => onPatch("reorderPoint", value)}
+              maxFractionDigits={3}
+              placeholder="—"
+              className="h-8 text-right tabular-nums"
+              aria-label={`${copy.cols.reorder} ${row.name}`}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium">{copy.cols.max}</span>
+            <QuantityInput
+              value={row.maxStock}
+              onValueChange={(value) => onPatch("maxStock", value)}
+              maxFractionDigits={3}
+              placeholder="—"
+              className="h-8 text-right tabular-nums"
+              aria-label={`${copy.cols.max} ${row.name}`}
+            />
+          </label>
+        </div>
+      </ItemContent>
+    </Item>
+  );
+}
+
 function BulkApplyDialog({
   open,
   onOpenChange,
@@ -339,88 +456,61 @@ function BulkApplyDialog({
   selectedCount: number;
   onApply: (values: { min: string; reorder: string; max: string }) => void;
 }) {
-  const [min, setMin] = useState("");
-  const [reorder, setReorder] = useState("");
-  const [max, setMax] = useState("");
+  async function handleSubmit(values: BulkThresholdValues) {
+    if (selectedCount === 0) {
+      return { success: false, error: copy.bulk.empty };
+    }
+    if (values.min === "" && values.reorder === "" && values.max === "") {
+      return {
+        success: false,
+        error: "Nhập ít nhất một ngưỡng để áp dụng.",
+      };
+    }
 
-  function reset() {
-    setMin("");
-    setReorder("");
-    setMax("");
+    onApply(values);
+    return { success: true };
   }
 
   return (
-    <Dialog
+    <FormDialog
       open={open}
-      onOpenChange={(next) => {
-        if (!next) reset();
-        onOpenChange(next);
-      }}
+      onOpenChange={onOpenChange}
+      title={copy.bulk.dialogTitle}
+      description={`${copy.bulk.applyTo(selectedCount)} · ${copy.bulk.dialogHint}`}
+      schema={bulkThresholdSchema}
+      defaultValues={BULK_THRESHOLD_DEFAULT_VALUES}
+      entityKey={`bulk-${selectedCount}`}
+      onSubmit={handleSubmit}
+      successMessage={copy.bulk.applyTo(selectedCount)}
+      submitLabel={copy.bulk.applyAction}
+      cancelLabel={copy.bulk.cancel}
+      contentClassName="sm:max-w-md"
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{copy.bulk.dialogTitle}</DialogTitle>
-          <DialogDescription>
-            {copy.bulk.applyTo(selectedCount)} · {copy.bulk.dialogHint}
-          </DialogDescription>
-        </DialogHeader>
-
+      {(form) => (
         <div className="grid grid-cols-3 gap-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium">{copy.cols.min}</span>
-            <QuantityInput
-              value={min}
-              onValueChange={setMin}
-              maxFractionDigits={3}
-              placeholder="—"
-              className="h-9 text-right tabular-nums"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium">{copy.cols.reorder}</span>
-            <QuantityInput
-              value={reorder}
-              onValueChange={setReorder}
-              maxFractionDigits={3}
-              placeholder="—"
-              className="h-9 text-right tabular-nums"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium">{copy.cols.max}</span>
-            <QuantityInput
-              value={max}
-              onValueChange={setMax}
-              maxFractionDigits={3}
-              placeholder="—"
-              className="h-9 text-right tabular-nums"
-            />
-          </label>
+          <QuantityField
+            control={form.control}
+            name="min"
+            label={copy.cols.min}
+            placeholder="—"
+            className="h-9 text-right tabular-nums"
+          />
+          <QuantityField
+            control={form.control}
+            name="reorder"
+            label={copy.cols.reorder}
+            placeholder="—"
+            className="h-9 text-right tabular-nums"
+          />
+          <QuantityField
+            control={form.control}
+            name="max"
+            label={copy.cols.max}
+            placeholder="—"
+            className="h-9 text-right tabular-nums"
+          />
         </div>
-
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
-            {copy.bulk.cancel}
-          </Button>
-          <Button
-            type="button"
-            disabled={
-              selectedCount === 0 ||
-              (min === "" && reorder === "" && max === "")
-            }
-            onClick={() => {
-              onApply({ min, reorder, max });
-              reset();
-            }}
-          >
-            {copy.bulk.applyAction}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      )}
+    </FormDialog>
   );
 }

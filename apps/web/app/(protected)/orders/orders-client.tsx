@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing orders review surface keeps operational copy inline */
+
 import { useState, useTransition, useMemo } from "react";
 import { ShoppingBag as IconShoppingBag } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
@@ -14,11 +16,13 @@ import { KpiCard } from "@/components/kpi/kpi-card";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -40,6 +44,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { AppSection, AppToolbar } from "@/components/surface";
 
 const ORDER_COLUMNS: DataTableColumn<OrderRow>[] = [
   {
@@ -196,8 +201,7 @@ export function OrdersClient({
       </div>
 
       {/* ─── Filter bar ─── */}
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-2 p-3">
+      <AppToolbar className="items-end">
           <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
             <Label htmlFor="date-from" className="text-xs">
               {FORM_VI.fromDate}
@@ -286,30 +290,30 @@ export function OrdersClient({
               </Button>
             )}
           </div>
-        </CardContent>
-      </Card>
+      </AppToolbar>
 
-      <div className="rounded-lg border bg-muted/30 text-card-foreground flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <p className="text-sm text-muted-foreground">
-          {ORDERS_COPY.listCountNote(displayOrders.length, summary.totalCount)}
-        </p>
-        {hasFilters && (
-          <Badge variant="info" className="rounded-full px-3 py-1.5">
-            Bộ lọc đang áp dụng
-          </Badge>
-        )}
-      </div>
+      <AppToolbar className="justify-between">
+          <p className="text-sm text-muted-foreground">
+            {ORDERS_COPY.listCountNote(
+              displayOrders.length,
+              summary.totalCount,
+            )}
+          </p>
+          {hasFilters && (
+            <Badge variant="info" className="rounded-full px-3 py-1.5">
+              Bộ lọc đang áp dụng
+            </Badge>
+          )}
+      </AppToolbar>
 
       {/* ─── Table ─── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Danh sách đơn</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Theo dõi trạng thái, thanh toán và tổng tiền của từng đơn hàng.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-<DataTable
+      <AppSection
+        title="Danh sách đơn"
+        description="Theo dõi trạng thái, thanh toán và tổng tiền của từng đơn hàng."
+        contentFlush
+        contentScroll
+      >
+          <DataTable
             columns={ORDER_COLUMNS}
             data={displayOrders}
             getRowKey={(order) => order.id}
@@ -323,53 +327,46 @@ export function OrdersClient({
             emptyIcon={<IconShoppingBag />}
             emptyMode={hasFilters ? "no-results" : "no-data"}
             mobileCardRender={(order) => (
-              <button
-                type="button"
-                onClick={() => setSelectedOrder(order)}
-                className="rounded-lg border bg-muted/30 text-card-foreground w-full p-4 text-left transition-colors hover:bg-muted/20"
+              <Item
+                asChild
+                variant="outline"
+                className="cursor-pointer text-left"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-mono text-sm font-medium">
-                      {order.order_number}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {order.branch_name}
-                    </p>
-                  </div>
-                  <StatusBadge domain="order" value={order.status} />
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">{STAFF_VI.long}</p>
-                    <p className="mt-1 font-medium">{order.created_by_name}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-muted-foreground">
-                      {FORM_VI.totalAmount}
-                    </p>
-                    <p className="mt-1 font-mono font-medium">
+                <button type="button" onClick={() => setSelectedOrder(order)}>
+                  <ItemHeader>
+                    <ItemContent>
+                      <ItemTitle className="font-mono">
+                        {order.order_number}
+                      </ItemTitle>
+                      <ItemDescription>{order.branch_name}</ItemDescription>
+                    </ItemContent>
+                    <StatusBadge domain="order" value={order.status} />
+                  </ItemHeader>
+                  <ItemFooter>
+                    <span className="text-xs text-muted-foreground">
+                      {STAFF_VI.long}: {order.created_by_name}
+                    </span>
+                    <span className="font-mono text-sm font-semibold tabular-nums">
                       {formatVND(order.total_amount)}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  <p className="text-xs text-muted-foreground">
-                    {formatVNDateTime(order.created_at)}
-                  </p>
-                  {order.payment_method ? (
-                    <Badge variant="outline" className="text-xs">
-                      {getPaymentMethodLabelVi(order.payment_method)}
-                    </Badge>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  )}
-                </div>
-              </button>
+                    </span>
+                  </ItemFooter>
+                  <ItemFooter>
+                    <span className="text-xs text-muted-foreground">
+                      {formatVNDateTime(order.created_at)}
+                    </span>
+                    {order.payment_method ? (
+                      <Badge variant="outline" className="text-xs">
+                        {getPaymentMethodLabelVi(order.payment_method)}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </ItemFooter>
+                </button>
+              </Item>
             )}
           />
-        </CardContent>
-      </Card>
+      </AppSection>
 
       {/* ─── Detail sheet ─── */}
       <OrderDetailSheet

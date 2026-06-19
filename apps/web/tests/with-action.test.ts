@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { test } from "node:test";
 import { z } from "zod";
 import {
@@ -6,6 +8,12 @@ import {
   withActionPositional,
   type ActionContext,
 } from "../app/_lib/with-action";
+
+const withActionSource = () =>
+  readFileSync(
+    resolve(import.meta.dirname, "../app/_lib/with-action.ts"),
+    "utf8",
+  );
 
 /**
  * Fake ActionContext suitable for handler bodies. The new helper paths
@@ -31,10 +39,7 @@ function fakeCtx(overrides?: {
 }
 
 const sampleSchema = z.object({
-  orderItemId: z.coerce
-    .number()
-    .int()
-    .positive({ error: "Món không hợp lệ" }),
+  orderItemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
   reason: z.string().trim().min(5, { error: "Lý do tối thiểu 5 ký tự" }),
 });
 
@@ -221,6 +226,20 @@ test("withAction requireBranchScope skipped when customAuth is used", async () =
   assert.equal(result.success, true);
 });
 
+test("withFormAction supports the standard branch-scope guard", () => {
+  const source = withActionSource();
+  assert.match(
+    source,
+    /type FormActionOptions[\s\S]*DirectActionOptions/,
+    "FormData actions must accept requireBranchScope through DirectActionOptions",
+  );
+  assert.match(
+    source,
+    /export function withFormAction[\s\S]*opts\.requireBranchScope[\s\S]*lacksRequiredBranchScope/,
+    "withFormAction must reject branch-scoped roles with null branch_id on the standard auth path",
+  );
+});
+
 test("withActionPositional maps positional args through argsToInput", async () => {
   let seenData: unknown = null;
   const action = withActionPositional(
@@ -383,7 +402,7 @@ test("withActionPositional forbiddenError + forbiddenErrorCode together", async 
 });
 
 test("forbiddenError unset keeps the default denial copy (backward compat)", async () => {
-  // Callers that never set forbiddenError must get the shared
+  // Callers that never set forbiddenError must still get the shared
   // FORBIDDEN_ERROR — the option is additive.
   const result = await withAction(
     { schema: sampleSchema, customAuth: async () => null },

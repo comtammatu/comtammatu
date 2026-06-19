@@ -86,10 +86,11 @@ export const setOrderItemPriority = withActionPositional(
 export const transferOrderTable = withActionPositional(
   {
     argsToInput: (
+      branchId: number,
       orderId: number,
       newTableId: number,
       idempotencyKey?: string,
-    ) => ({ orderId, newTableId, idempotencyKey }),
+    ) => ({ branchId, orderId, newTableId, idempotencyKey }),
     schema: transferTableSchema,
     customAuth: posUseAuth,
   },
@@ -113,4 +114,3 @@ export const transferOrderTable = withActionPositional(
       : { success: true };
   },
 );
-

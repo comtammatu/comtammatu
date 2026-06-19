@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
-import { AppPageHeader, AppEmptyState } from "@/components/surface";
+import { AppPageHeader, AppEmptyState, AppSection } from "@/components/surface";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { CATALOG_MANAGE_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { fetchIngredients } from "../../ingredient-actions";
@@ -54,17 +53,15 @@ export default async function InventoryThresholdsPage() {
         description={copy.description}
       />
 
-      <Card>
-        <CardContent flush>
-          {rows.length === 0 ? (
-            <div className="px-5 py-10">
-              <AppEmptyState title={copy.empty} />
-            </div>
-          ) : (
-            <ThresholdsClient rows={rows} />
-          )}
-        </CardContent>
-      </Card>
+      <AppSection contentFlush>
+        {rows.length === 0 ? (
+          <div className="px-5 py-10">
+            <AppEmptyState title={copy.empty} />
+          </div>
+        ) : (
+          <ThresholdsClient rows={rows} />
+        )}
+      </AppSection>
     </div>
   );
 }

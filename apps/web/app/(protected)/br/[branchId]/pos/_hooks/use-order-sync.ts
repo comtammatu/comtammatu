@@ -46,12 +46,6 @@ export interface UseOrderSyncArgs {
    * the active-side state mutation.
    */
   onArchivedInvalidate?: () => void;
-  /**
-   * One-tap hand-off from the "Bếp hoàn thành" toast: marks the order
-   * served without opening the detail sheet. Omitting it renders the
-   * toast without an action button.
-   */
-  onServeOrder?: (orderId: number) => void;
   /** Whether audible POS alerts are enabled on this device/session. */
   soundEnabled?: boolean;
   /**
@@ -125,7 +119,6 @@ function notifyOrderTransition(
   currentOrder: SessionOrder | undefined,
   next: Record<string, unknown>,
   soundEnabled: boolean,
-  onServeOrder?: (orderId: number) => void,
 ): void {
   if (!currentOrder) return;
 
@@ -144,23 +137,14 @@ function notifyOrderTransition(
 
   if (nextStatus === "ready" && currentOrder.status !== "ready") {
     if (soundEnabled) playAppSignal("pos");
-    const orderId = currentOrder.id;
     toast.success(`Bếp hoàn thành #${orderNumber}`, {
-      description: "Sẵn sàng phục vụ hoặc gọi khách",
-      action: onServeOrder
-        ? {
-            label: "Phục vụ",
-            onClick: () => {
-              onServeOrder(orderId);
-            },
-          }
-        : undefined,
+      description: "Sẵn sàng gọi khách hoặc thanh toán",
     });
     return;
   }
 
   if (nextStatus === "served" && currentOrder.status !== "served") {
-    toast.info(`Đơn #${orderNumber} đã phục vụ`, {
+    toast.info(`Đơn #${orderNumber} chờ thanh toán`, {
       description: getOrderContextDescription(currentOrder),
     });
     return;
@@ -308,6 +292,8 @@ function applyOrderUpdate(
   }
   if (typeof payload.created_at === "string")
     next.created_at = payload.created_at;
+  if (typeof payload.updated_at === "string")
+    next.updated_at = payload.updated_at;
   return next;
 }
 
@@ -386,6 +372,10 @@ function buildOptimisticOrder(
       typeof payload.created_at === "string"
         ? payload.created_at
         : new Date().toISOString(),
+    updated_at:
+      typeof payload.updated_at === "string"
+        ? payload.updated_at
+        : new Date().toISOString(),
     tables: tableNumber !== null ? { number: tableNumber } : null,
   };
 }
@@ -411,7 +401,6 @@ export function useOrderSync({
   refreshOrders,
   refreshAll,
   onArchivedInvalidate,
-  onServeOrder,
   soundEnabled = false,
   skipFirstSubscribedRefresh = false,
 }: UseOrderSyncArgs): void {
@@ -422,7 +411,6 @@ export function useOrderSync({
   const getTablesRef = useRef(getTables);
   const getOrdersRef = useRef(getOrders);
   const onArchivedInvalidateRef = useRef(onArchivedInvalidate);
-  const onServeOrderRef = useRef(onServeOrder);
   const soundEnabledRef = useRef(soundEnabled);
   const lastSyncRef = useRef<number>(Date.now());
   const initialSubscribeSeenRef = useRef(false);
@@ -435,7 +423,6 @@ export function useOrderSync({
     getTablesRef.current = getTables;
     getOrdersRef.current = getOrders;
     onArchivedInvalidateRef.current = onArchivedInvalidate;
-    onServeOrderRef.current = onServeOrder;
     soundEnabledRef.current = soundEnabled;
   }, [
     refreshOrders,
@@ -445,7 +432,6 @@ export function useOrderSync({
     getTables,
     getOrders,
     onArchivedInvalidate,
-    onServeOrder,
     soundEnabled,
   ]);
 
@@ -518,7 +504,6 @@ export function useOrderSync({
                 currentOrder,
                 updated,
                 soundEnabledRef.current,
-                onServeOrderRef.current,
               );
 
               if (isTerminal) {

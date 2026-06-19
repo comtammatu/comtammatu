@@ -18,6 +18,7 @@ interface SidebarHeaderInputs {
 }
 
 export interface TabbedSidebarProps extends SidebarHeaderInputs {
+  isContextGate: boolean;
   showOrders: boolean;
   onShowOrdersChange: (show: boolean) => void;
   sidebarContentProps: SidebarContentProps;
@@ -29,10 +30,15 @@ function TabbedSidebarComponent({
   canManageMenuLimits,
   menuLimitRows,
   onShowCloseSession,
+  isContextGate,
   showOrders,
   onShowOrdersChange,
   sidebarContentProps,
 }: TabbedSidebarProps) {
+  const contentProps = isContextGate
+    ? { ...sidebarContentProps, showOrders: true }
+    : sidebarContentProps;
+
   return (
     <div className="hidden w-96 shrink-0 flex-col border-l border-border/60 bg-background md:flex xl:hidden">
       <PosSessionHeader
@@ -41,13 +47,13 @@ function TabbedSidebarComponent({
         menuLimitRows={menuLimitRows}
         onShowCloseSession={onShowCloseSession}
       />
-      {sidebarContentProps.appendDraft.target == null && (
+      {!isContextGate && sidebarContentProps.appendDraft.target == null && (
         <PosSidebarTabs
           showOrders={showOrders}
           onShowOrdersChange={onShowOrdersChange}
         />
       )}
-      <PosSidebarContent {...sidebarContentProps} />
+      <PosSidebarContent {...contentProps} />
     </div>
   );
 }
@@ -55,6 +61,7 @@ function TabbedSidebarComponent({
 export const TabbedSidebar = memo(TabbedSidebarComponent);
 
 export interface SplitSidebarProps extends SidebarHeaderInputs {
+  isContextGate: boolean;
   sidebarContentProps: SidebarContentProps;
 }
 
@@ -64,6 +71,7 @@ function SplitSidebarComponent({
   canManageMenuLimits,
   menuLimitRows,
   onShowCloseSession,
+  isContextGate,
   sidebarContentProps,
 }: SplitSidebarProps) {
   const {
@@ -77,7 +85,27 @@ function SplitSidebarComponent({
     onViewBill,
     onViewDetail,
     onOpenArchivedSheet,
+    hideTakeawayOrders,
   } = sidebarContentProps;
+
+  if (isContextGate) {
+    return (
+      <div className="hidden w-96 shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
+        <PosSessionHeader
+          canCloseShift={canCloseShift}
+          canManageMenuLimits={canManageMenuLimits}
+          menuLimitRows={menuLimitRows}
+          onShowCloseSession={onShowCloseSession}
+        />
+        <OrderListPane
+          onViewBill={onViewBill}
+          onViewDetail={onViewDetail}
+          onOpenArchivedSheet={onOpenArchivedSheet}
+          hideTakeawayOrders={hideTakeawayOrders}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="hidden shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
@@ -91,7 +119,7 @@ function SplitSidebarComponent({
         <div className="flex w-96 shrink-0 flex-col">
           {appendDraft.target != null ? (
             <AppendDraftPane
-              orderNumber={appendDraft.target.orderNumber}
+              targetLabel={appendDraft.target.targetLabel}
               items={appendDraft.items}
               isSubmitting={appendDraft.isSubmitting}
               onSubmit={appendDraft.onSubmit}
@@ -115,6 +143,7 @@ function SplitSidebarComponent({
             onViewBill={onViewBill}
             onViewDetail={onViewDetail}
             onOpenArchivedSheet={onOpenArchivedSheet}
+            hideTakeawayOrders={hideTakeawayOrders}
           />
         </div>
       </div>

@@ -22,10 +22,13 @@ export interface WorkspaceNavItemConfig extends NavItemConfig {
   label?: string;
 }
 
-export interface BranchOperationNavItemConfig extends NavItemConfig {
+export interface BranchScopedNavItemConfig extends NavItemConfig {
   hrefTemplate: string;
   label?: string;
 }
+
+export type BranchManagementNavItemConfig = BranchScopedNavItemConfig;
+export type BranchOperationNavItemConfig = BranchScopedNavItemConfig;
 
 /** Admin sidebar nav groups — only admin-scoped modules */
 export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
@@ -35,12 +38,12 @@ export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
       {
         moduleKey: "dashboard",
         icon: "LayoutDashboard",
-        label: APP_COPY_VI.erpCockpit,
+        label: APP_COPY_VI.ownerHome,
       },
       {
         moduleKey: "reports",
         icon: "BarChart3",
-        label: APP_COPY_VI.executiveReporting,
+        label: APP_COPY_VI.reportsLabel,
       },
     ],
   },
@@ -50,15 +53,12 @@ export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
       {
         moduleKey: "staff",
         icon: "Users",
-        label: APP_COPY_VI.foundationalStaff,
+        label: APP_COPY_VI.staffLabel,
       },
-      // Accounting (period close) stays OUT of the default nav (HKD scope,
-      // see docs/plan/decisions.md); /admin/accounting is reachable directly
-      // by permission only.
       {
         moduleKey: "settings",
         icon: "Settings",
-        label: APP_COPY_VI.systemSetup,
+        label: APP_COPY_VI.settingsLabel,
       },
     ],
   },
@@ -73,8 +73,8 @@ export const DOMAIN_WORKSPACE_ITEMS: WorkspaceNavItemConfig[] = [
   { moduleKey: "hr", icon: "Briefcase", label: APP_COPY_VI.hrWorkspace },
 ];
 
-/** Branch-scoped operational entry points */
-export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
+/** Branch-scoped management entry points */
+export const BRANCH_MANAGEMENT_ITEMS: BranchManagementNavItemConfig[] = [
   {
     moduleKey: "branch_dashboard",
     icon: "LayoutDashboard",
@@ -86,6 +86,10 @@ export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
     icon: "Settings",
     hrefTemplate: "/br/{branchId}/settings",
   },
+];
+
+/** Branch-scoped live operation entry points */
+export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
   {
     moduleKey: "branch_menu_limits",
     icon: "Utensils",

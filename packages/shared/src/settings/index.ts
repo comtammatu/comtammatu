@@ -3,7 +3,6 @@
  * Never hardcode key strings elsewhere.
  */
 export const SYSTEM_SETTING_KEYS = {
-  CURRENCY: "currency",
   /** "true" | "false" — POS shows VietQR when env credentials exist */
   PAYMENT_ENABLE_VIETQR: "payment_enable_vietqr",
   /** "true" | "false" — POS shows MoMo when env credentials exist */
@@ -23,17 +22,8 @@ export const SYSTEM_SETTING_KEYS = {
 export type SystemSettingKey =
   (typeof SYSTEM_SETTING_KEYS)[keyof typeof SYSTEM_SETTING_KEYS];
 
-/** Keys edited on Admin → Settings → Chung (excludes payment toggles) */
-export const GENERAL_SYSTEM_SETTING_KEYS = [
-  SYSTEM_SETTING_KEYS.CURRENCY,
-] as const satisfies readonly SystemSettingKey[];
-
-export type GeneralSystemSettingKey =
-  (typeof GENERAL_SYSTEM_SETTING_KEYS)[number];
-
 /** Default values for settings (used when no DB row exists) */
 export const SYSTEM_SETTING_DEFAULTS: Record<SystemSettingKey, string> = {
-  [SYSTEM_SETTING_KEYS.CURRENCY]: "VND",
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]: "false",
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]: "false",
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE]: "",

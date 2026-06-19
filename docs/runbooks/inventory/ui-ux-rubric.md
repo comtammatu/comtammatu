@@ -4,7 +4,7 @@
 >
 > Áp dụng cho toàn bộ `/inventory/*` đang live và các cầu nối vận hành có ảnh hưởng trực tiếp đến cảm nhận tồn kho hằng ngày.
 
-Updated: `2026-06-13`
+Updated: `2026-06-19`
 
 ---
 
@@ -18,12 +18,13 @@ source of truth. Khi kết luận, đối chiếu theo nhóm authority này:
 - UI implementation guide: [docs/modules/ui.md](../../modules/ui.md)
 - Canonical Inventory context: [docs/ref/inventory.md](../../ref/inventory.md), [docs/ref/inventory-sop.md](../../ref/inventory-sop.md), and [docs/modules/web-app.md](../../modules/web-app.md)
 
-Live route map (mọi route nằm dưới `apps/web/app/(protected)/inventory/*`; không còn surface `/admin/inventory*` — key `inventory_admin` đã retired, `allowedRoles: []`):
+Live route map (mọi route nằm dưới `apps/web/app/(protected)/inventory/*`; `/admin/inventory*` bị chặn bởi `inventory_admin` với `allowedRoles: []`):
 
 - Tổng quan / điều hướng: `/inventory`, `/inventory/dashboard`, `/inventory/stock`, `/inventory/reports`, `/inventory/settings` (+ `expiry`, `qc`, `thresholds`).
 - Danh mục: `/inventory/ingredients`, `/inventory/recipes`.
 - Nhập hàng (procurement intake): `/inventory/receiving`, `/inventory/suppliers`, `/inventory/purchase-orders` (+ `new`, `[id]`), `/inventory/grn` (+ `new`, `[id]`), `/inventory/supplier-invoices`, `/inventory/supplier-returns` (+ `new`, `[id]`), `/inventory/drafts`.
-- Điều chuyển: `/inventory/transfers` (+ `[id]`, `[id]/receive`) — gồm cả `Cấp bếp` (Kho CN → Bếp CN, một bước) lẫn điều chuyển chi nhánh → chi nhánh (5 bước).
+- Điều chuyển: `/inventory/transfers` (+ `[id]`, `[id]/receive`) — chỉ phiếu hàng vẫn còn tồn tại site nhận.
+- Tiêu hao: `/inventory/consumption` (+ `[id]`) — ghi nhận nguyên liệu chi nhánh đã dùng trong ngày sau khi quản lý duyệt/apply.
 - Sản xuất: `/inventory/production`.
 - Kiểm kê: `/inventory/stocktake` (+ `new`, `[id]`, `[id]/count`).
 - Hao hụt / hạn dùng: `/inventory/waste` (+ `new`, `approvals`), `/inventory/expiry`, `/inventory/issues` (+ `[id]`).
@@ -44,7 +45,7 @@ Boundary:
 | Severity | Khi nào dùng                                                                                     | Ví dụ                                                                                                            |
 | -------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
 | `P0`     | Chặn tác vụ hằng ngày, gây thao tác sai nghiệp vụ, hoặc khiến user không thể hoàn tất flow chính | Không thấy CTA nhận hàng ở chi nhánh, confirm sai vai trò, mất action chính trên mobile                          |
-| `P1`     | User vẫn làm được nhưng rất dễ hiểu sai, bỏ sót bước, hoặc đi chậm đáng kể                       | Sau `received` không có gợi ý sang `Cấp bếp`, toast/state không đủ rõ, placeholder copy gây hiểu nhầm là đã live |
+| `P1`     | User vẫn làm được nhưng rất dễ hiểu sai, bỏ sót bước, hoặc đi chậm đáng kể                       | Sau `received` không có gợi ý sang `Tiêu hao` khi cần duyệt consumption, toast/state không đủ rõ, placeholder copy gây hiểu nhầm là đã live |
 | `P2`     | Lệch visual, responsive, a11y, hoặc discoverability nhưng chưa phá workflow                      | Hover-only action trên desktop, badge màu khó hiểu, spacing làm table khó quét                                   |
 
 Nếu một issue chạm cả chức năng và UX, ưu tiên severity cao hơn.
@@ -102,16 +103,16 @@ Evidence cần chụp:
 Pass signals:
 
 - `Receiving` rõ là hub nhập hàng của chi nhánh (PO/GRN/HĐ NCC theo chi nhánh đang chọn).
-- `Cấp bếp` (Kho CN → Bếp CN, một bước) được hiểu là bước chuẩn nội bộ chi nhánh, không phải ngoại lệ.
-- Điều chuyển chi nhánh → chi nhánh (5 bước: nháp → xuất kho → vận chuyển → kiểm nhận → đã nhận) tách bạch rõ với `Cấp bếp`.
-- `Production` chỉ lộ đúng vai trò (`production_manager`).
+- `Tiêu hao` được hiểu là actual food cost/consumption của chi nhánh, không phải transfer.
+- Điều chuyển thật (5 bước: nháp → xuất kho → vận chuyển → kiểm nhận → đã nhận) tách bạch rõ với tiêu hao.
+- `Production` chỉ lộ đúng vai trò (`production_manager`) và đúng site Bếp Trung Tâm.
 - `Danh mục` không trùng entry với `Settings`.
 
 Fail patterns:
 
 - wording làm user hiểu nhầm flow;
 - một bước nghiệp vụ bị tách quá xa khỏi bước ngay trước/sau;
-- gộp nhầm `Cấp bếp` nội bộ với điều chuyển chi nhánh → chi nhánh;
+- gộp nhầm tiêu hao chi nhánh với điều chuyển tồn thật;
 - oversight role bị kéo vào thao tác operator.
 
 Evidence cần chụp:
@@ -227,7 +228,7 @@ Evidence cần chụp:
 | ----------------------------------- | --------------------------------------------------------------- |
 | Wave 1 — IA/nav                     | `Action discoverability`, `Workflow clarity`                    |
 | Wave 2 — Nhập hàng (Receiving)      | `Workflow clarity`, `State feedback`, `Error prevention`        |
-| Wave 3 — Cấp bếp + điều chuyển CN→CN | `Workflow clarity`, `Error prevention`, `Responsive ergonomics` |
+| Wave 3 — Tiêu hao + điều chuyển thật | `Workflow clarity`, `Error prevention`, `Responsive ergonomics` |
 | Wave 4 — Branch ops journey         | cả 6 trục, đặc biệt `Responsive ergonomics`                     |
 | Wave 5 — Oversight                  | `Workflow clarity`, `Action discoverability`                    |
 | Wave 6 — Placeholder sweep          | `Workflow clarity`, `Error prevention`                          |

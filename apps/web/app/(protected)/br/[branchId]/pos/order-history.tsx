@@ -6,10 +6,7 @@ import { cn } from "@comtammatu/ui";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  ConciergeBell as IconConciergeBell,
-  Receipt as IconReceipt,
-} from "lucide-react";
+import { Receipt as IconReceipt } from "lucide-react";
 import { messages } from "@lib/messages";
 import {
   Item,
@@ -47,11 +44,48 @@ export interface SessionOrder {
   merged_into_order_id: number | null;
   split_from_order_id: number | null;
   created_at: string;
+  updated_at: string;
   tables: { number: number } | null;
 }
 
+const ORDER_SEQUENCE_RE = /^(?:TC|MV)-(?:(?:\d{6}|\d{8})-)?(\d{1,4})(?:-.+)?$/i;
+
+function cleanOrderNumber(orderNumber: string): string {
+  return orderNumber.trim().replace(/^#+/, "");
+}
+
+function extractOrderSequence(orderNumber: string): string | null {
+  const match = ORDER_SEQUENCE_RE.exec(cleanOrderNumber(orderNumber));
+  return match?.[1] ?? null;
+}
+
+function getCompactOrderTitle(
+  order: SessionOrder,
+  options: { showDineInSequence?: boolean } = {},
+): string {
+  const contextLabel = getOrderContextLabel(order);
+  if (order.order_type === "takeaway") {
+    const sequence = extractOrderSequence(order.order_number);
+    if (sequence !== null) return `${contextLabel} #${sequence}`;
+
+    const cleaned = cleanOrderNumber(order.order_number);
+    return cleaned.length > 0 ? `${contextLabel} ${cleaned}` : contextLabel;
+  }
+
+  if (options.showDineInSequence === true) {
+    const sequence = extractOrderSequence(order.order_number);
+    if (sequence !== null) {
+      return `${contextLabel} - ${messages.pos.orderHistory.orderSequence(
+        sequence,
+      )}`;
+    }
+  }
+
+  return contextLabel;
+}
+
 function getOrderMetaLabel(order: SessionOrder): string {
-  return `${getOrderContextLabel(order)} - ${formatTime(order.created_at)}`;
+  return formatTime(order.created_at);
 }
 
 function compareOrdersNewestFirst(a: SessionOrder, b: SessionOrder): number {
@@ -72,14 +106,6 @@ function getOrderActionPriority(order: SessionOrder): number {
   if (order.status === "confirmed") return 4;
   if (order.status === "new") return 5;
   return 6;
-}
-
-type OrderSectionKey = "serve" | "pay" | "cooking";
-
-function getOrderSectionKey(order: SessionOrder): OrderSectionKey {
-  if (order.status === "ready") return "serve";
-  if (order.status === "served") return "pay";
-  return "cooking";
 }
 
 export function compareOrdersByNextAction(
@@ -127,15 +153,19 @@ export function OrderCardSummary({
   order,
   amountClassName,
   rightMeta,
+  showDineInSequence = false,
 }: {
   order: SessionOrder;
   amountClassName?: string;
   rightMeta: ReactNode;
+  showDineInSequence?: boolean;
 }) {
   return (
     <ItemContent className="w-full min-w-0 gap-1.5">
       <ItemTitle className="w-full min-w-0 justify-between gap-3 text-base">
-        <span className="min-w-0 truncate">#{order.order_number}</span>
+        <span className="min-w-0 truncate">
+          {getCompactOrderTitle(order, { showDineInSequence })}
+        </span>
         <span
           className={cn(
             "shrink-0 text-right font-bold tabular-nums",
@@ -145,9 +175,9 @@ export function OrderCardSummary({
           {formatVND(order.total_amount)}
         </span>
       </ItemTitle>
-      <ItemDescription className="flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-        <span className="min-w-0 truncate">{getOrderMetaLabel(order)}</span>
-        <span className="ml-auto flex flex-wrap items-center justify-end gap-1">
+      <ItemDescription className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        <span className="shrink-0 tabular-nums">{getOrderMetaLabel(order)}</span>
+        <span className="flex min-w-0 flex-wrap items-center gap-1">
           {rightMeta}
         </span>
       </ItemDescription>
@@ -176,11 +206,6 @@ interface ActiveOrdersListProps {
     orderNumber: string,
     summary?: SessionOrder,
   ) => void;
-  /**
-   * One-tap hand-off for `ready` rows. The detail-sheet path stays as
-   * fallback when omitted.
-   */
-  onServeOrder?: (orderId: number) => void;
 }
 
 /**
@@ -194,40 +219,30 @@ function ActiveOrdersListComponent({
   orders,
   onViewBill,
   onViewDetail,
-  onServeOrder,
 }: ActiveOrdersListProps) {
-  const sections = useMemo(() => {
-    const filtered = orders.filter(
-      (order) =>
-        ACTIVE_POS_STATUSES.includes(order.status) &&
-        order.payment_status !== "paid",
-    );
-    const byKey: Record<OrderSectionKey, SessionOrder[]> = {
-      serve: [],
-      pay: [],
-      cooking: [],
-    };
-    for (const order of filtered) {
-      byKey[getOrderSectionKey(order)].push(order);
-    }
-    return (
-      [
-        { key: "serve", label: messages.pos.orderHistory.sections.serve },
-        { key: "pay", label: messages.pos.orderHistory.sections.pay },
-        { key: "cooking", label: messages.pos.orderHistory.sections.cooking },
-      ] as const
-    )
-      .map((section) => ({
-        ...section,
-        orders: byKey[section.key].sort(compareOrdersByNextAction),
-      }))
-      .filter((section) => section.orders.length > 0);
-  }, [orders]);
-
   const activeOrders = useMemo(
-    () => sections.flatMap((section) => section.orders),
-    [sections],
+    () =>
+      orders
+        .filter(
+          (order) =>
+            ACTIVE_POS_STATUSES.includes(order.status) &&
+            order.payment_status !== "paid",
+        )
+        .sort(compareOrdersByNextAction),
+    [orders],
   );
+  const multiOrderTableIds = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const order of activeOrders) {
+      if (order.order_type !== "dine_in" || order.table_id === null) continue;
+      counts.set(order.table_id, (counts.get(order.table_id) ?? 0) + 1);
+    }
+    return new Set(
+      Array.from(counts)
+        .filter(([, count]) => count > 1)
+        .map(([tableId]) => tableId),
+    );
+  }, [activeOrders]);
 
   if (activeOrders.length === 0) {
     return (
@@ -239,104 +254,66 @@ function ActiveOrdersListComponent({
     );
   }
 
-  // A lone section (typical quiet stretch) renders without its header —
-  // the grouping only earns its space when the list actually mixes jobs.
-  const showHeaders = sections.length > 1;
-
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
         <div className="flex flex-col gap-3 px-3 pb-24 pt-2 md:p-2">
-          {sections.map((section) => (
-            <section
-              key={section.key}
-              aria-label={section.label(section.orders.length)}
-            >
-              {showHeaders ? (
-                <p className="sticky top-0 z-10 bg-background/95 px-1 pb-1.5 text-sm font-semibold text-muted-foreground">
-                  {section.label(section.orders.length)}
-                </p>
-              ) : null}
-              <ItemGroup className="gap-2">
-                {section.orders.map((order) => {
-                  const waitingPayment = order.payment_status !== "paid";
-                  const showServe = order.status === "ready" && !!onServeOrder;
-
-                  return (
-                    <Item
-                      key={order.id}
-                      data-testid={`pos-order-card-${order.id}`}
-                      variant="outline"
-                      size="sm"
-                      role="listitem"
-                      className="bg-card"
-                    >
-                      <OrderCardSummary
-                        order={order}
-                        amountClassName="text-primary"
-                        rightMeta={
-                          <>
-                            {order.is_priority ? (
-                              <Badge
-                                variant="warning"
-                                className="text-sm font-semibold"
-                              >
-                                Ưu tiên
-                              </Badge>
-                            ) : null}
-                            <OrderStatusBadge order={order} />
-                            {waitingPayment ? (
-                              <Badge
-                                variant="warning"
-                                className="text-sm font-semibold"
-                              >
-                                {messages.pos.orderHistory.waitingPayment}
-                              </Badge>
-                            ) : null}
-                          </>
-                        }
-                      />
-                      <ItemFooter className="mt-1.5 justify-end border-t border-border/60 pt-2">
-                        <Button
-                          data-testid={`pos-order-detail-${order.id}`}
-                          variant="outline"
-                          size="touch"
-                          className="px-3 text-sm"
-                          onClick={() =>
-                            onViewDetail(order.id, order.order_number, order)
-                          }
+          <ItemGroup className="gap-2">
+            {activeOrders.map((order) => (
+              <Item
+                key={order.id}
+                data-testid={`pos-order-card-${order.id}`}
+                variant="outline"
+                size="sm"
+                role="listitem"
+                className="bg-card"
+              >
+                <OrderCardSummary
+                  order={order}
+                  amountClassName="text-primary"
+                  showDineInSequence={
+                    order.table_id !== null && multiOrderTableIds.has(order.table_id)
+                  }
+                  rightMeta={
+                    <>
+                      {order.is_priority ? (
+                        <Badge
+                          variant="warning"
+                          className="text-sm font-semibold"
                         >
-                          {messages.pos.orderHistory.handleOrder}
-                        </Button>
-                        <Button
-                          data-testid={`pos-order-bill-${order.id}`}
-                          variant={showServe ? "outline" : "default"}
-                          size="touch"
-                          className="px-3 text-sm"
-                          onClick={() => onViewBill(order.id, "payment")}
-                        >
-                          <IconReceipt data-icon="inline-start" />
-                          {messages.pos.orderHistory.payment}
-                        </Button>
-                        {showServe ? (
-                          <Button
-                            data-testid={`pos-order-serve-${order.id}`}
-                            variant="default"
-                            size="touch"
-                            className="px-3 text-sm"
-                            onClick={() => onServeOrder(order.id)}
-                          >
-                            <IconConciergeBell data-icon="inline-start" />
-                            {messages.pos.orderHistory.serve}
-                          </Button>
-                        ) : null}
-                      </ItemFooter>
-                    </Item>
-                  );
-                })}
-              </ItemGroup>
-            </section>
-          ))}
+                          {messages.pos.orderHistory.priority}
+                        </Badge>
+                      ) : null}
+                      <OrderStatusBadge order={order} />
+                    </>
+                  }
+                />
+                <ItemFooter className="mt-1.5 justify-end border-t border-border/60 pt-2">
+                  <Button
+                    data-testid={`pos-order-detail-${order.id}`}
+                    variant="outline"
+                    size="touch"
+                    className="px-3 text-sm"
+                    onClick={() =>
+                      onViewDetail(order.id, order.order_number, order)
+                    }
+                  >
+                    {messages.pos.orderHistory.handleOrder}
+                  </Button>
+                  <Button
+                    data-testid={`pos-order-bill-${order.id}`}
+                    variant="default"
+                    size="touch"
+                    className="px-3 text-sm"
+                    onClick={() => onViewBill(order.id, "payment")}
+                  >
+                    <IconReceipt data-icon="inline-start" />
+                    {messages.pos.orderHistory.payment}
+                  </Button>
+                </ItemFooter>
+              </Item>
+            ))}
+          </ItemGroup>
         </div>
       </ScrollArea>
     </div>

@@ -15,6 +15,7 @@ import {
   usePosOperationalDispatch,
   usePosOrders,
 } from "../_providers/pos-desktop-provider";
+import { messages } from "@lib/messages";
 
 interface OrderListPaneProps {
   onViewBill: (orderId: number, intent?: BillReceiptIntent) => void;
@@ -24,6 +25,7 @@ interface OrderListPaneProps {
     summary?: SessionOrder,
   ) => void;
   onClosePane?: () => void;
+  hideTakeawayOrders?: boolean;
   /**
    * Opens the "Đơn hoàn thành" sheet (paid + cancelled orders, paginated).
    * Provided by the shell. Replaces the inline archived list — at scale
@@ -37,21 +39,32 @@ function OrderListPaneComponent({
   onViewBill,
   onViewDetail,
   onClosePane,
+  hideTakeawayOrders = false,
   onOpenArchivedSheet,
 }: OrderListPaneProps) {
   const orders = usePosOrders();
-  const { refreshOrders, serveOrder } = usePosOperationalDispatch();
-  const activeOrderCount = orders.length;
+  const { refreshOrders } = usePosOperationalDispatch();
+  const displayedOrders = hideTakeawayOrders
+    ? orders.filter((order) => order.order_type !== "takeaway")
+    : orders;
+  const activeOrderCount = displayedOrders.length;
+  const title = hideTakeawayOrders
+    ? messages.pos.orderHistory.dineInSessionOrders
+    : messages.pos.orderHistory.sessionOrders;
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3">
         <div className="flex min-w-0 items-center gap-2">
-          <p className="text-base font-semibold">Đơn trong ca</p>
+          <p className="text-base font-semibold">
+            {title}
+          </p>
           <Badge
             variant={activeOrderCount > 0 ? "warning" : "outline"}
             className="h-6 min-w-6 px-1.5 text-sm font-bold tabular-nums"
-            aria-label={`${String(activeOrderCount)} đơn trong ca`}
+            aria-label={messages.pos.orderHistory.activeCountAria(
+              activeOrderCount,
+            )}
           >
             {activeOrderCount}
           </Badge>
@@ -62,7 +75,7 @@ function OrderListPaneComponent({
             variant="ghost"
             size="icon-lg"
             className="text-muted-foreground"
-            aria-label="Tải lại danh sách đơn trong ca"
+            aria-label={messages.pos.orderHistory.refreshOrdersAria}
             onClick={() => void refreshOrders()}
           >
             <IconRefresh />
@@ -73,7 +86,7 @@ function OrderListPaneComponent({
               variant="ghost"
               size="icon-lg"
               className="text-muted-foreground"
-              aria-label="Đóng danh sách đơn"
+              aria-label={messages.pos.orderHistory.closeListAria}
               onClick={onClosePane}
             >
               <IconX />
@@ -83,10 +96,9 @@ function OrderListPaneComponent({
       </div>
 
       <ActiveOrdersList
-        orders={orders}
+        orders={displayedOrders}
         onViewBill={onViewBill}
         onViewDetail={onViewDetail}
-        onServeOrder={serveOrder}
       />
 
       {onOpenArchivedSheet ? (
@@ -100,7 +112,7 @@ function OrderListPaneComponent({
         >
           <span className="flex items-center gap-2">
             <IconClock data-icon="inline-start" />
-            Đơn hoàn thành
+            {messages.pos.archivedOrders.trigger}
           </span>
           <IconChevronRight data-icon="inline-end" />
         </Button>

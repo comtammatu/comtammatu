@@ -58,6 +58,7 @@ const ORDER_LIST_SELECT = `
   merged_into_order_id,
   split_from_order_id,
   created_at,
+  updated_at,
   tables ( number )
 `;
 
@@ -105,7 +106,7 @@ export const fetchActiveOrders = withActionPositional(
 
 const archivedCursorSchema = z
   .object({
-    createdAt: z.string().min(1, { error: "Cursor không hợp lệ" }),
+    archivedAt: z.string().min(1, { error: "Cursor không hợp lệ" }),
     id: z.coerce.number().int().positive(),
   })
   .nullable()
@@ -122,9 +123,8 @@ const fetchArchivedOrdersSchema = z.object({
 
 /**
  * Paginated lookup of archived (paid / cancelled) orders for the POS
- * sidebar's "Đã xử lý" sheet. Keyset cursor on `(created_at desc, id desc)`
- * — stable under concurrent inserts (a payment landing on terminal B
- * mid-scroll cannot duplicate or skip rows on terminal A).
+ * sidebar's "Đã xử lý" sheet. Keyset cursor on `(updated_at desc, id desc)`
+ * so the newest archived transition appears first, not the newest order number.
  *
  * Default scope = `pos_session_id` (current session). Setting `sessionId`
  * to null widens the scope to the whole branch (cap is the cursor itself
@@ -135,7 +135,7 @@ export async function fetchArchivedOrders(
 ): Promise<
   ActionResult<{
     rows: unknown[];
-    nextCursor: { createdAt: string; id: number } | null;
+    nextCursor: { archivedAt: string; id: number } | null;
   }>
 > {
   const parsed = fetchArchivedOrdersSchema.safeParse(input);
@@ -183,20 +183,20 @@ export async function fetchArchivedOrders(
   }
 
   if (cursor !== undefined && cursor !== null) {
-    // Keyset: rows STRICTLY after the cursor under (created_at desc, id desc).
-    // i.e. (created_at, id) < (cursor.createdAt, cursor.id) lexicographically.
+    // Keyset: rows STRICTLY after the cursor under (updated_at desc, id desc).
+    // i.e. (updated_at, id) < (cursor.archivedAt, cursor.id) lexicographically.
     // PostgREST cannot express composite "<" directly, so we OR two
     // disjoint half-spaces:
-    //   created_at < cursor.createdAt
-    //   OR (created_at = cursor.createdAt AND id < cursor.id)
+    //   updated_at < cursor.archivedAt
+    //   OR (updated_at = cursor.archivedAt AND id < cursor.id)
     query = query.or(
-      `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${String(cursor.id)})`,
+      `updated_at.lt.${cursor.archivedAt},and(updated_at.eq.${cursor.archivedAt},id.lt.${String(cursor.id)})`,
     );
   }
 
   // Fetch pageSize+1 to probe nextCursor without a separate count round-trip.
   const { data, error } = await query
-    .order("created_at", { ascending: false })
+    .order("updated_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(pageSize + 1);
 
@@ -206,7 +206,7 @@ export async function fetchArchivedOrders(
 
   const fetched = (data ?? []) as Array<{
     id: number;
-    created_at: string;
+    updated_at: string;
     [k: string]: unknown;
   }>;
   const hasMore = fetched.length > pageSize;
@@ -214,7 +214,7 @@ export async function fetchArchivedOrders(
   const last = rows.at(-1);
   const nextCursor =
     hasMore && last !== undefined
-      ? { createdAt: last.created_at, id: last.id }
+      ? { archivedAt: last.updated_at, id: last.id }
       : null;
 
   return { success: true, data: { rows, nextCursor } };

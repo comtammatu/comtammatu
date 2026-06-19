@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory ingredients management surface keeps operational copy inline */
+
 import { useMemo, useState, useTransition } from "react";
 import {
   Ellipsis as IconDots,
@@ -10,7 +12,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +35,7 @@ import {
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
-import { AppPageHeader, AppPage } from "@/components/surface";
+import { AppPageHeader, AppPage, AppToolbar } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -251,66 +252,64 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
   }
 
   const filterBar = (
-    <Card className="py-0">
-      <CardContent className="flex flex-wrap items-center gap-3 p-3">
-        <InputGroup className="h-10 flex-1">
-          <InputGroupAddon>
-            <IconSearch />
-          </InputGroupAddon>
-          <InputGroupInput
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Tìm theo tên hoặc SKU"
-          />
-        </InputGroup>
+    <AppToolbar>
+      <InputGroup className="h-10 flex-1">
+        <InputGroupAddon>
+          <IconSearch />
+        </InputGroupAddon>
+        <InputGroupInput
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Tìm theo tên hoặc SKU"
+        />
+      </InputGroup>
 
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Tất cả loại" />
-          </SelectTrigger>
-          <SelectContent>
-            {categoryOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <Select value={category} onValueChange={setCategory}>
+        <SelectTrigger className="w-40">
+          <SelectValue placeholder="Tất cả loại" />
+        </SelectTrigger>
+        <SelectContent>
+          {categoryOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-        <Select value={preservation} onValueChange={setPreservation}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Mọi bảo quản" />
-          </SelectTrigger>
-          <SelectContent>
-            {preservationOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <Select value={preservation} onValueChange={setPreservation}>
+        <SelectTrigger className="w-40">
+          <SelectValue placeholder="Mọi bảo quản" />
+        </SelectTrigger>
+        <SelectContent>
+          {preservationOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-        <Select
-          value={activeFilter}
-          onValueChange={(value) => setActiveFilter(value as "active" | "all")}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {activeOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <Select
+        value={activeFilter}
+        onValueChange={(value) => setActiveFilter(value as "active" | "all")}
+      >
+        <SelectTrigger className="w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {activeOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-        <Badge variant="outline" className="rounded-full">
-          {filtered.length} / {rows.length} nguyên liệu
-        </Badge>
-      </CardContent>
-    </Card>
+      <Badge variant="outline" className="rounded-full">
+        {filtered.length} / {rows.length} nguyên liệu
+      </Badge>
+    </AppToolbar>
   );
 
   const columns: DataTableColumn<IngredientRow>[] = [

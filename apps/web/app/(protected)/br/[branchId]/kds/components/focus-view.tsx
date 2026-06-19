@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@comtammatu/ui";
-import { AppEmptyState } from "@/components/surface";
+import { AppEmptyState, OperationalBoardCard } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -311,10 +310,10 @@ function FocusOrderPanel({
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
       <ScrollArea className="h-full min-h-0 flex-1">
         <div className="mx-auto w-full max-w-screen-2xl p-2 md:p-3">
-          <Card
+          <OperationalBoardCard
             data-testid={`kds-focus-card-${order.groupKey}`}
             className={cn(
-              "gap-0 overflow-hidden border-l-4 py-0 shadow-sm",
+              "gap-0 overflow-hidden border-l-4 py-0",
               getCardLeftAccent(overallStatus, elapsedMinutes),
             )}
           >
@@ -380,7 +379,7 @@ function FocusOrderPanel({
               </div>
             </div>
 
-            <CardContent flush className="divide-y divide-border/50">
+            <div className="divide-y divide-border/50">
               {order.items.map((item) => {
                 const ticket = ticketByItemId.get(item.id);
                 const status = ticket?.status ?? "pending";
@@ -646,8 +645,8 @@ function FocusOrderPanel({
                   </div>
                 );
               })}
-            </CardContent>
-          </Card>
+            </div>
+          </OperationalBoardCard>
         </div>
       </ScrollArea>
 

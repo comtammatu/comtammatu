@@ -2,13 +2,6 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { Button } from "@comtammatu/ui/components/button";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
@@ -39,7 +32,7 @@ import { createWasteEntry } from "@/(protected)/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";
 import { FormattedNumberInput } from "@/components/form";
 import { messages } from "@lib/messages";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 
 /* ─── Context shape from server component ─── */
 
@@ -271,14 +264,11 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
         shiftLabel={context.capStatus.shiftKey}
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{messages.inventory.waste.generalInfoTitle}</CardTitle>
-          <CardDescription>
-            {messages.inventory.waste.generalInfoDescription}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <AppSection
+        title={messages.inventory.waste.generalInfoTitle}
+        description={messages.inventory.waste.generalInfoDescription}
+        contentClassName="space-y-3"
+      >
           <div>
             <Label htmlFor="waste-loc">
               {messages.inventory.waste.location}
@@ -314,8 +304,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
               rows={2}
             />
           </div>
-        </CardContent>
-      </Card>
+      </AppSection>
 
       <ul className="space-y-3">
         {lines.map((line, idx) => {
@@ -331,12 +320,12 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
           });
           return (
             <li key={line.uid}>
-              <Card>
-                <CardHeader className="pb-3">
+              <div className="rounded-lg border bg-card">
+                <div className="p-4 pb-3 sm:p-6 sm:pb-3">
                   <div className="flex items-center justify-between gap-2">
-                    <CardTitle size="sm">
+                    <div className="font-heading text-sm font-semibold">
                       {messages.inventory.waste.lineTitle(idx + 1)}
-                    </CardTitle>
+                    </div>
                     <div className="flex items-center gap-2">
                       <WasteTierBadge
                         tier={preview.tier}
@@ -358,8 +347,8 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                       ) : null}
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
+                </div>
+                <div className="space-y-3 p-4 pt-0 sm:p-6 sm:pt-0">
                   <div>
                     <Label>{PRODUCT_VI.rawIngredient}</Label>
                     <SearchableSelect
@@ -466,8 +455,8 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                       rows={2}
                     />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </li>
           );
         })}

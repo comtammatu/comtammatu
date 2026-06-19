@@ -17,19 +17,16 @@ import {
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { cn } from "@comtammatu/ui";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import { Progress } from "@comtammatu/ui/components/progress";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
-import { StatusBadge } from "./_components/status-badge";
+import {
+  AppEmptyState,
+  AppLinkCard,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  type AppLinkCardProps,
+} from "@/components/surface";
 import { formatVND } from "./_lib/format";
 import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
 import { tNav, tStatus } from "./_lib/dictionary";
@@ -40,7 +37,7 @@ import { messages } from "@lib/messages";
 /* ------------------------------------------------------------------ */
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-type DashboardSiteKind = "branch";
+type DashboardSiteKind = "branch" | "central_supply" | "central_kitchen";
 
 export type DashboardProps = {
   routeBase: InventoryRouteBase;
@@ -203,7 +200,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     {
       label:
         props.siteKind === "branch"
-          ? "Nhận hàng & cấp bếp"
+          ? "Nhận/điều chuyển hàng"
           : tNav("transfers", "navigation"),
       href: paths.transfers,
       primary: true,
@@ -216,8 +213,8 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
 
   if (props.siteKind === "branch") {
     movementActions.push({
-      label: "Cấp bếp",
-      href: `${paths.transfers}?create=cap-bep`,
+      label: "Tiêu hao",
+      href: paths.consumption,
     });
   }
 
@@ -272,7 +269,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
       key: "movement",
       title: "3. Điều phối và sản xuất",
       description:
-        "Nhận hàng về kho chi nhánh và cấp phát xuống bếp chi nhánh theo ca bán.",
+        "Theo dõi phiếu hàng còn giữ tồn sau khi nhận và lệnh sản xuất trung tâm.",
       href: paths.transfers,
       icon: IconArrowLeftRight,
       metric: String(props.activeTransfers),
@@ -305,6 +302,31 @@ type TaskItem = {
   href: string;
   icon: ReactNode;
   severity: "destructive" | "warning" | "info" | "success" | "primary";
+};
+
+const taskLinkTone: Record<
+  TaskItem["severity"],
+  NonNullable<AppLinkCardProps["tone"]>
+> = {
+  destructive: "warning",
+  warning: "warning",
+  info: "info",
+  success: "success",
+  primary: "primary",
+};
+
+const taskBadge: Record<
+  TaskItem["severity"],
+  {
+    label: string;
+    variant: NonNullable<AppLinkCardProps["badgeVariant"]>;
+  }
+> = {
+  destructive: { label: "Ưu tiên", variant: "destructive" },
+  warning: { label: "Cần xử lý", variant: "warning" },
+  info: { label: "Theo dõi", variant: "info" },
+  success: { label: "Đang mở", variant: "success" },
+  primary: { label: "Tiếp tục", variant: "default" },
 };
 
 function buildTasks(props: DashboardProps): TaskItem[] {
@@ -375,9 +397,9 @@ function buildTasks(props: DashboardProps): TaskItem[] {
       });
     items.push({
       key: "issues",
-      title: "Cấp bếp cho ca bán",
-      description: "Chuyển từ kho chi nhánh sang bếp chi nhánh trước giờ bán.",
-      href: `${paths.transfers}?create=cap-bep`,
+      title: "Tiêu hao trong ngày",
+      description: "Duyệt nguyên liệu đã dùng để ghi giá vốn thực tế.",
+      href: paths.consumption,
       icon: <IconSquareCheck className="size-4" />,
       severity: "info",
     });
@@ -421,14 +443,6 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     });
   return items.slice(0, 6);
 }
-
-const severityDot: Record<string, string> = {
-  destructive: "bg-destructive",
-  warning: "bg-warning",
-  info: "bg-info",
-  success: "bg-success",
-  primary: "bg-primary",
-};
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -503,29 +517,29 @@ export function DashboardClient(props: DashboardProps) {
             const Icon = flow.icon;
 
             return (
-              <Card
+              <div
                 key={flow.key}
                 className={cn(
-                  "relative overflow-hidden",
+                  "relative overflow-hidden rounded-lg border bg-card",
                   flow.tone === "destructive" && "bg-destructive/5",
                   flow.tone === "warning" && "bg-warning/10",
                   flow.tone === "info" && "bg-info/10",
                   flow.tone === "success" && "bg-success/10",
                 )}
               >
-                <CardHeader className="gap-3 pb-3">
+                <div className="flex flex-col gap-3 p-4 pb-3 sm:p-6 sm:pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-start gap-3">
                       <div className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-background">
                         <Icon className="size-4" />
                       </div>
                       <div className="min-w-0">
-                        <CardTitle className="text-base leading-tight">
+                        <h3 className="font-heading text-base font-semibold leading-tight">
                           {flow.title}
-                        </CardTitle>
-                        <CardDescription className="mt-1 line-clamp-2">
+                        </h3>
+                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                           {flow.description}
-                        </CardDescription>
+                        </p>
                       </div>
                     </div>
                     <span
@@ -555,8 +569,8 @@ export function DashboardClient(props: DashboardProps) {
                       </Link>
                     </Button>
                   </div>
-                </CardHeader>
-                <CardContent>
+                </div>
+                <div className="p-4 pt-0 sm:p-6 sm:pt-0">
                   <div className="flex flex-wrap gap-2">
                     {flow.actions.map((action) => (
                       <Button
@@ -571,8 +585,8 @@ export function DashboardClient(props: DashboardProps) {
                       </Button>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             );
           })}
         </div>
@@ -621,15 +635,16 @@ export function DashboardClient(props: DashboardProps) {
               ]
             : []),
         ].map((kpi) => (
-          <Card
+          <div
             key={kpi.label}
             className={cn(
+              "rounded-lg border bg-card",
               kpi.tone === "destructive" &&
                 "border-destructive/40 bg-destructive/5",
               kpi.tone === "warning" && "border-warning/40 bg-warning/10",
             )}
           >
-            <CardContent className="p-4">
+            <div className="p-4">
               <p className={cn("text-muted-foreground text-xs")}>{kpi.label}</p>
               <p
                 className={cn(
@@ -641,8 +656,8 @@ export function DashboardClient(props: DashboardProps) {
               >
                 {kpi.value}
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 
@@ -652,23 +667,21 @@ export function DashboardClient(props: DashboardProps) {
       expiryAlerts.length === 0 &&
       activeTransferList.length === 0 &&
       activeStocktakeList.length === 0 ? (
-        <Card className="bg-success/5">
-          <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-success/15 text-success">
-              <IconSquareCheck className="size-6" />
-            </div>
-            <div className="space-y-1">
-              <p className="font-heading text-base font-semibold">
-                {messages.inventory.dashboard.allClearTitle}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {isOversight
-                  ? "Không có cảnh báo hoặc luồng đang chờ theo dõi."
-                  : messages.inventory.dashboard.allClearHint}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <AppSection contentClassName="items-center gap-3 py-10 text-center">
+          <div className="flex size-12 items-center justify-center rounded-full bg-success/15 text-success">
+            <IconSquareCheck className="size-6" />
+          </div>
+          <div className="space-y-1">
+            <p className="font-heading text-base font-semibold">
+              {messages.inventory.dashboard.allClearTitle}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {isOversight
+                ? "Không có cảnh báo hoặc luồng đang chờ theo dõi."
+                : messages.inventory.dashboard.allClearHint}
+            </p>
+          </div>
+        </AppSection>
       ) : (
         <>
           {/* Tasks + Alerts */}
@@ -679,167 +692,120 @@ export function DashboardClient(props: DashboardProps) {
             )}
           >
             {/* Tasks */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle size="sm">
-                      {messages.inventory.dashboard.shiftTasksTitle}
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      {messages.inventory.dashboard.pendingTasks(tasks.length)}
-                    </CardDescription>
-                  </div>
-                  <Badge variant="secondary" className="h-6">
+            <AppSection
+              title={messages.inventory.dashboard.shiftTasksTitle}
+              description={messages.inventory.dashboard.pendingTasks(tasks.length)}
+              size="sm"
+              badge={{
+                variant: "secondary",
+                children: (
+                  <>
                     <IconClock className="mr-1 size-3" />
                     {siteKindLabel}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {tasks.length === 0 ? (
-                  <AppEmptyState
-                    compact
-                    icon={<IconSquareCheck />}
-                    title={messages.inventory.dashboard.noUrgentTasks}
-                  />
-                ) : (
-                  <div className="space-y-2">
-                    {tasks.map((task) => (
-                      <Link
+                  </>
+                ),
+              }}
+            >
+              {tasks.length === 0 ? (
+                <AppEmptyState
+                  compact
+                  icon={<IconSquareCheck />}
+                  title={messages.inventory.dashboard.noUrgentTasks}
+                />
+              ) : (
+                <div className="space-y-2">
+                  {tasks.map((task) => {
+                    const badge = taskBadge[task.severity];
+                    return (
+                      <AppLinkCard
                         key={task.key}
                         href={withBranch(task.href)}
-                        className={cn(
-                          "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
-                          isMobile && "py-4",
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "mt-1.5 size-2 shrink-0 rounded-full",
-                            severityDot[task.severity],
-                          )}
-                        />
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <p className="text-sm font-medium leading-tight">
-                            {task.title}
-                          </p>
-                          <p className="line-clamp-2 break-words text-xs text-muted-foreground">
-                            {task.description}
-                          </p>
-                        </div>
-                        <IconArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground" />
-                      </Link>
-                    ))}
-                  </div>
+                        title={task.title}
+                        description={task.description}
+                        icon={task.icon}
+                        tone={taskLinkTone[task.severity]}
+                        badge={badge.label}
+                        badgeVariant={badge.variant}
+                        ctaLabel="Mở xử lý"
+                      />
+                    );
+                  })}
+                </div>
                 )}
-              </CardContent>
-            </Card>
+            </AppSection>
 
             {/* Alerts */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle size="sm">
-                      {messages.inventory.dashboard.priorityAlertsTitle}
-                    </CardTitle>
-                  </div>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href={withBranch(paths.expiry)}>
-                      {ACTIONS_VI.viewAll}
-                    </Link>
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
+            <AppSection
+              title={messages.inventory.dashboard.priorityAlertsTitle}
+              size="sm"
+              action={
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href={withBranch(paths.expiry)}>
+                    {ACTIONS_VI.viewAll}
+                  </Link>
+                </Button>
+              }
+            >
                 <div className="space-y-2">
                   {reorderAlerts.slice(0, isMobile ? 2 : 3).map((item) => (
-                    <Link
+                    <AppLinkCard
                       key={`r-${item.ingredientId}-${item.branchId}`}
                       href={withBranch(
                         showProcurement ? paths.purchaseOrders : paths.stock,
                       )}
-                      className={cn(
-                        "flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/5 p-3 transition-colors hover:bg-accent",
-                        isMobile && "py-4",
+                      title={item.name}
+                      description={messages.inventory.dashboard.reorderStatus(
+                        item.current,
+                        item.unit,
+                        item.reorder,
                       )}
-                    >
-                      <IconAlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <p className="text-sm font-medium leading-tight">
-                          {item.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {messages.inventory.dashboard.reorderStatus(
-                            item.current,
-                            item.unit,
-                            item.reorder,
-                          )}
-                        </p>
-                      </div>
-                      <Badge variant="destructive" className="shrink-0 text-xs">
-                        {messages.inventory.dashboard.reorder}
-                      </Badge>
-                    </Link>
+                      icon={<IconAlertTriangle />}
+                      tone="warning"
+                      badge={messages.inventory.dashboard.reorder}
+                      badgeVariant="destructive"
+                      ctaLabel="Mở xử lý"
+                    />
                   ))}
                   {expiryAlerts.slice(0, isMobile ? 2 : 3).map((item) => (
-                    <Link
+                    <AppLinkCard
                       key={`e-${item.id}`}
                       href={withBranch(paths.expiry)}
-                      className={cn(
-                        "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent",
-                        item.urgency === "critical"
-                          ? "border-destructive/50 bg-destructive/5"
-                          : "border-warning/50 bg-warning/5",
-                        isMobile && "py-4",
-                      )}
-                    >
-                      <IconAlertTriangle
-                        className={cn(
-                          "mt-0.5 size-4 shrink-0",
-                          item.urgency === "critical"
-                            ? "text-destructive"
-                            : "text-warning",
-                        )}
-                      />
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <p className="text-sm font-medium leading-tight">
-                          {item.ingredientName}
-                          {item.lot ? ` • ${item.lot}` : ""}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {item.daysLeft <= 0
-                            ? messages.inventory.dashboard.expiredDays(
-                                item.daysLeft,
-                              )
-                            : messages.inventory.dashboard.remainingDays(
-                                item.daysLeft,
-                              )}
-                        </p>
-                      </div>
-                      <Badge
-                        variant={
-                          item.urgency === "critical"
-                            ? "destructive"
-                            : "warning"
-                        }
-                        className="shrink-0 text-xs"
-                      >
-                        {item.daysLeft <= 0
+                      title={
+                        item.lot
+                          ? `${item.ingredientName} • ${item.lot}`
+                          : item.ingredientName
+                      }
+                      description={
+                        item.daysLeft <= 0
+                          ? messages.inventory.dashboard.expiredDays(
+                              item.daysLeft,
+                            )
+                          : messages.inventory.dashboard.remainingDays(
+                              item.daysLeft,
+                            )
+                      }
+                      icon={<IconAlertTriangle />}
+                      tone="warning"
+                      badge={
+                        item.daysLeft <= 0
                           ? tStatus("expired", "badge")
-                          : tStatus("critical", "badge")}
-                      </Badge>
-                    </Link>
+                          : tStatus("critical", "badge")
+                      }
+                      badgeVariant={
+                        item.urgency === "critical" ? "destructive" : "warning"
+                      }
+                      ctaLabel="Mở hạn dùng"
+                    />
                   ))}
                   {reorderAlerts.length === 0 && expiryAlerts.length === 0 && (
-                    <p className="py-8 text-center text-sm text-muted-foreground">
-                      {messages.inventory.dashboard.noAlerts}
-                    </p>
+                    <AppEmptyState
+                      compact
+                      icon={<IconSquareCheck />}
+                      title={messages.inventory.dashboard.noAlerts}
+                    />
                   )}
                 </div>
-              </CardContent>
-            </Card>
+            </AppSection>
           </div>
 
           {/* Transfer tracking + Stocktake progress */}
@@ -849,118 +815,100 @@ export function DashboardClient(props: DashboardProps) {
               isMobile ? "grid-cols-1" : "lg:grid-cols-2",
             )}
           >
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle size="sm">
-                      {isOversight
-                        ? "Luồng đang xử lý"
-                        : messages.inventory.dashboard.transferTrackingTitle}
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      {messages.inventory.dashboard.activeTransfers(
-                        activeTransferList.length,
-                      )}
-                    </CardDescription>
-                  </div>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href={withBranch(paths.transfers)}>
-                      {ACTIONS_VI.viewAll}
-                    </Link>
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
+            <AppSection
+              title={
+                isOversight
+                  ? "Luồng đang xử lý"
+                  : messages.inventory.dashboard.transferTrackingTitle
+              }
+              description={messages.inventory.dashboard.activeTransfers(
+                activeTransferList.length,
+              )}
+              size="sm"
+              action={
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href={withBranch(paths.transfers)}>
+                    {ACTIONS_VI.viewAll}
+                  </Link>
+                </Button>
+              }
+            >
                 {activeTransferList.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
-                    {messages.inventory.dashboard.noActiveTransfers}
-                  </p>
+                  <AppEmptyState
+                    compact
+                    icon={<IconArrowLeftRight />}
+                    title={messages.inventory.dashboard.noActiveTransfers}
+                  />
                 ) : (
                   <div className="space-y-2">
                     {activeTransferList.map((t) => (
-                      <Link
+                      <AppLinkCard
                         key={t.id}
                         href={withBranch(paths.transferDetail(t.id))}
-                        className={cn(
-                          "block rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
-                          isMobile && "py-4",
-                        )}
-                      >
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="text-sm font-medium">{t.code}</span>
-                          <StatusBadge status={t.status} />
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{t.fromBranch}</span>
-                          <IconArrowRight className="size-3" />
-                          <span>{t.toBranch}</span>
-                        </div>
-                      </Link>
+                        title={t.code}
+                        description={`${t.fromBranch} -> ${t.toBranch}`}
+                        icon={<IconArrowLeftRight />}
+                        tone="info"
+                        badge={tStatus(t.status, "badge")}
+                        badgeVariant="info"
+                        ctaLabel="Mở phiếu"
+                      />
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+            </AppSection>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle size="sm">
-                      {isOversight
-                        ? "Tiến độ đối soát tồn"
-                        : messages.inventory.dashboard.stocktakeProgress}
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      {isOversight
-                        ? `${activeStocktakeList.length} phiên đang thực hiện`
-                        : messages.inventory.dashboard.activeStocktakes(
-                            activeStocktakeList.length,
-                          )}
-                    </CardDescription>
-                  </div>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href={withBranch(paths.stocktake)}>
-                      {ACTIONS_VI.viewAll}
-                    </Link>
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
+            <AppSection
+              title={
+                isOversight
+                  ? "Tiến độ đối soát tồn"
+                  : messages.inventory.dashboard.stocktakeProgress
+              }
+              description={
+                isOversight
+                  ? `${activeStocktakeList.length} phiên đang thực hiện`
+                  : messages.inventory.dashboard.activeStocktakes(
+                      activeStocktakeList.length,
+                    )
+              }
+              size="sm"
+              action={
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href={withBranch(paths.stocktake)}>
+                    {ACTIONS_VI.viewAll}
+                  </Link>
+                </Button>
+              }
+            >
                 {activeStocktakeList.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
-                    {isOversight
-                      ? "Không có phiên đối soát tồn đang thực hiện"
-                      : messages.inventory.dashboard.noActiveStocktakes}
-                  </p>
+                  <AppEmptyState
+                    compact
+                    icon={<IconClipboardList />}
+                    title={
+                      isOversight
+                        ? "Không có phiên đối soát tồn đang thực hiện"
+                        : messages.inventory.dashboard.noActiveStocktakes
+                    }
+                  />
                 ) : (
                   <div className="space-y-2">
                     {activeStocktakeList.map((s) => (
-                      <Link
+                      <AppLinkCard
                         key={s.id}
                         href={withBranch(paths.stocktakeDetail(s.id))}
-                        className={cn(
-                          "block rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
-                          isMobile && "py-4",
-                        )}
-                      >
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="text-sm font-medium">{s.code}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {s.progress}%
-                          </Badge>
-                        </div>
-                        <p className="mb-2 text-xs text-muted-foreground">
-                          {s.branchName}
-                        </p>
-                        <Progress value={s.progress} className="h-2" />
-                      </Link>
+                        title={s.code}
+                        description={s.branchName}
+                        icon={<IconClipboardList />}
+                        tone="success"
+                        badge={tStatus(s.status, "badge")}
+                        badgeVariant="success"
+                        metric={{ value: `${s.progress}%`, label: "tiến độ" }}
+                        ctaLabel="Mở phiên"
+                      />
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+            </AppSection>
           </div>
         </>
       )}

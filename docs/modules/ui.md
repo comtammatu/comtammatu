@@ -2,19 +2,19 @@
 
 ## Overview
 
-UI cua repo la Com Tam Ma Tu Custom Theme (Ma Tu Concept 01) chay tren
-`shadcn/ui` primitive baseline hien hanh. `shadcn` preset la baseline de compose
-primitive va doi chieu runtime, khong phai source of truth cao hon contract.
-Khong con helper layer hay theme system rieng theo route/surface.
+UI của repo là Com Tam Ma Tu Custom Theme (Ma Tu Concept 01) chạy trên
+`shadcn/ui` primitive baseline hiện hành. `shadcn` preset là baseline để compose
+primitive và đối chiếu runtime, không phải source of truth cao hơn contract.
+Không còn helper layer hay theme system riêng theo route/surface.
 
 Single source of truth for agent decisions:
 
 1. `docs/spec/design-system.md`
 
-File nay la implementation guide: cach ap dung contract vao app code, wrapper,
-forms, keyboard shortcut, overlay, feedback, va rebuild flow. Khong dung file
-nay de override token, typography, rhythm, visual role, hoac primitive authority
-da chot trong `docs/spec/design-system.md`.
+File này là implementation guide: cách áp dụng contract vào app code, wrapper,
+forms, keyboard shortcut, overlay, feedback, và rebuild flow. Không dùng file
+này để override token, typography, rhythm, visual role, hoặc primitive authority
+đã chốt trong `docs/spec/design-system.md`.
 
 Runtime config, primitives, adapters, runbooks, worklogs, and regression rules
 are evidence/enforcement for that contract. They do not authorize a second
@@ -34,70 +34,56 @@ the contract/runtime before building new UI.
 
 ## Contract Boundary
 
-Tat ca UI/UX rebuild phai di theo `docs/spec/design-system.md` truoc khi sua
+Tất cả UI/UX rebuild phải đi theo `docs/spec/design-system.md` trước khi sửa
 runtime. Role split:
 
 - `docs/spec/design-system.md`: Custom Theme authority; owns tokens, typography,
-  rhythm, primitive roles, surface contracts, and retired-layer rules.
+  rhythm, primitive roles, surface contracts, and forbidden compatibility names.
 - `docs/modules/ui.md`: implementation guide; owns composition, form, overlay,
   feedback, shortcut, and rebuild workflow guidance.
 - `docs/agent/rules/ui.md`: fast-loading guardrails for agents.
 - `tasks/regressions.md`: negative rules from incidents; not an authority to
   invent new visual language.
 - `docs/runbooks/*`: verification checklists only.
-- `docs/worklog/*`: history/progress only; promote stable decisions back to
+- `docs/worklog/*`: temporary staging only; promote stable decisions back to
   spec/modules/tasks, then remove stale worklog claims.
 
-Khong duoc coi `shadcn` preset la authority cao hon Custom Theme contract. Khong
-duoc coi Custom Theme la mot layer/fork moi tach rieng khoi shadcn primitives.
-Neu can pattern moi, update `docs/spec/design-system.md` truoc, roi moi rollout
-vao code.
+Không được coi `shadcn` preset là authority cao hơn Custom Theme contract.
+Không được coi Custom Theme là một layer/fork mới tách riêng khỏi shadcn
+primitives. Nếu cần pattern mới, update `docs/spec/design-system.md` trước, rồi
+mới rollout vào code.
 
-### Legacy Pilot Layer Retirement
+Code mới phải dùng `apps/web/app/components/surface.tsx`, semantic shadcn
+tokens, và font utilities hiện hành cho app UI. Nếu cần visual layer mới, update
+`docs/spec/design-system.md` trước khi rollout vào runtime.
 
-Cac artifact sau tu Inventory redesign pilot da bi retire khoi runtime app UI,
-khong phai source of truth hien tai:
-
-- removed `packages/design-tokens/tokens.json`
-- removed `packages/ui/src/styles/matu-tokens.css`
-- removed `apps/web/app/components/matu-surface.tsx`
-- removed `apps/web/app/(protected)/admin/kitchen-sink/page.tsx`
-- external design folders
-
-Code moi KHONG duoc import `@/components/matu-surface`, KHONG dung
-`font-matu-body`, va KHONG dung `bg-matu-*`, `text-matu-*`, `border-matu-*`,
-`rounded-matu-*`, `--spacing-matu-*`, hoac `--radius-matu-*`. Neu cham vao
-surface cu dang dung cac artifact nay, xem do la regression/migration task ve
-`apps/web/app/components/surface.tsx` + semantic shadcn tokens, khong phai co
-quyen khoi phuc layer pilot.
-
-Read order cho agent khi lam UI:
+Read order cho agent khi làm UI:
 
 1. `AGENTS.md`
 2. `docs/agent/rules/skills.md`
 3. `docs/spec/design-system.md`
 4. `docs/modules/ui.md`
 5. `tasks/regressions.md`
-6. Domain docs lien quan den route dang sua
+6. Domain docs liên quan đến route đang sửa
 
 ## Primitive Baseline Contract
 
-Baseline hien tai: `radix-lyra`, resolved preset `buFywKm`, `neutral`, `lucide`
-cho monorepo `apps/web` + `packages/ui`. Day la primitive implementation
-baseline; semantic token values va rhythm phai theo `docs/spec/design-system.md`.
+Baseline hiện tại: `radix-lyra`, resolved preset `buFywKm`, `neutral`, `lucide`
+cho monorepo `apps/web` + `packages/ui`. Đây là primitive implementation
+baseline; semantic token values và rhythm phải theo `docs/spec/design-system.md`.
 
-Dieu nay co nghia:
+Điều này có nghĩa:
 
-- primitive structure phai theo file do `shadcn` bootstrap sinh ra
-- semantic token values phai theo `docs/spec/design-system.md`
-- brand color/typography phai di qua semantic token va font variables chung
-- page/shell chi duoc compose tu primitives co san va app surface adapters
-- logo/brand lockup trong web runtime phai di qua `BrandMark` / `BrandLockup`
-- khong duoc giu `app-*` helper classes hoac custom background/theme chrome o root
+- primitive structure phải theo file do `shadcn` bootstrap sinh ra
+- semantic token values phải theo `docs/spec/design-system.md`
+- brand color/typography phải đi qua semantic token và font variables chung
+- page/shell chỉ được compose từ primitives có sẵn và app surface adapters
+- logo/brand lockup trong web runtime phải đi qua `BrandMark` / `BrandLockup`
+- không được giữ `app-*` helper classes hoặc custom background/theme chrome ở root
 
 ## Primitive Layer
 
-Primitive source van song tai `packages/ui/src/components/*`, nhung phai tiep tuc theo cau truc shadcn:
+Primitive source vẫn sống tại `packages/ui/src/components/*`, nhưng phải tiếp tục theo cấu trúc shadcn:
 
 - `button`
 - `card`
@@ -109,22 +95,22 @@ Primitive source van song tai `packages/ui/src/components/*`, nhung phai tiep tu
 - `tabs`
 - `input`
 - `select`
-- `empty` — tat ca empty-state UI (no-data, no-results, error, inline)
+- `empty` — tất cả empty-state UI (no-data, no-results, error, inline)
 - `field` + `field-group` — form field composition (label, control, error, description)
 - `item` + `item-group` — list rows with media/title/description/actions
 - `spinner` — loading indicator (thay cho `Loader2 + animate-spin`)
 
-Khong fork primitive theo surface.
+Không fork primitive theo surface.
 
-`CardContent` table/list exceptions phai di qua named primitive props:
-`flush` cho table-edge/list-edge alignment va `scroll` cho horizontal table
-scrolling. AppSection dung `contentFlush` / `contentScroll` cho cung vai tro.
-Khong dung local `className="p-0"` hoac `className="overflow-x-auto"` tren
-`CardContent` hay `AppSection contentClassName` o app code.
+`CardContent` table/list exceptions phải đi qua named primitive props:
+`flush` cho table-edge/list-edge alignment và `scroll` cho horizontal table
+scrolling. AppSection dùng `contentFlush` / `contentScroll` cho cùng vai trò.
+Không dùng local `className="p-0"` hoặc `className="overflow-x-auto"` trên
+`CardContent` hay `AppSection contentClassName` ở app code.
 
 ## App Surface Adapters
 
-`apps/web/app/components/surface.tsx` la adapter layer duy nhat cho cac pattern lap lai o app level:
+`apps/web/app/components/surface.tsx` là adapter layer duy nhất cho các pattern lặp lại ở app level:
 
 - `AppPage` cho content container/width/scroll rhythm.
 - `AppPageHeader` cho page heading, description, badge, action.
@@ -133,46 +119,86 @@ Khong dung local `className="p-0"` hoac `className="overflow-x-auto"` tren
 - `AppEmptyState` cho empty/no-result/no-access/error state.
 - `AppLinkCard` cho navigation/action card.
 
-Domain wrappers nhu Inventory/Employee/Admin co the giu API rieng de tranh sua hang loat call site, nhung phai delegate ve cac adapter nay thay vi tu style lai `Card`, `Empty`, hoac page container.
+Domain wrappers như Inventory/Employee/Admin có thể giữ API riêng để tránh sửa hàng loạt call site, nhưng phải delegate về các adapter này thay vì tự style lại `Card`, `Empty`, hoặc page container.
+
+## Component Governance
+
+`Card`, `Table`, `Dialog`, và `AlertDialog` là primitive composition cấp cao.
+Code app mới không được mặc định import trực tiếp các primitive này từ
+`@comtammatu/ui/components/*`; phải chọn adapter sở hữu workflow trước:
+
+- layout/card section → `AppSection`, `KpiCard`, `InteractiveCard`, hoặc adapter vận hành đã duyệt
+- table/list responsive → `DataTable` hoặc `TableEmptyStateRow`; document line-sheet cần adapter ghi rõ
+- CRUD form dialog → `FormDialog`; form dài hoặc nhiều line dùng Page/Sheet theo Overlay Decision
+- destructive confirm đơn giản → shared `confirm()`; confirm có input/reason dùng flow đã duyệt
+
+`pnpm lint:ui-contract` khóa baseline import trực tiếp theo từng file bằng các
+gate `raw-card-import-file-baseline`, `raw-table-import-file-baseline`,
+`raw-dialog-import-file-baseline`, và `raw-alert-dialog-import-file-baseline`.
+Baseline chỉ được giảm. Nếu một file mới cần import trực tiếp primitive cấp cao,
+phải update `docs/spec/design-system.md` hoặc module doc liên quan trước, không
+thêm allowlist cục bộ để né guard.
+
+## Component Audit
+
+Khi cần đào sâu UI/component debt theo từng route family, chạy:
+
+```bash
+pnpm audit:ui-components
+pnpm audit:ui-components -- --family inventory
+pnpm audit:ui-components -- --family hr --all
+```
+
+Audit này đọc code hiện tại trong `apps/web/app` và in ra:
+
+- route-family summary: số file/page, direct import `Card`/`Table`/`Dialog`/`AlertDialog`, adapter adoption, `STATUS` map, `useIsMobile`
+- shared adapter adoption: file/hit cho `AppPage`, `DataTable`, `FormDialog`, `KpiCard`, `StatusBadge`, v.v.
+- highest-risk files: file nào còn nhiều primitive composition trực tiếp hoặc signal drift
+
+Đây là công cụ định hướng review, không phải UI authority. Khi kết quả audit
+mâu thuẫn với `docs/spec/design-system.md`, contract thắng; sửa runtime hoặc
+guard để quay về contract.
 
 ## Keyboard Shortcuts
 
-Operational surfaces (POS, KDS) support keyboard shortcuts cho power users. Shortcut helper duy nhat: `useKeyboardShortcut` tai `apps/web/app/_lib/use-keyboard-shortcut.ts`.
+Operational surfaces (POS, KDS) support keyboard shortcuts cho power users.
+Shortcut helper duy nhất: `useKeyboardShortcut` tại
+`apps/web/app/_lib/use-keyboard-shortcut.ts`.
 
 Convention:
 
-- Shortcut don phim (`T`, `D`, `/`) mac dinh KHONG fire khi focus dang o input/textarea/contenteditable.
-- Shortcut co meta (`Cmd+Enter`, `Ctrl+K`) co the dung `fireInInput: true` de fire ca khi dang go.
-- `Escape` de clear filter hoac dong dialog (Radix tu lo dong dialog).
-- Hien thi hint voi `<Kbd>` (hoac `<KbdGroup>` khi nhieu phim) canh label button, `className="hidden md:inline-flex"` de an tren mobile.
-- Them `aria-keyshortcuts="T"` tren button/toggle de screen reader doc duoc.
+- Shortcut đơn phím (`T`, `D`, `/`) mặc định KHÔNG fire khi focus đang ở input/textarea/contenteditable.
+- Shortcut có meta (`Cmd+Enter`, `Ctrl+K`) có thể dùng `fireInInput: true` để fire cả khi đang gõ.
+- `Escape` để clear filter hoặc đóng dialog (Radix tự lo đóng dialog).
+- Hiển thị hint với `<Kbd>` hoặc `<KbdGroup>` khi nhiều phím, cạnh label button, `className="hidden md:inline-flex"` để ẩn trên mobile.
+- Thêm `aria-keyshortcuts="T"` trên button/toggle để screen reader đọc được.
 
 Shortcuts da wire:
 
 - POS cart (`cart-pane.tsx`):
-  - `Cmd/Ctrl + Enter` — mo dialog xac nhan gui bep (works khi dang go note)
-  - `T` — chuyen sang Mang ve
-  - `D` — chuyen sang Tai ban
+  - `Cmd/Ctrl + Enter` — mở dialog xác nhận gửi bếp (works khi đang gõ note)
+  - `T` — chuyển sang Mang về
+  - `D` — chuyển sang Tại bàn
 - POS append draft (`append-draft-pane.tsx`):
-  - Khong co shortcut rieng; append vao don cu phai qua nut `Gui mon them`, khong gui ngay khi cham mon.
+  - Không có shortcut riêng; append vào đơn cũ phải qua nút `Gửi món thêm`, không gửi ngay khi chạm món.
 - KDS (`kds-board.tsx`):
-  - `Escape` — clear het filter (station + status + orderType) neu co filter nao dang bat
+  - `Escape` — clear hết filter (station + status + orderType) nếu có filter nào đang bật
 
-Khi them shortcut moi, update bang nay + cau hinh `aria-keyshortcuts` tuong ung.
+Khi thêm shortcut mới, update bảng này + cấu hình `aria-keyshortcuts` tương ứng.
 
 ## Toast And Notifications
 
 Contract chi tiet: `docs/spec/toast-notification-system.md`.
 
-- Toast la feedback ngan han cho action hien tai, di qua `toast` tu `@comtammatu/ui/components/sonner`.
-- Notification la feed ben vung cho handoff, approval, escalation, SLA, hoac viec can role/branch khac xu ly.
-- Khong dung toast thay audit/work queue. Khong tao notification cho success cuc bo cua form neu khong can nguoi khac xu ly.
-- Copy phai an toan, tieng Viet, va khong bao gio expose raw Supabase/Postgres `error.message`.
-- Notification producer moi phai co `kind`, `severity`, `target_roles`, optional `target_branch_id`, `action_url`, va `dedup_key` khi event co the lap lai.
+- Toast là feedback ngắn hạn cho action hiện tại, đi qua `toast` từ `@comtammatu/ui/components/sonner`.
+- Notification là feed bền vững cho handoff, approval, escalation, SLA, hoặc việc cần role/branch khác xử lý.
+- Không dùng toast thay audit/work queue. Không tạo notification cho success cục bộ của form nếu không cần người khác xử lý.
+- Copy phải an toàn, tiếng Việt, và không bao giờ expose raw Supabase/Postgres `error.message`.
+- Notification producer mới phải có `kind`, `severity`, `target_roles`, optional `target_branch_id`, `action_url`, và `dedup_key` khi event có thể lặp lại.
 
 ## Form Helpers
 
-App-local form helpers song tai `apps/web/app/components/form/`. Dung cho moi dialog/form moi:
+App-local form helpers sống tại `apps/web/app/components/form/`. Dùng cho mọi dialog/form mới:
 
 - `TextField` — text Input + RHF useController
 - `NumberField` — `FormattedNumberInput` (VND format) + RHF
@@ -182,115 +208,115 @@ App-local form helpers song tai `apps/web/app/components/form/`. Dung cho moi di
 - `SelectField` — Select voi `options={[{value, label}]}`
 - `TextareaField` — Textarea + RHF
 - `FormDialog` — generic Dialog + `useForm` + `zodResolver` + `useTransition`
-- `valuesToFormData` — adapter de goi server actions `withFormAction`-wrapped
+- `valuesToFormData` — adapter để gọi server actions `withFormAction`-wrapped
 
 Import: `import { TextField, FormDialog, ... } from "@/components/form"`.
 
-Schema: luon dung Zod 4 voi `{ error: "..." }` (khong dung `{ message }`).
+Schema: luôn dùng Zod 4 với `{ error: "..." }` (không dùng `{ message }`).
 
 ### Form Mode Decision
 
-- Dung RHF + Zod khi form co line array, hon 4 field, can inline validation truoc submit, hoac can pending/dirty submit UX. PO, GRN, transfer lines, stocktake, adjustment, va production forms thuoc nhom nay.
-- Dung plain `<form action>` cho login, sign out, va single-reason confirm don gian khi state da reload qua redirect.
-- Shared schema can import ca client va server thi dat tai `packages/shared/src/forms/<name>.ts`; schema chi dung noi bo route co the dat gan route.
-- Validation field-level hien inline. Business error khong map duoc field thi hien toast/action message an toan, khong expose raw Supabase/Postgres error.
+- Dùng RHF + Zod khi form có line array, hơn 4 field, cần inline validation trước submit, hoặc cần pending/dirty submit UX. PO, GRN, transfer lines, stocktake, adjustment, và production forms thuộc nhóm này.
+- Dùng plain `<form action>` cho login, sign out, và single-reason confirm đơn giản khi state đã reload qua redirect.
+- Shared schema cần import cả client và server thì đặt tại `packages/shared/src/forms/<name>.ts`; schema chỉ dùng nội bộ route có thể đặt gần route.
+- Validation field-level hiển thị inline. Business error không map được field thì hiển thị toast/action message an toàn, không expose raw Supabase/Postgres error.
 
 ### Feedback Decision
 
-- Sonner la feedback mac dinh cho success/action outcome: `Da luu`, `Da xac nhan GRN`, `Khong the tao phieu`.
-- URL flash/search params khong dung cho non-auth success/error. Redirect den `/access-denied?reason=` chi dung cho permission, auth, hoac scope failure.
-- Durable notification chi dung khi co follow-up cross-role/branch, SLA, approval, hoac exception can ton tai sau reload.
+- Sonner là feedback mặc định cho success/action outcome: `Đã lưu`, `Đã xác nhận GRN`, `Không thể tạo phiếu`.
+- URL flash/search params không dùng cho non-auth success/error. Redirect đến `/access-denied?reason=` chỉ dùng cho permission, auth, hoặc scope failure.
+- Durable notification chỉ dùng khi có follow-up cross-role/branch, SLA, approval, hoặc exception cần tồn tại sau reload.
 
 ### Inventory Flow Decision
 
-Inventory IA phai bam 3 luong chinh:
+Inventory IA phải bám 3 luồng chính:
 
-1. `Kiem soat ton` — Ton kho, Kiem ke, Han dung, Hao hut/dieu chinh, Bao cao.
-2. `Nhap/Nhan/Doi soat` — Don dat hang, Phieu nhap/GRN, supplier invoice/price variance, receiving exception.
-3. `Dieu phoi/San xuat` — Dieu chuyen, Lenh san xuat, BOM/recipe issue, yield.
+1. `Kiểm soát tồn` — Tồn kho, Kiểm kê, Hạn dùng, Hao hụt/điều chỉnh, Báo cáo.
+2. `Nhập/Nhận/Đối soát` — Đơn đặt hàng, Phiếu nhập/GRN, supplier invoice/price variance, receiving exception.
+3. `Điều phối/Sản xuất` — Điều chuyển, Lệnh sản xuất, BOM/recipe issue, yield.
 
-Sidebar labels phai ngan va scan duoc trong rail co dinh. Ten day du cua luong dat trong page title, breadcrumb, tab, hoac empty state thay vi ep vao group label dai.
+Sidebar labels phải ngắn và scan được trong rail cố định. Tên đầy đủ của luồng đặt trong page title, breadcrumb, tab, hoặc empty state thay vì ép vào group label dài.
 
 ### Overlay Decision
 
-- Page: long form, nhieu dong, keyboard-heavy workflow nhu GRN 20 line, transfer detail edit, stocktake session.
-- Sheet: focused data entry/action ngan; bottom sheet tren mobile va side sheet tren desktop khi implementation can responsive surface.
-- Dialog: short contextual task khong destructive.
+- Page: long form, nhiều dòng, keyboard-heavy workflow như GRN 20 line, transfer detail edit, stocktake session.
+- Sheet: focused data entry/action ngắn; bottom sheet trên mobile và side sheet trên desktop khi implementation cần responsive surface.
+- Dialog: short contextual task không destructive.
 - AlertDialog: destructive/irreversible confirm nhu void order, deactivate, inactive lifecycle transition.
 
 ### Audit And Permission Decision
 
-- Detail page co audit nhu `Tabs [Overview | Lines | Lich su]`; `Lich su` filter `audit_logs` bang `entity_type` + `entity_id`, hien actor, action, timestamp, old/new diff khi co.
-- Tenant-wide `/admin/audit` la compliance search surface, khong bat buoc cho Inventory Lite MVP.
-- Neu user thieu quyen permanent thi hide action. Neu bi block tam thoi do business state, show disabled + explain inline/tooltip, vi du chua mo ca hoac ky da khoa.
+- Detail page có audit như `Tabs [Overview | Lines | Lịch sử]`; `Lịch sử` filter `audit_logs` bằng `entity_type` + `entity_id`, hiển thị actor, action, timestamp, old/new diff khi có.
+- Tenant-wide `/admin/audit` là compliance search surface, không bắt buộc cho Inventory Lite MVP.
+- Nếu user thiếu quyền permanent thì hide action. Nếu bị block tạm thời do business state, show disabled + explain inline/tooltip, ví dụ chưa mở ca hoặc kỳ đã khóa.
 
 ## Composition Rules
 
-Cho phep:
+Cho phép:
 
-- wrapper nho de tap hop du lieu, nav, va structure
-- wrapper domain delegate ve `apps/web/app/components/surface.tsx`
-- dung `className` de sap xep layout co ban
+- wrapper nhỏ để tập hợp dữ liệu, nav, và structure
+- wrapper domain delegate về `apps/web/app/components/surface.tsx`
+- dùng `className` để sắp xếp layout cơ bản
 - compose truc tiep tu shadcn primitives
 
-Khong cho phep:
+Không cho phép:
 
-- helper class kieu `app-*`
+- helper class kiểu `app-*`
 - custom theme layer
-- retired pilot layer `matu-surface` / `matu-*`
-- wrapper override visual contract cua primitive
-- module tu tao lai page/header/section/toolbar/empty/link-card thay vi delegate ve `apps/web/app/components/surface.tsx`
-- dung `div` / `span` / `p` thuong de gia lap `Card`, `Badge`, `Button`, `Table`, `Tabs`, `Input`, `Select`
+- parallel compatibility layer
+- wrapper override visual contract của primitive
+- module tự tạo lại page/header/section/toolbar/empty/link-card thay vì delegate về `apps/web/app/components/surface.tsx`
+- dùng `div` / `span` / `p` thường để giả lập `Card`, `Badge`, `Button`, `Table`, `Tabs`, `Input`, `Select`
 - per-surface `theme.css`
-- shell chrome tu che de thay cho stock shadcn structure
+- shell chrome tự chế để thay cho stock shadcn structure
 
-Quy tac review:
+Quy tắc review:
 
-- neu UI trong giong `card` thi phai dung `Card`
-- neu UI trong giong `badge/chip` thi phai dung `Badge`
-- neu UI trong giong `button` thi phai dung `Button`
-- neu UI trong giong bang du lieu thi phai dung `Table`
-- neu UI la empty/error state thi phai dung `Empty` (hoac wrapper `EmptyStatePanel`/`TableEmptyStateRow`)
-- neu UI la loading spinner thi phai dung `Spinner` (khong tu style `Loader2 + animate-spin`)
-- neu UI la form field thi phai dung helpers tu `@/components/form` (`TextField`, `NumberField`, `SelectField`, `TextareaField`)
-- neu UI la form dialog CRUD thi phai dung `FormDialog` wrapper
-- neu khong co primitive phu hop, dung lai va thong nhat truoc khi them pattern moi
+- nếu UI trông giống `card` thì phải dùng `Card`
+- nếu UI trông giống `badge/chip` thì phải dùng `Badge`
+- nếu UI trông giống `button` thì phải dùng `Button`
+- nếu UI trông giống bảng dữ liệu thì phải dùng `Table`
+- nếu UI là empty/error state thì phải dùng wrapper đã được phê duyệt như `AppEmptyState` / `TableEmptyStateRow`; route code không dùng raw `Empty*` trực tiếp
+- nếu UI là loading spinner thì phải dùng `Spinner`, không tự style `Loader2 + animate-spin`
+- nếu UI là form field thì phải dùng helpers từ `@/components/form` (`TextField`, `NumberField`, `SelectField`, `TextareaField`)
+- nếu UI là form dialog CRUD thì phải dùng `FormDialog` wrapper
+- nếu không có primitive phù hợp, dừng lại và thống nhất trước khi thêm pattern mới
 
 ## UI Rebuild Gate
 
-Truoc khi rebuild mot surface, agent phai ghi ro trong plan:
+Trước khi rebuild một surface, agent phải ghi rõ trong plan:
 
-- surface va route family dang sua
-- primary user job cua surface do
+- surface và route family đang sửa
+- primary user job của surface đó
 - UI thay doi thuoc nhom visual refactor, UX flow, copy, hay behavior
-- primitives se dung (`Table`, `Tabs`, `Sheet`, `Dialog`, `Item`, `InputGroup`, ...)
+- primitives sẽ dùng (`Table`, `Tabs`, `Sheet`, `Dialog`, `Item`, `InputGroup`, ...)
 - regression rules co nguy co cham vao
 
-Rebuild theo wave nho:
+Rebuild theo wave nhỏ:
 
-1. Lock design system va rule.
+1. Lock design system và rule.
 2. Audit route family.
 3. Chuan hoa shell/layout/state primitives.
-4. Sua flow chinh.
+4. Sửa flow chính.
 5. Verify mobile first viewport + desktop density.
-6. Update docs/regressions neu phat sinh rule moi.
+6. Update docs/regressions nếu phát sinh rule mới.
 
-Khong gom nhieu route family lon vao mot PR neu khong can thiet.
+Không gom nhiều route family lớn vào một PR nếu không cần thiết.
 
 ## Operational Surfaces
 
-POS va KDS la surface van hanh, khong phai dashboard.
+POS và KDS là surface vận hành, không phải dashboard.
 
-Dieu nay co nghia:
+Điều này có nghĩa:
 
-- first viewport tren mobile phai uu tien action chinh hoac hang doi song
-- sau khi khoa context (ca, ban, tram, don), shell phai co gon de nhuong cho tac vu chinh
-- analytics, hero copy, progress block chi la secondary content; khong duoc day queue/cart xuong duoi fold
-- desktop co the them mat do thong tin, nhung khong duoc tao IA khac mobile
-- neu control trong giong `Tabs`, `Badge`, `Button`, `Card`, `Sheet`, `Select`, `Progress` thi phai dung primitive that, khong tu style raw `div` / `button`
+- first viewport trên mobile phải ưu tiên action chính hoặc hàng đợi sống
+- sau khi khóa context (ca, bàn, trạm, đơn), shell phải co gọn để nhường cho tác vụ chính
+- analytics, hero copy, progress block chỉ là secondary content; không được đẩy queue/cart xuống dưới fold
+- desktop có thể thêm mật độ thông tin, nhưng không được tạo IA khác mobile
+- nếu control trông giống `Tabs`, `Badge`, `Button`, `Card`, `Sheet`, `Select`, `Progress` thì phải dùng primitive thật, không tự style raw `div` / `button`
 
 Review heuristic:
 
-- POS/KDS truoc het phai giup nhan vien lam thao tac tiep theo nhanh hon
-- mot workflow state chi nen co mot noi the hien chinh
-- destructive action phai tach khoi primary action va co confirm / recovery
+- POS/KDS trước hết phải giúp nhân viên làm thao tác tiếp theo nhanh hơn
+- một workflow state chỉ nên có một nơi thể hiện chính
+- destructive action phải tách khỏi primary action và có confirm / recovery

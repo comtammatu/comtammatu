@@ -4,9 +4,9 @@
 >
 > Boundary hiện tại:
 >
-> - `tenant` có thể chuyển thẳng về `Kho chi nhánh`.
-> - `chi nhánh` là một node sản xuất/phân phối hợp lệ, không phải hop bắt buộc.
-> - `Kho chi nhánh` và `Bếp chi nhánh` là hai điểm vận hành trong cùng site `branch`, tách bằng `inventory_locations`; cấp bếp dùng intra-branch transfer.
+> - `Kho Tổng` và `Bếp Trung Tâm` là stock-bearing central sites trên bảng `branches`.
+> - `Kho chi nhánh` là stock-bearing location của chi nhánh.
+> - `Bếp chi nhánh` là endpoint tiêu hao, không phải location giữ tồn trong flow mới.
 
 ---
 
@@ -15,28 +15,27 @@
 ```mermaid
 flowchart LR
     SUP["Nhà cung cấp"]
-    tenant["Tenant"]
-    chi nhánh["chi nhánh"]
+    CS["Kho Tổng"]
+    CK["Bếp Trung Tâm"]
     BW["Kho chi nhánh"]
-    BK["Bếp chi nhánh"]
+    CONS["Tiêu hao chi nhánh"]
     POS["POS / Bán hàng"]
     CTRL["Kiểm soát: stocktake / alerts / reports"]
 
-    SUP -->|"PO -> GRN -> Supplier Invoice"| tenant
+    SUP -->|"PO -> GRN"| CS
+    SUP -->|"PO -> GRN"| CK
 
-    tenant -->|"Transfer trực tiếp"| BW
-    tenant -->|"Transfer nguyên liệu"| chi nhánh
+    CS -->|"Transfer thật"| BW
+    CK -->|"Production Order"| CK
+    CK -->|"Transfer thật"| BW
 
-    chi nhánh -->|"Production Order"| chi nhánh
-    chi nhánh -->|"Transfer thành phẩm"| BW
+    BW -->|"Approved consumption"| CONS
+    CONS -->|"Food cost thực tế"| POS
 
-    BW -->|"Cấp phát nội bộ"| BK
-    BK -->|"Tiêu hao theo order completed"| POS
-
-    tenant --- CTRL
-    chi nhánh --- CTRL
+    CS --- CTRL
+    CK --- CTRL
     BW --- CTRL
-    BK --- CTRL
+    CONS --- CTRL
 ```
 
 ---
@@ -45,32 +44,25 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    subgraph tenant["Tenant"]
+    subgraph central["Trung tâm"]
         H1["Tạo PO"]
         H2["Nhận hàng + GRN"]
-        H3["Cập nhật WAC + tồn tenant"]
+        H3["Cập nhật WAC + tồn trung tâm"]
         H4{"Đi hàng theo hướng nào?"}
-        H5["Transfer tenant -> chi nhánh"]
-        H6["Transfer tenant -> Kho chi nhánh"]
-    end
-
-    subgraph chi nhánh["chi nhánh"]
-        C1["Nhận nguyên liệu"]
-        C2["Tạo Production Order"]
-        C3["Xuất nguyên liệu + nhập thành phẩm"]
-        C4["Transfer chi nhánh -> Kho chi nhánh"]
+        H5["Production tại Bếp Trung Tâm"]
+        H6["Transfer trung tâm -> Kho chi nhánh"]
     end
 
     subgraph BR["Chi nhánh"]
         B1["Kho chi nhánh nhận hàng"]
-        B2["Kho chi nhánh cấp phát -> Bếp chi nhánh"]
-        B3["Bếp chi nhánh bán hàng"]
-        B4["Order completed -> consumption"]
+        B2["Bán hàng"]
+        B3["Submit consumption report"]
+        B4["Approve/apply consumption"]
         B5["Stocktake / adjustment / write-off"]
     end
 
     H1 --> H2 --> H3 --> H4
-    H4 -->|"Sản xuất tập trung"| H5 --> C1 --> C2 --> C3 --> C4 --> B1
+    H4 -->|"Sản xuất"| H5 --> H6 --> B1
     H4 -->|"Cấp thẳng chi nhánh"| H6 --> B1
     B1 --> B2 --> B3 --> B4 --> B5
 ```

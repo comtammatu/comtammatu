@@ -21,6 +21,7 @@
     "lint:review-tier": "node scripts/check-review-tier.mjs",
     "lint:rules-mirror": "node scripts/check-rules-mirror.mjs",
     "lint:ui-contract": "node scripts/check-ui-contract.mjs",
+    "audit:ui-components": "node scripts/audit-ui-components.mjs",
     "regressions:retire-candidates": "node scripts/list-regression-retire-candidates.mjs",
     "deps:audit": "node scripts/deps-audit.mjs",
     "typecheck": "turbo typecheck",
@@ -32,7 +33,8 @@
     "db:baseline:extract": "node scripts/supabase-baseline-extract.mjs",
     "db:baseline:extract:dry-run": "node scripts/supabase-baseline-extract.mjs --dry-run",
     "db:baseline:local-check": "node scripts/supabase-baseline-local-check.mjs",
-    "clean:web": "node scripts/clean-web.mjs"
+    "clean:web": "node scripts/clean-web.mjs",
+    "docs:okf": "node scripts/export-okf.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

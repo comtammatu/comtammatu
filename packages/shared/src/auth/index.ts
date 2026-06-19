@@ -41,10 +41,13 @@ export type {
   NavItemConfig,
   NavGroupConfig,
   WorkspaceNavItemConfig,
+  BranchScopedNavItemConfig,
+  BranchManagementNavItemConfig,
   BranchOperationNavItemConfig,
 } from "./nav-config";
 export {
   ADMIN_NAV_GROUPS,
+  BRANCH_MANAGEMENT_ITEMS,
   DOMAIN_WORKSPACE_ITEMS,
   BRANCH_OPERATION_ITEMS,
 } from "./nav-config";
@@ -56,6 +59,7 @@ export type {
 } from "./nav-resolution";
 export {
   resolveAdminNavGroups,
+  resolveBranchManagementItems,
   resolveBranchOperationItems,
   resolveNavLink,
   resolveQuickLaunchGroups,
@@ -71,6 +75,7 @@ export type {
 } from "./app-discovery";
 export {
   resolveAdminDiscoveryGroups,
+  resolveBranchManagementDiscoveryGroup,
   resolveBranchOperationDiscoveryGroup,
   resolveDiscoveredAppGroups,
   resolveDiscoveredApps,

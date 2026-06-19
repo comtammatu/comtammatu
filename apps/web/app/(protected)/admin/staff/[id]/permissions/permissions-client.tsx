@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: permission management surface keeps localized operational copy inline */
+
 import { useMemo, useState, useTransition } from "react";
 import {
   Plus as IconPlus,
@@ -9,12 +11,7 @@ import {
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { AppEmptyState, AppSection } from "@/components/surface";
 import {
   Select,
   SelectContent,
@@ -107,7 +104,7 @@ export function PermissionsClient({
 
   function handleGrant() {
     if (!selectedBranch || !selectedPerm) {
-      toast.error("Chọn chi nhánh và permission key.");
+      toast.error("Chọn chi nhánh và quyền.");
       return;
     }
     startTransition(async () => {
@@ -136,7 +133,7 @@ export function PermissionsClient({
       description:
         "Nhân viên sẽ mất quyền truy cập tương ứng ngay sau khi thu hồi.",
       details: [
-        { label: "Permission key", value: grant.permissionKey },
+        { label: "Quyền", value: grant.permissionKey },
         ...(description ? [{ label: "Mô tả", value: description }] : []),
       ],
       confirmText: "Thu hồi",
@@ -188,13 +185,9 @@ export function PermissionsClient({
   }
 
   return (
-    <div className="space-y-5">
-      {/* ─── Grant individual permission ─── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Gán quyền đơn lẻ</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <div className="space-y-5">
+        {/* ─── Grant individual permission ─── */}
+      <AppSection title="Gán quyền đơn lẻ">
           <div className="grid gap-3 sm:grid-cols-3">
             <Select value={selectedBranch} onValueChange={setSelectedBranch}>
               <SelectTrigger>
@@ -210,7 +203,7 @@ export function PermissionsClient({
             </Select>
             <Select value={selectedPerm} onValueChange={setSelectedPerm}>
               <SelectTrigger className="sm:col-span-2">
-                <SelectValue placeholder="Permission key" />
+                <SelectValue placeholder="Chọn quyền" />
               </SelectTrigger>
               <SelectContent>
                 {modules.map((mod) => (
@@ -257,15 +250,10 @@ export function PermissionsClient({
             <IconPlus className="mr-1 size-4" />
             Gán quyền
           </Button>
-        </CardContent>
-      </Card>
+      </AppSection>
 
       {/* ─── Apply template ─── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Áp dụng template</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <AppSection title="Áp dụng template">
           <div className="grid gap-3 sm:grid-cols-3">
             <Select value={templateBranch} onValueChange={setTemplateBranch}>
               <SelectTrigger>
@@ -313,23 +301,17 @@ export function PermissionsClient({
             <IconStack className="mr-1 size-4" />
             Áp dụng
           </Button>
-        </CardContent>
-      </Card>
+      </AppSection>
 
-      {/* ─── Current grants — tenant-wide ─── */}
+      {/* ─── Current grants — whole shop ─── */}
       {tenantGrants.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Quyền tenant-wide ({tenantGrants.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <GrantList
-              grants={tenantGrants}
-              onRevoke={handleRevoke}
-              disabled={isPending}
-            />
-          </CardContent>
-        </Card>
+        <AppSection title={`Quyền toàn quán (${tenantGrants.length})`}>
+          <GrantList
+            grants={tenantGrants}
+            onRevoke={handleRevoke}
+            disabled={isPending}
+          />
+        </AppSection>
       )}
 
       {/* ─── Current grants — per branch ─── */}
@@ -337,30 +319,22 @@ export function PermissionsClient({
         const list = branchGrantsByBranch.get(b.id) ?? [];
         if (list.length === 0) return null;
         return (
-          <Card key={b.id}>
-            <CardHeader>
-              <CardTitle>
-                {b.name} ({list.length} quyền)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <GrantList
-                grants={list}
-                onRevoke={handleRevoke}
-                disabled={isPending}
-              />
-            </CardContent>
-          </Card>
+          <AppSection key={b.id} title={`${b.name} (${list.length} quyền)`}>
+            <GrantList
+              grants={list}
+              onRevoke={handleRevoke}
+              disabled={isPending}
+            />
+          </AppSection>
         );
       })}
 
       {currentGrants.length === 0 && (
-        <Card>
-          <CardContent className="p-6 text-center text-sm text-muted-foreground">
-            {targetFullName} chưa có quyền nào. Gán đơn lẻ hoặc áp dụng template
-            ở trên.
-          </CardContent>
-        </Card>
+        <AppEmptyState
+          compact
+          title={`${targetFullName} chưa có quyền nào.`}
+          description="Gán đơn lẻ hoặc áp dụng template ở trên."
+        />
       )}
     </div>
   );

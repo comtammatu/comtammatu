@@ -43,9 +43,9 @@ export const cashConfirmSchema = z.object({
  * / `confirmVietQrPaymentWithInvoice`) and does not flow through this
  * action.
  *
- * Field order: branchId first, then the remaining three via
- * `paymentSchema`, so the first-issue message stays identical when multiple
- * fields fail validation simultaneously.
+ * Field order matters: branchId is validated first, then the remaining
+ * three, so the first-issue message stays identical when multiple fields
+ * fail validation simultaneously.
  *
  * `amount.positive()`: server-side amount-vs-`order.total_amount` equality
  * check lives INSIDE the handler — schema only rejects zero/negative.
@@ -83,7 +83,7 @@ export const branchOnlyReadSchema = z.object({
  * decide whether to resume an in-flight MoMo QR session or start fresh.
  *
  * `orderId` carries the explicit "Order ID không hợp lệ" error message;
- * field order branchId first so the first-issue message stays identical
+ * field order is branchId first so the first-issue message stays identical
  * when both fields are invalid.
  */
 export const fetchPendingRemotePaymentSchema = z.object({

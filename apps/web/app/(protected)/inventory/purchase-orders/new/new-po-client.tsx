@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,12 +16,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -49,7 +43,7 @@ import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import {
   createPurchaseOrder,
   fetchPoSuggestions,
@@ -78,6 +72,35 @@ interface LocalLine {
   unitPriceEst: number | null;
 }
 
+let compactLineItemsMql: MediaQueryList | null = null;
+
+function getCompactLineItemsQuery(): MediaQueryList {
+  compactLineItemsMql ??= window.matchMedia("(max-width: 1023px)");
+  return compactLineItemsMql;
+}
+
+function subscribeCompactLineItems(onStoreChange: () => void): () => void {
+  const list = getCompactLineItemsQuery();
+  list.addEventListener("change", onStoreChange);
+  return () => list.removeEventListener("change", onStoreChange);
+}
+
+function getCompactLineItemsSnapshot(): boolean {
+  return getCompactLineItemsQuery().matches;
+}
+
+function getCompactLineItemsServerSnapshot(): boolean {
+  return false;
+}
+
+function useIsCompactLineItems(): boolean {
+  return useSyncExternalStore(
+    subscribeCompactLineItems,
+    getCompactLineItemsSnapshot,
+    getCompactLineItemsServerSnapshot,
+  );
+}
+
 export interface ProcurementBranchOption {
   id: number;
   name: string;
@@ -103,6 +126,7 @@ export function NewPoClient({
 }) {
   const router = useRouter();
   const isMobile = useIsMobile();
+  const isCompactLineItems = useIsCompactLineItems();
 
   const [supplierId, setSupplierId] = useState("");
   const [notes, setNotes] = useState("");
@@ -352,7 +376,7 @@ export function NewPoClient({
           supplierId={supplierId}
           totalValue={totalValue}
           hasValue={hasValue}
-          isMobile={isMobile}
+          isCompact={isCompactLineItems}
           onRemoveLine={removeLine}
           onAddLine={(line) => {
             if (lines.some((l) => l.ingredientId === line.ingredientId)) {
@@ -420,47 +444,40 @@ function SupplierSection({
   onNotesChange: (v: string) => void;
 }) {
   return (
-    <Card className="rounded-lg">
-      <CardHeader className="gap-1">
-        <CardTitle>{messages.inventory.po.headerInfoTitle}</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          {messages.inventory.po.headerInfoDescription}
-        </p>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-          <div className="space-y-1.5">
-            <Label>
-              {messages.inventory.po.supplierRequired}{" "}
-              <span className="text-destructive">*</span>
-            </Label>
-            <Combobox
-              value={supplierId}
-              onValueChange={onSupplierChange}
-              options={suppliers.map((s) => ({
-                value: String(s.id),
-                label: s.name,
-              }))}
-              placeholder={messages.inventory.po.supplierPlaceholder}
-              searchPlaceholder={
-                messages.inventory.po.supplierSearchPlaceholder
-              }
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="notes">{FORM_VI.notes}</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => onNotesChange(e.target.value)}
-              rows={3}
-              placeholder={messages.inventory.po.notesPlaceholder}
-              className="min-h-24"
-            />
-          </div>
+    <AppSection
+      title={messages.inventory.po.headerInfoTitle}
+      description={messages.inventory.po.headerInfoDescription}
+    >
+      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+        <div className="space-y-1.5">
+          <Label>
+            {messages.inventory.po.supplierRequired}{" "}
+            <span className="text-destructive">*</span>
+          </Label>
+          <Combobox
+            value={supplierId}
+            onValueChange={onSupplierChange}
+            options={suppliers.map((s) => ({
+              value: String(s.id),
+              label: s.name,
+            }))}
+            placeholder={messages.inventory.po.supplierPlaceholder}
+            searchPlaceholder={messages.inventory.po.supplierSearchPlaceholder}
+          />
         </div>
-      </CardContent>
-    </Card>
+        <div className="space-y-1.5">
+          <Label htmlFor="notes">{FORM_VI.notes}</Label>
+          <Textarea
+            id="notes"
+            value={notes}
+            onChange={(e) => onNotesChange(e.target.value)}
+            rows={3}
+            placeholder={messages.inventory.po.notesPlaceholder}
+            className="min-h-24"
+          />
+        </div>
+      </div>
+    </AppSection>
   );
 }
 
@@ -504,15 +521,15 @@ function SuggestionsPanel({
     procurementBranches.find((b) => b.id === branchId)?.name ?? "Chưa chọn";
   const showBranchSwitcher = canSwitchBranch && procurementBranches.length > 1;
   return (
-    <Card className="rounded-lg border-info/20 bg-info/5">
-      <CardContent className="pt-6">
+    <AppSection className="rounded-lg border-info/20 bg-info/5" contentFlush>
+      <div className="p-4 pt-6 md:p-5 md:pt-6">
         <Collapsible open={suggestionsOpen} onOpenChange={onOpenChange}>
           <div className="-m-4 md:-m-5">
             <CollapsibleTrigger asChild>
               <Button
                 type="button"
                 variant="ghost"
-                className="h-auto w-full justify-between rounded-none px-4 py-3 text-left md:px-5"
+                className="h-auto w-full justify-between rounded-none px-4 py-3 text-left md:px-4"
               >
                 <div className="flex items-center gap-2">
                   <IconBulb className="size-4 text-info" />
@@ -530,7 +547,7 @@ function SuggestionsPanel({
             </CollapsibleTrigger>
 
             <CollapsibleContent>
-              <div className="border-t border-info/20 px-4 pb-4 pt-3 md:px-5">
+              <div className="border-t border-info/20 px-4 pb-4 pt-3 md:px-4">
                 {/* Branch + period selector + bulk action */}
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -602,7 +619,7 @@ function SuggestionsPanel({
 
                 {/* Suggestion rows */}
                 {suggestions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-background/35 px-6 py-8 text-center">
+                  <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-background/35 px-4 py-4 text-center">
                     <IconPackage className="size-5 text-muted-foreground" />
                     <p className="text-base font-semibold">
                       {messages.inventory.po.stableStockTitle}
@@ -760,8 +777,8 @@ function SuggestionsPanel({
             </CollapsibleContent>
           </div>
         </Collapsible>
-      </CardContent>
-    </Card>
+      </div>
+    </AppSection>
   );
 }
 
@@ -775,7 +792,7 @@ function LineItemsSection({
   supplierId,
   totalValue,
   hasValue,
-  isMobile,
+  isCompact,
   onRemoveLine,
   onAddLine,
 }: {
@@ -785,7 +802,7 @@ function LineItemsSection({
   supplierId: string;
   totalValue: number;
   hasValue: boolean;
-  isMobile: boolean;
+  isCompact: boolean;
   onRemoveLine: (idx: number) => void;
   onAddLine: (line: LocalLine) => void;
 }) {
@@ -854,12 +871,11 @@ function LineItemsSection({
     }
   }
 
-  if (isMobile) {
+  if (isCompact) {
     return (
-      <Card className="overflow-hidden rounded-lg">
-        <CardContent flush>
+      <div className="overflow-hidden rounded-lg border bg-card">
           <div className="-m-4 md:-m-5">
-            <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5 md:px-5">
+            <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5 md:px-4">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {PRODUCT_VI.rawIngredient}
               </span>
@@ -871,7 +887,7 @@ function LineItemsSection({
             </div>
 
             {lines.length === 0 ? (
-              <div className="px-6 py-8 text-center">
+              <div className="px-4 py-4 text-center">
                 <p className="text-base font-semibold">
                   {messages.inventory.po.emptyIngredientsTitle}
                 </p>
@@ -935,7 +951,7 @@ function LineItemsSection({
             {/* Mobile add-row form */}
             <form
               onSubmit={handleAddLine}
-              className="border-t bg-muted/5 p-3 space-y-2 md:px-5"
+              className="border-t bg-muted/5 p-3 space-y-2 md:px-4"
             >
               <Combobox
                 value={ingredientId}
@@ -999,18 +1015,16 @@ function LineItemsSection({
                 )}
             </form>
           </div>
-        </CardContent>
-      </Card>
+      </div>
     );
   }
 
   // Desktop layout
   return (
-    <Card className="overflow-hidden rounded-lg">
-      <CardContent flush>
+    <div className="overflow-hidden rounded-lg border bg-card">
         <div className="-m-4 md:-m-5">
           {/* Table header */}
-          <div className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 border-b bg-muted/30 px-3 py-2 md:px-5">
+          <div className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 border-b bg-muted/30 px-3 py-2 md:px-4">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {PRODUCT_VI.rawIngredient}
             </span>
@@ -1031,7 +1045,7 @@ function LineItemsSection({
 
           {/* Existing lines */}
           {lines.length === 0 ? (
-            <div className="px-6 py-8 text-center">
+            <div className="px-4 py-4 text-center">
               <p className="text-base font-semibold">
                 {messages.inventory.po.emptyIngredientsTitle}
               </p>
@@ -1108,7 +1122,7 @@ function LineItemsSection({
           {/* Add-row form */}
           <form
             onSubmit={handleAddLine}
-            className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] items-center gap-0 border-t bg-muted/5 px-3 py-2 md:px-5"
+            className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] items-center gap-0 border-t bg-muted/5 px-3 py-2 md:px-4"
           >
             <div className="pr-2">
               <Combobox
@@ -1181,8 +1195,7 @@ function LineItemsSection({
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 

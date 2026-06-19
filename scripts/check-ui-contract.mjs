@@ -70,9 +70,9 @@ function extractJsxOpeningTags(content, tagName) {
 
 const checks = [
   {
-    id: "legacy-matu-pilot-layer",
+    id: "non-current-visual-layer",
     description:
-      "Legacy matu-surface / matu-* / font-matu-* usage is retired.",
+      "Non-current visual-layer tokens are not part of the runtime UI contract.",
     roots: [
       { dir: "apps/web/app", extensions: [".ts", ".tsx"] },
       { dir: "packages/ui/src/styles", extensions: [".css"] },
@@ -95,8 +95,7 @@ const checks = [
     description:
       "Banned icon-size classes size-7/9/11 must not spread; size-14/16 stay limited to media thumbnails.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
-    pattern:
-      /className=\{?(?:cn\()?['"][^'"]*\b(size-(7|9|11|14|16))\b/g,
+    pattern: /className=\{?(?:cn\()?['"][^'"]*\b(size-(7|9|11|14|16))\b/g,
     allowlist: {
       "apps/web/app/(protected)/inventory/_components/photo-upload-input.tsx": 2,
       "apps/web/app/(protected)/menu/menu-image-input.tsx": 1,
@@ -109,6 +108,39 @@ const checks = [
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
       /className=\{?(?:cn\()?['"][^'"]*(\brounded\b(?!-(?:md|lg|full|none|t|b|l|r))|\brounded-(sm|xl|2xl|3xl|4xl)\b)/g,
+    allowlist: {},
+  },
+  {
+    id: "gap-scale",
+    description:
+      "App surfaces use the documented gap scale only: gap-1/1.5/2/3/4/6. gap-5/7/8+ is blocked at zero.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern:
+      /className=\{?(?:cn\()?['"][^'"]*\bgap-(?:5|7|[89]|[1-9]\d|\[[^\]]+\])\b/g,
+    allowlist: {},
+  },
+  {
+    id: "primitive-radius-scale",
+    description:
+      "App-facing primitives do not expose rounded-xl/2xl/3xl/4xl radii; overlays and empty states use rounded-lg.",
+    roots: [{ dir: "packages/ui/src/components", extensions: [".tsx"] }],
+    pattern: /\brounded-(?:xl|2xl|3xl|4xl)!?\b/g,
+    allowlist: {},
+  },
+  {
+    id: "primitive-transition-all",
+    description:
+      "Primitive motion must name the transitioned properties instead of using transition-all.",
+    roots: [{ dir: "packages/ui/src/components", extensions: [".tsx"] }],
+    pattern: /\btransition-all\b/g,
+    allowlist: {},
+  },
+  {
+    id: "primitive-shadow-overrun",
+    description:
+      "Primitive overlays cap at shadow-md for popover/menu/select/chart tooltip and shadow-lg for modal/sheet surfaces.",
+    roots: [{ dir: "packages/ui/src/components", extensions: [".tsx"] }],
+    pattern: /\bshadow-(?:xl|2xl)\b/g,
     allowlist: {},
   },
   {
@@ -129,6 +161,67 @@ const checks = [
       /<AppSection\b[^>]*contentClassName=["'][^"']*\b(?:p-0|overflow-x-auto)\b/g,
     allowlist: {},
   },
+	  {
+	    id: "admin-finance-branch-raw-table-import",
+	    description:
+	      "Admin, Finance, and Branch Settings list surfaces use DataTable; raw Table imports are frozen baseline debt.",
+    roots: [
+      { dir: "apps/web/app/(protected)/admin", extensions: [".tsx"] },
+      { dir: "apps/web/app/(protected)/finance", extensions: [".tsx"] },
+      {
+        dir: "apps/web/app/(protected)/branch-settings",
+        extensions: [".tsx"],
+      },
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/settings",
+        extensions: [".tsx"],
+      },
+	    ],
+	    pattern: /from\s+["@']@comtammatu\/ui\/components\/table["@']/g,
+	    allowlist: {},
+	  },
+	  {
+	    id: "admin-finance-branch-raw-card-import",
+	    description:
+      "Admin, Finance, and Branch Settings page surfaces use AppSection/KpiCard/approved adapters; raw Card imports are frozen baseline debt.",
+    roots: [
+      { dir: "apps/web/app/(protected)/admin", extensions: [".tsx"] },
+      { dir: "apps/web/app/(protected)/finance", extensions: [".tsx"] },
+      {
+        dir: "apps/web/app/(protected)/branch-settings",
+        extensions: [".tsx"],
+      },
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/settings",
+        extensions: [".tsx"],
+      },
+	    ],
+	    pattern: /from\s+["@']@comtammatu\/ui\/components\/card["@']/g,
+	    allowlist: {},
+	  },
+  {
+    id: "admin-finance-branch-toolbar-fixed-control",
+    description:
+      "Toolbar controls route through AppToolbar/DataTable; page-local fixed h-9/w-36/w-44/w-45 SelectTrigger sizing is frozen baseline debt.",
+    roots: [
+      { dir: "apps/web/app/(protected)/admin", extensions: [".tsx"] },
+      { dir: "apps/web/app/(protected)/finance", extensions: [".tsx"] },
+      {
+        dir: "apps/web/app/(protected)/branch-settings",
+        extensions: [".tsx"],
+      },
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/settings",
+        extensions: [".tsx"],
+      },
+    ],
+    pattern:
+      /<SelectTrigger\b[^>]*className=["'][^"']*\b(?:h-9|w-36|w-44|w-45)\b/g,
+    allowlist: {
+      "apps/web/app/(protected)/admin/reports/stock-movement/stock-movement-client.tsx": 1,
+      "apps/web/app/(protected)/admin/staff/staff-filters.tsx": 2,
+    },
+  },
   {
     id: "app-arbitrary-sizing",
     description:
@@ -137,7 +230,6 @@ const checks = [
     pattern:
       /className=\{?(?:cn\()?['"][^'"]*\b(?:w|h|max-w|max-h|min-w|min-h|text)-\[[^\]]+\]/g,
     allowlist: {
-      "apps/web/app/(protected)/finance/revenue/revenue-client.tsx": 1,
       "apps/web/app/components/app-shell.tsx": 1,
     },
   },
@@ -147,7 +239,7 @@ const checks = [
       "Status label/variant maps are single-sourced in @comtammatu/shared labels + apps/web/app/components/status-badge.tsx; page-local STATUS* maps (including STATUS-first names and multi-line type annotations) must not spread.",
     roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
     pattern:
-      /\bconst\s+[A-Z0-9_]*STATUS[A-Z0-9_]*(?:\s*:[^=]*?)?\s*=\s*[{[]/g,
+      /\bconst\s+(?![A-Z0-9_]*STATUS[A-Z0-9_]*(?:RANK|PRIORITY)[A-Z0-9_]*\b)[A-Z0-9_]*STATUS[A-Z0-9_]*(?:\s*:[^=]*?)?\s*=\s*[{[]/g,
     allowlist: {
       // SSoT registry + exceptions documented in design-system.md
       // "Status vocabulary": status-badge.tsx is the registry itself;
@@ -159,7 +251,7 @@ const checks = [
       // Page-local STATUS* maps frozen at baseline (W1 status-registry
       // burn-down); the un-blinded regex now also blocks new STATUS-first names.
       "apps/web/app/(protected)/admin/settings/printers/jobs/page.tsx": 1,
-      "apps/web/app/(protected)/admin/settings/tables/constants.ts": 1,
+      "apps/web/app/(protected)/branch-settings/_shared/tables/constants.ts": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/actions.ts": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/hooks/use-kds-realtime.ts": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": 2,
@@ -191,28 +283,41 @@ const checks = [
     allowlist: {
       "apps/web/app/(protected)/admin/dashboard/page.tsx": 2,
       "apps/web/app/(protected)/admin/reports/stock-movement/stock-movement-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-summary.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
       "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts": 2,
-      "apps/web/app/(protected)/finance/audit-trail/audit-trail-client.tsx": 1,
       "apps/web/app/(protected)/finance/components/work-queue-strip.tsx": 1,
       "apps/web/app/(protected)/finance/food-cost/food-cost-client.tsx": 1,
-      "apps/web/app/(protected)/finance/journal/journal-client.tsx": 4,
       "apps/web/app/(protected)/finance/page.tsx": 2,
-      "apps/web/app/(protected)/finance/periods/periods-client.tsx": 3,
       "apps/web/app/(protected)/finance/revenue/[date]/page.tsx": 2,
       "apps/web/app/(protected)/finance/revenue/revenue-charts-internal.tsx": 2,
       "apps/web/app/(protected)/finance/revenue/revenue-client.tsx": 9,
       "apps/web/app/(protected)/hr/payroll/[periodId]/payroll-detail-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/audit-history-list.tsx": 1,
       "apps/web/app/(protected)/inventory/_components/auto-approve-eval-panel.tsx": 2,
-      "apps/web/app/(protected)/inventory/_components/document-stock-correction-dialog.tsx": 1,
       "apps/web/app/(protected)/inventory/_lib/format.ts": 2,
       "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx": 1,
       "apps/web/app/(protected)/inventory/ingredient-table.tsx": 1,
       "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 1,
       "apps/web/app/(protected)/inventory/production-order-list.tsx": 1,
       "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 16,
+    },
+  },
+  {
+    id: "date-format-ssot",
+    description:
+      "VN date/time rendering goes through @comtammatu/shared/time (formatVNDate/formatVNDateTime/getVNDateString/…, which pin Asia/Ho_Chi_Minh); ad-hoc Intl.DateTimeFormat / toLocaleDateString / toLocaleTimeString in app code must not spread.",
+    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
+    pattern:
+      /Intl\.DateTimeFormat\b|\.toLocaleDateString\(|\.toLocaleTimeString\(/g,
+    allowlist: {
+      // finance/page.tsx + pos-sessions: en-CA today-key / display formatters
+      // pending migration in the active UI-governance branch (owner WIP edits
+      // these regions; fold into shared/time there to drop these entries).
+      "apps/web/app/(protected)/finance/page.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/settings/pos-sessions/pos-sessions-client.tsx": 2,
+      // finance-params.ts is a self-contained VN-date range module (vnDateParts/
+      // addDays/fmtVN) duplicating shared/time; migrate with a range-equivalence
+      // test in a dedicated PR (finance reporting path, no current coverage).
+      "apps/web/app/(protected)/finance/_lib/finance-params.ts": 1,
     },
   },
   {
@@ -241,8 +346,7 @@ const checks = [
       "Parallel mobile/desktop JSX trees (hidden … md:block twins) must not spread; migrate list surfaces to the shared DataTable adapter instead.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern: /\bhidden\b[^"'\n]*\bmd:block\b/g,
-    allowlist: {
-    },
+    allowlist: {},
   },
   {
     id: "use-is-mobile-budget",
@@ -263,12 +367,9 @@ const checks = [
       "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 2,
       "apps/web/app/(protected)/inventory/issues/issues-client.tsx": 2,
       "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx": 2,
       "apps/web/app/(protected)/inventory/receiving/receiving-client.tsx": 2,
       "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 2,
       "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/stocktake/stocktake-list-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/suppliers/suppliers-client.tsx": 2,
       "apps/web/app/_components/responsive-toaster.tsx": 2,
       "apps/web/app/components/data-table/data-table-toolbar.tsx": 2,
       "apps/web/app/components/data-table/data-table.tsx": 2,
@@ -319,6 +420,31 @@ const checks = [
     pattern:
       /className=\{?(?:cn\()?['"][^'"]*\bhover:shadow-(?:md|lg|xl|2xl)\b/g,
     allowlist: {},
+  },
+  {
+    id: "resting-shadow-rung",
+    description:
+      "Resting app shadows are fixed baseline debt and must not spread; selected/active state uses ring, border, and background instead.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern:
+      /(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
+    allowlist: {
+      "apps/web/app/components/workspace-bottom-nav.tsx": 2,
+      "apps/web/app/(public)/access-denied/page.tsx": 1,
+      "apps/web/app/(public)/(auth)/login/page.tsx": 1,
+      "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 1,
+      "apps/web/app/(protected)/employee/components/bottom-nav.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/runner/runner-idle-visual.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 3,
+      "apps/web/app/(protected)/br/[branchId]/pos/pos-status-shell.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/kds-board.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/components/focus-view.tsx": 1,
+      "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
+    },
   },
   {
     id: "motion-color-duration",
@@ -447,11 +573,11 @@ const textChecks = [
     file: "docs/modules/ui.md",
     includes: [
       "Single source of truth for agent decisions:",
-      "UI cua repo la Com Tam Ma Tu Custom Theme",
+      "UI của repo là Com Tam Ma Tu Custom Theme",
       "Runtime config, primitives, adapters, runbooks, worklogs, and regression rules",
       "are evidence/enforcement for that contract",
       "design system:",
-      "Khong duoc coi `shadcn` preset la authority cao hon Custom Theme contract.",
+      "Không được coi `shadcn` preset là authority cao hơn Custom Theme contract.",
     ],
   },
   {
@@ -477,7 +603,7 @@ const textChecks = [
       "`docs/spec/design-system.md`: Custom Theme authority",
       "`docs/modules/ui.md`: implementation guide",
       "`docs/runbooks/*`: verification checklists only.",
-      "`docs/worklog/*`: history/progress only",
+      "`docs/worklog/*`: temporary staging only",
     ],
   },
   {
@@ -529,7 +655,10 @@ const textChecks = [
   {
     id: "card-content-layout-props-module-doc",
     file: "docs/modules/ui.md",
-    includes: ["`flush` cho table-edge/list-edge alignment", "`scroll` cho horizontal table"],
+    includes: [
+      "`flush` cho table-edge/list-edge alignment",
+      "`scroll` cho horizontal table",
+    ],
   },
   {
     id: "shadcn-resolved-preset-contract",
@@ -585,21 +714,321 @@ const textChecks = [
 ];
 
 const countBudgets = [
+	  {
+	    id: "card-content-classname-baseline",
+	    description:
+	      "CardContent className overrides are composition debt and must not increase.",
+	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+	    pattern: /<CardContent\b[^\n]*\bclassName=/g,
+	    maxCount: 1,
+	  },
+	  {
+	    id: "card-title-classname-baseline",
+	    description:
+	      "CardTitle className overrides are heading-scale debt and must not increase.",
+	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+	    pattern: /<CardTitle\b[^\n]*\bclassName=/g,
+	    maxCount: 0,
+	  },
+	  {
+	    id: "resting-shadow-baseline",
+	    description:
+	      "Resting shadow debt only burns down; new app-surface shadows must route through an approved overlay/fixed-chrome adapter.",
+	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+	    pattern:
+	      /(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
+		    maxCount: 20,
+	  },
+	  {
+	    id: "raw-card-import-baseline",
+	    description:
+	      "Raw Card imports are baseline debt; route-family waves should delegate to AppSection/KpiCard/operational adapters instead.",
+	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+	    pattern: /from\s+["@']@comtammatu\/ui\/components\/card["@']/g,
+	    maxCount: 2,
+	  },
+	  {
+	    id: "raw-table-import-baseline",
+	    description:
+	      "Raw Table imports are baseline debt; list surfaces should move to DataTable or a route-specific adapter.",
+	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+	    pattern: /from\s+["@']@comtammatu\/ui\/components\/table["@']/g,
+	    maxCount: 2,
+	  },
+	  {
+	    id: "raw-dialog-import-baseline",
+	    description:
+	      "Raw Dialog and AlertDialog imports are baseline debt; CRUD forms should use FormDialog/form helpers or page/sheet shells.",
+	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+	    pattern:
+	      /from\s+["@']@comtammatu\/ui\/components\/(?:dialog|alert-dialog)["']/g,
+	    maxCount: 28,
+	  },
+	];
+
+const perFileCountBudgets = [
   {
-    id: "card-content-classname-baseline",
+    id: "space-y-baseline",
     description:
-      "CardContent className overrides are composition debt and must not increase.",
+      "Vertical rhythm debt is frozen per file; cleanup in one file must not let another file add space-y drift.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
-    pattern: /<CardContent\b[^\n]*\bclassName=/g,
-    maxCount: 81,
+    pattern:
+      /\bspace-y-(?:px|0|0\.5|1|1\.5|2|2\.5|3|3\.5|4|5|6|7|8|9|10|11|12|14|16|20|24|\[[^\]]+\])\b/g,
+    allowlist: {
+      "apps/web/app/_components/notification-item.tsx": 1,
+      "apps/web/app/(protected)/admin/accounting/periods/period-admin-client.tsx": 1,
+      "apps/web/app/(protected)/admin/reports/page.tsx": 4,
+      "apps/web/app/(protected)/admin/reports/stock-movement/stock-movement-client.tsx": 4,
+      "apps/web/app/(protected)/admin/settings/branches/network-config-dialog.tsx": 1,
+      "apps/web/app/(protected)/admin/settings/general/settings-form.tsx": 3,
+      "apps/web/app/(protected)/admin/settings/layout.tsx": 1,
+      "apps/web/app/(protected)/admin/settings/payments/payments-form.tsx": 7,
+      "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 9,
+      "apps/web/app/(protected)/admin/settings/settings-page-frame.tsx": 1,
+      "apps/web/app/(protected)/admin/staff/[id]/permissions/permissions-client.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/components/completion-history-sheet.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/menu-limits/menu-limits-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/settings/pos-sessions/pos-sessions-client.tsx": 10,
+      "apps/web/app/(protected)/branch-settings/_shared/printers/printers-client.tsx": 10,
+      "apps/web/app/(protected)/branch-settings/_shared/tables/tables-client.tsx": 2,
+      "apps/web/app/(protected)/finance/expenses/expenses-client.tsx": 1,
+      "apps/web/app/(protected)/finance/food-cost/food-cost-client.tsx": 1,
+      "apps/web/app/(protected)/finance/invoice-list.tsx": 1,
+      "apps/web/app/(protected)/finance/page.tsx": 3,
+      "apps/web/app/(protected)/finance/revenue/[date]/page.tsx": 2,
+      "apps/web/app/(protected)/finance/revenue/[date]/revenue-drill-tabs.tsx": 1,
+      "apps/web/app/(protected)/finance/revenue/revenue-client.tsx": 3,
+      "apps/web/app/(protected)/hr/attendance-table.tsx": 2,
+      "apps/web/app/(protected)/hr/checklist-templates-table.tsx": 10,
+      "apps/web/app/(protected)/hr/payroll/[periodId]/payroll-detail-client.tsx": 1,
+      "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/_components/document-stock-correction-dialog.tsx": 5,
+      "apps/web/app/(protected)/inventory/_components/period-close-card.tsx": 1,
+      "apps/web/app/(protected)/inventory/_components/photo-upload-input.tsx": 2,
+      "apps/web/app/(protected)/inventory/_components/shift-cap-meter.tsx": 1,
+      "apps/web/app/(protected)/inventory/dashboard-client.tsx": 5,
+      "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx": 5,
+      "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/ingredients/import-export-menu.tsx": 3,
+      "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 2,
+      "apps/web/app/(protected)/inventory/production-order-form.tsx": 7,
+      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 6,
+      "apps/web/app/(protected)/inventory/receiving/receiving-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx": 4,
+      "apps/web/app/(protected)/inventory/recipes/recipes-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/settings/qc/qc-settings-client.tsx": 7,
+      "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx": 1,
+      "apps/web/app/(protected)/inventory/supplier-returns/[id]/supplier-return-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx": 3,
+      "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx": 3,
+      "apps/web/app/(protected)/menu/category-table.tsx": 2,
+      "apps/web/app/(protected)/menu/import-export-menu.tsx": 4,
+      "apps/web/app/(protected)/menu/item-detail-dialog.tsx": 7,
+      "apps/web/app/(protected)/menu/item-table.tsx": 1,
+      "apps/web/app/(protected)/menu/menu-image-input.tsx": 1,
+      "apps/web/app/(protected)/menu/page.tsx": 2,
+      "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 7,
+      "apps/web/app/(protected)/orders/page.tsx": 2,
+      "apps/web/app/(protected)/orders/refunds-client.tsx": 1,
+      "apps/web/app/(public)/(auth)/login/login-form.tsx": 1,
+      "apps/web/app/(public)/(auth)/login/page.tsx": 1,
+      "apps/web/app/(public)/payment/momo/return/page.tsx": 2,
+      "apps/web/app/components/app-shell.tsx": 2,
+      "apps/web/app/components/surface.tsx": 1,
+    },
   },
   {
-    id: "card-title-classname-baseline",
+    id: "raw-padding-baseline",
     description:
-      "CardTitle className overrides are heading-scale debt and must not increase.",
+      "Large local padding is frozen per file; route cleanup must not create offsetting padding debt elsewhere.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
-    pattern: /<CardTitle\b[^\n]*\bclassName=/g,
-    maxCount: 13,
+    pattern:
+      /className=\{?(?:cn\()?['"][^'"]*\b(?:p|px|py|pt|pb|pl|pr)-(?:5|6|7|8|9|10|11|12|14|16|20|24)\b/g,
+    allowlist: {
+      "apps/web/app/_components/notification-list.tsx": 1,
+      "apps/web/app/(protected)/admin/settings/branches/network-config-dialog.tsx": 2,
+      "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/components/completion-history-sheet.tsx": 3,
+      "apps/web/app/(protected)/br/[branchId]/kds/components/focus-view.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/kds/components/order-grid.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": 4,
+      "apps/web/app/(protected)/br/[branchId]/menu-limits/menu-limits-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/hotkey-overlay.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/close-session-sheet.tsx": 3,
+      "apps/web/app/(protected)/br/[branchId]/pos/order-history.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/pos-status-shell.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/pos-table-gate.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/pos-takeaway-gate.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/settings/pos-sessions/pos-sessions-client.tsx": 2,
+      "apps/web/app/(protected)/branch-settings/_shared/kds/station-form-dialog.tsx": 1,
+      "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
+      "apps/web/app/(protected)/inventory/_components/blind-counting-grid.tsx": 1,
+      "apps/web/app/(protected)/inventory/_components/inventory-branch-filter.tsx": 1,
+      "apps/web/app/(protected)/inventory/_components/mobile/mobile-page.tsx": 1,
+      "apps/web/app/(protected)/inventory/dashboard-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 1,
+      "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/production-recipe-panel.tsx": 1,
+      "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx": 1,
+      "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx": 2,
+      "apps/web/app/(protected)/menu/item-detail-dialog.tsx": 2,
+      "apps/web/app/(protected)/menu/page.tsx": 2,
+      "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 2,
+      "apps/web/app/(public)/(auth)/login/page.tsx": 2,
+      "apps/web/app/(public)/access-denied/layout.tsx": 1,
+      "apps/web/app/components/data-table/data-table.tsx": 1,
+      "apps/web/app/components/form/form-dialog.tsx": 1,
+    },
+  },
+  {
+    id: "gap-atypical-baseline",
+    description:
+      "Gap values outside the documented app scale are frozen per file until they are normalized.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern: /\bgap-(?:0|0\.5|2\.5)\b/g,
+    allowlist: {
+      "apps/web/app/(protected)/admin/dashboard/page.tsx": 1,
+      "apps/web/app/(protected)/admin/staff/[id]/permissions/permissions-client.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/components/focus-view.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/components/order-grid.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-summary.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/invoice-form-section.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/merge-orders-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-actions-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/split-order-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-list-pane.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/pos-sidebar-panel.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
+      "apps/web/app/(protected)/employee/components/employee-page.tsx": 1,
+      "apps/web/app/(protected)/employee/payslip/year-picker.tsx": 1,
+      "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/_components/mobile/number-pad-sheet.tsx": 1,
+      "apps/web/app/(protected)/inventory/_components/timeline-stepper.tsx": 1,
+      "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 1,
+      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 4,
+      "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/suppliers/suppliers-client.tsx": 1,
+      "apps/web/app/components/data-table/data-table.tsx": 1,
+    },
+  },
+  {
+    id: "custom-shadow-baseline",
+    description:
+      "Custom shadow values are frozen per file; app elevation must use the documented shadow rung scale.",
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "packages/ui/src/components", extensions: [".tsx"] },
+    ],
+    pattern: /\bshadow-\[[^\]]+\]|\bboxShadow\b|\bbox-shadow\b|--shadow-[\w-]+/g,
+    allowlist: {
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx": 1,
+      "apps/web/app/(protected)/employee/components/bottom-nav.tsx": 1,
+      "apps/web/app/(protected)/employee/components/employee-page.tsx": 2,
+      "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 1,
+      "apps/web/app/(protected)/employee/tasks/tasks-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/settings/settings-section-nav.tsx": 1,
+      "apps/web/app/components/data-table/interactive-card.tsx": 1,
+      "apps/web/app/components/surface.tsx": 3,
+      "apps/web/app/components/workspace-bottom-nav.tsx": 2,
+      "packages/ui/src/components/badge.tsx": 1,
+      "packages/ui/src/components/button.tsx": 1,
+      "packages/ui/src/components/scroll-area.tsx": 1,
+      "packages/ui/src/components/sidebar.tsx": 2,
+      "packages/ui/src/components/switch.tsx": 1,
+      "packages/ui/src/components/tabs.tsx": 1,
+      "packages/ui/src/components/toggle.tsx": 1,
+    },
+  },
+];
+
+const frozenPrimitiveImportBaselines = [
+  {
+    id: "raw-card-import-file-baseline",
+    component: "card",
+	    label: "Card",
+	    replacement: "AppSection, KpiCard, or an approved operational adapter",
+	    allowlist: {
+	      "apps/web/app/components/kpi/kpi-card.tsx": 1,
+	      "apps/web/app/components/surface.tsx": 1,
+	    },
+  },
+  {
+    id: "raw-table-import-file-baseline",
+    component: "table",
+	    label: "Table",
+	    replacement: "DataTable, TableEmptyStateRow, or a documented line-sheet adapter",
+	    allowlist: {
+	      "apps/web/app/components/data-table/data-table.tsx": 1,
+	      "apps/web/app/components/table-empty-state-row.tsx": 1,
+	    },
+  },
+  {
+    id: "raw-dialog-import-file-baseline",
+    component: "dialog",
+    label: "Dialog",
+    replacement: "FormDialog, Sheet, Page, or an approved contextual dialog",
+    allowlist: {
+      "apps/web/app/(protected)/admin/settings/branches/network-config-dialog.tsx": 1,
+      "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/_components/operational-pwa/toolbar.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/transfer-table-dialog.tsx": 1,
+      "apps/web/app/(protected)/employee/components/employee-pwa-toolbar.tsx": 1,
+      "apps/web/app/(protected)/employee/leave/leave-client.tsx": 1,
+      "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
+      "apps/web/app/(protected)/hr/checklist-templates-table.tsx": 1,
+      "apps/web/app/(protected)/hr/leave-requests-table.tsx": 1,
+      "apps/web/app/(protected)/inventory/ingredients/import-export-menu.tsx": 1,
+      "apps/web/app/(protected)/inventory/production-order-form.tsx": 1,
+      "apps/web/app/(protected)/inventory/production-order-list.tsx": 1,
+      "apps/web/app/(protected)/inventory/production-recipe-import-export-menu.tsx": 1,
+      "apps/web/app/(protected)/inventory/production-recipe-panel.tsx": 1,
+      "apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx": 1,
+      "apps/web/app/(protected)/menu/import-export-menu.tsx": 1,
+      "apps/web/app/(protected)/menu/item-detail-dialog.tsx": 1,
+      "apps/web/app/components/form/form-dialog.tsx": 1,
+    },
+  },
+  {
+    id: "raw-alert-dialog-import-file-baseline",
+    component: "alert-dialog",
+    label: "AlertDialog",
+    replacement: "confirm(), FormDialog with reason input, or an approved destructive flow",
+    allowlist: {
+      "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/cancel-order-dialog.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/reduce-quantity-dialog.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/void-item-dialog.tsx": 1,
+      "apps/web/app/(protected)/branch-settings/_shared/tables/table-table.tsx": 1,
+      "apps/web/app/(protected)/finance/invoice-list.tsx": 1,
+      "apps/web/app/(protected)/hr/shifts-table.tsx": 1,
+      "apps/web/app/(protected)/inventory/_components/period-close-card.tsx": 1,
+      "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx": 1,
+    },
   },
 ];
 
@@ -648,6 +1077,50 @@ for (const check of countBudgets) {
     failures.push(
       `${check.id}: ${count} hit(s), allowed ${check.maxCount}. ${check.description}`,
     );
+  }
+}
+
+for (const check of perFileCountBudgets) {
+  const seen = new Map();
+
+  for (const root of check.roots) {
+    for (const filePath of walkFiles(root.dir, root.extensions)) {
+      const normalized = toPosix(filePath);
+      const content = fs.readFileSync(filePath, "utf8");
+      const count = countMatches(content, check.pattern);
+      if (count === 0) continue;
+      seen.set(normalized, (seen.get(normalized) ?? 0) + count);
+    }
+  }
+
+  for (const [filePath, count] of seen) {
+    const allowed = check.allowlist[filePath] ?? 0;
+    if (count > allowed) {
+      failures.push(
+        `${check.id}: ${filePath} has ${count} hit(s), allowed ${allowed}. ${check.description}`,
+      );
+    }
+  }
+}
+
+for (const gate of frozenPrimitiveImportBaselines) {
+  const pattern = new RegExp(
+    `from\\s+["@']@comtammatu/ui/components/${gate.component}["@']`,
+    "g",
+  );
+
+  for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
+    const normalized = toPosix(filePath);
+    const content = fs.readFileSync(filePath, "utf8");
+    const count = countMatches(content, pattern);
+    if (count === 0) continue;
+
+    const allowed = gate.allowlist[normalized] ?? 0;
+    if (count > allowed) {
+      failures.push(
+        `${gate.id}: ${normalized} imports raw ${gate.label} primitive ${count} time(s), allowed ${allowed}. Use ${gate.replacement}; expanding this per-file baseline needs a design-system contract reason.`,
+      );
+    }
   }
 }
 
@@ -701,8 +1174,7 @@ const ROUTE_MANIFEST_SHIM_ROUTES = new Set([
   "/admin",
   "/admin/finance/[[...slug]]",
 ]);
-// ACL family-roots intentionally without a landing page (retired surface, kept
-// only so old URLs resolve through the shared ACL instead of 404-ing raw).
+// ACL family roots without a landing page still resolve through shared ACL.
 const ROUTE_MANIFEST_NO_PAGE_ACL = new Set(["/admin/inventory"]);
 
 function routePathFromPageFile(normalizedFile) {
@@ -710,7 +1182,10 @@ function routePathFromPageFile(normalizedFile) {
     .replace(/^apps\/web\/app/, "")
     .replace(/\/page\.tsx$/, "")
     .split("/")
-    .filter((segment) => segment && !(segment.startsWith("(") && segment.endsWith(")")));
+    .filter(
+      (segment) =>
+        segment && !(segment.startsWith("(") && segment.endsWith(")")),
+    );
   const route = "/" + segments.join("/");
   return route.replace(/\/\[branchId\](?=\/|$)/g, "/*") || "/";
 }
@@ -737,6 +1212,51 @@ for (const file of protectedPages) {
       `route-manifest: ${file} (${route}) resolves to no MODULE_ACL family. Place it under a declared family in ${MODULE_ACL_SOURCE} or make it a redirect shim (design-system.md § C / D019).`,
     );
   }
+}
+
+// raw-empty-import-route-code: app routes use AppEmptyState/TableEmptyStateRow
+// adapters. The raw Empty primitive is reserved for adapter implementations and
+// explicitly approved shell layers so route-local markup cannot fork empty-state
+// behavior.
+const RAW_EMPTY_IMPORT_ALLOWLIST = new Set([
+  "apps/web/app/components/surface.tsx",
+  "apps/web/app/(protected)/employee/components/employee-page.tsx",
+  "apps/web/app/(public)/access-denied/page.tsx",
+]);
+for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
+  const normalized = toPosix(filePath);
+  if (RAW_EMPTY_IMPORT_ALLOWLIST.has(normalized)) continue;
+  const content = fs.readFileSync(filePath, "utf8");
+  if (content.includes('"@comtammatu/ui/components/empty"')) {
+    failures.push(
+      `raw-empty-import-route-code: ${normalized} imports raw Empty primitives. Use AppEmptyState or TableEmptyStateRow; raw Empty* is reserved for approved wrappers (design-system.md Empty / Confirm).`,
+    );
+  }
+}
+
+// form-dialog-crud-wrapper: simple CRUD RHF dialogs use FormDialog so pending,
+// reset, server-error, footer, and submit vocabulary stay consistent. Complex
+// line-array production workflows remain custom until they move to Page/Sheet.
+const FORM_DIALOG_CRUD_ALLOWLIST = {
+  "apps/web/app/(protected)/inventory/production-order-form.tsx":
+    "line-array production workflow dialog",
+  "apps/web/app/(protected)/inventory/production-recipe-panel.tsx":
+    "line-array production recipe workflow dialog",
+  "apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx":
+    "line-array menu recipe workflow dialog",
+};
+for (const filePath of walkFiles("apps/web/app/(protected)", [".tsx"])) {
+  const normalized = toPosix(filePath);
+  const content = fs.readFileSync(filePath, "utf8");
+  const hasRHFZodDialog =
+    content.includes("zodResolver") &&
+    /\buseForm\s*</.test(content) &&
+    extractJsxOpeningTags(content, "Dialog").length > 0;
+  if (!hasRHFZodDialog || /\bFormDialog\b/.test(content)) continue;
+  if (FORM_DIALOG_CRUD_ALLOWLIST[normalized]) continue;
+  failures.push(
+    `form-dialog-crud-wrapper: ${normalized} uses <Dialog> + useForm + zodResolver without FormDialog. Use apps/web/app/components/form/FormDialog or add a documented non-CRUD allowlist reason.`,
+  );
 }
 
 for (const aclPath of ACL_PATHS) {
@@ -781,9 +1301,10 @@ for (const file of walkFiles("apps/web/app", [".tsx"])) {
   }
 }
 
-// button-height-on-button (D030): the touch-height ratchet is scoped to the
-// shared <Button>/<TouchButton>. A raw h-10..h-44 or min-h-12..min-h-24 on a
-// button is height drift that should use a size variant; raw heights on
+// button-height-on-button (D030): the touch-height ratchet is scoped to action
+// elements (<Button>/<TouchButton>/<button>/<Link>). A raw h-10..h-44 or
+// min-h-12..min-h-24 on an action is height drift that should use a size
+// variant; raw heights on
 // non-button elements (Input/Select/Skeleton/layout containers) are out of
 // scope by design (design-system.md § Enforcement Status — the old "any raw
 // height" gate was ~37 non-button false-positives). The tag scanner is
@@ -796,16 +1317,15 @@ const BUTTON_HEIGHT_BASELINE = {
   // 36px, touch=min-h-12 48px), so these stay raw until a shared trigger-height
   // token exists.
   "apps/web/app/components/form/business-date-field.tsx": 1,
-  "apps/web/app/components/form/combobox-field.tsx": 1,
   "apps/web/app/components/form/combobox.tsx": 1,
   "apps/web/app/components/form/multi-select-combobox.tsx": 1,
   // Bespoke single-use tap targets (full-row / stacked icon-over-label tiles ≥
   // h-20) that do not warrant a shared Button size variant. Frozen so a new raw
   // ≥h-20 height on a Button still fails CI.
-  "apps/web/app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx": 1,
   "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
   "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-row.tsx": 1,
   "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 3,
+  "apps/web/app/(protected)/inventory/_components/mobile/number-pad-sheet.tsx": 1,
 };
 const BUTTON_HEIGHT_TOKEN =
   /\b(?:h-(?:10|11|12|14|16|20|24|28|32|36|40|44)|min-h-(?:12|14|16|20|24))\b/;
@@ -813,7 +1333,7 @@ for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
   const normalized = toPosix(filePath);
   const content = fs.readFileSync(filePath, "utf8");
   let count = 0;
-  for (const tagName of ["Button", "TouchButton"]) {
+  for (const tagName of ["Button", "TouchButton", "button", "Link"]) {
     for (const tag of extractJsxOpeningTags(content, tagName)) {
       if (BUTTON_HEIGHT_TOKEN.test(tag)) count += 1;
     }
@@ -821,7 +1341,7 @@ for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
   const allowed = BUTTON_HEIGHT_BASELINE[normalized] ?? 0;
   if (count > allowed) {
     failures.push(
-      `button-height-on-button: ${normalized} has ${count} <Button> raw height(s), allowed ${allowed}. Use a Button size variant; non-button heights are out of scope (design-system.md § Enforcement Status / D030).`,
+      `button-height-on-button: ${normalized} has ${count} action raw height(s), allowed ${allowed}. Use a Button size variant; non-action heights are out of scope (design-system.md § Enforcement Status / D030).`,
     );
   }
 }

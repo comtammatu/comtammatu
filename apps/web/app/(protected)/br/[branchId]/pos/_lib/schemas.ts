@@ -103,13 +103,17 @@ export const priorityInputSchema = z.object({
 });
 
 /**
- * Schema for `transferOrderTable(orderId, newTableId, idempotencyKey?)`.
+ * Schema for `transferOrderTable(branchId, orderId, newTableId, idempotencyKey?)`.
  * `idempotencyKey` is a per-click mint by the cashier UI — covers the
  * network-flap retry case where the server commits but the client times
  * out, cashier taps again, and the second call must dedupe rather than
  * re-shuffle the order.
  */
 export const transferTableSchema = z.object({
+  branchId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Branch ID không hợp lệ" }),
   orderId: z.coerce.number().int().positive({ error: "Đơn không hợp lệ" }),
   newTableId: z.coerce.number().int().positive({ error: "Bàn không hợp lệ" }),
   idempotencyKey: z
@@ -119,21 +123,14 @@ export const transferTableSchema = z.object({
 });
 
 /**
- * Schema for `updateOrderStatus(orderId, newStatus)`. POS only ever
- * transitions to `served`; other states come from KDS / kitchen flow.
- * Keeping the enum tight prevents the cashier UI from accidentally
- * driving the order to `paid` / `completed` via this action.
- */
-export const updateOrderStatusSchema = z.object({
-  orderId: z.coerce.number().int().positive({ error: "Đơn không hợp lệ" }),
-  newStatus: z.enum(["served"]),
-});
-
-/**
- * Schema for `markOrderItemServed(itemId)`. POS waiter per-item serve
+ * Schema for `markOrderItemServed(branchId, itemId)`. POS waiter per-item serve
  * confirmation. RPC enforces "preparing|ready → served" transition.
  */
 export const markOrderItemServedSchema = z.object({
+  branchId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Branch ID không hợp lệ" }),
   itemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
 });
 
@@ -168,8 +165,8 @@ export const submitOrderSchema = z.object({
 /**
  * Schema for `appendOrderItems(branchId, orderId, items, idempotencyKey?)`.
  *
- * Aggregates all 4 positional args. Cashier UI also clamps `items.min(1)`
- * client-side.
+ * Aggregates all 4 positional args. The `items.min(1)` clause requires at
+ * least one item; cashier UI also clamps client-side.
  */
 export const appendOrderItemsSchema = z.object({
   branchId: z.coerce

@@ -2,13 +2,6 @@
 
 import Link from "next/link";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import {
@@ -18,6 +11,7 @@ import {
 import { Inbox as IconInbox } from "lucide-react";
 import type { NotificationItem as NotificationItemModel } from "@/_actions/notifications";
 import { messages, m } from "@lib/messages";
+import { AppEmptyState } from "@/components/surface";
 import { AppBoneyardSkeleton } from "./boneyard-skeleton";
 import { NotificationItem } from "./notification-item";
 
@@ -210,19 +204,13 @@ export function NotificationList({
           snapshotConfig={{ excludeSelectors: ["svg"] }}
         >
           {items.length === 0 && !loading ? (
-            <Empty className="py-10">
-              <EmptyMedia variant="icon">
-                <IconInbox aria-hidden />
-              </EmptyMedia>
-              <EmptyHeader>
-                <EmptyTitle className="text-sm font-semibold">
-                  {messages.notifications.empty}
-                </EmptyTitle>
-                <EmptyDescription className="text-xs leading-5">
-                  {messages.notifications.emptyHint}
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+            <AppEmptyState
+              compact
+              className="py-10"
+              title={messages.notifications.empty}
+              description={messages.notifications.emptyHint}
+              icon={<IconInbox aria-hidden />}
+            />
           ) : (
             <NotificationRows
               items={items}

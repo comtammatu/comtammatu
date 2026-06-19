@@ -159,7 +159,7 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
         variant="outline"
         size="sm"
         className={cn(
-          "w-full min-w-0 max-w-full rounded-none p-0 shadow-sm transition-colors duration-150",
+          "w-full min-w-0 max-w-full rounded-none p-0 transition-colors duration-150",
           getItemStatusToneClass(row.status),
           getRowChangeToneClass(changeTone),
           cancelled && "border-dashed",

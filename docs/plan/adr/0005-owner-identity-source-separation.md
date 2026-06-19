@@ -1,7 +1,7 @@
 # ADR 0005 — Owner Identity Source Separation
 
 **Status:** Accepted (2026-05-07)
-**Context:** H3b deferred work from H3a security audit
+**Context:** Owner identity separation after H3a security hardening
 **Decision drivers:** 4-agent debate (planner + analyst + architect + critic)
 
 This ADR remains active because the schema has a current `tenants.owner_user_id`
@@ -13,7 +13,7 @@ HR owner position, and canonical owner auth identity.
 
 The H3a security audit (2026-05-07) closed the silent-demote vector in `has_permission()` owner-bypass by enforcing `profiles.position_id NOT NULL` with FK `ON DELETE RESTRICT` and adding defensive guards in `handle_new_user` + `admin_update_profile`. After H3a, a profile cannot reach a NULL `position_id` state via any code path.
 
-H3b was originally proposed to add `tenants.owner_user_id UUID` column AND extend `has_permission()` with a second OR branch (defense-in-depth dual source). The intent was "make owner-bypass robust against position_id NULL" — but H3a already closed that vector.
+The rejected alternative was to add `tenants.owner_user_id UUID` and immediately extend `has_permission()` with a second OR branch (defense-in-depth dual source). The intent was "make owner-bypass robust against position_id NULL" — but H3a already closed that vector.
 
 Three concepts were conflated in original code:
 
@@ -25,15 +25,15 @@ Three concepts were conflated in original code:
 
 **Adopt minimum-regret synthesis (Architect's Antithesis):**
 
-1. **Add `tenants.owner_user_id UUID REFERENCES auth.users(id) ON DELETE RESTRICT NOT NULL`** as the data foundation for canonical auth identity (this ADR + archived migration `20260601500000`, now folded into the baseline).
-2. **DEFER updating `has_permission()` / `_auth_is_owner()` / `has_permission_any()`** to add second OR branch. No functional regression to fix — H3a sufficient.
+1. **Keep `tenants.owner_user_id UUID REFERENCES auth.users(id) ON DELETE RESTRICT NOT NULL`** as the canonical owner auth identity column (this ADR + archived migration `20260601500000`, now folded into the baseline).
+2. **Do not update `has_permission()` / `_auth_is_owner()` / `has_permission_any()`** to add a second OR branch without a new owner-gated decision. No functional regression to fix — H3a sufficient.
 3. **Three concepts kept separate** with clear semantics:
 
 | Column                   | Type                              | Purpose                          | Owner-bypass?        |
 | ------------------------ | --------------------------------- | -------------------------------- | -------------------- |
 | `tenants.representative` | TEXT                              | HKD owner / registered representative name | ❌ Never             |
 | `positions.code='owner'` | (lookup via profiles.position_id) | HR label, JWT user_role source   | ✅ Currently         |
-| `tenants.owner_user_id`  | UUID FK auth.users                | Canonical auth identity          | ⚠️ Future (deferred) |
+| `tenants.owner_user_id`  | UUID FK auth.users                | Canonical auth identity column   | ❌ Not used by current RLS |
 
 ## Why minimum-regret over full dual-source
 
@@ -49,23 +49,23 @@ Three concepts were conflated in original code:
 
 **Synthesis path:**
 
-- Ship column NOW (data foundation for future ownership transfer UI/RPC).
-- DEFER function update — flip in one PR if a real second silent-demote incident occurs.
+- Keep the column as canonical owner identity data.
+- Keep permission helpers single-source unless a real second silent-demote incident or owner-approved transfer flow requires a new decision.
 - Avoids drift: no two sources of truth in active use yet.
 
 ## Consequences
 
 **Positive:**
 
-- Data foundation present for future `transfer_ownership(p_new_user_id)` RPC.
+- Canonical owner auth identity exists in schema without changing current RLS behavior.
 - Backfill verified at migration time (every tenant has identifiable owner).
 - Three-concept model documented; future engineers know which to use.
 - Migration is reversible (column drop only).
 
 **Negative / Trade-offs:**
 
-- Column exists but unused by RLS. Slight schema bloat (1 UUID per tenant — single row in pilot).
-- Future ownership transfer needs explicit RPC (deferred design); for now, manual SQL `UPDATE tenants SET owner_user_id = ...` is the only mutation path.
+- Column exists but unused by RLS. Slight schema bloat (1 UUID per tenant).
+- Ownership transfer needs an explicit owner-approved RPC; there is no current UI/RPC mutation path.
 - If H3a invariants ever weakened (e.g. NOT NULL constraint dropped), defense-in-depth via this column is NOT in place — deliberate, ADR documents fallback path.
 
 ## Alternatives Rejected

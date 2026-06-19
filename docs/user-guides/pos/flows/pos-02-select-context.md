@@ -141,4 +141,3 @@ URL: `/br/{branchId}/pos` (sau khi ca đã mở, mặc định landing trên mà
 | Capture script           | [apps/web/e2e/guides/pos-02-select-context.guide.ts](../../../../apps/web/e2e/guides/pos-02-select-context.guide.ts) |
 | Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-02"`                                                       |
 | Cập nhật mockup gần nhất | 2026-04-27                                                                                                           |
-| Người maintain           | _TBD_                                                                                                                |

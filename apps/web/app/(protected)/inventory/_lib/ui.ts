@@ -49,7 +49,7 @@ const STATUS_BADGE_VARIANTS: Record<string, BadgeProps["variant"]> = {
   expired: "destructive",
   critical: "warning",
   warning: "warning",
-  // kitchen_use is not a valid stock-issue reason; use intra-branch stock_transfer.
+  // kitchen_use is not a valid stock-issue reason; sale usage posts as consumption.
   write_off: "destructive",
   consumption: "success",
   storage_loss: "warning",

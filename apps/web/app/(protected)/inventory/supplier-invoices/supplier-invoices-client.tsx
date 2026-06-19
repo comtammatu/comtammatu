@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import type { UseFormReturn } from "react-hook-form";
+import { z } from "zod";
 import {
   TriangleAlert as IconAlertTriangle,
   CircleCheck as IconCircleCheck,
@@ -9,31 +11,10 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import { Input } from "@comtammatu/ui/components/input";
-import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
   SelectContent,
@@ -41,17 +22,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { cn } from "@comtammatu/ui";
-import { Combobox } from "@/components/form";
+import {
+  BusinessDateField,
+  Combobox,
+  FormDialog,
+  MoneyVndField,
+  NumberField,
+  SelectField,
+  TextareaField,
+  TextField,
+} from "@/components/form";
 import { matchesSearch } from "@lib/search";
-import { FormattedNumberInput } from "../_components/formatted-number-input";
-import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  AppToolbar,
+} from "@/components/surface";
 import {
   createSupplierInvoice,
   fetchSupplierInvoices,
@@ -59,15 +54,13 @@ import {
   recomputeInvoiceMatching,
 } from "../procurement-actions";
 import type { SupplierInvoiceCursor } from "../procurement-actions";
+import { StatusBadge } from "../_components/status-badge";
 
 import { formatVND } from "../_lib/format";
-import {
-  getInventoryStatusBadgeVariant,
-  getInventoryStatusLabel,
-} from "../_lib/ui";
+import { getInventoryStatusLabel } from "../_lib/ui";
 import { messages } from "@lib/messages";
 
-import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
 import {
   diffVNDateDays,
   formatVNBusinessDate,
@@ -132,18 +125,52 @@ type GrnOption = {
 
 const ALL_FILTER_VALUE = "_all";
 
-const MATCH_STATUS_OPTIONS = [
-  { value: "pending", label: "Chờ đối soát" },
-  { value: "matched", label: "Đã khớp" },
-  { value: "discrepancy", label: "Chênh lệch" },
-  { value: "approved", label: "Đã duyệt ngoại lệ" },
-] as const;
+const MATCH_FILTER_OPTIONS = [
+  "pending",
+  "matched",
+  "discrepancy",
+  "approved",
+].map((value) => ({
+  value,
+  label: getInventoryStatusLabel(value),
+}));
 
-const PAYMENT_STATUS_OPTIONS = [
-  { value: "unpaid", label: "Chưa thanh toán" },
-  { value: "partial", label: "Thanh toán một phần" },
-  { value: "paid", label: "Đã thanh toán" },
-] as const;
+const PAYMENT_FILTER_OPTIONS = ["unpaid", "partial", "paid"].map((value) => ({
+  value,
+  label: getInventoryStatusLabel(value),
+}));
+
+const supplierInvoiceSchema = z.object({
+  grnId: z.string(),
+  supplierId: z.string().min(1, { error: FORM_VI.required }),
+  invoiceNumber: z.string().trim().min(1, { error: FORM_VI.required }),
+  invoiceDate: z.string().min(1, { error: FORM_VI.required }),
+  subtotal: z.string().refine((value) => Number(value) > 0, {
+    error: FORM_VI.required,
+  }),
+  vatRate: z.string().refine(
+    (value) => {
+      const numericValue = Number(value || 0);
+      return Number.isFinite(numericValue) && numericValue >= 0;
+    },
+    { error: FORM_VI.required },
+  ),
+  matchingNotes: z.string().trim().optional(),
+});
+
+type SupplierInvoiceFormValues = z.infer<typeof supplierInvoiceSchema>;
+
+function createSupplierInvoiceDefaultValues(): SupplierInvoiceFormValues {
+  return {
+    grnId: "none",
+    supplierId: "",
+    invoiceNumber: "",
+    invoiceDate: getVNDateString(),
+    subtotal: "",
+    vatRate: "8",
+    matchingNotes: "",
+  };
+}
 
 function formatDate(value: string | null) {
   if (!value) return "Chưa có";
@@ -160,6 +187,141 @@ function isInvoiceOverdue(invoice: SupplierInvoiceRow) {
   }
 
   return diffVNDateDays(invoice.dueDate, getVNDateString()) > 0;
+}
+
+function SupplierInvoiceCreateFields({
+  form,
+  suppliers,
+  grns,
+  copy,
+}: {
+  form: UseFormReturn<
+    SupplierInvoiceFormValues,
+    unknown,
+    SupplierInvoiceFormValues
+  >;
+  suppliers: SupplierOption[];
+  grns: GrnOption[];
+  copy: typeof messages.inventory.supplierInvoices;
+}) {
+  const grnId = form.watch("grnId");
+  const subtotal = form.watch("subtotal");
+  const vatRate = form.watch("vatRate");
+  const selectedGrn =
+    grnId !== "none"
+      ? (grns.find((option) => option.id === Number(grnId)) ?? null)
+      : null;
+  const numericSubtotal = Number(subtotal || 0);
+  const numericVatRate = Number(vatRate || 0);
+  const vatAmount = Math.round(numericSubtotal * numericVatRate) / 100;
+  const totalAmount = numericSubtotal + vatAmount;
+
+  useEffect(() => {
+    if (!selectedGrn) {
+      return;
+    }
+
+    const nextSupplierId = String(selectedGrn.supplierId);
+    if (form.getValues("supplierId") === nextSupplierId) {
+      return;
+    }
+
+    form.setValue("supplierId", nextSupplierId, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [form, selectedGrn]);
+
+  const grnOptions = useMemo(
+    () => [
+      { value: "none", label: copy.noLinkedGrn },
+      ...grns.map((option) => ({
+        value: String(option.id),
+        label: `${option.code} · ${option.supplierName}`,
+      })),
+    ],
+    [copy.noLinkedGrn, grns],
+  );
+  const supplierOptions = useMemo(
+    () =>
+      suppliers.map((option) => ({
+        value: String(option.id),
+        label: option.name,
+      })),
+    [suppliers],
+  );
+
+  return (
+    <>
+      <SelectField
+        control={form.control}
+        name="grnId"
+        label={copy.linkedGrn}
+        options={grnOptions}
+        placeholder={copy.chooseGrnOptional}
+      />
+      <SelectField
+        control={form.control}
+        name="supplierId"
+        label={copy.supplier}
+        options={supplierOptions}
+        placeholder={copy.chooseSupplier}
+        disabled={selectedGrn != null}
+        required
+      />
+      <TextField
+        control={form.control}
+        name="invoiceNumber"
+        label={copy.invoiceNumber}
+        placeholder="INV-2026-001"
+        required
+      />
+      <BusinessDateField
+        control={form.control}
+        name="invoiceDate"
+        label={copy.invoiceDate}
+        required
+      />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <MoneyVndField
+          control={form.control}
+          name="subtotal"
+          label={FORM_VI.subtotal}
+          placeholder={copy.subtotalPlaceholder}
+          required
+        />
+        <NumberField
+          control={form.control}
+          name="vatRate"
+          label={`${copy.vat} %`}
+          maxFractionDigits={1}
+          placeholder="8"
+          required
+        />
+      </div>
+      <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-muted-foreground">{copy.vat}</span>
+          <span className="font-mono tabular-nums">
+            {messages.inventory.common.currencyCompact(formatVND(vatAmount))}
+          </span>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <span className="text-muted-foreground">{FORM_VI.totalAmount}</span>
+          <span className="font-mono font-semibold tabular-nums">
+            {messages.inventory.common.currencyCompact(formatVND(totalAmount))}
+          </span>
+        </div>
+      </div>
+      <TextareaField
+        control={form.control}
+        name="matchingNotes"
+        label={copy.matchingNotes}
+        rows={3}
+        placeholder={copy.matchingNotesPlaceholder}
+      />
+    </>
+  );
 }
 
 export function SupplierInvoicesClient({
@@ -193,15 +355,12 @@ export function SupplierInvoicesClient({
     invoices[0]?.id ?? null,
   );
   const [createOpen, setCreateOpen] = useState(false);
-  const [supplierId, setSupplierId] = useState("");
-  const [grnId, setGrnId] = useState("none");
-  const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [invoiceDate, setInvoiceDate] = useState(getVNDateString());
-  const [subtotal, setSubtotal] = useState("");
-  const [vatRate, setVatRate] = useState("8");
-  const [matchingNotes, setMatchingNotes] = useState("");
   const [isPending, startTransition] = useTransition();
   const copy = messages.inventory.supplierInvoices;
+  const createDefaultValues = useMemo(
+    () => createSupplierInvoiceDefaultValues(),
+    [createOpen],
+  );
 
   const supplierOptions = useMemo(() => {
     return Array.from(
@@ -277,40 +436,14 @@ export function SupplierInvoicesClient({
       matchStatusFilter !== ALL_FILTER_VALUE ||
       paymentStatusFilter !== ALL_FILTER_VALUE ||
       showOnlyOverdue);
-  const selectedGrn =
-    grnId !== "none"
-      ? (grns.find((option) => option.id === Number(grnId)) ?? null)
-      : null;
-  const numericSubtotal = Number(subtotal || 0);
-  const numericVatRate = Number(vatRate || 0);
-  const vatAmount = Math.round(numericSubtotal * numericVatRate) / 100;
-  const totalAmount = numericSubtotal + vatAmount;
-
-  function resetCreateForm() {
-    setSupplierId("");
-    setGrnId("none");
-    setInvoiceNumber("");
-    setInvoiceDate(getVNDateString());
-    setSubtotal("");
-    setVatRate("8");
-    setMatchingNotes("");
-  }
-
-  useEffect(() => {
-    if (createOpen) {
-      return;
-    }
-
-    resetCreateForm();
-  }, [createOpen]);
 
   async function reloadInvoices(nextSelectedId?: number | null) {
     const again = await fetchSupplierInvoices();
     if (!again.success) return;
 
-    const nextRows = (
-      (again.data ?? []) as Array<Record<string, unknown>>
-    ).map(mapSupplierInvoiceRow);
+    const nextRows = ((again.data ?? []) as Array<Record<string, unknown>>).map(
+      mapSupplierInvoiceRow,
+    );
 
     setRows(nextRows);
     // Full reload returns every invoice, so keyset paging no longer applies.
@@ -351,45 +484,35 @@ export function SupplierInvoicesClient({
     });
   }
 
-  function handleCreateInvoice() {
+  async function handleCreateInvoice(values: SupplierInvoiceFormValues) {
+    const selectedGrn =
+      values.grnId !== "none"
+        ? (grns.find((option) => option.id === Number(values.grnId)) ?? null)
+        : null;
     const resolvedSupplierId =
-      selectedGrn?.supplierId ?? Number(supplierId || 0);
-    if (!resolvedSupplierId) {
-      toast.error("Chọn nhà cung cấp hoặc GRN liên kết.");
-      return;
-    }
-    if (!invoiceNumber.trim()) {
-      toast.error("Nhập số hóa đơn.");
-      return;
-    }
-    if (numericSubtotal <= 0) {
-      toast.error("Nhập giá trị hóa đơn hợp lệ.");
-      return;
-    }
-
-    startTransition(async () => {
-      const res = await createSupplierInvoice({
-        supplierId: resolvedSupplierId,
-        grnId: selectedGrn?.id ?? null,
-        invoiceNumber: invoiceNumber.trim(),
-        invoiceDate,
-        subtotal: numericSubtotal,
-        vatRate: numericVatRate,
-        vatAmount,
-        totalAmount,
-        matchingNotes: matchingNotes.trim() || undefined,
-      });
-
-      if (!res.success || !res.data) {
-        toast.error(res.error ?? "Không thể ghi nhận hóa đơn NCC.");
-        return;
-      }
-
-      const created = res.data as { id: number };
-      toast.success("Đã ghi nhận hóa đơn NCC.");
-      setCreateOpen(false);
-      await reloadInvoices(created.id);
+      selectedGrn?.supplierId ?? Number(values.supplierId || 0);
+    const numericSubtotal = Number(values.subtotal || 0);
+    const numericVatRate = Number(values.vatRate || 0);
+    const vatAmount = Math.round(numericSubtotal * numericVatRate) / 100;
+    const totalAmount = numericSubtotal + vatAmount;
+    const res = await createSupplierInvoice({
+      supplierId: resolvedSupplierId,
+      grnId: selectedGrn?.id ?? null,
+      invoiceNumber: values.invoiceNumber.trim(),
+      invoiceDate: values.invoiceDate,
+      subtotal: numericSubtotal,
+      vatRate: numericVatRate,
+      vatAmount,
+      totalAmount,
+      matchingNotes: values.matchingNotes?.trim() || undefined,
     });
+
+    if (res.success && res.data) {
+      const created = res.data as { id: number };
+      await reloadInvoices(created.id);
+    }
+
+    return res;
   }
 
   function handleRecomputeMatching() {
@@ -412,15 +535,22 @@ export function SupplierInvoicesClient({
     const isActive = selectedInvoice?.id === invoice.id;
 
     return (
-      <Card
+      <InteractiveCard
+        asChild
+        minHeight="mobile"
+        padding="default"
         className={cn(
-          "bg-muted/30 transition",
-          isActive && "ring-primary/40 shadow-md",
+          "flex-col items-stretch gap-3 text-left",
+          isActive && "border-primary/40 bg-primary/5 ring-2 ring-primary/40",
         )}
       >
-        <CardContent>
+        <button
+          type="button"
+          onClick={() => setSelectedInvoiceId(invoice.id)}
+          aria-pressed={isActive}
+        >
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <p className="font-mono text-base font-semibold">
                 {invoice.code}
               </p>
@@ -428,22 +558,12 @@ export function SupplierInvoicesClient({
                 {invoice.supplierName}
               </p>
             </div>
-            {overdue ? (
-              <Badge variant={getInventoryStatusBadgeVariant("overdue")}>
-                {getInventoryStatusLabel("overdue")}
-              </Badge>
-            ) : null}
+            {overdue ? <StatusBadge status="overdue" /> : null}
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <Badge variant={getInventoryStatusBadgeVariant(invoice.matchStatus)}>
-              {getInventoryStatusLabel(invoice.matchStatus)}
-            </Badge>
-            <Badge
-              variant={getInventoryStatusBadgeVariant(invoice.paymentStatus)}
-            >
-              {getInventoryStatusLabel(invoice.paymentStatus)}
-            </Badge>
+            <StatusBadge status={invoice.matchStatus} />
+            <StatusBadge status={invoice.paymentStatus} />
           </div>
 
           <div className="mt-4 grid gap-2 text-sm">
@@ -465,16 +585,11 @@ export function SupplierInvoicesClient({
             </div>
           </div>
 
-          <Button
-            type="button"
-            variant={isActive ? "default" : "outline"}
-            className="mt-4 w-full"
-            onClick={() => setSelectedInvoiceId(invoice.id)}
-          >
+          <span className="mt-4 text-sm font-medium text-primary">
             {isActive ? copy.analyzing : copy.viewAnalysis}
-          </Button>
-        </CardContent>
-      </Card>
+          </span>
+        </button>
+      </InteractiveCard>
     );
   };
 
@@ -484,7 +599,7 @@ export function SupplierInvoicesClient({
       header: copy.invoiceNumber,
       className: "min-w-40",
       render: (invoice) => (
-        <div className="space-y-1">
+        <div className="flex flex-col gap-1">
           <p className="font-mono font-semibold text-foreground">
             {invoice.code}
           </p>
@@ -509,7 +624,7 @@ export function SupplierInvoicesClient({
       header: copy.dateDue,
       className: "min-w-44",
       render: (invoice) => (
-        <div className="space-y-1 text-sm">
+        <div className="flex flex-col gap-1 text-sm">
           <p>{formatDate(invoice.invoiceDate)}</p>
           <p
             className={cn(
@@ -526,11 +641,7 @@ export function SupplierInvoicesClient({
       key: "matchStatus",
       header: copy.matchingPlaceholder,
       className: "min-w-36",
-      render: (invoice) => (
-        <Badge variant={getInventoryStatusBadgeVariant(invoice.matchStatus)}>
-          {getInventoryStatusLabel(invoice.matchStatus)}
-        </Badge>
-      ),
+      render: (invoice) => <StatusBadge status={invoice.matchStatus} />,
     },
     {
       key: "paymentStatus",
@@ -538,16 +649,8 @@ export function SupplierInvoicesClient({
       className: "min-w-36",
       render: (invoice) => (
         <div className="flex flex-wrap gap-2">
-          <Badge
-            variant={getInventoryStatusBadgeVariant(invoice.paymentStatus)}
-          >
-            {getInventoryStatusLabel(invoice.paymentStatus)}
-          </Badge>
-          {isInvoiceOverdue(invoice) ? (
-            <Badge variant={getInventoryStatusBadgeVariant("overdue")}>
-              {getInventoryStatusLabel("overdue")}
-            </Badge>
-          ) : null}
+          <StatusBadge status={invoice.paymentStatus} />
+          {isInvoiceOverdue(invoice) ? <StatusBadge status="overdue" /> : null}
         </div>
       ),
     },
@@ -594,81 +697,76 @@ export function SupplierInvoicesClient({
         }
       />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-        {/* Collapsed to single AppToolbar */}
-        <AppToolbar
-          search={
-            <InputGroup className="h-10 flex-1">
-              <InputGroupAddon>
-                <IconSearch />
-              </InputGroupAddon>
-              <InputGroupInput
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={copy.searchPlaceholder}
-              />
-            </InputGroup>
-          }
-          filters={
-            <>
-              <Combobox
-                value={supplierFilter}
-                onValueChange={setSupplierFilter}
-                options={[
-                  { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
-                  ...supplierOptions,
-                ]}
-                placeholder={copy.supplierPlaceholder}
-                searchPlaceholder={copy.supplierSearchPlaceholder}
-                aria-label={copy.supplierFilterAria}
-                triggerClassName="h-10 w-48"
-              />
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <AppToolbar
+            search={
+              <InputGroup className="min-w-0 flex-1">
+                <InputGroupAddon>
+                  <IconSearch />
+                </InputGroupAddon>
+                <InputGroupInput
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={copy.searchPlaceholder}
+                />
+              </InputGroup>
+            }
+            filters={
+              <>
+                <Combobox
+                  value={supplierFilter}
+                  onValueChange={setSupplierFilter}
+                  options={[
+                    { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
+                    ...supplierOptions,
+                  ]}
+                  placeholder={copy.supplierPlaceholder}
+                  searchPlaceholder={copy.supplierSearchPlaceholder}
+                  aria-label={copy.supplierFilterAria}
+                  triggerClassName="w-48"
+                />
 
-              <Select
-                value={matchStatusFilter}
-                onValueChange={setMatchStatusFilter}
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder={copy.matchingPlaceholder} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_FILTER_VALUE}>
-                    {copy.allMatching}
-                  </SelectItem>
-                  {MATCH_STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                <Select
+                  value={matchStatusFilter}
+                  onValueChange={setMatchStatusFilter}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder={copy.matchingPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_FILTER_VALUE}>
+                      {copy.allMatching}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    {MATCH_FILTER_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              <Select
-                value={paymentStatusFilter}
-                onValueChange={setPaymentStatusFilter}
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder={copy.paymentPlaceholder} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_FILTER_VALUE}>
-                    {copy.allPayments}
-                  </SelectItem>
-                  {PAYMENT_STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                <Select
+                  value={paymentStatusFilter}
+                  onValueChange={setPaymentStatusFilter}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder={copy.paymentPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_FILTER_VALUE}>
+                      {copy.allPayments}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </>
-          }
-        />
-
-        {/* Table */}
-        <Card>
-          <CardContent flush>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    {PAYMENT_FILTER_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            }
+            actions={
               <Button
                 type="button"
                 size="sm"
@@ -676,14 +774,17 @@ export function SupplierInvoicesClient({
                 onClick={() => setShowOnlyOverdue((current) => !current)}
                 aria-pressed={showOnlyOverdue}
               >
-                <IconAlertTriangle className="size-4" />
+                <IconAlertTriangle data-icon="inline-start" />
                 {copy.overdueOnly}
               </Button>
-              <Badge variant="outline" className="rounded-full">
-                {copy.invoiceCount(filteredInvoices.length, rows.length)}
-              </Badge>
-            </div>
+            }
+          />
 
+          <AppSection
+            title={copy.title}
+            headerHint={copy.invoiceCount(filteredInvoices.length, rows.length)}
+            contentFlush
+          >
             <DataTable
               columns={invoiceColumns}
               data={filteredInvoices}
@@ -699,13 +800,15 @@ export function SupplierInvoicesClient({
                   : copy.emptyInitialDescription
               }
               emptyMode={showEmptyResults ? "no-results" : "no-data"}
-              rowClassName={(invoice) =>
-                selectedInvoice?.id === invoice.id ? "bg-primary/5" : undefined
+              onRowClick={(invoice) => setSelectedInvoiceId(invoice.id)}
+              getRowAriaLabel={(invoice) => `${copy.analysis}: ${invoice.code}`}
+              getRowDataState={(invoice) =>
+                selectedInvoice?.id === invoice.id ? "selected" : undefined
               }
               mobileCardRender={renderInvoiceCard}
             />
             {hasMore ? (
-              <div className="mt-4 flex justify-center">
+              <div className="flex justify-center p-3">
                 <Button
                   type="button"
                   variant="outline"
@@ -717,15 +820,13 @@ export function SupplierInvoicesClient({
                 </Button>
               </div>
             ) : null}
-          </CardContent>
-        </Card>
+          </AppSection>
+        </div>
 
-        <Card>
-          <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <CardTitle>
-              {selectedInvoice?.code ?? copy.noInvoiceSelected}
-            </CardTitle>
-            {selectedInvoice ? (
+        <AppSection
+          title={selectedInvoice?.code ?? copy.noInvoiceSelected}
+          action={
+            selectedInvoice ? (
               <div className="flex flex-wrap justify-end gap-2">
                 <Button
                   type="button"
@@ -736,291 +837,138 @@ export function SupplierInvoicesClient({
                 >
                   {copy.recomputeMatching}
                 </Button>
-                <Badge
-                  variant={getInventoryStatusBadgeVariant(
-                    selectedInvoice.matchStatus,
-                  )}
-                >
-                  {getInventoryStatusLabel(selectedInvoice.matchStatus)}
-                </Badge>
-                <Badge
-                  variant={getInventoryStatusBadgeVariant(
-                    selectedInvoice.paymentStatus,
-                  )}
-                >
-                  {getInventoryStatusLabel(selectedInvoice.paymentStatus)}
-                </Badge>
+                <StatusBadge status={selectedInvoice.matchStatus} />
+                <StatusBadge status={selectedInvoice.paymentStatus} />
               </div>
-            ) : null}
-          </CardHeader>
-          <CardContent>
-            {selectedInvoice ? (
-              <div className="space-y-5">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Card className="bg-muted/30">
-                    <CardContent>
-                      <Badge variant="secondary">{copy.totalInvoice}</Badge>
-                      <p className="mt-2 font-mono text-xl font-semibold">
-                        {messages.inventory.common.currencyCompact(
-                          formatVND(selectedInvoice.amount),
-                        )}
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-muted/30">
-                    <CardContent>
-                      <Badge variant="secondary">
-                        {copy.outstandingPayable}
-                      </Badge>
-                      <p className="mt-2 font-mono text-xl font-semibold">
-                        {messages.inventory.common.currencyCompact(
-                          formatVND(getOutstandingAmount(selectedInvoice)),
-                        )}
-                      </p>
-                    </CardContent>
-                  </Card>
+            ) : null
+          }
+        >
+          {selectedInvoice ? (
+            <div className="flex flex-col gap-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <Badge variant="secondary">{copy.totalInvoice}</Badge>
+                  <p className="mt-2 font-mono text-xl font-semibold tabular-nums">
+                    {messages.inventory.common.currencyCompact(
+                      formatVND(selectedInvoice.amount),
+                    )}
+                  </p>
                 </div>
-
-                <div className="space-y-3">
-                  <Card className="bg-muted/30 py-0">
-                    <CardContent className="flex items-center justify-between gap-3 px-4 py-3">
-                      <span className="text-sm text-muted-foreground">
-                        {copy.invoiceDate}
-                      </span>
-                      <span className="text-sm font-medium">
-                        {formatDate(selectedInvoice.invoiceDate)}
-                      </span>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-muted/30 py-0">
-                    <CardContent className="flex items-center justify-between gap-3 px-4 py-3">
-                      <span className="text-sm text-muted-foreground">
-                        {copy.dueDate}
-                      </span>
-                      <span
-                        className={cn(
-                          "text-sm font-medium",
-                          isInvoiceOverdue(selectedInvoice) &&
-                            "text-destructive",
-                        )}
-                      >
-                        {formatDate(selectedInvoice.dueDate)}
-                      </span>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-muted/30 py-0">
-                    <CardContent className="flex items-center justify-between gap-3 px-4 py-3">
-                      <span className="text-sm text-muted-foreground">
-                        {copy.paidAmount}
-                      </span>
-                      <span className="text-sm font-medium">
-                        {messages.inventory.common.currencyCompact(
-                          formatVND(selectedInvoice.paidAmount),
-                        )}
-                      </span>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-muted/30 py-0">
-                    <CardContent className="flex items-center justify-between gap-3 px-4 py-3">
-                      <span className="text-sm text-muted-foreground">
-                        {copy.linkedGrn}
-                      </span>
-                      <span className="text-sm font-medium">
-                        {selectedInvoice.grnCode ?? copy.notLinked}
-                      </span>
-                    </CardContent>
-                  </Card>
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <Badge variant="secondary">{copy.outstandingPayable}</Badge>
+                  <p className="mt-2 font-mono text-xl font-semibold tabular-nums">
+                    {messages.inventory.common.currencyCompact(
+                      formatVND(getOutstandingAmount(selectedInvoice)),
+                    )}
+                  </p>
                 </div>
+              </div>
 
-                {selectedInvoice.variance !== null &&
-                selectedInvoice.variance > 0 ? (
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-                    <div className="flex items-start gap-3">
-                      <IconAlertTriangle className="mt-0.5 size-4 text-destructive" />
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold text-destructive">
-                          {copy.varianceTitle(selectedInvoice.variance)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {copy.varianceDescription}
-                        </p>
-                      </div>
+              <dl className="grid gap-2">
+                <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+                  <dt className="text-sm text-muted-foreground">
+                    {copy.invoiceDate}
+                  </dt>
+                  <dd className="text-sm font-medium">
+                    {formatDate(selectedInvoice.invoiceDate)}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+                  <dt className="text-sm text-muted-foreground">
+                    {copy.dueDate}
+                  </dt>
+                  <dd
+                    className={cn(
+                      "text-sm font-medium",
+                      isInvoiceOverdue(selectedInvoice) && "text-destructive",
+                    )}
+                  >
+                    {formatDate(selectedInvoice.dueDate)}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+                  <dt className="text-sm text-muted-foreground">
+                    {copy.paidAmount}
+                  </dt>
+                  <dd className="font-mono text-sm font-medium tabular-nums">
+                    {messages.inventory.common.currencyCompact(
+                      formatVND(selectedInvoice.paidAmount),
+                    )}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+                  <dt className="text-sm text-muted-foreground">
+                    {copy.linkedGrn}
+                  </dt>
+                  <dd className="text-sm font-medium">
+                    {selectedInvoice.grnCode ?? copy.notLinked}
+                  </dd>
+                </div>
+              </dl>
+
+              {selectedInvoice.variance !== null &&
+              selectedInvoice.variance > 0 ? (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                  <div className="flex items-start gap-3">
+                    <IconAlertTriangle className="mt-0.5 size-4 text-destructive" />
+                    <div className="flex flex-col gap-1">
+                      <p className="text-sm font-semibold text-destructive">
+                        {copy.varianceTitle(selectedInvoice.variance)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {copy.varianceDescription}
+                      </p>
                     </div>
                   </div>
-                ) : (
-                  <div className="rounded-lg border border-success/30 bg-success/5 p-4">
-                    <div className="flex items-start gap-3">
-                      <IconCircleCheck className="mt-0.5 size-4 text-success" />
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold text-success">
-                          {copy.safeTitle}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {copy.safeDescription}
-                        </p>
-                      </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-success/30 bg-success/5 p-3">
+                  <div className="flex items-start gap-3">
+                    <IconCircleCheck className="mt-0.5 size-4 text-success" />
+                    <div className="flex flex-col gap-1">
+                      <p className="text-sm font-semibold text-success">
+                        {copy.safeTitle}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {copy.safeDescription}
+                      </p>
                     </div>
                   </div>
-                )}
-              </div>
-            ) : (
-              <Empty className="py-8">
-                <EmptyHeader>
-                  <EmptyTitle className="text-sm font-semibold">
-                    {copy.noAnalysisTitle}
-                  </EmptyTitle>
-                  <EmptyDescription className="text-xs leading-5">
-                    {copy.noAnalysisDescription}
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            )}
-          </CardContent>
-        </Card>
+                </div>
+              )}
+            </div>
+          ) : (
+            <AppEmptyState
+              compact
+              title={copy.noAnalysisTitle}
+              description={copy.noAnalysisDescription}
+            />
+          )}
+        </AppSection>
       </div>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{copy.createAction}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div className="grid gap-2">
-              <Label>{copy.linkedGrn}</Label>
-              <Select
-                value={grnId}
-                onValueChange={(value) => {
-                  setGrnId(value);
-                  if (value !== "none") {
-                    const grn =
-                      grns.find((option) => option.id === Number(value)) ??
-                      null;
-                    if (grn) {
-                      setSupplierId(String(grn.supplierId));
-                    }
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={copy.chooseGrnOptional} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{copy.noLinkedGrn}</SelectItem>
-                  {grns.map((option) => (
-                    <SelectItem key={option.id} value={String(option.id)}>
-                      {option.code} · {option.supplierName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>{copy.supplier}</Label>
-              <Select value={supplierId} onValueChange={setSupplierId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={copy.chooseSupplier} />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map((option) => (
-                    <SelectItem key={option.id} value={String(option.id)}>
-                      {option.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>{copy.invoiceNumber}</Label>
-              <Input
-                value={invoiceNumber}
-                onChange={(event) => setInvoiceNumber(event.target.value)}
-                placeholder="INV-2026-001"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label>{copy.invoiceDate}</Label>
-              <Input
-                type="date"
-                value={invoiceDate}
-                onChange={(event) => setInvoiceDate(event.target.value)}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>{FORM_VI.subtotal}</Label>
-                <FormattedNumberInput
-                  value={subtotal}
-                  onValueChange={setSubtotal}
-                  maxFractionDigits={0}
-                  placeholder={copy.subtotalPlaceholder}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>VAT %</Label>
-                <FormattedNumberInput
-                  value={vatRate}
-                  onValueChange={setVatRate}
-                  maxFractionDigits={1}
-                  placeholder="8"
-                />
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">{copy.vat}</span>
-                <span className="font-mono">
-                  {messages.inventory.common.currencyCompact(
-                    formatVND(vatAmount),
-                  )}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">
-                  {FORM_VI.totalAmount}
-                </span>
-                <span className="font-mono font-semibold">
-                  {messages.inventory.common.currencyCompact(
-                    formatVND(totalAmount),
-                  )}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>{copy.matchingNotes}</Label>
-              <Textarea
-                value={matchingNotes}
-                onChange={(event) => setMatchingNotes(event.target.value)}
-                rows={3}
-                placeholder={copy.matchingNotesPlaceholder}
-                className="min-h-24"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCreateOpen(false)}
-              disabled={isPending}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleCreateInvoice}
-              disabled={isPending}
-            >
-              {copy.saveInvoice}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        schema={supplierInvoiceSchema}
+        defaultValues={createDefaultValues}
+        entityKey="new-supplier-invoice"
+        title={copy.createAction}
+        submitLabel={copy.saveInvoice}
+        cancelLabel={ACTIONS_VI.cancel}
+        successMessage={STATES_VI.saved}
+        contentClassName="sm:max-w-2xl"
+        onSubmit={handleCreateInvoice}
+      >
+        {(form) => (
+          <SupplierInvoiceCreateFields
+            form={form}
+            suppliers={suppliers}
+            grns={grns}
+            copy={copy}
+          />
+        )}
+      </FormDialog>
     </AppPage>
   );
 }

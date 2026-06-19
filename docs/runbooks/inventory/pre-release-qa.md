@@ -1,13 +1,8 @@
-# Inventory Pre-release QA
+# Inventory Readiness QA
 
-> Smoke + readiness checklist trước khi coi một lát Inventory là “sẵn sàng dùng”.
->
-> Dùng cho:
->
-> - thay đổi docs ảnh hưởng Inventory scope
-> - thay đổi route / server action / RPC / RLS / migrations liên quan Inventory
-> - chốt một flow pilot mới như stocktake, transfer, production, expiry, AP readouts
-> - chạy audit UI/UX theo vai trò và thiết bị thật
+> Smoke + readiness checklist trước khi coi một lát Inventory là sẵn sàng dùng.
+
+Updated: `2026-06-19`
 
 ---
 
@@ -18,7 +13,8 @@ Chạy runbook này cùng với:
 - [ui-ux-rubric.md](./ui-ux-rubric.md)
 - [operator-journeys.md](./operator-journeys.md)
 - [route-cta-matrix.md](./route-cta-matrix.md)
-- Ghi evidence trực tiếp vào ticket/PR hoặc worklog hiện hành nếu chưa promote được vào canonical docs.
+- [inventory.md](../../ref/inventory.md)
+- [inventory-sop.md](../../ref/inventory-sop.md)
 
 Thiết bị ưu tiên:
 
@@ -26,23 +22,7 @@ Thiết bị ưu tiên:
 - `warehouse_manager / production_manager`: tablet + desktop
 - `branch_manager`: tablet + mobile trước, desktop sau
 
-## 0b. Wave 0 — Kickoff bắt buộc
-
-Trước khi bắt đầu round QA:
-
-1. Chốt scope theo 4 lens bắt buộc của repo:
-   - `PM`: acceptance criteria + phạm vi sign-off
-   - `BA`: business rules + edge cases
-   - `Senior Dev`: blast radius + affected routes/CTA
-   - `QA/QC`: gate + evidence cần lưu
-2. Chọn journey và device tương ứng từ [operator-journeys.md](./operator-journeys.md)
-3. Ghi kickoff evidence vào ticket/PR hoặc worklog hiện hành
-4. Dùng [route-cta-matrix.md](./route-cta-matrix.md) làm checklist route/button phải audit; không dùng nó để override ACL, Inventory reference, hoặc design-system contract
-5. Chấm finding theo [ui-ux-rubric.md](./ui-ux-rubric.md), không theo cảm tính
-
 ## 1. Required Gates
-
-### Gate A — Repo-wide verify
 
 Chạy bắt buộc:
 
@@ -54,194 +34,125 @@ pnpm build
 
 Fail một lệnh là chưa qua gate.
 
-### Gate B — Inventory scope sanity
+## 2. Scope sanity
 
-Kiểm tra ít nhất các surface sau còn mở được:
+Các route phải mở đúng theo ACL và nav:
 
 - `/inventory`
 - `/inventory/stock`
 - `/inventory/transfers`
+- `/inventory/consumption`
 - `/inventory/issues`
 - `/inventory/stocktake`
 - `/inventory/expiry`
 - `/inventory/waste`
-- `/inventory/supplier-returns`
 - `/inventory/reports`
-- master-data surfaces: `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`
-- procurement surfaces đang active trong pilot: `/inventory/receiving`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/supplier-invoices`, `/inventory/drafts`
-- `/inventory/production` nếu flow production bị ảnh hưởng
-- retired `/admin/inventory*` URLs đi qua `inventory_admin` module ACL với `allowedRoles: []`; verify chúng bị deny (không render như surface live), không phải 200
+- procurement: `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/supplier-invoices`, `/inventory/suppliers`
+- production: `/inventory/production` khi site là `central_kitchen`
+- `/admin/inventory*` phải bị deny, không render như surface live
 
-### Gate C — UI/UX scope sanity
+## 3. ACL smoke
 
-- nav phản ánh đúng role, không chỉ chặn ở page-level
-- quick actions và task queue trên dashboard phải phản ánh đúng site kind
-- action chính trên thiết bị mục tiêu không phụ thuộc hover
-- placeholder CTA/card `sắp mở` phải được phân loại rõ `accepted placeholder` hoặc `bug`
-- không có route live nào thiếu row tương ứng trong `route-cta-matrix.md`
-
----
-
-## 2. ACL Smoke
-
-Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md):
-
-| Role                                            | Phải đúng                                                                                                                                    |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `warehouse_manager`                             | Vào được Inventory + procurement surfaces (NCC, PO, GRN, HĐ NCC, công thức), không vào production                                          |
-| `production_manager`                            | Vào được Inventory + procurement + production                                                                                                |
-| `branch_manager`                                | Vào được branch ops surfaces (`stock`, `transfers`, `issues`, `stocktake`, `expiry`, `reports`), không vào procurement, không vào production |
-| `owner`                                         | Vào được Inventory + procurement + production qua ACL nhưng không được UX dẫn như operator hằng ngày                                         |
-| `office`, `cashier`, `waiter`, `chef`           | Không vào Inventory route nếu ACL hiện tại chưa cho                                                                                          |
+| Role | Phải đúng |
+| --- | --- |
+| `warehouse_manager` | Vào Inventory + procurement + transfer theo scope; không bị dẫn vào production nếu không ở Bếp Trung Tâm |
+| `production_manager` | Vào Inventory + production tại Bếp Trung Tâm |
+| `branch_manager` | Vào stock, transfers inbound, consumption, stocktake, expiry, reports; không vào procurement/production |
+| `owner` | Xem oversight tenant-wide; không bị UX dẫn như operator hằng ngày |
+| `office`, `cashier`, `waiter`, `chef` | Không vào Inventory route nếu ACL hiện tại chưa cho |
 
 Đặc biệt kiểm:
 
-- route bị cấm phải redirect/forbid đúng
-- nav không lộ link sai role
-- dashboard phải giữ mental model `task queue first`
-- `Production` phải ẩn khỏi `warehouse_manager`/`branch_manager` ngay từ nav; `production_manager` là operator, `owner` là oversight/deep-link access
-- `Ingredients / Suppliers / Recipes` không xuất hiện duplicate giữa menu chính và `Settings`
-- không có page nào “vào được nhưng dữ liệu null im lặng” do thiếu `GRANT` hoặc RLS sai
-- `owner` không được UX dẫn như inventory operator hằng ngày
-- `Receiving` không được xuất hiện như nhãn generic cho branch receiving
-- `Cấp bếp` không được bị cảm nhận như flow phụ hoặc flow lỗi
+- nav không lộ link sai role/site
+- branch manager không tạo transfer outbound hay intra-branch transfer
+- production không hiện như daily action của chi nhánh thường
+- site label phân biệt `Kho chi nhánh`, `Kho Tổng`, `Bếp Trung Tâm`
 
----
+## 4. Flow smoke
 
-## 3. Flow Smoke Checklist
+### 4.1 Procurement
 
-### 3.0 Journey-first execution
+- Tạo/mở `PO` cho `branch`, `central_supply`, hoặc `central_kitchen`.
+- Tạo `GRN` từ PO.
+- Confirm `GRN`.
+- Kiểm tồn stock-bearing location tăng đúng.
+- Nếu Finance handoff bật, nhập `supplier_invoice` và recompute matching riêng.
 
-Chạy flow smoke theo persona + device, không chỉ theo route rời rạc:
+### 4.2 Transfer thật
 
-- `warehouse_manager` (procurement + outbound transfer): desktop, tablet đối chiếu
-- `production_manager` (production + branch → branch cycle): tablet trước, desktop đối chiếu
-- `branch_manager` (inbound receive + Cấp bếp nội bộ): tablet trước, mobile ergonomics riêng
-- Oversight (`owner`): desktop
+- Tạo transfer theo hướng hợp lệ:
+  - `central_supply -> branch`
+  - `central_kitchen -> branch`
+  - `branch -> branch`
+- Confirm ship.
+- Mark in transit.
+- Confirm receive.
+- Receive.
+- Kiểm `transfer_out` / `transfer_in` và tồn hai đầu.
+- Thử `from_branch_id = to_branch_id`: phải bị reject.
 
-Mỗi flow phải log:
+### 4.3 Tiêu hao chi nhánh
 
-- CTA nào đã bấm
-- UI phản hồi ra sao
-- step kế tiếp user có hiểu được không
-- tác động dữ liệu/downstream có quan sát được không
+- Từ Employee checkout, submit consumption report.
+- Branch manager mở checkout approvals và duyệt/apply.
+- Kiểm checkout chỉ pass khi report required đã `approved` hoặc `applied`.
+- Kiểm movement:
+  - `type = consumption`
+  - `movement_subtype = sale_consumption`
+  - `source_type = hrm_consumption`
+  - `location_id` là Kho CN/default issue warehouse, không phải kitchen.
+- Kiểm `/inventory/consumption` và detail đọc được trace.
 
-### 3.1 Procurement (warehouse_manager)
+### 4.4 Production tại Bếp Trung Tâm
 
-- Tạo / mở `PO`
-- `draft` có thể `Gửi PO` / `Hủy PO`
-- Từ `PO` đã gửi hoặc nhận dở, tạo `GRN` thật
-- Confirm `GRN`
-- Kiểm tra tồn kho chi nhánh nhận hàng tăng đúng
-- Nếu Finance P1 được bật, nhập `supplier_invoice` và recompute matching như một handoff riêng
-- Không coi ghi nhận thanh toán / AP aging là pilot gate của Inventory
-- Kiểm dashboard và `Receiving` có dẫn đúng từng bước PO -> GRN, không bắt user tự đoán bước tồn kho kế tiếp
+- `production_manager` ở `central_kitchen` thấy nav/page.
+- Tạo `production_order`.
+- Fail đúng khi thiếu BOM hoặc thiếu nguyên liệu.
+- Confirm thành công khi đủ điều kiện.
+- Kiểm `production_consumption` + `production_output`.
 
-### 3.2 Inter-branch transfer (chi nhánh → chi nhánh, 5 bước)
+### 4.5 Stocktake và stock report
 
-- Hướng hợp lệ DUY NHẤT giữa hai site là `chi nhánh → chi nhánh` (cả hai `branch_kind = 'branch'`); trigger `enforce_stock_transfer_direction` raise `invalid direction` (23514) cho mọi hướng khác
-- Tạo transfer (`warehouse_manager` / `production_manager` create + ship)
-- Confirm ship
-- Mark in transit
-- Confirm receive
-- Receive (`branch_manager` chi nhánh nhận chỉ được nhận inbound về đúng branch của mình)
-- Kiểm tra `transfer_out` / `transfer_in` và tồn hai đầu
-- Kiểm stepper/status/primary action có làm user hiểu đúng bước kế tiếp
+- Tạo phiên `stocktake`.
+- Nhập số đếm.
+- Complete session.
+- Kiểm `count_adjustment`.
+- Kiểm `/inventory/stock` và report không cộng `location_kind = kitchen` vào tổng tồn vận hành.
 
-### 3.3 Production
+### 4.6 Finance Basic
 
-- `production_manager` thấy nav và vào được page; `owner` có thể deep-link để kiểm tra/khẩn cấp; `warehouse_manager`/`branch_manager` bị chặn kể cả khi có manual grant
-- Direct DB smoke sau khi apply migration: `warehouse_manager`/`branch_manager` có manual production/menu grant vẫn phải bị `42501` khi gọi `create_production_order`, `confirm_production_order`, `cancel_production_order`, `upsert_production_recipe_lines`, hoặc mutate `production_recipes` / `production_orders` / `production_order_items` qua PostgREST
-- Tạo `production_order`
-- Fail đúng khi thiếu BOM hoặc thiếu nguyên liệu
-- Confirm thành công khi đủ điều kiện
-- Kiểm tra `production_consumption` + `production_output`
-- Kiểm readiness/empty states có chỉ user đúng dependency đang thiếu
+- Gross profit = doanh thu ròng trước VAT - actual approved consumption cost.
+- `mv_food_cost` / `get_food_cost` chỉ dùng làm theoretical recipe/reference và variance.
+- Nếu chưa có approved consumption trong kỳ có doanh thu, food cost/gross profit phải thể hiện `needs_review`, không gọi là recipe-only truth.
 
-### 3.4 Inbound receive tại chi nhánh nhận (đầu cuối của chi nhánh → chi nhánh)
+## 5. Regression hotspots
 
-- Từ một transfer `chi nhánh → chi nhánh` đã ship, đứng ở chi nhánh nhận
-- Confirm receipt ở chi nhánh nhận (`branch_manager` chỉ nhận inbound về đúng branch của mình)
-- Kiểm tra short-receipt / discrepancy flow nếu scope có hỗ trợ
-- Kiểm branch dashboard sau khi nhận hàng có dẫn đủ rõ sang `Cấp bếp` (Kho CN → Bếp CN)
+| Hotspot | Vì sao dễ vỡ |
+| --- | --- |
+| RLS + GRANT | Supabase có thể trả dữ liệu rỗng mà UI hiểu nhầm là không có việc |
+| Transfer direction | Dễ tái tạo `Kho CN -> Bếp CN` như transfer nếu chỉ copy flow cũ |
+| Consumption source location | Dễ chọn `is_default_consumption`/`kitchen` thay vì Kho CN |
+| Stock totals | Legacy kitchen stock dễ bị cộng vào tồn vận hành |
+| Finance food cost | Recipe theoretical dễ bị nhầm thành actual gross profit |
+| Production site kind | Branch production cũ dễ bị giữ làm happy path |
 
-### 3.5 Cấp bếp nội bộ (Kho CN → Bếp CN, một bước)
-
-- Kiểm tra flow `Cấp bếp` bằng intra-branch transfer tại `/inventory/transfers` (cùng `branch`, `from_branch_id = to_branch_id`)
-- Đây là transfer MỘT BƯỚC (`from` location_kind `warehouse` → `to` location_kind `kitchen`), KHÔNG đi qua state machine 5 bước của chi nhánh → chi nhánh
-- `branch_manager` được tạo/commit `Cấp bếp` nội bộ; không được tạo/ship inter-site outbound
-- Xác nhận branch dashboard dẫn đúng sang inbound receive và intra-branch `Cấp bếp`, không dẫn sang `receiving`
-- Xác nhận luồng này không bị bỏ quên trong SOP / UI / báo cáo
-- Ghi rõ evidence theo `from_location_id` / `to_location_id` (cùng một `branch`)
-- Sau khi `Cấp bếp`, user phải hiểu tồn Kho CN đã giảm và tồn Bếp CN / default consumption đã tăng
-
-### 3.6 Stocktake
-
-- Tạo phiên `stocktake`
-- Nhập số đếm
-- Complete session
-- Kiểm tra `count_adjustment` và tồn mới
-- Kiểm blur-save feedback, progress visibility, result comprehension
-
-### 3.7 Alerts and reports
-
-- Reorder alert hiển thị đúng khi dưới `reorder_point`
-- Expiry alert hiển thị đúng theo window tài liệu quy định
-- Nếu surface có `AP aging` hoặc inventory value, số liệu không lỗi obvious và được đánh dấu là oversight/Finance P1 nếu chưa live
-- Các CTA chưa mở phải được ghi rõ `sắp mở` hoặc chuyển thành điều hướng thật; không để disabled button gây hiểu nhầm là đã có workflow
-- Report cards `sắp mở` không được trông giống feature live
-- AP aging link phải dẫn đúng sang công nợ NCC nếu Finance P1 đang bật; nếu không, ẩn khỏi frontline pilot
-
-### 3.8 POS/KDS bridge
-
-- Với branch flow có scope tiêu hao, đối chiếu `POS/KDS completed -> recipe consumption`
-- Kiểm user có hiểu vì sao tồn kho giảm sau khi order hoàn tất
-- Nếu bridge chưa chứng minh được bằng UI/evidence downstream, không mark branch journey là pass
-
----
-
-## 4. Regression Hotspots
-
-| Hotspot                              | Vì sao dễ vỡ                                                                    |
-| ------------------------------------ | ------------------------------------------------------------------------------- |
-| RLS + GRANT                          | Supabase có thể trả `{ data: null, error: null }`                               |
-| `module-acl.ts` vs page-level guards | Rất dễ drift giữa nav, proxy, và page guard                                     |
-| WAC assumptions                      | Docs rất dễ vô tình lẫn với FIFO/lot semantics                                  |
-| Transfer direction trigger           | Chỉ `chi nhánh → chi nhánh` (inter-site) và `Kho CN → Bếp CN` (intra-branch) hợp lệ; hướng khác raise `invalid direction` 23514 |
-| Production permissions               | Operator là `production_manager`; `warehouse_manager` và `branch_manager` hard-deny ở Server Action + RPC + RLS |
-| False-promise CTA                    | UI rất dễ để lại nút giả sau refactor workflow, khiến docs và hành vi lệch nhau |
-| Hover-only actions                   | Desktop có thể pass nhưng mobile/tablet fail nặng                               |
-| Step-to-step mental model            | Sau mỗi thao tác, user có thể không biết phải làm gì tiếp dù backend đúng       |
-
----
-
-## 5. Evidence cần lưu
+## 6. Evidence cần lưu
 
 - Lệnh verify cuối cùng và kết quả
-- Role nào đã smoke
-- Device nào đã smoke
-- Flow nào đã smoke
-- CTA nào đã smoke
-- Bất kỳ deviation nào giữa docs và code
+- Role/site/device đã smoke
+- Flow đã smoke
+- CTA đã smoke
+- Deviation giữa docs và code nếu còn
 - Ảnh/chứng cứ cho mọi `P0` và `P1`
 
-Nếu có chỗ phải defer:
+## 7. Exit criteria
 
-- ghi rõ `deferred because ...`
-- link lại doc scope liên quan
-- không mark là shipped nếu chưa qua gate bắt buộc
-
----
-
-## 6. Exit Criteria
-
-Chỉ coi lát Inventory là ready khi:
+Inventory slice chỉ ready khi:
 
 - verify repo-wide xanh
-- ACL smoke đúng với doc
+- ACL smoke đúng
 - flow smoke đúng với scope thay đổi
-- route live có coverage tương ứng trong `route-cta-matrix.md`
-- persona chính có ít nhất 1 journey hoàn chỉnh theo đúng thiết bị mục tiêu
+- route live có coverage trong `route-cta-matrix.md`
 - mọi `P0` đã xử lý
-- mọi `P1` đã xử lý hoặc được chấp nhận rõ ràng trong evidence log
-- không còn mâu thuẫn giữa [inventory.md](../../ref/inventory.md), [inventory-sop.md](../../ref/inventory-sop.md), và [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md)
+- mọi `P1` đã xử lý hoặc được chấp nhận rõ trong evidence
+- docs không còn mâu thuẫn giữa `inventory.md`, `inventory-sop.md`, `operational-data-contract.md`, và runbooks

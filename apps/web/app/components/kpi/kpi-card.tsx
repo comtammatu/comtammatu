@@ -6,19 +6,6 @@ import { cn } from "@comtammatu/ui/lib/utils";
 import { CompareChip, type CompareDelta } from "./compare-chip";
 import { TrendSparkline, type TrendPoint } from "./trend-sparkline";
 
-// KPI card primitive — replaces the bespoke layouts in finance-client and
-// revenue-client. Owner Q-spec acceptance §4: every KPI must have a
-// drill-down link; tone follows BA §2 thresholds; sparkline is optional.
-//
-// Layout:
-//   ┌──────────────────────────────────┐
-//   │ LABEL (uppercase) ↗   ◯ tone dot │
-//   │ VALUE (2xl bold tabular)         │
-//   │ ▲ +12,3% · vs kỳ trước           │
-//   │ Hint                             │
-//   │ ░░░░░░░░░░░░░░░░░░░░░ sparkline  │
-//   └──────────────────────────────────┘
-
 type KpiTone =
   | "neutral"
   | "primary"
@@ -80,12 +67,12 @@ export function KpiCard({
   const Body = (
     <CardContent
       className={cn(
-        "relative space-y-1.5 p-4",
+        "relative flex h-full min-h-32 flex-col gap-2",
         href ? "transition-colors hover:bg-muted/40" : undefined,
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="flex min-h-8 items-start justify-between gap-2">
+        <p className="line-clamp-2 min-w-0 break-words text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {label}
         </p>
         {icon ? (
@@ -110,15 +97,28 @@ export function KpiCard({
           </span>
         )}
       </div>
-      <p className={cn("text-2xl font-bold tabular-nums", VALUE_TONE[tone])}>
+      <p
+        className={cn(
+          "min-w-0 break-words text-2xl leading-tight font-bold tabular-nums",
+          VALUE_TONE[tone],
+        )}
+      >
         {value}
       </p>
-      {delta ? (
-        <CompareChip label={delta.label} tone={delta.tone} hint={compareHint} />
-      ) : null}
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      <div className="min-h-5">
+        {delta ? (
+          <CompareChip
+            label={delta.label}
+            tone={delta.tone}
+            hint={compareHint}
+          />
+        ) : null}
+      </div>
+      <div className="min-h-8 line-clamp-2 break-words text-xs text-muted-foreground">
+        {hint}
+      </div>
       {sparkline && sparkline.length > 0 ? (
-        <div className="-mx-1 -mb-1 mt-2 h-8">
+        <div className="-mx-1 -mb-1 mt-auto h-8">
           <TrendSparkline
             data={sparkline}
             ariaLabel={sparklineLabel ?? `Xu hướng ${label}`}
@@ -138,21 +138,18 @@ export function KpiCard({
   );
 
   if (!href) {
-    return <Card className={className}>{Body}</Card>;
+    return <Card className={cn("h-full", className)}>{Body}</Card>;
   }
-  // Card primitive is a div with no asChild slot, so we wrap the whole
-  // card in a Link. Display:block keeps the card's own layout intact;
-  // the Link gets focus styling so keyboard users see selection rings.
   return (
     <Link
       href={href}
       className={cn(
-        "block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "block h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         className,
       )}
       aria-label={typeof value === "string" ? `${label}: ${value}` : label}
     >
-      <Card>{Body}</Card>
+      <Card className="h-full">{Body}</Card>
     </Link>
   );
 }

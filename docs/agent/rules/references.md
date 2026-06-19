@@ -24,10 +24,10 @@ Supported runtimes are **Claude Code** and **Codex**. Each loads its own
 entrypoint and wires the same canonical prod-DB guard; adding another IDE means
 adding an adapter, not duplicating rules.
 
-| IDE         | Auto-loaded entrypoint        | MCP config           | Prod-DB guard adapter                                    |
-| ----------- | ----------------------------- | -------------------- | ------------------------------------------------------- |
-| Claude Code | `CLAUDE.md` (shim → `AGENTS.md`) | `.mcp.json`        | `.claude/settings.json` → `scripts/guard-prod-db.mjs`   |
-| Codex       | `AGENTS.md` (native)          | `.codex/config.toml` | `.codex/hooks.json` → `scripts/guard-prod-db.mjs`       |
+| IDE         | Auto-loaded entrypoint           | MCP config           | Prod-DB guard adapter                                 |
+| ----------- | -------------------------------- | -------------------- | ----------------------------------------------------- |
+| Claude Code | `CLAUDE.md` (shim → `AGENTS.md`) | `.mcp.json`          | `.claude/settings.json` → `scripts/guard-prod-db.mjs` |
+| Codex       | `AGENTS.md` (native)             | `.codex/config.toml` | `.codex/hooks.json` → `scripts/guard-prod-db.mjs`     |
 
 `scripts/guard-prod-db.mjs` is the single guard; the adapter configs only wire it
 per runtime. `pnpm lint:guard-sync` enforces that every adapter in `ADAPTER_PATHS`
@@ -43,8 +43,8 @@ Two duplications are deliberate and machine-enforced — do NOT "de-duplicate" t
   copied byte-for-byte between `AGENTS.md` and `docs/agent/rules/engineering.md`
   (each runtime auto-loads only its entrypoint). `pnpm lint:rules-mirror`
   enforces equality — edit BOTH identically.
-- The prod-DB guard triad (`scripts/guard-prod-db.mjs` + `.claude/settings.json`
-  + `.codex/hooks.json`) is kept in sync by `pnpm lint:guard-sync`.
+- The prod-DB guard triad (`scripts/guard-prod-db.mjs`, `.claude/settings.json`,
+  and `.codex/hooks.json`) is kept in sync by `pnpm lint:guard-sync`.
 
 ## Planning And Specs
 
@@ -63,6 +63,9 @@ Two duplications are deliberate and machine-enforced — do NOT "de-duplicate" t
 
 - Reference index (canonical, full list of `docs/ref/` files): `docs/ref/README.md`
 - Project vocabulary & naming SSoT: `docs/ref/glossary.md`
+- Domain knowledge encyclopedia for F&B, Finance, Tax/HKD, labor, and operational
+  reasoning: `docs/ref/domain-encyclopedia.md`
+- Operational data and metric contract: `docs/ref/operational-data-contract.md`
 - HKD business context: `docs/ref/business-context.md`
 - HKD legal framework register (SSoT for laws/decrees): `docs/ref/legal-framework-2026.md`
 
@@ -97,3 +100,15 @@ that list.
   version-controlled shared rule files.
 - Keep rules concrete and verifiable. Avoid vague guidance such as "write good code" or "be careful".
 - Do not add an archive tree or keep superseded implementation plans in the repo. When a decision is current, promote it into the source-of-truth doc above; when it is not current, remove it.
+
+## Open Knowledge Format Export
+
+- OKF is an exchange/export format for agent-readable project knowledge, not a
+  project authority. The source-of-truth docs above always win.
+- Run `pnpm docs:okf` to generate a disposable OKF v0.1 bundle under
+  `.tmp/okf/` from the current Markdown authority files.
+- Generated OKF bundles must stay out of version control unless the owner
+  explicitly approves a publishable artifact path.
+- Do not create `docs/llm-wiki/`, duplicate rule trees, or copy generated OKF
+  content back into source docs. Update the canonical source doc, then
+  regenerate the bundle.

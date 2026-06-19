@@ -45,8 +45,12 @@ test("Employee leave migration uses branch-scoped RLS and RPC workflow", () => {
     "reject_leave_request(BIGINT, TEXT)",
   ]) {
     assert.ok(
-      migration.includes(`REVOKE ALL ON FUNCTION public.${fn} FROM PUBLIC, anon`) &&
-        migration.includes(`GRANT EXECUTE ON FUNCTION public.${fn} TO authenticated, service_role`),
+      migration.includes(
+        `REVOKE ALL ON FUNCTION public.${fn} FROM PUBLIC, anon`,
+      ) &&
+        migration.includes(
+          `GRANT EXECUTE ON FUNCTION public.${fn} TO authenticated, service_role`,
+        ),
       `expected explicit function ACL for ${fn}`,
     );
   }
@@ -95,7 +99,7 @@ test("Cổng nhân viên exposes leave request self-service from Profile", () =>
 
   for (const expected of [
     '.from("leave_requests")',
-    ".eq(\"employee_id\", ctx.employeeId)",
+    '.eq("employee_id", ctx.employeeId)',
     "LeaveRequestClient",
     "EmployeeMissingProfileEmpty",
   ]) {
@@ -107,7 +111,7 @@ test("Cổng nhân viên exposes leave request self-service from Profile", () =>
     "cancelLeaveRequest",
     "Textarea",
     "Nghỉ không lương",
-    "status === \"pending\"",
+    'status === "pending"',
   ]) {
     assert.ok(client.includes(expected), `expected client ${expected}`);
   }
@@ -136,11 +140,15 @@ test("HRM exposes branch-scoped leave approval tab", () => {
 
   for (const expected of [
     "LeaveRequestsTable",
-    'TabsTrigger value="leave"',
-    "copy.tabs.leave",
+    'TabsTrigger value="attendance"',
+    "copy.tabs.attendance",
   ]) {
     assert.ok(hrClient.includes(expected), `expected HR client ${expected}`);
   }
+  assert.ok(
+    !hrClient.includes('TabsTrigger value="leave"'),
+    "leave approval must stay inside HR attendance flow, not add a separate Employee-style HR tab",
+  );
 
   for (const expected of [
     "fetchLeaveRequests",
@@ -148,7 +156,7 @@ test("HRM exposes branch-scoped leave approval tab", () => {
     "rejectLeaveRequest",
     "Textarea",
     "copy.emptyPendingTitle",
-    "status !== \"pending\"",
+    'status !== "pending"',
   ]) {
     assert.ok(table.includes(expected), `expected leave table ${expected}`);
   }

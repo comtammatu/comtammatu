@@ -12,7 +12,7 @@ export const employee = {
     ariaLabel: "Điều hướng trang nhân viên",
     today: "Hôm nay",
     tasks: "Việc",
-    schedule: "Lịch",
+    schedule: "Lịch ca",
     profileShort: "Hồ sơ",
   },
   pwa: {
@@ -48,7 +48,7 @@ export const employee = {
   },
   home: {
     title: "Hôm nay",
-    description: "Bước tiếp theo của ca hôm nay.",
+    description: "Một ca, một bước chính.",
     todayWorkTitle: "Ca hôm nay",
     workdayTitle: "Việc hôm nay",
     clockPanelTitle: "Chấm công hôm nay",
@@ -60,7 +60,7 @@ export const employee = {
     statusNotStarted: "Chưa chấm công",
     statusNoProfile: "Thiếu hồ sơ nhân viên",
     statusNoBranch: "Thiếu chi nhánh",
-    descriptionWorking: "Kết thúc ca khi bàn giao xong.",
+    descriptionWorking: "Hoàn thành checklist trong ca, sau đó gửi kết ca.",
     descriptionReadyToCheckout:
       "Checklist đã xong, gửi quản lý chi nhánh duyệt kết ca.",
     descriptionCheckoutPending:
@@ -101,10 +101,10 @@ export const employee = {
     workProgress: "Tiến độ",
     notYet: "Chưa bắt đầu",
     nextActionTitle: "Bước tiếp theo",
-    viewSchedule: "Xem lịch",
-    scheduleTitle: "Lịch",
-    scheduleDescription: "Lịch ca và ngày công",
-    scheduleLongDescription: "Xem lịch ca và ngày công theo tháng.",
+    viewSchedule: "Xem lịch ca",
+    scheduleTitle: "Lịch ca",
+    scheduleDescription: "Ca làm và ngày công",
+    scheduleLongDescription: "Ca làm theo tháng.",
     leaveTitle: "Nghỉ phép",
     leaveDescription: "Gửi yêu cầu nghỉ",
     payslipLongDescription:
@@ -182,7 +182,8 @@ export const employee = {
     cancelCheckoutButton: "Rút yêu cầu kết ca",
     cancelCheckoutPending: "Đang rút...",
     tasksTitle: "Việc trong ca",
-    tasksDescription: "Hoàn thành checklist trước khi kết ca.",
+    tasksDescription:
+      "Hoàn thành việc bắt buộc trong ca; Tiêu hao bếp chỉ tick khi được giao.",
     tasksButton: "Việc trong ca",
     managerCheckoutTitle: "Chấm công ra",
     staffCheckoutTitle: "Gửi duyệt kết ca",
@@ -215,7 +216,11 @@ export const employee = {
   hrAttendance: {
     summaryView: "Tổng hợp",
     clockView: "Vào / ra",
+    workdayRule: "2 ca = 1 công · 1 ca = 0,5 công",
     loadHint: "Chưa có dữ liệu chấm công cho chi nhánh và tháng đã chọn.",
+    summaryEmptyTitle: "Chưa có ngày công",
+    summaryEmptyDescription:
+      "Chọn chi nhánh/tháng khác hoặc chờ nhân viên chấm công ca đầu tiên.",
     employeeCode: "Mã NV",
     fullName: "Họ tên",
     present: "Có mặt",
@@ -223,6 +228,9 @@ export const employee = {
     absent: "Vắng",
     halfDay: "Nửa ngày",
     empty: "Chưa có dữ liệu chấm công.",
+    detailEmptyTitle: "Chưa có lượt vào/ra",
+    detailEmptyDescription:
+      "Lượt chấm công từng ca sẽ hiện tại đây sau khi nhân viên vào ca.",
     shift: "Ca",
     checkIn: "Vào",
     checkOut: "Ra",
@@ -262,18 +270,12 @@ export const employee = {
     emptyTitle: "Chưa có lịch ca tháng này",
     checkInShort: "Vào",
     checkOutShort: "Ra",
-    rowAttendance: "Công",
     rowShift: "Ca",
-    rowStatus: "Trạng thái",
-    selectedDayTitle: "Ngày đã chọn",
     noShiftForDay: "Ca mặc định",
     leaveApproved: "Nghỉ phép",
     leavePending: "Chờ duyệt nghỉ",
     requestLeaveCta: "Xin nghỉ phép",
-    timeRange: "Giờ ca",
-    clockRange: "Vào / ra",
-    calendarAxisLabel: "Lịch",
-    loadError: "Không tải được lịch.",
+    loadError: "Không tải được lịch ca.",
     nextMonth: "Tháng sau",
     noAttendance: "Chưa chấm công",
     prevMonth: "Tháng trước",
@@ -282,7 +284,8 @@ export const employee = {
     today: "Hôm nay",
   },
   tasks: {
-    description: "Checklist ca làm hôm nay",
+    description:
+      "Checklist ca làm hôm nay, gồm mục Tiêu hao bếp nếu được giao",
     notStartedTitle: "Chưa vào ca",
     notStartedDescription: "Chấm công vào trước khi mở việc trong ca.",
     checklistTitle: "Checklist",

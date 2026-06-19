@@ -1,7 +1,7 @@
 export const settings = {
   nav: {
     ariaLabel: "Mục cài đặt",
-    branches: "Chi nhánh",
+    branches: "Điểm vận hành",
     general: "Chung",
     payments: "Thanh toán",
     tables: "Bàn",
@@ -33,7 +33,8 @@ export const settings = {
     branchesTitle: "Điểm vận hành",
     branchCount: (count: number) => `${count} điểm vận hành`,
     generalTitle: "Cài đặt chung",
-    generalDescription: "Thuế GTGT, đơn vị tiền tệ và định danh hộ kinh doanh (pháp danh, mã số thuế)",
+    generalDescription:
+      "Định danh hộ kinh doanh (pháp danh, mã số thuế, địa chỉ, người đại diện) — in trên hóa đơn và chứng từ.",
     kdsTitle: "Trạm bếp (KDS)",
     kdsDescription: "Quản lý trạm hiển thị bếp và gán danh mục món ăn",
     paymentsTitle: "Thanh toán",
@@ -42,7 +43,6 @@ export const settings = {
     printersTitle: "Máy in",
     printersDescription:
       "Cấu hình máy in theo từng chi nhánh: loại phiếu và danh mục món in trên từng máy.",
-    printMonitor: "Giám sát in",
     printTemplatesTitle: "Mẫu phiếu in",
     printTemplatesDescription:
       "Chỉnh bố cục từng loại phiếu, xem trước đúng bản in và in thử xuống máy chi nhánh.",
@@ -53,7 +53,6 @@ export const settings = {
       "Mẫu phiếu, giám sát job in, và cấu hình máy in theo từng chi nhánh.",
     printBranchConfigTitle: "Cấu hình theo chi nhánh",
     tablesTitle: "Sơ đồ bàn",
-    tablesDescription: "Quản lý sơ đồ bàn ăn theo chi nhánh",
   },
   printTemplates: {
     layoutTitle: "Bố cục phiếu",
@@ -123,6 +122,44 @@ export const settings = {
     deleteTitle: "Xóa bàn?",
     deleteDescription:
       "Bàn sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.",
+    zonesTab: (count: number) => `Khu vực (${count})`,
+    tablesTab: (count: number) => `Bàn (${count})`,
+    addZone: "Thêm khu vực",
+    addTable: "Thêm bàn",
+    noZonesTitle: "Chưa có khu vực nào",
+    zoneName: "Tên khu vực",
+    zoneOrder: "Thứ tự",
+    zoneNameRequired: "Tên khu vực không được trống",
+    createZoneTitle: "Thêm khu vực mới",
+    editZoneTitle: "Chỉnh sửa khu vực",
+    zoneCreated: "Đã tạo khu vực mới",
+    zoneUpdated: "Đã cập nhật khu vực",
+    zoneDeleted: "Đã xóa khu vực",
+    zoneNamePlaceholder: "VD: Tầng 1, Sân vườn, VIP",
+    zoneOrderLabel: "Thứ tự hiển thị",
+    deleteZoneTitle: "Xóa khu vực?",
+    deleteZoneDescription:
+      "Khu vực sẽ bị xóa vĩnh viễn. Các bàn thuộc khu vực này sẽ không còn khu vực.",
+  },
+  qcSettings: {
+    warnBelowReview: "Ngưỡng cảnh báo phải nhỏ hơn ngưỡng kiểm tra.",
+    saveFailed: "Không thể lưu cài đặt.",
+    saved: "Đã lưu cài đặt QC.",
+    eyebrow: "Kho hàng",
+    title: "Cài đặt QC nhập kho",
+    description:
+      "Cấu hình ngưỡng kiểm soát chất lượng cho phiếu nhập (GRN). Các ngưỡng này áp dụng toàn tenant; cảnh báo xử lý trong app.",
+    toleranceTitle: "Tolerance số lượng & giá",
+    shortToleranceLabel: "Thiếu hàng ≤ (%)",
+    shortToleranceHelp:
+      "Dưới ngưỡng → tự chấp nhận, không bắt chọn cách xử lý.",
+    warningThresholdLabel: "Giá lệch cảnh báo ≥ (%)",
+    warningThresholdHelp: "Vượt ngưỡng → bắt nhập lý do.",
+    reviewThresholdLabel: "Giá lệch kiểm tra ≥ (%)",
+    reviewThresholdHelp: "Vượt ngưỡng → bắt thêm ảnh hóa đơn + flag review.",
+    rejectPhotoLabel: "Bắt buộc ảnh khi reject hàng",
+    rejectPhotoHelp: "Khi có hàng từ chối, phải đính kèm ảnh trước khi chốt.",
+    saveButton: "Lưu cài đặt",
   },
   attendance: {
     title: (branchName: string) => `Cấu hình ca làm — ${branchName}`,
@@ -171,10 +208,6 @@ export const settings = {
     allFallback: "Tất cả (fallback)",
   },
   general: {
-    taxFeesTitle: "Thuế & Phí",
-    currencyLabel: "Đơn vị tiền tệ",
-    saveSettings: "Lưu cài đặt",
-    saved: "Đã lưu cài đặt",
     identityTitle: "Định danh hộ kinh doanh",
     identityDescription: "Thông tin này in trên hóa đơn và chứng từ HĐĐT.",
     legalNameLabel: "Tên pháp danh / hộ kinh doanh",
@@ -209,6 +242,15 @@ export const settings = {
     emptyForBranch: "Chưa có máy POS nào cho chi nhánh này",
     terminalName: "Tên máy",
     deviceId: "Mã thiết bị",
+    terminalNameRequired: "Tên máy không được trống",
+    createTerminalTitle: "Thêm máy POS mới",
+    editTerminalTitle: "Chỉnh sửa máy POS",
+    terminalCreated: "Đã tạo máy POS",
+    terminalUpdated: "Đã cập nhật máy POS",
+    terminalNamePlaceholder: "VD: Quầy 1, Quầy chính",
+    deviceIdOptional: "Mã thiết bị (tuỳ chọn)",
+    deviceIdPlaceholder: "VD: tablet-thungan-01",
+    terminalActive: "Hoạt động",
   },
   printers: {
     backPrinters: "Máy in",
@@ -216,26 +258,65 @@ export const settings = {
     statFailed24h: "Lỗi 24h",
     statPrintedToday: "Đã in hôm nay",
     statAgentOnline: "Agent online",
+    statusPlaceholder: "Trạng thái",
+    allStatuses: "Tất cả trạng thái",
+    attentionStatus: "Cần xử lý",
+    jobTypePlaceholder: "Loại phiếu",
+    allJobTypes: "Tất cả loại",
+    printerColumn: "Máy in",
+    attemptsColumn: "Thử",
+    createdAtColumn: "Tạo lúc",
+    printedAtColumn: "In lúc",
+    errorColumn: "Lỗi",
+    actionColumn: "Hành động",
+    emptyJobs: "Chưa có job in nào khớp bộ lọc",
+    retrySuccess: (id: number) => `Đã đẩy lại job #${id} vào hàng đợi`,
+    retryFailed: "Không thể thử lại",
+    jobTypes: {
+      kitchen_ticket: "Phiếu bếp",
+      receipt: "Hóa đơn",
+      provisional_bill: "Phiếu tạm tính",
+      reprint: "In lại",
+      cancel_ticket: "Phiếu hủy",
+    },
   },
   branch: {
     commandTitle: "Điều hành chi nhánh",
     commandDescription: (branchName: string) =>
       `${branchName} · Nhịp vận hành hôm nay`,
+    financeCta: "Xem tài chính",
+    openAction: "Mở",
     commandOverviewTitle: "Luồng chính",
     commandOverviewDescription:
       "Mở đúng bề mặt để vận hành chi nhánh, kiểm tra thiết bị và xử lý công việc trong ngày.",
+    liveOperationsTitle: "Vận hành trực tiếp",
+    liveOperationsDescription:
+      "Các màn thao tác trong ca: bán hàng, bếp, gọi món và hạn mức bán hôm nay.",
+    endDayTitle: "Đối soát ca / cuối ngày",
+    endDayDescription:
+      "Xem lại ca POS, bill, doanh thu và chênh lệch sau khi vận hành.",
+    setupLaneTitle: "Thiết lập chi nhánh",
+    setupLaneDescription:
+      "Bàn, máy POS, trạm bếp, máy in và cấu hình chấm công của chi nhánh.",
+    drilldownTitle: "Mở sâu",
+    drilldownDescription:
+      "Tra cứu nghiệp vụ khi cần xem lịch sử, kho, nhân sự hoặc thực đơn toàn hệ thống.",
     commandBranchSetup: "Thiết lập sàn",
     commandBranchSetupDescription:
-      "Bàn, máy POS, trạm bếp, máy in và ca POS của chi nhánh.",
+      "Bàn, máy POS, trạm bếp, máy in và cấu hình chấm công của chi nhánh.",
     commandPosDescription: "Bán hàng, gửi bếp, thanh toán và in hóa đơn.",
     commandKdsDescription: "Nhận món, cập nhật trạng thái bếp và gọi món xong.",
     commandRunnerDescription:
       "Màn hình gọi số cho khách theo dõi món đã sẵn sàng.",
+    commandPosSessionsTitle: "Ca POS",
+    commandPosSessionsDescription:
+      "Lịch sử ca, bill, doanh thu, số món và đối soát chênh lệch.",
     commandOrdersDescription:
       "Tra cứu đơn, xử lý sự cố và đối soát theo chi nhánh.",
     commandHrDescription: "Ngày công, nghỉ phép và duyệt kết ca của nhân viên.",
     commandInventoryDescription:
       "Tồn kho, nhận hàng, cấp bếp, kiểm kê và hủy hao.",
+    commandMenuDescription: "Danh mục, món bán và giá đang áp dụng.",
     commandMenuLimitsDescription:
       "Đặt số phần tối đa hoặc tắt món trong ngày cho POS và bếp.",
     dayRevenueLabel: "Doanh thu hôm nay",
@@ -248,22 +329,65 @@ export const settings = {
     dayKitchenHint: "Đơn chưa phục vụ xong hôm nay.",
     readinessTitle: "Sẵn sàng vận hành",
     readinessDescription:
-      "Ca bán hàng, thiết bị in và việc chờ duyệt của chi nhánh.",
+      "Cấu hình mở bán, ca POS, thiết bị in và việc chờ duyệt của chi nhánh.",
+    readinessReadyBadge: "Sẵn sàng",
+    readinessWarningBadge: "Cảnh báo",
+    readinessMissingBadge: "Thiếu",
+    readinessSetupCta: "Mở thiết lập",
+    readinessMenuTitle: "Thực đơn bán",
+    readinessMenuReady: (count: number) =>
+      `${count.toLocaleString("vi-VN")} món đang bật để bán.`,
+    readinessMenuMissing: "Chưa có món active để POS bán đúng.",
+    readinessMenuCta: "Mở thực đơn",
+    readinessFloorTitle: "Bàn & máy POS",
+    readinessFloorReady: (tables: number, terminals: number) =>
+      `${tables.toLocaleString("vi-VN")} bàn và ${terminals.toLocaleString("vi-VN")} máy POS active.`,
+    readinessFloorMissing: (tables: number, terminals: number) =>
+      `${tables.toLocaleString("vi-VN")} bàn, ${terminals.toLocaleString("vi-VN")} máy POS active. Cần đủ cả hai để bán tại quán.`,
+    readinessKdsSetupTitle: "Trạm KDS",
+    readinessKdsSetupReady: (count: number) =>
+      `${count.toLocaleString("vi-VN")} trạm bếp active.`,
+    readinessKdsSetupMissing:
+      "Chưa có trạm bếp active; có thể bán thủ công nếu quản lý chấp nhận fallback.",
+    readinessPaymentTitle: "Thanh toán & HĐĐT",
+    readinessPaymentReady: (hddtReady: boolean) =>
+      hddtReady
+        ? "Có phương thức thu tiền và HĐĐT đã cấu hình."
+        : "Có phương thức thu tiền; HĐĐT cần kiểm tra trước rollout.",
+    readinessPaymentMissing: "Chưa có phương thức thanh toán khả dụng.",
+    readinessPaymentHddtWarningBadge: "Thiếu HĐĐT",
+    readinessPaymentCta: "Mở cấu hình",
     readinessPosTitle: "Ca POS",
     readinessPosOpen: (time: string) => `Đang mở từ ${time}.`,
     readinessPosClosed: "Chưa mở ca bán hàng.",
     readinessPosOpenBadge: "Đang mở",
     readinessPosClosedBadge: "Chưa mở",
     readinessPosCta: "Mở POS",
+    readinessKdsTitle: "Bếp/KDS",
+    readinessKdsActive: (count: number) =>
+      `${count.toLocaleString("vi-VN")} đơn đang trong bếp.`,
+    readinessKdsEmpty: "Không có đơn bếp đang mở.",
+    readinessKdsBadge: (count: number) =>
+      count > 0 ? `${count.toLocaleString("vi-VN")} đơn` : "0 đơn",
+    readinessKdsCta: "Mở KDS",
     readinessPrinterTitle: "Máy in",
     readinessPrinterOnline: "Agent in đang hoạt động.",
     readinessPrinterOffline: "Agent in offline — kiểm tra máy trạm in.",
+    readinessPrinterNoConfig:
+      "Chưa có máy in active; được phép bán thủ công nếu quản lý chấp nhận fallback.",
     readinessPrinterNoAgent: "Chưa ghi nhận agent in cho chi nhánh.",
     readinessPrinterFailed: (count: number) =>
       `${String(count)} lệnh in lỗi trong 24 giờ qua.`,
     readinessPrinterOnlineBadge: "Online",
     readinessPrinterOfflineBadge: "Offline",
+    readinessPrinterNoConfigBadge: "Fallback",
     readinessPrinterCta: "Mở máy in",
+    readinessStaffTitle: "Nhân sự trong ngày",
+    readinessStaffReady: (count: number) =>
+      `${count.toLocaleString("vi-VN")} nhân sự active được gán chi nhánh.`,
+    readinessStaffMissing:
+      "Chưa thấy nhân sự active gán chi nhánh; kiểm tra trước khi mở ca thật.",
+    readinessStaffCta: "Mở nhân sự",
     readinessCheckoutTitle: "Duyệt kết ca",
     readinessCheckoutPending: (count: number) =>
       `${String(count)} yêu cầu đang chờ duyệt.`,
@@ -276,6 +400,17 @@ export const settings = {
     hubTitle: "Thiết lập chi nhánh",
     hubDescription: (branchName: string) => branchName,
     infoTitle: "Thông tin",
+    tablesSetupTitle: "Bàn & khu vực",
+    tablesSetupDescription:
+      "Khu vực ăn uống, danh sách bàn và trạng thái vận hành tại chi nhánh.",
+    posSetupTitle: "Máy POS",
+    posSetupDescription: "Máy POS đăng ký tại chi nhánh và điểm bán tương ứng.",
+    printersSetupTitle: "Máy in",
+    printersSetupDescription:
+      "Hóa đơn, bếp và trạng thái agent in đang dùng cho chi nhánh.",
+    kdsSetupTitle: "Trạm bếp (KDS)",
+    kdsSetupDescription:
+      "Trạm hiển thị bếp và danh mục món ăn được gán cho từng trạm.",
     attendanceChecklistTitle: "Cấu hình chấm công",
     attendanceChecklistDescription:
       "Checklist template và phân công công việc được quản lý trong HR.",
@@ -291,6 +426,18 @@ export const settings = {
     menuLimitsLoadFailed: "Không tải được dữ liệu hạn mức.",
     printersDescription: (branchName: string) =>
       `Cấu hình 3 máy in của ${branchName}: hóa đơn, bếp 1, bếp 2`,
+  },
+  branchTable: {
+    operationPoint: "Điểm vận hành",
+    address: "Địa chỉ",
+    phone: "Điện thoại",
+    emptyTitle: "Chưa có điểm vận hành nào",
+    deactivateTitle: "Tạm ngừng điểm vận hành?",
+    deactivateDescription:
+      "Điểm vận hành sẽ ngừng hoạt động cho đến khi được kích hoạt lại.",
+    deactivate: "Tạm ngừng",
+    activate: "Kích hoạt",
+    networkGateway: "Cổng mạng POS/KDS",
   },
   posSessions: {
     branchSharedSession: "Ca chung của chi nhánh",

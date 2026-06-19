@@ -6,7 +6,7 @@
 
 - Active delivery track: production đang vận hành in-place trên repo `comtammatu`; ongoing work là hardening + feature follow-ups.
 - Active tracker: [tasks/todo.md](../tasks/todo.md)
-- Retired docs are not retained in this repo. Current decisions must live in `tasks/todo.md`, `docs/plan/adr/`, `docs/plan/decisions.md`, module docs, specs, runbooks, or canonical references.
+- Superseded docs are not retained in this repo. Current decisions must live in `tasks/todo.md`, `docs/plan/adr/`, `docs/plan/decisions.md`, module docs, specs, runbooks, or canonical references.
 
 ## Đọc theo nhu cầu
 
@@ -22,7 +22,9 @@
 - Feature/module architecture: `docs/modules/*`, `docs/spec/*`
 - Active planning: `tasks/todo.md`, `docs/plan/adr/*`, `docs/plan/decisions.md`
 - Readiness checklist và smoke gates: [runbooks/README.md](runbooks/README.md)
-- Continuity / adoption tracking: [worklog/README.md](worklog/README.md)
+- Temporary implementation staging: [worklog/README.md](worklog/README.md)
+- Xuất tri thức agent dạng OKF tạm thời: `pnpm docs:okf` -> `.tmp/okf/`
+  (generated, không phải SSOT)
 
 ## Inventory nhanh
 
@@ -37,7 +39,7 @@
 ### Trạng thái Inventory hiện tại
 
 - Procurement UI đã chốt là `tenant procurement hub`: `Receiving -> PO -> GRN -> supplier invoice`
-- Branch flow hiện đi theo `Nhận transfer -> Cấp bếp -> Stocktake/alerts`, không dùng `Receiving` như generic inbound hub
+- Branch flow hiện đi theo `Nhận transfer -> Duyệt tiêu hao -> Stocktake/alerts`, không dùng `Receiving` như generic inbound hub
 - Dashboard `/inventory` đã chuyển sang `task queue first`
 - `Ingredients / Suppliers / Recipes` đã canonical về `Danh mục`; các route cũ trong `Settings` chỉ còn giữ redirect tương thích
 
@@ -50,4 +52,4 @@
 - `spec/design-system.md`: single source of truth cho UI design-system; active shadcn preset, runtime configs, primitives, adapters, runbooks, worklogs, and regression rules only implement, verify, or enforce it
 - `plan/`: active decisions and ADRs
 - `runbooks/`: operational verification
-- `worklog/`: current implementation contracts that have not yet been promoted to canonical docs
+- `worklog/`: temporary staging for implementation contracts before promotion or removal

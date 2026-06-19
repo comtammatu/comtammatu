@@ -23,6 +23,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
@@ -30,6 +31,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
 } from "@comtammatu/ui/components/sidebar";
 import {
@@ -81,8 +83,8 @@ export interface AppShellProps {
   /** Sidebar collapsible mode. Default "offcanvas" (mobile drawer). */
   collapsible?: "icon" | "offcanvas";
   /**
-   * Mobile-only workspace bottom navbar (ACL-resolved tabs + drawer
-   * trigger). Default true for all back-office shells.
+   * Mobile-only workspace bottom navbar (same nav model as the sidebar +
+   * drawer trigger). Default true for all back-office shells.
    */
   bottomNav?: boolean;
 }
@@ -170,28 +172,30 @@ export function AppShell({
               <SidebarGroupLabel className="px-2 pb-1 text-xs font-medium text-sidebar-foreground/70">
                 {group.title}
               </SidebarGroupLabel>
-              <SidebarMenu>
-                {group.items.map((item) => {
-                  const active = isNavItemActive(item, pathname);
-                  const Icon = item.icon;
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={active}
-                        size="lg"
-                        tooltip={item.label}
-                        className="rounded-md"
-                      >
-                        <Link href={item.href}>
-                          <Icon />
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => {
+                    const active = isNavItemActive(item, pathname);
+                    const Icon = item.icon;
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          size="lg"
+                          tooltip={item.label}
+                          className="rounded-md"
+                        >
+                          <Link href={item.href}>
+                            <Icon />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
             </SidebarGroup>
           ))}
         </SidebarContent>
@@ -222,6 +226,7 @@ export function AppShell({
             </form>
           </div>
         </SidebarFooter>
+        <SidebarRail />
       </Sidebar>
 
       <SidebarInset>
@@ -307,7 +312,7 @@ export function AppShell({
           </AppShellPaddingBoundary>
         </main>
       </SidebarInset>
-      {bottomNav ? <WorkspaceBottomNav role={role} /> : null}
+      {bottomNav ? <WorkspaceBottomNav navGroups={navGroups} /> : null}
     </SidebarProvider>
   );
 }

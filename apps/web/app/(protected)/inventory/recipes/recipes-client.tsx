@@ -1,25 +1,29 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory recipe list keeps kitchen workflow copy inline */
+
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil as IconPencil, Plus as IconPlus } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
-import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
+import {
+  AppPage,
+  AppPageHeader,
+  AppEmptyState,
+  AppSection,
+} from "@/components/surface";
 import { formatVND } from "../_lib/format";
 import { RecipeLineDialog } from "./recipe-line-dialog";
 import type {
@@ -101,6 +105,45 @@ export function RecipesClient({
     router.refresh();
   }
 
+  const recipeItemColumns: DataTableColumn<RecipeItem>[] = [
+    {
+      key: "ingredient",
+      header: PRODUCT_VI.rawIngredient,
+      render: (item) => (
+        <div className="flex items-center gap-3">
+          <div className="size-2 rounded-full bg-primary/40" />
+          <span className="font-semibold">{item.ingredientName}</span>
+        </div>
+      ),
+    },
+    {
+      key: "quantity",
+      header: FORM_VI.quantity,
+      className: "font-mono",
+      render: (item) => item.qty,
+    },
+    {
+      key: "unit",
+      header: FORM_VI.unit,
+      className: "text-muted-foreground",
+      render: (item) => item.unit,
+    },
+    {
+      key: "yield",
+      header: "Yield",
+      className: "text-center",
+      render: (item) => <YieldBadge value={item.yieldFactor} />,
+    },
+    {
+      key: "note",
+      header: FORM_VI.notes,
+      className: "max-w-xs text-xs italic text-muted-foreground",
+      render: (item) => (
+        <span className="line-clamp-2 break-words">{item.note ?? "—"}</span>
+      ),
+    },
+  ];
+
   return (
     <AppPage scroll>
       <AppPageHeader
@@ -122,18 +165,16 @@ export function RecipesClient({
 
       <div className="space-y-4">
         {recipes.map((recipe) => (
-          <Card key={recipe.id} className="overflow-hidden">
-            <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                <CardTitle>{recipe.name}</CardTitle>
-                {recipe.category && (
-                  <Badge variant="success">{recipe.category}</Badge>
-                )}
-                <span className="text-sm text-muted-foreground">
-                  {recipe.items.length} nguyên liệu •{" "}
-                  {formatVND(recipe.estimatedCost)} đ/phần
-                </span>
-              </div>
+          <AppSection
+            key={recipe.id}
+            title={recipe.name}
+            badge={
+              recipe.category
+                ? { children: recipe.category, variant: "success" }
+                : undefined
+            }
+            headerHint={`${recipe.items.length} nguyên liệu · ${formatVND(recipe.estimatedCost)} đ/phần`}
+            action={
               <Button
                 type="button"
                 variant="outline"
@@ -143,47 +184,16 @@ export function RecipesClient({
                 <IconPencil className="size-4" />
                 Sửa định mức
               </Button>
-            </CardHeader>
-            <CardContent flush>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{PRODUCT_VI.rawIngredient}</TableHead>
-                    <TableHead>{FORM_VI.quantity}</TableHead>
-                    <TableHead>{FORM_VI.unit}</TableHead>
-                    <TableHead className="text-center">Yield</TableHead>
-                    <TableHead>{FORM_VI.notes}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recipe.items.map((item) => (
-                    <TableRow key={item.ingredientId}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="size-2 rounded-full bg-primary/40" />
-                          <span className="font-semibold">
-                            {item.ingredientName}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono">{item.qty}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {item.unit}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <YieldBadge value={item.yieldFactor} />
-                      </TableCell>
-                      <TableCell className="max-w-xs text-xs italic text-muted-foreground">
-                        <span className="line-clamp-2 break-words">
-                          {item.note ?? "—"}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+            }
+            contentFlush
+          >
+            <DataTable
+              columns={recipeItemColumns}
+              data={recipe.items}
+              getRowKey={(item) => item.ingredientId}
+              mobileCardRender={(item) => <RecipeItemCard item={item} />}
+            />
+          </AppSection>
         ))}
       </div>
 
@@ -198,5 +208,21 @@ export function RecipesClient({
         onSaved={handleSaved}
       />
     </AppPage>
+  );
+}
+
+function RecipeItemCard({ item }: { item: RecipeItem }) {
+  return (
+    <Item variant="outline">
+      <ItemHeader>
+        <ItemTitle>{item.ingredientName}</ItemTitle>
+        <YieldBadge value={item.yieldFactor} />
+      </ItemHeader>
+      <ItemContent>
+        <ItemDescription>
+          {item.qty} {item.unit} · {item.note ?? "Không ghi chú"}
+        </ItemDescription>
+      </ItemContent>
+    </Item>
   );
 }

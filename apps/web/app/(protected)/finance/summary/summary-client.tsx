@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: finance summary surface keeps operational report copy inline */
+
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,17 +12,19 @@ import {
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { StatusBadge } from "@/components/status-badge";
 import { AppSection } from "@/components/surface";
-import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { BusinessDateField, SelectField } from "@/components/form";
 import {
   formatVNDateTime,
@@ -74,6 +78,50 @@ export function SummaryClient({ initialBranches, initialQueue }: Props) {
   const filterOptions = [
     { value: "all", label: "Tất cả chi nhánh" },
     ...branchOptions,
+  ];
+
+  const queueColumns: DataTableColumn<SummaryQueueRow>[] = [
+    {
+      key: "date",
+      header: "Ngày",
+      className: "font-mono text-sm",
+      render: (row) => row.summary_date,
+    },
+    {
+      key: "branch",
+      header: "Chi nhánh",
+      render: (row) =>
+        branchById.get(String(row.branch_id)) ?? `CN #${row.branch_id}`,
+    },
+    {
+      key: "status",
+      header: "Trạng thái",
+      render: (row) => <StatusBadge domain="summary-run" value={row.status} />,
+    },
+    {
+      key: "trigger",
+      header: "Trigger",
+      className: "text-sm text-muted-foreground",
+      render: (row) => TRIGGER_LABEL[row.trigger_source],
+    },
+    {
+      key: "invoice",
+      header: "Mã HĐ",
+      className: "text-right font-mono text-sm",
+      render: (row) => row.tax_invoice_id ?? "—",
+    },
+    {
+      key: "error",
+      header: "Lỗi gần nhất",
+      className: "max-w-xs truncate text-sm text-muted-foreground",
+      render: (row) => row.last_error ?? "—",
+    },
+    {
+      key: "finished",
+      header: "Hoàn tất",
+      className: "text-sm text-muted-foreground",
+      render: (row) => formatDateTime(row.finished_at),
+    },
   ];
 
   const form = useForm<FormValues>({
@@ -191,57 +239,38 @@ export function SummaryClient({ initialBranches, initialQueue }: Props) {
           </div>
         }
         contentFlush
+        contentScroll
       >
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ngày</TableHead>
-                <TableHead>Chi nhánh</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead>Trigger</TableHead>
-                <TableHead className="text-right">Mã HĐ</TableHead>
-                <TableHead>Lỗi gần nhất</TableHead>
-                <TableHead>Hoàn tất</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {queue.length === 0 ? (
-                <TableEmptyStateRow
-                  colSpan={7}
-                  title="Chưa có lần chạy nào trong 30 ngày qua"
-                />
-              ) : (
-                queue.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-mono text-sm">
-                      {row.summary_date}
-                    </TableCell>
-                    <TableCell>
-                      {branchById.get(String(row.branch_id)) ??
-                        `CN #${row.branch_id}`}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge domain="summary-run" value={row.status} />
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {TRIGGER_LABEL[row.trigger_source]}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {row.tax_invoice_id ?? "—"}
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate text-sm text-muted-foreground">
-                      {row.last_error ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDateTime(row.finished_at)}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable
+          columns={queueColumns}
+          data={queue}
+          getRowKey={(row) => row.id}
+          emptyTitle="Chưa có lần chạy nào trong 30 ngày qua"
+          mobileCardRender={(row) => (
+            <Item variant="outline">
+              <ItemContent>
+                <ItemTitle>
+                  {branchById.get(String(row.branch_id)) ??
+                    `CN #${row.branch_id}`}
+                </ItemTitle>
+                <ItemDescription>
+                  {row.summary_date} · {TRIGGER_LABEL[row.trigger_source]}
+                </ItemDescription>
+              </ItemContent>
+              <ItemFooter>
+                <StatusBadge domain="summary-run" value={row.status} />
+                <span className="font-mono text-xs text-muted-foreground">
+                  {row.tax_invoice_id ?? "—"}
+                </span>
+              </ItemFooter>
+              <ItemFooter>
+                <span className="truncate text-xs text-muted-foreground">
+                  {row.last_error ?? formatDateTime(row.finished_at)}
+                </span>
+              </ItemFooter>
+            </Item>
+          )}
+        />
       </AppSection>
     </>
   );

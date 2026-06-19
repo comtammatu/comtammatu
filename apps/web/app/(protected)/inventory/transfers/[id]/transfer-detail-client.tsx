@@ -13,11 +13,6 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
-import {
-  TableCell,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import {
   DataTable,
   type DataTableColumn,
@@ -363,9 +358,8 @@ export function TransferDetailClient({
             ]}
           >
             <TabsContent value="overview" className="mt-4">
-              <div className="space-y-6">
-                {/* Timeline */}
-                <AppSection contentClassName="py-6">
+              <div className="flex flex-col gap-4">
+                <AppSection contentClassName="py-4">
                   <div className="flex justify-center">
                     <TimelineStepper steps={transferSteps} />
                   </div>
@@ -399,37 +393,31 @@ export function TransferDetailClient({
                       icon: null,
                     },
                   ].map((info) => (
-                    <Card key={info.label}>
-                      <CardContent>
-                        <Badge variant="secondary">{info.label}</Badge>
-                        <p className="mt-3 flex items-center gap-1 text-lg font-semibold">
-                          {info.icon} {info.value}
-                        </p>
-                      </CardContent>
-                    </Card>
+                    <div key={info.label} className="rounded-md border bg-card p-4">
+                      <Badge variant="secondary">{info.label}</Badge>
+                      <p className="mt-3 flex items-center gap-1 text-lg font-semibold">
+                        {info.icon} {info.value}
+                      </p>
+                    </div>
                   ))}
                 </div>
 
-                {/* Note */}
                 {transfer.note && (
-                  <Card>
-                    <CardContent className="pt-6">
-                      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        {copy.transportNote}
-                      </p>
-                      <p className="mt-1 line-clamp-3 break-words text-sm italic">
-                        &ldquo;{transfer.note}&rdquo;
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <div className="rounded-md border bg-card p-4">
+                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {copy.transportNote}
+                    </p>
+                    <p className="mt-1 line-clamp-3 break-words text-sm italic">
+                      &ldquo;{transfer.note}&rdquo;
+                    </p>
+                  </div>
                 )}
               </div>
             </TabsContent>
 
             <TabsContent value="lines" className="mt-4">
-              <div className="space-y-6">
+              <div className="flex flex-col gap-4">
                 <div className="grid gap-6 lg:grid-cols-3">
-                  {/* Items table */}
                   <div className="lg:col-span-2">
                     <AppSection
                       className="overflow-hidden"
@@ -475,79 +463,97 @@ export function TransferDetailClient({
                             </div>
                           </div>
                         }
-                        desktopFooter={
-                          <>
-                            <TableRow className="border-border">
-                              <TableCell
-                                colSpan={4}
-                                className="text-right text-sm text-muted-foreground"
-                              >
-                                {copy.ingredientValue}
-                              </TableCell>
-                              <TableCell className="text-right font-mono tabular-nums">
-                                {messages.inventory.common.currencyCompact(
-                                  formatVND(transfer.subtotal),
-                                )}
-                              </TableCell>
-                              <TableCell />
-                            </TableRow>
-                            <TableRow className="border-border">
-                              <TableCell
-                                colSpan={4}
-                                className="text-right text-sm text-muted-foreground"
-                              >
-                                {copy.shippingFee}
-                              </TableCell>
-                              <TableCell className="text-right font-mono tabular-nums">
-                                {messages.inventory.common.currencyCompact(
-                                  formatVND(transfer.shipping),
-                                )}
-                              </TableCell>
-                              <TableCell />
-                            </TableRow>
-                            <TableRow className="border-border">
-                              <TableCell
-                                colSpan={4}
-                                className="text-right text-sm font-bold"
-                              >
-                                {copy.totalValue}
-                              </TableCell>
-                              <TableCell className="text-right font-mono tabular-nums font-bold text-primary">
-                                {messages.inventory.common.currencyCompact(
-                                  formatVND(transfer.total),
-                                )}
-                              </TableCell>
-                              <TableCell />
-                            </TableRow>
-                          </>
-                        }
+                        desktopFooterRows={[
+                          {
+                            key: "ingredient-value",
+                            className: "border-border",
+                            cells: [
+                              {
+                                key: "label",
+                                colSpan: 4,
+                                className:
+                                  "text-right text-sm text-muted-foreground",
+                                content: copy.ingredientValue,
+                              },
+                              {
+                                key: "value",
+                                className:
+                                  "text-right font-mono tabular-nums",
+                                content:
+                                  messages.inventory.common.currencyCompact(
+                                    formatVND(transfer.subtotal),
+                                  ),
+                              },
+                              { key: "actions", content: null },
+                            ],
+                          },
+                          {
+                            key: "shipping-fee",
+                            className: "border-border",
+                            cells: [
+                              {
+                                key: "label",
+                                colSpan: 4,
+                                className:
+                                  "text-right text-sm text-muted-foreground",
+                                content: copy.shippingFee,
+                              },
+                              {
+                                key: "value",
+                                className:
+                                  "text-right font-mono tabular-nums",
+                                content:
+                                  messages.inventory.common.currencyCompact(
+                                    formatVND(transfer.shipping),
+                                  ),
+                              },
+                              { key: "actions", content: null },
+                            ],
+                          },
+                          {
+                            key: "total-value",
+                            className: "border-border",
+                            cells: [
+                              {
+                                key: "label",
+                                colSpan: 4,
+                                className: "text-right text-sm font-bold",
+                                content: copy.totalValue,
+                              },
+                              {
+                                key: "value",
+                                className:
+                                  "text-right font-mono font-bold tabular-nums text-primary",
+                                content:
+                                  messages.inventory.common.currencyCompact(
+                                    formatVND(transfer.total),
+                                  ),
+                              },
+                              { key: "actions", content: null },
+                            ],
+                          },
+                        ]}
                       />
                     </AppSection>
                   </div>
 
-                  {/* Sidebar value card */}
-                  <Card className="h-fit border-primary/20 bg-primary/5">
-                    <CardContent className="space-y-3 pt-6">
-                      <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                        {copy.totalTransferValue}
-                      </p>
+                  <AppSection tone="info" title={copy.totalTransferValue}>
+                    <div className="flex flex-col gap-3">
                       <p className="font-mono text-xl font-semibold tabular-nums text-primary">
                         {messages.inventory.common.currencyCompact(
                           formatVND(transfer.total),
                         )}
                       </p>
-                      <Card>
-                        <CardContent className="space-y-1 pt-6">
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                            {copy.totalItems}
-                          </p>
-                          <p className="text-lg font-bold tabular-nums">
-                            {String(transfer.items.length).padStart(2, "0")}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </CardContent>
-                  </Card>
+                      <div className="rounded-md border bg-background/70 p-3">
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                          {copy.totalItems}
+                        </p>
+                        <p className="text-lg font-bold tabular-nums">
+                          {String(transfer.items.length).padStart(2, "0")}
+                        </p>
+                      </div>
+                    </div>
+                  </AppSection>
                 </div>
 
                 {isReceiveMode && hasShort ? (
@@ -613,7 +619,7 @@ export function TransferDetailClient({
                           actionConfig?.action === "receive" &&
                           !noteOk)
                       }
-                      className="rounded-full px-10 font-bold shadow-lg"
+                      className="rounded-full px-10 font-bold"
                       onClick={handlePrimaryAction}
                     >
                       <IconCircleCheck className="size-5" />
@@ -647,7 +653,7 @@ function TransferLineMobileCard({
 }) {
   const copy = messages.inventory.transfer;
   return (
-    <Card className="bg-muted/30">
+    <div className="rounded-md border bg-muted/30 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-bold">{item.name}</p>
@@ -690,6 +696,6 @@ function TransferLineMobileCard({
           <p className="font-semibold text-primary">{formatVND(item.total)}</p>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

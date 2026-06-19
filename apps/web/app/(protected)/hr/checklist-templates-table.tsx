@@ -27,15 +27,18 @@ import {
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui/lib/utils";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import type { BranchOption } from "./page";
 import {
   archiveChecklistTemplate,
@@ -47,9 +50,12 @@ import {
   CHECKLIST_PHASES,
   CHECKLIST_SCOPE_LABELS,
   CHECKLIST_SCOPES,
+  CHECKLIST_TASK_KIND_LABELS,
+  CHECKLIST_TASK_KINDS,
   checklistTemplateLabel,
   type ChecklistPhase,
   type ChecklistScope,
+  type ChecklistTaskKind,
   type ChecklistTemplateItem,
   type ChecklistTemplateRow,
 } from "./checklist-types";
@@ -71,6 +77,7 @@ interface DraftState {
 
 const EMPTY_ITEM: DraftItem = {
   title: "",
+  taskKind: "standard",
   phase: "start_of_shift",
   scope: "every_shift",
   doneDefinition: "",
@@ -87,13 +94,19 @@ function newDraft(branchId: number | null): DraftState {
   };
 }
 
-function toDraft(template: ChecklistTemplateRow, cloneToBranchId?: number): DraftState {
+function toDraft(
+  template: ChecklistTemplateRow,
+  cloneToBranchId?: number,
+): DraftState {
   return {
     templateId: cloneToBranchId == null ? template.id : null,
-    name: cloneToBranchId == null ? template.name : `${template.name} - Chi nhánh`,
+    name:
+      cloneToBranchId == null ? template.name : `${template.name} - Chi nhánh`,
     branchId: cloneToBranchId ?? template.branchId,
     items: template.items.map((item, index) => ({
+      id: item.id,
       title: item.title,
+      taskKind: item.taskKind,
       phase: item.phase,
       scope: item.scope,
       doneDefinition: item.doneDefinition,
@@ -193,6 +206,7 @@ export function ChecklistTemplatesTable({
     const items = draft.items
       .map((item) => ({
         title: item.title.trim(),
+        taskKind: item.taskKind,
         phase: item.phase,
         scope: item.scope,
         doneDefinition: item.doneDefinition.trim(),
@@ -229,7 +243,9 @@ export function ChecklistTemplatesTable({
 
   function handleArchive(template: ChecklistTemplateRow) {
     startTransition(async () => {
-      const result = await archiveChecklistTemplate({ templateId: template.id });
+      const result = await archiveChecklistTemplate({
+        templateId: template.id,
+      });
       if (!result.success) {
         toast.error(result.error ?? "Không thể ngưng dùng template.");
         return;
@@ -240,6 +256,130 @@ export function ChecklistTemplatesTable({
       );
     });
   }
+
+  function getPhaseCounts(template: ChecklistTemplateRow) {
+    return CHECKLIST_PHASES.map((phase) => ({
+      phase,
+      count: template.items.filter((item) => item.phase === phase).length,
+    }));
+  }
+
+  function hasConsumptionReport(template: ChecklistTemplateRow) {
+    return template.items.some((item) => item.taskKind === "consumption_report");
+  }
+
+  function renderScopeBadge(template: ChecklistTemplateRow) {
+    return (
+      <Badge variant={template.branchId == null ? "default" : "outline"}>
+        {template.branchId == null
+          ? "Global"
+          : (template.branchName ?? "Chi nhánh")}
+      </Badge>
+    );
+  }
+
+  function renderPhaseBadges(template: ChecklistTemplateRow) {
+    return (
+      <div className="flex flex-wrap gap-1">
+        {getPhaseCounts(template).map(({ phase, count }) => (
+          <Badge
+            key={phase}
+            variant="secondary"
+            className={cn(count === 0 && "opacity-50")}
+          >
+            {CHECKLIST_PHASE_LABELS[phase]} {count}
+          </Badge>
+        ))}
+      </div>
+    );
+  }
+
+  function renderTemplateActions(template: ChecklistTemplateRow) {
+    return (
+      <div className="flex justify-end gap-1">
+        {template.branchId == null && branches.length > 0 ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            disabled={isPending}
+            onClick={() => openClone(template)}
+            aria-label="Clone template"
+          >
+            <Copy />
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          disabled={
+            isPending ||
+            (template.branchId == null && !canManageGlobalChecklist)
+          }
+          onClick={() => openEdit(template)}
+          aria-label="Sửa template"
+        >
+          <Pencil />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          disabled={
+            isPending ||
+            (template.branchId == null && !canManageGlobalChecklist)
+          }
+          onClick={() => handleArchive(template)}
+          aria-label="Ngưng dùng template"
+        >
+          <Trash2 />
+        </Button>
+      </div>
+    );
+  }
+
+  const columns: DataTableColumn<ChecklistTemplateRow>[] = [
+    {
+      key: "name",
+      header: "Tên template",
+      render: (template) => (
+        <span className="font-medium">{template.name}</span>
+      ),
+    },
+    {
+      key: "scope",
+      header: "Phạm vi",
+      render: renderScopeBadge,
+    },
+    {
+      key: "items",
+      header: "Việc",
+      className: "text-center tabular-nums",
+      render: (template) => template.itemCount,
+    },
+    {
+      key: "type",
+      header: "Loại",
+      render: (template) =>
+        hasConsumptionReport(template) ? (
+          <Badge variant="warning">Có tiêu hao bếp</Badge>
+        ) : (
+          <Badge variant="secondary">Việc thường</Badge>
+        ),
+    },
+    {
+      key: "phase",
+      header: "Phase",
+      render: renderPhaseBadges,
+    },
+    {
+      key: "actions",
+      header: "Thao tác",
+      className: "w-36 text-right",
+      render: renderTemplateActions,
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -254,7 +394,7 @@ export function ChecklistTemplatesTable({
               variant="outline"
               onClick={() => openCreate(null)}
             >
-              <Plus className="mr-2 size-4" />
+              <Plus data-icon="inline-start" />
               Global
             </Button>
           ) : null}
@@ -263,128 +403,54 @@ export function ChecklistTemplatesTable({
             disabled={firstBranchId == null}
             onClick={() => openCreate(firstBranchId)}
           >
-            <Plus className="mr-2 size-4" />
+            <Plus data-icon="inline-start" />
             Chi nhánh
           </Button>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Tên template</TableHead>
-              <TableHead>Phạm vi</TableHead>
-              <TableHead className="text-center">Việc</TableHead>
-              <TableHead>Phase</TableHead>
-              <TableHead className="w-36 text-right">Thao tác</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedTemplates.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  Chưa có checklist template.
-                </TableCell>
-              </TableRow>
-            ) : (
-              sortedTemplates.map((template) => {
-                const phaseCounts = CHECKLIST_PHASES.map((phase) => ({
-                  phase,
-                  count: template.items.filter((item) => item.phase === phase)
-                    .length,
-                }));
+      <DataTable
+        columns={columns}
+        data={sortedTemplates}
+        getRowKey={(template) => template.id}
+        emptyTitle="Chưa có checklist template."
+        rowClassName={() => (isPending ? "opacity-60" : undefined)}
+        mobileCardRender={(template) => (
+          <Item variant="outline" className={isPending ? "opacity-60" : ""}>
+            <ItemContent>
+              <ItemTitle className="line-clamp-none text-sm font-semibold">
+                {template.name}
+              </ItemTitle>
+              <ItemDescription className="line-clamp-none text-sm leading-6">
+                {template.itemCount} việc
+              </ItemDescription>
+              <div className="mt-2 flex flex-col gap-2">
+                {renderScopeBadge(template)}
+                {hasConsumptionReport(template) ? (
+                  <Badge variant="warning">Có tiêu hao bếp</Badge>
+                ) : null}
+                {renderPhaseBadges(template)}
+              </div>
+            </ItemContent>
+            <ItemActions>{renderTemplateActions(template)}</ItemActions>
+          </Item>
+        )}
+      />
 
-                return (
-                  <TableRow key={template.id}>
-                    <TableCell className="font-medium">{template.name}</TableCell>
-                    <TableCell>
-                      <Badge variant={template.branchId == null ? "default" : "outline"}>
-                        {template.branchId == null
-                          ? "Global"
-                          : (template.branchName ?? "Chi nhánh")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center tabular-nums">
-                      {template.itemCount}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {phaseCounts.map(({ phase, count }) => (
-                          <Badge
-                            key={phase}
-                            variant="secondary"
-                            className={cn(count === 0 && "opacity-50")}
-                          >
-                            {CHECKLIST_PHASE_LABELS[phase]} {count}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        {template.branchId == null && branches.length > 0 ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            disabled={isPending}
-                            onClick={() => openClone(template)}
-                            aria-label="Clone template"
-                          >
-                            <Copy className="size-4" />
-                          </Button>
-                        ) : null}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          disabled={
-                            isPending ||
-                            (template.branchId == null &&
-                              !canManageGlobalChecklist)
-                          }
-                          onClick={() => openEdit(template)}
-                          aria-label="Sửa template"
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          disabled={
-                            isPending ||
-                            (template.branchId == null &&
-                              !canManageGlobalChecklist)
-                          }
-                          onClick={() => handleArchive(template)}
-                          aria-label="Ngưng dùng template"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <Dialog open={draft !== null} onOpenChange={(open) => !open && setDraft(null)}>
+      <Dialog
+        open={draft !== null}
+        onOpenChange={(open) => !open && setDraft(null)}
+      >
         <DialogContent className="max-h-dvh-90 overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>
-              {draft?.templateId ? "Sửa checklist template" : "Tạo checklist template"}
+              {draft?.templateId
+                ? "Sửa checklist template"
+                : "Tạo checklist template"}
             </DialogTitle>
             <DialogDescription>
-              Template mới chỉ áp dụng cho lần chấm công sau; checklist đã snapshot
-              không đổi.
+              Template mới chỉ áp dụng cho lần chấm công sau; checklist đã
+              snapshot không đổi.
             </DialogDescription>
           </DialogHeader>
 
@@ -422,7 +488,10 @@ export function ChecklistTemplatesTable({
                         <SelectItem value="global">Global</SelectItem>
                       ) : null}
                       {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id.toString()}>
+                        <SelectItem
+                          key={branch.id}
+                          value={branch.id.toString()}
+                        >
                           {branch.name}
                         </SelectItem>
                       ))}
@@ -434,8 +503,13 @@ export function ChecklistTemplatesTable({
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <Label>Danh sách việc</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                    <Plus className="mr-2 size-4" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addItem}
+                  >
+                    <Plus data-icon="inline-start" />
                     Thêm việc
                   </Button>
                 </div>
@@ -443,7 +517,7 @@ export function ChecklistTemplatesTable({
                 <div className="space-y-3">
                   {draft.items.map((item, index) => (
                     <div key={index} className="rounded-md border p-3">
-                      <div className="grid gap-3 lg:grid-cols-[1fr_150px_150px_120px_auto]">
+                      <div className="grid gap-3 lg:grid-cols-[1fr_170px_150px_150px_120px_auto]">
                         <div className="space-y-2">
                           <Label htmlFor={`checklist-item-${index}`}>
                             Việc
@@ -456,6 +530,37 @@ export function ChecklistTemplatesTable({
                             }
                             placeholder="Tên việc cần làm"
                           />
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <Label>Loại việc</Label>
+                          <Select
+                            value={item.taskKind}
+                            onValueChange={(value) => {
+                              const taskKind = value as ChecklistTaskKind;
+                              updateItem(index, {
+                                taskKind,
+                                title:
+                                  taskKind === "consumption_report" &&
+                                  item.title.trim().length === 0
+                                    ? CHECKLIST_TASK_KIND_LABELS[
+                                        "consumption_report"
+                                      ]
+                                    : item.title,
+                              });
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {CHECKLIST_TASK_KINDS.map((taskKind) => (
+                                <SelectItem key={taskKind} value={taskKind}>
+                                  {CHECKLIST_TASK_KIND_LABELS[taskKind]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
 
                         <div className="space-y-2">
@@ -524,7 +629,7 @@ export function ChecklistTemplatesTable({
                           onClick={() => removeItem(index)}
                           aria-label="Xóa việc"
                         >
-                          <Trash2 className="size-4" />
+                          <Trash2 />
                         </Button>
                       </div>
 
@@ -572,7 +677,7 @@ export function ChecklistTemplatesTable({
               Hủy
             </Button>
             <Button type="button" disabled={isPending} onClick={handleSave}>
-              {isPending ? <Spinner className="mr-2 size-4" /> : null}
+              {isPending ? <Spinner data-icon="inline-start" /> : null}
               Lưu template
             </Button>
           </DialogFooter>

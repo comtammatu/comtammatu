@@ -1,26 +1,17 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useState,
-  useTransition,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { RefreshCw as IconRefresh } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import type { InventoryValueVisibility } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemContent,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import {
   Tabs,
   TabsContent,
@@ -29,26 +20,32 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import {
   fetchInventoryValueByBranch,
   fetchInventoryValueSystem,
 } from "./inventory-value-actions";
 import { messages } from "@lib/messages";
-import { AppPageHeader } from "@/components/surface";
+import { AppEmptyState, AppPageHeader, AppSection } from "@/components/surface";
 
 import { BRANCH_VI } from "@comtammatu/shared/messages";
 interface InventoryValuePanelProps {
   visibility: InventoryValueVisibility;
 }
 
+type BranchValueRow = {
+  branchId: number;
+  branchName: string;
+  totalValue: number;
+};
+
 export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
   const [systemTotal, setSystemTotal] = useState<number | null>(null);
-  const [branchRows, setBranchRows] = useState<
-    { branchId: number; branchName: string; totalValue: number }[] | null
-  >(null);
+  const [branchRows, setBranchRows] = useState<BranchValueRow[] | null>(null);
   const [isPending, startTransition] = useTransition();
-  const isMobile = useIsMobile();
 
   const loadSystem = useCallback(() => {
     startTransition(async () => {
@@ -98,11 +95,24 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
   ).length;
   const branchTotal =
     branchRows?.reduce((sum, row) => sum + Number(row.totalValue), 0) ?? 0;
-  const SummaryBox = ({ children }: { children: ReactNode }) => (
-    <Card className="bg-muted/30">
-      <CardContent className="px-4 py-4">{children}</CardContent>
-    </Card>
-  );
+
+  const branchColumns: DataTableColumn<BranchValueRow>[] = [
+    {
+      key: "branch",
+      header: BRANCH_VI.long,
+      render: (row) => <span className="font-medium">{row.branchName}</span>,
+    },
+    {
+      key: "value",
+      header: messages.inventory.value.inventoryValue,
+      className: "text-right",
+      render: (row) => (
+        <span className="font-mono tabular-nums">
+          {formatVND(row.totalValue)}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <Tabs defaultValue={defaultTab} className="space-y-4">
@@ -144,35 +154,18 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
 
       {visibility.system && (
         <TabsContent value="system" className="mt-3">
-          <Card>
-            <CardContent className="space-y-4 pt-6">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Card className="bg-muted/30">
-                  <CardContent className="p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                      {messages.inventory.value.currentValue}
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">
-                      {systemTotal == null ? "—" : formatVND(systemTotal)}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/30">
-                  <CardContent className="p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                      {messages.inventory.value.viewScope}
-                    </p>
-                    <p className="mt-2 text-base font-semibold">
-                      {messages.inventory.value.systemScope}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {messages.inventory.value.systemDescription}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SummaryBlock
+              label={messages.inventory.value.currentValue}
+              value={systemTotal == null ? "—" : formatVND(systemTotal)}
+            />
+            <SummaryBlock
+              label={messages.inventory.value.viewScope}
+              value={messages.inventory.value.systemScope}
+              hint={messages.inventory.value.systemDescription}
+              valueClassName="text-base"
+            />
+          </div>
         </TabsContent>
       )}
 
@@ -183,83 +176,74 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               {APP_COPY_VI.loading}
             </p>
           ) : branchRows.length === 0 ? (
-            <Card>
-              <CardContent className="py-10 text-center">
-                <p className="text-base font-semibold">
-                  {APP_COPY_VI.noScopedBranches}
-                </p>
-              </CardContent>
-            </Card>
-          ) : isMobile ? (
-            <Card className="overflow-hidden">
-              <CardContent className="space-y-4 pt-6">
-                <SummaryBox>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                    {messages.inventory.value.branchTotal}
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums">
-                    {formatVND(branchTotal)}
-                  </p>
-                </SummaryBox>
-                <div className="-m-4 divide-y md:-m-5">
-                  {branchRows.map((row) => (
-                    <div
-                      key={row.branchId}
-                      className="flex items-center justify-between gap-3 px-4 py-3 md:px-5"
-                    >
-                      <span className="truncate text-sm font-medium">
-                        {row.branchName}
-                      </span>
-                      <span className="shrink-0 text-sm font-mono tabular-nums">
-                        {formatVND(row.totalValue)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <AppEmptyState compact title={APP_COPY_VI.noScopedBranches} />
           ) : (
-            <Card className="overflow-hidden">
-              <CardContent className="space-y-4 pt-6">
-                <SummaryBox>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                    {messages.inventory.value.branchTotal}
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums">
-                    {formatVND(branchTotal)}
-                  </p>
-                </SummaryBox>
-                <div className="-m-4 md:-m-5">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                          {BRANCH_VI.long}
-                        </TableHead>
-                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
-                          {messages.inventory.value.inventoryValue}
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {branchRows.map((row) => (
-                        <TableRow key={row.branchId}>
-                          <TableCell className="font-medium">
-                            {row.branchName}
-                          </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums">
-                            {formatVND(row.totalValue)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <AppSection
+              title={messages.inventory.value.tabs.branch}
+              badge={{
+                children: `${branchRows.length} chi nhánh`,
+                variant: "secondary",
+              }}
+              contentFlush
+              contentClassName="gap-0"
+            >
+              <div className="border-b p-4 md:p-5">
+                <SummaryBlock
+                  label={messages.inventory.value.branchTotal}
+                  value={formatVND(branchTotal)}
+                />
+              </div>
+              <DataTable
+                columns={branchColumns}
+                data={branchRows}
+                getRowKey={(row) => row.branchId}
+                mobileCardRender={(row) => <BranchValueItem row={row} />}
+              />
+            </AppSection>
           )}
         </TabsContent>
       )}
     </Tabs>
+  );
+}
+
+function SummaryBlock({
+  label,
+  value,
+  hint,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="rounded-md border bg-muted/30 p-4">
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+        {label}
+      </p>
+      <p
+        className={`mt-2 font-semibold tracking-tight tabular-nums ${valueClassName ?? "text-2xl"}`}
+      >
+        {value}
+      </p>
+      {hint ? <p className="mt-1 text-sm text-muted-foreground">{hint}</p> : null}
+    </div>
+  );
+}
+
+function BranchValueItem({ row }: { row: BranchValueRow }) {
+  return (
+    <Item variant="outline">
+      <ItemHeader>
+        <ItemTitle>{row.branchName}</ItemTitle>
+      </ItemHeader>
+      <ItemContent>
+        <span className="font-mono text-sm font-semibold tabular-nums">
+          {formatVND(row.totalValue)}
+        </span>
+      </ItemContent>
+    </Item>
   );
 }

@@ -141,7 +141,7 @@ Change ownership:
 
 ## Routing (path-based, single domain)
 
-> Decision: D009 — path-based, không sub-domain. Sub-domain là Post-v1.0.
+> Decision: D009 — path-based, không sub-domain. Sub-domain không nằm trong backlog hiện tại.
 
 Top-level surfaces (see `module-acl.ts` for canonical role lists):
 

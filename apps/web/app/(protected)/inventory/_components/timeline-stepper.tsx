@@ -19,7 +19,7 @@ export function TimelineStepper({ steps }: { steps: TimelineStep[] }) {
           <div className="flex flex-col items-center">
             <div
               className={cn(
-                "flex size-10 items-center justify-center rounded-full text-xs font-bold shadow-sm transition-colors",
+                "flex size-10 items-center justify-center rounded-full text-xs font-bold ring-1 ring-border/60 transition-colors",
                 step.completed
                   ? "bg-success text-white"
                   : step.active

@@ -1,20 +1,27 @@
 # Finance Module
 
-## Verdict
+## Product Boundary
 
-Finance full is **NO-GO for pilot**.
+Enterprise accounting is outside the current Finance product boundary.
 
-Finance Basic is **CONDITIONAL GO** only when the first screen answers four owner-level questions:
+Finance Basic is the default Finance experience when the first screen answers
+four owner-level questions without ambiguous revenue labels:
 
-- **Doanh thu**: kỳ này đã thu bao nhiêu?
+- **Tiền đã thu / doanh thu ròng trước VAT**: kỳ này đã thu bao nhiêu tiền, và
+  doanh thu thuần dùng cho margin là bao nhiêu?
 - **Giá trị tồn kho**: hiện đang giữ bao nhiêu tiền trong kho?
 - **Chi vận hành**: kỳ này đã ghi nhận bao nhiêu chi phí vận hành?
 - **Lợi nhuận gộp**: doanh thu sau giảm giá/trước VAT trừ giá vốn món còn bao nhiêu?
 
 Do not expand Finance by default into a full enterprise accounting product.
-The current business model is HKD, so the pilot surface must serve restaurant
+The current business model is HKD, so the Finance surface must serve restaurant
 operating finance first: daily money, stock value, food cost, expenses, HĐĐT,
 and accountant export.
+
+Finance metrics, cards, titles, and overview summaries must also follow
+`docs/ref/operational-data-contract.md`. Do not add a new finance KPI or reuse a
+generic label such as "doanh thu" or "lãi gộp" unless the metric contract states
+the exact source, formula, exclusions, confidence, and drilldown.
 
 ## Scope Boundary
 
@@ -37,12 +44,16 @@ level operating reports.
 
 ### Finance Basic
 
-Finance Basic is the pilot-facing finance surface. It owns four primary metrics:
+Finance Basic is the current finance surface. It owns four primary metrics:
 
 1. **Revenue**
    - Completed paid orders by branch/date.
    - Revenue must be bucketed by completed payment time in Vietnam local date.
-   - The owner-facing number may show total collected, with before-VAT revenue as supporting context.
+   - `Tiền đã thu` is money collected from completed payments.
+   - `Doanh thu ròng trước VAT` / `doanh thu thuần` is net sales after
+     discounts/refunds and before VAT; this is the margin denominator.
+   - Never ask the owner to choose the meaning of `doanh thu ròng`; adapt legacy
+     source fields into either `total_collected` or `net_sales_before_vat`.
    - Top món dùng đúng `resolved.start→end` như mọi KPI khác; side items trong `order_items.sides` được đếm thành món riêng và doanh thu side bị trừ khỏi dòng món chính để không double-count (migrations `20260609151615` + `20260609161402`, đã apply prod).
 
 2. **Inventory value**
@@ -68,42 +79,33 @@ Supporting workflows remain available but are not the first screen:
 - Supplier payable review.
 - Accountant export.
 
-### Accounting Advanced — retired (D020)
+### Accounting Advanced Boundary (D020)
 
-The enterprise double-entry GL (TT 200 / VAS) was retired on 2026-06-14 (**D020**)
-because Má Tư operates as a Hộ kinh doanh on single-entry bookkeeping (TT 152/2025).
-Dropped from prod: `chart_of_accounts`, `journal_entries`, `journal_entry_lines`,
-`posting_rules`, `fiscal_periods`, `vas_report_lines` plus the GL functions/triggers
-and everything built on them (B01/B02/B03-DN statements, VAS report-line config,
-payroll GL posting, subledger-to-GL reconciliation). The GL history is preserved under
-`supabase/migrations/_archive/` for a possible future conversion-to-company path.
+Má Tư operates as a Hộ kinh doanh on single-entry bookkeeping (TT 152/2025).
+Enterprise double-entry accounting (TT 200 / VAS) is outside the current Finance scope.
 
-What remains is operational period close/reopen on `accounting_periods` (KEPT by design
-— `close_period_*` / `reopen_period`, surfaced at `/admin/accounting/periods`). That is
-month-close discipline, NOT general-ledger accounting. Do not reintroduce GL
-capabilities while Má Tư is HKD; reopening that scope requires a new decision.
+`accounting_periods` and the close/reopen RPCs remain database-only owner-gated
+support. No current app route exposes period close/reopen. Reopening that scope
+requires a new decision.
 
 ## Route Contract
 
 Current code has a broad `/finance/*` workspace. The target product contract is:
 
-| Route family                     | Pilot role                   | Decision                                                              |
+| Route family                     | Current role                 | Decision                                                              |
 | -------------------------------- | ---------------------------- | --------------------------------------------------------------------- |
 | `/finance`                       | Four-metric basic landing    | Should show revenue, inventory value, operating expense, gross profit |
 | `/finance/revenue`               | Revenue analytics            | Keep, but do not make it the only money-control entry                 |
 | `/admin/reports/inventory-value` | Inventory value drilldown    | Link from Finance Basic, implemented under reporting/inventory        |
-| `/finance/food-cost`             | Gross profit / margin signal | Keep as read-only analysis, not GL accounting                         |
-| `/finance/reconciliation`        | Payment/order recovery       | Keep as support workflow, not primary Finance nav                     |
+| `/finance/food-cost`             | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                  |
 | `/finance/invoices`              | HĐĐT queue                   | Keep as support workflow                                              |
 | `/finance/summary`               | HĐĐT summary trigger         | Keep admin-only by action permission                                  |
-| `/finance/audit-trail`           | Audit/admin support          | Keep accessible for owner, but not core daily workflow                |
-| `/admin/accounting/periods`      | Advanced accounting admin    | Keep restricted and direct-only; hide from default Admin nav          |
 
-The enterprise GL routes were retired in D020 after a data-retention review (history archived under `supabase/migrations/_archive/`). The remaining advanced routes — `/admin/accounting/periods` (period close/reopen) and `/finance/audit-trail` — stay direct-only, not default nav.
+There is no current `/admin/accounting/*` app surface.
 
 ## Acceptance Criteria
 
-Finance Basic is acceptable for pilot only when all of these are true:
+Finance Basic is operationally acceptable only when all of these are true:
 
 1. Owner can open one screen and see revenue, inventory value, operating expense, and gross profit.
 2. Revenue uses the paid-at Vietnam-local period contract.
@@ -112,7 +114,7 @@ Finance Basic is acceptable for pilot only when all of these are true:
 5. Gross profit is derived from revenue before VAT after discounts minus food cost.
 6. Labels avoid advanced accounting terms unless the user is inside an advanced accounting route.
 7. Support workflows for HĐĐT, payment/order desync, cash sessions, and supplier payables stay accessible but do not dominate the first screen.
-8. No pilot-critical action depends on manual journal entry creation.
+8. No current operating action depends on enterprise-accounting screens.
 
 ## Stop Rules
 
@@ -122,15 +124,14 @@ Do not add new finance KPIs unless they answer a daily operator question or a re
 
 Do not expose VAS/TT200 routes as the primary Finance experience for owner or branch operations while Má Tư is operating as HKD.
 
-Do not call the module "done" because journal, statements, or chart of accounts exist. Those prove accounting capability, not restaurant finance readiness.
+Do not call the module "done" because enterprise-accounting objects exist in old migrations or archived references. Restaurant finance readiness is operating cash, revenue, expense, HĐĐT, inventory value, and accountant export.
 
 ## Current Gaps
 
-- This file is the active Finance contract. Do not infer current scope from removed historical plans.
-- Chi vận hành has no dedicated simple expense entry workflow yet; the current read model depends on posted operating expense entries.
-- Inventory value exists under reporting/inventory, not as a native Finance route.
+- Chi vận hành is captured in `/finance/expenses`; keep it as single-entry HKD operating expense, not enterprise accounting.
+- Inventory value exists under reporting/inventory and is linked from Finance.
 - HĐĐT is active through Viettel S-invoice, but recovery and archival workflows are support workflows, not the Finance Basic landing.
-- Advanced accounting routes exist for continuity but must remain hidden from the default pilot Finance/Admin nav.
+- Period close/reopen is not an app workflow. Treat it as database-only support unless a new owner decision reopens it.
 
 ## Source Files
 

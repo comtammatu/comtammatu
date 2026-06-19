@@ -1,15 +1,26 @@
 # Current Tasks
 
-> Active work tracker for the in-place `comtammatu` production track. v1.0.0 is operating on real branches; ongoing work is hardening + feature follow-ups. **Shipped history is condensed into one-line summaries** (durable detail lives in git, `tasks/regressions.md`, `tasks/lessons.md`); this file tracks ACTIVE + deferred work. Decisions referenced as `D0xx` live in `docs/plan/decisions.md`.
-> Sắp theo **TRẠNG THÁI THẬT** (verify code + prod ledger 2026-06-16), không theo module. Nghẽn throughput lớn nhất = không có env non-prod (`.env.local` trỏ PROD) → mọi việc "needs running-app verify" đứng yên.
+> Active work tracker for the in-place `comtammatu` production track. This file
+> contains only active, blocked, or explicitly owner-gated work. Durable failure
+> rules live in `tasks/regressions.md`; decisions live in
+> `docs/plan/decisions.md`; shipped history lives in git.
+>
+> Sắp theo **trạng thái thật**. Không dùng file này cho wishlist, ý tưởng sản
+> phẩm chưa duyệt, hay tính năng mở rộng scope khi chưa có `D0xx` phê duyệt.
 
-## Module status (snapshot)
+## Current System Snapshot
 
-M0–M7 + Auth + POS PWA + Realtime hardening + Shadcn primitive migration M1–M9 — **all SHIPPED**. External integrations VietQR + Momo are wired with production credentials and active in real branches. HĐĐT is active through Viettel S-invoice only.
+Production is running in-place on this repo. External payment/invoice surfaces
+currently in scope: VietQR, MoMo, and Viettel S-invoice. Ongoing work is
+hardening, HRM/payroll completion, print-agent rollout, DB guard cleanup, and
+verification infrastructure.
 
-## Agent-doable now (không cần owner quyết)
+Current checkout branch `codex/ui-component-governance` contains in-flight UI/IA,
+HR, Finance, and branch-settings work. Treat those changes as checkout-state
+until gated, but do not reopen plan rows that are already represented by code in
+this checkout.
 
-> Việc agent làm được ngay; migration vẫn đi flow file→PR→owner apply. Gate `typecheck/lint/build` trước khi đóng.
+## Agent-Doable Now
 
 - [ ] **Payroll upsert atomic RPC** — `hr/payroll-actions.ts` ghi 2 bước rời (upsert `payroll_entries` rồi update `payroll_periods.status='calculated'`); bước 2 fail → status lệch với entries đã ghi. Gom 2 ghi vào 1 RPC transaction. T3 (payroll/money); migration file→PR→owner.
 - [ ] **WS-3 — tách `grn-detail-client` (1548 dòng)** — file KHÔNG có realtime (0 `.channel()`) → split `_hooks/` + `views/` theo concern, không cần running-app verify. (2 shell còn lại có realtime → mục "Chặn: cần env".)
@@ -20,14 +31,23 @@ M0–M7 + Auth + POS PWA + Realtime hardening + Shadcn primitive migration M1–
 - [x] **L6 Finance migration-chain ADR** — ✅ `docs/plan/adr/0006-finance-migration-chain.md`: thứ tự retire GL (D020, 5 bước) + rollback deps + ranh giới operating-finance giữ lại.
 - [x] **Print: gỡ cast + error-matcher chết** — ✅ commit `5d32dc8f` (drop `as never` → `toSupabaseJson`, bỏ matcher "migration chưa apply"). Deploy bundle vẫn = ops (xem "Chờ owner/ops").
 
-## Đang làm (mostly done — tail nhỏ)
+- [ ] **WS-3 — split `grn-detail-client`** — file không có realtime channel; tách `_hooks/` + `views/` theo concern, giữ hành vi hiện tại.
+- [~] **Residual broad grants** — migration `20260616120000_revoke_cosmetic_grants_anon_authenticated.sql` đã land; follow-up definer revoke cũng có `20260616170000_revoke_anon_execute_secdef.sql`. Không còn code task ở đây; chỉ verify prod ledger trước khi owner apply lại ở môi trường nào còn thiếu. Phần `bmidl_write` legacy `auth_role()` gộp vào `α4c`.
+- [~] **HRM Đợt 2** (D026) — tạo NV 1 bước đã land; HR create form trong checkout đã thu `base_salary`/`dependents_count`/ID/bank. Còn thật: `updateEmployee` cho hồ sơ HR, ngưng việc (`employees.end_date`), xác minh notification nghỉ phép 2 chiều + pending toàn chi nhánh, quyết định đổi nhãn `/admin/staff` từ "Nhân viên" sang "Tài khoản & phân quyền" ở module/nav, rồi chạy gate + runtime/owner verify cho flow HR.
+- [~] **HRM payroll/base_salary** (D026/D031) — checkout đã có payroll HKD đơn giản: `calculatePayroll` đọc `employees.base_salary`, lọc `is_active && base_salary > 0`, tính công theo 2 ca/ngày, PIT theo legal-version, và `/hr` có tab/link vào `/hr/payroll`. Còn thật: `standard_days` owner nhập + clamp (code hiện còn đếm T2-T6), export CSV/Excel, màn đối chiếu trước duyệt, atomic RPC cho calculate+status, và runtime verify.
+- [ ] **UI ratchet real-debt bridge** — chỉ burn down debt thật đã nêu trong `docs/spec/design-system.md` khi nó đi cùng route-family work hiện tại. Dùng `pnpm audit:ui-components -- --family <family>` để chọn file theo route-family trước khi sửa. HR lane trong checkout đã đưa direct `Table` và route-local `STATUS` maps về 0; phần còn lại ở HR là dialog/confirm flow đã có chủ. Lanes tiếp theo: Inventory high-risk panels, Finance table/card remnants, rồi POS/KDS operational adapter exceptions. Không mở cleanup PR để chase `reframe` allowlists hoặc false-positive về 0.
 
-- [~] **HRM per-shift (D027, NỀN)** — core + UI **ĐÃ LIVE**: migration `130000/160000/170000` (+Codex `120000/140000`) trên prod (owner-delegated apply 2026-06-15); scope-editor + position-default UI đã land (commit `f7438718`). **Tail = owner thao tác UI:** gán per-person checklist cho 7 chef Phước Hải + tạp vụ qua Select "Checklist mặc định" ở `/hr` (chef đa-khâu nên không có position-default; cashier/branch_manager đã có default). Owner còn quyết: cleaner Tạp vụ, cơ chế việc-tuần, phân vai tiền/tồn. Detail: `docs/worklog/hrm-redesign-2026-06-15.md`.
-- [~] **HRM Đợt 1** — code (a)-(e) xong (bỏ 3 cột lừa, `cancelCheckoutRequest`, `staleOpenShift` nudge, xóa dead `checkIn/bulkCheckIn/checkOut`, nhãn "Ngày công"). Chỉ còn behavior-verify runtime (b)(c) → **chặn vì không có env non-prod** (xem dưới). `standard_days` clamp đi cùng Đợt 3.
+## Blocked: No Non-Prod Runtime
 
-## Chặn vì không có môi trường non-prod (đòn bẩy lớn nhất)
+> `.env.local` đang trỏ PROD. Các việc dưới đây cần staging/Vercel Preview hoặc
+> Supabase branch để chạy app/daemon và test hành vi mà không chạm production.
 
-> `.env.local` trỏ PROD → agent không chạy app/daemon verify được. 1 staging/Vercel-Preview env (hoặc Supabase branch) gỡ băng cả cụm này.
+- [ ] **WS-3 realtime shells** — split `pos-desktop-shell` và `order-detail-sheet`; cả hai có realtime `.channel()` nên phải behavior-verify trên app chạy thật.
+- [ ] **E2E POS -> payment smoke** — cần CI wiring + seeded test tenant + staging/Preview. Stock assertion không thuộc chain hiện tại vì D016 vẫn tắt POS stock consumption.
+- [ ] **Real POS -> payment -> KDS/print -> HĐĐT smoke** — cần env test có provider creds; stock leg vẫn off theo D016.
+- [ ] **α4c — remove `can_access_branch`** — còn khoảng 10 ref baseline + `20260609103000` recreate; cần RLS regression-test trước khi viết migration.
+- [ ] **Unused indexes** — cần một chu kỳ `pg_stat_user_indexes` đại diện, gồm month-end, rồi mới chọn DROP.
+- [ ] **Dead-RPC drop wave 2** — cần bật `track_functions`, lấy traffic thật, chạy 6-channel scan, rồi drop theo wave nhỏ.
 
 - [ ] **WS-3 `pos-desktop-shell` (1989) + `order-detail-sheet` (1654)** — có realtime `.channel()` → split `_hooks/`+`views/` cần running-app verify. One PR per file. Goal = một concern rõ mỗi file (cohesion, KHÔNG đếm dòng).
 - [ ] **E2E POS→payment→stock** — spec đã có (`e2e/payment-cash.spec.ts` assert stock_movements + fail-soft); thiếu wire vào CI (`ci.yml` chỉ chạy `pnpm test`) + staging/Preview + seeded test tenant. Runbook `docs/runbooks/inventory/pre-release-qa.md`.
@@ -51,7 +71,7 @@ M0–M7 + Auth + POS PWA + Realtime hardening + Shadcn primitive migration M1–
 
 - [ ] **POS calls provider trước DB lock** — RPC fail = orphan gateway order. DEFER-WITH-MITIGATION (idempotency 23505 đã có).
 - [ ] **HĐĐT e-invoice post-pilot** — reconcile cron orphan `signing` (admin retry covers pilot); replace flow TT 78 (pilot cancel + manual portal); provider config encrypted `system_settings` (env-only OK single-tenant); PDF/XML persist + download UI (portal link OK). 3-way matching `supplier_invoices` ĐÃ SHIP (bỏ khỏi đây).
-- [ ] **Branch Kitchen site split Phase 2** — dual-write + cutover; seed `inventory_locations` kitchen/warehouse per branch. RPC `commit_intra_branch_transfer` + `confirm_stock_issue` (draft→confirmed) đã có; chỉ chạy khi mở chi nhánh 2.
+- [ ] **Inventory legacy backfill — Kho CN -> Bếp CN** — milestone riêng sau PR behavior-fix: dry-run/audit bằng `scripts/inventory-legacy-kitchen-backfill.mjs` cho các transfer cùng branch từ `warehouse` sang `kitchen`, tính phantom kitchen stock theo ingredient/location, sinh consumption correction để zero kitchen stock và đưa chi phí vào `sale_consumption`. Không sửa/xóa transfer history cũ; owner duyệt report trước/sau trước khi chạy prod.
 - [ ] **Refund partial-refund T3** — duyệt partial flip cả `payments.status='refunded'` → chặn refund phần còn lại (`create_refund` cần `completed`) + overstate `get_revenue_kpis.voided_amount`. `20260612120000` chỉ sửa nhãn `orders.payment_status`. (Gộp "Refunds flow gaps" cũ vào đây — không có gap riêng.)
 - [ ] **H3b** `has_permission()` dual-source flip — tripwire, chỉ flip nếu có incident silent-demote thứ 2 (`tenants.owner_user_id` ship `20260601500000`). Per ADR 0005.
 - [ ] **F-009 Stock master-detail drawer** — side-panel `stock-client.tsx` hiện chấp nhận được; chỉ làm nếu thành vấn đề UX.

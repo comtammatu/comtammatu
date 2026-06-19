@@ -7,6 +7,7 @@ import { getAuthContextWithPermission } from "../../_lib/auth";
 import { fetchQcSettingsForForm } from "../../notifications-actions";
 import { QcSettingsClient } from "./qc-settings-client";
 import { AppPage, AppPageHeader } from "@/components/surface";
+import { messages } from "@lib/messages";
 
 export default async function QcSettingsPage() {
   const ctx = await getAuthContextWithPermission(
@@ -22,24 +23,20 @@ export default async function QcSettingsPage() {
         price_variance_warn_pct: number;
         price_variance_review_pct: number;
         reject_requires_photo: boolean;
-        alert_webhook_url: string | null;
-        alert_channel: string;
       })
     : {
         qty_short_tolerance_pct: 5,
         price_variance_warn_pct: 5,
         price_variance_review_pct: 15,
         reject_requires_photo: true,
-        alert_webhook_url: null,
-        alert_channel: "generic",
       };
 
   return (
     <AppPage>
       <AppPageHeader
-        eyebrow="Cài đặt kho"
-        title="Cài đặt kiểm tra chất lượng"
-        description="Cấu hình ngưỡng dung sai và kênh thông báo QC."
+        eyebrow={messages.settings.qcSettings.eyebrow}
+        title={messages.settings.qcSettings.title}
+        description={messages.settings.qcSettings.description}
       />
       <QcSettingsClient initial={settings} />
     </AppPage>

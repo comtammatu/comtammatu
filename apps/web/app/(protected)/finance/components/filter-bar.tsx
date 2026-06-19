@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Select,
   SelectContent,
@@ -15,6 +14,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { cn } from "@comtammatu/ui/lib/utils";
+import { AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
   FINANCE_RANGES,
@@ -45,7 +45,7 @@ interface AccessibleBranch {
 interface FilterBarProps {
   params: FinanceParams;
   branches: AccessibleBranch[];
-  /** Pathname to push (e.g. "/finance/revenue", "/finance/reconciliation") */
+  /** Pathname to push (e.g. "/finance/revenue", "/finance/food-cost") */
   basePath: string;
   /** Optional route-specific preset subset. Defaults to the full Finance set. */
   ranges?: ReadonlyArray<FinanceRange>;
@@ -173,8 +173,7 @@ export function FilterBar({
   const showPayment = !hide.includes("payment");
 
   return (
-    <Card size="sm" className={className}>
-      <CardContent className="flex flex-col gap-3">
+    <AppToolbar className={cn("flex-col items-stretch", className)}>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {showBranch && (
             <div className="grid gap-1.5">
@@ -352,7 +351,6 @@ export function FilterBar({
             <span> · {PAYMENT_LABEL[params.payment]}</span>
           ) : null}
         </p>
-      </CardContent>
-    </Card>
+    </AppToolbar>
   );
 }

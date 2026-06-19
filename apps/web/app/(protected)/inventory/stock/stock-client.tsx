@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import { formatVNDate } from "@comtammatu/shared/time";
 import {
   ArrowRightToLine as IconArrowBarRight,
@@ -17,20 +18,6 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -42,30 +29,27 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
-import { Textarea } from "@comtammatu/ui/components/textarea";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
-import { AppPageHeader } from "@/components/surface";
+import {
+  FormDialog,
+  NumberField,
+  SelectField,
+  TextareaField,
+  TextField,
+} from "@/components/form";
+import { AppEmptyState, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import {
   InventoryFilterBar,
   InventoryPageContent,
 } from "../_components/inventory-page-layout";
 import { StatusBadge } from "../_components/status-badge";
-import { TableEmptyStateRow } from "../_components/table-empty-state-row";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { InteractiveCard } from "../_components/interactive-card";
-import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatDateTime, formatQty, formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
@@ -177,12 +161,57 @@ const quickIssueTypeOptions: {
   },
 ];
 
+function createQuickIssueSchema(maxQuantity: number) {
+  return z.object({
+    issueType: z.enum(["consumption", "writeoff", "other"]),
+    quantity: z
+      .string()
+      .refine((value) => Number(value) > 0, {
+        error: stockCopy.quickIssue.quantityPositive,
+      })
+      .refine((value) => Number(value) <= maxQuantity, {
+        error: stockCopy.quickIssue.quantityExceedsStock,
+      }),
+    unit: z.string().trim().min(1, { error: stockCopy.quickIssue.unitRequired }),
+    reason: z
+      .string()
+      .trim()
+      .min(1, { error: stockCopy.quickIssue.reasonRequired }),
+  });
+}
+
+type QuickIssueFormValues = z.infer<ReturnType<typeof createQuickIssueSchema>>;
+
 const STATUS_PRIORITY: Record<StockIngredient["status"], number> = {
   out: 0,
   low: 1,
   over: 2,
   normal: 3,
 };
+
+const STOCK_COMPACT_QUERY = "(max-width: 1023px)";
+
+function subscribeStockCompactLayout(callback: () => void) {
+  const media = window.matchMedia(STOCK_COMPACT_QUERY);
+  media.addEventListener("change", callback);
+  return () => media.removeEventListener("change", callback);
+}
+
+function getStockCompactLayoutSnapshot() {
+  return window.matchMedia(STOCK_COMPACT_QUERY).matches;
+}
+
+function getStockCompactLayoutServerSnapshot() {
+  return false;
+}
+
+function useStockCompactLayout() {
+  return useSyncExternalStore(
+    subscribeStockCompactLayout,
+    getStockCompactLayoutSnapshot,
+    getStockCompactLayoutServerSnapshot,
+  );
+}
 
 function branchHref(branchId: number, path: string): string {
   return `${path}?branchId=${branchId}`;
@@ -324,177 +353,125 @@ function QuickStockIssueDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [issueType, setIssueType] = useState<QuickIssueType>(target.issueType);
-  const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState(target.ingredient.unit);
-  const [reason, setReason] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const activeIssueType = quickIssueTypeOptions.find(
-    (option) => option.value === issueType,
+  const schema = useMemo(
+    () => createQuickIssueSchema(target.ingredient.qty),
+    [target.ingredient.qty],
+  );
+  const defaultValues = useMemo<QuickIssueFormValues>(
+    () => ({
+      issueType: target.issueType,
+      quantity: "",
+      unit: target.ingredient.unit,
+      reason: "",
+    }),
+    [target.ingredient.unit, target.issueType],
   );
   const title =
-    issueType === "writeoff"
+    target.issueType === "writeoff"
       ? stockCopy.quickIssue.writeoffTitle
       : stockCopy.quickIssue.issueTitle;
 
-  function resetForm() {
-    setIssueType(target.issueType);
-    setQuantity("");
-    setUnit(target.ingredient.unit);
-    setReason("");
-  }
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const parsedQuantity = Number(quantity);
-    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
-      toast.error(stockCopy.quickIssue.quantityPositive);
-      return;
-    }
-    if (parsedQuantity > target.ingredient.qty) {
-      toast.error(stockCopy.quickIssue.quantityExceedsStock);
-      return;
-    }
-    if (!unit.trim()) {
-      toast.error(stockCopy.quickIssue.unitRequired);
-      return;
-    }
-    if (!reason.trim()) {
-      toast.error(stockCopy.quickIssue.reasonRequired);
-      return;
-    }
-
-    startTransition(async () => {
-      const draftRes = await createStockIssueDraft({
-        branchId,
-        issueType,
-        notes: stockCopy.quickIssue.draftNotes(target.ingredient.name),
-      });
-      if (!draftRes.success || !draftRes.data) {
-        toast.error(draftRes.error ?? stockCopy.quickIssue.createDraftFailed);
-        return;
-      }
-
-      const issueId = Number((draftRes.data as { id: number }).id);
-      const lineRes = await upsertStockIssueLine({
-        issueId,
-        ingredientId: target.ingredient.id,
-        quantity: parsedQuantity,
-        unit: unit.trim(),
-        reason: reason.trim(),
-      });
-      if (!lineRes.success) {
-        toast.error(lineRes.error ?? stockCopy.quickIssue.addLineFailed);
-        router.push(`/inventory/issues/${issueId}`);
-        return;
-      }
-
-      toast.success(stockCopy.quickIssue.created(target.ingredient.name));
-      onOpenChange(false);
-      resetForm();
-      router.push(`/inventory/issues/${issueId}`);
+  async function handleSubmit(values: QuickIssueFormValues) {
+    const draftRes = await createStockIssueDraft({
+      branchId,
+      issueType: values.issueType,
+      notes: stockCopy.quickIssue.draftNotes(target.ingredient.name),
     });
+    if (!draftRes.success || !draftRes.data) {
+      return {
+        success: false,
+        error: draftRes.error ?? stockCopy.quickIssue.createDraftFailed,
+      };
+    }
+
+    const issueId = Number((draftRes.data as { id: number }).id);
+    const lineRes = await upsertStockIssueLine({
+      issueId,
+      ingredientId: target.ingredient.id,
+      quantity: Number(values.quantity),
+      unit: values.unit.trim(),
+      reason: values.reason.trim(),
+    });
+    if (!lineRes.success) {
+      router.push(`/inventory/issues/${issueId}`);
+      return {
+        success: false,
+        error: lineRes.error ?? stockCopy.quickIssue.addLineFailed,
+      };
+    }
+
+    router.push(`/inventory/issues/${issueId}`);
+    return { success: true };
   }
 
   return (
-    <Dialog
+    <FormDialog
       open={open}
-      onOpenChange={(nextOpen) => {
-        onOpenChange(nextOpen);
-        if (!nextOpen) resetForm();
-      }}
+      onOpenChange={onOpenChange}
+      title={title}
+      schema={schema}
+      defaultValues={defaultValues}
+      entityKey={`${target.ingredient.id}-${target.issueType}`}
+      onSubmit={handleSubmit}
+      successMessage={stockCopy.quickIssue.created(target.ingredient.name)}
+      submitLabel={stockCopy.quickIssue.createSlip}
+      cancelLabel={ACTIONS_VI.cancel}
+      contentClassName="sm:max-w-md"
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="rounded-md border bg-muted/20 px-3 py-2">
-            <p className="font-medium">{target.ingredient.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {stockCopy.quickIssue.stockLine(
-                target.ingredient.sku,
-                target.ingredient.category,
-                formatQty(target.ingredient.qty),
-                target.ingredient.unit,
-              )}
-            </p>
-          </div>
+      {(form) => {
+        const activeIssueType = quickIssueTypeOptions.find(
+          (option) => option.value === form.watch("issueType"),
+        );
+        return (
+          <>
+            <div className="rounded-md border bg-muted/20 px-3 py-2">
+              <p className="font-medium">{target.ingredient.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {stockCopy.quickIssue.stockLine(
+                  target.ingredient.sku,
+                  target.ingredient.category,
+                  formatQty(target.ingredient.qty),
+                  target.ingredient.unit,
+                )}
+              </p>
+            </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label>{stockCopy.quickIssue.operation}</Label>
-            <Select
-              value={issueType}
-              onValueChange={(value) => setIssueType(value as QuickIssueType)}
-              disabled={isPending}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {quickIssueTypeOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="quick-issue-qty">{FORM_VI.quantity}</Label>
-              <FormattedNumberInput
-                id="quick-issue-qty"
-                value={quantity}
-                onValueChange={setQuantity}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <NumberField
+                control={form.control}
+                name="quantity"
+                label={FORM_VI.quantity}
                 maxFractionDigits={3}
                 placeholder="0"
-                disabled={isPending}
+                required
               />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="quick-issue-unit">{FORM_VI.unit}</Label>
-              <Input
-                id="quick-issue-unit"
-                value={unit}
+              <TextField
+                control={form.control}
+                name="unit"
+                label={FORM_VI.unit}
                 readOnly
                 aria-readonly="true"
-                disabled={isPending}
               />
             </div>
-          </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="quick-issue-reason">{FORM_VI.reason}</Label>
-            <Textarea
-              id="quick-issue-reason"
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
+            <SelectField
+              control={form.control}
+              name="issueType"
+              label={stockCopy.quickIssue.operation}
+              options={quickIssueTypeOptions}
+            />
+            <TextareaField
+              control={form.control}
+              name="reason"
+              label={FORM_VI.reason}
               rows={3}
               placeholder={activeIssueType?.reasonPlaceholder}
-              disabled={isPending}
+              required
             />
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending
-                ? stockCopy.quickIssue.creating
-                : stockCopy.quickIssue.createSlip}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </>
+        );
+      }}
+    </FormDialog>
   );
 }
 
@@ -516,7 +493,7 @@ export function StockClient({
   movementHistory: StockMovementHistory[];
 }) {
   const router = useRouter();
-  const isMobile = useIsMobile();
+  const isCompactLayout = useStockCompactLayout();
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
@@ -639,12 +616,98 @@ export function StockClient({
   );
   const visibleTotalValue = branchValue ?? filteredValue;
   const liveLabel = formatVNDate(new Date());
+  const stockColumns: DataTableColumn<StockIngredient>[] = [
+    {
+      key: "ingredient",
+      header: PRODUCT_VI.rawIngredient,
+      className: "min-w-56",
+      render: (item) => (
+        <div className="flex flex-col gap-1">
+          <p className="font-semibold">{item.name}</p>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-mono">{item.sku}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "category",
+      header: FORM_VI.category,
+      className: "min-w-32",
+      render: (item) =>
+        item.category ? (
+          <Badge
+            className={
+              CATEGORY_TONE_CLASS[item.category] ??
+              "bg-muted text-muted-foreground"
+            }
+          >
+            {item.category}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">
+            {inventoryCommon.noValue}
+          </span>
+        ),
+    },
+    {
+      key: "stock",
+      header: stockCopy.table.stock,
+      className: "min-w-24 text-right",
+      render: (item) => (
+        <span
+          className={cn(
+            "font-mono",
+            (item.status === "low" || item.status === "out") &&
+              "font-semibold text-destructive",
+          )}
+        >
+          {formatQty(item.qty)} {item.unit}
+        </span>
+      ),
+    },
+    {
+      key: "warning",
+      header: stockCopy.table.warning,
+      className: "min-w-40 text-right",
+      render: (item) => (
+        <div className="flex flex-wrap justify-end gap-2">
+          <StatusBadge status={item.status} size="sm" />
+          {item.qty <= item.reorder ? (
+            <Badge variant="warning">{stockCopy.filters.reorder}</Badge>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "wac",
+      header: stockCopy.table.wac,
+      className: "min-w-24 text-right",
+      render: (item) => (
+        <span className="font-mono">
+          {item.cost > 0 ? formatVND(item.cost) : inventoryCommon.noValue}
+        </span>
+      ),
+    },
+    {
+      key: "value",
+      header: FORM_VI.value,
+      className: "min-w-28 text-right",
+      render: (item) => (
+        <span className="font-mono font-semibold">
+          {stockValue(item) > 0
+            ? inventoryCommon.currencyCompact(formatVND(stockValue(item)))
+            : inventoryCommon.noValue}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <InventoryPageContent
-      width={isMobile ? "narrow" : "wide"}
-      className={isMobile ? undefined : "p-3"}
-      contentClassName={isMobile ? undefined : "max-w-none gap-2"}
+      width={isCompactLayout ? "narrow" : "wide"}
+      className={isCompactLayout ? undefined : "p-3"}
+      contentClassName={isCompactLayout ? undefined : "max-w-none gap-2"}
       scroll
     >
       <AppPageHeader
@@ -658,7 +721,7 @@ export function StockClient({
           </div>
         }
       />
-      <div className="flex flex-wrap items-center gap-2 border bg-card p-2">
+      <InventoryFilterBar className="gap-2">
         {permissions.canReceiveGrn ? (
           <QuickActionButton
             href={branchHref(branchId, "/inventory/grn")}
@@ -697,7 +760,7 @@ export function StockClient({
         ) : null}
 
         <InputGroup
-          className={cn("min-w-56 flex-1", isMobile ? "h-12" : "h-10")}
+          className={cn("min-w-56 flex-1", isCompactLayout ? "h-12" : "h-10")}
         >
           <InputGroupAddon>
             <IconSearch />
@@ -719,45 +782,49 @@ export function StockClient({
             </InputGroupAddon>
           ) : null}
         </InputGroup>
-      </div>
+      </InventoryFilterBar>
 
-      <div className="flex flex-wrap items-center divide-x overflow-hidden border bg-card">
-        <SummaryMetric
-          label={stockCopy.metrics.selectedWarehouse}
-          value={inventoryCommon.currencyCompact(formatVND(visibleTotalValue))}
-        />
-        {totalValue != null ? (
+      <AppSection className="overflow-hidden" contentFlush>
+        <div className="flex flex-wrap items-center divide-x">
           <SummaryMetric
-            label={stockCopy.metrics.wholeSystem}
-            value={inventoryCommon.currencyCompact(formatVND(totalValue))}
+            label={stockCopy.metrics.selectedWarehouse}
+            value={inventoryCommon.currencyCompact(
+              formatVND(visibleTotalValue),
+            )}
           />
-        ) : null}
-        <SummaryMetric
-          label={stockCopy.metrics.underThreshold}
-          value={String(summary.underThresholdCount)}
-          tone={summary.underThresholdCount > 0 ? "warning" : "muted"}
-          onClick={
-            summary.underThresholdCount > 0
-              ? () => {
-                  setStockFilter(stockFilter === "low" ? "all" : "low");
-                }
-              : undefined
-          }
-          active={stockFilter === "low"}
-        />
-        <SummaryMetric
-          label={stockCopy.metrics.nearExpiry}
-          value={String(summary.expiryCount)}
-          tone={summary.expiryCount > 0 ? "warning" : "muted"}
-        />
-        <SummaryMetric
-          label={stockCopy.metrics.pending}
-          value={String(summary.pendingWorkCount)}
-          tone={summary.pendingWorkCount > 0 ? "warning" : "muted"}
-        />
-      </div>
+          {totalValue != null ? (
+            <SummaryMetric
+              label={stockCopy.metrics.wholeSystem}
+              value={inventoryCommon.currencyCompact(formatVND(totalValue))}
+            />
+          ) : null}
+          <SummaryMetric
+            label={stockCopy.metrics.underThreshold}
+            value={String(summary.underThresholdCount)}
+            tone={summary.underThresholdCount > 0 ? "warning" : "muted"}
+            onClick={
+              summary.underThresholdCount > 0
+                ? () => {
+                    setStockFilter(stockFilter === "low" ? "all" : "low");
+                  }
+                : undefined
+            }
+            active={stockFilter === "low"}
+          />
+          <SummaryMetric
+            label={stockCopy.metrics.nearExpiry}
+            value={String(summary.expiryCount)}
+            tone={summary.expiryCount > 0 ? "warning" : "muted"}
+          />
+          <SummaryMetric
+            label={stockCopy.metrics.pending}
+            value={String(summary.pendingWorkCount)}
+            tone={summary.pendingWorkCount > 0 ? "warning" : "muted"}
+          />
+        </div>
+      </AppSection>
 
-      <InventoryFilterBar className="gap-2 p-2">
+      <InventoryFilterBar className="gap-2">
         <Select value={activeCategory} onValueChange={setActiveCategory}>
           <SelectTrigger className="min-w-40">
             <SelectValue placeholder={stockCopy.filters.categoryPlaceholder} />
@@ -830,43 +897,38 @@ export function StockClient({
       </InventoryFilterBar>
 
       {isFirstLoadEmpty ? (
-        <Card className="bg-muted/20">
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-              <IconShoppingCart className="size-6" />
-            </div>
-            <div className="space-y-1">
-              <p className="font-heading text-base font-semibold">
-                {stockCopy.empty.firstLoadTitle}
-              </p>
-              <p className="max-w-md text-sm text-muted-foreground">
-                {stockCopy.empty.firstLoadHint}
-              </p>
-            </div>
-            {permissions.canCreatePurchaseOrder ? (
-              <Button asChild size="sm">
-                <Link
-                  href={branchHref(branchId, "/inventory/purchase-orders/new")}
-                >
-                  <IconShoppingCart className="size-4" />
-                  {stockCopy.actions.purchaseSuggestion}
-                </Link>
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : isMobile ? (
+        <AppEmptyState
+          title={stockCopy.empty.firstLoadTitle}
+          description={stockCopy.empty.firstLoadHint}
+          icon={<IconShoppingCart />}
+        >
+          {permissions.canCreatePurchaseOrder ? (
+            <Button asChild size="sm">
+              <Link
+                href={branchHref(branchId, "/inventory/purchase-orders/new")}
+              >
+                <IconShoppingCart className="size-4" />
+                {stockCopy.actions.purchaseSuggestion}
+              </Link>
+            </Button>
+          ) : null}
+        </AppEmptyState>
+      ) : isCompactLayout ? (
         <div className="flex flex-col gap-2">
           {filtered.length === 0 ? (
-            <Empty className="py-8">
-              <EmptyHeader>
-                <EmptyTitle className="text-sm font-semibold">
-                  {searchQuery.trim()
-                    ? stockCopy.empty.search
-                    : stockCopy.empty.noData}
-                </EmptyTitle>
-              </EmptyHeader>
-            </Empty>
+            <AppEmptyState
+              compact
+              title={
+                searchQuery.trim()
+                  ? stockCopy.empty.search
+                  : stockCopy.empty.noData
+              }
+              description={
+                searchQuery.trim()
+                  ? stockCopy.empty.searchDescription
+                  : stockCopy.empty.noDataDescription
+              }
+            />
           ) : (
             filtered.map((item) => (
               <InteractiveCard
@@ -876,7 +938,7 @@ export function StockClient({
                 className="flex-col items-stretch gap-3"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <p className="truncate font-semibold">{item.name}</p>
                     <div className="flex items-center gap-2">
                       {item.category ? (
@@ -989,349 +1051,264 @@ export function StockClient({
           )}
         </div>
       ) : (
-        <div className="grid overflow-hidden border bg-card lg:grid-cols-3 xl:grid-cols-4">
-          <div className="min-w-0 lg:col-span-2 xl:col-span-3">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/20 hover:bg-muted/20">
-                    <TableHead className="min-w-56">
-                      {PRODUCT_VI.rawIngredient}
-                    </TableHead>
-                    <TableHead className="min-w-32">
-                      {FORM_VI.category}
-                    </TableHead>
-                    <TableHead className="min-w-24 text-right">
-                      {stockCopy.table.stock}
-                    </TableHead>
-                    <TableHead className="min-w-40 text-right">
-                      {stockCopy.table.warning}
-                    </TableHead>
-                    <TableHead className="min-w-24 text-right">
-                      {stockCopy.table.wac}
-                    </TableHead>
-                    <TableHead className="min-w-28 text-right">
-                      {FORM_VI.value}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 ? (
-                    <TableEmptyStateRow
-                      colSpan={6}
-                      title={
-                        searchQuery.trim()
-                          ? stockCopy.empty.search
-                          : stockCopy.empty.noData
-                      }
-                      description={
-                        searchQuery.trim()
-                          ? stockCopy.empty.searchDescription
-                          : stockCopy.empty.noDataDescription
-                      }
-                    />
-                  ) : null}
-
-                  {filtered.map((item) => {
-                    const active = selected?.id === item.id;
-                    return (
-                      <TableRow
-                        key={item.id}
-                        role="button"
-                        tabIndex={0}
-                        data-state={active ? "selected" : undefined}
-                        className={cn(
-                          "cursor-pointer hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                        )}
-                        onClick={() => setSelectedId(item.id)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            setSelectedId(item.id);
-                          }
-                        }}
-                        aria-label={stockCopy.actions.viewDetailAria(item.name)}
-                      >
-                        <TableCell>
-                          <div className="space-y-1">
-                            <p className="font-semibold">{item.name}</p>
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                              <span className="font-mono">{item.sku}</span>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {item.category ? (
-                            <Badge
-                              className={
-                                CATEGORY_TONE_CLASS[item.category] ??
-                                "bg-muted text-muted-foreground"
-                              }
-                            >
-                              {item.category}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              {inventoryCommon.noValue}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell
-                          className={cn(
-                            "text-right font-mono",
-                            (item.status === "low" || item.status === "out") &&
-                              "font-semibold text-destructive",
-                          )}
-                        >
-                          {formatQty(item.qty)} {item.unit}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex flex-wrap justify-end gap-2">
-                            <StatusBadge status={item.status} size="sm" />
-                            {item.qty <= item.reorder ? (
-                              <Badge variant="warning">
-                                {stockCopy.filters.reorder}
-                              </Badge>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {item.cost > 0
-                            ? formatVND(item.cost)
-                            : inventoryCommon.noValue}
-                        </TableCell>
-                        <TableCell className="text-right font-mono font-semibold">
-                          {stockValue(item) > 0
-                            ? inventoryCommon.currencyCompact(
-                                formatVND(stockValue(item)),
-                              )
-                            : inventoryCommon.noValue}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+        <AppSection className="overflow-hidden" contentFlush>
+          <div className="grid lg:grid-cols-3 xl:grid-cols-4">
+            <div className="min-w-0 lg:col-span-2 xl:col-span-3">
+              <DataTable
+                columns={stockColumns}
+                data={filtered}
+                getRowKey={(item) => item.id}
+                emptyTitle={
+                  searchQuery.trim()
+                    ? stockCopy.empty.search
+                    : stockCopy.empty.noData
+                }
+                emptyDescription={
+                  searchQuery.trim()
+                    ? stockCopy.empty.searchDescription
+                    : stockCopy.empty.noDataDescription
+                }
+                emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
+                onRowClick={(item) => setSelectedId(item.id)}
+                getRowAriaLabel={(item) =>
+                  stockCopy.actions.viewDetailAria(item.name)
+                }
+                getRowDataState={(item) =>
+                  selected?.id === item.id ? "selected" : undefined
+                }
+                mobileCardRender={(item) => (
+                  <InteractiveCard minHeight="mobile" padding="default">
+                    <span className="font-semibold">{item.name}</span>
+                  </InteractiveCard>
+                )}
+              />
             </div>
-          </div>
 
-          <aside className="border-t bg-background/70 p-3 lg:border-l lg:border-t-0">
-            {selected ? (
-              <div className="flex h-full flex-col gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h2 className="font-heading truncate text-base font-semibold">
-                        {selected.name}
-                      </h2>
+            <aside className="border-t bg-background/70 p-3 lg:border-l lg:border-t-0">
+              {selected ? (
+                <div className="flex h-full flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h2 className="font-heading truncate text-base font-semibold">
+                          {selected.name}
+                        </h2>
+                        <p className="text-xs text-muted-foreground">
+                          {selected.sku}
+                          {selected.category ? ` · ${selected.category}` : ""}
+                        </p>
+                      </div>
+                      <StatusBadge status={selected.status} size="sm" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                    <div>
                       <p className="text-xs text-muted-foreground">
-                        {selected.sku}
-                        {selected.category ? ` · ${selected.category}` : ""}
+                        {stockCopy.table.currentStock}
+                      </p>
+                      <p className="font-semibold tabular-nums">
+                        {formatQty(selected.qty)} {selected.unit}
                       </p>
                     </div>
-                    <StatusBadge status={selected.status} size="sm" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      {stockCopy.table.currentStock}
-                    </p>
-                    <p className="font-semibold tabular-nums">
-                      {formatQty(selected.qty)} {selected.unit}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      {stockCopy.table.stockValue}
-                    </p>
-                    <p className="font-semibold tabular-nums">
-                      {inventoryCommon.currencyCompact(
-                        formatVND(stockValue(selected)),
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      {stockCopy.table.wac}
-                    </p>
-                    <p className="tabular-nums">
-                      {inventoryCommon.currencyCompact(
-                        formatVND(selected.cost),
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      {stockCopy.table.lastCount}
-                    </p>
-                    <p>{selected.lastCount}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      {stockCopy.table.minThreshold}
-                    </p>
-                    <p className="tabular-nums">{formatQty(selected.min)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Reorder</p>
-                    <p className="tabular-nums">
-                      {formatQty(selected.reorder)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  {permissions.canReceiveGrn ? (
-                    <Button asChild size="sm">
-                      <Link href={branchHref(branchId, "/inventory/grn")}>
-                        <IconReceipt className="size-3.5" />
-                        {stockCopy.actions.receiveGoods}
-                      </Link>
-                    </Button>
-                  ) : null}
-                  {permissions.canCreateIssue ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setQuickIssueTarget({
-                          ingredient: selected,
-                          issueType: "consumption",
-                        })
-                      }
-                    >
-                      <IconTruck className="size-3.5" />
-                      {stockCopy.actions.issueStock}
-                    </Button>
-                  ) : null}
-                  {permissions.canCreateStocktake ? (
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={branchHref(branchId, "/inventory/stocktake")}>
-                        <IconClipboardList className="size-3.5" />
-                        {stockCopy.actions.stocktake}
-                      </Link>
-                    </Button>
-                  ) : null}
-                  {permissions.canWriteoff ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setQuickIssueTarget({
-                          ingredient: selected,
-                          issueType: "writeoff",
-                        })
-                      }
-                    >
-                      <IconTrash className="size-3.5" />
-                      {stockCopy.actions.waste}
-                    </Button>
-                  ) : null}
-                  <Button asChild size="sm" variant="ghost">
-                    <Link href={branchHref(branchId, "/inventory/reports")}>
-                      <IconArrowBarRight className="size-3.5" />
-                      {stockCopy.actions.viewStockCard}
-                    </Link>
-                  </Button>
-                  {permissions.canAdjustException ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => setAdjustTarget(selected)}
-                    >
-                      <IconPencil className="size-3.5" />
-                      {stockCopy.actions.exception}
-                    </Button>
-                  ) : null}
-                </div>
-
-                <div className="space-y-2 border-t pt-3 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium">{stockCopy.table.history}</p>
-                    <Badge variant="outline">{selectedHistory.length}/5</Badge>
-                  </div>
-                  {selectedHistory.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      {stockCopy.table.noRecentHistory}
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {selectedHistory.map((movement) => {
-                        const reference = movementReference(movement);
-                        const signedQty =
-                          movement.quantityChange > 0
-                            ? `+${formatQty(movement.quantityChange)}`
-                            : formatQty(movement.quantityChange);
-
-                        return (
-                          <div
-                            key={movement.id}
-                            className="space-y-1 border bg-card px-2 py-2"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className="truncate text-xs font-medium">
-                                  {movementLabel(movement)}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {formatDateTime(movement.createdAt)}
-                                </p>
-                              </div>
-                              <Badge
-                                variant={movementVariant(
-                                  movement.quantityChange,
-                                )}
-                                className="shrink-0"
-                              >
-                                {signedQty} {selected.unit}
-                              </Badge>
-                            </div>
-                            {reference ||
-                            movement.reason ||
-                            movement.unitCost != null ? (
-                              <div className="space-y-0.5 text-xs text-muted-foreground">
-                                {reference ? <p>{reference}</p> : null}
-                                {movement.reason ? (
-                                  <p className="break-words">
-                                    {movement.reason}
-                                  </p>
-                                ) : null}
-                                {movement.unitCost != null ? (
-                                  <p>
-                                    {stockCopy.table.wacValue(
-                                      formatVND(movement.unitCost),
-                                    )}
-                                  </p>
-                                ) : null}
-                              </div>
-                            ) : null}
-                          </div>
-                        );
-                      })}
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        {stockCopy.table.stockValue}
+                      </p>
+                      <p className="font-semibold tabular-nums">
+                        {inventoryCommon.currencyCompact(
+                          formatVND(stockValue(selected)),
+                        )}
+                      </p>
                     </div>
-                  )}
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        {stockCopy.table.wac}
+                      </p>
+                      <p className="tabular-nums">
+                        {inventoryCommon.currencyCompact(
+                          formatVND(selected.cost),
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        {stockCopy.table.lastCount}
+                      </p>
+                      <p>{selected.lastCount}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        {stockCopy.table.minThreshold}
+                      </p>
+                      <p className="tabular-nums">{formatQty(selected.min)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Reorder</p>
+                      <p className="tabular-nums">
+                        {formatQty(selected.reorder)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {permissions.canReceiveGrn ? (
+                      <Button asChild size="sm">
+                        <Link href={branchHref(branchId, "/inventory/grn")}>
+                          <IconReceipt className="size-3.5" />
+                          {stockCopy.actions.receiveGoods}
+                        </Link>
+                      </Button>
+                    ) : null}
+                    {permissions.canCreateIssue ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setQuickIssueTarget({
+                            ingredient: selected,
+                            issueType: "consumption",
+                          })
+                        }
+                      >
+                        <IconTruck className="size-3.5" />
+                        {stockCopy.actions.issueStock}
+                      </Button>
+                    ) : null}
+                    {permissions.canCreateStocktake ? (
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          href={branchHref(branchId, "/inventory/stocktake")}
+                        >
+                          <IconClipboardList className="size-3.5" />
+                          {stockCopy.actions.stocktake}
+                        </Link>
+                      </Button>
+                    ) : null}
+                    {permissions.canWriteoff ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setQuickIssueTarget({
+                            ingredient: selected,
+                            issueType: "writeoff",
+                          })
+                        }
+                      >
+                        <IconTrash className="size-3.5" />
+                        {stockCopy.actions.waste}
+                      </Button>
+                    ) : null}
+                    <Button asChild size="sm" variant="ghost">
+                      <Link href={branchHref(branchId, "/inventory/reports")}>
+                        <IconArrowBarRight className="size-3.5" />
+                        {stockCopy.actions.viewStockCard}
+                      </Link>
+                    </Button>
+                    {permissions.canAdjustException ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => setAdjustTarget(selected)}
+                      >
+                        <IconPencil className="size-3.5" />
+                        {stockCopy.actions.exception}
+                      </Button>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-col gap-2 border-t pt-3 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium">{stockCopy.table.history}</p>
+                      <Badge variant="outline">
+                        {selectedHistory.length}/5
+                      </Badge>
+                    </div>
+                    {selectedHistory.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        {stockCopy.table.noRecentHistory}
+                      </p>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {selectedHistory.map((movement) => {
+                          const reference = movementReference(movement);
+                          const signedQty =
+                            movement.quantityChange > 0
+                              ? `+${formatQty(movement.quantityChange)}`
+                              : formatQty(movement.quantityChange);
+
+                          return (
+                            <div
+                              key={movement.id}
+                              className="flex flex-col gap-1 rounded-md border bg-background p-2"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="truncate text-xs font-medium">
+                                    {movementLabel(movement)}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {formatDateTime(movement.createdAt)}
+                                  </p>
+                                </div>
+                                <Badge
+                                  variant={movementVariant(
+                                    movement.quantityChange,
+                                  )}
+                                  className="shrink-0"
+                                >
+                                  {signedQty} {selected.unit}
+                                </Badge>
+                              </div>
+                              {reference ||
+                              movement.reason ||
+                              movement.unitCost != null ? (
+                                <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                                  {reference ? <p>{reference}</p> : null}
+                                  {movement.reason ? (
+                                    <p className="break-words">
+                                      {movement.reason}
+                                    </p>
+                                  ) : null}
+                                  {movement.unitCost != null ? (
+                                    <p>
+                                      {stockCopy.table.wacValue(
+                                        formatVND(movement.unitCost),
+                                      )}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
-                {stockCopy.table.chooseIngredientDetail}
-              </div>
-            )}
-          </aside>
-        </div>
+              ) : (
+                <div className="flex h-full items-center justify-center p-4 text-center text-sm text-muted-foreground">
+                  {stockCopy.table.chooseIngredientDetail}
+                </div>
+              )}
+            </aside>
+          </div>
+        </AppSection>
       )}
 
-      <div className="border bg-card px-3 py-2 text-xs text-muted-foreground">
+      <AppSection
+        size="sm"
+        contentClassName="py-2 text-xs text-muted-foreground"
+      >
         {stockCopy.table.filteredSummary(
           filtered.length,
           formatVND(filteredValue),
         )}
-      </div>
+      </AppSection>
 
       {adjustTarget ? (
         <AdjustStockDialog

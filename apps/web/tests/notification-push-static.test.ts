@@ -41,11 +41,22 @@ test("notification actions expose push subscription lifecycle", () => {
 test("push dispatcher cron is configured and idempotent", () => {
   const route = read("../app/api/cron/notifications-push/route.ts");
   const vercel = read("../vercel.json");
+  const claimIndex = route.indexOf("claim_notification_push_delivery");
+  const sendIndex = route.indexOf(
+    "const result = await sendWebPushNotification(subscription, payload)",
+  );
 
   assert.match(route, /notification_push_deliveries/);
+  assert.match(route, /claim_notification_push_delivery/);
   assert.match(route, /sendWebPushNotification/);
   assert.match(route, /canReceiveNotification/);
   assert.match(route, /timingSafeEquals/);
+  assert.ok(claimIndex >= 0, "route must claim a delivery before sending");
+  assert.ok(sendIndex >= 0, "route must send web push from the cron loop");
+  assert.ok(claimIndex < sendIndex, "claim must happen before send");
+  assert.match(route, /if \(claimError\) \{[\s\S]*?continue;/);
+  assert.match(route, /if \(claim\?\.status !== "claimed"\) \{[\s\S]*?continue;/);
+  assert.doesNotMatch(route, /\.from\("notification_push_deliveries"\)\.upsert/);
   assert.match(vercel, /\/api\/cron\/notifications-push/);
 });
 
@@ -65,6 +76,9 @@ test("push subscription migration has RLS, grants, and delivery ledger", () => {
   const migration = read(
     "../../../supabase/migrations/20260610154520_notification_push_subscriptions.sql",
   );
+  const hardeningMigration = read(
+    "../../../supabase/migrations/20260619062853_security_rpc_cron_runner_hardening.sql",
+  );
 
   assert.match(
     migration,
@@ -74,6 +88,12 @@ test("push subscription migration has RLS, grants, and delivery ledger", () => {
   assert.match(migration, /notification_push_subscriptions_insert_own/);
   assert.match(migration, /notification_push_deliveries/);
   assert.match(migration, /GRANT SELECT, INSERT, UPDATE, DELETE/);
+  assert.match(hardeningMigration, /claim_notification_push_delivery/);
+  assert.match(
+    hardeningMigration,
+    /status = ANY \(ARRAY\['pending', 'processing', 'sent', 'failed', 'skipped'\]\)/,
+  );
+  assert.match(hardeningMigration, /status', 'claimed'/);
 });
 
 test("retired customer surfaces are absent from active app/auth copy", () => {

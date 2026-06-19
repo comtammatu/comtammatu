@@ -12,6 +12,7 @@ import {
 import type { ElementType } from "react";
 import {
   resolveAdminNavGroups,
+  resolveBranchManagementItems,
   resolveWorkspaceItems,
   type ResolvedNavGroup,
   type ResolvedNavLink,
@@ -47,13 +48,26 @@ function mapItem(item: ResolvedNavLink): ShellNavItem {
   };
 }
 
-export function resolveOfficeNavGroups(role: StaffRole): ShellNavGroup[] {
+export function resolveOfficeNavGroups(
+  role: StaffRole,
+  branchId?: number | null,
+): ShellNavGroup[] {
   const adminGroups: ShellNavGroup[] = resolveAdminNavGroups(role).map(
     (group: ResolvedNavGroup) => ({
       title: group.title,
       items: group.items.map(mapItem),
     }),
   );
+  const branchManagementItems = resolveBranchManagementItems(role, branchId);
+  const branchManagementGroup: ShellNavGroup[] =
+    branchManagementItems.length > 0
+      ? [
+          {
+            title: NAV_GROUP_LABELS_VI.branchManagement,
+            items: branchManagementItems.map(mapItem),
+          },
+        ]
+      : [];
   const workspaceItems = resolveWorkspaceItems(role);
   const workspaceGroup: ShellNavGroup[] =
     workspaceItems.length > 0
@@ -68,7 +82,10 @@ export function resolveOfficeNavGroups(role: StaffRole): ShellNavGroup[] {
   // operations command groups first, the cross-workspace group between them and
   // the foundation/setup group.
   const [firstAdminGroup, ...restAdminGroups] = adminGroups;
-  return [firstAdminGroup, ...workspaceGroup, ...restAdminGroups].filter(
-    (group): group is ShellNavGroup => group != null,
-  );
+  return [
+    firstAdminGroup,
+    ...branchManagementGroup,
+    ...workspaceGroup,
+    ...restAdminGroups,
+  ].filter((group): group is ShellNavGroup => group != null);
 }

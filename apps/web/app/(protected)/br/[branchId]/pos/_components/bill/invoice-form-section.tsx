@@ -3,7 +3,6 @@
 import { useId } from "react";
 import { Receipt as IconReceipt } from "lucide-react";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
   Field,
@@ -13,6 +12,7 @@ import {
 } from "@comtammatu/ui/components/field";
 import { Input } from "@comtammatu/ui/components/input";
 import { BUYER_NOT_GET_INVOICE_NAME } from "@comtammatu/shared/providers";
+import { AppSection } from "@/components/surface";
 
 const ADVISORY_THRESHOLD_VND = 200_000;
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
@@ -91,8 +91,8 @@ export function InvoiceFormSection({
     state.enabled && mstTrim.length > 0 && state.buyerName.trim().length === 0;
 
   return (
-    <Card size="sm">
-      <CardContent className="flex flex-col gap-3">
+    <AppSection size="sm" contentClassName="gap-3">
+      <>
         <Field orientation="horizontal">
           <Checkbox
             id={checkboxId}
@@ -192,7 +192,7 @@ export function InvoiceFormSection({
             </Field>
           </FieldGroup>
         ) : null}
-      </CardContent>
-    </Card>
+      </>
+    </AppSection>
   );
 }

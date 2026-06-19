@@ -1,21 +1,13 @@
 import Link from "next/link";
-import type { ElementType, ReactNode } from "react";
+import type { ComponentProps, ElementType, ReactNode } from "react";
 import {
   ChevronRight as IconChevronRight,
   UserCircle as IconUserCircle,
 } from "lucide-react";
-import { AppPageHeader, AppSection } from "@/components/surface";
+import { AppEmptyState, AppPageHeader, AppSection } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
-import type { BadgeProps } from "@comtammatu/ui/components/badge";
+import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import {
   Item,
   ItemActions,
@@ -149,6 +141,213 @@ export function EmployeePanel({
   );
 }
 
+type EmployeeFramePad = "none" | "sm";
+
+type EmployeeFrameProps = ComponentProps<"div"> & {
+  pad?: EmployeeFramePad;
+};
+
+export function EmployeeFrame({
+  children,
+  className,
+  pad = "none",
+  ...props
+}: EmployeeFrameProps) {
+  return (
+    <div
+      data-employee-frame
+      className={cn(
+        "rounded-md border bg-card motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200",
+        pad === "sm" && "p-3",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+type EmployeeControlBarProps = Omit<EmployeeFrameProps, "pad">;
+
+export function EmployeeControlBar({
+  children,
+  className,
+  ...props
+}: EmployeeControlBarProps) {
+  return (
+    <EmployeeFrame
+      pad="sm"
+      className={cn("flex items-center justify-between gap-2", className)}
+      {...props}
+    >
+      {children}
+    </EmployeeFrame>
+  );
+}
+
+interface EmployeeActionBarProps {
+  children: ReactNode;
+  align?: "start" | "end";
+  className?: string;
+}
+
+export function EmployeeActionBar({
+  children,
+  align = "start",
+  className,
+}: EmployeeActionBarProps) {
+  return (
+    <div
+      data-employee-action-bar
+      className={cn(
+        "flex flex-col gap-2 sm:flex-row",
+        align === "end" && "sm:justify-end",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+interface EmployeeActionGridProps {
+  children: ReactNode;
+  columns?: 1 | 2;
+  className?: string;
+}
+
+export function EmployeeActionGrid({
+  children,
+  columns = 2,
+  className,
+}: EmployeeActionGridProps) {
+  return (
+    <div
+      data-employee-action-grid
+      className={cn(
+        "grid gap-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200",
+        columns === 2 && "sm:grid-cols-2",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+const inlineStateToneClassName = {
+  default: "",
+  success: "border-success/30 bg-success/5",
+  warning: "border-warning/30 bg-warning/5",
+  info: "border-info/30 bg-info/5",
+  destructive: "border-destructive/30 bg-destructive/5",
+} satisfies Record<EmployeeTone, string>;
+
+interface EmployeeInlineStateProps {
+  icon?: ElementType;
+  media?: ReactNode;
+  title?: ReactNode;
+  description?: ReactNode;
+  children?: ReactNode;
+  actions?: ReactNode;
+  tone?: EmployeeTone;
+  className?: string;
+  mediaClassName?: string;
+}
+
+export function EmployeeInlineState({
+  icon: Icon,
+  media,
+  title,
+  description,
+  children,
+  actions,
+  tone = "default",
+  className,
+  mediaClassName,
+}: EmployeeInlineStateProps) {
+  const mediaVariant = mediaClassName ? "image" : "icon";
+  return (
+    <Item
+      variant={tone === "default" ? "muted" : "outline"}
+      size="sm"
+      className={cn(
+        "items-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200",
+        inlineStateToneClassName[tone],
+        className,
+      )}
+    >
+      {media ? (
+        <ItemMedia variant={mediaVariant} className={mediaClassName}>
+          {media}
+        </ItemMedia>
+      ) : Icon ? (
+        <ItemMedia
+          variant="icon"
+          className={cn(
+            "rounded-md bg-background p-2",
+            toneIconClassName[tone],
+            mediaClassName,
+          )}
+        >
+          <Icon />
+        </ItemMedia>
+      ) : null}
+      {title || description || children ? (
+        <ItemContent className="min-w-0">
+          {title ? (
+            <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
+              {title}
+            </ItemTitle>
+          ) : null}
+          {description ? (
+            <ItemDescription className="line-clamp-none text-sm leading-6">
+              {description}
+            </ItemDescription>
+          ) : null}
+          {children}
+        </ItemContent>
+      ) : null}
+      {actions ? (
+        <ItemActions className="ml-auto shrink-0">{actions}</ItemActions>
+      ) : null}
+    </Item>
+  );
+}
+
+interface EmployeeBadgeListProps {
+  items: Array<{
+    key: string;
+    label: ReactNode;
+    title?: string;
+    variant?: BadgeProps["variant"];
+  }>;
+  className?: string;
+}
+
+export function EmployeeBadgeList({
+  items,
+  className,
+}: EmployeeBadgeListProps) {
+  return (
+    <div
+      data-employee-badge-list
+      className={cn("flex flex-wrap gap-1.5", className)}
+    >
+      {items.map((item) => (
+        <Badge
+          key={item.key}
+          variant={item.variant ?? "secondary"}
+          title={item.title}
+        >
+          {item.label}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
 interface EmployeeStatusStripProps {
   items: Array<{
     label: string;
@@ -164,7 +363,7 @@ export function EmployeeStatusStrip({
   className,
 }: EmployeeStatusStripProps) {
   return (
-    <div
+    <ItemGroup
       className={cn(
         "grid gap-2",
         items.length === 1 && "grid-cols-1",
@@ -174,25 +373,29 @@ export function EmployeeStatusStrip({
       )}
     >
       {items.map((item) => (
-        <div
+        <Item
           key={item.label}
-          className="flex min-w-0 flex-col gap-1 rounded-md border bg-background px-2 py-2 transition-[background-color,border-color,box-shadow] duration-150 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-200"
+          variant="outline"
+          size="xs"
+          className="min-w-0 bg-background transition-[background-color,border-color,box-shadow] duration-150 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-200"
         >
-          <span className="truncate text-2xs font-medium text-muted-foreground">
-            {item.label}
-          </span>
-          <span
-            className={cn(
-              "min-w-0 truncate text-sm font-semibold",
-              item.mono && "font-mono tabular-nums",
-              item.muted ? "text-muted-foreground" : "text-foreground",
-            )}
-          >
-            {item.value}
-          </span>
-        </div>
+          <ItemContent className="min-w-0 gap-0.5">
+            <ItemDescription className="truncate text-2xs font-medium leading-4">
+              {item.label}
+            </ItemDescription>
+            <ItemTitle
+              className={cn(
+                "line-clamp-1 max-w-full text-sm font-semibold",
+                item.mono && "font-mono tabular-nums",
+                item.muted ? "text-muted-foreground" : "text-foreground",
+              )}
+            >
+              {item.value}
+            </ItemTitle>
+          </ItemContent>
+        </Item>
       ))}
-    </div>
+    </ItemGroup>
   );
 }
 
@@ -283,7 +486,7 @@ function EmployeeActionItem({
       variant="outline"
       size={size}
       className={cn(
-        "group/employee-action min-h-14 items-center bg-card transition-[transform,background-color,border-color,box-shadow] duration-150 hover:bg-muted/50 active:translate-y-px motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200 motion-safe:hover:-translate-y-px hover:shadow-sm",
+        "group/employee-action min-h-14 items-start bg-card transition-[transform,background-color,border-color,box-shadow] duration-150 hover:bg-muted/50 active:translate-y-px motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200 motion-safe:hover:-translate-y-px hover:shadow-sm sm:items-center",
         size === "sm" && "min-h-12",
       )}
     >
@@ -296,13 +499,17 @@ function EmployeeActionItem({
             <Icon />
           </ItemMedia>
         ) : null}
-        <ItemContent>
-          <ItemTitle>{title}</ItemTitle>
+        <ItemContent className="min-w-0">
+          <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
+            {title}
+          </ItemTitle>
           {description ? (
-            <ItemDescription>{description}</ItemDescription>
+            <ItemDescription className="line-clamp-none text-sm leading-6">
+              {description}
+            </ItemDescription>
           ) : null}
         </ItemContent>
-        <ItemActions className="text-muted-foreground">
+        <ItemActions className="self-center text-muted-foreground">
           <IconChevronRight className="transition-transform duration-150 group-active/employee-action:translate-x-0.5" />
         </ItemActions>
       </Link>
@@ -370,27 +577,22 @@ export function EmployeeMissingProfileEmpty({
   actionLabel = messages.employee.profile.openProfile,
 }: EmployeeMissingProfileEmptyProps) {
   return (
-    <Empty>
-      <EmptyMedia variant="icon">
-        <IconUserCircle />
-      </EmptyMedia>
-      <EmptyHeader>
-        <EmptyTitle>{title}</EmptyTitle>
-        <EmptyDescription>{description}</EmptyDescription>
-      </EmptyHeader>
-      <EmptyContent>
-        <Button
-          asChild
-          variant="outline"
-          size="touch"
-          className="w-full sm:w-fit"
-        >
-          <Link href="/employee/profile">
-            <IconUserCircle data-icon="inline-start" />
-            {actionLabel}
-          </Link>
-        </Button>
-      </EmptyContent>
-    </Empty>
+    <AppEmptyState
+      title={title}
+      description={description}
+      icon={<IconUserCircle />}
+    >
+      <Button
+        asChild
+        variant="outline"
+        size="touch"
+        className="w-full sm:w-fit"
+      >
+        <Link href="/employee/profile">
+          <IconUserCircle data-icon="inline-start" />
+          {actionLabel}
+        </Link>
+      </Button>
+    </AppEmptyState>
   );
 }

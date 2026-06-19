@@ -1,4 +1,5 @@
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
+import { getVNDateString } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchRevenueKpis } from "../actions";
 import type { FinanceParams, ResolvedFinanceRange } from "./finance-params";
@@ -108,9 +109,7 @@ export async function fetchCashSummary(
 
   // Running quỹ: cash collected (DB-side via revenue RPC) − cash spent, since
   // the anchor date, tenant-wide.
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Ho_Chi_Minh",
-  }).format(new Date());
+  const today = getVNDateString();
   const revRes = await fetchRevenueKpis(null, openingDate, today);
   const cashInSince = revRes.success
     ? toNumber((revRes.data as { cash_revenue?: number } | null)?.cash_revenue)

@@ -17,7 +17,6 @@ export type ModuleKey =
   | "hr"
   | "hr_payroll"
   | "finance"
-  | "accounting"
   | "reports"
   | "settings"
   | "pos"
@@ -105,12 +104,6 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/finance",
     allowedRoles: ["owner"],
     label: getModuleLabelVi("finance"),
-  },
-  /** Accounting admin — period close / reopen. Gate on period_reopen perm. */
-  accounting: {
-    path: "/admin/accounting",
-    allowedRoles: ["owner"],
-    label: getModuleLabelVi("accounting"),
   },
   reports: {
     path: "/admin/reports",

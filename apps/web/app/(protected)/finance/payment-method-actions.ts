@@ -6,8 +6,9 @@
  * Fixes a wrongly-recorded payment method (e.g. customer paid by transfer but
  * "cash" was tapped). Resolves the order's single completed payment and calls
  * the correct_payment_method RPC (permission-gated, completed-payment only,
- * audited). Pure record fix: post-D020 there is no GL, and the HĐĐT payment
- * field is hardcoded "TM/CK", so an issued invoice is unaffected.
+ * audited). Pure record fix: post-D020 there is no enterprise-accounting
+ * ledger, and the HĐĐT payment field is hardcoded "TM/CK", so an issued
+ * invoice is unaffected.
  */
 
 import { z } from "zod";

@@ -3,7 +3,7 @@
  * import path stable for existing callers.
  *
  * - order-reads          — queries (active / archived / by-table / bill / detail / reorder)
- * - order-lifecycle      — submit, append, advance status, mark served
+ * - order-lifecycle      — submit, append, mark item served
  * - order-void-actions   — void / reduce / edit / cancel (pos:void_order)
  * - order-adjust-actions — priority flags + table transfer
  */
@@ -20,7 +20,6 @@ export {
   appendOrderItems,
   reserveDailyLimitHolds,
   releaseDailyLimitHolds,
-  updateOrderStatus,
   markOrderItemServed,
 } from "./order-lifecycle";
 export {

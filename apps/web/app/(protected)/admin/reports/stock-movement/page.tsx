@@ -22,7 +22,7 @@ export default async function StockMovementReportPage() {
   return (
     <AppPage>
       <AppPageHeader
-        eyebrow={APP_COPY_VI.executiveReporting}
+        eyebrow={APP_COPY_VI.reportsLabel}
         title={messages.admin.reports.stockMovement.pageTitle}
         description={messages.admin.reports.stockMovement.pageDescription}
       />

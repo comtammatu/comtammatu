@@ -9,6 +9,7 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { messages } from "@lib/messages";
+import { EmployeeControlBar } from "../components/employee-page";
 
 const copy = messages.employee.payslip;
 
@@ -34,7 +35,7 @@ export function YearPicker({ selectedYear, currentYear }: YearPickerProps) {
   }
 
   return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2">
+    <EmployeeControlBar>
       <Button
         type="button"
         variant="outline"
@@ -58,7 +59,7 @@ export function YearPicker({ selectedYear, currentYear }: YearPickerProps) {
             disabled={isPending}
             onClick={() => go(currentYear)}
           >
-            {isPending ? <Spinner className="mr-1" /> : null}
+            {isPending ? <Spinner data-icon="inline-start" /> : null}
             {copy.currentYear}
           </Button>
         ) : (
@@ -78,6 +79,6 @@ export function YearPicker({ selectedYear, currentYear }: YearPickerProps) {
       >
         <IconChevronRight />
       </Button>
-    </div>
+    </EmployeeControlBar>
   );
 }

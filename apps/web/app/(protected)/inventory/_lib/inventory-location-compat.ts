@@ -1,11 +1,10 @@
 import type { TenantSupabase } from "./types";
 
-export type InventoryLocationMode = "receive" | "issue" | "consumption";
+export type InventoryLocationMode = "receive" | "issue";
 
 const LOCATION_DEFAULT_FLAG: Record<InventoryLocationMode, string> = {
   receive: "is_default_receive",
   issue: "is_default_issue",
-  consumption: "is_default_consumption",
 };
 
 export async function resolveDefaultInventoryLocation(

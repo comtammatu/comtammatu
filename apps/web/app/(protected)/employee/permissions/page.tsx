@@ -3,22 +3,17 @@ import {
   ShieldCheck as IconShieldCheck,
   UserCircle as IconUserCircle,
 } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchCurrentUserPermissions } from "@/_lib/permissions";
 import {
+  EmployeeBadgeList,
   EmployeeDetailList,
   EmployeePage,
   EmployeePanel,
 } from "../components/employee-page";
 import { messages } from "@lib/messages";
+import { AppEmptyState } from "@/components/surface";
 
 const copy = messages.employee.permissions;
 
@@ -126,20 +121,20 @@ function PermissionCard({
   return (
     <EmployeePanel title={title}>
       {permissions.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>{emptyTitle}</EmptyTitle>
-            <EmptyDescription>{emptyDescription}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <AppEmptyState
+          compact
+          title={emptyTitle}
+          description={emptyDescription}
+        />
       ) : (
-        <div className="flex flex-wrap gap-1.5">
-          {permissions.map((p) => (
-            <Badge key={p.key} variant="secondary" title={p.key}>
-              {p.label}
-            </Badge>
-          ))}
-        </div>
+        <EmployeeBadgeList
+          items={permissions.map((p) => ({
+            key: p.key,
+            label: p.label,
+            title: p.key,
+            variant: "secondary",
+          }))}
+        />
       )}
     </EmployeePanel>
   );

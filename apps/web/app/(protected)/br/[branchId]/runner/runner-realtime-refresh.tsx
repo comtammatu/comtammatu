@@ -2,12 +2,11 @@
 
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 
 const POLL_INTERVAL_MS = 15_000;
 
-export function RunnerRealtimeRefresh({ branchId }: { branchId: number }) {
+export function RunnerRealtimeRefresh() {
   const router = useRouter();
   const refresh = useMemo(
     () =>
@@ -19,36 +18,6 @@ export function RunnerRealtimeRefresh({ branchId }: { branchId: number }) {
         { metricName: "runner.board.refresh" },
       ),
     [router],
-  );
-
-  useRealtimeChannel(
-    (supabase) =>
-      supabase
-        .channel(`runner-board-${String(branchId)}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "kds_tickets",
-            filter: `branch_id=eq.${String(branchId)}`,
-          },
-          refresh,
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "orders",
-            filter: `branch_id=eq.${String(branchId)}`,
-          },
-          refresh,
-        )
-        .subscribe((status) => {
-          if (status === "SUBSCRIBED") refresh();
-        }),
-    [branchId, refresh],
   );
 
   useEffect(() => {

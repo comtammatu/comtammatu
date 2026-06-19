@@ -177,4 +177,3 @@ URL: `/br/{branchId}/pos` (sau khi chọn bàn hoặc tab Mang về)
 | Capture script           | [apps/web/e2e/guides/pos-03-create-order.guide.ts](../../../../apps/web/e2e/guides/pos-03-create-order.guide.ts) |
 | Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-03"`                                                   |
 | Cập nhật mockup gần nhất | 2026-04-27                                                                                                       |
-| Người maintain           | _TBD_                                                                                                            |

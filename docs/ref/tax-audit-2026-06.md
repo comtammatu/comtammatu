@@ -135,8 +135,8 @@ chung — đã chú thích ngoại lệ cho mẫu MTT.
 
 ## 4. Checklist hành động (T3) — trạng thái
 
-Đã chạy quy trình T3 (debate 4 góc nhìn: `docs/worklog/tax-pit-bhxh-legal-versions-2026-06-16.md`),
-sửa code + test, gate xanh (typecheck + eslint + 15/15 test payroll), verify đối kháng (1 subagent).
+Đã chạy quy trình T3, sửa code + test, gate xanh (typecheck + eslint + 15/15
+test payroll), verify đối kháng (1 subagent).
 
 - [x] **Biểu TNCN 5 bậc áp cho cả năm 2026** (§2.1) — `legal-versions.ts` version
       `2026-01-01` đã trỏ `PIT_BRACKETS_2026`. ⚠️ **Còn 1 quyết định của kế toán**:

@@ -1,28 +1,16 @@
 import Link from "next/link";
 import {
-  BarChart3 as IconBarChart,
-  Briefcase as IconBriefcase,
-  ClipboardList as IconClipboardList,
+  AlertTriangle as IconAlertTriangle,
   DollarSign as IconCurrencyDollar,
   Package as IconPackage,
-  Printer as IconPrinter,
   Receipt as IconReceipt,
-  Settings as IconSettings,
   Store as IconStore,
   TrendingUp as IconTrendingUp,
-  Users as IconUsers,
-  Utensils as IconUtensils,
   Wallet as IconWallet,
 } from "lucide-react";
 import { canAccess, MODULE_ACL } from "@comtammatu/shared/auth";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-} from "@comtammatu/ui/components/empty";
 import {
   Item,
   ItemActions,
@@ -33,22 +21,37 @@ import {
 } from "@comtammatu/ui/components/item";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNTime } from "@comtammatu/shared/time";
-import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { StatusBadge } from "@/components/status-badge";
 import { loadAuthState } from "@/_lib/auth";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import { messages } from "@lib/messages";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { buildCompareDelta } from "@/components/kpi/compare-chip";
 import {
-  SurfaceLinkCard,
-  type SurfaceLinkCardProps,
-} from "@/components/surface-link-card";
+  fetchFinanceCockpit,
+  type FinanceException,
+} from "../../finance/_lib/finance-cockpit";
 import {
-  fetchAdminOverview,
+  parseFinanceParams,
+  resolveFinanceRange,
+} from "../../finance/_lib/finance-params";
+import {
   fetchBranchOperatingStatus,
   fetchDashboardStats,
   type BranchOperatingRow,
 } from "./actions";
+import {
+  buildOwnerDailyCommandSummary,
+  financeExceptionSource,
+  rankOwnerWorkQueue,
+  type OwnerWorkQueueItem,
+  type OwnerWorkQueueSeverity,
+} from "./owner-view-model";
 
 type RecentOrders = Awaited<
   ReturnType<typeof fetchDashboardStats>
@@ -57,14 +60,11 @@ type RecentOrders = Awaited<
 function RecentOrderList({ orders }: { orders: RecentOrders }) {
   if (orders.length === 0) {
     return (
-      <Empty>
-        <EmptyHeader>
-          <EmptyTitle>{ADMIN_DASHBOARD_COPY.noRecentOrderTitle}</EmptyTitle>
-          <EmptyDescription>
-            {ADMIN_DASHBOARD_COPY.noRecentOrderDescription}
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <AppEmptyState
+        compact
+        title={ADMIN_DASHBOARD_COPY.noRecentOrderTitle}
+        description={ADMIN_DASHBOARD_COPY.noRecentOrderDescription}
+      />
     );
   }
 
@@ -141,7 +141,12 @@ function BranchOperatingItem({ row }: { row: BranchOperatingRow }) {
         </ItemDescription>
       </ItemContent>
       <ItemActions className="w-full justify-start sm:w-auto sm:justify-end">
-        <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="w-full sm:w-auto"
+        >
           <Link href={`/br/${String(row.branchId)}/dashboard`}>
             {ADMIN_DASHBOARD_COPY.branchOpenCta}
           </Link>
@@ -151,222 +156,215 @@ function BranchOperatingItem({ row }: { row: BranchOperatingRow }) {
   );
 }
 
-function buildSetupCards(
-  role: Parameters<typeof canAccess>[0],
-): SurfaceLinkCardProps[] {
-  const cards: SurfaceLinkCardProps[] = [];
-
-  if (canAccess(role, "settings")) {
-    cards.push({
-      title: ADMIN_DASHBOARD_COPY.setupBranchesTitle,
-      href: "/admin/settings/branches",
-      description: ADMIN_DASHBOARD_COPY.setupBranchesDescription,
-      icon: <IconStore />,
-      tone: "primary",
-      ctaLabel: ADMIN_DASHBOARD_COPY.openCta,
-    });
-  }
-
-  if (canAccess(role, "staff")) {
-    cards.push({
-      title: ADMIN_DASHBOARD_COPY.setupStaffTitle,
-      href: MODULE_ACL.staff.path,
-      description: ADMIN_DASHBOARD_COPY.setupStaffDescription,
-      icon: <IconUsers />,
-      tone: "secondary",
-      ctaLabel: ADMIN_DASHBOARD_COPY.openCta,
-    });
-  }
-
-  if (canAccess(role, "menu")) {
-    cards.push({
-      title: MODULE_ACL.menu.label,
-      href: MODULE_ACL.menu.path,
-      description: ADMIN_DASHBOARD_COPY.setupMenuDescription,
-      icon: <IconUtensils />,
-      tone: "info",
-      ctaLabel: ADMIN_DASHBOARD_COPY.openCta,
-    });
-  }
-
-  if (canAccess(role, "settings")) {
-    cards.push({
-      title: ADMIN_DASHBOARD_COPY.setupPrintersTitle,
-      href: "/admin/settings/printers",
-      description: ADMIN_DASHBOARD_COPY.setupPrintersDescription,
-      icon: <IconPrinter />,
-      tone: "secondary",
-      ctaLabel: ADMIN_DASHBOARD_COPY.openCta,
-    });
-    cards.push({
-      title: MODULE_ACL.settings.label,
-      href: MODULE_ACL.settings.path,
-      description: ADMIN_DASHBOARD_COPY.setupSettingsDescription,
-      icon: <IconSettings />,
-      tone: "secondary",
-      ctaLabel: ADMIN_DASHBOARD_COPY.openCta,
-    });
-  }
-
-  return cards;
+function formatCount(value: number): string {
+  return value.toLocaleString("vi-VN");
 }
 
-function buildDomainCards(
-  role: Parameters<typeof canAccess>[0],
-): SurfaceLinkCardProps[] {
-  const cards: SurfaceLinkCardProps[] = [];
-
-  if (canAccess(role, "orders")) {
-    cards.push({
-      title: MODULE_ACL.orders.label,
-      href: MODULE_ACL.orders.path,
-      description: ADMIN_DASHBOARD_COPY.domainOrdersDescription,
-      icon: <IconClipboardList />,
-      tone: "primary",
-      ctaLabel: ADMIN_DASHBOARD_COPY.openCta,
-    });
-  }
-
-  if (canAccess(role, "inventory")) {
-    cards.push({
-      title: MODULE_ACL.inventory.label,
-      href: MODULE_ACL.inventory.path,
-      description: ADMIN_DASHBOARD_COPY.domainInventoryDescription,
-      icon: <IconPackage />,
-      tone: "info",
-      ctaLabel: ADMIN_DASHBOARD_COPY.openCta,
-    });
-  }
-
-  if (canAccess(role, "finance")) {
-    cards.push({
-      title: MODULE_ACL.finance.label,
-      href: MODULE_ACL.finance.path,
-      description: ADMIN_DASHBOARD_COPY.domainFinanceDescription,
-      icon: <IconWallet />,
-      tone: "success",
-      ctaLabel: ADMIN_DASHBOARD_COPY.openCta,
-    });
-  }
-
-  if (canAccess(role, "hr")) {
-    cards.push({
-      title: MODULE_ACL.hr.label,
-      href: MODULE_ACL.hr.path,
-      description: APP_COPY_VI.hrWorkspaceSubtitle,
-      icon: <IconBriefcase />,
-      tone: "info",
-      ctaLabel: ADMIN_DASHBOARD_COPY.openCta,
-    });
-  }
-
-  if (canAccess(role, "reports")) {
-    cards.push({
-      title: MODULE_ACL.reports.label,
-      href: MODULE_ACL.reports.path,
-      description: ADMIN_DASHBOARD_COPY.domainReportsDescription,
-      icon: <IconBarChart />,
-      tone: "secondary",
-      ctaLabel: ADMIN_DASHBOARD_COPY.openCta,
-    });
-  }
-
-  return cards;
+function getQueueBadgeVariant(
+  severity: OwnerWorkQueueSeverity,
+): BadgeProps["variant"] {
+  if (severity === "destructive") return "destructive";
+  if (severity === "warning") return "warning";
+  return "secondary";
 }
 
-const ADMIN_DASHBOARD_COPY = {
-  pageTitle: "Điều hành hệ thống",
-  pageDescription:
-    "Sự thật vận hành hôm nay của toàn chuỗi: doanh thu, chi nhánh, thiết lập và lối vào nghiệp vụ.",
-  pageBadge: "Hôm nay",
-  overviewTitle: "Tổng quan hệ thống",
-  overviewDescription:
-    "Doanh thu, chi phí, lợi nhuận hôm nay và giá trị tồn kho hiện tại.",
-  revenueLabel: "Doanh thu",
-  todayOrdersLabel: "Đơn bán",
-  avgOrderLabel: "Trung bình/đơn",
-  revenueHelper: "Tổng tiền đã thu trong ngày.",
-  ordersHelper: "Số đơn đã thanh toán.",
-  avgOrderHelper: "Giá trị trung bình mỗi đơn.",
-  grossProfitLabel: "Lợi nhuận gộp",
-  grossProfitHelper: "Doanh thu trước VAT trừ chi nguyên liệu hôm nay.",
-  netProfitLabel: "Lợi nhuận ròng",
-  netProfitHelper: (gross: string, expense: string) =>
-    `Lãi gộp ${gross} − chi vận hành ${expense}`,
-  ingredientCostLabel: "Chi nguyên liệu",
-  ingredientCostHelper: "Giá vốn nguyên liệu tiêu hao hôm nay.",
-  inventoryValueLabel: "Giá trị tồn kho",
-  inventoryValueHelper: "Giá trị tồn kho hiện tại trong phạm vi quản trị.",
-  compareHint: "vs hôm qua",
-  branchStatusTitle: "Vận hành theo chi nhánh",
-  branchStatusDescription:
-    "Đơn, doanh thu, ca POS và máy in của từng chi nhánh hôm nay.",
-  branchSales: (orders: string, revenue: string) =>
-    `${orders} đơn đã thanh toán · ${revenue}`,
-  branchPosOpenBadge: (time: string) => `POS mở từ ${time}`,
-  branchPosClosedBadge: "POS chưa mở",
-  branchPrinterOnlineBadge: "In online",
-  branchPrinterOfflineBadge: "In offline",
-  branchPrinterNoAgentBadge: "Chưa có agent in",
-  branchPrinterFailedBadge: (count: number) => `${String(count)} lỗi in 24h`,
-  branchOpenCta: "Mở chi nhánh",
-  branchStatusEmptyTitle: "Chưa có chi nhánh hoạt động",
-  branchStatusEmptyDescription:
-    "Khai báo chi nhánh trong Thiết lập hệ thống để bắt đầu vận hành.",
-  setupTitle: "Thiết lập hệ thống",
-  setupDescription:
-    "Khởi tạo và điều chỉnh nền tảng vận hành của chuỗi theo từng bước.",
-  setupBranchesTitle: "Chi nhánh & bàn",
-  setupBranchesDescription: "Khai báo chi nhánh, khu vực và bàn phục vụ.",
-  setupStaffTitle: "Nhân sự & quyền",
-  setupStaffDescription: "Tài khoản, vai trò và phân quyền truy cập.",
-  setupMenuDescription: "Món, giá bán, biến thể và món thêm.",
-  setupPrintersTitle: "Máy in & mẫu phiếu",
-  setupPrintersDescription: "Máy in chi nhánh, định tuyến và mẫu phiếu in.",
-  setupSettingsDescription: "POS, bếp, thanh toán và các thiết lập chung.",
-  domainTitle: "Không gian nghiệp vụ",
-  domainDescription: "Đi thẳng vào không gian xử lý công việc theo mảng.",
-  domainOrdersDescription: "Tra cứu đơn, hoàn tiền và xử lý sự cố bán hàng.",
-  domainInventoryDescription: "Tồn kho, nhập hàng và kiểm kê.",
-  domainFinanceDescription: "Doanh thu, chi vận hành, lãi gộp và HĐĐT.",
-  domainReportsDescription: "Báo cáo doanh thu và vận hành theo chi nhánh.",
-  recentOrdersTitle: "Đơn hàng gần đây",
-  recentOrdersDescription: "Các đơn mới nhất trong phạm vi quản trị hiện tại.",
-  noRecentOrderTitle: "Chưa có đơn hàng mới",
-  noRecentOrderDescription: "Đơn hàng bán trong ngày sẽ xuất hiện tại đây.",
-  openCta: "Mở",
-} as const;
+function getQueueBadgeLabel(severity: OwnerWorkQueueSeverity): string {
+  if (severity === "destructive") {
+    return ADMIN_DASHBOARD_COPY.queueSeverityDestructive;
+  }
+  if (severity === "warning") return ADMIN_DASHBOARD_COPY.queueSeverityWarning;
+  return ADMIN_DASHBOARD_COPY.queueSeverityNeutral;
+}
+
+function buildBranchQueueItems(
+  branchStatus: readonly BranchOperatingRow[],
+): OwnerWorkQueueItem[] {
+  const items: OwnerWorkQueueItem[] = [];
+  const posClosed = branchStatus.filter((row) => row.posOpenedAt === null);
+  const printerFailed = branchStatus.filter((row) => row.printerFailed24h > 0);
+  const printerOffline = branchStatus.filter(
+    (row) => !row.printerHasAgent || !row.printerOnline,
+  );
+  const printerFailedCount = printerFailed.reduce(
+    (sum, row) => sum + row.printerFailed24h,
+    0,
+  );
+
+  if (printerFailedCount > 0 && printerFailed[0]) {
+    items.push({
+      id: "branch-printer-failed",
+      severity: "destructive",
+      title: ADMIN_DASHBOARD_COPY.queuePrinterFailedTitle,
+      value: formatCount(printerFailedCount),
+      description:
+        ADMIN_DASHBOARD_COPY.queuePrinterFailedDescription(printerFailedCount),
+      href: `/admin/settings/printers/jobs?branch=${String(
+        printerFailed[0].branchId,
+      )}&status=needs_attention`,
+      actionLabel: ADMIN_DASHBOARD_COPY.openWorkItem,
+      branchId: printerFailed[0].branchId,
+      source: "branch",
+    });
+  }
+
+  if (printerOffline.length > 0 && printerOffline[0]) {
+    items.push({
+      id: "branch-printer-offline",
+      severity: "warning",
+      title: ADMIN_DASHBOARD_COPY.queuePrinterOfflineTitle,
+      value: formatCount(printerOffline.length),
+      description: ADMIN_DASHBOARD_COPY.queuePrinterOfflineDescription(
+        printerOffline.length,
+      ),
+      href: `/br/${String(printerOffline[0].branchId)}/settings/printers`,
+      actionLabel: ADMIN_DASHBOARD_COPY.openWorkItem,
+      branchId: printerOffline[0].branchId,
+      source: "branch",
+    });
+  }
+
+  if (posClosed.length > 0 && posClosed[0]) {
+    items.push({
+      id: "branch-pos-closed",
+      severity: "warning",
+      title: ADMIN_DASHBOARD_COPY.queuePosClosedTitle,
+      value: formatCount(posClosed.length),
+      description: ADMIN_DASHBOARD_COPY.queuePosClosedDescription(
+        posClosed.length,
+      ),
+      href: `/br/${String(posClosed[0].branchId)}/pos`,
+      actionLabel: ADMIN_DASHBOARD_COPY.openWorkItem,
+      branchId: posClosed[0].branchId,
+      source: "branch",
+    });
+  }
+
+  return items;
+}
+
+function buildFinanceQueueItems(
+  exceptions: readonly FinanceException[],
+): OwnerWorkQueueItem[] {
+  return exceptions
+    .filter((item) => item.tone !== "neutral")
+    .map((item) => {
+      const source = financeExceptionSource(item);
+      const severity =
+        item.label === messages.finance.powerLite.exceptions.paymentDesyncLabel
+          ? "destructive"
+          : item.tone;
+
+      return {
+        id: `finance-${source}-${item.label}`,
+        severity,
+        title: item.label,
+        value: item.value,
+        description: item.hint,
+        href: item.href ?? MODULE_ACL.finance.path,
+        actionLabel: ADMIN_DASHBOARD_COPY.openWorkItem,
+        source,
+      };
+    });
+}
+
+function OwnerWorkQueueList({
+  items,
+}: {
+  items: readonly OwnerWorkQueueItem[];
+}) {
+  if (items.length === 0) {
+    return (
+      <AppEmptyState
+        compact
+        title={ADMIN_DASHBOARD_COPY.workQueueEmptyTitle}
+        description={ADMIN_DASHBOARD_COPY.workQueueEmptyDescription}
+      />
+    );
+  }
+
+  return (
+    <ItemGroup className="gap-2">
+      {items.map((item) => (
+        <Item key={item.id} variant="outline" className="items-start">
+          <ItemContent className="min-w-0">
+            <ItemTitle className="flex w-full flex-wrap items-center gap-2 text-sm">
+              {item.title}
+              <Badge variant={getQueueBadgeVariant(item.severity)}>
+                {getQueueBadgeLabel(item.severity)}
+              </Badge>
+            </ItemTitle>
+            <ItemDescription>{item.description}</ItemDescription>
+          </ItemContent>
+          <ItemActions className="w-full justify-between gap-2 sm:w-auto sm:justify-end">
+            <span className="font-mono text-sm font-semibold tabular-nums">
+              {item.value}
+            </span>
+            <Button asChild variant="outline" size="sm" className="shrink-0">
+              <Link href={item.href}>{item.actionLabel}</Link>
+            </Button>
+          </ItemActions>
+        </Item>
+      ))}
+    </ItemGroup>
+  );
+}
+
+const ADMIN_DASHBOARD_COPY = messages.admin.dashboard;
 
 export default async function DashboardPage() {
-  const [{ claims }, stats, overview, branchStatus] = await Promise.all([
+  const ownerFinanceParams = parseFinanceParams({
+    range: "mtd",
+    compare: "prev_month",
+  });
+  const ownerFinanceRange = resolveFinanceRange(ownerFinanceParams);
+  const [{ claims }, stats, financeCockpit, branchStatus] = await Promise.all([
     loadAuthState(),
     fetchDashboardStats(),
-    fetchAdminOverview(),
-    fetchBranchOperatingStatus(),
+    fetchFinanceCockpit(ownerFinanceParams, ownerFinanceRange),
+    fetchBranchOperatingStatus({
+      startDate: ownerFinanceRange.start,
+      endDate: ownerFinanceRange.end,
+    }),
   ]);
 
-  const yesterdayAvg =
-    stats.yesterdayOrders > 0
-      ? stats.yesterdayRevenue / stats.yesterdayOrders
-      : 0;
   const role = claims.user_role;
-  const setupCards = buildSetupCards(role);
-  const domainCards = buildDomainCards(role);
   const reportsHref = canAccess(role, "reports")
-    ? "/admin/reports/revenue"
+    ? "/finance/revenue"
     : undefined;
   const ordersHref = canAccess(role, "orders")
     ? MODULE_ACL.orders.path
     : undefined;
   const financeHref = canAccess(role, "finance")
-    ? MODULE_ACL.finance.path
+    ? "/finance?range=mtd&compare=prev_month"
     : undefined;
-  const foodCostHref = canAccess(role, "finance")
-    ? "/finance/food-cost"
-    : undefined;
+  const revenueHref = canAccess(role, "finance")
+    ? "/finance/revenue?range=mtd&compare=prev_month"
+    : reportsHref;
   const inventoryHref = canAccess(role, "inventory")
     ? MODULE_ACL.inventory.path
     : undefined;
+  const workQueue = rankOwnerWorkQueue([
+    ...buildBranchQueueItems(branchStatus),
+    ...buildFinanceQueueItems(financeCockpit.exceptions),
+  ]);
+  const ownerSummary = buildOwnerDailyCommandSummary({
+    branchStatus,
+    workQueue,
+  });
+  const financeKpis = financeCockpit.kpis;
+  const compareFinanceKpis = financeCockpit.compareKpis;
+  const collectedMonth = Math.round(financeKpis.totalCollected);
+  const monthOrderCount = financeKpis.orderCount;
+  const monthAvgOrderValue =
+    monthOrderCount > 0 ? financeKpis.totalCollected / monthOrderCount : 0;
+  const compareAvgOrderValue =
+    compareFinanceKpis && compareFinanceKpis.orderCount > 0
+      ? compareFinanceKpis.totalCollected / compareFinanceKpis.orderCount
+      : 0;
+  const cashRevenue = Math.round(financeKpis.cashRevenue);
+  const transferRevenue = Math.round(
+    financeKpis.vietqrRevenue + financeKpis.momoRevenue,
+  );
 
   return (
     <AppPage width="wide" density="compact">
@@ -379,31 +377,75 @@ export default async function DashboardPage() {
         }}
       />
 
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <KpiCard
+          label={ADMIN_DASHBOARD_COPY.revenueLabel}
+          value={formatVND(collectedMonth)}
+          delta={buildCompareDelta(
+            financeKpis.totalCollected,
+            compareFinanceKpis?.totalCollected ?? 0,
+            "higher_better",
+          )}
+          compareHint={ADMIN_DASHBOARD_COPY.compareHint}
+          hint={ADMIN_DASHBOARD_COPY.revenueHelper}
+          icon={<IconCurrencyDollar />}
+          href={revenueHref}
+          className="sm:col-span-2 lg:col-span-2"
+        />
+        <KpiCard
+          label={ADMIN_DASHBOARD_COPY.cashCollectedLabel}
+          value={formatVND(cashRevenue)}
+          hint={ADMIN_DASHBOARD_COPY.cashCollectedHelper}
+          icon={<IconWallet />}
+          href={revenueHref}
+          className="lg:col-span-2"
+        />
+        <KpiCard
+          label={ADMIN_DASHBOARD_COPY.transferCollectedLabel}
+          value={formatVND(transferRevenue)}
+          hint={ADMIN_DASHBOARD_COPY.transferCollectedHelper(
+            formatVND(Math.round(financeKpis.vietqrRevenue)),
+            formatVND(Math.round(financeKpis.momoRevenue)),
+          )}
+          icon={<IconCurrencyDollar />}
+          href={revenueHref}
+          className="lg:col-span-2"
+        />
+        <KpiCard
+          label={ADMIN_DASHBOARD_COPY.operatingExpenseLabel}
+          value={formatVND(Math.round(financeKpis.operatingExpense))}
+          delta={buildCompareDelta(
+            financeKpis.operatingExpense,
+            compareFinanceKpis?.operatingExpense ?? 0,
+            "lower_better",
+          )}
+          compareHint={ADMIN_DASHBOARD_COPY.compareHint}
+          hint={ADMIN_DASHBOARD_COPY.operatingExpenseHelper}
+          icon={<IconWallet />}
+          href={financeHref}
+          className="sm:col-span-2 lg:col-span-3"
+        />
+        <KpiCard
+          label={ADMIN_DASHBOARD_COPY.inventoryValueLabel}
+          value={formatVND(Math.round(financeKpis.inventoryValue))}
+          hint={ADMIN_DASHBOARD_COPY.inventoryValueHelper}
+          icon={<IconPackage />}
+          href={inventoryHref}
+          className="lg:col-span-3"
+        />
+      </div>
+
       <AppSection
-        title={ADMIN_DASHBOARD_COPY.overviewTitle}
-        description={ADMIN_DASHBOARD_COPY.overviewDescription}
+        title={ADMIN_DASHBOARD_COPY.operatingPulseTitle}
+        description={ADMIN_DASHBOARD_COPY.operatingPulseDescription}
       >
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-          <KpiCard
-            label={ADMIN_DASHBOARD_COPY.revenueLabel}
-            value={formatVND(stats.todayRevenue)}
-            delta={buildCompareDelta(
-              stats.todayRevenue,
-              stats.yesterdayRevenue,
-              "higher_better",
-            )}
-            compareHint={ADMIN_DASHBOARD_COPY.compareHint}
-            hint={ADMIN_DASHBOARD_COPY.revenueHelper}
-            icon={<IconCurrencyDollar />}
-            href={reportsHref}
-            className="col-span-2 sm:col-span-1"
-          />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard
             label={ADMIN_DASHBOARD_COPY.todayOrdersLabel}
-            value={stats.todayOrders.toLocaleString("vi-VN")}
+            value={formatCount(monthOrderCount)}
             delta={buildCompareDelta(
-              stats.todayOrders,
-              stats.yesterdayOrders,
+              monthOrderCount,
+              compareFinanceKpis?.orderCount ?? 0,
               "higher_better",
             )}
             compareHint={ADMIN_DASHBOARD_COPY.compareHint}
@@ -413,110 +455,72 @@ export default async function DashboardPage() {
           />
           <KpiCard
             label={ADMIN_DASHBOARD_COPY.avgOrderLabel}
-            value={formatVND(Math.round(stats.avgOrderValue))}
+            value={formatVND(Math.round(monthAvgOrderValue))}
             delta={buildCompareDelta(
-              stats.avgOrderValue,
-              yesterdayAvg,
+              monthAvgOrderValue,
+              compareAvgOrderValue,
               "higher_better",
             )}
             compareHint={ADMIN_DASHBOARD_COPY.compareHint}
             hint={ADMIN_DASHBOARD_COPY.avgOrderHelper}
             icon={<IconTrendingUp />}
           />
-          {overview.finance ? (
-            <>
-              <KpiCard
-                label={ADMIN_DASHBOARD_COPY.ingredientCostLabel}
-                value={formatVND(Math.round(overview.finance.ingredientCost))}
-                hint={ADMIN_DASHBOARD_COPY.ingredientCostHelper}
-                icon={<IconWallet />}
-                href={foodCostHref}
-              />
-              <KpiCard
-                label={ADMIN_DASHBOARD_COPY.grossProfitLabel}
-                value={formatVND(Math.round(overview.finance.grossProfit))}
-                hint={ADMIN_DASHBOARD_COPY.grossProfitHelper}
-                icon={<IconTrendingUp />}
-                href={financeHref}
-              />
-              <KpiCard
-                label={ADMIN_DASHBOARD_COPY.netProfitLabel}
-                value={formatVND(
-                  Math.round(
-                    overview.finance.grossProfit -
-                      overview.finance.operatingExpense,
-                  ),
-                )}
-                hint={ADMIN_DASHBOARD_COPY.netProfitHelper(
-                  formatVND(Math.round(overview.finance.grossProfit)),
-                  formatVND(Math.round(overview.finance.operatingExpense)),
-                )}
-                icon={<IconTrendingUp />}
-                href={financeHref}
-              />
-            </>
-          ) : null}
-          {overview.inventoryValue !== null ? (
-            <KpiCard
-              label={ADMIN_DASHBOARD_COPY.inventoryValueLabel}
-              value={formatVND(Math.round(overview.inventoryValue))}
-              hint={ADMIN_DASHBOARD_COPY.inventoryValueHelper}
-              icon={<IconPackage />}
-              href={inventoryHref}
-            />
-          ) : null}
+          <KpiCard
+            label={ADMIN_DASHBOARD_COPY.branchNeedsReviewLabel}
+            value={formatCount(ownerSummary.branchNeedsReview)}
+            hint={ADMIN_DASHBOARD_COPY.branchNeedsReviewHelper(
+              ownerSummary.branchCount,
+            )}
+            icon={<IconStore />}
+            tone={ownerSummary.branchNeedsReview > 0 ? "warning" : "success"}
+            href="#branch-health"
+          />
+          <KpiCard
+            label={ADMIN_DASHBOARD_COPY.attentionLabel}
+            value={formatCount(ownerSummary.attentionTotal)}
+            hint={ADMIN_DASHBOARD_COPY.attentionHelper}
+            icon={<IconAlertTriangle />}
+            tone={ownerSummary.attentionTotal > 0 ? "warning" : "success"}
+            href="#owner-work-queue"
+          />
         </div>
       </AppSection>
 
-      <AppSection
-        title={ADMIN_DASHBOARD_COPY.branchStatusTitle}
-        description={ADMIN_DASHBOARD_COPY.branchStatusDescription}
-      >
-        {branchStatus.length === 0 ? (
-          <Empty>
-            <EmptyHeader>
-              <EmptyTitle>
-                {ADMIN_DASHBOARD_COPY.branchStatusEmptyTitle}
-              </EmptyTitle>
-              <EmptyDescription>
-                {ADMIN_DASHBOARD_COPY.branchStatusEmptyDescription}
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <ItemGroup className="gap-2">
-            {branchStatus.map((row) => (
-              <BranchOperatingItem key={row.branchId} row={row} />
-            ))}
-          </ItemGroup>
-        )}
-      </AppSection>
-
-      {setupCards.length > 0 ? (
+      <div id="owner-work-queue">
         <AppSection
-          title={ADMIN_DASHBOARD_COPY.setupTitle}
-          description={ADMIN_DASHBOARD_COPY.setupDescription}
+          title={ADMIN_DASHBOARD_COPY.workQueueTitle}
+          description={ADMIN_DASHBOARD_COPY.workQueueDescription}
+          badge={{
+            children: ADMIN_DASHBOARD_COPY.workQueueBadge(
+              ownerSummary.attentionTotal,
+            ),
+            variant: ownerSummary.attentionTotal > 0 ? "warning" : "success",
+          }}
         >
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {setupCards.map((card) => (
-              <SurfaceLinkCard key={card.href} {...card} />
-            ))}
-          </div>
+          <OwnerWorkQueueList items={workQueue} />
         </AppSection>
-      ) : null}
+      </div>
 
-      {domainCards.length > 0 ? (
+      <div id="branch-health">
         <AppSection
-          title={ADMIN_DASHBOARD_COPY.domainTitle}
-          description={ADMIN_DASHBOARD_COPY.domainDescription}
+          title={ADMIN_DASHBOARD_COPY.branchStatusTitle}
+          description={ADMIN_DASHBOARD_COPY.branchStatusDescription}
         >
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {domainCards.map((card) => (
-              <SurfaceLinkCard key={card.href} {...card} />
-            ))}
-          </div>
+          {branchStatus.length === 0 ? (
+            <AppEmptyState
+              compact
+              title={ADMIN_DASHBOARD_COPY.branchStatusEmptyTitle}
+              description={ADMIN_DASHBOARD_COPY.branchStatusEmptyDescription}
+            />
+          ) : (
+            <ItemGroup className="gap-2">
+              {branchStatus.map((row) => (
+                <BranchOperatingItem key={row.branchId} row={row} />
+              ))}
+            </ItemGroup>
+          )}
         </AppSection>
-      ) : null}
+      </div>
 
       <AppSection
         title={ADMIN_DASHBOARD_COPY.recentOrdersTitle}

@@ -105,7 +105,7 @@ export async function hasCurrentProductionBranchAccess(
     .eq("id", claims.branch_id)
     .maybeSingle();
 
-  return !error && data?.branch_kind === "branch";
+  return !error && data?.branch_kind === "central_kitchen";
 }
 
 export async function loadProductionSurfaceData({
@@ -174,7 +174,7 @@ export async function loadProductionSurfaceData({
 
   const branches = (branchesRes.data ?? []) as BranchPreviewRow[];
   let productionBranches: BranchOption[] = branches
-    .filter((branch) => branch.branch_kind === "branch")
+    .filter((branch) => branch.branch_kind === "central_kitchen")
     .map((branch) => ({
       id: branch.id,
       name: branch.name,

@@ -1,11 +1,11 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
-import { Button } from "@comtammatu/ui/components/button";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { AppPage } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
+import { messages } from "@lib/messages";
+import { BranchManagementShell } from "../../_components/branch-management-chrome";
 import {
   PosSessionsClient,
   type PosSessionOrder,
@@ -27,7 +27,7 @@ export default async function BranchPosSessionsPage({
   const branchId = Number(branchIdStr);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  const { supabase, claims } = await loadAuthState();
+  const { supabase, claims, session } = await loadAuthState();
 
   if (!canManageBranchFloorSettings(claims.user_role)) {
     redirect(`/br/${branchId}/settings`);
@@ -168,31 +168,35 @@ export default async function BranchPosSessionsPage({
       report = reportResult.data;
     }
   }
+  const displayName =
+    session.user.user_metadata?.["full_name"] ??
+    session.user.email ??
+    claims.user_role;
 
   return (
-    <AppPage width="wide">
-      <div className="flex items-center gap-3">
-        <Button asChild variant="outline" size="sm" className="gap-1">
-          <Link href={`/br/${branchId}/settings`}>
-            <IconArrowLeft className="size-4" />
-            Thiết lập
-          </Link>
-        </Button>
-        <AppPageHeader
-          className="min-w-0 flex-1"
-          title="Ca POS"
-          description={branch.name}
+    <BranchManagementShell
+      user={{ name: displayName }}
+      role={claims.user_role}
+      branchId={branchId}
+      branchName={branch.name}
+      defaultPageTitle={messages.settings.branch.commandPosSessionsTitle}
+      description={messages.settings.branch.commandPosSessionsDescription}
+      breadcrumbSegments={[
+        { label: APP_COPY_VI.branchCommand, href: `/br/${branchId}/dashboard` },
+        messages.settings.branch.endDayTitle,
+        messages.settings.branch.commandPosSessionsTitle,
+      ]}
+    >
+      <AppPage width="wide">
+        <PosSessionsClient
+          branchId={branchId}
+          sessions={sessionRows}
+          selectedSessionId={selectedSessionId}
+          orders={orders}
+          report={report}
         />
-      </div>
-
-      <PosSessionsClient
-        branchId={branchId}
-        sessions={sessionRows}
-        selectedSessionId={selectedSessionId}
-        orders={orders}
-        report={report}
-      />
-    </AppPage>
+      </AppPage>
+    </BranchManagementShell>
   );
 }
 

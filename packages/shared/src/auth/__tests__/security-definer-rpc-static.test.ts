@@ -22,6 +22,9 @@ function readRepoFile(path: string): string {
 const migration = readRepoFile(
   "supabase/migrations/20260601860000_security_definer_rpc_hardening.sql",
 );
+const securityHardeningMigration = readRepoFile(
+  "supabase/migrations/20260619062853_security_rpc_cron_runner_hardening.sql",
+);
 
 test("payment and print implementation RPCs are not directly executable by authenticated users", () => {
   for (const signature of [
@@ -60,4 +63,61 @@ test("staff admin RPCs enforce permission gates inside SECURITY DEFINER bodies",
     migration,
     /RAISE EXCEPTION 'forbidden: missing staff:assign_position' USING ERRCODE = '42501'/,
   );
+});
+
+test("service-only implementation RPCs are not executable by authenticated users", () => {
+  for (const signature of [
+    "public.consume_stock_for_order_service(BIGINT, UUID)",
+    "public.create_waste_from_order(BIGINT, BIGINT, TEXT, JSONB, TEXT)",
+    "public.claim_notification_push_delivery(BIGINT, BIGINT, INTEGER, INTEGER)",
+  ]) {
+    assert.match(
+      securityHardeningMigration,
+      new RegExp(
+        `REVOKE (?:ALL|EXECUTE) ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+FROM PUBLIC, anon, authenticated`,
+        "i",
+      ),
+    );
+    assert.match(
+      securityHardeningMigration,
+      new RegExp(
+        `GRANT EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+TO service_role`,
+        "i",
+      ),
+    );
+  }
+
+  assert.match(
+    securityHardeningMigration,
+    /IF auth\.role\(\) IS DISTINCT FROM 'service_role' THEN[\s\S]{0,160}forbidden_service_role_only/,
+  );
+});
+
+test("POS and inventory RPC bodies enforce branch permission and location scope", () => {
+  for (const functionName of [
+    "mark_order_item_served",
+    "transfer_order_table",
+  ]) {
+    const body =
+      securityHardeningMigration.match(
+        new RegExp(
+          `CREATE OR REPLACE FUNCTION public\\.${functionName}\\([\\s\\S]*?\\n\\$\\$;`,
+        ),
+      )?.[0] ?? "";
+    assert.match(body, /v_prof_branch IS NULL/);
+    assert.match(body, /public\.has_permission\([^,]+,\s*'pos:use'\)/);
+    assert.match(body, /forbidden: missing pos:use/);
+  }
+
+  assert.match(
+    securityHardeningMigration,
+    /CREATE OR REPLACE FUNCTION public\.create_waste_entry/,
+  );
+  assert.match(securityHardeningMigration, /FROM public\.inventory_locations/);
+  assert.match(securityHardeningMigration, /v_location\.tenant_id <> v_tenant/);
+  assert.match(
+    securityHardeningMigration,
+    /v_location\.branch_id <> p_branch_id/,
+  );
+  assert.match(securityHardeningMigration, /location_scope_mismatch/);
 });

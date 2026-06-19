@@ -1,8 +1,6 @@
 -- =========================================================================
 -- HRM "1 trục Ngày công" — sửa quyền nghỉ phép tận gốc + bỏ flow đăng ký ca
 --
--- T3 contract: docs/worklog/hrm-truc-ngay-cong-2026-06-10.md
---
 -- 1) Nghỉ phép "không có quyền" (cả nhân viên lẫn quản lý):
 --    20260610110000 chỉ seed hr:request_leave / hr:approve_leave_request vào
 --    role_templates. Template là snapshot-only (không tự cập nhật grant cho

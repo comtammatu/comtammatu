@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory production order list keeps kitchen workflow copy inline */
+
 import { useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -10,13 +12,6 @@ import {
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -34,19 +29,12 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { AppSection } from "@/components/surface";
 import { DocumentStockCorrectionDialog } from "./_components/document-stock-correction-dialog";
 import {
   cancelProductionOrder,
@@ -230,38 +218,33 @@ export function ProductionOrderList({
 
   return (
     <>
-      <Card>
-        <CardHeader className="border-b">
-          <CardTitle className="flex items-center gap-2">
-            <IconClipboardList />
-            Lệnh sản xuất
-          </CardTitle>
-          <CardAction>
-            <Badge variant={draftCount > 0 ? "warning" : "secondary"}>
-              {draftCount} lệnh nháp
-            </Badge>
-          </CardAction>
-        </CardHeader>
-
-        <CardContent flush className="max-md:px-4">
-          <DataTable
-            className={cn(isPending && "opacity-70")}
-            columns={columns}
-            data={orders}
-            getRowKey={(order) => order.id}
-            emptyTitle="Chưa có lệnh sản xuất nào"
-            emptyDescription="Tạo lệnh mới khi BOM và nguyên liệu đã sẵn sàng tại chi nhánh."
-            emptyIcon={<IconClipboardList />}
-            emptyMode="no-data"
-            mobileCardRender={(order) => (
-              <ProductionOrderItem
-                order={order}
-                actions={renderOrderActions(order)}
-              />
-            )}
-          />
-        </CardContent>
-      </Card>
+      <AppSection
+        title="Lệnh sản xuất"
+        icon={<IconClipboardList />}
+        badge={{
+          children: `${draftCount} lệnh nháp`,
+          variant: draftCount > 0 ? "warning" : "secondary",
+        }}
+        contentFlush
+        contentClassName="max-md:px-4"
+      >
+        <DataTable
+          className={cn(isPending && "opacity-70")}
+          columns={columns}
+          data={orders}
+          getRowKey={(order) => order.id}
+          emptyTitle="Chưa có lệnh sản xuất nào"
+          emptyDescription="Tạo lệnh mới khi BOM và nguyên liệu đã sẵn sàng tại chi nhánh."
+          emptyIcon={<IconClipboardList />}
+          emptyMode="no-data"
+          mobileCardRender={(order) => (
+            <ProductionOrderItem
+              order={order}
+              actions={renderOrderActions(order)}
+            />
+          )}
+        />
+      </AppSection>
       <ProductionShortageDialog
         info={shortageInfo}
         onClose={() => setShortageInfo(null)}
@@ -340,6 +323,50 @@ function ProductionShortageDialog({
   onClose,
 }: ProductionShortageDialogProps) {
   const open = info !== null;
+  const columns: DataTableColumn<ProductionShortageRow>[] = [
+    {
+      key: "ingredient",
+      header: "Nguyên liệu",
+      render: (row) => <span className="font-medium">{row.ingredient_name}</span>,
+    },
+    {
+      key: "needed",
+      header: "Cần",
+      className: "text-right",
+      render: (row) => (
+        <span className="font-mono tabular-nums">
+          {formatShortageNumber(row.needed)}
+        </span>
+      ),
+    },
+    {
+      key: "on_hand",
+      header: "Tồn",
+      className: "text-right",
+      render: (row) => (
+        <span className="font-mono tabular-nums">
+          {formatShortageNumber(row.on_hand)}
+        </span>
+      ),
+    },
+    {
+      key: "missing",
+      header: "Thiếu",
+      className: "text-right",
+      render: (row) => (
+        <span className="font-mono tabular-nums text-destructive">
+          {formatShortageNumber(row.missing)}
+        </span>
+      ),
+    },
+    {
+      key: "unit",
+      header: "Đơn vị",
+      className: "text-muted-foreground",
+      render: (row) => row.unit,
+    },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? null : onClose())}>
       <DialogContent className="max-w-2xl">
@@ -348,43 +375,17 @@ function ProductionShortageDialog({
           <DialogDescription>
             {info
               ? `Lệnh ${info.productionNumber} chưa đủ nguyên liệu trong kho mặc định của chi nhánh. Nhập kho các nguyên liệu dưới đây trước khi xác nhận lại.`
-              : ""}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nguyên liệu</TableHead>
-                <TableHead className="text-right">Cần</TableHead>
-                <TableHead className="text-right">Tồn</TableHead>
-                <TableHead className="text-right">Thiếu</TableHead>
-                <TableHead>Đơn vị</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {info?.rows.map((row) => (
-                <TableRow key={row.ingredient_id}>
-                  <TableCell className="font-medium">
-                    {row.ingredient_name}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">
-                    {formatShortageNumber(row.needed)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">
-                    {formatShortageNumber(row.on_hand)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums text-destructive">
-                    {formatShortageNumber(row.missing)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {row.unit}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+            : ""}
+        </DialogDescription>
+      </DialogHeader>
+        <DataTable
+          columns={columns}
+          data={info?.rows ?? []}
+          getRowKey={(row) => row.ingredient_id}
+          emptyTitle="Không có dòng thiếu nguyên liệu"
+          emptyMode="no-data"
+          mobileCardRender={(row) => <ProductionShortageItem row={row} />}
+        />
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             Đóng
@@ -392,5 +393,24 @@ function ProductionShortageDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ProductionShortageItem({ row }: { row: ProductionShortageRow }) {
+  return (
+    <Item variant="outline">
+      <ItemHeader>
+        <ItemTitle>{row.ingredient_name}</ItemTitle>
+        <Badge variant="destructive">
+          Thiếu {formatShortageNumber(row.missing)} {row.unit}
+        </Badge>
+      </ItemHeader>
+      <ItemContent>
+        <ItemDescription>
+          Cần {formatShortageNumber(row.needed)} · Tồn{" "}
+          {formatShortageNumber(row.on_hand)}
+        </ItemDescription>
+      </ItemContent>
+    </Item>
   );
 }

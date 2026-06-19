@@ -1,7 +1,10 @@
 import {
+  ATTENDANCE_STATUS_LABELS_VI,
+  LEAVE_REQUEST_STATUS_LABELS_VI,
   ORDER_ITEM_STATUS_LABELS_VI,
   ORDER_PAYMENT_STATUS_LABELS_VI,
   ORDER_STATUS_LABELS_VI,
+  PAYROLL_PERIOD_STATUS_LABELS_VI,
   PAYMENT_RECORD_STATUS_LABELS_VI,
   PRINT_JOB_STATUS_LABELS_VI,
   REFUND_STATUS_LABELS_VI,
@@ -106,6 +109,36 @@ const STATUS_DOMAINS = {
       issued: "default",
       failed: "destructive",
       skipped: "secondary",
+    },
+  },
+  attendance: {
+    labels: ATTENDANCE_STATUS_LABELS_VI,
+    variants: {
+      present: "default",
+      late: "outline",
+      absent: "destructive",
+      half_day: "secondary",
+      checked_out: "default",
+      in_shift: "secondary",
+      stale_open: "destructive",
+    },
+  },
+  "leave-request": {
+    labels: LEAVE_REQUEST_STATUS_LABELS_VI,
+    variants: {
+      pending: "warning",
+      approved: "success",
+      rejected: "destructive",
+      cancelled: "secondary",
+    },
+  },
+  "payroll-period": {
+    labels: PAYROLL_PERIOD_STATUS_LABELS_VI,
+    variants: {
+      draft: "secondary",
+      calculated: "outline",
+      approved: "default",
+      paid: "default",
     },
   },
 } satisfies Record<string, DomainConfig>;

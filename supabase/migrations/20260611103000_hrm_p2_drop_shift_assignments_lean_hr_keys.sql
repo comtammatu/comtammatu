@@ -1,8 +1,6 @@
 -- =========================================================================
 -- HRM "1 trục Ngày công" — Phase 2: bỏ hẳn Phân ca + gom permission keys HR
 --
--- T3 contract: docs/worklog/hrm-truc-ngay-cong-2026-06-10.md (section Phase 2)
---
 -- 1) Phân ca (shift_assignments) bỏ hẳn theo quyết định owner 2026-06-11:
 --    bảng 0 dòng trên prod từ trước tới nay, quán chạy ca mặc định. Drop
 --    bảng + 3 RPC bulk + nhánh override trong RPC chấm công (template giờ

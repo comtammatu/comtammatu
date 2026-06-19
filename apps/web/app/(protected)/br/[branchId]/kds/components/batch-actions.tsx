@@ -2,14 +2,11 @@
 
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { CheckCheck as IconCheckCheck } from "lucide-react";
-import { CardFooter } from "@comtammatu/ui/components/card";
 import type { KdsTicket } from "../types";
 
 interface BatchActionsProps {
   orderGroupKey: string;
-  orderNumber?: string;
   activeTickets: KdsTicket[];
   pendingTicketIds: Set<number>;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
@@ -18,7 +15,6 @@ interface BatchActionsProps {
 
 export function BatchActions({
   orderGroupKey,
-  orderNumber,
   activeTickets,
   pendingTicketIds,
   onCompleteTickets,
@@ -41,21 +37,7 @@ export function BatchActions({
         : "Hoàn tất"
       : fullLabel;
 
-  const handleCompleteBatch = async () => {
-    const ok = await confirm({
-      title: "Hoàn tất cả phiếu của đơn này?",
-      description:
-        "Toàn bộ món đang chờ của đơn sẽ được đánh dấu hoàn tất cùng lúc.",
-      details: [
-        ...(orderNumber
-          ? [{ label: "Mã đơn", value: orderNumber }]
-          : []),
-        { label: "Số món", value: String(activeTickets.length) },
-      ],
-      confirmText: "Hoàn tất",
-      variant: "destructive",
-    });
-    if (!ok) return;
+  const handleCompleteBatch = () => {
     void onCompleteTickets(activeTicketIds);
   };
 
@@ -68,7 +50,7 @@ export function BatchActions({
       className={layout === "title" ? "px-2.5 font-semibold" : "w-full"}
       disabled={completeBatchBusy}
       onClick={() => {
-        void handleCompleteBatch();
+        handleCompleteBatch();
       }}
       aria-label={fullLabel}
     >
@@ -86,8 +68,8 @@ export function BatchActions({
   }
 
   return (
-    <CardFooter className="border-t p-2.5 md:p-3">
+    <div className="border-t p-2.5 md:p-3">
       <div className="grid w-full grid-cols-1 gap-2">{action}</div>
-    </CardFooter>
+    </div>
   );
 }

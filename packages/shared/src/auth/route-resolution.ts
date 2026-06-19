@@ -23,6 +23,7 @@ export const INVENTORY_PROCUREMENT_PREFIXES = [
 
 export const INVENTORY_ROUTE_PREFIXES = [
   "/inventory/dashboard",
+  "/inventory/consumption",
   "/inventory/drafts",
   "/inventory/expiry",
   "/inventory/grn",
@@ -92,7 +93,6 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   // Mapping kept so URL space resolves to access-denied via standard ACL flow
   // instead of falling through to admin-route landing redirect. See module-acl.ts.
   if (pathname.startsWith("/admin/inventory")) return "inventory_admin";
-  if (pathname.startsWith("/admin/accounting")) return "accounting";
 
   for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
     if (matchesPathPrefix(pathname, prefix)) {

@@ -173,6 +173,7 @@ export type Database = {
           phase: string
           scope: string
           sort_order: number
+          task_kind: string
           template_item_id: number | null
           tenant_id: number
           title: string
@@ -189,6 +190,7 @@ export type Database = {
           phase?: string
           scope?: string
           sort_order: number
+          task_kind?: string
           template_item_id?: number | null
           tenant_id: number
           title: string
@@ -205,6 +207,7 @@ export type Database = {
           phase?: string
           scope?: string
           sort_order?: number
+          task_kind?: string
           template_item_id?: number | null
           tenant_id?: number
           title?: string
@@ -227,6 +230,177 @@ export type Database = {
           },
           {
             foreignKeyName: "attendance_checklist_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_consumption_report_lines: {
+        Row: {
+          created_at: string
+          default_item_id: number | null
+          id: number
+          ingredient_id: number
+          note: string | null
+          quantity: number
+          report_id: number
+          sort_order: number
+          tenant_id: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_item_id?: number | null
+          id?: never
+          ingredient_id: number
+          note?: string | null
+          quantity: number
+          report_id: number
+          sort_order?: number
+          tenant_id: number
+          unit: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_item_id?: number | null
+          id?: never
+          ingredient_id?: number
+          note?: string | null
+          quantity?: number
+          report_id?: number
+          sort_order?: number
+          tenant_id?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_consumption_report_lines_default_item_id_fkey"
+            columns: ["default_item_id"]
+            isOneToOne: false
+            referencedRelation: "shift_checklist_consumption_default_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_consumption_report_lines_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_consumption_report_lines_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_consumption_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_consumption_report_lines_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_consumption_reports: {
+        Row: {
+          attendance_record_id: number
+          branch_id: number
+          created_at: string
+          employee_id: number
+          id: number
+          no_consumption: boolean
+          note: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          stock_issue_id: number | null
+          submitted_at: string | null
+          submitted_by: string | null
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          attendance_record_id: number
+          branch_id: number
+          created_at?: string
+          employee_id: number
+          id?: never
+          no_consumption?: boolean
+          note?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          stock_issue_id?: number | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          attendance_record_id?: number
+          branch_id?: number
+          created_at?: string
+          employee_id?: number
+          id?: never
+          no_consumption?: boolean
+          note?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          stock_issue_id?: number | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_consumption_reports_attendance_record_id_fkey"
+            columns: ["attendance_record_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_consumption_reports_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_consumption_reports_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "attendance_consumption_reports_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_consumption_reports_stock_issue_id_fkey"
+            columns: ["stock_issue_id"]
+            isOneToOne: false
+            referencedRelation: "stock_issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_consumption_reports_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -5048,6 +5222,64 @@ export type Database = {
           },
         ]
       }
+      shift_checklist_consumption_default_items: {
+        Row: {
+          created_at: string
+          id: number
+          ingredient_id: number
+          is_active: boolean
+          note: string | null
+          sort_order: number
+          template_item_id: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          ingredient_id: number
+          is_active?: boolean
+          note?: string | null
+          sort_order?: number
+          template_item_id: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          ingredient_id?: number
+          is_active?: boolean
+          note?: string | null
+          sort_order?: number
+          template_item_id?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_checklist_consumption_default_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_checklist_consumption_default_items_template_item_id_fkey"
+            columns: ["template_item_id"]
+            isOneToOne: false
+            referencedRelation: "shift_checklist_template_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_checklist_consumption_default_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_checklist_template_items: {
         Row: {
           created_at: string
@@ -5058,6 +5290,7 @@ export type Database = {
           phase: string
           scope: string
           sort_order: number
+          task_kind: string
           template_id: number
           tenant_id: number
           title: string
@@ -5071,6 +5304,7 @@ export type Database = {
           phase?: string
           scope?: string
           sort_order: number
+          task_kind?: string
           template_id: number
           tenant_id: number
           title: string
@@ -5084,6 +5318,7 @@ export type Database = {
           phase?: string
           scope?: string
           sort_order?: number
+          task_kind?: string
           template_id?: number
           tenant_id?: number
           title?: string
@@ -7984,6 +8219,10 @@ export type Database = {
       auth_role_to_position: { Args: { p_role: string }; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
       auto_close_periods: { Args: never; Returns: number }
+      branch_manager_approve_consumption_report: {
+        Args: { p_report_id: number; p_tenant_id: number }
+        Returns: Json
+      }
       branch_manager_approve_employee_clock_out: {
         Args: {
           p_approved_by: string
@@ -7993,6 +8232,14 @@ export type Database = {
           p_tenant_id: number
         }
         Returns: string
+      }
+      branch_manager_request_consumption_adjustment: {
+        Args: {
+          p_report_id: number
+          p_review_note: string
+          p_tenant_id: number
+        }
+        Returns: number
       }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       can_access_branch: { Args: { p_branch_id: number }; Returns: boolean }
@@ -8010,6 +8257,15 @@ export type Database = {
       }
       cancel_production_order: { Args: { p_order_id: number }; Returns: Json }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
+      claim_notification_push_delivery: {
+        Args: {
+          p_max_attempts?: number
+          p_notification_id: number
+          p_processing_ttl_seconds?: number
+          p_subscription_id: number
+        }
+        Returns: Json
+      }
       claim_print_job: {
         Args: { p_agent_id: string; p_job_id: number }
         Returns: boolean
@@ -8307,6 +8563,16 @@ export type Database = {
           p_tenant_id: number
         }
         Returns: string
+      }
+      employee_submit_consumption_report: {
+        Args: {
+          p_attendance_id: number
+          p_lines: Json
+          p_no_consumption?: boolean
+          p_note?: string
+          p_tenant_id: number
+        }
+        Returns: number
       }
       enable_offline_for_session: {
         Args: { p_session_id: number }

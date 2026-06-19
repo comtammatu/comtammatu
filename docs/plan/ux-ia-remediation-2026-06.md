@@ -20,7 +20,7 @@
 | HĐĐT `sellerName=''` lên hóa đơn pháp lý | **REFUTED** — không lên wire, Viettel tự điền | Rời Phase 0; hạ thành dọn literal + card định danh (T2) |
 | POS/refund/KDS/checkout concurrency thiếu guard | **REFUTED** — đã khóa DB-layer, prod 0 trùng | Đóng track; chỉ còn 1 rough-edge low-prio |
 | `createEmployee` rớt base_salary | **OVERSTATED** — server đã nhận đủ; chỉ client form thiếu | Payroll = sửa form, không sửa action create |
-| customer_count "đã bỏ" | **SAI** — chỉ write-path chết; còn ~11 chỗ đọc + mirror in | Cleanup T2 thật + drop-column T3 |
+| customer_count "đã bỏ" | **ĐÃ ĐÓNG sau D3** — verify ban đầu đúng là còn debt, nhưng cleanup + drop-column đã ship | Không mở lại active cleanup; xem tiến độ D3 bên dưới |
 | Payroll cần migration | **REFUTED** — mọi cột đã có prod | Bỏ slot migration payroll |
 | Food-cost lệch nhẹ | **UPGRADED** — view 1-ngày margin ~100% (thổi phồng) | Ưu tiên cao Track C |
 
@@ -72,11 +72,11 @@ Dùng `confirm()` SSoT (`@comtammatu/ui` confirm-dialog), KHÔNG tự chế dial
 ### D1 — Payroll vào app *(đi sau/khớp D026/D027)*
 | PR | Nội dung | Files | Tier |
 | --- | --- | --- | --- |
-| D1a | Form NV: profile-picker thay UUID thô (`fetchUnlinkedProfiles` mới) + base_salary/id_number/bank/dependents/contract_type; `updateEmployee` + Edit dialog (dual create/edit) | `employee-form-dialog.tsx`, `hr/actions.ts`, `employee-table.tsx` | T2 |
-| D1b | **Surface hợp đồng lao động** (unblocker): `contract-actions.ts` (create/update/fetch) + `contract-dialog.tsx`, ghi `gross_salary`/`insurance_base_salary`/dates/contract_number/sequence; wire nút "Hợp đồng" hoặc tab | `hr/contract-actions.ts`*, `hr/contract-dialog.tsx`*, `hr-client.tsx` | **T3** |
-| D1c | Overview tab thật: `fetchPayrollPeriod` + `payroll-overview.tsx` (KpiCards Tổng net/BHXH/TNCN/Số NV + approved_by/at, paid_at); StatusBadge domain `payroll-period` + labels | `payroll/[periodId]/page.tsx`, `status-badge.tsx`, `labels/vi.ts` | T2 |
+| D1a | Form NV theo mô hình HKD đơn giản: profile-picker thay UUID thô, `base_salary`/`id_number`/bank/`dependents_count`; thêm `updateEmployee` + Edit dialog cho hồ sơ HR | `employee-form-dialog.tsx`, `hr/actions.ts`, `employee-table.tsx` | T2 |
+| D1b | Payroll engine HKD: `calculatePayroll` đọc `employees.base_salary`, eligibility `is_active && base_salary > 0`, 2 ca/ngày = 1 công, PIT legal-version; thêm `standard_days` owner nhập + clamp; chuyển calculate+status sang RPC nguyên tử trước go-live | `payroll-actions.ts`, shared payroll helpers, migration nếu cần RPC | **T3** |
+| D1c | Overview/đối chiếu/export: KpiCards tổng net/TNCN/số NV + approved_by/at, paid_at; export CSV/Excel; StatusBadge domain `payroll-period` + labels | `payroll/[periodId]/page.tsx`, `status-badge.tsx`, `labels/vi.ts` | T2 |
 
-Dùng `calculatePayrollEntry` (versioned legal tables, KHÔNG hardcode). **Debt riêng (T3, trước go-live):** `calculatePayroll` upsert non-transactional → RPC nguyên tử (`payroll-actions.ts:291`). **Acceptance D1:** tạo NV có lương qua picker → lập hợp đồng → "Tính lương" sinh entry thật → Overview hiện tổng + trạng thái.
+Dùng `calculatePayrollEntry` (versioned legal tables, KHÔNG hardcode). Không build surface hợp đồng lao động trong scope hiện tại; owner đã chốt payroll HKD đơn giản, không phụ thuộc `employment_contracts`. **Debt riêng (T3, trước go-live):** `calculatePayroll` upsert non-transactional → RPC nguyên tử. **Acceptance D1:** tạo/sửa NV có lương + phụ thuộc → "Tính lương" sinh entry thật theo ngày công ca → owner xem được tổng, PIT, trạng thái, export và duyệt/trả.
 
 ### D2 — Runner = đồng hồ chờ (rename + age/overflow) [T2, không M]
 - GIỮ `RUNNER_ACTIVE_STATUSES=['pending','preparing']`; **đổi tiêu đề khỏi "Gọi số"** → "Đơn đang làm"/"Bếp đang làm"; thêm age escalation (mirror KDS `getAgeStyle`) + xoay/nén overflow để không giấu đơn chờ lâu.
@@ -99,13 +99,13 @@ Dùng `calculatePayrollEntry` (versioned legal tables, KHÔNG hardcode). **Debt 
 
 **Owner-default đã ghi (D031c):** status 'partial' = derive-at-read; đơn trả-một-phần không split/merge; QR/MoMo khớp số tender. **Acceptance:** trả 2 lần (tiền mặt + QR) cho 1 đơn → đơn 'paid' khi đủ tổng, receipt in cả 2 tender, không tạo payment trùng.
 
-### D5 — Định danh HKD vào UI + bỏ field chết [T2] · VAT [accountant-gated]
+### D5 — Định danh HKD vào UI + bỏ field chết [T2] · VAT derive theo bậc [T3]
 | PR | Nội dung | Tier | M? |
 | --- | --- | --- | --- |
 | D5a | Card "Định danh hộ kinh doanh" (owner-only) đọc/sửa `tenants.legal_name`/`tax_code`/địa chỉ; print-render + hiển thị người bán đọc từ `tenants` thay literal `''`; bỏ 3 field chết (`service_charge`/`store_phone`/`store_email`) khỏi `settings-form`+`GENERAL_SYSTEM_SETTING_KEYS` | T2 | — |
-| D5b | **BLOCKED on accountant:** đổi `SYSTEM_SETTING_DEFAULTS.vat_rate` khỏi `8` → 3.00/2.40/0 (chờ kế toán xác nhận ngưỡng 1 tỷ) + guard chặn set 8 | T3 | — |
+| D5b | ĐÓNG: bỏ hướng đổi số cứng `vat_rate`; dùng resolver versioned theo bậc doanh thu + ngày hiệu lực (`resolve_gtgt_rate`, mirror shared tax) | T3 | ✓ |
 
-**KHÔNG** đụng payload Viettel / `SELLER_*` env. **Acceptance D5a:** sửa tên hộ/MST ở settings → hiện đúng trên chứng từ in; General chỉ còn control sống. **D5b mở** cho tới khi có con số kế toán.
+**KHÔNG** đụng payload Viettel / `SELLER_*` env. **Acceptance D5a:** sửa tên hộ/MST ở settings → General chỉ còn control sống. Seller-name trên HĐĐT do Viettel S-invoice tự điền từ MST đăng ký, không còn là gap. **D5b đóng**: HĐ mới dùng resolver; HĐ cũ 8% là sửa-tiến/kế toán, không tự ghi đè.
 
 ---
 
@@ -163,16 +163,16 @@ Dùng `calculatePayrollEntry` (versioned legal tables, KHÔNG hardcode). **Debt 
 
 ## Thứ tự & song song hóa
 
-1. **Ngay, song song:** Track A (3 PR độc lập) ‖ khởi động migration **C1 food-cost** + **D4a split-bill** (lead dài: file→PR→owner-apply) ‖ mở debate T3 **D1b contract surface**.
+1. **Ngay, song song:** Track A (3 PR độc lập) ‖ khởi động migration **C1 food-cost** + **D4a split-bill** (lead dài: file→PR→owner-apply) ‖ mở T3 **D1b payroll RPC/standard-days**.
 2. **Sóng 1 (sau A):** Track B confirm() · Track C2–C5 số liệu · Track E IA (mechanical, độc lập).
-3. **Sóng 2:** D3 customer_count cleanup → D3b drop-column (sau khi code sạch) · D5a identity · D2 runner.
+3. **Sóng 2 còn lại:** D2 runner. D3 customer_count và D5 identity/VAT đã chuyển xuống tiến độ đóng, không mở lại từ thứ tự cũ.
 4. **Sóng 3:** D4b UI tách hóa đơn (sau khi D4a applied + `db:types`) · D1a→D1c payroll (sau/khớp D026/D027).
 5. **Sóng 4:** Track F nhất quán (F1 registry trước F2/F3) · Track G phân trang · Track H gom.
 
 ## Cổng chờ (block scope, không block bắt đầu)
 
-- **VAT (D5b):** owner xác nhận doanh thu cả năm > 1 tỷ (2 tháng gần nhất ~400tr/tháng) → chịu GTGT → ăn uống **2,4%** (giảm tạm đến 31/12/2026, về 3% sau). Còn lại = code change trong D5 (đổi `SYSTEM_SETTING_DEFAULTS.vat_rate` khỏi 8 + guard chặn 8); set live qua `/admin/settings/general`.
-- **Payroll chủ HKD:** hồ sơ owner có lập HĐ + payroll entry? (tax-vn: BHXH chủ hộ doc-only).
+- **VAT (D5b):** ĐÓNG. Không hỏi kế toán để đổi số cứng; resolver tự suy theo bậc doanh thu và ngày hiệu lực. Nếu cần đối soát hồi tố HĐ cũ 8%, mở việc kế toán/kê khai riêng.
+- **Payroll chủ HKD:** chủ hộ có vào payroll app hay xử lý ngoài app (BHXH chủ hộ doc-only) — quyết định riêng, không chặn payroll nhân viên.
 - **Viettel `sellerInfo`:** chỉ mở T3 provider-body nếu HDSD Viettel xác nhận chấp nhận override (mặc định: KHÔNG làm).
 - **Tách hóa đơn:** xác nhận quy tắc split/merge/refund cho đơn trả-một-phần trước khi mở rộng split-by-item.
 
@@ -182,7 +182,7 @@ Dùng `calculatePayrollEntry` (versioned legal tables, KHÔNG hardcode). **Debt 
 - ₫-glyph app-wide → wave riêng D029. Allowlist ratchet `reframe` → không đuổi về 0 (D030).
 - `tables.capacity` → đã bỏ, test-guard.
 
-## Tiến độ thực thi (cập nhật 2026-06-16)
+## Tiến độ thực thi (cập nhật 2026-06-18)
 
 Branch `main`:
 
@@ -193,14 +193,23 @@ Branch `main`:
 | docs — D031 + plan | `edb55b79` | ✅ |
 | B — confirm() wave | `94a6bc5d` | ✅ gated (B2 HR hoãn) |
 | C — số liệu sai | `b4bf47d3` | ✅ gated: C2 net-profit · C3 priceReview thật · C5 orders revenue full-set/loại unpaid · **C1-2a interim** (gross/net/biên = "—" khi thiếu giá vốn, hết margin ~100% ảo) |
-| E wave 1 — IA nav | đang chạy | E1 wire orphan nav + E5 active-state SSoT |
-| E wave 2 — IA behavior/deletions | đang chạy | ✅ gated (typecheck app + lint clean, scoped): E2 landing launcher ACL-driven (thay `MANAGER_LINKS` thủ công bằng `EmployeeActionSection` "Khu vực làm việc" dựng từ `resolveQuickLaunchGroups` cho MỌI vai trò non-admin — branch_manager→Branch Command, warehouse/production→Inventory, cashier→Orders+POS, waiter→POS, chef→KDS; xóa `manager-tools-sheet.tsx`) · E3 gộp tile "Khu vực"+"Bàn"→"Bàn & khu vực" · E4 xóa 3 stub `notFound()` + gỡ `revalidatePath` chết + KDS banner→`/br/[id]/settings/kds` + fallback non-owner→`/access-denied`. E3-expiry single-home HOÃN sang H6 (inventory-settings pass) |
+
+Branch/checkouts hiện tại `codex/ui-component-governance`:
+
+| Track | Bằng chứng | Trạng thái |
+| --- | --- | --- |
+| Inventory UI governance waves | `a5ce50a1`, `91904956`, `063ae6e2` | ✅ committed trên branch: PO/GRN/transfer, stock/stocktake, supplier invoice UI contracts |
+| E wave 1 — IA nav | `resolveFinanceNav`, `resolveInventoryNav`, `settings-section-nav`, `/admin/staff/audit` | Code có trong checkout: `finance/invoices`, `finance/summary`, `supplier-invoices`, `waste/approvals`, `settings/qc`, `staff/audit`, active-state SSoT |
+| E wave 2 — IA behavior/deletions | `resolveQuickLaunchGroups`, employee `EmployeeActionSection`, branch settings shared clients | Code có trong checkout: landing employee ACL-driven, branch settings shared homes, admin branch table links to `/br/[id]/settings`; cần gate lại vì checkout có lỗi JSX HR |
+| D1 payroll HKD | `employee-form-dialog.tsx`, `payroll-actions.ts`, `/hr` payroll tab | Partial trong checkout: create form + payroll engine/link đã có; chưa có `updateEmployee`, standard-days owner input/clamp, export, atomic RPC, runtime gate |
+| D2 runner | `runner/page.tsx`, `runner-copy.test.ts` | Partial/không đóng: active statuses + overflow density đã có, nhưng module/manifest vẫn còn "Màn gọi số"/"Gọi số"; chỉ đóng khi copy route thống nhất theo quyết định |
 
 **Hoãn có chủ đích:**
 - **C1-2b** (daily-grain `mv_food_cost_daily` migration): no-op tới khi inventory có recipe/GRN (giá vốn=0 dù grain nào); khi làm phải mirror `mv_daily_revenue` (paid_at + VN-local + payment join), KHÔNG chỉ week→day; rebase `refresh_finance_views()` lúc apply. C1-2a đã chặn số ảo nên không gấp.
 - **E3 expiry single-home:** `/inventory/expiry` là home đơn, `settings/expiry`→trang ngưỡng thật hoặc xóa — gộp vào inventory-settings pass **H6** (không làm ở E wave 2).
-- **B2 HR (payroll/leave confirm) · D1 payroll · F3 hr DataTable:** chờ HRM redesign D026/D027 settle (off-limits).
+- **B2 HR (payroll/leave confirm) · F3 hr DataTable:** chỉ làm sau khi HR checkout compile/gate xanh.
+- **D1 payroll:** không còn chờ hợp đồng lao động; đi theo mô hình HKD đơn giản ở trên.
 
 **VAT (D031e) — XONG, KHÔNG còn set tay:** rate giờ **tự suy theo bậc** (`resolve_gtgt_rate`, mirror `packages/shared/src/tax`). Prod hiện = **2,4%** (Má Tư annualized ≥1 tỷ, group2, giảm tạm) — tự về 0 nếu <1 tỷ, sang 17% TNCN nếu >3 tỷ, 2,4%→3% sau 31/12/2026. `vat_rate` setting đã gỡ. Emit mẫu 2 (gross) không đổi; HĐ cũ 8% sửa-tiến.
 
-**Owner action tồn:** **push + promote 1 production deploy** khi tiện (Vercel deploy đang ngủ; local-dev đã chạy code mới nên không gấp). Migration đã apply hết qua delegation: `20260616100000` (D3 drop customer_count) · `20260616110000` (identity RPC) · `20260616130000` (derive-VAT). Follow-up nhỏ: gộp revoke anon-execute cho `resolve_gtgt_rate`/`update_tenant_identity` vào sweep `20260616120000`.
+**Owner action tồn:** **push + promote 1 production deploy** khi tiện nếu production chưa chạy code mới. Migration D3/D5/VAT đã có file và prior delegation evidence trong plan; follow-up revoke không còn là plan row riêng vì `20260616170000_revoke_anon_execute_secdef.sql` đã land. Trước khi yêu cầu owner apply lại, kiểm `schema_migrations` của target trước.

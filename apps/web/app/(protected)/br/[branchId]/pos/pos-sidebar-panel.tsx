@@ -11,6 +11,7 @@ import { useCartQuantity } from "./_hooks/use-cart";
 import { usePosOperationalDispatch } from "./_providers/pos-desktop-provider";
 import type { SessionOrder } from "./order-history";
 import type { CartItem, OrderType } from "./types";
+import { messages } from "@lib/messages";
 
 interface PosSidebarTabsProps {
   showOrders: boolean;
@@ -43,7 +44,9 @@ function PosSidebarTabsComponent({
             value="new-order"
             className="h-full min-w-0 gap-2 px-2 py-0 text-base font-semibold"
           >
-            <span className="truncate">Giỏ đơn mới</span>
+            <span className="truncate">
+              {messages.pos.desktop.pendingNewTitle}
+            </span>
             {cartQuantity > 0 && (
               <Badge variant="secondary" className="shrink-0 text-sm">
                 {cartQuantity}
@@ -55,7 +58,9 @@ function PosSidebarTabsComponent({
             data-testid="pos-active-orders-tab"
             className="h-full min-w-0 gap-2 px-2 py-0 text-base font-semibold"
           >
-            <span className="truncate">Đơn trong ca</span>
+            <span className="truncate">
+              {messages.pos.orderHistory.sessionOrders}
+            </span>
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -70,7 +75,11 @@ interface PosSidebarContentProps {
   canSubmit: boolean;
   isPending: boolean;
   appendDraft: {
-    target: { orderId: number; orderNumber: string } | null;
+    target: {
+      orderId: number;
+      orderNumber: string;
+      targetLabel: string;
+    } | null;
     items: CartItem[];
     isSubmitting: boolean;
     onSubmit: () => void;
@@ -90,6 +99,7 @@ interface PosSidebarContentProps {
   ) => void;
   onOpenArchivedSheet?: () => void;
   onReturnToTables?: () => void;
+  hideTakeawayOrders?: boolean;
 }
 
 function PosSidebarContentComponent({
@@ -105,11 +115,12 @@ function PosSidebarContentComponent({
   onViewDetail,
   onOpenArchivedSheet,
   onReturnToTables,
+  hideTakeawayOrders,
 }: PosSidebarContentProps) {
   if (appendDraft.target != null) {
     return (
       <AppendDraftPane
-        orderNumber={appendDraft.target.orderNumber}
+        targetLabel={appendDraft.target.targetLabel}
         items={appendDraft.items}
         isSubmitting={appendDraft.isSubmitting}
         onSubmit={appendDraft.onSubmit}
@@ -128,6 +139,7 @@ function PosSidebarContentComponent({
         onViewDetail={onViewDetail}
         onClosePane={onClosePane}
         onOpenArchivedSheet={onOpenArchivedSheet}
+        hideTakeawayOrders={hideTakeawayOrders}
       />
     );
   }

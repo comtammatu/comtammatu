@@ -12,10 +12,9 @@ function readRepoSource(path: string): string {
 }
 
 const tableWorkflowSources = [
-  "app/(protected)/admin/settings/tables/actions.ts",
-  "app/(protected)/admin/settings/tables/page.tsx",
-  "app/(protected)/admin/settings/tables/table-form-dialog.tsx",
-  "app/(protected)/admin/settings/tables/table-table.tsx",
+  "app/(protected)/branch-settings/_shared/tables/actions.ts",
+  "app/(protected)/branch-settings/_shared/tables/table-form-dialog.tsx",
+  "app/(protected)/branch-settings/_shared/tables/table-table.tsx",
   "app/(protected)/br/[branchId]/settings/page.tsx",
   "app/(protected)/br/[branchId]/settings/tables/page.tsx",
   "app/(protected)/br/[branchId]/pos/page.tsx",
@@ -49,7 +48,7 @@ test("POS user guides do not describe table seat-count copy", () => {
 
 test("table creation still relies on the database default capacity", () => {
   const actionSource = readWebSource(
-    "app/(protected)/admin/settings/tables/actions.ts",
+    "app/(protected)/branch-settings/_shared/tables/actions.ts",
   );
   const baselineSource = readRepoSource(
     "supabase/migrations/00000000000000_baseline.sql",

@@ -1,7 +1,7 @@
 # Inventory Role Handoff — 1 Trang
 
 > Dùng cho training nhanh đội vận hành  
-> Mô hình pilot: `chi nhánh`, `Kho CN`, `Bếp CN`
+> Mô hình vận hành: `Kho Tổng`, `Bếp Trung Tâm`, `chi nhánh`, `Kho CN`, `tiêu hao`
 
 ---
 
@@ -17,11 +17,11 @@ Tài liệu này là bản training 1 trang.
 
 ## 1. Luồng chuẩn
 
-1. chi nhánh nhập nguyên liệu từ nhà cung cấp bằng `PO` và `GRN`.
-2. chi nhánh có thể chuyển hàng sang chi nhánh khác hoặc nhập thẳng về Kho CN bằng `stock_transfer`.
-3. Nếu sản xuất tập trung, chi nhánh tạo `production_order` để sản xuất thành phẩm.
-4. chi nhánh có thể chuyển thành phẩm sang chi nhánh khác bằng `stock_transfer`.
-5. Kho CN cấp phát xuống Bếp CN theo nhu cầu bán.
+1. Kho Tổng/Bếp Trung Tâm/chi nhánh nhập hàng từ nhà cung cấp bằng `PO` và `GRN`.
+2. Kho Tổng hoặc Bếp Trung Tâm chuyển hàng còn tồn về Kho CN bằng `stock_transfer`.
+3. Bếp Trung Tâm tạo `production_order` để sản xuất thành phẩm.
+4. Chi nhánh nhận hàng vào Kho CN và bán hàng.
+5. Quản lý chi nhánh duyệt/apply tiêu hao trong ngày.
 6. Cuối ngày các site kiểm kê và xử lý chênh lệch nếu có.
 
 ## 2. Thủ kho chi nhánh
@@ -31,20 +31,20 @@ Trong hệ thống hiện tại, vai trò này thường map vào `warehouse_man
 ### Việc phải làm
 
 - Tạo `PO` cho nhà cung cấp.
-- Tạo và xác nhận `GRN` khi hàng tới tại chi nhánh.
+- Tạo và xác nhận `GRN` khi hàng tới tại site nhận.
 - Kiểm đúng số lượng, đơn giá, batch, hạn dùng.
-- Tạo transfer từ chi nhánh sang chi nhánh khác hoặc nhập về Kho CN.
+- Tạo transfer thật từ Kho Tổng/Bếp Trung Tâm/chi nhánh sang Kho CN.
 
 ### Không được làm
 
-- GRN chỉ được tạo tại site `branch_kind = 'branch'`.
+- GRN chỉ được tạo tại site stock-bearing (`branch`, `central_supply`, `central_kitchen`).
 - Không sửa tay tồn kho nếu lệch số.
 - Không ép mọi flow phải qua chi nhánh khác nếu hàng được nhập thẳng vào Kho CN.
 
 ### Checklist cuối ngày
 
 - Tất cả `GRN` đã confirm.
-- Không còn transfer chi nhánh → chi nhánh hoặc Kho CN → Bếp CN bị treo bất thường.
+- Không còn transfer thật bị treo bất thường.
 - Hóa đơn NCC mới đã được chuyển cho kế toán / OPS nếu có.
 
 ## 3. Bếp trưởng / Quản lý chi nhánh
@@ -53,16 +53,16 @@ Trong hệ thống hiện tại, flow này do `production_manager` thao tác.
 
 ### Việc phải làm
 
-- Xác nhận nhận nguyên liệu từ chi nhánh.
+- Xác nhận nguyên liệu vào Bếp Trung Tâm.
 - Tạo `production_order` đúng thành phẩm và đúng số lượng.
 - Chỉ confirm sản xuất khi BOM đầy đủ và nguyên liệu đủ.
-- Tạo transfer thành phẩm sang chi nhánh khác.
+- Tạo transfer thành phẩm về Kho CN.
 
 ### Không được làm
 
 - Không xác nhận lệnh sản xuất khi thiếu nguyên liệu hoặc thiếu BOM.
 - Không xuất thành phẩm đi chi nhánh trước khi lệnh sản xuất hoàn tất.
-- Không dùng chi nhánh như điểm bán trực tiếp trong pilot.
+- Không tạo production order tại chi nhánh thường.
 
 ### Checklist cuối ngày
 
@@ -76,15 +76,15 @@ Trong hệ thống hiện tại, vai trò này map vào `branch_manager`.
 
 ### Việc phải làm
 
-- Xác nhận nhận hàng từ chi nhánh.
-- Xác nhận nhận hàng trực tiếp từ chi nhánh khác khi có.
-- Theo dõi tồn tại Kho CN và cấp phát xuống Bếp CN.
+- Xác nhận nhận hàng từ transfer inbound.
+- Theo dõi tồn tại Kho CN.
+- Duyệt/apply báo cáo tiêu hao trong ngày.
 - Đảm bảo order/POS được chốt đúng luồng.
 - Kiểm kê cuối ngày cho các mặt hàng trọng yếu.
 
 ### Không được làm
 
-- Không tự nhập nguyên liệu từ NCC trong flow pilot.
+- Không tự nhập nguyên liệu từ NCC trong flow Inventory của quản lý chi nhánh.
 - Không chỉnh tay tồn kho để “khớp số”.
 - Không bỏ qua chênh lệch kiểm kê lặp lại nhiều ngày.
 
@@ -100,9 +100,9 @@ Trong hệ thống hiện tại, phần AP/reporting có thể đi qua `owner` h
 
 ### Việc phải làm
 
-- Đối soát `PO -> GRN`; `supplier_invoice` là Finance P1/handoff khi được bật.
+- Đối soát `PO -> GRN`; `supplier_invoice` là Finance handoff khi được bật.
 - Theo dõi transfer treo và chênh lệch kiểm kê.
-- Theo dõi giá vốn; AP aging là Finance P1, không phải daily Inventory pilot gate.
+- Theo dõi giá vốn; AP aging là Finance handoff, không phải daily Inventory gate.
 - Báo lại các site nếu có số liệu bất thường.
 
 ### Theo dõi mỗi ngày

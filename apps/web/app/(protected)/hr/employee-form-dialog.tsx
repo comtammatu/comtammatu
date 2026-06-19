@@ -2,23 +2,9 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing HR employee form keeps Vietnamese operational copy inline */
 
-import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
 import { FieldGroup } from "@comtammatu/ui/components/field";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { toast } from "@comtammatu/ui/components/sonner";
-import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
-import { SelectField, TextField } from "@/components/form";
+import { FormDialog, SelectField, TextField } from "@/components/form";
 import { createEmployeeAccount } from "./actions";
 import {
   checklistTemplateLabel,
@@ -100,72 +86,55 @@ export function EmployeeFormDialog({
   positionOptions,
   checklistTemplates,
 }: EmployeeFormDialogProps) {
-  const [isPending, startTransition] = useTransition();
-  const [serverError, setServerError] = useState<string | null>(null);
   const availableTemplates = checklistTemplates ?? [];
 
-  const form = useForm<EmployeeFormValues>({
-    resolver: zodResolver(employeeSchema),
-    defaultValues: DEFAULT_VALUES,
-  });
-
-  useEffect(() => {
-    if (open) {
-      form.reset(DEFAULT_VALUES);
-      setServerError(null);
-    }
-  }, [open, form]);
-
-  function onValid(values: EmployeeFormValues) {
-    startTransition(async () => {
-      setServerError(null);
-      const defaultTemplateId =
-        values.default_checklist_template_id &&
-        values.default_checklist_template_id !== NO_TEMPLATE
-          ? Number(values.default_checklist_template_id)
-          : null;
-      const branchId =
-        values.branch_id && values.branch_id !== NO_BRANCH
-          ? Number(values.branch_id)
-          : undefined;
-      const result = await createEmployeeAccount({
-        fullName: values.full_name,
-        email: values.email,
-        password: values.password,
-        phone: values.phone || undefined,
-        role: values.role,
-        branchId,
-        employeeCode: values.employee_code || undefined,
-        startDate: values.start_date || undefined,
-        defaultChecklistTemplateId: defaultTemplateId,
-        baseSalary: values.base_salary ? Number(values.base_salary) : undefined,
-        dependentsCount: values.dependents_count
-          ? Number(values.dependents_count)
-          : 0,
-        idNumber: values.id_number || undefined,
-        bankAccount: values.bank_account || undefined,
-      });
-      if (!result.success) {
-        setServerError(result.error ?? ERRORS_VI.fallback);
-        return;
-      }
-      toast.success("Đã tạo tài khoản và hồ sơ nhân viên mới");
-      onOpenChange(false);
+  async function handleSubmit(values: EmployeeFormValues) {
+    const defaultTemplateId =
+      values.default_checklist_template_id &&
+      values.default_checklist_template_id !== NO_TEMPLATE
+        ? Number(values.default_checklist_template_id)
+        : null;
+    const branchId =
+      values.branch_id && values.branch_id !== NO_BRANCH
+        ? Number(values.branch_id)
+        : undefined;
+    return createEmployeeAccount({
+      fullName: values.full_name,
+      email: values.email,
+      password: values.password,
+      phone: values.phone || undefined,
+      role: values.role,
+      branchId,
+      employeeCode: values.employee_code || undefined,
+      startDate: values.start_date || undefined,
+      defaultChecklistTemplateId: defaultTemplateId,
+      baseSalary: values.base_salary ? Number(values.base_salary) : undefined,
+      dependentsCount: values.dependents_count
+        ? Number(values.dependents_count)
+        : 0,
+      idNumber: values.id_number || undefined,
+      bankAccount: values.bank_account || undefined,
     });
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Thêm nhân viên</DialogTitle>
-        </DialogHeader>
-
-        <form onSubmit={form.handleSubmit(onValid)} noValidate>
-          <FieldGroup>
-            <TextField
-              control={form.control}
-              name="full_name"
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      schema={employeeSchema}
+      defaultValues={DEFAULT_VALUES}
+      entityKey="new-employee"
+      title="Thêm nhân viên"
+      submitLabel="Thêm nhân viên"
+      successMessage="Đã tạo tài khoản và hồ sơ nhân viên mới"
+      contentClassName="sm:max-w-lg"
+      onSubmit={handleSubmit}
+    >
+      {(form) => (
+        <>
+          <TextField
+            control={form.control}
+            name="full_name"
               label="Họ tên"
               placeholder="Nguyễn Văn A"
               required
@@ -272,30 +241,8 @@ export function EmployeeFormDialog({
                 label="Số tài khoản"
               />
             </FieldGroup>
-
-            {serverError && (
-              <p className="text-sm text-destructive" role="alert">
-                {serverError}
-              </p>
-            )}
-          </FieldGroup>
-
-          <DialogFooter className="pt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending && <Spinner className="mr-2" />}
-              Thêm nhân viên
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </>
+      )}
+    </FormDialog>
   );
 }

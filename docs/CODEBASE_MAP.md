@@ -7,9 +7,9 @@
 
 ## Trạng thái
 
-- **Active delivery track:** production đang vận hành in-place trên repo `comtammatu`; ongoing work tập trung vào hardening + bổ sung tính năng theo phản hồi vận hành. Retired rebuild packs are no longer retained in `docs/`; current decisions live in `tasks/todo.md`, `docs/plan/decisions.md`, and active ADRs.
-- **Phiên bản hiện tại:** v1.0.0 — Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print, Payments (Cash + VietQR + Momo) SHIPPED và đang vận hành thực tế. HĐĐT active qua Viettel S-invoice. Finance/HR/Notifications/Reporting vẫn còn phần PARTIAL (xem `tasks/todo.md`).
-- **Mốc tiếp theo:** tiếp tục hardening trên mô hình `chi nhánh` đang chạy production; backlog ưu tiên ở `tasks/todo.md`.
+- **Operating track:** production đang vận hành in-place trên repo `comtammatu`; ongoing work tập trung vào hardening + bổ sung tính năng theo phản hồi vận hành. Current decisions live in `tasks/todo.md`, `docs/plan/decisions.md`, and active ADRs.
+- **Current surface:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print, Payments (Cash + VietQR + Momo) đang là surface vận hành thật. HĐĐT active qua Viettel S-invoice. Finance/HR/Notifications/Reporting còn các blocker thật trong `tasks/todo.md`.
+- **Current priority:** tiếp tục hardening trên mô hình `tenant -> chi nhánh`; chỉ các blocker/current work ở `tasks/todo.md` là work queue hợp lệ.
 - **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
 
 ## Chỉ mục phân hệ
@@ -34,7 +34,7 @@ Khi cần đi sâu hơn theo loại tài liệu:
 - [docs/architecture/README.md](architecture/README.md) — kiến trúc hệ thống và cross-cutting docs
 - [ref/README.md](ref/README.md) — canonical reference docs
 - [runbooks/README.md](runbooks/README.md) — readiness và smoke gates
-- [worklog/README.md](worklog/README.md) — adoption/progress tracking
+- [worklog/README.md](worklog/README.md) — temporary implementation staging only
 
 ## Tổng quan kiến trúc
 
@@ -141,7 +141,7 @@ Use this matrix when adding or moving files. It is the practical replacement for
 | New skill/plugin/tool routing rule           | `docs/agent/rules/skills.md` plus relevant entrypoint docs          | `AGENTS.md`, `docs/agent/rules/references.md`, `docs/agent/rules/workflow.md`         | Divergent workspace-only rules, secrets, plugin caches |
 | New operational rule/runbook                 | `docs/modules/*`, `docs/runbooks/*`, `tasks/*`                      | `docs/agent/rules/references.md`                                                      | Separate agent-only doc trees                          |
 
-### Pilot Operating Model
+### Current Operating Model
 
 ```mermaid
 flowchart LR
@@ -225,16 +225,16 @@ Opening `/` after authentication follows the same shared default resolver.
 
 | #   | Unknown                                                                                                                                                                                                                                                        | Verification Step                                                             | Impact                                              |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------- |
-| 1   | has tenant-wide access (no intermediate scope table)                                                                                                                                                                                                           | Deferred — tracked as item **H3** in `tasks/todo.md` "Deferred to post-pilot" | May need migration later                            |
-| 2   | Test coverage exists but is still concentrated: current checkout has 32 test/spec files under `apps/web/e2e` + `packages/shared/src` plus 36 files under `apps/web/tests`, with gaps around full POS→payment→stock→print→HĐĐT smoke and live provider behavior | Expand route smoke + end-to-end pilot runbooks before scale                   | Refactor regressions possible on uncovered surfaces |
+| 1   | Owner has tenant-wide access without an intermediate scope table.                                                                                                                                                                                              | ADR 0005 defines the owner identity source; any dual-source flip must be a new owner-gated task | May need migration later                            |
+| 2   | Test coverage exists but is still concentrated around static/unit coverage; the full POS→payment→KDS/print→HĐĐT smoke and live provider behavior still need a safe runtime.                                                                                   | Expand route smoke + end-to-end runbooks before scale                         | Refactor regressions possible on uncovered surfaces |
 
 ## Priority Recommendations
 
-1. **v1.0.0 in production:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print, Payments (Cash + VietQR + Momo) shipped và đang vận hành thực tế trên mô hình `tenant -> chi nhánh`. Finance/HR/Notifications/Reporting còn phần PARTIAL — ưu tiên hiện tại là hardening (QA, security follow-ups), bổ sung BHXH/PIT, và đóng các P0 còn mở trong `tasks/todo.md`.
+1. **Production operating surface:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print, Payments (Cash + VietQR + Momo), and HĐĐT run on the `tenant -> chi nhánh` model. Finance/HR/Notifications/Reporting work is governed by the live blockers in `tasks/todo.md`.
 2. **Watch hub files:** Any change to `module-acl.ts` or `types.ts` requires proxy + layout + nav verification.
 3. **RLS pattern:** Every new table must follow the tenant-scoped RLS pattern with explicit GRANTs. See [database.md](modules/database.md).
 
 Inventory route ownership note:
 
 - `/inventory` is the canonical Inventory surface.
-- `/admin/inventory/*` page files were removed. The URL space remains mapped to the retired `inventory_admin` module in `module-acl.ts` with `allowedRoles: []`, so no role passes the proxy gate. Treat the URL space as unsupported; do not wire new admin features there.
+- `/admin/inventory/*` is unsupported and blocked by the `inventory_admin` ACL bucket with `allowedRoles: []`. Do not wire new Inventory features there.

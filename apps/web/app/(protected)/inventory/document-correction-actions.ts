@@ -39,6 +39,7 @@ type SourceDocument = {
   branchId: number;
   code: string;
   status: string;
+  traceLabel: string | null;
   link: {
     grn_id?: number;
     issue_id?: number;
@@ -60,6 +61,17 @@ async function hasInventoryWritePermission(
 
 function isPostedStatus(status: string, allowed: readonly string[]) {
   return allowed.includes(status);
+}
+
+function readHrmConsumptionTrace(sourceRef: unknown): string | null {
+  const ref =
+    sourceRef && typeof sourceRef === "object"
+      ? (sourceRef as { source?: unknown; source_label?: unknown })
+      : null;
+  if (ref?.source !== "attendance_consumption_report") return null;
+  return typeof ref.source_label === "string"
+    ? ref.source_label
+    : "HRM - Tiêu hao bếp trong ngày";
 }
 
 async function loadGrnSource(
@@ -92,6 +104,7 @@ async function loadGrnSource(
     branchId: grn.branch_id,
     code: grn.grn_number,
     status: grn.status,
+    traceLabel: null,
     link: { grn_id: grn.id },
   };
 }
@@ -103,7 +116,7 @@ async function loadIssueSource(
 ): Promise<SourceDocument | null> {
   const { data: issue, error } = await supabase
     .from("stock_issues")
-    .select("id, branch_id, status, issue_number")
+    .select("id, branch_id, status, issue_number, source_ref")
     .eq("id", input.documentId)
     .eq("tenant_id", tenantId)
     .maybeSingle();
@@ -126,6 +139,7 @@ async function loadIssueSource(
     branchId: issue.branch_id,
     code: issue.issue_number,
     status: issue.status,
+    traceLabel: readHrmConsumptionTrace(issue.source_ref),
     link: { issue_id: issue.id },
   };
 }
@@ -180,6 +194,7 @@ async function loadTransferSource(
     branchId: input.branchId,
     code: transfer.transfer_number,
     status: transfer.status,
+    traceLabel: null,
     link: { transfer_id: transfer.id },
   };
 }
@@ -214,6 +229,7 @@ async function loadProductionSource(
     branchId: order.branch_id,
     code: order.production_number,
     status: order.status,
+    traceLabel: null,
     link: { production_order_id: order.id },
   };
 }
@@ -279,6 +295,10 @@ export const createInventoryDocumentCorrection = withAction(
       };
     }
 
+    const sourceLabel = `${correctionLabel(data.documentType)} ${source.code}${
+      source.traceLabel ? ` - ${source.traceLabel}` : ""
+    }`;
+
     const { data: row, error } = await supabase
       .from("stock_movements")
       .insert({
@@ -287,7 +307,7 @@ export const createInventoryDocumentCorrection = withAction(
         ingredient_id: data.ingredientId,
         type: "adjustment",
         quantity_change: data.quantityChange,
-        reason: `${correctionLabel(data.documentType)} ${source.code}: ${data.reason}`,
+        reason: `${sourceLabel}: ${data.reason}`,
         created_by: user.id,
         location_id: defaultLocationId,
         ...source.link,

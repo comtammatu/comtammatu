@@ -1,6 +1,6 @@
 "use client";
 
-import { Card } from "@comtammatu/ui/components/card";
+import { AppSection } from "@/components/surface";
 import { useNotifications } from "@/_hooks/use-notifications";
 import { NotificationList } from "@/_components/notification-list";
 import { NotificationPushControl } from "@/_components/notification-push-control";
@@ -22,7 +22,7 @@ export function NotificationsClient({ tenantId }: { tenantId: number }) {
   return (
     <div className="flex flex-col gap-3">
       <NotificationPushControl />
-      <Card className="overflow-hidden p-0">
+      <AppSection className="overflow-hidden" contentFlush>
         <NotificationList
           items={items}
           unreadCount={unreadCount}
@@ -37,7 +37,7 @@ export function NotificationsClient({ tenantId }: { tenantId: number }) {
           showViewAll={false}
           scrollClassName="max-h-[70vh]"
         />
-      </Card>
+      </AppSection>
     </div>
   );
 }

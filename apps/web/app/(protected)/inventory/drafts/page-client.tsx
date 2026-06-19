@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory draft review surface keeps operational copy inline */
+
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -9,7 +11,14 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppEmptyState } from "@/components/surface";
@@ -18,6 +27,7 @@ import { MobileSectionHeader } from "../_components/mobile/mobile-section-header
 import { discardGrnDraft } from "../grn-actions";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 
 export type ServerDraftRow = {
   grnId: number;
@@ -29,10 +39,7 @@ export type ServerDraftRow = {
 };
 
 function formatUpdatedAt(value: string): string {
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return formatVNDateTime(value);
 }
 
 export function MobileDraftsClient({ drafts }: { drafts: ServerDraftRow[] }) {
@@ -85,25 +92,24 @@ export function MobileDraftsClient({ drafts }: { drafts: ServerDraftRow[] }) {
       ) : (
         <div className="flex flex-col gap-3">
           {drafts.map((draft) => (
-            <Card key={draft.grnId} className="border bg-card shadow-sm">
-              <CardContent className="space-y-4 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-base font-semibold">
-                      {draft.supplierName}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {draft.grnNumber}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Cập nhật lúc {formatUpdatedAt(draft.updatedAt)}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="rounded-full px-3 py-1">
-                    {draft.lineCount} dòng
-                  </Badge>
+            <Item key={draft.grnId} variant="outline" className="bg-card p-4">
+              <ItemHeader>
+                <div className="min-w-0">
+                  <ItemTitle className="text-base">
+                    {draft.supplierName}
+                  </ItemTitle>
+                  <ItemDescription>{draft.grnNumber}</ItemDescription>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Cập nhật lúc {formatUpdatedAt(draft.updatedAt)}
+                  </p>
                 </div>
+                <Badge variant="outline" className="rounded-full px-3 py-1">
+                  {draft.lineCount} dòng
+                </Badge>
+              </ItemHeader>
 
+              <ItemContent className="hidden" />
+              <ItemFooter>
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
@@ -127,8 +133,8 @@ export function MobileDraftsClient({ drafts }: { drafts: ServerDraftRow[] }) {
                     {ACTIONS_VI.delete}
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </ItemFooter>
+            </Item>
           ))}
         </div>
       )}

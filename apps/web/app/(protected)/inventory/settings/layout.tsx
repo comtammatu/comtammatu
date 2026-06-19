@@ -4,8 +4,7 @@ import {
   buildAccessDeniedPath,
   PERMISSION_KEYS,
 } from "@comtammatu/shared/auth";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { SettingsSectionNav } from "./settings-section-nav";
@@ -45,11 +44,9 @@ export default async function InventorySettingsLayout({
           variant: "outline",
         }}
       />
-      <Card>
-        <CardContent className="px-4 py-4 sm:px-5">
-          <SettingsSectionNav role={claims.user_role} />
-        </CardContent>
-      </Card>
+      <AppSection contentClassName="px-4 py-4 sm:px-5">
+        <SettingsSectionNav role={claims.user_role} />
+      </AppSection>
       <div>{children}</div>
     </AppPage>
   );

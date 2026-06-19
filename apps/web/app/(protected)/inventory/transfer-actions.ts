@@ -22,7 +22,9 @@ const BRANCH_SCOPED_TRANSFER_ROLES: readonly StaffRole[] = [
   "production_manager",
 ];
 const BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR =
-  "Quản lý chi nhánh chỉ được nhận phiếu inbound hoặc tạo Cấp bếp nội bộ.";
+  "Quản lý chi nhánh chỉ được nhận phiếu chuyển về chi nhánh.";
+const INTRA_BRANCH_TRANSFER_RETIRED_ERROR =
+  "Kho chi nhánh sang bếp chi nhánh là tiêu hao bán hàng, không phải phiếu điều chuyển.";
 
 function isBranchScopedTransferRole(role: StaffRole): boolean {
   return BRANCH_SCOPED_TRANSFER_ROLES.includes(role);
@@ -41,7 +43,11 @@ function isAllowedInterSiteDirection(
   fromKind: string,
   toKind: string,
 ): boolean {
-  return fromKind === "branch" && toKind === "branch";
+  if (fromKind === "branch" && toKind === "branch") return true;
+  return (
+    (fromKind === "central_supply" || fromKind === "central_kitchen") &&
+    toKind === "branch"
+  );
 }
 
 function enforceTransferActionScope(
@@ -58,18 +64,11 @@ function enforceTransferActionScope(
   }
 
   if (claims.user_role === "branch_manager") {
-    const isOwnIntraBranch =
-      transfer.from_branch_id === ownBranchId &&
-      transfer.to_branch_id === ownBranchId;
-
     if (requiredPermission === PERMISSION_KEYS.INVENTORY_TRANSFER_SHIP) {
       return BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR;
     }
 
-    if (
-      requiredPermission === PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE &&
-      !isOwnIntraBranch
-    ) {
+    if (requiredPermission === PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE) {
       return BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR;
     }
 
@@ -127,6 +126,9 @@ async function loadTransferForPermission(
     .single();
   if (transferError || !transfer) {
     return { success: false, error: "Không tìm thấy phiếu chuyển." };
+  }
+  if (transfer.from_branch_id === transfer.to_branch_id) {
+    return { success: false, error: INTRA_BRANCH_TRANSFER_RETIRED_ERROR };
   }
 
   const branchId =
@@ -312,13 +314,14 @@ export async function createStockTransfer(
 
   const isIntraBranch = fromBranchId === toBranchId;
 
-  if (
-    claims.user_role === "branch_manager" &&
-    (claims.branch_id == null ||
-      !isIntraBranch ||
-      fromBranchId !== claims.branch_id ||
-      toBranchId !== claims.branch_id)
-  ) {
+  if (isIntraBranch) {
+    return {
+      success: false,
+      error: INTRA_BRANCH_TRANSFER_RETIRED_ERROR,
+    };
+  }
+
+  if (claims.user_role === "branch_manager") {
     return {
       success: false,
       error: BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR,
@@ -336,37 +339,17 @@ export async function createStockTransfer(
     };
   }
 
-  // Intra-branch: must have different locations
-  if (isIntraBranch) {
-    if (!parsed.data.fromLocationId || !parsed.data.toLocationId) {
-      return {
-        success: false,
-        error: "Chuyển nội bộ cần chọn vị trí kho gửi và nhận.",
-      };
-    }
-    if (parsed.data.fromLocationId === parsed.data.toLocationId) {
-      return { success: false, error: "Vị trí gửi và nhận phải khác nhau." };
-    }
+  const fromKind = await loadBranchKind(supabase, claims.tenant_id, fromBranchId);
+  const toKind = await loadBranchKind(supabase, claims.tenant_id, toBranchId);
+  if (!fromKind || !toKind) {
+    return { success: false, error: "Điểm vận hành không hợp lệ." };
   }
-
-  // Validate branch kind for inter-branch transfers.
-  if (!isIntraBranch) {
-    const fromKind = await loadBranchKind(
-      supabase,
-      claims.tenant_id,
-      fromBranchId,
-    );
-    const toKind = await loadBranchKind(supabase, claims.tenant_id, toBranchId);
-    if (!fromKind || !toKind) {
-      return { success: false, error: "Chi nhánh không hợp lệ." };
-    }
-    if (!isAllowedInterSiteDirection(fromKind, toKind)) {
-      return {
-        success: false,
-        error:
-          "Luồng luân chuyển không hợp lệ. Chỉ hỗ trợ điều chuyển giữa các chi nhánh.",
-      };
-    }
+  if (!isAllowedInterSiteDirection(fromKind, toKind)) {
+    return {
+      success: false,
+      error:
+        "Luồng luân chuyển không hợp lệ. Chỉ hỗ trợ Kho Tổng/Bếp Trung Tâm cấp chi nhánh hoặc điều chuyển giữa các chi nhánh.",
+    };
   }
 
   // Branch-scoped role check
@@ -419,41 +402,6 @@ export async function createStockTransfer(
     unit: line.unit,
   }));
 
-  if (isIntraBranch) {
-    const { data, error } = await supabase.rpc("commit_intra_branch_transfer", {
-      p_branch_id: fromBranchId,
-      p_from_location_id: fromLocationId,
-      p_to_location_id: toLocationId,
-      p_transfer_number: transferNumber,
-      p_notes: parsed.data.notes ?? undefined,
-      p_lines: transferLines,
-    });
-
-    if (error) {
-      if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
-        return { success: false, error: "Không có quyền tạo Cấp bếp." };
-      }
-      if (
-        error.code === PG_ERR.CHECK_VIOLATION ||
-        error.code === PG_ERR.INVALID_TEXT_REPRESENTATION
-      ) {
-        return {
-          success: false,
-          error:
-            "Cấp bếp cần gửi từ kho chi nhánh sang một vị trí bếp cùng chi nhánh. Kiểm tra cấu hình kho/bếp.",
-        };
-      }
-      return { success: false, error: "Không thể tạo Cấp bếp." };
-    }
-
-    const result = data as unknown as { id?: number; status?: string } | null;
-    if (!result?.id) {
-      return { success: false, error: "Không thể tạo Cấp bếp." };
-    }
-
-    return { success: true, data: { id: result.id, status: result.status } };
-  }
-
   const { data, error } = await supabase.rpc("create_stock_transfer_draft", {
     p_from_branch_id: fromBranchId,
     p_to_branch_id: toBranchId,
@@ -461,9 +409,7 @@ export async function createStockTransfer(
     p_to_location_id: toLocationId,
     p_transfer_number: transferNumber,
     p_notes: parsed.data.notes ?? undefined,
-    p_vehicle_info: isIntraBranch
-      ? undefined
-      : (parsed.data.vehicleInfo ?? undefined),
+    p_vehicle_info: parsed.data.vehicleInfo ?? undefined,
     p_lines: transferLines,
   });
 
@@ -498,10 +444,7 @@ export async function transferConfirmShip(
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
   const authz = await loadTransferForPermission(
     id.data,
-    (transfer) =>
-      transfer.from_branch_id === transfer.to_branch_id
-        ? PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE
-        : PERMISSION_KEYS.INVENTORY_TRANSFER_SHIP,
+    PERMISSION_KEYS.INVENTORY_TRANSFER_SHIP,
     "from",
   );
   if (!authz.success) return { success: false, error: authz.error };
@@ -631,38 +574,4 @@ export async function fetchBranchesForTransfer(): Promise<ActionResult> {
     };
   }
   return { success: true, data: branches };
-}
-
-export async function fetchInventoryLocationsForBranch(
-  branchId: number,
-): Promise<ActionResult> {
-  const id = z.coerce.number().int().positive().safeParse(branchId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.INVENTORY_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-
-  // Branch-scoped roles may only read their own branch's locations
-  if (
-    claims.branch_id != null &&
-    ["branch_manager", "warehouse_manager", "production_manager"].includes(
-      claims.user_role ?? "",
-    ) &&
-    id.data !== claims.branch_id
-  ) {
-    return { success: false, error: "Không có quyền xem vị trí kho này." };
-  }
-
-  const { data, error } = await supabase
-    .from("inventory_locations")
-    .select("id, name, code, location_kind, is_default_consumption")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("branch_id", id.data)
-    .eq("is_active", true)
-    .order("sort_order");
-  if (error) return { success: false, error: "Không thể tải vị trí kho." };
-  return { success: true, data: data ?? [] };
 }

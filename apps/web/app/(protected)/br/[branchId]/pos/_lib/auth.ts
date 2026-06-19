@@ -18,6 +18,30 @@ import {
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import type { ActionContext } from "@/_lib/with-action";
 
+function branchIdFromInput(input?: unknown): number | null {
+  const branchId =
+    input !== null && typeof input === "object" && "branchId" in input
+      ? input.branchId
+      : undefined;
+  return typeof branchId === "number" &&
+    Number.isInteger(branchId) &&
+    branchId > 0
+    ? branchId
+    : null;
+}
+
+function resolvePosPermission(
+  roles: readonly StaffRole[],
+  permission: string,
+  input?: unknown,
+) {
+  return getAuthContextWithPermission(
+    roles,
+    permission,
+    branchIdFromInput(input),
+  );
+}
+
 /**
  * POS operators allowed to void / cancel / reduce order flows. Mirrors
  * `MODULE_ACL.pos.allowedRoles` — kept as a named alias so refactoring the
@@ -34,19 +58,25 @@ const POS_VOID_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
  * RPC's own server-side gate provides defense-in-depth (per the
  * POS-KDS-RPC-SERVER-SIDE-ROLE-GATE regression note).
  *
- * Signature: accepts but ignores the schema input. `withActionPositional`
- * passes the parsed input to every `customAuth` callable; resolvers that
- * do not need it can declare zero-arity (TS allows narrower-arity).
+ * Used by `voidOrderItem`, `reduceOrderItemQuantity`, `cancelOrder`, and
+ * `editPendingOrderItem`.
+ *
+ * Signature: receives parsed schema input when available. Branch-aware
+ * actions probe their branch-scoped grant before the handler runs; ID-only
+ * paths still rely on handler/RPC branch checks.
  */
-export async function posVoidAuth(): Promise<ActionContext | null> {
-  return getAuthContextWithPermission(
+export async function posVoidAuth(
+  input?: unknown,
+): Promise<ActionContext | null> {
+  return resolvePosPermission(
     POS_VOID_ROLES,
     PERMISSION_KEYS.POS_VOID_ORDER,
+    input,
   );
 }
 
 /** POS operators allowed to run day-to-day order lifecycle actions
- * (priority flags, table transfer, served, cart submit). Same role list
+ * (priority flags, table transfer, item served, cart submit). Same role list
  * as `POS_VOID_ROLES` today, but kept as a separate named alias so a
  * future split (e.g. removing chef from non-kitchen lifecycle actions)
  * can land without re-scoping void.
@@ -57,12 +87,14 @@ const POS_USE_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
  * `customAuth` resolver for POS lifecycle actions: composite gate
  * role ∈ POS_USE_ROLES AND grant `pos:use`. Used by
  * `setOrderPriority` / `setOrderItemPriority` /
- * `transferOrderTable` / `updateOrderStatus` / `markOrderItemServed`
+ * `transferOrderTable` / `markOrderItemServed`
  * and any other lifecycle action that does NOT destroy revenue
  * (those keep `posVoidAuth`).
  */
-export async function posUseAuth(): Promise<ActionContext | null> {
-  return getAuthContextWithPermission(POS_USE_ROLES, PERMISSION_KEYS.POS_USE);
+export async function posUseAuth(
+  input?: unknown,
+): Promise<ActionContext | null> {
+  return resolvePosPermission(POS_USE_ROLES, PERMISSION_KEYS.POS_USE, input);
 }
 
 /**
@@ -75,9 +107,12 @@ export async function posUseAuth(): Promise<ActionContext | null> {
  * are webhook-driven, do not touch the physical cash drawer, and the
  * cashier merely confirms the remote provider's success).
  */
-export async function posConfirmPaymentAuth(): Promise<ActionContext | null> {
-  return getAuthContextWithPermission(
+export async function posConfirmPaymentAuth(
+  input?: unknown,
+): Promise<ActionContext | null> {
+  return resolvePosPermission(
     POS_USE_ROLES,
     PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
+    input,
   );
 }

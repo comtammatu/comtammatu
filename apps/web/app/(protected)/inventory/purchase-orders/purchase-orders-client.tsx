@@ -10,7 +10,6 @@ import {
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   InputGroup,
   InputGroupAddon,
@@ -24,18 +23,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import {
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  FilterToolbar,
+} from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
 import { tRoute, tStatus } from "../_lib/dictionary";
 import type { SupplierRow } from "../suppliers/suppliers-client";
+import { messages } from "@lib/messages";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 export interface PurchaseOrderRow {
@@ -51,13 +55,15 @@ export interface PurchaseOrderRow {
 }
 
 const ALL_FILTER_VALUE = "_all";
-const STATUS_KEYS = [
+const PO_FILTER_KEYS = [
   "draft",
   "sent",
   "partially_received",
   "received",
   "cancelled",
 ] as const;
+const poCopy = messages.inventory.po;
+const inventoryShellCopy = messages.inventory.shell;
 
 function formatDate(value: string) {
   return formatVNDate(value);
@@ -91,7 +97,6 @@ export function PurchaseOrdersClient({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(ALL_FILTER_VALUE);
   const [supplierFilter, setSupplierFilter] = useState(ALL_FILTER_VALUE);
-  const isMobile = useIsMobile();
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -150,7 +155,7 @@ export function PurchaseOrdersClient({
       className: "min-w-52",
       render: (row) => (
         <span className="text-muted-foreground">
-          {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
+          {row.suppliers?.name ?? poCopy.supplierFallback}
         </span>
       ),
     },
@@ -183,7 +188,7 @@ export function PurchaseOrdersClient({
             !row.notes && "text-muted-foreground/60",
           )}
         >
-          {row.notes ?? "Không có ghi chú"}
+          {row.notes ?? poCopy.noNotes}
         </p>
       ),
     },
@@ -203,37 +208,35 @@ export function PurchaseOrdersClient({
   ];
 
   return (
-    <AppPage width={isMobile ? "narrow" : "wide"}>
+    <AppPage width="wide">
       <AppPageHeader
-        eyebrow="Kho hàng"
+        eyebrow={inventoryShellCopy.moduleName}
         title={tRoute("/inventory/purchase-orders", "heading")}
         actions={
           <Button asChild disabled={suppliers.length === 0}>
             <Link href={`${purchaseOrdersBasePath}/new`}>
               <IconPlus className="size-4" />
-              Tạo PO
+              {poCopy.createPo}
             </Link>
           </Button>
         }
       />
       {suppliers.length === 0 ? (
-        <Card className="border-warning/40 bg-warning/10">
-          <CardContent className="space-y-4 pt-6">
-            <div>
-              <p className="text-base font-semibold">Chưa có nhà cung cấp</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Tạo nhà cung cấp trước khi lập đơn đặt hàng mới.
-              </p>
-            </div>
+        <AppSection
+          tone="warning"
+          title={poCopy.noSuppliersTitle}
+          description={poCopy.noSuppliersDescription}
+          action={
             <Button asChild variant="outline">
-              <Link href={suppliersPath}>Đi tới danh sách nhà cung cấp</Link>
+              <Link href={suppliersPath}>{poCopy.goToSuppliers}</Link>
             </Button>
-          </CardContent>
-        </Card>
+          }
+        >
+          <div />
+        </AppSection>
       ) : null}
 
-      {/* Toolbar */}
-      <AppToolbar>
+      <FilterToolbar>
         <InputGroup className="h-10 flex-1">
           <InputGroupAddon>
             <IconSearch />
@@ -241,7 +244,7 @@ export function PurchaseOrdersClient({
           <InputGroupInput
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm theo số PO, nhà cung cấp hoặc ghi chú"
+            placeholder={poCopy.searchPlaceholder}
           />
         </InputGroup>
 
@@ -254,11 +257,13 @@ export function PurchaseOrdersClient({
           }
         >
           <SelectTrigger className="h-10 w-44">
-            <SelectValue placeholder="Trạng thái" />
+            <SelectValue placeholder={poCopy.statusPlaceholder} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_FILTER_VALUE}>Tất cả trạng thái</SelectItem>
-            {STATUS_KEYS.map((statusKey) => (
+            <SelectItem value={ALL_FILTER_VALUE}>
+              {poCopy.allStatuses}
+            </SelectItem>
+            {PO_FILTER_KEYS.map((statusKey) => (
               <SelectItem key={statusKey} value={statusKey}>
                 {tStatus(statusKey, "table")} ({statusCounts[statusKey] ?? 0})
               </SelectItem>
@@ -270,50 +275,44 @@ export function PurchaseOrdersClient({
           value={supplierFilter}
           onValueChange={setSupplierFilter}
           options={[
-            { value: ALL_FILTER_VALUE, label: "Tất cả nhà cung cấp" },
+            { value: ALL_FILTER_VALUE, label: poCopy.allSuppliers },
             ...suppliers.map((supplier) => ({
               value: String(supplier.id),
               label: supplier.name,
             })),
           ]}
-          placeholder="Nhà cung cấp"
-          searchPlaceholder="Tìm nhà cung cấp..."
-          aria-label="Lọc theo nhà cung cấp"
+          placeholder={poCopy.supplierRequired}
+          searchPlaceholder={poCopy.supplierSearchPlaceholder}
+          aria-label={poCopy.supplierFilterAria}
           triggerClassName="h-10 w-48"
         />
 
         <Badge variant="outline" className="rounded-full">
           {filteredRows.length} / {rows.length} PO
         </Badge>
-      </AppToolbar>
+      </FilterToolbar>
 
-      {/* Table / Mobile list */}
-      <Card>
-        <CardContent flush className="max-md:px-4">
-          <DataTable
-            columns={columns}
-            data={filteredRows}
-            getRowKey={(row) => row.id}
-            emptyTitle={
-              showEmptyResults
-                ? "Không tìm thấy đơn đặt hàng phù hợp"
-                : "Chưa có đơn đặt hàng"
-            }
-            emptyDescription={
-              showEmptyResults
-                ? "Thử đổi bộ lọc hoặc từ khóa để xem thêm kết quả."
-                : 'Nhấn "Tạo PO" để bắt đầu lập đơn mua đầu tiên.'
-            }
-            emptyMode={showEmptyResults ? "no-results" : "no-data"}
-            mobileCardRender={(row) => (
-              <PurchaseOrderCard
-                row={row}
-                href={`${purchaseOrdersBasePath}/${row.id}`}
-              />
-            )}
+      <DataTable
+        className="md:rounded-md md:border"
+        columns={columns}
+        data={filteredRows}
+        getRowKey={(row) => row.id}
+        emptyTitle={
+          showEmptyResults ? poCopy.emptySearchTitle : poCopy.emptyInitialTitle
+        }
+        emptyDescription={
+          showEmptyResults
+            ? poCopy.emptySearchDescription
+            : poCopy.emptyInitialDescription
+        }
+        emptyMode={showEmptyResults ? "no-results" : "no-data"}
+        mobileCardRender={(row) => (
+          <PurchaseOrderCard
+            row={row}
+            href={`${purchaseOrdersBasePath}/${row.id}`}
           />
-        </CardContent>
-      </Card>
+        )}
+      />
     </AppPage>
   );
 }
@@ -328,15 +327,15 @@ function PurchaseOrderCard({
   return (
     <InteractiveCard asChild minHeight="mobile" padding="default">
       <Link href={href} className="block">
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="font-mono text-sm font-semibold">
             {row.display_id ?? row.po_number}
           </p>
           <p className="truncate text-xs text-muted-foreground">
-            {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
+            {row.suppliers?.name ?? poCopy.supplierFallback}
           </p>
           <p className="text-xs text-muted-foreground">
-            Ngày đặt:{" "}
+            {poCopy.orderedDatePrefix}:{" "}
             <span title={formatRelative(row.ordered_at)}>
               {formatDate(row.ordered_at)}
             </span>

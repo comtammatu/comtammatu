@@ -2,13 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Textarea } from "@comtammatu/ui/components/textarea";
@@ -21,7 +14,7 @@ import { approveWaste } from "@/(protected)/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";
 import { getWasteReasonLabelVi } from "@comtammatu/shared/labels";
 import { formatVNDateTime } from "@comtammatu/shared/time";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 
 type PendingWasteItem = {
@@ -74,11 +67,7 @@ export function WasteApprovalsClient({ initial, branchFilter }: Props) {
       />
 
       {rows.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            {copy.empty}
-          </CardContent>
-        </Card>
+        <AppEmptyState compact title={copy.empty} />
       ) : (
         <ul className="space-y-3">
           {rows.map((row) => (
@@ -138,13 +127,16 @@ function WasteApprovalCard({
 
   return (
     <li>
-      <Card
-        className={cn(row.isSelfCreated && "border-warning/40 bg-warning/10")}
+      <div
+        className={cn(
+          "rounded-lg border bg-card",
+          row.isSelfCreated && "border-warning/40 bg-warning/10",
+        )}
       >
-        <CardHeader>
+        <div className="p-4 pb-3 sm:p-6 sm:pb-3">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <CardTitle className="text-base flex items-center gap-2">
+              <div className="font-heading text-base flex items-center gap-2 font-semibold">
                 {row.issueNumber}
                 <Badge variant="outline" className="text-xs">
                   {row.branchName}
@@ -157,8 +149,8 @@ function WasteApprovalCard({
                     {row.sourceType}
                   </Badge>
                 ) : null}
-              </CardTitle>
-              <CardDescription>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
                 {row.createdByName}
                 {row.isSelfCreated ? (
                   <Badge className="ml-2 bg-warning/15 text-warning-foreground border-warning/40 border text-xs">
@@ -167,7 +159,7 @@ function WasteApprovalCard({
                 ) : null}
                 {" • "}
                 {formatVNDateTime(row.issuedAt)}
-              </CardDescription>
+              </p>
             </div>
             <div className="text-right">
               <div className="text-lg font-semibold tabular-nums">
@@ -178,8 +170,8 @@ function WasteApprovalCard({
               </div>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
+        </div>
+        <div className="space-y-3 p-4 pt-0 sm:p-6 sm:pt-0">
           <ul className="space-y-2">
             {row.items.map((it) => (
               <li
@@ -276,8 +268,8 @@ function WasteApprovalCard({
               {copy.approve}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </li>
   );
 }

@@ -1,16 +1,12 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: POS cash denomination entry keeps cashier-facing copy inline */
+
 import { useRef } from "react";
 import { formatVND } from "@comtammatu/shared/format";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { Label } from "@comtammatu/ui/components/label";
 import { FormattedNumberInput } from "@/components/form";
+import { AppSection } from "@/components/surface";
 
 const DENOMINATIONS = [
   500_000, 200_000, 100_000, 50_000, 20_000, 10_000, 5_000, 2_000, 1_000,
@@ -54,14 +50,21 @@ export function DenominationInput({
   const total = sumDenominations(counts);
 
   return (
-    <Card size="sm">
-      <CardHeader className="flex-row items-center justify-between gap-3">
-        <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">
-          Đếm tiền mặt theo mệnh giá
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">Enter để sang dòng kế</p>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2">
+    <AppSection
+      size="sm"
+      title="Đếm tiền mặt theo mệnh giá"
+      headerHint="Enter để sang dòng kế"
+      contentClassName="gap-2"
+      footer={
+        <div className="flex w-full items-center justify-between gap-3">
+          <span className="text-base font-semibold">Tổng đếm được</span>
+          <span className="text-lg font-bold tabular-nums text-primary">
+            {formatVND(total)}
+          </span>
+        </div>
+      }
+    >
+      <>
         {DENOMINATIONS.map((denom, index) => {
           const count = counts[denom] ?? 0;
           const subtotal = denom * count;
@@ -98,13 +101,7 @@ export function DenominationInput({
             </div>
           );
         })}
-      </CardContent>
-      <CardFooter className="justify-between border-t">
-        <span className="text-base font-semibold">Tổng đếm được</span>
-        <span className="text-lg font-bold tabular-nums text-primary">
-          {formatVND(total)}
-        </span>
-      </CardFooter>
-    </Card>
+      </>
+    </AppSection>
   );
 }

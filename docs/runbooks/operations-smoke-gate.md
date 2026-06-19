@@ -9,7 +9,7 @@ rules; khi có lệch, cập nhật canonical docs trước rồi mới cập nh
 
 ## Khi Nào Chạy
 
-- Trước khi mở chi nhánh pilot hoặc mở thêm chi nhánh mới.
+- Trước khi mở chi nhánh mới hoặc đưa chi nhánh vào vận hành chính thức.
 - Sau thay đổi vào POS, KDS, payment, print, stock consumption, HĐĐT, Finance Basic, hoặc realtime.
 - Trước khi đánh dấu xong item `POS -> payment -> stock -> KDS/print -> HĐĐT` trong `tasks/todo.md`.
 - Sau mỗi refactor server action/RPC có thể ảnh hưởng luồng bán hàng.
@@ -25,7 +25,7 @@ chứng runtime trên dev/test/staging được duyệt.
 2. [docs/ref/glossary.md](../ref/glossary.md) cho cách gọi chuẩn.
 3. [docs/ref/inventory-sop.md](../ref/inventory-sop.md) cho luồng kho và tiêu hao.
 4. [docs/ref/einvoice-tax.md](../ref/einvoice-tax.md) cho HĐĐT.
-5. [docs/runbooks/pos-kds/print-agent-pilot.md](pos-kds/print-agent-pilot.md) cho agent in.
+5. [docs/runbooks/pos-kds/print-agent-rollout.md](pos-kds/print-agent-rollout.md) cho agent in.
 6. [docs/runbooks/hddt-viettel-operations.md](hddt-viettel-operations.md) cho smoke Viettel S-invoice.
 
 ## Điều Kiện Vào Gate
@@ -160,7 +160,7 @@ Gate chỉ green khi:
 
 ## Yellow Criteria
 
-Chỉ được yellow nếu vẫn có thể pilot an toàn bằng thao tác thủ công đã ghi rõ:
+Chỉ được yellow nếu vẫn có thể vận hành an toàn bằng thao tác thủ công đã ghi rõ:
 
 - HĐĐT provider chưa issued tự động nhưng có queue/manual recovery.
 - Printer fail nhưng manual ticket fallback đã chạy được và dữ liệu DB đúng.
@@ -170,7 +170,7 @@ Yellow không được dùng nếu payment, stock, hoặc order status có thể
 
 ## Red Criteria
 
-Không pilot/không scale nếu có một trong các lỗi:
+Không vận hành/không scale nếu có một trong các lỗi:
 
 - Payment thành công nhưng order không đúng trạng thái.
 - Order completed nhưng stock không trừ hoặc trừ sai site.

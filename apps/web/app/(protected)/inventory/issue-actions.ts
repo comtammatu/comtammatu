@@ -61,7 +61,7 @@ export async function fetchStockIssues(opts?: {
   let query = supabase
     .from("stock_issues")
     .select(
-      "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, branches ( id, name, branch_kind )",
+      "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, source_type, source_ref, branches ( id, name, branch_kind )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("issued_at", { ascending: false });
@@ -104,7 +104,7 @@ export const createStockIssueDraft = withAction(
       "issue",
     );
 
-    // kitchen_use is not a valid stock-issue reason; use intra-branch stock_transfer.
+    // kitchen_use is not a valid stock-issue reason; sale usage posts as consumption.
     // target_location_id is always NULL for single-site issues.
     const { data, error } = await supabase
       .from("stock_issues")
@@ -145,7 +145,7 @@ export async function fetchStockIssueDetail(
   let issueQuery = supabase
     .from("stock_issues")
     .select(
-      "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, branches ( id, name, branch_kind )",
+      "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, source_type, source_ref, branches ( id, name, branch_kind )",
     )
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id);

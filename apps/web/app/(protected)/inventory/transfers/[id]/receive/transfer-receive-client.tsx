@@ -9,7 +9,6 @@ import {
   Pencil as IconPencil,
   TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
-import { Card } from "@comtammatu/ui/components/card";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -49,6 +48,34 @@ type Props = {
 };
 
 const READY_STATES = ["in_transit", "confirmed_receive"];
+
+const TRANSFER_RECEIVE_COPY = {
+  backToDetail: "Về chi tiết phiếu",
+  receiveEyebrow: "Kiểm nhận",
+  totalSent: "Tổng xuất",
+  totalReceived: "Tổng nhận",
+  startReceiveDescription:
+    "Phiếu đang vận chuyển. Xác nhận bắt đầu kiểm nhận để chỉnh số lượng thực nhận.",
+  startReceive: "Bắt đầu kiểm nhận",
+  shortNoteLabel: "Ghi chú thiếu hụt",
+  shortNotePlaceholder: "Ví dụ: thiếu 2kg thịt ba chỉ do giao chưa đủ...",
+  shortNoteMin: "Ghi chú cần ít nhất 3 ký tự.",
+  acknowledgement:
+    "Tôi xác nhận số lượng nhận đúng với thực tế và chịu trách nhiệm về số liệu trên.",
+  confirming: "Đang xác nhận...",
+  inactive: "Phiếu không ở trạng thái kiểm nhận",
+  needsAcknowledgement: "Tích xác nhận để gửi",
+  confirmShort: "Xác nhận nhập thiếu",
+  confirmEnough: "Xác nhận đã nhận đủ",
+  shortSummary: (count: number) =>
+    `${count} mặt hàng thiếu so với phiếu xuất.`,
+  lineCount: (count: number) => `${count} mặt hàng trong phiếu`,
+  issuedQty: (qty: number, unit: string) =>
+    `Phiếu xuất: ${formatQty(qty)} ${unit}`,
+  receivedUnit: (unit: string) => `${unit} đã nhận`,
+  editQtyAria: "Chỉnh số lượng",
+  receiveAll: "Nhận đủ",
+};
 
 export function TransferReceiveClient({ transfer, lines }: Props) {
   const router = useRouter();
@@ -136,12 +163,12 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
     <MobilePage>
       <MobileSectionHeader
         backHref={`/inventory/transfers/${transfer.id}`}
-        backLabel="Về chi tiết phiếu"
-        eyebrow="Kiểm nhận"
+        backLabel={TRANSFER_RECEIVE_COPY.backToDetail}
+        eyebrow={TRANSFER_RECEIVE_COPY.receiveEyebrow}
         title={transfer.code}
       />
 
-      <Card className="gap-2 p-4">
+      <div className="flex flex-col gap-2 rounded-lg border bg-card p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <IconPackageImport className="size-5 text-primary" />
           <span className="truncate">{transfer.fromBranchName}</span>
@@ -151,7 +178,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-              Tổng xuất
+              {TRANSFER_RECEIVE_COPY.totalSent}
             </p>
             <p className="text-lg font-semibold tabular-nums">
               {formatQty(totals.sent)}
@@ -159,7 +186,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
           </div>
           <div>
             <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-              Tổng nhận
+              {TRANSFER_RECEIVE_COPY.totalReceived}
             </p>
             <p
               className={cn(
@@ -173,7 +200,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
         </div>
         {hasShort ? (
           <p className="text-xs text-warning-foreground">
-            {totals.shortLines} mặt hàng thiếu so với phiếu xuất.
+            {TRANSFER_RECEIVE_COPY.shortSummary(totals.shortLines)}
           </p>
         ) : null}
         {transfer.notes ? (
@@ -181,16 +208,13 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
             {transfer.notes}
           </p>
         ) : null}
-      </Card>
+      </div>
 
       {needsReceiveMode ? (
         <Alert>
           <IconAlertTriangle className="size-4" />
           <AlertDescription className="flex flex-col gap-2">
-            <span>
-              Phiếu đang vận chuyển. Xác nhận bắt đầu kiểm nhận để chỉnh số
-              lượng thực nhận.
-            </span>
+            <span>{TRANSFER_RECEIVE_COPY.startReceiveDescription}</span>
             <Button
               type="button"
               size="touch"
@@ -199,7 +223,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
               className="w-full text-sm"
             >
               {startingReceive ? <Spinner /> : <IconCheck className="size-4" />}
-              Bắt đầu kiểm nhận
+              {TRANSFER_RECEIVE_COPY.startReceive}
             </Button>
           </AlertDescription>
         </Alert>
@@ -207,7 +231,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
 
       <section className="flex flex-col gap-2">
         <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-          {lines.length} mặt hàng trong phiếu
+          {TRANSFER_RECEIVE_COPY.lineCount(lines.length)}
         </p>
         <ul className="flex flex-col gap-2">
           {lines.map((line) => {
@@ -226,7 +250,10 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
                       {line.ingredientName}
                     </p>
                     <p className="text-2xs text-muted-foreground">
-                      Phiếu xuất: {formatQty(line.sentQty)} {line.unit}
+                      {TRANSFER_RECEIVE_COPY.issuedQty(
+                        line.sentQty,
+                        line.unit,
+                      )}
                     </p>
                     <div className="mt-1 flex items-baseline gap-2">
                       <span
@@ -238,7 +265,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
                         {formatQty(got)}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {line.unit} đã nhận
+                        {TRANSFER_RECEIVE_COPY.receivedUnit(line.unit)}
                       </span>
                     </div>
                   </div>
@@ -250,7 +277,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
                       className="size-10"
                       onClick={() => setEditing(line)}
                       disabled={!canAct || needsReceiveMode}
-                      aria-label="Chỉnh số lượng"
+                      aria-label={TRANSFER_RECEIVE_COPY.editQtyAria}
                     >
                       <IconPencil className="size-4" />
                     </Button>
@@ -267,7 +294,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
                           }))
                         }
                       >
-                        Nhận đủ
+                        {TRANSFER_RECEIVE_COPY.receiveAll}
                       </Button>
                     ) : null}
                   </div>
@@ -279,9 +306,10 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
       </section>
 
       {hasShort && !needsReceiveMode ? (
-        <Card className="gap-2 p-4">
+        <div className="flex flex-col gap-2 rounded-lg border bg-card p-4">
           <label htmlFor="short-note" className="text-sm font-semibold">
-            Ghi chú thiếu hụt <span className="text-destructive">*</span>
+            {TRANSFER_RECEIVE_COPY.shortNoteLabel}{" "}
+            <span className="text-destructive">*</span>
           </label>
           <Textarea
             id="short-note"
@@ -289,14 +317,14 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
             onChange={(e) => setShortNote(e.target.value)}
             rows={3}
             maxLength={300}
-            placeholder="Ví dụ: thiếu 2kg thịt ba chỉ do giao chưa đủ..."
+            placeholder={TRANSFER_RECEIVE_COPY.shortNotePlaceholder}
           />
           {!noteOk ? (
             <p className="text-xs text-destructive">
-              Ghi chú cần ít nhất 3 ký tự.
+              {TRANSFER_RECEIVE_COPY.shortNoteMin}
             </p>
           ) : null}
-        </Card>
+        </div>
       ) : null}
 
       {!needsReceiveMode ? (
@@ -307,8 +335,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
             className="mt-0.5"
           />
           <span className="leading-snug">
-            Tôi xác nhận số lượng nhận đúng với thực tế và chịu trách nhiệm về
-            số liệu trên.
+            {TRANSFER_RECEIVE_COPY.acknowledgement}
           </span>
         </label>
       ) : null}
@@ -326,21 +353,20 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
             type="button"
             onClick={submit}
             disabled={!canSubmit}
-            className="shadow-lg"
           >
             {pending ? (
               <>
                 <Spinner className="size-5" />
-                Đang xác nhận...
+                {TRANSFER_RECEIVE_COPY.confirming}
               </>
             ) : !canAct ? (
-              "Phiếu không ở trạng thái kiểm nhận"
+              TRANSFER_RECEIVE_COPY.inactive
             ) : !acknowledged ? (
-              "Tích xác nhận để gửi"
+              TRANSFER_RECEIVE_COPY.needsAcknowledgement
             ) : hasShort ? (
-              "Xác nhận nhập thiếu"
+              TRANSFER_RECEIVE_COPY.confirmShort
             ) : (
-              "Xác nhận đã nhận đủ"
+              TRANSFER_RECEIVE_COPY.confirmEnough
             )}
           </TouchButton>
         </div>

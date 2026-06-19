@@ -5,6 +5,12 @@
 import { useState, useTransition } from "react";
 import { Briefcase as IconBriefcase } from "lucide-react";
 import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -13,14 +19,9 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
-import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { setPositionDefaultChecklist } from "./checklist-actions";
 import type {
   ChecklistTemplateRow,
@@ -70,6 +71,53 @@ export function PositionDefaultsTable({
     });
   }
 
+  function getTemplateName(templateId: number | null) {
+    if (!templateId) return "Không gán";
+    return (
+      globalTemplates.find((template) => template.id === templateId)?.name ??
+      "Không gán"
+    );
+  }
+
+  function renderTemplateSelect(position: PositionDefaultRow) {
+    return (
+      <Select
+        value={position.default_checklist_template_id?.toString() ?? "none"}
+        disabled={isPending}
+        onValueChange={(value) => updateDefault(position.id, value)}
+      >
+        <SelectTrigger className="w-full min-w-48">
+          <SelectValue placeholder="Không gán" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">Không gán</SelectItem>
+          {globalTemplates.map((template) => (
+            <SelectItem key={template.id} value={template.id.toString()}>
+              {template.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  const columns: DataTableColumn<PositionDefaultRow>[] = [
+    {
+      key: "position",
+      header: "Vị trí",
+      render: (position) => (
+        <span className="font-medium">
+          {position.label_vi ?? position.code}
+        </span>
+      ),
+    },
+    {
+      key: "checklist",
+      header: "Checklist mặc định",
+      render: renderTemplateSelect,
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-3">
       <div>
@@ -79,59 +127,27 @@ export function PositionDefaultsTable({
           gán được checklist Global.
         </p>
       </div>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Vị trí</TableHead>
-              <TableHead>Checklist mặc định</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 && (
-              <TableEmptyStateRow
-                colSpan={2}
-                title="Chưa có vị trí nào"
-                icon={
-                  <IconBriefcase className="mx-auto size-8 text-muted-foreground" />
-                }
-              />
-            )}
-            {rows.map((position) => (
-              <TableRow key={position.id}>
-                <TableCell className="font-medium">
-                  {position.label_vi ?? position.code}
-                </TableCell>
-                <TableCell>
-                  <Select
-                    value={
-                      position.default_checklist_template_id?.toString() ??
-                      "none"
-                    }
-                    disabled={isPending}
-                    onValueChange={(value) => updateDefault(position.id, value)}
-                  >
-                    <SelectTrigger className="w-full min-w-48">
-                      <SelectValue placeholder="Không gán" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Không gán</SelectItem>
-                      {globalTemplates.map((template) => (
-                        <SelectItem
-                          key={template.id}
-                          value={template.id.toString()}
-                        >
-                          {template.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowKey={(position) => position.id}
+        emptyTitle="Chưa có vị trí nào"
+        emptyIcon={<IconBriefcase />}
+        rowClassName={() => (isPending ? "opacity-60" : undefined)}
+        mobileCardRender={(position) => (
+          <Item variant="outline" className={isPending ? "opacity-60" : ""}>
+            <ItemContent>
+              <ItemTitle className="line-clamp-none text-sm font-semibold">
+                {position.label_vi ?? position.code}
+              </ItemTitle>
+              <ItemDescription className="line-clamp-none text-sm leading-6">
+                {getTemplateName(position.default_checklist_template_id)}
+              </ItemDescription>
+              <div className="mt-2">{renderTemplateSelect(position)}</div>
+            </ItemContent>
+          </Item>
+        )}
+      />
     </div>
   );
 }

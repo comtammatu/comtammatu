@@ -4,7 +4,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Image as IconImage } from "lucide-react";
+import { Image as IconImage, ListChecks as IconListChecks } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
@@ -15,13 +15,12 @@ import {
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import {
   Select,
   SelectContent,
@@ -51,6 +50,12 @@ import {
 } from "./actions";
 import { fetchApprovedLeaveMonth } from "./leave-request-actions";
 import type { BranchOption } from "./page";
+import { StatusBadge } from "@/components/status-badge";
+import { AppEmptyState } from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import {
   CHECKLIST_PHASE_LABELS,
   CHECKLIST_PHASES,
@@ -106,23 +111,6 @@ interface ApprovedLeaveRow {
     profiles: { full_name: string } | null;
   } | null;
 }
-
-const STATUS_LABELS: Record<string, string> = {
-  present: attendanceCopy.present,
-  late: attendanceCopy.late,
-  absent: attendanceCopy.absent,
-  half_day: attendanceCopy.halfDay,
-};
-
-const STATUS_COLORS: Record<
-  string,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  present: "default",
-  late: "outline",
-  absent: "destructive",
-  half_day: "secondary",
-};
 
 interface AttendanceTableProps {
   branches: BranchOption[];
@@ -251,6 +239,9 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
 
         {isPending && <Spinner />}
       </div>
+      <p className="text-sm text-muted-foreground">
+        {attendanceCopy.workdayRule}
+      </p>
 
       {view === "summary" ? (
         <SummaryView data={summary} />
@@ -273,6 +264,39 @@ function ApprovedLeavePanel({ leaves }: { leaves: ApprovedLeaveRow[] }) {
   if (leaves.length === 0) return null;
 
   const leaveCopy = messages.hr.leave;
+  const columns: DataTableColumn<ApprovedLeaveRow>[] = [
+    {
+      key: "employee_code",
+      header: attendanceCopy.employeeCode,
+      className: "font-mono",
+      render: (leave) => leave.employees?.employee_code ?? "—",
+    },
+    {
+      key: "full_name",
+      header: attendanceCopy.fullName,
+      render: (leave) =>
+        leave.employees?.profiles?.full_name ?? leaveCopy.fallbackEmployee,
+    },
+    {
+      key: "range",
+      header: attendanceCopy.leaveRange,
+      className: "font-mono tabular-nums",
+      render: (leave) =>
+        leave.start_date === leave.end_date
+          ? formatLeaveDate(leave.start_date)
+          : `${formatLeaveDate(leave.start_date)} - ${formatLeaveDate(leave.end_date)}`,
+    },
+    {
+      key: "type",
+      header: attendanceCopy.leaveType,
+      render: (leave) => {
+        const typeLabel =
+          leaveCopy.types[leave.leave_type as keyof typeof leaveCopy.types] ??
+          leaveCopy.types.other;
+        return <Badge variant="outline">{typeLabel}</Badge>;
+      },
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-2">
@@ -280,45 +304,34 @@ function ApprovedLeavePanel({ leaves }: { leaves: ApprovedLeaveRow[] }) {
         <p className="text-sm font-medium">{attendanceCopy.leaveTitle}</p>
         <Badge variant="info">{attendanceCopy.leaveCount(leaves.length)}</Badge>
       </div>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{attendanceCopy.employeeCode}</TableHead>
-              <TableHead>{attendanceCopy.fullName}</TableHead>
-              <TableHead>{attendanceCopy.leaveRange}</TableHead>
-              <TableHead>{attendanceCopy.leaveType}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {leaves.map((leave) => {
-              const typeLabel =
-                leaveCopy.types[
-                  leave.leave_type as keyof typeof leaveCopy.types
-                ] ?? leaveCopy.types.other;
-              return (
-                <TableRow key={leave.id}>
-                  <TableCell className="font-mono">
-                    {leave.employees?.employee_code ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    {leave.employees?.profiles?.full_name ??
-                      leaveCopy.fallbackEmployee}
-                  </TableCell>
-                  <TableCell className="font-mono tabular-nums">
-                    {leave.start_date === leave.end_date
-                      ? formatLeaveDate(leave.start_date)
-                      : `${formatLeaveDate(leave.start_date)} - ${formatLeaveDate(leave.end_date)}`}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{typeLabel}</Badge>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={leaves}
+        getRowKey={(leave) => leave.id}
+        mobileCardRender={(leave) => {
+          const typeLabel =
+            leaveCopy.types[leave.leave_type as keyof typeof leaveCopy.types] ??
+            leaveCopy.types.other;
+          return (
+            <Item variant="outline">
+              <ItemContent>
+                <ItemTitle className="line-clamp-none text-sm font-semibold">
+                  {leave.employees?.profiles?.full_name ??
+                    leaveCopy.fallbackEmployee}
+                </ItemTitle>
+                <ItemDescription className="line-clamp-none text-sm leading-6">
+                  {leave.start_date === leave.end_date
+                    ? formatLeaveDate(leave.start_date)
+                    : `${formatLeaveDate(leave.start_date)} - ${formatLeaveDate(leave.end_date)}`}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Badge variant="outline">{typeLabel}</Badge>
+              </ItemActions>
+            </Item>
+          );
+        }}
+      />
     </div>
   );
 }
@@ -326,53 +339,80 @@ function ApprovedLeavePanel({ leaves }: { leaves: ApprovedLeaveRow[] }) {
 function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
   if (data.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        {attendanceCopy.loadHint}
-      </p>
+      <AppEmptyState
+        title={attendanceCopy.summaryEmptyTitle}
+        description={attendanceCopy.summaryEmptyDescription}
+        icon={<IconListChecks />}
+      />
     );
   }
 
+  const columns: DataTableColumn<AttendanceSummaryRow>[] = [
+    {
+      key: "employee_code",
+      header: attendanceCopy.employeeCode,
+      className: "font-mono",
+      render: (row) => row.employee_code,
+    },
+    {
+      key: "full_name",
+      header: attendanceCopy.fullName,
+      render: (row) => row.full_name,
+    },
+    {
+      key: "workdays",
+      header: "Số công",
+      className: "text-center font-bold tabular-nums",
+      render: (row) => row.workdays,
+    },
+    {
+      key: "open",
+      header: "Ca chưa kết",
+      className: "text-center tabular-nums",
+      render: (row) => (
+        <span
+          className={
+            row.open > 0
+              ? "font-medium text-warning-foreground"
+              : "text-muted-foreground"
+          }
+        >
+          {row.open}
+        </span>
+      ),
+    },
+  ];
+
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{attendanceCopy.employeeCode}</TableHead>
-            <TableHead>{attendanceCopy.fullName}</TableHead>
-            <TableHead className="text-center">Số công</TableHead>
-            <TableHead className="text-center">Ca chưa kết</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((row) => (
-            <TableRow key={row.employee_id}>
-              <TableCell className="font-mono">{row.employee_code}</TableCell>
-              <TableCell>{row.full_name}</TableCell>
-              <TableCell className="text-center font-bold">
-                {row.workdays}
-              </TableCell>
-              <TableCell
-                className={
-                  row.open > 0
-                    ? "text-center font-medium text-warning-foreground"
-                    : "text-center text-muted-foreground"
-                }
-              >
-                {row.open}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <DataTable
+      columns={columns}
+      data={data}
+      getRowKey={(row) => row.employee_id}
+      mobileCardRender={(row) => (
+        <Item variant="outline">
+          <ItemContent>
+            <ItemTitle className="line-clamp-none text-sm font-semibold">
+              {row.full_name}
+            </ItemTitle>
+            <ItemDescription className="line-clamp-none text-sm leading-6">
+              {row.employee_code}
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            <div className="text-right">
+              <div className="font-mono text-sm font-bold">{row.workdays}</div>
+              <div className="text-xs text-muted-foreground">
+                {row.open} ca chưa kết
+              </div>
+            </div>
+          </ItemActions>
+        </Item>
+      )}
+    />
   );
 }
 
-function DetailView({
-  data,
-}: {
-  data: AttendanceRecord[];
-}) {
+function DetailView({ data }: { data: AttendanceRecord[] }) {
   const [photoOpen, setPhotoOpen] = useState(false);
   const [checklistRecord, setChecklistRecord] =
     useState<AttendanceRecord | null>(null);
@@ -409,119 +449,172 @@ function DetailView({
     });
   }
 
-  if (data.length === 0) {
+  function recordStateBadge(record: AttendanceRecord) {
+    const isStale =
+      !!record.check_in && !record.check_out && record.date < todayStr;
+    if (isStale) {
+      return <StatusBadge domain="attendance" value="stale_open" />;
+    }
+    if (record.check_out) {
+      return (
+        <StatusBadge
+          domain="attendance"
+          value="checked_out"
+          label={attendanceCopy.checkedOut}
+        />
+      );
+    }
+    if (record.check_in) {
+      return (
+        <StatusBadge
+          domain="attendance"
+          value="in_shift"
+          label={attendanceCopy.inShift}
+        />
+      );
+    }
+    return <StatusBadge domain="attendance" value={record.status} />;
+  }
+
+  function photoAction(record: AttendanceRecord) {
+    const photoPending = pendingPhotoId === record.id;
+    if (!record.check_in_photo_path) {
+      return (
+        <span className="text-sm text-muted-foreground">
+          {attendanceCopy.noPhoto}
+        </span>
+      );
+    }
+
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        {attendanceCopy.empty}
-      </p>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={pendingPhotoId !== null}
+        onClick={() => openPhoto(record)}
+      >
+        {photoPending ? (
+          <Spinner data-icon="inline-start" />
+        ) : (
+          <IconImage data-icon="inline-start" />
+        )}
+        {attendanceCopy.viewPhoto}
+      </Button>
     );
   }
 
+  if (data.length === 0) {
+    return (
+      <AppEmptyState
+        title={attendanceCopy.detailEmptyTitle}
+        description={attendanceCopy.detailEmptyDescription}
+        icon={<IconListChecks />}
+      />
+    );
+  }
+
+  const columns: DataTableColumn<AttendanceRecord>[] = [
+    {
+      key: "date",
+      header: FORM_VI.date,
+      className: "font-mono text-sm",
+      render: (record) => record.date,
+    },
+    {
+      key: "employee",
+      header: STAFF_VI.long,
+      render: (record) => record.employees?.profiles?.full_name ?? "—",
+    },
+    {
+      key: "shift",
+      header: attendanceCopy.shift,
+      className: "text-sm text-muted-foreground",
+      render: (record) => record.shifts?.name ?? "—",
+    },
+    {
+      key: "template",
+      header: "Template",
+      className: "text-sm",
+      render: (record) =>
+        record.shift_checklist_templates?.name ?? (
+          <span className="text-muted-foreground">Chưa gán</span>
+        ),
+    },
+    {
+      key: "checklist",
+      header: "Checklist",
+      render: (record) => (
+        <ChecklistProgressButton
+          record={record}
+          onOpen={() => setChecklistRecord(record)}
+        />
+      ),
+    },
+    {
+      key: "check_in",
+      header: attendanceCopy.checkIn,
+      className: "font-mono text-sm",
+      render: (record) =>
+        record.check_in ? formatVNTime(record.check_in) : "—",
+    },
+    {
+      key: "check_out",
+      header: attendanceCopy.checkOut,
+      className: "font-mono text-sm",
+      render: (record) =>
+        record.check_out ? formatVNTime(record.check_out) : "—",
+    },
+    {
+      key: "state",
+      header: attendanceCopy.recordState,
+      render: recordStateBadge,
+    },
+    {
+      key: "photo",
+      header: attendanceCopy.photo,
+      render: photoAction,
+    },
+    {
+      key: "note",
+      header: FORM_VI.notes,
+      className: "max-w-48 truncate text-sm text-muted-foreground",
+      render: (record) => record.note ?? "",
+    },
+  ];
+
   return (
     <>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{FORM_VI.date}</TableHead>
-              <TableHead>{STAFF_VI.long}</TableHead>
-              <TableHead>{attendanceCopy.shift}</TableHead>
-              <TableHead>Template</TableHead>
-              <TableHead>Checklist</TableHead>
-              <TableHead>{attendanceCopy.checkIn}</TableHead>
-              <TableHead>{attendanceCopy.checkOut}</TableHead>
-              <TableHead>{attendanceCopy.recordState}</TableHead>
-              <TableHead>{attendanceCopy.photo}</TableHead>
-              <TableHead>{FORM_VI.notes}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.map((record) => {
-              const photoPending = pendingPhotoId === record.id;
-              const isStale =
-                !!record.check_in &&
-                !record.check_out &&
-                record.date < todayStr;
-              return (
-                <TableRow key={record.id}>
-                  <TableCell className="font-mono text-sm">
-                    {record.date}
-                  </TableCell>
-                  <TableCell>
-                    {record.employees?.profiles?.full_name ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {record.shifts?.name ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {record.shift_checklist_templates?.name ?? (
-                      <span className="text-muted-foreground">Chưa gán</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <ChecklistProgressButton
-                      record={record}
-                      onOpen={() => setChecklistRecord(record)}
-                    />
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {record.check_in ? formatVNTime(record.check_in) : "—"}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {record.check_out ? formatVNTime(record.check_out) : "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        isStale
-                          ? "destructive"
-                          : record.check_out
-                            ? "default"
-                            : record.check_in
-                              ? "secondary"
-                              : (STATUS_COLORS[record.status] ?? "secondary")
-                      }
-                    >
-                      {isStale
-                        ? "Treo (chưa kết ca)"
-                        : record.check_out
-                          ? attendanceCopy.checkedOut
-                          : record.check_in
-                            ? attendanceCopy.inShift
-                            : (STATUS_LABELS[record.status] ?? record.status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {record.check_in_photo_path ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={pendingPhotoId !== null}
-                        onClick={() => openPhoto(record)}
-                      >
-                        {photoPending ? (
-                          <Spinner data-icon="inline-start" />
-                        ) : (
-                          <IconImage data-icon="inline-start" />
-                        )}
-                        {attendanceCopy.viewPhoto}
-                      </Button>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        {attendanceCopy.noPhoto}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="max-w-48 truncate text-sm text-muted-foreground">
-                    {record.note ?? ""}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={data}
+        getRowKey={(record) => record.id}
+        mobileCardRender={(record) => (
+          <Item variant="outline">
+            <ItemContent>
+              <ItemTitle className="line-clamp-none text-sm font-semibold">
+                {record.employees?.profiles?.full_name ?? "—"}
+              </ItemTitle>
+              <ItemDescription className="line-clamp-none text-sm leading-6">
+                {record.date} · {record.shifts?.name ?? "—"}
+              </ItemDescription>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {recordStateBadge(record)}
+                <ChecklistProgressButton
+                  record={record}
+                  onOpen={() => setChecklistRecord(record)}
+                />
+              </div>
+              {record.note ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {record.note}
+                </p>
+              ) : null}
+            </ItemContent>
+            <ItemActions>{photoAction(record)}</ItemActions>
+          </Item>
+        )}
+      />
 
       <Dialog
         open={photoOpen}

@@ -9,36 +9,100 @@ export const admin = {
     finance: "Tài chính",
     menu: "Menu",
   },
+  dashboard: {
+    pageTitle: "Tổng quan vận hành",
+    pageDescription:
+      "Theo dõi tiền đã thu, chi vận hành, tồn kho và việc cần chủ xử lý.",
+    pageBadge: "Tháng này",
+    overviewTitle: "Tiền và nhịp bán tháng này",
+    overviewDescription:
+      "Dữ liệu lấy theo kỳ tháng hiện tại, tính theo ngày Việt Nam.",
+    revenueLabel: "Tiền đã thu tháng này",
+    todayOrdersLabel: "Đơn trong tháng",
+    avgOrderLabel: "Trung bình/đơn",
+    revenueHelper: "Tổng thanh toán hoàn tất trong tháng.",
+    ordersHelper: "Số đơn đã thanh toán trong tháng.",
+    avgOrderHelper: "Giá trị trung bình mỗi đơn trong tháng.",
+    branchNeedsReviewLabel: "Chi nhánh cần xem",
+    branchNeedsReviewHelper: (total: number) =>
+      `Trên ${total.toLocaleString("vi-VN")} chi nhánh đang hoạt động.`,
+    attentionLabel: "Cần xử lý",
+    attentionHelper: "Số nhóm việc đang cần chủ xem.",
+    operatingExpenseLabel: "Chi vận hành đã ghi nhận",
+    operatingExpenseHelper: "Chi vận hành đã ghi nhận trong tháng.",
+    cashCollectedLabel: "Tiền mặt đã thu",
+    cashCollectedHelper: "Thanh toán hoàn tất bằng tiền mặt trong tháng.",
+    transferCollectedLabel: "Chuyển khoản/ví đã thu",
+    transferCollectedHelper: (vietqr: string, momo: string) =>
+      `VietQR ${vietqr} + MoMo ${momo} trong tháng.`,
+    inventoryValueLabel: "Giá trị tồn kho",
+    inventoryValueHelper: "Tồn kho hiện tại theo phạm vi quản trị.",
+    compareHint: "so với cùng kỳ tháng trước",
+    operatingPulseTitle: "Nhịp bán trong tháng",
+    operatingPulseDescription:
+      "Số đơn, trung bình mỗi đơn và các tín hiệu vận hành cần chủ xem.",
+    workQueueTitle: "Việc cần xử lý trước",
+    workQueueDescription:
+      "Ưu tiên lỗi chặn vận hành, sau đó tới cảnh báo tiền, hóa đơn và dữ liệu giá vốn.",
+    workQueueBadge: (count: number) => (count > 0 ? `${count} việc` : "Đã ổn"),
+    workQueueEmptyTitle: "Đã ổn",
+    workQueueEmptyDescription:
+      "Chưa có lỗi vận hành hoặc hàng việc tài chính cần xử lý theo dữ liệu hiện có.",
+    queueSeverityDestructive: "Khẩn cấp",
+    queueSeverityWarning: "Cần xem",
+    queueSeverityNeutral: "Theo dõi",
+    queuePosClosedTitle: "Chi nhánh chưa mở POS",
+    queuePosClosedDescription: (count: number) =>
+      `${count.toLocaleString("vi-VN")} chi nhánh chưa mở ca bán hàng hôm nay.`,
+    queuePrinterFailedTitle: "Lỗi in trong 24 giờ",
+    queuePrinterFailedDescription: (count: number) =>
+      `${count.toLocaleString("vi-VN")} lệnh in lỗi hoặc quá hạn, kiểm tra máy in chi nhánh.`,
+    queuePrinterOfflineTitle: "Máy in mất kết nối",
+    queuePrinterOfflineDescription: (count: number) =>
+      `${count.toLocaleString("vi-VN")} chi nhánh có bộ in mất kết nối hoặc chưa đăng ký.`,
+    openWorkItem: "Mở xử lý",
+    branchStatusTitle: "Tình trạng chi nhánh hôm nay",
+    branchStatusDescription:
+      "POS đã mở, máy in, lỗi in 24h, đơn đã thanh toán và tiền đã thu trong tháng.",
+    branchSales: (orders: string, revenue: string) =>
+      `${orders} đơn đã thanh toán · ${revenue}`,
+    branchPosOpenBadge: (time: string) => `POS mở từ ${time}`,
+    branchPosClosedBadge: "POS chưa mở",
+    branchPrinterOnlineBadge: "In sẵn sàng",
+    branchPrinterOfflineBadge: "In mất kết nối",
+    branchPrinterNoAgentBadge: "Chưa đăng ký in",
+    branchPrinterFailedBadge: (count: number) => `${String(count)} lỗi in 24h`,
+    branchOpenCta: "Mở chi nhánh",
+    branchStatusEmptyTitle: "Chưa có chi nhánh hoạt động",
+    branchStatusEmptyDescription:
+      "Khai báo chi nhánh trong Thiết lập hệ thống để bắt đầu vận hành.",
+    recentOrdersTitle: "Kiểm tra nhanh đơn gần đây",
+    recentOrdersDescription:
+      "Các đơn mới nhất trong phạm vi quản trị hiện tại.",
+    noRecentOrderTitle: "Chưa có đơn hàng mới",
+    noRecentOrderDescription: "Đơn hàng bán trong ngày sẽ xuất hiện tại đây.",
+  },
   reports: {
     index: {
       title: "Báo cáo điều hành",
       description:
-        "Xem nhanh doanh thu, tồn kho, dòng tiền vận hành và ngày công.",
+        "Xem nhanh tiền đã thu, tồn kho, dòng tiền vận hành và ngày công.",
       aggregateTitle: "Báo cáo tổng hợp",
       aggregateDescription:
-        "Các chỉ số quan trọng cho doanh thu, tồn kho, tiền vận hành và ngày công.",
-      relatedTitle: "Mở nhanh mục liên quan",
-      relatedDescription:
-        "Đi từ báo cáo sang các mục liên quan để xem chi tiết và xử lý công việc.",
+        "Các chỉ số quan trọng cho tiền đã thu, tồn kho, tiền vận hành và ngày công.",
       openReport: "Mở báo cáo",
       summaryBadge: "Tổng hợp",
       operationsBadge: "Vận hành",
-      detailsBadge: "Chi tiết",
       cards: {
-        revenue: "Doanh thu",
+        revenue: "Doanh thu ròng",
         inventoryValue: "Giá trị tồn kho",
         stockMovement: "Biến động tồn kho",
-        finance: "Tài chính vận hành",
-        inventory: "Kho",
-        hr: "Nhân sự",
       },
       cardDescriptions: {
-        revenue: "Doanh thu theo ngày, chi nhánh và phương thức thanh toán.",
+        revenue:
+          "Tiền đã thu và doanh thu ròng theo ngày, chi nhánh và phương thức thanh toán.",
         inventoryValue: "Tổng giá trị tồn kho toàn hệ thống và theo chi nhánh.",
         stockMovement: "Nhập – xuất – tồn nguyên liệu theo kỳ.",
-        finance: "Thu chi vận hành, lãi gộp và food cost.",
-        inventory: "Báo cáo kho chi tiết: tồn, nhập hàng, hao hụt.",
-        hr: "Chấm công và ngày công nhân viên.",
       },
     },
     inventoryValue: {
@@ -65,12 +129,12 @@ export const admin = {
       openingPeriod: "Tồn đầu kỳ",
       closing: "Tồn cuối",
       closingPeriod: "Tồn cuối kỳ",
-      grnReceipt: "Nhập (GRN)",
+      grnReceipt: "Nhập kho",
       productionConsumption: "SX tiêu hao",
       productionOutput: "SX nhập",
       transferIn: "Chuyển vào",
       transferOut: "Chuyển ra",
-      consumption: "Tiêu thụ",
+      consumption: "Tiêu hao",
       adjustment: "Điều chỉnh",
     },
   },
@@ -82,20 +146,27 @@ export const admin = {
     branchNotApplicable: "Không áp dụng",
     branchDescription: "Bắt buộc cho vai trò vận hành tại chi nhánh.",
   },
+  staffPage: {
+    title: "Tài khoản & phân quyền",
+    description:
+      "Tạo tài khoản, gán chức vụ hiển thị và phân quyền nhân viên theo chi nhánh. Hồ sơ nhân sự, chấm công và lương ở mục Nhân sự.",
+    hrLink: "Nhân sự",
+  },
   staffAudit: {
     backToStaff: "Quay lại danh sách nhân viên",
     linkLabel: "Nhật ký quyền hạn",
     title: "Nhật ký quyền hạn",
     description:
-      "Mọi thao tác gán/thu hồi quyền + áp dụng template. Ghi log không thay đổi được.",
+      "Mọi thao tác gán/thu hồi quyền và áp dụng mẫu quyền. Ghi nhật ký không thay đổi được.",
     recentItems: (count: number) => `${count} mục gần nhất`,
     empty: "Không có thay đổi nào.",
     time: "Thời gian",
     action: "Hành động",
     actor: "Người thao tác",
     target: "Đối tượng",
+    permission: "Quyền",
     expires: "Hạn",
-    tenantWide: "tenant-wide",
+    tenantWide: "toàn quán",
     forever: "vĩnh viễn",
   },
 } as const;

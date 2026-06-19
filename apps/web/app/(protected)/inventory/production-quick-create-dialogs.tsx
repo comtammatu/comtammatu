@@ -1,21 +1,7 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import { FieldGroup } from "@comtammatu/ui/components/field";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { toast } from "@comtammatu/ui/components/sonner";
-import { SelectField, TextField } from "@/components/form";
+import { FormDialog, SelectField, TextField } from "@/components/form";
 import { createIngredient } from "./ingredient-actions";
 import type {
   FinishedGoodOption,
@@ -23,7 +9,6 @@ import type {
 } from "./production-types";
 import { STORAGE_OPTIONS } from "./_lib/constants";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 type StorageType = "ambient" | "refrigerated" | "frozen";
 
 const quickCreateSchema = z.object({
@@ -65,133 +50,92 @@ function QuickCreateDialog<TCreated>({
   onCreated?: (value: TCreated) => void;
   mapCreated: (input: { id: number; name: string; unit: string }) => TCreated;
 }) {
-  const [isPending, startTransition] = useTransition();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const defaultValues: QuickCreateFormValues = {
+    name: "",
+    unit: "",
+    category: config.categoryDefault,
+    storage_type: "ambient",
+  };
 
-  const form = useForm<QuickCreateFormValues>({
-    resolver: zodResolver(quickCreateSchema),
-    defaultValues: {
-      name: "",
-      unit: "",
-      category: config.categoryDefault,
-      storage_type: "ambient",
-    },
-  });
-
-  useEffect(() => {
-    if (open) {
-      form.reset({
-        name: "",
-        unit: "",
-        category: config.categoryDefault,
-        storage_type: "ambient",
-      });
-      setServerError(null);
-    }
-  }, [open, config.categoryDefault, form]);
-
-  function onValid(values: QuickCreateFormValues) {
-    startTransition(async () => {
-      setServerError(null);
-      const result = await createIngredient({
-        name: values.name,
-        purchase_unit: values.unit,
-        measure_unit: values.unit,
-        purchase_to_measure_factor: 1,
-        category: values.category || undefined,
-        item_kind: config.itemKind,
-        storage_type: values.storage_type as StorageType,
-        min_stock_level: 0,
-      });
-
-      if (!result.success) {
-        setServerError(result.error ?? config.errorFallback);
-        return;
-      }
-
-      const createdId = Number(
-        (result.data as { id?: number | string } | null)?.id,
-      );
-      if (!Number.isFinite(createdId) || createdId <= 0) {
-        setServerError(config.readIdError);
-        return;
-      }
-
-      onCreated?.(
-        mapCreated({ id: createdId, name: values.name, unit: values.unit }),
-      );
-      toast.success(config.successMessage);
-      onOpenChange(false);
+  async function handleSubmit(values: QuickCreateFormValues) {
+    const result = await createIngredient({
+      name: values.name,
+      purchase_unit: values.unit,
+      measure_unit: values.unit,
+      purchase_to_measure_factor: 1,
+      category: values.category || undefined,
+      item_kind: config.itemKind,
+      storage_type: values.storage_type as StorageType,
+      min_stock_level: 0,
     });
+
+    if (!result.success) {
+      return { ...result, error: result.error ?? config.errorFallback };
+    }
+
+    const createdId = Number(
+      (result.data as { id?: number | string } | null)?.id,
+    );
+    if (!Number.isFinite(createdId) || createdId <= 0) {
+      return { success: false, error: config.readIdError };
+    }
+
+    onCreated?.(
+      mapCreated({ id: createdId, name: values.name, unit: values.unit }),
+    );
+    return result;
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{config.title}</DialogTitle>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      schema={quickCreateSchema}
+      defaultValues={defaultValues}
+      entityKey={`${config.itemKind}-${config.categoryDefault}`}
+      title={config.title}
+      description={config.intro}
+      submitLabel={config.submitLabel}
+      successMessage={config.successMessage}
+      contentClassName="sm:max-w-lg"
+      onSubmit={handleSubmit}
+    >
+      {(form) => (
+        <>
+          <div className="grid gap-4 md:grid-cols-2">
+            <TextField
+              control={form.control}
+              name="name"
+              label={config.nameLabel}
+              placeholder={config.namePlaceholder}
+              required
+            />
+            <TextField
+              control={form.control}
+              name="unit"
+              label={config.unitLabel}
+              placeholder={config.unitPlaceholder}
+              required
+            />
+          </div>
 
-        <form onSubmit={form.handleSubmit(onValid)} noValidate>
-          <FieldGroup>
-            <p className="text-sm text-muted-foreground">{config.intro}</p>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <TextField
-                control={form.control}
-                name="name"
-                label={config.nameLabel}
-                placeholder={config.namePlaceholder}
-                required
-              />
-              <TextField
-                control={form.control}
-                name="unit"
-                label={config.unitLabel}
-                placeholder={config.unitPlaceholder}
-                required
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <TextField
-                control={form.control}
-                name="category"
-                label={config.categoryLabel}
-                placeholder={config.categoryPlaceholder}
-              />
-              <SelectField
-                control={form.control}
-                name="storage_type"
-                label="Kiểu lưu trữ"
-                options={STORAGE_OPTIONS}
-              />
-            </div>
-
-            {serverError && (
-              <p className="text-sm text-destructive" role="alert">
-                {serverError}
-              </p>
-            )}
-          </FieldGroup>
-
-          <DialogFooter className="pt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending && <Spinner className="mr-2" />}
-              {config.submitLabel}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          <div className="grid gap-4 md:grid-cols-2">
+            <TextField
+              control={form.control}
+              name="category"
+              label={config.categoryLabel}
+              placeholder={config.categoryPlaceholder}
+            />
+            <SelectField
+              control={form.control}
+              name="storage_type"
+              label="Kiểu lưu trữ"
+              options={STORAGE_OPTIONS}
+            />
+          </div>
+        </>
+      )}
+    </FormDialog>
   );
 }
 

@@ -1,22 +1,20 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   Armchair as IconArmchair,
-  ArrowLeft as IconArrowLeft,
   ChefHat as IconChefHat,
-  Gauge as IconGauge,
-  ListChecks as IconChecklist,
   Monitor as IconDeviceDesktop,
   Printer as IconPrinter,
-  ReceiptText as IconReceipt2,
+  ReceiptText as IconReceiptText,
+  SlidersHorizontal as IconSlidersHorizontal,
 } from "lucide-react";
-import { canAccess } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import { AppLinkCard, AppPage, AppPageHeader } from "@/components/surface";
-import { Button } from "@comtammatu/ui/components/button";
+import { ItemGroup } from "@comtammatu/ui/components/item";
+import { AppPage, AppSection } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
+import { BranchActionItem } from "../_components/branch-action-item";
+import { BranchManagementShell } from "../_components/branch-management-chrome";
 import { AttendanceSettingsCard } from "./attendance-settings-card";
 
 type Tile = {
@@ -37,7 +35,7 @@ export default async function BranchSettingsHubPage({
     notFound();
   }
 
-  const { supabase, claims } = await loadAuthState();
+  const { supabase, claims, session } = await loadAuthState();
 
   const { data: branch } = await supabase
     .from("branches")
@@ -48,103 +46,88 @@ export default async function BranchSettingsHubPage({
 
   if (!branch || !branch.is_active) notFound();
 
-  const canEnterEmployeePortal = canAccess(claims.user_role, "employee");
-  const backHref =
-    claims.user_role === "branch_manager"
-      ? `/br/${branchId}/dashboard`
-      : canEnterEmployeePortal
-        ? "/employee"
-        : "/admin/dashboard";
-  const backLabel =
-    claims.user_role === "branch_manager"
-      ? APP_COPY_VI.branchCommand
-      : canEnterEmployeePortal
-        ? messages.settings.branch.employeeBack
-        : APP_COPY_VI.adminSurface;
-
+  const copy = messages.settings.branch;
   const operationalTiles: Tile[] = [
     {
       href: `/br/${branchId}/settings/tables`,
-      title: "Bàn & khu vực",
-      description: "Khu vực ăn uống (Tầng 1, Sân vườn…), danh sách bàn và trạng thái.",
+      title: copy.tablesSetupTitle,
+      description: copy.tablesSetupDescription,
       icon: <IconArmchair />,
     },
     {
       href: `/br/${branchId}/settings/pos`,
-      title: "POS",
-      description: "Máy POS đăng ký tại chi nhánh.",
+      title: copy.posSetupTitle,
+      description: copy.posSetupDescription,
       icon: <IconDeviceDesktop />,
     },
     {
-      href: `/br/${branchId}/settings/pos-sessions`,
-      title: "Ca POS",
-      description:
-        "Lịch sử ca, bill, doanh thu, số món và đối soát chênh lệch.",
-      icon: <IconReceipt2 />,
-    },
-    {
       href: `/br/${branchId}/settings/printers`,
-      title: "Máy in",
-      description: "Hóa đơn, bếp 1, bếp 2 — cấu hình & trạng thái agent.",
+      title: copy.printersSetupTitle,
+      description: copy.printersSetupDescription,
       icon: <IconPrinter />,
     },
     {
       href: `/br/${branchId}/settings/kds`,
-      title: "Trạm bếp (KDS)",
-      description: "Trạm hiển thị bếp và gán danh mục món ăn cho từng trạm.",
+      title: copy.kdsSetupTitle,
+      description: copy.kdsSetupDescription,
       icon: <IconChefHat />,
     },
     {
-      href: `/br/${branchId}/menu-limits`,
-      title: "Hạn mức bán hàng ngày",
-      description:
-        "Đặt số phần tối đa mỗi món hôm nay (vd. 30 Sườn cốt lết) hoặc tắt món. Quản lý/POS/Bếp đều chỉnh được.",
-      icon: <IconGauge />,
+      href: `/br/${branchId}/settings/pos-sessions`,
+      title: copy.commandPosSessionsTitle,
+      description: copy.commandPosSessionsDescription,
+      icon: <IconReceiptText />,
     },
-  ];
-
-  const tiles: Tile[] = [
     {
-      href: "/menu",
-      title: "Thực đơn",
-      description: "Danh mục, món ăn, giá. (Áp dụng toàn hệ thống.)",
-      icon: <IconChecklist />,
+      href: `/br/${branchId}/menu-limits`,
+      title: copy.menuLimitsTitle,
+      description: copy.commandMenuLimitsDescription,
+      icon: <IconSlidersHorizontal />,
     },
-    ...operationalTiles,
   ];
+  const displayName =
+    session.user.user_metadata?.["full_name"] ??
+    session.user.email ??
+    claims.user_role;
 
   return (
-    <AppPage width="default" className="md:p-6">
-      <AppPageHeader
-        title={messages.settings.branch.hubTitle}
-        description={messages.settings.branch.hubDescription(branch.name)}
-        actions={
-          <Button asChild variant="outline" size="sm" className="gap-1">
-            <Link href={backHref}>
-              <IconArrowLeft className="size-4" />
-              {backLabel}
-            </Link>
-          </Button>
-        }
-      />
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <AttendanceSettingsCard
-          branch={{
-            id: branch.id,
-            name: branch.name,
-          }}
-        />
-        {tiles.map((tile) => (
-          <AppLinkCard
-            key={`${tile.title}-${tile.href}`}
-            href={tile.href}
-            title={tile.title}
-            description={tile.description}
-            icon={tile.icon}
-          />
-        ))}
-      </div>
-    </AppPage>
+    <BranchManagementShell
+      user={{ name: displayName }}
+      role={claims.user_role}
+      branchId={branchId}
+      branchName={branch.name}
+      defaultPageTitle={copy.hubTitle}
+      description={copy.hubDescription(branch.name)}
+      breadcrumbSegments={[
+        { label: APP_COPY_VI.branchCommand, href: `/br/${branchId}/dashboard` },
+        copy.hubTitle,
+      ]}
+    >
+      <AppPage width="wide">
+        <AppSection
+          title={copy.setupLaneTitle}
+          description={copy.setupLaneDescription}
+        >
+          <ItemGroup className="gap-2">
+            <AttendanceSettingsCard
+              branch={{
+                id: branch.id,
+                name: branch.name,
+              }}
+            />
+            {operationalTiles.map((tile) => (
+              <BranchActionItem
+                key={`${tile.title}-${tile.href}`}
+                href={tile.href}
+                title={tile.title}
+                description={tile.description}
+                icon={tile.icon}
+                ctaLabel={copy.openAction}
+              />
+            ))}
+          </ItemGroup>
+        </AppSection>
+      </AppPage>
+    </BranchManagementShell>
   );
 }

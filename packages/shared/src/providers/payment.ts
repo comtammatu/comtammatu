@@ -1,7 +1,7 @@
 /**
  * Payment Provider Interface
  *
- * Tương tự Go interface — mỗi payment method (cash, VietQR, MoMo, VNPay...)
+ * Tương tự Go interface — mỗi payment method (cash, VietQR, MoMo)
  * implement interface này. Server action chỉ gọi qua interface,
  * không biết implementation cụ thể.
  *
@@ -9,8 +9,7 @@
  * PaymentProvider (interface)
  *   ├── CashProvider
  *   ├── VietQRProvider
- *   ├── MoMoProvider
- *   └── (future) VNPayProvider, ZaloPayProvider
+ *   └── MoMoProvider
  * ```
  */
 

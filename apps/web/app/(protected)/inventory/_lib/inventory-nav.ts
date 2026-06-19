@@ -112,6 +112,11 @@ export function resolveInventoryNav({
         label: "Hao hụt/điều chỉnh",
         icon: IconFileText,
       },
+      {
+        href: "/inventory/consumption",
+        label: "Tiêu hao",
+        icon: IconToolsKitchen,
+      },
       ...(showWasteApprovals
         ? [
             {
@@ -157,7 +162,7 @@ export function resolveInventoryNav({
     items: [
       {
         href: "/inventory/transfers",
-        label: isBranchSite ? "Nhận hàng & cấp bếp" : "Điều chuyển",
+        label: isBranchSite ? "Nhận/điều chuyển hàng" : "Điều chuyển",
         icon: IconTruck,
       },
       ...(showProduction

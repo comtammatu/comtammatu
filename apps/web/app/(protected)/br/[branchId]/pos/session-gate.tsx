@@ -7,15 +7,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import {
   Field,
   FieldDescription,
@@ -26,6 +18,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { BrandMark } from "@/components/brand";
 import { FormattedNumberInput } from "@/components/form";
+import { AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { TriangleAlert as IconAlertTriangle } from "lucide-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
@@ -41,8 +34,8 @@ interface PosTerminal {
 interface SessionGateProps {
   branchId: number;
   /**
-   * Per-branch model (D7): list dùng để cảnh báo "branch chưa có máy POS
-   * nào" (block mở ca). POS session thuộc branch, không thuộc terminal.
+   * Per-branch model: terminals only drive the "no POS terminal" block. The
+   * cashier never chooses a terminal; the session belongs to the branch.
    */
   terminals: PosTerminal[];
 }
@@ -87,59 +80,21 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
       <EmployeePortalBackControl className="absolute left-4 top-4 z-10 sm:left-6 sm:top-6" />
 
       <div className="mx-auto flex w-full max-w-xl flex-1 items-center pt-12 sm:pt-0">
-        <Card className="w-full">
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 flex-col gap-2">
-                <Badge variant="outline" className="w-fit">
-                  {messages.pos.sessionGate.branch(branchId)}
-                </Badge>
-                <CardTitle size="lg">
-                  {messages.pos.sessionGate.title}
-                </CardTitle>
-              </div>
-              <BrandMark
-                decorative
-                size="lg"
-                className="shrink-0 rounded-md bg-card p-1 ring-1 ring-border"
-              />
-            </div>
-          </CardHeader>
-
-          <CardContent>
-            <FieldGroup>
-              {!branchHasTerminals ? (
-                <Alert className="border-warning/20 bg-warning/10 text-warning">
-                  <IconAlertTriangle />
-                  <AlertTitle>
-                    {messages.pos.sessionGate.noTerminalTitle}
-                  </AlertTitle>
-                  <AlertDescription>
-                    {messages.pos.sessionGate.noTerminalDescription}
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-
-              <Field data-invalid={!hasValidOpeningCash}>
-                <FieldLabel htmlFor="opening-cash">
-                  {messages.pos.sessionGate.openingCashLabel}
-                </FieldLabel>
-                <FormattedNumberInput
-                  id="opening-cash"
-                  maxFractionDigits={0}
-                  value={openingCash}
-                  onValueChange={setOpeningCash}
-                  placeholder="0"
-                  aria-invalid={!hasValidOpeningCash}
-                />
-                <FieldDescription>
-                  {messages.pos.sessionGate.openingCashDescription}
-                </FieldDescription>
-              </Field>
-            </FieldGroup>
-          </CardContent>
-
-          <CardFooter>
+        <AppSection
+          className="w-full"
+          title={messages.pos.sessionGate.title}
+          badge={{
+            children: messages.pos.sessionGate.branch(branchId),
+            variant: "outline",
+          }}
+          action={
+            <BrandMark
+              decorative
+              size="lg"
+              className="shrink-0 rounded-md bg-card p-1 ring-1 ring-border"
+            />
+          }
+          footer={
             <Button
               className="w-full"
               size="touch-lg"
@@ -155,8 +110,37 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                 messages.pos.sessionGate.open
               )}
             </Button>
-          </CardFooter>
-        </Card>
+          }
+        >
+          <FieldGroup>
+            {!branchHasTerminals ? (
+              <Alert className="border-warning/20 bg-warning/10 text-warning">
+                <IconAlertTriangle />
+                <AlertTitle>{messages.pos.sessionGate.noTerminalTitle}</AlertTitle>
+                <AlertDescription>
+                  {messages.pos.sessionGate.noTerminalDescription}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            <Field data-invalid={!hasValidOpeningCash}>
+              <FieldLabel htmlFor="opening-cash">
+                {messages.pos.sessionGate.openingCashLabel}
+              </FieldLabel>
+              <FormattedNumberInput
+                id="opening-cash"
+                maxFractionDigits={0}
+                value={openingCash}
+                onValueChange={setOpeningCash}
+                placeholder="0"
+                aria-invalid={!hasValidOpeningCash}
+              />
+              <FieldDescription>
+                {messages.pos.sessionGate.openingCashDescription}
+              </FieldDescription>
+            </Field>
+          </FieldGroup>
+        </AppSection>
       </div>
     </div>
   );

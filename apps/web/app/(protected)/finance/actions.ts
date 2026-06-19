@@ -524,11 +524,14 @@ export async function cancelTaxInvoice(
 
 /* ─── Fetch Invoices ─── */
 
+// order_number is resolved in a second query (see fetchTaxInvoicesPage), not a
+// PostgREST embed: embedding `orders(order_number)` joins tax_invoices ⋈ orders,
+// and since both tables' RLS policies reference a bare `branch_id`, the generated
+// query fails with 42702 "column reference branch_id is ambiguous".
 const TAX_INVOICE_LIST_SELECT = `
   id, order_id, invoice_number, status, buyer_name, buyer_tax_code,
   subtotal, vat_rate, vat_amount, total_amount,
-  issued_at, cancelled_at, archived_at, created_at,
-  orders ( order_number )
+  issued_at, cancelled_at, archived_at, created_at
 ` as const;
 
 const TAX_INVOICE_PAGE_SIZE = 50;
@@ -615,6 +618,7 @@ export async function fetchTaxInvoicesPage(
   const fetched = (data ?? []) as Array<{
     id: number;
     created_at: string;
+    order_id: number | null;
     [k: string]: unknown;
   }>;
   const hasMore = fetched.length > pageSize;
@@ -625,7 +629,42 @@ export async function fetchTaxInvoicesPage(
       ? { createdAt: last.created_at, id: last.id }
       : null;
 
-  return { success: true, data: { items, hasMore, nextCursor } };
+  // Resolve order_number for the page in one extra query keyed by order_id.
+  // Failure here is non-fatal — the list still renders, with the UI falling
+  // back to `#<invoice id>` for any missing order number.
+  const orderIds = Array.from(
+    new Set(
+      items
+        .map((row) => row.order_id)
+        .filter((id): id is number => typeof id === "number"),
+    ),
+  );
+
+  const orderNumberById = new Map<number, string>();
+  if (orderIds.length > 0) {
+    const { data: orderRows } = await supabase
+      .from("orders")
+      .select("id, order_number")
+      .eq("tenant_id", claims.tenant_id)
+      .in("id", orderIds);
+    for (const row of orderRows ?? []) {
+      orderNumberById.set(row.id as number, row.order_number as string);
+    }
+  }
+
+  const itemsWithOrder = items.map((row) => {
+    const orderNumber =
+      row.order_id !== null ? orderNumberById.get(row.order_id) : undefined;
+    return {
+      ...row,
+      orders: orderNumber ? { order_number: orderNumber } : null,
+    };
+  });
+
+  return {
+    success: true,
+    data: { items: itemsWithOrder, hasMore, nextCursor },
+  };
 }
 
 /* ─── fetchRevenueRollup — aggregate mv_daily_revenue theo day/week/month ─ */

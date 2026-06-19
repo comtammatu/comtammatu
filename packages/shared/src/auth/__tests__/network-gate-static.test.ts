@@ -25,7 +25,7 @@ const provisioningCli = readRepoFile(
 );
 const printAgentReadme = readRepoFile("apps/print-agent/README.md");
 const printAgentRunbook = readRepoFile(
-  "docs/runbooks/pos-kds/print-agent-pilot.md",
+  "docs/runbooks/pos-kds/print-agent-rollout.md",
 );
 const migration = readRepoFile(
   "supabase/migrations/20260601870000_network_gate_presence_token_registry.sql",

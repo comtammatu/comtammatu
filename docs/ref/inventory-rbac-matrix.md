@@ -43,7 +43,7 @@
 | `warehouse_manager` | Kho trưởng         | `warehouse_manager`  | chi nhánh (procurement + outbound transfer)            |
 | `head_chef`         | Bếp trưởng         | `production_manager` | chi nhánh (sản xuất + KDS)                             |
 
-> Position code legacy (`quan_ly_CN`, `kho_truong`, `bep_truong`, `phu_bep`) đã rename về English; `thu_kho`, `ke_toan`, `ke_toan_truong`, `tro_ly_giam_doc` đã xóa hẳn (0 nhân sự) — migration `20260610230000_canonical_position_codes_lean`. Tên cũ trong các ghi chú lịch sử bên dưới giữ nguyên vì mô tả migration đã chạy.
+> Position code dùng English `lower_snake_case` theo bộ canonical hiện hành. Tên hiển thị tiếng Việt đi qua `label_vi`.
 >
 > Các position POS/KDS (`cashier`, `waiter`, `chef`, `kitchen_helper`) không có Inventory grant mặc định; chỉ tác động tồn kho gián tiếp qua consumption flow.
 
@@ -132,10 +132,10 @@ Edit template không tự propagate toàn cục. Khi sửa template, quyền c�
 
 **Contract notes:**
 
-- `branch_manager` giữ `inventory:transfer_create` chỉ để commit one-step intra-branch `Cấp bếp`; không được tạo/ship inter-site outbound.
+- `branch_manager` không tạo transfer outbound hoặc same-branch transfer; họ nhận inbound về đúng branch và duyệt/apply tiêu hao.
 - `branch_manager` giữ `inventory:transfer_receive` chỉ để nhận inbound về đúng branch của mình.
 - Multi-branch oversight phải đi qua explicit branch grants hoặc tenant-level permission rõ ràng; không có scope trung gian.
-- `head_chef` / `production_manager` sở hữu vòng sản xuất chi nhánh: nhận inbound chi nhánh → chi nhánh, sản xuất, rồi create/ship outbound chi nhánh → chi nhánh, và quản trị production recipes.
+- `head_chef` / `production_manager` sở hữu vòng sản xuất Bếp Trung Tâm: nhận hàng, sản xuất, rồi create/ship transfer thật về Kho CN, và quản trị production recipes.
 - Production hard-deny `branch_manager` ở Server Actions, RPC và RLS dù có manual grant production/menu; operator production là `production_manager`, còn `owner` là oversight/emergency access.
 
 ---
@@ -169,7 +169,7 @@ Production DB contract dùng helper `is_inventory_production_operator()` cho RPC
 
 Một số RPC vẫn dùng `auth_role()` như guard phụ:
 
-- Transfer RPC vẫn kiểm tra role để khóa hướng vận hành: `branch_manager` chỉ nhận inbound / commit `Cấp bếp`, `warehouse_manager` và `production_manager` chỉ thao tác trên branch của mình khi là role branch-scoped.
+- Transfer RPC vẫn kiểm tra role để khóa hướng vận hành: `branch_manager` chỉ nhận inbound, `warehouse_manager` và `production_manager` chỉ thao tác trên site của mình khi là role branch-scoped.
 - `stock_transfer_list_branches()` còn là helper role-whitelist, nhưng whitelist đã gồm `warehouse_manager` và `production_manager`; route vẫn đi qua module ACL.
 - Non-Inventory RPC legacy không còn là blocker của Inventory contract và không được xem là source of truth cho Inventory action authz.
 
@@ -178,7 +178,7 @@ Một số RPC vẫn dùng `auth_role()` như guard phụ:
 ## 7. Open Questions / Known Drift
 
 1. **Template drift** — closed by `20260505094000_inventory_rbac_template_contract_v2.sql`: add missing chi nhánh transfer grants for `bep_truong`, remove procurement keys from `quan_ly_CN`, and keep manual overrides reviewable.
-2. **Intermediate scope** — removed. Multi-branch access is explicit branch grants or tenant-level permission only.
+2. **Intermediate scope** — Multi-branch access is explicit branch grants or tenant-level permission only.
 3. **Held permissions của kho_truong** (`po_approve`, `invoice_*`) — cố ý để owner / accounting. Document không ghi là thiếu quyền.
 4. **Manual permission overrides** — migration contract chỉ expire grant có `source_template` trỏ tới template hệ thống hiện tại. Grant thủ công phải review bằng admin/audit flow nếu muốn thu hồi.
 

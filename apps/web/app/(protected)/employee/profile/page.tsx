@@ -28,6 +28,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
+  EmployeeActionBar,
   EmployeeActionSection,
   EmployeePage,
   EmployeePanel,
@@ -124,15 +125,14 @@ export default async function ProfilePage() {
     session.user.email ??
     copy.fallbackName;
 
-  // ACL-driven workspace launcher: each non-admin role surfaces its
-  // matrix-defined direct links (Branch Command, Inventory, POS, KDS, …) gated
-  // through MODULE_ACL via the shared nav resolvers. Branch-scoped links resolve
-  // only when a branch is in scope.
-  const workspaceLinks: ProfileLink[] = isAdminRole(claims.user_role)
-    ? []
-    : resolveQuickLaunchGroups(claims.user_role, effectiveBranchId)
-        .flatMap((group) => group.items)
-        .map(mapWorkspaceLink);
+  // Profile stays personal. Branch Managers enter management tools from
+  // `/employee` to Branch Command, not from a second launcher here.
+  const workspaceLinks: ProfileLink[] =
+    isAdminRole(claims.user_role) || claims.user_role === "branch_manager"
+      ? []
+      : resolveQuickLaunchGroups(claims.user_role, effectiveBranchId)
+          .flatMap((group) => group.items)
+          .map(mapWorkspaceLink);
 
   return (
     <EmployeePage
@@ -162,12 +162,14 @@ export default async function ProfilePage() {
         />
       </EmployeePanel>
 
-      <EmployeeActionSection
-        title={copy.workspaceLauncherTitle}
-        description={copy.workspaceLauncherDescription}
-        links={workspaceLinks}
-        columns={1}
-      />
+      {workspaceLinks.length > 0 ? (
+        <EmployeeActionSection
+          title={copy.workspaceLauncherTitle}
+          description={copy.workspaceLauncherDescription}
+          links={workspaceLinks}
+          columns={1}
+        />
+      ) : null}
 
       <EmployeeActionSection
         title={copy.personalToolsTitle}
@@ -175,17 +177,19 @@ export default async function ProfilePage() {
         columns={1}
       />
 
-      <form action="/api/auth/signout" method="post">
-        <Button
-          type="submit"
-          variant="outline"
-          size="touch"
-          className="w-full sm:w-fit"
-        >
-          <IconLogout data-icon="inline-start" />
-          {ACTIONS_VI.signOut}
-        </Button>
-      </form>
+      <EmployeeActionBar>
+        <form action="/api/auth/signout" method="post">
+          <Button
+            type="submit"
+            variant="outline"
+            size="touch"
+            className="w-full sm:w-fit"
+          >
+            <IconLogout data-icon="inline-start" />
+            {ACTIONS_VI.signOut}
+          </Button>
+        </form>
+      </EmployeeActionBar>
     </EmployeePage>
   );
 }

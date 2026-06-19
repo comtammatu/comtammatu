@@ -1,24 +1,22 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory receiving queue keeps operator copy inline */
+
 import Link from "next/link";
 import {
-  ArrowRight as IconArrowRight,
   ClipboardCheck as IconClipboardCheck,
   FileText as IconFileText,
   ShoppingCart as IconShoppingCart,
   Bolt as IconBolt,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   diffVNDateDays,
   formatVNDate,
   formatVNTime,
   getVNDateString,
 } from "@comtammatu/shared/time";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { cn } from "@comtammatu/ui";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppLinkCard, AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -60,8 +58,8 @@ const WORKFLOW_STEPS = [
     href: "/inventory/purchase-orders",
     cta: "Quản lý PO",
     description: "Tạo và theo dõi đơn đặt hàng trước khi nhận thực tế.",
-    toneClassName: "text-primary",
-    badgeClassName: "bg-primary/10 text-primary",
+    tone: "primary" as const,
+    badgeVariant: "default" as const,
   },
   {
     key: "grn",
@@ -70,8 +68,8 @@ const WORKFLOW_STEPS = [
     href: "/inventory/grn",
     cta: "Mở GRN",
     description: "Xác nhận số lượng nhận, batch và chi phí đầu vào.",
-    toneClassName: "text-success",
-    badgeClassName: "bg-success/10 text-success",
+    tone: "success" as const,
+    badgeVariant: "success" as const,
   },
   {
     key: "invoice",
@@ -80,8 +78,8 @@ const WORKFLOW_STEPS = [
     href: "/inventory/supplier-invoices",
     cta: "Đối soát hóa đơn",
     description: "Khóa công nợ với quy trình 3-way matching.",
-    toneClassName: "text-info",
-    badgeClassName: "bg-info/10 text-info",
+    tone: "info" as const,
+    badgeVariant: "info" as const,
   },
 ] as const;
 
@@ -91,8 +89,6 @@ export function ReceivingClient({
   invoiceCount,
   recentActivity,
 }: ReceivingProps) {
-  const isMobile = useIsMobile();
-
   const countsByKey = {
     po: poCount,
     grn: grnCount,
@@ -172,7 +168,7 @@ export function ReceivingClient({
   );
 
   return (
-    <AppPage width={isMobile ? "narrow" : "wide"}>
+    <AppPage width="wide">
       <AppPageHeader
         eyebrow="Kho hàng"
         title={tRoute("/inventory/receiving", "heading")}
@@ -190,87 +186,39 @@ export function ReceivingClient({
           </>
         }
       />
-      {/* Pipeline cards */}
       <div className="grid gap-4 xl:grid-cols-3">
         {WORKFLOW_STEPS.map((step, index) => {
           const Icon = step.icon;
           const label = tNav(step.labelKey, "heading");
 
-          return isMobile ? (
-            <InteractiveCard
+          return (
+            <AppLinkCard
               key={step.key}
-              asChild
-              minHeight="mobile"
-              padding="default"
-            >
-              <Link href={step.href} className="block">
-                <div
-                  className={cn(
-                    "inline-flex size-10 shrink-0 items-center justify-center rounded-full",
-                    step.badgeClassName,
-                  )}
-                >
-                  <Icon className="size-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">{label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Bước {index + 1} &middot; {countsByKey[step.key]} đang mở
-                  </p>
-                </div>
-                <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
-              </Link>
-            </InteractiveCard>
-          ) : (
-            <Card key={step.key}>
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      "inline-flex size-10 items-center justify-center rounded-full",
-                      step.badgeClassName,
-                    )}
-                  >
-                    <Icon className="size-5" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold">{label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Bước {index + 1} &middot; {countsByKey[step.key]} đang mở
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="mt-3 w-full justify-between"
-                >
-                  <Link href={step.href}>
-                    {step.cta}
-                    <IconArrowRight className="size-4" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+              href={step.href}
+              title={label}
+              description={step.description}
+              icon={<Icon />}
+              tone={step.tone}
+              badge={`Bước ${index + 1}`}
+              badgeVariant={step.badgeVariant}
+              metric={{ value: countsByKey[step.key], label: "đang mở" }}
+              ctaLabel={step.cta}
+            />
           );
         })}
       </div>
 
-      {/* Recent activity */}
-      <Card>
-        <CardContent flush>
-          <DataTable
-            columns={activityColumns}
-            data={recentActivity}
-            getRowKey={(item) => `${item.type}-${item.id}`}
-            emptyTitle="Chưa có hoạt động nào"
-            emptyDescription="PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh."
-            emptyMode="no-data"
-            mobileCardRender={renderActivityCard}
-          />
-        </CardContent>
-      </Card>
+      <AppSection title="Hoạt động gần đây" contentFlush>
+        <DataTable
+          columns={activityColumns}
+          data={recentActivity}
+          getRowKey={(item) => `${item.type}-${item.id}`}
+          emptyTitle="Chưa có hoạt động nào"
+          emptyDescription="PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh."
+          emptyMode="no-data"
+          mobileCardRender={renderActivityCard}
+        />
+      </AppSection>
     </AppPage>
   );
 }

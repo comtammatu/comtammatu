@@ -25,12 +25,9 @@ not a second authority:
 - `packages/ui/src/components/*` and `apps/web/app/components/surface.tsx` are
   runtime implementation and adapter evidence, not competing design systems.
 
-Legacy `matu-*` visual-layer strings (`matu-surface`, `font-matu-*`,
-`bg/text/border/rounded/spacing/radius-matu*` tokens, and retired design-folder
-paths) are enforced out by `scripts/check-ui-contract.mjs` /
-`pnpm lint:ui-contract`. Treat any new occurrence as a contract violation; do
-not reintroduce that layer unless `docs/spec/design-system.md` is explicitly
-changed first.
+Non-current visual-layer strings and non-current design-folder paths are blocked
+by `scripts/check-ui-contract.mjs` / `pnpm lint:ui-contract`. Any new visual
+token layer requires a design-system contract change first.
 
 External references:
 
@@ -46,6 +43,10 @@ External references:
 - NEVER exceed authority when editing UI; only make UI changes explicitly requested or clearly required by the task.
 - NEVER put agent notes, dev commit notes, implementation explanations, or internal commentary into user-facing UI.
 - ALWAYS follow project UI rules and regressions before changing any interface.
+- BEFORE adding or changing Admin, Inventory, Finance, Reports, or overview
+  cards/titles/KPIs, read `docs/ref/operational-data-contract.md`. Every metric
+  card must bind to a contract key or an existing workflow/entity contract; if
+  no contract exists, update the contract before changing UI.
 - USE `shadcn/ui` components and the project's active preset as the default
   primitive implementation path after `docs/spec/design-system.md` has selected
   the pattern.
@@ -53,7 +54,7 @@ External references:
   contract.
 - NEVER override the visual contract of core primitives through ad-hoc wrappers, custom themes, or parallel surface systems.
 - USE `apps/web/app/components/surface.tsx` for repeated app-level page/header/section/toolbar/empty/link-card patterns; domain wrappers must delegate to it instead of cloning layout/chrome.
-- NEVER use `matu-surface`, `font-matu-body`, `bg-matu-*`, `text-matu-*`, `border-matu-*`, `rounded-matu-*`, `--spacing-matu-*`, or `--radius-matu-*` for app UI. Treat any touched usage as a regression unless the owner explicitly reactivates that layer through `docs/spec/design-system.md`.
+- NEVER use a separate visual-token layer or compatibility wrapper for app UI. Route reusable patterns through `apps/web/app/components/surface.tsx` and semantic shadcn tokens unless the design-system contract explicitly changes first.
 - BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked Custom Theme contract.
 - UI/UX rebuild PRs MUST state the surface, primary user job, route family, change type, and primitives used before implementation.
 
@@ -62,7 +63,7 @@ External references:
 - Ma Tu Concept 01 typography is fixed: Inter for body/content, Montserrat for headings/titles, and JetBrains Mono for tabular operational data.
 - Runtime source is `apps/web/app/layout.tsx` plus `packages/ui/src/styles/globals.css`; use `font-sans`, `font-heading`, and `font-mono` instead of raw `font-family`.
 - NEVER add route-specific fonts, per-surface font variables, extra Google font families, or hardcoded fallback stacks.
-- NEVER reintroduce `Be Vietnam Pro`, Geist, system-only typography, `font-matu-body`, or `font-heading → font-sans` unless the design-system contract is explicitly changed first.
+- NEVER reintroduce `Be Vietnam Pro`, Geist, system-only typography, route-specific font variables, or `font-heading → font-sans` unless the design-system contract is explicitly changed first.
 - When changing typography, update `docs/spec/design-system.md`, `docs/modules/ui.md`, `tasks/regressions.md`, and runtime artifacts in the same change.
 
 ## Operational UI Philosophy
@@ -80,6 +81,17 @@ External references:
 ## Regression Rules To Recheck
 
 Read `tasks/regressions.md` before UI work, especially:
+
+Use targeted lookup instead of loading the whole file:
+
+```bash
+rg -n "DESIGN-SYSTEM|UI-|PRESET-FIRST|NO-PRIMITIVE|NO-FAKE|NO-ARBITRARY|NO-SURFACE|NO-STATIC|NO-LEGACY|APP-SURFACE|STATUS|DataTable|FORMDIALOG|EMPTY|LOADER|RAW-TABLE|PAGE-HEADER|RHYTHM|SHELL|NAV|PADDING" tasks/regressions.md
+```
+
+Separate the enforcement lane before acting: `DESIGN-SYSTEM-ONE-SOURCE-ONLY`
+is a lint-anchor, many runtime/rhythm rules are covered by
+`pnpm lint:ui-contract`, and review-checklist rules still need route-family
+inspection.
 
 - `DESIGN-SYSTEM-CONTRACT-FIRST`
 - `NO-ARBITRARY-DIMENSIONS`

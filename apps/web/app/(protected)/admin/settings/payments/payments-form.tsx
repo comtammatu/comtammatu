@@ -176,7 +176,7 @@ export function PaymentsForm({
               </Label>
               <Input
                 id="vietqr-account-name"
-                placeholder="CONG TY CP COM TAM MA TU"
+                placeholder="HO KINH DOANH COM TAM MA TU"
                 {...form.register("vietqr_account_name")}
               />
               {form.formState.errors.vietqr_account_name && (

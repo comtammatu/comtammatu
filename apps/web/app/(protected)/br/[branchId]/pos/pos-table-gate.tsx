@@ -1,10 +1,9 @@
 "use client";
 
-import { memo, useCallback, useMemo } from "react";
-import { AppEmptyState } from "@/components/surface";
+import { memo, useCallback, useMemo, type ReactNode } from "react";
+import { AppEmptyState, OperationalTile } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { messages } from "@lib/messages";
 import {
@@ -26,6 +25,7 @@ interface PosTableGateProps {
   orderCountByTable?: Map<number, number>;
   /** Map<table_id, visual state derived from active unpaid orders. */
   tableOrderVisualStateByTable?: Map<number, PosTableOrderVisualState>;
+  headerAction?: ReactNode;
   className?: string;
 }
 
@@ -55,6 +55,14 @@ const TableButton = memo(function TableButton({
   });
   const isSuccessTile =
     tileVisualState === "ready" || tileVisualState === "served";
+  const tileTone =
+    tileVisualState === "empty"
+      ? "default"
+      : isSuccessTile
+        ? "success"
+        : tileVisualState === "active"
+          ? "warning"
+          : "muted";
   const statusLabel = isSelected
     ? messages.pos.tableGate.selected
     : tileVisualState === "empty"
@@ -68,24 +76,15 @@ const TableButton = memo(function TableButton({
             : messages.pos.tableGate.reserved;
 
   return (
-    <Button
+    <OperationalTile
       type="button"
-      variant={isSelected ? "default" : "outline"}
+      selected={isSelected}
+      tone={tileTone}
       size="tile"
       aria-label={messages.pos.tableGate.tableAria(table.number, statusLabel)}
       className={cn(
         "w-full min-w-0 flex-col items-stretch justify-start gap-2 p-2.5 text-left whitespace-normal hover:shadow-sm sm:gap-3 sm:p-3 lg:p-4",
-        isSelected
-          ? "shadow-md"
-          : tileVisualState === "empty"
-            ? "bg-card shadow-sm hover:border-primary/25"
-            : tileVisualState === "ready"
-              ? "border-success/35 bg-success/20 text-foreground shadow-sm hover:border-success/50 hover:bg-success/25"
-              : tileVisualState === "served"
-                ? "bg-success/10 text-foreground shadow-sm hover:border-success/35"
-                : tileVisualState === "active"
-                  ? "bg-warning/10 text-foreground shadow-sm hover:border-warning/35"
-                  : "bg-muted/55 text-muted-foreground shadow-sm hover:border-border",
+        tileVisualState === "ready" && !isSelected && "bg-success/20",
       )}
       onClick={handleClick}
     >
@@ -125,7 +124,7 @@ const TableButton = memo(function TableButton({
           </Badge>
         )}
       </div>
-    </Button>
+    </OperationalTile>
   );
 });
 
@@ -135,6 +134,7 @@ function PosTableGateComponent({
   onTableSelect,
   orderCountByTable,
   tableOrderVisualStateByTable,
+  headerAction,
   className,
 }: PosTableGateProps) {
   const tableGroups = useMemo(() => {
@@ -150,8 +150,6 @@ function PosTableGateComponent({
     return Array.from(map.entries()).map(([zoneName, zoneTables]) => ({
       zoneName,
       zoneTables,
-      availableCount: zoneTables.filter((table) => table.status === "available")
-        .length,
     }));
   }, [tables]);
 
@@ -171,23 +169,20 @@ function PosTableGateComponent({
       ) : (
         <ScrollArea className="min-h-0 flex-1 overflow-hidden">
           <div className="flex w-full flex-col gap-4 px-2 pb-28 pt-2 md:px-4 md:py-4 lg:px-5">
-            {tableGroups.map(({ zoneName, zoneTables, availableCount }) => (
+            {tableGroups.map(({ zoneName, zoneTables }, index) => (
               <section key={zoneName} className="flex flex-col gap-4">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 items-center gap-2">
                     <IconMapPin className="size-5 shrink-0 text-primary" />
                     <div className="min-w-0">
                       <p className="truncate text-base font-semibold text-foreground">
                         {zoneName}
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        {messages.pos.tableGate.tableCount(zoneTables.length)}
-                      </p>
                     </div>
                   </div>
-                  <Badge variant="outline">
-                    {messages.pos.tableGate.availableCount(availableCount)}
-                  </Badge>
+                  {index === 0 && headerAction ? (
+                    <div className="w-full sm:w-72">{headerAction}</div>
+                  ) : null}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 2xl:grid-cols-5">

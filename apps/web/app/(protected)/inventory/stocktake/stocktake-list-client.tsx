@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import {
   ArrowRight as IconArrowRight,
   ClipboardCheck as IconClipboardCheck,
@@ -14,18 +15,10 @@ import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
   SelectContent,
@@ -33,11 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { toast } from "@comtammatu/ui/components/sonner";
-import { cn } from "@comtammatu/ui";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
+import { FormDialog, SelectField } from "@/components/form";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import {
   DataTable,
@@ -45,9 +36,18 @@ import {
 } from "@/components/data-table/data-table";
 import { StatusBadge } from "../_components/status-badge";
 import { InteractiveCard } from "../_components/interactive-card";
-import { createStocktakeSession, fetchStocktakeSessions } from "../actions";
+import { createStocktakeSession } from "../actions";
 
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+
+const createStocktakeSchema = z.object({
+  branchId: z.string().min(1, {
+    error: messages.inventory.stocktake.selectBranch,
+  }),
+});
+
+type CreateStocktakeValues = z.infer<typeof createStocktakeSchema>;
+
 export interface StocktakeSessionRow {
   id: number;
   branch_id: number;
@@ -113,13 +113,10 @@ export function StocktakeListClient({
   routeBase?: string;
 }) {
   const router = useRouter();
-  const isMobile = useIsMobile();
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedBranchId, setSelectedBranchId] = useState("");
   const branchQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
 
   useEffect(() => {
@@ -148,36 +145,35 @@ export function StocktakeListClient({
     return list;
   }, [rows, search, statusFilter]);
 
+  const branchOptions = useMemo(
+    () => branches.map((branch) => ({ value: String(branch.id), label: branch.name })),
+    [branches],
+  );
+
+  const createDefaultValues = useMemo<CreateStocktakeValues>(
+    () => ({
+      branchId: userBranchId != null ? String(userBranchId) : "",
+    }),
+    [userBranchId],
+  );
+
   function handleCreate() {
-    setSelectedBranchId(userBranchId != null ? String(userBranchId) : "");
     setDialogOpen(true);
   }
 
-  function doCreate(branchId: number) {
-    startTransition(async () => {
-      const res = await createStocktakeSession(branchId);
-      if (!res.success) {
-        toast.error(
-          res.error ?? messages.inventory.stocktake.createClassicFailed,
-        );
-        return;
-      }
-      toast.success(messages.inventory.stocktake.classicCreated);
-      setDialogOpen(false);
-      const again = await fetchStocktakeSessions(branchId);
-      if (again.success) setRows((again.data ?? []) as StocktakeSessionRow[]);
-      const id = (res.data as { id: number }).id;
-      router.push(`${routeBase}/${id}?branchId=${branchId}`);
-    });
-  }
-
-  function handleDialogConfirm() {
-    const bid = Number(selectedBranchId);
-    if (!bid) {
-      toast.error(messages.inventory.stocktake.selectBranch);
-      return;
+  async function handleCreateSession(values: CreateStocktakeValues) {
+    const branchId = Number(values.branchId);
+    const res = await createStocktakeSession(branchId);
+    if (!res.success || !res.data) {
+      return {
+        success: false,
+        error: res.error ?? messages.inventory.stocktake.createClassicFailed,
+      };
     }
-    doCreate(bid);
+
+    const id = (res.data as { id: number }).id;
+    router.push(`${routeBase}/${id}?branchId=${branchId}`);
+    return { success: true };
   }
 
   const isFiltered = Boolean(search) || statusFilter !== "all";
@@ -226,7 +222,7 @@ export function StocktakeListClient({
   ];
 
   return (
-    <AppPage width={isMobile ? "narrow" : "wide"}>
+    <AppPage width="wide">
       <AppPageHeader
         eyebrow="Kho hàng"
         title={messages.inventory.stocktake.title}
@@ -240,7 +236,7 @@ export function StocktakeListClient({
                 {messages.inventory.stocktake.v2}
               </Link>
             </Button>
-            <Button type="button" onClick={handleCreate} disabled={isPending}>
+            <Button type="button" onClick={handleCreate}>
               <IconPlus className="size-4" />
               {messages.inventory.stocktake.openSession}
             </Button>
@@ -277,7 +273,7 @@ export function StocktakeListClient({
           </SelectContent>
         </Select>
 
-        <InputGroup className={cn("flex-1", isMobile && "h-12 basis-full")}>
+        <InputGroup className="h-12 flex-1 basis-full sm:h-10 sm:basis-auto">
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -314,54 +310,30 @@ export function StocktakeListClient({
           <StocktakeSessionCard row={r} routeBase={routeBase} />
         )}
       />
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>
-              {messages.inventory.stocktake.chooseBranchTitle}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Label htmlFor="branch-select">{BRANCH_VI.long}</Label>
-            <Select
-              value={selectedBranchId}
-              onValueChange={setSelectedBranchId}
-            >
-              <SelectTrigger id="branch-select">
-                <SelectValue
-                  placeholder={
-                    messages.inventory.stocktake.chooseBranchPlaceholder
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={String(b.id)}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDialogOpen(false)}
-              disabled={isPending}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button
-              onClick={handleDialogConfirm}
-              disabled={isPending || !selectedBranchId}
-            >
-              {isPending
-                ? messages.inventory.stocktake.creatingClassic
-                : messages.inventory.stocktake.createClassic}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title={messages.inventory.stocktake.chooseBranchTitle}
+        schema={createStocktakeSchema}
+        defaultValues={createDefaultValues}
+        entityKey={`stocktake-${createDefaultValues.branchId || "new"}`}
+        onSubmit={handleCreateSession}
+        successMessage={messages.inventory.stocktake.classicCreated}
+        submitLabel={messages.inventory.stocktake.createClassic}
+        cancelLabel={ACTIONS_VI.cancel}
+        contentClassName="sm:max-w-sm"
+      >
+        {(form) => (
+          <SelectField
+            control={form.control}
+            name="branchId"
+            label={BRANCH_VI.long}
+            options={branchOptions}
+            placeholder={messages.inventory.stocktake.chooseBranchPlaceholder}
+            required
+          />
+        )}
+      </FormDialog>
     </AppPage>
   );
 }

@@ -1,31 +1,12 @@
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  formatVNDate,
-  formatVNDateTime,
-  getVNDayUtcRange,
-} from "@comtammatu/shared/time";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
-import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
+import { PermissionAuditTable } from "./permission-audit-table";
 
-import { BRANCH_VI } from "@comtammatu/shared/messages";
 interface Props {
   searchParams: Promise<{
     action?: string;
@@ -95,6 +76,28 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
     (branches ?? []).map((b) => [b.id, b.name]),
   );
   const copy = messages.admin.staffAudit;
+  const auditDisplayRows = auditRows.map((r) => {
+    const meta = (r.metadata ?? {}) as Record<string, unknown>;
+    const validUntil =
+      typeof meta.valid_until === "string" ? meta.valid_until : null;
+    const actorUserId = String(r.actor_user_id ?? "");
+    const targetUserId = String(r.target_user_id ?? "");
+
+    return {
+      id: r.id,
+      actorUserId,
+      actorName: nameByUserId.get(actorUserId) ?? null,
+      targetUserId,
+      targetName: nameByUserId.get(targetUserId) ?? null,
+      branchId: r.branch_id,
+      branchName:
+        r.branch_id === null ? null : (branchNameById.get(r.branch_id) ?? null),
+      permissionKey: r.permission_key,
+      action: r.action,
+      at: r.at,
+      validUntil,
+    };
+  });
 
   return (
     <AppPage>
@@ -111,102 +114,9 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
         }
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{copy.recentItems(auditRows.length)}</CardTitle>
-        </CardHeader>
-        <CardContent flush>
-          {auditRows.length === 0 ? (
-            <AppEmptyState mode="no-data" description={copy.empty} compact />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {copy.time}
-                  </TableHead>
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {copy.action}
-                  </TableHead>
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {copy.actor}
-                  </TableHead>
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {copy.target}
-                  </TableHead>
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Permission
-                  </TableHead>
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {BRANCH_VI.long}
-                  </TableHead>
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {copy.expires}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {auditRows.map((r) => {
-                  const meta = (r.metadata ?? {}) as Record<string, unknown>;
-                  const validUntil =
-                    typeof meta.valid_until === "string"
-                      ? meta.valid_until
-                      : null;
-                  const actionVariant: "default" | "outline" | "destructive" =
-                    r.action === "revoke"
-                      ? "destructive"
-                      : r.action === "apply_template"
-                        ? "outline"
-                        : "default";
-                  return (
-                    <TableRow key={r.id}>
-                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {formatVNDateTime(r.at)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={actionVariant}>{r.action}</Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {nameByUserId.get(r.actor_user_id) ?? (
-                          <code className="text-xs">
-                            {r.actor_user_id.slice(0, 8)}
-                          </code>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        <Link
-                          href={`/admin/staff/${r.target_user_id}/permissions`}
-                          className="hover:underline"
-                        >
-                          {nameByUserId.get(r.target_user_id) ?? (
-                            <code className="text-xs">
-                              {r.target_user_id.slice(0, 8)}
-                            </code>
-                          )}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <code className="rounded-md bg-muted px-1.5 py-0.5 text-xs">
-                          {r.permission_key}
-                        </code>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {r.branch_id === null
-                          ? copy.tenantWide
-                          : (branchNameById.get(r.branch_id) ??
-                            `#${r.branch_id}`)}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {validUntil ? formatVNDate(validUntil) : copy.forever}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <AppSection title={copy.recentItems(auditRows.length)} contentFlush>
+        <PermissionAuditTable rows={auditDisplayRows} />
+      </AppSection>
     </AppPage>
   );
 }

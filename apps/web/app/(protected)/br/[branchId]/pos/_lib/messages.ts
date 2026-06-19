@@ -212,7 +212,7 @@ export function mapDailyLimitRpcError<TData = unknown>(
  * most-specific first. Predicates see the already-lowercased message
  * (mapRpcError lowercases once upstream).
  *
- * Sentinel → meaning:
+ * The RPC sentinels map as:
  * - `"forbidden"`     → 42501 from the RPC's `has_permission` gate
  * - `"voidable"`      → "item not voidable in current state" — already
  *                       cancelled / served path
@@ -247,8 +247,8 @@ export const voidRpcFallback: RpcErrorFallback = {
  * warning string. Print failure is non-fatal — the void itself is already
  * committed; surface as a toast warning, not an action error.
  *
- * A free function (not via `mapRpcError`) because the desired output is a
- * plain warning string, not an `ActionResult`.
+ * Kept as a free function (not via `mapRpcError`) because the desired
+ * output is a plain warning string, not an `ActionResult`.
  */
 function printErrorToWarning(message: string | null | undefined): string {
   const msg = (message ?? "").toLowerCase();
@@ -421,8 +421,10 @@ export const enqueuePartialCancelTicketPrintHook: AfterSuccessHook<
   ReduceItemInput,
   { qtyReduced: number; oldQuantity: number; newQuantity: number }
 > = async (input, result, ctx) => {
-  // `wasSentToKitchen` is a meta-only internal flag. `oldQuantity` /
-  // `newQuantity` come from data (the caller also needs them in the toast).
+  // `wasSentToKitchen` rides on meta (internal flag — not exposed to
+  // callers). `oldQuantity` / `newQuantity` come from the handler's data
+  // because the caller also wants them in the toast ("đã giảm SL: 3 → 2"),
+  // so duplicating on meta would be noise.
   const wasSentToKitchen = result.meta?.wasSentToKitchen === true;
   if (!wasSentToKitchen) return;
 
@@ -672,33 +674,6 @@ export const transferRpcMappings: readonly RpcErrorMapping[] = [
 
 export const transferRpcFallback: RpcErrorFallback = {
   userMessage: "Không thể chuyển bàn. Vui lòng thử lại.",
-  errorCode: POS_ERROR_CODES.RPC_GENERIC,
-};
-
-/* ────────────────────────────────────────────────────────────────────────── */
-/*  updateOrderStatus — RPC error vocabulary                                  */
-/* ────────────────────────────────────────────────────────────────────────── */
-
-export const updateOrderStatusRpcMappings: readonly RpcErrorMapping[] = [
-  {
-    match: includesAny("complete requires"),
-    errorCode: POS_ERROR_CODES.RPC_GENERIC,
-    userMessage: "Đánh dấu phục vụ trước khi hoàn thành.",
-  },
-  {
-    match: includesAny("items not terminal"),
-    errorCode: POS_ERROR_CODES.RPC_GENERIC,
-    userMessage: "Còn món chưa sẵn sàng hoặc chưa xử lý xong.",
-  },
-  {
-    match: includesAny("invalid transition"),
-    errorCode: POS_ERROR_CODES.RPC_GENERIC,
-    userMessage: "Không thể đổi trạng thái đơn lúc này.",
-  },
-];
-
-export const updateOrderStatusRpcFallback: RpcErrorFallback = {
-  userMessage: "Không thể cập nhật trạng thái. Vui lòng thử lại.",
   errorCode: POS_ERROR_CODES.RPC_GENERIC,
 };
 

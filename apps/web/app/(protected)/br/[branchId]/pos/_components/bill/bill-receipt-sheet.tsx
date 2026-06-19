@@ -23,8 +23,6 @@ import {
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +47,7 @@ import {
   Wallet as IconWallet,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
+import { AppSection } from "@/components/surface";
 import { FormattedNumberInput } from "@/components/form";
 import { messages } from "@lib/messages";
 import { fetchOrderForBill } from "../../actions";
@@ -201,8 +200,8 @@ function PaymentSkeleton() {
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-20 w-full" />
       </div>
-      <Card size="sm">
-        <CardContent className="flex flex-col gap-3">
+      <AppSection size="sm" contentClassName="gap-3">
+        <>
           <Skeleton className="h-5 w-36" />
           <Skeleton className="h-10 w-full" />
           <div className="grid grid-cols-2 gap-2">
@@ -211,8 +210,8 @@ function PaymentSkeleton() {
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
-        </CardContent>
-      </Card>
+        </>
+      </AppSection>
     </div>
   );
 }
@@ -237,8 +236,8 @@ function PaymentLoadingFixture() {
           {PAYMENT_LOADING_TEXT.qr}
         </Button>
       </div>
-      <Card size="sm">
-        <CardContent className="flex flex-col gap-4">
+      <AppSection size="sm" contentClassName="gap-4">
+        <>
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-muted-foreground">
               {PAYMENT_LOADING_TEXT.total}
@@ -264,8 +263,8 @@ function PaymentLoadingFixture() {
               </Button>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </>
+      </AppSection>
     </div>
   );
 }
@@ -286,11 +285,9 @@ function PaymentQrPlaceholder({
   Icon: ComponentType<{ className?: string }>;
 }) {
   return (
-    <Card className="mx-auto size-48 bg-muted/40 py-0">
-      <CardContent flush className="flex h-full items-center justify-center">
-        <Icon className="size-10 text-muted-foreground" />
-      </CardContent>
-    </Card>
+    <div className="mx-auto flex size-48 items-center justify-center rounded-md border bg-muted/40">
+      <Icon className="size-10 text-muted-foreground" />
+    </div>
   );
 }
 
@@ -868,28 +865,6 @@ export function BillReceipt({
   const handleConfirmPaid = useCallback(async () => {
     if (!order || orderId === null || !canConfirmPaid) return;
 
-    // HĐĐT issues realtime the instant payment confirms — there is no post-issue
-    // edit, only cancel/replace. Gate the irreversible action behind a summary
-    // the cashier verifies with the customer (catches wrong method + premature
-    // tap, the two reported error classes).
-    const confirmed = await confirm({
-      title: messages.pos.payment.confirmIssueTitle,
-      details: [
-        {
-          label: messages.pos.payment.confirmIssueMethod,
-          value: PAYMENT_METHOD_LABELS_VI[selectedMethod],
-        },
-        {
-          label: messages.pos.payment.confirmIssueAmount,
-          value: formatVND(totalAmount),
-        },
-      ],
-      description: messages.pos.payment.confirmIssueWarning,
-      confirmText: messages.pos.payment.confirmIssueConfirm,
-      cancelText: messages.pos.payment.confirmIssueCancel,
-    });
-    if (!confirmed) return;
-
     // Freeze the invoice payload at click — guards against the cashier
     // editing the form while the submit is in flight.
     const invoicePayload = buildInvoicePayload(invoiceForm);
@@ -933,7 +908,7 @@ export function BillReceipt({
       }
 
       // VietQR: cashier confirms manually after customer scans and transfers.
-      // confirm_vietqr_payment creates the payment row + posts GL atomically.
+      // confirm_vietqr_payment creates the payment row atomically.
       const result = await confirmVietQrPaymentWithInvoice(
         branchId,
         orderId,
@@ -1043,8 +1018,6 @@ export function BillReceipt({
     order?.payment_status === "paid" ||
     order?.status === "completed" ||
     order?.status === "cancelled";
-  const showUnservedWarning =
-    order != null && !isReadOnlyOrder && order.status !== "served";
   const dialogTitleLabel =
     isReceiptIntent || isReadOnlyOrder ? "Hóa đơn" : "Thanh toán";
   // Header preview: the full `order` wins when present; otherwise use the
@@ -1139,16 +1112,6 @@ export function BillReceipt({
         ) : (
           <>
             <div className="flex flex-col gap-4">
-              {showUnservedWarning ? (
-                <Alert className="border-warning/20 bg-warning/10 text-warning">
-                  <IconAlertTriangle />
-                  <AlertTitle>{messages.pos.payment.unservedTitle}</AlertTitle>
-                  <AlertDescription>
-                    {messages.pos.payment.unservedDescription}
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-
               <div className="grid grid-cols-2 gap-2">
                 {methods.map((method) => {
                   const meta = METHOD_META[method] ?? {
@@ -1186,8 +1149,8 @@ export function BillReceipt({
               )}
 
               {selectedMethod === "cash" ? (
-                <Card size="sm">
-                  <CardContent className="flex flex-col gap-4">
+                <AppSection size="sm" contentClassName="gap-4">
+                  <>
                     {order && (
                       <OrderTotalsSummary
                         subtotal={order.subtotal}
@@ -1251,11 +1214,11 @@ export function BillReceipt({
                       disabled={actionPending}
                       onChange={setInvoiceForm}
                     />
-                  </CardContent>
-                </Card>
+                  </>
+                </AppSection>
               ) : (
-                <Card size="sm">
-                  <CardContent className="flex flex-col gap-4">
+                <AppSection size="sm" contentClassName="gap-4">
+                  <>
                     {order && (
                       <OrderTotalsSummary
                         subtotal={order.subtotal}
@@ -1326,8 +1289,8 @@ export function BillReceipt({
                         />
                       </>
                     )}
-                  </CardContent>
-                </Card>
+                  </>
+                </AppSection>
               )}
             </div>
 

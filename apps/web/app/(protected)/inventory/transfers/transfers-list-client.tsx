@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ArrowRight as IconArrowRight,
   CircleCheck as IconCircleCheck,
@@ -28,20 +27,16 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { matchesSearch } from "@lib/search";
-import { fetchStockTransfers } from "../transfer-actions";
-import { CreateTransferDialog } from "./create-transfer-dialog";
 import type {
   BranchForTransfer,
-  InventoryLocation,
 } from "./create-transfer-dialog";
-import type { IngredientRow } from "../page";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
 import { messages } from "@lib/messages";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
-export type { BranchForTransfer, InventoryLocation };
+export type { BranchForTransfer };
 
 export interface TransferListRow {
   id: number;
@@ -98,59 +93,41 @@ function classifyTransfer(
 export function TransfersListClient({
   initial,
   branches,
-  ingredients,
-  locations,
   userBranchId,
   userRole,
   basePath = "/inventory/transfers",
-  initialCreateOpen = false,
 }: {
   initial: TransferListRow[];
   branches: BranchForTransfer[];
-  ingredients: IngredientRow[];
-  locations: InventoryLocation[];
   userBranchId: number | null;
   userRole: StaffRole;
   basePath?: string;
-  initialCreateOpen?: boolean;
 }) {
-  const router = useRouter();
   const isBranchManager = userRole === "branch_manager";
   const userBranchKind =
     userBranchId == null
       ? null
       : (branches.find((branch) => branch.id === userBranchId)?.branch_kind ??
         null);
-  const canCreateInternal =
-    userBranchId != null &&
-    userBranchKind === "branch" &&
-    locations.length >= 2;
   const canCreateOutbound =
     !isBranchManager &&
     userBranchId != null &&
-    userBranchKind === "branch" &&
+    (userBranchKind === "branch" ||
+      userBranchKind === "central_supply" ||
+      userBranchKind === "central_kitchen") &&
     branches.length >= 2;
-  const canCreate = isBranchManager
-    ? canCreateInternal
-    : canCreateOutbound || canCreateInternal;
-  const [rows, setRows] = useState(initial);
-  const [open, setOpen] = useState(() => initialCreateOpen && canCreate);
+  const canCreate = canCreateOutbound;
+  const rows = initial;
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("receive");
 
-  const createLabel = isBranchManager
-    ? copy.createKitchenShort
-    : copy.createSlip;
-  const pageTitle = isBranchManager
-    ? copy.receiveKitchenTitle
-    : copy.internalTransferTitle;
-  const tabLabels: Record<Tab, string> = isBranchManager
-    ? {
-        receive: copy.list.tabs.receive,
-        dispatch: copy.list.tabs.kitchen,
-        history: copy.list.tabs.history,
-      }
-    : TAB_LABELS;
+  const createLabel = copy.createSlip;
+  const pageTitle = copy.internalTransferTitle;
+  const tabLabels: Record<Tab, string> = TAB_LABELS;
+  const createHref =
+    userBranchId == null
+      ? `${basePath}/new`
+      : `${basePath}/new?branchId=${userBranchId}`;
 
   const tabGroups = useMemo(() => {
     const groups: Record<Tab, TransferListRow[]> = {
@@ -195,13 +172,6 @@ export function TransfersListClient({
     }
     return list;
   }, [tabGroups, activeTab, search]);
-
-  function handleCreated(id: number) {
-    fetchStockTransfers(userBranchId ?? undefined).then((res) => {
-      if (res.success) setRows((res.data ?? []) as TransferListRow[]);
-    });
-    router.push(detailHref(id));
-  }
 
   function detailHref(id: number): string {
     const scopeQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
@@ -292,9 +262,11 @@ export function TransfersListClient({
         title={pageTitle}
         actions={
           canCreate ? (
-            <Button size="sm" onClick={() => setOpen(true)}>
-              <IconPlus className="size-4" />
-              {createLabel}
+            <Button size="sm" asChild>
+              <Link href={createHref}>
+                <IconPlus data-icon="inline-start" />
+                {createLabel}
+              </Link>
             </Button>
           ) : undefined
         }
@@ -310,7 +282,7 @@ export function TransfersListClient({
               className={cn(
                 "flex items-center justify-center rounded-lg px-2 py-2.5 text-xs font-semibold transition",
                 active
-                  ? "bg-background text-foreground shadow-sm"
+                  ? "border border-primary/20 bg-background text-foreground ring-1 ring-primary/20"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -361,17 +333,6 @@ export function TransfersListClient({
         mobileCardRender={(r) => (
           <MobileTransferCard row={r} tab={activeTab} href={detailHref(r.id)} />
         )}
-      />
-
-      <CreateTransferDialog
-        open={open}
-        onOpenChange={setOpen}
-        branches={branches}
-        ingredients={ingredients}
-        locations={locations}
-        userBranchId={userBranchId}
-        userRole={userRole}
-        onCreated={handleCreated}
       />
     </AppPage>
   );

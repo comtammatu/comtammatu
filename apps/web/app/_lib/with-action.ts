@@ -120,7 +120,7 @@ type DirectActionOptions<TSchema extends z.ZodType, TData> = BaseActionOptions<
   requireBranchScope?: boolean;
 };
 
-type FormActionOptions<TSchema extends z.ZodType, TData> = BaseActionOptions<
+type FormActionOptions<TSchema extends z.ZodType, TData> = DirectActionOptions<
   TSchema,
   TData
 > & {
@@ -367,8 +367,8 @@ export function withActionPositional<
  *
  * Preserves the `(_prev, formData)` signature required by React's
  * useActionState. The `extract` function converts FormData to a plain
- * object for Zod parsing. Supports `customAuth` and `afterSuccess` the same
- * way as `withAction`.
+ * object for Zod parsing. Supports `customAuth`, `requireBranchScope`, and
+ * `afterSuccess` the same way as `withAction`.
  *
  * @example
  *   export const createCategory = withFormAction(
@@ -413,6 +413,17 @@ export function withFormAction<TSchema extends z.ZodType, TData = unknown>(
     if (!ctx) {
       return actionFailure<TData>(
         opts.forbiddenError ?? FORBIDDEN_ERROR,
+        opts.forbiddenErrorCode,
+      );
+    }
+
+    if (
+      opts.requireBranchScope &&
+      !opts.customAuth &&
+      lacksRequiredBranchScope(ctx)
+    ) {
+      return actionFailure<TData>(
+        BRANCH_SCOPE_UNSET_ERROR,
         opts.forbiddenErrorCode,
       );
     }

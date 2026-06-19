@@ -36,7 +36,7 @@ export async function fetchFoodCost(
   });
 
   if (error) {
-    return { success: false, error: "Không thể tải dữ liệu food cost." };
+    return { success: false, error: "Không thể tải dữ liệu giá vốn món." };
   }
 
   return { success: true, data: data ?? [] };

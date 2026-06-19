@@ -32,8 +32,8 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
   );
   assert.match(
     hrMessagesSource,
-    /branchManagerTitle:\s*"Ca và chấm công"/,
-    "Branch Manager HR page should read as shift and attendance management",
+    /branchManagerTitle:\s*"Ngày công"/,
+    "Branch Manager HR page should read as workday management",
   );
   assert.match(
     hrMessagesSource,
@@ -42,13 +42,28 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
   );
   assert.match(
     hrMessagesSource,
-    /attendance:\s*"Chấm công"/,
-    "HR attendance tab should use Chấm công wording",
+    /attendance:\s*"Ngày công"/,
+    "HR attendance tab should use Ngày công wording",
   );
   assert.match(
     hrClientSource,
     /<TabsTrigger value="attendance">\{copy\.tabs\.attendance\}<\/TabsTrigger>/,
     "HR attendance tab should read from the HR message dictionary",
+  );
+  assert.match(
+    hrClientSource,
+    /<TabsTrigger value="setup">\{copy\.tabs\.setup\}<\/TabsTrigger>/,
+    "HR setup should group shift and checklist configuration",
+  );
+  assert.doesNotMatch(
+    hrClientSource,
+    /value="leave"/,
+    "Leave requests should sit inside the day-work flow instead of a separate top-level tab",
+  );
+  assert.match(
+    hrClientSource,
+    /<TabsContent value="attendance"[\s\S]*<AttendanceTable branches=\{branches\} \/>[\s\S]*<LeaveRequestsTable branches=\{branches\} \/>/,
+    "Day-work tab should group attendance and leave review together",
   );
   assert.match(
     attendanceTableSource,
@@ -82,7 +97,7 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
   );
   assert.match(
     attendanceTableSource,
-    /<TableHead>\{attendanceCopy\.photo\}<\/TableHead>/,
+    /key: "photo",\s*header: attendanceCopy\.photo,/,
     "Attendance detail rows should expose a manager photo-review column",
   );
   assert.match(
@@ -100,7 +115,9 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
     "updateAttendanceStatus",
     "handleStatusChange",
     "onStatusChange",
-    'value={record.status}',
+    // Editable status dropdown is forbidden (read surface); the read-only
+    // <StatusBadge value={record.status} /> fallback is allowed.
+    "Select value={record.status}",
   ]) {
     assert.doesNotMatch(
       attendanceTableSource,

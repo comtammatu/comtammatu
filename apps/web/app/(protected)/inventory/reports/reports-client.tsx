@@ -10,14 +10,12 @@ import {
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import { AppPage, AppPageHeader } from "@/components/surface";
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
 import { SimpleBarChart, TrendSparkline } from "../_lib/chart-primitives";
 import { formatVND } from "../_lib/format";
 import {
@@ -76,18 +74,13 @@ export function ReportsClient({
 
       {/* Dashboard Grid — 12 col asymmetric */}
       <div className="grid grid-cols-12 gap-4">
-        {/* Stock Movement Summary — col-span-8 */}
-        <Card className="col-span-12 flex flex-col lg:col-span-8">
-          <CardContent className="flex flex-1 flex-col p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
-                  <IconChartBar className="size-5 text-primary" />
-                </div>
-                <h3 className="font-heading text-lg font-bold text-foreground">
-                  {messages.inventory.reports.movementTitle}
-                </h3>
-              </div>
+        <AppSection
+          className="col-span-12 flex flex-col lg:col-span-8"
+          title={messages.inventory.reports.movementTitle}
+          icon={<IconChartBar />}
+          contentClassName="flex flex-1 flex-col gap-4"
+        >
+            <div className="flex items-center justify-end">
               <div className="flex items-center gap-4 text-xs font-medium">
                 <span className="flex items-center gap-1.5">
                   <span className="size-3 rounded-full bg-primary" />
@@ -124,14 +117,12 @@ export function ReportsClient({
                 {messages.inventory.reports.currentMonthSnapshot}
               </Badge>
             </div>
-          </CardContent>
-        </Card>
+        </AppSection>
 
-        <Card className="col-span-12 lg:col-span-4">
-          <CardContent className="p-6">
-            <h3 className="font-heading mb-4 text-lg font-bold text-foreground">
-              {messages.inventory.reports.supplierPayables}
-            </h3>
+        <AppSection
+          className="col-span-12 lg:col-span-4"
+          title={messages.inventory.reports.supplierPayables}
+        >
             <div className="space-y-4">
               {apAging.map((item, idx) => {
                 const isOverdue = idx === apAging.length - 1;
@@ -181,7 +172,7 @@ export function ReportsClient({
                       )}
                     >
                       <div
-                        className="h-full rounded-full transition-all"
+                        className="h-full rounded-full transition-[width,background-color]"
                         style={{
                           width: `${(item.amount / maxAP) * 100}%`,
                           backgroundColor: barColor,
@@ -202,24 +193,20 @@ export function ReportsClient({
                 {messages.inventory.reports.openSupplierDebt}
               </Link>
             </Button>
-          </CardContent>
-        </Card>
+        </AppSection>
 
-        <Card className="col-span-12 md:col-span-6">
-          <CardContent className="p-6">
-            <h3 className="font-heading mb-2 text-lg font-bold text-foreground">
-              {messages.inventory.reports.consumptionVariance}
-            </h3>
-            <p className="mb-6 text-sm text-muted-foreground">
-              {messages.inventory.reports.recipeActualVsStandard}
-            </p>
+        <AppSection
+          className="col-span-12 md:col-span-6"
+          title={messages.inventory.reports.consumptionVariance}
+          description={messages.inventory.reports.recipeActualVsStandard}
+        >
             <div className="space-y-4">
               {consumptionVariance.map((item) => {
                 const isUp = item.trend === "up";
                 return (
-                  <Card
+                  <div
                     key={item.name}
-                    className="bg-muted/35 flex items-center justify-between p-4"
+                    className="bg-muted/35 flex items-center justify-between rounded-md border p-4"
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex size-10 items-center justify-center rounded-full bg-card">
@@ -249,25 +236,17 @@ export function ReportsClient({
                           : messages.inventory.reports.saving}
                       </Badge>
                     </div>
-                  </Card>
+                  </div>
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
+        </AppSection>
 
-        <Card className="col-span-12 md:col-span-6">
-          <CardContent className="p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h3 className="font-heading text-lg font-bold text-foreground">
-                  {messages.inventory.reports.foodCostTrend}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {messages.inventory.reports.foodCostTarget}
-                </p>
-              </div>
-            </div>
+        <AppSection
+          className="col-span-12 md:col-span-6"
+          title={messages.inventory.reports.foodCostTrend}
+          description={messages.inventory.reports.foodCostTarget}
+        >
             {foodCostTrendAvailable ? (
               <>
                 <TrendSparkline
@@ -282,19 +261,14 @@ export function ReportsClient({
                 </p>
               </>
             ) : (
-              <Empty className="min-h-40 py-8">
-                <EmptyHeader>
-                  <EmptyTitle className="text-sm font-semibold">
-                    {messages.inventory.reports.foodCostEmptyTitle}
-                  </EmptyTitle>
-                  <EmptyDescription className="text-xs leading-5">
-                    {messages.inventory.reports.foodCostEmptyDescription}
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
+              <AppEmptyState
+                compact
+                className="min-h-40"
+                title={messages.inventory.reports.foodCostEmptyTitle}
+                description={messages.inventory.reports.foodCostEmptyDescription}
+              />
             )}
-          </CardContent>
-        </Card>
+        </AppSection>
       </div>
 
       {/* Report catalog */}
@@ -303,22 +277,18 @@ export function ReportsClient({
       </h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {reportCatalog.map((report) => (
-          <Card key={report.title}>
-            <CardContent className="p-5">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div className="flex size-12 items-center justify-center rounded-full bg-muted transition-colors">
-                  <report.icon className="size-5 text-muted-foreground" />
-                </div>
-                <Badge variant="outline">
-                  {messages.inventory.reports.comingSoon}
-                </Badge>
+          <div key={report.title} className="rounded-md border bg-card p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex size-12 items-center justify-center rounded-full bg-muted transition-colors">
+                <report.icon className="size-5 text-muted-foreground" />
               </div>
-              <p className="font-bold text-foreground">{report.title}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {report.desc}
-              </p>
-            </CardContent>
-          </Card>
+              <Badge variant="outline">
+                {messages.inventory.reports.comingSoon}
+              </Badge>
+            </div>
+            <p className="font-bold text-foreground">{report.title}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{report.desc}</p>
+          </div>
         ))}
       </div>
     </AppPage>

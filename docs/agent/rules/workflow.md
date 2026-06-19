@@ -14,7 +14,7 @@ Pick review depth by the task's blast radius, not by file count. Higher tiers AD
 
 When in doubt between tiers, pick the higher one.
 
-A deterministic floor backs this up: `scripts/check-review-tier.mjs` (`pnpm lint:review-tier`) independently classifies the diff by blast radius — migration paths, a `SECURITY DEFINER` token, auth/RLS files, money paths — and flags a declared tier below that floor. It is advisory (warn-only) during the pilot and never replaces judgment: it only catches under-classification (a money/RLS/migration diff self-assigned too low), the dominant tiering failure. It reads the tier from the `Verification:`/tier note that `engineering.md` already requires in the commit body.
+A deterministic floor backs this up: `scripts/check-review-tier.mjs` (`pnpm lint:review-tier`) independently classifies the diff by blast radius — migration paths, a `SECURITY DEFINER` token, auth/RLS files, money paths — and flags a declared tier below that floor. It is advisory until `REVIEW_TIER_STRICT=1` is enabled and never replaces judgment: it only catches under-classification (a money/RLS/migration diff self-assigned too low), the dominant tiering failure. It reads the tier from the `Verification:`/tier note that `engineering.md` already requires in the commit body.
 
 ## Skill Plan Gate
 
@@ -107,7 +107,7 @@ Before marking implementation work complete:
    - T3: paste a 3-line attestation into the PR / worklog contract — test-plan items covered vs deferred-with-reason; each BA rule mapped to the implementing file/line; known out-of-scope gaps.
    - T2: a 1-line attestation that the diff matches the self-review block.
    - T1: state why the debate was skipped in the commit body.
-4. **Tier floor (advisory during pilot).** `pnpm lint:review-tier` flags a declared tier below the computed blast-radius floor. Treat a flag as a prompt to re-justify the tier, not an automatic block, until it is promoted to fail-closed.
+4. **Tier floor (advisory until strict mode).** `pnpm lint:review-tier` flags a declared tier below the computed blast-radius floor. Treat a flag as a prompt to re-justify the tier, not an automatic block, until `REVIEW_TIER_STRICT=1` promotes it to fail-closed.
 5. CI (`.github/workflows/ci.yml`) runs typecheck, lint, test, and build on every PR and on push to `main` — a push to a working branch alone triggers nothing. Landed work is complete only with green CI.
 6. Learning-loop hygiene (T2/T3) — one pass before closing, so the loop stays bounded:
    - A recurring failure surfaced → add a `tasks/regressions.md` rule. If its detection is a deterministic code pattern, add a guard row to `scripts/check-regression-guards.mjs` instead of relying on prose — an enforced rule costs zero context.

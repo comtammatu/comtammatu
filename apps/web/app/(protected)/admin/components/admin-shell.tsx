@@ -67,7 +67,7 @@ export function AdminShell({
       defaultPageTitle={APP_COPY_VI.adminSurface}
       pageHeader={{
         breadcrumbSegments,
-        crumbLabel: APP_COPY_VI.adminFoundation,
+        crumbLabel: APP_COPY_VI.storeManagement,
         actions: canAccess(role, "employee") ? (
           <Button asChild variant="outline" size="sm">
             <Link href="/employee">{MODULE_LABELS_VI.employee}</Link>

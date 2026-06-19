@@ -8,26 +8,24 @@ import { formatVNDateTime } from "@comtammatu/shared/time";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import {
   RefreshCw as IconRefresh,
   RotateCcw as IconRotate,
 } from "lucide-react";
+import { messages } from "@lib/messages";
 import { retryJobFromMonitor } from "./actions";
 
 export type JobRow = {
@@ -58,17 +56,17 @@ interface Props {
   currentBranchLocked: boolean;
 }
 
-const JOB_TYPE_LABEL: Record<string, string> = {
-  kitchen_ticket: "Phiếu bếp",
-  receipt: "Hóa đơn",
-  provisional_bill: "Phiếu tạm tính",
-  reprint: "In lại",
-  cancel_ticket: "Phiếu hủy",
-};
+const PRINT_JOB_ATTENTION_STATUS = "needs_attention";
+const PRINT_JOBS_COPY = messages.settings.printers;
+type PrintJobTypeKey = keyof typeof PRINT_JOBS_COPY.jobTypes;
 
 function formatTime(iso: string | null): string {
   if (!iso) return "—";
   return formatVNDateTime(iso);
+}
+
+function getJobTypeLabel(jobType: string): string {
+  return PRINT_JOBS_COPY.jobTypes[jobType as PrintJobTypeKey] ?? jobType;
 }
 
 export function PrintJobsClient({
@@ -97,160 +95,201 @@ export function PrintJobsClient({
       const r = await retryJobFromMonitor(id);
       setPendingJobId(null);
       if (r.success) {
-        toast.success(`Đã đẩy lại job #${id} vào hàng đợi`);
+        toast.success(PRINT_JOBS_COPY.retrySuccess(id));
         router.refresh();
       } else {
-        toast.error(r.error ?? "Không thể thử lại");
+        toast.error(r.error ?? PRINT_JOBS_COPY.retryFailed);
       }
     });
   };
 
+  function RetryAction({ job }: { job: JobRow }) {
+    const canRetry = job.status === "failed" || job.status === "expired";
+    if (!canRetry) return null;
+
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={isPending && pendingJobId === job.id}
+        onClick={() => handleRetry(job.id)}
+      >
+        <IconRotate className="size-3.5" />
+        {ACTIONS_VI.retry}
+      </Button>
+    );
+  }
+
+  const columns: DataTableColumn<JobRow>[] = [
+    {
+      key: "id",
+      header: "#",
+      className: "font-mono text-xs",
+      render: (job) => job.id,
+    },
+    {
+      key: "type",
+      header: FORM_VI.type,
+      render: (job) => getJobTypeLabel(job.job_type),
+    },
+    {
+      key: "printer",
+      header: PRINT_JOBS_COPY.printerColumn,
+      render: (job) => (
+        <div className="text-xs">
+          <div>{job.printer_name ?? `#${job.printer_id}`}</div>
+          {job.printer_role ? (
+            <div className="text-muted-foreground">{job.printer_role}</div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (job) => <StatusBadge domain="print-job" value={job.status} />,
+    },
+    {
+      key: "attempts",
+      header: PRINT_JOBS_COPY.attemptsColumn,
+      className: "text-right text-xs font-mono tabular-nums",
+      render: (job) => (
+        <>
+          {job.attempts}
+          {job.retry_count > 0 ? (
+            <span className="text-muted-foreground"> (+{job.retry_count})</span>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      key: "created_at",
+      header: PRINT_JOBS_COPY.createdAtColumn,
+      className: "text-xs text-muted-foreground",
+      render: (job) => formatTime(job.created_at),
+    },
+    {
+      key: "printed_at",
+      header: PRINT_JOBS_COPY.printedAtColumn,
+      className: "text-xs text-muted-foreground",
+      render: (job) => formatTime(job.printed_at),
+    },
+    {
+      key: "last_error",
+      header: PRINT_JOBS_COPY.errorColumn,
+      className: "max-w-xs truncate text-xs text-destructive",
+      render: (job) => (
+        <span title={job.last_error ?? ""}>{job.last_error ?? ""}</span>
+      ),
+    },
+    {
+      key: "actions",
+      header: PRINT_JOBS_COPY.actionColumn,
+      className: "text-right",
+      render: (job) => <RetryAction job={job} />,
+    },
+  ];
+
+  const filters = [
+    ...(!currentBranchLocked && branches.length > 1
+      ? [
+          {
+            key: "branch",
+            placeholder: BRANCH_VI.selectAll,
+            options: [
+              { value: "all", label: BRANCH_VI.selectAll },
+              ...branches.map((branch) => ({
+                value: String(branch.id),
+                label: branch.name,
+              })),
+            ],
+          },
+        ]
+      : []),
+    {
+      key: "status",
+      placeholder: PRINT_JOBS_COPY.statusPlaceholder,
+      options: [
+        { value: "all", label: PRINT_JOBS_COPY.allStatuses },
+        {
+          value: PRINT_JOB_ATTENTION_STATUS,
+          label: PRINT_JOBS_COPY.attentionStatus,
+        },
+        ...Object.entries(PRINT_JOB_STATUS_LABELS_VI).map(([value, label]) => ({
+          value,
+          label,
+        })),
+      ],
+    },
+    {
+      key: "job_type",
+      placeholder: PRINT_JOBS_COPY.jobTypePlaceholder,
+      options: [
+        { value: "all", label: PRINT_JOBS_COPY.allJobTypes },
+        ...Object.entries(PRINT_JOBS_COPY.jobTypes).map(([value, label]) => ({
+          value,
+          label,
+        })),
+      ],
+    },
+  ];
+
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        {!currentBranchLocked && branches.length > 1 && (
-          <Select
-            value={filterBranch != null ? String(filterBranch) : "all"}
-            onValueChange={(v) => updateParam("branch", v === "all" ? null : v)}
-          >
-            <SelectTrigger className="h-9 w-44">
-              <SelectValue placeholder={BRANCH_VI.selectAll} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
-              {branches.map((b) => (
-                <SelectItem key={b.id} value={String(b.id)}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        <Select
-          value={filterStatus ?? "all"}
-          onValueChange={(v) => updateParam("status", v === "all" ? null : v)}
-        >
-          <SelectTrigger className="h-9 w-36">
-            <SelectValue placeholder="Trạng thái" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tất cả trạng thái</SelectItem>
-            {Object.entries(PRINT_JOB_STATUS_LABELS_VI).map(([k, v]) => (
-              <SelectItem key={k} value={k}>
-                {v}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={filterJobType ?? "all"}
-          onValueChange={(v) => updateParam("job_type", v === "all" ? null : v)}
-        >
-          <SelectTrigger className="h-9 w-36">
-            <SelectValue placeholder="Loại phiếu" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tất cả loại</SelectItem>
-            {Object.entries(JOB_TYPE_LABEL).map(([k, v]) => (
-              <SelectItem key={k} value={k}>
-                {v}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 gap-1"
-          onClick={() => router.refresh()}
-        >
+    <DataTable
+      columns={columns}
+      data={jobs}
+      getRowKey={(job) => job.id}
+      filters={filters}
+      filterValues={{
+        branch: filterBranch != null ? String(filterBranch) : "all",
+        status: filterStatus ?? "all",
+        job_type: filterJobType ?? "all",
+      }}
+      onFilterChange={(key, value) =>
+        updateParam(key, value === "all" ? null : value)
+      }
+      actions={
+        <Button variant="outline" size="sm" onClick={() => router.refresh()}>
           <IconRefresh className="size-3.5" />
           {ACTIONS_VI.refresh}
         </Button>
-      </div>
-
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>#</TableHead>
-            <TableHead>{FORM_VI.type}</TableHead>
-            <TableHead>Máy in</TableHead>
-            <TableHead>{FORM_VI.status}</TableHead>
-            <TableHead className="text-right">Thử</TableHead>
-            <TableHead>Tạo lúc</TableHead>
-            <TableHead>In lúc</TableHead>
-            <TableHead>Lỗi</TableHead>
-            <TableHead className="text-right">Hành động</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {jobs.length === 0 ? (
-            <TableEmptyStateRow
-              colSpan={9}
-              title="Chưa có job in nào khớp bộ lọc"
-            />
-          ) : null}
-          {jobs.map((j) => {
-            const canRetry = j.status === "failed" || j.status === "expired";
-            return (
-              <TableRow key={j.id}>
-                <TableCell className="font-mono text-xs">{j.id}</TableCell>
-                <TableCell>
-                  {JOB_TYPE_LABEL[j.job_type] ?? j.job_type}
-                </TableCell>
-                <TableCell>
-                  <div className="text-xs">
-                    <div>{j.printer_name ?? `#${j.printer_id}`}</div>
-                    {j.printer_role && (
-                      <div className="text-muted-foreground">
-                        {j.printer_role}
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge domain="print-job" value={j.status} />
-                </TableCell>
-                <TableCell className="text-right text-xs font-mono tabular-nums">
-                  {j.attempts}
-                  {j.retry_count > 0 && (
-                    <span className="text-muted-foreground">
-                      {" "}
-                      (+{j.retry_count})
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {formatTime(j.created_at)}
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {formatTime(j.printed_at)}
-                </TableCell>
-                <TableCell
-                  className="max-w-xs truncate text-xs text-destructive"
-                  title={j.last_error ?? ""}
-                >
-                  {j.last_error ?? ""}
-                </TableCell>
-                <TableCell className="text-right">
-                  {canRetry ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 gap-1"
-                      disabled={isPending && pendingJobId === j.id}
-                      onClick={() => handleRetry(j.id)}
-                    >
-                      <IconRotate className="size-3.5" />
-                      {ACTIONS_VI.retry}
-                    </Button>
-                  ) : null}
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+      }
+      emptyTitle={PRINT_JOBS_COPY.emptyJobs}
+      mobileCardRender={(job) => (
+        <Item variant="outline">
+          <ItemHeader>
+            <ItemTitle>#{job.id}</ItemTitle>
+            <StatusBadge domain="print-job" value={job.status} />
+          </ItemHeader>
+          <ItemContent>
+            <ItemDescription>{getJobTypeLabel(job.job_type)}</ItemDescription>
+            <ItemDescription>
+              {job.printer_name ?? `#${job.printer_id}`}
+              {job.printer_role ? ` · ${job.printer_role}` : ""}
+            </ItemDescription>
+            <ItemDescription>
+              {PRINT_JOBS_COPY.createdAtColumn}: {formatTime(job.created_at)}
+            </ItemDescription>
+            <ItemDescription>
+              {PRINT_JOBS_COPY.printedAtColumn}: {formatTime(job.printed_at)}
+            </ItemDescription>
+            {job.last_error ? (
+              <ItemDescription className="text-destructive">
+                {job.last_error}
+              </ItemDescription>
+            ) : null}
+          </ItemContent>
+          <ItemFooter>
+            <span className="font-mono text-xs text-muted-foreground">
+              {PRINT_JOBS_COPY.attemptsColumn}: {job.attempts}
+              {job.retry_count > 0 ? ` (+${job.retry_count})` : ""}
+            </span>
+            <ItemActions>
+              <RetryAction job={job} />
+            </ItemActions>
+          </ItemFooter>
+        </Item>
+      )}
+    />
   );
 }

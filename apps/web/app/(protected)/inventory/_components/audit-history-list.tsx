@@ -1,3 +1,4 @@
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import type { AuditLogRow } from "@/_lib/audit";
 import { AppEmptyState } from "@/components/surface";
 import {
@@ -19,7 +20,7 @@ export function AuditHistoryList({ logs }: { logs: AuditLogRow[] }) {
           <ItemContent>
             <ItemTitle>{formatAction(log.action)}</ItemTitle>
             <ItemDescription>
-              {log.userId ?? "Hệ thống"} · {formatVnTimestamp(log.createdAt)}
+              {log.userId ?? "Hệ thống"} · {formatVNDateTime(log.createdAt)}
             </ItemDescription>
           </ItemContent>
         </Item>
@@ -40,15 +41,4 @@ function formatAction(action: string): string {
     void: "Vô hiệu",
   };
   return map[action] ?? action;
-}
-
-function formatVnTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString("vi-VN", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }

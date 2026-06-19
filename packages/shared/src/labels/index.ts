@@ -4,8 +4,11 @@ export type { LegalFixedString, ReceiptInvariantString } from "./legal-fixed";
 export {
   APP_COPY_VI,
   ACTIVE_STATE_LABELS_VI,
+  ATTENDANCE_STATUS_LABELS_VI,
+  LEAVE_REQUEST_STATUS_LABELS_VI,
   MODULE_LABELS_VI,
   NAV_GROUP_LABELS_VI,
+  PAYROLL_PERIOD_STATUS_LABELS_VI,
   getModuleLabelVi,
   getInventorySiteKindLabelVi,
   getInventorySiteLabelVi,
