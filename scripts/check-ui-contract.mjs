@@ -191,7 +191,6 @@ const checks = [
     allowlist: {
       "apps/web/app/(protected)/admin/dashboard/page.tsx": 2,
       "apps/web/app/(protected)/admin/reports/stock-movement/stock-movement-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-summary.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
       "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts": 2,
       "apps/web/app/(protected)/finance/audit-trail/audit-trail-client.tsx": 1,
@@ -204,7 +203,6 @@ const checks = [
       "apps/web/app/(protected)/finance/revenue/revenue-charts-internal.tsx": 2,
       "apps/web/app/(protected)/finance/revenue/revenue-client.tsx": 9,
       "apps/web/app/(protected)/hr/payroll/[periodId]/payroll-detail-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/audit-history-list.tsx": 1,
       "apps/web/app/(protected)/inventory/_components/auto-approve-eval-panel.tsx": 2,
       "apps/web/app/(protected)/inventory/_components/document-stock-correction-dialog.tsx": 1,
       "apps/web/app/(protected)/inventory/_lib/format.ts": 2,
@@ -213,6 +211,25 @@ const checks = [
       "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 1,
       "apps/web/app/(protected)/inventory/production-order-list.tsx": 1,
       "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 16,
+    },
+  },
+  {
+    id: "date-format-ssot",
+    description:
+      "VN date/time rendering goes through @comtammatu/shared/time (formatVNDate/formatVNDateTime/getVNDateString/…, which pin Asia/Ho_Chi_Minh); ad-hoc Intl.DateTimeFormat / toLocaleDateString / toLocaleTimeString in app code must not spread.",
+    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
+    pattern:
+      /Intl\.DateTimeFormat\b|\.toLocaleDateString\(|\.toLocaleTimeString\(/g,
+    allowlist: {
+      // finance/page.tsx + pos-sessions: en-CA today-key / display formatters
+      // pending migration in the active UI-governance branch (owner WIP edits
+      // these regions; fold into shared/time there to drop these entries).
+      "apps/web/app/(protected)/finance/page.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/settings/pos-sessions/pos-sessions-client.tsx": 2,
+      // finance-params.ts is a self-contained VN-date range module (vnDateParts/
+      // addDays/fmtVN) duplicating shared/time; migrate with a range-equivalence
+      // test in a dedicated PR (finance reporting path, no current coverage).
+      "apps/web/app/(protected)/finance/_lib/finance-params.ts": 1,
     },
   },
   {

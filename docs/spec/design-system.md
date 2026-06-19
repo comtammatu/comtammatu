@@ -442,6 +442,8 @@ Money, quantity, unit-price, tax-rate, ID/code, and timestamp cells render with 
 
 Money values render through `formatVND` from `@comtammatu/shared/format` (single style `45.000đ`); page-local VND formatters and raw `toLocaleString("vi-VN")` money calls are ratcheted by `vnd-format-ssot`. `font-mono` is mandatory on any numeric cell that participates in vertical column comparison (the Typography Contract applied to table bodies). A money/quantity cell written as `text-right tabular-nums` WITHOUT `font-mono` is contract drift — JetBrains Mono is the locked operational-data face, not Inter. These classes go on `TableCell` / `TableHead`, never on a page-specific Table clone; a shared numeric-cell wrapper is allowed only if it renders the shared `Table` primitive and emits exactly this class set. Forbidden: `text-left` money columns, numeric columns missing `tabular-nums`, money/quantity cells missing `font-mono`.
 
+Date and time values render through `@comtammatu/shared/time` (`formatVNDate`, `formatVNDateTime`, `formatVNTime`, `getVNDateString`, …), which pin `Asia/Ho_Chi_Minh` so server-rendered receipts and reports never drift to the host zone. Page-local `Intl.DateTimeFormat` / `toLocaleDateString` / `toLocaleTimeString` in app code are ratcheted by `date-format-ssot`. The `packages/ui` calendar/chart primitives are locale-param-driven UI and stay out of scope.
+
 Allowed app wrappers:
 
 - Data adapters that fetch, map, or validate domain data.
