@@ -42,9 +42,10 @@ function assertValidators(
     );
     // 44: (lineNet − discount) × taxPct/100 ≈ taxAmount  (strict < 1)
     const diff44 = Math.abs(
-      ((li.itemTotalAmountWithoutTax - li.itemDiscount) * li.taxPercentage) /
+      ((li.itemTotalAmountWithoutTax - li.itemDiscount) *
+        (li.taxPercentage ?? 0)) /
         100 -
-        li.taxAmount,
+        (li.taxAmount ?? 0),
     );
     assert.ok(
       diff44 < 1,
@@ -76,7 +77,7 @@ function assertValidators(
     `sumLineDiscount mismatch`,
   );
   // 49: totalTaxAmount == Σ items.taxAmount
-  const sumTaxCheck = result.itemInfo.reduce((s, l) => s + l.taxAmount, 0);
+  const sumTaxCheck = result.itemInfo.reduce((s, l) => s + (l.taxAmount ?? 0), 0);
   assert.equal(
     result.sumLineTax,
     sumTaxCheck,
@@ -146,32 +147,32 @@ test("template 2 direct-sales mode keeps VAT-inclusive menu prices", () => {
         quantity: 1,
         amount: 47_000,
         amountWithTax: 47_000,
-        taxPercentage: -2,
-        taxAmount: 0,
+        taxPercentage: undefined,
+        taxAmount: undefined,
       },
       {
         unitPrice: 47_000,
         quantity: 1,
         amount: 47_000,
         amountWithTax: 47_000,
-        taxPercentage: -2,
-        taxAmount: 0,
+        taxPercentage: undefined,
+        taxAmount: undefined,
       },
       {
         unitPrice: 40_000,
         quantity: 2,
         amount: 80_000,
         amountWithTax: 80_000,
-        taxPercentage: -2,
-        taxAmount: 0,
+        taxPercentage: undefined,
+        taxAmount: undefined,
       },
       {
         unitPrice: 5_000,
         quantity: 1,
         amount: 5_000,
         amountWithTax: 5_000,
-        taxPercentage: -2,
-        taxAmount: 0,
+        taxPercentage: undefined,
+        taxAmount: undefined,
       },
     ],
   );
@@ -197,8 +198,8 @@ test("direct-sales mode subtracts allocated line discounts from Sinvoice totals"
   assert.equal(line.itemTotalAmountWithTax, 90_000);
   assert.equal(line.discount, 10); // rate %, not the 10_000₫ amount
   assert.equal(line.itemDiscount, 10_000);
-  assert.equal(line.taxPercentage, -2);
-  assert.equal(line.taxAmount, 0);
+  assert.equal(line.taxPercentage, undefined);
+  assert.equal(line.taxAmount, undefined);
 });
 
 test("direct-sales discount serializes as a RATE %, not the amount", () => {
@@ -418,6 +419,96 @@ test("createInvoice: login request uses JSON credentials body", async () => {
   }
 });
 
+const instantIssueReq = (orderId: number) => ({
+  orderId,
+  orderNumber: `ORD-${orderId}`,
+  sellerName: "",
+  sellerTaxCode: "0100109106-509",
+  sellerAddress: "",
+  buyerName: "Khach le",
+  items: [item("Com tam", 1, 100_000)],
+  subtotal: 100_000,
+  vatRate: 2.4,
+  vatAmount: 0,
+  totalAmount: 100_000,
+});
+
+const instantIssueProvider = () =>
+  new ViettelSinvoiceProvider({
+    username: "0100109106-509",
+    password: "test-password",
+    taxCode: "0100109106-509",
+    templateCode: "2/001",
+    invoiceSeries: "C26MAA",
+    baseUrl: "https://example.test",
+  });
+
+const createMock =
+  (body: Record<string, unknown>) =>
+  (async (input: Parameters<typeof fetch>[0]) => {
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response(JSON.stringify({ result: body }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof fetch;
+
+test("createInvoice: synchronous codeOfTax marks MTT mẫu-2 invoice issued", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = createMock({
+    invoiceNo: "C26MAA42",
+    codeOfTax: "MA-CQT-MTT-1",
+    supplierTaxCode: "0100109106-509",
+  });
+  try {
+    const result = await instantIssueProvider().createInvoice(
+      instantIssueReq(42),
+    );
+    assert.equal(result.status, "issued");
+    assert.equal(result.codeOfTax, "MA-CQT-MTT-1");
+    assert.equal(result.invoiceNumber, "C26MAA42");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createInvoice: empty or whitespace codeOfTax stays submitted (no false issue)", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = createMock({ invoiceNo: "C26MAA7", codeOfTax: "" });
+    assert.equal(
+      (await instantIssueProvider().createInvoice(instantIssueReq(7))).status,
+      "submitted",
+    );
+    globalThis.fetch = createMock({ invoiceNo: "C26MAA7", codeOfTax: "   " });
+    assert.equal(
+      (await instantIssueProvider().createInvoice(instantIssueReq(7))).status,
+      "submitted",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createInvoice: no invoiceNo stays signing", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = createMock({});
+  try {
+    const result = await instantIssueProvider().createInvoice(
+      instantIssueReq(8),
+    );
+    assert.equal(result.status, "signing");
+    assert.equal(result.invoiceNumber, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("createInvoice: sends buyerNotGetInvoice flag for no-buyer-info sales", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{
@@ -523,8 +614,8 @@ test("createInvoice: sends buyerNotGetInvoice flag for no-buyer-info sales", asy
     assert.equal(line.itemTotalAmountWithoutTax, 100_000);
     assert.equal(line.itemTotalAmountAfterDiscount, 100_000);
     assert.equal(line.itemTotalAmountWithTax, 100_000);
-    assert.equal(line.taxPercentage, -2);
-    assert.equal(line.taxAmount, 0);
+    assert.equal(line.taxPercentage, undefined);
+    assert.equal(line.taxAmount, undefined);
     assert.equal(line.discount, 0);
     assert.equal(line.itemDiscount, 0);
     assert.equal(body.summarizeInfo?.totalAmountAfterDiscount, 100_000);
@@ -627,8 +718,8 @@ test("createInvoice: sends direct-sales line discount and discounted summary", a
     assert.equal(body.summarizeInfo?.totalAmountWithoutTax, 90_000);
     assert.equal(body.summarizeInfo?.totalTaxAmount, 0);
     assert.equal(body.summarizeInfo?.totalAmountWithTax, 90_000);
-    assert.equal(body.taxBreakdowns?.[0]?.taxableAmount, 90_000);
-    assert.equal(body.taxBreakdowns?.[0]?.taxAmount, 0);
+    // mẫu-2 sales invoice: no tax breakdown (taxPercentage turned off).
+    assert.deepEqual(body.taxBreakdowns, []);
   } finally {
     globalThis.fetch = originalFetch;
   }

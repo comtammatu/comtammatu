@@ -242,6 +242,7 @@ export async function createTaxInvoice(
   let providerRef: string | null;
   let invoiceStatus: "draft" | "signing" | "submitted" | "issued";
   let providerData: Record<string, unknown> | undefined;
+  let cqtCode: string | null = null;
 
   // activeItems already computed above for VAT aggregation; the empty-
   // items check still applies here (provider payload cannot have zero lines).
@@ -278,6 +279,10 @@ export async function createTaxInvoice(
     providerRef = result.providerRef;
     invoiceStatus = result.status === "failed" ? "draft" : result.status;
     providerData = result.providerData;
+    cqtCode =
+      typeof result.codeOfTax === "string" && result.codeOfTax.trim().length > 0
+        ? result.codeOfTax
+        : null;
   } else {
     // No provider configured — create as draft with unique ID
     invoiceNumber = `DRAFT-${order.branch_id}-${crypto.randomUUID().slice(0, 8)}`;
@@ -310,6 +315,7 @@ export async function createTaxInvoice(
     provider_data: providerData
       ? JSON.parse(JSON.stringify(providerData))
       : null,
+    cqt_code: cqtCode,
     signing_started_at: hasProviderSubmission ? stateTimestamp : null,
     issued_at: invoiceStatus === "issued" ? stateTimestamp : null,
   };

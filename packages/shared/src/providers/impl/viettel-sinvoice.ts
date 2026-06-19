@@ -201,8 +201,11 @@ export interface SinvoiceItemInfo {
   itemDiscount: number;
   itemNote: null;
   isIncreaseItem: null;
-  taxPercentage: number;
-  taxAmount: number;
+  // Omitted for direct_sales_gross (mẫu-2 hóa đơn bán hàng): the sales-invoice
+  // template has no thuế-suất field — Viettel strips taxPercentage from the CQT
+  // XML, so we send neither rather than a placeholder. VAT mode (mẫu-1) sets both.
+  taxPercentage?: number;
+  taxAmount?: number;
 }
 
 export interface SinvoiceLineMath {
@@ -323,8 +326,7 @@ export function buildSinvoiceItemInfo(
         itemDiscount: lineDiscount,
         itemNote: null,
         isIncreaseItem: null,
-        taxPercentage: -2,
-        taxAmount: 0,
+        // No taxPercentage/taxAmount: mẫu-2 sales invoice carries no tax rate.
       };
     }
 
@@ -371,7 +373,7 @@ export function buildSinvoiceItemInfo(
     0,
   );
   const sumLineDiscount = itemInfo.reduce((s, l) => s + l.itemDiscount, 0);
-  const sumLineTax = itemInfo.reduce((s, l) => s + l.taxAmount, 0);
+  const sumLineTax = itemInfo.reduce((s, l) => s + (l.taxAmount ?? 0), 0);
   const totalGross = itemInfo.reduce(
     (s, l) => s + l.itemTotalAmountWithTax,
     0,
@@ -600,14 +602,18 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         discountAmount: sumLineDiscount,
         totalAmountWithTaxInWords: null,
       },
-      taxBreakdowns: [
-        {
-          taxPercentage:
-            pricingMode === "direct_sales_gross" ? -2 : request.vatRate,
-          taxableAmount: totalAmountAfterDiscount,
-          taxAmount: sumLineTax,
-        },
-      ],
+      // mẫu-2 (direct_sales_gross): no tax breakdown — sales invoice has no
+      // thuế-suất. mẫu-1 (VAT): one breakdown carrying the real rate.
+      taxBreakdowns:
+        pricingMode === "direct_sales_gross"
+          ? []
+          : [
+              {
+                taxPercentage: request.vatRate,
+                taxableAmount: totalAmountAfterDiscount,
+                taxAmount: sumLineTax,
+              },
+            ],
     };
 
     return { body, transactionUuid };
@@ -643,15 +649,16 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       const invoiceNo = result?.invoiceNo ?? null;
       const codeOfTax = result?.codeOfTax ?? null;
 
-      // Sinvoice returns invoiceNo synchronously; the CQT code (codeOfTax / Mã
-      // của cơ quan thuế) usually arrives later and is read by the reconcile
-      // cron via getStatus. Treat invoiceNo presence as 'submitted' (sent to
-      // CQT, awaiting code); no invoiceNo = still 'signing'. Status is NOT
-      // coupled to codeOfTax here — synchronous instant-issue is a separate,
-      // gated change.
-      const status: InvoiceResult["status"] = invoiceNo
-        ? "submitted"
-        : "signing";
+      // MTT mẫu-2 invoices receive the CQT code (codeOfTax / Mã của cơ quan
+      // thuế) synchronously on create → already legally issued, so surface
+      // 'issued' immediately (same rule as createBatchInvoice + getStatus). HĐ
+      // GTGT mẫu-1 codes arrive async (no codeOfTax yet ⇒ 'submitted', reconcile
+      // cron promotes). No invoiceNo ⇒ still 'signing'. The codeOfTax check is
+      // strict non-empty so a '' / whitespace value never falsely issues.
+      const hasCqtCode =
+        typeof codeOfTax === "string" && codeOfTax.trim().length > 0;
+      const status: InvoiceResult["status"] =
+        invoiceNo && hasCqtCode ? "issued" : invoiceNo ? "submitted" : "signing";
 
       return {
         status,
