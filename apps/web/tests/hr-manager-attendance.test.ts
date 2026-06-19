@@ -97,7 +97,7 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
   );
   assert.match(
     attendanceTableSource,
-    /<TableHead>\{attendanceCopy\.photo\}<\/TableHead>/,
+    /key: "photo",\s*header: attendanceCopy\.photo,/,
     "Attendance detail rows should expose a manager photo-review column",
   );
   assert.match(
@@ -115,7 +115,9 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
     "updateAttendanceStatus",
     "handleStatusChange",
     "onStatusChange",
-    'value={record.status}',
+    // Editable status dropdown is forbidden (read surface); the read-only
+    // <StatusBadge value={record.status} /> fallback is allowed.
+    "Select value={record.status}",
   ]) {
     assert.doesNotMatch(
       attendanceTableSource,

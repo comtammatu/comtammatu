@@ -24,10 +24,13 @@ test("POS cart makes Gửi bếp the primary submit action and keeps Ưu tiên s
   const [sendKitchenButton, priorityButton] = submitButtons;
 
   // Normal submit fires immediately — no confirm dialog tax on every
-  // order. Only the priority path keeps its AlertDialog.
+  // order. Only the priority path keeps its confirm dialog.
   assert.match(sendKitchenButton ?? "", /onClick=\{\(\) => onSubmitOrder\(\)\}/);
   assert.doesNotMatch(sendKitchenButton ?? "", /setSubmitIntent\("normal"\)/);
-  assert.match(sendKitchenButton ?? "", /Gửi bếp \(\{totalQuantity\}\)/);
+  assert.match(
+    sendKitchenButton ?? "",
+    /\{messages\.pos\.pendingDraft\.submitKitchen\(totalQuantity\)\}/,
+  );
   assert.match(
     sendKitchenButton ?? "",
     /aria-keyshortcuts="Meta\+Enter Control\+Enter"/,
@@ -37,10 +40,10 @@ test("POS cart makes Gửi bếp the primary submit action and keeps Ưu tiên s
 
   assert.match(
     priorityButton ?? "",
-    /onClick=\{\(\) => setSubmitIntent\("priority"\)\}/,
+    /onClick=\{\(\) => void handlePrioritySubmit\(\)\}/,
   );
   assert.match(priorityButton ?? "", /variant="outline"/);
-  assert.match(priorityButton ?? "", /<>Ưu tiên<\/>/);
+  assert.match(priorityButton ?? "", /<>\{messages\.pos\.pendingDraft\.priority\}<\/>/);
   assert.doesNotMatch(priorityButton ?? "", /shadow-md/);
   assert.doesNotMatch(priorityButton ?? "", /IconFlame/);
   assert.doesNotMatch(priorityButton ?? "", /Gửi ưu tiên/);

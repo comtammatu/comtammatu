@@ -118,8 +118,8 @@ test("Finance live copy stays HKD operating-first without two-mode labels", () =
   );
   assert.match(
     financeMessages,
-    /Workspace chính cho tài chính vận hành HKD/,
-    "default Finance workspace should stay HKD operating-first",
+    /subLabel: "Vận hành"/,
+    "default Finance workspace should stay operating-first (framed under Vận hành)",
   );
   assert.doesNotMatch(financeMessages, /Hệ thống tài khoản|Sổ nhật ký|B01-DN/);
 });
