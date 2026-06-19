@@ -1,3 +1,4 @@
+import { getVNDateString } from "@comtammatu/shared/time";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchAccessibleBranches } from "../actions";
@@ -34,9 +35,7 @@ export default async function ExpensesPage({
   }[];
   const rows = expensesRes.success ? (expensesRes.data ?? []) : [];
   const totalAmount = rows.reduce((sum, row) => sum + row.amount, 0);
-  const todayBusinessDate = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Ho_Chi_Minh",
-  }).format(new Date());
+  const todayBusinessDate = getVNDateString();
 
   return (
     <AppPage>
