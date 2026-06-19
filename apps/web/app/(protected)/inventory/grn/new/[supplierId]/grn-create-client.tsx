@@ -16,7 +16,6 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Card } from "@comtammatu/ui/components/card";
 import { Button } from "@comtammatu/ui/components/button";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
@@ -337,7 +336,7 @@ export function GrnCreateClient({
       />
 
       {lineCount > 0 ? (
-        <Card className="gap-2 p-3">
+        <div className="flex flex-col gap-2 rounded-lg border bg-card p-3">
           <div className="flex items-center justify-between text-2xs font-medium uppercase tracking-wider text-muted-foreground">
             <span>{GRN_CREATE_COPY.addedSummary(lineCount)}</span>
             <span className="text-foreground">
@@ -396,7 +395,7 @@ export function GrnCreateClient({
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       ) : null}
 
       <InputGroup className="h-12 rounded-lg">

@@ -12,8 +12,7 @@ import {
 } from "./_lib/messages";
 
 /**
- * Toggle priority flag on an order. Auth: POS_USE. Migrated to
- * `withActionPositional` in WS-1b batch 2 (2026-05-27). `mapPriorityError`
+ * Toggle priority flag on an order. Auth: POS_USE. `mapPriorityError`
  * lives in `_lib/messages.ts` so the internal `markInitialOrderPriority`
  * helper at the top of this file can reuse it.
  */
@@ -45,8 +44,7 @@ export const setOrderPriority = withActionPositional(
 );
 
 /**
- * Toggle priority flag on a single order item. Auth: POS_USE. Migrated to
- * `withActionPositional` in WS-1b batch 2 (2026-05-27).
+ * Toggle priority flag on a single order item. Auth: POS_USE.
  */
 export const setOrderItemPriority = withActionPositional(
   {
@@ -84,16 +82,15 @@ export const setOrderItemPriority = withActionPositional(
  * dedupes on this so the network-flap retry case (server commits but
  * client times out, cashier taps again) returns the same response
  * rather than re-shuffling the order.
- *
- * Migrated to `withActionPositional` in WS-1b batch 2 (2026-05-27).
  */
 export const transferOrderTable = withActionPositional(
   {
     argsToInput: (
+      branchId: number,
       orderId: number,
       newTableId: number,
       idempotencyKey?: string,
-    ) => ({ orderId, newTableId, idempotencyKey }),
+    ) => ({ branchId, orderId, newTableId, idempotencyKey }),
     schema: transferTableSchema,
     customAuth: posUseAuth,
   },
@@ -117,4 +114,3 @@ export const transferOrderTable = withActionPositional(
       : { success: true };
   },
 );
-

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
+import { z } from "zod";
 import {
   CalendarX as IconCalendarX,
   Check as IconCheck,
@@ -8,23 +15,7 @@ import {
 } from "lucide-react";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
   SelectContent,
@@ -34,22 +25,27 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
-import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { messages } from "@lib/messages";
+import { StatusBadge } from "@/components/status-badge";
+import { AppEmptyState } from "@/components/surface";
+import { FormDialog, TextareaField } from "@/components/form";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import {
   approveLeaveRequest,
   fetchLeaveRequests,
@@ -84,12 +80,11 @@ interface LeaveRequestsTableProps {
 
 const copy = messages.hr.leave;
 
-const STATUS_LABELS = {
-  pending: { label: copy.status.pending, variant: "warning" as const },
-  approved: { label: copy.status.approved, variant: "success" as const },
-  rejected: { label: copy.status.rejected, variant: "destructive" as const },
-  cancelled: { label: copy.status.cancelled, variant: "secondary" as const },
-};
+const rejectFormSchema = z.object({
+  reason: z.string().trim().max(500).optional(),
+});
+
+type RejectFormValues = z.infer<typeof rejectFormSchema>;
 
 function formatDateRange(startDate: string, endDate: string): string {
   if (startDate === endDate) return formatVNBusinessDate(startDate);
@@ -135,7 +130,6 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
   const [rejectTarget, setRejectTarget] = useState<LeaveRequestRow | null>(
     null,
   );
-  const [rejectReason, setRejectReason] = useState("");
 
   const load = useCallback((branchId: number) => {
     startTransition(async () => {
@@ -177,45 +171,188 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
     });
   }
 
-  function handleReject() {
-    if (!rejectTarget) return;
-    startTransition(async () => {
-      const result = await rejectLeaveRequest({
-        requestId: rejectTarget.id,
-        reason: rejectReason.trim() || undefined,
-      });
-      if (!result.success) {
-        toast.error(result.error ?? "Không thể từ chối yêu cầu nghỉ");
-        return;
-      }
-      toast.success("Đã từ chối yêu cầu nghỉ");
-      setRequests((prev) =>
-        prev.map((item) =>
-          item.id === rejectTarget.id
-            ? {
-                ...item,
-                status: "rejected",
-                rejected_reason: rejectReason.trim() || null,
-              }
-            : item,
-        ),
-      );
-      setRejectTarget(null);
-      setRejectReason("");
+  async function handleReject(values: RejectFormValues) {
+    if (!rejectTarget) {
+      return { success: false, error: "Không tìm thấy yêu cầu." };
+    }
+
+    const reason = values.reason?.trim() ?? "";
+    const result = await rejectLeaveRequest({
+      requestId: rejectTarget.id,
+      reason: reason || undefined,
     });
+    if (!result.success) {
+      return result;
+    }
+
+    setRequests((prev) =>
+      prev.map((item) =>
+        item.id === rejectTarget.id
+          ? {
+              ...item,
+              status: "rejected",
+              rejected_reason: reason || null,
+            }
+          : item,
+      ),
+    );
+    return result;
   }
+
+  function renderDateRange(request: LeaveRequestRow) {
+    const days = countInclusiveDays(request.start_date, request.end_date);
+    return (
+      <div>
+        <div className="font-medium">
+          {formatDateRange(request.start_date, request.end_date)}
+        </div>
+        {days ? (
+          <div className="text-xs text-muted-foreground">
+            {days} {copy.dayUnit}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  function renderPendingActions(request: LeaveRequestRow) {
+    return (
+      <div className="flex justify-end gap-1">
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={isPending}
+          onClick={() => handleApprove(request)}
+          aria-label={copy.approveAria}
+        >
+          <IconCheck data-icon="only" />
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={isPending}
+          onClick={() => setRejectTarget(request)}
+          aria-label={copy.rejectAria}
+        >
+          <IconX data-icon="only" />
+        </Button>
+      </div>
+    );
+  }
+
+  function renderHistoryStatus(request: LeaveRequestRow) {
+    return (
+      <div>
+        <StatusBadge
+          domain="leave-request"
+          value={request.status}
+          label={copy.status[request.status]}
+        />
+        {request.status === "rejected" && request.rejected_reason ? (
+          <div className="mt-1 text-xs text-muted-foreground">
+            {request.rejected_reason}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  function renderLeaveMobileCard(
+    request: LeaveRequestRow,
+    actions?: React.ReactNode,
+  ) {
+    return (
+      <Item variant="outline" className={isPending ? "opacity-60" : ""}>
+        <ItemContent>
+          <ItemTitle className="line-clamp-none text-sm font-semibold">
+            {getEmployeeName(request)}
+          </ItemTitle>
+          <ItemDescription className="line-clamp-none text-sm leading-6">
+            {formatDateRange(request.start_date, request.end_date)} ·{" "}
+            {copy.types[request.leave_type]}
+          </ItemDescription>
+          {request.reason ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {request.reason}
+            </p>
+          ) : null}
+          {request.status !== "pending" ? (
+            <div className="mt-2">{renderHistoryStatus(request)}</div>
+          ) : null}
+        </ItemContent>
+        {actions ? <ItemActions>{actions}</ItemActions> : null}
+      </Item>
+    );
+  }
+
+  const pendingColumns: DataTableColumn<LeaveRequestRow>[] = [
+    {
+      key: "dateRange",
+      header: copy.table.dateRange,
+      render: renderDateRange,
+    },
+    {
+      key: "employee",
+      header: copy.table.employee,
+      render: getEmployeeName,
+    },
+    {
+      key: "type",
+      header: copy.table.type,
+      render: (request) => copy.types[request.leave_type],
+    },
+    {
+      key: "reason",
+      header: copy.table.reason,
+      className: "max-w-xs truncate text-sm text-muted-foreground",
+      render: (request) => request.reason ?? "—",
+    },
+    {
+      key: "actions",
+      header: copy.table.actions,
+      className: "w-32 text-right",
+      render: renderPendingActions,
+    },
+  ];
+
+  const historyColumns: DataTableColumn<LeaveRequestRow>[] = [
+    {
+      key: "dateRange",
+      header: copy.table.dateRange,
+      render: renderDateRange,
+    },
+    {
+      key: "employee",
+      header: copy.table.employee,
+      render: getEmployeeName,
+    },
+    {
+      key: "type",
+      header: copy.table.type,
+      render: (request) => copy.types[request.leave_type],
+    },
+    {
+      key: "reason",
+      header: copy.table.reason,
+      className: "max-w-xs truncate text-sm text-muted-foreground",
+      render: (request) => request.reason ?? "—",
+    },
+    {
+      key: "status",
+      header: copy.table.status,
+      render: renderHistoryStatus,
+    },
+  ];
 
   if (branches.length === 0) {
     return (
-      <Empty>
-        <EmptyMedia variant="icon">
-          <IconCalendarX />
-        </EmptyMedia>
-        <EmptyHeader>
-          <EmptyTitle>{copy.emptyBranchTitle}</EmptyTitle>
-          <EmptyDescription>{copy.emptyBranchDescription}</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <AppEmptyState
+        title={copy.emptyBranchTitle}
+        description={copy.emptyBranchDescription}
+        icon={<IconCalendarX />}
+      />
     );
   }
 
@@ -257,222 +394,77 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
 
         <TabsContent value="pending" className="mt-4">
           {pendingRows.length === 0 && !isPending ? (
-            <Empty>
-              <EmptyMedia variant="icon">
-                <IconCalendarX />
-              </EmptyMedia>
-              <EmptyHeader>
-                <EmptyTitle>{copy.emptyPendingTitle}</EmptyTitle>
-                <EmptyDescription>{copy.emptyPendingDescription}</EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <div className="overflow-x-auto rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{copy.table.dateRange}</TableHead>
-                    <TableHead>{copy.table.employee}</TableHead>
-                    <TableHead>{copy.table.type}</TableHead>
-                    <TableHead>{copy.table.reason}</TableHead>
-                    <TableHead className="w-32 text-right">
-                      {copy.table.actions}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pendingRows.map((request) => {
-                    const days = countInclusiveDays(
-                      request.start_date,
-                      request.end_date,
-                    );
-                    return (
-                      <TableRow key={request.id}>
-                        <TableCell>
-                          <div className="font-medium">
-                            {formatDateRange(
-                              request.start_date,
-                              request.end_date,
-                            )}
-                          </div>
-                          {days ? (
-                            <div className="text-xs text-muted-foreground">
-                              {days} {copy.dayUnit}
-                            </div>
-                          ) : null}
-                        </TableCell>
-                        <TableCell>{getEmployeeName(request)}</TableCell>
-                        <TableCell>{copy.types[request.leave_type]}</TableCell>
-                        <TableCell className="max-w-xs truncate text-sm text-muted-foreground">
-                          {request.reason ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              disabled={isPending}
-                              onClick={() => handleApprove(request)}
-                              aria-label={copy.approveAria}
-                            >
-                              <IconCheck data-icon="only" />
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              disabled={isPending}
-                              onClick={() => {
-                                setRejectTarget(request);
-                                setRejectReason("");
-                              }}
-                              aria-label={copy.rejectAria}
-                            >
-                              <IconX data-icon="only" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+            <AppEmptyState
+              title={copy.emptyPendingTitle}
+              description={copy.emptyPendingDescription}
+              icon={<IconCalendarX />}
+            />
+          ) : pendingRows.length === 0 ? null : (
+            <DataTable
+              columns={pendingColumns}
+              data={pendingRows}
+              getRowKey={(request) => request.id}
+              rowClassName={() => (isPending ? "opacity-60" : undefined)}
+              mobileCardRender={(request) =>
+                renderLeaveMobileCard(request, renderPendingActions(request))
+              }
+            />
           )}
         </TabsContent>
 
         <TabsContent value="history" className="mt-4">
           {historyRows.length === 0 && !isPending ? (
-            <Empty>
-              <EmptyMedia variant="icon">
-                <IconCalendarX />
-              </EmptyMedia>
-              <EmptyHeader>
-                <EmptyTitle>{copy.emptyHistoryTitle}</EmptyTitle>
-                <EmptyDescription>{copy.emptyHistoryDescription}</EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <div className="overflow-x-auto rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{copy.table.dateRange}</TableHead>
-                    <TableHead>{copy.table.employee}</TableHead>
-                    <TableHead>{copy.table.type}</TableHead>
-                    <TableHead>{copy.table.reason}</TableHead>
-                    <TableHead>{copy.table.status}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {historyRows.map((request) => {
-                    const days = countInclusiveDays(
-                      request.start_date,
-                      request.end_date,
-                    );
-                    const statusInfo = STATUS_LABELS[request.status];
-                    return (
-                      <TableRow key={request.id}>
-                        <TableCell>
-                          <div className="font-medium">
-                            {formatDateRange(
-                              request.start_date,
-                              request.end_date,
-                            )}
-                          </div>
-                          {days ? (
-                            <div className="text-xs text-muted-foreground">
-                              {days} {copy.dayUnit}
-                            </div>
-                          ) : null}
-                        </TableCell>
-                        <TableCell>{getEmployeeName(request)}</TableCell>
-                        <TableCell>{copy.types[request.leave_type]}</TableCell>
-                        <TableCell className="max-w-xs truncate text-sm text-muted-foreground">
-                          {request.reason ?? "—"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={statusInfo.variant}>
-                            {statusInfo.label}
-                          </Badge>
-                          {request.status === "rejected" &&
-                          request.rejected_reason ? (
-                            <div className="mt-1 text-xs text-muted-foreground">
-                              {request.rejected_reason}
-                            </div>
-                          ) : null}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+            <AppEmptyState
+              title={copy.emptyHistoryTitle}
+              description={copy.emptyHistoryDescription}
+              icon={<IconCalendarX />}
+            />
+          ) : historyRows.length === 0 ? null : (
+            <DataTable
+              columns={historyColumns}
+              data={historyRows}
+              getRowKey={(request) => request.id}
+              rowClassName={() => (isPending ? "opacity-60" : undefined)}
+              mobileCardRender={(request) => renderLeaveMobileCard(request)}
+            />
           )}
         </TabsContent>
       </Tabs>
 
-      <Dialog
+      <FormDialog
         open={rejectTarget !== null}
         onOpenChange={(open) => {
-          if (!open) {
-            setRejectTarget(null);
-            setRejectReason("");
-          }
+          if (!open) setRejectTarget(null);
         }}
+        title={copy.rejectDialogTitle}
+        description={
+          rejectTarget
+            ? `${getEmployeeName(rejectTarget)} · ${formatDateRange(
+                rejectTarget.start_date,
+                rejectTarget.end_date,
+              )}`
+            : copy.fallbackEmployee
+        }
+        schema={rejectFormSchema}
+        defaultValues={{ reason: "" }}
+        entityKey={rejectTarget?.id ?? "none"}
+        onSubmit={handleReject}
+        successMessage="Đã từ chối yêu cầu nghỉ"
+        submitLabel={copy.rejectSubmit}
+        submitVariant="destructive"
+        cancelLabel={ACTIONS_VI.cancel}
+        contentClassName="sm:max-w-md"
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{copy.rejectDialogTitle}</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">
-              {rejectTarget
-                ? getEmployeeName(rejectTarget)
-                : copy.fallbackEmployee}{" "}
-              ·{" "}
-              {rejectTarget
-                ? formatDateRange(
-                    rejectTarget.start_date,
-                    rejectTarget.end_date,
-                  )
-                : ""}
-            </p>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="leave-reject-reason">
-                {copy.rejectReasonLabel}
-              </Label>
-              <Textarea
-                id="leave-reject-reason"
-                value={rejectReason}
-                onChange={(event) => setRejectReason(event.target.value)}
-                maxLength={500}
-                placeholder={copy.rejectReasonPlaceholder}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setRejectTarget(null)}
-              disabled={isPending}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleReject}
-              disabled={isPending}
-            >
-              {isPending ? <Spinner className="mr-2" /> : null}
-              {copy.rejectSubmit}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {(form) => (
+          <TextareaField
+            control={form.control}
+            name="reason"
+            label={copy.rejectReasonLabel}
+            maxLength={500}
+            placeholder={copy.rejectReasonPlaceholder}
+          />
+        )}
+      </FormDialog>
     </div>
   );
 }

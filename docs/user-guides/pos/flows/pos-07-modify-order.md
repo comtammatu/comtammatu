@@ -72,7 +72,7 @@ URL: `/br/{branchId}/pos` → bàn occupied → đơn
 
 ![Bước 3 - Transfer picker dialog](../mockups/pos-07/pos-07-step-03-transfer-picker.png)
 
-**Bạn làm:** Trong chi tiết đơn → chạm **Chuyển bàn** (nút full width dưới Phục vụ/Thêm món).
+**Bạn làm:** Trong chi tiết đơn → mở menu **Thao tác khác** → chạm **Chuyển bàn**.
 
 **Bạn thấy:** Dialog "Chuyển đơn {mã} sang bàn khác":
 
@@ -148,7 +148,7 @@ URL: `/br/{branchId}/pos` → bàn occupied → đơn
 
 **Bạn làm:** Vuốt món sang trái trong danh sách chi tiết đơn.
 
-**Bạn thấy:** 2 nút trồi ra (Phục vụ + Hủy).
+**Bạn thấy:** Sheet thao tác món mở, có **Đã phục vụ** (theo từng món) và **Hủy**.
 
 **Bạn làm tiếp:** Chạm **Hủy** → dialog yêu cầu lý do (≥5 ký tự) → confirm.
 
@@ -226,4 +226,3 @@ URL: `/br/{branchId}/pos` → bàn occupied → đơn
 | Capture script           | [apps/web/e2e/guides/pos-07-modify-order.guide.ts](../../../../apps/web/e2e/guides/pos-07-modify-order.guide.ts) |
 | Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-07"`                                                   |
 | Cập nhật mockup gần nhất | 2026-04-27                                                                                                       |
-| Người maintain           | _TBD_                                                                                                            |

@@ -5,22 +5,14 @@ a hand-maintained per-column schema dump.
 
 ## Current Snapshot
 
-Generated from the current checkout on 2026-06-10 with:
+Regenerate checkout counts when needed with:
 
 ```bash
 node scripts/project-snapshot.mjs
 ```
 
-| Area                                        | Count |
-| ------------------------------------------- | ----: |
-| Public tables in generated types            |   113 |
-| Public views in generated types             |     8 |
-| Public RPC/SQL functions in generated types |   253 |
-| Public enums in generated types             |     0 |
-| Active SQL migration files                  |    49 |
-
-The early-2026 hand-written table-by-table reference has been removed. Use the
-source ladder below instead of resurrecting stale schema dumps.
+Use the source ladder below for schema facts; do not recreate hand-written
+table-by-table schema dumps.
 
 ## Migration layout (baseline-first — 2026-05-30)
 
@@ -65,7 +57,7 @@ Current high-level groups:
 - Menu, POS, orders, KDS, and runner.
 - Payments, refunds, webhooks, HĐĐT, and reconciliation.
 - Inventory, procurement, production, QC, and waste.
-- Finance, HĐĐT, accountant export, advanced journal/fiscal-period/VAS reporting, and audit.
+- Finance, expenses, HĐĐT, accountant export, period-close support, and audit.
 - HR, contracts, shifts, attendance, leave requests, payroll, and employee portal.
 - Print agent, printer fleet, print jobs, and document templates.
 - Notifications, trust, and security perimeter tables.

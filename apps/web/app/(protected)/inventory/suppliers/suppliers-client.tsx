@@ -9,24 +9,15 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@comtammatu/ui/components/alert-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
 import { AppPageHeader } from "@/components/surface";
 import {
@@ -45,6 +36,8 @@ import type { SupplierRow } from "./supplier-dialog";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type { SupplierRow } from "./supplier-dialog";
+
+const suppliersCopy = messages.inventory.suppliers;
 
 const avatarColors = [
   { bg: "bg-primary/10", fg: "text-primary" },
@@ -88,7 +81,7 @@ function SupplierMobileCard({
   supplier: SupplierRow;
   index: number;
   onEdit: (row: SupplierRow) => void;
-  onDelete: (id: number) => void;
+  onDelete: (row: SupplierRow) => void;
 }) {
   return (
     <InteractiveCard
@@ -134,7 +127,7 @@ function SupplierMobileCard({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => onDelete(supplier.id)}
+            onClick={() => onDelete(supplier)}
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             aria-label={`Xóa ${supplier.name}`}
           >
@@ -147,23 +140,19 @@ function SupplierMobileCard({
 }
 
 export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
-  const isMobile = useIsMobile();
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<SupplierRow | null>(
     null,
   );
-  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
     const q = search.trim();
     if (!q) return rows;
     return rows.filter((s) => matchesSearch([s.name, s.tax_code, s.phone], q));
   }, [rows, search]);
-
-  const deleteTarget = rows.find((r) => r.id === deleteConfirmId);
 
   async function reload() {
     const res = await fetchSuppliers();
@@ -184,20 +173,31 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
     startTransition(async () => {
       const res = await deleteSupplier(id);
       if (!res.success) {
-        toast.error(res.error ?? "Không xóa được");
-        setDeleteConfirmId(null);
+        toast.error(res.error ?? suppliersCopy.deleteFailed);
         return;
       }
-      toast.success("Đã xóa nhà cung cấp");
-      setDeleteConfirmId(null);
+      toast.success(suppliersCopy.deleteOk);
       await reload();
     });
+  }
+
+  async function confirmDelete(supplier: SupplierRow) {
+    const ok = await confirm({
+      title: suppliersCopy.deleteTitle,
+      description: suppliersCopy.deleteDescription(supplier.name),
+      confirmText: suppliersCopy.deleteAction,
+      cancelText: ACTIONS_VI.cancel,
+      variant: "destructive",
+    });
+
+    if (!ok) return;
+    handleDelete(supplier.id);
   }
 
   const columns: DataTableColumn<SupplierRow>[] = [
     {
       key: "name",
-      header: "Nhà cung cấp",
+      header: suppliersCopy.title,
       render: (s, i) => (
         <div className="flex items-center gap-3">
           <SupplierAvatar name={s.name} colorIndex={i} />
@@ -256,7 +256,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => setDeleteConfirmId(s.id)}
+            onClick={() => confirmDelete(s)}
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             aria-label={`Xóa ${s.name}`}
           >
@@ -269,24 +269,24 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
 
   return (
     <>
-      <InventoryPageContent width={isMobile ? "narrow" : "wide"}>
+      <InventoryPageContent width="wide">
         <AppPageHeader
-          title="Nhà cung cấp"
+          title={suppliersCopy.title}
           actions={
             <Button type="button" onClick={openCreate}>
               <IconPlus className="size-4" />
-              Thêm nhà cung cấp
+              {suppliersCopy.createAction}
             </Button>
           }
         />
         <InventoryFilterBar>
-          <InputGroup className={cn("flex-1", isMobile && "h-12 basis-full")}>
+          <InputGroup className="h-12 flex-1 basis-full sm:h-10 sm:basis-auto">
             <InputGroupAddon>
               <IconSearch />
             </InputGroupAddon>
             <InputGroupInput
               type="text"
-              placeholder="Tìm tên, mã số thuế, điện thoại..."
+              placeholder={suppliersCopy.searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               inputMode="search"
@@ -303,13 +303,13 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
           getRowKey={(s) => s.id}
           emptyTitle={
             search.trim()
-              ? "Không tìm thấy nhà cung cấp phù hợp"
-              : "Chưa có nhà cung cấp"
+              ? suppliersCopy.emptySearchTitle
+              : suppliersCopy.emptyInitialTitle
           }
           emptyDescription={
             search.trim()
-              ? "Thử tên, mã số thuế hoặc số điện thoại khác."
-              : 'Nhấn "Thêm nhà cung cấp" để bắt đầu.'
+              ? suppliersCopy.emptySearchDescription
+              : suppliersCopy.emptyInitialDescription
           }
           emptyMode={search.trim() ? "no-results" : "no-data"}
           mobileCardRender={(s, i) => (
@@ -317,7 +317,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
               supplier={s}
               index={i}
               onEdit={openEdit}
-              onDelete={setDeleteConfirmId}
+              onDelete={confirmDelete}
             />
           )}
         />
@@ -329,37 +329,6 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         supplier={editingSupplier}
         onSaved={reload}
       />
-
-      <AlertDialog
-        open={deleteConfirmId != null}
-        onOpenChange={(o) => {
-          if (!o) setDeleteConfirmId(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
-            <AlertDialogDescription>
-              Xóa nhà cung cấp &ldquo;{deleteTarget?.name}&rdquo;? Hành động này
-              không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>
-              {ACTIONS_VI.cancel}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (deleteConfirmId != null) handleDelete(deleteConfirmId);
-              }}
-            >
-              {isPending ? "Đang xóa..." : "Xóa"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

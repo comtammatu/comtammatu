@@ -4,28 +4,26 @@ import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { formatVND } from "@comtammatu/shared/format";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableFooterRow,
+} from "@/components/data-table/data-table";
 import type { FinanceDashboardSummary } from "../actions";
 import type { FinanceDashboardHealth, TopItemRow } from "../_lib/finance-types";
 import type { FinanceParams } from "../_lib/finance-params";
@@ -44,10 +42,10 @@ const RevenueChartsBlock = dynamic(
     ssr: false,
     loading: () => (
       <>
-        <div className="h-[180px] w-full animate-pulse rounded-md bg-muted/40" />
+        <Skeleton className="h-44 w-full rounded-md" />
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="aspect-square max-h-72 w-full animate-pulse rounded-md bg-muted/40" />
-          <div className="aspect-square max-h-72 w-full animate-pulse rounded-md bg-muted/40" />
+          <Skeleton className="aspect-square max-h-72 w-full rounded-md" />
+          <Skeleton className="aspect-square max-h-72 w-full rounded-md" />
         </div>
       </>
     ),
@@ -391,6 +389,168 @@ export function RevenueClient({
   const branchSlug = params.branch == null ? "all" : `cn-${params.branch}`;
   const csvFilename = `doanh-thu-${branchSlug}-${resolvedStart}_${resolvedEnd}`;
 
+  function periodDrillHref(row: PeriodAggregateRow): string | null {
+    const drillBranchId =
+      params.branch != null
+        ? params.branch
+        : row.branch_ids.length === 1
+          ? row.branch_ids[0]
+          : null;
+    if (params.gran !== "day" || drillBranchId == null) return null;
+    return `/finance/revenue/${row.period_start}?branch=${drillBranchId}`;
+  }
+
+  const periodColumns: DataTableColumn<PeriodAggregateRow>[] = [
+    {
+      key: "period",
+      header: revCopy.periodTable.colPeriod,
+      className: "font-medium font-mono tabular-nums",
+      render: (row) => {
+        const href = periodDrillHref(row);
+        return href ? (
+          <Link
+            href={href}
+            className="text-primary underline-offset-2 hover:underline"
+          >
+            {row.period_label}
+          </Link>
+        ) : (
+          row.period_label
+        );
+      },
+    },
+    {
+      key: "orders",
+      header: revCopy.periodTable.colOrders,
+      className: "text-right font-mono tabular-nums",
+      render: (row) => row.order_count.toLocaleString("vi-VN"),
+    },
+    {
+      key: "net_revenue",
+      header: revCopy.periodTable.colNetRevenue,
+      className: "text-right font-mono tabular-nums font-medium",
+      render: (row) => formatVND(netRevenuePreVatFor(row)),
+    },
+    {
+      key: "cash",
+      header: revCopy.periodTable.colCash,
+      className: "text-right font-mono tabular-nums text-muted-foreground",
+      render: (row) => formatVND(row.cash_revenue),
+    },
+    {
+      key: "vietqr",
+      header: "VietQR",
+      className: "text-right font-mono tabular-nums text-muted-foreground",
+      render: (row) => formatVND(row.vietqr_revenue),
+    },
+    {
+      key: "momo",
+      header: "MoMo",
+      className: "text-right font-mono tabular-nums text-muted-foreground",
+      render: (row) => formatVND(row.momo_revenue),
+    },
+    {
+      key: "vat",
+      header: revCopy.periodTable.colVat,
+      className: "text-right font-mono tabular-nums text-muted-foreground",
+      render: (row) => formatVND(row.total_tax),
+    },
+  ];
+
+  const periodFooterRows: DataTableFooterRow[] = [
+    {
+      key: "total",
+      className: "hover:bg-transparent",
+      cells: [
+        {
+          key: "label",
+          content: revCopy.periodTable.total,
+          className: "font-medium",
+        },
+        {
+          key: "orders",
+          content: (kpis?.order_count ?? 0).toLocaleString("vi-VN"),
+          className: "text-right font-mono tabular-nums font-medium",
+        },
+        {
+          key: "net",
+          content: formatVND(netRevenuePreVat),
+          className: "text-right font-mono tabular-nums font-bold",
+        },
+        {
+          key: "cash",
+          content: formatVND(kpis?.cash_revenue ?? 0),
+          className: "text-right font-mono tabular-nums",
+        },
+        {
+          key: "vietqr",
+          content: formatVND(kpis?.vietqr_revenue ?? 0),
+          className: "text-right font-mono tabular-nums",
+        },
+        {
+          key: "momo",
+          content: formatVND(kpis?.momo_revenue ?? 0),
+          className: "text-right font-mono tabular-nums",
+        },
+        {
+          key: "tax",
+          content: formatVND(kpis?.total_tax ?? 0),
+          className: "text-right font-mono tabular-nums",
+        },
+      ],
+    },
+  ];
+
+  const cashierRows = cashiers.slice(0, 8);
+  const cashierColumns: DataTableColumn<CashierRow>[] = [
+    {
+      key: "cashier",
+      header: revCopy.cashierTable.colCashier,
+      className: "font-medium",
+      render: (row) => row.cashier_name,
+    },
+    {
+      key: "orders",
+      header: revCopy.cashierTable.colOrders,
+      className: "text-right font-mono tabular-nums",
+      render: (row) => Number(row.order_count).toLocaleString("vi-VN"),
+    },
+    {
+      key: "net",
+      header: revCopy.cashierTable.colNetRevenue,
+      className: "text-right font-mono tabular-nums font-medium",
+      render: (row) => formatVND(Number(row.net_revenue)),
+    },
+    {
+      key: "cash",
+      header: revCopy.cashierTable.colCash,
+      className: "text-right font-mono tabular-nums text-muted-foreground",
+      render: (row) => formatVND(Number(row.cash_revenue)),
+    },
+  ];
+
+  const topItemRows = topItems.slice(0, 8);
+  const topItemColumns: DataTableColumn<TopItemRow>[] = [
+    {
+      key: "name",
+      header: revCopy.topItems.colName,
+      className: "font-medium",
+      render: (row) => row.item_name,
+    },
+    {
+      key: "qty",
+      header: revCopy.topItems.colQty,
+      className: "text-right font-mono tabular-nums",
+      render: (row) => Number(row.quantity_sold).toLocaleString("vi-VN"),
+    },
+    {
+      key: "revenue",
+      header: revCopy.topItems.colRevenue,
+      className: "text-right font-mono tabular-nums",
+      render: (row) => formatVND(row.revenue),
+    },
+  ];
+
   // ─── Render ────────────────────────────────────────────────
   return (
     <AppPage width="wide" density="compact">
@@ -528,259 +688,170 @@ export function RevenueClient({
         branchActive={params.branch != null}
       />
 
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
-          <div className="space-y-0.5">
-            <CardTitle>{revCopy.heatmap.title}</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {hourlyEnabled
-                ? revCopy.heatmap.description
-                : revCopy.heatmap.tooLargeRange}
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6 sm:pt-2">
+      <AppSection
+        title={revCopy.heatmap.title}
+        description={
+          hourlyEnabled
+            ? revCopy.heatmap.description
+            : revCopy.heatmap.tooLargeRange
+        }
+      >
           {hourlyEnabled && heatmapCells.length > 0 ? (
             <HeatmapGrid cells={heatmapCells} />
           ) : (
-            <div className="flex h-32 items-center justify-center rounded-md border border-dashed border-border text-sm text-muted-foreground">
-              {hourlyEnabled
-                ? revCopy.heatmap.empty
-                : revCopy.heatmap.tooLargeEmpty}
-            </div>
+            <AppEmptyState
+              compact
+              className="h-32 border-dashed bg-transparent py-0"
+              title={
+                hourlyEnabled
+                  ? revCopy.heatmap.empty
+                  : revCopy.heatmap.tooLargeEmpty
+              }
+            />
           )}
-        </CardContent>
-      </Card>
+      </AppSection>
 
       <SectionHeading
         title={revCopy.sections.tableTitle}
         description={revCopy.sections.tableDescription}
       />
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>{revCopy.periodTable.title}</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            {params.branch == null
-              ? revCopy.periodTable.descriptionAll
-              : revCopy.periodTable.descriptionSingle}
-          </p>
-        </CardHeader>
-        <CardContent scroll>
-          {periodRows.length === 0 ? (
-            <Empty className="py-8">
-              <EmptyHeader>
-                <EmptyTitle className="text-sm font-semibold">
-                  {revCopy.periodTable.empty}
-                </EmptyTitle>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{revCopy.periodTable.colPeriod}</TableHead>
-                  <TableHead className="text-right">
+      <AppSection
+        title={revCopy.periodTable.title}
+        description={
+          params.branch == null
+            ? revCopy.periodTable.descriptionAll
+            : revCopy.periodTable.descriptionSingle
+        }
+        contentFlush
+        contentScroll
+      >
+        <DataTable
+          columns={periodColumns}
+          data={periodRows}
+          getRowKey={(row) => row.period_start}
+          emptyTitle={revCopy.periodTable.empty}
+          mobileCardRender={(row) => {
+            const href = periodDrillHref(row);
+            return (
+              <Item variant="outline">
+                <ItemContent>
+                  <ItemTitle>
+                    {href ? (
+                      <Link
+                        href={href}
+                        className="text-primary underline-offset-2 hover:underline"
+                      >
+                        {row.period_label}
+                      </Link>
+                    ) : (
+                      row.period_label
+                    )}
+                  </ItemTitle>
+                  <ItemDescription>
+                    {row.order_count.toLocaleString("vi-VN")}{" "}
                     {revCopy.periodTable.colOrders}
-                  </TableHead>
-                  <TableHead className="text-right">
-                    {revCopy.periodTable.colNetRevenue}
-                  </TableHead>
-                  <TableHead className="text-right">
-                    {revCopy.periodTable.colCash}
-                  </TableHead>
-                  <TableHead className="text-right">VietQR</TableHead>
-                  <TableHead className="text-right">MoMo</TableHead>
-                  <TableHead className="text-right">
-                    {revCopy.periodTable.colVat}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {periodRows.map((r) => {
-                  const drillBranchId =
-                    params.branch != null
-                      ? params.branch
-                      : r.branch_ids.length === 1
-                        ? r.branch_ids[0]
-                        : null;
-                  const canDrill =
-                    params.gran === "day" && drillBranchId != null;
-                  return (
-                    <TableRow key={r.period_start}>
-                      <TableCell className="font-medium font-mono tabular-nums">
-                        {canDrill ? (
-                          <Link
-                            href={`/finance/revenue/${r.period_start}?branch=${drillBranchId}`}
-                            className="text-primary underline-offset-2 hover:underline"
-                          >
-                            {r.period_label}
-                          </Link>
-                        ) : (
-                          r.period_label
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
-                        {r.order_count.toLocaleString("vi-VN")}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums font-medium">
-                        {formatVND(netRevenuePreVatFor(r))}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
-                        {formatVND(r.cash_revenue)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
-                        {formatVND(r.vietqr_revenue)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
-                        {formatVND(r.momo_revenue)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
-                        {formatVND(r.total_tax)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-              <TableFooter>
-                <TableRow className="hover:bg-transparent">
-                  <TableCell className="font-medium">
-                    {revCopy.periodTable.total}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums font-medium">
-                    {(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums font-bold">
-                    {formatVND(netRevenuePreVat)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">
-                    {formatVND(kpis?.cash_revenue ?? 0)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">
-                    {formatVND(kpis?.vietqr_revenue ?? 0)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">
-                    {formatVND(kpis?.momo_revenue ?? 0)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">
-                    {formatVND(kpis?.total_tax ?? 0)}
-                  </TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                  </ItemDescription>
+                </ItemContent>
+                <ItemFooter>
+                  <span className="text-xs text-muted-foreground">
+                    {revCopy.periodTable.colVat}: {formatVND(row.total_tax)}
+                  </span>
+                  <span className="font-mono text-sm font-semibold tabular-nums">
+                    {formatVND(netRevenuePreVatFor(row))}
+                  </span>
+                </ItemFooter>
+              </Item>
+            );
+          }}
+          desktopFooterRows={periodFooterRows}
+          mobileFooter={
+            <div className="flex items-center justify-between rounded-md border bg-muted/30 p-3 text-sm">
+              <span className="font-medium">{revCopy.periodTable.total}</span>
+              <span className="font-mono font-semibold tabular-nums">
+                {formatVND(netRevenuePreVat)}
+              </span>
+            </div>
+          }
+        />
+      </AppSection>
 
       {/* Cashier table + Top items table */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>{revCopy.cashierTable.title}</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {cashierEnabled
-                ? revCopy.cashierTable.description
-                : revCopy.cashierTable.tooLargeRange}
-            </p>
-          </CardHeader>
-          <CardContent scroll>
-            {cashiers.length === 0 ? (
-              <Empty className="py-8">
-                <EmptyHeader>
-                  <EmptyTitle className="text-sm font-semibold">
-                    {cashierEnabled
-                      ? revCopy.cashierTable.empty
-                      : revCopy.cashierTable.tooLargeEmpty}
-                  </EmptyTitle>
-                </EmptyHeader>
-              </Empty>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{revCopy.cashierTable.colCashier}</TableHead>
-                    <TableHead className="text-right">
-                      {revCopy.cashierTable.colOrders}
-                    </TableHead>
-                    <TableHead className="text-right">
-                      {revCopy.cashierTable.colNetRevenue}
-                    </TableHead>
-                    <TableHead className="text-right">
-                      {revCopy.cashierTable.colCash}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cashiers.slice(0, 8).map((c) => (
-                    <TableRow key={c.cashier_id ?? c.cashier_name}>
-                      <TableCell className="font-medium">
-                        {c.cashier_name}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
-                        {Number(c.order_count).toLocaleString("vi-VN")}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums font-medium">
-                        {formatVND(Number(c.net_revenue))}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
-                        {formatVND(Number(c.cash_revenue))}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+        <AppSection
+          title={revCopy.cashierTable.title}
+          description={
+            cashierEnabled
+              ? revCopy.cashierTable.description
+              : revCopy.cashierTable.tooLargeRange
+          }
+          contentFlush
+          contentScroll
+        >
+          <DataTable
+            columns={cashierColumns}
+            data={cashierRows}
+            getRowKey={(row) => row.cashier_id ?? row.cashier_name}
+            emptyTitle={
+              cashierEnabled
+                ? revCopy.cashierTable.empty
+                : revCopy.cashierTable.tooLargeEmpty
+            }
+            mobileCardRender={(row) => (
+              <Item variant="outline">
+                <ItemContent>
+                  <ItemTitle>{row.cashier_name}</ItemTitle>
+                  <ItemDescription>
+                    {Number(row.order_count).toLocaleString("vi-VN")}{" "}
+                    {revCopy.cashierTable.colOrders}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemFooter>
+                  <span className="text-xs text-muted-foreground">
+                    {revCopy.cashierTable.colCash}:{" "}
+                    {formatVND(Number(row.cash_revenue))}
+                  </span>
+                  <span className="font-mono text-sm font-semibold tabular-nums">
+                    {formatVND(Number(row.net_revenue))}
+                  </span>
+                </ItemFooter>
+              </Item>
             )}
-          </CardContent>
-        </Card>
+          />
+        </AppSection>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>{revCopy.topItems.title}</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {revCopy.topItems.description}
-            </p>
-          </CardHeader>
-          <CardContent scroll>
-            {topItems.length === 0 ? (
-              <Empty className="py-8">
-                <EmptyHeader>
-                  <EmptyTitle className="text-sm font-semibold">
-                    {revCopy.topItems.empty}
-                  </EmptyTitle>
-                </EmptyHeader>
-              </Empty>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{revCopy.topItems.colName}</TableHead>
-                    <TableHead className="text-right">
-                      {revCopy.topItems.colQty}
-                    </TableHead>
-                    <TableHead className="text-right">
-                      {revCopy.topItems.colRevenue}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {topItems.slice(0, 8).map((item) => (
-                    <TableRow key={`${item.branch_id}-${item.menu_item_id}`}>
-                      <TableCell className="font-medium">
-                        {item.item_name}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
-                        {Number(item.quantity_sold).toLocaleString("vi-VN")}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
-                        {formatVND(item.revenue)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+        <AppSection
+          title={revCopy.topItems.title}
+          description={revCopy.topItems.description}
+          contentFlush
+          contentScroll
+        >
+          <DataTable
+            columns={topItemColumns}
+            data={topItemRows}
+            getRowKey={(row) => `${row.branch_id}-${row.menu_item_id}`}
+            emptyTitle={revCopy.topItems.empty}
+            mobileCardRender={(row) => (
+              <Item variant="outline">
+                <ItemContent>
+                  <ItemTitle>{row.item_name}</ItemTitle>
+                  <ItemDescription>
+                    {Number(row.quantity_sold).toLocaleString("vi-VN")}{" "}
+                    {revCopy.topItems.colQty}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemFooter>
+                  <span className="text-xs text-muted-foreground">
+                    CN #{row.branch_id}
+                  </span>
+                  <span className="font-mono text-sm font-semibold tabular-nums">
+                    {formatVND(row.revenue)}
+                  </span>
+                </ItemFooter>
+              </Item>
             )}
-          </CardContent>
-        </Card>
+          />
+        </AppSection>
       </div>
 
       <SectionHeading
@@ -814,92 +885,84 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
         ? "bad"
         : "warn";
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle>{cashCopy.title}</CardTitle>
-        <p className="text-sm text-muted-foreground">{cashCopy.description}</p>
-      </CardHeader>
-      <CardContent className="space-y-3 p-4">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div>
-            <p className="text-xs text-muted-foreground">
-              {cashCopy.closedSessions}
-            </p>
-            <p className="text-lg font-semibold tabular-nums">
-              {variance.session_count.toLocaleString("vi-VN")}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">
-              {cashCopy.netVariance}
-            </p>
-            <p
-              className={
-                tone === "good"
-                  ? "text-lg font-semibold tabular-nums text-success"
-                  : tone === "bad"
-                    ? "text-lg font-semibold tabular-nums text-destructive"
-                    : "text-lg font-semibold tabular-nums text-warning"
-              }
-            >
-              {variance.total_variance >= 0 ? "+" : ""}
-              {formatVND(variance.total_variance)}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">
-              {cashCopy.short(variance.short_count)}
-            </p>
-            <p className="text-lg font-semibold tabular-nums text-destructive">
-              {formatVND(variance.short_total)}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">
-              {cashCopy.over(variance.over_count)}
-            </p>
-            <p className="text-lg font-semibold tabular-nums text-success">
-              +{formatVND(variance.over_total)}
-            </p>
-          </div>
-        </div>
-        {variance.worst_cashiers.length > 0 ? (
-          <div className="space-y-1.5 border-t pt-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {cashCopy.topVariance}
-            </p>
-            <ul className="space-y-1">
-              {variance.worst_cashiers.map((c) => (
-                <li
-                  key={c.cashier_id ?? c.cashier_name}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <span className="truncate">
-                    {c.cashier_name}
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      {cashCopy.sessionCount(c.session_count)}
-                    </Badge>
-                  </span>
-                  <span
-                    className={
-                      c.net_variance < 0
-                        ? "tabular-nums text-destructive"
-                        : "tabular-nums text-success"
-                    }
-                  >
-                    {c.net_variance >= 0 ? "+" : ""}
-                    {formatVND(c.net_variance)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : (
-          <p className="border-t pt-3 text-xs text-muted-foreground">
-            {cashCopy.noVariance}
+    <AppSection title={cashCopy.title} description={cashCopy.description}>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div>
+          <p className="text-xs text-muted-foreground">
+            {cashCopy.closedSessions}
           </p>
-        )}
-      </CardContent>
-    </Card>
+          <p className="text-lg font-semibold tabular-nums">
+            {variance.session_count.toLocaleString("vi-VN")}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">{cashCopy.netVariance}</p>
+          <p
+            className={
+              tone === "good"
+                ? "text-lg font-semibold tabular-nums text-success"
+                : tone === "bad"
+                  ? "text-lg font-semibold tabular-nums text-destructive"
+                  : "text-lg font-semibold tabular-nums text-warning"
+            }
+          >
+            {variance.total_variance >= 0 ? "+" : ""}
+            {formatVND(variance.total_variance)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">
+            {cashCopy.short(variance.short_count)}
+          </p>
+          <p className="text-lg font-semibold tabular-nums text-destructive">
+            {formatVND(variance.short_total)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">
+            {cashCopy.over(variance.over_count)}
+          </p>
+          <p className="text-lg font-semibold tabular-nums text-success">
+            +{formatVND(variance.over_total)}
+          </p>
+        </div>
+      </div>
+      {variance.worst_cashiers.length > 0 ? (
+        <div className="space-y-1.5 border-t pt-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {cashCopy.topVariance}
+          </p>
+          <ul className="space-y-1">
+            {variance.worst_cashiers.map((c) => (
+              <li
+                key={c.cashier_id ?? c.cashier_name}
+                className="flex items-center justify-between text-sm"
+              >
+                <span className="truncate">
+                  {c.cashier_name}
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    {cashCopy.sessionCount(c.session_count)}
+                  </Badge>
+                </span>
+                <span
+                  className={
+                    c.net_variance < 0
+                      ? "tabular-nums text-destructive"
+                      : "tabular-nums text-success"
+                  }
+                >
+                  {c.net_variance >= 0 ? "+" : ""}
+                  {formatVND(c.net_variance)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="border-t pt-3 text-xs text-muted-foreground">
+          {cashCopy.noVariance}
+        </p>
+      )}
+    </AppSection>
   );
 }

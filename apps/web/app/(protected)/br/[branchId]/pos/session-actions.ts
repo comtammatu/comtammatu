@@ -4,7 +4,11 @@ import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext, getAuthContextWithPermission } from "../../_lib/auth";
+import {
+  getAuthContext,
+  getAuthContextWithPermission,
+  probePermission,
+} from "../../_lib/auth";
 import { withActionPositional } from "@/_lib/with-action";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
@@ -378,10 +382,73 @@ export const closePosSession = withActionPositional(
     roles: POS_ROLES,
     permission: PERMISSION_KEYS.POS_CLOSE_SHIFT,
   },
-  async (
-    { sessionId, closingCash, note },
-    { supabase },
-  ): Promise<ActionResult> => {
+  async ({ sessionId, closingCash, note }, ctx): Promise<ActionResult> => {
+    const { supabase, claims } = ctx;
+    const { data: session, error: sessionFetchError } = await supabase
+      .from("pos_sessions")
+      .select("id, branch_id, status")
+      .eq("id", sessionId)
+      .eq("tenant_id", claims.tenant_id)
+      .maybeSingle();
+
+    if (sessionFetchError) {
+      return {
+        success: false,
+        error: "Không thể tải thông tin ca. Vui lòng thử lại.",
+        meta: { code: "unknown" },
+      };
+    }
+
+    if (!session) {
+      return {
+        success: false,
+        error: "Không tìm thấy ca",
+        meta: { code: "session_not_found" },
+      };
+    }
+
+    if (
+      (claims.user_role === "branch_manager" ||
+        claims.user_role === "cashier") &&
+      claims.branch_id == null
+    ) {
+      return {
+        success: false,
+        error: "Tài khoản chưa được gán chi nhánh",
+        meta: { code: "branch_scope_unset" },
+      };
+    }
+
+    if (claims.branch_id !== null && session.branch_id !== claims.branch_id) {
+      return {
+        success: false,
+        error: "Không có quyền truy cập chi nhánh này",
+        meta: { code: "branch_mismatch" },
+      };
+    }
+
+    if (
+      !(await probePermission(
+        ctx,
+        PERMISSION_KEYS.POS_CLOSE_SHIFT,
+        session.branch_id,
+      ))
+    ) {
+      return {
+        success: false,
+        error: "Không có quyền đóng ca",
+        meta: { code: "no_permission" },
+      };
+    }
+
+    if (session.status !== "open") {
+      return {
+        success: false,
+        error: "Ca đã được đóng",
+        meta: { code: "session_already_closed" },
+      };
+    }
+
     const { data, error } = await supabase.rpc("close_pos_session", {
       p_session_id: sessionId,
       p_closing_cash: closingCash,

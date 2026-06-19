@@ -1,6 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { ScrollText as IconScrollText } from "lucide-react";
+import {
+  Briefcase as IconBriefcase,
+  ScrollText as IconScrollText,
+} from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { STAFF_ROLES, staffRoleFromPositionCode } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
@@ -103,10 +106,16 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   return (
     <AppPage>
       <AppPageHeader
-        title="Nhân viên"
-        description="Quản lý tài khoản, chức vụ hiển thị và phân quyền nhân viên theo chi nhánh."
+        title={messages.admin.staffPage.title}
+        description={messages.admin.staffPage.description}
         actions={
           <>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/hr">
+                <IconBriefcase className="mr-1 size-4" />
+                {messages.admin.staffPage.hrLink}
+              </Link>
+            </Button>
             <Button asChild variant="outline" size="sm">
               <Link href="/admin/staff/audit">
                 <IconScrollText className="mr-1 size-4" />

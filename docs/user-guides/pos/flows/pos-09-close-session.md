@@ -188,4 +188,3 @@ Sau khi chốt → màn `/employee` → tap "Bán hàng POS" → mở ca mới (
 | Capture script           | [apps/web/e2e/guides/pos-09-close-session.guide.ts](../../../../apps/web/e2e/guides/pos-09-close-session.guide.ts) |
 | Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-09"`                                                     |
 | Cập nhật mockup gần nhất | 2026-04-27                                                                                                         |
-| Người maintain           | _TBD_                                                                                                              |

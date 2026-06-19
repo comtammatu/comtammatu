@@ -5,6 +5,7 @@ import {
   CheckCircle2 as IconDone,
   ClipboardCheck as IconClipboardCheck,
   Clock as IconClock,
+  LayoutDashboard as IconLayoutDashboard,
   ListChecks as IconListChecks,
   LogOut as IconLogout,
   Monitor as IconDeviceDesktop,
@@ -17,6 +18,7 @@ import {
   type ModuleKey,
   type StaffRole,
 } from "@comtammatu/shared/auth";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -26,6 +28,7 @@ import { NotificationPushControl } from "@/_components/notification-push-control
 import { messages } from "@lib/messages";
 import {
   EmployeeActionSection,
+  EmployeeInlineState,
   EmployeePanel,
   EmployeePage as EmployeePageShell,
   EmployeeStatusStrip,
@@ -192,10 +195,13 @@ export default async function EmployeePage() {
     }
   }
 
-  // POS/KDS/Runner entry points always render by permission — proxy ACL is
-  // the access gate. Hiding them by clock state locks staff out.
+  const isBranchManager = claims.user_role === "branch_manager";
+
+  // POS/KDS/Runner entry points render directly for frontline roles. Branch
+  // Managers enter those tools through Branch Command so Employee stays the
+  // personal daily-work surface.
   const operationHandoffs =
-    branchId && branchIsOperational
+    branchId && branchIsOperational && !isBranchManager
       ? OPERATION_HANDOFFS.filter((item) =>
           canAccess(claims.user_role, item.moduleKey),
         ).map((item) => ({
@@ -203,6 +209,31 @@ export default async function EmployeePage() {
           href: item.href(branchId),
         }))
       : [];
+  const branchCommandHandoffs =
+    isBranchManager &&
+    branchId &&
+    branchIsOperational &&
+    canAccess(claims.user_role, "branch_dashboard")
+      ? [
+          {
+            key: "branch_dashboard",
+            href: `/br/${branchId}/dashboard`,
+            icon: IconLayoutDashboard,
+            title: APP_COPY_VI.branchCommand,
+            description: copy.operationToolsDescription,
+          },
+        ]
+      : [];
+  const operationLinks =
+    branchCommandHandoffs.length > 0
+      ? branchCommandHandoffs
+      : operationHandoffs.map((link) => ({
+          key: link.moduleKey,
+          href: link.href,
+          icon: link.icon,
+          title: link.title,
+          description: link.description,
+        }));
 
   const tone = getWorkTone(state.status);
   const title = getWorkTitle(state);
@@ -384,13 +415,13 @@ export default async function EmployeePage() {
                 <p className="font-heading text-xl font-semibold tracking-tight">
                   {title}
                 </p>
-                <p className="mt-1 truncate text-xs font-medium text-muted-foreground">
+                <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
                   {todayMeta}
                 </p>
                 <p className="mt-2 text-2xs font-semibold uppercase text-muted-foreground">
                   {copy.nextActionTitle}
                 </p>
-                <p className="mt-1 hidden max-w-2xl text-sm leading-6 text-muted-foreground sm:block">
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
                   {description}
                 </p>
               </div>
@@ -419,27 +450,31 @@ export default async function EmployeePage() {
         </EmployeePanel>
 
         {state.todayShifts.length > 0 ? (
-          <EmployeePanel icon={IconClock} title={copy.shiftsTodayTitle} size="sm">
+          <EmployeePanel
+            icon={IconClock}
+            title={copy.shiftsTodayTitle}
+            size="sm"
+          >
             <div className="flex flex-col gap-2">
               {state.todayShifts.map((shift) => {
                 const badge = getShiftStateBadge(shift);
+                const shiftTimeRange = `${shift.checkIn ? formatTimeVN(shift.checkIn) : "—"} - ${
+                  shift.checkOut ? formatTimeVN(shift.checkOut) : "—"
+                }`;
                 return (
-                  <div
+                  <EmployeeInlineState
                     key={shift.shiftId}
-                    className="flex items-center justify-between gap-2"
-                  >
-                    <span className="text-sm font-medium">
-                      {shift.shiftName ?? "—"}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                        {shift.checkIn ? formatTimeVN(shift.checkIn) : "—"}
-                        {" – "}
-                        {shift.checkOut ? formatTimeVN(shift.checkOut) : "—"}
+                    title={shift.shiftName ?? "—"}
+                    description={
+                      <span className="font-mono tabular-nums">
+                        {shiftTimeRange}
                       </span>
+                    }
+                    actions={
                       <Badge variant={badge.variant}>{badge.label}</Badge>
-                    </div>
-                  </div>
+                    }
+                    className="bg-background"
+                  />
                 );
               })}
             </div>
@@ -478,17 +513,13 @@ export default async function EmployeePage() {
           </EmployeePanel>
         ) : null}
 
-        <EmployeeActionSection
-          title={copy.operationToolsTitle}
-          links={operationHandoffs.map((link) => ({
-            key: link.moduleKey,
-            href: link.href,
-            icon: link.icon,
-            title: link.title,
-            description: link.description,
-          }))}
-          columns={2}
-        />
+        {operationLinks.length > 0 ? (
+          <EmployeeActionSection
+            title={copy.operationToolsTitle}
+            links={operationLinks}
+            columns={branchCommandHandoffs.length > 0 ? 1 : 2}
+          />
+        ) : null}
 
         <EmployeePanel tone="info" size="sm">
           <NotificationPushControl compact />

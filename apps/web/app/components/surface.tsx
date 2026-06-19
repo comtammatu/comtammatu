@@ -375,7 +375,7 @@ export function AppSection({
         </CardContent>
       ) : null}
       {open && footer ? (
-        <CardFooter className="flex items-center justify-end gap-2 border-t px-6 py-3">
+        <CardFooter className="flex items-center justify-end gap-2 border-t">
           {footer}
         </CardFooter>
       ) : null}
@@ -728,7 +728,7 @@ export function AppLinkCard({
 
   const inner = (
     <div className="group flex h-full flex-col justify-between gap-4 p-4">
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-3">
           <div
             className={cn(

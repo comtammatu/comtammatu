@@ -1,11 +1,34 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
 function readWebSource(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
+
+function listWebSources(dir: string): string[] {
+  return readdirSync(join(process.cwd(), dir), { withFileTypes: true }).flatMap(
+    (entry) => {
+      const path = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) return listWebSources(path);
+      if (entry.isFile() && path.endsWith(".tsx")) return [path];
+      return [];
+    },
+  );
+}
+
+const employeeUiSourcePaths = listWebSources("app/(protected)/employee");
+const employeeContentSourcePaths = employeeUiSourcePaths.filter(
+  (path) =>
+    !path.endsWith("/layout.tsx") &&
+    !path.endsWith("/loading.tsx") &&
+    !path.endsWith("/error.tsx") &&
+    !path.endsWith("/components/employee-page.tsx") &&
+    !path.endsWith("/components/mobile-header.tsx") &&
+    !path.endsWith("/components/bottom-nav.tsx") &&
+    !path.endsWith("/components/employee-pwa-toolbar.tsx"),
+);
 
 const employeeLayoutSource = readWebSource(
   "app/(protected)/employee/layout.tsx",
@@ -41,6 +64,15 @@ const employeeScheduleClientSource = readWebSource(
 );
 const employeeProfileSource = readWebSource(
   "app/(protected)/employee/profile/page.tsx",
+);
+const employeeLeaveClientSource = readWebSource(
+  "app/(protected)/employee/leave/leave-client.tsx",
+);
+const employeePayslipYearPickerSource = readWebSource(
+  "app/(protected)/employee/payslip/year-picker.tsx",
+);
+const employeePermissionsSource = readWebSource(
+  "app/(protected)/employee/permissions/page.tsx",
 );
 const employeeMessagesSource = readWebSource("lib/messages/employee.ts");
 
@@ -203,7 +235,7 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeHomeSource,
-    /const operationHandoffs =\s*branchId && branchIsOperational\s*\?\s*OPERATION_HANDOFFS\.filter/,
+    /const operationHandoffs =\s*branchId && branchIsOperational && !isBranchManager\s*\?\s*OPERATION_HANDOFFS\.filter/,
     "Operation handoffs stay ACL-gated and require an operational branch",
   );
   const operationHandoffSource =
@@ -222,13 +254,33 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeTasksSource,
+    /function sortPhaseItems[\s\S]*left\.done !== right\.done[\s\S]*left\.isRequired !== right\.isRequired[\s\S]*left\.sortOrder - right\.sortOrder/,
+    "Checklist phase rows should keep unfinished and required work first while preserving template order",
+  );
+  assert.match(
+    employeeTasksSource,
+    /phaseRequiredRemaining[\s\S]*taskCopy\.requiredRemaining/,
+    "Checklist phase headers should show required remaining work",
+  );
+  assert.match(
+    employeeTasksSource,
     /border-success\/30 bg-success\/5/,
     "Completed checklist rows should read as done without changing the binary model",
+  );
+  assert.match(
+    employeeTasksSource,
+    /const router = useRouter\(\);[\s\S]*toggleChecklistItem[\s\S]*router\.refresh\(\);/,
+    "Checklist toggles should refresh the server parent so the checkout CTA unlocks immediately",
   );
   assert.match(
     employeeTasksPageSource,
     /<EmployeePage title=\{copy\.shiftTasks\} hideHeaderOnMobile>/,
     "Tasks should avoid repeating the tab title in a mobile page header",
+  );
+  assert.match(
+    employeeTasksPageSource,
+    /item\.taskKind === "consumption_report"/,
+    "Tasks should detect the consumption report workflow by taskKind, not display title",
   );
   assert.doesNotMatch(
     employeeTasksPageSource,
@@ -256,6 +308,11 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
     "Clock flow should not show a disabled Chấm công vào button before a photo exists",
   );
   assert.match(
+    employeeClockSource,
+    /const attendanceId = state\.attendance\?\.id;[\s\S]*requestCheckoutApproval\(\{ attendanceId \}\)/,
+    "Clock checkout must target the current attendance record",
+  );
+  assert.match(
     employeeSchedulePageSource,
     /<EmployeePage title=\{copy\.scheduleTitle\} hideHeaderOnMobile>/,
     "Schedule should avoid a duplicate mobile page header",
@@ -267,8 +324,13 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeScheduleClientSource,
-    /title=\{formatMonthTitle\(monthStart\)\}[\s\S]*description=\{monthRangeLabel\}/,
-    "Schedule should use the viewed month as the single calendar panel title",
+    /<EmployeeControlBar>[\s\S]*\{formatMonthTitle\(monthStart\)\}[\s\S]*!isCurrentMonth[\s\S]*copy\.currentMonth/,
+    "Schedule should use the viewed month inside the month switcher, with Tháng này only as a return action",
+  );
+  assert.doesNotMatch(
+    employeeScheduleClientSource,
+    /calendarAxisLabel|monthRangeLabel/,
+    "Schedule should not render a vague Lịch label or a separate date-range header above the calendar",
   );
   assert.match(
     employeeScheduleClientSource,
@@ -277,8 +339,13 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeScheduleClientSource,
-    /function SelectedDayDetail[\s\S]*copy\.selectedDayTitle[\s\S]*copy\.clockRange/,
-    "Schedule should show selected-day shift, attendance, and clock detail below the calendar",
+    /function SelectedDayDetail[\s\S]*\{formatDate\(dateStr\)\}[\s\S]*const timeText = hasClock[\s\S]*\{timeText\}/,
+    "Schedule selected-day detail should stay compact on mobile: date header plus one row per shift",
+  );
+  assert.doesNotMatch(
+    employeeScheduleClientSource,
+    /copy\.selectedDayTitle|EmployeeDetailList|copy\.timeRange|copy\.clockRange/,
+    "Schedule selected-day detail should not reintroduce verbose labels for every shift",
   );
   const calendarCellSource =
     employeeScheduleClientSource.match(
@@ -306,8 +373,8 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeScheduleClientSource,
-    /function SelectedDayDetail[\s\S]*motion-safe:slide-in-from-bottom-1/,
-    "Selected-day detail should use a subtle motion-safe entry transition",
+    /function SelectedDayDetail[\s\S]*<EmployeeFrame pad="sm"/,
+    "Selected-day detail should use the shared Employee frame instead of a hand-rolled card",
   );
   assert.match(
     employeeScheduleClientSource,
@@ -338,5 +405,115 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
     employeeProfileSource,
     /ManagerToolsSheet|MANAGER_LINKS/,
     "Profile should no longer use the hand-maintained manager-tools sheet",
+  );
+});
+
+test("Employee route family uses shared surface primitives instead of raw UI fragments", () => {
+  assert.match(
+    employeePageShellSource,
+    /function EmployeeFrame[\s\S]*data-employee-frame/,
+    "Employee surfaces should centralize framed content through EmployeeFrame",
+  );
+  assert.match(
+    employeePageShellSource,
+    /function EmployeeInlineState[\s\S]*<Item[\s\S]*variant=\{tone === "default" \? "muted" : "outline"\}/,
+    "Small Employee state rows should delegate to the shared Item primitive",
+  );
+  assert.match(
+    employeePageShellSource,
+    /function EmployeeActionBar[\s\S]*data-employee-action-bar/,
+    "Employee CTA rows should share one action bar rhythm",
+  );
+  assert.match(
+    employeePageShellSource,
+    /function EmployeeBadgeList[\s\S]*data-employee-badge-list/,
+    "Employee badge clouds should share one grouping primitive",
+  );
+
+  for (const path of employeeUiSourcePaths) {
+    const source = readWebSource(path);
+    assert.doesNotMatch(
+      source,
+      /space-y-/,
+      `${path} should use explicit flex/grid gap instead of space-y shortcuts`,
+    );
+    assert.doesNotMatch(
+      source,
+      /@comtammatu\/ui\/components\/empty|<Empty/,
+      `${path} should use AppEmptyState or EmployeeMissingProfileEmpty, not raw Empty primitives`,
+    );
+    assert.doesNotMatch(
+      source,
+      /<Spinner className=/,
+      `${path} should use Spinner data-icon placement instead of margin utility classes`,
+    );
+  }
+
+  for (const path of employeeContentSourcePaths) {
+    const source = readWebSource(path);
+    assert.doesNotMatch(
+      source,
+      /rounded-(md|lg|xl|2xl)\s+border|bg-card\s+p-\d|bg-muted\/40\s+p-\d/,
+      `${path} should not hand-roll card/frame surfaces inside Employee content routes`,
+    );
+  }
+
+  assert.match(
+    employeeTasksSource,
+    /<section[\s\S]*aria-labelledby=\{headingId\}/,
+    "Checklist phases should be semantic sections with explicit gap rhythm",
+  );
+  assert.match(
+    employeeClockSource,
+    /<EmployeeFrame className="overflow-hidden bg-muted\/40 motion-safe:zoom-in-95">/,
+    "Clock camera preview should use EmployeeFrame instead of raw rounded borders",
+  );
+  assert.match(
+    employeeClockSource,
+    /<EmployeeInlineState[\s\S]*title=\{clockCopy\.photoReadyTitle\}/,
+    "Clock photo confirmation should use EmployeeInlineState",
+  );
+  assert.match(
+    employeeScheduleClientSource,
+    /function ScheduleMonthCalendarTable[\s\S]*<EmployeeFrame className="overflow-hidden">/,
+    "Schedule calendar frame should be centralized through EmployeeFrame",
+  );
+  assert.match(
+    employeeLeaveClientSource,
+    /<EmployeeActionBar>[\s\S]*copy\.newRequestButton/,
+    "Leave request CTA should use the shared Employee action bar",
+  );
+  assert.match(
+    employeePayslipYearPickerSource,
+    /<EmployeeControlBar>[\s\S]*copy\.currentYear/,
+    "Payslip year controls should use the shared Employee control bar",
+  );
+  assert.match(
+    employeePermissionsSource,
+    /<EmployeeBadgeList/,
+    "Permissions badge groups should use the shared Employee badge list",
+  );
+  const checkoutApprovalsSource = readWebSource(
+    "app/(protected)/employee/checkout-approvals/checkout-approvals-client.tsx",
+  );
+  assert.match(
+    checkoutApprovalsSource,
+    /async function approveConsumption[\s\S]*await confirm\([\s\S]*Duyệt và áp Inventory\?/,
+    "Consumption approval must confirm before applying Inventory",
+  );
+  assert.match(
+    checkoutApprovalsSource,
+    /requiresConsumptionReport[\s\S]*status === "approved" \|\| status === "applied"/,
+    "Checkout approval UI should block only when a required consumption report is not approved/applied",
+  );
+  assert.match(
+    checkoutApprovalsSource,
+    /function getCheckoutBlockLabel[\s\S]*Chưa gửi tiêu hao[\s\S]*Cần duyệt tiêu hao[\s\S]*Chờ nhân viên chỉnh sửa/,
+    "Checkout approval cards should explain why checkout approval is blocked by consumption review",
+  );
+  assert.match(
+    checkoutApprovalsSource,
+    /Duyệt kết ca/,
+    "Checkout approval primary action should name the final checkout approval step",
   );
 });

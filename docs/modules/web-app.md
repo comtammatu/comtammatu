@@ -31,11 +31,10 @@ owner; Branch Manager dùng L1 Branch Command dưới
 | Root redirect        | `/`                                                                                                          | Shared role default                                       | Delegates to `getDefaultRedirect(claims)`: owner → `/admin/dashboard`; non-admin staff including Branch Manager → `/employee`.                                                | No extra hub surface. Scope remains in JWT + route params.                                  |
 | Public / auth        | `/login`, `/access-denied`, `/payment/momo/return`, `/br/[branchId]/runner`, public health/webhook endpoints | `/login`, external return URL, hoặc Runner display URL    | Không dùng app shell. Không giữ app back link.                                                                                                                                | Không đọc tenant/branch scope từ UI state. Runner display tự validate branch trong page.    |
 | Admin foundation     | `/admin/dashboard`, `/admin/reports/*`, `/admin/staff/*`, tenant `/admin/settings/*`                         | `/admin/dashboard`                                        | `AdminShell` dùng admin sidebar và ẩn back link. Không dùng Admin như home chung cho mọi role hoặc nơi chứa branch setup mới.                                                 | Breadcrumb root là `Quản trị`; AdminShell build breadcrumb từ active nav + path tail.       |
-| Admin direct support | `/admin/accounting/*`                                                                                        | Không có default nav entry                                | Direct-only route cho khóa/mở kỳ khi owner cần, không quảng bá như workflow pilot hằng ngày.                                                                                  | Vẫn đi qua Admin shell + ACL; không đưa vào `ADMIN_NAV_GROUPS`.                             |
 | Domain workspaces    | `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/notifications/*`                            | `MODULE_ACL[module].path`                                 | Workspace shell dùng sidebar/domain nav; link rời workspace phải đi qua `resolveRoleHomeLink(role)`. `/hr/payroll/*` là direct-support, không đưa vào discovery/nav mặc định. | Breadcrumb root là nhóm `Công việc`; filter/tab state giữ trong URL, không lưu local state. |
 | Branch operations    | `/br/[branchId]/dashboard`, `/pos/*`, `/kds/*`, `/settings/*`, `/menu-limits/*` dưới cùng branch URL         | `/br/[branchId]/{dashboard,pos,kds,settings,menu-limits}` | Operational chrome hoặc in-flow controls. POS/KDS ưu tiên hành động trong ca, không quay về Admin. Staff discovery vẫn có thể link sang Runner display public.                | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.      |
 | Employee portal      | `/employee/*`                                                                                                | `/employee`                                               | Employee dùng bottom/desktop nav trong surface; admin-level role không vào `/employee/*`.                                                                                     | Breadcrumb nhẹ theo task portal; không trộn HR admin/payroll thành hot path nhân viên.      |
-| Compatibility        | `/admin/inventory*`, `/admin/finance*`                                                                       | Không có active entry point                               | `/admin/finance*` canonical redirect sang `/finance*`; `/admin/inventory*` đi qua ACL retired module.                                                                         | Docs/runtime không quảng bá URL compatibility như entry point.                              |
+| Compatibility        | `/admin/inventory*`, `/admin/finance*`                                                                       | Không có active entry point                               | `/admin/finance*` canonical redirect sang `/finance*`; `/admin/inventory*` bị chặn bởi `inventory_admin` empty ACL.                                                           | Docs/runtime không quảng bá URL compatibility như entry point.                              |
 
 History rule: route changes that move the user between pages should use normal
 `Link` / `router.push` so browser Back returns to the previous route. Use
@@ -63,14 +62,10 @@ apps/web/app/
 │   ├── hr/                 # HR workspace; URL remains /hr; /hr/payroll/* is direct-support
 │   ├── finance/            # Finance workspace; URL remains /finance/*
 │   │   ├── revenue/        # Revenue rollups + [date] drilldown
-│   │   ├── reconciliation/ # POS/subledger ↔ GL reconciliation
-│   │   ├── chart-of-accounts/ # Chart of accounts management
-│   │   ├── journal/        # Journal entries
-│   │   ├── posting-rules/  # GL posting rules
 │   │   ├── food-cost/      # Food cost analysis
-│   │   ├── periods/        # Fiscal period management
-│   │   ├── audit-trail/    # Finance audit log
-│   │   └── statements/     # Financial statements
+│   │   ├── expenses/       # HKD operating expense ledger
+│   │   ├── invoices/       # Viettel S-invoice register
+│   │   └── summary/        # B2C daily-summary trigger
 │   └── employee/           # Non-admin staff portal; URL remains /employee/*
 │
 ├── admin/                  # Operations foundation + executive reporting shell
@@ -78,15 +73,11 @@ apps/web/app/
 │   ├── components/
 │   │   └── admin-shell.tsx # Sidebar nav, executive shell, role-based filtering
 │   ├── dashboard/          # Operations cockpit landing
-│   ├── accounting/
-│   │   └── periods/        # Direct-only period close/reopen support (owner; ACCOUNTING_PERIOD_REOPEN gated)
-│   ├── inventory/          # REMOVED — URL space maps to retired inventory_admin ACL only
+│   ├── inventory/          # Unsupported; blocked by inventory_admin ACL
 │   ├── staff/              # Staff CRUD with role hierarchy auth, excludes owner
 │   │   ├── audit/          # Permission audit log viewer
 │   │   └── [id]/permissions/ # Per-user grant/revoke + template apply
-│   ├── finance/            # Compatibility redirect → /finance/* (also canonicalized in proxy + returnTo resolver)
 │   ├── reports/            # CEO/tenant reports hub
-│   │   ├── revenue/        # Revenue reports
 │   │   ├── inventory-value/ # Inventory valuation reports
 │   │   └── stock-movement/ # Stock movement reports
 │   └── settings/
@@ -94,11 +85,8 @@ apps/web/app/
 │       ├── page.tsx        # Redirect to tenant branch network
 │       ├── general/        # System settings key/value — owner only
 │       ├── branches/       # Branch CRUD — owner only
-│       ├── tables/         # Tenant-admin compatibility; BM branch setup belongs under /br/[branchId]/settings
-│       ├── pos/            # Tenant-admin compatibility; BM branch setup belongs under /br/[branchId]/settings
-│       ├── kds/            # Tenant-admin compatibility; BM branch setup belongs under /br/[branchId]/settings
-│       ├── payments/       # Tenant-admin compatibility; BM branch setup belongs under /br/[branchId]/settings
-│       └── printers/       # Tenant-admin compatibility; BM branch setup belongs under /br/[branchId]/settings
+│       ├── payments/       # Tenant-level payment provider/system settings — owner only
+│       └── printers/       # Tenant printer support hub: branch config links, templates, jobs
 │
 ├── br/[branchId]/
 │   ├── dashboard/          # Branch Command landing for branch_manager
@@ -217,9 +205,9 @@ Các detail pages của Inventory không còn chỉ là read-only shells:
 - `purchase-orders/[id]`: `draft` có thể gửi / hủy PO; `sent|partially_received` có thể tạo GRN từ PO
 - `grn/[id]`: có action chốt nhập kho (`confirmGrn`)
 - `transfers/[id]`: đã wire đủ state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`
-- `supplier-invoices`: đã có tạo hóa đơn NCC và tính lại đối soát; ghi nhận thanh toán là Finance/AP handoff, không phải action Inventory pilot
-- `supplier-returns`: route family đã ẩn khỏi Inventory pilot; stock-return/credit-note/AP xử lý là deferred, không còn CTA daily UI từ dashboard hoặc GRN detail
-- `stocktake/conflicts` và `stocktake/[id]/escalate`: S13b conflict/recount/escalation đã ẩn khỏi daily UI; pilot giữ open/count/complete
+- `supplier-invoices`: có tạo hóa đơn NCC và tính lại đối soát; ghi nhận thanh toán là Finance/AP handoff, không phải action Inventory
+- `supplier-returns`: không thuộc daily Inventory UI; stock-return/credit-note/AP đi qua quyết định riêng trước khi có CTA
+- `stocktake/conflicts` và `stocktake/[id]/escalate`: conflict/recount/escalation không nằm trong daily UI; current stocktake flow là open/count/complete
 
 Một số CTA vẫn được giữ là `sắp mở` có chủ đích khi chưa có input surface hoặc backend/reporting hoàn chỉnh, để tránh false promise.
 
@@ -267,7 +255,7 @@ Browser request
 - **Proxy as single auth gate:** All auth enforcement happens in `proxy.ts` before any route code runs. Layout-level checks are defense-in-depth, not primary.
 - **RSC by default:** Pages are React Server Components. Only interactive elements (forms, dropdowns) use "use client".
 - **Admin is now narrower by design:** it keeps L0 foundation controls and executive reporting for owner, while Branch Manager uses `/br/[branchId]/*` and deep domain workflows live in dedicated workspaces.
-- **Inventory is a standalone surface:** `/inventory` is the canonical Inventory operations domain. `/admin/inventory/*` page files were removed; the URL space still maps to retired `inventory_admin` with empty `allowedRoles`, so no role passes the proxy ACL check.
-- **Employee portal is live:** profile, clock, attendance, schedule, leave request, and payslip pages shipped. HR workspace defaults to nhân viên/ca/ngày công/nghỉ phép; `/hr/payroll/*` remains owner direct-support for đối soát/chốt lương.
-- **Finance default is HKD operating finance:** revenue, inventory value, food cost/gross profit, HĐĐT and support reconciliation are live; COA/journal/statements/period-close routes remain direct permissioned support, not default pilot navigation.
+- **Inventory is a standalone surface:** `/inventory` is the canonical Inventory operations domain. `/admin/inventory/*` is unsupported and blocked by `inventory_admin` with empty `allowedRoles`.
+- **Employee portal is live:** profile, clock, attendance, schedule, leave request, and payslip pages are current employee surfaces. HR workspace defaults to nhân viên/ca/ngày công/nghỉ phép; `/hr/payroll/*` remains owner direct-support for đối soát/chốt lương.
+- **Finance default is HKD operating finance:** revenue, inventory value, food cost/gross profit, operating expenses, cash summary, and HĐĐT support are live. Enterprise-accounting routes and period close/reopen are not part of the current app surface.
 - **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ policy/config như expiry; catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`, còn route settings cũ giữ redirect tương thích.

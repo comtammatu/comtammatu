@@ -153,5 +153,6 @@ session; never as a default. The mechanics that work in practice:
 - TypeScript 6 packages using `process.env` need `"types": ["node"]` in tsconfig.
 - Zod 4 uses `{ error: }`, not `{ message: }`; use `z.email()`, not `.email()`.
 - PL/pgSQL `IF record IS NOT NULL` is true only when every column is non-null. Check a guaranteed non-null column or use `FOUND`.
+- PostgREST resource embedding (`select=...,other(col)`) generates a join. If BOTH the base table and the embedded table have an RLS policy referencing a bare `branch_id` (e.g. `has_permission(branch_id, …)`), the generated query fails with `42702 column reference "branch_id" is ambiguous` and the whole SELECT errors. Qualifying the policy (`has_permission(tax_invoices.branch_id, …)`) does NOT fix it — Postgres canonicalizes the table-qualified ref back to bare `branch_id` when storing the policy. Fix at the query layer: drop the embed and fetch the related column in a second query (see `fetchTaxInvoicesPage`). Server Actions swallow the Supabase `error` into a generic message, so the only symptom is a silently empty list — surface `error` while debugging.
 
 Also read `tasks/regressions.md` before database/auth work.

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory production recipe panel keeps kitchen workflow copy inline */
+
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -17,25 +19,9 @@ import {
   Trash as IconTrash,
 } from "lucide-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@comtammatu/ui/components/alert-dialog";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -49,17 +35,22 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
-import { AppEmptyState } from "@/components/surface";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { Combobox, NumberField, TextField } from "@/components/form";
+import { AppEmptyState, AppSection } from "@/components/surface";
 import {
   deleteProductionRecipeGroup,
   deleteProductionRecipe,
@@ -278,8 +269,6 @@ export function ProductionRecipePanel({
   const [recipeDialogOpen, setRecipeDialogOpen] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [editingRecipeGroup, setEditingRecipeGroup] =
-    useState<ProductionRecipeGroup | null>(null);
-  const [recipeGroupToDelete, setRecipeGroupToDelete] =
     useState<ProductionRecipeGroup | null>(null);
   const [pendingFinishedGoodId, setPendingFinishedGoodId] = useState<
     string | undefined
@@ -502,19 +491,24 @@ export function ProductionRecipePanel({
     });
   }
 
-  function handleRecipeGroupDelete() {
-    if (!recipeGroupToDelete) return;
+  async function handleRecipeGroupDelete(group: ProductionRecipeGroup) {
+    const ok = await confirm({
+      title: "Xóa toàn bộ BOM?",
+      description: `Thao tác này sẽ xóa toàn bộ ${group.lines.length} dòng BOM của "${group.finishedGoodName}".`,
+      confirmText: "Xóa toàn bộ BOM",
+      cancelText: ACTIONS_VI.cancel,
+      variant: "destructive",
+    });
+
+    if (!ok) return;
 
     startTransition(async () => {
-      const result = await deleteProductionRecipeGroup(
-        recipeGroupToDelete.finishedGoodId,
-      );
+      const result = await deleteProductionRecipeGroup(group.finishedGoodId);
       if (!result.success) {
         toast.error(result.error ?? "Không thể xóa công thức cũ");
         return;
       }
       toast.success("Đã xóa toàn bộ công thức cũ của thành phẩm");
-      setRecipeGroupToDelete(null);
       router.refresh();
     });
   }
@@ -523,16 +517,80 @@ export function ProductionRecipePanel({
     openRecipeDialog(recipe.finished_good_id);
   }
 
+  const recipeLineColumns: DataTableColumn<ProductionRecipeRow>[] = [
+    {
+      key: "ingredient",
+      header: PRODUCT_VI.rawIngredient,
+      render: (recipe) => (
+        <div>
+          <div className="font-medium">{recipe.ingredient_name}</div>
+          <div className="text-xs text-muted-foreground">{recipe.unit}</div>
+        </div>
+      ),
+    },
+    {
+      key: "quantity",
+      header: FORM_VI.quantity,
+      render: (recipe) => (
+        <span>
+          {recipe.quantity} {recipe.unit}
+        </span>
+      ),
+    },
+    {
+      key: "yield",
+      header: "Yield",
+      render: (recipe) => recipe.yield_factor,
+    },
+    {
+      key: "note",
+      header: FORM_VI.notes,
+      className: "text-muted-foreground",
+      render: (recipe) => recipe.note ?? "—",
+    },
+    ...(canManageRecipes
+      ? [
+          {
+            key: "actions",
+            header: "",
+            className: "w-24",
+            render: (recipe) => (
+              <div className="flex items-center justify-end gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleEditClick(recipe)}
+                  aria-label={`Cập nhật BOM ${recipe.finished_good_name}`}
+                  title="Cập nhật BOM"
+                >
+                  <IconPencil />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRecipeDelete(recipe.id)}
+                  aria-label={`Xóa dòng BOM ${recipe.ingredient_name}`}
+                  title="Xóa dòng BOM"
+                >
+                  <IconTrash />
+                </Button>
+              </div>
+            ),
+          } satisfies DataTableColumn<ProductionRecipeRow>,
+        ]
+      : []),
+  ];
+
   return (
     <section id="production-recipes" className="flex flex-col gap-3">
-      <Card>
-        <CardHeader className="border-b">
-          <CardTitle className="flex items-center gap-2">
-            <IconClipboardList />
-            Công thức sản xuất
-          </CardTitle>
-          {canManageRecipes ? (
-            <CardAction className="col-span-full row-auto flex flex-wrap justify-start gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-self-end">
+      <AppSection
+        title="Công thức sản xuất"
+        icon={<IconClipboardList />}
+        action={
+          canManageRecipes ? (
+            <>
               <ProductionRecipeImportExportMenu
                 onImported={() => router.refresh()}
               />
@@ -544,18 +602,19 @@ export function ProductionRecipePanel({
                 <IconPlus data-icon="inline-start" />
                 Nhập BOM
               </Button>
-            </CardAction>
-          ) : null}
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
+            </>
+          ) : null
+        }
+      >
+        <div className="flex flex-wrap gap-2">
           <Badge variant={badgeVariantFromTone("neutral")}>
             {groupedRecipes.length} thành phẩm có BOM
           </Badge>
           <Badge variant={badgeVariantFromTone("neutral")}>
             {recipes.length} dòng nguyên liệu
           </Badge>
-        </CardContent>
-      </Card>
+        </div>
+      </AppSection>
 
       <Dialog
         open={recipeDialogOpen}
@@ -763,35 +822,6 @@ export function ProductionRecipePanel({
         onOpenChange={setQuickRawIngredientDialogOpen}
         onCreated={handleRawIngredientCreated}
       />
-      <AlertDialog
-        open={recipeGroupToDelete != null}
-        onOpenChange={(open) => {
-          if (!open) setRecipeGroupToDelete(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xóa toàn bộ BOM?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {recipeGroupToDelete
-                ? `Thao tác này sẽ xóa toàn bộ ${recipeGroupToDelete.lines.length} dòng BOM của "${recipeGroupToDelete.finishedGoodName}".`
-                : "Thao tác này sẽ xóa toàn bộ BOM của thành phẩm đã chọn."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>
-              {ACTIONS_VI.cancel}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRecipeGroupDelete}
-              disabled={isPending}
-            >
-              {isPending && <Spinner data-icon="inline-start" />}
-              Xóa toàn bộ BOM
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {groupedRecipes.length === 0 ? (
         <AppEmptyState
@@ -803,16 +833,16 @@ export function ProductionRecipePanel({
       ) : (
         <div className="flex flex-col gap-4">
           {groupedRecipes.map((group) => (
-            <Card key={group.finishedGoodId}>
-              <CardHeader className="border-b">
-                <CardTitle className="flex flex-wrap items-center gap-2">
-                  {group.finishedGoodName}
-                  <Badge variant={badgeVariantFromTone("neutral")}>
-                    {group.lines.length} nguyên liệu
-                  </Badge>
-                </CardTitle>
-                {canManageRecipes ? (
-                  <CardAction className="col-span-full row-auto flex flex-wrap justify-start gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-self-end">
+            <AppSection
+              key={group.finishedGoodId}
+              title={group.finishedGoodName}
+              badge={{
+                children: `${group.lines.length} nguyên liệu`,
+                variant: badgeVariantFromTone("neutral"),
+              }}
+              action={
+                canManageRecipes ? (
+                  <>
                     <Button
                       type="button"
                       variant="outline"
@@ -826,79 +856,85 @@ export function ProductionRecipePanel({
                       type="button"
                       variant="destructive"
                       size="sm"
-                      onClick={() => setRecipeGroupToDelete(group)}
+                      onClick={() => handleRecipeGroupDelete(group)}
                     >
                       <IconTrash data-icon="inline-start" />
                       Xóa toàn bộ BOM
                     </Button>
-                  </CardAction>
-                ) : null}
-              </CardHeader>
-
-              <CardContent flush>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{PRODUCT_VI.rawIngredient}</TableHead>
-                      <TableHead>{FORM_VI.quantity}</TableHead>
-                      <TableHead>Yield</TableHead>
-                      <TableHead>{FORM_VI.notes}</TableHead>
-                      {canManageRecipes ? <TableHead className="w-24" /> : null}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {group.lines.map((recipe) => (
-                      <TableRow key={recipe.id}>
-                        <TableCell>
-                          <div className="font-medium">
-                            {recipe.ingredient_name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {recipe.unit}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {recipe.quantity} {recipe.unit}
-                        </TableCell>
-                        <TableCell>{recipe.yield_factor}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {recipe.note ?? "—"}
-                        </TableCell>
-                        {canManageRecipes ? (
-                          <TableCell>
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEditClick(recipe)}
-                                aria-label={`Cập nhật BOM ${recipe.finished_good_name}`}
-                                title="Cập nhật BOM"
-                              >
-                                <IconPencil />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRecipeDelete(recipe.id)}
-                                aria-label={`Xóa dòng BOM ${recipe.ingredient_name}`}
-                                title="Xóa dòng BOM"
-                              >
-                                <IconTrash />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        ) : null}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                  </>
+                ) : null
+              }
+              contentFlush
+            >
+              <DataTable
+                columns={recipeLineColumns}
+                data={group.lines}
+                getRowKey={(recipe) => recipe.id}
+                mobileCardRender={(recipe) => (
+                  <RecipeLineItemCard
+                    recipe={recipe}
+                    canManageRecipes={canManageRecipes}
+                    onEdit={handleEditClick}
+                    onDelete={handleRecipeDelete}
+                  />
+                )}
+              />
+            </AppSection>
           ))}
         </div>
       )}
     </section>
+  );
+}
+
+function RecipeLineItemCard({
+  recipe,
+  canManageRecipes,
+  onEdit,
+  onDelete,
+}: {
+  recipe: ProductionRecipeRow;
+  canManageRecipes: boolean;
+  onEdit: (recipe: ProductionRecipeRow) => void;
+  onDelete: (recipeId: number) => void;
+}) {
+  return (
+    <Item variant="outline">
+      <ItemHeader>
+        <ItemTitle>{recipe.ingredient_name}</ItemTitle>
+        <Badge variant={badgeVariantFromTone("neutral")}>
+          {recipe.quantity} {recipe.unit}
+        </Badge>
+      </ItemHeader>
+      <ItemContent>
+        <ItemDescription>
+          Yield {recipe.yield_factor} · {recipe.note ?? "Không ghi chú"}
+        </ItemDescription>
+      </ItemContent>
+      {canManageRecipes ? (
+        <ItemFooter>
+          <ItemActions>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(recipe)}
+            >
+              <IconPencil data-icon="inline-start" />
+              Cập nhật
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(recipe.id)}
+            >
+              <IconTrash data-icon="inline-start" />
+              Xóa
+            </Button>
+          </ItemActions>
+        </ItemFooter>
+      ) : null}
+    </Item>
   );
 }

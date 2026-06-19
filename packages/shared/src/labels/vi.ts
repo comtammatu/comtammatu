@@ -11,7 +11,6 @@ export type ModuleLabelKey =
   | "hr"
   | "hr_payroll"
   | "finance"
-  | "accounting"
   | "reports"
   | "settings"
   | "pos"
@@ -29,7 +28,7 @@ type SiteLike = {
 };
 
 export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
-  dashboard: "Tổng quan",
+  dashboard: "Điều hành hôm nay",
   menu: "Thực đơn",
   inventory: "Kho hàng",
   inventory_procurement: "Kho hàng — NCC & công thức",
@@ -39,7 +38,6 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   hr: "Nhân sự",
   hr_payroll: "Lương",
   finance: "Tài chính",
-  accounting: "Hỗ trợ khóa kỳ",
   reports: "Báo cáo",
   settings: "Cài đặt",
   pos: "POS",
@@ -57,16 +55,17 @@ export const NAV_GROUP_LABELS_VI = {
   operations: "Điều hành",
   foundation: "Quản lý",
   workspaces: "Công việc",
+  branchManagement: "Quản lý chi nhánh",
   branchOperations: "Theo chi nhánh",
 } as const;
 
 export const APP_COPY_VI = {
   adminSurface: "Quản trị",
-  adminFoundation: "Quản lý cửa hàng",
-  executiveReporting: "Báo cáo",
-  erpCockpit: "Tổng quan vận hành",
-  foundationalStaff: "Nhân viên",
-  systemSetup: "Thiết lập hệ thống",
+  storeManagement: "Quản lý cửa hàng",
+  reportsLabel: "Báo cáo",
+  ownerHome: "Điều hành hôm nay",
+  staffLabel: "Tài khoản & quyền",
+  settingsLabel: "Thiết lập hệ thống",
   quickAccess: "Mục nhanh",
   quickAccessAria: "Truy cập nhanh chức năng",
   employeePortal: "Trang nhân viên",
@@ -92,6 +91,30 @@ const INVENTORY_SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
 export const ACTIVE_STATE_LABELS_VI = {
   active: "Hoạt động",
   inactive: "Tạm ngưng",
+} as const;
+
+export const ATTENDANCE_STATUS_LABELS_VI = {
+  present: "Có mặt",
+  late: "Đi trễ",
+  absent: "Vắng",
+  half_day: "Nửa ngày",
+  checked_out: "Đã kết ca",
+  in_shift: "Đang trong ca",
+  stale_open: "Treo (chưa kết ca)",
+} as const;
+
+export const LEAVE_REQUEST_STATUS_LABELS_VI = {
+  pending: "Chờ duyệt",
+  approved: "Đã duyệt",
+  rejected: "Từ chối",
+  cancelled: "Đã hủy",
+} as const;
+
+export const PAYROLL_PERIOD_STATUS_LABELS_VI = {
+  draft: "Nháp",
+  calculated: "Đã tính",
+  approved: "Đã duyệt",
+  paid: "Đã trả",
 } as const;
 
 export function resolveSiteKind(site: SiteLike): SiteKind {
@@ -225,8 +248,7 @@ export function getWasteReasonLabelVi(code: string): string {
 // print-agent ships as a standalone .exe (@yao-pkg/pkg) and cannot import
 // workspace packages — keep both copies in sync. See glossary.md (Thanh toán).
 //
-// `bank_transfer` belongs to GL supplier-payment flow (TT 25/2018 hóa đơn
-// ≥ 20tr), NOT POS — kept here for finance/accounting surfaces.
+// `bank_transfer` belongs to supplier/payment support, NOT POS.
 export const PAYMENT_METHOD_LABELS_VI = {
   cash: "Tiền mặt",
   vietqr: "VietQR",

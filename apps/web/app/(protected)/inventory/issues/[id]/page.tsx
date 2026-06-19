@@ -33,6 +33,8 @@ export default async function IssueDetailPage({
       notes: string | null;
       issued_at: string;
       branch_id: number;
+      source_type: string | null;
+      source_ref: unknown;
       branches: {
         id: number;
         name: string;

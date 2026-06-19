@@ -16,22 +16,22 @@ import { withAction } from "@/_lib/with-action";
 import {
   CHECKLIST_PHASES,
   CHECKLIST_SCOPES,
+  CHECKLIST_TASK_KINDS,
   type ChecklistPhase,
   type ChecklistScope,
+  type ChecklistTaskKind,
   type ChecklistTemplateItem,
   type ChecklistTemplateRow,
   type PositionDefaultRow,
 } from "./checklist-types";
 
-const CHECKLIST_ROLES: readonly StaffRole[] = [
-  "owner",
-  "branch_manager",
-];
+const CHECKLIST_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
 
 const CHECKLIST_OWNER_ROLES: readonly StaffRole[] = ["owner"];
 
 const templateItemSchema = z.object({
   title: z.string().trim().min(1).max(120),
+  taskKind: z.enum(CHECKLIST_TASK_KINDS).default("standard"),
   phase: z.enum(CHECKLIST_PHASES),
   scope: z.enum(CHECKLIST_SCOPES).default("every_shift"),
   doneDefinition: z.string().trim().max(240).default(""),
@@ -59,10 +59,16 @@ const setPositionDefaultChecklistSchema = z.object({
   templateId: z.coerce.number().int().positive().nullable(),
 });
 
+const setConsumptionDefaultIngredientsSchema = z.object({
+  templateItemId: z.coerce.number().int().positive(),
+  ingredientIds: z.array(z.coerce.number().int().positive()).max(80),
+});
+
 type ChecklistItemRow = {
   id: number;
   template_id: number;
   title: string;
+  task_kind: string;
   phase: string;
   scope: string;
   done_definition: string;
@@ -102,6 +108,12 @@ function normalizeScope(value: string): ChecklistScope {
     : "every_shift";
 }
 
+function normalizeTaskKind(value: string): ChecklistTaskKind {
+  return CHECKLIST_TASK_KINDS.includes(value as ChecklistTaskKind)
+    ? (value as ChecklistTaskKind)
+    : "standard";
+}
+
 function normalizeTemplates(
   templates: ChecklistTemplateDbRow[],
   items: ChecklistItemRow[],
@@ -117,6 +129,7 @@ function normalizeTemplates(
     rows.push({
       id: item.id,
       title: item.title,
+      taskKind: normalizeTaskKind(item.task_kind),
       phase: normalizePhase(item.phase),
       scope: normalizeScope(item.scope),
       doneDefinition: item.done_definition,
@@ -240,7 +253,7 @@ export async function fetchChecklistTemplates(): Promise<
       ? service
           .from("shift_checklist_template_items")
           .select(
-            "id, template_id, title, phase, scope, done_definition, is_required, sort_order",
+            "id, template_id, title, task_kind, phase, scope, done_definition, is_required, sort_order",
           )
           .eq("tenant_id", ctx.claims.tenant_id)
           .eq("is_active", true)
@@ -299,6 +312,7 @@ export const saveChecklistTemplate = withAction(
 
     const payload = data.items.map((item, index) => ({
       title: item.title,
+      taskKind: item.taskKind,
       phase: item.phase,
       scope: item.scope,
       doneDefinition: item.doneDefinition,
@@ -344,10 +358,16 @@ export const setEmployeeDefaultChecklist = withAction(
     const profile = employee?.profiles as { branch_id: number | null } | null;
     const branchId = profile?.branch_id ?? null;
     if (!employee || branchId == null) {
-      return { success: false, error: "Nhân viên chưa thuộc chi nhánh hợp lệ." };
+      return {
+        success: false,
+        error: "Nhân viên chưa thuộc chi nhánh hợp lệ.",
+      };
     }
     if (!(await canManageTemplateScope(ctx, branchId))) {
-      return { success: false, error: "Không có quyền cập nhật nhân viên này." };
+      return {
+        success: false,
+        error: "Không có quyền cập nhật nhân viên này.",
+      };
     }
     if (
       data.templateId != null &&
@@ -370,7 +390,10 @@ export const setEmployeeDefaultChecklist = withAction(
       .eq("id", data.employeeId);
 
     if (error) {
-      return { success: false, error: "Không thể cập nhật checklist mặc định." };
+      return {
+        success: false,
+        error: "Không thể cập nhật checklist mặc định.",
+      };
     }
 
     revalidateChecklistPaths();
@@ -442,7 +465,10 @@ export const archiveChecklistTemplate = withAction(
     permission: PERMISSION_KEYS.STAFF_MANAGE,
   },
   async (data, ctx) => {
-    const branchId = await loadTemplateScope(ctx.claims.tenant_id, data.templateId);
+    const branchId = await loadTemplateScope(
+      ctx.claims.tenant_id,
+      data.templateId,
+    );
     if (branchId === undefined) {
       return { success: false, error: "Không tìm thấy checklist template." };
     }
@@ -458,6 +484,94 @@ export const archiveChecklistTemplate = withAction(
 
     if (error) {
       return { success: false, error: "Không thể ngưng dùng template." };
+    }
+
+    revalidateChecklistPaths();
+    return { success: true };
+  },
+);
+
+export const setConsumptionDefaultIngredients = withAction(
+  {
+    roles: CHECKLIST_ROLES,
+    schema: setConsumptionDefaultIngredientsSchema,
+    permission: PERMISSION_KEYS.STAFF_MANAGE,
+  },
+  async (data, ctx) => {
+    const ingredientIds = Array.from(new Set(data.ingredientIds));
+    const service = createServiceClient();
+    const { data: item } = await service
+      .from("shift_checklist_template_items")
+      .select(
+        "id, template_id, task_kind, shift_checklist_templates!inner(branch_id)",
+      )
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("id", data.templateItemId)
+      .maybeSingle();
+
+    const checklistItem = item as unknown as {
+      task_kind?: string;
+      shift_checklist_templates?: unknown;
+    } | null;
+    const template = checklistItem?.shift_checklist_templates as {
+      branch_id: number | null;
+    } | null;
+    const branchId = template?.branch_id ?? null;
+    if (!checklistItem || checklistItem.task_kind !== "consumption_report") {
+      return { success: false, error: "Không tìm thấy checklist tiêu hao." };
+    }
+    if (!(await canManageTemplateScope(ctx, branchId))) {
+      return {
+        success: false,
+        error: "Không có quyền cấu hình checklist này.",
+      };
+    }
+
+    if (ingredientIds.length > 0) {
+      const { data: ingredients, error: ingredientError } = await service
+        .from("ingredients")
+        .select("id")
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("is_active", true)
+        .in("id", ingredientIds);
+      if (
+        ingredientError ||
+        (ingredients ?? []).length !== ingredientIds.length
+      ) {
+        return { success: false, error: "Danh sách nguyên liệu không hợp lệ." };
+      }
+    }
+
+    const { error: updateError } = await service
+      .from("shift_checklist_consumption_default_items")
+      .update({ is_active: false })
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("template_item_id", data.templateItemId)
+      .eq("is_active", true);
+    if (updateError) {
+      return {
+        success: false,
+        error: "Không thể cập nhật nguyên liệu mặc định.",
+      };
+    }
+
+    if (ingredientIds.length > 0) {
+      const { error: insertError } = await service
+        .from("shift_checklist_consumption_default_items")
+        .insert(
+          ingredientIds.map((ingredientId, index) => ({
+            tenant_id: ctx.claims.tenant_id,
+            template_item_id: data.templateItemId,
+            ingredient_id: ingredientId,
+            sort_order: index + 1,
+          })),
+        );
+      if (insertError) {
+        return {
+          success: false,
+          error: "Không thể lưu nguyên liệu mặc định.",
+        };
+      }
     }
 
     revalidateChecklistPaths();

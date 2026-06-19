@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory production stats surface keeps operator copy inline */
+
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -16,13 +18,7 @@ import {
 } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { AppSection } from "@/components/surface";
 import {
   QuickFinishedGoodDialog,
   QuickRawIngredientDialog,
@@ -133,104 +129,99 @@ export function ProductionStats({
 
   return (
     <>
-      <Card>
-        <CardHeader className="border-b">
-          <CardTitle className="flex items-center gap-2">
-            <IconFactory />
-            Trạm điều phối sản xuất
-          </CardTitle>
-          <CardAction>
-            <Badge variant={readinessReady ? "success" : "warning"}>
+      <AppSection
+        title="Trạm điều phối sản xuất"
+        icon={<IconFactory />}
+        badge={{
+          variant: readinessReady ? "success" : "warning",
+          children: (
+            <>
               {readinessReady ? (
                 <IconCircleCheck data-icon="inline-start" />
               ) : (
                 <IconCircleAlert data-icon="inline-start" />
               )}
               {readinessReady ? "Sẵn sàng" : "Cần cấu hình"}
-            </Badge>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            {summaryItems.map((item) => (
-              <div
-                key={item.label}
-                className="flex min-h-24 flex-col justify-between rounded-md border bg-muted/30 p-3"
-              >
-                <div className="text-xs font-medium text-muted-foreground">
-                  {item.label}
-                </div>
-                <div className="text-2xl font-semibold tabular-nums">
-                  {item.value}
-                </div>
-                <div className="line-clamp-2 break-words text-xs text-muted-foreground">
-                  {item.description}
-                </div>
+            </>
+          ),
+        }}
+      >
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {summaryItems.map((item) => (
+            <div
+              key={item.label}
+              className="flex min-h-24 flex-col justify-between rounded-md border bg-muted/30 p-3"
+            >
+              <div className="text-xs font-medium text-muted-foreground">
+                {item.label}
               </div>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-background p-3">
-            <div className="flex min-w-0 flex-col gap-1">
-              <p className="text-sm font-medium">{activeProductionBranchCopy}</p>
-              <p className="text-xs text-muted-foreground">
-                Quy trình chuẩn: nhận nguyên liệu, chốt BOM, xác nhận lệnh để
-                trừ nguyên liệu và nhập thành phẩm.
-              </p>
+              <div className="text-2xl font-semibold tabular-nums">
+                {item.value}
+              </div>
+              <div className="line-clamp-2 break-words text-xs text-muted-foreground">
+                {item.description}
+              </div>
             </div>
-            <Badge variant="outline">CN</Badge>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-background p-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <p className="text-sm font-medium">{activeProductionBranchCopy}</p>
+            <p className="text-xs text-muted-foreground">
+              Quy trình chuẩn: nhận nguyên liệu, chốt BOM, xác nhận lệnh để trừ
+              nguyên liệu và nhập thành phẩm.
+            </p>
           </div>
+          <Badge variant="outline">CN</Badge>
+        </div>
 
-          {readinessMessage ? (
-            <Alert className="border-warning/20 bg-warning/10">
-              <IconCircleAlert />
-              <AlertTitle>{readinessMessage}</AlertTitle>
-              {recoveryMessage ? (
-                <AlertDescription>{recoveryMessage}</AlertDescription>
-              ) : null}
-            </Alert>
-          ) : null}
+        {readinessMessage ? (
+          <Alert className="border-warning/20 bg-warning/10">
+            <IconCircleAlert />
+            <AlertTitle>{readinessMessage}</AlertTitle>
+            {recoveryMessage ? (
+              <AlertDescription>{recoveryMessage}</AlertDescription>
+            ) : null}
+          </Alert>
+        ) : null}
 
-          {(readinessState === "missing-finished-good" ||
-            readinessState === "missing-raw-material" ||
-            readinessState === "missing-recipe") && (
-            <div className="flex flex-wrap items-center gap-2">
-              {canManageCatalog &&
-              readinessState === "missing-finished-good" ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setQuickFinishedGoodDialogOpen(true)}
-                >
-                  <IconPlus data-icon="inline-start" />
-                  Tạo thành phẩm
-                </Button>
-              ) : null}
-              {canManageCatalog && readinessState === "missing-raw-material" ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setQuickRawIngredientDialogOpen(true)}
-                >
-                  <IconPlus data-icon="inline-start" />
-                  Tạo nguyên liệu
-                </Button>
-              ) : null}
-              {readinessState === "missing-recipe" && canManageRecipes ? (
-                <Button type="button" size="sm" variant="outline" asChild>
-                  <Link href="#production-recipes">Mở BOM sản xuất</Link>
-                </Button>
-              ) : readinessState !== "missing-recipe" && canManageCatalog ? (
-                <Button type="button" size="sm" variant="outline" asChild>
-                  <Link href="/inventory/ingredients">
-                    Mở danh mục nguyên liệu
-                  </Link>
-                </Button>
-              ) : null}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {(readinessState === "missing-finished-good" ||
+          readinessState === "missing-raw-material" ||
+          readinessState === "missing-recipe") && (
+          <div className="flex flex-wrap items-center gap-2">
+            {canManageCatalog && readinessState === "missing-finished-good" ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setQuickFinishedGoodDialogOpen(true)}
+              >
+                <IconPlus data-icon="inline-start" />
+                Tạo thành phẩm
+              </Button>
+            ) : null}
+            {canManageCatalog && readinessState === "missing-raw-material" ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setQuickRawIngredientDialogOpen(true)}
+              >
+                <IconPlus data-icon="inline-start" />
+                Tạo nguyên liệu
+              </Button>
+            ) : null}
+            {readinessState === "missing-recipe" && canManageRecipes ? (
+              <Button type="button" size="sm" variant="outline" asChild>
+                <Link href="#production-recipes">Mở BOM sản xuất</Link>
+              </Button>
+            ) : readinessState !== "missing-recipe" && canManageCatalog ? (
+              <Button type="button" size="sm" variant="outline" asChild>
+                <Link href="/inventory/ingredients">Mở danh mục nguyên liệu</Link>
+              </Button>
+            ) : null}
+          </div>
+        )}
+      </AppSection>
       <QuickFinishedGoodDialog
         open={quickFinishedGoodDialogOpen}
         onOpenChange={setQuickFinishedGoodDialogOpen}

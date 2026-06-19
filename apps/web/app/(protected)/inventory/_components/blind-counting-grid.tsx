@@ -1,25 +1,30 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory blind-counting grid keeps operator copy inline */
+
 import { useMemo, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { matchesSearch } from "@lib/search";
 import {
   Search as IconSearch,
   Check as IconCheck,
   FlagTriangleRight as IconFlag3,
 } from "lucide-react";
-import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { FormattedNumberInput } from "./formatted-number-input";
 import { AbcClassChip } from "./abc-class-chip";
 import type { StocktakeLineBlind } from "../stocktake-actions";
@@ -82,6 +87,60 @@ export function BlindCountingGrid({
     [counts],
   );
 
+  function handleQtyChange(ingredientId: number, raw: string) {
+    if (!raw) {
+      onCountChange(ingredientId, null);
+      return;
+    }
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed)) onCountChange(ingredientId, parsed);
+  }
+
+  const columns: DataTableColumn<StocktakeLineBlind>[] = [
+    {
+      key: "ingredient",
+      header: PRODUCT_VI.rawIngredient,
+      render: (line) => <div className="font-medium">{line.ingredientName}</div>,
+    },
+    {
+      key: "abc",
+      header: "ABC",
+      render: (line) => <AbcClassChip class_={line.abcClass} compact withTooltip />,
+    },
+    {
+      key: "unit",
+      header: FORM_VI.unit,
+      className: "text-muted-foreground",
+      render: (line) => line.unit,
+    },
+    {
+      key: "count",
+      header: "Số đếm",
+      className: "text-right",
+      render: (line) => (
+        <FormattedNumberInput
+          value={
+            counts[line.ingredientId]?.qty == null
+              ? ""
+              : String(counts[line.ingredientId]?.qty)
+          }
+          disabled={readOnly || line.isFinal}
+          maxFractionDigits={3}
+          className="ml-auto h-9 w-32 text-right tabular-nums"
+          onValueChange={(raw) => handleQtyChange(line.ingredientId, raw)}
+          data-slot="blind-counting-grid-qty"
+          data-ingredient-id={line.ingredientId}
+        />
+      ),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      className: "text-right",
+      render: (line) => <CountStatusBadge line={line} />,
+    },
+  ];
+
   return (
     <div
       data-slot="blind-counting-grid"
@@ -115,40 +174,36 @@ export function BlindCountingGrid({
         ) : null}
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{PRODUCT_VI.rawIngredient}</TableHead>
-            <TableHead>ABC</TableHead>
-            <TableHead>{FORM_VI.unit}</TableHead>
-            <TableHead className="text-right">Số đếm</TableHead>
-            <TableHead className="text-right">{FORM_VI.status}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filtered.length === 0 ? (
-            <TableEmptyStateRow
-              colSpan={5}
-              title="Không có dòng nào khớp bộ lọc."
-            />
-          ) : (
-            filtered.map((line) => (
-              <CountRow
-                key={line.lineId}
-                line={line}
-                value={counts[line.ingredientId]?.qty ?? null}
-                readOnly={readOnly || line.isFinal}
-                onChange={(qty) => onCountChange(line.ingredientId, qty)}
-              />
-            ))
-          )}
-        </TableBody>
-      </Table>
+      <DataTable
+        columns={columns}
+        data={filtered}
+        getRowKey={(line) => line.lineId}
+        emptyTitle="Không có dòng nào khớp bộ lọc."
+        emptyMode={query.trim() ? "no-results" : "no-data"}
+        getRowDataState={(line) =>
+          line.isFinal ? "final" : line.needsRecount ? "needs-recount" : "open"
+        }
+        rowClassName={(line) =>
+          cn(
+            "align-middle",
+            line.isFinal && "bg-success/10",
+            !line.isFinal && line.needsRecount && "bg-tier-note/10",
+          )
+        }
+        mobileCardRender={(line) => (
+          <CountLineItem
+            line={line}
+            value={counts[line.ingredientId]?.qty ?? null}
+            readOnly={readOnly || line.isFinal}
+            onChange={(raw) => handleQtyChange(line.ingredientId, raw)}
+          />
+        )}
+      />
     </div>
   );
 }
 
-function CountRow({
+function CountLineItem({
   line,
   value,
   readOnly,
@@ -157,66 +212,65 @@ function CountRow({
   line: StocktakeLineBlind;
   value: number | null;
   readOnly: boolean;
-  onChange: (qty: number | null) => void;
+  onChange: (raw: string) => void;
 }) {
-  const rowTone = line.isFinal
-    ? "bg-success/10"
-    : line.needsRecount
-      ? "bg-tier-note/10"
-      : "";
-
   return (
-    <TableRow
-      className={cn("align-middle", rowTone)}
+    <Item
+      variant="outline"
+      className={cn(
+        line.isFinal && "bg-success/10",
+        !line.isFinal && line.needsRecount && "bg-tier-note/10",
+      )}
       data-row-state={
         line.isFinal ? "final" : line.needsRecount ? "needs-recount" : "open"
       }
     >
-      <TableCell>
-        <div className="font-medium">{line.ingredientName}</div>
-      </TableCell>
-      <TableCell>
-        <AbcClassChip class_={line.abcClass} compact withTooltip />
-      </TableCell>
-      <TableCell className="text-muted-foreground">{line.unit}</TableCell>
-      <TableCell className="text-right">
+      <ItemHeader>
+        <ItemTitle>{line.ingredientName}</ItemTitle>
+        <CountStatusBadge line={line} />
+      </ItemHeader>
+      <ItemContent>
+        <ItemDescription className="flex items-center gap-2">
+          <AbcClassChip class_={line.abcClass} compact withTooltip />
+          <span>{line.unit}</span>
+        </ItemDescription>
+      </ItemContent>
+      <ItemFooter>
         <FormattedNumberInput
           value={value === null ? "" : String(value)}
           disabled={readOnly}
           maxFractionDigits={3}
-          className="ml-auto h-9 w-32 text-right tabular-nums"
-          onValueChange={(raw) => {
-            if (!raw) return onChange(null);
-            const parsed = Number(raw);
-            if (Number.isFinite(parsed)) onChange(parsed);
-          }}
+          className="ml-auto h-9 w-full max-w-40 text-right tabular-nums"
+          onValueChange={onChange}
           data-slot="blind-counting-grid-qty"
           data-ingredient-id={line.ingredientId}
         />
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="inline-flex items-center gap-1">
-          {line.isFinal ? (
-            <Badge
-              variant="outline"
-              className="gap-1 border-success/40 text-success"
-            >
-              <IconCheck className="size-3.5" /> Final
-            </Badge>
-          ) : line.needsRecount ? (
-            <Badge
-              variant="outline"
-              className="gap-1 border-tier-note/40 text-tier-note-foreground"
-            >
-              <IconFlag3 className="size-3.5" /> Cần kiểm tra
-            </Badge>
-          ) : (
-            <Badge variant="outline">R{line.roundNo}</Badge>
-          )}
-        </div>
-      </TableCell>
-    </TableRow>
+      </ItemFooter>
+    </Item>
   );
+}
+
+function CountStatusBadge({ line }: { line: StocktakeLineBlind }) {
+  if (line.isFinal) {
+    return (
+      <Badge variant="outline" className="gap-1 border-success/40 text-success">
+        <IconCheck className="size-3.5" /> Final
+      </Badge>
+    );
+  }
+
+  if (line.needsRecount) {
+    return (
+      <Badge
+        variant="outline"
+        className="gap-1 border-tier-note/40 text-tier-note-foreground"
+      >
+        <IconFlag3 className="size-3.5" /> Cần kiểm tra
+      </Badge>
+    );
+  }
+
+  return <Badge variant="outline">R{line.roundNo}</Badge>;
 }
 
 interface BlindCountingGridToolbarProps {

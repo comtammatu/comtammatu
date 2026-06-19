@@ -1,8 +1,16 @@
 "use client";
 
-import { Card, CardContent } from "@comtammatu/ui/components/card";
+import type { ReactNode } from "react";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
+
+function PosSkeletonPanel({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-md border bg-card p-4 shadow-xs">
+      <div className="flex flex-col gap-2">{children}</div>
+    </div>
+  );
+}
 
 function PosPageSkeletonFallback() {
   return (
@@ -25,13 +33,11 @@ function PosPageSkeletonFallback() {
           </div>
           <div className="grid flex-1 auto-rows-min grid-cols-2 gap-3 overflow-hidden sm:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 12 }).map((_, index) => (
-              <Card key={index} size="sm">
-                <CardContent className="flex flex-col gap-2">
-                  <Skeleton className="mb-3 aspect-square w-full" />
-                  <Skeleton className="h-5 w-4/5" />
-                  <Skeleton className="mt-2 h-4 w-1/2" />
-                </CardContent>
-              </Card>
+              <PosSkeletonPanel key={index}>
+                <Skeleton className="mb-3 aspect-square w-full" />
+                <Skeleton className="h-5 w-4/5" />
+                <Skeleton className="mt-2 h-4 w-1/2" />
+              </PosSkeletonPanel>
             ))}
           </div>
         </div>
@@ -39,12 +45,10 @@ function PosPageSkeletonFallback() {
           <Skeleton className="h-6 w-32" />
           <div className="mt-4 flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Card key={index} size="sm">
-                <CardContent className="flex flex-col gap-2">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="mt-2 h-4 w-1/2" />
-                </CardContent>
-              </Card>
+              <PosSkeletonPanel key={index}>
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="mt-2 h-4 w-1/2" />
+              </PosSkeletonPanel>
             ))}
           </div>
           <Skeleton className="mt-auto h-12 w-full" />
@@ -79,13 +83,11 @@ function PosPageSkeletonFixture() {
           </div>
           <div className="grid flex-1 auto-rows-min grid-cols-2 gap-3 overflow-hidden sm:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 12 }).map((_, index) => (
-              <Card key={index} size="sm">
-                <CardContent className="flex flex-col gap-2">
-                  <div className="mb-3 aspect-square w-full bg-muted" />
-                  <p className="truncate text-sm font-medium">Com tam suon</p>
-                  <p className="mt-2 text-sm text-muted-foreground">65.000 d</p>
-                </CardContent>
-              </Card>
+              <PosSkeletonPanel key={index}>
+                <div className="mb-3 aspect-square w-full bg-muted" />
+                <p className="truncate text-sm font-medium">Com tam suon</p>
+                <p className="mt-2 text-sm text-muted-foreground">65.000 d</p>
+              </PosSkeletonPanel>
             ))}
           </div>
         </div>
@@ -93,14 +95,12 @@ function PosPageSkeletonFixture() {
           <p className="text-base font-semibold">Gio hang</p>
           <div className="mt-4 flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Card key={index} size="sm">
-                <CardContent className="flex flex-col gap-2">
-                  <p className="text-sm font-medium">Mon dang chon</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    1 x 65.000 d
-                  </p>
-                </CardContent>
-              </Card>
+              <PosSkeletonPanel key={index}>
+                <p className="text-sm font-medium">Mon dang chon</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  1 x 65.000 d
+                </p>
+              </PosSkeletonPanel>
             ))}
           </div>
           <div className="mt-auto h-12 bg-primary" />

@@ -118,8 +118,8 @@ export async function refundOrderPayment(
     return { success: false, error: "Không lấy được mã hoàn tiền." };
   }
 
-  // STEP B — approve + post reversal (GL reversal + stock restore + flip
-  // payment/refund). Pending refund persists if this fails — recoverable.
+  // STEP B — approve refund, restore eligible stock, and flip payment/refund.
+  // Pending refund persists if this fails — recoverable.
   const { error: approveErr } = await supabase.rpc("reverse_payment_and_post", {
     p_refund_id: refundId,
   });

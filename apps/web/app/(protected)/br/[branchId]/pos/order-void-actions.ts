@@ -33,19 +33,9 @@ import {
 /**
  * Void a single pending / kitchen-sent order item with audit reason.
  *
- * WS-1a (2026-05-27) proving slice for the extended `withActionPositional`
- * helper. Migrated from the prior hand-rolled `// Skip withAction:` block.
- * Exercises 4/4 new helper capabilities in one site:
- *   1. positional args (orderItemId, reason) preserved via `argsToInput`
- *   2. composite auth via `customAuth: posVoidAuth`
- *   3. RPC error vocabulary via `mapRpcError(..., voidRpcMappings, voidRpcFallback)`
- *   4. non-fatal post-RPC cancel-ticket print via `afterSuccess: enqueueCancelTicketPrintHook`
- *
- * Result shape change vs pre-WS-1a:
- *   - `data.autoCancelledOrder` UNCHANGED
- *   - `data.printWarning` REMOVED — print warning now lives on
- *     `result.meta.warning` (set by the afterSuccess hook). The caller
- *     `order-detail-sheet.tsx` was updated in the same commit.
+ * The non-fatal cancel-ticket print warning lives on `result.meta.warning`
+ * (set by the `enqueueCancelTicketPrintHook` afterSuccess hook), not on
+ * `data`.
  */
 export const voidOrderItem = withActionPositional(
   {
@@ -96,17 +86,9 @@ export const voidOrderItem = withActionPositional(
 /**
  * Reduce a single kitchen-sent order item's quantity with audit reason.
  *
- * Migrated to `withActionPositional` in WS-1b (2026-05-27). Same template
- * as `voidOrderItem`: positional args via `argsToInput`, composite auth
- * via `posVoidAuth`, RPC error map via `reduceRpcMappings` + fallback,
- * partial-cancel kitchen ticket via `afterSuccess` hook
- * (`enqueuePartialCancelTicketPrintHook`).
- *
- * Result shape change vs pre-WS-1b:
- *   - `data.qtyReduced / oldQuantity / newQuantity` UNCHANGED
- *   - `data.printWarning` REMOVED — print warning now lives on
- *     `result.meta.warning` (set by the afterSuccess hook). The caller
- *     `order-detail-sheet.tsx` was updated in the same commit.
+ * The partial-cancel print warning lives on `result.meta.warning` (set by
+ * the `enqueuePartialCancelTicketPrintHook` afterSuccess hook), not on
+ * `data`.
  */
 export const reduceOrderItemQuantity = withActionPositional(
   {
@@ -190,8 +172,7 @@ export const reduceOrderItemQuantity = withActionPositional(
  * tăng SL dùng kitchen_ticket/GỌI THÊM; giảm SL dùng cancel_ticket. Các edit
  * khác vẫn chỉ bump KDS realtime và nhắc cashier báo bếp thủ công.
  *
- * Migrated to `withActionPositional` in WS-1b (2026-05-27).
- * Result shape vs pre-WS-1b: UNCHANGED. Print logic stays in the handler
+ * Print logic stays in the handler
  * (not in an `afterSuccess` hook) because `quantityPrintQueued` is a
  * data-level outcome the caller branches on — `afterSuccess` only returns
  * `{ warning? }`, which would lose that signal. The caller
@@ -338,12 +319,7 @@ export const editPendingOrderItem = withActionPositional(
  * `result.skip_reasons[]` and get reduced to a single operator toast by
  * `cancelSkipReasonsToWarning`.
  *
- * Migrated to `withActionPositional` in WS-1b (2026-05-27).
- * Result shape change vs pre-WS-1b:
- *   - `data.cancelTickets / cancelSkipped` UNCHANGED
- *   - `data.printWarning` REMOVED — warning now lives on
- *     `result.meta.warning`. Caller `order-detail-sheet.tsx` updated in
- *     the same commit.
+ * The skip warning lives on `result.meta.warning`, not on `data`.
  */
 export const cancelOrder = withActionPositional(
   {

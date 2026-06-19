@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing settings branch table keeps Vietnamese operational copy inline */
-
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
@@ -23,20 +21,22 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { toggleBranchActive } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
 import { NetworkConfigDialog } from "./network-config-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
@@ -57,15 +57,15 @@ export function BranchTable({ branches }: BranchTableProps) {
   const [editBranch, setEditBranch] = useState<BranchRow | null>(null);
   const [networkBranch, setNetworkBranch] = useState<BranchRow | null>(null);
   const [isPending, startTransition] = useTransition();
+  const copy = messages.settings.branchTable;
 
   async function handleToggleActive(branch: BranchRow) {
     if (branch.is_active !== false) {
       const ok = await confirm({
-        title: "Tạm ngừng điểm vận hành?",
-        description:
-          "Điểm vận hành sẽ ngừng hoạt động cho đến khi được kích hoạt lại.",
-        details: [{ label: "Điểm vận hành", value: branch.name }],
-        confirmText: "Tạm ngừng",
+        title: copy.deactivateTitle,
+        description: copy.deactivateDescription,
+        details: [{ label: copy.operationPoint, value: branch.name }],
+        confirmText: copy.deactivate,
         variant: "destructive",
       });
       if (!ok) return;
@@ -78,113 +78,126 @@ export function BranchTable({ branches }: BranchTableProps) {
     });
   }
 
+  function BranchActions({ branch }: { branch: BranchRow }) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon-lg">
+            <IconDots className="size-4" />
+            <span className="sr-only">Menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {branch.is_active !== false && (
+            <>
+              <DropdownMenuItem asChild>
+                <Link href={`/br/${branch.id}/settings`}>
+                  <IconSliders className="mr-2 size-4" />
+                  {messages.settings.branch.hubTitle}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
+          <DropdownMenuItem onClick={() => setEditBranch(branch)}>
+            <IconPencil className="mr-2 size-4" />
+            {messages.settings.common.edit}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleToggleActive(branch)}>
+            {branch.is_active !== false ? (
+              <>
+                <IconToggleLeft className="mr-2 size-4" />
+                {copy.deactivate}
+              </>
+            ) : (
+              <>
+                <IconToggleRight className="mr-2 size-4" />
+                {copy.activate}
+              </>
+            )}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setNetworkBranch(branch)}>
+            <IconShield className="mr-2 size-4" />
+            {copy.networkGateway}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  const columns: DataTableColumn<BranchRow>[] = [
+    {
+      key: "name",
+      header: copy.operationPoint,
+      render: (branch) => <span className="font-medium">{branch.name}</span>,
+    },
+    {
+      key: "address",
+      header: copy.address,
+      className: "max-w-xs text-muted-foreground",
+      render: (branch) => (
+        <span className="block truncate" title={branch.address ?? undefined}>
+          {branch.address || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "phone",
+      header: copy.phone,
+      className: "text-muted-foreground",
+      render: (branch) => branch.phone || "—",
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (branch) => (
+        <Badge variant={branch.is_active !== false ? "default" : "outline"}>
+          {branch.is_active !== false
+            ? ACTIVE_STATE_LABELS_VI.active
+            : ACTIVE_STATE_LABELS_VI.inactive}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "w-12",
+      render: (branch) => <BranchActions branch={branch} />,
+    },
+  ];
+
   return (
     <>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Điểm vận hành</TableHead>
-              <TableHead className="hidden sm:table-cell">Địa chỉ</TableHead>
-              <TableHead className="hidden md:table-cell">Điện thoại</TableHead>
-              <TableHead>{FORM_VI.status}</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {branches.length === 0 && (
-              <TableEmptyStateRow
-                colSpan={5}
-                title="Chưa có điểm vận hành nào"
-                icon={
-                  <IconBuilding className="mx-auto size-8 text-muted-foreground" />
-                }
-              />
-            )}
-            {branches.map((branch) => (
-              <TableRow
-                key={branch.id}
-                className={isPending ? "opacity-60" : ""}
+      <DataTable
+        columns={columns}
+        data={branches}
+        getRowKey={(branch) => branch.id}
+        emptyTitle={copy.emptyTitle}
+        emptyIcon={
+          <IconBuilding className="mx-auto size-8 text-muted-foreground" />
+        }
+        rowClassName={() => (isPending ? "opacity-60" : undefined)}
+        mobileCardRender={(branch) => (
+          <Item variant="outline" className={isPending ? "opacity-60" : ""}>
+            <ItemContent>
+              <ItemTitle>{branch.name}</ItemTitle>
+              <ItemDescription>{branch.address || "—"}</ItemDescription>
+              <ItemDescription>{branch.phone || "—"}</ItemDescription>
+              <Badge
+                variant={branch.is_active !== false ? "default" : "outline"}
               >
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{branch.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="hidden max-w-xs sm:table-cell">
-                  <span
-                    className="block truncate text-muted-foreground"
-                    title={branch.address ?? undefined}
-                  >
-                    {branch.address || "—"}
-                  </span>
-                </TableCell>
-                <TableCell className="hidden text-muted-foreground md:table-cell">
-                  {branch.phone || "—"}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={branch.is_active !== false ? "default" : "outline"}
-                  >
-                    {branch.is_active !== false
-                      ? ACTIVE_STATE_LABELS_VI.active
-                      : ACTIVE_STATE_LABELS_VI.inactive}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon-lg">
-                        <IconDots className="size-4" />
-                        <span className="sr-only">Menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {branch.is_active !== false && (
-                        <>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/br/${branch.id}/settings`}>
-                              <IconSliders className="mr-2 size-4" />
-                              {messages.settings.branch.hubTitle}
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                        </>
-                      )}
-                      <DropdownMenuItem onClick={() => setEditBranch(branch)}>
-                        <IconPencil className="mr-2 size-4" />
-                        Chỉnh sửa
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleToggleActive(branch)}
-                      >
-                        {branch.is_active !== false ? (
-                          <>
-                            <IconToggleLeft className="mr-2 size-4" />
-                            Tạm ngừng
-                          </>
-                        ) : (
-                          <>
-                            <IconToggleRight className="mr-2 size-4" />
-                            Kích hoạt
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => setNetworkBranch(branch)}
-                      >
-                        <IconShield className="mr-2 size-4" />
-                        Cổng mạng POS/KDS
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                {branch.is_active !== false
+                  ? ACTIVE_STATE_LABELS_VI.active
+                  : ACTIVE_STATE_LABELS_VI.inactive}
+              </Badge>
+            </ItemContent>
+            <ItemActions>
+              <BranchActions branch={branch} />
+            </ItemActions>
+          </Item>
+        )}
+      />
 
       <BranchFormDialog
         open={!!editBranch}

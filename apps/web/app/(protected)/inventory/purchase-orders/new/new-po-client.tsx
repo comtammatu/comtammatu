@@ -17,12 +17,6 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -49,7 +43,7 @@ import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import {
   createPurchaseOrder,
   fetchPoSuggestions,
@@ -450,47 +444,40 @@ function SupplierSection({
   onNotesChange: (v: string) => void;
 }) {
   return (
-    <Card className="rounded-lg">
-      <CardHeader className="gap-1">
-        <CardTitle>{messages.inventory.po.headerInfoTitle}</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          {messages.inventory.po.headerInfoDescription}
-        </p>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-          <div className="space-y-1.5">
-            <Label>
-              {messages.inventory.po.supplierRequired}{" "}
-              <span className="text-destructive">*</span>
-            </Label>
-            <Combobox
-              value={supplierId}
-              onValueChange={onSupplierChange}
-              options={suppliers.map((s) => ({
-                value: String(s.id),
-                label: s.name,
-              }))}
-              placeholder={messages.inventory.po.supplierPlaceholder}
-              searchPlaceholder={
-                messages.inventory.po.supplierSearchPlaceholder
-              }
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="notes">{FORM_VI.notes}</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => onNotesChange(e.target.value)}
-              rows={3}
-              placeholder={messages.inventory.po.notesPlaceholder}
-              className="min-h-24"
-            />
-          </div>
+    <AppSection
+      title={messages.inventory.po.headerInfoTitle}
+      description={messages.inventory.po.headerInfoDescription}
+    >
+      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+        <div className="space-y-1.5">
+          <Label>
+            {messages.inventory.po.supplierRequired}{" "}
+            <span className="text-destructive">*</span>
+          </Label>
+          <Combobox
+            value={supplierId}
+            onValueChange={onSupplierChange}
+            options={suppliers.map((s) => ({
+              value: String(s.id),
+              label: s.name,
+            }))}
+            placeholder={messages.inventory.po.supplierPlaceholder}
+            searchPlaceholder={messages.inventory.po.supplierSearchPlaceholder}
+          />
         </div>
-      </CardContent>
-    </Card>
+        <div className="space-y-1.5">
+          <Label htmlFor="notes">{FORM_VI.notes}</Label>
+          <Textarea
+            id="notes"
+            value={notes}
+            onChange={(e) => onNotesChange(e.target.value)}
+            rows={3}
+            placeholder={messages.inventory.po.notesPlaceholder}
+            className="min-h-24"
+          />
+        </div>
+      </div>
+    </AppSection>
   );
 }
 
@@ -534,8 +521,8 @@ function SuggestionsPanel({
     procurementBranches.find((b) => b.id === branchId)?.name ?? "Chưa chọn";
   const showBranchSwitcher = canSwitchBranch && procurementBranches.length > 1;
   return (
-    <Card className="rounded-lg border-info/20 bg-info/5">
-      <CardContent className="pt-6">
+    <AppSection className="rounded-lg border-info/20 bg-info/5" contentFlush>
+      <div className="p-4 pt-6 md:p-5 md:pt-6">
         <Collapsible open={suggestionsOpen} onOpenChange={onOpenChange}>
           <div className="-m-4 md:-m-5">
             <CollapsibleTrigger asChild>
@@ -790,8 +777,8 @@ function SuggestionsPanel({
             </CollapsibleContent>
           </div>
         </Collapsible>
-      </CardContent>
-    </Card>
+      </div>
+    </AppSection>
   );
 }
 
@@ -886,8 +873,7 @@ function LineItemsSection({
 
   if (isCompact) {
     return (
-      <Card className="overflow-hidden rounded-lg">
-        <CardContent flush>
+      <div className="overflow-hidden rounded-lg border bg-card">
           <div className="-m-4 md:-m-5">
             <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5 md:px-4">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -1029,15 +1015,13 @@ function LineItemsSection({
                 )}
             </form>
           </div>
-        </CardContent>
-      </Card>
+      </div>
     );
   }
 
   // Desktop layout
   return (
-    <Card className="overflow-hidden rounded-lg">
-      <CardContent flush>
+    <div className="overflow-hidden rounded-lg border bg-card">
         <div className="-m-4 md:-m-5">
           {/* Table header */}
           <div className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 border-b bg-muted/30 px-3 py-2 md:px-4">
@@ -1211,8 +1195,7 @@ function LineItemsSection({
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 

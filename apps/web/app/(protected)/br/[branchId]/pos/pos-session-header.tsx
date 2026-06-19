@@ -39,8 +39,7 @@ interface PosSessionHeaderProps {
   contextLabel?: string;
   /**
    * Mobile: nút back arrow cạnh contextLabel — quay lại table gate / trang
-   * chính POS. Hidden khi undefined (desktop sidebar, hoặc menu chưa ready,
-   * hoặc đang appending — banner "Huỷ" đã serve role thoát).
+   * chính POS hoặc hủy append hiện tại. Hidden khi undefined.
    */
   onBack?: () => void;
 }

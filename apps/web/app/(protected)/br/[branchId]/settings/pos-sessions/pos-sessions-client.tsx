@@ -13,7 +13,10 @@ import {
   ChevronRight as IconChevronRight,
 } from "lucide-react";
 import { AppEmptyState, AppSection } from "@/components/surface";
-import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { formatVND } from "@comtammatu/shared/format";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import {
@@ -29,6 +32,8 @@ import { Progress } from "@comtammatu/ui/components/progress";
 import {
   Item,
   ItemContent,
+  ItemDescription,
+  ItemFooter,
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
@@ -41,14 +46,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { CloseSessionSheet } from "../../pos/close-session-sheet";
 import type { CartModifier, CartSide } from "../../pos/types";
 import type { PosSessionReport } from "./report-actions";
@@ -157,6 +154,61 @@ export function PosSessionsClient({
     orders.find((order) => order.id === selectedOrderId) ?? null;
 
   const summary = useMemo(() => buildSummary(orders), [orders]);
+  const orderColumns: DataTableColumn<PosSessionOrder>[] = [
+    {
+      key: "bill",
+      header: messages.settings.posSessions.bill,
+      className: "max-w-sm",
+      render: (order) => (
+        <div>
+          <div className="font-medium">{order.order_number}</div>
+          <div className="text-xs text-muted-foreground">
+            {order.order_type === "dine_in"
+              ? messages.settings.posSessions.tableContext(
+                  order.tables?.number ?? "-",
+                )
+              : messages.settings.posSessions.takeaway}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "time",
+      header: messages.settings.posSessions.time,
+      render: (order) => formatTime(order.created_at),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (order) => <StatusBadge domain="order" value={order.status} />,
+    },
+    {
+      key: "payment",
+      header: messages.settings.posSessions.payment,
+      render: (order) =>
+        order.payment_status === "paid" ? (
+          <span className="text-success">
+            {paymentMethodLabel(order.payment_method)}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">
+            {messages.settings.posSessions.unpaidShort}
+          </span>
+        ),
+    },
+    {
+      key: "total",
+      header: FORM_VI.total,
+      className: "text-right font-medium font-mono tabular-nums",
+      render: (order) => formatVND(order.total_amount),
+    },
+    {
+      key: "open",
+      header: "",
+      className: "w-8",
+      render: () => <IconChevronRight className="size-4 text-muted-foreground" />,
+    },
+  ];
 
   if (sessions.length === 0) {
     return (
@@ -233,72 +285,40 @@ export function PosSessionsClient({
                 orders.length,
               )}
               description={messages.settings.posSessions.billsDescription}
+              contentFlush
               contentScroll
             >
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{messages.settings.posSessions.bill}</TableHead>
-                    <TableHead>{messages.settings.posSessions.time}</TableHead>
-                    <TableHead>{FORM_VI.status}</TableHead>
-                    <TableHead>
-                      {messages.settings.posSessions.payment}
-                    </TableHead>
-                    <TableHead className="text-right">
-                      {FORM_VI.total}
-                    </TableHead>
-                    <TableHead className="w-8" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orders.map((order) => (
-                    <TableRow
-                      key={order.id}
-                      className="cursor-pointer hover:bg-accent/50"
-                      onClick={() => setSelectedOrderId(order.id)}
-                    >
-                      <TableCell className="max-w-sm">
-                        <div className="font-medium">{order.order_number}</div>
-                        <div className="text-xs text-muted-foreground">
+              <DataTable
+                columns={orderColumns}
+                data={orders}
+                getRowKey={(order) => order.id}
+                emptyTitle={messages.settings.posSessions.noBills}
+                onRowClick={(order) => setSelectedOrderId(order.id)}
+                mobileCardRender={(order) => (
+                  <Item variant="outline">
+                    <ItemHeader>
+                      <ItemContent>
+                        <ItemTitle>{order.order_number}</ItemTitle>
+                        <ItemDescription>
+                          {formatTime(order.created_at)} ·{" "}
                           {order.order_type === "dine_in"
                             ? messages.settings.posSessions.tableContext(
                                 order.tables?.number ?? "-",
                               )
                             : messages.settings.posSessions.takeaway}
-                        </div>
-                      </TableCell>
-                      <TableCell>{formatTime(order.created_at)}</TableCell>
-                      <TableCell>
-                        <StatusBadge domain="order" value={order.status} />
-                      </TableCell>
-                      <TableCell>
-                        {order.payment_status === "paid" ? (
-                          <span className="text-success">
-                            {paymentMethodLabel(order.payment_method)}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            {messages.settings.posSessions.unpaidShort}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-medium font-mono tabular-nums">
+                        </ItemDescription>
+                      </ItemContent>
+                      <IconChevronRight className="size-4 text-muted-foreground" />
+                    </ItemHeader>
+                    <ItemFooter>
+                      <StatusBadge domain="order" value={order.status} />
+                      <span className="font-mono text-sm font-semibold tabular-nums">
                         {formatVND(order.total_amount)}
-                      </TableCell>
-                      <TableCell>
-                        <IconChevronRight className="size-4 text-muted-foreground" />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {orders.length === 0 ? (
-                    <TableEmptyStateRow
-                      colSpan={6}
-                      title={messages.settings.posSessions.noBills}
-                      paddingClassName="py-8"
-                    />
-                  ) : null}
-                </TableBody>
-              </Table>
+                      </span>
+                    </ItemFooter>
+                  </Item>
+                )}
+              />
             </AppSection>
           </>
         ) : null}
@@ -553,6 +573,70 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
     1,
     ...category_breakdown.map((c) => c.revenue),
   );
+  const topItemColumns: DataTableColumn<
+    PosSessionReport["top_items"][number]
+  >[] = [
+    {
+      key: "name",
+      header: messages.settings.posSessions.itemName,
+      className: "font-medium",
+      render: (item) => item.name,
+    },
+    {
+      key: "type",
+      header: messages.settings.posSessions.itemType,
+      render: (item) => (
+        <Badge variant="outline">{ITEM_SOURCE_LABEL[item.source]}</Badge>
+      ),
+    },
+    {
+      key: "quantity",
+      header: messages.settings.posSessions.quantityShort,
+      className: "text-right font-mono tabular-nums",
+      render: (item) => item.qty,
+    },
+    {
+      key: "revenue",
+      header: messages.settings.posSessions.revenue,
+      className: "text-right font-mono tabular-nums",
+      render: (item) => formatVND(item.revenue),
+    },
+  ];
+  const discountColumns: DataTableColumn<
+    PosSessionReport["discounts"]["top_orders"][number]
+  >[] = [
+    {
+      key: "bill",
+      header: messages.settings.posSessions.bill,
+      className: "font-medium",
+      render: (order) => order.order_number,
+    },
+    {
+      key: "type",
+      header: messages.settings.posSessions.itemType,
+      render: (order) => (
+        <Badge variant="outline">
+          {order.type === "pct"
+            ? `${order.value ?? 0}%`
+            : order.type === "vnd"
+              ? "VND"
+              : "—"}
+        </Badge>
+      ),
+    },
+    {
+      key: "discount",
+      header: messages.settings.posSessions.discount,
+      className: "text-right font-mono tabular-nums",
+      render: (order) => `-${formatVND(order.amount)}`,
+    },
+    {
+      key: "note",
+      header: messages.settings.posSessions.note,
+      className: "max-w-sm whitespace-normal break-words text-muted-foreground",
+      render: (order) => order.note ?? "—",
+    },
+  ];
 
   return (
     <AppSection
@@ -592,47 +676,34 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
       </div>
 
       {top_items.length > 0 ? (
-        <div>
-          <SectionLabel>{messages.settings.posSessions.topItems}</SectionLabel>
-          <ScrollArea className="max-h-72">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    {messages.settings.posSessions.itemName}
-                  </TableHead>
-                  <TableHead>
-                    {messages.settings.posSessions.itemType}
-                  </TableHead>
-                  <TableHead className="text-right">
-                    {messages.settings.posSessions.quantityShort}
-                  </TableHead>
-                  <TableHead className="text-right">
-                    {messages.settings.posSessions.revenue}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {top_items.map((item, idx) => (
-                  <TableRow key={`${item.source}-${item.name}-${idx}`}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>
+          <div>
+            <SectionLabel>{messages.settings.posSessions.topItems}</SectionLabel>
+            <ScrollArea className="max-h-72">
+              <DataTable
+                columns={topItemColumns}
+                data={top_items}
+                getRowKey={(item) => `${item.source}-${item.name}`}
+                mobileCardRender={(item) => (
+                  <Item variant="outline">
+                    <ItemContent>
+                      <ItemTitle>{item.name}</ItemTitle>
+                      <ItemDescription>
+                        {ITEM_SOURCE_LABEL[item.source]} · {item.qty}
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemFooter>
                       <Badge variant="outline">
                         {ITEM_SOURCE_LABEL[item.source]}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {item.qty}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {formatVND(item.revenue)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </div>
+                      <span className="font-mono text-sm font-semibold tabular-nums">
+                        {formatVND(item.revenue)}
+                      </span>
+                    </ItemFooter>
+                  </Item>
+                )}
+              />
+            </ScrollArea>
+          </div>
       ) : (
         <NoteCallout label={messages.settings.posSessions.topItemsEmptyTitle}>
           {messages.settings.posSessions.topItemsEmptyDescription}
@@ -701,42 +772,31 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
               formatVND(discounts.total),
             )}
           </SectionLabel>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{messages.settings.posSessions.bill}</TableHead>
-                <TableHead>{messages.settings.posSessions.itemType}</TableHead>
-                <TableHead className="text-right">
-                  {messages.settings.posSessions.discount}
-                </TableHead>
-                <TableHead>{messages.settings.posSessions.note}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {discounts.top_orders.map((order) => (
-                <TableRow key={order.order_id}>
-                  <TableCell className="font-medium">
-                    {order.order_number}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {order.type === "pct"
-                        ? `${order.value ?? 0}%`
-                        : order.type === "vnd"
-                          ? "VND"
-                          : "—"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">
+          <DataTable
+            columns={discountColumns}
+            data={discounts.top_orders}
+            getRowKey={(order) => order.order_id}
+            mobileCardRender={(order) => (
+              <Item variant="outline">
+                <ItemContent>
+                  <ItemTitle>{order.order_number}</ItemTitle>
+                  <ItemDescription>{order.note ?? "—"}</ItemDescription>
+                </ItemContent>
+                <ItemFooter>
+                  <Badge variant="outline">
+                    {order.type === "pct"
+                      ? `${order.value ?? 0}%`
+                      : order.type === "vnd"
+                        ? "VND"
+                        : "—"}
+                  </Badge>
+                  <span className="font-mono text-sm font-semibold tabular-nums text-destructive">
                     -{formatVND(order.amount)}
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate text-muted-foreground">
-                    {order.note ?? "—"}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </span>
+                </ItemFooter>
+              </Item>
+            )}
+          />
         </div>
       ) : null}
     </AppSection>

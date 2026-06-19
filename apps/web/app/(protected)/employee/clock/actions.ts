@@ -44,7 +44,10 @@ const checklistToggleSchema = z.object({
   itemId: z.coerce.number().int().positive(),
   done: z.boolean(),
 });
-const managerClockOutSchema = z.object({}).strict();
+const attendanceActionSchema = z.object({
+  attendanceId: z.coerce.number().int().positive(),
+});
+const managerClockOutSchema = attendanceActionSchema.strict();
 
 function getTodayVN(): string {
   return getVNDateString();
@@ -437,9 +440,17 @@ export async function toggleChecklistItem(input: {
   return { success: true };
 }
 
-export async function requestCheckoutApproval(): Promise<
-  ActionResult<{ requestedAt: string }>
-> {
+export async function requestCheckoutApproval(
+  input: unknown,
+): Promise<ActionResult<{ requestedAt: string }>> {
+  const parsed = attendanceActionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
   const ctx = await getEmployeeContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
 
@@ -447,11 +458,10 @@ export async function requestCheckoutApproval(): Promise<
   const { data: record } = await service
     .from("attendance_records")
     .select("id")
+    .eq("id", parsed.data.attendanceId)
     .eq("employee_id", ctx.employeeId)
     .eq("tenant_id", ctx.claims.tenant_id)
     .is("check_out", null)
-    .order("date", { ascending: false })
-    .limit(1)
     .maybeSingle();
 
   if (!record) {
@@ -483,9 +493,17 @@ export async function requestCheckoutApproval(): Promise<
   return { success: true, data: { requestedAt } };
 }
 
-export async function cancelCheckoutRequest(): Promise<
-  ActionResult<{ cancelled: true }>
-> {
+export async function cancelCheckoutRequest(
+  input: unknown,
+): Promise<ActionResult<{ cancelled: true }>> {
+  const parsed = attendanceActionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
   const ctx = await getEmployeeContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
 
@@ -500,6 +518,7 @@ export async function cancelCheckoutRequest(): Promise<
       checkout_approval_target_roles: [],
       updated_at: now,
     })
+    .eq("id", parsed.data.attendanceId)
     .eq("employee_id", ctx.employeeId)
     .eq("tenant_id", ctx.claims.tenant_id)
     .eq("date", getTodayVN())
@@ -568,6 +587,7 @@ export async function clockOutManagerShift(
     .eq("employee_id", ctx.employeeId)
     .eq("tenant_id", ctx.claims.tenant_id)
     .eq("branch_id", ctx.branchId)
+    .eq("id", parsed.data.attendanceId)
     .eq("date", getTodayVN())
     .is("check_out", null)
     .select("id, check_out")
@@ -590,6 +610,25 @@ const approveCheckoutSchema = z.object({
   attendanceId: z.coerce.number().int().positive(),
   note: z.string().trim().max(500).optional(),
 });
+type ConsumptionStatusQuery = PromiseLike<{
+  data: { status: string | null } | null;
+  error: unknown;
+}> & {
+  select: (columns: string) => ConsumptionStatusQuery;
+  eq: (column: string, value: unknown) => ConsumptionStatusQuery;
+  maybeSingle: () => Promise<{
+    data: { status: string | null } | null;
+    error: unknown;
+  }>;
+};
+
+type ConsumptionChecklistQuery = PromiseLike<{
+  data: { id: number }[] | null;
+  error: unknown;
+}> & {
+  select: (columns: string) => ConsumptionChecklistQuery;
+  eq: (column: string, value: unknown) => ConsumptionChecklistQuery;
+};
 
 export async function approveCheckoutRequest(input: {
   attendanceId: number;
@@ -644,6 +683,63 @@ export async function approveCheckoutRequest(input: {
       success: false,
       error: "Không có quyền duyệt kết ca tại chi nhánh này.",
     };
+  }
+
+  const consumptionChecklistQuery = service as unknown as {
+    from: (table: string) => ConsumptionChecklistQuery;
+  };
+  const { data: consumptionChecklistItems, error: consumptionChecklistError } =
+    await consumptionChecklistQuery
+      .from("attendance_checklist_items")
+      .select("id")
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("attendance_record_id", parsed.data.attendanceId)
+      .eq("task_kind", "consumption_report");
+
+  if (consumptionChecklistError) {
+    console.error("[employee/clock] consumption checklist lookup failed", {
+      code: (consumptionChecklistError as { code?: unknown }).code,
+    });
+    return {
+      success: false,
+      error: "Không thể kiểm tra báo cáo tiêu hao trước khi duyệt kết ca.",
+    };
+  }
+
+  const requiresConsumptionReport =
+    (consumptionChecklistItems ?? []).length > 0;
+
+  const consumptionReportQuery = service as unknown as {
+    from: (table: string) => ConsumptionStatusQuery;
+  };
+  if (requiresConsumptionReport) {
+    const { data: consumptionReport, error: consumptionReportError } =
+      await consumptionReportQuery
+        .from("attendance_consumption_reports")
+        .select("status")
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("attendance_record_id", parsed.data.attendanceId)
+        .maybeSingle();
+
+    if (consumptionReportError) {
+      console.error("[employee/clock] consumption report lookup failed", {
+        code: (consumptionReportError as { code?: unknown }).code,
+      });
+      return {
+        success: false,
+        error: "Không thể kiểm tra báo cáo tiêu hao trước khi duyệt kết ca.",
+      };
+    }
+
+    if (
+      consumptionReport?.status !== "approved" &&
+      consumptionReport?.status !== "applied"
+    ) {
+      return {
+        success: false,
+        error: "Cần duyệt báo cáo tiêu hao trước khi duyệt kết ca.",
+      };
+    }
   }
 
   const { data: checkOutTime, error } = await service.rpc(

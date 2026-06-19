@@ -7,15 +7,10 @@ import {
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Progress } from "@comtammatu/ui/components/progress";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import { messages } from "@lib/messages";
+import { AppEmptyState } from "@/components/surface";
 import {
+  EmployeeActionBar,
   EmployeeMissingProfileEmpty,
   EmployeePage,
   EmployeePanel,
@@ -24,6 +19,10 @@ import {
 import { getTodayWorkState } from "../_lib/today-work-state";
 import { formatTimeVN } from "../_lib/vn-business-date";
 import { TasksClient } from "./tasks-client";
+import {
+  fetchConsumptionIngredients,
+  fetchConsumptionReportForAttendance,
+} from "../consumption-actions";
 
 const copy = messages.employee.home;
 const taskCopy = messages.employee.tasks;
@@ -76,7 +75,7 @@ export default async function EmployeeTasksPage() {
               },
             ]}
           />
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <EmployeeActionBar>
             <Button
               asChild
               size="touch-lg"
@@ -88,7 +87,7 @@ export default async function EmployeeTasksPage() {
                 {actionLabel}
               </Link>
             </Button>
-          </div>
+          </EmployeeActionBar>
         </EmployeePanel>
       </EmployeePage>
     );
@@ -120,14 +119,14 @@ export default async function EmployeeTasksPage() {
         >
           {state.status === "missing_branch" ||
           state.status === "not_required" ? null : (
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <EmployeeActionBar>
               <Button asChild size="touch-lg" className="w-full sm:w-fit">
                 <Link href="/employee/clock">
                   <IconCamera data-icon="inline-start" />
                   {copy.clockIn}
                 </Link>
               </Button>
-            </div>
+            </EmployeeActionBar>
           )}
         </EmployeePanel>
       </EmployeePage>
@@ -137,6 +136,27 @@ export default async function EmployeeTasksPage() {
   const allRequiredDone = state.checklist.requiredRemaining === 0;
   const checkoutPending = state.status === "checkout_pending";
   const checkoutDone = state.status === "done";
+  const consumptionChecklistItem = state.checklist.items.find(
+    (item) => item.taskKind === "consumption_report",
+  );
+  const hasConsumptionChecklist = Boolean(consumptionChecklistItem);
+  const [ingredientsResult, consumptionReportResult] =
+    hasConsumptionChecklist && state.attendance
+      ? await Promise.all([
+          fetchConsumptionIngredients(
+            consumptionChecklistItem?.templateItemId ?? null,
+          ),
+          fetchConsumptionReportForAttendance(state.attendance.id),
+        ])
+      : [null, null];
+  const consumptionIngredients =
+    ingredientsResult?.success && ingredientsResult.data
+      ? ingredientsResult.data
+      : [];
+  const consumptionReport =
+    consumptionReportResult?.success && consumptionReportResult.data
+      ? consumptionReportResult.data
+      : null;
   const progressValue =
     state.checklist.total > 0
       ? Math.round((state.checklist.done / state.checklist.total) * 100)
@@ -155,7 +175,9 @@ export default async function EmployeeTasksPage() {
         icon={allRequiredDone ? IconDone : IconListChecks}
         title={taskCopy.checklistTitle}
         headerHint={`${state.checklist.done}/${state.checklist.total}`}
-        tone={checkoutPending ? "warning" : allRequiredDone ? "success" : "info"}
+        tone={
+          checkoutPending ? "warning" : allRequiredDone ? "success" : "info"
+        }
         contentClassName="gap-3"
       >
         <EmployeeStatusStrip
@@ -175,7 +197,13 @@ export default async function EmployeeTasksPage() {
 
         <Progress
           value={progressValue}
-          tone={checkoutPending ? "warning" : allRequiredDone ? "success" : "default"}
+          tone={
+            checkoutPending
+              ? "warning"
+              : allRequiredDone
+                ? "success"
+                : "default"
+          }
           className="h-2"
         />
 
@@ -183,19 +211,17 @@ export default async function EmployeeTasksPage() {
           <TasksClient
             items={state.checklist.items}
             disabled={checkoutPending || checkoutDone}
+            attendanceId={state.attendance?.id ?? null}
+            consumptionIngredients={consumptionIngredients}
+            consumptionReport={consumptionReport}
+            showConsumptionReport={hasConsumptionChecklist}
           />
         ) : (
-          <Empty>
-            <EmptyMedia variant="icon">
-              <IconListChecks />
-            </EmptyMedia>
-            <EmptyHeader>
-              <EmptyTitle>{taskCopy.noChecklistTitle}</EmptyTitle>
-              <EmptyDescription>
-                {taskCopy.noChecklistDescription}
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+          <AppEmptyState
+            title={taskCopy.noChecklistTitle}
+            description={taskCopy.noChecklistDescription}
+            icon={<IconListChecks />}
+          />
         )}
 
         {allRequiredDone && !checkoutPending && !checkoutDone ? (

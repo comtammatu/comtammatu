@@ -8,15 +8,29 @@ Tài liệu tham chiếu dài hạn cho repo này.
 ## Đọc trước nếu mới vào dự án
 
 - [glossary.md](glossary.md)
+- [domain-encyclopedia.md](domain-encyclopedia.md)
+- [operational-data-contract.md](operational-data-contract.md)
 - [business-context.md](business-context.md)
 - [setup.md](setup.md)
 - [inventory.md](inventory.md)
+
+## Metric và contract tổng quan
+
+- [operational-data-contract.md](operational-data-contract.md): khung ngữ nghĩa
+  dữ liệu, metric, card, KPI, và contract tổng quan cho Admin, Inventory,
+  Finance, Reports
+
+## Bách khoa nghiệp vụ
+
+- [domain-encyclopedia.md](domain-encyclopedia.md): kiến thức nền cho Agent về
+  F&B ăn uống, bán hàng, tài chính vận hành, kho/giá vốn, thuế/HĐĐT, HKD,
+  doanh nghiệp, lao động, payroll, và quy tắc xử lý số liệu/chứng từ.
 
 ## Inventory
 
 - [inventory.md](inventory.md): canonical reference cho Inventory
 - [../spec/inventory-overview-diagrams.md](../spec/inventory-overview-diagrams.md): sơ đồ tổng quan business flow + data flow
-- [inventory-sop.md](inventory-sop.md): SOP vận hành pilot
+- [inventory-sop.md](inventory-sop.md): SOP vận hành Inventory hiện tại
 - [inventory-role-handoff.md](inventory-role-handoff.md): training 1 trang
 - [inventory-rbac-matrix.md](inventory-rbac-matrix.md): ma trận quyền Inventory
 
@@ -27,10 +41,9 @@ Tài liệu tham chiếu dài hạn cho repo này.
 - [labor-contracts.md](labor-contracts.md)
 - [payroll-pit.md](payroll-pit.md)
 - [third-party-integrations.md](third-party-integrations.md)
-- [competitive-analysis.md](competitive-analysis.md)
 
 ## Reference Hygiene
 
-Retired reference packs are not retained here. Promote current business rules to
-the canonical files above, or remove the retired note instead of linking to a
-retired pack.
+Superseded reference packs are not retained here. Promote current business rules
+to the canonical files above, or remove the non-current note instead of linking
+to a stale pack.

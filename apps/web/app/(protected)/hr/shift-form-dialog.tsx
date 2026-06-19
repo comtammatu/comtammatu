@@ -1,22 +1,10 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing HR shift form keeps operational copy inline */
+
+import { useMemo } from "react";
 import { z } from "zod";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import { FieldGroup } from "@comtammatu/ui/components/field";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { toast } from "@comtammatu/ui/components/sonner";
-import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
-import { TextField } from "@/components/form";
+import { FormDialog, TextField } from "@/components/form";
 import { createShift, updateShift } from "./actions";
 import type { ShiftRow } from "./page";
 
@@ -41,120 +29,85 @@ export function ShiftFormDialog({
   shift,
   onShiftSaved,
 }: ShiftFormDialogProps) {
-  const [isPending, startTransition] = useTransition();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const defaultValues = useMemo<ShiftFormValues>(
+    () => ({
+      name: shift?.name ?? "",
+      start_time: shift?.start_time?.slice(0, 5) ?? "",
+      end_time: shift?.end_time?.slice(0, 5) ?? "",
+    }),
+    [shift],
+  );
 
-  const form = useForm<ShiftFormValues>({
-    resolver: zodResolver(shiftSchema),
-    defaultValues: { name: "", start_time: "", end_time: "" },
-  });
-
-  useEffect(() => {
-    if (open) {
-      form.reset({
-        name: shift?.name ?? "",
-        start_time: shift?.start_time?.slice(0, 5) ?? "",
-        end_time: shift?.end_time?.slice(0, 5) ?? "",
-      });
-      setServerError(null);
-    }
-  }, [open, form, shift]);
-
-  function onValid(values: ShiftFormValues) {
-    startTransition(async () => {
-      setServerError(null);
-      const payload = {
-        name: values.name,
-        startTime: values.start_time,
-        endTime: values.end_time,
-      };
-      const result = shift
-        ? await updateShift({
-            ...payload,
-            shiftId: shift.id,
-            isActive: shift.is_active,
-          })
-        : await createShift(payload);
-      if (!result.success) {
-        setServerError(result.error ?? ERRORS_VI.fallback);
-        return;
-      }
-      toast.success(
-        shift ? "Đã cập nhật ca làm việc" : "Đã tạo ca làm việc mới",
-      );
-      const saved = result.data as ShiftRow | null;
-      onShiftSaved({
-        id: saved?.id ?? shift?.id ?? 0,
-        name: saved?.name ?? values.name,
-        start_time: saved?.start_time ?? values.start_time,
-        end_time: saved?.end_time ?? values.end_time,
-        is_active: saved?.is_active ?? shift?.is_active ?? true,
-      });
-      onOpenChange(false);
+  async function handleSubmit(values: ShiftFormValues) {
+    const payload = {
+      name: values.name,
+      startTime: values.start_time,
+      endTime: values.end_time,
+    };
+    const result = shift
+      ? await updateShift({
+          ...payload,
+          shiftId: shift.id,
+          isActive: shift.is_active,
+        })
+      : await createShift(payload);
+    if (!result.success) return result;
+    const saved = result.data as ShiftRow | null;
+    onShiftSaved({
+      id: saved?.id ?? shift?.id ?? 0,
+      name: saved?.name ?? values.name,
+      start_time: saved?.start_time ?? values.start_time,
+      end_time: saved?.end_time ?? values.end_time,
+      is_active: saved?.is_active ?? shift?.is_active ?? true,
     });
+    return result;
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {shift ? "Sửa ca làm việc" : "Thêm ca làm việc"}
-          </DialogTitle>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={shift ? "Sửa ca làm việc" : "Thêm ca làm việc"}
+      schema={shiftSchema}
+      defaultValues={defaultValues}
+      entityKey={shift?.id ?? "new"}
+      onSubmit={handleSubmit}
+      successMessage={
+        shift ? "Đã cập nhật ca làm việc" : "Đã tạo ca làm việc mới"
+      }
+      submitLabel={shift ? "Lưu ca" : "Tạo ca"}
+      contentClassName="sm:max-w-md"
+    >
+      {(form) => (
+        <>
+          <TextField
+            control={form.control}
+            name="name"
+            label="Tên ca"
+            placeholder="Ca sáng, Ca chiều, Ca tối..."
+            required
+          />
 
-        <form onSubmit={form.handleSubmit(onValid)} noValidate>
-          <FieldGroup>
+          <div className="grid grid-cols-2 gap-4">
             <TextField
               control={form.control}
-              name="name"
-              label="Tên ca"
-              placeholder="Ca sáng, Ca chiều, Ca tối..."
+              name="start_time"
+              label="Giờ bắt đầu"
+              type="time"
+              placeholder="06:00"
               required
             />
-
-            <div className="grid grid-cols-2 gap-4">
-              <TextField
-                control={form.control}
-                name="start_time"
-                label="Giờ bắt đầu"
-                type="time"
-                placeholder="06:00"
-                required
-              />
-              <TextField
-                control={form.control}
-                name="end_time"
-                label="Giờ kết thúc"
-                type="time"
-                placeholder="21:00"
-                required
-              />
-            </div>
-
-            {serverError && (
-              <p className="text-sm text-destructive" role="alert">
-                {serverError}
-              </p>
-            )}
-          </FieldGroup>
-
-          <DialogFooter className="pt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending && <Spinner className="mr-2" />}
-              {shift ? "Lưu ca" : "Tạo ca"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <TextField
+              control={form.control}
+              name="end_time"
+              label="Giờ kết thúc"
+              type="time"
+              placeholder="21:00"
+              required
+            />
+          </div>
+        </>
+      )}
+    </FormDialog>
   );
 }

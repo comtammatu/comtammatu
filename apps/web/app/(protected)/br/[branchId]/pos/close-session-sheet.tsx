@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: POS close-session sheet keeps cashier reconciliation copy inline */
+
 import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
@@ -7,7 +9,6 @@ import { formatVND } from "@comtammatu/shared/format";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
@@ -20,6 +21,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { AppSection } from "@/components/surface";
 import {
   ArrowLeft as IconArrowLeft,
   ArrowRight as IconArrowRight,
@@ -194,54 +196,48 @@ export function CloseSessionSheet({
 
             {step === "reconcile" && summary && (
               <div className="flex flex-col gap-4">
-                <Card size="sm">
-                  <CardContent>
-                    <div className="flex flex-col gap-3 text-base">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Kỳ vọng tồn quỹ
-                        </span>
-                        <span className="font-medium tabular-nums">
-                          {formatVND(summary.expected_cash)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Đã đếm được
-                        </span>
-                        <span className="font-medium tabular-nums">
-                          {formatVND(summary.closing_cash)}
-                        </span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Chênh lệch
-                        </span>
-                        <span
-                          className={cn(
-                            "text-base font-bold tabular-nums",
-                            diffToneClass(
-                              summary.cash_difference,
-                              summary.variance_threshold,
-                            ),
-                          )}
-                        >
-                          {summary.cash_difference >= 0 ? "+" : ""}
-                          {formatVND(summary.cash_difference)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Số đơn trong ca
-                        </span>
-                        <span className="font-medium tabular-nums">
-                          {summary.order_count}
-                        </span>
-                      </div>
+                <AppSection size="sm" contentClassName="gap-3 text-base">
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Kỳ vọng tồn quỹ
+                      </span>
+                      <span className="font-medium tabular-nums">
+                        {formatVND(summary.expected_cash)}
+                      </span>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Đã đếm được</span>
+                      <span className="font-medium tabular-nums">
+                        {formatVND(summary.closing_cash)}
+                      </span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Chênh lệch</span>
+                      <span
+                        className={cn(
+                          "text-base font-bold tabular-nums",
+                          diffToneClass(
+                            summary.cash_difference,
+                            summary.variance_threshold,
+                          ),
+                        )}
+                      >
+                        {summary.cash_difference >= 0 ? "+" : ""}
+                        {formatVND(summary.cash_difference)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Số đơn trong ca
+                      </span>
+                      <span className="font-medium tabular-nums">
+                        {summary.order_count}
+                      </span>
+                    </div>
+                  </>
+                </AppSection>
 
                 <Alert
                   className={cn(

@@ -417,8 +417,7 @@
 /* Brand decoration: the three Concept-01 identity patterns as seamless,
  * tileable SVG (art in /brand/patterns). Use only as decorative footer
  * strips, packaging trim, or section separators — never as a background
- * behind body text. `brand-strip` is a ready-made 40px divider band.
- * Named `brand-` (not the retired `matu-*` layer) per legacy-matu-pilot rule. */
+ * behind body text. `brand-strip` is a ready-made 40px divider band. */
 @utility brand-pattern-caro {
   background-image: url("/brand/patterns/ke-caro.svg");
   background-repeat: repeat;

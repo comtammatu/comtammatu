@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: menu item table keeps management copy inline */
+
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import {
@@ -23,20 +25,24 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemMedia,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { toggleItemActive } from "./actions";
 import { ItemFormDialog } from "./item-form-dialog";
 import { ItemDetailDialog } from "./item-detail-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import type { CategoryRow } from "./category-table";
-import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 export interface ItemRow {
@@ -85,128 +91,150 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
     });
   }
 
+  function renderImage(item: ItemRow) {
+    return item.image_url ? (
+      <Image
+        src={item.image_url}
+        alt={item.name}
+        width={48}
+        height={48}
+        className="size-12 rounded-md object-cover"
+        unoptimized
+      />
+    ) : (
+      <div className="flex size-12 items-center justify-center rounded-md bg-muted text-muted-foreground">
+        <IconImage className="size-5" />
+      </div>
+    );
+  }
+
+  function renderActions(item: ItemRow) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="rounded-full">
+            <IconDots className="size-4" />
+            <span className="sr-only">Menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setEditItem(item)}>
+            <IconPencil className="mr-2 size-4" />
+            Chỉnh sửa
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setDetailItem(item)}>
+            <IconSettings2 className="mr-2 size-4" />
+            Biến thể & Tùy chọn
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => void handleToggleActive(item)}>
+            {item.is_active ? (
+              <>
+                <IconToggleLeft className="mr-2 size-4" />
+                Vô hiệu hóa
+              </>
+            ) : (
+              <>
+                <IconToggleRight className="mr-2 size-4" />
+                Kích hoạt
+              </>
+            )}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  const columns: DataTableColumn<ItemRow>[] = [
+    {
+      key: "image",
+      header: "Ảnh",
+      className: "w-16",
+      render: (item) => renderImage(item),
+    },
+    {
+      key: "name",
+      header: "Tên món",
+      render: (item) => (
+        <div>
+          <span className="font-medium">{item.name}</span>
+          {item.description && (
+            <p className="text-xs text-muted-foreground line-clamp-1">
+              {item.description}
+            </p>
+          )}
+          <div className="mt-1 space-y-1 sm:hidden">
+            <p className="text-xs text-muted-foreground">{item.category_name}</p>
+            <p className="text-xs font-medium text-foreground">
+              {formatVND(item.base_price)}
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "category",
+      header: FORM_VI.category,
+      className: "hidden sm:table-cell",
+      render: (item) => <Badge variant="secondary">{item.category_name}</Badge>,
+    },
+    {
+      key: "price",
+      header: FORM_VI.price,
+      className: "hidden text-right font-mono md:table-cell",
+      render: (item) => formatVND(item.base_price),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (item) => (
+        <Badge variant={item.is_active ? "default" : "outline"}>
+          {item.is_active
+            ? ACTIVE_STATE_LABELS_VI.active
+            : ACTIVE_STATE_LABELS_VI.inactive}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "w-12",
+      render: (item) => renderActions(item),
+    },
+  ];
+
   return (
     <>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-16">Ảnh</TableHead>
-              <TableHead>Tên món</TableHead>
-              <TableHead className="hidden sm:table-cell">
-                {FORM_VI.category}
-              </TableHead>
-              <TableHead className="hidden md:table-cell text-right">
-                {FORM_VI.price}
-              </TableHead>
-              <TableHead>{FORM_VI.status}</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.length === 0 && (
-              <TableEmptyStateRow
-                colSpan={6}
-                title="Chưa có món ăn nào"
-                icon={
-                  <IconToolsKitchen className="mx-auto size-8 text-muted-foreground" />
-                }
-              />
-            )}
-            {items.map((item) => (
-              <TableRow key={item.id} className={isPending ? "opacity-60" : ""}>
-                <TableCell>
-                  {item.image_url ? (
-                    <Image
-                      src={item.image_url}
-                      alt={item.name}
-                      width={48}
-                      height={48}
-                      className="size-12 rounded-md object-cover"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="flex size-12 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                      <IconImage className="size-5" />
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <span className="font-medium">{item.name}</span>
-                    {item.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-1">
-                        {item.description}
-                      </p>
-                    )}
-                    <div className="mt-1 space-y-1 sm:hidden">
-                      <p className="text-xs text-muted-foreground">
-                        {item.category_name}
-                      </p>
-                      <p className="text-xs font-medium text-foreground">
-                        {formatVND(item.base_price)}
-                      </p>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  <Badge variant="secondary">{item.category_name}</Badge>
-                </TableCell>
-                <TableCell className="hidden md:table-cell text-right font-mono">
-                  {formatVND(item.base_price)}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={item.is_active ? "default" : "outline"}>
-                    {item.is_active
-                      ? ACTIVE_STATE_LABELS_VI.active
-                      : ACTIVE_STATE_LABELS_VI.inactive}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-full"
-                      >
-                        <IconDots className="size-4" />
-                        <span className="sr-only">Menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setEditItem(item)}>
-                        <IconPencil className="mr-2 size-4" />
-                        Chỉnh sửa
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setDetailItem(item)}>
-                        <IconSettings2 className="mr-2 size-4" />
-                        Biến thể & Tùy chọn
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => void handleToggleActive(item)}
-                      >
-                        {item.is_active ? (
-                          <>
-                            <IconToggleLeft className="mr-2 size-4" />
-                            Vô hiệu hóa
-                          </>
-                        ) : (
-                          <>
-                            <IconToggleRight className="mr-2 size-4" />
-                            Kích hoạt
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={items}
+        getRowKey={(item) => item.id}
+        emptyTitle="Chưa có món ăn nào"
+        emptyIcon={<IconToolsKitchen className="size-8 text-muted-foreground" />}
+        rowClassName={() => (isPending ? "opacity-60" : undefined)}
+        mobileCardRender={(item) => (
+          <Item variant="outline">
+            <ItemMedia variant="image">{renderImage(item)}</ItemMedia>
+            <ItemContent>
+              <ItemTitle>{item.name}</ItemTitle>
+              <ItemDescription>
+                {item.category_name} · {formatVND(item.base_price)}
+              </ItemDescription>
+              {item.description ? (
+                <ItemDescription>{item.description}</ItemDescription>
+              ) : null}
+            </ItemContent>
+            <ItemFooter>
+              <Badge variant={item.is_active ? "default" : "outline"}>
+                {item.is_active
+                  ? ACTIVE_STATE_LABELS_VI.active
+                  : ACTIVE_STATE_LABELS_VI.inactive}
+              </Badge>
+              <ItemActions>{renderActions(item)}</ItemActions>
+            </ItemFooter>
+          </Item>
+        )}
+      />
 
       <ItemFormDialog
         open={!!editItem}

@@ -38,8 +38,6 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 - Checkbox "Xuất hóa đơn điện tử" (mặc định KHÔNG tick).
 - 3 nút bottom: **Hủy**, **Đã thanh toán** (đỏ, lớn), **In tạm tính**.
 
-> ⚠️ Nếu thấy alert vàng "Đơn chưa đánh dấu đã phục vụ" — vẫn thanh toán được. Alert chỉ nhắc nhở: nếu đã bấm "Đã phục vụ" trước đó, alert biến mất.
-
 ### Bước 2 — Nhập tiền khách đưa (cho tiền mặt)
 
 ![Bước 2 - Cash amount](../mockups/pos-05/pos-05-step-02-cash-amount.png)
@@ -199,4 +197,3 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 | Capture script           | [apps/web/e2e/guides/pos-05-payment.guide.ts](../../../../apps/web/e2e/guides/pos-05-payment.guide.ts) |
 | Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-05"`                                         |
 | Cập nhật mockup gần nhất | 2026-04-27                                                                                             |
-| Người maintain           | _TBD_                                                                                                  |

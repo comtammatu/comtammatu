@@ -149,7 +149,7 @@ Updated: `2026-06-13`
 - `expected next step`:
   - sau `received`, UI phải gợi đủ rõ sang `Cấp bếp`;
   - sau phiếu `Cấp bếp` (`Kho CN → Bếp CN`), user hiểu tồn Kho CN giảm và tồn Bếp CN/default consumption tăng;
-  - sau stocktake, user hiểu variance/kết quả chốt; conflict/recount S13b không nằm trong daily pilot.
+  - sau stocktake, user hiểu variance/kết quả chốt; conflict/recount S13b không nằm trong daily UI.
 - `handoff`: báo chênh lệch lớn hoặc expiry risk cho OPS/owner
 - `success`:
   - đây là journey branch quan trọng nhất và không được cần “người biết hệ thống trước” mới dùng được;

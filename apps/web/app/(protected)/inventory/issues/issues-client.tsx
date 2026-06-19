@@ -2,9 +2,10 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing inventory issue surface keeps localized JSX copy until message-catalog extraction */
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import {
   ArrowRight as IconArrowRight,
   FileDown as IconFileDownload,
@@ -16,19 +17,10 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
   SelectContent,
@@ -37,11 +29,9 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Textarea } from "@comtammatu/ui/components/textarea";
-import { cn } from "@comtammatu/ui";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { downloadCsv } from "@/_lib/download-file";
 import { matchesSearch } from "@lib/search";
+import { FormDialog, SelectField, TextareaField } from "@/components/form";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import {
   DataTable,
@@ -49,6 +39,7 @@ import {
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
+import { getInventoryStatusLabel } from "../_lib/ui";
 import { tNav } from "../_lib/dictionary";
 import { createStockIssueDraft } from "../issue-actions";
 
@@ -76,19 +67,17 @@ const ISSUE_TYPES = [
   { value: "other", label: "Khác" },
 ] as const;
 
-type IssueTypeValue = (typeof ISSUE_TYPES)[number]["value"];
-
 function issueTypeLabel(type: string, branchKind: string | null): string {
   void branchKind;
   return ISSUE_TYPES.find((o) => o.value === type)?.label ?? type;
 }
 
-const STATUS_FILTER_OPTIONS = [
-  { value: "all", label: "Tất cả trạng thái" },
-  { value: "draft", label: "Nháp" },
-  { value: "confirmed", label: "Đã xác nhận" },
-  { value: "cancelled", label: "Đã hủy" },
-];
+const STATE_FILTER_OPTIONS = ["draft", "confirmed", "cancelled"].map(
+  (value) => ({
+    value,
+    label: getInventoryStatusLabel(value),
+  }),
+);
 
 // Filter options show generic labels (no branch context at the filter level).
 const TYPE_FILTER_OPTIONS = [
@@ -100,6 +89,14 @@ const TYPE_FILTER_OPTIONS = [
 
 const CREATE_ISSUE_DIALOG_DESCRIPTION =
   "Chọn điểm vận hành, loại xuất và ghi chú trước khi tạo phiếu nháp.";
+
+const createIssueSchema = z.object({
+  branchId: z.string().min(1, { error: "Chọn chi nhánh để tạo phiếu xuất." }),
+  issueType: z.enum(["consumption", "writeoff", "other"]),
+  notes: z.string().trim().optional(),
+});
+
+type CreateIssueValues = z.infer<typeof createIssueSchema>;
 
 function csvCell(value: string | number): string {
   const raw = String(value);
@@ -127,17 +124,18 @@ export function IssuesClient({
   defaultBranchId: number | null;
 }) {
   const router = useRouter();
-  const isMobile = useIsMobile();
   const [activeStatus, setActiveStatus] = useState("all");
   const [activeType, setActiveType] = useState("all");
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
-  const [branchId, setBranchId] = useState(
-    defaultBranchId ? String(defaultBranchId) : "",
+  const createIssueDefaultValues = useMemo<CreateIssueValues>(
+    () => ({
+      branchId: defaultBranchId ? String(defaultBranchId) : "",
+      issueType: "consumption",
+      notes: "",
+    }),
+    [defaultBranchId],
   );
-  const [issueType, setIssueType] = useState<IssueTypeValue>("consumption");
-  const [notes, setNotes] = useState("");
-  const [isPending, startTransition] = useTransition();
   // Capability-gated only — the CSV builds client-side and downloads fine
   // on phones; hiding it by breakpoint forced warehouse staff back to a
   // desktop just to press one button.
@@ -158,32 +156,19 @@ export function IssuesClient({
     return result;
   }, [activeStatus, activeType, search, issues]);
 
-  function handleCreate(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const parsedBranchId = Number(branchId);
-    if (!parsedBranchId) {
-      toast.error("Chọn chi nhánh để tạo phiếu xuất.");
-      return;
+  async function handleCreate(values: CreateIssueValues) {
+    const res = await createStockIssueDraft({
+      branchId: Number(values.branchId),
+      issueType: values.issueType,
+      notes: values.notes?.trim() || undefined,
+    });
+
+    if (res.success && res.data) {
+      const newId = (res.data as { id: number }).id;
+      router.push(`/inventory/issues/${newId}`);
     }
 
-    startTransition(async () => {
-      const res = await createStockIssueDraft({
-        branchId: parsedBranchId,
-        issueType,
-        notes: notes.trim() || undefined,
-      });
-
-      if (!res.success || !res.data) {
-        toast.error(res.error ?? "Không thể tạo phiếu xuất.");
-        return;
-      }
-
-      const newId = (res.data as { id: number }).id;
-      toast.success(`Đã tạo phiếu PXK-${newId}.`);
-      setCreateOpen(false);
-      setNotes("");
-      router.push(`/inventory/issues/${newId}`);
-    });
+    return res;
   }
 
   const hasActiveFilters =
@@ -233,7 +218,8 @@ export function IssuesClient({
             <SelectValue placeholder="Tất cả trạng thái" />
           </SelectTrigger>
           <SelectContent>
-            {STATUS_FILTER_OPTIONS.map((opt) => (
+            <SelectItem value="all">Tất cả trạng thái</SelectItem>
+            {STATE_FILTER_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
               </SelectItem>
@@ -254,7 +240,7 @@ export function IssuesClient({
           </SelectContent>
         </Select>
 
-        <InputGroup className={cn("flex-1", isMobile && "h-12 basis-full")}>
+        <InputGroup className="h-12 flex-1 basis-full sm:h-10 sm:basis-auto">
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -348,7 +334,7 @@ export function IssuesClient({
   const renderIssueCard = (item: IssueRow) => (
     <InteractiveCard asChild minHeight="mobile" padding="default">
       <Link href={`/inventory/issues/${item.id}`} className="block">
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="font-mono text-sm font-semibold">{item.code}</span>
             <StatusBadge status={item.status} size="sm" />
@@ -357,8 +343,7 @@ export function IssuesClient({
             {item.branchName}
           </p>
           <p className="text-xs text-muted-foreground">
-            {issueTypeLabel(item.type, item.branchKind)} &middot;{" "}
-            {item.date}
+            {issueTypeLabel(item.type, item.branchKind)} &middot; {item.date}
           </p>
         </div>
         <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
@@ -367,7 +352,7 @@ export function IssuesClient({
   );
 
   return (
-    <AppPage width={isMobile ? "narrow" : "wide"}>
+    <AppPage width="wide">
       <AppPageHeader
         eyebrow="Kho hàng"
         title={tNav("issues", "navigation")}
@@ -406,95 +391,61 @@ export function IssuesClient({
         mobileCardRender={renderIssueCard}
       />
 
-      <Dialog
+      <FormDialog
         open={createOpen}
-        onOpenChange={(open) => {
-          setCreateOpen(open);
-          if (open) {
-            setBranchId(defaultBranchId ? String(defaultBranchId) : "");
-            setIssueType("consumption");
-            setNotes("");
-          }
-        }}
+        onOpenChange={setCreateOpen}
+        title="Tạo phiếu xuất kho"
+        description={CREATE_ISSUE_DIALOG_DESCRIPTION}
+        schema={createIssueSchema}
+        defaultValues={createIssueDefaultValues}
+        entityKey={defaultBranchId ?? "new-issue"}
+        onSubmit={handleCreate}
+        successMessage="Đã tạo phiếu xuất."
+        submitLabel="Tạo phiếu"
+        cancelLabel={ACTIONS_VI.cancel}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tạo phiếu xuất kho</DialogTitle>
-            <DialogDescription>
-              {CREATE_ISSUE_DIALOG_DESCRIPTION}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Chi nhánh *</Label>
-              <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={BRANCH_VI.select} />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={String(branch.id)}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Loại xuất *</Label>
-              <Select
-                value={issueType}
-                onValueChange={(value) => setIssueType(value as IssueTypeValue)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ISSUE_TYPES.map((option) => {
-                    const selectedKind =
-                      branches.find((b) => b.id === Number(branchId))
-                        ?.branchKind ?? null;
-                    const label =
-                      option.value === "consumption"
-                        ? issueTypeLabel("consumption", selectedKind)
-                        : option.label;
-                    return (
-                      <SelectItem key={option.value} value={option.value}>
-                        {label}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="issue-notes">{FORM_VI.notes}</Label>
-              <Textarea
-                id="issue-notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+        {(form) => {
+          const selectedBranchId = form.watch("branchId");
+          const selectedKind =
+            branches.find((branch) => branch.id === Number(selectedBranchId))
+              ?.branchKind ?? null;
+          return (
+            <>
+              <SelectField
+                control={form.control}
+                name="branchId"
+                label={BRANCH_VI.long}
+                placeholder={BRANCH_VI.select}
+                options={branches.map((branch) => ({
+                  value: String(branch.id),
+                  label: branch.name,
+                }))}
+                required
+              />
+              <SelectField
+                control={form.control}
+                name="issueType"
+                label="Loại xuất"
+                options={ISSUE_TYPES.map((option) => ({
+                  value: option.value,
+                  label:
+                    option.value === "consumption"
+                      ? issueTypeLabel("consumption", selectedKind)
+                      : option.label,
+                }))}
+                required
+              />
+              <TextareaField
+                control={form.control}
+                name="notes"
+                label={FORM_VI.notes}
                 rows={3}
                 placeholder="Nhập ghi chú cho phiếu xuất"
               />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setCreateOpen(false)}
-              >
-                {ACTIONS_VI.cancel}
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? "Đang tạo..." : "Tạo phiếu"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            </>
+          );
+        }}
+      </FormDialog>
     </AppPage>
   );
 }

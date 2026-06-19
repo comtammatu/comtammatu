@@ -178,4 +178,3 @@ Sau khi cashier chạm "Đã thanh toán" (POS-05), toast hiện trong **1 trong
 | Capture script           | [apps/web/e2e/guides/pos-08-exceptions.guide.ts](../../../../apps/web/e2e/guides/pos-08-exceptions.guide.ts) |
 | Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-08"`                                               |
 | Cập nhật mockup gần nhất | 2026-04-27                                                                                                   |
-| Người maintain           | _TBD_                                                                                                        |

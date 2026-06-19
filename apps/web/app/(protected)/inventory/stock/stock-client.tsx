@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import { formatVNDate } from "@comtammatu/shared/time";
 import {
   ArrowRightToLine as IconArrowBarRight,
@@ -17,15 +18,6 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -37,11 +29,16 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { toast } from "@comtammatu/ui/components/sonner";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
+import {
+  FormDialog,
+  NumberField,
+  SelectField,
+  TextareaField,
+  TextField,
+} from "@/components/form";
 import { AppEmptyState, AppPageHeader, AppSection } from "@/components/surface";
 import {
   DataTable,
@@ -53,7 +50,6 @@ import {
 } from "../_components/inventory-page-layout";
 import { StatusBadge } from "../_components/status-badge";
 import { InteractiveCard } from "../_components/interactive-card";
-import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatDateTime, formatQty, formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
@@ -164,6 +160,27 @@ const quickIssueTypeOptions: {
     reasonPlaceholder: stockCopy.quickIssue.placeholders.other,
   },
 ];
+
+function createQuickIssueSchema(maxQuantity: number) {
+  return z.object({
+    issueType: z.enum(["consumption", "writeoff", "other"]),
+    quantity: z
+      .string()
+      .refine((value) => Number(value) > 0, {
+        error: stockCopy.quickIssue.quantityPositive,
+      })
+      .refine((value) => Number(value) <= maxQuantity, {
+        error: stockCopy.quickIssue.quantityExceedsStock,
+      }),
+    unit: z.string().trim().min(1, { error: stockCopy.quickIssue.unitRequired }),
+    reason: z
+      .string()
+      .trim()
+      .min(1, { error: stockCopy.quickIssue.reasonRequired }),
+  });
+}
+
+type QuickIssueFormValues = z.infer<ReturnType<typeof createQuickIssueSchema>>;
 
 const STATUS_PRIORITY: Record<StockIngredient["status"], number> = {
   out: 0,
@@ -336,177 +353,125 @@ function QuickStockIssueDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [issueType, setIssueType] = useState<QuickIssueType>(target.issueType);
-  const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState(target.ingredient.unit);
-  const [reason, setReason] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const activeIssueType = quickIssueTypeOptions.find(
-    (option) => option.value === issueType,
+  const schema = useMemo(
+    () => createQuickIssueSchema(target.ingredient.qty),
+    [target.ingredient.qty],
+  );
+  const defaultValues = useMemo<QuickIssueFormValues>(
+    () => ({
+      issueType: target.issueType,
+      quantity: "",
+      unit: target.ingredient.unit,
+      reason: "",
+    }),
+    [target.ingredient.unit, target.issueType],
   );
   const title =
-    issueType === "writeoff"
+    target.issueType === "writeoff"
       ? stockCopy.quickIssue.writeoffTitle
       : stockCopy.quickIssue.issueTitle;
 
-  function resetForm() {
-    setIssueType(target.issueType);
-    setQuantity("");
-    setUnit(target.ingredient.unit);
-    setReason("");
-  }
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const parsedQuantity = Number(quantity);
-    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
-      toast.error(stockCopy.quickIssue.quantityPositive);
-      return;
-    }
-    if (parsedQuantity > target.ingredient.qty) {
-      toast.error(stockCopy.quickIssue.quantityExceedsStock);
-      return;
-    }
-    if (!unit.trim()) {
-      toast.error(stockCopy.quickIssue.unitRequired);
-      return;
-    }
-    if (!reason.trim()) {
-      toast.error(stockCopy.quickIssue.reasonRequired);
-      return;
-    }
-
-    startTransition(async () => {
-      const draftRes = await createStockIssueDraft({
-        branchId,
-        issueType,
-        notes: stockCopy.quickIssue.draftNotes(target.ingredient.name),
-      });
-      if (!draftRes.success || !draftRes.data) {
-        toast.error(draftRes.error ?? stockCopy.quickIssue.createDraftFailed);
-        return;
-      }
-
-      const issueId = Number((draftRes.data as { id: number }).id);
-      const lineRes = await upsertStockIssueLine({
-        issueId,
-        ingredientId: target.ingredient.id,
-        quantity: parsedQuantity,
-        unit: unit.trim(),
-        reason: reason.trim(),
-      });
-      if (!lineRes.success) {
-        toast.error(lineRes.error ?? stockCopy.quickIssue.addLineFailed);
-        router.push(`/inventory/issues/${issueId}`);
-        return;
-      }
-
-      toast.success(stockCopy.quickIssue.created(target.ingredient.name));
-      onOpenChange(false);
-      resetForm();
-      router.push(`/inventory/issues/${issueId}`);
+  async function handleSubmit(values: QuickIssueFormValues) {
+    const draftRes = await createStockIssueDraft({
+      branchId,
+      issueType: values.issueType,
+      notes: stockCopy.quickIssue.draftNotes(target.ingredient.name),
     });
+    if (!draftRes.success || !draftRes.data) {
+      return {
+        success: false,
+        error: draftRes.error ?? stockCopy.quickIssue.createDraftFailed,
+      };
+    }
+
+    const issueId = Number((draftRes.data as { id: number }).id);
+    const lineRes = await upsertStockIssueLine({
+      issueId,
+      ingredientId: target.ingredient.id,
+      quantity: Number(values.quantity),
+      unit: values.unit.trim(),
+      reason: values.reason.trim(),
+    });
+    if (!lineRes.success) {
+      router.push(`/inventory/issues/${issueId}`);
+      return {
+        success: false,
+        error: lineRes.error ?? stockCopy.quickIssue.addLineFailed,
+      };
+    }
+
+    router.push(`/inventory/issues/${issueId}`);
+    return { success: true };
   }
 
   return (
-    <Dialog
+    <FormDialog
       open={open}
-      onOpenChange={(nextOpen) => {
-        onOpenChange(nextOpen);
-        if (!nextOpen) resetForm();
-      }}
+      onOpenChange={onOpenChange}
+      title={title}
+      schema={schema}
+      defaultValues={defaultValues}
+      entityKey={`${target.ingredient.id}-${target.issueType}`}
+      onSubmit={handleSubmit}
+      successMessage={stockCopy.quickIssue.created(target.ingredient.name)}
+      submitLabel={stockCopy.quickIssue.createSlip}
+      cancelLabel={ACTIONS_VI.cancel}
+      contentClassName="sm:max-w-md"
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="rounded-md border bg-muted/20 px-3 py-2">
-            <p className="font-medium">{target.ingredient.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {stockCopy.quickIssue.stockLine(
-                target.ingredient.sku,
-                target.ingredient.category,
-                formatQty(target.ingredient.qty),
-                target.ingredient.unit,
-              )}
-            </p>
-          </div>
+      {(form) => {
+        const activeIssueType = quickIssueTypeOptions.find(
+          (option) => option.value === form.watch("issueType"),
+        );
+        return (
+          <>
+            <div className="rounded-md border bg-muted/20 px-3 py-2">
+              <p className="font-medium">{target.ingredient.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {stockCopy.quickIssue.stockLine(
+                  target.ingredient.sku,
+                  target.ingredient.category,
+                  formatQty(target.ingredient.qty),
+                  target.ingredient.unit,
+                )}
+              </p>
+            </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label>{stockCopy.quickIssue.operation}</Label>
-            <Select
-              value={issueType}
-              onValueChange={(value) => setIssueType(value as QuickIssueType)}
-              disabled={isPending}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {quickIssueTypeOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="quick-issue-qty">{FORM_VI.quantity}</Label>
-              <FormattedNumberInput
-                id="quick-issue-qty"
-                value={quantity}
-                onValueChange={setQuantity}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <NumberField
+                control={form.control}
+                name="quantity"
+                label={FORM_VI.quantity}
                 maxFractionDigits={3}
                 placeholder="0"
-                disabled={isPending}
+                required
               />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="quick-issue-unit">{FORM_VI.unit}</Label>
-              <Input
-                id="quick-issue-unit"
-                value={unit}
+              <TextField
+                control={form.control}
+                name="unit"
+                label={FORM_VI.unit}
                 readOnly
                 aria-readonly="true"
-                disabled={isPending}
               />
             </div>
-          </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="quick-issue-reason">{FORM_VI.reason}</Label>
-            <Textarea
-              id="quick-issue-reason"
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
+            <SelectField
+              control={form.control}
+              name="issueType"
+              label={stockCopy.quickIssue.operation}
+              options={quickIssueTypeOptions}
+            />
+            <TextareaField
+              control={form.control}
+              name="reason"
+              label={FORM_VI.reason}
               rows={3}
               placeholder={activeIssueType?.reasonPlaceholder}
-              disabled={isPending}
+              required
             />
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending
-                ? stockCopy.quickIssue.creating
-                : stockCopy.quickIssue.createSlip}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </>
+        );
+      }}
+    </FormDialog>
   );
 }
 

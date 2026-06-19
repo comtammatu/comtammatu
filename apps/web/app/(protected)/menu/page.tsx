@@ -1,10 +1,11 @@
-import { Card, CardContent } from "@comtammatu/ui/components/card";
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: menu management page keeps tab labels inline */
+
 import {
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { UrlTabs } from "@/_components/url-tabs";
 import { loadAuthState } from "@/_lib/auth";
 import { CategoryTable } from "./category-table";
@@ -57,8 +58,7 @@ export default async function MenuPage() {
         actions={<MenuImportExportMenu />}
       />
 
-      <Card>
-        <CardContent>
+      <AppSection>
           <UrlTabs defaultValue="items">
             <TabsList className="h-11 rounded-lg bg-muted/60">
               <TabsTrigger value="items" className="px-5">
@@ -82,7 +82,7 @@ export default async function MenuPage() {
                   tenantId={claims.tenant_id}
                 />
               </div>
-              <div className="rounded-lg border border-border/70 shadow-sm">
+              <div className="overflow-hidden rounded-lg border border-border/70">
                 <ItemTable
                   items={items}
                   categories={categories}
@@ -95,13 +95,12 @@ export default async function MenuPage() {
               <div className="flex justify-end">
                 <AddCategoryButton />
               </div>
-              <div className="rounded-lg border border-border/70 shadow-sm">
+              <div className="overflow-hidden rounded-lg border border-border/70">
                 <CategoryTable categories={categories} />
               </div>
             </TabsContent>
           </UrlTabs>
-        </CardContent>
-      </Card>
+      </AppSection>
     </AppPage>
   );
 }

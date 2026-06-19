@@ -1,6 +1,6 @@
 # Auth & ACL Module
 
-> **Auth (shipped 2026-04-22/23):** Position (HR chức vụ) is separated from Permission (quyền truy cập). Authz runs against a normalized `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` table, gated by RLS via `has_permission(branch_id, key)`. Legacy role strings (`branch_manager`, `cashier`, …) are still emitted in JWT as `user_role` for backward compat — they're derived from `positions.code mapper`. `profiles.role` column + `staff_role` enum **dropped**. See the Auth section below.
+> **Current auth contract:** Position (HR chức vụ) is separated from Permission (quyền truy cập). Authz runs against a normalized `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` table, gated by RLS via `has_permission(branch_id, key)`. Legacy role strings (`branch_manager`, `cashier`, …) are still emitted in JWT as `user_role` for backward compat — they're derived from `positions.code mapper`. Runtime code must not depend on `profiles.role` or `staff_role`.
 
 ## Overview
 
@@ -37,8 +37,8 @@ navigation, and default-landing changes must keep the spec, `module-acl.ts`,
 
 Discovery invariant: `MODULE_ACL.hr_payroll` vẫn gate `/hr/payroll/*` cho
 owner, nhưng không nằm trong `DOMAIN_WORKSPACE_ITEMS` hoặc app
-discovery mặc định. HKD pilot mở `/hr` cho nhân viên/ca/ngày công trước; payroll
-chỉ là direct-support khi cần đối soát/chốt lương.
+discovery mặc định. HKD operation mở `/hr` cho nhân viên/ca/ngày công trước;
+payroll chỉ là direct-support khi cần đối soát/chốt lương.
 
 ## Role Hierarchy
 
@@ -62,11 +62,12 @@ Two parallel ACL mechanisms exist; pick the right one:
 - **`has_permission(branch_id, key)`** — queries `staff_permissions` live. Revoke is **immediate**. Use for destructive UPDATE/DELETE policies and any gate that must honor instant grant changes.
 - **`auth_role()`** — reads JWT `user_role` claim (cached up to ~1h until token refresh). Use ONLY for: (a) scope/side guards inside RPC bodies (e.g. `branch_manager` forbidden from inter-site ship), (b) "tenant sees all branches" SELECT pattern (`branch_id = auth_branch_id() OR auth_role() IN HQ_ROLES`), (c) named ABAC helpers (`is_inventory_production_operator()`), (d) module-ACL fast-path on non-destructive read-mostly tables (e.g. `branch_menu_item_daily_limits` — see regression rule `BMIDL-RLS-INTENTIONAL-ROLE-FASTPATH`).
 
-**Refactor history:**
+**ACL contract notes:**
 
-- 2026-05-07 H2a — `refunds_update` policy migrated from `auth_role() IN ('owner','super_manager')` → `has_permission(branch_id,'orders:refund_approve')` (`supabase/migrations/20260601200000_h2a_refunds_update_perm_gate.sql`). Closed 1h stale-revoke window for refund approve/reject which is reachable via direct UPDATE in `apps/web/app/(protected)/orders/refund-actions.ts`.
-- 2026-05-24 α4b — `admin_update_profile` and `toggle_profile_active` now derive actor role and branch live from `profiles + positions`; `set_branch_kind` gates on `settings:tenant`. `can_access_branch()` remains a separate RLS-policy batch because it is a shared branch-scope predicate.
-- Backlog H2b — `hr_payroll` policies (`20260416040000:31,38,42,123,130,134`) follow same pattern; deferred pending business decision on payroll-specific permission keys.
+- `refunds_update` uses `has_permission(branch_id,'orders:refund_approve')`; destructive refund approval must not depend on cached `auth_role()`.
+- `admin_update_profile` and `toggle_profile_active` derive actor role and branch live from `profiles + positions`; `set_branch_kind` gates on `settings:tenant`.
+- `can_access_branch()` is a separate RLS-policy batch because it is a shared branch-scope predicate.
+- `hr_payroll` policy scope is handled with the HRM payroll/base-salary work; do not add payroll permission keys outside that task.
 
 ## Invariants (post H3a, 2026-05-07)
 
@@ -74,13 +75,13 @@ Two parallel ACL mechanisms exist; pick the right one:
   - `handle_new_user` trigger raises `position_not_resolved` (SQLSTATE P0001) if `raw_app_meta_data->>'role'` does not map to a seeded position — signup fails loudly instead of inserting a broken profile.
   - `admin_update_profile` raises the same exception if a manager passes a role that does not resolve to a position for the tenant.
   - Deleting a position with active profiles raises `foreign_key_violation` (SQLSTATE 23503). Admins must reassign profiles before deleting.
-- **Owner identity has three separate meanings.** `tenants.representative` is a free-text legal-document name (TEXT, not UUID), `positions.code='owner'` is the current runtime owner-bypass / JWT role source, and `tenants.owner_user_id UUID NOT NULL` is the canonical owner auth identity column for future ownership-transfer UI/RPC. Do not wire `representative` into auth. Do not add a dual-source `has_permission()` branch unless the deferred H3b flip is intentionally shipped. See ADR 0005: `docs/plan/adr/0005-owner-identity-source-separation.md`.
+- **Owner identity has three separate meanings.** `tenants.representative` is a free-text legal-document name (TEXT, not UUID), `positions.code='owner'` is the current runtime owner-bypass / JWT role source, and `tenants.owner_user_id UUID NOT NULL` is the canonical owner auth identity column. Do not wire `representative` into auth. Do not add a dual-source `has_permission()` branch unless ADR 0005 is superseded by a new owner-gated decision.
 
 ## Auth — Position vs Permission
 
 | Concept        | Storage                                                                          | Purpose                                                                                                                                                                                                                                                                                                                                             |
 | -------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Position**   | `positions` (per tenant) + `profiles.position_id`                                | HR chức vụ label. Codes are canonical English `lower_snake_case` ONLY — the 11-code set in `POSITION_CODE_TO_STAFF_ROLE` (shared TS) / `private.staff_role_from_position_code` (SQL twin); legacy Vietnamese codes were renamed/removed at the root by `20260610230000_canonical_position_codes_lean`. Display via `label_vi`. Does not gate authz. |
+| **Position**   | `positions` (per tenant) + `profiles.position_id`                                | HR chức vụ label. Codes are canonical English `lower_snake_case` ONLY — mapped by `POSITION_CODE_TO_STAFF_ROLE` (shared TS) / `private.staff_role_from_position_code` (SQL twin). Display via `label_vi`. Does not gate authz. |
 | **Permission** | `permission_keys` catalog (global)                                               | Canonical action strings: `inventory:read`, `pos:use`, 86 keys.                                                                                                                                                                                                                                                                                     |
 | **Grant**      | `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` | Source of truth for authz. `branch_id IS NULL` ⇒ tenant-wide. Temporal window.                                                                                                                                                                                                                                                                      |
 | **Template**   | `role_templates(permission_keys[])`                                              | Preset bundle applied when assigning a position (snapshot; edits don't propagate).                                                                                                                                                                                                                                                                  |
@@ -118,12 +119,11 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | menu                                                       | ✓     | ✓          |        |          |         |        |      |        |
 | inventory                                                  | ✓     | ✓          | ✓      | ✓        |         |        |      |        |
 | inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức)    | ✓     |            | ✓      | ✓        |         |        |      |        |
-| inventory_admin (retired — empty allowed_roles)            |       |            |        |          |         |        |      |        |
+| inventory_admin (blocked; empty allowed_roles)             |       |            |        |          |         |        |      |        |
 | orders                                                     | ✓     | ✓          |        |          | ✓       |        |      |        |
 | staff                                                      | ✓     |            |        |          |         |        |      |        |
 | hr                                                         | ✓     | ✓          |        |          |         |        |      |        |
 | finance                                                    | ✓     |            |        |          |         |        |      |        |
-| accounting (direct-only period close/reopen)               | ✓     |            |        |          |         |        |      |        |
 | reports                                                    | ✓     |            |        |          |         |        |      |        |
 | settings                                                   | ✓     |            |        |          |         |        |      |        |
 | pos                                                        |       | ✓          |        |          | ✓       | ✓      |      |        |
@@ -145,7 +145,7 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 
 **Owner (chủ sở hữu):** ngoài các module quản trị / giám sát còn có thể vào `orders` và `inventory` để kiểm tra trực tiếp vận hành tenant-level. Tuy vậy owner không được coi là operator hằng ngày trong inventory docs/UI; các bề mặt Inventory hiện tối ưu cho `branch_manager`, `warehouse_manager`, `production_manager`.
 
-**Inventory sub-route ACL:** `inventory` allows `owner`, `branch_manager`, `warehouse_manager`, `production_manager` cho tồn kho, điều chuyển, stocktake, expiry, reports, và branch operations. `inventory_procurement` ở cấp chi nhánh: `owner`, `warehouse_manager`, `production_manager` vào `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, và `receiving` theo `route-resolution.ts`. `inventory_admin` (`/admin/inventory/*`) đã retired qua `allowedRoles: []`: page files đã removed, nhưng URL space vẫn map qua module này để proxy chặn bằng ACL chuẩn thay vì xem như admin route chưa phân loại. `production` không dùng module riêng; Server Actions và DB/RPC/RLS hard-deny `branch_manager` dù có manual production/menu grant. Operator production là `production_manager`; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày. `branch_manager` vì vậy chỉ nên thấy nhịp branch ops: nhận inbound transfer, tạo intra-branch transfer `Cấp bếp`, stocktake, adjustment/write-off.
+**Inventory sub-route ACL:** `inventory` allows `owner`, `branch_manager`, `warehouse_manager`, `production_manager` cho tồn kho, điều chuyển, stocktake, expiry, reports, và branch operations. `inventory_procurement` ở cấp chi nhánh: `owner`, `warehouse_manager`, `production_manager` vào `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, và `receiving` theo `route-resolution.ts`. `inventory_admin` (`/admin/inventory/*`) luôn có `allowedRoles: []` để proxy chặn bằng ACL chuẩn. `production` không dùng module riêng; Server Actions và DB/RPC/RLS hard-deny `branch_manager` dù có manual production/menu grant. Operator production là `production_manager`; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày. `branch_manager` vì vậy chỉ nên thấy nhịp branch ops: nhận inbound transfer, tạo intra-branch transfer `Cấp bếp`, stocktake, adjustment/write-off.
 
 **UX boundary quan trọng:** nav có thể hẹp hơn module-level ACL để giảm nhiễu vận hành. Ví dụ `branch_manager` vẫn vào được `/inventory/transfers` để nhận hàng, nhưng UI không nên quảng bá action tạo inter-site transfer như tác vụ mặc định của vai trò này.
 
@@ -247,5 +247,5 @@ Single canonical helper cho "send blocked user somewhere they can read what happ
 - **JWT claims over DB lookup per request:** Performance. Claims are verified cryptographically without a DB round-trip. Trade-off: stale data until token refresh.
 - **SECURITY DEFINER on hook:** Required by Supabase — the auth hook must read `profiles` which RLS would block during token minting.
 - **Single ACL source:** `module-acl.ts` prevents drift between proxy, nav, and layout guards.
-- **Single gate = proxy:** layouts and pages must not re-check session/claims/ACL. The 2026-04-17 cleanup removed duplicate guards from 8 layouts + 12 pages; those checks now live only in `proxy.ts`. `loadAuthState()` throws (not redirects) if claims are missing — silent redirects previously hid proxy bugs for months.
+- **Single gate = proxy:** layouts and pages must not re-check session/claims/ACL. `loadAuthState()` throws (not redirects) if claims are missing; proxy remains the only route gate.
 - **Invite-only (no self-signup):** Business requirement — staff are added by managers via Admin API with pre-set `tenant_id` + `role`.

@@ -13,7 +13,7 @@ unless CI is restored.
 comtammatu/
 ├── apps/
 │   ├── web/                # Next.js 16.2 — deployable web app (Vercel)
-│   └── print-agent/        # ESC/POS print daemon — chạy thật tại chi nhánh (runbook: docs/runbooks/pos-kds/print-agent-pilot.md)
+│   └── print-agent/        # ESC/POS print daemon — chạy thật tại chi nhánh (runbook: docs/runbooks/pos-kds/print-agent-rollout.md)
 ├── packages/
 │   ├── database/           # Supabase clients + generated types
 │   ├── shared/             # Auth types, ACL, utilities
@@ -89,7 +89,10 @@ Full setup guide: `docs/ref/setup.md`
 ## Deployment
 
 - **Vercel:** Auto-deploy from main branch. Environment variables set in Vercel dashboard.
-- **Supabase:** Migrations applied manually by owner (`supabase db push`) after PR merge.
+- **Supabase:** migration files land through PR; the owner applies production
+  changes manually according to the Environment Registry in
+  `docs/agent/rules/database.md`. Do not run file-based `supabase db push`
+  against production unless that registry explicitly changes.
 - **CI:** no active `.github/workflows` files are present in the current checkout.
   If CI is restored, it must run at least `pnpm typecheck`, `pnpm lint`, and
   `pnpm build`.

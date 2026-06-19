@@ -90,7 +90,7 @@ export function OfficeModuleShell({
         subLabel: chrome.subLabel,
         mainLabel: chrome.mainLabel,
       }}
-      navGroups={resolveOfficeNavGroups(role)}
+      navGroups={resolveOfficeNavGroups(role, branchId)}
       defaultPageTitle={chrome.defaultPageTitle}
       pageHeader={{
         crumbLabel: chrome.crumbLabel,

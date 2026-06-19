@@ -7,7 +7,7 @@ import { usePosArchivedInvalidationToken } from "../_providers/pos-desktop-provi
 
 const PAGE_SIZE = 30;
 
-type Cursor = { createdAt: string; id: number } | null;
+type Cursor = { archivedAt: string; id: number } | null;
 
 export type ArchivedScope = "session" | "today";
 
@@ -36,7 +36,7 @@ interface UseArchivedOrdersReturn {
 
 /**
  * Lazy paginated lookup for the "Đã xử lý" sheet. Keyset cursor on
- * (created_at, id). State semantics:
+ * (updated_at, id). State semantics:
  *
  *   - `open=false`         → idle, no network
  *   - `open=true` (cold)   → fetch first page

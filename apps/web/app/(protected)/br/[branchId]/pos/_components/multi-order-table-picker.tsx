@@ -106,10 +106,10 @@ export function MultiOrderTablePicker({
                       variant="default"
                       size="touch"
                       className="px-2 text-sm"
-                      onClick={() => onPayOrder(order.id)}
+                      onClick={() => onOpenOrder(order.id, order.order_number)}
                     >
-                      <IconCreditCard data-icon="inline-start" />
-                      {messages.pos.multiOrderTablePicker.payment}
+                      <IconClipboardList data-icon="inline-start" />
+                      {messages.pos.multiOrderTablePicker.handle}
                     </Button>
                     <Button
                       type="button"
@@ -128,10 +128,10 @@ export function MultiOrderTablePicker({
                       variant="outline"
                       size="touch"
                       className="px-2 text-sm"
-                      onClick={() => onOpenOrder(order.id, order.order_number)}
+                      onClick={() => onPayOrder(order.id)}
                     >
-                      <IconClipboardList data-icon="inline-start" />
-                      {messages.pos.multiOrderTablePicker.handle}
+                      <IconCreditCard data-icon="inline-start" />
+                      {messages.pos.multiOrderTablePicker.payment}
                     </Button>
                   </ItemFooter>
                 </Item>
@@ -151,7 +151,7 @@ export function MultiOrderTablePicker({
             onClick={onCreateNew}
           >
             <IconPlus data-icon="inline-start" />
-            {messages.pos.multiOrderTablePicker.createNew}
+            {messages.pos.multiOrderTablePicker.createNew(tableNumber)}
           </Button>
           <Button type="button" variant="ghost" onClick={onClose}>
             {ACTIONS_VI.close}

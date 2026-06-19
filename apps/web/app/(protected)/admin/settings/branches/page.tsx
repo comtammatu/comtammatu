@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { BranchTable } from "./branch-table";
 import { AddBranchButton } from "./add-branch-button";
-import { SettingsPageShell } from "../settings-page-shell";
+import { SettingsPageFrame } from "../settings-page-frame";
 import { messages } from "@lib/messages";
 
 export default async function BranchesPage() {
@@ -18,12 +18,12 @@ export default async function BranchesPage() {
     .order("name");
 
   return (
-    <SettingsPageShell
+    <SettingsPageFrame
       title={messages.settings.pages.branchesTitle}
       description={messages.settings.pages.branchCount(branches?.length ?? 0)}
       actions={<AddBranchButton />}
     >
       <BranchTable branches={branches ?? []} />
-    </SettingsPageShell>
+    </SettingsPageFrame>
   );
 }

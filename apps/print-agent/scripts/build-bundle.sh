@@ -102,7 +102,7 @@ Mở POS, kiểm:
 - [ ] Huỷ 1 món có ghi chú → phiếu hủy hiện ghi chú gạch ngang
 - [ ] Chốt ca → phiếu chốt ca có "Thu ngân:" (không "Người order:")
 
-Reference: docs/runbooks/pos-kds/print-agent-pilot.md trong repo.
+Reference: docs/runbooks/pos-kds/print-agent-rollout.md trong repo.
 EOF
 
 # 5. Zip — try zip first, fallback to tar+gzip

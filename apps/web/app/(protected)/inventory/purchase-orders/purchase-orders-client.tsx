@@ -23,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
 import {
@@ -56,7 +55,7 @@ export interface PurchaseOrderRow {
 }
 
 const ALL_FILTER_VALUE = "_all";
-const STATUS_KEYS = [
+const PO_FILTER_KEYS = [
   "draft",
   "sent",
   "partially_received",
@@ -98,7 +97,6 @@ export function PurchaseOrdersClient({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(ALL_FILTER_VALUE);
   const [supplierFilter, setSupplierFilter] = useState(ALL_FILTER_VALUE);
-  const isMobile = useIsMobile();
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -210,7 +208,7 @@ export function PurchaseOrdersClient({
   ];
 
   return (
-    <AppPage width={isMobile ? "narrow" : "wide"}>
+    <AppPage width="wide">
       <AppPageHeader
         eyebrow={inventoryShellCopy.moduleName}
         title={tRoute("/inventory/purchase-orders", "heading")}
@@ -265,7 +263,7 @@ export function PurchaseOrdersClient({
             <SelectItem value={ALL_FILTER_VALUE}>
               {poCopy.allStatuses}
             </SelectItem>
-            {STATUS_KEYS.map((statusKey) => (
+            {PO_FILTER_KEYS.map((statusKey) => (
               <SelectItem key={statusKey} value={statusKey}>
                 {tStatus(statusKey, "table")} ({statusCounts[statusKey] ?? 0})
               </SelectItem>
@@ -300,9 +298,7 @@ export function PurchaseOrdersClient({
         data={filteredRows}
         getRowKey={(row) => row.id}
         emptyTitle={
-          showEmptyResults
-            ? poCopy.emptySearchTitle
-            : poCopy.emptyInitialTitle
+          showEmptyResults ? poCopy.emptySearchTitle : poCopy.emptyInitialTitle
         }
         emptyDescription={
           showEmptyResults

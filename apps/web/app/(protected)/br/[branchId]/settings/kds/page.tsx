@@ -1,16 +1,15 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
-import { Button } from "@comtammatu/ui/components/button";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { AppPage } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
+import { BranchManagementShell } from "../../_components/branch-management-chrome";
 import {
   StationsClient,
   type CategoryOption,
   type StationRow,
-} from "@/(protected)/admin/settings/kds/stations-client";
+} from "@/(protected)/branch-settings/_shared/kds/stations-client";
 
 export default async function BranchKdsSettingsPage({
   params,
@@ -21,7 +20,7 @@ export default async function BranchKdsSettingsPage({
   const branchId = Number(branchIdStr);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
-  const { supabase, claims } = await loadAuthState();
+  const { supabase, claims, session } = await loadAuthState();
 
   if (!canManageBranchFloorSettings(claims.user_role)) {
     redirect(`/br/${branchId}/settings`);
@@ -72,28 +71,35 @@ export default async function BranchKdsSettingsPage({
     category_ids: s.kds_station_categories?.map((sc) => sc.category_id) ?? [],
   }));
   const categories = categoriesRes.data as CategoryOption[];
+  const displayName =
+    session.user.user_metadata?.["full_name"] ??
+    session.user.email ??
+    claims.user_role;
 
   return (
-    <AppPage width="default">
-      <div className="flex items-center gap-3">
-        <Button asChild variant="outline" size="sm" className="gap-1">
-          <Link href={`/br/${branchId}/settings`}>
-            <IconArrowLeft className="size-4" />
-            {messages.settings.branch.settingsBack}
-          </Link>
-        </Button>
-        <AppPageHeader
-          className="min-w-0 flex-1"
-          title={messages.settings.pages.kdsTitle}
-          description={branchRes.data.name}
+    <BranchManagementShell
+      user={{ name: displayName }}
+      role={claims.user_role}
+      branchId={branchId}
+      branchName={branchRes.data.name}
+      defaultPageTitle={messages.settings.pages.kdsTitle}
+      description={branchRes.data.name}
+      breadcrumbSegments={[
+        { label: APP_COPY_VI.branchCommand, href: `/br/${branchId}/dashboard` },
+        {
+          label: messages.settings.branch.hubTitle,
+          href: `/br/${branchId}/settings`,
+        },
+        messages.settings.pages.kdsTitle,
+      ]}
+    >
+      <AppPage width="wide">
+        <StationsClient
+          branches={[branchRes.data]}
+          stations={stations}
+          categories={categories}
         />
-      </div>
-
-      <StationsClient
-        branches={[branchRes.data]}
-        stations={stations}
-        categories={categories}
-      />
-    </AppPage>
+      </AppPage>
+    </BranchManagementShell>
   );
 }

@@ -430,8 +430,8 @@ SECURITY DEFINER
 Sau khi cron summary đã gộp 1 order vào HĐ tổng hợp, nếu khách quay lại yêu cầu HĐ có MST:
 
 - `createTaxInvoice` reject với message: "Đơn này đã trong HĐ tổng hợp ngày X — Liên hệ kế toán để lập HĐ điều chỉnh"
-- Pilot: kế toán xử lý qua portal provider (manual HĐ điều chỉnh giảm + HĐ có MST mới)
-- Defer P1: tự động hóa flow summary-adjustment → HĐ điều chỉnh
+- Kế toán xử lý qua portal provider: manual HĐ điều chỉnh giảm + HĐ có MST mới.
+- Tự động hóa flow summary-adjustment → HĐ điều chỉnh không thuộc current scope.
 
 Regression rule `HDDT-LATE-B2B-REQUEST-AFTER-BATCH-BLOCKED`.
 
@@ -628,7 +628,7 @@ SELECT public.get_finance_dashboard_summary(
   p_branch_id  := NULL  -- null = all branches user có quyền
 );
 -- Returns: { invoices_attention, invoices_issued, invoices_not_required,
---            journal_entries_count, webhook_failures_count, ... }
+--            webhook_failures_count, ... }
 ````
 
 ACL gate: `finance:view`.

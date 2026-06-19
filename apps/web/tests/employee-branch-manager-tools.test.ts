@@ -15,6 +15,10 @@ const employeeClockActionSource = readFileSync(
   join(process.cwd(), "app/(protected)/employee/clock/actions.ts"),
   "utf8",
 );
+const employeeClockClientSource = readFileSync(
+  join(process.cwd(), "app/(protected)/employee/clock/clock-client.tsx"),
+  "utf8",
+);
 const employeeClockPageSource = readFileSync(
   join(process.cwd(), "app/(protected)/employee/clock/page.tsx"),
   "utf8",
@@ -30,9 +34,24 @@ test("Employee home keeps Branch Manager tools out of the hot path", () => {
     /employee_checkout_approvals|MANAGER_LINKS|managerTools/,
     "Employee home must stay focused on the personal next action, not manager tools",
   );
+  assert.match(
+    employeeHomeSource,
+    /const isBranchManager = claims\.user_role === "branch_manager";/,
+    "Branch Manager hot path must be explicit",
+  );
+  assert.match(
+    employeeHomeSource,
+    /canAccess\(claims\.user_role, "branch_dashboard"\)/,
+    "Branch Manager hot path should route through Branch Command",
+  );
+  assert.match(
+    employeeHomeSource,
+    /branchId && branchIsOperational && !isBranchManager/,
+    "POS/KDS/Runner grid must stay out of the Branch Manager hot path",
+  );
 });
 
-test("Employee profile launcher is ACL-driven for all non-admin roles", () => {
+test("Employee profile launcher is ACL-driven for non-admin frontline roles", () => {
   assert.match(
     employeeProfileSource,
     /const effectiveBranchId = ctx\?\.branchId \?\? claims\.branch_id \?\? null;/,
@@ -50,8 +69,13 @@ test("Employee profile launcher is ACL-driven for all non-admin roles", () => {
   );
   assert.match(
     employeeProfileSource,
-    /title=\{copy\.workspaceLauncherTitle\}[\s\S]*links=\{workspaceLinks\}/,
-    "Workspace launcher should render through the shared EmployeeActionSection",
+    /claims\.user_role === "branch_manager"/,
+    "Branch Manager profile must stay personal instead of becoming a second Branch Command hub",
+  );
+  assert.match(
+    employeeProfileSource,
+    /workspaceLinks\.length > 0[\s\S]*title=\{copy\.workspaceLauncherTitle\}[\s\S]*links=\{workspaceLinks\}/,
+    "Workspace launcher should render only when there are non-profile links",
   );
   assert.doesNotMatch(
     employeeProfileSource,
@@ -95,5 +119,37 @@ test("Branch Manager self-attendance is only clock in and clock out", () => {
     employeeTasksPageSource,
     /state\.managerAttendanceOnly[\s\S]*managerTaskCopy\.noTaskTitle/,
     "Branch Manager tasks route should not render the personal checklist",
+  );
+});
+
+test("Staff checkout request stays single tap while manager direct checkout confirms", () => {
+  const submitCheckoutBlock = employeeClockClientSource.match(
+    /const submitCheckout = useCallback\(async \(\) => \{[\s\S]*?\n\s*\}, \[managerAttendanceOnly/,
+  )?.[0];
+  assert.ok(submitCheckoutBlock, "Clock client should define submitCheckout");
+  assert.match(
+    submitCheckoutBlock,
+    /if \(managerAttendanceOnly\) \{[\s\S]*await confirm\(/,
+    "Manager direct checkout should keep confirmation because it writes check_out immediately",
+  );
+  assert.doesNotMatch(
+    submitCheckoutBlock,
+    /Gửi yêu cầu kết ca\?/,
+    "Staff checkout request should not show an extra confirmation dialog",
+  );
+  assert.match(
+    submitCheckoutBlock,
+    /managerAttendanceOnly\s*\?\s*await clockOutManagerShift\(\{ attendanceId \}\)\s*:\s*await requestCheckoutApproval\(\{ attendanceId \}\)/,
+    "Staff and manager checkout should target the current attendance record",
+  );
+  assert.match(
+    employeeClockActionSource,
+    /const attendanceActionSchema = z\.object\(\{[\s\S]*attendanceId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)/,
+    "Checkout actions should validate the attendance id at the trust boundary",
+  );
+  assert.match(
+    employeeClockActionSource,
+    /\.from\("attendance_checklist_items"\)[\s\S]*\.eq\("task_kind", "consumption_report"\)[\s\S]*consumptionReport\?\.status !== "approved"[\s\S]*consumptionReport\?\.status !== "applied"/,
+    "Checkout approval should require approved/applied consumption reports when the shift has a consumption checklist",
   );
 });

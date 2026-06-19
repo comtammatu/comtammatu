@@ -1,15 +1,21 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import {
   AlertTriangle as IconAlertTriangle,
   Boxes as IconBoxes,
-  PiggyBank as IconPiggyBank,
   ReceiptText as IconReceiptText,
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
 } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
+import { Button } from "@comtammatu/ui/components/button";
 import { cn } from "@comtammatu/ui/lib/utils";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
 import { messages } from "@lib/messages";
 import { buildCompareDelta } from "@/components/kpi/compare-chip";
 import { KpiCard } from "@/components/kpi/kpi-card";
@@ -21,6 +27,7 @@ import {
 } from "./_lib/finance-params";
 import {
   fetchFinanceCockpit,
+  type FinanceCockpitData,
   type FinanceException,
   type FinanceInventoryItem,
 } from "./_lib/finance-cockpit";
@@ -84,6 +91,67 @@ function QuickPanel({
   );
 }
 
+function HddtComplianceBand({
+  summary,
+}: {
+  summary: FinanceCockpitData["dashboardSummary"];
+}) {
+  const needsWork =
+    (summary?.invoice_attention_count ?? 0) > 0 ||
+    (summary?.failed_webhook_count ?? 0) > 0;
+
+  return (
+    <AppSection
+      size="sm"
+      title={powerLiteCopy.hddtComplianceTitle}
+      description={powerLiteCopy.hddtComplianceDescription}
+      badge={{
+        children: needsWork
+          ? powerLiteCopy.hddtComplianceNeedsWork
+          : powerLiteCopy.hddtComplianceOk,
+        variant: needsWork ? "warning" : "success",
+      }}
+      action={
+        <Button asChild variant="outline" size="sm">
+          <Link href="/finance/invoices?queue=attention">
+            {powerLiteCopy.hddtComplianceAction}
+          </Link>
+        </Button>
+      }
+    >
+      {summary ? (
+        <div className="grid gap-3 sm:grid-cols-4">
+          <MetricInline
+            label={powerLiteCopy.hddtIssued}
+            value={formatCount(summary.invoice_issued_count)}
+          />
+          <MetricInline
+            label={powerLiteCopy.hddtAttention}
+            value={formatCount(summary.invoice_attention_count)}
+            muted={summary.invoice_attention_count === 0}
+          />
+          <MetricInline
+            label={powerLiteCopy.hddtNotRequired}
+            value={formatCount(summary.invoice_not_required_count)}
+            muted={summary.invoice_not_required_count === 0}
+          />
+          <MetricInline
+            label={powerLiteCopy.hddtWebhookFailures}
+            value={formatCount(summary.failed_webhook_count)}
+            muted={summary.failed_webhook_count === 0}
+          />
+        </div>
+      ) : (
+        <AppEmptyState
+          compact
+          title={powerLiteCopy.hddtNoDataTitle}
+          description={powerLiteCopy.hddtNoDataDescription}
+        />
+      )}
+    </AppSection>
+  );
+}
+
 function InventoryCapitalList({ items }: { items: FinanceInventoryItem[] }) {
   if (items.length === 0) {
     return (
@@ -143,7 +211,8 @@ function ExceptionList({ items }: { items: FinanceException[] }) {
               : "border-warning/30 bg-warning/5",
           )}
         >
-          <div className="flex items-start gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-2">
             <IconAlertTriangle
               className={cn(
                 "mt-0.5 size-4 shrink-0",
@@ -161,6 +230,12 @@ function ExceptionList({ items }: { items: FinanceException[] }) {
               </div>
               <p className="text-xs text-muted-foreground">{item.hint}</p>
             </div>
+            </div>
+            {item.href ? (
+              <Button asChild variant="outline" size="sm" className="shrink-0">
+                <Link href={item.href}>{powerLiteCopy.openWorkItem}</Link>
+              </Button>
+            ) : null}
           </div>
         </div>
       ))}
@@ -180,7 +255,8 @@ export default async function FinancePage({
     fetchFinanceCockpit(params, resolved),
     fetchCashSummary(params, resolved),
   ]);
-  const cashProfit = cockpit.kpis.totalCollected - cash.expensesPaidPeriod;
+  const cashDeltaAfterPaidExpenses =
+    cockpit.kpis.totalCollected - cash.expensesPaidPeriod;
   const todayBusinessDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Ho_Chi_Minh",
   }).format(new Date());
@@ -202,7 +278,7 @@ export default async function FinancePage({
         hide={["granularity", "compare", "payment"]}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           icon={<IconWallet className="size-4 text-muted-foreground" />}
           label={financeCopy.basic.kpis.revenue}
@@ -274,40 +350,6 @@ export default async function FinancePage({
               : null
           }
         />
-
-        <KpiCard
-          icon={<IconPiggyBank className="size-4 text-muted-foreground" />}
-          label={financeCopy.basic.kpis.netProfit}
-          value={
-            cockpit.kpis.costAvailable
-              ? formatVND(cockpit.kpis.netProfit)
-              : financeCopy.common.noValue
-          }
-          hint={
-            cockpit.kpis.costAvailable
-              ? financeCopy.basic.kpis.netProfitHint(
-                  formatVND(cockpit.kpis.grossProfit),
-                  formatVND(cockpit.kpis.operatingExpense),
-                )
-              : powerLiteCopy.exceptions.missingCostHint
-          }
-          tone={
-            cockpit.kpis.costAvailable
-              ? cockpit.kpis.netProfit >= 0
-                ? "success"
-                : "warning"
-              : undefined
-          }
-          delta={
-            cockpit.kpis.costAvailable && cockpit.compareKpis
-              ? buildCompareDelta(
-                  cockpit.kpis.netProfit,
-                  cockpit.compareKpis.netProfit,
-                  "higher_better",
-                )
-              : null
-          }
-        />
       </div>
 
       <CashPanel
@@ -316,10 +358,11 @@ export default async function FinancePage({
         openingDate={cash.openingDate}
         cashInSince={cash.cashInSince}
         cashOutSince={cash.cashOutSince}
-        cashProfit={cashProfit}
-        netProfit={cockpit.kpis.netProfit}
+        cashDeltaAfterPaidExpenses={cashDeltaAfterPaidExpenses}
         todayBusinessDate={todayBusinessDate}
       />
+
+      <HddtComplianceBand summary={cockpit.dashboardSummary} />
 
       <div className="grid gap-4 xl:grid-cols-2">
         <QuickPanel

@@ -6,20 +6,24 @@ import { z } from "zod";
 import { Plus as IconPlus, Trash2 as IconTrash } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { KpiCard } from "@/components/kpi/kpi-card";
-import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import { AppSection } from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import {
   BusinessDateField,
   FormDialog,
@@ -44,6 +48,7 @@ import {
 } from "../expense-actions";
 
 const copy = messages.finance.expenses;
+const TENANT_LEVEL_BRANCH_VALUE = "__tenant__";
 
 interface Branch {
   id: number;
@@ -85,6 +90,10 @@ const METHOD_OPTIONS = EXPENSE_PAYMENT_METHODS.map((value) => ({
   label: copy.paymentMethodLabels[value],
 }));
 
+function expenseDetail(row: ExpenseRow): string {
+  return [row.vendor_name, row.note].filter(Boolean).join(" · ");
+}
+
 export function ExpensesClient({
   params,
   branches,
@@ -99,15 +108,20 @@ export function ExpensesClient({
   const [isDeleting, startDelete] = useTransition();
 
   const branchNames = new Map(branches.map((b) => [b.id, b.name]));
+  const branchLabel = (branchId: number | null) =>
+    branchId != null
+      ? (branchNames.get(branchId) ?? `#${branchId}`)
+      : copy.tenantLevel;
 
   const branchOptions = [
-    { value: "", label: copy.form.branchTenantLevel },
+    { value: TENANT_LEVEL_BRANCH_VALUE, label: copy.form.branchTenantLevel },
     ...branches.map((b) => ({ value: String(b.id), label: b.name })),
   ];
 
   const defaultValues: ExpenseFormValues = {
     expenseDate: todayBusinessDate,
-    branchId: params.branch != null ? String(params.branch) : "",
+    branchId:
+      params.branch != null ? String(params.branch) : TENANT_LEVEL_BRANCH_VALUE,
     category: "",
     amount: "",
     paymentMethod: "cash",
@@ -116,8 +130,13 @@ export function ExpensesClient({
   };
 
   async function onSubmit(values: ExpenseFormValues): Promise<ActionResult> {
+    const branchId =
+      !values.branchId || values.branchId === TENANT_LEVEL_BRANCH_VALUE
+        ? null
+        : Number(values.branchId);
+
     const result = await createExpense({
-      branchId: values.branchId ? Number(values.branchId) : null,
+      branchId,
       expenseDate: values.expenseDate,
       category: values.category as ExpenseCategory,
       amount: Number(values.amount),
@@ -151,6 +170,62 @@ export function ExpensesClient({
     });
   }
 
+  const columns: DataTableColumn<ExpenseRow>[] = [
+    {
+      key: "date",
+      header: copy.table.date,
+      className: "w-28 font-mono tabular-nums",
+      render: (row) => row.expense_date,
+    },
+    {
+      key: "category",
+      header: copy.table.category,
+      render: (row) =>
+        copy.categoryLabels[row.category as ExpenseCategory] ?? row.category,
+    },
+    {
+      key: "branch",
+      header: copy.table.branch,
+      className: "text-muted-foreground",
+      render: (row) => branchLabel(row.branch_id),
+    },
+    {
+      key: "method",
+      header: copy.table.method,
+      render: (row) =>
+        copy.paymentMethodLabels[row.payment_method as ExpensePaymentMethod] ??
+        row.payment_method,
+    },
+    {
+      key: "amount",
+      header: copy.table.amount,
+      className: "text-right font-mono tabular-nums",
+      render: (row) => formatVND(row.amount),
+    },
+    {
+      key: "detail",
+      header: copy.table.detail,
+      className: "max-w-48 truncate text-muted-foreground",
+      render: (row) => expenseDetail(row) || "—",
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "w-12",
+      render: (row) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onDelete(row)}
+          disabled={isDeleting}
+          aria-label={copy.table.delete}
+        >
+          <IconTrash className="size-4 text-destructive" />
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <FilterBar
@@ -173,78 +248,51 @@ export function ExpensesClient({
         </Button>
       </div>
 
-      <Card className="overflow-hidden">
-        <CardContent scroll>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-28">{copy.table.date}</TableHead>
-                <TableHead>{copy.table.category}</TableHead>
-                <TableHead>{copy.table.branch}</TableHead>
-                <TableHead>{copy.table.method}</TableHead>
-                <TableHead className="text-right">{copy.table.amount}</TableHead>
-                <TableHead>{copy.table.detail}</TableHead>
-                <TableHead className="w-12" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 ? (
-                <TableEmptyStateRow
-                  colSpan={7}
-                  mode="no-data"
-                  title={copy.empty.title}
-                  description={copy.empty.description}
-                />
-              ) : (
-                rows.map((row) => {
-                  const detail = [row.vendor_name, row.note]
-                    .filter(Boolean)
-                    .join(" · ");
-                  return (
-                    <TableRow key={row.id}>
-                      <TableCell className="font-mono tabular-nums">
-                        {row.expense_date}
-                      </TableCell>
-                      <TableCell>
-                        {copy.categoryLabels[row.category as ExpenseCategory] ??
-                          row.category}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {row.branch_id != null
-                          ? (branchNames.get(row.branch_id) ??
-                            `#${row.branch_id}`)
-                          : copy.tenantLevel}
-                      </TableCell>
-                      <TableCell>
-                        {copy.paymentMethodLabels[
-                          row.payment_method as ExpensePaymentMethod
-                        ] ?? row.payment_method}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
-                        {formatVND(row.amount)}
-                      </TableCell>
-                      <TableCell className="max-w-48 truncate text-muted-foreground">
-                        {detail || "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onDelete(row)}
-                          disabled={isDeleting}
-                          aria-label={copy.table.delete}
-                        >
-                          <IconTrash className="size-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <AppSection contentFlush contentScroll>
+        <DataTable
+          columns={columns}
+          data={rows}
+          getRowKey={(row) => row.id}
+          emptyMode="no-data"
+          emptyTitle={copy.empty.title}
+          emptyDescription={copy.empty.description}
+          mobileCardRender={(row) => {
+            const detail = expenseDetail(row);
+            return (
+              <Item variant="outline">
+                <ItemHeader>
+                  <ItemContent>
+                    <ItemTitle>
+                      {copy.categoryLabels[row.category as ExpenseCategory] ??
+                        row.category}
+                    </ItemTitle>
+                    <ItemDescription>
+                      {row.expense_date} · {branchLabel(row.branch_id)}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(row)}
+                      disabled={isDeleting}
+                      aria-label={copy.table.delete}
+                    >
+                      <IconTrash className="size-4 text-destructive" />
+                    </Button>
+                  </ItemActions>
+                </ItemHeader>
+                <ItemFooter>
+                  <ItemDescription>{detail || "—"}</ItemDescription>
+                  <span className="font-mono text-sm font-semibold tabular-nums">
+                    {formatVND(row.amount)}
+                  </span>
+                </ItemFooter>
+              </Item>
+            );
+          }}
+        />
+      </AppSection>
 
       <FormDialog
         open={dialogOpen}

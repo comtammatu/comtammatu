@@ -8,7 +8,7 @@
  * Cashier rule of thumb: chỉ show 5 labels.
  *   - active (new/confirmed/preparing) → relative age "X phút" / "X tiếng"
  *   - ready                            → "Sẵn sàng" (waiter pickup signal)
- *   - served                           → "Đã phục vụ"
+ *   - served                           → "Chờ thanh toán"
  *   - paid (any status)                → "Đã thanh toán"
  *   - cancelled                        → "Đã hủy"
  *
@@ -71,8 +71,8 @@ export function getPosOrderStatusInfo(
       };
     case "served":
       return {
-        label: "Đã phục vụ",
-        variant: getStatusBadgeMeta("order", "served").variant,
+        label: "Chờ thanh toán",
+        variant: "warning",
       };
     default:
       return { label: order.status, variant: "outline" };

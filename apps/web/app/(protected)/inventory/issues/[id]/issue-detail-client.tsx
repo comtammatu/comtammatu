@@ -5,6 +5,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import {
   ArrowLeft as IconArrowLeft,
   CircleCheck as IconCircleCheck,
@@ -12,46 +13,40 @@ import {
   Trash as IconTrash,
   X as IconX,
 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@comtammatu/ui/components/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import { AppEmptyState } from "@/components/surface";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
-import { Textarea } from "@comtammatu/ui/components/textarea";
-import { Combobox } from "@/components/form";
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import {
+  Combobox,
+  FormDialog,
+  NumberField,
+  TextareaField,
+  TextField,
+} from "@/components/form";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { KpiCard } from "@/components/kpi/kpi-card";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
-import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
@@ -78,6 +73,8 @@ type IssueRecord = {
   notes: string | null;
   issued_at: string;
   branch_id: number;
+  source_type: string | null;
+  source_ref: unknown;
   branches: { id: number; name: string; branch_kind?: string | null } | null;
 };
 
@@ -95,12 +92,26 @@ type IssueLine = {
 type AddIssueLineDialogProps = {
   ingredients: IngredientRow[];
   isOpen: boolean;
-  isPending: boolean;
   issueId: number;
   onOpenChange: (open: boolean) => void;
   onSaved: () => Promise<void>;
-  startTransition: React.TransitionStartFunction;
 };
+
+const addIssueLineSchema = z.object({
+  ingredientId: z.string().min(1, { error: "Chọn nguyên liệu cần xuất." }),
+  quantity: z
+    .string()
+    .min(1, { error: "Nhập số lượng xuất." })
+    .refine((value) => Number(value) > 0, {
+      error: "Số lượng xuất phải lớn hơn 0.",
+    }),
+  unit: z.string().trim().min(1, { error: "Đơn vị không được để trống." }),
+  reason: z.string().trim().min(1, {
+    error: "Lý do xuất là bắt buộc để lưu vết.",
+  }),
+});
+
+type AddIssueLineFormValues = z.infer<typeof addIssueLineSchema>;
 
 function getWarehouseUnit(ingredient: IngredientRow) {
   return ingredient.purchase_unit || ingredient.unit;
@@ -131,6 +142,26 @@ function getIssueSurface(
   };
 }
 
+function getIssueSourceLabel(issue: IssueRecord) {
+  const ref =
+    issue.source_ref && typeof issue.source_ref === "object"
+      ? (issue.source_ref as { source?: unknown; source_label?: unknown })
+      : null;
+
+  if (
+    issue.source_type === "hrm_consumption" ||
+    ref?.source === "attendance_consumption_report"
+  ) {
+    return typeof ref?.source_label === "string"
+      ? ref.source_label
+      : "HRM - Tiêu hao bếp trong ngày";
+  }
+
+  return issue.source_type === "manual" || !issue.source_type
+    ? "Thủ công"
+    : issue.source_type;
+}
+
 export function IssueDetailClient({
   issueId,
   initialIssue,
@@ -151,9 +182,6 @@ export function IssueDetailClient({
   const [lines, setLines] = useState(initialLines);
   const [isPending, startTransition] = useTransition();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
-  const [confirmIssueOpen, setConfirmIssueOpen] = useState(false);
-  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const isDraft = issue.status === "draft";
   const surface = getIssueSurface(
     issue.issue_type,
@@ -178,13 +206,21 @@ export function IssueDetailClient({
     router.refresh();
   }
 
-  function handleDeleteLine() {
-    if (pendingDeleteId == null) return;
+  async function handleDeleteLine(itemId: number) {
+    const ok = await confirm({
+      title: "Xóa dòng nguyên liệu?",
+      description: "Dòng này sẽ bị xóa khỏi phiếu xuất nháp.",
+      confirmText: "Xóa dòng",
+      cancelText: ACTIONS_VI.back,
+      variant: "destructive",
+    });
+
+    if (!ok) return;
 
     startTransition(async () => {
       const res = await deleteStockIssueLine({
         issueId,
-        itemId: pendingDeleteId,
+        itemId,
       });
       if (!res.success) {
         toast.error(res.error ?? "Không thể xóa dòng khỏi phiếu.");
@@ -192,12 +228,24 @@ export function IssueDetailClient({
       }
 
       toast.success("Đã xóa dòng nguyên liệu.");
-      setPendingDeleteId(null);
       await reload();
     });
   }
 
-  function handleConfirmIssue() {
+  async function handleConfirmIssue() {
+    const ok = await confirm({
+      title: surface.confirmTitle,
+      description: `Thao tác này sẽ trừ tồn kho tại ${issue.branches?.name ?? "—"} và không thể hoàn tác.`,
+      details: lines.map((line) => ({
+        label: line.ingredients?.name ?? `#${line.ingredient_id}`,
+        value: `${formatQty(Number(line.quantity ?? 0))} ${line.unit}`,
+      })),
+      confirmText: surface.confirmAction,
+      cancelText: ACTIONS_VI.back,
+    });
+
+    if (!ok) return;
+
     startTransition(async () => {
       const res = await confirmStockIssue(issueId);
       if (!res.success) {
@@ -206,12 +254,22 @@ export function IssueDetailClient({
       }
 
       toast.success("Đã xác nhận xuất kho và trừ tồn.");
-      setConfirmIssueOpen(false);
       await reload();
     });
   }
 
-  function handleCancelIssue() {
+  async function handleCancelIssue() {
+    const ok = await confirm({
+      title: "Hủy phiếu xuất?",
+      description:
+        "Phiếu xuất sẽ chuyển sang trạng thái hủy và không thể xác nhận nữa.",
+      confirmText: "Xác nhận hủy",
+      cancelText: "Không hủy",
+      variant: "destructive",
+    });
+
+    if (!ok) return;
+
     startTransition(async () => {
       const res = await cancelStockIssue(issueId);
       if (!res.success) {
@@ -220,7 +278,6 @@ export function IssueDetailClient({
       }
 
       toast.success("Đã hủy phiếu xuất.");
-      setConfirmCancelOpen(false);
       await reload();
     });
   }
@@ -283,7 +340,7 @@ export function IssueDetailClient({
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => setPendingDeleteId(line.id)}
+            onClick={() => handleDeleteLine(line.id)}
             disabled={isPending}
             className="text-muted-foreground hover:text-destructive"
           >
@@ -322,8 +379,8 @@ export function IssueDetailClient({
             ]}
           >
             <TabsContent value="overview" className="mt-4">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="flex flex-col gap-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
                   {[
                     {
                       label: "Nghiep vu",
@@ -339,49 +396,43 @@ export function IssueDetailClient({
                       value: String(lines.length).padStart(2, "0"),
                     },
                     {
+                      label: "Nguồn",
+                      value: getIssueSourceLabel(issue),
+                    },
+                    {
                       label: "Tổng giá trị",
                       value: formatVND(totalAmount),
                     },
                   ].map((item) => (
-                    <Card key={item.label}>
-                      <CardContent>
-                        <Badge variant="secondary">{item.label}</Badge>
-                        <p className="mt-3 text-xl font-semibold text-foreground">
-                          {item.value}
-                        </p>
-                      </CardContent>
-                    </Card>
+                    <KpiCard
+                      key={item.label}
+                      label={item.label}
+                      value={item.value}
+                    />
                   ))}
                 </div>
 
                 {issue.notes ? (
-                  <Card>
-                    <CardContent className="pt-6">
-                      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        {surface.noteLabel}
-                      </p>
-                      <p className="mt-1 line-clamp-3 break-words text-sm text-muted-foreground">
-                        {issue.notes}
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <AppSection title={surface.noteLabel} size="sm">
+                    <p className="line-clamp-3 break-words text-sm text-muted-foreground">
+                      {issue.notes}
+                    </p>
+                  </AppSection>
                 ) : null}
               </div>
             </TabsContent>
 
             <TabsContent value="lines" className="mt-4">
-              <div className="space-y-6">
-                <Card className="overflow-hidden">
-                  <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-1">
-                      <CardTitle>{tTerm("ingredientsList")}</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {isDraft
-                          ? "Phiếu nháp tự lưu khi thêm hoặc xóa dòng."
-                          : "Phiếu đã chốt, dữ liệu chỉ còn ở chế độ xem."}
-                      </p>
-                    </div>
-                    {isDraft ? (
+              <div className="flex flex-col gap-6">
+                <AppSection
+                  title={tTerm("ingredientsList")}
+                  description={
+                    isDraft
+                      ? "Phiếu nháp tự lưu khi thêm hoặc xóa dòng."
+                      : "Phiếu đã chốt, dữ liệu chỉ còn ở chế độ xem."
+                  }
+                  action={
+                    isDraft ? (
                       <Button
                         onClick={() => setAddDialogOpen(true)}
                         className="bg-success/10 text-success hover:bg-success/15 hover:text-success"
@@ -409,9 +460,9 @@ export function IssueDetailClient({
                           unit: line.unit ?? line.ingredients?.unit ?? "",
                         }))}
                       />
-                    ) : null}
-                  </CardHeader>
-                  <CardContent>
+                    ) : null
+                  }
+                >
                     {lines.length === 0 ? (
                       <AppEmptyState
                         mode="no-data"
@@ -429,7 +480,6 @@ export function IssueDetailClient({
                       />
                     ) : (
                       <DataTable
-                        className="p-4 md:p-0"
                         columns={lineColumns}
                         data={lines}
                         getRowKey={(line) => line.id}
@@ -438,14 +488,14 @@ export function IssueDetailClient({
                             item={item}
                             isDraft={isDraft}
                             isPending={isPending}
-                            onDelete={setPendingDeleteId}
+                            onDelete={handleDeleteLine}
                           />
                         )}
                       />
                     )}
 
-                    <div className="mt-4 flex justify-end rounded-lg border border-border/60 bg-muted/30 p-5 sm:p-6 lg:p-8">
-                      <div className="w-full max-w-sm space-y-3">
+                    <div className="flex justify-end rounded-lg border border-border/60 bg-muted/30 p-5 sm:p-6 lg:p-8">
+                      <div className="flex w-full max-w-sm flex-col gap-3">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
                             Tổng số dòng:
@@ -474,15 +524,14 @@ export function IssueDetailClient({
                         </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                </AppSection>
 
                 {isDraft ? (
                   <footer className="flex flex-col gap-4 border-t border-border py-6 md:flex-row md:items-center md:justify-between">
                     <Button
                       type="button"
                       variant="ghost"
-                      onClick={() => setConfirmCancelOpen(true)}
+                      onClick={handleCancelIssue}
                       className="text-destructive hover:bg-destructive/8 hover:text-destructive disabled:opacity-60"
                       disabled={isPending}
                     >
@@ -495,9 +544,9 @@ export function IssueDetailClient({
                       </Button>
                       <Button
                         type="button"
-                        onClick={() => setConfirmIssueOpen(true)}
+                        onClick={handleConfirmIssue}
                         disabled={isPending || lines.length === 0}
-                        className="shadow-lg transition-all hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="transition-transform hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <IconCircleCheck className="size-5" />
                         {surface.confirmAction}
@@ -518,97 +567,10 @@ export function IssueDetailClient({
       <AddIssueLineDialog
         ingredients={ingredients}
         isOpen={addDialogOpen}
-        isPending={isPending}
         issueId={issueId}
         onOpenChange={setAddDialogOpen}
         onSaved={reload}
-        startTransition={startTransition}
       />
-
-      <AlertDialog open={confirmIssueOpen} onOpenChange={setConfirmIssueOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{surface.confirmTitle}</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2">
-                <p>Thao tác này sẽ trừ tồn kho và không thể hoàn tác.</p>
-                {lines.length > 0 ? (
-                  <Card className="bg-muted/30 text-left">
-                    <CardContent className="space-y-2 pt-6">
-                      {lines.map((line) => (
-                        <p key={line.id}>
-                          Se tru{" "}
-                          <strong>
-                            {formatQty(Number(line.quantity ?? 0))} {line.unit}
-                          </strong>{" "}
-                          <strong>
-                            {line.ingredients?.name ?? `#${line.ingredient_id}`}
-                          </strong>{" "}
-                          khoi kho{" "}
-                          <strong>{issue.branches?.name ?? "—"}</strong>.
-                        </p>
-                      ))}
-                    </CardContent>
-                  </Card>
-                ) : null}
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{ACTIONS_VI.back}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmIssue}
-              disabled={isPending}
-            >
-              {isPending ? "Đang xử lý..." : "Xác nhận xuất kho"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={confirmCancelOpen} onOpenChange={setConfirmCancelOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hủy phiếu xuất?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Phiếu xuất sẽ chuyển sang trạng thái hủy và không thể xác nhận
-              nữa.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Không hủy</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancelIssue}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isPending ? "Đang xử lý..." : "Xác nhận hủy"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={pendingDeleteId !== null}
-        onOpenChange={(open) => !open && setPendingDeleteId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xóa dòng nguyên liệu?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Dòng này sẽ bị xóa khỏi phiếu xuất nháp.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{ACTIONS_VI.back}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteLine}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isPending ? "Đang xử lý..." : "Xóa dòng"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </AppPage>
   );
 }
@@ -616,165 +578,127 @@ export function IssueDetailClient({
 function AddIssueLineDialog({
   ingredients,
   isOpen,
-  isPending,
   issueId,
   onOpenChange,
   onSaved,
-  startTransition,
 }: AddIssueLineDialogProps) {
-  const [ingredientId, setIngredientId] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState("");
-  const [reason, setReason] = useState("");
+  const defaultValues = useMemo<AddIssueLineFormValues>(
+    () => ({
+      ingredientId: "",
+      quantity: "",
+      unit: "",
+      reason: "",
+    }),
+    [],
+  );
 
-  function resetForm() {
-    setIngredientId("");
-    setQuantity("");
-    setUnit("");
-    setReason("");
-  }
-
-  function handleIngredientChange(value: string) {
-    setIngredientId(value);
-    const ingredient = ingredients.find((item) => item.id === Number(value));
-    setUnit(ingredient ? getWarehouseUnit(ingredient) : "");
-  }
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    const parsedIngredientId = Number(ingredientId);
-    const parsedQuantity = Number(quantity);
-
-    if (!parsedIngredientId) {
-      toast.error("Chọn nguyên liệu cần xuất.");
-      return;
-    }
-
-    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
-      toast.error("Số lượng xuất phải lớn hơn 0.");
-      return;
-    }
-
-    if (!unit.trim()) {
-      toast.error("Đơn vị không được để trống.");
-      return;
-    }
-
-    if (!reason.trim()) {
-      toast.error("Lý do xuất là bắt buộc để lưu vết.");
-      return;
-    }
-
-    // Unit cost (WAC) comes from stock_levels.avg_unit_cost at confirm
-    // time — never user-entered, to keep COGS from drifting.
-    startTransition(async () => {
-      const res = await upsertStockIssueLine({
-        issueId,
-        ingredientId: parsedIngredientId,
-        quantity: parsedQuantity,
-        unit: unit.trim(),
-        reason: reason.trim(),
-      });
-
-      if (!res.success) {
-        toast.error(res.error ?? "Không thể lưu dòng nguyên liệu.");
-        return;
-      }
-
-      toast.success("Đã lưu dòng nguyên liệu.");
-      onOpenChange(false);
-      resetForm();
-      await onSaved();
+  async function handleSubmit(values: AddIssueLineFormValues) {
+    const res = await upsertStockIssueLine({
+      issueId,
+      ingredientId: Number(values.ingredientId),
+      quantity: Number(values.quantity),
+      unit: values.unit.trim(),
+      reason: values.reason.trim(),
     });
+
+    if (!res.success) {
+      return {
+        success: false,
+        error: res.error ?? "Không thể lưu dòng nguyên liệu.",
+      };
+    }
+
+    await onSaved();
+    return { success: true };
   }
 
   return (
-    <Dialog
+    <FormDialog
       open={isOpen}
-      onOpenChange={(open) => {
-        onOpenChange(open);
-        if (!open) resetForm();
-      }}
+      onOpenChange={onOpenChange}
+      title="Thêm dòng nguyên liệu"
+      schema={addIssueLineSchema}
+      defaultValues={defaultValues}
+      entityKey={`issue-line-${issueId}`}
+      onSubmit={handleSubmit}
+      successMessage="Đã lưu dòng nguyên liệu."
+      submitLabel="Lưu dòng"
+      cancelLabel={ACTIONS_VI.cancel}
     >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Thêm dòng nguyên liệu</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Nguyên liệu *</Label>
-            <Combobox
-              value={ingredientId}
-              onValueChange={handleIngredientChange}
-              options={ingredients
-                .filter((ingredient) => ingredient.is_active)
-                .map((ingredient) => ({
-                  value: String(ingredient.id),
-                  label: ingredient.name,
-                  hint: getWarehouseUnit(ingredient),
-                  keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
-                }))}
-              placeholder="Chọn nguyên liệu"
-              searchPlaceholder="Tìm tên, SKU, danh mục..."
-            />
-          </div>
+      {(form) => {
+        const ingredientError = form.formState.errors.ingredientId;
+        return (
+          <>
+            <Field data-invalid={!!ingredientError}>
+              <FieldLabel>Nguyên liệu *</FieldLabel>
+              <Combobox
+                value={form.watch("ingredientId")}
+                onValueChange={(value) => {
+                  form.setValue("ingredientId", value, {
+                    shouldValidate: true,
+                  });
+                  const ingredient = ingredients.find(
+                    (item) => item.id === Number(value),
+                  );
+                  form.setValue(
+                    "unit",
+                    ingredient ? getWarehouseUnit(ingredient) : "",
+                    { shouldValidate: true },
+                  );
+                }}
+                options={ingredients
+                  .filter((ingredient) => ingredient.is_active)
+                  .map((ingredient) => ({
+                    value: String(ingredient.id),
+                    label: ingredient.name,
+                    hint: getWarehouseUnit(ingredient),
+                    keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
+                  }))}
+                placeholder="Chọn nguyên liệu"
+                searchPlaceholder="Tìm tên, SKU, danh mục..."
+              />
+              {ingredientError ? (
+                <FieldError errors={[ingredientError]} />
+              ) : null}
+            </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="issue-line-qty">Số lượng xuất *</Label>
-              <FormattedNumberInput
-                id="issue-line-qty"
-                value={quantity}
-                onValueChange={setQuantity}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <NumberField
+                control={form.control}
+                name="quantity"
+                label="Số lượng xuất"
                 maxFractionDigits={3}
                 placeholder="0"
+                required
               />
-            </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="issue-line-unit">Đơn vị *</Label>
-              <Input
-                id="issue-line-unit"
-                value={unit}
+              <TextField
+                control={form.control}
+                name="unit"
+                label="Đơn vị"
                 readOnly
                 aria-readonly="true"
                 placeholder="kg"
+                required
               />
             </div>
-          </div>
 
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-            Đơn giá (WAC) tự áp dụng từ tồn kho tại thời điểm xác nhận phiếu.
-          </div>
+            <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+              Đơn giá (WAC) tự áp dụng từ tồn kho tại thời điểm xác nhận phiếu.
+            </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="issue-line-reason">Lý do xuất *</Label>
-            <Textarea
-              id="issue-line-reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
+            <TextareaField
+              control={form.control}
+              name="reason"
+              label="Lý do xuất"
               rows={3}
               placeholder="Ví dụ: cấp phát cho bếp chuẩn bị ca chiều"
-              className="min-h-24"
+              required
             />
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Đang lưu..." : "Lưu dòng"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </>
+        );
+      }}
+    </FormDialog>
   );
 }
 
@@ -790,18 +714,14 @@ function IssueLineMobileCard({
   onDelete: (lineId: number) => void;
 }) {
   return (
-    <Card className="bg-muted/20">
-      <CardContent>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="font-bold">
-              {item.ingredients?.name ?? `#${item.ingredient_id}`}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              ID: {item.ingredient_id}
-            </p>
-          </div>
-          {isDraft ? (
+    <Item variant="outline" className="bg-muted/20">
+      <ItemHeader>
+        <div>
+          <ItemTitle>{item.ingredients?.name ?? `#${item.ingredient_id}`}</ItemTitle>
+          <ItemDescription>ID: {item.ingredient_id}</ItemDescription>
+        </div>
+        {isDraft ? (
+          <ItemActions>
             <Button
               type="button"
               variant="ghost"
@@ -812,9 +732,11 @@ function IssueLineMobileCard({
             >
               <IconTrash className="size-4" />
             </Button>
-          ) : null}
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          </ItemActions>
+        ) : null}
+      </ItemHeader>
+      <ItemContent className="basis-full">
+        <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <p className="text-muted-foreground">{FORM_VI.quantity}</p>
             <p className="font-semibold">
@@ -840,11 +762,13 @@ function IssueLineMobileCard({
             </p>
           </div>
         </div>
-        <div className="mt-4 rounded-lg bg-background px-3 py-2 text-sm">
+      </ItemContent>
+      <ItemFooter className="basis-full">
+        <div className="w-full rounded-lg bg-background px-3 py-2 text-sm">
           <p className="text-muted-foreground">{tTerm("issueReason")}</p>
           <p className="mt-1">{item.reason ?? "—"}</p>
         </div>
-      </CardContent>
-    </Card>
+      </ItemFooter>
+    </Item>
   );
 }

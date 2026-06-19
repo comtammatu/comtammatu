@@ -12,9 +12,13 @@ export type TodayWorkStatus =
   | "checkout_pending"
   | "done";
 
+export type TodayChecklistTaskKind = "standard" | "consumption_report";
+
 export interface TodayChecklistItem {
   id: number;
+  templateItemId: number | null;
   title: string;
+  taskKind: TodayChecklistTaskKind;
   phase: "start_of_shift" | "during_shift" | "end_of_shift";
   doneDefinition: string;
   isRequired: boolean;
@@ -117,6 +121,10 @@ function normalizeShift(shift: unknown): {
     start_time: typeof maybe.start_time === "string" ? maybe.start_time : null,
     end_time: typeof maybe.end_time === "string" ? maybe.end_time : null,
   };
+}
+
+function normalizeTaskKind(value: unknown): TodayChecklistTaskKind {
+  return value === "consumption_report" ? "consumption_report" : "standard";
 }
 
 export async function getTodayWorkState(): Promise<TodayWorkState> {
@@ -232,7 +240,7 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     ? await supabase
         .from("attendance_checklist_items")
         .select(
-          "id, title, phase, done_definition, is_required, sort_order, is_done, completed_at",
+          "id, template_item_id, title, task_kind, phase, done_definition, is_required, sort_order, is_done, completed_at",
         )
         .eq("tenant_id", claims.tenant_id)
         .eq("attendance_record_id", attendance.id)
@@ -242,7 +250,9 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
   const checklistItems: TodayChecklistItem[] = (checklistRows ?? []).map(
     (item) => ({
       id: item.id,
+      templateItemId: item.template_item_id ?? null,
       title: item.title,
+      taskKind: normalizeTaskKind((item as { task_kind?: unknown }).task_kind),
       phase:
         item.phase === "start_of_shift" || item.phase === "end_of_shift"
           ? item.phase

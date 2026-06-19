@@ -146,4 +146,3 @@ Ví dụ: `/br/1/pos`
 | Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-01"`                                                   |
 | Cập nhật mockup gần nhất | 2026-04-27                                                                                                       |
 | Model bám                | per-branch (D7) — `0ccb059`                                                                                      |
-| Người maintain           | _TBD_                                                                                                            |

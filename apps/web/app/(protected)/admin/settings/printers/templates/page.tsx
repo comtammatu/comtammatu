@@ -14,7 +14,7 @@ import {
   type BranchOption,
   type KindTemplate,
 } from "./templates-client";
-import { SettingsPageShell } from "../../settings-page-shell";
+import { SettingsPageFrame } from "../../settings-page-frame";
 import { messages } from "@lib/messages";
 
 const TENANT_TEMPLATE_ROLES = ["owner"] as const;
@@ -75,7 +75,7 @@ export default async function PrintTemplatesPage() {
   });
 
   return (
-    <SettingsPageShell
+    <SettingsPageFrame
       title={messages.settings.pages.printTemplatesTitle}
       description={messages.settings.pages.printTemplatesDescription}
       actions={
@@ -91,6 +91,6 @@ export default async function PrintTemplatesPage() {
         templates={templates}
         branches={(branchesRes.data ?? []) as BranchOption[]}
       />
-    </SettingsPageShell>
+    </SettingsPageFrame>
   );
 }

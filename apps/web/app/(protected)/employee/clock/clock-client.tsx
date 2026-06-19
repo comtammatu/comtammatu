@@ -17,19 +17,19 @@ import {
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNTime } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
-import { EmployeeDetailList, EmployeePanel } from "../components/employee-page";
+import { AppEmptyState } from "@/components/surface";
+import {
+  EmployeeActionGrid,
+  EmployeeDetailList,
+  EmployeeFrame,
+  EmployeeInlineState,
+  EmployeePanel,
+} from "../components/employee-page";
 import type { TodayWorkState } from "../_lib/today-work-state";
 import {
   cancelCheckoutRequest,
@@ -236,30 +236,30 @@ export function ClockClient({ state }: ClockClientProps) {
 
   const submitCheckout = useCallback(async () => {
     const checkInValue = formatTime(state.attendance?.checkIn ?? null);
-    const ok = managerAttendanceOnly
-      ? await confirm({
-          title: "Đóng ca của bạn?",
-          description:
-            "Thao tác này chốt ca làm việc và ghi giờ ra ngay, không thể hoàn tác.",
-          details: [{ label: "Giờ vào ca", value: checkInValue }],
-          confirmText: "Đóng ca",
-          variant: "destructive",
-        })
-      : await confirm({
-          title: "Gửi yêu cầu kết ca?",
-          description:
-            "Giờ ra sẽ được ghi nhận và gửi quản lý duyệt. Không thể tự sửa sau khi gửi.",
-          details: [{ label: "Giờ vào ca", value: checkInValue }],
-          confirmText: "Gửi kết ca",
-          variant: "destructive",
-        });
-    if (!ok) return;
+    const attendanceId = state.attendance?.id;
+    if (!attendanceId) {
+      setCheckoutState("error");
+      setError("Không tìm thấy ca đang mở để kết ca.");
+      return;
+    }
+
+    if (managerAttendanceOnly) {
+      const ok = await confirm({
+        title: "Đóng ca của bạn?",
+        description:
+          "Thao tác này chốt ca làm việc và ghi giờ ra ngay, không thể hoàn tác.",
+        details: [{ label: "Giờ vào ca", value: checkInValue }],
+        confirmText: "Đóng ca",
+        variant: "destructive",
+      });
+      if (!ok) return;
+    }
     setCheckoutState("submitting");
     setError(null);
     startTransition(async () => {
       const result = managerAttendanceOnly
-        ? await clockOutManagerShift({})
-        : await requestCheckoutApproval();
+        ? await clockOutManagerShift({ attendanceId })
+        : await requestCheckoutApproval({ attendanceId });
       if (result.success) {
         setCheckoutState("success");
         if (navigator.vibrate) navigator.vibrate(150);
@@ -270,13 +270,20 @@ export function ClockClient({ state }: ClockClientProps) {
         setError(result.error ?? "Kết ca thất bại.");
       }
     });
-  }, [managerAttendanceOnly, router, state.attendance?.checkIn]);
+  }, [managerAttendanceOnly, router, state.attendance?.checkIn, state.attendance?.id]);
 
   const cancelCheckout = useCallback(() => {
+    const attendanceId = state.attendance?.id;
+    if (!attendanceId) {
+      setCheckoutState("error");
+      setError("Không tìm thấy yêu cầu kết ca.");
+      return;
+    }
+
     setCheckoutState("submitting");
     setError(null);
     startTransition(async () => {
-      const result = await cancelCheckoutRequest();
+      const result = await cancelCheckoutRequest({ attendanceId });
       if (result.success) {
         if (navigator.vibrate) navigator.vibrate(80);
         router.push("/employee");
@@ -286,7 +293,7 @@ export function ClockClient({ state }: ClockClientProps) {
         setError(result.error ?? "Không thể rút yêu cầu kết ca.");
       }
     });
-  }, [router]);
+  }, [router, state.attendance?.id]);
 
   const cameraActive =
     cameraState === "starting" ||
@@ -295,17 +302,11 @@ export function ClockClient({ state }: ClockClientProps) {
 
   if (state.status === "missing_branch") {
     return (
-      <Empty>
-        <EmptyMedia variant="icon">
-          <IconCircleX />
-        </EmptyMedia>
-        <EmptyHeader>
-          <EmptyTitle>{clockCopy.missingBranchTitle}</EmptyTitle>
-          <EmptyDescription>
-            {clockCopy.missingBranchDescription}
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <AppEmptyState
+        title={clockCopy.missingBranchTitle}
+        description={clockCopy.missingBranchDescription}
+        icon={<IconCircleX />}
+      />
     );
   }
 
@@ -525,10 +526,10 @@ export function ClockClient({ state }: ClockClientProps) {
         </Button>
 
         {checkoutState === "submitting" ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200">
-            <Spinner />
-            {checkoutPendingLabel}
-          </div>
+          <EmployeeInlineState
+            media={<Spinner />}
+            title={checkoutPendingLabel}
+          />
         ) : null}
       </EmployeePanel>
     );
@@ -563,7 +564,7 @@ export function ClockClient({ state }: ClockClientProps) {
       />
 
       {cameraActive ? (
-        <div className="overflow-hidden rounded-lg border bg-muted/40 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-200">
+        <EmployeeFrame className="overflow-hidden bg-muted/40 motion-safe:zoom-in-95">
           <div className="relative aspect-[4/3] w-full">
             <video
               ref={videoRef}
@@ -583,37 +584,38 @@ export function ClockClient({ state }: ClockClientProps) {
               </div>
             )}
           </div>
-        </div>
+        </EmployeeFrame>
       ) : null}
 
       {!cameraActive && previewUrl ? (
-        <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-200">
-          <Image
-            src={previewUrl}
-            alt=""
-            width={48}
-            height={48}
-            className="size-12 rounded-md object-cover"
-            unoptimized
-          />
-          <div className="min-w-0 text-sm">
-            <p className="font-medium">{clockCopy.photoReadyTitle}</p>
-            <p className="truncate text-muted-foreground">{photo?.name}</p>
-          </div>
-        </div>
+        <EmployeeInlineState
+          media={
+            <Image
+              src={previewUrl}
+              alt=""
+              width={48}
+              height={48}
+              className="size-full object-cover"
+              unoptimized
+            />
+          }
+          mediaClassName="size-12 rounded-md"
+          title={clockCopy.photoReadyTitle}
+          description={photo?.name}
+          className="bg-muted/40 motion-safe:zoom-in-95"
+        />
       ) : !cameraActive ? (
-        <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-background text-primary">
-            <IconCamera className="size-5" />
-          </span>
-          <span className="min-w-0">{clockCopy.cameraNotOpen}</span>
-        </div>
+        <EmployeeInlineState
+          icon={IconCamera}
+          description={clockCopy.cameraNotOpen}
+          className="bg-muted/40"
+        />
       ) : null}
 
       {error ? <ErrorAlert message={error} /> : null}
 
       {cameraState === "ready" || cameraState === "capturing" ? (
-        <div className="grid gap-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200 sm:grid-cols-2">
+        <EmployeeActionGrid>
           <Button
             type="button"
             size="touch"
@@ -639,9 +641,9 @@ export function ClockClient({ state }: ClockClientProps) {
           >
             {ACTIONS_VI.cancel}
           </Button>
-        </div>
+        </EmployeeActionGrid>
       ) : photo ? (
-        <div className="grid gap-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200 sm:grid-cols-2">
+        <EmployeeActionGrid>
           <Button
             type="button"
             variant="outline"
@@ -675,7 +677,7 @@ export function ClockClient({ state }: ClockClientProps) {
             )}
             {clockCopy.clockInButton}
           </Button>
-        </div>
+        </EmployeeActionGrid>
       ) : cameraState === "starting" ? null : (
         <Button
           type="button"

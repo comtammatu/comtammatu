@@ -1,36 +1,18 @@
 import Link from "next/link";
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing finance revenue detail page keeps operational copy inline */
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import { KpiCard } from "@/components/kpi/kpi-card";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import { Progress } from "@comtammatu/ui/components/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { formatVND } from "@comtammatu/shared/format";
-import { AppPage, AppPageHeader } from "@/components/surface";
-import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
-import { formatVNTime } from "@/_lib/format-datetime";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
 import { fetchAccessibleBranches, fetchOrdersForDay } from "../../actions";
+import { RevenueDrillTabs } from "./revenue-drill-tabs";
 
-interface OrderRow {
+export interface OrderRow {
   order_id: number;
   order_number: string;
   branch_id: number;
@@ -48,28 +30,11 @@ interface OrderRow {
   invoice_number: string | null;
 }
 
-const ORDER_TYPE_LABEL: Record<string, string> = {
-  dine_in: "Tại bàn",
-  takeaway: "Mang về",
-};
-
-const PAYMENT_METHOD_LABEL: Record<string, string> = {
-  cash: "Tiền mặt",
-  vietqr: "VietQR",
-  momo: "MoMo",
-};
-
 function isValidIsoDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
-function formatHourBucket(hour: number): string {
-  const start = String(hour).padStart(2, "0");
-  const end = String((hour + 1) % 24).padStart(2, "0");
-  return `${start}:00–${end}:00`;
-}
-
-interface HourSummary {
+export interface HourSummary {
   hour: number;
   order_count: number;
   total_revenue: number;
@@ -133,15 +98,13 @@ export default async function RevenueDrillPage({
             Quay lại
           </Link>
         </Button>
-        <Card>
-          <CardHeader>
-            <CardTitle>Chọn chi nhánh để xem chi tiết ngày {date}</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Drill-down từ chế độ &quot;Tất cả chi nhánh&quot; cần chọn cụ thể
-              chi nhánh để hiển thị danh sách đơn theo giờ.
-            </p>
-          </CardHeader>
-          <CardContent>
+        <AppSection
+          title={`Chọn chi nhánh để xem chi tiết ngày ${date}`}
+          description='Drill-down từ chế độ "Tất cả chi nhánh" cần chọn cụ thể chi nhánh để hiển thị danh sách đơn theo giờ.'
+        >
+          {branches.length === 0 ? (
+            <AppEmptyState compact title="Bạn chưa có quyền xem chi nhánh nào." />
+          ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
               {branches.map((b) => (
                 <li key={b.id}>
@@ -156,14 +119,9 @@ export default async function RevenueDrillPage({
                   </Button>
                 </li>
               ))}
-              {branches.length === 0 ? (
-                <li className="text-sm text-muted-foreground">
-                  Bạn chưa có quyền xem chi nhánh nào.
-                </li>
-              ) : null}
             </ul>
-          </CardContent>
-        </Card>
+          )}
+        </AppSection>
       </div>
     );
   }
@@ -209,180 +167,14 @@ export default async function RevenueDrillPage({
         badge={{ children: "Drill-down theo ngày", variant: "secondary" }}
       />
 
-      <AppPageTabs
-        items={[
-          { value: "tong-quan", label: "Tổng quan" },
-          { value: "theo-gio", label: "Theo giờ", count: hours.length },
-          {
-            value: "danh-sach-don",
-            label: "Danh sách đơn",
-            count: totalOrders,
-          },
-        ]}
-        defaultValue="tong-quan"
-        paramKey="tab"
-      >
-        <TabsContent value="tong-quan">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <KpiCard label="Doanh thu" value={formatVND(totalRevenue)} />
-            <KpiCard label="Giảm giá" value={formatVND(totalDiscount)} />
-            <KpiCard label="VAT" value={formatVND(totalTax)} />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="theo-gio">
-          <Card>
-            <CardHeader>
-              <CardTitle>Doanh thu theo giờ</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 p-4">
-              {hours.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Không có đơn trong ngày này.
-                </p>
-              ) : (
-                hours.map((h) => {
-                  const pct = totalRevenue
-                    ? Math.round((h.total_revenue / totalRevenue) * 100)
-                    : 0;
-                  return (
-                    <div key={h.hour} className="space-y-1">
-                      <div className="flex items-baseline justify-between text-sm">
-                        <span className="font-medium tabular-nums">
-                          {formatHourBucket(h.hour)}
-                        </span>
-                        <span className="tabular-nums">
-                          {formatVND(h.total_revenue)}
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            {h.order_count} đơn
-                          </span>
-                        </span>
-                      </div>
-                      <Progress value={pct} className="h-1.5 rounded-full" />
-                    </div>
-                  );
-                })
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="danh-sach-don">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                Danh sách đơn ({totalOrders.toLocaleString("vi-VN")})
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Sắp xếp theo thời gian thanh toán. HĐĐT &quot;Không yêu
-                cầu&quot; = khách lẻ không nhập MST.
-              </p>
-            </CardHeader>
-            <CardContent>
-              {orders.length === 0 ? (
-                <Empty className="py-8">
-                  <EmptyHeader>
-                    <EmptyTitle className="text-sm font-semibold">
-                      Không có đơn đã thanh toán trong ngày.
-                    </EmptyTitle>
-                  </EmptyHeader>
-                </Empty>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Giờ</TableHead>
-                      <TableHead>Mã đơn</TableHead>
-                      <TableHead>Loại</TableHead>
-                      <TableHead>Chi nhánh</TableHead>
-                      <TableHead className="text-right">Món</TableHead>
-                      <TableHead>Thanh toán</TableHead>
-                      <TableHead className="text-right">Giảm</TableHead>
-                      <TableHead className="text-right">VAT</TableHead>
-                      <TableHead className="text-right">Tổng</TableHead>
-                      <TableHead>HĐĐT</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.map((o) => {
-                      const invoiceLabel =
-                        o.invoice_status === "issued" && o.invoice_number
-                          ? `${getStatusBadgeMeta("tax-invoice", o.invoice_status).label} · ${o.invoice_number}`
-                          : undefined;
-                      return (
-                        <TableRow key={o.order_id}>
-                          <TableCell className="font-mono tabular-nums">
-                            {formatVNTime(o.paid_at)}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {o.order_number}
-                          </TableCell>
-                          <TableCell>
-                            {ORDER_TYPE_LABEL[o.order_type] ?? o.order_type}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {o.branch_name?.replace(/^Chi nhánh\s+/, "") ?? "—"}
-                          </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums">
-                            {o.item_count}
-                          </TableCell>
-                          <TableCell>
-                            {o.payment_method
-                              ? (PAYMENT_METHOD_LABEL[o.payment_method] ??
-                                o.payment_method)
-                              : "—"}
-                          </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
-                            {Number(o.discount_amount) > 0
-                              ? formatVND(o.discount_amount)
-                              : "—"}
-                          </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
-                            {formatVND(o.tax_amount)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums font-medium">
-                            {formatVND(o.total_amount)}
-                          </TableCell>
-                          <TableCell>
-                            {o.invoice_status ? (
-                              <StatusBadge
-                                domain="tax-invoice"
-                                value={o.invoice_status}
-                                label={invoiceLabel}
-                              />
-                            ) : (
-                              <span className="text-xs text-muted-foreground">
-                                Chưa xuất
-                              </span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                  <TableFooter>
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={6} className="font-medium">
-                        Tổng
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
-                        {formatVND(totalDiscount)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
-                        {formatVND(totalTax)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums font-bold">
-                        {formatVND(totalRevenue)}
-                      </TableCell>
-                      <TableCell />
-                    </TableRow>
-                  </TableFooter>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </AppPageTabs>
+      <RevenueDrillTabs
+        orders={orders}
+        hours={hours}
+        totalOrders={totalOrders}
+        totalRevenue={totalRevenue}
+        totalDiscount={totalDiscount}
+        totalTax={totalTax}
+      />
     </AppPage>
   );
 }

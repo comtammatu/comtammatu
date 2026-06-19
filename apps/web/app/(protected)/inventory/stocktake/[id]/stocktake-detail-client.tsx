@@ -14,17 +14,8 @@ import { formatVNDateTime } from "@comtammatu/shared/time";
 import { STOCKTAKE_SESSION_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Input } from "@comtammatu/ui/components/input";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@comtammatu/ui/components/alert-dialog";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { toast } from "@comtammatu/ui/components/sonner";
 
@@ -46,6 +37,7 @@ import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { tRoute, tTerm } from "../../_lib/dictionary";
+import { getInventoryStatusBadgeVariant } from "../../_lib/ui";
 import {
   cancelStocktake,
   completeStocktake,
@@ -106,8 +98,6 @@ export function StocktakeDetailClient({
   const [session, setSession] = useState<StocktakeSession>(initialSession);
   const [lines, setLines] = useState<StocktakeLine[]>(initialLines);
   const [savedLines, setSavedLines] = useState<Set<number>>(new Set());
-  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const statusLabel =
     (STOCKTAKE_SESSION_STATUS_LABELS_VI as Record<string, string>)[
@@ -191,30 +181,45 @@ export function StocktakeDetailClient({
     });
   }
 
-  function handleComplete() {
+  async function handleComplete() {
+    const ok = await confirm({
+      title: stocktakeDetailCopy.completeDialogTitle,
+      description: stocktakeDetailCopy.completeDialogDescription,
+      confirmText: stocktakeDetailCopy.completeResultAction,
+      cancelText: ACTIONS_VI.cancel,
+    });
+
+    if (!ok) return;
+
     startTransition(async () => {
       const res = await completeStocktake(session.id);
       if (!res.success) {
         toast.error(res.error ?? stocktakeDetailCopy.completeFailed);
-        setCompleteDialogOpen(false);
         return;
       }
       toast.success(stocktakeDetailCopy.completeOk);
-      setCompleteDialogOpen(false);
       refreshData();
     });
   }
 
-  function handleCancel() {
+  async function handleCancel() {
+    const ok = await confirm({
+      title: stocktakeDetailCopy.cancelDialogTitle,
+      description: stocktakeDetailCopy.cancelDialogDescription,
+      confirmText: stocktakeDetailCopy.confirmCancelAction,
+      cancelText: ACTIONS_VI.back,
+      variant: "destructive",
+    });
+
+    if (!ok) return;
+
     startTransition(async () => {
       const res = await cancelStocktake(session.id);
       if (!res.success) {
         toast.error(res.error ?? stocktakeDetailCopy.cancelFailed);
-        setCancelDialogOpen(false);
         return;
       }
       toast.success(stocktakeDetailCopy.cancelOk);
-      setCancelDialogOpen(false);
       refreshData();
     });
   }
@@ -225,7 +230,10 @@ export function StocktakeDetailClient({
         eyebrow="Kho hàng"
         title={`KK-${session.id}`}
         description={headerDescription}
-        badge={{ children: statusLabel }}
+        badge={{
+          children: statusLabel,
+          variant: getInventoryStatusBadgeVariant(session.status),
+        }}
         breadcrumb={
           <Link
             href={`${routeBase}?branchId=${session.branch_id}`}
@@ -240,14 +248,14 @@ export function StocktakeDetailClient({
             <>
               <Button
                 variant="outline"
-                onClick={() => setCancelDialogOpen(true)}
+                onClick={handleCancel}
                 disabled={isPending}
               >
                 <IconBan className="mr-2 size-4" />
                 {stocktakeDetailCopy.cancelAction}
               </Button>
               <Button
-                onClick={() => setCompleteDialogOpen(true)}
+                onClick={handleComplete}
                 disabled={isPending}
               >
                 <IconCircleCheck className="mr-2 size-4" />
@@ -359,60 +367,6 @@ export function StocktakeDetailClient({
         }
       />
 
-      {/* Complete confirm dialog */}
-      <AlertDialog
-        open={completeDialogOpen}
-        onOpenChange={setCompleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {stocktakeDetailCopy.completeDialogTitle}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {stocktakeDetailCopy.completeDialogDescription}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>
-              {ACTIONS_VI.cancel}
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleComplete} disabled={isPending}>
-              {isPending
-                ? stocktakeDetailCopy.processing
-                : stocktakeDetailCopy.completeResultAction}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Cancel confirm dialog */}
-      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {stocktakeDetailCopy.cancelDialogTitle}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {stocktakeDetailCopy.cancelDialogDescription}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>
-              {ACTIONS_VI.back}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancel}
-              disabled={isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isPending
-                ? stocktakeDetailCopy.processing
-                : stocktakeDetailCopy.confirmCancelAction}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </AppPage>
   );
 }

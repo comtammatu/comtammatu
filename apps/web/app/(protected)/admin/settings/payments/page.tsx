@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { SYSTEM_SETTING_DEFAULTS } from "@comtammatu/shared/settings";
 import { PaymentsForm } from "./payments-form";
-import { SettingsPageShell } from "../settings-page-shell";
+import { SettingsPageFrame } from "../settings-page-frame";
 import { messages } from "@lib/messages";
 
 export default async function PaymentSettingsPage() {
@@ -34,7 +34,7 @@ export default async function PaymentSettingsPage() {
     !!process.env.MOMO_SECRET_KEY;
 
   return (
-    <SettingsPageShell
+    <SettingsPageFrame
       title={messages.settings.pages.paymentsTitle}
       description={messages.settings.pages.paymentsDescription}
     >
@@ -43,6 +43,6 @@ export default async function PaymentSettingsPage() {
         vietqrEnvConfigured={vietqrEnvConfigured}
         momoEnvConfigured={momoEnvConfigured}
       />
-    </SettingsPageShell>
+    </SettingsPageFrame>
   );
 }

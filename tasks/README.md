@@ -2,7 +2,7 @@
 
 Top-level `tasks/` is intentionally small:
 
-- `todo.md` — active tracker for current pilot/hardening work.
+- `todo.md` — active tracker for current operating and owner-gated work.
 - `regressions.md` — active named failure rules loaded before implementation.
 - `lessons.md` — durable retrospective lessons after corrections.
 

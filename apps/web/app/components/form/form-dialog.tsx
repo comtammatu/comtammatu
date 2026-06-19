@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  useTransition,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import {
   useForm,
   type DefaultValues,
@@ -42,6 +48,7 @@ export interface FormDialogProps<TValues extends FieldValues> {
   onSubmit: (values: TValues) => Promise<ActionResult>;
   successMessage: string;
   submitLabel: string;
+  submitVariant?: ComponentProps<typeof Button>["variant"];
   cancelLabel?: string;
   contentClassName?: string;
   children: (form: FormContext<TValues>) => ReactNode;
@@ -58,6 +65,7 @@ export function FormDialog<TValues extends FieldValues>({
   onSubmit,
   successMessage,
   submitLabel,
+  submitVariant = "default",
   cancelLabel = "Hủy",
   contentClassName,
   children,
@@ -125,7 +133,7 @@ export function FormDialog<TValues extends FieldValues>({
             >
               {cancelLabel}
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" variant={submitVariant} disabled={isPending}>
               {isPending && <Spinner className="mr-2" />}
               {submitLabel}
             </Button>

@@ -28,9 +28,19 @@ export const CHECKLIST_SCOPE_LABELS: Record<ChecklistScope, string> = {
   weekly: "Hằng tuần",
 };
 
+export const CHECKLIST_TASK_KINDS = ["standard", "consumption_report"] as const;
+
+export type ChecklistTaskKind = (typeof CHECKLIST_TASK_KINDS)[number];
+
+export const CHECKLIST_TASK_KIND_LABELS: Record<ChecklistTaskKind, string> = {
+  standard: "Việc thường",
+  consumption_report: "Tiêu hao bếp trong ngày",
+};
+
 export interface ChecklistTemplateItem {
   id?: number;
   title: string;
+  taskKind: ChecklistTaskKind;
   phase: ChecklistPhase;
   scope: ChecklistScope;
   doneDefinition: string;
@@ -60,6 +70,24 @@ export interface PositionDefaultRow {
   code: string;
   label_vi: string | null;
   default_checklist_template_id: number | null;
+}
+
+export interface ConsumptionChecklistItemRow {
+  templateItemId: number;
+  templateName: string;
+  branchName: string | null;
+}
+
+export interface ConsumptionDefaultIngredientRow {
+  id: number;
+  name: string;
+  unit: string;
+  category: string | null;
+}
+
+export interface ConsumptionDefaultItemRow {
+  templateItemId: number;
+  ingredientId: number;
 }
 
 export function checklistTemplateLabel(

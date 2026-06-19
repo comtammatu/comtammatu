@@ -121,36 +121,5 @@ test("Finance live copy stays HKD operating-first without two-mode labels", () =
     /Workspace chính cho tài chính vận hành HKD/,
     "default Finance workspace should stay HKD operating-first",
   );
-  assert.match(
-    financeMessages,
-    /Danh mục tài khoản cho phần hỗ trợ kế toán/,
-    "COA copy should point to direct accounting support rather than default workflow",
-  );
-});
-
-test("Accounting period support copy stays direct-support framed", () => {
-  const financeMessages = read("apps/web/lib/messages/finance.ts");
-  const shellPrimitives = read("apps/web/app/lib/shell-primitives.ts");
-  const sharedLabels = read("packages/shared/src/labels/vi.ts");
-
-  const periodsAdminCopy =
-    financeMessages.match(
-      /periodsAdmin: \{[\s\S]*?\n {2}\},\n {2}revenueReport:/,
-    )?.[0] ?? "";
-  const periodsCopy =
-    financeMessages.match(
-      /periods: \{[\s\S]*?\n {2}\},\n {2}statements:/,
-    )?.[0] ?? "";
-
-  assert.match(sharedLabels, /accounting: "Hỗ trợ khóa kỳ"/);
-  assert.match(shellPrimitives, /accounting: "Hỗ trợ kế toán"/);
-  assert.match(shellPrimitives, /periods: "Khóa kỳ"/);
-  assert.match(periodsAdminCopy, /title: "Khóa kỳ hỗ trợ kế toán"/);
-  assert.match(periodsCopy, /title: "Khóa kỳ hỗ trợ kế toán"/);
-  assert.match(periodsCopy, /gl: "Đã ghi nhận"/);
-  assert.doesNotMatch(
-    `${periodsAdminCopy}\n${periodsCopy}`,
-    /Kỳ kế toán|quy trình kế toán|Soft close|hard close|Đối chiếu GL/,
-    "period-close support copy must not read like the default accounting workflow",
-  );
+  assert.doesNotMatch(financeMessages, /Hệ thống tài khoản|Sổ nhật ký|B01-DN/);
 });

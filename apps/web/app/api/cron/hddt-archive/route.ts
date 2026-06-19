@@ -43,11 +43,6 @@ function unauthorized() {
 }
 
 export async function POST(request: Request) {
-  const enabled = (process.env["HDDT_ARCHIVE_ENABLED"] ?? "false") === "true";
-  if (!enabled) {
-    return NextResponse.json({ ok: true, skipped: "feature_flag_off" });
-  }
-
   const expected = getCronSecret();
   const authHeader = request.headers.get("authorization");
   const provided = authHeader?.startsWith("Bearer ")
@@ -55,6 +50,11 @@ export async function POST(request: Request) {
     : null;
   if (!expected || !provided || !timingSafeEquals(provided, expected)) {
     return unauthorized();
+  }
+
+  const enabled = (process.env["HDDT_ARCHIVE_ENABLED"] ?? "false") === "true";
+  if (!enabled) {
+    return NextResponse.json({ ok: true, skipped: "feature_flag_off" });
   }
 
   ensureInvoiceProviderRegistered();

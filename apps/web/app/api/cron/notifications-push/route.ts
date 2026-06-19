@@ -47,11 +47,9 @@ type PositionRow = {
   code: string;
 };
 
-type DeliveryRow = {
-  notification_id: number;
-  subscription_id: number;
-  status: string;
-  attempt_count: number;
+type DeliveryClaimResult = {
+  status: "claimed" | "already_done" | "in_progress" | "max_attempts";
+  attempt_count?: number | null;
 };
 
 function timingSafeEquals(a: string, b: string): boolean {
@@ -69,10 +67,6 @@ function unauthorized() {
     { ok: false, error: "unauthorized" },
     { status: 401 },
   );
-}
-
-function deliveryKey(notificationId: number, subscriptionId: number): string {
-  return `${notificationId}:${subscriptionId}`;
 }
 
 export async function POST(request: Request) {
@@ -160,31 +154,21 @@ export async function POST(request: Request) {
   }
 
   const userIds = [...new Set(subscriptions.map((row) => row.user_id))];
-  const [profilesResult, positionsResult, deliveriesResult] = await Promise.all(
-    [
-      supabase
-        .from("profiles")
-        .select("id, tenant_id, branch_id, is_active, position_id")
-        .in("id", userIds),
-      supabase
-        .from("positions")
-        .select("id, tenant_id, code")
-        .in("tenant_id", tenantIds),
-      supabase
-        .from("notification_push_deliveries")
-        .select("notification_id, subscription_id, status, attempt_count")
-        .in(
-          "notification_id",
-          activeNotifications.map((row) => row.id),
-        ),
-    ],
-  );
+  const [profilesResult, positionsResult] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, tenant_id, branch_id, is_active, position_id")
+      .in("id", userIds),
+    supabase
+      .from("positions")
+      .select("id, tenant_id, code")
+      .in("tenant_id", tenantIds),
+  ]);
 
-  if (profilesResult.error || positionsResult.error || deliveriesResult.error) {
+  if (profilesResult.error || positionsResult.error) {
     console.error("[cron/notifications-push] support fetch failed codes=%o", {
       profiles: profilesResult.error?.code,
       positions: positionsResult.error?.code,
-      deliveries: deliveriesResult.error?.code,
     });
     return NextResponse.json(
       { ok: false, error: "notification_support_fetch_failed" },
@@ -202,12 +186,6 @@ export async function POST(request: Request) {
     ((positionsResult.data ?? []) as PositionRow[]).map((position) => [
       position.id,
       position,
-    ]),
-  );
-  const deliveryByPair = new Map(
-    ((deliveriesResult.data ?? []) as DeliveryRow[]).map((delivery) => [
-      deliveryKey(delivery.notification_id, delivery.subscription_id),
-      delivery,
     ]),
   );
 
@@ -229,31 +207,47 @@ export async function POST(request: Request) {
         continue;
       }
 
-      const key = deliveryKey(notification.id, subscription.id);
-      const prior = deliveryByPair.get(key);
-      if (prior?.status === "sent" || (prior?.attempt_count ?? 0) >= 3) {
+      const { data: claimData, error: claimError } = await supabase.rpc(
+        "claim_notification_push_delivery",
+        {
+          p_notification_id: notification.id,
+          p_subscription_id: subscription.id,
+        },
+      );
+
+      if (claimError) {
+        failed++;
+        console.error(
+          "[cron/notifications-push] delivery claim failed code=%s",
+          claimError.code,
+        );
+        continue;
+      }
+
+      const claim = claimData as DeliveryClaimResult | null;
+      if (claim?.status !== "claimed") {
         skipped++;
         continue;
       }
 
       const result = await sendWebPushNotification(subscription, payload);
-      const attemptCount = (prior?.attempt_count ?? 0) + 1;
+      const attemptCount = Number(claim.attempt_count ?? 1);
       if (result.success) {
         sent++;
         await Promise.all([
-          supabase.from("notification_push_deliveries").upsert(
-            {
+          supabase
+            .from("notification_push_deliveries")
+            .update({
               notification_id: notification.id,
               subscription_id: subscription.id,
               status: "sent",
-              attempt_count: attemptCount,
               last_attempt_at: nowIso,
               sent_at: nowIso,
               error: null,
               updated_at: nowIso,
-            },
-            { onConflict: "notification_id,subscription_id" },
-          ),
+            })
+            .eq("notification_id", notification.id)
+            .eq("subscription_id", subscription.id),
           supabase
             .from("notification_push_subscriptions")
             .update({
@@ -269,18 +263,18 @@ export async function POST(request: Request) {
 
       failed++;
       await Promise.all([
-        supabase.from("notification_push_deliveries").upsert(
-          {
+        supabase
+          .from("notification_push_deliveries")
+          .update({
             notification_id: notification.id,
             subscription_id: subscription.id,
             status: result.expired || attemptCount >= 3 ? "failed" : "pending",
-            attempt_count: attemptCount,
             last_attempt_at: nowIso,
             error: result.error,
             updated_at: nowIso,
-          },
-          { onConflict: "notification_id,subscription_id" },
-        ),
+          })
+          .eq("notification_id", notification.id)
+          .eq("subscription_id", subscription.id),
         supabase
           .from("notification_push_subscriptions")
           .update({

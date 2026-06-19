@@ -26,7 +26,7 @@ import type { CartItem } from "../types";
 import { PosLineItemCompact } from "./pos-line-item-compact";
 
 interface AppendDraftPaneProps {
-  orderNumber: string;
+  targetLabel: string;
   items: CartItem[];
   isSubmitting: boolean;
   onSubmit: () => void;
@@ -42,7 +42,7 @@ interface AppendDraftPaneProps {
 }
 
 function AppendDraftPaneComponent({
-  orderNumber,
+  targetLabel,
   items,
   isSubmitting,
   onSubmit,
@@ -75,17 +75,24 @@ function AppendDraftPaneComponent({
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
       <div className="shrink-0 border-b border-border/60 px-3 py-3 sm:px-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h2 className="font-heading truncate text-base font-semibold tracking-tight text-foreground sm:text-xl">
-              {messages.pos.appendDraft.title}
-            </h2>
-            <Badge variant="warning">#{orderNumber}</Badge>
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <h2 className="font-heading truncate text-base font-semibold tracking-tight text-foreground">
+                {messages.pos.appendDraft.title}
+              </h2>
+              <Badge variant="warning">
+                {messages.pos.appendDraft.draftState}
+              </Badge>
+              <Badge variant="outline" className="font-mono tabular-nums">
+                {targetLabel}
+              </Badge>
+            </div>
           </div>
           <Button
             type="button"
             variant="ghost"
-            size="touch"
-            className="w-12 shrink-0 px-0 text-muted-foreground"
+            size="icon-touch"
+            className="shrink-0 text-muted-foreground"
             aria-label={
               onClosePane
                 ? messages.pos.appendDraft.closeAria
@@ -122,18 +129,18 @@ function AppendDraftPaneComponent({
               return (
                 <li key={item.key} className="relative">
                   <Item
+                    asChild
                     variant="outline"
                     size="sm"
                     className={cn(
-                      "rounded-none bg-card p-0 pr-12 transition-all duration-150 hover:shadow-sm sm:pr-14",
+                      "bg-card pr-12 text-left transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 hover:shadow-sm sm:pr-14",
                       isRemoving &&
                         "bg-destructive/10 opacity-0 motion-safe:scale-95",
                     )}
                   >
-                    <Button
+                    <button
                       type="button"
-                      variant="ghost"
-                      className="h-auto min-h-24 w-full justify-start whitespace-normal rounded-none px-2 py-2 text-left hover:bg-transparent sm:px-3"
+                      className="w-full min-w-0 text-left disabled:pointer-events-none disabled:opacity-50"
                       aria-label={messages.pos.appendDraft.editItemAria(
                         displayName,
                       )}
@@ -150,13 +157,13 @@ function AppendDraftPaneComponent({
                         note={summary.note}
                         isPriority={summary.isPriority}
                       />
-                    </Button>
+                    </button>
                   </Item>
                   <Button
                     type="button"
                     variant="ghost"
-                    size="touch"
-                    className="absolute right-2 top-1/2 min-w-12 -translate-y-1/2 px-0 text-muted-foreground hover:text-destructive"
+                    size="icon-touch"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive"
                     aria-label={messages.pos.appendDraft.removeItemAria(
                       displayName,
                     )}
@@ -174,10 +181,24 @@ function AppendDraftPaneComponent({
 
       <div className="shrink-0 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            {messages.pos.appendDraft.itemCount(quantity)}
-          </p>
-          <p className="text-xl font-bold text-primary tabular-nums">
+          <div className="flex min-w-0 flex-col gap-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {messages.pos.appendDraft.summaryLabel}
+            </p>
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <Badge variant="warning">
+                {messages.pos.appendDraft.draftState}
+              </Badge>
+              <Badge variant="outline">
+                {messages.pos.appendDraft.itemCount(quantity)}
+              </Badge>
+              <Badge variant="secondary">
+                {messages.pos.appendDraft.sentState}{" "}
+                <span className="font-mono tabular-nums">{targetLabel}</span>
+              </Badge>
+            </div>
+          </div>
+          <p className="shrink-0 font-mono text-xl font-bold text-primary tabular-nums">
             {formatVND(total)}
           </p>
         </div>
@@ -186,7 +207,7 @@ function AppendDraftPaneComponent({
             type="button"
             variant="outline"
             size="touch"
-            className="flex-1"
+            className="basis-1/3"
             disabled={isSubmitting}
             onClick={onCancel}
           >
@@ -195,7 +216,7 @@ function AppendDraftPaneComponent({
           <Button
             type="button"
             size="touch"
-            className="flex-1"
+            className="basis-2/3"
             disabled={!canSubmit}
             onClick={onSubmit}
           >

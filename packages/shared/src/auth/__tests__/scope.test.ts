@@ -13,10 +13,12 @@ import {
   type StaffRole,
 } from "../types";
 import { canAccess } from "../module-acl";
-import { resolveDiscoveredApps } from "../app-discovery";
+import {
+  resolveDiscoveredAppGroups,
+  resolveDiscoveredApps,
+} from "../app-discovery";
 import { resolveRoleHomeLink } from "../nav-resolution";
 import { resolveRouteFamilyContract } from "../route-map";
-import { MODULE_LABELS_VI } from "../../labels";
 import {
   isPublicAppPath,
   resolveLegacyRouteRedirectPath,
@@ -111,6 +113,30 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
   assert.equal(
     resolveRouteFamilyContract("/br/3/dashboard")?.id,
     "branch-dashboard",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/br/3/dashboard")?.surface,
+    "branch_management",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/br/3/dashboard")?.primaryNav,
+    "management-sidebar",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/br/3/settings")?.surface,
+    "branch_management",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/br/3/settings/printers")?.primaryNav,
+    "management-sidebar",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/br/3/menu-limits")?.surface,
+    "branch_operation",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/br/3/menu-limits")?.primaryNav,
+    "operational-chrome",
   );
   assert.equal(
     resolveRouteFamilyContract("/admin/finance/revenue")?.id,
@@ -566,11 +592,6 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
     ownerApps.some((app) => app.moduleKey === "inventory_admin"),
     false,
   );
-  assert.equal(
-    ownerApps.some((app) => app.moduleKey === "accounting"),
-    false,
-  );
-  assert.equal(MODULE_LABELS_VI.accounting, "Hỗ trợ khóa kỳ");
   assert.ok(
     ownerApps.some((app) => app.moduleKey === "hr" && app.href === "/hr"),
   );
@@ -588,6 +609,21 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
   );
 
   const branchManagerApps = resolveDiscoveredApps("branch_manager", 3);
+  const branchManagerGroups = resolveDiscoveredAppGroups("branch_manager", 3);
+  const branchManagementGroup = branchManagerGroups.find(
+    (group) => group.surface === "branch_management",
+  );
+  const branchOperationGroup = branchManagerGroups.find(
+    (group) => group.surface === "branch_operation",
+  );
+  assert.deepEqual(
+    branchManagementGroup?.items.map((app) => app.moduleKey),
+    ["branch_dashboard", "branch_settings"],
+  );
+  assert.deepEqual(
+    branchOperationGroup?.items.map((app) => app.moduleKey),
+    ["branch_menu_limits", "pos", "kds", "runner"],
+  );
   assert.equal(
     branchManagerApps.some((app) => app.moduleKey === "settings"),
     false,
@@ -597,6 +633,11 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
       (app) =>
         app.moduleKey === "branch_dashboard" && app.href === "/br/3/dashboard",
     ),
+  );
+  assert.equal(
+    branchManagerApps.find((app) => app.moduleKey === "branch_dashboard")
+      ?.surface,
+    "branch_management",
   );
   assert.ok(
     branchManagerApps.some(
@@ -610,6 +651,11 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
         app.moduleKey === "branch_menu_limits" &&
         app.href === "/br/3/menu-limits",
     ),
+  );
+  assert.equal(
+    branchManagerApps.find((app) => app.moduleKey === "branch_menu_limits")
+      ?.surface,
+    "branch_operation",
   );
   assert.ok(
     branchManagerApps.some(

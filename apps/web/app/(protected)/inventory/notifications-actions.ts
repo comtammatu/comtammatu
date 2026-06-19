@@ -25,7 +25,7 @@ export async function fetchQcSettingsForForm(): Promise<ActionResult> {
   const { data, error } = await supabase
     .from("inventory_qc_settings")
     .select(
-      "qty_short_tolerance_pct, price_variance_warn_pct, price_variance_review_pct, reject_requires_photo, alert_webhook_url, alert_channel",
+      "qty_short_tolerance_pct, price_variance_warn_pct, price_variance_review_pct, reject_requires_photo",
     )
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
@@ -38,8 +38,6 @@ export async function fetchQcSettingsForForm(): Promise<ActionResult> {
       price_variance_warn_pct: 5,
       price_variance_review_pct: 15,
       reject_requires_photo: true,
-      alert_webhook_url: null,
-      alert_channel: "generic",
     },
   };
 }
@@ -51,11 +49,6 @@ const qcSettingsSchema = z.object({
   priceVarianceWarnPct: z.coerce.number().min(0).max(100),
   priceVarianceReviewPct: z.coerce.number().min(0).max(100),
   rejectRequiresPhoto: z.boolean(),
-  alertWebhookUrl: z
-    .union([z.string().url(), z.literal("")])
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : null)),
-  alertChannel: z.enum(["generic", "telegram", "discord", "slack"]),
 });
 
 export const saveQcSettings = withAction(
@@ -78,8 +71,8 @@ export const saveQcSettings = withAction(
         price_variance_warn_pct: data.priceVarianceWarnPct,
         price_variance_review_pct: data.priceVarianceReviewPct,
         reject_requires_photo: data.rejectRequiresPhoto,
-        alert_webhook_url: data.alertWebhookUrl,
-        alert_channel: data.alertChannel,
+        alert_webhook_url: null,
+        alert_channel: "generic",
         updated_by: user.id,
         updated_at: new Date().toISOString(),
       },
@@ -111,12 +104,11 @@ export async function dispatchNotificationOutbox(): Promise<ActionResult> {
 
   const { data: settings } = await supabase
     .from("inventory_qc_settings")
-    .select("alert_webhook_url, alert_channel")
+    .select("alert_webhook_url")
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
 
   const webhookUrl = settings?.alert_webhook_url ?? null;
-  const channel = settings?.alert_channel ?? "generic";
 
   const { data: pending, error: fetchErr } = await supabase
     .from("notification_outbox")
@@ -154,7 +146,7 @@ export async function dispatchNotificationOutbox(): Promise<ActionResult> {
       !Array.isArray(row.payload)
         ? (row.payload as OutboxPayload)
         : ({} as OutboxPayload);
-    const body = formatPayloadForChannel(channel, row.topic, payload);
+    const body = formatPayload(row.topic, payload);
     try {
       const resp = await fetch(webhookUrl, {
         method: "POST",
@@ -201,24 +193,8 @@ export async function dispatchNotificationOutbox(): Promise<ActionResult> {
 
 type OutboxPayload = Record<string, unknown>;
 
-function formatPayloadForChannel(
-  channel: string,
-  topic: string,
-  payload: OutboxPayload,
-): unknown {
+function formatPayload(topic: string, payload: OutboxPayload): unknown {
   const text = formatTopicText(topic, payload);
-
-  if (channel === "telegram") {
-    // Caller should have set webhook URL to a Telegram bot proxy that accepts
-    // { chat_id, text } or to a simple HTTP-to-bot bridge. Generic shape:
-    return { text, topic, payload };
-  }
-  if (channel === "discord") {
-    return { content: text };
-  }
-  if (channel === "slack") {
-    return { text };
-  }
   return { topic, text, payload };
 }
 

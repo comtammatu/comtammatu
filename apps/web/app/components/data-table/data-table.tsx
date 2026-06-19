@@ -32,7 +32,7 @@ import type { ReactNode } from "react";
 
 export interface DataTableColumn<T> {
   key: string;
-  header: string;
+  header: ReactNode;
   className?: string;
   /**
    * `index` enables inline-edit document tables (patchLine-style row

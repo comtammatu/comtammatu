@@ -13,7 +13,7 @@ import {
   type JobRow,
   type BranchOption,
 } from "./print-jobs-client";
-import { SettingsPageShell } from "../../settings-page-shell";
+import { SettingsPageFrame } from "../../settings-page-frame";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { messages } from "@lib/messages";
 
@@ -23,13 +23,18 @@ type SearchParams = {
   job_type?: string;
 };
 
-const STATUSES = [
+const PRINT_JOB_ATTENTION_STATUS = "needs_attention";
+const PRINT_JOB_STATE_VALUES = [
   "pending",
   "processing",
   "printed",
   "failed",
   "expired",
   "cancelled",
+] as const;
+const FILTER_OPTIONS = [
+  ...PRINT_JOB_STATE_VALUES,
+  PRINT_JOB_ATTENTION_STATUS,
 ] as const;
 const JOB_TYPES = [
   "kitchen_ticket",
@@ -53,7 +58,7 @@ export default async function PrintJobsPage({
   const filterBranch =
     sp.branch && Number.isFinite(Number(sp.branch)) ? Number(sp.branch) : null;
   const filterStatus =
-    sp.status && (STATUSES as readonly string[]).includes(sp.status)
+    sp.status && (FILTER_OPTIONS as readonly string[]).includes(sp.status)
       ? sp.status
       : null;
   const filterJobType =
@@ -84,7 +89,11 @@ export default async function PrintJobsPage({
     .order("created_at", { ascending: false })
     .limit(200);
   if (effectiveBranch) jobsQuery = jobsQuery.eq("branch_id", effectiveBranch);
-  if (filterStatus) jobsQuery = jobsQuery.eq("status", filterStatus);
+  if (filterStatus === PRINT_JOB_ATTENTION_STATUS) {
+    jobsQuery = jobsQuery.in("status", ["failed", "expired"]);
+  } else if (filterStatus) {
+    jobsQuery = jobsQuery.eq("status", filterStatus);
+  }
   if (filterJobType) jobsQuery = jobsQuery.eq("job_type", filterJobType);
 
   const printersQuery = supabase.from("printers").select("id, role, name");
@@ -99,7 +108,7 @@ export default async function PrintJobsPage({
   let failedQuery = supabase
     .from("print_jobs")
     .select("id", { count: "exact", head: true })
-    .eq("status", "failed")
+    .in("status", ["failed", "expired"])
     .gte("created_at", since24h);
   let printedTodayQuery = supabase
     .from("print_jobs")
@@ -160,7 +169,7 @@ export default async function PrintJobsPage({
   const branches = (branchesRes.data ?? []) as BranchOption[];
 
   return (
-    <SettingsPageShell
+    <SettingsPageFrame
       title={messages.settings.pages.printJobsTitle}
       description={messages.settings.pages.printJobsDescription}
       actions={
@@ -205,7 +214,7 @@ export default async function PrintJobsPage({
         filterJobType={filterJobType}
         currentBranchLocked={scopedBranch != null}
       />
-    </SettingsPageShell>
+    </SettingsPageFrame>
   );
 }
 

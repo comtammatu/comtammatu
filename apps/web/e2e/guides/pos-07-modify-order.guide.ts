@@ -43,13 +43,13 @@ async function gotoOrderDetail(p: Page, branchId: number): Promise<void> {
   const orderCard = p.locator('button:has-text("GUIDE-")').first();
   await orderCard.click();
   await p
-    .getByRole("button", { name: /^Phục vụ$/i })
+    .getByRole("button", { name: /Thanh toán/i })
     .first()
     .waitFor({ state: "visible", timeout: 8000 });
 }
 
 async function openMoreMenu(p: Page): Promise<void> {
-  const moreBtn = p.locator('button:has-text("Khác")').first();
+  const moreBtn = p.getByRole("button", { name: "Thao tác khác" }).first();
   await moreBtn.waitFor({ state: "visible", timeout: 5000 });
   await moreBtn.click();
   await p

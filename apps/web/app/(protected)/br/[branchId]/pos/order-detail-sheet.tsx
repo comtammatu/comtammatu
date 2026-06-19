@@ -56,7 +56,6 @@ import {
   reduceOrderItemQuantity,
   cancelOrder,
   transferOrderTable,
-  updateOrderStatus,
   markOrderItemServed,
   fetchOrderItemsForReorder,
   setOrderPriority,
@@ -122,7 +121,6 @@ const ORDER_DETAIL_LOADING_TEXT = {
   append: "Th\u00eam m\u00f3n",
   aria: "\u0110ang t\u1ea3i danh s\u00e1ch m\u00f3n",
   payment: "Thanh to\u00e1n",
-  served: "\u0110\u00e3 ph\u1ee5c v\u1ee5",
   sr: "\u0110ang t\u1ea3i \u0111\u01a1n h\u00e0ng",
 } as const;
 
@@ -208,18 +206,10 @@ function OrderDetailLoadingFixture() {
           </Button>
           <Button
             type="button"
-            variant="secondary"
-            size="touch"
-            className="flex-1"
-          >
-            {ORDER_DETAIL_LOADING_TEXT.served}
-          </Button>
-          <Button
-            type="button"
             variant="outline"
             size="icon"
             className="size-12 shrink-0"
-            aria-label="Thao tác khác"
+            aria-label={messages.pos.orderDetail.moreActionsAria}
           >
             <IconDots />
           </Button>
@@ -349,8 +339,8 @@ export function OrderDetailSheet({
   const [canManage, setCanManage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Two transitions on purpose:
-  //   - `isMutating` gates the action buttons (Confirm in dialogs, "Phục vụ"
-  //     / "Chuyển bàn" / "Thao tác" in the footer). It clears the moment the
+  //   - `isMutating` gates the action buttons (Confirm in dialogs, "Chuyển bàn"
+  //     / "Thao tác" in the footer). It clears the moment the
   //     Server Action returns, so cashier can chain the next tap.
   //   - `isRefetching` covers the background fetchOrderDetail that follows
   //     a mutation (or initial mount). It keeps the skeleton visible for
@@ -465,7 +455,7 @@ export function OrderDetailSheet({
   // value means the mount itself does not trigger a redundant fetch —
   // critical when the parent provides a seed via `initialOrder`, since
   // `0 == null` is false and the naive check would call `load()` and
-  // flip `isPending=true`, briefly disabling "Chuyển bàn" / "Đã phục vụ" /
+  // flip `isPending=true`, briefly disabling "Chuyển bàn" /
   // "Hủy đơn" even though the seed already painted the data.
   const lastRefreshTokenRef = useRef(refreshToken);
   useEffect(() => {
@@ -619,10 +609,9 @@ export function OrderDetailSheet({
             : messages.pos.item.voided,
         );
         // Cancel-ticket print warning rides on result.meta.warning (set by
-        // the afterSuccess hook in pos/_lib/messages.ts) per WS-1a. Pre-WS-1a
-        // this lived on `r.data.printWarning`; the move keeps `data` to the
-        // operator-facing result and moves non-fatal side-effect outcomes
-        // to `meta`.
+        // the afterSuccess hook in pos/_lib/messages.ts): `data` holds the
+        // operator-facing result, non-fatal side-effect outcomes live on
+        // `meta`.
         const printWarning = r.meta?.warning;
         if (typeof printWarning === "string") {
           notify.warning(printWarning);
@@ -649,9 +638,8 @@ export function OrderDetailSheet({
       const r = await cancelOrder(orderId, reason);
       if (r.success) {
         notify.success(messages.pos.order.voided);
-        // Per-item cancel-ticket skip warning now lives on r.meta.warning
-        // (set by cancelSkipReasonsToWarning inside the action handler) per
-        // WS-1b. Pre-WS-1b this was r.data.printWarning.
+        // Per-item cancel-ticket skip warning lives on r.meta.warning (set
+        // by cancelSkipReasonsToWarning inside the action handler).
         const cancelWarning = r.meta?.warning;
         if (typeof cancelWarning === "string") {
           notify.warning(cancelWarning);
@@ -677,7 +665,12 @@ export function OrderDetailSheet({
     // of re-executing or rejecting. Aligns transfer with split/merge.
     const idempotencyKey = crypto.randomUUID();
     startMutation(async () => {
-      const r = await transferOrderTable(orderId, tid, idempotencyKey);
+      const r = await transferOrderTable(
+        branchId,
+        orderId,
+        tid,
+        idempotencyKey,
+      );
       if (r.success) {
         if (!r.data?.idempotent) notify.success(messages.pos.order.transferred);
         setShowTransfer(false);
@@ -692,23 +685,9 @@ export function OrderDetailSheet({
     });
   };
 
-  const handleStatus = (next: "served") => {
-    if (orderId === null) return;
-    startMutation(async () => {
-      const r = await updateOrderStatus(orderId, next);
-      if (r.success) {
-        notify.success(messages.pos.order.markedServed);
-        await onOrderUpdated?.();
-        load();
-      } else {
-        notify.error(r.error ?? messages.pos.order.statusUpdateFailed);
-      }
-    });
-  };
-
   const handleMarkItemServed = (itemId: number) => {
     startMutation(async () => {
-      const r = await markOrderItemServed(itemId);
+      const r = await markOrderItemServed(branchId, itemId);
       if (r.success) {
         notify.success("Đã phục vụ món");
         setActionsItemId(null);
@@ -810,9 +789,8 @@ export function OrderDetailSheet({
         notify.success(
           `Đã giảm SL: ${target.quantity} → ${r.data?.newQuantity ?? reduceNewQty}`,
         );
-        // Partial-cancel print warning now lives on r.meta.warning (set by
-        // enqueuePartialCancelTicketPrintHook in pos/_lib/messages.ts) per
-        // WS-1b. Pre-WS-1b this was r.data.printWarning.
+        // Partial-cancel print warning lives on r.meta.warning (set by
+        // enqueuePartialCancelTicketPrintHook in pos/_lib/messages.ts).
         const reduceWarning = r.meta?.warning;
         if (typeof reduceWarning === "string") {
           notify.warning(reduceWarning);
@@ -1076,9 +1054,6 @@ export function OrderDetailSheet({
     data != null &&
     data.status !== "cancelled" &&
     data.payment_status === "paid";
-  const canMarkServed =
-    data != null &&
-    ["new", "confirmed", "preparing", "ready"].includes(data.status);
   const hasActiveKitchenItems =
     data?.order_items.some((item) =>
       ["pending", "preparing"].includes(item.status),
@@ -1108,7 +1083,7 @@ export function OrderDetailSheet({
     tableSiblingCount >= 2;
   // "Chuyển bàn" lives in the ⋮ dropdown instead of its own full-width
   // button — keeps the footer short and the cashier's thumb near the main
-  // CTAs ("Thanh toán" / "Thêm món" / "Phục vụ").
+  // CTAs ("Thanh toán" / "Thêm món").
   const canShowMoreMenu =
     canShowBillInMenu ||
     canShowReorder ||
@@ -1156,7 +1131,7 @@ export function OrderDetailSheet({
                   {sheetTitle
                     ? `#${sheetTitle}`
                     : orderId !== null
-                      ? "Đơn"
+                      ? messages.pos.orderDetail.genericOrderLabel
                       : ""}
                 </span>
                 {(data?.is_priority === true ||
@@ -1165,7 +1140,7 @@ export function OrderDetailSheet({
                     variant="warning"
                     className="h-5 shrink-0 px-1.5 py-0 text-xs font-semibold"
                   >
-                    Ưu tiên
+                    {messages.pos.orderDetail.priority}
                   </Badge>
                 )}
               </SheetTitle>
@@ -1174,14 +1149,14 @@ export function OrderDetailSheet({
                 variant="ghost"
                 size="icon-sm"
                 className="shrink-0 text-muted-foreground"
-                aria-label="Đóng chi tiết đơn"
+                aria-label={messages.pos.orderDetail.closeAria}
                 onClick={onClose}
               >
                 <IconX />
               </Button>
             </div>
             <SheetDescription className="sr-only">
-              Chi tiết đơn hàng, thêm món và cập nhật trạng thái phục vụ
+              {messages.pos.orderDetail.srDescription}
             </SheetDescription>
           </SheetHeader>
 
@@ -1197,7 +1172,7 @@ export function OrderDetailSheet({
               <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">
                 <ul
                   className="flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4"
-                  aria-label="Đang tải danh sách món"
+                  aria-label={messages.pos.orderDetail.loadingItemsAria}
                 >
                   {Array.from({ length: 5 }).map((_, index) => (
                     <Item
@@ -1224,7 +1199,9 @@ export function OrderDetailSheet({
                 <Skeleton className="h-9 w-full" />
                 <Skeleton className="h-7 w-full" />
               </div>
-              <span className="sr-only">Đang tải đơn hàng</span>
+              <span className="sr-only">
+                {messages.pos.orderDetail.loadingOrder}
+              </span>
             </AppBoneyardSkeleton>
           )}
 
@@ -1246,7 +1223,7 @@ export function OrderDetailSheet({
             <>
               {data.profiles?.full_name && (
                 <p className="px-3 pt-2 text-xs text-muted-foreground sm:px-4">
-                  Người order:{" "}
+                  {messages.pos.orderDetail.orderedByLabel}{" "}
                   <span className="font-medium text-foreground">
                     {data.profiles.full_name}
                   </span>
@@ -1255,7 +1232,7 @@ export function OrderDetailSheet({
               <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">
                 <ul
                   className="flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4"
-                  aria-label="Danh sách món"
+                  aria-label={messages.pos.orderDetail.itemListAria}
                 >
                   {data.order_items.map((row) => (
                     <OrderItemRow
@@ -1266,7 +1243,10 @@ export function OrderDetailSheet({
                   ))}
                 </ul>
                 {data.note && (
-                  <NoteCallout label="Ghi chú" className="mx-3 sm:mx-4">
+                  <NoteCallout
+                    label={messages.pos.orderDetail.noteLabel}
+                    className="mx-3 sm:mx-4"
+                  >
                     {data.note}
                   </NoteCallout>
                 )}
@@ -1298,13 +1278,13 @@ export function OrderDetailSheet({
                       onClose();
                     }}
                   >
-                    Thanh toán · {formatVND(data.total_amount)}
+                    {messages.pos.orderDetail.paymentAmount(
+                      formatVND(data.total_amount),
+                    )}
                   </Button>
                 )}
 
-                {(canAppendOrderStatus(data.status) ||
-                  canMarkServed ||
-                  canShowMoreMenu) && (
+                {(canAppendOrderStatus(data.status) || canShowMoreMenu) && (
                   <div className="flex gap-2">
                     {canAppendOrderStatus(data.status) && (
                       <Button
@@ -1316,19 +1296,7 @@ export function OrderDetailSheet({
                           onStartAppend(data.id, data.order_number);
                         }}
                       >
-                        Thêm món
-                      </Button>
-                    )}
-                    {canMarkServed && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="touch"
-                        className="flex-1"
-                        disabled={isMutating}
-                        onClick={() => void handleStatus("served")}
-                      >
-                        Phục vụ
+                        {messages.pos.orderDetail.appendItems}
                       </Button>
                     )}
                     {canShowMoreMenu && (
@@ -1338,18 +1306,21 @@ export function OrderDetailSheet({
                             type="button"
                             variant="outline"
                             size="touch"
-                            aria-label="Thao tác khác"
+                            aria-label={
+                              messages.pos.orderDetail.moreActionsAria
+                            }
                             className={
-                              canAppendOrderStatus(data.status) || canMarkServed
+                              canAppendOrderStatus(data.status)
                                 ? "min-w-12 shrink-0 px-0"
                                 : "flex-1"
                             }
                           >
                             <IconDots />
-                            {!canAppendOrderStatus(data.status) &&
-                              !canMarkServed && (
-                                <span className="ml-1.5">Thao tác</span>
-                              )}
+                            {!canAppendOrderStatus(data.status) && (
+                              <span className="ml-1.5">
+                                {messages.pos.orderDetail.moreActions}
+                              </span>
+                            )}
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
@@ -1362,7 +1333,7 @@ export function OrderDetailSheet({
                                 }}
                               >
                                 <IconReceipt />
-                                Hóa đơn
+                                {messages.pos.orderDetail.receipt}
                               </DropdownMenuItem>
                             )}
                             {canShowBillInMenu && (
@@ -1371,7 +1342,7 @@ export function OrderDetailSheet({
                                 onClick={() => handleReprintReceipt()}
                               >
                                 <IconPrinter />
-                                In lại hóa đơn
+                                {messages.pos.orderDetail.reprintReceipt}
                               </DropdownMenuItem>
                             )}
                             {canShowTransfer && (
@@ -1380,7 +1351,7 @@ export function OrderDetailSheet({
                                 onClick={() => setShowTransfer(true)}
                               >
                                 <IconArrowRightLeft />
-                                Chuyển bàn
+                                {messages.pos.orderDetail.transferTable}
                               </DropdownMenuItem>
                             )}
                             {canPrioritizeOrder && (
@@ -1390,8 +1361,8 @@ export function OrderDetailSheet({
                               >
                                 <IconFlame />
                                 {data.is_priority === true
-                                  ? "Bỏ ưu tiên"
-                                  : "Ưu tiên bếp"}
+                                  ? messages.pos.orderDetail.removePriority
+                                  : messages.pos.orderDetail.kitchenPriority}
                               </DropdownMenuItem>
                             )}
                             {canShowReorder && (
@@ -1399,7 +1370,7 @@ export function OrderDetailSheet({
                                 onClick={() => void handleReorder()}
                               >
                                 <IconCopy />
-                                Tạo đơn mới
+                                {messages.pos.orderDetail.reorder}
                               </DropdownMenuItem>
                             )}
                             {onCreateOrderOnTable != null &&
@@ -1417,7 +1388,7 @@ export function OrderDetailSheet({
                                   }}
                                 >
                                   <IconCirclePlus />
-                                  Thêm đơn cho bàn
+                                  {messages.pos.orderDetail.createOrderOnTable}
                                 </DropdownMenuItem>
                               )}
                           </DropdownMenuGroup>
@@ -1435,8 +1406,8 @@ export function OrderDetailSheet({
                                   >
                                     <IconCircleDollarSign />
                                     {data.order_discount_amount > 0
-                                      ? "Sửa chiết khấu"
-                                      : "Chiết khấu"}
+                                      ? messages.pos.orderDetail.editDiscount
+                                      : messages.pos.orderDetail.discount}
                                   </DropdownMenuItem>
                                 )}
                                 {canShowServiceCharge && (
@@ -1446,8 +1417,9 @@ export function OrderDetailSheet({
                                   >
                                     <IconCirclePlus />
                                     {data.service_charge > 0
-                                      ? "Sửa phụ phí"
-                                      : "Phụ phí"}
+                                      ? messages.pos.orderDetail
+                                          .editServiceCharge
+                                      : messages.pos.orderDetail.serviceCharge}
                                   </DropdownMenuItem>
                                 )}
                                 {canShowSplit && (
@@ -1456,7 +1428,7 @@ export function OrderDetailSheet({
                                     onClick={() => setShowSplit(true)}
                                   >
                                     <IconSplit />
-                                    Tách hóa đơn
+                                    {messages.pos.orderDetail.splitBill}
                                   </DropdownMenuItem>
                                 )}
                                 {canShowMerge && (
@@ -1465,7 +1437,7 @@ export function OrderDetailSheet({
                                     onClick={() => setShowMerge(true)}
                                   >
                                     <IconMerge />
-                                    Gộp hóa đơn
+                                    {messages.pos.orderDetail.mergeBill}
                                   </DropdownMenuItem>
                                 )}
                               </DropdownMenuGroup>
@@ -1481,7 +1453,7 @@ export function OrderDetailSheet({
                                   onClick={() => setShowCancel(true)}
                                 >
                                   <IconTrash />
-                                  Hủy đơn
+                                  {messages.pos.orderDetail.cancelOrder}
                                 </DropdownMenuItem>
                               </DropdownMenuGroup>
                             </>
@@ -1568,7 +1540,9 @@ export function OrderDetailSheet({
           onOpenChange={setShowDiscount}
           subtotal={orderDiscountBase}
           subtotalLabel={
-            data.item_discount_amount > 0 ? "Sau giảm món" : undefined
+            data.item_discount_amount > 0
+              ? messages.pos.orderDetail.postItemDiscountSubtotal
+              : undefined
           }
           serviceCharge={data.service_charge}
           current={{
@@ -1589,10 +1563,10 @@ export function OrderDetailSheet({
           onOpenChange={(open) => {
             if (!open) setDiscountItemId(null);
           }}
-          title="Chiết khấu món"
-          subtotalLabel="Giá món"
-          totalLabel="Thành tiền mới"
-          clearLabel="Bỏ chiết khấu món"
+          title={messages.pos.orderDetail.itemDiscountTitle}
+          subtotalLabel={messages.pos.orderDetail.itemDiscountSubtotal}
+          totalLabel={messages.pos.orderDetail.itemDiscountTotal}
+          clearLabel={messages.pos.orderDetail.clearItemDiscount}
           subtotal={discountItem.subtotal}
           serviceCharge={0}
           current={{

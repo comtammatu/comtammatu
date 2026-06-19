@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppSection } from "@/components/surface";
@@ -17,6 +11,7 @@ import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -26,17 +21,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@comtammatu/ui/components/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@comtammatu/ui/components/alert-dialog";
 import {
   Item,
   ItemActions,
@@ -160,9 +144,7 @@ export function TemplatesClient({
   const [kind, setKind] = useState<PrintKind>(templates[0]?.kind ?? "receipt");
   const [blocksByKind, setBlocksByKind] = useState<
     Record<string, TemplateBlock[]>
-  >(() =>
-    Object.fromEntries(templates.map((t) => [t.kind, t.blocks])),
-  );
+  >(() => Object.fromEntries(templates.map((t) => [t.kind, t.blocks])));
   const [dirtyKinds, setDirtyKinds] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -191,7 +173,9 @@ export function TemplatesClient({
 
   const patchBlock = (index: number, patch: Record<string, unknown>) => {
     setBlocks(
-      blocks.map((b, i) => (i === index ? ({ ...b, ...patch } as TemplateBlock) : b)),
+      blocks.map((b, i) =>
+        i === index ? ({ ...b, ...patch } as TemplateBlock) : b,
+      ),
     );
   };
 
@@ -268,7 +252,10 @@ export function TemplatesClient({
       });
       if (result.success) {
         toast.success(
-          copy.savedToast(KIND_LABEL[kind], String(result.data?.version ?? "?")),
+          copy.savedToast(
+            KIND_LABEL[kind],
+            String(result.data?.version ?? "?"),
+          ),
         );
         setSaveOpen(false);
         setSaveName("");
@@ -284,7 +271,16 @@ export function TemplatesClient({
     });
   };
 
-  const handleRestore = () => {
+  const handleRestore = async () => {
+    const ok = await confirm({
+      title: copy.restoreTitle,
+      description: copy.restoreDescription(KIND_LABEL[kind]),
+      confirmText: copy.restoreConfirm,
+      cancelText: copy.restoreCancel,
+      variant: "destructive",
+    });
+    if (!ok) return;
+
     startAction(async () => {
       const result = await restorePrintTemplateDefault(kind);
       if (result.success) {
@@ -505,23 +501,31 @@ export function TemplatesClient({
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-sm">
                     <DialogHeader>
-                      <DialogTitle>{copy.saveTitle(KIND_LABEL[kind])}</DialogTitle>
+                      <DialogTitle>
+                        {copy.saveTitle(KIND_LABEL[kind])}
+                      </DialogTitle>
                       <DialogDescription>
                         {copy.saveDescription}
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-3">
                       <div className="space-y-1.5">
-                        <Label htmlFor="template-name">{copy.saveNameLabel}</Label>
+                        <Label htmlFor="template-name">
+                          {copy.saveNameLabel}
+                        </Label>
                         <Input
                           id="template-name"
                           value={saveName}
                           onChange={(e) => setSaveName(e.target.value)}
-                          placeholder={copy.saveNamePlaceholder(KIND_LABEL[kind])}
+                          placeholder={copy.saveNamePlaceholder(
+                            KIND_LABEL[kind],
+                          )}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="paper-width">{copy.paperWidthLabel}</Label>
+                        <Label htmlFor="paper-width">
+                          {copy.paperWidthLabel}
+                        </Label>
                         <Select
                           value={String(paperWidth)}
                           onValueChange={(v) =>
@@ -532,8 +536,12 @@ export function TemplatesClient({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="80">{copy.paperWidth80}</SelectItem>
-                            <SelectItem value="58">{copy.paperWidth58}</SelectItem>
+                            <SelectItem value="80">
+                              {copy.paperWidth80}
+                            </SelectItem>
+                            <SelectItem value="58">
+                              {copy.paperWidth58}
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -544,44 +552,23 @@ export function TemplatesClient({
                         disabled={actionPending || saveName.trim() === ""}
                         onClick={handleSave}
                       >
-                        {actionPending ? (
-                          <Spinner className="size-4" />
-                        ) : null}
+                        {actionPending ? <Spinner className="size-4" /> : null}
                         {copy.saveConfirm}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
 
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="gap-1"
-                      disabled={actionPending}
-                    >
-                      <IconRotateCcw className="size-4" />
-                      {copy.restoreButton}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        {copy.restoreTitle}
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {copy.restoreDescription(KIND_LABEL[kind])}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{copy.restoreCancel}</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleRestore}>
-                        {copy.restoreConfirm}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-1"
+                  disabled={actionPending}
+                  onClick={() => void handleRestore()}
+                >
+                  <IconRotateCcw className="size-4" />
+                  {copy.restoreButton}
+                </Button>
               </div>
             </div>
           </AppSection>
@@ -654,7 +641,9 @@ function BlockFields({
       return (
         <ItemContent>
           <div className="flex items-center gap-2">
-            <Label className="text-muted-foreground">{copy.spacerLinesLabel}</Label>
+            <Label className="text-muted-foreground">
+              {copy.spacerLinesLabel}
+            </Label>
             <Input
               type="number"
               min={1}
@@ -697,7 +686,9 @@ function BlockFields({
       return (
         <ItemContent>
           <div className="flex items-center gap-2">
-            <Label className="shrink-0 text-muted-foreground">{copy.noteLabel}</Label>
+            <Label className="shrink-0 text-muted-foreground">
+              {copy.noteLabel}
+            </Label>
             <Input
               value={(block.prefix as string) ?? "Ghi chú: "}
               onChange={(e) => onPatch({ prefix: e.target.value })}
@@ -710,7 +701,9 @@ function BlockFields({
       return (
         <ItemContent>
           <div className="flex items-center gap-2">
-            <Label className="shrink-0 text-muted-foreground">{copy.qrHeadingLabel}</Label>
+            <Label className="shrink-0 text-muted-foreground">
+              {copy.qrHeadingLabel}
+            </Label>
             <Input
               value={(block.heading as string) ?? "QUÉT QR THANH TOÁN"}
               onChange={(e) => onPatch({ heading: e.target.value })}
@@ -720,9 +713,7 @@ function BlockFields({
         </ItemContent>
       );
     case "footer": {
-      const lines = Array.isArray(block.lines)
-        ? (block.lines as string[])
-        : [];
+      const lines = Array.isArray(block.lines) ? (block.lines as string[]) : [];
       return (
         <ItemContent>
           <Textarea

@@ -8,17 +8,9 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
-import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import {
   CalendarX as IconCalendarX,
   ChevronLeft as IconChevronLeft,
@@ -26,7 +18,12 @@ import {
   RefreshCw as IconRefresh,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
-import { EmployeePanel, EmployeeStatusStrip } from "../components/employee-page";
+import {
+  EmployeeControlBar,
+  EmployeeFrame,
+  EmployeePanel,
+  EmployeeStatusStrip,
+} from "../components/employee-page";
 import {
   fetchMySchedule,
   type ScheduleAttendance,
@@ -43,22 +40,9 @@ import {
   shiftVNMonth,
 } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
+import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 
 const copy = messages.employee.schedule;
-
-const ATTENDANCE_STATUS_LABELS: Record<string, string> = {
-  present: "C\u00f3 m\u1eb7t",
-  late: "\u0110i tr\u1ec5",
-  absent: "V\u1eafng",
-  half_day: "N\u1eeda ng\u00e0y",
-};
-
-const ATTENDANCE_STATUS_VARIANTS: Record<string, BadgeProps["variant"]> = {
-  present: "success",
-  late: "warning",
-  absent: "destructive",
-  half_day: "info",
-};
 
 const ATTENDANCE_DOT_CLASS_NAMES: Record<string, string> = {
   present: "bg-success",
@@ -94,10 +78,7 @@ function formatTime(iso: string | null | undefined): string {
   return iso ? formatVNTime(iso) : "\u2014";
 }
 
-function formatShiftWindow(
-  start: string | null,
-  end: string | null,
-): string {
+function formatShiftWindow(start: string | null, end: string | null): string {
   if (!start) return "—";
   return `${start.slice(0, 5)} - ${end ? end.slice(0, 5) : "—"}`;
 }
@@ -174,13 +155,7 @@ function chunkCalendarRows(cells: CalendarCell[]): CalendarCell[][] {
 }
 
 function getAttendanceLabel(attendance: ScheduleAttendance): string {
-  return ATTENDANCE_STATUS_LABELS[attendance.status] ?? attendance.status;
-}
-
-function getAttendanceVariant(
-  attendance: ScheduleAttendance,
-): BadgeProps["variant"] {
-  return ATTENDANCE_STATUS_VARIANTS[attendance.status] ?? "outline";
+  return getStatusBadgeMeta("attendance", attendance.status).label;
 }
 
 function getAttendanceDotClassName(attendance: ScheduleAttendance): string {
@@ -279,40 +254,38 @@ const SCHEDULE_SKELETON_FIXTURE: ScheduleMonthData = {
 
 function ScheduleSkeletonFallback() {
   return (
-    <div className="rounded-md border bg-card">
-      <Table className="table-fixed border-collapse">
-        <TableHeader>
-          <TableRow className="bg-muted/40 hover:bg-muted/40">
-            {copy.monthWeekdays.map((day) => (
-              <TableHead
-                key={day}
-                className="h-8 border-l text-center text-2xs font-medium whitespace-normal first:border-l-0 sm:h-9 sm:text-xs"
-              >
-                {day}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {Array.from({ length: 5 }).map((_, rowIndex) => (
-            <TableRow key={rowIndex} className="hover:bg-transparent">
-              {Array.from({ length: 7 }).map((_, cellIndex) => (
-                <TableCell
-                  key={cellIndex}
-                  className="border-l border-t p-1 align-top whitespace-normal first:border-l-0"
-                >
-                  <div className="flex aspect-square flex-col gap-2 rounded-md p-1 sm:aspect-video sm:p-2">
-                    <Skeleton className="h-4 w-6" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="hidden h-3 w-3/4 sm:block" />
-                  </div>
-                </TableCell>
-              ))}
-            </TableRow>
+    <EmployeeFrame>
+      <div role="grid" className="overflow-hidden">
+        <div role="row" className="grid grid-cols-7 bg-muted/40">
+          {copy.monthWeekdays.map((day) => (
+            <div
+              key={day}
+              role="columnheader"
+              className="flex h-8 items-center justify-center border-l text-center text-2xs font-medium whitespace-normal first:border-l-0 sm:h-9 sm:text-xs"
+            >
+              {day}
+            </div>
           ))}
-        </TableBody>
-      </Table>
-    </div>
+        </div>
+        {Array.from({ length: 5 }).map((_, rowIndex) => (
+          <div key={rowIndex} role="row" className="grid grid-cols-7">
+            {Array.from({ length: 7 }).map((_, cellIndex) => (
+              <div
+                key={cellIndex}
+                role="gridcell"
+                className="border-l border-t p-1 align-top whitespace-normal first:border-l-0"
+              >
+                <div className="flex aspect-square flex-col gap-2 rounded-md p-1 sm:aspect-video sm:p-2">
+                  <Skeleton className="h-4 w-6" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="hidden h-3 w-3/4 sm:block" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </EmployeeFrame>
   );
 }
 
@@ -437,49 +410,46 @@ function ScheduleMonthCalendarTable({
   const rows = chunkCalendarRows(generateMonthCalendarCells(monthStart));
 
   return (
-    <div className="rounded-md border bg-card motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200">
-      <Table className="table-fixed border-collapse">
-        <TableHeader>
-          <TableRow className="bg-muted/40 hover:bg-muted/40">
-            {copy.monthWeekdays.map((day) => (
-              <TableHead
-                key={day}
-                className="h-8 border-l text-center text-2xs font-medium whitespace-normal first:border-l-0 sm:h-9 sm:text-xs"
-                scope="col"
-              >
-                {day}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row, rowIndex) => (
-            <TableRow key={rowIndex} className="hover:bg-transparent">
-              {row.map((cell, cellIndex) => (
-                <TableCell
-                  key={cell.dateStr ?? `${rowIndex}-${cellIndex}`}
-                  className="border-l border-t p-1 align-top whitespace-normal first:border-l-0"
-                >
-                  <CalendarCellContent
-                    attendances={
-                      cell.dateStr
-                        ? (attendanceByDate.get(cell.dateStr) ?? [])
-                        : []
-                    }
-                    cell={cell}
-                    leave={
-                      cell.dateStr ? leaveByDate.get(cell.dateStr) : undefined
-                    }
-                    onSelectDate={onSelectDate}
-                    selected={cell.dateStr === selectedDate}
-                  />
-                </TableCell>
-              ))}
-            </TableRow>
+    <EmployeeFrame className="overflow-hidden">
+      <div role="grid" className="overflow-hidden">
+        <div role="row" className="grid grid-cols-7 bg-muted/40">
+          {copy.monthWeekdays.map((day) => (
+            <div
+              key={day}
+              role="columnheader"
+              className="flex h-8 items-center justify-center border-l text-center text-2xs font-medium whitespace-normal first:border-l-0 sm:h-9 sm:text-xs"
+            >
+              {day}
+            </div>
           ))}
-        </TableBody>
-      </Table>
-    </div>
+        </div>
+        {rows.map((row, rowIndex) => (
+          <div key={rowIndex} role="row" className="grid grid-cols-7">
+            {row.map((cell, cellIndex) => (
+              <div
+                key={cell.dateStr ?? `${rowIndex}-${cellIndex}`}
+                role="gridcell"
+                className="border-l border-t p-1 align-top whitespace-normal first:border-l-0"
+              >
+                <CalendarCellContent
+                  attendances={
+                    cell.dateStr
+                      ? (attendanceByDate.get(cell.dateStr) ?? [])
+                      : []
+                  }
+                  cell={cell}
+                  leave={
+                    cell.dateStr ? leaveByDate.get(cell.dateStr) : undefined
+                  }
+                  onSelectDate={onSelectDate}
+                  selected={cell.dateStr === selectedDate}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </EmployeeFrame>
   );
 }
 
@@ -493,13 +463,12 @@ function SelectedDayDetail({
   leave: LeaveDayStatus | undefined;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-md border bg-background p-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200">
+    <EmployeeFrame pad="sm" className="flex flex-col gap-3 bg-background">
       <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-heading text-sm font-semibold">
-            {copy.selectedDayTitle}
+            {formatDate(dateStr)}
           </p>
-          <p className="text-xs text-muted-foreground">{formatDate(dateStr)}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {leave ? (
@@ -514,51 +483,31 @@ function SelectedDayDetail({
       </div>
 
       {attendances.length === 0 ? (
-        <p className="rounded-md border px-3 py-4 text-center text-sm text-muted-foreground">
+        <p className="rounded-md bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
           {copy.noAttendance}
         </p>
       ) : (
         <div className="flex flex-col gap-2">
           {attendances.map((att, index) => {
             const hasClock = Boolean(att.check_in || att.check_out);
+            const timeText = hasClock
+              ? `${formatShiftWindow(att.start_time, att.end_time)} · ${copy.checkInShort} ${formatTime(att.check_in)} · ${copy.checkOutShort} ${formatTime(att.check_out)}`
+              : formatShiftWindow(att.start_time, att.end_time);
             return (
               <div
                 key={index}
-                className="grid min-w-0 gap-2 rounded-md border px-3 py-2 sm:grid-cols-2"
+                className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-muted/30 px-3 py-2"
               >
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {copy.rowShift}
-                  </p>
-                  <p className="truncate text-sm font-semibold">
+                  <p className="truncate text-sm font-medium">
                     {att.shift_name ?? copy.noShiftForDay}
                   </p>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {copy.timeRange}
-                  </p>
-                  <p className="font-mono text-xs tabular-nums text-muted-foreground">
-                    {formatShiftWindow(att.start_time, att.end_time)}
+                  <p className="truncate font-mono text-xs tabular-nums text-muted-foreground">
+                    {timeText}
                   </p>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {copy.clockRange}
-                  </p>
-                  <p className="font-mono text-xs tabular-nums text-muted-foreground">
-                    {hasClock
-                      ? `${copy.checkInShort} ${formatTime(att.check_in)} · ${copy.checkOutShort} ${formatTime(att.check_out)}`
-                      : "—"}
-                  </p>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {copy.rowAttendance}
-                  </p>
-                  <Badge variant={getAttendanceVariant(att)}>
-                    {getAttendanceLabel(att)}
-                  </Badge>
+                <div className="shrink-0">
+                  <StatusBadge domain="attendance" value={att.status} />
                 </div>
               </div>
             );
@@ -577,7 +526,7 @@ function SelectedDayDetail({
           {copy.requestLeaveCta}
         </Link>
       </Button>
-    </div>
+    </EmployeeFrame>
   );
 }
 
@@ -595,14 +544,6 @@ export function ScheduleClient({
 
   const currentMonthStart = getVNMonthStartDateString();
   const isCurrentMonth = monthStart === currentMonthStart;
-  const monthParts = parseISODateParts(monthStart);
-  const monthEndStr = monthParts
-    ? getVNMonthEndDateString(monthParts.year, monthParts.month)
-    : monthStart;
-  const monthRangeLabel =
-    monthEndStr === monthStart
-      ? formatDate(monthStart)
-      : `${formatDate(monthStart)} - ${formatDate(monthEndStr)}`;
 
   function loadMonth(newMonthStart: string) {
     setMonthStart(newMonthStart);
@@ -657,17 +598,8 @@ export function ScheduleClient({
   ).length;
 
   return (
-    <EmployeePanel
-      title={formatMonthTitle(monthStart)}
-      description={monthRangeLabel}
-      headerHint={
-        isCurrentMonth ? (
-          <Badge variant="outline">{copy.currentMonth}</Badge>
-        ) : undefined
-      }
-      contentClassName="gap-3"
-    >
-      <div className="flex items-center justify-between gap-2">
+    <EmployeePanel contentClassName="gap-3">
+      <EmployeeControlBar>
         <Button
           variant="outline"
           size="touch"
@@ -678,21 +610,23 @@ export function ScheduleClient({
         >
           <IconChevronLeft />
         </Button>
-        {!isCurrentMonth ? (
-          <Button
-            type="button"
-            variant="link"
-            size="sm"
-            onClick={goToCurrentMonth}
-            disabled={isPending}
-          >
-            {copy.currentMonth}
-          </Button>
-        ) : (
-          <span className="text-xs font-medium text-muted-foreground">
-            {copy.calendarAxisLabel}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+          <span className="font-heading min-w-0 truncate text-sm font-semibold tabular-nums sm:text-base">
+            {formatMonthTitle(monthStart)}
           </span>
-        )}
+          {!isCurrentMonth ? (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-auto shrink-0 px-0 text-xs"
+              onClick={goToCurrentMonth}
+              disabled={isPending}
+            >
+              {copy.currentMonth}
+            </Button>
+          ) : null}
+        </div>
         <Button
           variant="outline"
           size="touch"
@@ -703,7 +637,7 @@ export function ScheduleClient({
         >
           <IconChevronRight />
         </Button>
-      </div>
+      </EmployeeControlBar>
 
       <EmployeeStatusStrip
         items={[

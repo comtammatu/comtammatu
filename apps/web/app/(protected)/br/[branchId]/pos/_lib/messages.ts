@@ -2,11 +2,10 @@
  * POS RPC error → user message mappings, plus the `afterSuccess` side-effect
  * hooks composed into POS server actions.
  *
- * One module per route family per the WS-1a template: the **mechanism**
- * lives in `apps/web/app/_lib/rpc-error-map.ts`, the **vocabulary** lives
- * here. Authors compose `readonly RpcErrorMapping[]` literals and pass them
- * into `mapRpcError`. New vocabularies accrete as WS-1b migrates the rest
- * of `order-actions.ts` + `payment-actions.ts`.
+ * One module per route family: the **mechanism** lives in
+ * `apps/web/app/_lib/rpc-error-map.ts`, the **vocabulary** lives here.
+ * Authors compose `readonly RpcErrorMapping[]` literals and pass them into
+ * `mapRpcError`.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -213,7 +212,7 @@ export function mapDailyLimitRpcError<TData = unknown>(
  * most-specific first. Predicates see the already-lowercased message
  * (mapRpcError lowercases once upstream).
  *
- * Behaviour preserved exactly from the pre-WS-1a hand-rolled `if`-chain:
+ * The RPC sentinels map as:
  * - `"forbidden"`     → 42501 from the RPC's `has_permission` gate
  * - `"voidable"`      → "item not voidable in current state" — already
  *                       cancelled / served path
@@ -248,9 +247,8 @@ export const voidRpcFallback: RpcErrorFallback = {
  * warning string. Print failure is non-fatal — the void itself is already
  * committed; surface as a toast warning, not an action error.
  *
- * Mirrors the pre-WS-1a `if`-chain inside `voidOrderItem`. Kept as a free
- * function (not via `mapRpcError`) because the desired output is a plain
- * warning string, not an `ActionResult`.
+ * Kept as a free function (not via `mapRpcError`) because the desired
+ * output is a plain warning string, not an `ActionResult`.
  */
 function printErrorToWarning(message: string | null | undefined): string {
   const msg = (message ?? "").toLowerCase();
@@ -494,7 +492,6 @@ export const cancelRpcFallback: RpcErrorFallback = {
  * Reduce the `cancel_order` RPC's `skip_reasons[]` array down to a single
  * operator-facing toast warning. Skip-reasons are per-item; we surface the
  * MOST-IMPORTANT class (printer offline > no-slot > feature-off > other).
- * Mirrors the pre-WS-1b inline `if`-chain in `cancelOrder`.
  */
 export function cancelSkipReasonsToWarning(
   skipped: number,
@@ -677,33 +674,6 @@ export const transferRpcMappings: readonly RpcErrorMapping[] = [
 
 export const transferRpcFallback: RpcErrorFallback = {
   userMessage: "Không thể chuyển bàn. Vui lòng thử lại.",
-  errorCode: POS_ERROR_CODES.RPC_GENERIC,
-};
-
-/* ────────────────────────────────────────────────────────────────────────── */
-/*  updateOrderStatus — RPC error vocabulary                                  */
-/* ────────────────────────────────────────────────────────────────────────── */
-
-export const updateOrderStatusRpcMappings: readonly RpcErrorMapping[] = [
-  {
-    match: includesAny("complete requires"),
-    errorCode: POS_ERROR_CODES.RPC_GENERIC,
-    userMessage: "Đánh dấu phục vụ trước khi hoàn thành.",
-  },
-  {
-    match: includesAny("items not terminal"),
-    errorCode: POS_ERROR_CODES.RPC_GENERIC,
-    userMessage: "Còn món chưa sẵn sàng hoặc chưa xử lý xong.",
-  },
-  {
-    match: includesAny("invalid transition"),
-    errorCode: POS_ERROR_CODES.RPC_GENERIC,
-    userMessage: "Không thể đổi trạng thái đơn lúc này.",
-  },
-];
-
-export const updateOrderStatusRpcFallback: RpcErrorFallback = {
-  userMessage: "Không thể cập nhật trạng thái. Vui lòng thử lại.",
   errorCode: POS_ERROR_CODES.RPC_GENERIC,
 };
 

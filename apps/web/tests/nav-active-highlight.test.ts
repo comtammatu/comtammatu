@@ -66,3 +66,21 @@ test("finance deep-nav landing is wired exact, mirroring inventory", () => {
     "inventory landing remains the reference exact pattern",
   );
 });
+
+test("mobile workspace bottom nav reuses the shell nav model", () => {
+  const appShell = read("apps/web/app/components/app-shell.tsx");
+  const bottomNav = read("apps/web/app/components/workspace-bottom-nav.tsx");
+
+  assert.match(
+    appShell,
+    /<WorkspaceBottomNav navGroups=\{navGroups\}/,
+    "AppShell must pass the same nav model to desktop sidebar and mobile bottom nav",
+  );
+  assert.match(bottomNav, /navGroups: ShellNavGroup\[\]/);
+  assert.match(bottomNav, /flattenNavGroups\(navGroups\)/);
+  assert.doesNotMatch(
+    bottomNav,
+    /const NAV_ITEMS|MODULE_ACL|canAccess/,
+    "mobile bottom nav must not carry a second static ACL/nav source",
+  );
+});

@@ -33,6 +33,7 @@ apps/web/playwright-report/
 apps/web/test-results/
 
 # QA/tmp artifacts
+.tmp/
 apps/web/tmp/
 *.pem
 *.tsbuildinfo

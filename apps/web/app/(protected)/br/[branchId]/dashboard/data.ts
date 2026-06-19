@@ -1,7 +1,9 @@
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import type { JwtClaims } from "@comtammatu/shared/auth";
+import { getRegisteredMethods } from "@comtammatu/shared/providers";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import type { loadAuthState } from "@/_lib/auth";
+import { ensurePaymentProvidersRegistered } from "@lib/payment-providers-init";
 
 type ServerClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
@@ -22,6 +24,13 @@ export interface BranchDayStatus {
   printerOnline: boolean;
   printerFailed24h: number;
   pendingCheckouts: number;
+  setupActiveMenuItems: number;
+  setupActiveTerminals: number;
+  setupActiveKdsStations: number;
+  setupActivePrinters: number;
+  setupActiveStaff: number;
+  setupPaymentReady: boolean;
+  setupHddtReady: boolean;
 }
 
 /**
@@ -40,9 +49,18 @@ export async function fetchBranchDayStatus(
   branchId: number,
 ): Promise<BranchDayStatus> {
   const todayRange = getVNDayUtcRange(getVNDateString());
-  const failedSinceIso = new Date(Date.now() - 24 * 60 * 60 * 1000)
-    .toISOString();
+  const failedSinceIso = new Date(
+    Date.now() - 24 * 60 * 60 * 1000,
+  ).toISOString();
   const service = createServiceClient();
+  ensurePaymentProvidersRegistered();
+  const registeredPaymentMethods = getRegisteredMethods();
+  const hddtReady =
+    !!process.env["COMPANY_TAX_CODE"] &&
+    !!process.env["SINVOICE_USERNAME"] &&
+    !!process.env["SINVOICE_PASSWORD"] &&
+    !!process.env["SINVOICE_TEMPLATE_CODE"] &&
+    !!process.env["SINVOICE_INVOICE_SERIES"];
 
   const [
     paymentsRes,
@@ -52,6 +70,11 @@ export async function fetchBranchDayStatus(
     failedRes,
     sessionRes,
     checkoutRes,
+    menuRes,
+    terminalRes,
+    stationRes,
+    printerRes,
+    staffRes,
   ] = await Promise.all([
     supabase
       .from("payments")
@@ -103,6 +126,35 @@ export async function fetchBranchDayStatus(
       .eq("branch_id", branchId)
       .is("check_out", null)
       .not("checkout_requested_at", "is", null),
+    service
+      .from("menu_items")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true),
+    service
+      .from("pos_terminals")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("is_active", true),
+    service
+      .from("kds_stations")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("is_active", true),
+    service
+      .from("printers")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("is_active", true),
+    service
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("is_active", true),
   ]);
 
   const paymentRows = paymentsRes.data ?? [];
@@ -122,5 +174,12 @@ export async function fetchBranchDayStatus(
       Date.now() - new Date(lastSeenAt).getTime() < AGENT_OFFLINE_THRESHOLD_MS,
     printerFailed24h: failedRes.count ?? 0,
     pendingCheckouts: checkoutRes.count ?? 0,
+    setupActiveMenuItems: menuRes.count ?? 0,
+    setupActiveTerminals: terminalRes.count ?? 0,
+    setupActiveKdsStations: stationRes.count ?? 0,
+    setupActivePrinters: printerRes.count ?? 0,
+    setupActiveStaff: staffRes.count ?? 0,
+    setupPaymentReady: registeredPaymentMethods.length > 0,
+    setupHddtReady: hddtReady,
   };
 }

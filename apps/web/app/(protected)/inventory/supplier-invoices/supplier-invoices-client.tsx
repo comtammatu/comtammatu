@@ -54,12 +54,10 @@ import {
   recomputeInvoiceMatching,
 } from "../procurement-actions";
 import type { SupplierInvoiceCursor } from "../procurement-actions";
+import { StatusBadge } from "../_components/status-badge";
 
 import { formatVND } from "../_lib/format";
-import {
-  getInventoryStatusBadgeVariant,
-  getInventoryStatusLabel,
-} from "../_lib/ui";
+import { getInventoryStatusLabel } from "../_lib/ui";
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
@@ -127,18 +125,20 @@ type GrnOption = {
 
 const ALL_FILTER_VALUE = "_all";
 
-const MATCH_STATUS_OPTIONS = [
-  { value: "pending", label: "Chờ đối soát" },
-  { value: "matched", label: "Đã khớp" },
-  { value: "discrepancy", label: "Chênh lệch" },
-  { value: "approved", label: "Đã duyệt ngoại lệ" },
-] as const;
+const MATCH_FILTER_OPTIONS = [
+  "pending",
+  "matched",
+  "discrepancy",
+  "approved",
+].map((value) => ({
+  value,
+  label: getInventoryStatusLabel(value),
+}));
 
-const PAYMENT_STATUS_OPTIONS = [
-  { value: "unpaid", label: "Chưa thanh toán" },
-  { value: "partial", label: "Thanh toán một phần" },
-  { value: "paid", label: "Đã thanh toán" },
-] as const;
+const PAYMENT_FILTER_OPTIONS = ["unpaid", "partial", "paid"].map((value) => ({
+  value,
+  label: getInventoryStatusLabel(value),
+}));
 
 const supplierInvoiceSchema = z.object({
   grnId: z.string(),
@@ -558,24 +558,12 @@ export function SupplierInvoicesClient({
                 {invoice.supplierName}
               </p>
             </div>
-            {overdue ? (
-              <Badge variant={getInventoryStatusBadgeVariant("overdue")}>
-                {getInventoryStatusLabel("overdue")}
-              </Badge>
-            ) : null}
+            {overdue ? <StatusBadge status="overdue" /> : null}
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <Badge
-              variant={getInventoryStatusBadgeVariant(invoice.matchStatus)}
-            >
-              {getInventoryStatusLabel(invoice.matchStatus)}
-            </Badge>
-            <Badge
-              variant={getInventoryStatusBadgeVariant(invoice.paymentStatus)}
-            >
-              {getInventoryStatusLabel(invoice.paymentStatus)}
-            </Badge>
+            <StatusBadge status={invoice.matchStatus} />
+            <StatusBadge status={invoice.paymentStatus} />
           </div>
 
           <div className="mt-4 grid gap-2 text-sm">
@@ -653,11 +641,7 @@ export function SupplierInvoicesClient({
       key: "matchStatus",
       header: copy.matchingPlaceholder,
       className: "min-w-36",
-      render: (invoice) => (
-        <Badge variant={getInventoryStatusBadgeVariant(invoice.matchStatus)}>
-          {getInventoryStatusLabel(invoice.matchStatus)}
-        </Badge>
-      ),
+      render: (invoice) => <StatusBadge status={invoice.matchStatus} />,
     },
     {
       key: "paymentStatus",
@@ -665,16 +649,8 @@ export function SupplierInvoicesClient({
       className: "min-w-36",
       render: (invoice) => (
         <div className="flex flex-wrap gap-2">
-          <Badge
-            variant={getInventoryStatusBadgeVariant(invoice.paymentStatus)}
-          >
-            {getInventoryStatusLabel(invoice.paymentStatus)}
-          </Badge>
-          {isInvoiceOverdue(invoice) ? (
-            <Badge variant={getInventoryStatusBadgeVariant("overdue")}>
-              {getInventoryStatusLabel("overdue")}
-            </Badge>
-          ) : null}
+          <StatusBadge status={invoice.paymentStatus} />
+          {isInvoiceOverdue(invoice) ? <StatusBadge status="overdue" /> : null}
         </div>
       ),
     },
@@ -762,7 +738,7 @@ export function SupplierInvoicesClient({
                     <SelectItem value={ALL_FILTER_VALUE}>
                       {copy.allMatching}
                     </SelectItem>
-                    {MATCH_STATUS_OPTIONS.map((option) => (
+                    {MATCH_FILTER_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -781,7 +757,7 @@ export function SupplierInvoicesClient({
                     <SelectItem value={ALL_FILTER_VALUE}>
                       {copy.allPayments}
                     </SelectItem>
-                    {PAYMENT_STATUS_OPTIONS.map((option) => (
+                    {PAYMENT_FILTER_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -861,20 +837,8 @@ export function SupplierInvoicesClient({
                 >
                   {copy.recomputeMatching}
                 </Button>
-                <Badge
-                  variant={getInventoryStatusBadgeVariant(
-                    selectedInvoice.matchStatus,
-                  )}
-                >
-                  {getInventoryStatusLabel(selectedInvoice.matchStatus)}
-                </Badge>
-                <Badge
-                  variant={getInventoryStatusBadgeVariant(
-                    selectedInvoice.paymentStatus,
-                  )}
-                >
-                  {getInventoryStatusLabel(selectedInvoice.paymentStatus)}
-                </Badge>
+                <StatusBadge status={selectedInvoice.matchStatus} />
+                <StatusBadge status={selectedInvoice.paymentStatus} />
               </div>
             ) : null
           }

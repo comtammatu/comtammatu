@@ -1,11 +1,6 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { formatVND } from "@comtammatu/shared/format";
+import { AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import type {
   FinanceDashboardHealth,
@@ -17,9 +12,8 @@ import type {
 // but are not part of the pilot default set.
 //
 // Architect §1: extracted from finance-client.tsx:485-547 so the same
-// data composition works for /finance/revenue, /finance/reconciliation,
-// and /finance/food-cost. The owner page-level RSCs
-// fetch the inputs once and pass them down.
+// data composition works for /finance/revenue and /finance/food-cost. The
+// owner page-level RSCs fetch the inputs once and pass them down.
 
 const FOOD_COST_EXCEPTION_THRESHOLD = 60;
 const copy = messages.finance.dashboard;
@@ -99,16 +93,12 @@ export function WorkQueueStrip({
   if (visible.length === 0) return null;
 
   return (
-    <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-          {copy.workQueue.title}
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          {copy.workQueue.description}
-        </p>
-      </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <AppSection
+      title={copy.workQueue.title}
+      description={copy.workQueue.description}
+      className={className}
+      contentClassName="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+    >
         {visible.includes("invoices") && (
           <Metric
             label={copy.workQueue.invoicesAttention}
@@ -163,7 +153,6 @@ export function WorkQueueStrip({
             }
           />
         )}
-      </CardContent>
-    </Card>
+    </AppSection>
   );
 }

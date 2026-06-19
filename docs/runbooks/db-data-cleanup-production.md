@@ -4,10 +4,11 @@ Runbook for owner-run production data cleanup. Do not use this file as a
 business-record retention policy; it is an operational checklist for the exact
 audited cleanup batches linked below.
 
-Source evidence:
+Authority:
 
-- [DB data cleanup worklog](../worklog/db-data-cleanup-2026-06-12.md)
 - [Database environment registry](../agent/rules/database.md)
+- Owner approval for the exact batch and refreshed preflight output from this
+  runbook
 
 ## Rules
 
@@ -302,7 +303,7 @@ Replace `[0]` with the `candidate_order_ids` array returned by the apply script.
 Both checks should return `0`.
 
 Record the run timestamp, preflight result, apply result, and post-apply result
-back into the cleanup worklog.
+in the owner-approved ticket, PR note, or operations run note for this cleanup.
 
 ## Batch 3: Inventory Full Reset
 

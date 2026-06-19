@@ -156,7 +156,7 @@ test("mapRpcError passes Postgres error.code to predicates", () => {
 });
 
 test("mapRpcError predicates may ignore the code arg (backward compat)", () => {
-  // Existing 1-arg predicates from WS-1a/batch-1/batch-2 must keep working.
+  // 1-arg predicates that ignore the code arg must keep working.
   const mappings: readonly RpcErrorMapping[] = [
     {
       match: (msg) => msg.includes("forbidden"),

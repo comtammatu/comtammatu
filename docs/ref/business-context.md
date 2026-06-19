@@ -58,7 +58,7 @@ Các nguyên tắc vận hành đến tháng 06/2026:
 
 - HKD vẫn là người sử dụng lao động khi thuê nhân viên; thuật ngữ chuẩn là
   `NSDLĐ`, `NLĐ`, `HĐLĐ`, `BHXH/BHYT/BHTN`, `TNCN`.
-- Sản phẩm pilot ưu tiên ngày công, ca làm, phiếu lương, và export dữ liệu cho
+- Sản phẩm hiện tại ưu tiên ngày công, ca làm, phiếu lương, và export dữ liệu cho
   kế toán/thuế. Payroll pháp lý đầy đủ là capability hỗ trợ, không phải mặt
   bằng mặc định cho mọi operator.
 
@@ -66,8 +66,8 @@ Các nguyên tắc vận hành đến tháng 06/2026:
 
 - Báo cáo mặc định: doanh thu theo ngày/chi nhánh, lợi nhuận gộp trước VAT,
   giá vốn món, tồn kho, chênh lệch kiểm kê, thanh toán, HĐĐT cần xử lý.
-- Advanced COA/Journal/BCTC chỉ giữ như lớp kế toán nâng cao hoặc lộ trình
-  chuyển đổi sang doanh nghiệp; không dùng để định nghĩa UX pilot.
+- Advanced COA/Journal/BCTC không thuộc UX hiện tại cho HKD; chỉ xem xét lại
+  khi mô hình pháp lý/chuyển đổi doanh nghiệp thay đổi bằng quyết định riêng.
 
 ## Yêu cầu đăng ký cho `tenants` table
 

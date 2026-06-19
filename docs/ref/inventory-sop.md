@@ -1,14 +1,14 @@
-# SOP Inventory Pilot — chi nhánh / Kho Chi Nhánh (Kho CN) / Bếp Chi Nhánh (Bếp CN)
+# SOP Inventory — chi nhánh / Kho Chi Nhánh (Kho CN) / Bếp Chi Nhánh (Bếp CN)
 
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư
-> Phạm vi: Luồng vận hành pilot cho nguyên liệu và thành phẩm
+> Phạm vi: Luồng vận hành hiện tại cho nguyên liệu và thành phẩm
 > Mô hình: `chi nhánh`, `Kho CN` (location warehouse), `Bếp CN` (location kitchen)
 
 ---
 
 ## 0. Boundary
 
-SOP này chỉ mô tả **luồng vận hành pilot**.
+SOP này chỉ mô tả **luồng vận hành Inventory hiện tại**.
 
 - Dùng để hướng dẫn thao tác và điểm kiểm soát.
 - Không phải source of truth cho ACL module/route.
@@ -66,7 +66,7 @@ Nếu cần chi tiết quyền xem/tạo/xác nhận, xem [inventory-rbac-matrix
 2. Khi hàng tới, tạo `GRN` tại Kho CN của chi nhánh đó.
 3. Kiểm số lượng, đơn giá, batch, hạn dùng, nhiệt độ nhận hàng nếu cần.
 4. Xác nhận `GRN` để cộng tồn Kho CN và cập nhật WAC.
-5. Nếu Finance cần đối soát ngay, nhập `supplier_invoice` để làm 3-way matching với `PO` và `GRN`; đây là handoff Finance P1, không chặn Inventory pilot.
+5. Nếu Finance cần đối soát ngay, nhập `supplier_invoice` để làm 3-way matching với `PO` và `GRN`; đây là Finance handoff, không chặn đóng ngày Inventory.
 
 Điểm kiểm soát:
 
@@ -77,7 +77,7 @@ Nếu cần chi tiết quyền xem/tạo/xác nhận, xem [inventory-rbac-matrix
 
 Chuyển giữa hai chi nhánh dùng state machine vận chuyển 5 bước
 (`draft` → `confirmed_ship` → `in_transit` → `confirmed_receive` → `received`).
-Đây là hướng inter-site hợp lệ duy nhất trong pilot.
+Đây là hướng inter-site hợp lệ duy nhất trong current operation.
 
 #### 4.2.a Chuyển nguyên liệu đầu vào
 
@@ -139,7 +139,7 @@ Chuyển giữa hai chi nhánh dùng state machine vận chuyển 5 bước
 Điểm kiểm soát:
 
 - Đây là bước nội bộ trong cùng site `branch`; không dùng state machine vận chuyển 5 bước.
-- `stock_issue(issue_type = kitchen_use)` đã retired và không được dùng cho pilot.
+- Không dùng `stock_issue(issue_type = kitchen_use)` cho bước cấp bếp.
 - Không dùng fallback silent sang location khác; thiếu location Bếp CN/default consumption là lỗi cấu hình phải sửa trước khi bán.
 - Không bỏ qua ghi nhận luồng nội bộ nếu dẫn tới lệch giữa Kho CN và Bếp CN.
 
@@ -182,7 +182,7 @@ Chuyển giữa hai chi nhánh dùng state machine vận chuyển 5 bước
 ### Kho CN
 
 - Tất cả `GRN` trong ngày đã confirm.
-- `supplier_invoice` mới được ghi nhận nếu Finance P1 đang vận hành; không coi là điều kiện đóng ngày của Inventory pilot.
+- `supplier_invoice` mới được ghi nhận nếu Finance handoff đang vận hành; không coi là điều kiện đóng ngày của Inventory.
 - Không còn transfer chi nhánh → chi nhánh hoặc Kho CN → Bếp CN bị treo vô lý.
 
 ### Bếp CN
@@ -206,9 +206,9 @@ Chuyển giữa hai chi nhánh dùng state machine vận chuyển 5 bước
 - Tỷ lệ nguyên liệu cận hạn / hết hạn.
 - Số ngày AP outstanding với NCC.
 
-## 8. Deferred Trong SOP Này
+## 8. Ngoài SOP Này
 
-Những thứ dưới đây không nằm trong SOP pilot hiện tại:
+Những thứ dưới đây không nằm trong SOP Inventory hiện tại:
 
 - FIFO / FEFO vận hành theo lô
 - bin location / barcode / label

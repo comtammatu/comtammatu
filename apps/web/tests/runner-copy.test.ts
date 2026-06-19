@@ -98,6 +98,14 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /divide-x divide-border\/70/);
   assert.match(runnerPageSource, /role="list"/);
   assert.match(runnerPageSource, /role="listitem"/);
+  assert.match(
+    runnerPageSource,
+    /aria-current=\{featured \? "true" : undefined\}/,
+  );
+  assert.match(
+    runnerPageSource,
+    /data-runner-featured=\{featured \? "true" : undefined\}/,
+  );
   assert.match(runnerPageSource, /flex-1 grid-rows-4 overflow-hidden xl:grid-rows-6/);
   assert.match(runnerPageSource, /text-runner-header/);
   assert.match(runnerPageSource, /text-runner-board/);
@@ -144,6 +152,10 @@ test("Runner page follows the KDS order-list vocabulary", () => {
     /const statusLabel = getRunnerStatusLabel\(row\.status\);/,
   );
   assert.match(runnerPageSource, /featured && "border-l-primary"/);
+  assert.match(
+    runnerPageSource,
+    /featured && "bg-warning\/15 ring-1 ring-inset ring-warning\/40"/,
+  );
   assert.doesNotMatch(runnerPageSource, /bg-primary text-primary-foreground/);
   assert.doesNotMatch(runnerPageSource, /\.eq\("status", "ready"\)/);
   assert.doesNotMatch(runnerPageSource, /readyAfterIso/);

@@ -1,4 +1,4 @@
-# Inventory Pre-release QA
+# Inventory Readiness QA
 
 > Smoke + readiness checklist trước khi coi một lát Inventory là “sẵn sàng dùng”.
 >
@@ -6,7 +6,7 @@
 >
 > - thay đổi docs ảnh hưởng Inventory scope
 > - thay đổi route / server action / RPC / RLS / migrations liên quan Inventory
-> - chốt một flow pilot mới như stocktake, transfer, production, expiry, AP readouts
+> - chốt một flow Inventory mới hoặc thay đổi stocktake, transfer, production, expiry, AP readouts
 > - chạy audit UI/UX theo vai trò và thiết bị thật
 
 ---
@@ -68,9 +68,9 @@ Kiểm tra ít nhất các surface sau còn mở được:
 - `/inventory/supplier-returns`
 - `/inventory/reports`
 - master-data surfaces: `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`
-- procurement surfaces đang active trong pilot: `/inventory/receiving`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/supplier-invoices`, `/inventory/drafts`
+- procurement surfaces đang active: `/inventory/receiving`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/supplier-invoices`, `/inventory/drafts`
 - `/inventory/production` nếu flow production bị ảnh hưởng
-- retired `/admin/inventory*` URLs đi qua `inventory_admin` module ACL với `allowedRoles: []`; verify chúng bị deny (không render như surface live), không phải 200
+- `/admin/inventory*` URLs đi qua `inventory_admin` module ACL với `allowedRoles: []`; verify chúng bị deny (không render như surface live), không phải 200
 
 ### Gate C — UI/UX scope sanity
 
@@ -133,8 +133,8 @@ Mỗi flow phải log:
 - Từ `PO` đã gửi hoặc nhận dở, tạo `GRN` thật
 - Confirm `GRN`
 - Kiểm tra tồn kho chi nhánh nhận hàng tăng đúng
-- Nếu Finance P1 được bật, nhập `supplier_invoice` và recompute matching như một handoff riêng
-- Không coi ghi nhận thanh toán / AP aging là pilot gate của Inventory
+- Nếu Finance handoff được bật, nhập `supplier_invoice` và recompute matching như một handoff riêng
+- Không coi ghi nhận thanh toán / AP aging là gate đóng ngày của Inventory
 - Kiểm dashboard và `Receiving` có dẫn đúng từng bước PO -> GRN, không bắt user tự đoán bước tồn kho kế tiếp
 
 ### 3.2 Inter-branch transfer (chi nhánh → chi nhánh, 5 bước)
@@ -187,10 +187,10 @@ Mỗi flow phải log:
 
 - Reorder alert hiển thị đúng khi dưới `reorder_point`
 - Expiry alert hiển thị đúng theo window tài liệu quy định
-- Nếu surface có `AP aging` hoặc inventory value, số liệu không lỗi obvious và được đánh dấu là oversight/Finance P1 nếu chưa live
+- Nếu surface có `AP aging` hoặc inventory value, số liệu không lỗi obvious và được đánh dấu là oversight/Finance handoff nếu chưa live
 - Các CTA chưa mở phải được ghi rõ `sắp mở` hoặc chuyển thành điều hướng thật; không để disabled button gây hiểu nhầm là đã có workflow
 - Report cards `sắp mở` không được trông giống feature live
-- AP aging link phải dẫn đúng sang công nợ NCC nếu Finance P1 đang bật; nếu không, ẩn khỏi frontline pilot
+- AP aging link phải dẫn đúng sang công nợ NCC nếu Finance handoff đang bật; nếu không, ẩn khỏi frontline daily UI
 
 ### 3.8 POS/KDS bridge
 
@@ -225,9 +225,9 @@ Mỗi flow phải log:
 - Bất kỳ deviation nào giữa docs và code
 - Ảnh/chứng cứ cho mọi `P0` và `P1`
 
-Nếu có chỗ phải defer:
+Nếu có chỗ chưa thuộc scope hiện tại:
 
-- ghi rõ `deferred because ...`
+- ghi rõ lý do không nghiệm thu trong scope này
 - link lại doc scope liên quan
 - không mark là shipped nếu chưa qua gate bắt buộc
 

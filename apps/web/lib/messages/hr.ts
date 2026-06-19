@@ -2,11 +2,11 @@ export const hr = {
   workspace: {
     eyebrow: "Nhân sự",
     ownerTitle: "Nhân sự",
-    branchManagerTitle: "Ca và chấm công",
+    branchManagerTitle: "Ngày công",
     ownerDescription:
-      "Nhân viên, ca làm, ngày công và nghỉ phép cho mô hình Hộ kinh doanh.",
+      "Tách hồ sơ nhân sự, chấm công/ngày công, checklist theo vị trí và lương cho mô hình Hộ kinh doanh.",
     branchManagerDescription:
-      "Nhân viên, ca làm, ngày công và nghỉ phép của chi nhánh được gán.",
+      "Theo dõi ca, ngày công, kết ca và nghỉ phép của chi nhánh được gán.",
   },
   shell: {
     navTitle: "Nhân sự",
@@ -18,12 +18,90 @@ export const hr = {
   },
   client: {
     tabs: {
-      shifts: "Ca",
-      checklist: "Checklist",
-      attendance: "Chấm công",
-      leave: "Nghỉ phép",
+      employees: "Người",
+      attendance: "Ngày công",
+      payroll: "Lương",
+      setup: "Thiết lập",
     },
+    attendanceTitle: "Chấm công và ngày công theo ca",
+    attendanceDescription:
+      "Theo dõi vào/ra ca, checklist bắt buộc, mục tiêu hao bếp khi được giao, ca treo và nghỉ phép trong cùng một nơi.",
+    setupTitle: "Thiết lập ca, checklist và vị trí",
+    setupDescription:
+      "Ca làm là xương sống chấm công; nhân viên dùng checklist riêng hoặc mặc định theo vị trí khi vào ca.",
+    setupSteps: {
+      shifts: {
+        title: "Bước 1: Ca làm",
+        description:
+          "Tạo các khung ca để checklist và bảng công bám đúng thời điểm vào ca, trong ca, kết ca.",
+        hint: "Nền vận hành",
+      },
+      checklist: {
+        title: "Bước 2: Mẫu checklist",
+        description:
+          "Tạo danh sách việc theo chi nhánh hoặc global. Checklist đã snapshot theo ca cũ sẽ không đổi.",
+        hint: "Danh sách công việc",
+      },
+      consumption: {
+        title: "Bước 3: Nguyên liệu tiêu hao",
+        description:
+          "Chỉ cấu hình nguyên liệu mặc định cho checklist có việc Tiêu hao bếp trong ngày.",
+        hint: "Optional",
+      },
+      positions: {
+        title: "Bước 4: Mặc định theo vị trí",
+        description:
+          "Gán checklist mặc định cho từng vị trí để nhân viên nhận đúng danh sách việc khi chấm công vào.",
+        hint: "Điều phối nhân sự",
+      },
+    },
+    coverage: {
+      title: "Tình trạng áp checklist",
+      description:
+        "Đối chiếu vị trí, nhân viên, checklist tiêu hao và nguyên liệu mặc định trước khi nhân viên vào ca.",
+      hint: "Điều phối",
+      issueCount: (count: number) => `${count} cần kiểm tra`,
+      none: "Không gán",
+      noEmployee: "Nhân viên",
+      noPosition: "Chưa có vị trí",
+      noBranch: "Chưa có chi nhánh",
+      hasConsumption: "Có tiêu hao",
+      noConsumption: "Không tiêu hao",
+      employeeCount: (count: number) => `${count} NV`,
+      positionTitle: "Theo vị trí",
+      positionDescription:
+        "Kiểm tra checklist mặc định của từng vị trí và nguyên liệu tiêu hao đi kèm.",
+      employeeTitle: "Nhân viên cần kiểm tra",
+      employeeDescription:
+        "Chỉ hiện nhân viên đang thiếu checklist, thiếu nguyên liệu tiêu hao, hoặc dùng checklist riêng khác mặc định vị trí.",
+      emptyPositions: "Chưa có vị trí để kiểm tra",
+      emptyEmployees: "Không có nhân viên cần kiểm tra",
+      status: {
+        missing_checklist: "Thiếu checklist",
+        missing_consumption_defaults: "Thiếu nguyên liệu",
+        custom_checklist: "Checklist riêng",
+        ok: "Ổn",
+      },
+      positionTable: {
+        position: "Vị trí",
+        checklist: "Checklist mặc định",
+        consumption: "Tiêu hao",
+        employees: "Nhân viên",
+        status: "Trạng thái",
+      },
+      employeeTable: {
+        employee: "Nhân viên",
+        scope: "Chi nhánh / vị trí",
+        checklist: "Checklist đang áp",
+        status: "Cần kiểm tra",
+      },
+    },
+    payrollTitle: "Đối soát lương",
+    payrollDescription:
+      "Mở bảng lương để đối soát ngày công, lương gộp và thực lĩnh trước khi chốt.",
+    openPayroll: "Mở đối soát lương",
     employeeCount: (count: number) => `${count} nhân viên`,
+    staffAccounts: "Tài khoản & quyền",
     addEmployee: "Thêm nhân viên",
   },
   leave: {

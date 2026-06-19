@@ -9,6 +9,7 @@ import {
   fetchRevenueKpis,
   fetchRevenueRollup,
   fetchTopItems,
+  type FinanceDashboardSummary,
 } from "../actions";
 import { fetchFoodCost } from "../accounting-actions";
 import type { FinanceParams, ResolvedFinanceRange } from "./finance-params";
@@ -118,7 +119,12 @@ export interface FinanceCockpitData {
   kpis: FinanceCockpitKpis;
   compareKpis: Pick<
     FinanceCockpitKpis,
-    "totalCollected" | "operatingExpense" | "grossProfit" | "netProfit"
+    | "totalCollected"
+    | "orderCount"
+    | "operatingExpense"
+    | "ingredientCost"
+    | "grossProfit"
+    | "netProfit"
   > | null;
   revenueTrend: FinanceTrendPoint[];
   grossProfitTrend: FinanceTrendPoint[];
@@ -126,6 +132,7 @@ export interface FinanceCockpitData {
   inventoryItems: FinanceInventoryItem[];
   topItems: TopItemRow[];
   exceptions: FinanceException[];
+  dashboardSummary: FinanceDashboardSummary | null;
 }
 
 function toNumber(value: number | string | null | undefined): number {
@@ -424,7 +431,7 @@ function buildExceptions({
   paymentDesync,
 }: {
   kpis: FinanceCockpitKpis;
-  dashboardSummary: { invoice_attention_count: number } | null;
+  dashboardSummary: Pick<FinanceDashboardSummary, "invoice_attention_count"> | null;
   cashVariance: CashVarianceSummary | null;
   foodCostRows: FoodCostRow[];
   unpaidSupplierInvoices: { count: number; amount: number };
@@ -462,6 +469,7 @@ function buildExceptions({
         kpis.operatingExpense > 0
           ? copy.exceptions.operatingExpenseRecorded
           : copy.exceptions.operatingExpenseMissing,
+      href: "/finance/expenses",
       tone: kpis.operatingExpense > 0 ? "neutral" : "warning",
     },
     {
@@ -505,6 +513,7 @@ function buildExceptions({
         paymentDesync.count > 0
           ? copy.exceptions.paymentDesyncHint(formatCount(paymentDesync.count))
           : copy.exceptions.paymentDesyncClear,
+      href: "/finance/revenue",
       tone: paymentDesync.count > 0 ? "warning" : "neutral",
     },
   ];
@@ -641,6 +650,9 @@ export async function fetchFinanceCockpit(
       branchCashVariance.set(branchId, amount);
     }
   }
+  const dashboardSummary = dashboardSummaryRes.success
+    ? (dashboardSummaryRes.data as FinanceDashboardSummary | null)
+    : null;
 
   return {
     branches,
@@ -648,7 +660,9 @@ export async function fetchFinanceCockpit(
     compareKpis: compareKpis
       ? {
           totalCollected: compareKpis.totalCollected,
+          orderCount: compareKpis.orderCount,
           operatingExpense: compareKpis.operatingExpense,
+          ingredientCost: compareKpis.ingredientCost,
           grossProfit: compareKpis.grossProfit,
           netProfit: compareKpis.netProfit,
         }
@@ -671,13 +685,10 @@ export async function fetchFinanceCockpit(
     topItems: (topItemsRes.success
       ? (topItemsRes.data ?? [])
       : []) as TopItemRow[],
+    dashboardSummary,
     exceptions: buildExceptions({
       kpis,
-      dashboardSummary: dashboardSummaryRes.success
-        ? (dashboardSummaryRes.data as {
-            invoice_attention_count: number;
-          } | null)
-        : null,
+      dashboardSummary,
       cashVariance: cashVarianceRes.success
         ? (cashVarianceRes.data as CashVarianceSummary | null)
         : null,

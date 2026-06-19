@@ -25,7 +25,6 @@ export {
   setOrderItemPriority,
   cancelOrder,
   transferOrderTable,
-  updateOrderStatus,
   markOrderItemServed,
   fetchOrderItemsForReorder,
 } from "./order-actions";

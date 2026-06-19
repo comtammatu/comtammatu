@@ -3,8 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-// HRM "1 trục Ngày công" contract:
-// docs/worklog/hrm-truc-ngay-cong-2026-06-10.md
+// HRM day-work contract from decisions D026/D027:
 // 1) Leave grants are backfilled (the template-only seed of 20260610110000
 //    left prod with 0 users able to request/approve leave).
 // 2) Approvers receive a notification on every new leave request.

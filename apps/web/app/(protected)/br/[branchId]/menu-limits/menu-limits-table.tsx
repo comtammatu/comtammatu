@@ -21,14 +21,19 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { formatVND } from "@comtammatu/shared/format";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { normalizeSearch } from "@lib/search";
 import {
   type MenuLimitRow,
@@ -219,6 +224,138 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     });
   }
 
+  function renderSaveButton(row: MenuLimitRow) {
+    const draft = drafts[row.menu_item_id] ?? buildDraft(row);
+    const dirty = isDirty(row, draft);
+    const rowPending = isPending && pendingId === row.menu_item_id;
+    if (!dirty) return null;
+    return (
+      <Button
+        type="button"
+        size="sm"
+        disabled={rowPending}
+        onClick={() => handleSave(row)}
+      >
+        {rowPending ? (
+          <Spinner data-icon="inline-start" />
+        ) : (
+          <IconSave data-icon="inline-start" aria-hidden />
+        )}
+        {messages.pos.menu.updateLimit}
+      </Button>
+    );
+  }
+
+  function renderStatus(row: MenuLimitRow) {
+    const status = getStatusBadge(row);
+    const progress = getProgress(row);
+    return (
+      <div className="flex flex-col gap-2">
+        <Badge variant={status.variant}>{status.label}</Badge>
+        {progress ? (
+          <Progress
+            value={progress.value}
+            tone={progress.tone}
+            aria-label={messages.pos.menu.soldProgressAria(
+              row.sold_today,
+              progress.limit,
+            )}
+          />
+        ) : null}
+      </div>
+    );
+  }
+
+  function renderLimitInput(row: MenuLimitRow) {
+    const draft = drafts[row.menu_item_id] ?? buildDraft(row);
+    const rowPending = isPending && pendingId === row.menu_item_id;
+    return (
+      <Input
+        type="number"
+        min={1}
+        max={9999}
+        inputMode="numeric"
+        placeholder={messages.pos.menu.unlimited}
+        value={draft.qtyText}
+        disabled={rowPending}
+        onChange={(event) =>
+          updateDraft(row.menu_item_id, {
+            qtyText: event.target.value,
+          })
+        }
+        aria-label={messages.pos.menu.totalLimitInputAria(row.item_name)}
+      />
+    );
+  }
+
+  function renderDisabledSwitch(row: MenuLimitRow) {
+    const draft = drafts[row.menu_item_id] ?? buildDraft(row);
+    const rowPending = isPending && pendingId === row.menu_item_id;
+    return (
+      <Switch
+        checked={draft.isDisabled}
+        disabled={rowPending}
+        onCheckedChange={(checked) =>
+          updateDraft(row.menu_item_id, {
+            isDisabled: checked,
+          })
+        }
+        aria-label={messages.pos.menu.disableItemAria(row.item_name)}
+      />
+    );
+  }
+
+  const columns: DataTableColumn<MenuLimitRow>[] = [
+    {
+      key: "item",
+      header: messages.pos.menu.itemLabel,
+      className: "min-w-56",
+      render: (row) => (
+        <div>
+          <div className="font-medium">{row.item_name}</div>
+          <div className="font-mono text-xs tabular-nums text-muted-foreground">
+            {formatVND(row.base_price)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: messages.pos.menu.statusLabel,
+      className: "min-w-44",
+      render: (row) => renderStatus(row),
+    },
+    {
+      key: "sold",
+      header: messages.pos.menu.soldLabel,
+      className: "w-36",
+      render: (row) => (
+        <span className="font-mono text-sm tabular-nums">
+          {row.sold_today}
+          {row.limit_quantity != null ? ` / ${row.limit_quantity}` : ""}
+        </span>
+      ),
+    },
+    {
+      key: "limit",
+      header: messages.pos.menu.totalLimitLabel,
+      className: "w-40",
+      render: (row) => renderLimitInput(row),
+    },
+    {
+      key: "disabled",
+      header: messages.pos.menu.toggleDisabled,
+      className: "w-24",
+      render: (row) => renderDisabledSwitch(row),
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "w-32 text-right",
+      render: (row) => renderSaveButton(row),
+    },
+  ];
+
   if (rows.length === 0) {
     return (
       <AppEmptyState
@@ -281,121 +418,33 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
           contentFlush
           contentScroll
         >
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="min-w-56">
-                  {messages.pos.menu.itemLabel}
-                </TableHead>
-                <TableHead className="min-w-44">
-                  {messages.pos.menu.statusLabel}
-                </TableHead>
-                <TableHead className="w-36">
-                  {messages.pos.menu.soldLabel}
-                </TableHead>
-                <TableHead className="w-40">
-                  {messages.pos.menu.totalLimitLabel}
-                </TableHead>
-                <TableHead className="w-24">
-                  {messages.pos.menu.toggleDisabled}
-                </TableHead>
-                <TableHead className="w-32 text-right" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {group.items.map((row) => {
-                const draft = drafts[row.menu_item_id] ?? buildDraft(row);
-                const dirty = isDirty(row, draft);
-                const rowPending = isPending && pendingId === row.menu_item_id;
-                const status = getStatusBadge(row);
-                const progress = getProgress(row);
-
-                return (
-                  <TableRow key={row.menu_item_id}>
-                    <TableCell>
-                      <div className="font-medium">{row.item_name}</div>
-                      <div className="font-mono text-xs tabular-nums text-muted-foreground">
-                        {formatVND(row.base_price)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-2">
-                        <Badge variant={status.variant}>{status.label}</Badge>
-                        {progress ? (
-                          <Progress
-                            value={progress.value}
-                            tone={progress.tone}
-                            aria-label={messages.pos.menu.soldProgressAria(
-                              row.sold_today,
-                              progress.limit,
-                            )}
-                          />
-                        ) : null}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono text-sm tabular-nums">
-                        {row.sold_today}
-                        {row.limit_quantity != null
-                          ? ` / ${row.limit_quantity}`
-                          : ""}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={9999}
-                        inputMode="numeric"
-                        placeholder={messages.pos.menu.unlimited}
-                        value={draft.qtyText}
-                        disabled={rowPending}
-                        onChange={(event) =>
-                          updateDraft(row.menu_item_id, {
-                            qtyText: event.target.value,
-                          })
-                        }
-                        aria-label={messages.pos.menu.totalLimitInputAria(
-                          row.item_name,
-                        )}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={draft.isDisabled}
-                        disabled={rowPending}
-                        onCheckedChange={(checked) =>
-                          updateDraft(row.menu_item_id, {
-                            isDisabled: checked,
-                          })
-                        }
-                        aria-label={messages.pos.menu.disableItemAria(
-                          row.item_name,
-                        )}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {dirty ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={rowPending}
-                          onClick={() => handleSave(row)}
-                        >
-                          {rowPending ? (
-                            <Spinner data-icon="inline-start" />
-                          ) : (
-                            <IconSave data-icon="inline-start" aria-hidden />
-                          )}
-                          {messages.pos.menu.updateLimit}
-                        </Button>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <DataTable
+            columns={columns}
+            data={group.items}
+            getRowKey={(row) => row.menu_item_id}
+            mobileCardRender={(row) => (
+              <Item variant="outline">
+                <ItemHeader>
+                  <ItemContent>
+                    <ItemTitle>{row.item_name}</ItemTitle>
+                    <ItemDescription>{formatVND(row.base_price)}</ItemDescription>
+                  </ItemContent>
+                  <ItemActions>{renderDisabledSwitch(row)}</ItemActions>
+                </ItemHeader>
+                {renderStatus(row)}
+                <ItemFooter>
+                  <span className="font-mono text-sm tabular-nums">
+                    {row.sold_today}
+                    {row.limit_quantity != null ? ` / ${row.limit_quantity}` : ""}
+                  </span>
+                  <div className="w-32">{renderLimitInput(row)}</div>
+                </ItemFooter>
+                <ItemFooter className="justify-end">
+                  {renderSaveButton(row)}
+                </ItemFooter>
+              </Item>
+            )}
+          />
         </AppSection>
       ))}
     </>

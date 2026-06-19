@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { notFound } from "next/navigation";
 import { CircleAlert as IconAlertCircle } from "lucide-react";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { cn } from "@comtammatu/ui";
@@ -34,6 +35,8 @@ const RUNNER_ORDER_ITEM_SELECT_WITH_PRIORITY =
   "id, order_id, quantity, is_priority";
 const RUNNER_ORDER_ITEM_SELECT_BASE = "id, order_id, quantity";
 const RUNNER_ACTIVE_STATUSES = ["pending", "preparing"] as const;
+const RUNNER_DISPLAY_TOKEN_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 // 4 rows on small boards, 6 on xl TVs. The server cannot know the
 // breakpoint, so it renders up to the xl limit and rows 5-6 collapse
 // below xl via `hidden xl:grid`; the overflow footer mirrors the same
@@ -95,14 +98,16 @@ type RunnerQueryResult = {
 
 async function fetchRunnerTodayTicketCount(args: {
   supabase: RunnerSupabase;
+  tenantId: number;
   branchId: number;
   todayStartIso: string;
   todayEndIso: string;
 }): Promise<{ count: number; error: boolean }> {
-  const { supabase, branchId, todayStartIso, todayEndIso } = args;
+  const { supabase, tenantId, branchId, todayStartIso, todayEndIso } = args;
   const { count, error } = await supabase
     .from("kds_tickets")
     .select("id", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
     .eq("branch_id", branchId)
     .gte("created_at", todayStartIso)
     .lt("created_at", todayEndIso);
@@ -119,8 +124,16 @@ function isMissingPriorityColumn(error: { message?: string } | null): boolean {
   return message.includes("is_priority") && message.includes("column");
 }
 
-function isRunnerOperationalBranchKind(branchKind: string): boolean {
+function isRunnerOperationalBranchKind(branchKind: string | null): boolean {
   return branchKind === "branch";
+}
+
+function normalizeRunnerDisplayParam(
+  display: string | string[] | undefined,
+): string | null {
+  const value = Array.isArray(display) ? display[0] : display;
+  if (!value || !RUNNER_DISPLAY_TOKEN_RE.test(value)) return null;
+  return value;
 }
 
 function normalizeRunnerOrders(
@@ -166,14 +179,16 @@ function sortRunnerTicketsNewestFirst(
 
 async function fetchRunnerOrdersByIds(args: {
   supabase: RunnerSupabase;
+  tenantId: number;
   branchId: number;
   orderIds: number[];
 }): Promise<{ data: BuildRunnerQueueInput["orders"] | null; error: unknown }> {
-  const { supabase, branchId, orderIds } = args;
+  const { supabase, tenantId, branchId, orderIds } = args;
   const result = await fetchChunkedRows<unknown>(orderIds, async (ids) => {
     let ordersRes: RunnerQueryResult = await supabase
       .from("orders")
       .select(RUNNER_ORDER_SELECT_WITH_PRIORITY)
+      .eq("tenant_id", tenantId)
       .eq("branch_id", branchId)
       .in("id", ids);
 
@@ -181,6 +196,7 @@ async function fetchRunnerOrdersByIds(args: {
       ordersRes = await supabase
         .from("orders")
         .select(RUNNER_ORDER_SELECT_BASE)
+        .eq("tenant_id", tenantId)
         .eq("branch_id", branchId)
         .in("id", ids);
     }
@@ -194,19 +210,22 @@ async function fetchRunnerOrdersByIds(args: {
 
 async function fetchRunnerOrderItemsByIds(args: {
   supabase: RunnerSupabase;
+  tenantId: number;
   orderItemIds: number[];
 }): Promise<{ data: RunnerOrderItemQuantityRow[] | null; error: unknown }> {
-  const { supabase, orderItemIds } = args;
+  const { supabase, tenantId, orderItemIds } = args;
   const result = await fetchChunkedRows<unknown>(orderItemIds, async (ids) => {
     let itemsRes: RunnerQueryResult = await supabase
       .from("order_items")
       .select(RUNNER_ORDER_ITEM_SELECT_WITH_PRIORITY)
+      .eq("tenant_id", tenantId)
       .in("id", ids);
 
     if (isMissingPriorityColumn(itemsRes.error)) {
       itemsRes = await supabase
         .from("order_items")
         .select(RUNNER_ORDER_ITEM_SELECT_BASE)
+        .eq("tenant_id", tenantId)
         .in("id", ids);
     }
 
@@ -219,12 +238,14 @@ async function fetchRunnerOrderItemsByIds(args: {
 
 async function fetchRunnerKitchenBatchesByIds(args: {
   supabase: RunnerSupabase;
+  tenantId: number;
+  branchId: number;
   batchIds: number[];
 }): Promise<{
   data: BuildRunnerQueueInput["kitchenBatches"] | null;
   error: unknown;
 }> {
-  const { supabase, batchIds } = args;
+  const { supabase, tenantId, branchId, batchIds } = args;
   return fetchChunkedRows<BuildRunnerQueueInput["kitchenBatches"][number]>(
     batchIds,
     async (ids) => {
@@ -233,6 +254,8 @@ async function fetchRunnerKitchenBatchesByIds(args: {
         .select(
           "id, order_id, kitchen_ticket_number, send_seq, kind, created_at",
         )
+        .eq("tenant_id", tenantId)
+        .eq("branch_id", branchId)
         .in("id", ids);
 
       return {
@@ -245,15 +268,17 @@ async function fetchRunnerKitchenBatchesByIds(args: {
 
 async function fetchRunnerVisibleTickets(args: {
   supabase: RunnerSupabase;
+  tenantId: number;
   branchId: number;
   todayStartIso: string;
 }): Promise<{ tickets: RunnerTicketSnapshot[]; error: boolean }> {
-  const { supabase, branchId, todayStartIso } = args;
+  const { supabase, tenantId, branchId, todayStartIso } = args;
   const activeTicketsResult = await fetchPagedRows<RunnerTicketSnapshot>(
     async (from, to) => {
       const { data, error } = await supabase
         .from("kds_tickets")
         .select(RUNNER_TICKET_SELECT)
+        .eq("tenant_id", tenantId)
         .eq("branch_id", branchId)
         .in("status", RUNNER_ACTIVE_STATUSES)
         .gte("created_at", todayStartIso)
@@ -290,6 +315,7 @@ async function fetchRunnerVisibleTickets(args: {
           const { data, error } = await supabase
             .from("kds_tickets")
             .select(RUNNER_TICKET_SELECT)
+            .eq("tenant_id", tenantId)
             .eq("branch_id", branchId)
             .in("status", RUNNER_ACTIVE_STATUSES)
             .gte("created_at", todayStartIso)
@@ -317,6 +343,7 @@ async function fetchRunnerVisibleTickets(args: {
           const { data, error } = await supabase
             .from("kds_tickets")
             .select(RUNNER_TICKET_SELECT)
+            .eq("tenant_id", tenantId)
             .eq("branch_id", branchId)
             .in("status", RUNNER_ACTIVE_STATUSES)
             .gte("created_at", todayStartIso)
@@ -345,13 +372,21 @@ async function fetchRunnerVisibleTickets(args: {
 
 export default async function RunnerPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ branchId: string }>;
+  searchParams: Promise<{ display?: string | string[] }>;
 }) {
   const { branchId } = await params;
+  const { display } = await searchParams;
   const branchIdNum = Number(branchId);
   if (!Number.isInteger(branchIdNum) || branchIdNum <= 0) {
     return <RunnerErrorState />;
+  }
+
+  const displayParam = normalizeRunnerDisplayParam(display);
+  if (!displayParam) {
+    notFound();
   }
 
   const supabase = createServiceClient();
@@ -360,20 +395,28 @@ export default async function RunnerPage({
 
   const { data: branch, error: branchError } = await supabase
     .from("branches")
-    .select("id, name, branch_kind")
+    .select("id, tenant_id, name, branch_kind, is_active, runner_public_slug")
     .eq("id", branchIdNum)
+    .eq("runner_public_slug", displayParam)
     .maybeSingle();
 
-  if (
-    branchError ||
-    !branch ||
-    !isRunnerOperationalBranchKind(branch.branch_kind)
-  ) {
+  if (branchError) {
     return <RunnerErrorState />;
   }
+  if (
+    !branch ||
+    !isRunnerOperationalBranchKind(branch.branch_kind) ||
+    branch.is_active !== true ||
+    branch.runner_public_slug !== displayParam
+  ) {
+    notFound();
+  }
+
+  const tenantId = branch.tenant_id;
 
   const ticketResult = await fetchRunnerVisibleTickets({
     supabase,
+    tenantId,
     branchId: branchIdNum,
     todayStartIso,
   });
@@ -397,15 +440,21 @@ export default async function RunnerPage({
     orderIds.length > 0
       ? fetchRunnerOrdersByIds({
           supabase,
+          tenantId,
           branchId: branchIdNum,
           orderIds,
         })
       : Promise.resolve({ data: [], error: null }),
     batchIds.length > 0
-      ? fetchRunnerKitchenBatchesByIds({ supabase, batchIds })
+      ? fetchRunnerKitchenBatchesByIds({
+          supabase,
+          tenantId,
+          branchId: branchIdNum,
+          batchIds,
+        })
       : Promise.resolve({ data: [], error: null }),
     orderItemIds.length > 0
-      ? fetchRunnerOrderItemsByIds({ supabase, orderItemIds })
+      ? fetchRunnerOrderItemsByIds({ supabase, tenantId, orderItemIds })
       : Promise.resolve({ data: [], error: null }),
   ]);
 
@@ -440,6 +489,7 @@ export default async function RunnerPage({
   if (rows.length === 0) {
     const todayTicketCountResult = await fetchRunnerTodayTicketCount({
       supabase,
+      tenantId,
       branchId: branchIdNum,
       todayStartIso,
       todayEndIso,
@@ -456,7 +506,7 @@ export default async function RunnerPage({
 
   return (
     <>
-      <RunnerRealtimeRefresh branchId={branchIdNum} />
+      <RunnerRealtimeRefresh />
 
       <section
         aria-label={`${RUNNER_COPY.eyebrow} ${branch.name}`}
@@ -659,10 +709,13 @@ function RunnerOrderListRow({
   return (
     <div
       role="listitem"
+      aria-current={featured ? "true" : undefined}
+      data-runner-featured={featured ? "true" : undefined}
       className={cn(
         "grid h-full min-h-0 w-full grid-cols-12 items-stretch gap-0 divide-x divide-border/70 border-b border-l-4",
         getRunnerRowClass(),
         featured && "border-l-primary",
+        featured && "bg-warning/15 ring-1 ring-inset ring-warning/40",
         hiddenBelowXl && "hidden xl:grid",
       )}
     >

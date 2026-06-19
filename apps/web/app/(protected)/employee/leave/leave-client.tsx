@@ -1,33 +1,15 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { z } from "zod";
 import {
   CalendarX as IconCalendarX,
   Plus as IconPlus,
   X as IconX,
 } from "lucide-react";
 import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
-import {
-  formatVNBusinessDate,
-  getVNDateString,
-} from "@comtammatu/shared/time";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { formatVNBusinessDate, getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import { Input } from "@comtammatu/ui/components/input";
 import {
   Item,
   ItemActions,
@@ -36,21 +18,23 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { Label } from "@comtammatu/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { EmployeePanel, EmployeeStatusStrip } from "../components/employee-page";
+import {
+  EmployeeActionBar,
+  EmployeePanel,
+  EmployeeStatusStrip,
+} from "../components/employee-page";
 import { cancelLeaveRequest, submitLeaveRequest } from "./actions";
 import type { LeaveRequestRow, LeaveRequestType } from "./page";
 import { messages } from "@lib/messages";
+import { AppEmptyState } from "@/components/surface";
+import {
+  FormDialog,
+  SelectField,
+  TextareaField,
+  TextField,
+} from "@/components/form";
+import { StatusBadge } from "@/components/status-badge";
 
 interface LeaveRequestClientProps {
   branchId: number;
@@ -60,12 +44,7 @@ interface LeaveRequestClientProps {
 
 const copy = messages.employee.leave;
 
-const STATUS_LABELS = {
-  pending: { label: "Chờ duyệt", variant: "warning" as const },
-  approved: { label: "Đã duyệt", variant: "success" as const },
-  rejected: { label: "Từ chối", variant: "destructive" as const },
-  cancelled: { label: "Đã huỷ", variant: "secondary" as const },
-};
+const LEAVE_TYPES = ["annual", "sick", "unpaid", "personal", "other"] as const;
 
 const LEAVE_TYPE_LABELS: Record<LeaveRequestType, string> = {
   annual: "Nghỉ phép",
@@ -74,6 +53,35 @@ const LEAVE_TYPE_LABELS: Record<LeaveRequestType, string> = {
   personal: "Việc cá nhân",
   other: "Khác",
 };
+
+const LEAVE_TYPE_OPTIONS = LEAVE_TYPES.map((value) => ({
+  value,
+  label: LEAVE_TYPE_LABELS[value],
+}));
+
+const leaveRequestSchema = z
+  .object({
+    startDate: z.string().min(1),
+    endDate: z.string().min(1),
+    leaveType: z.enum(LEAVE_TYPES),
+    reason: z.string().trim().max(500).optional(),
+  })
+  .refine((values) => values.endDate >= values.startDate, {
+    path: ["endDate"],
+    error: "Ngày kết thúc phải sau ngày bắt đầu.",
+  });
+
+type LeaveRequestFormValues = z.infer<typeof leaveRequestSchema>;
+
+function leaveRequestDefaults(): LeaveRequestFormValues {
+  const today = getVNDateString();
+  return {
+    startDate: today,
+    endDate: today,
+    leaveType: "annual",
+    reason: "",
+  };
+}
 
 function formatDateRange(startDate: string, endDate: string): string {
   if (startDate === endDate) return formatVNBusinessDate(startDate);
@@ -107,76 +115,51 @@ export function LeaveRequestClient({
   branchName,
   initialRequests,
 }: LeaveRequestClientProps) {
-  const [requests, setRequests] =
-    useState<LeaveRequestRow[]>(initialRequests);
+  const [requests, setRequests] = useState<LeaveRequestRow[]>(initialRequests);
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
-  const [startDate, setStartDate] = useState(getVNDateString());
-  const [endDate, setEndDate] = useState(getVNDateString());
-  const [leaveType, setLeaveType] = useState<LeaveRequestType>("annual");
-  const [reason, setReason] = useState("");
-
-  const durationDays = useMemo(
-    () => countInclusiveDays(startDate, endDate),
-    [startDate, endDate],
+  const defaultValues = useMemo(() => leaveRequestDefaults(), [open]);
+  const todayIso = defaultValues.startDate;
+  const durationDays = countInclusiveDays(
+    defaultValues.startDate,
+    defaultValues.endDate,
   );
-  const todayIso = getVNDateString();
-  const canSubmit =
-    startDate.length > 0 && endDate.length > 0 && startDate <= endDate;
 
-  function resetForm() {
-    const today = getVNDateString();
-    setStartDate(today);
-    setEndDate(today);
-    setLeaveType("annual");
-    setReason("");
-  }
-
-  function handleStartDateChange(value: string) {
-    setStartDate(value);
-    if (endDate < value) setEndDate(value);
-  }
-
-  function handleSubmit() {
-    if (!canSubmit) return;
-    startTransition(async () => {
-      const result = await submitLeaveRequest({
-        branchId,
-        startDate,
-        endDate,
-        leaveType,
-        reason: reason.trim() || undefined,
-      });
-
-      if (!result.success) {
-        toast.error(result.error ?? "Không thể gửi yêu cầu nghỉ");
-        return;
-      }
-
-      toast.success(copy.submittedToast);
-      const requestId = (result.data as { requestId: number }).requestId;
-      const newRequest: LeaveRequestRow = {
-        id: requestId,
-        branch_id: branchId,
-        employee_id: 0,
-        status: "pending",
-        start_date: startDate,
-        end_date: endDate,
-        leave_type: leaveType,
-        reason: reason.trim() || null,
-        rejected_reason: null,
-        created_at: new Date().toISOString(),
-        reviewed_at: null,
-      };
-
-      setRequests((prev) =>
-        [newRequest, ...prev].sort((a, b) =>
-          b.start_date.localeCompare(a.start_date),
-        ),
-      );
-      resetForm();
-      setOpen(false);
+  async function handleSubmit(values: LeaveRequestFormValues) {
+    const reason = values.reason?.trim() ?? "";
+    const result = await submitLeaveRequest({
+      branchId,
+      startDate: values.startDate,
+      endDate: values.endDate,
+      leaveType: values.leaveType,
+      reason: reason || undefined,
     });
+
+    if (!result.success) {
+      return result;
+    }
+
+    const requestId = (result.data as { requestId: number }).requestId;
+    const newRequest: LeaveRequestRow = {
+      id: requestId,
+      branch_id: branchId,
+      employee_id: 0,
+      status: "pending",
+      start_date: values.startDate,
+      end_date: values.endDate,
+      leave_type: values.leaveType,
+      reason: reason || null,
+      rejected_reason: null,
+      created_at: new Date().toISOString(),
+      reviewed_at: null,
+    };
+
+    setRequests((prev) =>
+      [newRequest, ...prev].sort((a, b) =>
+        b.start_date.localeCompare(a.start_date),
+      ),
+    );
+    return result;
   }
 
   function handleCancel(request: LeaveRequestRow) {
@@ -213,14 +196,12 @@ export function LeaveRequestClient({
               {
                 label: copy.selectedRange,
                 value:
-                  durationDays === null
-                    ? "Chưa chọn"
-                    : `${durationDays} ngày`,
+                  durationDays === null ? "Chưa chọn" : `${durationDays} ngày`,
                 muted: durationDays === null,
               },
             ]}
           />
-          <div className="flex">
+          <EmployeeActionBar>
             <Button
               type="button"
               size="touch"
@@ -231,7 +212,7 @@ export function LeaveRequestClient({
               <IconPlus data-icon="inline-start" />
               {copy.newRequestButton}
             </Button>
-          </div>
+          </EmployeeActionBar>
         </div>
       </EmployeePanel>
 
@@ -240,19 +221,14 @@ export function LeaveRequestClient({
         description={copy.myRequestsDescription}
       >
         {requests.length === 0 ? (
-          <Empty>
-            <EmptyMedia variant="icon">
-              <IconCalendarX />
-            </EmptyMedia>
-            <EmptyHeader>
-              <EmptyTitle>{copy.emptyTitle}</EmptyTitle>
-              <EmptyDescription>{copy.emptyDescription}</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+          <AppEmptyState
+            title={copy.emptyTitle}
+            description={copy.emptyDescription}
+            icon={<IconCalendarX />}
+          />
         ) : (
           <ItemGroup>
             {requests.map((request) => {
-              const status = STATUS_LABELS[request.status];
               const days = countInclusiveDays(
                 request.start_date,
                 request.end_date,
@@ -262,14 +238,16 @@ export function LeaveRequestClient({
                   <ItemContent>
                     <ItemTitle>
                       {LEAVE_TYPE_LABELS[request.leave_type]}
-                      <Badge variant={status.variant}>{status.label}</Badge>
+                      <StatusBadge
+                        domain="leave-request"
+                        value={request.status}
+                      />
                     </ItemTitle>
                     <ItemDescription>
                       {formatDateRange(request.start_date, request.end_date)}
                       {days ? ` · ${days} ngày` : null}
                       {request.reason ? ` · ${request.reason}` : null}
-                      {request.status === "rejected" &&
-                      request.rejected_reason
+                      {request.status === "rejected" && request.rejected_reason
                         ? ` · ${copy.rejectedReason}: ${request.rejected_reason}`
                         : null}
                     </ItemDescription>
@@ -295,100 +273,69 @@ export function LeaveRequestClient({
         )}
       </EmployeePanel>
 
-      <Dialog
+      <FormDialog
         open={open}
-        onOpenChange={(nextOpen) => {
-          setOpen(nextOpen);
-          if (!nextOpen) resetForm();
-        }}
+        onOpenChange={setOpen}
+        title={copy.dialogTitle}
+        description={branchName ?? messages.employee.profile.noBranch}
+        schema={leaveRequestSchema}
+        defaultValues={defaultValues}
+        entityKey={open ? "open" : "closed"}
+        onSubmit={handleSubmit}
+        successMessage={copy.submittedToast}
+        submitLabel={copy.submit}
+        cancelLabel={ACTIONS_VI.cancel}
+        contentClassName="sm:max-w-md"
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{copy.dialogTitle}</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="leave-start-date">{copy.startDate}</Label>
-                <Input
-                  id="leave-start-date"
+        {(form) => {
+          const startDate = form.watch("startDate");
+          const endDate = form.watch("endDate");
+          const formDurationDays = countInclusiveDays(startDate, endDate);
+
+          return (
+            <>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <TextField
+                  control={form.control}
+                  name="startDate"
+                  label={copy.startDate}
                   type="date"
-                  value={startDate}
                   min={todayIso}
-                  onChange={(event) => handleStartDateChange(event.target.value)}
                 />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="leave-end-date">{copy.endDate}</Label>
-                <Input
-                  id="leave-end-date"
+                <TextField
+                  control={form.control}
+                  name="endDate"
+                  label={copy.endDate}
                   type="date"
-                  value={endDate}
                   min={startDate || todayIso}
-                  onChange={(event) => setEndDate(event.target.value)}
                 />
               </div>
-            </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="leave-type">{copy.leaveType}</Label>
-              <Select
-                value={leaveType}
-                onValueChange={(value) =>
-                  setLeaveType(value as LeaveRequestType)
-                }
-              >
-                <SelectTrigger id="leave-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(LEAVE_TYPE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <SelectField
+                control={form.control}
+                name="leaveType"
+                label={copy.leaveType}
+                options={LEAVE_TYPE_OPTIONS}
+              />
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="leave-reason">{copy.reason}</Label>
-              <Textarea
-                id="leave-reason"
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
+              <TextareaField
+                control={form.control}
+                name="reason"
+                label={copy.reason}
                 maxLength={500}
                 placeholder={copy.reasonPlaceholder}
               />
-            </div>
 
-            {durationDays !== null ? (
-              <p className="text-xs text-muted-foreground">
-                {formatDateRange(startDate, endDate)} · {durationDays}{" "}
-                {copy.dayUnit}
-              </p>
-            ) : null}
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={isPending}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSubmit}
-              disabled={isPending || !canSubmit}
-            >
-              {isPending ? <Spinner className="mr-2" /> : null}
-              {copy.submit}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {formDurationDays !== null ? (
+                <p className="text-xs text-muted-foreground">
+                  {formatDateRange(startDate, endDate)} · {formDurationDays}{" "}
+                  {copy.dayUnit}
+                </p>
+              ) : null}
+            </>
+          );
+        }}
+      </FormDialog>
     </>
   );
 }

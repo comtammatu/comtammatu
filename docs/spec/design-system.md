@@ -50,19 +50,6 @@ Active runtime:
 
 Agents must preserve this decision unless the task explicitly asks to change the design system itself.
 
-Legacy Inventory pilot artifacts have been retired from runtime app UI:
-
-- removed `packages/design-tokens/tokens.json`
-- removed `packages/ui/src/styles/matu-tokens.css`
-- removed `apps/web/app/components/matu-surface.tsx`
-- removed `apps/web/app/(protected)/admin/kitchen-sink/page.tsx`
-- external design folders
-
-New app UI must not import `matu-surface`, use `font-matu-body`, or use
-`bg-matu-*`, `text-matu-*`, `border-matu-*`, `rounded-matu-*`,
-`--spacing-matu-*`, or `--radius-matu-*`. If the owner explicitly reactivates
-the pilot layer later, the design-system contract must be updated first.
-
 ## Authority Order
 
 When deciding how to build UI, use this order:
@@ -129,9 +116,9 @@ Approved project utilities:
 
 Forbidden for new app UI:
 
-- `matu-*` Tailwind tokens.
-- `--font-matu-body`, `font-matu-body`, or Be Vietnam Pro.
-- `rounded-matu-*`, `--radius-matu-*`, or `--spacing-matu-*`.
+- Parallel Tailwind token namespaces outside the current semantic contract.
+- Custom font variables or font utility classes outside `font-sans`, `font-heading`, and `font-mono`.
+- Custom radius or spacing variable namespaces outside the current semantic contract.
 - External DS token names copied from outside this repo.
 
 Brand Concept 01 runtime mapping:
@@ -168,7 +155,7 @@ Rules:
 - Body text, controls, labels, descriptions, table text, and workflow copy inherit `font-sans`.
 - Use `font-mono` only for tabular operational data, IDs, codes, receipt/order numbers, prices, quantities, timestamps, and audit hashes.
 - Do not add route-specific `font-family`, custom font variables, or extra Google font families.
-- Do not reintroduce `Be Vietnam Pro`, Geist, system-only stacks, `font-matu-body`, or per-surface typography exceptions unless the design-system contract is explicitly changed first.
+- Do not reintroduce `Be Vietnam Pro`, Geist, system-only stacks, custom font variables, or per-surface typography exceptions unless the design-system contract is explicitly changed first.
 - When changing typography runtime, update `apps/web/app/layout.tsx`, `packages/ui/src/styles/globals.css`, this contract, `docs/modules/ui.md`, `docs/agent/rules/ui.md`, and `tasks/regressions.md`.
 
 Rules:
@@ -177,7 +164,7 @@ Rules:
 - Use `BrandMark` / `BrandLockup` for web runtime logo rendering; do not reference `/brand/logo-*` directly from route components.
 - Purpose-specific mascot assets may be used as decorative public images in customer-facing empty or splash states; they must not replace core workflow content.
 - Use `BrandGlyph` (`@comtammatu/ui/components/brand-glyph`) for the five Concept-01 sub-symbols (`hat-gao`, `to-com`, `dia-tron`, `mai-nha`, `dua`). They are brand DECORATION (packaging, storefront, empty-state accents), never an interactive affordance — `lucide-react` remains the only UI-icon source. It inherits `currentColor`; pass `tone` to paint the glyph's semantic brand color (terracotta=`text-primary`, navy=`text-foreground`, green=`text-success`, gold=`text-warning`). Do not give it a raw color.
-- The three brand patterns (`ke-caro`, `hat-gao`, `vong-to`) ship as tileable SVG under `/brand/patterns` with the `brand-pattern-caro` / `brand-pattern-hat-gao` / `brand-pattern-vong-to` and `brand-strip` utilities in `globals.css`. Use them only as decorative footer strips, packaging trim, or section separators — never as a background behind body text. Do not reintroduce the retired `matu-*` visual-layer prefix for these.
+- The three brand patterns (`ke-caro`, `hat-gao`, `vong-to`) ship as tileable SVG under `/brand/patterns` with the `brand-pattern-caro` / `brand-pattern-hat-gao` / `brand-pattern-vong-to` and `brand-strip` utilities in `globals.css`. Use them only as decorative footer strips, packaging trim, or section separators — never as a background behind body text.
 - Do not hardcode raw palette classes for status meaning (`amber`, `emerald`, `zinc`, etc.) when a semantic token exists.
 - Do not add arbitrary dimensions such as `text-[10px]`, `w-[200px]`, or `h-[3rem]`.
 - Do not add static inline styles for presentation.
@@ -387,8 +374,7 @@ the phone card list, the `Table` primitive for desktop, `AppEmptyState` /
 twin JSX trees (`md:hidden` card list + `hidden … md:block` table) are frozen
 by the `responsive-double-render` ratchet and migrate to `DataTable` per
 route family. Mobile and desktop MUST expose the same fields, status colors,
-and actions for the same row. The retired inventory copy of the data-table
-suite must not be reintroduced.
+and actions for the same row. Route-local data-table suites are not allowed.
 
 Inline-edit document sheets (PO/transfer/issue lines) use the same adapter:
 `render`/`mobileCardRender` receive `(row, index)` so per-line mutations
@@ -402,7 +388,8 @@ breakpoint switch can remount them safely.
 - Empty states render through `AppEmptyState` (page/section) or
   `TableEmptyStateRow` (inside a `Table`); the raw `Empty*` primitives are
   reserved for approved wrappers (`surface.tsx`, employee surface layer).
-  `EmptyStatePanel` and the inventory `MobileEmptyState` are retired.
+  Route-local empty wrappers such as `EmptyStatePanel` or `MobileEmptyState`
+  are not allowed.
 - A list surface renders ONE empty treatment per breakpoint — never a panel
   and a table row stacked on the same viewport.
 - Simple yes/no destructive confirmation uses `confirm()` from
@@ -454,9 +441,27 @@ Forbidden wrappers:
 - Wrappers that restyle a primitive into a new visual system.
 - Page-specific clones of `Button`, `Badge`, `Card`, `Table`, `Tabs`, `Input`, or `Select`.
 - Page-specific clones of app page/header/section/toolbar/empty-state/link-card adapters.
-- Compatibility shims for a removed design system.
-- Helpers named like legacy `app-*` surface classes.
-- Legacy pilot wrappers such as the removed `matu-surface` adapter.
+- Compatibility shims for non-current visual systems.
+- Helpers named like `app-*` surface classes.
+- Route-local app surface replacements.
+
+### High-level primitive import governance
+
+`Card`, `Table`, `Dialog`, and `AlertDialog` are high-level composition
+primitives. Existing direct app imports are a frozen per-file baseline, not a
+license to spread the pattern. New app code must pick the owning adapter first:
+
+| Primitive import | Default route for new app code |
+| ---------------- | ------------------------------ |
+| `@comtammatu/ui/components/card` | `AppSection`, `KpiCard`, `InteractiveCard`, or an approved operational adapter |
+| `@comtammatu/ui/components/table` | `DataTable`, `TableEmptyStateRow`, or a documented document/line-sheet adapter |
+| `@comtammatu/ui/components/dialog` | `FormDialog`, `Sheet`, Page flow, or an approved short contextual dialog |
+| `@comtammatu/ui/components/alert-dialog` | shared `confirm()`, `FormDialog` with reason input, or an approved destructive flow |
+
+`scripts/check-ui-contract.mjs` enforces this with the
+`raw-*-import-file-baseline` gates. The baseline only shrinks. Expanding a file's
+allowance requires a contract-level reason here or in the relevant module doc;
+do not add a one-off allowlist entry just to make a route compile.
 
 ## Surface Contracts
 
@@ -585,9 +590,8 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
   client is drift (e.g. a `/br/[branchId]/settings/*` page importing an
   `/admin/settings/*` client, or a duplicate periods page).
 - A route that loses its single home becomes a redirect shim to the canonical
-  home (the pattern already used for `/admin/finance` → `/finance`), never a
-  parallel copy. Removal follows the no-tombstone rule — replace the body with
-  the redirect, leave no stub.
+  home (the pattern already used for `/admin/finance` -> `/finance`), never a
+  parallel copy or stub.
 - Every `(protected)/**/page.tsx` MUST resolve to exactly one route family and
   be reachable from at least one navigation entry. Orphan routes (live page,
   zero inbound link) are drift; triage to either wire nav or delete, after
@@ -709,7 +713,7 @@ false-positive):
   they were never debt.
 - `vnd-format-ssot` — **reframe**: ~1 of ~28 migratable; the rest are non-money
   locale formatters (counts/quantities/dates). See `docs/plan/decisions.md` D029.
-- `status-label-ssot` — **reframe**: ~3 real label maps, all HR-deferred
+- `status-label-ssot` — **reframe**: ~3 real label maps, all HR-owned
   (D026/D027); ~20 are status value-arrays / variant-only / already-shared.
 - `card-content-classname-baseline` — **reframe (count 81, D030)**: the named
   `flush`/`scroll` variants absorb ~0 of the remaining hits; 14 KpiCard-debt
@@ -719,16 +723,24 @@ false-positive):
   has a `size` variant (`sm`=text-sm, `lg`=text-2xl, `default`=text-base); the 8
   pure heading-scale hits migrated to it (21→13). The remaining 13 are
   layout-only (`flex`/`truncate`, can't migrate), eyebrow small-caps (→ a
-  `SectionLabel` primitive, deferred), or active-zone (finance D028).
+  `SectionLabel` primitive not in current contract), or active-zone (finance D028).
 - `use-is-mobile-budget` — **mixed (D030)**: 3 of the 5 flagged list-forks
   migrated to the DataTable adapter (`supplier-invoices` faithful; `issues` +
   `receiving` with an owner-approved small mobile spacing/frame delta); 2 can't
   migrate (`stock` master-detail, `inventory-value` custom SummaryBox layout).
   The other ~32 hits are legit composition switches.
-- `stat-card-ssot` — **resolved (D030)**: the `\w*`-prefix widening surfaced
-  `FinanceSummaryCard`, now migrated to the shared `KpiCard` and deleted (local
-  stat-card def gone). Allowlist back to 2 (the `KpiCard` SSoT itself +
-  HR-deferred payroll `SummaryCard`).
+- `stat-card-ssot` — **resolved (D030)**: the finance metric card pattern now
+  uses the shared `KpiCard`; local stat-card wrappers are not a second metric
+  card contract. Allowlist back to 2 (the `KpiCard` SSoT itself + HR-owned
+  payroll `SummaryCard`).
+
+Tracker bridge: only open an active task for the named real-debt above when it
+is tied to current route-family work in `tasks/todo.md`. Current active links:
+HR D026/D027/payroll owns the remaining HR status-label maps and payroll
+`SummaryCard`; finance active-zone work waits for its owning finance task;
+`SectionLabel` waits for a design-system contract update before implementation.
+Do not create cleanup PRs that chase `reframe` allowlists or permanent
+false-positives toward zero.
 
 **Systemic false-negative — the `cn()` blind spot (partially closed
 2026-06-15).** Every className-anchored gate used `className=\{?['"]…`, which
@@ -737,7 +749,7 @@ and multi-line className. **Closed:** `icon-size`, `heading-scale`,
 `radius-scale`, `app-arbitrary-sizing` now also match `className={cn("…")}`
 (broadened anchor `\{?(?:cn\()?['"]`; 0 current hits, purely preventive);
 `stat-card-ssot` now matches prefix-named defs (`\w*SummaryCard` →
-`FinanceSummaryCard`, allowlisted as D028-deferred); `button-height` is
+`FinanceSummaryCard`, allowlisted as finance active-zone); `button-height` is
 **replaced** by `button-height-on-button`, which uses the brace/string-aware
 `extractJsxOpeningTags` scanner to read each `<Button>` opening tag in full —
 so `cn()` and multi-line className are covered structurally, not by widening a
@@ -771,7 +783,7 @@ Route-level transition states are part of the design system, not per-page improv
 Before any UI rebuild task:
 
 1. Read `AGENTS.md`, this file, `docs/modules/ui.md`, `tasks/regressions.md`, and the relevant domain docs.
-2. Confirm whether any touched file imports `matu-surface` or uses `matu-*` tokens. This should be zero in runtime app code; if not, the task is a legacy pilot regression unless the owner explicitly says otherwise.
+2. Confirm whether touched files use current app surface adapters, semantic tokens, and approved font utilities.
 3. State the surface, primary user job, affected route family, and primitives to use.
 4. Confirm whether the task is a visual refactor, UX flow change, copy change, or behavior change.
 5. Keep each PR to one route family or one primitive rollout wave.

@@ -10,6 +10,7 @@ import {
 export type RouteSurface =
   | "admin"
   | "workspace"
+  | "branch_management"
   | "branch_operation"
   | "employee"
   | "public";
@@ -17,6 +18,7 @@ export type RouteSurface =
 export type RoutePrimaryNav =
   | "admin-sidebar"
   | "workspace-sidebar"
+  | "management-sidebar"
   | "employee-bottom-nav"
   | "operational-chrome"
   | "none";
@@ -80,7 +82,6 @@ export const ROUTE_FAMILY_CONTRACTS = [
       "staff",
       "reports",
       "settings",
-      "accounting",
     ],
     primaryNav: "admin-sidebar",
     backBehavior: "none",
@@ -162,25 +163,25 @@ export const ROUTE_FAMILY_CONTRACTS = [
   {
     id: "branch-settings",
     label: MODULE_ACL.branch_settings.label,
-    surface: "branch_operation",
+    surface: "branch_management",
     entryPath: "/br/[branchId]/settings",
     matchPrefixes: ["/br/[branchId]/settings"],
     moduleKeys: ["branch_settings"],
-    primaryNav: "operational-chrome",
+    primaryNav: "management-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
     requiresBranchId: true,
   },
   {
     id: "branch-dashboard",
     label: MODULE_ACL.branch_dashboard.label,
-    surface: "branch_operation",
+    surface: "branch_management",
     entryPath: "/br/[branchId]/dashboard",
     matchPrefixes: ["/br/[branchId]/dashboard"],
     moduleKeys: ["branch_dashboard"],
-    primaryNav: "operational-chrome",
+    primaryNav: "management-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
     requiresBranchId: true,
   },
   {

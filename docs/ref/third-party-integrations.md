@@ -12,13 +12,8 @@
 | --------------------- | ------------------ | -------------------- | -------------------- |
 | **QR thanh toán**     | VietQR (NAPAS)     | —                    | Payment              |
 | **E-wallet #1**       | MoMo               | —                    | Payment              |
-| **E-wallet #2**       | ZaloPay            | —                    | Post-v1.0            |
 | **Card payment**      | VNPay              | —                    | Đã loại bỏ (D012 2026-06-10) |
 | **HĐĐT**              | Viettel S-invoice  | —                    | Finance              |
-| **OTP / Notify**      | Zalo ZNS           | SpeedSMS             | Post-v1.0            |
-| **Email**             | Resend.com         | —                    | Finance              |
-| **Delivery dispatch** | Ahamove            | —                    | Post-v1.0            |
-| **Delivery platform** | GrabFood           | ShopeeFood (partner) | Post-v1.0            |
 | **BHXH**              | iBHXH / VNPT-BHXH  | Manual portal        | Nhân sự & tiền lương |
 | **eTax / GTGT**       | Manual eTax portal | HTKK desktop         | Nhân sự & tiền lương |
 
@@ -94,24 +89,7 @@
 
 ---
 
-### 1.3 ZaloPay — E-wallet #2
-
-**Lựa chọn**: ⏳ **Post-v1.0**
-
-| Thuộc tính   | Giá trị                                    |
-| ------------ | ------------------------------------------ |
-| Thị phần     | ~44% người dùng VN                         |
-| API          | REST + SDK — `docs.zalopay.vn`             |
-| Sandbox      | Liên hệ ZaloPay để lấy credentials         |
-| Phí merchant | Không công bố — liên hệ                    |
-| Webhook      | POST với `data` + `mac` (HMAC-SHA256 key2) |
-| Onboarding   | Ký hợp đồng + Business Development team    |
-
-**Lý do defer**: ZaloPay yêu cầu đàm phán hợp đồng, không tự onboard. Tích hợp sau khi hệ thống stable.
-
----
-
-### 1.4 VNPay — Card & Gateway
+### 1.3 VNPay — Card & Gateway
 
 **Lựa chọn**: ❌ **Đã loại bỏ (D012 2026-06-10)**
 
@@ -176,131 +154,9 @@ Xem chi tiết schema trong `docs/ref/einvoice-tax.md`.
 
 ---
 
-## 3. Thông Báo Khách Hàng (Notifications)
+## 3. Pháp Lý & Compliance
 
-### 3.1 Zalo ZNS — Kênh chính
-
-**Lựa chọn**: ⏳ **Post-v1.0 (Notifications)**
-
-| Thuộc tính | Giá trị                                         |
-| ---------- | ----------------------------------------------- |
-| Phạm vi    | 75+ triệu user VN, 87% smartphone users         |
-| Phí/tin    | 300 VND (standard), 400–600 VND (có CTA button) |
-| Tốc độ     | 90% delivery trong 5 giây                       |
-| Open rate  | 60–90% (vs SMS ~5–10%)                          |
-| So với SMS | Rẻ hơn ~40%, nhanh hơn, readable hơn            |
-| Template   | Phải pre-approve với Zalo trước khi gửi         |
-| Sandbox    | Có sau khi đăng ký Zalo OA                      |
-
-**Use cases**:
-
-- ✅ OTP verification (thay SMS)
-- ✅ Xác nhận đơn hàng
-- ✅ Thông báo tích điểm loyalty
-- ✅ Nhắc lịch đặt bàn
-- ⚠️ Khuyến mãi (phải approve template trước, không spam)
-
-**Yêu cầu onboarding**:
-
-1. Đăng ký Zalo Official Account (OA) — xác minh theo hồ sơ kinh doanh hợp lệ
-2. Đăng ký ZNS service qua cổng Zalo Business
-3. Submit và chờ approve từng template (~3–5 ngày/template)
-4. Integrate API (trực tiếp hoặc qua Infobip)
-
-**Lưu ý**: Zalo ZNS chỉ gửi được khi khách hàng đã từng tương tác với OA hoặc cung cấp số điện thoại. Nếu khách chưa dùng Zalo → fallback sang SpeedSMS.
-
----
-
-### 3.2 SpeedSMS — SMS Fallback
-
-**Lựa chọn**: ✅ **Fallback cho Zalo ZNS**
-
-| Thuộc tính | Giá trị                              |
-| ---------- | ------------------------------------ |
-| Phí/tin    | 250–500 VND (tuỳ loại sender)        |
-| API        | REST — POST /sms/send                |
-| Batch      | Tối đa 100 số/request                |
-| Onboarding | Tự đăng ký tại `connect.speedsms.vn` |
-| Support    | 24/7 tiếng Việt                      |
-
-**Luồng notification**:
-
-```
-Send notification
-  → Có Zalo? → Zalo ZNS (300 VND)
-  → Không có Zalo / Delivery failed → SpeedSMS (250–500 VND)
-```
-
----
-
-### 3.3 Resend.com — Transactional Email
-
-**Lựa chọn**: ✅ **Email hóa đơn, xác nhận**
-
-| Thuộc tính | Giá trị                                   |
-| ---------- | ----------------------------------------- |
-| Free tier  | 3,000 email/tháng                         |
-| Trả phí    | $20/tháng cho 50k email                   |
-| API        | REST, developer-friendly                  |
-| SDK        | Node.js, Python, Go...                    |
-| Use case   | Gửi PDF HĐĐT, xác nhận tài khoản, báo cáo |
-
-**Không dùng Resend cho OTP** — quá chậm so với ZNS/SMS.
-
----
-
-## 4. Giao Hàng (Delivery)
-
-### 4.1 Ahamove — Dispatch nội bộ
-
-**Lựa chọn**: ⏳ **Post-v1.0**
-
-| Thuộc tính | Giá trị                                       |
-| ---------- | --------------------------------------------- |
-| API        | REST — `developers.ahamove.com`               |
-| Sandbox    | ✅ Staging environment                        |
-| Phí        | Theo công thức: Base + (Step × Km) + Stop fee |
-| Mạng lưới  | 300,000+ shipper, 200k+ đơn/ngày              |
-| Onboarding | Submit form → API Key qua email               |
-
-**Use case**: Restaurant dispatch khi nhận order online/delivery, gọi Ahamove thay vì shipper nội bộ.
-
----
-
-### 4.2 GrabFood — Nền tảng giao đồ ăn
-
-**Lựa chọn**: ⏳ **Post-v1.0**
-
-| Thuộc tính         | Giá trị                                         |
-| ------------------ | ----------------------------------------------- |
-| API                | REST + OAuth2 — `partner-api.grab.com/grabfood` |
-| SDK                | Java, Python, Go                                |
-| Commission         | 25–30%/đơn (25% năm đầu)                        |
-| Phí đăng ký        | 1,200,000 VND (tại HCM/HN)                      |
-| Integration time   | 7–10 ngày sau khi đăng ký                       |
-| Direct integration | Cần partner status hoặc qua POS provider        |
-
-**Lưu ý**: GrabFood thường integrate thông qua middleware (Deliverect, GetOrder...) thay vì direct API. Cần evaluate cost-benefit trước khi integrate.
-
----
-
-### 4.3 ShopeeFood — Nền tảng giao đồ ăn #2
-
-**Lựa chọn**: ⏳ **Post-v1.0 — Khó**
-
-| Thuộc tính | Giá trị                                       |
-| ---------- | --------------------------------------------- |
-| API        | ❌ Không có public API                        |
-| Access     | Restricted — chỉ large partners               |
-| Onboarding | Liên hệ trực tiếp ShopeeFood merchant support |
-
-**Kết luận**: ShopeeFood không có public API. Cần partnership negotiation riêng. Không prioritize trước GrabFood.
-
----
-
-## 5. Pháp Lý & Compliance
-
-### 5.1 BHXH — Bảo hiểm xã hội
+### 3.1 BHXH — Bảo hiểm xã hội
 
 **Lựa chọn**: 📋 **Manual workflow — Hệ thống chỉ xuất data**
 
@@ -323,7 +179,7 @@ Hệ thống → Export báo cáo lương + BHXH (định dạng CSV/Excel)
 
 ---
 
-### 5.2 eTax / HTKK — Kê khai thuế GTGT
+### 3.2 eTax / HTKK — Kê khai thuế GTGT
 
 **Lựa chọn**: 📋 **Manual workflow — Hệ thống chỉ xuất data**
 
@@ -349,37 +205,13 @@ Hệ thống → Export báo cáo thuế GTGT theo tháng (tổng đầu ra / đ
 
 ---
 
-## 6. Supabase Auth — OTP qua SMS
-
-**Lựa chọn**: ✅ **Custom SMS Hook → SpeedSMS / Zalo ZNS**
-
-Supabase Auth hỗ trợ SMS OTP natively nhưng chỉ qua Twilio/Vonage (quá đắt với VN).
-
-**Giải pháp**: Dùng **Send SMS Hook** của Supabase để plug-in provider VN:
-
-```typescript
-// supabase/functions/custom-sms-hook/index.ts
-// Trigger: auth.send_sms
-// Payload: { user: { phone }, otp }
-
-// Logic:
-// 1. Thử Zalo ZNS nếu phone đã opt-in
-// 2. Fallback: SpeedSMS API
-// 3. Log delivery status
-```
-
----
-
-## 7. Chi phí ước tính hàng tháng
+## 4. Chi phí ước tính hàng tháng
 
 Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 
 | Service                            | Volume      | Đơn giá    | Chi phí/tháng                           |
 | ---------------------------------- | ----------- | ---------- | --------------------------------------- |
 | Viettel S-invoice                  | 15,000 HĐ   | Theo HĐ    | Theo hợp đồng Viettel                   |
-| Zalo ZNS (order confirm + loyalty) | 20,000 tin  | 300 VND    | **6,000,000 VND**                       |
-| SpeedSMS (OTP fallback ~10%)       | 2,000 tin   | 400 VND    | **800,000 VND**                         |
-| Resend email                       | 5,000 email | Free tier  | **0 VND**                               |
 | VietQR (qua ngân hàng)             | 15,000 txn  | ~1,600 VND | **24,000,000 VND**                      |
 | MoMo                               | Variable    | **0%**     | **0 VND**                               |
 | **Tổng**                           |             |            | **Phụ thuộc hợp đồng Viettel + VietQR** |
@@ -388,19 +220,18 @@ Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 
 ---
 
-## 8. Thứ tự tích hợp theo Module
+## 5. Thứ tự tích hợp theo Module
 
 | Module                   | Tích hợp                                              |
 | ------------------------ | ----------------------------------------------------- |
 | **Payment**              | VietQR + MoMo                                         |
-| **Finance**              | Viettel S-invoice + Resend email                      |
+| **Finance**              | Viettel S-invoice                                     |
 | **Nhân sự & tiền lương** | Xuất data BHXH / thuế TNCN (no API, just export)      |
-| **Post-v1.0**            | Zalo ZNS, SpeedSMS, ZaloPay, GrabFood, Ahamove        |
 | **Đã loại bỏ**           | VNPay (D012 2026-06-10)                               |
 
 ---
 
-## 9. Environment Variables cần thiết
+## 6. Environment Variables cần thiết
 
 ```bash
 # Payment
@@ -426,11 +257,6 @@ SINVOICE_INVOICE_SERIES=
 SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn
 SINVOICE_SANDBOX=false
 
-# Notifications
-ZALO_OA_ACCESS_TOKEN=
-ZALO_APP_ID=
-SPEEDSMS_TOKEN=
-RESEND_API_KEY=
 ```
 
 > Tất cả secrets phải được lưu trong Supabase Vault / Vercel Environment Variables — **KHÔNG commit vào code**.

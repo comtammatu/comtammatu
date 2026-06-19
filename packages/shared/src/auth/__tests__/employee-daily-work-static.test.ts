@@ -63,9 +63,11 @@ test("Employee clock client and actions no longer use GPS for clock-in/out", () 
     "expected new Employee Daily Work server actions",
   );
   assert.ok(
-      actionSrc.includes("employee_clock_in_with_checklist") &&
+    actionSrc.includes("employee_clock_in_with_checklist") &&
       actionSrc.includes("employee_request_clock_out") &&
-      actionSrc.includes("!isManagerSimpleAttendanceRole(ctx.claims.user_role)") &&
+      actionSrc.includes(
+        "!isManagerSimpleAttendanceRole(ctx.claims.user_role)",
+      ) &&
       actionSrc.includes("checkout_requested_at: null") &&
       actionSrc.includes(".remove([photoPath])"),
     "expected floor-staff clock-in/out to use RPCs, manager self-checkout to stay direct and scoped, and failed photo rows to clean up",
@@ -165,7 +167,7 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
     "HR checklist actions must save templates through the JSON RPC and set employee defaults",
   );
   assert.ok(
-    hrClientSrc.includes('<TabsTrigger value="checklist">') &&
+    hrClientSrc.includes('<TabsTrigger value="setup">') &&
       hrClientSrc.includes("ChecklistTemplatesTable") &&
       employeeTableSrc.includes("Checklist mặc định"),
     "HR UI must expose template library and employee defaults",
@@ -176,6 +178,202 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
       !branchSettingsPageSrc.includes("role_code") &&
       !branchSettingsCardSrc.includes("AttendanceConfigDialog"),
     "branch settings hub must route checklist configuration to HR instead of the old role editor",
+  );
+});
+
+test("HRM consumption checklist is optional for each canonical template", () => {
+  const migration = read(
+    "supabase/migrations/20260618060957_hrm_checkout_consumption_checklist.sql",
+  );
+
+  for (const expected of [
+    "Tiêu hao bếp trong ngày",
+    "'end_of_shift'",
+    "'closing'",
+    "is_required = false",
+    "AND is_active = true",
+    "Nếu được giao",
+    "doanh thu ròng",
+    "tiêu hao trong ngày",
+    "'Kiểm kê Inventory'",
+    "'Kiểm kê trước khi chấm công ra'",
+  ]) {
+    assert.ok(migration.includes(expected), `expected ${expected}`);
+  }
+
+  for (const templateName of [
+    "Phục vụ",
+    "Phụ bếp",
+    "Quầy",
+    "Nướng",
+    "Tạp vụ",
+    "Cửa hàng trưởng",
+    "Bếp trưởng",
+  ]) {
+    assert.ok(
+      migration.includes(`'${templateName}'`),
+      `expected checkout consumption row for ${templateName}`,
+    );
+  }
+
+  assert.ok(
+    migration.includes("WHERE i.tenant_id = v_tenant") &&
+      migration.includes("AND i.template_id = v_template_id") &&
+      migration.includes(
+        "AND i.title IN (\n            v_item.title,\n            'Kiểm kê Inventory',\n            'Kiểm kê trước khi chấm công ra'\n          )",
+      ),
+    "migration must be idempotent per tenant/template/title",
+  );
+});
+
+test("HRM consumption report applies Inventory only after manager approval", () => {
+  const migration = read(
+    "supabase/migrations/20260618070000_hrm_consumption_report_approval.sql",
+  );
+  const taskKindMigration = read(
+    "supabase/migrations/20260619042223_employee_consumption_task_kind.sql",
+  );
+  const actionsSrc = read(
+    "apps/web/app/(protected)/employee/consumption-actions.ts",
+  );
+  const clockActionsSrc = read(
+    "apps/web/app/(protected)/employee/clock/actions.ts",
+  );
+  const tasksClientSrc = read(
+    "apps/web/app/(protected)/employee/tasks/tasks-client.tsx",
+  );
+  const approvalsClientSrc = read(
+    "apps/web/app/(protected)/employee/checkout-approvals/checkout-approvals-client.tsx",
+  );
+  const issueActionsSrc = read(
+    "apps/web/app/(protected)/inventory/issue-actions.ts",
+  );
+  const issueDetailSrc = read(
+    "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
+  );
+  const documentCorrectionSrc = read(
+    "apps/web/app/(protected)/inventory/document-correction-actions.ts",
+  );
+  const hrPageSrc = read("apps/web/app/(protected)/hr/page.tsx");
+  const hrClientSrc = read("apps/web/app/(protected)/hr/hr-client.tsx");
+  const checklistActionsSrc = read(
+    "apps/web/app/(protected)/hr/checklist-actions.ts",
+  );
+  const consumptionDefaultsSrc = read(
+    "apps/web/app/(protected)/hr/consumption-default-items-table.tsx",
+  );
+
+  for (const expected of [
+    "CREATE TABLE IF NOT EXISTS public.attendance_consumption_reports",
+    "no_consumption boolean NOT NULL DEFAULT false",
+    "CREATE TABLE IF NOT EXISTS public.shift_checklist_consumption_default_items",
+    "CREATE TABLE IF NOT EXISTS public.attendance_consumption_report_lines",
+    "default_item_id bigint",
+    "CREATE OR REPLACE FUNCTION public.employee_submit_consumption_report",
+    "CREATE OR REPLACE FUNCTION public.branch_manager_request_consumption_adjustment",
+    "CREATE OR REPLACE FUNCTION public.branch_manager_approve_consumption_report",
+    "p_no_consumption boolean DEFAULT false",
+    "consumption_checklist_not_assigned",
+    "no_consumption = EXCLUDED.no_consumption",
+    "status = 'needs_changes'",
+    "checkout_requested_at = NULL",
+    "INSERT INTO public.stock_issues",
+    "INSERT INTO public.stock_issue_items",
+    "INSERT INTO public.stock_movements",
+    "i.purchase_unit",
+    "'sale_consumption'",
+    "'attendance_consumption_report'",
+    "'HRM - Tiêu hao bếp trong ngày'",
+    "'hrm_consumption'",
+    "GRANT EXECUTE ON FUNCTION public.employee_submit_consumption_report",
+    "GRANT EXECUTE ON FUNCTION public.branch_manager_approve_consumption_report",
+  ]) {
+    assert.ok(migration.includes(expected), `expected ${expected}`);
+  }
+
+  for (const expected of [
+    "ADD COLUMN IF NOT EXISTS task_kind text NOT NULL DEFAULT 'standard'",
+    "CHECK (task_kind IN ('standard', 'consumption_report'))",
+    "CREATE OR REPLACE FUNCTION public.upsert_shift_checklist_template",
+    "i.task_kind",
+    "ci.task_kind = 'consumption_report'",
+    "AND task_kind = 'consumption_report'",
+  ]) {
+    assert.ok(taskKindMigration.includes(expected), `expected ${expected}`);
+  }
+  assert.ok(
+    !taskKindMigration.includes("ci.title = 'Tiêu hao bếp trong ngày'"),
+    "replacement consumption RPCs must not use the display title as the workflow key",
+  );
+
+  const submitFunction = migration.slice(
+    migration.indexOf(
+      "CREATE OR REPLACE FUNCTION public.employee_submit_consumption_report",
+    ),
+    migration.indexOf(
+      "CREATE OR REPLACE FUNCTION public.branch_manager_request_consumption_adjustment",
+    ),
+  );
+  assert.ok(
+    !submitFunction.includes("INSERT INTO public.stock_issues") &&
+      !submitFunction.includes("INSERT INTO public.stock_movements"),
+    "employee submit RPC must not apply Inventory",
+  );
+
+  assert.ok(
+    actionsSrc.includes("employee_submit_consumption_report") &&
+      actionsSrc.includes("branch_manager_approve_consumption_report") &&
+      actionsSrc.includes("branch_manager_request_consumption_adjustment") &&
+      actionsSrc.includes("p_no_consumption") &&
+      actionsSrc.includes("default_item_id") &&
+      actionsSrc.includes("defaultSortOrder") &&
+      actionsSrc.includes("mapReviewError") &&
+      actionsSrc.includes("insufficient_stock") &&
+      actionsSrc.includes("wac_not_ready"),
+    "server actions must route report submit/review through safe RPC wrappers",
+  );
+  assert.ok(
+    clockActionsSrc.includes("attendance_consumption_reports") &&
+      clockActionsSrc.includes("attendance_checklist_items") &&
+      clockActionsSrc.includes('eq("task_kind", "consumption_report")') &&
+      clockActionsSrc.includes('status !== "approved"') &&
+      clockActionsSrc.includes('status !== "applied"'),
+    "checkout approval action must block missing/non-approved consumption reports when a consumption checklist is assigned",
+  );
+  assert.ok(
+    tasksClientSrc.includes("submitConsumptionReport") &&
+      tasksClientSrc.includes("Báo cáo tiêu hao bếp") &&
+      tasksClientSrc.includes("Không phát sinh") &&
+      tasksClientSrc.includes("defaultIngredientsToDraft") &&
+      tasksClientSrc.includes("defaultSortOrder") &&
+      tasksClientSrc.includes("Đã áp Inventory") &&
+      tasksClientSrc.includes("Cần chỉnh sửa"),
+    "Employee tasks UI must expose the consumption report workflow",
+  );
+  assert.ok(
+    approvalsClientSrc.includes("approveConsumptionReport") &&
+      approvalsClientSrc.includes("requestConsumptionAdjustment") &&
+      approvalsClientSrc.includes("Duyệt & áp Inventory") &&
+      approvalsClientSrc.includes("Duyệt không phát sinh") &&
+      approvalsClientSrc.includes("Yêu cầu chỉnh sửa") &&
+      approvalsClientSrc.includes("requiresConsumptionReport") &&
+      approvalsClientSrc.includes("blocksCheckout"),
+    "checkout approval UI must review consumption before checkout approval",
+  );
+  assert.ok(
+    issueActionsSrc.includes("source_type, source_ref") &&
+      issueDetailSrc.includes("getIssueSourceLabel") &&
+      issueDetailSrc.includes("HRM - Tiêu hao bếp trong ngày") &&
+      documentCorrectionSrc.includes("readHrmConsumptionTrace") &&
+      documentCorrectionSrc.includes("issue.source_ref"),
+    "Inventory issue detail and correction flow must preserve HRM consumption trace",
+  );
+  assert.ok(
+    hrPageSrc.includes("shift_checklist_consumption_default_items") &&
+      hrClientSrc.includes("ConsumptionDefaultItemsTable") &&
+      checklistActionsSrc.includes("setConsumptionDefaultIngredients") &&
+      consumptionDefaultsSrc.includes("Nguyên liệu mặc định cho tiêu hao bếp"),
+    "HR setup must expose default ingredients for the consumption checklist",
   );
 });
 

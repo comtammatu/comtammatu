@@ -1,17 +1,19 @@
 "use client";
 
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { formatVND } from "@comtammatu/shared/format";
 import { PRODUCT_VI } from "@comtammatu/shared/messages";
-import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import { AppSection } from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { messages } from "@lib/messages";
 import { FilterBar } from "../components/filter-bar";
 import { KpiCard } from "@/components/kpi/kpi-card";
@@ -34,6 +36,12 @@ const foodCopy = messages.finance.foodCost;
 //   global default here.
 const MARGIN_GREEN = 60;
 const MARGIN_WARN = 40;
+
+function formatCount(value: number): string {
+  return Math.round(value)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
 
 function marginPct(r: FoodCostRow): number | null {
   const rev = Number(r.revenue ?? 0);
@@ -72,6 +80,45 @@ export function FoodCostClient({
           ? "warning"
           : "destructive";
 
+  const columns: DataTableColumn<FoodCostRow>[] = [
+    {
+      key: "item",
+      header: PRODUCT_VI.posItem,
+      render: (row) => row.item_name ?? "—",
+    },
+    {
+      key: "quantity_sold",
+      header: foodCopy.quantitySold,
+      className: "w-24 text-right font-mono tabular-nums",
+      render: (row) => formatCount(Number(row.quantity_sold ?? 0)),
+    },
+    {
+      key: "revenue",
+      header: foodCopy.revenueCurrency,
+      className: "w-36 text-right font-mono tabular-nums",
+      render: (row) => formatVND(Number(row.revenue ?? 0)),
+    },
+    {
+      key: "food_cost",
+      header: foodCopy.foodCostCurrency,
+      className: "w-36 text-right font-mono tabular-nums",
+      render: (row) => formatVND(Number(row.ingredient_cost ?? 0)),
+    },
+    {
+      key: "margin",
+      header: foodCopy.margin,
+      className: "w-24 text-right font-medium",
+      render: (row) => {
+        const pct = marginPct(row);
+        return (
+          <span className={marginToneClass(pct)}>
+            {pct == null ? "—" : `${pct.toFixed(1)}%`}
+          </span>
+        );
+      },
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <FilterBar
@@ -105,62 +152,46 @@ export function FoodCostClient({
         />
       </div>
 
-      <Card className="overflow-hidden">
-        <CardContent scroll>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{PRODUCT_VI.posItem}</TableHead>
-                <TableHead className="w-24 text-right">
-                  {foodCopy.quantitySold}
-                </TableHead>
-                <TableHead className="w-36 text-right">
-                  {foodCopy.revenueCurrency}
-                </TableHead>
-                <TableHead className="w-36 text-right">
-                  {foodCopy.foodCostCurrency}
-                </TableHead>
-                <TableHead className="w-24 text-right">
-                  {foodCopy.margin}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 ? (
-                <TableEmptyStateRow
-                  colSpan={5}
-                  mode="no-results"
-                  title={foodCopy.emptyTitle}
-                  description={foodCopy.emptyDescription}
-                />
-              ) : (
-                rows.map((r, i) => {
-                  const pct = marginPct(r);
-                  return (
-                    <TableRow key={i}>
-                      <TableCell>{r.item_name ?? "—"}</TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
-                        {Number(r.quantity_sold ?? 0).toLocaleString("vi-VN")}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
-                        {formatVND(Number(r.revenue ?? 0))}
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">
-                        {formatVND(Number(r.ingredient_cost ?? 0))}
-                      </TableCell>
-                      <TableCell
-                        className={`text-right font-medium ${marginToneClass(pct)}`}
-                      >
-                        {pct == null ? "—" : `${pct.toFixed(1)}%`}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <AppSection contentFlush contentScroll>
+        <DataTable
+          columns={columns}
+          data={rows}
+          getRowKey={(row) =>
+            [
+              row.period_start ?? "period",
+              row.branch_id ?? "branch",
+              row.menu_item_id ?? row.item_name ?? "item",
+            ].join(":")
+          }
+          emptyMode="no-results"
+          emptyTitle={foodCopy.emptyTitle}
+          emptyDescription={foodCopy.emptyDescription}
+          mobileCardRender={(row) => {
+            const pct = marginPct(row);
+            return (
+              <Item variant="outline">
+                <ItemContent>
+                  <ItemTitle>{row.item_name ?? "—"}</ItemTitle>
+                  <ItemDescription>
+                    {foodCopy.quantitySold}:{" "}
+                    {formatCount(Number(row.quantity_sold ?? 0))}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemFooter>
+                  <span className="text-xs text-muted-foreground">
+                    {formatVND(Number(row.ingredient_cost ?? 0))}
+                  </span>
+                  <span
+                    className={`font-mono text-sm font-semibold tabular-nums ${marginToneClass(pct)}`}
+                  >
+                    {pct == null ? "—" : `${pct.toFixed(1)}%`}
+                  </span>
+                </ItemFooter>
+              </Item>
+            );
+          }}
+        />
+      </AppSection>
     </div>
   );
 }

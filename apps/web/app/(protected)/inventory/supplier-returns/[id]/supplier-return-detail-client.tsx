@@ -1,15 +1,22 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: supplier return detail keeps warehouse operator copy inline */
+
 import { StatusBadge } from "../../_components/status-badge";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableFooter,
-} from "@comtammatu/ui/components/table";
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableFooterRow,
+} from "@/components/data-table/data-table";
+import { AppSection } from "@/components/surface";
 
 const REASON_LABELS: Record<string, string> = {
   damaged: "Hàng hỏng",
@@ -69,6 +76,60 @@ interface Props {
 
 export function SupplierReturnDetailClient({ header, lines }: Props) {
   const totalValue = lines.reduce((s, l) => s + Number(l.line_total ?? 0), 0);
+  const columns: DataTableColumn<DetailLine>[] = [
+    {
+      key: "ingredient",
+      header: "Nguyên liệu",
+      render: (line) => (
+        <span className="font-medium">{line.ingredients?.name ?? "—"}</span>
+      ),
+    },
+    {
+      key: "quantity",
+      header: "Số lượng",
+      className: "text-right",
+      render: (line) => (
+        <span className="font-mono">
+          {Number(line.quantity)}{" "}
+          <span className="text-xs text-muted-foreground">
+            {line.ingredients?.unit ?? line.unit}
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: "unit_cost",
+      header: "Đơn giá",
+      className: "text-right",
+      render: (line) => (
+        <span className="font-mono">{formatReturnValue(line.unit_cost)}</span>
+      ),
+    },
+    {
+      key: "line_total",
+      header: "Thành tiền",
+      className: "text-right",
+      render: (line) => (
+        <span className="font-mono">{formatReturnValue(line.line_total)}</span>
+      ),
+    },
+  ];
+  const footerRows: DataTableFooterRow[] =
+    lines.length > 0
+      ? [
+          {
+            key: "total",
+            cells: [
+              { key: "label", content: "Tổng", colSpan: 3, className: "font-bold" },
+              {
+                key: "value",
+                content: formatReturnValue(totalValue),
+                className: "text-right font-mono font-bold",
+              },
+            ],
+          },
+        ]
+      : [];
 
   return (
     <div className="space-y-4">
@@ -92,63 +153,27 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
         </div>
       </div>
 
-      {/* Lines table */}
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nguyên liệu</TableHead>
-              <TableHead className="text-right">Số lượng</TableHead>
-              <TableHead className="text-right">Đơn giá</TableHead>
-              <TableHead className="text-right">Thành tiền</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {lines.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="py-8 text-center text-muted-foreground"
-                >
-                  Chưa có dòng hàng
-                </TableCell>
-              </TableRow>
-            ) : (
-              lines.map((l) => (
-                <TableRow key={l.id}>
-                  <TableCell className="font-medium">
-                    {l.ingredients?.name ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {Number(l.quantity)}{" "}
-                    <span className="text-xs text-muted-foreground">
-                      {l.ingredients?.unit ?? l.unit}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatReturnValue(l.unit_cost)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatReturnValue(l.line_total)}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-          {lines.length > 0 && (
-            <TableFooter>
-              <TableRow>
-                <TableCell colSpan={3} className="font-bold">
-                  Tổng
-                </TableCell>
-                <TableCell className="text-right font-mono font-bold">
+      <AppSection title="Dòng trả hàng" contentFlush>
+        <DataTable
+          columns={columns}
+          data={lines}
+          getRowKey={(line) => line.id}
+          emptyTitle="Chưa có dòng hàng"
+          emptyMode="no-data"
+          desktopFooterRows={footerRows}
+          mobileFooter={
+            lines.length > 0 ? (
+              <div className="flex justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                <span className="font-bold">Tổng</span>
+                <span className="font-mono font-bold">
                   {formatReturnValue(totalValue)}
-                </TableCell>
-              </TableRow>
-            </TableFooter>
-          )}
-        </Table>
-      </div>
+                </span>
+              </div>
+            ) : null
+          }
+          mobileCardRender={(line) => <SupplierReturnLineItem line={line} />}
+        />
+      </AppSection>
 
       {header.notes && (
         <div className="rounded-lg border p-3">
@@ -157,5 +182,26 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
         </div>
       )}
     </div>
+  );
+}
+
+function SupplierReturnLineItem({ line }: { line: DetailLine }) {
+  return (
+    <Item variant="outline">
+      <ItemHeader>
+        <ItemTitle>{line.ingredients?.name ?? "—"}</ItemTitle>
+      </ItemHeader>
+      <ItemContent>
+        <ItemDescription>
+          {Number(line.quantity)} {line.ingredients?.unit ?? line.unit} · Đơn giá{" "}
+          {formatReturnValue(line.unit_cost)}
+        </ItemDescription>
+      </ItemContent>
+      <ItemFooter>
+        <span className="font-mono text-sm font-semibold">
+          {formatReturnValue(line.line_total)}
+        </span>
+      </ItemFooter>
+    </Item>
   );
 }

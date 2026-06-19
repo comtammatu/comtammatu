@@ -4,8 +4,6 @@
  * Separated from `messages.ts` (order lifecycle) so neither file balloons
  * past readability. Each vocabulary is owned by one route family; this
  * file owns the payment-actions vocabulary.
- *
- * Accretes as WS-1b batch 4 migrates payment-actions.ts.
  */
 
 import {
@@ -73,9 +71,9 @@ export const confirmCashPaymentRpcMappings: readonly RpcErrorMapping[] = [
   },
   {
     // Cash-specific tenant_mismatch shadows the shared one (which has
-    // different copy "Không thể xử lý..."). Order preserved from
-    // pre-WS-1b: cashier sees "Không có quyền truy cập đơn này" for
-    // confirm_cash_payment, generic copy for createPayment / VietQR.
+    // different copy "Không thể xử lý..."): cashier sees "Không có quyền
+    // truy cập đơn này" for confirm_cash_payment, generic copy for
+    // createPayment / VietQR.
     match: includesAny("tenant mismatch"),
     errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
     userMessage: "Không có quyền truy cập đơn này",
@@ -146,10 +144,8 @@ export const confirmCashPaymentRpcFallback: RpcErrorFallback = {
  *
  * `tenant_mismatch` here uses the GENERIC copy ("Không thể xử lý thanh
  * toán cho chi nhánh này.") — different from `confirmCashPaymentRpcMappings`
- * which uses the cash-specific "Không có quyền truy cập đơn này". Drift
- * is INTENTIONAL: pre-WS-1b `createPayment` routed through the local
- * `mapPaymentRpcError` (generic copy), `confirmCashPayment` used its own
- * hand-rolled cash-specific copy. Both preserved byte-identical.
+ * which uses the cash-specific "Không có quyền truy cập đơn này". The drift
+ * between the two is INTENTIONAL.
  *
  * 23505 / `unique_violation` is NOT in the mapping table. The handler
  * detects it BEFORE calling `mapRpcError` because the retry logic must

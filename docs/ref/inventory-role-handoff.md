@@ -1,7 +1,7 @@
 # Inventory Role Handoff — 1 Trang
 
 > Dùng cho training nhanh đội vận hành  
-> Mô hình pilot: `chi nhánh`, `Kho CN`, `Bếp CN`
+> Mô hình vận hành: `chi nhánh`, `Kho CN`, `Bếp CN`
 
 ---
 
@@ -62,7 +62,7 @@ Trong hệ thống hiện tại, flow này do `production_manager` thao tác.
 
 - Không xác nhận lệnh sản xuất khi thiếu nguyên liệu hoặc thiếu BOM.
 - Không xuất thành phẩm đi chi nhánh trước khi lệnh sản xuất hoàn tất.
-- Không dùng chi nhánh như điểm bán trực tiếp trong pilot.
+- Không dùng chi nhánh như điểm bán trực tiếp trong flow Inventory.
 
 ### Checklist cuối ngày
 
@@ -84,7 +84,7 @@ Trong hệ thống hiện tại, vai trò này map vào `branch_manager`.
 
 ### Không được làm
 
-- Không tự nhập nguyên liệu từ NCC trong flow pilot.
+- Không tự nhập nguyên liệu từ NCC trong flow Inventory của quản lý chi nhánh.
 - Không chỉnh tay tồn kho để “khớp số”.
 - Không bỏ qua chênh lệch kiểm kê lặp lại nhiều ngày.
 
@@ -100,9 +100,9 @@ Trong hệ thống hiện tại, phần AP/reporting có thể đi qua `owner` h
 
 ### Việc phải làm
 
-- Đối soát `PO -> GRN`; `supplier_invoice` là Finance P1/handoff khi được bật.
+- Đối soát `PO -> GRN`; `supplier_invoice` là Finance handoff khi được bật.
 - Theo dõi transfer treo và chênh lệch kiểm kê.
-- Theo dõi giá vốn; AP aging là Finance P1, không phải daily Inventory pilot gate.
+- Theo dõi giá vốn; AP aging là Finance handoff, không phải daily Inventory gate.
 - Báo lại các site nếu có số liệu bất thường.
 
 ### Theo dõi mỗi ngày

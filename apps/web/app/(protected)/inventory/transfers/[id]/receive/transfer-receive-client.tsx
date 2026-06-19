@@ -9,7 +9,6 @@ import {
   Pencil as IconPencil,
   TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
-import { Card } from "@comtammatu/ui/components/card";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -169,7 +168,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
         title={transfer.code}
       />
 
-      <Card className="gap-2 p-4">
+      <div className="flex flex-col gap-2 rounded-lg border bg-card p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <IconPackageImport className="size-5 text-primary" />
           <span className="truncate">{transfer.fromBranchName}</span>
@@ -209,7 +208,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
             {transfer.notes}
           </p>
         ) : null}
-      </Card>
+      </div>
 
       {needsReceiveMode ? (
         <Alert>
@@ -307,7 +306,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
       </section>
 
       {hasShort && !needsReceiveMode ? (
-        <Card className="gap-2 p-4">
+        <div className="flex flex-col gap-2 rounded-lg border bg-card p-4">
           <label htmlFor="short-note" className="text-sm font-semibold">
             {TRANSFER_RECEIVE_COPY.shortNoteLabel}{" "}
             <span className="text-destructive">*</span>
@@ -325,7 +324,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
               {TRANSFER_RECEIVE_COPY.shortNoteMin}
             </p>
           ) : null}
-        </Card>
+        </div>
       ) : null}
 
       {!needsReceiveMode ? (

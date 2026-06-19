@@ -8,6 +8,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -20,13 +21,13 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { X as IconX } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import { PosTableGate } from "./pos-table-gate";
+import { PosTakeawayGate } from "./pos-takeaway-gate";
 import { ItemCustomizer } from "./item-customizer";
 import { BillReceipt } from "./_components/bill/bill-receipt-sheet";
 import { OrderDetailSheet } from "./order-detail-sheet";
@@ -40,6 +41,7 @@ import {
   TabbedSidebar,
 } from "./_components/pos-sidebar-variants";
 import { PosSidebarContent } from "./pos-sidebar-panel";
+import { formatOrderTargetLabel } from "./_utils/order-display";
 
 // Lazy-load 3 modals OFF the cash path. Trims first-paint JS by ~14KB
 // minified (Sheet/Drawer/Card deps) without affecting payment latency.
@@ -52,7 +54,6 @@ import { PosSidebarContent } from "./pos-sidebar-panel";
 // participate in HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN +
 // HDDT-FORM-PAYLOAD-FREEZE-AT-CLICK + POS-PAYMENT-REUSE-UNIQUE-SLOT;
 // any chunk-load latency mid-payment is an unrecoverable cash risk.
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const HotkeyOverlay = dynamic(
   () =>
     import("./_components/hotkey-overlay").then((m) => ({
@@ -169,6 +170,11 @@ interface PosDesktopShellProps {
 }
 
 type DailyLimitHoldSource = "pos_cart" | "pos_append";
+
+type OrderTarget =
+  | { kind: "new-dine-in"; label: string }
+  | { kind: "new-takeaway"; label: string }
+  | { kind: "existing-order"; label: string };
 
 interface DailyLimitHoldSyncState {
   inFlight: boolean;
@@ -422,6 +428,7 @@ function PosDesktopInner({
   const [showOrders, setShowOrders] = useState(false);
   const [archivedSheetOpen, setArchivedSheetOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [takeawayDraftActive, setTakeawayDraftActive] = useState(false);
   const [appendDraftItems, setAppendDraftItems] = useState<CartItem[]>([]);
   const [appendSubmitting, setAppendSubmitting] = useState(false);
   const [detailRefreshTick, setDetailRefreshTick] = useState(0);
@@ -625,14 +632,58 @@ function PosDesktopInner({
     selectedTableId !== null && selectedTableId === allowOccupiedTableId;
   const selectedTableUsable = selectedTableAvailable || isExplicitOccupied;
 
-  const orderContextReady = cartOrderType === "takeaway" || selectedTableUsable;
+  const takeawayDraftReady =
+    cartOrderType === "takeaway" && takeawayDraftActive;
+  const orderContextReady = takeawayDraftReady || selectedTableUsable;
   const isAppendingToOrder = appendTarget != null;
   const menuContextReady = orderContextReady || isAppendingToOrder;
+  const isTakeawayGateActive = !menuContextReady && cartOrderType === "takeaway";
   const selectedTableNumber = selectedTable?.number;
   const appendDraftQuantity = useMemo(
     () => appendDraftItems.reduce((sum, item) => sum + item.quantity, 0),
     [appendDraftItems],
   );
+  const appendOrderSummary = useMemo(
+    () =>
+      appendTarget != null
+        ? (orders.find((order) => order.id === appendTarget.orderId) ?? null)
+        : null,
+    [appendTarget, orders],
+  );
+  const appendTargetLabel = useMemo(
+    () =>
+      appendTarget != null
+        ? formatOrderTargetLabel(appendTarget.orderNumber, appendOrderSummary)
+        : null,
+    [appendOrderSummary, appendTarget],
+  );
+  const currentOrderTarget = useMemo<OrderTarget | null>(() => {
+    if (appendTarget != null && appendTargetLabel != null) {
+      return { kind: "existing-order", label: appendTargetLabel };
+    }
+
+    if (takeawayDraftReady) {
+      return {
+        kind: "new-takeaway",
+        label: messages.pos.desktop.newTakeawayTarget,
+      };
+    }
+
+    if (selectedTableUsable && selectedTableNumber != null) {
+      return {
+        kind: "new-dine-in",
+        label: messages.pos.desktop.newDineInTarget(selectedTableNumber),
+      };
+    }
+
+    return null;
+  }, [
+    appendTarget,
+    appendTargetLabel,
+    selectedTableNumber,
+    selectedTableUsable,
+    takeawayDraftReady,
+  ]);
 
   useEffect(() => {
     setAppendDraftItems([]);
@@ -691,7 +742,7 @@ function PosDesktopInner({
   }, [pickerTableId, pickerOrders.length]);
 
   const canSubmit =
-    cartItemCount > 0 && (cartOrderType === "takeaway" || selectedTableUsable);
+    cartItemCount > 0 && (takeawayDraftReady || selectedTableUsable);
   const cartSnapshot = useCartSnapshot();
   const dailyLimitStore = usePosDailyLimitStore();
   const activeDraftLines = useMemo(
@@ -977,6 +1028,14 @@ function PosDesktopInner({
     [setActiveTable],
   );
 
+  const handleCreateTakeawayOrder = useCallback(() => {
+    setCartOrderType("takeaway");
+    setActiveTable(null);
+    setShowOrders(false);
+    setCartDrawerOpen(false);
+    setTakeawayDraftActive(true);
+  }, [setActiveTable, setCartOrderType]);
+
   const handleOrderTypeChange = useCallback(
     (type: OrderType) => {
       if (
@@ -990,6 +1049,7 @@ function PosDesktopInner({
       if (type === "takeaway") {
         setActiveTable(null);
       }
+      setTakeawayDraftActive(false);
     },
     [
       cartItemCount,
@@ -1051,6 +1111,7 @@ function PosDesktopInner({
 
           resetDailyLimitHoldToken("pos_cart");
           clearCart();
+          setTakeawayDraftActive(false);
           if (submittedOrderType === "takeaway") {
             setPostSubmitPaymentOrderId(null);
             setBillIntent("payment");
@@ -1604,7 +1665,10 @@ function PosDesktopInner({
       canSubmit,
       isPending,
       appendDraft: {
-        target: appendTarget,
+        target:
+          appendTarget != null && appendTargetLabel != null
+            ? { ...appendTarget, targetLabel: appendTargetLabel }
+            : null,
         items: appendDraftItems,
         isSubmitting: appendSubmitting,
         onSubmit: handleSubmitAppendDraft,
@@ -1619,12 +1683,14 @@ function PosDesktopInner({
       onViewDetail: openDetail,
       onOpenArchivedSheet: handleOpenArchivedSheet,
       onReturnToTables: handleReturnToTables,
+      hideTakeawayOrders: isTakeawayGateActive,
     }),
     [
       showOrders,
       canSubmit,
       isPending,
       appendTarget,
+      appendTargetLabel,
       appendDraftItems,
       appendSubmitting,
       handleSubmitAppendDraft,
@@ -1638,6 +1704,7 @@ function PosDesktopInner({
       openDetail,
       handleOpenArchivedSheet,
       handleReturnToTables,
+      isTakeawayGateActive,
     ],
   );
 
@@ -1645,8 +1712,10 @@ function PosDesktopInner({
     <ToggleGroup
       type="single"
       value={cartOrderType}
+      variant="outline"
       size="touch"
-      className="grid w-full grid-cols-2 overflow-hidden !rounded-none bg-muted/60"
+      spacing={0}
+      className="grid w-full grid-cols-2 bg-background"
       aria-label={messages.pos.desktop.serviceModeAria}
       onValueChange={(value) => {
         if (value === "dine_in" || value === "takeaway") {
@@ -1656,14 +1725,14 @@ function PosDesktopInner({
     >
       <ToggleGroupItem
         value="dine_in"
-        className="h-full min-w-0 justify-center !rounded-none border-r border-border px-0 text-sm font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+        className="w-full min-w-0 justify-center text-sm font-semibold"
         disabled={cartItemCount > 0 && cartOrderType !== "dine_in"}
       >
         {messages.pos.desktop.dineIn}
       </ToggleGroupItem>
       <ToggleGroupItem
         value="takeaway"
-        className="h-full min-w-0 justify-center !rounded-none px-0 text-sm font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+        className="w-full min-w-0 justify-center text-sm font-semibold"
         disabled={cartItemCount > 0 && cartOrderType !== "takeaway"}
       >
         {messages.pos.desktop.takeaway}
@@ -1671,64 +1740,76 @@ function PosDesktopInner({
     </ToggleGroup>
   );
 
-  const appendBannerRow =
-    appendTarget != null ? (
-      <div
-        role="status"
-        className="flex items-center justify-between gap-2 border-b border-warning/20 bg-warning/10 px-4 py-3"
-      >
-        <p className="min-w-0 text-base leading-6 text-foreground">
-          <span className="font-semibold">
-            {messages.pos.desktop.appendBannerTitle(appendTarget.orderNumber)}
-          </span>
-          <span className="text-muted-foreground">
-            {""}
-            {appendDraftQuantity > 0
-              ? messages.pos.desktop.appendPending(appendDraftQuantity)
-              : messages.pos.desktop.appendInstruction}
-          </span>
-        </p>
-        <Button
-          type="button"
-          variant="ghost"
-          size="touch"
-          className="min-w-12 shrink-0 gap-1 px-3 text-sm text-foreground hover:bg-warning/25"
-          onClick={cancelAppendWorkflow}
-        >
-          <IconX data-icon="inline-start" />
-          {ACTIONS_VI.cancel}
-        </Button>
-      </div>
-    ) : null;
-
-  const mobileHeaderContextLabel = menuContextReady
-    ? appendTarget != null
-      ? messages.pos.desktop.mobileHeaderAppend(appendTarget.orderNumber)
-      : cartOrderType === "takeaway"
-        ? messages.pos.desktop.takeaway
-        : messages.pos.desktop.mobileHeaderTable(selectedTableNumber ?? "")
-    : undefined;
-
-  // Back-to-main handler: dine_in → clear table → table gate; takeaway →
-  // flip mode → table gate. Wired to the mobile header back arrow (next to
-  // the table number) — kept out of the bottom action bar so it stays in reach.
+  // Back-to-main handler: dine_in → table gate; takeaway draft → takeaway gate.
+  // Wired to the mobile header back arrow, kept out of the bottom action bar so
+  // it stays in reach.
   const handleSwitchTableMode = useCallback(() => {
-    if (cartOrderType === "dine_in") {
-      setShowOrders(false);
-      setCartDrawerOpen(false);
-      setActiveTable(null);
-      return;
-    }
     if (cartItemCount > 0) {
-      toast.message("Giỏ đang có món — xoá giỏ rồi mới đổi sang Tại bàn.");
+      toast.message("Giỏ đang có món — xoá giỏ rồi mới đổi ngữ cảnh.");
       setShowOrders(false);
       setCartDrawerOpen(true);
       return;
     }
     setShowOrders(false);
     setCartDrawerOpen(false);
-    handleOrderTypeChange("dine_in");
-  }, [cartItemCount, cartOrderType, handleOrderTypeChange, setActiveTable]);
+    if (cartOrderType === "takeaway") {
+      setTakeawayDraftActive(false);
+      return;
+    }
+    setActiveTable(null);
+  }, [cartItemCount, cartOrderType, setActiveTable]);
+
+  const orderTargetLabel = currentOrderTarget?.label ?? null;
+  const orderTargetRow =
+    menuContextReady && orderTargetLabel != null ? (
+      <div className="hidden shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-background px-3 py-2 md:flex lg:px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="font-heading min-w-0 truncate text-base font-semibold tracking-tight text-foreground">
+            {orderTargetLabel}
+          </p>
+          <Badge
+            variant={
+              currentOrderTarget?.kind === "existing-order"
+                ? "warning"
+                : "outline"
+            }
+            className="shrink-0 text-xs font-semibold"
+          >
+            {currentOrderTarget?.kind === "existing-order"
+              ? messages.pos.desktop.pendingAppendTitle
+              : messages.pos.desktop.pendingNewTitle}
+          </Badge>
+          {currentOrderTarget?.kind === "existing-order" &&
+          appendDraftQuantity > 0 ? (
+            <Badge
+              variant="secondary"
+              className="shrink-0 text-xs font-semibold"
+            >
+              {messages.pos.appendDraft.itemCount(appendDraftQuantity)}
+            </Badge>
+          ) : null}
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="touch"
+          className="min-w-12 shrink-0 px-3 text-sm text-muted-foreground"
+          onClick={
+            currentOrderTarget?.kind === "existing-order"
+              ? cancelAppendWorkflow
+              : handleSwitchTableMode
+          }
+        >
+          {currentOrderTarget?.kind === "existing-order"
+            ? messages.pos.desktop.cancelTarget
+            : messages.pos.desktop.changeTarget}
+        </Button>
+      </div>
+    ) : null;
+
+  const mobileHeaderContextLabel = menuContextReady
+    ? (orderTargetLabel ?? undefined)
+    : undefined;
 
   const mobileSidebarDrawer = isMobile ? (
     <Drawer
@@ -1742,10 +1823,12 @@ function PosDesktopInner({
       >
         <DrawerTitle className="sr-only">
           {appendTarget != null
-            ? `Thêm món cho đơn #${appendTarget.orderNumber}`
+            ? `${messages.pos.desktop.pendingAppendTitle} ${
+                orderTargetLabel ?? ""
+              }`.trim()
             : showOrders
               ? "Đơn trong ca"
-              : "Giỏ đơn mới"}
+              : messages.pos.desktop.pendingNewTitle}
         </DrawerTitle>
         <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
           <PosSidebarContent
@@ -1769,6 +1852,7 @@ function PosDesktopInner({
         canManageMenuLimits={canManageMenuLimits}
         menuLimitRows={menuLimitRows}
         onShowCloseSession={openCloseSession}
+        isContextGate={!menuContextReady}
         showOrders={showOrders}
         onShowOrdersChange={setShowOrders}
         sidebarContentProps={sidebarContentProps}
@@ -1778,6 +1862,7 @@ function PosDesktopInner({
         canManageMenuLimits={canManageMenuLimits}
         menuLimitRows={menuLimitRows}
         onShowCloseSession={openCloseSession}
+        isContextGate={!menuContextReady}
         sidebarContentProps={sidebarContentProps}
       />
     </>
@@ -1793,9 +1878,11 @@ function PosDesktopInner({
           onShowCloseSession={openCloseSession}
           contextLabel={mobileHeaderContextLabel}
           onBack={
-            orderContextReady && !isAppendingToOrder
-              ? handleSwitchTableMode
-              : undefined
+            isAppendingToOrder
+              ? cancelAppendWorkflow
+              : orderContextReady
+                ? handleSwitchTableMode
+                : undefined
           }
         />
       </div>
@@ -1803,25 +1890,32 @@ function PosDesktopInner({
       {!menuContextReady ? (
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {appendBannerRow}
-            <div className="border-b border-border/60 bg-background p-0 md:hidden">
-              {serviceModeSelector}
-            </div>
-            <PosTableGate
-              tables={tables}
-              selectedTableId={selectedTableId}
-              onTableSelect={handleTableSelect}
-              orderCountByTable={orderCountByTable}
-              tableOrderVisualStateByTable={tableOrderVisualStateByTable}
-              className="min-h-0 flex-1"
-            />
+            {cartOrderType === "takeaway" ? (
+              <PosTakeawayGate
+                orders={orders}
+                onCreateNew={handleCreateTakeawayOrder}
+                onViewDetail={openDetail}
+                headerAction={serviceModeSelector}
+                className="min-h-0 flex-1"
+              />
+            ) : (
+              <PosTableGate
+                tables={tables}
+                selectedTableId={selectedTableId}
+                onTableSelect={handleTableSelect}
+                orderCountByTable={orderCountByTable}
+                tableOrderVisualStateByTable={tableOrderVisualStateByTable}
+                headerAction={serviceModeSelector}
+                className="min-h-0 flex-1"
+              />
+            )}
           </div>
           {sidebars}
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {appendBannerRow}
+            {orderTargetRow}
             <MenuPane
               categories={categories}
               dailyLimitDemandByMenuItem={dailyLimitDemandByMenuItem}
@@ -1839,6 +1933,10 @@ function PosDesktopInner({
         cartQuantity={cartQuantity}
         appendDraftQuantity={appendDraftQuantity}
         ordersCount={orders.length}
+        canSubmitNewOrder={canSubmit}
+        isSubmittingNewOrder={isPending}
+        canSubmitAppendDraft={appendDraftQuantity > 0 && !appendSubmitting}
+        isSubmittingAppendDraft={appendSubmitting}
         onOpenOrdersDrawer={() => {
           setShowOrders(true);
           void refreshOrders();
@@ -1852,6 +1950,9 @@ function PosDesktopInner({
           setShowOrders(false);
           setCartDrawerOpen(true);
         }}
+        onSubmitNewOrder={() => handleSubmitOrder()}
+        onSubmitAppendDraft={handleSubmitAppendDraft}
+        onCancelAppend={cancelAppendWorkflow}
       />
       {mobileSidebarDrawer}
 

@@ -10,7 +10,7 @@ import {
 } from "@comtammatu/shared/auth";
 import { AppLinkCard } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
-import { SettingsPageShell } from "../settings-page-shell";
+import { SettingsPageFrame } from "../settings-page-frame";
 import { messages } from "@lib/messages";
 
 const copy = messages.settings.pages;
@@ -27,7 +27,7 @@ export default async function PrintHubPage() {
   );
 
   return (
-    <SettingsPageShell
+    <SettingsPageFrame
       title={copy.printersTitle}
       description={copy.printHubDescription}
     >
@@ -53,6 +53,6 @@ export default async function PrintHubPage() {
           icon={<IconActivity />}
         />
       </div>
-    </SettingsPageShell>
+    </SettingsPageFrame>
   );
 }

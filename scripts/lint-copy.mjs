@@ -57,6 +57,14 @@ const CHECKS = [
   { pattern: /·\s*HR\s*\/\s*Payroll\b/g, replacement: "không dùng nhãn song ngữ kiểu này" },
   { pattern: /·\s*Menu\b/g, replacement: "không dùng nhãn song ngữ kiểu này" },
   { pattern: /·\s*Payment\b/g, replacement: "không dùng nhãn song ngữ kiểu này" },
+  { pattern: /\bTBD\b/g, replacement: "ghi blocker thật hoặc xóa placeholder" },
+  { pattern: /\bFIXME\b/g, replacement: "mở task thật hoặc sửa ngay" },
+  { pattern: /\bpost-v1\b/gi, replacement: "không giữ backlog suy đoán trong docs sống" },
+  { pattern: /\bwishlist\b/gi, replacement: "không giữ wishlist trong docs sống" },
+  { pattern: /\bTelegram bot bridge\b/g, replacement: "Generic JSON POST" },
+  { pattern: /\b(Ahamove|GrabFood|ShopeeFood|Baemin|ZaloPay|Zalo ZNS|SpeedSMS)\b/g, replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành" },
+  { pattern: /\b(QR Self-Order|Advanced Analytics|Delivery dispatch)\b/g, replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành" },
+  { pattern: /\b(Loyalty|Vouchers)\b/g, replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành" },
 ];
 
 function hasAllowedExtension(file) {

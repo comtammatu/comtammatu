@@ -17,7 +17,7 @@ The system has three feedback channels with different durability:
 - Toast: short-lived client feedback for the action currently happening on screen. Use `toast` from `@comtammatu/ui/components/sonner`.
 - In-app notification: durable, role/branch-scoped work item stored in `public.notifications`, read state in `public.notification_reads`, and surfaced through `/notifications`, Cổng nhân viên, or an approved bell/entry point.
 - Installed-PWA push: device-level alert for active staff subscriptions stored in `public.notification_push_subscriptions`, delivered through `/api/cron/notifications-push`, and linked back to `/notifications` or the notification action URL.
-- External outbox: delivery attempt queue in `public.notification_outbox` for webhook-style channels such as Slack, Discord, Telegram proxy, Zalo bridge, or future workers.
+- External outbox: delivery attempt queue in `public.notification_outbox` for configured webhook-style workers.
 
 Do not collapse these channels. A toast is not an audit trail. An in-app notification is not a replacement for immediate form feedback. Installed-PWA push is only an attention layer over durable notifications. The external outbox is not the unread feed.
 
@@ -75,7 +75,7 @@ MVP acceptance:
 Out of scope for the current contract:
 
 - Native-app-only APNs/FCM SDK delivery.
-- Email/SMS/Zalo native delivery.
+- Native channel SDK delivery.
 - A second visual notification system outside shadcn/Sonner.
 - Per-user notification rows. Targeting stays role/branch based; read state is per user.
 

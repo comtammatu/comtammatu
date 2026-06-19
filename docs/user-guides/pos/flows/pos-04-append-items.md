@@ -1,4 +1,4 @@
-# POS-04 — Thêm món vào đơn đang phục vụ
+# POS-04 — Thêm món vào đơn đang mở
 
 > Hướng dẫn thêm món vào đơn đã gửi bếp (khách gọi thêm).
 > Dành cho **phục vụ (waiter)** và **thu ngân (cashier)**.
@@ -32,7 +32,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 
 - Header: Bàn N + mã đơn (`#001D-...`).
 - Danh sách món trong đơn (mỗi món có số lượng + tên + giá).
-- Bottom có 4 nút: **Thanh toán**, **Thêm món**, **Phục vụ**, **Chuyển bàn**, **Khác...**
+- Bottom có các nút chính: **Thanh toán**, **Thêm món**, và menu **Thao tác khác**.
 
 > 💡 Cũng có thể vào chi tiết đơn từ "Đơn trong ca" (nút bên phải action bar).
 
@@ -40,7 +40,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 
 ![Bước 2 - Tap add items](../mockups/pos-04/pos-04-step-02-tap-add-items.png)
 
-**Bạn làm:** Chạm nút **Thêm món** (góc trái dưới, kế bên "Phục vụ").
+**Bạn làm:** Chạm nút **Thêm món** trong hàng action dưới cùng.
 
 **Bạn thấy:** Sheet đóng lại, màn chuyển sang **Append mode** (xem Bước 3).
 
@@ -171,4 +171,3 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 | Capture script           | [apps/web/e2e/guides/pos-04-append-items.guide.ts](../../../../apps/web/e2e/guides/pos-04-append-items.guide.ts) |
 | Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-04"`                                                   |
 | Cập nhật mockup gần nhất | 2026-04-27                                                                                                       |
-| Người maintain           | _TBD_                                                                                                            |

@@ -22360,7 +22360,7 @@ CREATE TABLE public.inventory_qc_settings (
     updated_by uuid,
     alert_webhook_url text,
     alert_channel text DEFAULT 'generic'::text,
-    CONSTRAINT inventory_qc_settings_alert_channel_check CHECK ((alert_channel = ANY (ARRAY['generic'::text, 'telegram'::text, 'discord'::text, 'slack'::text])))
+    CONSTRAINT inventory_qc_settings_alert_channel_check CHECK ((alert_channel = 'generic'::text))
 );
 
 
