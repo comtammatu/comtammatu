@@ -464,8 +464,6 @@ const checks = [
 const SHELL_REGISTRY_BASELINE = new Set([
   "apps/web/app/components/app-shell.tsx",
   "apps/web/app/components/office-module-shell.tsx",
-  "apps/web/app/(protected)/admin/components/admin-shell.tsx",
-  "apps/web/app/(protected)/admin/settings/settings-page-shell.tsx",
   "apps/web/app/(protected)/finance/components/finance-shell.tsx",
   "apps/web/app/(protected)/inventory/_components/inventory-shell.tsx",
   "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx",

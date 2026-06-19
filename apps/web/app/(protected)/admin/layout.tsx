@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { loadAuthState } from "@/_lib/auth";
-import { AdminShell } from "./components/admin-shell";
+import { OfficeModuleShell } from "@/components/office-module-shell";
 
 export default async function AdminLayout({
   children,
@@ -10,7 +10,8 @@ export default async function AdminLayout({
   const { session, claims } = await loadAuthState();
 
   return (
-    <AdminShell
+    <OfficeModuleShell
+      module="admin"
       user={{
         name:
           session.user.user_metadata?.["display_name"] ??
@@ -21,6 +22,6 @@ export default async function AdminLayout({
       branchId={claims.branch_id}
     >
       {children}
-    </AdminShell>
+    </OfficeModuleShell>
   );
 }

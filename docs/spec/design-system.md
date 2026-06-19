@@ -569,11 +569,16 @@ second sidebar idiom).
 or outer padding). It is governed by an allowlist, not by the `-shell` filename.
 
 - The only chrome shells permitted are: `app-shell.tsx` (canonical Management
-  chrome); the transitional Management module wrappers that compose it
-  (admin/inventory/finance/hr/menu/orders shells — W5 collapses these toward
-  one `AppShell`-driven nav, the count only shrinks); and the approved
-  Operations chrome (the POS desktop shell, the operational PWA toolbar, the
-  employee header + bottom-nav).
+  chrome); `office-module-shell.tsx`, the generic Management wrapper that
+  projects the shared office nav for modules with no shell-scoped client state
+  (admin/hr/menu/orders, keyed by a serializable module id); the two domain
+  wrappers `finance-shell.tsx` / `inventory-shell.tsx`, which keep a wrapper
+  only because they own shell-scoped client state `AppShell` cannot absorb
+  (finance: a lifted realtime channel; inventory: branch-reactive nav plus the
+  branch-filter / mobile-top-bar header chrome) — this is the end state, not a
+  transitional split; and the approved Operations chrome (the POS desktop
+  shell, the operational PWA toolbar, the employee header + bottom-nav). The
+  baseline only shrinks.
 - The canonical header lockup and bottom-nav MUST be exported primitives that
   both families consume, not re-implemented per surface. (Stage 0 extracts
   `AppHeader` / `AppBottomNav` from `AppShell`.)

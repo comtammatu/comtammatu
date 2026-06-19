@@ -4,7 +4,8 @@ import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
 /**
  * Sidebar navigation configuration — derived from MODULE_ACL.
  * Icon names reference Lucide React (resolved in the UI layer).
- * This is the SINGLE source of nav structure — admin-shell reads from here.
+ * This is the SINGLE source of nav structure — the Management shells project
+ * from here via `resolveOfficeNavGroups`.
  */
 
 export interface NavItemConfig {
