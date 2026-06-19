@@ -1138,7 +1138,6 @@ export type Database = {
           longitude: number | null
           name: string
           phone: string | null
-          runner_public_slug: string
           tenant_id: number
           timezone: string
           updated_at: string | null
@@ -1154,7 +1153,6 @@ export type Database = {
           longitude?: number | null
           name: string
           phone?: string | null
-          runner_public_slug?: string
           tenant_id: number
           timezone?: string
           updated_at?: string | null
@@ -1170,7 +1168,6 @@ export type Database = {
           longitude?: number | null
           name?: string
           phone?: string | null
-          runner_public_slug?: string
           tenant_id?: number
           timezone?: string
           updated_at?: string | null

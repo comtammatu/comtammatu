@@ -154,11 +154,12 @@ export default async function EmployeePage() {
   if (branchId) {
     const { data } = await supabase
       .from("branches")
-      .select("branch_kind")
+      .select("branch_kind, is_active")
       .eq("id", branchId)
       .eq("tenant_id", claims.tenant_id)
       .maybeSingle();
-    branchIsOperational = data?.branch_kind === "branch";
+    branchIsOperational =
+      data?.branch_kind === "branch" && data.is_active === true;
   }
 
   // Checkout requests BLOCK the requesting employee until a manager

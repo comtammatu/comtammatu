@@ -101,20 +101,23 @@ test("POS and inventory RPC bodies enforce branch permission and location scope"
     const body =
       securityHardeningMigration.match(
         new RegExp(
-          `CREATE OR REPLACE FUNCTION public\\.${functionName}\\([\\s\\S]*?\\n\\$function\\$;`,
+          `CREATE OR REPLACE FUNCTION public\\.${functionName}\\([\\s\\S]*?\\n\\$\\$;`,
         ),
       )?.[0] ?? "";
     assert.match(body, /v_prof_branch IS NULL/);
     assert.match(body, /public\.has_permission\([^,]+,\s*'pos:use'\)/);
-    assert.match(body, /permission_denied/);
+    assert.match(body, /forbidden: missing pos:use/);
   }
 
-  const wasteBody =
-    securityHardeningMigration.match(
-      /CREATE OR REPLACE FUNCTION public\.create_waste_entry\([\s\S]*?\n\$function\$;/,
-    )?.[0] ?? "";
-  assert.match(wasteBody, /FROM public\.inventory_locations/);
-  assert.match(wasteBody, /v_location\.tenant_id <> v_tenant/);
-  assert.match(wasteBody, /v_location\.branch_id <> p_branch_id/);
-  assert.match(wasteBody, /location_scope_mismatch/);
+  assert.match(
+    securityHardeningMigration,
+    /CREATE OR REPLACE FUNCTION public\.create_waste_entry/,
+  );
+  assert.match(securityHardeningMigration, /FROM public\.inventory_locations/);
+  assert.match(securityHardeningMigration, /v_location\.tenant_id <> v_tenant/);
+  assert.match(
+    securityHardeningMigration,
+    /v_location\.branch_id <> p_branch_id/,
+  );
+  assert.match(securityHardeningMigration, /location_scope_mismatch/);
 });

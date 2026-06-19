@@ -103,7 +103,7 @@ apps/web/app/
 │   ├── runner/             # Public Runner customer call screen; file path is URL-neutral
 │   │   ├── layout.tsx      # Display shell only; no staff auth/account chrome
 │   │   ├── page.tsx        # Read-only customer-facing queue display via server-only service client
-│   │   └── runner-realtime-refresh.tsx # "use client" — realtime invalidation + poll fallback
+│   │   └── runner-realtime-refresh.tsx # "use client" — polling invalidation
 │   ├── menu-limits/        # Daily sales limits per (branch, menu item) — branch_settings co-owners + cashier + chef
 │   └── settings/           # Branch-scoped settings (kds, pos, pos-sessions, printers, tables)
 │       ├── kds/

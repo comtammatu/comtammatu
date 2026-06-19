@@ -149,6 +149,18 @@ test("auth docs and comments do not use release-version labels for the contract"
   assert.deepEqual(violations, []);
 });
 
+test("proxy branch-surface cache fails closed for inactive or missing branches", () => {
+  const proxy = readRepoFile("apps/web/proxy.ts");
+
+  assert.match(proxy, /type BranchSurfaceGate = \{/);
+  assert.match(proxy, /const BRANCH_SURFACE_CACHE = new Map/);
+  assert.match(proxy, /\.select\("branch_kind, is_active"\)/);
+  assert.match(proxy, /branchSurface === null/);
+  assert.match(proxy, /branchSurface\.branchKind !== "branch"/);
+  assert.match(proxy, /branchSurface\.isActive !== true/);
+  assert.match(proxy, /"branch-surface-restricted"/);
+});
+
 test("remove intermediate scope migration preserves branch helper before dropping retired schema", () => {
   const migration = readRepoFile(
     "supabase/migrations/20260609103000_remove_intermediate_scope.sql",

@@ -1,17 +1,3 @@
-ALTER TABLE public.branches
-  ADD COLUMN IF NOT EXISTS runner_public_slug uuid;
-
-UPDATE public.branches
-   SET runner_public_slug = gen_random_uuid()
- WHERE runner_public_slug IS NULL;
-
-ALTER TABLE public.branches
-  ALTER COLUMN runner_public_slug SET DEFAULT gen_random_uuid(),
-  ALTER COLUMN runner_public_slug SET NOT NULL;
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_branches_runner_public_slug
-  ON public.branches (runner_public_slug);
-
 ALTER TABLE public.notification_push_deliveries
   DROP CONSTRAINT IF EXISTS notification_push_deliveries_status_check;
 

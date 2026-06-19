@@ -128,7 +128,7 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | settings                                                   | ✓     |            |        |          |         |        |      |        |
 | pos                                                        |       | ✓          |        |          | ✓       | ✓      |      |        |
 | kds                                                        |       | ✓          |        |          |         |        | ✓    |        |
-| runner (staff nav/discovery only; display route is public) |       | ✓          |        |          | ✓       | ✓      | ✓    |        |
+| runner (public display route)                              |       | ✓          |        |          | ✓       | ✓      | ✓    |        |
 | branch_dashboard                                           | ✓     | ✓          |        |          |         |        |      |        |
 | branch_settings                                            | ✓     | ✓          |        |          |         |        |      |        |
 | branch_menu_limits                                         | ✓     | ✓          |        |          | ✓       |        | ✓    |        |
@@ -139,7 +139,7 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 >
 > Inventory mutating RPC chính đã permission-gated; phần `auth_role()` còn lại là route/side/scope guard hoặc legacy helper. Xem `docs/ref/inventory-rbac-matrix.md` §6.
 >
-> Runner exception: `/br/[branchId]/runner` is an exact public customer display path. `MODULE_ACL.runner` remains for staff discovery/navigation metadata, not for forcing Account Login on the board.
+> Runner exception: `/br/[branchId]/runner` is an exact public customer display path. `MODULE_ACL.runner` remains for route metadata and protected future child routes, not for forcing Account Login on the board. Current pilot intentionally skips a public slug; add a tokenized URL again if live operational telemetry exposure or public load becomes a real issue.
 
 **Trang nhân viên boundary:** `employee` là bề mặt self-service / bàn giao vận hành cho staff không thuộc `ADMIN_ROLES`. `owner` không vào `/employee/*`; request trực tiếp được đưa về Admin default route.
 
@@ -180,7 +180,7 @@ The `proxy(request)` function evaluates in order:
 4. **Unauthenticated → `/login?returnTo=<current-url>`** (surface-aware: beta users go to `/beta/login`).
 5. **Claims extraction:** if `extractClaims()` returns null, proxy redirects to `/access-denied?reason=missing-auth-context&from=<path>`. Proxy **does not** fabricate claims.
 6. **Module ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`, except disallowed Admin URLs and admin-level `/employee/*` visits redirect to the role's Admin default route.
-7. **Branch-scope for POS/KDS/branch settings/menu limits:** if a protected branch-scoped URL is not reachable for the user's branch assignment → `/access-denied?reason=branch-scope-mismatch`. POS/KDS also reject `branch`/`branch` branches. These checks live in proxy; downstream protected layouts do not re-implement them. Runner rejects invalid/non-operational branches inside the public display page because it has no staff claims.
+7. **Branch-scope for POS/KDS/branch settings/menu limits:** if a protected branch-scoped URL is not reachable for the user's branch assignment → `/access-denied?reason=branch-scope-mismatch`. POS/KDS and future protected Runner child routes reject missing, inactive, or non-operational branches in proxy. The exact public Runner display rejects invalid/non-operational branches inside the page because it has no staff claims.
 
 The resolver `resolvePostLoginRedirect(claims, returnTo, { surface?: "legacy" | "beta" })` (`packages/shared/src/auth/scope.ts`) is the **single** post-login destination function. Surface controls beta-prefix wrapping; the underlying ACL + branch-scope rules are shared. Unit tests live in `packages/shared/src/auth/__tests__/scope.test.ts` (run `pnpm --filter @comtammatu/shared test`).
 

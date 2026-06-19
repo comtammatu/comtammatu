@@ -35,8 +35,6 @@ const RUNNER_ORDER_ITEM_SELECT_WITH_PRIORITY =
   "id, order_id, quantity, is_priority";
 const RUNNER_ORDER_ITEM_SELECT_BASE = "id, order_id, quantity";
 const RUNNER_ACTIVE_STATUSES = ["pending", "preparing"] as const;
-const RUNNER_DISPLAY_TOKEN_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 // 4 rows on small boards, 6 on xl TVs. The server cannot know the
 // breakpoint, so it renders up to the xl limit and rows 5-6 collapse
 // below xl via `hidden xl:grid`; the overflow footer mirrors the same
@@ -126,14 +124,6 @@ function isMissingPriorityColumn(error: { message?: string } | null): boolean {
 
 function isRunnerOperationalBranchKind(branchKind: string | null): boolean {
   return branchKind === "branch";
-}
-
-function normalizeRunnerDisplayParam(
-  display: string | string[] | undefined,
-): string | null {
-  const value = Array.isArray(display) ? display[0] : display;
-  if (!value || !RUNNER_DISPLAY_TOKEN_RE.test(value)) return null;
-  return value;
 }
 
 function normalizeRunnerOrders(
@@ -372,21 +362,13 @@ async function fetchRunnerVisibleTickets(args: {
 
 export default async function RunnerPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ branchId: string }>;
-  searchParams: Promise<{ display?: string | string[] }>;
 }) {
   const { branchId } = await params;
-  const { display } = await searchParams;
   const branchIdNum = Number(branchId);
   if (!Number.isInteger(branchIdNum) || branchIdNum <= 0) {
     return <RunnerErrorState />;
-  }
-
-  const displayParam = normalizeRunnerDisplayParam(display);
-  if (!displayParam) {
-    notFound();
   }
 
   const supabase = createServiceClient();
@@ -395,9 +377,8 @@ export default async function RunnerPage({
 
   const { data: branch, error: branchError } = await supabase
     .from("branches")
-    .select("id, tenant_id, name, branch_kind, is_active, runner_public_slug")
+    .select("id, tenant_id, name, branch_kind, is_active")
     .eq("id", branchIdNum)
-    .eq("runner_public_slug", displayParam)
     .maybeSingle();
 
   if (branchError) {
@@ -406,8 +387,7 @@ export default async function RunnerPage({
   if (
     !branch ||
     !isRunnerOperationalBranchKind(branch.branch_kind) ||
-    branch.is_active !== true ||
-    branch.runner_public_slug !== displayParam
+    branch.is_active !== true
   ) {
     notFound();
   }
