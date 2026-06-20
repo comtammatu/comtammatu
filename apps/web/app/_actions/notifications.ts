@@ -47,8 +47,9 @@ const listSchema = z.object({
 });
 
 /**
- * List notifications visible to caller (RLS filters by role + branch).
- * Joins `notification_reads` so each row carries `read_at`.
+ * List notifications visible to caller via the list_notifications RPC, which
+ * keyset-paginates and folds read_at + the unread-only filter in SQL. RLS on
+ * notifications + notification_reads scopes rows by role + branch.
  */
 export async function listNotifications(
   input: z.input<typeof listSchema>,
@@ -61,35 +62,19 @@ export async function listNotifications(
     };
   }
   const { limit, before, unreadOnly } = parsed.data;
-  const { supabase, session } = await loadAuthState();
-  const userId = session.user.id;
+  const { supabase } = await loadAuthState();
 
-  let query = supabase
-    .from("notifications")
-    .select(
-      `
-      id, tenant_id, target_branch_id, target_roles,
-      kind, severity, title, body,
-      entity_type, entity_id, action_url, meta,
-      created_at, expires_at,
-      notification_reads!left(read_at, user_id)
-    `,
-    )
-    .order("created_at", { ascending: false })
-    .limit(limit + 1);
-
-  if (before) query = query.lt("created_at", before);
-
-  const { data, error } = await query;
+  const { data, error } = await supabase.rpc("list_notifications", {
+    p_limit: limit,
+    p_before: before ?? undefined,
+    p_unread_only: unreadOnly,
+  });
   if (error) return { success: false, error: "Không thể tải thông báo" };
 
-  const mapped: NotificationItem[] = (data ?? []).map((row) => {
-    const readRow = Array.isArray(row.notification_reads)
-      ? row.notification_reads.find(
-          (r: { user_id: string; read_at: string }) => r.user_id === userId,
-        )
-      : null;
-    return {
+  const rows = data ?? [];
+  const hasMore = rows.length > limit;
+  const items: NotificationItem[] = (hasMore ? rows.slice(0, limit) : rows).map(
+    (row) => ({
       id: row.id,
       tenant_id: row.tenant_id,
       target_branch_id: row.target_branch_id,
@@ -104,16 +89,11 @@ export async function listNotifications(
       meta: (row.meta ?? {}) as Record<string, unknown>,
       created_at: row.created_at,
       expires_at: row.expires_at,
-      read_at: readRow?.read_at ?? null,
-    };
-  });
+      read_at: row.read_at ?? null,
+    }),
+  );
 
-  const filtered = unreadOnly ? mapped.filter((n) => !n.read_at) : mapped;
-  const hasMore = filtered.length > limit;
-  return {
-    success: true,
-    data: { items: filtered.slice(0, limit), hasMore },
-  };
+  return { success: true, data: { items, hasMore } };
 }
 
 /**

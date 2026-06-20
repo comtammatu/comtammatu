@@ -268,47 +268,29 @@ export async function fetchOrders(
     return q;
   };
 
-  // Revenue = paid, non-cancelled orders only. PostgREST aggregates are not
-  // enabled, so sum the single column over the full filtered paid set;
-  // count: "exact" gives the authoritative paid-order count from the header.
-  let paidRevenueQuery = supabase
-    .from("orders")
-    .select("total_amount", { count: "exact" });
-  if (parsed.data.status)
-    paidRevenueQuery = paidRevenueQuery.eq("status", parsed.data.status);
-  if (effectiveBranchId)
-    paidRevenueQuery = paidRevenueQuery.eq("branch_id", effectiveBranchId);
-  if (parsed.data.dateFrom)
-    paidRevenueQuery = paidRevenueQuery.gte(
-      "created_at",
-      getVNDayUtcRange(parsed.data.dateFrom).startIso,
-    );
-  if (parsed.data.dateTo)
-    paidRevenueQuery = paidRevenueQuery.lt(
-      "created_at",
-      getVNDayUtcRange(parsed.data.dateTo).endIso,
-    );
-  paidRevenueQuery = paidRevenueQuery
-    .eq("payment_status", "paid")
-    .neq("status", "cancelled");
+  // Revenue + paid count over the FULL filtered paid set via a server-side
+  // aggregate RPC. The previous JS reduce summed only the PostgREST-capped page
+  // (silent undercount above the row cap). VN-day boundaries computed in SQL, so
+  // pass the raw YYYY-MM-DD strings (not ISO).
+  const paidSummaryPromise = supabase.rpc("get_orders_paid_summary", {
+    p_status: parsed.data.status || undefined,
+    p_branch_id: effectiveBranchId,
+    p_date_from: parsed.data.dateFrom || undefined,
+    p_date_to: parsed.data.dateTo || undefined,
+  });
 
-  const [totalRes, inProgressRes, paidRevenueRes] = await Promise.all([
+  const [totalRes, inProgressRes, paidSummaryRes] = await Promise.all([
     buildOrdersQuery(),
     buildOrdersQuery().neq("status", "completed").neq("status", "cancelled"),
-    paidRevenueQuery,
+    paidSummaryPromise,
   ]);
 
-  const paidRevenueRows = (paidRevenueRes.data ?? []) as Array<{
-    total_amount: number | string | null;
-  }>;
+  const paidSummary = paidSummaryRes.data?.[0];
   const summary: OrdersSummary = {
     totalCount: totalRes.count ?? 0,
     inProgressCount: inProgressRes.count ?? 0,
-    paidCount: paidRevenueRes.count ?? paidRevenueRows.length,
-    paidRevenue: paidRevenueRows.reduce(
-      (sum, row) => sum + Number(row.total_amount ?? 0),
-      0,
-    ),
+    paidCount: Number(paidSummary?.paid_count ?? 0),
+    paidRevenue: Number(paidSummary?.paid_revenue ?? 0),
   };
 
   // Fetch branches list (for filter select — managers see all, branch_manager sees only theirs)
