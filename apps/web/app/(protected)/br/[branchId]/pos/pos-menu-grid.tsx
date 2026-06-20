@@ -381,7 +381,7 @@ function PosMenuGridComponent({
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="border-b border-border/60 bg-background px-2 py-2 md:px-5 md:py-4 lg:px-6">
+        <div className="border-b border-border/60 bg-background px-3 py-3 md:px-4 md:py-4">
           {/* Mobile: search pill and tab pills share one row. Tap search swaps tabs for input and cancel. */}
           <div className="flex items-center gap-1.5 md:hidden">
             {isSearchActive ? (

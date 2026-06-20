@@ -224,7 +224,6 @@ export function PosSessionsClient({
       <AppSection
         title={messages.settings.posSessions.sessionHistory}
         className="h-fit"
-        contentClassName="gap-2"
       >
         {sessions.map((session) => {
           const selected = session.id === selectedSessionId;
@@ -234,13 +233,13 @@ export function PosSessionsClient({
               asChild
               key={session.id}
               variant={selected ? "secondary" : "ghost"}
-              className="h-auto w-full justify-start rounded-lg px-3 py-2"
+              className="h-auto w-full justify-start px-3 py-2"
             >
               <Link
                 href={`/br/${branchId}/settings/pos-sessions?session=${session.id}`}
                 className="flex min-w-0 items-center gap-3"
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                   <IconClock className="size-4" />
                 </span>
                 <span className="min-w-0 flex-1 text-left">
@@ -269,7 +268,7 @@ export function PosSessionsClient({
         })}
       </AppSection>
 
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         {selectedSession ? (
           <>
             <SessionDetailCard
@@ -372,7 +371,7 @@ function SessionDetailCard({
     <AppSection
       title={resolveSessionLabel(session)}
       description={
-        <div className="space-y-1">
+        <div className="flex flex-col gap-1">
           <p>
             {messages.settings.posSessions.openedBy(
               session.opened_by_profile?.full_name ?? "—",
@@ -401,10 +400,9 @@ function SessionDetailCard({
           </Badge>
         )
       }
-      contentClassName="gap-4"
     >
       {breached ? (
-        <Alert className="border-destructive/30 bg-destructive/10 text-destructive">
+        <Alert variant="destructive">
           <IconAlertTriangle className="size-4" />
           <AlertDescription className="text-current">
             <strong>{messages.settings.posSessions.varianceAlertStrong}</strong>
@@ -715,7 +713,7 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
           <SectionLabel>
             {messages.settings.posSessions.revenueByCategory}
           </SectionLabel>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             {category_breakdown.map((cat) => (
               <div
                 key={`${cat.category_id}-${cat.category_name}`}
@@ -745,7 +743,7 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
           <SectionLabel>
             {messages.settings.posSessions.billValueDistribution}
           </SectionLabel>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             {aov_bins.map((bin) => (
               <div key={bin.label} className="space-y-1">
                 <div className="flex items-center justify-between text-sm">
@@ -870,7 +868,7 @@ function OrderDetailSheet({
         className="w-full p-0 data-[side=right]:w-full"
       >
         <SheetHeader>
-          <div className="space-y-1 pr-8">
+          <div className="flex flex-col gap-1 pr-8">
             <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {messages.settings.posSessions.orderSheetEyebrow}
             </div>
@@ -895,7 +893,7 @@ function OrderDetailSheet({
 
         <ScrollArea className="min-h-0 flex-1">
           {order ? (
-            <div className="space-y-4 px-4 py-4">
+            <div className="flex flex-col gap-4 px-4 py-4">
               <div className="grid gap-2 sm:grid-cols-2">
                 <DetailFact
                   label={messages.settings.posSessions.orderNumber}
@@ -945,7 +943,7 @@ function OrderDetailSheet({
                 <h4 className="font-heading text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                   {PRODUCT_VI.posItem}
                 </h4>
-                <div className="mt-2 divide-y rounded-lg border">
+                <div className="mt-2 divide-y rounded-md border">
                   {order.order_items.map((item) => {
                     const hasAddOns =
                       item.modifiers.length > 0 || item.sides.length > 0;
@@ -991,7 +989,7 @@ function OrderDetailSheet({
                             ) : null}
                           </div>
                           {hasAddOns ? (
-                            <div className="mt-1 space-y-1">
+                            <div className="mt-1 flex flex-col gap-1">
                               {item.modifiers.map((modifier) => (
                                 <AddOnLine
                                   key={`modifier-${String(modifier.modifier_id)}`}
@@ -1041,7 +1039,7 @@ function OrderDetailSheet({
                 </div>
               </div>
 
-              <div className="rounded-lg border px-3 py-2 space-y-1.5 text-sm">
+              <div className="flex flex-col gap-1.5 rounded-md border px-3 py-2 text-sm">
                 <KVRow
                   label={messages.settings.posSessions.subtotal}
                   value={formatVND(order.subtotal)}

@@ -154,7 +154,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /RunnerFooter/);
   assert.match(
     runnerPageSource,
-    /relative flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden bg-background px-8/,
+    /relative flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden bg-background px-4 text-center xl:px-8/,
   );
   assert.match(runnerPageSource, /flex max-w-full flex-col items-center gap-3/);
   assert.match(

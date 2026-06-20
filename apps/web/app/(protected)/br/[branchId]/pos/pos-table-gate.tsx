@@ -83,7 +83,7 @@ const TableButton = memo(function TableButton({
       size="tile"
       aria-label={messages.pos.tableGate.tableAria(table.number, statusLabel)}
       className={cn(
-        "w-full min-w-0 flex-col items-stretch justify-start gap-2 p-2.5 text-left whitespace-normal hover:shadow-sm sm:gap-3 sm:p-3 lg:p-4",
+        "w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-sm sm:gap-3 lg:p-4",
         tileVisualState === "ready" && !isSelected && "bg-success/20",
       )}
       onClick={handleClick}
@@ -168,7 +168,7 @@ function PosTableGateComponent({
         />
       ) : (
         <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-          <div className="flex w-full flex-col gap-4 px-2 pb-28 pt-2 md:px-4 md:py-4 lg:px-5">
+          <div className="flex w-full flex-col gap-4 px-2 pb-28 pt-2 md:px-4 md:py-4">
             {tableGroups.map(({ zoneName, zoneTables }, index) => (
               <section key={zoneName} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

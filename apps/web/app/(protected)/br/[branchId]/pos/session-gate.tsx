@@ -76,7 +76,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
   }, [branchId, canOpen, cashAmount, router, terminals]);
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-y-auto px-4 py-5 sm:px-6 sm:py-8">
+    <div className="relative flex flex-1 flex-col overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
       <EmployeePortalBackControl className="absolute left-4 top-4 z-10 sm:left-6 sm:top-6" />
 
       <div className="mx-auto flex w-full max-w-xl flex-1 items-center pt-12 sm:pt-0">

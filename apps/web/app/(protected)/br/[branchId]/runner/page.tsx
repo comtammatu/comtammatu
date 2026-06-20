@@ -528,7 +528,7 @@ function RunnerOrderBoard({
     const resolvedIdleState = idleState ?? "empty";
 
     return (
-      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden bg-background px-8 text-center">
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden bg-background px-4 text-center xl:px-8">
         <RunnerIdleAtmosphere state={resolvedIdleState} />
         <div className="relative z-10 flex flex-col items-center justify-center gap-6">
           <RunnerIdleVisual state={resolvedIdleState} />

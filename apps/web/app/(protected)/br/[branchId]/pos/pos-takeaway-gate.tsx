@@ -74,7 +74,7 @@ function TakeawayOrderTile({
         statusInfo.label,
         formatVND(order.total_amount),
       )}
-      className="w-full min-w-0 flex-col items-stretch justify-start gap-2 p-2.5 text-left whitespace-normal hover:shadow-sm sm:gap-3 sm:p-3 lg:p-4"
+      className="w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-sm sm:gap-3 lg:p-4"
       onClick={() => onViewDetail(order.id, order.order_number, order)}
     >
       <div className="flex w-full min-w-0 items-center justify-between gap-1.5">
@@ -133,7 +133,7 @@ function PosTakeawayGateComponent({
       )}
     >
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-        <div className="flex w-full flex-col gap-4 px-2 pb-28 pt-2 md:px-4 md:py-4 lg:px-5">
+        <div className="flex w-full flex-col gap-4 px-2 pb-28 pt-2 md:px-4 md:py-4">
           <section className="flex flex-col gap-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-2">
@@ -156,7 +156,7 @@ function PosTakeawayGateComponent({
                 size="tile"
                 data-testid="pos-takeaway-create-tile"
                 aria-label={messages.pos.takeawayGate.createNew}
-                className="w-full min-w-0 flex-col items-stretch justify-start gap-2 p-2.5 text-left whitespace-normal hover:shadow-sm sm:gap-3 sm:p-3 lg:p-4"
+                className="w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-sm sm:gap-3 lg:p-4"
                 onClick={onCreateNew}
               >
                 <div className="flex w-full min-w-0 items-center justify-between gap-1.5">
