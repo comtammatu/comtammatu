@@ -393,12 +393,11 @@ function ConsumptionReview({
   const report = item.consumptionReport;
   if (!report) {
     return (
-      <EmployeeFrame
-        pad="sm"
-        className="mt-3 border-warning/30 bg-warning/10 text-sm"
-      >
-        Chưa có báo cáo tiêu hao bếp cho ca này, nên chưa thể duyệt kết ca.
-      </EmployeeFrame>
+      <Alert className="mt-3 border-warning/30 bg-warning/10">
+        <AlertDescription>
+          Chưa có báo cáo tiêu hao bếp cho ca này, nên chưa thể duyệt kết ca.
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -420,13 +419,12 @@ function ConsumptionReview({
       </div>
 
       {report.reviewNote ? (
-        <EmployeeFrame
-          pad="sm"
-          className="border-warning/30 bg-warning/10 text-sm leading-5"
-        >
-          <span className="font-medium">Lý do chỉnh sửa: </span>
-          {report.reviewNote}
-        </EmployeeFrame>
+        <Alert className="border-warning/30 bg-warning/10">
+          <AlertDescription>
+            <span className="font-medium">Lý do chỉnh sửa: </span>
+            {report.reviewNote}
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       {report.lines.length > 0 ? (
