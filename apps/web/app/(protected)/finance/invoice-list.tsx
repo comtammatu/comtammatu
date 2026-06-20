@@ -46,6 +46,12 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import {
+  Item,
+  ItemContent,
+  ItemFooter,
+  ItemHeader,
+} from "@comtammatu/ui/components/item";
 import { formatVNDateTime, getVNDateString } from "@/_lib/format-datetime";
 
 import { FORM_VI, ORDER_VI } from "@comtammatu/shared/messages";
@@ -657,8 +663,8 @@ export function InvoiceList({
           emptyTitle="Chưa có hóa đơn nào"
           emptyIcon={<IconReceipt />}
           mobileCardRender={(inv) => (
-            <div className="rounded-lg border border-border/70 bg-background p-4">
-              <div className="flex items-start justify-between gap-3">
+            <Item variant="outline" className="flex-col items-stretch">
+              <ItemHeader className="items-start">
                 <div>
                   <p className="font-mono text-sm">
                     {inv.invoice_number ?? "—"}
@@ -668,8 +674,8 @@ export function InvoiceList({
                   </p>
                 </div>
                 <StatusBadge domain="tax-invoice" value={inv.status} />
-              </div>
-              <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+              </ItemHeader>
+              <ItemContent className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                 <div>
                   <p className="text-muted-foreground">Người mua</p>
                   <p className="mt-1">{inv.buyer_name ?? "—"}</p>
@@ -685,14 +691,14 @@ export function InvoiceList({
                     {formatVND(inv.total_amount)}
                   </p>
                 </div>
-              </div>
-              <div className="mt-4 flex items-center justify-between gap-3">
+              </ItemContent>
+              <ItemFooter className="mt-4">
                 <p className="text-xs text-muted-foreground">
                   {formatDate(inv.issued_at ?? inv.created_at)}
                 </p>
                 {renderActions(inv, "card")}
-              </div>
-            </div>
+              </ItemFooter>
+            </Item>
           )}
         />
         {hasMore ? (

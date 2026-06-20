@@ -26,6 +26,11 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import {
+  Item,
+  ItemContent,
+  ItemHeader,
+} from "@comtammatu/ui/components/item";
+import {
   fetchBranchMovementSummary,
   fetchStockMovementReport,
 } from "@/_actions/inventory";
@@ -343,8 +348,8 @@ export function StockMovementClient({
               emptyDescription={stockMovementCopy.detailEmptyDescription}
               className="md:overflow-x-auto"
               mobileCardRender={(row) => (
-                <div className="rounded-lg border border-border/70 bg-background p-4">
-                  <div className="flex items-start justify-between gap-3">
+                <Item variant="outline" className="flex-col items-stretch">
+                  <ItemHeader className="items-start">
                     <div>
                       <p className="font-medium">{row.ingredient_name}</p>
                       <p className="text-sm text-muted-foreground">
@@ -359,8 +364,8 @@ export function StockMovementClient({
                         {fmt(row.closing)}
                       </p>
                     </div>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  </ItemHeader>
+                  <ItemContent className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-muted-foreground">
                         {stockMovementCopy.opening}
@@ -421,8 +426,8 @@ export function StockMovementClient({
                       </p>
                       <p className="mt-1 font-mono">{fmt(row.adjustment)}</p>
                     </div>
-                  </div>
-                </div>
+                  </ItemContent>
+                </Item>
               )}
             />
           </TabsContent>
@@ -436,9 +441,9 @@ export function StockMovementClient({
               emptyDescription={stockMovementCopy.branchEmptyDescription}
               className="md:overflow-x-auto"
               mobileCardRender={(row) => (
-                <div className="rounded-lg border border-border/70 bg-background p-4">
+                <Item variant="outline" className="flex-col items-stretch">
                   <p className="font-medium">{row.branch_name}</p>
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <ItemContent className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-muted-foreground">
                         {stockMovementCopy.grnReceipt}
@@ -493,8 +498,8 @@ export function StockMovementClient({
                       </p>
                       <p className="mt-1 font-mono">{fmt(row.adjustment)}</p>
                     </div>
-                  </div>
-                </div>
+                  </ItemContent>
+                </Item>
               )}
             />
           </TabsContent>
