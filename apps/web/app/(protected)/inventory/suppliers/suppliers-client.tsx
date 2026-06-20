@@ -105,7 +105,7 @@ function SupplierMobileCard({
         />
       </div>
       <div className="flex items-center justify-between border-t pt-2">
-        <div className="flex min-w-0 flex-col gap-0.5 text-xs text-muted-foreground">
+        <div className="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
           {supplier.tax_code && (
             <span className="font-mono">MST: {supplier.tax_code}</span>
           )}

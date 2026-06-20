@@ -58,7 +58,7 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
   return (
     <AppPage>
       <AppPageHeader eyebrow={copy.eyebrow} title={copy.title} />
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto flex max-w-3xl flex-col gap-4">
         <Alert>
           <AlertDescription>{copy.description}</AlertDescription>
         </Alert>
@@ -68,7 +68,7 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
           size="sm"
           contentClassName="grid gap-4 md:grid-cols-3"
         >
-          <div className="space-y-1">
+          <div className="flex flex-col gap-1">
             <Label htmlFor="short-tol">{copy.shortToleranceLabel}</Label>
             <FormattedNumberInput
               id="short-tol"
@@ -80,7 +80,7 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
               {copy.shortToleranceHelp}
             </p>
           </div>
-          <div className="space-y-1">
+          <div className="flex flex-col gap-1">
             <Label htmlFor="warn-pct">{copy.warningThresholdLabel}</Label>
             <FormattedNumberInput
               id="warn-pct"
@@ -92,7 +92,7 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
               {copy.warningThresholdHelp}
             </p>
           </div>
-          <div className="space-y-1">
+          <div className="flex flex-col gap-1">
             <Label htmlFor="review-pct">{copy.reviewThresholdLabel}</Label>
             <FormattedNumberInput
               id="review-pct"
@@ -105,7 +105,7 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
             </p>
           </div>
           <div className="md:col-span-3">
-            <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="flex items-center justify-between rounded-md border p-3">
               <div>
                 <Label className="text-sm">{copy.rejectPhotoLabel}</Label>
                 <p className="text-xs text-muted-foreground">

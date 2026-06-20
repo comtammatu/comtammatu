@@ -168,7 +168,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
         title={transfer.code}
       />
 
-      <div className="flex flex-col gap-2 rounded-lg border bg-card p-4">
+      <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <IconPackageImport className="size-5 text-primary" />
           <span className="truncate">{transfer.fromBranchName}</span>
@@ -204,7 +204,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
           </p>
         ) : null}
         {transfer.notes ? (
-          <p className="line-clamp-3 break-words rounded-md bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground">
+          <p className="line-clamp-3 break-words rounded-md bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
             {transfer.notes}
           </p>
         ) : null}
@@ -241,7 +241,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
               <li key={line.id}>
                 <div
                   className={cn(
-                    "flex items-center gap-3 rounded-lg border bg-card px-3 py-3 transition",
+                    "flex items-center gap-3 rounded-md border bg-card p-3 transition",
                     short && "border-warning/40 bg-warning/5",
                   )}
                 >
@@ -306,7 +306,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
       </section>
 
       {hasShort && !needsReceiveMode ? (
-        <div className="flex flex-col gap-2 rounded-lg border bg-card p-4">
+        <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
           <label htmlFor="short-note" className="text-sm font-semibold">
             {TRANSFER_RECEIVE_COPY.shortNoteLabel}{" "}
             <span className="text-destructive">*</span>
@@ -328,11 +328,11 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
       ) : null}
 
       {!needsReceiveMode ? (
-        <label className="flex items-start gap-2 rounded-lg bg-muted/40 px-3 py-3 text-sm">
+        <label className="flex items-start gap-2 rounded-md bg-muted/40 px-3 py-3 text-sm">
           <Checkbox
             checked={acknowledged}
             onCheckedChange={(next) => setAcknowledged(next === true)}
-            className="mt-0.5"
+            className="mt-1"
           />
           <span className="leading-snug">
             {TRANSFER_RECEIVE_COPY.acknowledgement}

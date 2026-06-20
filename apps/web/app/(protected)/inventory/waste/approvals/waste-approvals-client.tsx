@@ -69,7 +69,7 @@ export function WasteApprovalsClient({ initial, branchFilter }: Props) {
       {rows.length === 0 ? (
         <AppEmptyState compact title={copy.empty} />
       ) : (
-        <ul className="space-y-3">
+        <ul className="flex flex-col gap-3">
           {rows.map((row) => (
             <WasteApprovalCard
               key={row.issueId}
@@ -133,7 +133,7 @@ function WasteApprovalCard({
           row.isSelfCreated && "border-warning/40 bg-warning/10",
         )}
       >
-        <div className="p-4 pb-3 sm:p-6 sm:pb-3">
+        <div className="p-4 pb-3">
           <div className="flex items-start justify-between gap-2">
             <div>
               <div className="font-heading text-base flex items-center gap-2 font-semibold">
@@ -171,8 +171,8 @@ function WasteApprovalCard({
             </div>
           </div>
         </div>
-        <div className="space-y-3 p-4 pt-0 sm:p-6 sm:pt-0">
-          <ul className="space-y-2">
+        <div className="flex flex-col gap-3 p-4 pt-0">
+          <ul className="flex flex-col gap-2">
             {row.items.map((it) => (
               <li
                 key={it.itemId}

@@ -267,7 +267,6 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
       <AppSection
         title={messages.inventory.waste.generalInfoTitle}
         description={messages.inventory.waste.generalInfoDescription}
-        contentClassName="space-y-3"
       >
           <div>
             <Label htmlFor="waste-loc">
@@ -306,7 +305,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
           </div>
       </AppSection>
 
-      <ul className="space-y-3">
+      <ul className="flex flex-col gap-3">
         {lines.map((line, idx) => {
           const qty = Number(line.quantity) || 0;
           const cost = Number(line.unitCost) || 0;
@@ -321,7 +320,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
           return (
             <li key={line.uid}>
               <div className="rounded-lg border bg-card">
-                <div className="p-4 pb-3 sm:p-6 sm:pb-3">
+                <div className="p-4 pb-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-heading text-sm font-semibold">
                       {messages.inventory.waste.lineTitle(idx + 1)}
@@ -348,7 +347,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                     </div>
                   </div>
                 </div>
-                <div className="space-y-3 p-4 pt-0 sm:p-6 sm:pt-0">
+                <div className="flex flex-col gap-3 p-4 pt-0">
                   <div>
                     <Label>{PRODUCT_VI.rawIngredient}</Label>
                     <SearchableSelect

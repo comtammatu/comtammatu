@@ -132,20 +132,20 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
       : [];
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* Meta */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border p-3">
+        <div className="rounded-md border p-3">
           <p className="text-xs text-muted-foreground">Trạng thái</p>
           <StatusBadge status={header.status} className="mt-2" />
         </div>
-        <div className="rounded-lg border p-3">
+        <div className="rounded-md border p-3">
           <p className="text-xs text-muted-foreground">Lý do</p>
           <p className="mt-1 text-sm font-medium">
             {REASON_LABELS[header.reason] ?? header.reason}
           </p>
         </div>
-        <div className="rounded-lg border p-3">
+        <div className="rounded-md border p-3">
           <p className="text-xs text-muted-foreground">Xử lý</p>
           <p className="mt-1 text-sm font-medium">
             {RESOLUTION_LABELS[header.resolution] ?? header.resolution}
@@ -176,7 +176,7 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
       </AppSection>
 
       {header.notes && (
-        <div className="rounded-lg border p-3">
+        <div className="rounded-md border p-3">
           <p className="text-xs text-muted-foreground">Ghi chú</p>
           <p className="mt-1 text-sm">{header.notes}</p>
         </div>

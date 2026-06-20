@@ -493,21 +493,21 @@ function BulkApplyDialog({
             name="min"
             label={copy.cols.min}
             placeholder="—"
-            className="h-9 text-right tabular-nums"
+            className="h-8 text-right tabular-nums"
           />
           <QuantityField
             control={form.control}
             name="reorder"
             label={copy.cols.reorder}
             placeholder="—"
-            className="h-9 text-right tabular-nums"
+            className="h-8 text-right tabular-nums"
           />
           <QuantityField
             control={form.control}
             name="max"
             label={copy.cols.max}
             placeholder="—"
-            className="h-9 text-right tabular-nums"
+            className="h-8 text-right tabular-nums"
           />
         </div>
       )}

@@ -206,10 +206,10 @@ export function ReportsClient({
                 return (
                   <div
                     key={item.name}
-                    className="bg-muted/35 flex items-center justify-between rounded-md border p-4"
+                    className="bg-muted/35 flex items-center justify-between rounded-md border p-3"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex size-10 items-center justify-center rounded-full bg-card">
+                      <div className="flex size-10 items-center justify-center rounded-md bg-card">
                         <IconPackage className="size-5 text-muted-foreground" />
                       </div>
                       <div>
@@ -272,14 +272,14 @@ export function ReportsClient({
       </div>
 
       {/* Report catalog */}
-      <h2 className="font-heading text-xl font-semibold tracking-tight sm:text-2xl">
+      <h2 className="font-heading text-base font-semibold tracking-tight">
         {messages.inventory.reports.detailTitle}
       </h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {reportCatalog.map((report) => (
-          <div key={report.title} className="rounded-md border bg-card p-5">
+          <div key={report.title} className="rounded-lg border bg-card p-4">
             <div className="mb-4 flex items-start justify-between gap-3">
-              <div className="flex size-12 items-center justify-center rounded-full bg-muted transition-colors">
+              <div className="flex size-12 items-center justify-center rounded-md bg-muted transition-colors">
                 <report.icon className="size-5 text-muted-foreground" />
               </div>
               <Badge variant="outline">
@@ -287,7 +287,7 @@ export function ReportsClient({
               </Badge>
             </div>
             <p className="font-bold text-foreground">{report.title}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{report.desc}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{report.desc}</p>
           </div>
         ))}
       </div>

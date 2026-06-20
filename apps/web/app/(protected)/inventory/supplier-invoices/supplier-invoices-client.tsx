@@ -299,7 +299,7 @@ function SupplierInvoiceCreateFields({
           required
         />
       </div>
-      <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-sm">
+      <div className="rounded-md border border-border/60 bg-muted/20 p-3 text-sm">
         <div className="flex items-center justify-between gap-3">
           <span className="text-muted-foreground">{copy.vat}</span>
           <span className="font-mono tabular-nums">
@@ -551,7 +551,7 @@ export function SupplierInvoicesClient({
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-1">
-              <p className="font-mono text-base font-semibold">
+              <p className="font-mono text-sm font-semibold">
                 {invoice.code}
               </p>
               <p className="truncate text-sm text-muted-foreground">
@@ -846,7 +846,7 @@ export function SupplierInvoicesClient({
           {selectedInvoice ? (
             <div className="flex flex-col gap-4">
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border bg-muted/30 p-3">
+                <div className="rounded-md border bg-muted/30 p-3">
                   <Badge variant="secondary">{copy.totalInvoice}</Badge>
                   <p className="mt-2 font-mono text-xl font-semibold tabular-nums">
                     {messages.inventory.common.currencyCompact(
@@ -854,7 +854,7 @@ export function SupplierInvoicesClient({
                     )}
                   </p>
                 </div>
-                <div className="rounded-lg border bg-muted/30 p-3">
+                <div className="rounded-md border bg-muted/30 p-3">
                   <Badge variant="secondary">{copy.outstandingPayable}</Badge>
                   <p className="mt-2 font-mono text-xl font-semibold tabular-nums">
                     {messages.inventory.common.currencyCompact(
@@ -865,7 +865,7 @@ export function SupplierInvoicesClient({
               </div>
 
               <dl className="grid gap-2">
-                <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
                   <dt className="text-sm text-muted-foreground">
                     {copy.invoiceDate}
                   </dt>
@@ -873,7 +873,7 @@ export function SupplierInvoicesClient({
                     {formatDate(selectedInvoice.invoiceDate)}
                   </dd>
                 </div>
-                <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
                   <dt className="text-sm text-muted-foreground">
                     {copy.dueDate}
                   </dt>
@@ -886,7 +886,7 @@ export function SupplierInvoicesClient({
                     {formatDate(selectedInvoice.dueDate)}
                   </dd>
                 </div>
-                <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
                   <dt className="text-sm text-muted-foreground">
                     {copy.paidAmount}
                   </dt>
@@ -896,7 +896,7 @@ export function SupplierInvoicesClient({
                     )}
                   </dd>
                 </div>
-                <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+                <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
                   <dt className="text-sm text-muted-foreground">
                     {copy.linkedGrn}
                   </dt>
@@ -908,7 +908,7 @@ export function SupplierInvoicesClient({
 
               {selectedInvoice.variance !== null &&
               selectedInvoice.variance > 0 ? (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
                   <div className="flex items-start gap-3">
                     <IconAlertTriangle className="mt-0.5 size-4 text-destructive" />
                     <div className="flex flex-col gap-1">
@@ -922,7 +922,7 @@ export function SupplierInvoicesClient({
                   </div>
                 </div>
               ) : (
-                <div className="rounded-lg border border-success/30 bg-success/5 p-3">
+                <div className="rounded-md border border-success/30 bg-success/5 p-3">
                   <div className="flex items-start gap-3">
                     <IconCircleCheck className="mt-0.5 size-4 text-success" />
                     <div className="flex flex-col gap-1">

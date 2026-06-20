@@ -707,7 +707,7 @@ export function StockClient({
     <InventoryPageContent
       width={isCompactLayout ? "narrow" : "wide"}
       className={isCompactLayout ? undefined : "p-3"}
-      contentClassName={isCompactLayout ? undefined : "max-w-none gap-2"}
+      contentClassName={isCompactLayout ? undefined : "max-w-none gap-3"}
       scroll
     >
       <AppPageHeader
@@ -1267,7 +1267,7 @@ export function StockClient({
                               {reference ||
                               movement.reason ||
                               movement.unitCost != null ? (
-                                <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                                <div className="flex flex-col gap-1 text-xs text-muted-foreground">
                                   {reference ? <p>{reference}</p> : null}
                                   {movement.reason ? (
                                     <p className="break-words">

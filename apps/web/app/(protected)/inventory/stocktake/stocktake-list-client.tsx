@@ -82,7 +82,7 @@ function StocktakeSessionCard({
     <InteractiveCard minHeight="mobile" padding="default" asChild>
       <Link
         href={`${routeBase}/${row.id}?branchId=${row.branch_id}`}
-        className="flex-col items-stretch gap-2"
+        className="flex-col items-stretch gap-3"
       >
         <div className="flex items-center justify-between gap-2">
           <span className="font-mono text-sm font-medium">KK-{row.id}</span>

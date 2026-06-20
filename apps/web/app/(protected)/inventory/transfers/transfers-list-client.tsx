@@ -280,7 +280,7 @@ export function TransfersListClient({
               type="button"
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "flex items-center justify-center rounded-lg px-2 py-2.5 text-xs font-semibold transition",
+                "flex items-center justify-center rounded-md px-2 py-2 text-xs font-semibold transition",
                 active
                   ? "border border-primary/20 bg-background text-foreground ring-1 ring-primary/20"
                   : "text-muted-foreground hover:text-foreground",
@@ -290,7 +290,7 @@ export function TransfersListClient({
               {tabCounts[tab] > 0 && (
                 <span
                   className={cn(
-                    "ml-1.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums",
+                    "ml-1.5 rounded-full px-1.5 py-1 text-xs tabular-nums",
                     active
                       ? "bg-primary/15 text-primary"
                       : "bg-muted text-muted-foreground",
@@ -359,23 +359,23 @@ function MobileTransferCard({
   return (
     <InteractiveCard asChild minHeight="mobile" className="h-auto">
       <Link href={href}>
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
           <Icon className="size-5" />
         </span>
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center justify-between gap-2">
             <p className="truncate font-mono text-sm font-semibold">
               {row.transfer_number}
             </p>
             <StatusBadge status={row.status} size="sm" />
           </div>
-          <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted-foreground">
+          <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
             <span className="truncate">{row.from_branch_name}</span>
             <IconArrowRight className="size-3 shrink-0" />
             <span className="truncate">{row.to_branch_name}</span>
           </p>
           {(row.shipped_at || row.created_at) && (
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {formatVNDate(row.shipped_at ?? row.created_at)}
             </p>
           )}

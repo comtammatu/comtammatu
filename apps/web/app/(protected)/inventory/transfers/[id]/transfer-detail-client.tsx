@@ -557,7 +557,7 @@ export function TransferDetailClient({
                 </div>
 
                 {isReceiveMode && hasShort ? (
-                  <AppSection tone="warning" contentClassName="space-y-2 pt-6">
+                  <AppSection tone="warning">
                     <p className="text-sm font-semibold">
                       {copy.shortageNoteTitle}{" "}
                       <span className="text-destructive">*</span>
@@ -587,7 +587,7 @@ export function TransferDetailClient({
                       <Button
                         type="button"
                         variant="outline"
-                        className="rounded-full px-6 font-bold text-muted-foreground"
+                        className="px-6 font-bold text-muted-foreground"
                       >
                         <IconPrinter className="size-5" />
                         {copy.printSlip}
@@ -619,7 +619,7 @@ export function TransferDetailClient({
                           actionConfig?.action === "receive" &&
                           !noteOk)
                       }
-                      className="rounded-full px-10 font-bold"
+                      className="px-6 font-bold"
                       onClick={handlePrimaryAction}
                     >
                       <IconCircleCheck className="size-5" />

@@ -102,7 +102,7 @@ export function NewStocktakeSessionClient({
         title={messages.inventory.stocktake.startTitle}
         description={messages.inventory.stocktake.startDescription}
       />
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         <AppSection
           title={messages.inventory.stocktake.modeTitle}
           className="lg:col-span-2"
@@ -218,17 +218,15 @@ export function NewStocktakeSessionClient({
                 messages.inventory.common.all}
             </span>
           </div>
-          <div className="pt-2">
-            <Button
-              className="w-full"
-              onClick={submit}
-              disabled={pending || !branchId}
-            >
-              {pending
-                ? messages.inventory.stocktake.creating
-                : messages.inventory.stocktake.startCounting}
-            </Button>
-          </div>
+          <Button
+            className="w-full"
+            onClick={submit}
+            disabled={pending || !branchId}
+          >
+            {pending
+              ? messages.inventory.stocktake.creating
+              : messages.inventory.stocktake.startCounting}
+          </Button>
         </AppSection>
       </div>
     </InventoryPageContent>

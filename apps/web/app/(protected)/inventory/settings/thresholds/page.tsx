@@ -46,7 +46,7 @@ export default async function InventoryThresholdsPage() {
     }));
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <AppPageHeader
         eyebrow={copy.eyebrow}
         title={copy.title}
@@ -55,7 +55,7 @@ export default async function InventoryThresholdsPage() {
 
       <AppSection contentFlush>
         {rows.length === 0 ? (
-          <div className="px-5 py-10">
+          <div className="px-4 py-6">
             <AppEmptyState title={copy.empty} />
           </div>
         ) : (

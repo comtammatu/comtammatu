@@ -273,7 +273,7 @@ export function StocktakeDetailClient({
             ]}
           >
             <TabsContent value="overview">
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {[
                     {
@@ -296,7 +296,6 @@ export function StocktakeDetailClient({
                     <AppSection
                       key={item.label}
                       size="sm"
-                      contentClassName="gap-3"
                     >
                       <Badge variant="secondary">{item.label}</Badge>
                       <p className="text-xl font-semibold">{item.value}</p>
@@ -326,7 +325,7 @@ export function StocktakeDetailClient({
 
                 {/* Cancelled state */}
                 {session.status === "cancelled" && (
-                  <AppSection contentClassName="items-center justify-center gap-2 py-10 text-center">
+                  <AppSection contentClassName="items-center justify-center gap-2 py-6 text-center">
                     <IconCircleX className="size-8 text-muted-foreground" />
                     <p className="text-base font-semibold">
                       {stocktakeDetailCopy.cancelledTitle}
@@ -340,7 +339,7 @@ export function StocktakeDetailClient({
             </TabsContent>
 
             <TabsContent value="lines">
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4">
                 {/* Counting phase (in_progress) */}
                 {session.status === "in_progress" && (
                   <CountingPhase
@@ -396,7 +395,7 @@ function CountingPhase({
         <div className="flex items-center gap-2 text-sm font-medium">
           {line.ingredients?.name ?? `#${line.ingredient_id}`}
           {savedLines.has(line.id) && (
-            <span className="inline-flex items-center gap-0.5 text-xs text-success">
+            <span className="inline-flex items-center gap-1 text-xs text-success">
               <IconCheck className="size-3" />
               {stocktakeDetailCopy.saved}
             </span>
@@ -458,11 +457,11 @@ function CountingPhase({
             description={stocktakeDetailCopy.emptyCountDescription}
           />
         ) : (
-          <div className="-m-4 divide-y md:-m-5">
+          <div className="-m-4 divide-y">
             {lines.map((line) => (
               <div
                 key={line.id}
-                className="flex flex-col gap-2 px-4 py-3 md:px-5"
+                className="flex flex-col gap-2 px-4 py-3"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="truncate text-sm font-medium">
@@ -633,7 +632,7 @@ function ResultsPhase({
   return (
     <div className="flex flex-col gap-3">
       {/* Variance legend */}
-      <div className="flex flex-wrap items-center gap-4 text-xs">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="text-muted-foreground font-medium">
           {stocktakeDetailCopy.results.legendTitle}
         </span>

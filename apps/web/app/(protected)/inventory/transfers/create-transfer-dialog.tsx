@@ -214,10 +214,7 @@ export function CreateTransferForm({
 
   return (
     <form onSubmit={submit} className="flex min-w-0 flex-col gap-4">
-      <AppSection
-        title={messages.inventory.transfer.createTransferTitle}
-        contentClassName="gap-4"
-      >
+      <AppSection title={messages.inventory.transfer.createTransferTitle}>
         {canCreateOutbound ? (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
@@ -314,7 +311,7 @@ export function CreateTransferForm({
             {draftLines.map((line) => (
               <div
                 key={line.key}
-                className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2"
+                className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2"
               >
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">
                   {line.name}
