@@ -44,6 +44,8 @@ export interface ReorderAlertRow {
 export interface ExpiryAlertRow {
   ingredient_id: number;
   ingredient_name: string;
+  grn_item_id: number;
+  unit: string;
   batch_number: string | null;
   expiry_date: string;
   grn_number: string;

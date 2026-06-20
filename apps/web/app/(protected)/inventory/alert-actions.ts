@@ -24,6 +24,8 @@ export async function fetchExpiryAlerts(
     .from("grn_items")
     .select(
       `
+      id,
+      unit,
       batch_number,
       expiry_date,
       goods_received_notes!inner (
@@ -90,6 +92,8 @@ export async function fetchExpiryAlerts(
       return {
         ingredient_id: ingredient.id,
         ingredient_name: ingredient.name,
+        grn_item_id: Number(item.id),
+        unit: String(item.unit),
         batch_number: item.batch_number,
         expiry_date: item.expiry_date,
         grn_number: grn.grn_number,
@@ -100,7 +104,36 @@ export async function fetchExpiryAlerts(
       };
     });
 
-  return { success: true, data: alerts };
+  // Exclude lots already written off — a non-cancelled writeoff stock_issue
+  // whose source_ref points at this grn_item — so the alert clears once the
+  // expiry write-off is created.
+  const grnItemIds = alerts.map((a) => a.grn_item_id);
+  if (grnItemIds.length === 0) {
+    return { success: true, data: alerts };
+  }
+
+  const { data: writeoffs } = await supabase
+    .from("stock_issues")
+    .select("source_ref")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("issue_type", "writeoff")
+    .neq("status", "cancelled")
+    .not("source_ref", "is", null);
+
+  const writtenOffGrnItemIds = new Set(
+    (writeoffs ?? [])
+      .map(
+        (w) =>
+          (w.source_ref as unknown as { grn_item_id?: number } | null)
+            ?.grn_item_id,
+      )
+      .filter((id): id is number => id != null),
+  );
+
+  return {
+    success: true,
+    data: alerts.filter((a) => !writtenOffGrnItemIds.has(a.grn_item_id)),
+  };
 }
 
 /* ─── fetchReorderAlerts ─── */

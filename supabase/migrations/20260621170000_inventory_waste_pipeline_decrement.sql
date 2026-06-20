@@ -87,7 +87,11 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public._post_writeoff_movements(bigint) FROM PUBLIC;
+-- Gateless internal helper: lock to the SECURITY DEFINER callers (which run as
+-- owner). authenticated holds a default-privilege EXECUTE grant that REVOKE FROM
+-- PUBLIC does not remove, so revoke it explicitly — otherwise any authenticated
+-- user could call this directly and bypass the tier-2 approval gate.
+REVOKE ALL ON FUNCTION public._post_writeoff_movements(bigint) FROM PUBLIC, anon, authenticated;
 
 -- create_waste_entry: post movements on the tier0 (no-approval) confirm path.
 CREATE OR REPLACE FUNCTION public.create_waste_entry(
@@ -197,6 +201,7 @@ DECLARE
   v_tenant bigint := public.auth_tenant_id();
   v_loc RECORD; v_grn RECORD;
   v_shift_key text; v_issue_id bigint; v_issue_no text; v_approval text;
+  v_seed_cost numeric(15, 2);
   v_source_ref jsonb := jsonb_build_object('kind', 'expiry');
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000'; END IF;
@@ -232,11 +237,22 @@ BEGIN
     now(), v_uid, p_location_id, 'not_required', v_shift_key, 'manual', v_source_ref)
   RETURNING id INTO v_issue_id;
 
+  -- Seed unit_cost from the location WAC (not NULL — column is NOT NULL) so the
+  -- generated total_cost reflects real value while a tier-2 item sits pending,
+  -- keeping the waste-cap accumulators accurate. _post_writeoff_movements
+  -- overwrites it with the locked WAC at post time. COALESCE to 0 when no stock
+  -- row exists; the helper then raises wac_not_ready on the non-pending path.
+  SELECT avg_unit_cost INTO v_seed_cost
+    FROM public.stock_levels
+   WHERE tenant_id = v_tenant AND branch_id = p_branch_id
+     AND location_id = p_location_id AND ingredient_id = p_ingredient_id;
+
   -- BEFORE-INSERT trigger computes tier/photo_required/approval_required and
   -- enforces the photo gate (raises 22023 if a photo is required but missing).
   INSERT INTO public.stock_issue_items (tenant_id, issue_id, ingredient_id, quantity, unit, unit_cost,
     reason_code, photo_urls, reason)
-  VALUES (v_tenant, v_issue_id, p_ingredient_id, p_quantity, COALESCE(p_unit, 'kg'), NULL,
+  VALUES (v_tenant, v_issue_id, p_ingredient_id, p_quantity, COALESCE(p_unit, 'kg'),
+    COALESCE(v_seed_cost, 0),
     'expired', COALESCE(p_photo_urls, ARRAY[]::text[]), p_note);
 
   SELECT approval_status INTO v_approval FROM public.stock_issues WHERE id = v_issue_id;
@@ -253,3 +269,148 @@ $$;
 
 REVOKE ALL ON FUNCTION public.create_expiry_writeoff(bigint, bigint, bigint, numeric, text, bigint, text, text[]) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.create_expiry_writeoff(bigint, bigint, bigint, numeric, text, bigint, text, text[]) TO authenticated;
+
+-- confirm_stock_issue: the generic draft-issue confirm posts the SAME decrementing
+-- writeoff movement as the waste pipeline but only checks inventory:write, never
+-- approval_status. Now that the waste pipeline actually decrements, a writeoff
+-- awaiting tier-2 approval (status='draft', approval_status='pending') could be
+-- self-confirmed here, bypassing approve_waste's waste_approve + 4-eye gate. Block
+-- that one case; consumption/other issues and non-pending writeoffs are unchanged.
+CREATE OR REPLACE FUNCTION public.confirm_stock_issue(p_issue_id bigint)
+  RETURNS jsonb
+  LANGUAGE plpgsql SECURITY DEFINER
+  SET search_path TO 'public'
+  AS $$
+DECLARE
+  v_uid         UUID   := auth.uid();
+  v_tenant      BIGINT := public.auth_tenant_id();
+  v_issue       RECORD;
+  v_item        RECORD;
+  v_branch_kind TEXT;
+  v_subtype     TEXT;
+  v_sl_q        NUMERIC(15,3);
+  v_wac         NUMERIC(15,2);
+  v_source_loc  RECORD;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  SELECT * INTO v_issue
+  FROM public.stock_issues
+  WHERE id = p_issue_id
+    AND tenant_id = v_tenant
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'issue_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF NOT public.has_permission(v_issue.branch_id, 'inventory:write') THEN
+    RAISE EXCEPTION 'forbidden_inventory_write' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_issue.status <> 'draft' THEN
+    RAISE EXCEPTION 'issue_not_draft' USING ERRCODE = '22023';
+  END IF;
+
+  -- A writeoff awaiting approval must go through approve_waste (which enforces
+  -- inventory:waste_approve + the 4-eye self-approval guard), not this generic
+  -- confirm path which only checks inventory:write.
+  IF v_issue.issue_type = 'writeoff' AND v_issue.approval_status = 'pending' THEN
+    RAISE EXCEPTION 'writeoff_pending_approval' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_issue.source_location_id IS NULL THEN
+    RAISE EXCEPTION 'issue_source_location_missing' USING ERRCODE = '23502';
+  END IF;
+
+  SELECT id, branch_id
+  INTO v_source_loc
+  FROM public.inventory_locations
+  WHERE id = v_issue.source_location_id
+    AND tenant_id = v_tenant
+    AND is_active = TRUE;
+
+  IF NOT FOUND OR v_source_loc.branch_id <> v_issue.branch_id THEN
+    RAISE EXCEPTION 'issue_source_location_invalid' USING ERRCODE = '23514';
+  END IF;
+
+  SELECT b.branch_kind INTO v_branch_kind
+  FROM public.branches b
+  WHERE b.id = v_issue.branch_id
+    AND b.tenant_id = v_tenant;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'issue_branch_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  v_subtype := CASE
+    WHEN v_issue.issue_type = 'consumption'
+      THEN 'sale_consumption'
+    WHEN v_issue.issue_type = 'writeoff'
+      THEN 'writeoff'
+    WHEN v_issue.issue_type = 'other'
+      THEN 'other'
+    ELSE NULL
+  END;
+
+  FOR v_item IN
+    SELECT * FROM public.stock_issue_items
+    WHERE issue_id = p_issue_id
+      AND tenant_id = v_tenant
+  LOOP
+    SELECT sl.current_quantity, sl.avg_unit_cost
+    INTO v_sl_q, v_wac
+    FROM public.stock_levels sl
+    WHERE sl.tenant_id = v_tenant
+      AND sl.branch_id = v_issue.branch_id
+      AND sl.location_id = v_issue.source_location_id
+      AND sl.ingredient_id = v_item.ingredient_id
+    FOR UPDATE;
+
+    IF NOT FOUND OR v_wac IS NULL THEN
+      RAISE EXCEPTION 'wac_not_ready_for_%', v_item.ingredient_id
+        USING ERRCODE = '22023';
+    END IF;
+
+    IF v_sl_q < v_item.quantity THEN
+      RAISE EXCEPTION 'insufficient_stock_for_%', v_item.ingredient_id
+        USING ERRCODE = '22023';
+    END IF;
+
+    UPDATE public.stock_issue_items
+    SET unit_cost = v_wac
+    WHERE id = v_item.id
+      AND tenant_id = v_tenant;
+
+    INSERT INTO public.stock_movements (
+      tenant_id, branch_id, ingredient_id, type, movement_subtype,
+      quantity_change, unit_cost, reason, created_by, issue_id, location_id
+    ) VALUES (
+      v_tenant,
+      v_issue.branch_id,
+      v_item.ingredient_id,
+      'consumption',
+      v_subtype,
+      -v_item.quantity,
+      v_wac,
+      COALESCE(v_item.reason, v_issue.notes),
+      v_uid,
+      p_issue_id,
+      v_issue.source_location_id
+    );
+  END LOOP;
+
+  UPDATE public.stock_issues
+  SET status = 'confirmed'
+  WHERE id = p_issue_id
+    AND tenant_id = v_tenant;
+
+  RETURN jsonb_build_object(
+    'ok', true,
+    'issue_id', p_issue_id,
+    'movement_subtype', v_subtype
+  );
+END;
+$$;

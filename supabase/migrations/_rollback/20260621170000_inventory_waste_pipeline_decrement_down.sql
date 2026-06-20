@@ -75,3 +75,136 @@ BEGIN
 END; $$;
 
 DROP FUNCTION IF EXISTS public._post_writeoff_movements(bigint);
+
+-- Restore confirm_stock_issue without the writeoff-pending-approval guard.
+CREATE OR REPLACE FUNCTION public.confirm_stock_issue(p_issue_id bigint)
+  RETURNS jsonb
+  LANGUAGE plpgsql SECURITY DEFINER
+  SET search_path TO 'public'
+  AS $$
+DECLARE
+  v_uid         UUID   := auth.uid();
+  v_tenant      BIGINT := public.auth_tenant_id();
+  v_issue       RECORD;
+  v_item        RECORD;
+  v_branch_kind TEXT;
+  v_subtype     TEXT;
+  v_sl_q        NUMERIC(15,3);
+  v_wac         NUMERIC(15,2);
+  v_source_loc  RECORD;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  SELECT * INTO v_issue
+  FROM public.stock_issues
+  WHERE id = p_issue_id
+    AND tenant_id = v_tenant
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'issue_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF NOT public.has_permission(v_issue.branch_id, 'inventory:write') THEN
+    RAISE EXCEPTION 'forbidden_inventory_write' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_issue.status <> 'draft' THEN
+    RAISE EXCEPTION 'issue_not_draft' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_issue.source_location_id IS NULL THEN
+    RAISE EXCEPTION 'issue_source_location_missing' USING ERRCODE = '23502';
+  END IF;
+
+  SELECT id, branch_id
+  INTO v_source_loc
+  FROM public.inventory_locations
+  WHERE id = v_issue.source_location_id
+    AND tenant_id = v_tenant
+    AND is_active = TRUE;
+
+  IF NOT FOUND OR v_source_loc.branch_id <> v_issue.branch_id THEN
+    RAISE EXCEPTION 'issue_source_location_invalid' USING ERRCODE = '23514';
+  END IF;
+
+  SELECT b.branch_kind INTO v_branch_kind
+  FROM public.branches b
+  WHERE b.id = v_issue.branch_id
+    AND b.tenant_id = v_tenant;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'issue_branch_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  v_subtype := CASE
+    WHEN v_issue.issue_type = 'consumption'
+      THEN 'sale_consumption'
+    WHEN v_issue.issue_type = 'writeoff'
+      THEN 'writeoff'
+    WHEN v_issue.issue_type = 'other'
+      THEN 'other'
+    ELSE NULL
+  END;
+
+  FOR v_item IN
+    SELECT * FROM public.stock_issue_items
+    WHERE issue_id = p_issue_id
+      AND tenant_id = v_tenant
+  LOOP
+    SELECT sl.current_quantity, sl.avg_unit_cost
+    INTO v_sl_q, v_wac
+    FROM public.stock_levels sl
+    WHERE sl.tenant_id = v_tenant
+      AND sl.branch_id = v_issue.branch_id
+      AND sl.location_id = v_issue.source_location_id
+      AND sl.ingredient_id = v_item.ingredient_id
+    FOR UPDATE;
+
+    IF NOT FOUND OR v_wac IS NULL THEN
+      RAISE EXCEPTION 'wac_not_ready_for_%', v_item.ingredient_id
+        USING ERRCODE = '22023';
+    END IF;
+
+    IF v_sl_q < v_item.quantity THEN
+      RAISE EXCEPTION 'insufficient_stock_for_%', v_item.ingredient_id
+        USING ERRCODE = '22023';
+    END IF;
+
+    UPDATE public.stock_issue_items
+    SET unit_cost = v_wac
+    WHERE id = v_item.id
+      AND tenant_id = v_tenant;
+
+    INSERT INTO public.stock_movements (
+      tenant_id, branch_id, ingredient_id, type, movement_subtype,
+      quantity_change, unit_cost, reason, created_by, issue_id, location_id
+    ) VALUES (
+      v_tenant,
+      v_issue.branch_id,
+      v_item.ingredient_id,
+      'consumption',
+      v_subtype,
+      -v_item.quantity,
+      v_wac,
+      COALESCE(v_item.reason, v_issue.notes),
+      v_uid,
+      p_issue_id,
+      v_issue.source_location_id
+    );
+  END LOOP;
+
+  UPDATE public.stock_issues
+  SET status = 'confirmed'
+  WHERE id = p_issue_id
+    AND tenant_id = v_tenant;
+
+  RETURN jsonb_build_object(
+    'ok', true,
+    'issue_id', p_issue_id,
+    'movement_subtype', v_subtype
+  );
+END;
+$$;
