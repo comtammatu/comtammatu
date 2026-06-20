@@ -146,9 +146,9 @@ export function SplitOrderSheet({
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
       <SheetContent
         side="right"
-        className="flex flex-col data-[side=right]:w-full data-[side=right]:sm:max-w-md"
+        className="data-[side=right]:w-full data-[side=right]:sm:max-w-md"
       >
-        <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
+        <SheetHeader>
           <SheetTitle>
             Tách hóa đơn{headerSubtitle ? ` · ${headerSubtitle}` : ""}
           </SheetTitle>
@@ -223,7 +223,7 @@ export function SplitOrderSheet({
           </ul>
         </ScrollArea>
 
-        <SheetFooter className="flex-col gap-2 border-t border-border/60 px-3 py-3 sm:px-4">
+        <SheetFooter>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">
               Đã chọn {totalUnitsSelected} phần

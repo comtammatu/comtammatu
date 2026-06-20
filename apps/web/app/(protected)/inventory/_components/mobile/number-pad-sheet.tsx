@@ -97,7 +97,7 @@ export function NumberPadSheet({
         className="h-auto max-h-dvh-95 gap-0 bg-background p-0 text-foreground"
         showCloseButton={false}
       >
-        <SheetHeader className="border-b p-4 pb-3">
+        <SheetHeader>
           <SheetTitle className="text-sm font-medium text-muted-foreground">
             {title}
           </SheetTitle>
@@ -130,7 +130,7 @@ export function NumberPadSheet({
             </button>
           ))}
         </div>
-        <SheetFooter className="p-3 pt-0">
+        <SheetFooter>
           <TouchButton type="button" onClick={handleConfirm} disabled={!valid}>
             {confirmLabel}
           </TouchButton>

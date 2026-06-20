@@ -292,7 +292,7 @@ export function ItemDetailDialog({
             </TabsList>
 
             {/* ─── Variants Tab ─── */}
-            <TabsContent value="variants" className="space-y-3 mt-4">
+            <TabsContent value="variants" className="space-y-3">
               {variants.map((v, idx) => (
                 <div
                   key={v.id ?? `new-${idx}`}
@@ -358,7 +358,7 @@ export function ItemDetailDialog({
             </TabsContent>
 
             {/* ─── Modifiers Tab ─── */}
-            <TabsContent value="modifiers" className="space-y-3 mt-4">
+            <TabsContent value="modifiers" className="space-y-3">
               {modifiers.map((m, idx) => (
                 <div
                   key={m.id ?? `new-${idx}`}
@@ -423,7 +423,7 @@ export function ItemDetailDialog({
             </TabsContent>
 
             {/* ─── Sides Tab ─── */}
-            <TabsContent value="sides" className="space-y-3 mt-4">
+            <TabsContent value="sides" className="space-y-3">
               {sideItems.length === 0 ? (
                 <AppEmptyState
                   compact

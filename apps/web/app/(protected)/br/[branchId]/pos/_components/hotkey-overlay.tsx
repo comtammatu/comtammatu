@@ -60,7 +60,7 @@ export function HotkeyOverlay({ open, onOpenChange }: HotkeyOverlayProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="max-h-dvh p-0">
         <div className="flex max-h-dvh flex-col overflow-hidden">
-          <SheetHeader className="border-b px-5 pt-5 pb-3 text-left">
+          <SheetHeader>
             <SheetTitle>Phím tắt</SheetTitle>
           </SheetHeader>
 

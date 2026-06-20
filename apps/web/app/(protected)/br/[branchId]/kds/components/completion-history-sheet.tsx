@@ -113,7 +113,7 @@ export function KdsCompletionHistorySheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-hidden sm:max-w-xl">
-        <SheetHeader className="p-4 pr-12">
+        <SheetHeader>
           <div className="flex min-w-0 items-start gap-2">
             <IconHistory
               data-icon="inline-start"

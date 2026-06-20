@@ -572,7 +572,7 @@ function LineEditSheet({
       >
         {edit ? (
           <>
-            <SheetHeader className="border-b p-4">
+            <SheetHeader>
               <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
                 {edit.line ? GRN_CREATE_COPY.editItem : GRN_CREATE_COPY.addItem}
               </p>
@@ -706,7 +706,7 @@ function LineEditSheet({
               </div>
             </div>
 
-            <SheetFooter className="flex flex-col gap-2 border-t p-3">
+            <SheetFooter>
               <TouchButton type="button" onClick={onSave} disabled={!valid}>
                 {edit.line ? "Cập nhật" : "Thêm vào phiếu"}
               </TouchButton>

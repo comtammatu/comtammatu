@@ -334,7 +334,7 @@ export function StockMovementClient({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="detail" className="mt-4">
+          <TabsContent value="detail">
 <DataTable
               columns={detailColumns}
               data={movementRows}
@@ -427,7 +427,7 @@ export function StockMovementClient({
             />
           </TabsContent>
 
-          <TabsContent value="branch" className="mt-4">
+          <TabsContent value="branch">
 <DataTable
               columns={branchColumns}
               data={branchRows}

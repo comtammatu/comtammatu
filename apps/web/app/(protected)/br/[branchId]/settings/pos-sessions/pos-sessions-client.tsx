@@ -867,9 +867,9 @@ function OrderDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col p-0 data-[side=right]:w-full sm:max-w-lg"
+        className="w-full p-0 data-[side=right]:w-full"
       >
-        <SheetHeader className="border-b px-4 pt-5 pb-3 text-left">
+        <SheetHeader>
           <div className="space-y-1 pr-8">
             <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {messages.settings.posSessions.orderSheetEyebrow}

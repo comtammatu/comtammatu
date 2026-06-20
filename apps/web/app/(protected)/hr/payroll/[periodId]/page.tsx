@@ -58,13 +58,13 @@ export default async function PayrollDetailPage({
               },
             ]}
           >
-            <TabsContent value="overview" className="mt-4">
+            <TabsContent value="overview">
               <PayrollDetailClient periodId={id} initialEntries={entries} />
             </TabsContent>
-            <TabsContent value="entries" className="mt-4">
+            <TabsContent value="entries">
               <PayrollDetailClient periodId={id} initialEntries={entries} />
             </TabsContent>
-            <TabsContent value="history" className="mt-4">
+            <TabsContent value="history">
               <AuditHistoryList logs={auditLogs} />
             </TabsContent>
           </AppPageTabs>

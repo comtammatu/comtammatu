@@ -504,7 +504,7 @@ export function PODetailClient({
               { value: "history", label: "Lịch sử", count: auditLogs.length },
             ]}
           >
-            <TabsContent value="overview" className="mt-4">
+            <TabsContent value="overview">
               <div className="flex flex-col gap-4">
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="rounded-md border bg-card p-4">
@@ -574,7 +574,7 @@ export function PODetailClient({
               </div>
             </TabsContent>
 
-            <TabsContent value="lines" className="mt-4">
+            <TabsContent value="lines">
               <div className="flex flex-col gap-4">
                 <div className="grid gap-6 lg:grid-cols-3">
                   <div className="lg:col-span-2">
@@ -858,7 +858,7 @@ export function PODetailClient({
               </div>
             </TabsContent>
 
-            <TabsContent value="history" className="mt-4">
+            <TabsContent value="history">
               <AuditHistoryList logs={auditLogs} />
             </TabsContent>
           </AppPageTabs>

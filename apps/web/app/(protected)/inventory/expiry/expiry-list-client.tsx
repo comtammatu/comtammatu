@@ -466,17 +466,17 @@ export function ExpiryListClient({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all" className="mt-4">
+        <TabsContent value="all">
           {renderTable(displayItems)}
         </TabsContent>
-        <TabsContent value="expired" className="mt-4">
+        <TabsContent value="expired">
           {renderTable(
             urgencyFilter
               ? displayItems.filter((a) => a.urgency === "expired")
               : expired,
           )}
         </TabsContent>
-        <TabsContent value="near" className="mt-4">
+        <TabsContent value="near">
           {renderTable(
             urgencyFilter
               ? displayItems.filter(

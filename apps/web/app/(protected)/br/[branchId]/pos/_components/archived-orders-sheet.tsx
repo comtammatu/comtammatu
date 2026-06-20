@@ -244,9 +244,9 @@ export function ArchivedOrdersSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex flex-col p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
+        className="p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
       >
-        <SheetHeader className="border-b px-5 pt-5 pb-3 text-left">
+        <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             {messages.pos.archivedOrders.sheetTitle}
             {orders.length > 0 ? (

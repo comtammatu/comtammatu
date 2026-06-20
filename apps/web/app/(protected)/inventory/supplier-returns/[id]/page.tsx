@@ -68,13 +68,13 @@ export default async function SupplierReturnDetailPage({
               { value: "history", label: "Lịch sử", count: auditLogs.length },
             ]}
           >
-            <TabsContent value="overview" className="mt-4">
+            <TabsContent value="overview">
               <SupplierReturnDetailClient header={header} lines={lines} />
             </TabsContent>
-            <TabsContent value="lines" className="mt-4">
+            <TabsContent value="lines">
               <SupplierReturnDetailClient header={header} lines={lines} />
             </TabsContent>
-            <TabsContent value="history" className="mt-4">
+            <TabsContent value="history">
               <AuditHistoryList logs={auditLogs} />
             </TabsContent>
           </AppPageTabs>

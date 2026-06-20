@@ -116,7 +116,7 @@ export function HrClient({
       </TabsList>
 
       {canViewEmployees ? (
-        <TabsContent value="employees" className="mt-4 flex flex-col gap-4">
+        <TabsContent value="employees" className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
               {copy.employeeCount(employees.length)}
@@ -152,7 +152,7 @@ export function HrClient({
         </TabsContent>
       ) : null}
 
-      <TabsContent value="attendance" className="mt-4 flex flex-col gap-4">
+      <TabsContent value="attendance" className="flex flex-col gap-4">
         <div className="flex max-w-3xl flex-col gap-1">
           <p className="font-heading text-base font-semibold">
             {copy.attendanceTitle}
@@ -166,7 +166,7 @@ export function HrClient({
       </TabsContent>
 
       {canManageEmployees ? (
-        <TabsContent value="payroll" className="mt-4 flex flex-col gap-4">
+        <TabsContent value="payroll" className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-3xl">
               <p className="font-heading text-base font-semibold">
@@ -186,7 +186,7 @@ export function HrClient({
         </TabsContent>
       ) : null}
 
-      <TabsContent value="setup" className="mt-4 flex flex-col gap-6">
+      <TabsContent value="setup" className="flex flex-col gap-6">
         <div className="flex max-w-3xl flex-col gap-1">
           <p className="font-heading text-base font-semibold">
             {copy.setupTitle}

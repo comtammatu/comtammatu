@@ -144,7 +144,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
             ]}
             defaultValue="overview"
           >
-            <TabsContent value="overview" className="mt-4">
+            <TabsContent value="overview">
               <AppSection title="Thông tin nhân viên">
                 <dl className="grid gap-3 sm:grid-cols-2">
                   <div>
@@ -199,7 +199,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
               </AppSection>
             </TabsContent>
 
-            <TabsContent value="permissions" className="mt-4">
+            <TabsContent value="permissions">
               <PermissionsClient
                 targetUserId={profile.id}
                 targetFullName={profile.full_name}
@@ -231,7 +231,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
               />
             </TabsContent>
 
-            <TabsContent value="history" className="mt-4">
+            <TabsContent value="history">
               <AppSection
                 title={`Lịch sử thay đổi (${auditList.length} mục gần nhất)`}
               >

@@ -97,7 +97,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="zones" className="mt-4 space-y-4">
+        <TabsContent value="zones" className="space-y-4">
           <AppToolbar
             actions={
               <Button
@@ -112,7 +112,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
           <ZoneTable zones={filteredZones} />
         </TabsContent>
 
-        <TabsContent value="tables" className="mt-4 space-y-4">
+        <TabsContent value="tables" className="space-y-4">
           <AppToolbar
             actions={
               <Button

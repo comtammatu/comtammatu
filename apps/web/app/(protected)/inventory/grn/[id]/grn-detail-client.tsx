@@ -392,7 +392,7 @@ export function GRNDetailClient({
               { value: "history", label: "Lịch sử", count: auditLogs.length },
             ]}
           >
-            <TabsContent value="overview" className="mt-4">
+            <TabsContent value="overview">
               <div className="space-y-6">
                 {isReview && isDraft ? (
                   <Alert>
@@ -448,7 +448,7 @@ export function GRNDetailClient({
               </div>
             </TabsContent>
 
-            <TabsContent value="lines" className="mt-4">
+            <TabsContent value="lines">
               <div className="space-y-6">
                 <div className="grid gap-6 lg:grid-cols-3">
                   <div className="lg:col-span-2">
@@ -597,7 +597,7 @@ export function GRNDetailClient({
               </div>
             </TabsContent>
 
-            <TabsContent value="history" className="mt-4">
+            <TabsContent value="history">
               <AuditHistoryList logs={auditLogs} />
             </TabsContent>
           </AppPageTabs>
@@ -719,8 +719,8 @@ function AmendOwnerDialog({
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
-      <SheetContent className="gap-0 overflow-y-auto sm:max-w-lg">
-        <SheetHeader className="border-b p-4">
+      <SheetContent className="gap-0 overflow-y-auto">
+        <SheetHeader>
           <SheetTitle>{grnCopy.amend.title}</SheetTitle>
         </SheetHeader>
         {line ? (
@@ -777,7 +777,7 @@ function AmendOwnerDialog({
               />
             </div>
 
-            <SheetFooter className="border-t p-0 pt-4">
+            <SheetFooter>
               <Button
                 type="button"
                 variant="outline"
@@ -931,8 +931,8 @@ function AddGrnLineDialog({
         if (!open) resetForm();
       }}
     >
-      <SheetContent className="gap-0 overflow-y-auto sm:max-w-lg">
-        <SheetHeader className="border-b p-4">
+      <SheetContent className="gap-0 overflow-y-auto">
+        <SheetHeader>
           <SheetTitle>{grnCopy.addDialog.title}</SheetTitle>
         </SheetHeader>
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 p-4">
@@ -1018,7 +1018,7 @@ function AddGrnLineDialog({
             </div>
           </div>
 
-          <SheetFooter className="border-t p-0 pt-4">
+          <SheetFooter>
             <Button
               type="button"
               variant="outline"

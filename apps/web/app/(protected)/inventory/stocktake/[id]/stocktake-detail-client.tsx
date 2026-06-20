@@ -272,7 +272,7 @@ export function StocktakeDetailClient({
               { value: "history", label: "Lịch sử", count: auditLogs.length },
             ]}
           >
-            <TabsContent value="overview" className="mt-4">
+            <TabsContent value="overview">
               <div className="flex flex-col gap-6">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {[
@@ -339,7 +339,7 @@ export function StocktakeDetailClient({
               </div>
             </TabsContent>
 
-            <TabsContent value="lines" className="mt-4">
+            <TabsContent value="lines">
               <div className="flex flex-col gap-6">
                 {/* Counting phase (in_progress) */}
                 {session.status === "in_progress" && (
@@ -360,7 +360,7 @@ export function StocktakeDetailClient({
               </div>
             </TabsContent>
 
-            <TabsContent value="history" className="mt-4">
+            <TabsContent value="history">
               <AuditHistoryList logs={auditLogs} />
             </TabsContent>
           </AppPageTabs>

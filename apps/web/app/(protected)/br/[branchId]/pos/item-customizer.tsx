@@ -335,7 +335,7 @@ export function ItemCustomizer({
       >
         {item && (
           <div className="flex h-full flex-col">
-            <SheetHeader className="px-4 pt-4 pb-4">
+            <SheetHeader>
               <div className="flex items-center justify-between gap-3">
                 <SheetTitle className="min-w-0 flex-1 truncate text-left">
                   {item.name}

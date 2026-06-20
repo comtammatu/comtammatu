@@ -110,9 +110,9 @@ export function OrderItemActionsSheet({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="pos-safe-bottom max-h-dvh-80 flex flex-col gap-0 px-0 sm:mx-auto sm:max-w-md"
+        className="pos-safe-bottom max-h-dvh-80 gap-0 px-0 sm:mx-auto sm:max-w-md"
       >
-        <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
+        <SheetHeader>
           <SheetTitle className="text-base">Thao tác món</SheetTitle>
           <SheetDescription className="sr-only">
             Đánh dấu đã phục vụ hoặc hủy món được chọn

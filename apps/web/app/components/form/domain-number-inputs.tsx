@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { FieldValues } from "react-hook-form";
+import { cn } from "@comtammatu/ui";
 import { FormattedNumberInput } from "./formatted-number-input";
 import { NumberField, type NumberFieldProps } from "./number-field";
 
@@ -41,11 +42,12 @@ export type QuantityInputProps = Omit<
 export const QuantityInput = React.forwardRef<
   HTMLInputElement,
   QuantityInputProps
->(function QuantityInput({ maxFractionDigits = 3, ...props }, ref) {
+>(function QuantityInput({ maxFractionDigits = 3, className, ...props }, ref) {
   return (
     <FormattedNumberInput
       {...props}
       ref={ref}
+      className={cn("text-right tabular-nums", className)}
       inputMode={maxFractionDigits > 0 ? "decimal" : "numeric"}
       maxFractionDigits={maxFractionDigits}
     />

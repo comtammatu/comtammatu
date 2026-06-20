@@ -270,7 +270,7 @@ export function MenuLimitsSheet({
         </Button>
       </SheetTrigger>
       <SheetContent className="sm:max-w-xl">
-        <SheetHeader className="border-b px-4 py-4">
+        <SheetHeader>
           <div className="flex min-w-0 items-center gap-2">
             <SheetTitle>{sheetTitle}</SheetTitle>
             {isRefreshing ? <Spinner aria-hidden /> : null}

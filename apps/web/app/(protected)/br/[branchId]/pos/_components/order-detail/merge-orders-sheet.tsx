@@ -130,9 +130,9 @@ export function MergeOrdersSheet({
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
       <SheetContent
         side="right"
-        className="flex flex-col data-[side=right]:w-full data-[side=right]:sm:max-w-md"
+        className="data-[side=right]:w-full data-[side=right]:sm:max-w-md"
       >
-        <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
+        <SheetHeader>
           <SheetTitle>
             Gộp hóa đơn{headerSubtitle ? ` · ${headerSubtitle}` : ""}
           </SheetTitle>
@@ -225,7 +225,7 @@ export function MergeOrdersSheet({
           </div>
         </ScrollArea>
 
-        <SheetFooter className="flex-col gap-2 border-t border-border/60 px-3 py-3 sm:px-4">
+        <SheetFooter>
           <div className="flex gap-2">
             <Button
               type="button"

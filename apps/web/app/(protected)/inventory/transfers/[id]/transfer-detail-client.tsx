@@ -357,7 +357,7 @@ export function TransferDetailClient({
               { value: "history", label: "Lịch sử", count: auditLogs.length },
             ]}
           >
-            <TabsContent value="overview" className="mt-4">
+            <TabsContent value="overview">
               <div className="flex flex-col gap-4">
                 <AppSection contentClassName="py-4">
                   <div className="flex justify-center">
@@ -415,7 +415,7 @@ export function TransferDetailClient({
               </div>
             </TabsContent>
 
-            <TabsContent value="lines" className="mt-4">
+            <TabsContent value="lines">
               <div className="flex flex-col gap-4">
                 <div className="grid gap-6 lg:grid-cols-3">
                   <div className="lg:col-span-2">
@@ -630,7 +630,7 @@ export function TransferDetailClient({
               </div>
             </TabsContent>
 
-            <TabsContent value="history" className="mt-4">
+            <TabsContent value="history">
               <AuditHistoryList logs={auditLogs} />
             </TabsContent>
           </AppPageTabs>

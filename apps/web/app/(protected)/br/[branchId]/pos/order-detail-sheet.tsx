@@ -1118,9 +1118,9 @@ export function OrderDetailSheet({
         <SheetContent
           side="right"
           showCloseButton={false}
-          className="flex flex-col overflow-hidden data-[side=right]:w-full data-[side=right]:max-w-full data-[side=right]:sm:max-w-md"
+          className="overflow-hidden data-[side=right]:w-full data-[side=right]:max-w-full data-[side=right]:sm:max-w-md"
         >
-          <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
+          <SheetHeader>
             <div className="flex items-center justify-between gap-3">
               <SheetTitle className="flex min-w-0 items-center gap-2 text-base">
                 {orderContextLabel && <span>{orderContextLabel}</span>}

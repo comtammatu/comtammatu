@@ -151,9 +151,9 @@ export function CloseSessionSheet({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col p-0 data-[side=right]:w-full sm:max-w-lg"
+        className="w-full p-0 data-[side=right]:w-full"
       >
-        <SheetHeader className="border-b px-3 pt-5 pb-3 text-left sm:px-5">
+        <SheetHeader>
           <SheetTitle>
             Đóng ca · {step === "count" ? "Đếm tiền mặt" : "Đối soát"}
           </SheetTitle>

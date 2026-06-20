@@ -392,7 +392,7 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending" className="mt-4">
+        <TabsContent value="pending">
           {pendingRows.length === 0 && !isPending ? (
             <AppEmptyState
               title={copy.emptyPendingTitle}
@@ -412,7 +412,7 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
           )}
         </TabsContent>
 
-        <TabsContent value="history" className="mt-4">
+        <TabsContent value="history">
           {historyRows.length === 0 && !isPending ? (
             <AppEmptyState
               title={copy.emptyHistoryTitle}

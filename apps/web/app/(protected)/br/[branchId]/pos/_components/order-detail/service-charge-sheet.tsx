@@ -93,9 +93,9 @@ export function ServiceChargeSheet({
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && handleClose()}>
       <SheetContent
         side="right"
-        className="flex flex-col data-[side=right]:w-full data-[side=right]:sm:max-w-md"
+        className="data-[side=right]:w-full data-[side=right]:sm:max-w-md"
       >
-        <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
+        <SheetHeader>
           <SheetTitle>Phụ phí</SheetTitle>
         </SheetHeader>
 
@@ -164,7 +164,7 @@ export function ServiceChargeSheet({
           </div>
         </div>
 
-        <SheetFooter className="flex-col gap-2 border-t border-border/60 px-3 py-3 sm:flex-row sm:justify-between sm:px-4">
+        <SheetFooter className="sm:flex-row sm:justify-between">
           {hasExistingCharge ? (
             <Button
               type="button"
