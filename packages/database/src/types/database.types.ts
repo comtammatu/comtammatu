@@ -9504,6 +9504,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      upsert_payroll_calculation: {
+        Args: { p_entries: Json; p_period_id: number }
+        Returns: Json
+      }
       upsert_printer_with_routes: {
         Args: {
           p_branch_id?: number
