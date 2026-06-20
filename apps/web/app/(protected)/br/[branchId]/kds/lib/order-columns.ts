@@ -28,13 +28,13 @@ export const KDS_ORDER_COLUMN_DEFINITIONS = [
     id: "takeaway",
     title: ORDER_TYPE_LABELS_VI.takeaway,
     emptyTitle: "Chưa có đơn mang về",
-    widthClass: "xl:col-span-3",
+    widthClass: "xl:col-span-4",
   },
   {
     id: "add_on",
     title: "Món thêm",
     emptyTitle: "Chưa có món thêm",
-    widthClass: "xl:col-span-3",
+    widthClass: "xl:col-span-2",
   },
 ] as const satisfies readonly KdsOrderColumnDefinition[];
 

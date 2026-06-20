@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import type { StaffRole } from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
@@ -12,6 +13,13 @@ import {
 import { withActionPositional } from "@/_lib/with-action";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
+// Opening/closing a shift is an owner-capable operation: the DB already
+// authorizes owner (owner short-circuit in `has_permission` + owner holds
+// `pos:open_cashbox`/`pos:close_shift` tenant-wide), but `MODULE_ACL.pos`
+// omits owner from the operational POS roster. Widen the role gate for the
+// two shift actions only so the role check in `getAuthContext` does not
+// reject owner before the permission probe runs.
+const POS_SHIFT_ROLES: readonly StaffRole[] = [...POS_ROLES, "owner"];
 const MENU_LIMIT_ROLES = MODULE_ACL.branch_menu_limits.allowedRoles;
 
 const branchIdSchema = z.coerce
@@ -301,7 +309,7 @@ export const openPosSession = withActionPositional(
       terminalId?: number,
     ) => ({ branchId, openingCash, terminalId }),
     schema: openPosSessionSchema,
-    roles: POS_ROLES,
+    roles: POS_SHIFT_ROLES,
     permission: PERMISSION_KEYS.POS_OPEN_CASHBOX,
     permissionBranchId: (data) => data.branchId,
     forbiddenError: "Không có quyền mở ca",
@@ -310,7 +318,10 @@ export const openPosSession = withActionPositional(
     { branchId, openingCash, terminalId },
     { supabase, claims, user },
   ): Promise<ActionResult<{ session_id: number }>> => {
-    if (claims.branch_id !== branchId) {
+    // A tenant-wide owner (claims.branch_id === null) is authorized on every
+    // branch — skip the branch-mismatch check for that case, mirroring
+    // `closePosSession`. Branch-scoped roles still must match their branch.
+    if (claims.branch_id !== null && claims.branch_id !== branchId) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
@@ -379,7 +390,7 @@ export const closePosSession = withActionPositional(
       note,
     }),
     schema: closeSessionSchema,
-    roles: POS_ROLES,
+    roles: POS_SHIFT_ROLES,
     permission: PERMISSION_KEYS.POS_CLOSE_SHIFT,
   },
   async ({ sessionId, closingCash, note }, ctx): Promise<ActionResult> => {

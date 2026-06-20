@@ -98,7 +98,7 @@ const OFFICE_MODULE_CHROME: Record<OfficeModuleId, ModuleChrome> = {
     subLabel: "Chuyên trách",
     mainLabel: MODULE_LABELS_VI.menu,
     defaultPageTitle: MODULE_LABELS_VI.menu,
-    crumbLabel: "Catalog · Thực đơn",
+    crumbLabel: MODULE_LABELS_VI.menu,
     description:
       "Nhập danh mục, món ăn, biến thể và topping cho toàn chuỗi tại cùng một nơi.",
   },

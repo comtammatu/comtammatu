@@ -5,13 +5,20 @@ import { resolve } from "node:path";
 // inline <script>. Nonce-based CSP needs a middleware refactor; until that
 // lands we accept 'unsafe-inline' on script/style. Everything else is tightly
 // scoped — Supabase REST/storage/realtime + Upstash + self.
+// Dev-only: allow the local Supabase stack (supabase start → 127.0.0.1:54321)
+// so the browser can reach REST + realtime against a local DB. Production
+// NODE_ENV keeps the original byte-identical policy.
+const localSupabase =
+  process.env.NODE_ENV === "production"
+    ? ""
+    : " http://127.0.0.1:54321 ws://127.0.0.1:54321";
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.supabase.co",
+  `img-src 'self' data: blob: https://*.supabase.co${localSupabase}`,
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.upstash.io",
+  `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.upstash.io${localSupabase}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
