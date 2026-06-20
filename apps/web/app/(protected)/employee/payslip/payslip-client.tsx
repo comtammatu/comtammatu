@@ -62,7 +62,7 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
                 {
                   label: "Thực lĩnh",
                   value: (
-                    <span className="font-mono text-base font-semibold text-primary">
+                    <span className="font-mono tabular-nums text-right text-base font-semibold text-primary">
                       {fmt(Number(entry.net_salary))}
                     </span>
                   ),

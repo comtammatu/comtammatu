@@ -208,7 +208,7 @@ function CartPaneComponent({
         {!shouldShowOrderTypeSelector && (
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="font-heading truncate text-base font-semibold tracking-tight text-foreground sm:text-xl">
+              <h2 className="font-heading text-base font-semibold tracking-tight text-foreground sm:text-xl">
                 {messages.pos.desktop.pendingNewTitle}
               </h2>
               <Badge variant="outline" className="mt-1 max-w-full truncate">
@@ -281,7 +281,7 @@ function CartPaneComponent({
             type="single"
             value={cart.orderType}
             size="touch"
-            className="grid w-full grid-cols-2 overflow-hidden rounded-none bg-muted/60"
+            className="grid w-full grid-cols-2 overflow-hidden bg-muted/60"
             aria-label={messages.pos.desktop.serviceModeAria}
             onValueChange={(value) => {
               if (
@@ -294,7 +294,7 @@ function CartPaneComponent({
           >
             <ToggleGroupItem
               value="dine_in"
-              className="h-full min-w-0 justify-center gap-2 !rounded-none border-r border-border px-0 text-base font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+              className="h-full min-w-0 justify-center gap-2 border-r border-border px-0 text-base font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
               aria-keyshortcuts="D"
               disabled={modeLocked && cart.orderType !== "dine_in"}
             >
@@ -306,7 +306,7 @@ function CartPaneComponent({
             </ToggleGroupItem>
             <ToggleGroupItem
               value="takeaway"
-              className="h-full min-w-0 justify-center gap-2 !rounded-none px-0 text-base font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+              className="h-full min-w-0 justify-center gap-2 px-0 text-base font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
               aria-keyshortcuts="T"
               disabled={modeLocked && cart.orderType !== "takeaway"}
             >

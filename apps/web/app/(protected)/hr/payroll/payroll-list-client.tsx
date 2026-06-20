@@ -90,14 +90,14 @@ export function PayrollListClient({
     {
       key: "approved_at",
       header: copy.approvedAt,
-      className: "text-sm text-muted-foreground",
+      className: "font-mono tabular-nums text-sm text-muted-foreground",
       render: (period) =>
         period.approved_at ? formatVNDate(period.approved_at) : "—",
     },
     {
       key: "paid_at",
       header: copy.paidAt,
-      className: "text-sm text-muted-foreground",
+      className: "font-mono tabular-nums text-sm text-muted-foreground",
       render: (period) => (period.paid_at ? formatVNDate(period.paid_at) : "—"),
     },
     {

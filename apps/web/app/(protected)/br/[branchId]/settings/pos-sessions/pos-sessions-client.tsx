@@ -676,31 +676,29 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
       {top_items.length > 0 ? (
           <div>
             <SectionLabel>{messages.settings.posSessions.topItems}</SectionLabel>
-            <ScrollArea className="max-h-72">
-              <DataTable
-                columns={topItemColumns}
-                data={top_items}
-                getRowKey={(item) => `${item.source}-${item.name}`}
-                mobileCardRender={(item) => (
-                  <Item variant="outline">
-                    <ItemContent>
-                      <ItemTitle>{item.name}</ItemTitle>
-                      <ItemDescription>
-                        {ITEM_SOURCE_LABEL[item.source]} · {item.qty}
-                      </ItemDescription>
-                    </ItemContent>
-                    <ItemFooter>
-                      <Badge variant="outline">
-                        {ITEM_SOURCE_LABEL[item.source]}
-                      </Badge>
-                      <span className="font-mono text-sm font-semibold tabular-nums">
-                        {formatVND(item.revenue)}
-                      </span>
-                    </ItemFooter>
-                  </Item>
-                )}
-              />
-            </ScrollArea>
+            <DataTable
+              columns={topItemColumns}
+              data={top_items}
+              getRowKey={(item) => `${item.source}-${item.name}`}
+              mobileCardRender={(item) => (
+                <Item variant="outline">
+                  <ItemContent>
+                    <ItemTitle>{item.name}</ItemTitle>
+                    <ItemDescription>
+                      {ITEM_SOURCE_LABEL[item.source]} · {item.qty}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemFooter>
+                    <Badge variant="outline">
+                      {ITEM_SOURCE_LABEL[item.source]}
+                    </Badge>
+                    <span className="font-mono text-sm font-semibold tabular-nums">
+                      {formatVND(item.revenue)}
+                    </span>
+                  </ItemFooter>
+                </Item>
+              )}
+            />
           </div>
       ) : (
         <NoteCallout label={messages.settings.posSessions.topItemsEmptyTitle}>

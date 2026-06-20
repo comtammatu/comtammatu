@@ -247,7 +247,7 @@ export function StockMovementClient({
     <div className="flex flex-col gap-4">
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3">
-        <div className="w-full space-y-1.5 sm:w-44 sm:flex-none">
+        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="startDate">{FORM_VI.fromDate}</Label>
           <Input
             id="startDate"
@@ -257,7 +257,7 @@ export function StockMovementClient({
             className="w-full sm:w-40"
           />
         </div>
-        <div className="w-full space-y-1.5 sm:w-44 sm:flex-none">
+        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="endDate">{FORM_VI.toDate}</Label>
           <Input
             id="endDate"
@@ -268,7 +268,7 @@ export function StockMovementClient({
           />
         </div>
         {!userBranchId && (
-          <div className="w-full space-y-1.5 sm:w-48 sm:flex-none">
+          <div className="flex w-full flex-col gap-1.5 sm:w-48 sm:flex-none">
             <Label>{BRANCH_VI.long}</Label>
             <Select value={branchId} onValueChange={setBranchId}>
               <SelectTrigger className="w-full sm:w-44">

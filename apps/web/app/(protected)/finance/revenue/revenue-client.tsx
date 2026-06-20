@@ -891,7 +891,7 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
           <p className="text-xs text-muted-foreground">
             {cashCopy.closedSessions}
           </p>
-          <p className="text-lg font-semibold tabular-nums">
+          <p className="text-lg font-semibold font-mono tabular-nums">
             {variance.session_count.toLocaleString("vi-VN")}
           </p>
         </div>
@@ -900,10 +900,10 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
           <p
             className={
               tone === "good"
-                ? "text-lg font-semibold tabular-nums text-success"
+                ? "text-lg font-semibold font-mono tabular-nums text-success"
                 : tone === "bad"
-                  ? "text-lg font-semibold tabular-nums text-destructive"
-                  : "text-lg font-semibold tabular-nums text-warning"
+                  ? "text-lg font-semibold font-mono tabular-nums text-destructive"
+                  : "text-lg font-semibold font-mono tabular-nums text-warning"
             }
           >
             {variance.total_variance >= 0 ? "+" : ""}
@@ -914,7 +914,7 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
           <p className="text-xs text-muted-foreground">
             {cashCopy.short(variance.short_count)}
           </p>
-          <p className="text-lg font-semibold tabular-nums text-destructive">
+          <p className="text-lg font-semibold font-mono tabular-nums text-destructive">
             {formatVND(variance.short_total)}
           </p>
         </div>
@@ -922,7 +922,7 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
           <p className="text-xs text-muted-foreground">
             {cashCopy.over(variance.over_count)}
           </p>
-          <p className="text-lg font-semibold tabular-nums text-success">
+          <p className="text-lg font-semibold font-mono tabular-nums text-success">
             +{formatVND(variance.over_total)}
           </p>
         </div>

@@ -317,6 +317,7 @@ export default async function EmployeePage() {
           label: copy.tasksShort,
           value: progressHint,
           muted: state.checklist.total === 0,
+          mono: true,
         },
       ];
 

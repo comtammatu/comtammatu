@@ -737,7 +737,7 @@ function RunnerOrderCell({
     >
       <div
         className={cn(
-          "min-w-0 whitespace-normal break-words font-semibold text-current text-runner-board",
+          "min-w-0 whitespace-normal break-words font-semibold text-runner-board",
           mono && "font-mono tabular-nums",
         )}
       >

@@ -61,7 +61,7 @@ export default async function MenuPage() {
 
       <AppSection>
           <UrlTabs defaultValue="items">
-            <TabsList className="h-11 rounded-lg bg-muted/60">
+            <TabsList className="rounded-lg bg-muted/60">
               <TabsTrigger value="items" className="px-3">
                 Món ăn
                 <Badge variant="secondary" className="ml-1.5 tabular-nums">

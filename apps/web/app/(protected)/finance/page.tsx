@@ -8,6 +8,7 @@ import {
   Wallet as IconWallet,
 } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
+import { getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { cn } from "@comtammatu/ui/lib/utils";
 import {
@@ -257,9 +258,7 @@ export default async function FinancePage({
   ]);
   const cashDeltaAfterPaidExpenses =
     cockpit.kpis.totalCollected - cash.expensesPaidPeriod;
-  const todayBusinessDate = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Ho_Chi_Minh",
-  }).format(new Date());
+  const todayBusinessDate = getVNDateString();
 
   return (
     <AppPage width="wide" density="compact">

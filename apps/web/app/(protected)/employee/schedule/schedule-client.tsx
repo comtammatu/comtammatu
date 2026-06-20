@@ -641,16 +641,18 @@ export function ScheduleClient({
 
       <EmployeeStatusStrip
         items={[
-          { label: copy.summaryWorkdays, value: String(workdaysCount) },
+          { label: copy.summaryWorkdays, value: String(workdaysCount), mono: true },
           {
             label: copy.summaryOpenShifts,
             value: String(openShiftsCount),
             muted: openShiftsCount === 0,
+            mono: true,
           },
           {
             label: copy.summaryLeaveDays,
             value: String(leaveDaysCount),
             muted: leaveDaysCount === 0,
+            mono: true,
           },
         ]}
       />

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { VN_TIME_ZONE } from "@comtammatu/shared/time";
+import { getVNDateParts } from "@comtammatu/shared/time";
 
 // ─── URL param schema — single source of truth ──────────────────
 //
@@ -147,21 +147,10 @@ export function serializeFinanceParams(p: FinanceParams): URLSearchParams {
 }
 
 // ─── Period preset library — Asia/Ho_Chi_Minh ───────────────────
-//
-// Same TZ-shifting trick used by /finance/page.tsx:38: format the date
-// in VN locale, parse back the parts. No date-fns-tz dependency added.
 
 function vnDateParts(date: Date): { y: number; m: number; d: number } {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: VN_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const y = Number(parts.find((p) => p.type === "year")?.value ?? "1970");
-  const m = Number(parts.find((p) => p.type === "month")?.value ?? "01");
-  const d = Number(parts.find((p) => p.type === "day")?.value ?? "01");
-  return { y, m, d };
+  const { year, month, day } = getVNDateParts(date);
+  return { y: year, m: month, d: day };
 }
 
 function fmtVN(parts: { y: number; m: number; d: number }): string {

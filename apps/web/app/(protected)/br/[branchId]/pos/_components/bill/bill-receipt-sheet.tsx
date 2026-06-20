@@ -32,7 +32,10 @@ import {
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
 import { Input } from "@comtammatu/ui/components/input";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import {
+  InputGroup,
+  InputGroupAddon,
+} from "@comtammatu/ui/components/input-group";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -227,11 +230,21 @@ function PaymentLoadingFixture() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2">
-        <Button type="button" variant="default" className="h-20 flex-col gap-2">
+        <Button
+          type="button"
+          variant="default"
+          size="touch-lg"
+          className="flex-col gap-2"
+        >
           <IconCash data-icon="inline-start" />
           {PAYMENT_LOADING_TEXT.cash}
         </Button>
-        <Button type="button" variant="outline" className="h-20 flex-col gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="touch-lg"
+          className="flex-col gap-2"
+        >
           <IconQrcode data-icon="inline-start" />
           {PAYMENT_LOADING_TEXT.qr}
         </Button>
@@ -242,20 +255,19 @@ function PaymentLoadingFixture() {
             <span className="text-sm text-muted-foreground">
               {PAYMENT_LOADING_TEXT.total}
             </span>
-            <span className="text-lg font-bold tabular-nums">
+            <span className="text-lg font-mono font-bold tabular-nums">
               {formatVND(165000)}
             </span>
           </div>
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
-              {PAYMENT_LOADING_TEXT.received}
-            </span>
+          <InputGroup className="h-10">
+            <InputGroupAddon>{PAYMENT_LOADING_TEXT.received}</InputGroupAddon>
             <Input
               readOnly
               value="165000"
-              className="h-12 pl-28 pr-3 text-right text-lg font-semibold tabular-nums"
+              data-slot="input-group-control"
+              className="flex-1 rounded-none border-0 bg-transparent text-right text-lg font-mono font-semibold tabular-nums shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:bg-transparent"
             />
-          </div>
+          </InputGroup>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {[165000, 170000, 200000, 500000].map((amount) => (
               <Button key={amount} type="button" variant="outline">
@@ -356,11 +368,7 @@ const RECEIPT_LOADING_ORDER: OrderData = {
 };
 
 function ReceiptLoadingFixture() {
-  return (
-    <ScrollArea className="max-h-96">
-      <BillReceiptSummary order={RECEIPT_LOADING_ORDER} />
-    </ScrollArea>
-  );
+  return <BillReceiptSummary order={RECEIPT_LOADING_ORDER} />;
 }
 
 function RemotePaymentDetails({
@@ -1085,9 +1093,7 @@ export function BillReceipt({
           <p className="text-base text-destructive">{error}</p>
         ) : isReadOnlyOrder && order ? (
           <div className="flex flex-col gap-3">
-            <ScrollArea className="max-h-96">
-              <BillReceiptSummary order={order} />
-            </ScrollArea>
+            <BillReceiptSummary order={order} />
             <DialogFooter>
               <Button
                 type="button"
@@ -1125,7 +1131,8 @@ export function BillReceipt({
                       variant={
                         selectedMethod === method ? "default" : "outline"
                       }
-                      className="h-20 flex-col gap-2"
+                      size="touch-lg"
+                      className="flex-col gap-2"
                       onClick={() => handleSelectMethod(method)}
                       disabled={actionPending || methodPending}
                     >
@@ -1163,21 +1170,22 @@ export function BillReceipt({
                       />
                     )}
 
-                    <div className="relative">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                    <InputGroup className="h-10">
+                      <InputGroupAddon>
                         {messages.pos.payment.cashReceived}
-                      </span>
+                      </InputGroupAddon>
                       <FormattedNumberInput
                         id="cash-received"
                         data-testid="bill-cash-received"
+                        data-slot="input-group-control"
                         maxFractionDigits={0}
                         value={cashInput}
                         onValueChange={setCashInput}
                         onFocus={(event) => event.currentTarget.select()}
                         disabled={actionPending}
-                        className="h-12 pl-28 pr-3 text-right text-lg font-semibold tabular-nums"
+                        className="flex-1 rounded-none border-0 bg-transparent text-right text-lg font-mono font-semibold tabular-nums shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:bg-transparent"
                       />
-                    </div>
+                    </InputGroup>
 
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {cashSuggestions.map((amount) => (
@@ -1197,7 +1205,7 @@ export function BillReceipt({
                       <span className="text-sm font-medium">
                         {messages.pos.payment.cashChange}
                       </span>
-                      <span className="text-lg font-bold tabular-nums">
+                      <span className="text-lg font-mono font-bold tabular-nums">
                         {cashReceived < totalAmount
                           ? messages.pos.payment.cashShort(
                               formatVND(totalAmount - cashReceived),

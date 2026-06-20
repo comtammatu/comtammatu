@@ -4,7 +4,7 @@ import {
   TrendingUp as IconTrendingUp,
 } from "lucide-react";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
   SurfaceLinkCard,
@@ -49,15 +49,10 @@ export default function ReportsPage() {
         description={copy.description}
       />
 
-      <section className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <h2 className="font-heading text-base font-semibold tracking-tight">
-            {copy.aggregateTitle}
-          </h2>
-          <p className="text-sm leading-6 text-muted-foreground">
-            {copy.aggregateDescription}
-          </p>
-        </div>
+      <AppSection
+        title={copy.aggregateTitle}
+        description={copy.aggregateDescription}
+      >
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {executiveCards.map((card) => (
             <SurfaceLinkCard
@@ -67,7 +62,7 @@ export default function ReportsPage() {
             />
           ))}
         </div>
-      </section>
+      </AppSection>
     </AppPage>
   );
 }

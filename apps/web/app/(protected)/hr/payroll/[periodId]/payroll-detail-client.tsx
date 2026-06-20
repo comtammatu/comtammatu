@@ -25,6 +25,7 @@ import {
 import type { PayrollEntryRow } from "./page";
 import { useState } from "react";
 import { ERRORS_VI, STAFF_VI } from "@comtammatu/shared/messages";
+import { formatVND } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import {
@@ -33,8 +34,6 @@ import {
   type DataTableFooterRow,
 } from "@/components/data-table/data-table";
 
-const fmt = (n: number) =>
-  n.toLocaleString("vi-VN", { maximumFractionDigits: 0 });
 const copy = messages.hr.payroll.detail;
 
 interface PayrollDetailClientProps {
@@ -122,48 +121,48 @@ export function PayrollDetailClient({
     {
       key: "working_days",
       header: copy.table.workingDays,
-      className: "text-right font-mono text-sm",
+      className: "text-right font-mono tabular-nums text-sm",
       render: (entry) =>
         `${Number(entry.working_days)}/${Number(entry.standard_days)}`,
     },
     {
       key: "gross",
       header: copy.table.gross,
-      className: "text-right font-mono",
-      render: (entry) => fmt(Number(entry.gross_total)),
+      className: "text-right font-mono tabular-nums",
+      render: (entry) => formatVND(Number(entry.gross_total)),
     },
     {
       key: "employee_insurance",
       header: copy.table.employeeInsurance,
-      className: "text-right font-mono text-sm",
-      render: (entry) => fmt(Number(entry.total_insurance_employee)),
+      className: "text-right font-mono tabular-nums text-sm",
+      render: (entry) => formatVND(Number(entry.total_insurance_employee)),
     },
     {
       key: "deductions",
       header: copy.table.deductions,
-      className: "text-right font-mono text-sm",
+      className: "text-right font-mono tabular-nums text-sm",
       render: (entry) =>
-        fmt(
+        formatVND(
           Number(entry.personal_deduction) + Number(entry.dependent_deduction),
         ),
     },
     {
       key: "taxable_income",
       header: copy.table.taxableIncome,
-      className: "text-right font-mono text-sm",
-      render: (entry) => fmt(Number(entry.taxable_income)),
+      className: "text-right font-mono tabular-nums text-sm",
+      render: (entry) => formatVND(Number(entry.taxable_income)),
     },
     {
       key: "pit",
       header: copy.table.pit,
-      className: "text-right font-mono text-sm",
-      render: (entry) => fmt(Number(entry.pit_tax)),
+      className: "text-right font-mono tabular-nums text-sm",
+      render: (entry) => formatVND(Number(entry.pit_tax)),
     },
     {
       key: "net",
       header: copy.table.net,
-      className: "text-right font-mono font-bold",
-      render: (entry) => fmt(Number(entry.net_salary)),
+      className: "text-right font-mono tabular-nums font-bold",
+      render: (entry) => formatVND(Number(entry.net_salary)),
     },
   ];
   const footerRows: DataTableFooterRow[] =
@@ -177,25 +176,25 @@ export function PayrollDetailClient({
               { key: "working_days", content: "" },
               {
                 key: "gross",
-                content: fmt(totalGross),
-                className: "text-right font-mono",
+                content: formatVND(totalGross),
+                className: "text-right font-mono tabular-nums",
               },
               {
                 key: "employee_insurance",
-                content: fmt(totalInsEmp),
-                className: "text-right font-mono",
+                content: formatVND(totalInsEmp),
+                className: "text-right font-mono tabular-nums",
               },
               { key: "deductions", content: "" },
               { key: "taxable_income", content: "" },
               {
                 key: "pit",
-                content: fmt(totalPit),
-                className: "text-right font-mono",
+                content: formatVND(totalPit),
+                className: "text-right font-mono tabular-nums",
               },
               {
                 key: "net",
-                content: fmt(totalNet),
-                className: "text-right font-mono",
+                content: formatVND(totalNet),
+                className: "text-right font-mono tabular-nums",
               },
             ],
           },
@@ -234,12 +233,12 @@ export function PayrollDetailClient({
       {/* Summary */}
       {entries.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
-          <KpiCard label={copy.summary.gross} value={fmt(totalGross)} />
+          <KpiCard label={copy.summary.gross} value={formatVND(totalGross)} />
           <KpiCard label={copy.summary.headcount} value={entries.length} />
-          <KpiCard label={copy.summary.pit} value={fmt(totalPit)} />
+          <KpiCard label={copy.summary.pit} value={formatVND(totalPit)} />
           <KpiCard
             label={copy.summary.net}
-            value={fmt(totalNet)}
+            value={formatVND(totalNet)}
             tone="primary"
           />
         </div>
@@ -259,13 +258,13 @@ export function PayrollDetailClient({
                   {copy.table.total(entries.length)}
                 </ItemTitle>
                 <ItemDescription className="line-clamp-none text-sm leading-6">
-                  {copy.summary.gross}: {fmt(totalGross)} · {copy.summary.pit}:{" "}
-                  {fmt(totalPit)}
+                  {copy.summary.gross}: {formatVND(totalGross)} · {copy.summary.pit}:{" "}
+                  {formatVND(totalPit)}
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
-                <div className="text-right font-mono font-bold">
-                  {fmt(totalNet)}
+                <div className="text-right font-mono tabular-nums font-bold">
+                  {formatVND(totalNet)}
                 </div>
               </ItemActions>
             </Item>
@@ -284,18 +283,18 @@ export function PayrollDetailClient({
               </ItemDescription>
               <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                 <span>{copy.table.gross}</span>
-                <span className="text-right font-mono">
-                  {fmt(Number(entry.gross_total))}
+                <span className="text-right font-mono tabular-nums">
+                  {formatVND(Number(entry.gross_total))}
                 </span>
                 <span>{copy.table.pit}</span>
-                <span className="text-right font-mono">
-                  {fmt(Number(entry.pit_tax))}
+                <span className="text-right font-mono tabular-nums">
+                  {formatVND(Number(entry.pit_tax))}
                 </span>
               </div>
             </ItemContent>
             <ItemActions>
-              <div className="text-right font-mono font-bold">
-                {fmt(Number(entry.net_salary))}
+              <div className="text-right font-mono tabular-nums font-bold">
+                {formatVND(Number(entry.net_salary))}
               </div>
             </ItemActions>
           </Item>
