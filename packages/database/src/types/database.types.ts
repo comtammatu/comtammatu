@@ -9551,6 +9551,17 @@ export type Database = {
         }
         Returns: number
       }
+      upsert_station_with_categories: {
+        Args: {
+          p_branch_id?: number
+          p_category_ids?: number[]
+          p_is_active?: boolean
+          p_name?: string
+          p_position?: number
+          p_station_id?: number
+        }
+        Returns: number
+      }
       verify_branch_override_code: {
         Args: { p_branch_id: number; p_code: string }
         Returns: boolean
