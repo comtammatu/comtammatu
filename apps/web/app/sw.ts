@@ -25,6 +25,24 @@ declare const self: ServiceWorkerGlobalScope;
 // MUST hit the network. A cached payment POST is the worst-possible failure
 // (silent double-charge). See regressions: POS-PAYMENT-REUSE-UNIQUE-SLOT,
 // HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN.
+// Protected route prefixes. Their SSR'd HTML embeds user identity, so the
+// service worker must never persist a navigation response for them.
+const AUTHED_NAV_PREFIXES = [
+  "/admin",
+  "/br",
+  "/employee",
+  "/inventory",
+  "/finance",
+  "/hr",
+  "/menu",
+  "/orders",
+  "/notifications",
+  "/branch-settings",
+  "/payment",
+];
+const isAuthedPath = (pathname: string) =>
+  AUTHED_NAV_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
 const runtimeCaching: RuntimeCaching[] = [
   // 1. Mutations: never cache.
   {
@@ -71,7 +89,14 @@ const runtimeCaching: RuntimeCaching[] = [
         url.pathname.endsWith(".woff")),
     handler: new StaleWhileRevalidate({ cacheName: "static-assets" }),
   },
-  // 7. HTML navigation: network-first with short timeout, cached fallback.
+  // 7. Authed navigations: never cache. Protected shells embed user identity in
+  //    the SSR'd HTML; a cached page leaks across users on a shared device/PWA.
+  {
+    matcher: ({ request, url }) =>
+      request.mode === "navigate" && isAuthedPath(url.pathname),
+    handler: new NetworkOnly(),
+  },
+  // 8. Public HTML navigation: network-first with short timeout, cached fallback.
   {
     matcher: ({ request }) => request.mode === "navigate",
     handler: new NetworkFirst({
@@ -164,6 +189,12 @@ self.addEventListener("notificationclick", (event: NotificationEvent) => {
       await self.clients.openWindow(targetUrl.href);
     })(),
   );
+});
+
+// Purge any identity-bearing navigation HTML cached by a prior SW version
+// before rule #7 excluded authed routes.
+self.addEventListener("activate", (event) => {
+  event.waitUntil(caches.delete("pages"));
 });
 
 serwist.addEventListeners();

@@ -91,11 +91,15 @@ export async function POST(request: Request) {
     now.getTime() - 24 * 60 * 60 * 1000,
   ).toISOString();
 
+  // Immediate Web Push carries only `critical` (owner-locked policy: warning is
+  // daily-digest-only, info is in-app-only). Audience per severity is enforced
+  // in canReceiveNotification.
   const { data: notifications, error: notificationsError } = await supabase
     .from("notifications")
     .select(
       "id, tenant_id, target_branch_id, target_roles, kind, severity, title, body, action_url, created_at, expires_at",
     )
+    .eq("severity", "critical")
     .gte("created_at", lowerBound)
     .order("created_at", { ascending: true })
     .limit(200);
