@@ -293,15 +293,19 @@ export async function cancelStockIssue(issueId: number): Promise<ActionResult> {
 
   const { supabase, claims } = ctx;
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("stock_issues")
     .update({ status: "cancelled" })
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id)
-    .eq("status", "draft");
+    .eq("status", "draft")
+    .select("id");
 
   if (error) {
     return { success: false, error: "Không thể hủy phiếu xuất." };
+  }
+  if (!data || data.length === 0) {
+    return { success: false, error: "Không tìm thấy phiếu xuất nháp để hủy." };
   }
   return { success: true };
 }

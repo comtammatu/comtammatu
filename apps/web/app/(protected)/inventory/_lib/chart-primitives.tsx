@@ -84,10 +84,11 @@ export function TrendSparkline({
   color?: InventorySemanticColor | string;
   target?: number;
 }) {
+  const gradientId = useId().replace(/:/g, "");
+
   if (data.length < 2) return null;
 
   const strokeColor = resolveInventoryColorValue(color);
-  const gradientId = useId().replace(/:/g, "");
   const min = Math.min(...data) * 0.9;
   const max = Math.max(...data) * 1.1;
   const range = max - min || 1;
