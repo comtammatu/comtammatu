@@ -199,8 +199,8 @@ export function KdsCompletionHistorySheet({
                 </div>
 
                 <ul className="mt-2 flex flex-col gap-1 text-sm leading-5">
-                  {getItemPreview(entry).map((item) => (
-                    <li key={item} className="min-w-0 break-words">
+                  {getItemPreview(entry).map((item, index) => (
+                    <li key={index} className="min-w-0 break-words">
                       {item}
                     </li>
                   ))}
