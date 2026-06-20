@@ -11,8 +11,8 @@ import { Switch } from "@comtammatu/ui/components/switch";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { AppEmptyState } from "@/components/surface";
-import { FormDialog, TextField, valuesToFormData } from "@/components/form";
-import { createStation, saveStationCategories, updateStation } from "./actions";
+import { FormDialog, TextField } from "@/components/form";
+import { upsertStationWithCategories } from "./actions";
 import type { CategoryOption, StationRow } from "./stations-client";
 
 const stationSchema = z.object({
@@ -62,37 +62,14 @@ export function StationFormDialog({
   const defaultValues = useMemo(() => toFormValues(station), [station]);
 
   async function handleSubmit(values: StationFormValues) {
-    const payload: Record<string, unknown> = {
+    return upsertStationWithCategories({
+      id: isEdit && station ? station.id : undefined,
+      branchId,
       name: values.name,
-      position: values.position || "0",
-    };
-    if (isEdit) {
-      payload.is_active = values.is_active;
-    }
-    const fd = valuesToFormData(payload);
-    fd.set("branch_id", String(branchId));
-    if (isEdit && station) {
-      fd.set("id", String(station.id));
-    }
-
-    const mainResult = isEdit
-      ? await updateStation(null, fd)
-      : await createStation(null, fd);
-
-    if (!mainResult.success) return mainResult;
-
-    const stationId = isEdit
-      ? station?.id
-      : (mainResult.data as { id: number } | undefined)?.id;
-
-    if (!stationId) return mainResult;
-
-    const catResult = await saveStationCategories({
-      stationId,
+      position: values.position ? Number(values.position) : 0,
+      isActive: isEdit ? values.is_active : true,
       categoryIds: values.category_ids,
     });
-    if (!catResult.success) return catResult;
-    return mainResult;
   }
 
   return (

@@ -45,10 +45,9 @@ import { Combobox } from "@/components/form";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import {
-  createPurchaseOrder,
+  createPurchaseOrderWithLines,
   fetchPoSuggestions,
   fetchSinglePriceDeviation,
-  upsertPurchaseOrderLine,
 } from "../../procurement-actions";
 import type {
   PoSuggestionRow,
@@ -283,30 +282,22 @@ export function NewPoClient({
       return;
     }
     startTransition(async () => {
-      const poRes = await createPurchaseOrder({
+      const res = await createPurchaseOrderWithLines({
         supplierId: Number(supplierId),
         branchId,
         notes: notes || undefined,
+        lines: lines.map((l) => ({
+          ingredientId: l.ingredientId,
+          quantity: l.quantity,
+          unit: l.unit,
+          unitPriceEst: l.unitPriceEst,
+        })),
       });
-      if (!poRes.success || !poRes.data) {
-        toast.error(poRes.error ?? "Không tạo được PO");
+      if (!res.success || !res.data) {
+        toast.error(res.error ?? "Không tạo được PO");
         return;
       }
-      const poId = (poRes.data as { id: number }).id;
-      for (const line of lines) {
-        const lineRes = await upsertPurchaseOrderLine({
-          poId,
-          ingredientId: line.ingredientId,
-          quantity: line.quantity,
-          unit: line.unit,
-          unitPriceEst: line.unitPriceEst,
-        });
-        if (!lineRes.success) {
-          toast.error(`Lỗi "${line.ingredientName}": ${lineRes.error}`);
-          router.push(`${poBasePath}/${poId}?branchId=${branchId}`);
-          return;
-        }
-      }
+      const poId = (res.data as { id: number }).id;
       toast.success("Đã tạo đơn đặt hàng");
       router.push(`${poBasePath}/${poId}?branchId=${branchId}`);
     });

@@ -17,6 +17,7 @@ export {
 export {
   fetchPurchaseOrders,
   createPurchaseOrder,
+  createPurchaseOrderWithLines,
   fetchPurchaseOrderDetail,
   upsertPurchaseOrderLine,
   deletePurchaseOrderLine,
