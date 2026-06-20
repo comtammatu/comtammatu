@@ -467,7 +467,7 @@ function HeatmapCard({
           />
         </div>
       </div>
-      <div className="mt-2 min-w-0 rounded-md border border-border/50 bg-card/70 p-2 xl:mt-3 xl:p-3">
+      <div className="mt-2 min-w-0 rounded-md bg-card/70 p-2 xl:mt-3 xl:p-3">
         {order.items.map((item) => (
           <CompactItemRow
             key={item.id}

@@ -854,7 +854,6 @@ const perFileCountBudgets = [
       "apps/web/app/_components/notification-list.tsx": 1,
       "apps/web/app/(protected)/admin/staff/[id]/permissions/permissions-client.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/components/completion-history-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/components/order-grid.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-page-skeleton.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx": 1,

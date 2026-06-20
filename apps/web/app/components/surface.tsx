@@ -556,12 +556,11 @@ export function OperationalTile({
 }
 
 const OPERATIONAL_BOARD_CURRENT_CLASSNAME: Record<SurfaceTone, string> = {
-  primary: "relative z-10 border-primary bg-primary/10 ring-2 ring-primary/50",
-  success: "relative z-10 border-success bg-success/10 ring-2 ring-success/50",
-  warning: "relative z-10 border-warning bg-warning/25 ring-2 ring-warning/70",
-  info: "relative z-10 border-info bg-info/10 ring-2 ring-info/50",
-  secondary:
-    "relative z-10 border-secondary bg-secondary/50 ring-2 ring-secondary",
+  primary: "relative z-10 bg-primary/10 ring-2 ring-primary/50",
+  success: "relative z-10 bg-success/10 ring-2 ring-success/50",
+  warning: "relative z-10 bg-warning/25 ring-2 ring-warning/70",
+  info: "relative z-10 bg-info/10 ring-2 ring-info/50",
+  secondary: "relative z-10 bg-secondary/50 ring-2 ring-secondary",
 };
 
 export type OperationalBoardCardProps = ComponentProps<typeof Card> & {
