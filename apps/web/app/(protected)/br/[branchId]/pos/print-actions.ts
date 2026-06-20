@@ -5,6 +5,7 @@ import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { buildVietQrEmvco, resolveBankBin } from "@comtammatu/shared/providers";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
+import { KITCHEN_PARTIAL_SEND_WARNING } from "./_lib/messages";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 
@@ -102,6 +103,25 @@ export async function sendToKitchen(
     };
   }
 
+  // Silent-drop guard: `route_order_to_kds` returns void and (pre-migration)
+  // skips an item whose category has no KDS station, no fallback station, and
+  // no kitchen-ticket printer — neither ticketing nor printing it. Such an item
+  // is left with `sent_to_kitchen_at IS NULL` and no `kds_tickets` row. Detect
+  // that remainder and downgrade the outcome to a warning so the counter does
+  // not see a green "sent" when the kitchen got nothing. Order/payment state is
+  // untouched. Cancelled items never need routing, so they are excluded.
+  const { data: remaining } = await supabase
+    .from("order_items")
+    .select("id, kds_tickets(id)")
+    .eq("order_id", order.id)
+    .eq("tenant_id", claims.tenant_id)
+    .neq("status", "cancelled")
+    .is("sent_to_kitchen_at", null);
+
+  const unrouted = (remaining ?? []).filter(
+    (item) => (item.kds_tickets ?? []).length === 0,
+  ).length;
+
   return {
     success: true,
     data: {
@@ -110,6 +130,7 @@ export async function sendToKitchen(
       jobs: [],
       deferred_to: "kds_completion",
     },
+    ...(unrouted > 0 ? { meta: { warning: KITCHEN_PARTIAL_SEND_WARNING } } : {}),
   };
 }
 
