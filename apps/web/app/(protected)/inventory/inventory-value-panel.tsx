@@ -115,8 +115,8 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
   ];
 
   return (
-    <Tabs defaultValue={defaultTab} className="space-y-4">
-      <div className="space-y-3">
+    <Tabs defaultValue={defaultTab} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         <AppPageHeader
           eyebrow={messages.inventory.value.eyebrow}
           title={messages.inventory.value.title}
@@ -153,7 +153,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
       </div>
 
       {visibility.system && (
-        <TabsContent value="system" className="mt-3">
+        <TabsContent value="system">
           <div className="grid gap-3 sm:grid-cols-2">
             <SummaryBlock
               label={messages.inventory.value.currentValue}
@@ -170,7 +170,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
       )}
 
       {visibility.branch && (
-        <TabsContent value="branch" className="mt-3">
+        <TabsContent value="branch">
           {branchRows == null ? (
             <p className="text-sm text-muted-foreground">
               {APP_COPY_VI.loading}
@@ -187,7 +187,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               contentFlush
               contentClassName="gap-0"
             >
-              <div className="border-b p-4 md:p-5">
+              <div className="border-b p-4">
                 <SummaryBlock
                   label={messages.inventory.value.branchTotal}
                   value={formatVND(branchTotal)}

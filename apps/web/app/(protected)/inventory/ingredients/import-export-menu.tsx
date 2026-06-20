@@ -188,8 +188,8 @@ function IngredientImportDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             <label htmlFor="ing-import-file" className="text-sm font-medium">
               Chọn file (.xlsx, .csv)
             </label>
@@ -214,15 +214,15 @@ function IngredientImportDialog({
           </div>
 
           {error ? (
-            <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-              <IconAlertCircle className="mt-0.5 size-4 shrink-0" />
+            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              <IconAlertCircle className="size-4 shrink-0" />
               <p className="font-medium">{error}</p>
             </div>
           ) : null}
 
           {issues.length > 0 ? (
             <div className="max-h-52 overflow-auto rounded-md border bg-muted/30 p-2 text-sm">
-              <ul className="space-y-1">
+              <ul className="flex flex-col gap-1">
                 {issues.slice(0, 50).map((iss, idx) => (
                   <li key={idx} className="flex gap-2">
                     <span className="font-mono text-xs text-muted-foreground">

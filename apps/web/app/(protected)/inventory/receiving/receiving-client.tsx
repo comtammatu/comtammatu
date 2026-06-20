@@ -146,7 +146,7 @@ export function ReceivingClient({
   const renderActivityCard = (item: RecentActivityItem) => (
     <InteractiveCard asChild minHeight="tap" padding="default">
       <Link href={activityHref(item)} className="block">
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="min-w-0 flex-1 flex flex-col gap-1">
           <p className="font-mono text-sm font-semibold">{item.code}</p>
           <p className="truncate text-xs text-muted-foreground">
             {item.supplier}

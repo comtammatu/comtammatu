@@ -28,7 +28,7 @@ export function StatusBadge({
   return (
     <Badge
       variant={resolvedVariant}
-      className={cn(size === "sm" && "text-xs px-2 py-0.5", className)}
+      className={cn(size === "sm" && "text-xs", className)}
       data-slot="status-badge"
       data-status={status}
     >

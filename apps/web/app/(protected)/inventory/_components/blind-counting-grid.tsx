@@ -167,7 +167,7 @@ export function BlindCountingGrid({
         {blindMode ? (
           <Badge
             variant="outline"
-            className="border-warning/40 bg-warning/15 text-warning-foreground"
+            className="border-warning/40 bg-warning/10 text-warning-foreground"
           >
             Blind mode
           </Badge>

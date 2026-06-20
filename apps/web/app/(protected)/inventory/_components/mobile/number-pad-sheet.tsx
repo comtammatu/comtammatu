@@ -117,7 +117,7 @@ export function NumberPadSheet({
               type="button"
               onClick={() => handleTap(key)}
               className={cn(
-                "flex h-16 items-center justify-center rounded-lg border border-transparent bg-muted text-2xl font-semibold tabular-nums",
+                "flex h-16 items-center justify-center rounded-md border border-transparent bg-muted text-2xl font-semibold tabular-nums",
                 "transition-transform active:scale-95 active:bg-muted-foreground/20",
                 key === "del" && "text-destructive",
                 key === "." &&

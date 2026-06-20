@@ -170,7 +170,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
           </SelectContent>
         </Select>
 
-        <Badge variant="outline" className="rounded-full">
+        <Badge variant="outline">
           {filtered.length}/{grns.length}
         </Badge>
       </AppToolbar>
@@ -199,7 +199,7 @@ function GrnMobileCard({ grn }: { grn: GrnRow }) {
   return (
     <InteractiveCard asChild minHeight="mobile" padding="default">
       <Link href={`/inventory/grn/${grn.id}`} className="block">
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="min-w-0 flex-1 flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="font-mono text-sm font-semibold">{grn.code}</span>
             <StatusBadge status={grn.status} size="sm" />

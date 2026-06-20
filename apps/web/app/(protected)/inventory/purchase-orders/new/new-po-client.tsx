@@ -339,7 +339,7 @@ export function NewPoClient({
           </Link>
         }
       />
-      <div className="mx-auto max-w-4xl space-y-5">
+      <div className="mx-auto flex max-w-4xl flex-col gap-4">
         {/* PO header */}
         <SupplierSection
           suppliers={suppliers}
@@ -391,7 +391,7 @@ export function NewPoClient({
         />
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-1">
+        <div className="flex items-center justify-between">
           <Button variant="ghost" asChild>
             <Link
               href={
@@ -521,10 +521,10 @@ function SuggestionsPanel({
     procurementBranches.find((b) => b.id === branchId)?.name ?? "Chưa chọn";
   const showBranchSwitcher = canSwitchBranch && procurementBranches.length > 1;
   return (
-    <AppSection className="rounded-lg border-info/20 bg-info/5" contentFlush>
-      <div className="p-4 pt-6 md:p-5 md:pt-6">
+    <AppSection tone="info" contentFlush>
+      <div className="p-4">
         <Collapsible open={suggestionsOpen} onOpenChange={onOpenChange}>
-          <div className="-m-4 md:-m-5">
+          <div className="-m-4">
             <CollapsibleTrigger asChild>
               <Button
                 type="button"
@@ -619,7 +619,7 @@ function SuggestionsPanel({
 
                 {/* Suggestion rows */}
                 {suggestions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-background/35 px-4 py-4 text-center">
+                  <div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed bg-background/35 px-4 py-4 text-center">
                     <IconPackage className="size-5 text-muted-foreground" />
                     <p className="text-base font-semibold">
                       {messages.inventory.po.stableStockTitle}
@@ -722,7 +722,7 @@ function SuggestionsPanel({
                       return (
                         <div
                           key={s.ingredient_id}
-                          className={`grid grid-cols-12 items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-sm transition-colors ${
+                          className={`grid grid-cols-12 items-center gap-2 rounded-md border border-transparent px-3 py-2 text-sm transition-colors ${
                             alreadyAdded
                               ? "bg-muted/30 opacity-60"
                               : "bg-background/70 hover:border-info/20 hover:bg-info/5"
@@ -762,7 +762,7 @@ function SuggestionsPanel({
                                 "Đã thêm"
                               ) : (
                                 <>
-                                  <IconPlus className="mr-0.5 size-3" />
+                                  <IconPlus className="mr-1 size-3" />
                                   {ACTIONS_VI.add}
                                 </>
                               )}
@@ -874,8 +874,8 @@ function LineItemsSection({
   if (isCompact) {
     return (
       <div className="overflow-hidden rounded-lg border bg-card">
-          <div className="-m-4 md:-m-5">
-            <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5 md:px-4">
+          <div className="-m-4">
+            <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2 md:px-4">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {PRODUCT_VI.rawIngredient}
               </span>
@@ -902,7 +902,7 @@ function LineItemsSection({
                   return (
                     <div
                       key={idx}
-                      className="px-4 py-2.5 flex items-center justify-between gap-2"
+                      className="px-4 py-2 flex items-center justify-between gap-2"
                     >
                       <div className="min-w-0">
                         <span className="text-sm font-medium">
@@ -1022,7 +1022,7 @@ function LineItemsSection({
   // Desktop layout
   return (
     <div className="overflow-hidden rounded-lg border bg-card">
-        <div className="-m-4 md:-m-5">
+        <div className="-m-4">
           {/* Table header */}
           <div className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 border-b bg-muted/30 px-3 py-2 md:px-4">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -1060,7 +1060,7 @@ function LineItemsSection({
                 return (
                   <div
                     key={idx}
-                    className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 items-center border-b px-3 py-2.5 hover:bg-muted/20 transition-colors"
+                    className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 items-center border-b px-3 py-2 hover:bg-muted/20 transition-colors"
                   >
                     <span className="text-sm font-medium">
                       {l.ingredientName}
@@ -1187,7 +1187,7 @@ function LineItemsSection({
             <span />
           </form>
           {addRowDeviation && Math.abs(addRowDeviation.deviation_pct) > 5 && (
-            <div className="px-3 pb-2 -mt-0.5">
+            <div className="px-3 pb-2">
               <InlineDeviationHint
                 deviation={addRowDeviation}
                 unit={unit || messages.inventory.po.unitShort}
@@ -1215,7 +1215,7 @@ function InlineDeviationHint({
 
   return (
     <span
-      className={`inline-flex items-center gap-1 text-xs mt-0.5 ${
+      className={`inline-flex items-center gap-1 text-xs ${
         isExpensive ? "text-destructive" : "text-success"
       }`}
     >

@@ -488,7 +488,7 @@ export function DashboardClient(props: DashboardProps) {
   const stockValueLabel = "Giá trị tồn kho:";
 
   return (
-    <AppPage width={isMobile ? "narrow" : "wide"} contentClassName="gap-6">
+    <AppPage width={isMobile ? "narrow" : "wide"}>
       <AppPageHeader
         eyebrow={`Kho hàng · ${siteKindLabel}`}
         title={siteName}
@@ -527,7 +527,7 @@ export function DashboardClient(props: DashboardProps) {
                   flow.tone === "success" && "bg-success/10",
                 )}
               >
-                <div className="flex flex-col gap-3 p-4 pb-3 sm:p-6 sm:pb-3">
+                <div className="flex flex-col gap-3 p-4 pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-start gap-3">
                       <div className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-background">
@@ -570,7 +570,7 @@ export function DashboardClient(props: DashboardProps) {
                     </Button>
                   </div>
                 </div>
-                <div className="p-4 pt-0 sm:p-6 sm:pt-0">
+                <div className="p-4 pt-0">
                   <div className="flex flex-wrap gap-2">
                     {flow.actions.map((action) => (
                       <Button
@@ -649,7 +649,7 @@ export function DashboardClient(props: DashboardProps) {
               <p
                 className={cn(
                   "font-bold tabular-nums",
-                  isMobile ? "mt-0.5 text-lg" : "mt-1 text-2xl",
+                  isMobile ? "mt-1 text-lg" : "mt-1 text-2xl",
                   kpi.tone === "destructive" && "text-destructive",
                   kpi.tone === "warning" && "text-warning",
                 )}
@@ -667,11 +667,11 @@ export function DashboardClient(props: DashboardProps) {
       expiryAlerts.length === 0 &&
       activeTransferList.length === 0 &&
       activeStocktakeList.length === 0 ? (
-        <AppSection contentClassName="items-center gap-3 py-10 text-center">
+        <AppSection contentClassName="items-center gap-3 py-6 text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-success/15 text-success">
             <IconSquareCheck className="size-6" />
           </div>
-          <div className="space-y-1">
+          <div className="flex flex-col gap-1">
             <p className="font-heading text-base font-semibold">
               {messages.inventory.dashboard.allClearTitle}
             </p>
@@ -713,7 +713,7 @@ export function DashboardClient(props: DashboardProps) {
                   title={messages.inventory.dashboard.noUrgentTasks}
                 />
               ) : (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   {tasks.map((task) => {
                     const badge = taskBadge[task.severity];
                     return (
@@ -746,7 +746,7 @@ export function DashboardClient(props: DashboardProps) {
                 </Button>
               }
             >
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   {reorderAlerts.slice(0, isMobile ? 2 : 3).map((item) => (
                     <AppLinkCard
                       key={`r-${item.ingredientId}-${item.branchId}`}
@@ -840,7 +840,7 @@ export function DashboardClient(props: DashboardProps) {
                     title={messages.inventory.dashboard.noActiveTransfers}
                   />
                 ) : (
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     {activeTransferList.map((t) => (
                       <AppLinkCard
                         key={t.id}
@@ -891,7 +891,7 @@ export function DashboardClient(props: DashboardProps) {
                     }
                   />
                 ) : (
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     {activeStocktakeList.map((s) => (
                       <AppLinkCard
                         key={s.id}

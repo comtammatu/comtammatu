@@ -124,7 +124,7 @@ function LineRowCells({
   const rowError = errors.lines?.[index];
 
   return (
-    <div className="space-y-1.5">
+    <div className="flex flex-col gap-1.5">
       <div className="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_auto] items-center gap-2 px-3 py-2">
         <Controller
           control={control}
@@ -405,9 +405,9 @@ export function RecipeLineDialog({
         <form
           onSubmit={form.handleSubmit(onValid)}
           noValidate
-          className="space-y-5"
+          className="flex flex-col gap-4"
         >
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium">Món bán *</Label>
             <Controller
               control={form.control}
@@ -452,7 +452,7 @@ export function RecipeLineDialog({
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <Label className="text-sm font-medium">
                 Danh sách nguyên liệu *
@@ -486,7 +486,7 @@ export function RecipeLineDialog({
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-md border">
+            <div className="overflow-hidden rounded-lg border">
               <div className="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_auto] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <div>{PRODUCT_VI.rawIngredient}</div>
                 <div>{FORM_VI.quantity}</div>
@@ -528,7 +528,7 @@ export function RecipeLineDialog({
             </p>
           )}
 
-          <DialogFooter className="pt-2">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"

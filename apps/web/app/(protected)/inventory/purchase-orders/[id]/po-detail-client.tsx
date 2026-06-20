@@ -507,13 +507,13 @@ export function PODetailClient({
             <TabsContent value="overview">
               <div className="flex flex-col gap-4">
                 <div className="grid gap-3 md:grid-cols-3">
-                  <div className="rounded-md border bg-card p-4">
+                  <div className="rounded-lg border bg-card p-4">
                     <Badge variant="secondary">
                       {poCopy.supplierRequired}
                     </Badge>
                     <p className="mt-3 text-xl font-semibold">{po.supplier}</p>
                   </div>
-                  <div className="rounded-md border bg-card p-4">
+                  <div className="rounded-lg border bg-card p-4">
                     <Badge variant="secondary">{poDetailCopy.goodsTotal}</Badge>
                     <p className="mt-3 text-xl font-semibold">
                       {messages.inventory.common.currency(
@@ -521,7 +521,7 @@ export function PODetailClient({
                       )}
                     </p>
                   </div>
-                  <div className="rounded-md border bg-card p-4">
+                  <div className="rounded-lg border bg-card p-4">
                     <Badge variant="secondary">{FORM_VI.totalAmount}</Badge>
                     <p className="mt-3 text-2xl font-semibold text-primary">
                       {messages.inventory.common.currency(formatVND(grandTotal))}
@@ -576,7 +576,7 @@ export function PODetailClient({
 
             <TabsContent value="lines">
               <div className="flex flex-col gap-4">
-                <div className="grid gap-6 lg:grid-cols-3">
+                <div className="grid gap-4 lg:grid-cols-3">
                   <div className="lg:col-span-2">
                     <AppSection
                       className="overflow-hidden"

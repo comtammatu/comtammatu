@@ -96,7 +96,7 @@ function ExpiryAlertCard({
     className: "bg-muted text-muted-foreground",
   };
   return (
-    <Item size="sm" className="justify-between rounded-lg border bg-muted/30">
+    <Item size="sm" className="justify-between border bg-muted/30">
       <ItemContent>
         <ItemTitle className="text-sm font-medium">
           <span className="truncate">{alert.ingredient_name}</span>
@@ -502,7 +502,7 @@ export function ExpiryListClient({
                 : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="space-y-3 px-1">
+          <div className="flex flex-col gap-3">
             <Label htmlFor="writeoff-qty">Số lượng xóa sổ</Label>
             <FormattedNumberInput
               id="writeoff-qty"

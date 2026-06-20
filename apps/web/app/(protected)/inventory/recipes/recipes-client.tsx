@@ -110,7 +110,7 @@ export function RecipesClient({
       key: "ingredient",
       header: PRODUCT_VI.rawIngredient,
       render: (item) => (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <div className="size-2 rounded-full bg-primary/40" />
           <span className="font-semibold">{item.ingredientName}</span>
         </div>
@@ -163,8 +163,7 @@ export function RecipesClient({
         />
       )}
 
-      <div className="space-y-4">
-        {recipes.map((recipe) => (
+      {recipes.map((recipe) => (
           <AppSection
             key={recipe.id}
             title={recipe.name}
@@ -195,7 +194,6 @@ export function RecipesClient({
             />
           </AppSection>
         ))}
-      </div>
 
       <RecipeLineDialog
         open={dialogOpen}

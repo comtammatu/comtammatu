@@ -81,7 +81,7 @@ export function ReportsClient({
           contentClassName="flex flex-1 flex-col gap-4"
         >
             <div className="flex items-center justify-end">
-              <div className="flex items-center gap-4 text-xs font-medium">
+              <div className="flex items-center gap-3 text-xs font-medium">
                 <span className="flex items-center gap-1.5">
                   <span className="size-3 rounded-full bg-primary" />
                   <span className="text-muted-foreground">
@@ -111,7 +111,7 @@ export function ReportsClient({
             <div className="flex-1">
               <SimpleBarChart data={movementSummary} height={220} />
             </div>
-            <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">{trendLabel}</p>
               <Badge variant="outline">
                 {messages.inventory.reports.currentMonthSnapshot}
@@ -123,7 +123,7 @@ export function ReportsClient({
           className="col-span-12 lg:col-span-4"
           title={messages.inventory.reports.supplierPayables}
         >
-            <div className="space-y-4">
+            <div className="flex flex-col gap-3">
               {apAging.map((item, idx) => {
                 const isOverdue = idx === apAging.length - 1;
                 const barColor =
@@ -138,7 +138,7 @@ export function ReportsClient({
                   <div
                     key={item.range}
                     className={cn(
-                      "rounded-lg p-3",
+                      "rounded-md p-3",
                       isOverdue
                         ? "border border-destructive/20 bg-destructive/12"
                         : "bg-muted/35",
@@ -187,7 +187,7 @@ export function ReportsClient({
               asChild
               type="button"
               variant="outline"
-              className="mt-6 w-full rounded-full text-muted-foreground"
+              className="w-full text-muted-foreground"
             >
               <Link href="/inventory/supplier-invoices">
                 {messages.inventory.reports.openSupplierDebt}
@@ -200,7 +200,7 @@ export function ReportsClient({
           title={messages.inventory.reports.consumptionVariance}
           description={messages.inventory.reports.recipeActualVsStandard}
         >
-            <div className="space-y-4">
+            <div className="flex flex-col gap-3">
               {consumptionVariance.map((item) => {
                 const isUp = item.trend === "up";
                 return (

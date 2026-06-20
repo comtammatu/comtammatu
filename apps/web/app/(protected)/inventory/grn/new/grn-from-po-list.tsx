@@ -61,7 +61,7 @@ export function GrnFromPoList({ openPos }: Props) {
   }
 
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between px-1">
         <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
           Từ PO chờ nhận
@@ -86,7 +86,7 @@ export function GrnFromPoList({ openPos }: Props) {
               disabled={isPending}
               onClick={() => handleCreate(po.id)}
             >
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
                 <IconFileTime className="size-6" />
               </span>
               <div className="min-w-0 flex-1">
@@ -103,7 +103,7 @@ export function GrnFromPoList({ openPos }: Props) {
                 <p className="truncate text-xs text-muted-foreground">
                   {po.supplier_name}
                 </p>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <span>{po.line_count} mặt hàng</span>
                   {po.total_est != null ? (
                     <span>~{formatVND(po.total_est)} đ</span>

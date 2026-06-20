@@ -13,10 +13,10 @@ interface TimelineStep {
 
 export function TimelineStepper({ steps }: { steps: TimelineStep[] }) {
   return (
-    <div className="flex items-center gap-0">
+    <div className="flex items-center">
       {steps.map((step, index) => (
         <div key={step.label} className="flex items-center">
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center gap-1">
             <div
               className={cn(
                 "flex size-10 items-center justify-center rounded-full text-xs font-bold ring-1 ring-border/60 transition-colors",
@@ -35,7 +35,7 @@ export function TimelineStepper({ steps }: { steps: TimelineStep[] }) {
             </div>
             <p
               className={cn(
-                "mt-1.5 max-w-20 text-center text-xs font-medium text-muted-foreground",
+                "max-w-20 text-center text-xs font-medium text-muted-foreground",
                 (step.active || step.completed) && "font-bold text-foreground",
               )}
             >

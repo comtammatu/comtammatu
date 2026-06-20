@@ -38,7 +38,7 @@ export function MobileTopBar({ siteName }: MobileTopBarProps) {
           type="submit"
           variant="outline"
           size="icon-lg"
-          className="size-10 rounded-lg text-muted-foreground"
+          className="size-10 rounded-md text-muted-foreground"
           aria-label={messages.inventory.common.signOut}
         >
           <IconLogout className="size-5" />

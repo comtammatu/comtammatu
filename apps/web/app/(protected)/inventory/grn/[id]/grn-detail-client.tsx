@@ -393,7 +393,7 @@ export function GRNDetailClient({
             ]}
           >
             <TabsContent value="overview">
-              <div className="space-y-6">
+              <div className="flex flex-col gap-4">
                 {isReview && isDraft ? (
                   <Alert>
                     <IconInfoCircle className="size-4" />
@@ -449,7 +449,7 @@ export function GRNDetailClient({
             </TabsContent>
 
             <TabsContent value="lines">
-              <div className="space-y-6">
+              <div className="flex flex-col gap-4">
                 <div className="grid gap-6 lg:grid-cols-3">
                   <div className="lg:col-span-2">
                     <AppSection
@@ -476,7 +476,6 @@ export function GRNDetailClient({
                           </Button>
                         ) : null
                       }
-                      contentClassName="space-y-4"
                     >
                       {lines.map((line, idx) => (
                         <LineRow
@@ -496,11 +495,11 @@ export function GRNDetailClient({
                     </AppSection>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="flex flex-col gap-4">
                     <AppSection
                       size="sm"
                       title={grnCopy.qcSummary}
-                      contentClassName="space-y-3 text-sm"
+                      contentClassName="text-sm"
                     >
                       <Row
                         label={grnCopy.acceptedLines}
@@ -730,7 +729,7 @@ function AmendOwnerDialog({
               <AlertDescription>{grnCopy.amend.warning}</AlertDescription>
             </Alert>
 
-            <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+            <div className="rounded-md border bg-muted/30 p-3 text-sm">
               <p className="font-bold">{line.name}</p>
               <p className="text-xs text-muted-foreground">
                 {grnCopy.amend.current(
@@ -1295,7 +1294,7 @@ function LineRow({
 
   if (!isDraft) {
     return (
-      <div className="rounded-md border bg-muted/30 p-4">
+      <div className="rounded-md border bg-muted/30 p-3">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-bold">{line.name}</p>
@@ -1363,7 +1362,7 @@ function LineRow({
 
   // Draft mode — editable
   return (
-    <div className="flex flex-col gap-3 rounded-md border bg-card p-4">
+    <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
         <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="font-bold">{line.name}</p>
@@ -1588,9 +1587,9 @@ function Stat({
   children: React.ReactNode;
 }) {
   return (
-    <div>
+    <div className="flex flex-col gap-1">
       <p className="text-muted-foreground">{label}</p>
-      <p className="mt-0.5 font-mono">{children}</p>
+      <p className="font-mono">{children}</p>
     </div>
   );
 }

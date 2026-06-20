@@ -100,7 +100,7 @@ function LineRowCells({
   const rowError = errors.lines?.[index];
 
   return (
-    <div className="space-y-1.5">
+    <div className="flex flex-col gap-1.5">
       <div className="grid gap-3 md:grid-cols-[1fr_120px_120px_auto]">
         <Controller
           control={control}
@@ -313,10 +313,10 @@ export function ProductionOrderForm({
         <form
           onSubmit={form.handleSubmit(onValid)}
           noValidate
-          className="space-y-4"
+          className="flex flex-col gap-4"
         >
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="productionNumber">Số lệnh</Label>
               <Controller
                 control={form.control}
@@ -340,7 +340,7 @@ export function ProductionOrderForm({
                 </p>
               )}
             </div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="branchId">Chi nhánh sản xuất</Label>
               <Controller
                 control={form.control}
@@ -373,7 +373,7 @@ export function ProductionOrderForm({
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="notes">{FORM_VI.notes}</Label>
             <Controller
               control={form.control}
@@ -389,7 +389,7 @@ export function ProductionOrderForm({
             />
           </div>
 
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <Label>{PRODUCT_VI.finishedGood}</Label>
               <Button
@@ -402,7 +402,7 @@ export function ProductionOrderForm({
               </Button>
             </div>
 
-            <div className="space-y-3">
+            <div className="flex flex-col gap-3">
               {fields.map((row, index) => (
                 <LineRowCells
                   key={row.id}

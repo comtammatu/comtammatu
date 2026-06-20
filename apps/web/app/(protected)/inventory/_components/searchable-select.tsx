@@ -93,10 +93,10 @@ export function SearchableSelect({
         >
           <CommandInput
             placeholder={searchPlaceholder}
-            className="h-10 bg-transparent text-sm focus:ring-0"
+            className="bg-transparent focus:ring-0"
           />
           <CommandList className="max-h-60">
-            <CommandEmpty className="py-4 text-center text-sm text-muted-foreground">
+            <CommandEmpty className="text-muted-foreground">
               {emptyText}
             </CommandEmpty>
             <CommandGroup className="p-1">
@@ -108,7 +108,7 @@ export function SearchableSelect({
                     onValueChange(nextValue);
                     setOpen(false);
                   }}
-                  className="cursor-pointer rounded-lg px-3 py-2 text-sm text-foreground"
+                  className="cursor-pointer text-foreground"
                 >
                   <span className="flex-1">{option.label}</span>
                   {value === option.value ? (

@@ -293,7 +293,7 @@ export function PurchaseOrdersClient({
       </FilterToolbar>
 
       <DataTable
-        className="md:rounded-md md:border"
+        className="md:rounded-lg md:border"
         columns={columns}
         data={filteredRows}
         getRowKey={(row) => row.id}

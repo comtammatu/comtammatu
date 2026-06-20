@@ -119,7 +119,7 @@ function IngredientMobileCard({
               size="sm"
             />
           </div>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             {item.sku ?? "—"} &middot; {conversionLabel(item)}
           </p>
         </div>
@@ -306,7 +306,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
         </SelectContent>
       </Select>
 
-      <Badge variant="outline" className="rounded-full">
+      <Badge variant="outline">
         {filtered.length} / {rows.length} nguyên liệu
       </Badge>
     </AppToolbar>

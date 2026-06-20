@@ -63,7 +63,7 @@ export function ShiftCapMeter({
   return (
     <div
       className={cn(
-        "rounded-md border p-3 text-xs space-y-1.5",
+        "flex flex-col gap-1.5 rounded-md border p-3 text-xs",
         wrapTone,
         className,
       )}

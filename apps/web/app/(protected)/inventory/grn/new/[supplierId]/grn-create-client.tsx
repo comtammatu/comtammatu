@@ -347,7 +347,7 @@ export function GrnCreateClient({
             {draft.lines.map((line) => (
               <div
                 key={line.ingredientId}
-                className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded-md bg-muted/40 px-3 py-2"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold leading-tight">
@@ -430,7 +430,7 @@ export function GrnCreateClient({
                 onClick={() => openEdit(ingredient)}
                 className="flex items-center gap-3 rounded-lg border bg-card px-3 py-3 text-left transition hover:bg-accent/40 active:scale-[0.99]"
               >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-2xs font-bold uppercase text-muted-foreground">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-2xs font-bold uppercase text-muted-foreground">
                   {(ingredient.sku ?? ingredient.name).slice(0, 2)}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -591,7 +591,7 @@ function LineEditSheet({
                   <button
                     type="button"
                     onClick={() => onOpenNumpad("qty")}
-                    className="flex flex-col items-start gap-1 rounded-lg border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
+                    className="flex flex-col items-start gap-1 rounded-md border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
                   >
                     <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
                       {FORM_VI.quantity}
@@ -604,7 +604,7 @@ function LineEditSheet({
                     </span>
                   </button>
                 ) : (
-                  <label className="flex cursor-text flex-col items-start gap-1 rounded-lg border bg-card px-3 py-3 text-left transition focus-within:ring-2 focus-within:ring-ring/30">
+                  <label className="flex cursor-text flex-col items-start gap-1 rounded-md border bg-card px-3 py-3 text-left transition focus-within:ring-2 focus-within:ring-ring/30">
                     <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
                       {FORM_VI.quantity}
                     </span>
@@ -627,7 +627,7 @@ function LineEditSheet({
                   <button
                     type="button"
                     onClick={() => onOpenNumpad("cost")}
-                    className="flex flex-col items-start gap-1 rounded-lg border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
+                    className="flex flex-col items-start gap-1 rounded-md border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
                   >
                     <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
                       {FORM_VI.unitPrice}
@@ -640,7 +640,7 @@ function LineEditSheet({
                     </span>
                   </button>
                 ) : (
-                  <label className="flex cursor-text flex-col items-start gap-1 rounded-lg border bg-card px-3 py-3 text-left transition focus-within:ring-2 focus-within:ring-ring/30">
+                  <label className="flex cursor-text flex-col items-start gap-1 rounded-md border bg-card px-3 py-3 text-left transition focus-within:ring-2 focus-within:ring-ring/30">
                     <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
                       {FORM_VI.unitPrice}
                     </span>
@@ -659,7 +659,7 @@ function LineEditSheet({
                 )}
               </div>
 
-              <div className="rounded-lg bg-muted/50 px-3 py-2.5">
+              <div className="rounded-md bg-muted/50 px-3 py-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
                     {FORM_VI.amount}

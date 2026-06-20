@@ -390,7 +390,7 @@ export function IssueDetailClient({
             ]}
           >
             <TabsContent value="overview">
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
                   {[
                     {
@@ -434,7 +434,7 @@ export function IssueDetailClient({
             </TabsContent>
 
             <TabsContent value="lines">
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4">
                 <AppSection
                   title={tTerm("ingredientsList")}
                   description={
@@ -505,7 +505,7 @@ export function IssueDetailClient({
                       />
                     )}
 
-                    <div className="flex justify-end rounded-lg border border-border/60 bg-muted/30 p-5 sm:p-6 lg:p-8">
+                    <div className="flex justify-end rounded-md border border-border/60 bg-muted/30 p-4">
                       <div className="flex w-full max-w-sm flex-col gap-3">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
@@ -538,7 +538,7 @@ export function IssueDetailClient({
                 </AppSection>
 
                 {isDraft ? (
-                  <footer className="flex flex-col gap-4 border-t border-border py-6 md:flex-row md:items-center md:justify-between">
+                  <footer className="flex flex-col gap-4 border-t border-border py-4 md:flex-row md:items-center md:justify-between">
                     <Button
                       type="button"
                       variant="ghost"
@@ -775,7 +775,7 @@ function IssueLineMobileCard({
         </div>
       </ItemContent>
       <ItemFooter className="basis-full">
-        <div className="w-full rounded-lg bg-background px-3 py-2 text-sm">
+        <div className="w-full rounded-md bg-background px-3 py-2 text-sm">
           <p className="text-muted-foreground">{tTerm("issueReason")}</p>
           <p className="mt-1">{item.reason ?? "—"}</p>
         </div>

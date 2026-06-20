@@ -794,7 +794,7 @@ export function ProductionRecipePanel({
               )}
             </FieldGroup>
 
-            <DialogFooter className="pt-6">
+            <DialogFooter>
               <Button
                 type="button"
                 variant="outline"

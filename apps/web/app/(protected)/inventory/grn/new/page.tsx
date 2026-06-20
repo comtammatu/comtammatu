@@ -140,7 +140,7 @@ export default async function GrnNewSupplierPage() {
 
       {openPos.length > 0 ? <GrnFromPoList openPos={openPos} /> : null}
 
-      <section className="flex flex-col gap-2">
+      <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between px-1">
           <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
             Nhập ad-hoc theo nhà cung cấp
@@ -173,7 +173,7 @@ export default async function GrnNewSupplierPage() {
                     <p className="truncate text-base font-semibold leading-tight">
                       {supplier.name}
                     </p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       {supplier.phone ? (
                         <span className="inline-flex items-center gap-1">
                           <IconPhone className="size-3" />

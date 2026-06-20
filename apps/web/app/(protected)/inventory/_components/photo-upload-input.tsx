@@ -100,7 +100,7 @@ export function PhotoUploadInput({
   const isPdf = value && /\.pdf(\?.*)?$/i.test(value);
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
       {value ? (
         <div className="flex items-center gap-3 rounded-md border bg-muted/30 p-2">
           {isImage ? (
@@ -139,7 +139,7 @@ export function PhotoUploadInput({
           ) : null}
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <input
             ref={inputRef}
             type="file"

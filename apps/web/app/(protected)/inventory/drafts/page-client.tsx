@@ -92,7 +92,7 @@ export function MobileDraftsClient({ drafts }: { drafts: ServerDraftRow[] }) {
       ) : (
         <div className="flex flex-col gap-3">
           {drafts.map((draft) => (
-            <Item key={draft.grnId} variant="outline" className="bg-card p-4">
+            <Item key={draft.grnId} variant="outline" className="bg-card">
               <ItemHeader>
                 <div className="min-w-0">
                   <ItemTitle className="text-base">
