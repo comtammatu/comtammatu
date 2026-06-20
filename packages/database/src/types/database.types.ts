@@ -8450,6 +8450,15 @@ export type Database = {
         }
         Returns: Json
       }
+      create_purchase_order_with_lines: {
+        Args: {
+          p_branch_id: number
+          p_lines: Json
+          p_notes: string
+          p_supplier_id: number
+        }
+        Returns: Json
+      }
       create_refund: {
         Args: { p_amount: number; p_payment_id: number; p_reason: string }
         Returns: Json
@@ -8788,6 +8797,18 @@ export type Database = {
           total_amount: number
         }[]
       }
+      get_orders_paid_summary: {
+        Args: {
+          p_branch_id?: number
+          p_date_from?: string
+          p_date_to?: string
+          p_status?: string
+        }
+        Returns: {
+          paid_count: number
+          paid_revenue: number
+        }[]
+      }
       get_pos_session_report: { Args: { p_session_id: number }; Returns: Json }
       get_revenue_by_cashier: {
         Args: {
@@ -8967,6 +8988,26 @@ export type Database = {
           limit_quantity: number
           menu_item_id: number
           sold_today: number
+        }[]
+      }
+      list_notifications: {
+        Args: { p_before?: string; p_limit?: number; p_unread_only?: boolean }
+        Returns: {
+          action_url: string
+          body: string
+          created_at: string
+          entity_id: number
+          entity_type: string
+          expires_at: string
+          id: number
+          kind: string
+          meta: Json
+          read_at: string
+          severity: string
+          target_branch_id: number
+          target_roles: string[]
+          tenant_id: number
+          title: string
         }[]
       }
       log_audit: {
@@ -9539,6 +9580,17 @@ export type Database = {
           p_name: string
           p_template_id: number
           p_tenant_id: number
+        }
+        Returns: number
+      }
+      upsert_station_with_categories: {
+        Args: {
+          p_branch_id?: number
+          p_category_ids?: number[]
+          p_is_active?: boolean
+          p_name?: string
+          p_position?: number
+          p_station_id?: number
         }
         Returns: number
       }
