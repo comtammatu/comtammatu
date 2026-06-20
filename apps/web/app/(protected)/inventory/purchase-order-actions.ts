@@ -111,6 +111,75 @@ export const createPurchaseOrder = withAction(
   },
 );
 
+/* ─── createPurchaseOrderWithLines (atomic) ─── */
+
+const poWithLinesSchema = z.object({
+  supplierId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive(),
+  notes: z.string().max(500, { error: "Ghi chú tối đa 500 ký tự" }).optional(),
+  lines: z
+    .array(
+      z.object({
+        ingredientId: z.coerce.number().int().positive(),
+        quantity: z.coerce
+          .number()
+          .positive({ error: "Số lượng phải lớn hơn 0" }),
+        unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
+        unitPriceEst: z.union([z.number().min(0), z.null()]).optional(),
+      }),
+    )
+    .min(1, { error: "Thêm ít nhất 1 nguyên liệu" }),
+});
+
+export const createPurchaseOrderWithLines = withAction(
+  {
+    roles: ROLES,
+    schema: poWithLinesSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+  },
+  async (data, { supabase, claims }) => {
+    if (!canAccessProcurementBranch(claims, data.branchId)) {
+      return { success: false, error: "Bạn chỉ được tạo PO cho kho của mình." };
+    }
+
+    const { data: row, error } = await supabase.rpc(
+      "create_purchase_order_with_lines",
+      {
+        p_supplier_id: data.supplierId,
+        p_branch_id: data.branchId,
+        p_notes: data.notes ?? "",
+        p_lines: data.lines.map((l) => ({
+          ingredient_id: l.ingredientId,
+          quantity: l.quantity,
+          unit: l.unit,
+          unit_price_est: l.unitPriceEst ?? null,
+        })),
+      },
+    );
+
+    if (error) {
+      const byCode: Record<string, string> = {
+        "42501": "Bạn không có quyền tạo PO cho kho này.",
+        P0002: "Chi nhánh hoặc nhà cung cấp không hợp lệ.",
+        "22023": "Dữ liệu dòng PO không hợp lệ.",
+        "28000": "Phiên đăng nhập đã hết hạn.",
+      };
+      return {
+        success: false,
+        error: byCode[error.code ?? ""] ?? "Không thể tạo đơn đặt hàng.",
+      };
+    }
+
+    const parsed = z
+      .object({ id: z.coerce.number().int().positive() })
+      .safeParse(row);
+    if (!parsed.success) {
+      return { success: false, error: "Phản hồi không hợp lệ từ máy chủ." };
+    }
+    return { success: true, data: { id: parsed.data.id } };
+  },
+);
+
 /* ─── fetchPurchaseOrderDetail ─── */
 
 export async function fetchPurchaseOrderDetail(

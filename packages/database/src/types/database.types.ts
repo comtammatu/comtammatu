@@ -8450,6 +8450,15 @@ export type Database = {
         }
         Returns: Json
       }
+      create_purchase_order_with_lines: {
+        Args: {
+          p_branch_id: number
+          p_lines: Json
+          p_notes: string
+          p_supplier_id: number
+        }
+        Returns: Json
+      }
       create_refund: {
         Args: { p_amount: number; p_payment_id: number; p_reason: string }
         Returns: Json
