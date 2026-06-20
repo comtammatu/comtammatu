@@ -678,3 +678,29 @@ Doanh thu năm = **ước lượng từ dữ liệu** (HĐ issued / paid revenue
 **Giữ lại (KHÔNG đụng):** permission `accounting:period_reopen` (`permissions.ts`) + các RPC DB `close_period_soft/hard`, `reopen_period`, bảng `accounting_periods`. DB-layer thuộc thẩm quyền owner qua migration; chỉ gỡ lớp app.
 
 **Consequences:** Guard test cập nhật cùng đợt — bỏ test "Accounting period support copy" (`finance-revenue-date-range.test.ts`) và assertion `MODULE_LABELS_VI.accounting` (`scope.test.ts`). Muốn dựng lại khóa-kỳ sau này: làm như tính năng "Khóa số liệu tháng" gọn dưới `/admin/settings`, không tái lập khung kế toán.
+
+## D036: Agentic OS — xương sống Notification/Alert/Report + thang tự chủ (2026-06-19)
+
+**Decision:** Xây một "Agentic OS" cho Má Tư theo hướng **95% deterministic + 5% LLM mỏng-bounded**, trên xương sống `notifications` sẵn có. Hợp đồng SSoT = `docs/agent/rules/notifications.md`; tầm nhìn + lộ trình + sprint + agent-team = `docs/plan/agentic-os-blueprint.md`. Bắt đầu bằng **wedge S0**: Cash Sentinel + Till Anomaly chạy **shadow-only** (chỉ ghi `agent_decisions`), 0 blast radius.
+
+**Context:** Phễu "phần mềm hỗ trợ HKD" (D012) + "tài chính trước, tiền mặt hiện hữu" (D028). Rò rỉ ở quầy (lệch quỹ, void/discount, giá NCC trườn, food-cost drift) là tổn thất sống còn mà mắt người không thấy theo mẫu. Owner muốn "agent trông quán" để chuyển từ *canh chừng lo âu* sang *mỗi ngày báo đúng + cờ cái sai kèm đề xuất*.
+
+**Quyết định owner đã chốt (verify vs CODE + PROD, không từ docs cũ):**
+- **Ngưỡng:** lệch quỹ `max(20.000đ, 0.1%×expected_cash)`; void `>10%`/ca; discount `>5%`/ca và `>20%`/đơn; ca mở `>16h`; payment treo `>2h`. (Lệch quỹ #1 ĐÃ có trigger `trg_notify_pos_shift_variance` — chỉ **retune hằng số**, không xây mới.)
+- **Routing 2 kênh tách bạch:** Web Push = theo `target_roles` (critical → owner; warning → owner + branch_manager, **digest cuối ngày**, không push giữa ca). **branch_manager chỉ ở Web Push.** Telegram Supergroup = **theo thành viên group** (owner + người được đặc cách mời), **tách khỏi role app**; cả critical lẫn warning vào topic; dispatcher role-agnostic.
+- **Quiet hours:** warning → digest; critical → push ngay.
+- **Telegram:** Bot API 10.1, forum supergroup + topics (`message_thread_id`, `can_manage_topics`), native fetch, 20 msg/min cho CẢ group → digest là van rate. Cây topic: 🔴 Khẩn · 💵 Tiền-Quỹ · 🍳 Bếp-Void · 📦 Kho-Tồn · 🛒 Mua hàng-Nhập · 🧾 Hóa đơn-Thuế · 👥 Nhân sự · 📊 Báo cáo ngày · 📈 Báo cáo tuần-tháng. Token + chat_id ở env; topic map ở `inventory_qc_settings.telegram_topic_map`.
+- **Thang tự chủ R0→R3** (shadow → inform → recommend → auto-act-bounded). **Lằn ranh cứng: agent đụng tiền/thuế/lao động cap R1 (báo) mãi mãi** — không auto-act. Service Janitor là agent auto-act (R3) DUY NHẤT (idempotent/đảo-ngược). LLM không bao giờ cầm DB/RPC/số; chỉ narrate trên số do SQL tính; digest là thứ làm CUỐI.
+- **Báo cáo ngày/tuần/tháng** là phần giá trị cao nhất (xác nhận tích cực, không chỉ cảnh báo); "Đóng ngày" 02:05 ICT là flagship.
+
+**Why (kiến trúc + ràng buộc):**
+- Producer → `notifications` (dedup_key) → Dispatchers (Web Push role-based **[live]** + Telegram topic-based **[designed]**, mỗi cái claim-RPC + ledger riêng) → Channels → Audiences. **Telegram phải SOI Web Push, KHÔNG dùng `notification_outbox`** (user-gated + read→loop→update đua double-send).
+- **Tool của agent = 885 RPC `SECURITY DEFINER` sẵn có** (allowlist + cap), không xây action API mới. Precedent role-hardening: migration `20260619062853`.
+- Cron mới CHỈ làm phần trigger không làm được (aggregate + staleness); test khẳng định 0 trùng kind của trigger (#1, #6).
+- Migration: file → PR → owner (no dev DB; `guard-prod-db.mjs`). Agent ghi file trong git worktree riêng (kỷ luật shared-tree). Single tenant (`tenant_id=1`).
+- Đội thực thi = mô hình `docs/agent/rules/team.md` chĩa vào backlog (KHÔNG org mới): Orchestrator + Contract/Migration/Detector/Dispatcher/Briefer + Verify + Codex stage-6. 1 sprint = 1 workflow run. 3 cổng owner: DoR (T3) · apply migration · duyệt R0→R1.
+- **Timeline thật:** code ~2–3 tuần; DONE ~tuần 10–13 (≈70% là shadow-soak + owner review serial). Tính lịch theo shadow-wall-clock + owner review, KHÔNG theo LLM-pace.
+
+**Quan hệ với D024:** D024 (trợ lý Telegram = **mặt tiền CHAT** tương tác, DRAFT) khác phần này (**Telegram OUTBOUND alerting** — dispatcher đẩy notification vào topic). Bổ trợ, không trùng: alerting outbound ship trước; chat-front-end (đọc lệnh, ack/snooze) là việc sau, off-scope S0–S7.
+
+**Consequences / phasing:** S0 spine+shadow (wedge) → S1 Web Push live + severity gate + retune trigger → S2 Telegram dark → S3 Telegram live + rate-valve + void-after-pay → S4 Đóng ngày → S5 mua hàng/kho/tài chính → S6 POS tail+HR+tuần → S7+ migration batch + LLM digest. Critical path S0→S2→S3→S4; S1 ∥ S2. Tài liệu này (D036) + `notifications.md` + `agentic-os-blueprint.md` là of-record; mọi producer/agent code theo đó.
