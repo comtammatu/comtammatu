@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = process.cwd();
+const SELF_PATH = fileURLToPath(import.meta.url);
+const WRITE_MODE = process.argv.includes("--write");
 
 function walkFiles(rootDir, extensions) {
   const absoluteRoot = path.join(REPO_ROOT, rootDir);
@@ -760,7 +763,7 @@ const countBudgets = [
 	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
 	    pattern:
 	      /from\s+["@']@comtammatu\/ui\/components\/(?:dialog|alert-dialog)["']/g,
-	    maxCount: 28,
+	    maxCount: 22,
 	  },
 	];
 
@@ -773,71 +776,14 @@ const perFileCountBudgets = [
     pattern:
       /\bspace-y-(?:px|0|0\.5|1|1\.5|2|2\.5|3|3\.5|4|5|6|7|8|9|10|11|12|14|16|20|24|\[[^\]]+\])\b/g,
     allowlist: {
-      "apps/web/app/_components/notification-item.tsx": 1,
-      "apps/web/app/(protected)/admin/accounting/periods/period-admin-client.tsx": 1,
-      "apps/web/app/(protected)/admin/reports/page.tsx": 4,
-      "apps/web/app/(protected)/admin/reports/stock-movement/stock-movement-client.tsx": 4,
-      "apps/web/app/(protected)/admin/settings/branches/network-config-dialog.tsx": 1,
-      "apps/web/app/(protected)/admin/settings/general/settings-form.tsx": 3,
-      "apps/web/app/(protected)/admin/settings/layout.tsx": 1,
-      "apps/web/app/(protected)/admin/settings/payments/payments-form.tsx": 7,
-      "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 9,
-      "apps/web/app/(protected)/admin/settings/settings-page-frame.tsx": 1,
-      "apps/web/app/(protected)/admin/staff/[id]/permissions/permissions-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/components/completion-history-sheet.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/menu-limits/menu-limits-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/settings/pos-sessions/pos-sessions-client.tsx": 10,
-      "apps/web/app/(protected)/branch-settings/_shared/printers/printers-client.tsx": 10,
-      "apps/web/app/(protected)/branch-settings/_shared/tables/tables-client.tsx": 2,
-      "apps/web/app/(protected)/finance/expenses/expenses-client.tsx": 1,
-      "apps/web/app/(protected)/finance/food-cost/food-cost-client.tsx": 1,
-      "apps/web/app/(protected)/finance/invoice-list.tsx": 1,
-      "apps/web/app/(protected)/finance/page.tsx": 3,
-      "apps/web/app/(protected)/finance/revenue/[date]/page.tsx": 2,
-      "apps/web/app/(protected)/finance/revenue/[date]/revenue-drill-tabs.tsx": 1,
-      "apps/web/app/(protected)/finance/revenue/revenue-client.tsx": 3,
-      "apps/web/app/(protected)/hr/attendance-table.tsx": 2,
-      "apps/web/app/(protected)/hr/checklist-templates-table.tsx": 10,
-      "apps/web/app/(protected)/hr/payroll/[periodId]/payroll-detail-client.tsx": 1,
-      "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/document-stock-correction-dialog.tsx": 5,
-      "apps/web/app/(protected)/inventory/_components/period-close-card.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/photo-upload-input.tsx": 2,
-      "apps/web/app/(protected)/inventory/_components/shift-cap-meter.tsx": 1,
-      "apps/web/app/(protected)/inventory/dashboard-client.tsx": 5,
-      "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx": 5,
-      "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/ingredients/import-export-menu.tsx": 3,
+      "apps/web/app/(protected)/admin/reports/stock-movement/stock-movement-client.tsx": 3,
+      "apps/web/app/(protected)/br/[branchId]/settings/pos-sessions/pos-sessions-client.tsx": 2,
+      "apps/web/app/(protected)/branch-settings/_shared/printers/printers-client.tsx": 9,
+      "apps/web/app/(protected)/hr/checklist-templates-table.tsx": 1,
       "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 2,
-      "apps/web/app/(protected)/inventory/production-order-form.tsx": 7,
-      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 6,
-      "apps/web/app/(protected)/inventory/receiving/receiving-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx": 4,
-      "apps/web/app/(protected)/inventory/recipes/recipes-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/settings/qc/qc-settings-client.tsx": 7,
-      "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx": 1,
-      "apps/web/app/(protected)/inventory/supplier-returns/[id]/supplier-return-detail-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx": 3,
-      "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx": 3,
+      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 5,
       "apps/web/app/(protected)/menu/category-table.tsx": 2,
-      "apps/web/app/(protected)/menu/import-export-menu.tsx": 4,
-      "apps/web/app/(protected)/menu/item-detail-dialog.tsx": 7,
       "apps/web/app/(protected)/menu/item-table.tsx": 1,
-      "apps/web/app/(protected)/menu/menu-image-input.tsx": 1,
-      "apps/web/app/(protected)/menu/page.tsx": 2,
-      "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 7,
-      "apps/web/app/(protected)/orders/page.tsx": 2,
-      "apps/web/app/(protected)/orders/refunds-client.tsx": 1,
-      "apps/web/app/(public)/(auth)/login/login-form.tsx": 1,
-      "apps/web/app/(public)/(auth)/login/page.tsx": 1,
-      "apps/web/app/(public)/payment/momo/return/page.tsx": 2,
-      "apps/web/app/components/app-shell.tsx": 2,
-      "apps/web/app/components/surface.tsx": 1,
     },
   },
   {
@@ -851,48 +797,27 @@ const perFileCountBudgets = [
       "apps/web/app/_components/notification-list.tsx": 1,
       "apps/web/app/(protected)/admin/settings/branches/network-config-dialog.tsx": 2,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/components/completion-history-sheet.tsx": 3,
-      "apps/web/app/(protected)/br/[branchId]/kds/components/focus-view.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/kds/components/order-grid.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": 4,
+      "apps/web/app/(protected)/br/[branchId]/kds/components/focus-view.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/menu-limits/menu-limits-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/hotkey-overlay.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/pos/close-session-sheet.tsx": 3,
       "apps/web/app/(protected)/br/[branchId]/pos/order-history.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-status-shell.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-table-gate.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-takeaway-gate.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/settings/pos-sessions/pos-sessions-client.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/settings/pos-sessions/pos-sessions-client.tsx": 1,
       "apps/web/app/(protected)/branch-settings/_shared/kds/station-form-dialog.tsx": 1,
       "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
       "apps/web/app/(protected)/inventory/_components/blind-counting-grid.tsx": 1,
       "apps/web/app/(protected)/inventory/_components/inventory-branch-filter.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/mobile/mobile-page.tsx": 1,
-      "apps/web/app/(protected)/inventory/dashboard-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 1,
-      "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/production-recipe-panel.tsx": 1,
       "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 1,
       "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx": 1,
-      "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx": 1,
       "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx": 2,
       "apps/web/app/(protected)/menu/item-detail-dialog.tsx": 2,
-      "apps/web/app/(protected)/menu/page.tsx": 2,
       "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 2,
       "apps/web/app/(public)/(auth)/login/page.tsx": 2,
       "apps/web/app/(public)/access-denied/layout.tsx": 1,
       "apps/web/app/components/data-table/data-table.tsx": 1,
-      "apps/web/app/components/form/form-dialog.tsx": 1,
     },
   },
   {
@@ -903,33 +828,19 @@ const perFileCountBudgets = [
     pattern: /\bgap-(?:0|0\.5|2\.5)\b/g,
     allowlist: {
       "apps/web/app/(protected)/admin/dashboard/page.tsx": 1,
-      "apps/web/app/(protected)/admin/staff/[id]/permissions/permissions-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/components/focus-view.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/components/order-grid.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-summary.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/invoice-form-section.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/merge-orders-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-actions-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/split-order-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-list-pane.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-sidebar-panel.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
-      "apps/web/app/(protected)/employee/components/employee-page.tsx": 1,
-      "apps/web/app/(protected)/employee/payslip/year-picker.tsx": 1,
-      "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 2,
       "apps/web/app/(protected)/inventory/_components/mobile/number-pad-sheet.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/timeline-stepper.tsx": 1,
       "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx": 2,
       "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
       "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 1,
       "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 1,
       "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 4,
-      "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/suppliers/suppliers-client.tsx": 1,
-      "apps/web/app/components/data-table/data-table.tsx": 1,
     },
   },
   {
@@ -943,7 +854,6 @@ const perFileCountBudgets = [
       "apps/web/app/_components/notification-list.tsx": 1,
       "apps/web/app/(protected)/admin/reports/stock-movement/stock-movement-client.tsx": 2,
       "apps/web/app/(protected)/admin/staff/[id]/permissions/permissions-client.tsx": 2,
-      "apps/web/app/(protected)/admin/staff/staff-table.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/components/completion-history-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/components/order-grid.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx": 1,
@@ -977,13 +887,8 @@ const perFileCountBudgets = [
       /className=\{?(?:cn\()?['"](?:(?=[^'"]*\brounded-full\b)(?=[^'"]*\bsize-(?:8|10|12|14|16)\b)|(?=[^'"]*\brounded-lg\b)(?=[^'"]*\bsize-(?:8|10|12)\b))[^'"]*['"]/g,
     allowlist: {
       "apps/web/app/_components/notification-list.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/mobile/mobile-top-bar.tsx": 1,
       "apps/web/app/(protected)/inventory/dashboard-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/grn/new/grn-from-po-list.tsx": 1,
       "apps/web/app/(protected)/inventory/grn/new/page.tsx": 1,
-      "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx": 1,
     },
   },
   {
@@ -1049,10 +954,8 @@ const frozenPrimitiveImportBaselines = [
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/transfer-table-dialog.tsx": 1,
       "apps/web/app/(protected)/employee/components/employee-pwa-toolbar.tsx": 1,
-      "apps/web/app/(protected)/employee/leave/leave-client.tsx": 1,
       "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
       "apps/web/app/(protected)/hr/checklist-templates-table.tsx": 1,
-      "apps/web/app/(protected)/hr/leave-requests-table.tsx": 1,
       "apps/web/app/(protected)/inventory/ingredients/import-export-menu.tsx": 1,
       "apps/web/app/(protected)/inventory/production-order-form.tsx": 1,
       "apps/web/app/(protected)/inventory/production-order-list.tsx": 1,
@@ -1070,15 +973,10 @@ const frozenPrimitiveImportBaselines = [
     label: "AlertDialog",
     replacement: "confirm(), FormDialog with reason input, or an approved destructive flow",
     allowlist: {
-      "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/cancel-order-dialog.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/reduce-quantity-dialog.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/void-item-dialog.tsx": 1,
-      "apps/web/app/(protected)/branch-settings/_shared/tables/table-table.tsx": 1,
       "apps/web/app/(protected)/finance/invoice-list.tsx": 1,
-      "apps/web/app/(protected)/hr/shifts-table.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/period-close-card.tsx": 1,
       "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx": 1,
     },
   },
@@ -1396,6 +1294,203 @@ for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
       `button-height-on-button: ${normalized} has ${count} action raw height(s), allowed ${allowed}. Use a Button size variant; non-action heights are out of scope (design-system.md § Enforcement Status / D030).`,
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// --write (ratchet) mode: lower the count-budget baselines to the current
+// actuals. NEVER raises a number. The script file is the single source of truth
+// for these baselines, so the updated literals are written back in place; only
+// the `maxCount:`/`allowlist:` values of count-budget gates change. Gate ids,
+// patterns, roots, Mode-A zero-allowlist gates, and every non-count-budget gate
+// are left byte-for-byte untouched, and normal-mode behavior above is unchanged.
+// ---------------------------------------------------------------------------
+
+// Actual per-file counts for a perFileCountBudgets / frozenPrimitiveImportBaselines
+// style gate (the loops above already proved this matches the live check logic).
+function computePerFileActuals(roots, pattern) {
+  const seen = new Map();
+  for (const root of roots) {
+    for (const filePath of walkFiles(root.dir, root.extensions)) {
+      const normalized = toPosix(filePath);
+      const content = fs.readFileSync(filePath, "utf8");
+      const count = countMatches(content, pattern);
+      if (count === 0) continue;
+      seen.set(normalized, (seen.get(normalized) ?? 0) + count);
+    }
+  }
+  return seen;
+}
+
+function computeTotalActual(roots, pattern) {
+  let count = 0;
+  for (const root of roots) {
+    for (const filePath of walkFiles(root.dir, root.extensions)) {
+      const content = fs.readFileSync(filePath, "utf8");
+      count += countMatches(content, pattern);
+    }
+  }
+  return count;
+}
+
+// Ratchet a {file:count} allowlist downward: keep only files still present in
+// the old allowlist, drop entries whose actual is 0, and set each surviving
+// entry to min(oldAllowed, actual). Files not in the old allowlist are never
+// added (their budget stays the implicit 0 the gate already enforces).
+function ratchetAllowlist(oldAllowlist, actuals) {
+  const next = {};
+  for (const [file, oldAllowed] of Object.entries(oldAllowlist)) {
+    const actual = actuals.get(file) ?? 0;
+    if (actual <= 0) continue;
+    next[file] = Math.min(oldAllowed, actual);
+  }
+  return next;
+}
+
+// Locate the source span of a value literal for `key` inside the gate object
+// identified by `id`, within the array literal assigned to `varName`. Returns
+// { valueStart, valueEnd, indent } or null. Brace/bracket/string aware so an
+// allowlist object value is captured whole. Only used by --write.
+function locateGateValueSpan(source, varName, id, key) {
+  const arrAnchor = source.indexOf(`const ${varName} = [`);
+  if (arrAnchor === -1) return null;
+  const idAnchor = source.indexOf(`id: "${id}"`, arrAnchor);
+  if (idAnchor === -1) return null;
+
+  const keyAnchor = source.indexOf(`${key}:`, idAnchor);
+  if (keyAnchor === -1) return null;
+  // Guard: the key must belong to this gate, i.e. appear before the next `id: "`.
+  const nextId = source.indexOf(`id: "`, idAnchor + 1);
+  if (nextId !== -1 && keyAnchor > nextId) return null;
+
+  const lineStart = source.lastIndexOf("\n", keyAnchor) + 1;
+  const indent = source.slice(lineStart, keyAnchor);
+
+  let i = keyAnchor + key.length + 1;
+  while (i < source.length && (source[i] === " " || source[i] === "\t")) i += 1;
+  const valueStart = i;
+
+  if (source[i] === "{" || source[i] === "[") {
+    const open = source[i];
+    const close = open === "{" ? "}" : "]";
+    let depth = 0;
+    let inString = null;
+    for (; i < source.length; i += 1) {
+      const ch = source[i];
+      if (inString) {
+        if (ch === inString && source[i - 1] !== "\\") inString = null;
+      } else if (ch === '"' || ch === "'" || ch === "`") {
+        inString = ch;
+      } else if (ch === open) depth += 1;
+      else if (ch === close) {
+        depth -= 1;
+        if (depth === 0) {
+          i += 1;
+          break;
+        }
+      }
+    }
+    return { valueStart, valueEnd: i, indent };
+  }
+
+  // Scalar value (a number, for maxCount): read up to the next comma/newline.
+  while (i < source.length && source[i] !== "," && source[i] !== "\n") i += 1;
+  return { valueStart, valueEnd: i, indent };
+}
+
+function serializeAllowlist(allowlist, indent) {
+  const entries = Object.entries(allowlist);
+  if (entries.length === 0) return "{}";
+  const inner = `${indent}  `;
+  const lines = entries.map(
+    ([file, count]) => `${inner}${JSON.stringify(file)}: ${count},`,
+  );
+  return `{\n${lines.join("\n")}\n${indent}}`;
+}
+
+if (WRITE_MODE) {
+  let source = fs.readFileSync(SELF_PATH, "utf8");
+  // Collect edits as {start, end, text} then apply right-to-left so earlier
+  // offsets stay valid.
+  const edits = [];
+  const ratchetSummary = [];
+
+  // perFileCountBudgets + frozenPrimitiveImportBaselines: ratchet `allowlist`.
+  const allowlistGates = [
+    ...perFileCountBudgets.map((gate) => ({
+      varName: "perFileCountBudgets",
+      id: gate.id,
+      oldAllowlist: gate.allowlist,
+      actuals: computePerFileActuals(gate.roots, gate.pattern),
+    })),
+    ...frozenPrimitiveImportBaselines.map((gate) => {
+      const pattern = new RegExp(
+        `from\\s+["@']@comtammatu/ui/components/${gate.component}["@']`,
+        "g",
+      );
+      return {
+        varName: "frozenPrimitiveImportBaselines",
+        id: gate.id,
+        oldAllowlist: gate.allowlist,
+        actuals: computePerFileActuals(
+          [{ dir: "apps/web/app", extensions: [".tsx"] }],
+          pattern,
+        ),
+      };
+    }),
+  ];
+
+  for (const gate of allowlistGates) {
+    const oldTotal = Object.values(gate.oldAllowlist).reduce((a, b) => a + b, 0);
+    const next = ratchetAllowlist(gate.oldAllowlist, gate.actuals);
+    const newTotal = Object.values(next).reduce((a, b) => a + b, 0);
+    const span = locateGateValueSpan(source, gate.varName, gate.id, "allowlist");
+    if (!span) {
+      console.error(`--write: could not locate allowlist for ${gate.id}`);
+      process.exit(1);
+    }
+    const serialized = serializeAllowlist(next, span.indent);
+    if (source.slice(span.valueStart, span.valueEnd) !== serialized) {
+      edits.push({ start: span.valueStart, end: span.valueEnd, text: serialized });
+    }
+    ratchetSummary.push({ id: gate.id, oldTotal, newTotal });
+  }
+
+  // countBudgets: ratchet `maxCount`.
+  for (const gate of countBudgets) {
+    const actualTotal = computeTotalActual(gate.roots, gate.pattern);
+    const newMax = Math.min(gate.maxCount, actualTotal);
+    const span = locateGateValueSpan(source, "countBudgets", gate.id, "maxCount");
+    if (!span) {
+      console.error(`--write: could not locate maxCount for ${gate.id}`);
+      process.exit(1);
+    }
+    const serialized = String(newMax);
+    if (source.slice(span.valueStart, span.valueEnd) !== serialized) {
+      edits.push({ start: span.valueStart, end: span.valueEnd, text: serialized });
+    }
+    ratchetSummary.push({ id: gate.id, oldTotal: gate.maxCount, newTotal: newMax });
+  }
+
+  edits.sort((a, b) => b.start - a.start);
+  for (const edit of edits) {
+    source = source.slice(0, edit.start) + edit.text + source.slice(edit.end);
+  }
+
+  if (edits.length > 0) {
+    fs.writeFileSync(SELF_PATH, source);
+  }
+
+  console.log(
+    edits.length > 0
+      ? `UI contract ratchet: lowered ${edits.length} baseline(s).`
+      : "UI contract ratchet: no change (already at actuals).",
+  );
+  for (const row of ratchetSummary) {
+    if (row.oldTotal !== row.newTotal) {
+      console.log(`  ${row.id}: ${row.oldTotal} -> ${row.newTotal}`);
+    }
+  }
+  process.exit(0);
 }
 
 if (failures.length > 0) {
