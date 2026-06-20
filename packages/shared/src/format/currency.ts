@@ -8,6 +8,7 @@
  *   formatVND(-30000)    → "-30.000đ"
  */
 export function formatVND(amount: number): string {
+  if (!Number.isFinite(amount)) return "0đ";
   const rounded = Math.round(amount);
   const isNegative = rounded < 0;
   const abs = Math.abs(rounded).toString();
