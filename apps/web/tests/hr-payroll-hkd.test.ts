@@ -77,7 +77,7 @@ test("HKD payroll: calculate persists via one atomic RPC", () => {
 test("HKD payroll: calculate reports employeeCount from the RPC result", () => {
   assert.match(
     payrollActionsSource,
-    /employeeCount:\s*Number\(rpcData\?\.employee_count/,
+    /employee_count\s*\?\?\s*entries\.length/,
     "meta.employeeCount must read the RPC's persisted-row count (regression for the calculated(0) toast)",
   );
 });
