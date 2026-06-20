@@ -261,7 +261,7 @@ function ScheduleSkeletonFallback() {
             <div
               key={day}
               role="columnheader"
-              className="flex h-8 items-center justify-center border-l text-center text-2xs font-medium whitespace-normal first:border-l-0 sm:h-9 sm:text-xs"
+              className="flex h-8 items-center justify-center border-l text-center text-xs font-medium whitespace-normal first:border-l-0 sm:h-9"
             >
               {day}
             </div>
@@ -337,7 +337,7 @@ function CalendarCellContent({
         if (cell.dateStr) onSelectDate(cell.dateStr);
       }}
       className={cn(
-        "flex aspect-square w-full flex-col gap-0.5 rounded-md bg-background p-1 text-left transition-[background-color,box-shadow,transform] duration-150 active:translate-y-px motion-safe:hover:-translate-y-px sm:aspect-video sm:gap-1 sm:p-2",
+        "flex aspect-square w-full flex-col gap-1 rounded-md bg-background p-1 text-left transition-[background-color,box-shadow,transform] duration-150 active:translate-y-px motion-safe:hover:-translate-y-px sm:aspect-video sm:p-2",
         cell.isToday && "bg-primary/5 ring-1 ring-primary/30",
         selected &&
           "bg-info/10 shadow-sm ring-2 ring-info/40 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150",
@@ -359,7 +359,7 @@ function CalendarCellContent({
         ) : null}
       </div>
 
-      <div className="mt-auto flex min-w-0 flex-col gap-0.5">
+      <div className="mt-auto flex min-w-0 flex-col gap-1">
         {attendances.map((att, index) => (
           <div key={index} className="flex min-w-0 items-center gap-1">
             <span
@@ -369,7 +369,7 @@ function CalendarCellContent({
               )}
               aria-hidden="true"
             />
-            <span className="hidden min-w-0 truncate text-2xs leading-4 text-muted-foreground sm:inline">
+            <span className="hidden min-w-0 truncate text-xs leading-4 text-muted-foreground sm:inline">
               {att.shift_name ?? "\u2014"}
               {att.check_in ? ` ${formatTime(att.check_in)}` : ""}
             </span>
@@ -384,7 +384,7 @@ function CalendarCellContent({
               )}
               aria-hidden="true"
             />
-            <span className="hidden min-w-0 truncate text-2xs leading-4 text-muted-foreground sm:inline">
+            <span className="hidden min-w-0 truncate text-xs leading-4 text-muted-foreground sm:inline">
               {getLeaveLabel(leave)}
             </span>
           </div>
@@ -417,7 +417,7 @@ function ScheduleMonthCalendarTable({
             <div
               key={day}
               role="columnheader"
-              className="flex h-8 items-center justify-center border-l text-center text-2xs font-medium whitespace-normal first:border-l-0 sm:h-9 sm:text-xs"
+              className="flex h-8 items-center justify-center border-l text-center text-xs font-medium whitespace-normal first:border-l-0 sm:h-9"
             >
               {day}
             </div>

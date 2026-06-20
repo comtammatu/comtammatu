@@ -379,7 +379,7 @@ export function EmployeeStatusStrip({
           size="xs"
           className="min-w-0 bg-background transition-[background-color,border-color,box-shadow] duration-150 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-200"
         >
-          <ItemContent className="min-w-0 gap-0.5">
+          <ItemContent className="min-w-0 gap-1">
             <ItemDescription className="truncate text-2xs font-medium leading-4">
               {item.label}
             </ItemDescription>

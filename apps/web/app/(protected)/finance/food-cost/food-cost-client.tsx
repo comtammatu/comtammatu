@@ -120,7 +120,7 @@ export function FoodCostClient({
   ];
 
   return (
-    <div className="space-y-4">
+    <>
       <FilterBar
         params={params}
         branches={branches}
@@ -192,6 +192,6 @@ export function FoodCostClient({
           }}
         />
       </AppSection>
-    </div>
+    </>
   );
 }

@@ -198,7 +198,7 @@ export function RevenueDrillTabs({
                 ? Math.round((hour.total_revenue / totalRevenue) * 100)
                 : 0;
               return (
-                <div key={hour.hour} className="space-y-1">
+                <div key={hour.hour} className="flex flex-col gap-1">
                   <div className="flex items-baseline justify-between text-sm">
                     <span className="font-medium tabular-nums">
                       {formatHourBucket(hour.hour)}

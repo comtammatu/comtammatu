@@ -236,7 +236,7 @@ export function CheckoutApprovalsClient({
   return (
     <div className="flex flex-col gap-3">
       {!canApprove ? (
-        <Alert className="border-warning/20 bg-warning/10">
+        <Alert className="border-warning/30 bg-warning/10">
           <AlertDescription>
             Tài khoản này chưa có quyền duyệt kết ca cho chi nhánh hiện tại.
           </AlertDescription>

@@ -178,7 +178,7 @@ export function ShiftsTable({
               </ItemDescription>
               <Badge
                 variant={shift.is_active ? "default" : "outline"}
-                className="mt-2 w-fit"
+                className="w-fit"
               >
                 {shift.is_active
                   ? ACTIVE_STATE_LABELS_VI.active

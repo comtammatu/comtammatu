@@ -70,7 +70,7 @@ export default async function RevenueDrillPage({
 
   if (!isValidIsoDate(date)) {
     return (
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         <p className="text-sm text-destructive">Ngày không hợp lệ.</p>
         <Button asChild variant="outline" size="sm">
           <Link href="/finance/revenue">Về báo cáo doanh thu</Link>
@@ -91,7 +91,7 @@ export default async function RevenueDrillPage({
       name: string;
     }[];
     return (
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         <Button asChild variant="ghost" size="sm">
           <Link href="/finance/revenue" className="gap-2">
             <IconArrowLeft className="size-4" />

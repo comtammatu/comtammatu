@@ -227,7 +227,7 @@ export function ExpensesClient({
   ];
 
   return (
-    <div className="space-y-4">
+    <>
       <FilterBar
         params={params}
         branches={branches}
@@ -356,6 +356,6 @@ export function ExpensesClient({
           </>
         )}
       </FormDialog>
-    </div>
+    </>
   );
 }

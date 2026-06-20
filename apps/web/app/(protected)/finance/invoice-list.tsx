@@ -636,7 +636,7 @@ export function InvoiceList({
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         {draftCount > 0 ? (
           <div className="flex justify-end">
             <Button

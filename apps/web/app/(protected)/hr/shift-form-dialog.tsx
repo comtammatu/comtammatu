@@ -88,7 +88,7 @@ export function ShiftFormDialog({
             required
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <TextField
               control={form.control}
               name="start_time"

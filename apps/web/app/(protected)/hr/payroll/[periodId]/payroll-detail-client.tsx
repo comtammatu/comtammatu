@@ -203,7 +203,7 @@ export function PayrollDetailClient({
       : [];
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-2">
         <Button onClick={handleCalculate} disabled={isPending}>
           {isPending ? (

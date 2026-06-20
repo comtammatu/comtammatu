@@ -182,7 +182,7 @@ export function EmployeeTable({
               {employee.employee_code ?? "—"} ·{" "}
               {employee.profiles?.branches?.name ?? "—"}
             </ItemDescription>
-            <div className="mt-2 flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               {employee.profiles?.positions?.label_vi ? (
                 <Badge variant="secondary" className="w-fit">
                   {employee.profiles.positions.label_vi}

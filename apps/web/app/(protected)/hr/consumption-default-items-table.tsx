@@ -162,7 +162,7 @@ export function ConsumptionDefaultItemsTable({
               <ItemDescription className="line-clamp-none">
                 {item.branchName ?? "Global"}
               </ItemDescription>
-              <div className="mt-2">{renderIngredients(item)}</div>
+              <div>{renderIngredients(item)}</div>
             </ItemContent>
             <ItemActions>
               <Button

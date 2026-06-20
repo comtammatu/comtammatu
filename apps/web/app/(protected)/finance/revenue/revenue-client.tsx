@@ -42,10 +42,10 @@ const RevenueChartsBlock = dynamic(
     ssr: false,
     loading: () => (
       <>
-        <Skeleton className="h-44 w-full rounded-md" />
+        <Skeleton className="h-44 w-full rounded-lg" />
         <div className="grid gap-4 lg:grid-cols-2">
-          <Skeleton className="aspect-square max-h-72 w-full rounded-md" />
-          <Skeleton className="aspect-square max-h-72 w-full rounded-md" />
+          <Skeleton className="aspect-square max-h-72 w-full rounded-lg" />
+          <Skeleton className="aspect-square max-h-72 w-full rounded-lg" />
         </div>
       </>
     ),
@@ -204,7 +204,7 @@ function SectionHeading({
   description: string;
 }) {
   return (
-    <div className="space-y-1">
+    <div className="flex flex-col gap-1">
       <h2 className="font-heading text-base font-semibold">{title}</h2>
       <p className="text-sm text-muted-foreground">{description}</p>
     </div>
@@ -928,11 +928,11 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
         </div>
       </div>
       {variance.worst_cashiers.length > 0 ? (
-        <div className="space-y-1.5 border-t pt-3">
+        <div className="flex flex-col gap-1.5 border-t pt-3">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {cashCopy.topVariance}
           </p>
-          <ul className="space-y-1">
+          <ul className="flex flex-col gap-1">
             {variance.worst_cashiers.map((c) => (
               <li
                 key={c.cashier_id ?? c.cashier_name}

@@ -144,9 +144,8 @@ export function ExportToolbar({
         size="sm"
         onClick={handleCopy}
         disabled={isDisabled}
-        className="gap-1.5"
       >
-        <Copy className="size-3.5" aria-hidden />
+        <Copy aria-hidden />
         {copyLabel}
       </Button>
       <Button
@@ -154,9 +153,8 @@ export function ExportToolbar({
         size="sm"
         onClick={handleDownload}
         disabled={isDisabled}
-        className="gap-1.5"
       >
-        <Download className="size-3.5" aria-hidden />
+        <Download aria-hidden />
         {exportCopy.download}
       </Button>
     </div>

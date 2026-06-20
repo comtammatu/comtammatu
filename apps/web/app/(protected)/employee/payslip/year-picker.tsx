@@ -47,7 +47,7 @@ export function YearPicker({ selectedYear, currentYear }: YearPickerProps) {
       >
         <IconChevronLeft />
       </Button>
-      <div className="flex flex-1 flex-col items-center gap-0.5">
+      <div className="flex flex-1 flex-col items-center gap-1">
         <p className="text-sm font-medium">
           {copy.yearBadge} {selectedYear}
         </p>

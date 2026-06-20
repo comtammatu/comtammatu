@@ -382,7 +382,7 @@ export function ChecklistTemplatesTable({
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground">
           {templates.length} template
@@ -455,9 +455,9 @@ export function ChecklistTemplatesTable({
           </DialogHeader>
 
           {draft ? (
-            <div className="space-y-5 py-2">
+            <div className="flex flex-col gap-4 py-2">
               <div className="grid gap-4 sm:grid-cols-[1fr_240px]">
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="checklist-template-name">Tên template</Label>
                   <Input
                     id="checklist-template-name"
@@ -469,7 +469,7 @@ export function ChecklistTemplatesTable({
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="checklist-template-scope">Phạm vi</Label>
                   <Select
                     value={draft.branchId?.toString() ?? "global"}
@@ -500,7 +500,7 @@ export function ChecklistTemplatesTable({
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                   <Label>Danh sách việc</Label>
                   <Button
@@ -514,11 +514,11 @@ export function ChecklistTemplatesTable({
                   </Button>
                 </div>
 
-                <div className="space-y-3">
+                <div className="flex flex-col gap-3">
                   {draft.items.map((item, index) => (
                     <div key={index} className="rounded-md border p-3">
                       <div className="grid gap-3 lg:grid-cols-[1fr_170px_150px_150px_120px_auto]">
-                        <div className="space-y-2">
+                        <div className="flex flex-col gap-2">
                           <Label htmlFor={`checklist-item-${index}`}>
                             Việc
                           </Label>
@@ -563,7 +563,7 @@ export function ChecklistTemplatesTable({
                           </Select>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="flex flex-col gap-2">
                           <Label>Phase</Label>
                           <Select
                             value={item.phase}
@@ -586,7 +586,7 @@ export function ChecklistTemplatesTable({
                           </Select>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="flex flex-col gap-2">
                           <Label>Phạm vi</Label>
                           <Select
                             value={item.scope}

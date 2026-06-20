@@ -193,7 +193,7 @@ export function TasksClient({
         return (
           <section
             key={phase}
-            className="flex flex-col gap-2"
+            className="flex flex-col gap-3"
             aria-labelledby={headingId}
           >
             <div className="flex flex-wrap items-center justify-between gap-2">

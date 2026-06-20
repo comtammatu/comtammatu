@@ -109,7 +109,7 @@ export function PayrollListClient({
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {copy.count(periods.length)}
@@ -141,7 +141,7 @@ export function PayrollListClient({
                 {copy.paidAt}:{" "}
                 {period.paid_at ? formatVNDate(period.paid_at) : "—"}
               </ItemDescription>
-              <div className="mt-2">{renderStatus(period)}</div>
+              <div>{renderStatus(period)}</div>
             </ItemContent>
             <ItemActions>{renderDetailLink(period)}</ItemActions>
           </Item>

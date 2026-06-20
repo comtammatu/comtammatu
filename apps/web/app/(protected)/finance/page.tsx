@@ -162,7 +162,7 @@ function InventoryCapitalList({ items }: { items: FinanceInventoryItem[] }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
       {items.slice(0, 3).map((item) => (
         <div
           key={`${item.branchName}-${item.ingredientName}`}
@@ -200,7 +200,7 @@ function ExceptionList({ items }: { items: FinanceException[] }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
       {visibleItems.slice(0, 4).map((item) => (
         <div
           key={item.label}
@@ -221,7 +221,7 @@ function ExceptionList({ items }: { items: FinanceException[] }) {
                   : "text-warning",
               )}
             />
-            <div className="min-w-0 flex-1 space-y-1">
+            <div className="min-w-0 flex-1 flex flex-col gap-1">
               <div className="flex items-center justify-between gap-2">
                 <p className="truncate text-sm font-medium">{item.label}</p>
                 <p className="font-mono text-sm font-semibold tabular-nums">

@@ -411,7 +411,7 @@ export default async function EmployeePage() {
       <div className="flex flex-col gap-3">
         <EmployeePanel tone={tone} size="sm" contentClassName="gap-3">
           <div className="flex flex-col gap-3">
-            <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-heading text-xl font-semibold tracking-tight">
                   {title}
@@ -419,7 +419,7 @@ export default async function EmployeePage() {
                 <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
                   {todayMeta}
                 </p>
-                <p className="mt-2 text-2xs font-semibold uppercase text-muted-foreground">
+                <p className="mt-2 text-xs font-semibold uppercase text-muted-foreground">
                   {copy.nextActionTitle}
                 </p>
                 <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -431,7 +431,7 @@ export default async function EmployeePage() {
               </Badge>
             </div>
             <div>{primaryAction}</div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-2 text-xs">
                 <span className="font-medium text-muted-foreground">
                   {copy.workProgress}

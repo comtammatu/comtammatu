@@ -214,7 +214,7 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
           </SelectContent>
         </Select>
 
-        <div className="flex gap-1 rounded-md border p-0.5">
+        <div className="flex gap-1 rounded-md border p-1">
           <Button
             variant={view === "summary" ? "default" : "ghost"}
             size="sm"
@@ -721,7 +721,7 @@ function ChecklistDetail({ record }: { record: AttendanceRecord }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {CHECKLIST_PHASES.map((phase) => {
         const phaseItems = items.filter(
           (item) => normalizePhase(item.phase) === phase,
@@ -729,7 +729,7 @@ function ChecklistDetail({ record }: { record: AttendanceRecord }) {
         if (phaseItems.length === 0) return null;
 
         return (
-          <div key={phase} className="space-y-2">
+          <div key={phase} className="flex flex-col gap-2">
             <div className="text-sm font-medium">
               {CHECKLIST_PHASE_LABELS[phase]}
             </div>

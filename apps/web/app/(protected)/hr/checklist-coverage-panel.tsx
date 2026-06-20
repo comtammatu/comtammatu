@@ -147,7 +147,7 @@ export function ChecklistCoveragePanel({
       }}
     >
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <div>
             <p className="font-heading text-sm font-semibold">
               {copy.positionTitle}
@@ -171,7 +171,7 @@ export function ChecklistCoveragePanel({
                   <ItemDescription className="line-clamp-none text-sm leading-6">
                     {row.checklistName ?? copy.none}
                   </ItemDescription>
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  <div className="mt-2 flex flex-wrap gap-1.5">
                     <Badge variant={row.hasConsumption ? "warning" : "secondary"}>
                       {row.hasConsumption
                         ? copy.hasConsumption
@@ -185,7 +185,7 @@ export function ChecklistCoveragePanel({
           />
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <div>
             <p className="font-heading text-sm font-semibold">
               {copy.employeeTitle}
@@ -210,7 +210,7 @@ export function ChecklistCoveragePanel({
                     {row.branchName ?? copy.noBranch} ·{" "}
                     {row.positionName || copy.noPosition}
                   </ItemDescription>
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  <div className="mt-2 flex flex-wrap gap-1.5">
                     <Badge variant="secondary">
                       {row.checklistName ?? copy.none}
                     </Badge>

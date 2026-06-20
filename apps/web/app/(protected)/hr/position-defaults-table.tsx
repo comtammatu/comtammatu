@@ -143,7 +143,7 @@ export function PositionDefaultsTable({
               <ItemDescription className="line-clamp-none text-sm leading-6">
                 {getTemplateName(position.default_checklist_template_id)}
               </ItemDescription>
-              <div className="mt-2">{renderTemplateSelect(position)}</div>
+              <div>{renderTemplateSelect(position)}</div>
             </ItemContent>
           </Item>
         )}
