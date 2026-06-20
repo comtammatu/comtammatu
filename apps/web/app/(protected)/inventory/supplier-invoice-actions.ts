@@ -12,19 +12,24 @@ const ROLES = PROCUREMENT_ROLES;
 
 /* ─── Supplier Invoices (3-way match: PO ↔ GRN ↔ Invoice) ─── */
 
-const invoiceSchema = z.object({
-  supplierId: z.coerce.number().int().positive(),
-  grnId: z.coerce.number().int().positive().optional().nullable(),
-  poId: z.coerce.number().int().positive().optional().nullable(),
-  invoiceNumber: z.string().min(1),
-  invoiceDate: z.string(),
-  subtotal: z.coerce.number().min(0),
-  vatRate: z.coerce.number().min(0).default(8),
-  vatAmount: z.coerce.number().min(0),
-  totalAmount: z.coerce.number().min(0),
-  matchingNotes: z.string().optional(),
-  dueDate: z.string().optional().nullable(),
-});
+const invoiceSchema = z
+  .object({
+    supplierId: z.coerce.number().int().positive(),
+    grnId: z.coerce.number().int().positive().optional().nullable(),
+    poId: z.coerce.number().int().positive().optional().nullable(),
+    invoiceNumber: z.string().min(1),
+    invoiceDate: z.string(),
+    subtotal: z.coerce.number().min(0),
+    vatRate: z.coerce.number().min(0).default(8),
+    vatAmount: z.coerce.number().min(0),
+    totalAmount: z.coerce.number().min(0),
+    matchingNotes: z.string().optional(),
+    dueDate: z.string().optional().nullable(),
+  })
+  .refine((d) => Math.abs(d.totalAmount - (d.subtotal + d.vatAmount)) <= 1, {
+    message: "Tổng tiền phải bằng tạm tính cộng thuế GTGT.",
+    path: ["totalAmount"],
+  });
 
 export const createSupplierInvoice = withAction(
   {
