@@ -199,6 +199,8 @@ Allowed gap scale in app code: `1`, `1.5`, `2`, `3`, `4`, `6`. Avoid `5`, `7`, `
 
 Page padding MUST come from `AppPage` (not ad-hoc on the page root). Card padding MUST come from `Card` / `Card size="sm"` (not ad-hoc on `<CardContent>`). When a card body needs table-edge alignment or horizontal table scrolling, use the named primitive props `CardContent flush` and/or `CardContent scroll` instead of local `p-0` / `overflow-x-auto` overrides.
 
+Vertical rhythm uses flex gap, not `space-y-*`. Section / page / dialog / client-root stacks compose `flex flex-col gap-4` (compact `gap-3`); AppSection content uses `gap-3`. Do NOT use `space-y-*` for these stacks — gap keeps the spacing on the container (one knob, density-aware) instead of leaking margins onto children. Existing `space-y-*` usage is frozen per file by the `space-y-baseline` gate and only burns down.
+
 ### B. Heading Scale (locked per role)
 
 | Role                    | Class                                                                   | Source                                                                 |
@@ -273,16 +275,20 @@ If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove ta
 
 `h-10` is permitted ONLY on these `form/*` field controls, applied through the shared wrapper. The forbidden fixed heights `h-10` / `h-11` / `h-12` / `h-14` / `h-16` above apply to elements acting as a **button CTA** (`<button>` / `<Link>` / `<Button>` used as an action) — a form-field control that holds input or opens a popover/list is governed by this table, not by the button-height ban. Do not hand-patch a raw `Input` or `SelectTrigger` to `h-10`; route it through the `form/*` wrapper so field height stays single-sourced. Vertical chrome should otherwise be controlled with `Field` / `FieldGroup` spacing, not ad-hoc height overrides.
 
-### E. Radius Scale (4 tokens only)
+### E. Radius Scale (4 tiers, 4 tokens only)
 
-| Token          | When                                                         |
-| -------------- | ------------------------------------------------------------ |
-| `rounded-md`   | Default for input, button, badge, chip, small surface card   |
-| `rounded-lg`   | Card, sheet, dialog, drawer outer                            |
-| `rounded-full` | Avatar, pill badge, circular icon container                  |
-| `rounded-none` | Explicit reset only (table cell internals, edge-bleed media) |
+Radius is a tier, not a free choice. Pick the token from the element's role:
+
+| Tier               | Token          | Roles                                                                                  |
+| ------------------ | -------------- | -------------------------------------------------------------------------------------- |
+| Control            | `rounded-md`   | Input, button, badge, chip, icon-box (square icon container), inset block, callout/Alert |
+| Card / page-container | `rounded-lg` | Card, Sheet, Dialog, Drawer outer; page-container surfaces                              |
+| Pill               | `rounded-full` | Avatar, pill badge, circular (truly round) icon container                              |
+| Reset              | `rounded-none` | Explicit reset only (table cell internals, edge-bleed media)                           |
 
 `rounded` (no suffix), `rounded-sm`, `rounded-xl`, `rounded-2xl`, `rounded-3xl`, `rounded-4xl` are NOT allowed in app code. The radius primitive token surface (`--radius-sm/md/lg/xl/2xl/3xl/4xl`) exists in `globals.css` for shadcn primitive compatibility — app surfaces consume them indirectly through Card/Sheet/etc., not directly.
+
+Tier misalignment is mostly a review concern, but two unambiguous cases are enforced by the `radius-tier-baseline` gate: a `rounded-full` on a sized icon-box (`size-8/10/12/14/16` — that is a square control, so it should be `rounded-md`), and `rounded-lg` on a small inset (`size-8/10/12` — control tier, so `rounded-md`). The gate is a detectable subset only; full tier-correctness comes from this table plus review.
 
 ### F. Density Modes
 
