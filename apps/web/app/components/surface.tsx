@@ -728,7 +728,7 @@ export function AppLinkCard({
 
   const inner = (
     <div className="group flex h-full flex-col justify-between gap-4 p-4">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-3">
           <div
             className={cn(
@@ -740,17 +740,17 @@ export function AppLinkCard({
           </div>
           {(badge ?? metric) ? topRight : null}
         </div>
-        <div className="min-w-0">
+        <div className="flex min-w-0 flex-col gap-1">
           <p className="font-heading text-base font-semibold tracking-tight">
             {title}
           </p>
           {description ? (
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            <p className="text-sm leading-6 text-muted-foreground">
               {description}
             </p>
           ) : null}
           {disabled && disabledReason ? (
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {disabledReason}
             </p>
           ) : null}
