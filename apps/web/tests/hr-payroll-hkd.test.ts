@@ -61,6 +61,27 @@ test("HKD payroll: list queries are bounded", () => {
   );
 });
 
+test("HKD payroll: calculate persists via one atomic RPC", () => {
+  assert.match(
+    payrollActionsSource,
+    /\.rpc\(\s*"upsert_payroll_calculation"/,
+    "calculatePayroll must persist entries + status via the atomic RPC",
+  );
+  assert.doesNotMatch(
+    payrollActionsCode,
+    /\.update\(\s*\{\s*status:\s*"calculated"/,
+    "the separate payroll_periods.status='calculated' write must be folded into the RPC",
+  );
+});
+
+test("HKD payroll: calculate reports employeeCount from the RPC result", () => {
+  assert.match(
+    payrollActionsSource,
+    /employeeCount:\s*Number\(rpcData\?\.employee_count/,
+    "meta.employeeCount must read the RPC's persisted-row count (regression for the calculated(0) toast)",
+  );
+});
+
 // Regression: shared engine math under the HKD model (insuranceBaseSalary=0).
 // Numbers are derived from the versioned legal tables — do NOT hardcode rates
 // here; these assert the end-to-end output the action persists.

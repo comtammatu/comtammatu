@@ -310,3 +310,44 @@
 **Nghĩa vụ %** (nếu doanh thu >1 tỷ → GTGT 2,4%/3%) khai ở **tờ khai trên tổng doanh thu**, KHÔNG trên hóa đơn.
 
 **Status:** RESOLVED — verify trên account no-validation `0100109106-509` (caveat: validator prod trên template ĐÃ ĐĂNG KÝ của Má Tư có thể khác) → owner **smoke hóa đơn thật đầu tiên** sau deploy.
+
+## D041: Payroll "tính lương" atomic — gộp upsert entries + flip status vào 1 RPC (2026-06-20)
+
+**Decision (T3, owner duyệt qua finish-contract harness):** `calculatePayroll`
+(`apps/web/app/(protected)/hr/payroll-actions.ts`) trước ghi 2 bước rời (upsert
+`payroll_entries` → update riêng `payroll_periods.status='calculated'`); bước 2
+fail → status lệch entries đã ghi (nhánh partial-success cũ). Gộp cả 2 +
+clean-recompute delete vào 1 RPC `public.upsert_payroll_calculation(p_period_id
+bigint, p_entries jsonb)` SECURITY DEFINER. TS giữ toàn quyền tính
+PIT/BHXH/proration (`calculatePayrollEntry` + `legal-versions.ts`); RPC chỉ
+persist nguyên tử, không đụng giá trị tiền.
+
+**Chốt:**
+
+1. **Clean-recompute IN scope:** RPC xóa entry của NV không còn eligible bằng
+   `NOT EXISTS` (không `NOT IN`) trong cùng transaction → re-run không để ghost row.
+2. **No EXCEPTION block** trong RPC: một exception bị bắt sẽ commit ghi dở → tái
+   tạo đúng divergence cần giết.
+3. **Gate in-body:** `auth_tenant_id()` ép tenant + `payroll_period_id` trên mọi
+   row (không tin jsonb client), `has_permission_any('finance:payroll_calculate')`,
+   period `FOR UPDATE`, chỉ cho `status IN (draft,calculated)`, reject `p_entries`
+   rỗng. `GRANT EXECUTE` chỉ `authenticated`.
+4. **employee_count = GET DIAGNOSTICS ROW_COUNT** (không `jsonb_array_length`).
+5. **Typing gap:** tên RPC chưa có trong `database.types.ts` tới khi owner apply →
+   cast rpc surface 1 lần có chú thích (owner chọn typed-wrapper). `pnpm db:types`
+   chạy SAU khi owner apply.
+6. **Guard:** `PAYROLL-CALCULATE-MUST-BE-ATOMIC-RPC` trong
+   `scripts/check-regression-guards.mjs` (present `.rpc("upsert_payroll_calculation"`,
+   absent `.update({ status: "calculated"` — siết theo `calculated` để không đụng
+   approve/pay cùng file).
+
+**Defer (owner quyết sau, KHÔNG làm ở PR này):** (a) persist
+`legalVersionEffectiveFrom` thành cột snapshot — recompute kỳ `calculated` dưới
+legal-version mới hiện ghi đè im lặng, không audit trail; (b) guard
+entry-completeness lúc approve; (c) chính sách loại NV 0 công (hiện vẫn ghi
+net=0). TOCTOU còn lại: employees/attendance đọc ở TS TRƯỚC khi RPC lock period —
+chấp nhận ở quy mô single-tenant manual-trigger.
+
+**Apply:** file → PR → owner apply tay vào prod ref `iexwsuaqqenyjiskawoj`
+(re-confirm `payroll_periods`/`payroll_entries` còn 0 row trước khi apply). Agent
+KHÔNG apply prod.

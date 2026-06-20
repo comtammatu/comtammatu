@@ -8,6 +8,11 @@ import { getVNMonthEndDateString } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { logAudit } from "@/_lib/audit";
+import {
+  mapRpcError,
+  type RpcErrorMapping,
+  type RpcErrorFallback,
+} from "@/_lib/rpc-error-map";
 
 const PAYROLL_ROLES: readonly StaffRole[] = ["owner"];
 
@@ -76,6 +81,35 @@ export const createPayrollPeriod = withAction(
 );
 
 /* ─── Calculate Payroll ─── */
+
+const payrollCalcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: (m, c) =>
+      m.includes("forbidden") || m.includes("tenant_mismatch") || c === "42501",
+    errorCode: "payroll.calculate.forbidden",
+    userMessage: "Không có quyền tính lương.",
+  },
+  {
+    match: (m, c) => m.includes("payroll_period_not_found") || c === "P0002",
+    errorCode: "payroll.calculate.period_not_found",
+    userMessage: "Kỳ lương không tồn tại.",
+  },
+  {
+    match: (m) => m.includes("payroll_locked"),
+    errorCode: "payroll.calculate.locked",
+    userMessage: "Chỉ có thể tính lương cho kỳ nháp hoặc đã tính.",
+  },
+  {
+    match: (m) => m.includes("invalid_payroll_entries"),
+    errorCode: "payroll.calculate.invalid_entries",
+    userMessage: "Dữ liệu bảng lương không hợp lệ.",
+  },
+];
+
+const payrollCalcFallback: RpcErrorFallback = {
+  userMessage: "Không thể tính lương. Vui lòng thử lại.",
+  errorCode: "payroll.calculate.unknown",
+};
 
 const periodIdSchema = z.object({
   periodId: z.coerce.number().int().positive(),
@@ -233,31 +267,33 @@ export const calculatePayroll = withAction(
       };
     });
 
-    const { error: upsertErr } = await supabase
-      .from("payroll_entries")
-      .upsert(entries, {
-        onConflict: "payroll_period_id,employee_id,tenant_id",
-      });
+    // `upsert_payroll_calculation` enters database.types.ts only after the owner applies the
+    // migration (file → PR → owner); cast the rpc surface once so params + return stay type-checked.
+    const { data: rpcData, error: rpcErr } = await (
+      supabase as unknown as {
+        rpc: (
+          fn: "upsert_payroll_calculation",
+          args: { p_period_id: number; p_entries: typeof entries },
+        ) => Promise<{
+          data: { employee_count?: number } | null;
+          error: { message?: string | null; code?: string | null } | null;
+        }>;
+      }
+    ).rpc("upsert_payroll_calculation", {
+      p_period_id: data.periodId,
+      p_entries: entries,
+    });
 
-    if (upsertErr) {
-      return { success: false, error: "Không thể lưu bảng lương." };
+    if (rpcErr) {
+      return mapRpcError(rpcErr, payrollCalcMappings, payrollCalcFallback);
     }
 
-    const { error: statusErr } = await supabase
-      .from("payroll_periods")
-      .update({ status: "calculated" })
-      .eq("id", data.periodId)
-      .eq("tenant_id", claims.tenant_id);
-
-    if (statusErr) {
-      return {
-        success: false,
-        error:
-          "Đã lưu bảng lương nhưng không thể cập nhật trạng thái kỳ lương.",
-      };
-    }
-
-    return { success: true, meta: { employeeCount: entries.length } };
+    return {
+      success: true,
+      meta: {
+        employeeCount: Number(rpcData?.employee_count ?? entries.length),
+      },
+    };
   },
 );
 
