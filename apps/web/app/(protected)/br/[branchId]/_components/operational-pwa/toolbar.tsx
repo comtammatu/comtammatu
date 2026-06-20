@@ -159,7 +159,7 @@ export function OperationalPwaToolbar({
   if (hasNewVersion) {
     return (
       <div
-        className="flex shrink-0 items-center gap-2 border-b border-border/60 bg-background/90 px-2 py-1.5 md:px-4"
+        className="flex shrink-0 items-center gap-2 border-b border-border/60 bg-background/90 px-2 py-2 md:px-4"
         role="region"
         aria-label={copy.regionLabel}
       >
@@ -193,7 +193,7 @@ export function OperationalPwaToolbar({
   return (
     <>
       <div
-        className="flex shrink-0 items-center gap-2 border-b border-border/60 bg-background/90 px-2 py-1.5 md:px-4"
+        className="flex shrink-0 items-center gap-2 border-b border-border/60 bg-background/90 px-2 py-2 md:px-4"
         role="region"
         aria-label={copy.regionLabel}
       >

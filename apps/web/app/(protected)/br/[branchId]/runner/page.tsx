@@ -584,7 +584,7 @@ function RunnerOrderBoard({
       {overflowBase > 0 ? (
         <p
           className={cn(
-            "shrink-0 border-t border-border bg-muted/70 px-4 py-1.5 text-center font-heading text-runner-footer font-semibold text-muted-foreground",
+            "shrink-0 border-t border-border bg-muted/70 px-4 py-2 text-center font-heading text-runner-footer font-semibold text-muted-foreground",
             overflowXl <= 0 && "xl:hidden",
           )}
         >
@@ -692,7 +692,7 @@ function RunnerOrderListRow({
       aria-current={featured ? "true" : undefined}
       data-runner-featured={featured ? "true" : undefined}
       className={cn(
-        "grid h-full min-h-0 w-full grid-cols-12 items-stretch gap-0 divide-x divide-border/70 border-b border-l-4",
+        "grid h-full min-h-0 w-full grid-cols-12 items-stretch divide-x divide-border/70 border-b border-l-4",
         getRunnerRowClass(),
         featured && "border-l-primary",
         featured && "bg-warning/15 ring-1 ring-inset ring-warning/40",

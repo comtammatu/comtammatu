@@ -129,7 +129,7 @@ function CompactItemRow({
     >
       <div
         className={cn(
-          "flex h-8 w-12 shrink-0 items-center justify-center rounded-md px-1.5 ring-1 ring-inset xl:h-9 xl:w-14 xl:px-2",
+          "flex h-8 w-12 shrink-0 items-center justify-center rounded-md px-2 ring-1 ring-inset xl:h-9 xl:w-14",
           getQuantityStatusClass(status),
         )}
       >
@@ -145,7 +145,7 @@ function CompactItemRow({
         {item.is_priority && (
           <Badge
             variant="warning"
-            className="h-5 rounded-md px-1.5 py-0 text-xs font-semibold leading-none xl:h-6 xl:px-2 xl:text-sm"
+            className="h-5 rounded-md px-2 py-0 text-xs font-semibold leading-none xl:h-6 xl:text-sm"
           >
             {KDS_HEATMAP_LABELS.priority}
           </Badge>
@@ -464,7 +464,7 @@ function HeatmapCard({
           />
         </div>
       </div>
-      <div className="mt-2 min-w-0 rounded-md border border-border/50 bg-card/70 p-1.5 xl:mt-3 xl:p-2">
+      <div className="mt-2 min-w-0 rounded-md border border-border/50 bg-card/70 p-2 xl:mt-3 xl:p-3">
         {order.items.map((item) => (
           <CompactItemRow
             key={item.id}
@@ -574,7 +574,7 @@ export function OrderGrid({
   return (
     <div className="min-h-0 flex-1 overflow-y-auto xl:overflow-hidden">
       {displayOrders.length === 0 ? (
-        <div className="flex min-h-80 items-center justify-center p-6 md:min-h-96">
+        <div className="flex min-h-80 items-center justify-center p-4 md:min-h-96">
           <AppEmptyState
             title={
               hasGroupedOrders ? "Không có đơn phù hợp bộ lọc" : "Bếp đang rảnh"

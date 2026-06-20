@@ -142,7 +142,7 @@ export function OrderItemActionsSheet({
               }
               noteClassName={cancelled ? "line-through opacity-60" : undefined}
             />
-            <p className="mt-1.5 text-xs text-muted-foreground">
+            <p className="mt-2 text-xs text-muted-foreground">
               Trạng thái:{" "}
               <span className="font-medium text-foreground">{statusLabel}</span>
             </p>

@@ -163,7 +163,7 @@ export function CloseSessionSheet({
         </SheetHeader>
 
         <ScrollArea className="min-h-0 flex-1">
-          <div className="px-3 py-3 sm:px-5 sm:py-4">
+          <div className="px-3 py-3 sm:px-4 sm:py-4">
             {step === "count" && (
               <div className="flex flex-col gap-4">
                 <DenominationInput
@@ -264,17 +264,15 @@ export function CloseSessionSheet({
                   </AlertDescription>
                 </Alert>
 
-                <div className="flex flex-col gap-2">
-                  <Badge variant="outline" className="w-fit text-sm">
-                    Tiền đầu ca: {formatVND(summary.opening_cash)}
-                  </Badge>
-                </div>
+                <Badge variant="outline" className="w-fit text-sm">
+                  Tiền đầu ca: {formatVND(summary.opening_cash)}
+                </Badge>
               </div>
             )}
           </div>
         </ScrollArea>
 
-        <div className="border-t px-3 py-3 sm:px-5 sm:py-4">
+        <div className="border-t px-3 py-3 sm:px-4 sm:py-4">
           {step === "count" ? (
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">

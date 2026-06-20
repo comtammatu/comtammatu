@@ -60,14 +60,14 @@ export function OrderTitleLine({
     <div
       aria-label={accessibleLabel}
       className={cn(
-        "inline-flex min-w-0 max-w-full flex-wrap items-baseline gap-x-1.5 gap-y-0.5",
+        "inline-flex min-w-0 max-w-full flex-wrap items-baseline gap-x-1.5 gap-y-1",
         className,
       )}
     >
       {contextLabel && (
         <span
           className={cn(
-            "shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-semibold leading-none text-muted-foreground",
+            "shrink-0 rounded-md bg-muted px-1.5 py-1 font-semibold leading-none text-muted-foreground",
             sizeClass.context,
           )}
         >

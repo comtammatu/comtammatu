@@ -16,7 +16,7 @@ export function EmployeePortalBackControl({
       variant="ghost"
       size="sm"
       className={cn(
-        "h-9 min-h-9 shrink-0 gap-1.5 px-2.5 text-sm text-muted-foreground",
+        "h-9 min-h-9 shrink-0 gap-1.5 px-2 text-sm text-muted-foreground",
         className,
       )}
       asChild

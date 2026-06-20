@@ -118,7 +118,7 @@ export function KdsCompletionHistorySheet({
             <IconHistory
               data-icon="inline-start"
               aria-hidden
-              className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+              className="size-4 shrink-0 text-muted-foreground"
             />
             <div className="min-w-0">
               <SheetTitle>{KDS_COMPLETION_HISTORY_COPY.title}</SheetTitle>
@@ -129,7 +129,7 @@ export function KdsCompletionHistorySheet({
           </div>
         </SheetHeader>
 
-        <div className="flex items-center justify-between gap-2 border-y px-4 py-2">
+        <div className="flex items-center justify-between gap-2 border-y px-4 py-3">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {KDS_COMPLETION_HISTORY_COPY.sourceTitle}
           </p>
@@ -150,9 +150,9 @@ export function KdsCompletionHistorySheet({
         </div>
 
         <ScrollArea className="min-h-0 flex-1">
-          <div className="space-y-2 p-4">
+          <div className="flex flex-col gap-3 p-4">
             {isPending && history === null && (
-              <div className="rounded-md border px-4 py-6 text-center text-sm text-muted-foreground">
+              <div className="rounded-md border px-4 py-4 text-center text-sm text-muted-foreground">
                 {KDS_COMPLETION_HISTORY_COPY.loading}
               </div>
             )}
@@ -160,7 +160,7 @@ export function KdsCompletionHistorySheet({
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             {!isPending && !error && history !== null && history.length === 0 && (
-              <div className="rounded-md border px-4 py-6 text-center text-sm text-muted-foreground">
+              <div className="rounded-md border px-4 py-4 text-center text-sm text-muted-foreground">
                 {KDS_COMPLETION_HISTORY_COPY.empty}
               </div>
             )}
@@ -198,7 +198,7 @@ export function KdsCompletionHistorySheet({
                   </Badge>
                 </div>
 
-                <ul className="mt-2 space-y-1 text-sm leading-5">
+                <ul className="mt-2 flex flex-col gap-1 text-sm leading-5">
                   {getItemPreview(entry).map((item) => (
                     <li key={item} className="min-w-0 break-words">
                       {item}

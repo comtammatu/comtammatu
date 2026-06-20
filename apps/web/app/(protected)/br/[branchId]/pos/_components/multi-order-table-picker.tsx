@@ -71,7 +71,7 @@ export function MultiOrderTablePicker({
           className="h-64 min-h-0 overflow-hidden px-4 sm:h-72"
           data-testid="pos-multi-order-list"
         >
-          <div className="flex flex-col gap-2 pr-2 pb-2" data-vaul-no-drag>
+          <div className="flex flex-col gap-3 pr-2 pb-2" data-vaul-no-drag>
             {orders.map((order) => {
               const statusInfo = getPosOrderStatusInfo(order);
               return (

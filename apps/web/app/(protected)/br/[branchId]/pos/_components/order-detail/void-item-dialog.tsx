@@ -58,7 +58,7 @@ export function VoidItemDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <FieldGroup className="py-2">
+        <FieldGroup>
           <Field data-invalid={!reasonReady && trimmedLen > 0}>
             <FieldLabel htmlFor="void-reason" className="sr-only">
               {FORM_VI.reason}

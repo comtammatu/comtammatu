@@ -26,7 +26,7 @@ export function UnassignedBanner({
       role="status"
       className="flex flex-wrap items-center justify-between gap-1.5 border-b border-warning/40 bg-warning/10 px-2 py-1 md:px-3"
     >
-      <div className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-warning sm:text-sm">
+      <div className="flex min-w-0 items-center gap-1 text-xs font-semibold text-warning sm:text-sm">
         <IconAlertTriangle aria-hidden className="size-4 shrink-0" />
         <span>{messages.pos.kds.unassignedTitle(count)}</span>
       </div>

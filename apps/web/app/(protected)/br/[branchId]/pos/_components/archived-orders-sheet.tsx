@@ -282,7 +282,7 @@ function ArchivedOrderRow({
         order={order}
         rightMeta={<OrderStatusBadge order={order} />}
       />
-      <ItemFooter className="mt-1.5 justify-end border-t border-border/60 pt-2">
+      <ItemFooter className="mt-2 justify-end border-t border-border/60 pt-2">
         <Button
           type="button"
           variant="outline"

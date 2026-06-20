@@ -88,7 +88,7 @@ export function ReduceQuantityDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <FieldGroup className="py-2">
+        <FieldGroup>
           <Field>
             <FieldLabel htmlFor="reduce-qty" className="sr-only">
               Số lượng mới
@@ -96,7 +96,7 @@ export function ReduceQuantityDialog({
             <div
               role="group"
               aria-label="Chọn số lượng mới"
-              className="flex items-center justify-center gap-3"
+              className="flex items-center justify-center gap-2"
             >
               <Button
                 type="button"

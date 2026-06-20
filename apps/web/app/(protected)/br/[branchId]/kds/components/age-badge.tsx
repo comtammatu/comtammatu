@@ -9,7 +9,7 @@ const SIZE_CLASS: Record<
   { container: string; number: string; label: string }
 > = {
   compact: {
-    container: "rounded-md px-2 py-0.5 xl:px-2.5 xl:py-1",
+    container: "rounded-full px-2 py-1 xl:px-3",
     number: "text-xs xl:text-sm",
     label: "text-xs xl:text-sm",
   },

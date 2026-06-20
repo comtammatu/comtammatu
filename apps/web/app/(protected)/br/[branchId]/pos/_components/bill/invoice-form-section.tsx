@@ -127,7 +127,7 @@ export function InvoiceFormSection({
         ) : null}
 
         {state.enabled ? (
-          <FieldGroup className="gap-2.5">
+          <FieldGroup className="gap-3">
             <Field data-invalid={nameMissing || undefined}>
               <FieldLabel htmlFor={nameId} className="text-xs">
                 Tên người mua / công ty{""}

@@ -167,11 +167,11 @@ export function SplitOrderSheet({
                   key={item.id}
                   asChild
                   variant="outline"
-                  className="px-2.5 py-2"
+                  className="px-3 py-2"
                   data-disabled={isCancelled || undefined}
                 >
                   <li className="flex w-full items-start gap-3">
-                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <span className="break-words font-medium leading-snug">
                         {displayName}
                       </span>

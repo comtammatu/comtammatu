@@ -35,7 +35,7 @@ export function ViewModeToggle({ mode, onChange }: ViewModeToggleProps) {
           <ToggleGroupItem
             value="focus"
             aria-label="Đang làm — một đơn rõ ràng"
-            className="px-2.5"
+            className="px-2"
           >
             <IconFocus aria-hidden />
           </ToggleGroupItem>
@@ -47,7 +47,7 @@ export function ViewModeToggle({ mode, onChange }: ViewModeToggleProps) {
           <ToggleGroupItem
             value="comprehensive"
             aria-label="Tổng quan — hiển thị nhiều đơn"
-            className="px-2.5"
+            className="px-2"
           >
             <IconLayoutGrid aria-hidden />
           </ToggleGroupItem>

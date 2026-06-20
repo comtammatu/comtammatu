@@ -49,7 +49,7 @@ export function TicketRowMeta({
               key={`${s.side_item_id}-${idx}`}
               variant="outline"
               className={cn(
-                "h-auto min-h-6 rounded-md px-2 py-0.5 text-sm font-semibold leading-tight text-foreground",
+                "h-auto min-h-6 rounded-md px-2 py-1 text-sm font-semibold leading-tight text-foreground",
                 getSideBadgeToneClass(s),
               )}
             >
@@ -58,7 +58,7 @@ export function TicketRowMeta({
           ))}
 
         {hasNote && (
-          <span className="inline-flex min-h-6 min-w-0 max-w-full items-center gap-1.5 rounded-md bg-warning/15 px-2 py-0.5 text-warning-foreground">
+          <span className="inline-flex min-h-6 min-w-0 max-w-full items-center gap-1.5 rounded-md bg-warning/15 px-2 py-1 text-warning-foreground">
             <IconNote aria-hidden className="size-3 shrink-0 text-warning" />
             <span className="min-w-0 break-words text-sm font-semibold leading-tight">
               {note}
@@ -86,7 +86,7 @@ export function TicketRowMeta({
               key={`${s.side_item_id}-${idx}`}
               variant="outline"
               className={cn(
-                "h-auto min-h-6 rounded-md px-2.5 py-1 text-sm font-semibold leading-tight text-foreground",
+                "h-auto min-h-6 rounded-md px-2 py-1 text-sm font-semibold leading-tight text-foreground",
                 getSideBadgeToneClass(s),
               )}
             >
@@ -97,7 +97,7 @@ export function TicketRowMeta({
       )}
 
       {hasNote && (
-        <div className="mt-1 flex items-start gap-1.5 rounded-md bg-warning/15 px-2.5 py-1.5 text-warning-foreground">
+        <div className="mt-1 flex items-start gap-1.5 rounded-md bg-warning/15 px-2 py-1 text-warning-foreground">
           <IconNote
             aria-hidden
             className="mt-0.5 size-4 shrink-0 text-warning"
@@ -120,8 +120,8 @@ function ModifierChip({
 }) {
   const tone = classifyModifier(label);
   const className = compact
-    ? "h-auto min-h-6 rounded-md px-2 py-0.5 text-sm font-semibold leading-tight"
-    : "h-auto min-h-6 rounded-md px-2.5 py-1 text-sm font-semibold leading-tight";
+    ? "h-auto min-h-6 rounded-md px-2 py-1 text-sm font-semibold leading-tight"
+    : "h-auto min-h-6 rounded-md px-2 py-1 text-sm font-semibold leading-tight";
 
   if (tone === "negation") {
     return (

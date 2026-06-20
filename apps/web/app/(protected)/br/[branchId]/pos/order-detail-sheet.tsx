@@ -228,7 +228,7 @@ function OrderDetailSheetSkeletonFallback() {
           aria-label={ORDER_DETAIL_LOADING_TEXT.aria}
         >
           {Array.from({ length: 5 }).map((_, index) => (
-            <Item key={index} asChild variant="outline" className="px-2.5 py-2">
+            <Item key={index} asChild variant="outline" className="px-3 py-2">
               <li>
                 <div className="flex items-start gap-3">
                   <Skeleton className="mt-1 size-4" />
@@ -1179,7 +1179,7 @@ export function OrderDetailSheet({
                       key={index}
                       asChild
                       variant="outline"
-                      className="px-2.5 py-2"
+                      className="px-3 py-2"
                     >
                       <li>
                         <div className="flex items-start gap-3">

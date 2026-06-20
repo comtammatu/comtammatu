@@ -111,7 +111,7 @@ export function OrderTotalsSummary({
         </>
       )}
 
-      <Separator className={isCompact ? "my-0.5" : "my-1"} />
+      <Separator className="my-1" />
 
       <div className={totalClass}>
         <span>Tổng cộng</span>

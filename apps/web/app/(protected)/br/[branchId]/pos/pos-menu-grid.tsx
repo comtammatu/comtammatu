@@ -343,7 +343,7 @@ function PosMenuGridComponent({
   // TabsList width) — `!flex-none` is required so chips keep content width
   // and overflow scrolls horizontally.
   const tabPillClassName =
-    "group/tab !flex-none gap-1.5 bg-muted/50 px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm md:gap-2 md:px-4";
+    "group/tab !flex-none gap-1.5 bg-muted/50 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm md:gap-2 md:px-4";
   const tabBadgeClassName =
     "hidden shrink-0 text-xs sm:inline-flex group-data-[state=active]/tab:border-primary-foreground/30 group-data-[state=active]/tab:bg-primary-foreground/15 group-data-[state=active]/tab:text-primary-foreground";
   const unifiedTabs = (

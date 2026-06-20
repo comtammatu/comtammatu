@@ -187,7 +187,7 @@ function CartPaneComponent({
       <div
         className={cn(
           "shrink-0 border-b border-border/60",
-          shouldShowOrderTypeSelector ? "p-0" : "px-3 py-2.5 sm:px-4 sm:py-4",
+          shouldShowOrderTypeSelector ? "p-0" : "px-3 py-3 sm:px-4 sm:py-4",
         )}
       >
         {isMobileDrawer && shouldShowOrderTypeSelector ? (
@@ -430,7 +430,7 @@ function CartPaneComponent({
             </div>
           </ScrollArea>
 
-          <div className="shrink-0 border-t border-border/60 bg-background px-3 py-2.5 sm:px-4 sm:py-3">
+          <div className="flex shrink-0 flex-col gap-3 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="pos-order-note"
@@ -456,8 +456,8 @@ function CartPaneComponent({
               </p>
             </div>
 
-            <AppSection size="sm" className="mt-2 sm:mt-3" contentFlush>
-              <div className="relative flex flex-col gap-2 p-2.5 sm:gap-3 sm:p-4">
+            <AppSection size="sm">
+              <div className="relative flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                     {messages.pos.pendingDraft.subtotal}

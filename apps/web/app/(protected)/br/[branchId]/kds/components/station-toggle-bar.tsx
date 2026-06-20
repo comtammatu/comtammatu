@@ -28,7 +28,7 @@ export function StationToggleBar({
             type="button"
             variant={activeStationId === null ? "secondary" : "ghost"}
             size="default"
-            className="gap-1.5 px-2.5 text-sm font-semibold"
+            className="gap-1.5 px-2 text-sm font-semibold"
             aria-label={messages.pos.kds.allStationsAria}
             aria-pressed={activeStationId === null}
             onClick={() => onChange(null)}
@@ -44,7 +44,7 @@ export function StationToggleBar({
               type="button"
               variant={activeStationId === station.id ? "secondary" : "ghost"}
               size="default"
-              className="gap-1.5 px-2.5 text-sm font-semibold"
+              className="gap-1.5 px-2 text-sm font-semibold"
               aria-label={messages.pos.kds.stationAria(station.name)}
               aria-pressed={activeStationId === station.id}
               onClick={() => onChange(String(station.id))}

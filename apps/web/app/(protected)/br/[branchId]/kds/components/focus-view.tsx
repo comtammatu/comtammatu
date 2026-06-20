@@ -309,7 +309,7 @@ function FocusOrderPanel({
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
       <ScrollArea className="h-full min-h-0 flex-1">
-        <div className="mx-auto w-full max-w-screen-2xl p-2 md:p-3">
+        <div className="mx-auto w-full max-w-screen-2xl p-3">
           <OperationalBoardCard
             data-testid={`kds-focus-card-${order.groupKey}`}
             className={cn(
@@ -337,7 +337,7 @@ function FocusOrderPanel({
                   {order.isPriority && (
                     <Badge
                       variant="warning"
-                      className="px-2.5 py-1 text-sm font-semibold"
+                      className="px-2 py-1 text-sm font-semibold"
                     >
                       {KDS_FOCUS_COPY.priority}
                     </Badge>
@@ -446,7 +446,7 @@ function FocusOrderPanel({
                       {shouldShowTicketStatusBadge(status) && (
                         <Badge
                           variant={getStatusVariant(status)}
-                          className="h-6 rounded-md px-2.5 py-0 text-sm font-semibold leading-none"
+                          className="h-6 rounded-md px-2 py-0 text-sm font-semibold leading-none"
                         >
                           {getStatusLabel(status)}
                         </Badge>
@@ -556,7 +556,7 @@ function FocusOrderPanel({
                     key={ticket.id}
                     data-kds-effect={rowEffect ?? undefined}
                     className={cn(
-                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-1.5 transition-colors duration-150 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
+                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2 transition-colors duration-150 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
                       getItemRowStatusClass(status),
                       getKdsRowEffectClass(rowEffect),
                     )}
@@ -652,8 +652,8 @@ function FocusOrderPanel({
 
       {/* Sticky batch action bar */}
       {canMarkReady && activeTickets.length > 0 && (
-        <div className="border-t bg-card px-2 py-2 md:px-3">
-          <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-2">
+        <div className="border-t bg-card p-3">
+          <div className="mx-auto grid w-full max-w-screen-2xl grid-cols-1 gap-2">
             <Button
               data-testid={`kds-focus-complete-order-${order.groupKey}`}
               type="button"
@@ -683,7 +683,7 @@ function FocusOrderPanel({
           aria-live="polite"
           className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-success/15 backdrop-blur-sm motion-safe:animate-in motion-safe:fade-in"
         >
-          <div className="flex flex-col items-center gap-2 rounded-md bg-success/95 px-6 py-4 text-success-foreground shadow-md">
+          <div className="flex flex-col items-center gap-2 rounded-md bg-success/95 px-4 py-3 text-success-foreground shadow-md">
             <IconCheck className="size-10" aria-hidden />
             <span className="font-heading text-base font-semibold">
               {KDS_FOCUS_COPY.readyAdvance}

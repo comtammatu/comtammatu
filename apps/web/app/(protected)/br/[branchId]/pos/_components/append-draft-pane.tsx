@@ -179,8 +179,8 @@ function AppendDraftPaneComponent({
         </ScrollArea>
       )}
 
-      <div className="shrink-0 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="flex shrink-0 flex-col gap-3 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {messages.pos.appendDraft.summaryLabel}

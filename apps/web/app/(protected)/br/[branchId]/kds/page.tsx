@@ -281,7 +281,7 @@ export default async function KdsPage({
 
   if (stationsError) {
     return (
-      <div className="flex h-dvh items-center justify-center p-6">
+      <div className="flex h-dvh items-center justify-center p-4">
         <Alert variant="destructive" className="max-w-md">
           <IconAlertCircle />
           <AlertDescription>
@@ -300,7 +300,7 @@ export default async function KdsPage({
 
   if (ticketResult.error) {
     return (
-      <div className="flex h-dvh items-center justify-center p-6">
+      <div className="flex h-dvh items-center justify-center p-4">
         <Alert variant="destructive" className="max-w-md">
           <IconAlertCircle />
           <AlertDescription>
@@ -359,7 +359,7 @@ export default async function KdsPage({
 
     if (ordersRes.error || itemsRes.error) {
       return (
-        <div className="flex h-dvh items-center justify-center p-6">
+        <div className="flex h-dvh items-center justify-center p-4">
           <Alert variant="destructive" className="max-w-md">
             <IconAlertCircle />
             <AlertDescription>
@@ -387,7 +387,7 @@ export default async function KdsPage({
     });
     if (batchRes.error) {
       return (
-        <div className="flex h-dvh items-center justify-center p-6">
+        <div className="flex h-dvh items-center justify-center p-4">
           <Alert variant="destructive" className="max-w-md">
             <IconAlertCircle />
             <AlertDescription>

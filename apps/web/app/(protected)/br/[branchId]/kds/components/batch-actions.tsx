@@ -47,7 +47,7 @@ export function BatchActions({
       type="button"
       variant="default"
       size={layout === "title" ? "touch" : "touch-lg"}
-      className={layout === "title" ? "px-2.5 font-semibold" : "w-full"}
+      className={layout === "title" ? "px-2 font-semibold" : "w-full"}
       disabled={completeBatchBusy}
       onClick={() => {
         handleCompleteBatch();
@@ -68,7 +68,7 @@ export function BatchActions({
   }
 
   return (
-    <div className="border-t p-2.5 md:p-3">
+    <div className="border-t p-3">
       <div className="grid w-full grid-cols-1 gap-2">{action}</div>
     </div>
   );

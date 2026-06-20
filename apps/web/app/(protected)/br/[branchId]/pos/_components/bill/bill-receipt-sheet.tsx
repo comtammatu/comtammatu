@@ -236,7 +236,7 @@ function PaymentLoadingFixture() {
           {PAYMENT_LOADING_TEXT.qr}
         </Button>
       </div>
-      <AppSection size="sm" contentClassName="gap-4">
+      <AppSection size="sm" contentClassName="gap-3">
         <>
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-muted-foreground">
@@ -376,27 +376,25 @@ function RemotePaymentDetails({
 }) {
   if (method === "momo") {
     return (
-      <div className="space-y-3">
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-          <dt className="text-muted-foreground">
-            {REMOTE_PAYMENT_COPY.momoWalletLabel}
-          </dt>
-          <dd className="font-medium">{REMOTE_PAYMENT_COPY.momoWalletValue}</dd>
-          <dt className="text-muted-foreground">
-            {REMOTE_PAYMENT_COPY.momoOrderLabel}
-          </dt>
-          <dd className="break-all font-mono">
-            {pendingExtras?.provider_ref ??
-              (isCreating
-                ? REMOTE_PAYMENT_COPY.creating
-                : REMOTE_PAYMENT_COPY.unavailable)}
-          </dd>
-          <dt className="text-muted-foreground">
-            {REMOTE_PAYMENT_COPY.momoStatusLabel}
-          </dt>
-          <dd>{REMOTE_PAYMENT_COPY.momoPendingStatus}</dd>
-        </dl>
-      </div>
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+        <dt className="text-muted-foreground">
+          {REMOTE_PAYMENT_COPY.momoWalletLabel}
+        </dt>
+        <dd className="font-medium">{REMOTE_PAYMENT_COPY.momoWalletValue}</dd>
+        <dt className="text-muted-foreground">
+          {REMOTE_PAYMENT_COPY.momoOrderLabel}
+        </dt>
+        <dd className="break-all font-mono">
+          {pendingExtras?.provider_ref ??
+            (isCreating
+              ? REMOTE_PAYMENT_COPY.creating
+              : REMOTE_PAYMENT_COPY.unavailable)}
+        </dd>
+        <dt className="text-muted-foreground">
+          {REMOTE_PAYMENT_COPY.momoStatusLabel}
+        </dt>
+        <dd>{REMOTE_PAYMENT_COPY.momoPendingStatus}</dd>
+      </dl>
     );
   }
 
@@ -1149,7 +1147,7 @@ export function BillReceipt({
               )}
 
               {selectedMethod === "cash" ? (
-                <AppSection size="sm" contentClassName="gap-4">
+                <AppSection size="sm" contentClassName="gap-3">
                   <>
                     {order && (
                       <OrderTotalsSummary
@@ -1217,7 +1215,7 @@ export function BillReceipt({
                   </>
                 </AppSection>
               ) : (
-                <AppSection size="sm" contentClassName="gap-4">
+                <AppSection size="sm" contentClassName="gap-3">
                   <>
                     {order && (
                       <OrderTotalsSummary

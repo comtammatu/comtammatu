@@ -279,19 +279,22 @@ export function MenuLimitsSheet({
         </SheetHeader>
 
         <div className="border-b px-4 py-3">
-          <div className="flex h-9 items-center gap-2 border bg-background px-2">
-            <IconSearch className="text-muted-foreground" aria-hidden />
+          <div className="relative">
+            <IconSearch
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={messages.pos.menu.searchPlaceholder}
-              className="h-8 border-0 px-0 shadow-none focus-visible:ring-0"
+              className="pl-9"
             />
           </div>
         </div>
 
         <ScrollArea className="min-h-0 flex-1">
-          <div className="space-y-2 p-3">
+          <div className="flex flex-col gap-2 p-3">
             {filteredRows.map((row) => {
               const draft = drafts[row.menu_item_id] ?? buildDraft(row);
               const dirty = isDirty(row, draft);
@@ -405,7 +408,7 @@ export function MenuLimitsSheet({
             })}
 
             {filteredRows.length === 0 ? (
-              <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+              <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
                 {messages.pos.menu.noResults}
               </div>
             ) : null}
