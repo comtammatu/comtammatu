@@ -28,6 +28,7 @@ apps/print-agent/dist-bundle/
 
 # Playwright
 .playwright-cli/
+.playwright-mcp/
 apps/web/.playwright/
 apps/web/playwright-report/
 apps/web/test-results/

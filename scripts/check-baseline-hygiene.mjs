@@ -52,6 +52,18 @@ const CLASSIFIED_FILES = new Map([
     "packages/shared/src/auth/__tests__/employee-daily-work-static.test.ts",
     "Asserts the exact SQL comment string shipped in the checklist-template migration; the marker word lives in asserted migration content, not dead code.",
   ],
+  [
+    "scripts/inventory-legacy-kitchen-backfill.mjs",
+    "Active read-only audit for the historical Kho CN -> Bep CN transfer data; 'legacy' names that transfer domain, not retired code.",
+  ],
+  [
+    "apps/web/tests/inventory-rebuild-static.test.ts",
+    "Test vocabulary for the Kho CN -> Bep CN legacy-transfer domain (intra-branch RPC guard, branch-kitchen exclusion, backfill audit); references the live audit script, not dead code.",
+  ],
+  [
+    "apps/web/e2e/inventory/transfer-direction.spec.ts",
+    "E2E asserts the live redirect from the old transfer-create URL (create=cap-bep) to the consumption surface; URL canonicalization for the legacy kitchen-transfer flow, not cruft.",
+  ],
 ]);
 
 function walkFiles(rootDir) {
