@@ -267,22 +267,10 @@ export const calculatePayroll = withAction(
       };
     });
 
-    // `upsert_payroll_calculation` enters database.types.ts only after the owner applies the
-    // migration (file → PR → owner); cast the rpc surface once so params + return stay type-checked.
-    const { data: rpcData, error: rpcErr } = await (
-      supabase as unknown as {
-        rpc: (
-          fn: "upsert_payroll_calculation",
-          args: { p_period_id: number; p_entries: typeof entries },
-        ) => Promise<{
-          data: { employee_count?: number } | null;
-          error: { message?: string | null; code?: string | null } | null;
-        }>;
-      }
-    ).rpc("upsert_payroll_calculation", {
-      p_period_id: data.periodId,
-      p_entries: entries,
-    });
+    const { data: rpcData, error: rpcErr } = await supabase.rpc(
+      "upsert_payroll_calculation",
+      { p_period_id: data.periodId, p_entries: entries },
+    );
 
     if (rpcErr) {
       return mapRpcError(rpcErr, payrollCalcMappings, payrollCalcFallback);
@@ -291,7 +279,10 @@ export const calculatePayroll = withAction(
     return {
       success: true,
       meta: {
-        employeeCount: Number(rpcData?.employee_count ?? entries.length),
+        employeeCount: Number(
+          (rpcData as { employee_count?: number } | null)?.employee_count ??
+            entries.length,
+        ),
       },
     };
   },
