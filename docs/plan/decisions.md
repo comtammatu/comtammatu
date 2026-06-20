@@ -226,7 +226,7 @@
 
 - **A (nền, bắt buộc) = thực thi D031** (track nav/IA, status/DataTable, pagination, surface) + HRM (D026/D027). 1 trạng thái = 1 màu/nhãn, DataTable phủ mọi bảng, enforce `AppPage` padding, gộp module-shell về 1 `AppShell` (W5).
 - **B (lớp khác biệt, chỉ làm SAU khi A đủ phủ + update spec TRƯỚC khi apply token):** (1) tách `info`-hue (hiện `--info` == `--foreground`); (2) bật lại dark mode (token `.dark` đủ, đang bị `forcedTheme="light"`) **[OPEN]** phạm vi; (3) chiều sâu dashboard + `chart-1..5`; (4) ⌘K command palette; (5) **[OPEN — taste]** `--radius` 0.625→0.75rem.
-- **GIỮ:** `primary` đỏ gạch + palette Concept 01; Rhythm/Radius/Motion contract. *(Typography Inter/Montserrat/JetBrains → ĐẢO bởi D037: chuyển Geist.)*
+- **GIỮ:** `primary` đỏ gạch + palette Concept 01; Rhythm/Radius/Motion contract. *(Typography Inter/Montserrat/JetBrains → ĐẢO bởi D038: chuyển Geist.)*
 
 **Quan hệ:** A = D031 (+ D026/D027); kế thừa D019, D029/D030. Mỗi PR = 1 route family / 1 primitive rollout.
 
@@ -274,7 +274,7 @@
 
 **Consequences / phasing:** S0 spine+shadow (wedge) → S1 Web Push live + severity gate + retune trigger → S2 Telegram dark → S3 Telegram live + rate-valve + void-after-pay → S4 Đóng ngày → S5 mua hàng/kho/tài chính → S6 POS tail+HR+tuần → S7+ migration batch + LLM digest. Critical path S0→S2→S3→S4; S1 ∥ S2. Tài liệu này (D036) + `notifications.md` + `agentic-os-blueprint.md` là of-record; mọi producer/agent code theo đó.
 
-## D036: Import `m-tu-design-system` bundle — touch tier cho form control (2026-06-20)
+## D037: Import `m-tu-design-system` bundle — touch tier cho form control (2026-06-20)
 
 **Context:** Bundle derive ra từ chính repo này (~85% circular: token/brand/logo/mascot md5-identical; palette lệch ΔE<0.018; template tả màn đã ship). Không màn mới, không token mới.
 
@@ -283,17 +283,17 @@
 1. **Touch tier form control (gated):** thêm value `touch` vào `size` cva của `Select`(trigger)/`Switch`/`Checkbox`/`RadioGroupItem` (`min-h-12` trigger, box 20px + hit-area ≥44px), theo precedent §"Button is the single source of truth for button height". Consumer opt-in qua `size="touch"`. Default render KHÔNG đổi.
 2. **bo-slide deck → standalone** (không vào route surface; không dựng report-export capability).
 3. **Glossary casing → `vi.ts` authoritative** (TitleCase "Bếp Trung Tâm" là SSoT; bundle mirror, không fork sentence-case).
-4. **Font Geist** *(ĐẢO bởi D037 cùng ngày — owner chốt dùng Geist; xem D037)*.
+4. **Font Geist** *(ĐẢO bởi D038 cùng ngày — owner chốt dùng Geist; xem D038)*.
 
 **Out of scope:** net-new prop khác bundle quảng cáo (`Button rice`, `Avatar` fill/status, `Progress` size/label, `Textarea showCount`) — chưa duyệt, đụng contract khóa.
 
-## D037: Chuyển typography sang Geist theo Má Tư Design System (2026-06-20)
+## D038: Chuyển typography sang Geist theo Má Tư Design System (2026-06-20)
 
-**Decision (owner — đảo D032, supersede D036 §4):** App-UI typography chuyển sang **Geist** (body + heading, single-family) + **Geist Mono** (tiền/mã/ngày giờ/số đơn). Bỏ Inter/Montserrat/JetBrains khỏi runtime UI. Print pipeline (`packages/print-render`, RobotoMono bitmap nhiệt) KHÔNG đụng (pipeline riêng, pixel-locked).
+**Decision (owner — đảo D032, supersede D037 §4):** App-UI typography chuyển sang **Geist** (body + heading, single-family) + **Geist Mono** (tiền/mã/ngày giờ/số đơn). Bỏ Inter/Montserrat/JetBrains khỏi runtime UI. Print pipeline (`packages/print-render`, RobotoMono bitmap nhiệt) KHÔNG đụng (pipeline riêng, pixel-locked).
 
 **Cơ chế:** `next/font/google` Geist KHÔNG có subset `vietnamese` → dùng **`geist` package** (Vercel official, next/font/local, full glyph tiếng Việt, self-hosted). `globals.css` bind `--font-sans`/`--font-heading` → `--font-geist-sans`, `--font-mono` → `--font-geist-mono`. App code không đổi. Spec forbid-list lật: cấm tái nhập Inter/Montserrat/JetBrains/Be Vietnam Pro.
 
-## D038: HĐĐT realtime instant-issue khi provider trả mã CQT đồng bộ (2026-06-20)
+## D039: HĐĐT realtime instant-issue khi provider trả mã CQT đồng bộ (2026-06-20)
 
 **Decision (T3):** Trong `createInvoice`, khi có CẢ `invoiceNo` LẪN `codeOfTax` non-empty (trimmed) → trả `issued` (mirror `createBatchInvoice` + `getStatus`). `codeOfTax` rỗng nhưng có `invoiceNo` → `submitted`; không `invoiceNo` → `signing`. HĐ GTGT mẫu `1/...` (mã async) không đổi hành vi. `createTaxInvoice` capture `codeOfTax` → ghi `tax_invoices.cqt_code` (cột trước đây chết). KHÔNG migration (state machine đã cho `signing/submitted → issued`).
 
@@ -301,7 +301,7 @@
 
 **Open (chờ owner):** (a) có ghi 1 row `tax_invoice_events` cho realtime issue không (hiện audit_logs-only); (b) instant-issue rút mẫu-2 khỏi pool reconcile → `codeOfTax` là nguồn issuance duy nhất; (c) mẫu-1 có codeOfTax đồng bộ (hiếm) cũng instant-issue; (d) owner smoke Viettel sandbox.
 
-## D039: Tắt `taxPercentage` giả cho mẫu `2/...` (S-invoice) (2026-06-20)
+## D040: Tắt `taxPercentage` giả cho mẫu `2/...` (S-invoice) (2026-06-20)
 
 **Decision (owner — "phải chuẩn, không để giá trị giả"):** mẫu `2/...` (HĐ bán hàng MTT, direct method) KHÔNG gửi `taxPercentage`/`taxAmount` trên `itemInfo`, `taxBreakdowns: []`. Trước đây hardcode `taxPercentage: -2` (sentinel "không chịu thuế"). Mẫu `1/...` (HĐ GTGT) giữ rate thật.
 

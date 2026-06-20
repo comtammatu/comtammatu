@@ -189,7 +189,7 @@ backfill hoặc khi chủ trương vận hành chuyển sang template tổng h�
       cột VAT và sẽ làm lệch tổng do làm tròn từng dòng
 - Thuế suất/tiền thuế GTGT: hiển thị riêng chỉ với mẫu HĐ GTGT; mẫu `2/...`
   vẫn lưu `vat_rate/vat_amount` nội bộ để báo cáo nhưng gửi provider theo giá gross
-    + ℹ️ **Mẫu `2/...` KHÔNG gửi `taxPercentage` (D039)**: template hóa đơn bán
+    + ℹ️ **Mẫu `2/...` KHÔNG gửi `taxPercentage` (D040)**: template hóa đơn bán
       hàng không có ô thuế suất — Viettel strip `taxPercentage` khỏi XML gửi CQT.
       Code gửi **giá GROSS, KHÔNG `taxPercentage`/`taxAmount`, `taxBreakdowns: []`**
       (đã verify sandbox: XML ra không `<TSuat>`/`<TgTThue>`, total = gross, giống
@@ -283,7 +283,7 @@ Cashier double-click sẽ nhận error rõ ràng "Đơn này đã có HĐ #N", k
 Mỗi state transition **qua RPC** (`transition_tax_invoice_state` /
 `_as_system`) write 1 row vào `tax_invoice_events`. Lưu ý: luồng realtime
 `createTaxInvoice` INSERT thẳng row ở status ban đầu provider trả về (kể cả
-`issued` instant-issue — D038), KHÔNG qua RPC ⇒ không sinh event row; issuance
+`issued` instant-issue — D039), KHÔNG qua RPC ⇒ không sinh event row; issuance
 đó được audit qua `audit_logs` + `provider_data.codeOfTax` + cột `cqt_code`.
 
 ```sql
@@ -545,7 +545,7 @@ type InvoiceResult = {
   status: "draft" | "signing" | "submitted" | "issued" | "failed";
   invoiceNumber: string | null; // null khi draft/signing
   providerRef: string; // unique ID phía provider
-  codeOfTax?: string | null; // Mã CQT khi provider trả ngay (instant-issue D038)
+  codeOfTax?: string | null; // Mã CQT khi provider trả ngay (instant-issue D039)
   providerData?: Record<string, unknown>;
 };
 ```
