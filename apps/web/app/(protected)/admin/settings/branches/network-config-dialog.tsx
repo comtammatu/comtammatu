@@ -140,10 +140,10 @@ export function NetworkConfigDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5">
+        <div className="flex flex-col gap-4">
           {/* Status banner */}
           {!loading && activeRows.length === 0 && (
-            <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+            <div className="flex items-start gap-3 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
               <IconAlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
               <div>
                 <p className="font-medium">
@@ -157,7 +157,7 @@ export function NetworkConfigDialog({
           )}
 
           {!loading && activeRows.length > 0 && !hasFreshTrust && (
-            <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+            <div className="flex items-start gap-3 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
               <IconAlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
               <div>
                 <p className="font-medium">

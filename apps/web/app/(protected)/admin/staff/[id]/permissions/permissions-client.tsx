@@ -185,7 +185,7 @@ export function PermissionsClient({
   }
 
   return (
-      <div className="space-y-5">
+      <div className="flex flex-col gap-4">
         {/* ─── Grant individual permission ─── */}
       <AppSection title="Gán quyền đơn lẻ">
           <div className="grid gap-3 sm:grid-cols-3">
@@ -215,7 +215,7 @@ export function PermissionsClient({
                       .filter((p) => p.module === mod)
                       .map((p) => (
                         <SelectItem key={p.key} value={p.key}>
-                          <div className="flex min-w-0 flex-col items-start gap-0.5">
+                          <div className="flex min-w-0 flex-col items-start gap-1">
                             <span className="font-mono text-xs">{p.key}</span>
                             <span className="break-words text-xs text-muted-foreground">
                               {p.description}

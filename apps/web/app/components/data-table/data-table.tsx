@@ -237,7 +237,7 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn("flex flex-col gap-0", className)}>
+    <div className={cn("flex flex-col gap-3", className)}>
       {toolbar}
       <Table>
         <TableHeader>

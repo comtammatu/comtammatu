@@ -239,7 +239,7 @@ export function StockMovementClient({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3">
         <div className="w-full space-y-1.5 sm:w-44 sm:flex-none">

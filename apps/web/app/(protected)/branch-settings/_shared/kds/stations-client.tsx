@@ -97,7 +97,7 @@ export function StationsClient({
 
   function CategoryBadges({ station }: { station: StationRow }) {
     return (
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1.5">
         {station.category_ids.length === 0 ? (
           <span className="text-xs text-muted-foreground">
             {messages.settings.kds.allFallback}

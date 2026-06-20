@@ -49,8 +49,8 @@ export default function ReportsPage() {
         description={copy.description}
       />
 
-      <section className="space-y-3">
-        <div className="space-y-1">
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
           <h2 className="font-heading text-base font-semibold tracking-tight">
             {copy.aggregateTitle}
           </h2>

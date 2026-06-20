@@ -270,11 +270,11 @@ export function ItemDetailDialog({
         </DialogHeader>
 
         {isLoading ? (
-          <div className="flex justify-center py-8">
+          <div className="flex justify-center py-6">
             <Spinner className="size-6 text-muted-foreground" />
           </div>
         ) : loadError ? (
-          <p className="py-8 text-center text-sm text-destructive" role="alert">
+          <p className="py-6 text-center text-sm text-destructive" role="alert">
             {loadError}
           </p>
         ) : (
@@ -292,13 +292,13 @@ export function ItemDetailDialog({
             </TabsList>
 
             {/* ─── Variants Tab ─── */}
-            <TabsContent value="variants" className="space-y-3">
+            <TabsContent value="variants" className="flex flex-col gap-3">
               {variants.map((v, idx) => (
                 <div
                   key={v.id ?? `new-${idx}`}
                   className="flex items-end gap-2"
                 >
-                  <div className="flex-1 space-y-1">
+                  <div className="flex-1 flex flex-col gap-1">
                     <Label className="text-xs">{FORM_VI.name}</Label>
                     <Input
                       value={v.name}
@@ -308,7 +308,7 @@ export function ItemDetailDialog({
                       placeholder="VD: Phần lớn"
                     />
                   </div>
-                  <div className="w-28 space-y-1">
+                  <div className="w-28 flex flex-col gap-1">
                     <Label className="text-xs">+/- Giá</Label>
                     <FormattedNumberInput
                       defaultValue={String(v.price_adjustment)}
@@ -358,13 +358,13 @@ export function ItemDetailDialog({
             </TabsContent>
 
             {/* ─── Modifiers Tab ─── */}
-            <TabsContent value="modifiers" className="space-y-3">
+            <TabsContent value="modifiers" className="flex flex-col gap-3">
               {modifiers.map((m, idx) => (
                 <div
                   key={m.id ?? `new-${idx}`}
                   className="flex items-end gap-2"
                 >
-                  <div className="flex-1 space-y-1">
+                  <div className="flex-1 flex flex-col gap-1">
                     <Label className="text-xs">{FORM_VI.name}</Label>
                     <Input
                       value={m.name}
@@ -374,7 +374,7 @@ export function ItemDetailDialog({
                       placeholder="VD: Thêm trứng"
                     />
                   </div>
-                  <div className="w-28 space-y-1">
+                  <div className="w-28 flex flex-col gap-1">
                     <Label className="text-xs">{FORM_VI.price}</Label>
                     <FormattedNumberInput
                       defaultValue={String(m.price)}
@@ -423,7 +423,7 @@ export function ItemDetailDialog({
             </TabsContent>
 
             {/* ─── Sides Tab ─── */}
-            <TabsContent value="sides" className="space-y-3">
+            <TabsContent value="sides" className="flex flex-col gap-3">
               {sideItems.length === 0 ? (
                 <AppEmptyState
                   compact

@@ -12,7 +12,7 @@ export function AddBranchButton() {
   return (
     <>
       <Button onClick={() => setOpen(true)}>
-        <IconPlus className="mr-2 size-4" />
+        <IconPlus data-icon="inline-start" />
         {ACTIONS_VI.add} điểm vận hành
       </Button>
       <BranchFormDialog open={open} onOpenChange={setOpen} />

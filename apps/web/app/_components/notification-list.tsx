@@ -111,7 +111,7 @@ function NotificationListSkeletonFallback() {
       {Array.from({ length: 4 }).map((_, index) => (
         <div
           key={index}
-          className="flex items-start gap-3 rounded-lg border bg-card p-3"
+          className="flex items-start gap-3 rounded-md border bg-card p-3"
         >
           <Skeleton className="size-8 shrink-0 rounded-full" />
           <div className="flex min-w-0 flex-1 flex-col gap-2">

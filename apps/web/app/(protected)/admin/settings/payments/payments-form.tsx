@@ -102,19 +102,18 @@ export function PaymentsForm({
     <form
       onSubmit={form.handleSubmit(onValid)}
       noValidate
-      className="space-y-6"
+      className="flex flex-col gap-4"
     >
       <AppSection
         title={messages.settings.payments.sectionTitle}
-        contentClassName="gap-6"
       >
-        <div className="space-y-3 rounded-lg border p-4">
+        <div className="flex flex-col gap-3 rounded-md border p-4">
           <Controller
             control={form.control}
             name="enable_vietqr"
             render={({ field }) => (
-              <div className="flex flex-row items-start justify-between gap-4">
-                <div className="space-y-1">
+              <div className="flex flex-row items-start justify-between gap-2">
+                <div className="flex flex-col gap-1">
                   <Label htmlFor="enable-vietqr" className="text-base">
                     {messages.settings.payments.vietqrLabel}
                   </Label>
@@ -138,7 +137,7 @@ export function PaymentsForm({
           />
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1">
+            <div className="flex flex-col gap-1">
               <Label htmlFor="vietqr-bank-code" className="text-xs">
                 {messages.settings.payments.bankCode}
               </Label>
@@ -154,7 +153,7 @@ export function PaymentsForm({
                 </p>
               )}
             </div>
-            <div className="space-y-1">
+            <div className="flex flex-col gap-1">
               <Label htmlFor="vietqr-account-no" className="text-xs">
                 {messages.settings.payments.accountNo}
               </Label>
@@ -170,7 +169,7 @@ export function PaymentsForm({
                 </p>
               )}
             </div>
-            <div className="space-y-1">
+            <div className="flex flex-col gap-1">
               <Label htmlFor="vietqr-account-name" className="text-xs">
                 {messages.settings.payments.accountName}
               </Label>
@@ -195,8 +194,8 @@ export function PaymentsForm({
           control={form.control}
           name="enable_momo"
           render={({ field }) => (
-            <div className="flex flex-row items-start justify-between gap-4 rounded-lg border p-4">
-              <div className="space-y-1">
+            <div className="flex flex-row items-start justify-between gap-2 rounded-md border p-4">
+              <div className="flex flex-col gap-1">
                 <Label htmlFor="enable-momo" className="text-base">
                   MoMo
                 </Label>

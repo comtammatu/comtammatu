@@ -69,7 +69,7 @@ export function SettingsForm({ identity }: SettingsFormProps) {
     <form
       onSubmit={identityForm.handleSubmit(onIdentityValid)}
       noValidate
-      className="space-y-6"
+      className="flex flex-col gap-4"
     >
       <AppSection
         title={copy.identityTitle}

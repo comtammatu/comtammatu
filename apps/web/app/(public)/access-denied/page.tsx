@@ -43,7 +43,7 @@ export default async function AccessDeniedPage({
         </Badge>
       }
     >
-      <div className="rounded-lg border bg-muted/40 p-4 text-sm leading-6 text-muted-foreground">
+      <div className="rounded-md border bg-muted/40 p-3 text-sm leading-6 text-muted-foreground">
         {copy.nextStep}
         {from ? (
           <p className="mt-2 text-xs font-medium text-muted-foreground/80">

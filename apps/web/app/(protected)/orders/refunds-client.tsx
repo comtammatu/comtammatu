@@ -164,7 +164,7 @@ export function RefundsClient({
             className: "text-right",
             render: (refund: RefundRow) =>
               refund.status === "pending" ? (
-                <div className="flex justify-end gap-1.5">
+                <div className="flex justify-end gap-2">
                   <Button
                     size="sm"
                     variant="outline"
@@ -231,20 +231,16 @@ export function RefundsClient({
       </div>
 
       <AppToolbar className="justify-between">
-          <div className="space-y-1.5">
+          <div className="flex flex-col gap-1.5">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Điều phối hoàn tiền
             </p>
             <p className="text-sm text-muted-foreground">
               {refunds.length} yêu cầu hoàn tiền trong danh sách hiện tại.
             </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="warning" className="rounded-full px-3 py-1.5">
-                {pendingCount} chờ duyệt
-              </Badge>
-              <Badge variant="success" className="rounded-full px-3 py-1.5">
-                {approvedCount} đã duyệt
-              </Badge>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge variant="warning">{pendingCount} chờ duyệt</Badge>
+              <Badge variant="success">{approvedCount} đã duyệt</Badge>
             </div>
           </div>
           <Button

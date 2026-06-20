@@ -69,7 +69,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
   return (
     <form
       action={formAction}
-      className="space-y-4"
+      className="flex flex-col gap-4"
       aria-busy={isPending}
       onSubmit={() => setLastSubmittedValues(values)}
     >

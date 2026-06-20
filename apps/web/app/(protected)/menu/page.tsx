@@ -5,6 +5,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { UrlTabs } from "@/_components/url-tabs";
 import { loadAuthState } from "@/_lib/auth";
@@ -61,21 +62,21 @@ export default async function MenuPage() {
       <AppSection>
           <UrlTabs defaultValue="items">
             <TabsList className="h-11 rounded-lg bg-muted/60">
-              <TabsTrigger value="items" className="px-5">
+              <TabsTrigger value="items" className="px-3">
                 Món ăn
-                <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
+                <Badge variant="secondary" className="ml-1.5 tabular-nums">
                   {items.length}
-                </span>
+                </Badge>
               </TabsTrigger>
-              <TabsTrigger value="categories" className="px-5">
+              <TabsTrigger value="categories" className="px-3">
                 {FORM_VI.category}
-                <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
+                <Badge variant="secondary" className="ml-1.5 tabular-nums">
                   {categories.length}
-                </span>
+                </Badge>
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="items" className="mt-6 space-y-4">
+            <TabsContent value="items" className="mt-6 flex flex-col gap-4">
               <div className="flex justify-end">
                 <AddItemButton
                   categories={categories}
@@ -91,7 +92,7 @@ export default async function MenuPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="categories" className="mt-6 space-y-4">
+            <TabsContent value="categories" className="mt-6 flex flex-col gap-4">
               <div className="flex justify-end">
                 <AddCategoryButton />
               </div>

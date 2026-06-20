@@ -155,7 +155,7 @@ export function AppShell({
                 <BrandIcon className="size-5" />
               )}
             </div>
-            <div className="min-w-0 flex-1 space-y-0.5 group-data-[collapsible=icon]:hidden">
+            <div className="min-w-0 flex-1 flex flex-col gap-1 group-data-[collapsible=icon]:hidden">
               <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
                 {brand.subLabel}
               </p>
@@ -308,7 +308,7 @@ export function AppShell({
           className={cn("flex-1 p-4", bottomNav && "pb-24 lg:pb-4")}
         >
           <AppShellPaddingBoundary>
-            <div className="space-y-4">{children}</div>
+            <div className="flex flex-col gap-4">{children}</div>
           </AppShellPaddingBoundary>
         </main>
       </SidebarInset>

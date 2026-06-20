@@ -317,7 +317,7 @@ export function TemplatesClient({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <Tabs value={kind} onValueChange={(v) => setKind(v as PrintKind)}>
         <TabsList className="w-full justify-start overflow-x-auto">
           {templates.map((t) => (
@@ -432,7 +432,7 @@ export function TemplatesClient({
           </ItemGroup>
         </AppSection>
 
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <AppSection
             title={copy.previewTitle}
             description={copy.previewDescription}
@@ -462,9 +462,9 @@ export function TemplatesClient({
           </AppSection>
 
           <AppSection title={copy.actionsTitle}>
-            <div className="space-y-3">
+            <div className="flex flex-col gap-3">
               <div className="flex items-end gap-2">
-                <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="min-w-0 flex-1 flex flex-col gap-1.5">
                   <Label htmlFor="test-branch">{copy.testBranchLabel}</Label>
                   <Select value={testBranch} onValueChange={setTestBranch}>
                     <SelectTrigger id="test-branch">
@@ -508,8 +508,8 @@ export function TemplatesClient({
                         {copy.saveDescription}
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-1.5">
                         <Label htmlFor="template-name">
                           {copy.saveNameLabel}
                         </Label>
@@ -522,7 +522,7 @@ export function TemplatesClient({
                           )}
                         />
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="flex flex-col gap-1.5">
                         <Label htmlFor="paper-width">
                           {copy.paperWidthLabel}
                         </Label>
@@ -588,7 +588,7 @@ function BlockFields({
   switch (block.type) {
     case "text":
       return (
-        <ItemContent className="space-y-2">
+        <ItemContent className="flex flex-col gap-2">
           <Textarea
             value={(block.text as string) ?? ""}
             onChange={(e) => onPatch({ text: e.target.value })}
@@ -603,7 +603,7 @@ function BlockFields({
       );
     case "row":
       return (
-        <ItemContent className="space-y-2">
+        <ItemContent className="flex flex-col gap-2">
           <div className="grid gap-2 sm:grid-cols-2">
             <Input
               value={(block.left as string) ?? ""}

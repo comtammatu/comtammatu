@@ -55,7 +55,7 @@ export function PageSpinner({
   return (
     <div
       className={cn(
-        "flex w-full flex-col items-center justify-center gap-3 py-24",
+        "flex w-full flex-col items-center justify-center gap-3 py-6",
         fullScreen && "min-h-dvh py-0",
       )}
     >

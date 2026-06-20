@@ -10,7 +10,7 @@ export default async function SettingsLayout({
   const { claims } = await loadAuthState();
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <SettingsNav role={claims.user_role} />
       {children}
     </div>

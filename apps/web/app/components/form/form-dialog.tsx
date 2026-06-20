@@ -114,7 +114,11 @@ export function FormDialog<TValues extends FieldValues>({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(handleValid)} noValidate>
+        <form
+          onSubmit={form.handleSubmit(handleValid)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <FieldGroup>
             {children(form)}
             {serverError && (
@@ -124,7 +128,7 @@ export function FormDialog<TValues extends FieldValues>({
             )}
           </FieldGroup>
 
-          <DialogFooter className="pt-6">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -134,7 +138,7 @@ export function FormDialog<TValues extends FieldValues>({
               {cancelLabel}
             </Button>
             <Button type="submit" variant={submitVariant} disabled={isPending}>
-              {isPending && <Spinner className="mr-2" />}
+              {isPending && <Spinner />}
               {submitLabel}
             </Button>
           </DialogFooter>

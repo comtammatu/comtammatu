@@ -300,7 +300,7 @@ export function OrdersClient({
             )}
           </p>
           {hasFilters && (
-            <Badge variant="info" className="rounded-full px-3 py-1.5">
+            <Badge variant="info">
               Bộ lọc đang áp dụng
             </Badge>
           )}

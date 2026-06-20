@@ -21,7 +21,7 @@ export default async function LoginPage({
 
       {/* Login form */}
       <section className="flex flex-1 items-center justify-center p-6 sm:p-8">
-        <div className="w-full max-w-sm space-y-6">
+        <div className="flex w-full max-w-sm flex-col gap-4">
           <h2 className="font-heading text-xl font-semibold">
             {ACTIONS_VI.signIn}
           </h2>

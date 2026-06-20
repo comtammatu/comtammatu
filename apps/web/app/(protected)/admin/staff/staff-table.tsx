@@ -18,6 +18,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+} from "@comtammatu/ui/components/item";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { toggleStaffActive } from "./actions";
 import { StaffFormDialog } from "./staff-form-dialog";
@@ -209,35 +214,40 @@ export function StaffTable({
         emptyIcon={<IconUsers />}
         className={isPending ? "opacity-60" : undefined}
         mobileCardRender={(member) => (
-          <div className="rounded-lg border border-border/70 bg-background p-4 transition-colors">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-medium">{member.full_name}</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {member.branch_name ?? "—"}
-                </p>
+          <Item
+            variant="outline"
+            className={isPending ? "opacity-60" : undefined}
+          >
+            <ItemContent className="gap-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <p className="font-medium">{member.full_name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {member.branch_name ?? "—"}
+                  </p>
+                </div>
+                <StaffActiveBadge active={member.is_active} />
               </div>
-              <StaffActiveBadge active={member.is_active} />
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-muted-foreground">{STAFF_VI.role}</p>
-                <p className="mt-1">{member.position_label ?? member.role}</p>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex flex-col gap-1">
+                  <p className="text-muted-foreground">{STAFF_VI.role}</p>
+                  <p>{member.position_label ?? member.role}</p>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-muted-foreground">SĐT</p>
+                  <p>{member.phone ?? "—"}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-muted-foreground">SĐT</p>
-                <p className="mt-1">{member.phone ?? "—"}</p>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center justify-end">
+            </ItemContent>
+            <ItemActions>
               <StaffActionsMenu
                 member={member}
                 variant="card"
                 onEdit={setEditStaff}
                 onToggle={handleToggleActive}
               />
-            </div>
-          </div>
+            </ItemActions>
+          </Item>
         )}
       />
 

@@ -15,7 +15,7 @@ export function SettingsPageFrame({
   children,
 }: SettingsPageFrameProps) {
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-4">
       <AppPageHeader
         title={title}
         description={description}

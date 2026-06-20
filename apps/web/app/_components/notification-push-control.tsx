@@ -214,7 +214,7 @@ export function NotificationPushControl({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2",
+        "flex flex-col gap-3",
         compact ? null : "rounded-md border bg-background p-3",
       )}
     >

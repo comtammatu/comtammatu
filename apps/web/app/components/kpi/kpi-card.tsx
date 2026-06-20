@@ -67,7 +67,7 @@ export function KpiCard({
   const Body = (
     <CardContent
       className={cn(
-        "relative flex h-full min-h-32 flex-col gap-2",
+        "relative flex h-full min-h-32 flex-col gap-3",
         href ? "transition-colors hover:bg-muted/40" : undefined,
       )}
     >

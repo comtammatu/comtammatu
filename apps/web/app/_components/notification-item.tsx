@@ -93,14 +93,14 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
     >
       <span
         className={cn(
-          "mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-muted",
+          "inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-muted",
           tone,
         )}
         aria-hidden
       >
         <Icon className="size-4" />
       </span>
-      <div className="min-w-0 flex-1 space-y-1">
+      <div className="min-w-0 flex-1 flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <p
             className={cn(
@@ -122,7 +122,7 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
             {item.body}
           </p>
         )}
-        <p className="text-2xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {kindLabel} · {relativeTime(item.created_at)}
         </p>
       </div>

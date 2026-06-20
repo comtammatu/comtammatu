@@ -64,7 +64,7 @@ export default async function OrdersPage() {
               },
             ]}
           >
-            <TabsContent value="orders" className="space-y-4">
+            <TabsContent value="orders" className="flex flex-col gap-4">
               <OrdersClient
                 initialOrders={orders}
                 initialSummary={summary}
@@ -72,7 +72,7 @@ export default async function OrdersPage() {
                 showBranchFilter={isManagerOrAbove}
               />
             </TabsContent>
-            <TabsContent value="refunds" className="space-y-4">
+            <TabsContent value="refunds" className="flex flex-col gap-4">
               <RefundsClient
                 initialRefunds={refunds}
                 canApprove={canApproveRefund}

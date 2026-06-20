@@ -138,7 +138,7 @@ export function PrintersClient(props: {
   const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-4">
       {branches.map((branch) => {
         const byRole = new Map(
           printers
@@ -503,7 +503,7 @@ function PrinterForm({
           {PRINT_TYPE_ORDER.map((type) => (
             <label
               key={type}
-              className="flex items-center gap-2 rounded-md border border-border/70 p-2 text-sm"
+              className="flex items-center gap-2 rounded-md border border-border/70 p-3 text-sm"
             >
               <Checkbox
                 checked={form.print_types.includes(type)}
@@ -523,7 +523,7 @@ function PrinterForm({
           {categories.map((category) => (
             <label
               key={category.id}
-              className="flex items-center gap-2 rounded-md border border-border/70 p-2 text-sm"
+              className="flex items-center gap-2 rounded-md border border-border/70 p-3 text-sm"
             >
               <Checkbox
                 checked={form.category_ids.includes(category.id)}

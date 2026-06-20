@@ -147,45 +147,45 @@ export default async function StaffPermissionsPage({ params }: Props) {
             <TabsContent value="overview">
               <AppSection title="Thông tin nhân viên">
                 <dl className="grid gap-3 sm:grid-cols-2">
-                  <div>
+                  <div className="flex flex-col gap-1">
                     <dt className="text-xs font-medium text-muted-foreground">
                       Họ tên
                     </dt>
-                    <dd className="mt-0.5 text-sm">{profile.full_name}</dd>
+                    <dd className="text-sm">{profile.full_name}</dd>
                   </div>
-                  <div>
+                  <div className="flex flex-col gap-1">
                     <dt className="text-xs font-medium text-muted-foreground">
                       Số điện thoại
                     </dt>
-                    <dd className="mt-0.5 font-mono text-sm">
+                    <dd className="font-mono text-sm">
                       {profile.phone ?? "—"}
                     </dd>
                   </div>
-                  <div>
+                  <div className="flex flex-col gap-1">
                     <dt className="text-xs font-medium text-muted-foreground">
                       Chức vụ
                     </dt>
-                    <dd className="mt-0.5 text-sm">{positionLabel}</dd>
+                    <dd className="text-sm">{positionLabel}</dd>
                   </div>
-                  <div>
+                  <div className="flex flex-col gap-1">
                     <dt className="text-xs font-medium text-muted-foreground">
                       Chi nhánh mặc định
                     </dt>
-                    <dd className="mt-0.5 text-sm">{defaultBranchName}</dd>
+                    <dd className="text-sm">{defaultBranchName}</dd>
                   </div>
-                  <div>
+                  <div className="flex flex-col gap-1">
                     <dt className="text-xs font-medium text-muted-foreground">
                       Role
                     </dt>
-                    <dd className="mt-0.5 font-mono text-sm">
+                    <dd className="font-mono text-sm">
                       {staffRoleFromPositionCode(profile.positions?.code)}
                     </dd>
                   </div>
-                  <div>
+                  <div className="flex flex-col gap-1">
                     <dt className="text-xs font-medium text-muted-foreground">
                       Trạng thái
                     </dt>
-                    <dd className="mt-0.5">
+                    <dd>
                       <Badge
                         variant={profile.is_active ? "success" : "secondary"}
                       >
@@ -265,7 +265,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
                             >
                               {a.action}
                             </Badge>
-                            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs font-normal">
+                            <code className="rounded-md bg-muted px-1.5 py-1 font-mono text-xs font-normal">
                               {a.permission_key}
                             </code>
                             <span className="ml-2 text-xs font-normal text-muted-foreground">

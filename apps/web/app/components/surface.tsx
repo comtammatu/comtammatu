@@ -179,7 +179,7 @@ export function AppPageHeader({
     <header className={cn("flex flex-col gap-2", className)}>
       {breadcrumb ? <div>{breadcrumb}</div> : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
+        <div className="flex min-w-0 flex-col gap-1">
           {eyebrow ? (
             <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {eyebrow}

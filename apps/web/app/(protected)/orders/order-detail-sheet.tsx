@@ -165,14 +165,14 @@ export function OrderDetailSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto">
-        <SheetHeader className="mb-6">
+        <SheetHeader className="mb-4">
           <SheetTitle className="font-mono text-base">
             #{order.order_number}
           </SheetTitle>
         </SheetHeader>
 
         {/* ─── Order info ─── */}
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <span className="text-muted-foreground">{FORM_VI.status}</span>
             <div>
@@ -194,7 +194,7 @@ export function OrderDetailSheet({
 
           {/* ─── Payment info ─── */}
           {order.payment && (
-            <div className="rounded-md border p-3 space-y-2">
+            <div className="rounded-md border p-3 flex flex-col gap-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Thanh toán
               </p>
@@ -213,7 +213,7 @@ export function OrderDetailSheet({
           )}
 
           {!order.payment && order.payment_method && (
-            <div className="rounded-md border p-3 space-y-2">
+            <div className="rounded-md border p-3 flex flex-col gap-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Thanh toán
               </p>
@@ -258,7 +258,7 @@ export function OrderDetailSheet({
               </div>
             )}
             {!itemsError && items !== null && items.length > 0 && (
-              <ul className="space-y-2">
+              <ul className="flex flex-col gap-2">
                 {items.map((item) => {
                   const isCancelled = item.status === "cancelled";
                   const modifierLine =
@@ -299,7 +299,7 @@ export function OrderDetailSheet({
                           {item.variant_name && (
                             <p
                               className={cn(
-                                "mt-0.5 text-xs text-muted-foreground",
+                                "mt-1 text-xs text-muted-foreground",
                                 isCancelled && "line-through",
                               )}
                             >
@@ -328,7 +328,7 @@ export function OrderDetailSheet({
                         sideLine ||
                         item.note ||
                         (isCancelled && item.cancel_reason)) && (
-                        <dl className="mt-2 space-y-1 border-t pt-2 text-xs">
+                        <dl className="mt-2 flex flex-col gap-1 border-t pt-2 text-xs">
                           {modifierLine && (
                             <div
                               className={cn(
@@ -392,7 +392,7 @@ export function OrderDetailSheet({
           </div>
 
           {/* ─── Totals ─── */}
-          <div className="rounded-md border p-3 space-y-1.5 text-sm">
+          <div className="rounded-md border p-3 flex flex-col gap-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">{FORM_VI.subtotal}</span>
               <span className="font-mono">{formatVND(order.subtotal)}</span>
@@ -419,7 +419,7 @@ export function OrderDetailSheet({
                 </span>
               </div>
             )}
-            <div className="flex justify-between border-t pt-1.5 font-semibold">
+            <div className="flex justify-between border-t pt-2 font-semibold">
               <span>{FORM_VI.totalAmount}</span>
               <span className="font-mono">{formatVND(order.total_amount)}</span>
             </div>
@@ -442,7 +442,7 @@ export function OrderDetailSheet({
               </p>
             )}
             {!auditPending && !auditError && audit && audit.length > 0 && (
-              <ol className="space-y-2">
+              <ol className="flex flex-col gap-2">
                 {audit.map((entry) => (
                   <li key={entry.id} className="rounded-md border p-3 text-sm">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">

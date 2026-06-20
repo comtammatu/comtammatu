@@ -103,7 +103,7 @@ export function MenuImageInput({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
       <input
         ref={inputRef}
         type="file"
@@ -117,7 +117,7 @@ export function MenuImageInput({
         }}
       />
       {value ? (
-        <div className="flex items-center gap-3 rounded-md border bg-muted/30 p-2">
+        <div className="flex items-center gap-3 rounded-md border bg-muted/30 p-3">
           <Image
             src={value}
             alt="Ảnh món"

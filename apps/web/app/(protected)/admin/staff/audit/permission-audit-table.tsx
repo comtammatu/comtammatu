@@ -88,7 +88,7 @@ export function PermissionAuditTable({
       key: "permission",
       header: copy.permission,
       render: (row) => (
-        <code className="rounded-md bg-muted px-1.5 py-0.5 text-xs">
+        <code className="rounded-md bg-muted px-1.5 py-1 text-xs">
           {row.permissionKey}
         </code>
       ),
