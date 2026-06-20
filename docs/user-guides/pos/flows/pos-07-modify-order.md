@@ -8,7 +8,7 @@
 | Trường              | Giá trị                                                                                       |
 | ------------------- | --------------------------------------------------------------------------------------------- |
 | **Vai trò**         | Thu ngân, Quản lý chi nhánh                                                                   |
-| **Quyền cần có**    | `pos:use` cho hủy món / chuyển bàn / tách / gộp; `pos:cancel_order` cho hủy đơn               |
+| **Quyền cần có**    | `pos:use` cho hủy món / chuyển bàn / tách / gộp; `pos:void_order` cho hủy đơn               |
 | **Điều kiện trước** | Đơn ở `confirmed` (chưa thanh toán)                                                           |
 | **Hệ quả chung**    | Mọi thao tác đều **đảo ngược KDS ticket** + recompute tổng + audit vào `order_status_history` |
 
@@ -17,7 +17,7 @@
 | Thao tác         | Khi nào dùng                             | Yêu cầu                        | Kết quả                                           |
 | ---------------- | ---------------------------------------- | ------------------------------ | ------------------------------------------------- |
 | **Hủy món**      | Khách đổi ý / món hết / nhập sai         | swipe món sang trái            | Món `cancelled`, KDS ticket cancel                |
-| **Hủy đơn**      | Khách bỏ về / đơn nhập nhầm hoàn toàn    | có quyền `pos:cancel_order`    | Toàn đơn `cancelled`, bàn về trống                |
+| **Hủy đơn**      | Khách bỏ về / đơn nhập nhầm hoàn toàn    | có quyền `pos:void_order`    | Toàn đơn `cancelled`, bàn về trống                |
 | **Chuyển bàn**   | Khách đổi sang bàn khác                  | bàn đích `available`           | Đơn bind sang bàn mới, bàn cũ về trống            |
 | **Tách hóa đơn** | 1 nhóm khách chia bill                   | đơn `dine_in` + ≥2 món         | Tạo đơn mới cùng bàn, chuyển 1 phần món qua       |
 | **Gộp hóa đơn**  | 2 đơn cùng bàn → gộp 1 (1 người trả hết) | bàn có ≥2 đơn `dine_in` active | Đơn được chọn nhận hết món, đơn nguồn `cancelled` |
@@ -164,7 +164,7 @@ URL: `/br/{branchId}/pos` → bàn occupied → đơn
 
 **Bạn thấy:** Menu Khác… không có option "Hủy đơn".
 
-**Lý do:** Waiter không có quyền `pos:cancel_order` — chỉ thu ngân/quản lý mới hủy được.
+**Lý do:** Waiter không có quyền `pos:void_order` — chỉ thu ngân/quản lý mới hủy được.
 
 **Cách xử lý:** Báo thu ngân ra hủy. Hoặc waiter tự hủy từng món rồi gọi cashier confirm tổng (nếu thực sự cần).
 
@@ -204,7 +204,7 @@ URL: `/br/{branchId}/pos` → bàn occupied → đơn
 
 ### Permission matrix
 
-| Action             | `pos:use` | `pos:cancel_order` |
+| Action             | `pos:use` | `pos:void_order` |
 | ------------------ | --------- | ------------------ |
 | Hủy món (per-item) | ✅        | —                  |
 | Hủy đơn (toàn bộ)  | —         | ✅ (chỉ cashier+)  |

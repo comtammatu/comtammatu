@@ -106,7 +106,7 @@ equivalent, or `find-skills` if the owner asked for new tooling.
   for owner/accountant; do not silently reconcile either side.
 - Má Tư is a Hộ kinh doanh: no formal BCTC/VAS. Treat enterprise-accounting
   guidance as an advanced layer reachable by direct permission, not the default
-  surface (D012/D013).
+  surface (D012/D020).
 - Execution entry point: the `tax-vn` repo skill (`.claude/skills/tax-vn/`)
   routes these docs in order and names the real compute functions in
   `packages/shared/src/payroll/` and the HĐĐT helpers. It restates no rule and
@@ -257,6 +257,31 @@ Use this workflow for UI/UX design tasks in this repo:
   `tasks/lessons.md`, `tasks/regressions.md`, `docs/worklog/`, and `AGENTS.md`
   (see Anti-Patterns). `setup-deploy` must not rewrite `CLAUDE.md` (a stable
   pointer to `AGENTS.md`).
+
+### Plugin Lanes — OMC, engineering-os, Ponytail
+
+These installed workflow plugins are Claude-runtime aids, not authority — Codex
+does not load them, so no rule, gate, or workflow may DEPEND on one. Route by lane:
+
+- **engineering-os (`eos-*`)** — structured deliverables only: system-design,
+  tech-spec, PR review, sprint, release notes, incident, api-docs, weekly report.
+  Thin adapter over its own `templates/`, zero hooks/MCP. Draft an artifact with
+  it, then map back to this repo's SSoT — its templates are not a competing
+  authority.
+- **oh-my-claudecode (`oh-my-claudecode:*`)** — OPT-IN, explicitly-invoked
+  orchestration/heavy-lift only (`ultrawork`, `team`, `trace`, `ask`). The repo's
+  T3 four-perspective debate (`workflow.md`) stays the runtime-neutral backbone;
+  OMC orchestration never replaces it. Its auto stores (`project-memory`, `wiki`,
+  `notepad`, `learner`, `.omc/`) are a parallel, Claude-only learning source — do
+  NOT treat them as memory; SSoT stays `tasks/lessons.md`, `tasks/regressions.md`,
+  `AGENTS.md`, `docs/agent/rules/` (Anti-Patterns).
+- **ponytail** — laziest-correct / YAGNI code discipline. Orthogonal; routes
+  nothing, governs how code is written.
+
+Where a plugin overlaps a native system (EOS `eos-code-review` / OMC
+`code-reviewer` vs repo `review` + T-tier; OMC `team`/`ultrawork` vs the T3 debate
++ Agent Teams), prefer the repo flow; reach for the plugin only for a capability
+the repo flow lacks.
 
 ### GitHub, Vercel, And CI
 

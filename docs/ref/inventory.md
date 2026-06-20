@@ -21,11 +21,12 @@ kho không map được vào contract hiện có, cập nhật contract trước
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation đọc theo WAC khi có dữ liệu                        | Không chuyển sang FIFO engine                                            |
 | Biến động `stock_movements`     | Append-only ledger cho `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*` | Không mở lot-first ledger / batch accounting                             |
 | Mô hình site                    | `branches.branch_kind IN ('branch', 'central_supply', 'central_kitchen')`; `branch` giữ Kho CN, `central_supply` là Kho Tổng, `central_kitchen` là Bếp Trung Tâm | V1 không tạo bảng `inventory_sites`                                      |
-| PO / GRN / NCC                  | Bảng PO/GRN/NCC + RPC `confirm_grn`; QC và price variance là control trong luồng nhập             | Không mở PR workflow nhiều bước                                          |
+| PO / GRN / NCC                  | Bảng PO/GRN/NCC + RPC `confirm_goods_receipt_note`; QC và price variance là control trong luồng nhập | Không mở PR workflow nhiều bước                                          |
 | Luân chuyển nội bộ              | `stock_transfers` chỉ dùng khi site nhận vẫn giữ tồn: Kho Tổng/Bếp Trung Tâm/chi nhánh -> Kho CN, hoặc chi nhánh -> chi nhánh | `Kho CN -> Bếp CN` không phải transfer                                    |
 | HĐ NCC + 3-way matching         | `supplier_invoices` + matching logic là Finance handoff                                           | Không mở payment proposal engine trong Inventory                         |
 | `recipes` + xuất kho theo order | `recipes` + RPC tiêu hao theo order                                                              | Không mở multi-level BOM                                                 |
 | Thành phẩm + production hub     | `item_kind`, `production_recipes`, `production_orders`, route production cho `central_kitchen`     | Không mở labor / overhead / WIP accounting đầy đủ                        |
+| Hao hụt / trả hàng / sự cố      | Waste (`/inventory/waste` + approvals), supplier return (`/inventory/supplier-returns`), issue log (`/inventory/issues`); nhập hàng đi qua `/inventory/receiving` | Không mở claim/insurance workflow                                        |
 
 ## Scope Boundary
 
@@ -315,29 +316,28 @@ Ngoài phạm vi v1:
 
 ### 8.1 Quy trình
 
-1. **Tạo phiên kiểm kê** (`createStocktakeSession`): chọn chi nhánh → tạo `stocktake_sessions` + tự động tạo `stocktake_lines` từ `stock_levels` hiện có (snapshot `system_quantity`).
-2. **Đếm thực tế** (`updateStocktakeLine`): nhập `counted_quantity` cho từng dòng. Chỉ cho phép khi phiên ở trạng thái `in_progress`.
-3. **Hoàn tất** (`completeStocktake` → RPC `complete_stocktake`): kiểm tra tất cả dòng đã đếm → re-snapshot `stock_levels.current_quantity` mới nhất (tránh race condition) → tính chênh lệch → INSERT `stock_movements` (type=`count_adjustment`) → cập nhật `stock_levels` + `last_counted_at` qua trigger.
-4. **Hủy phiên** (`cancelStocktake`): chỉ khi `in_progress`, chuyển sang `cancelled`.
+1. **Tạo phiên kiểm kê** (`startStocktake` → RPC `start_stocktake`): chọn chi nhánh, `location_id`, `mode` (`daily/weekly/monthly/quarterly/spot`), blind mode và ngưỡng variance → tạo `stocktake_sessions` + tự động tạo `stocktake_lines` từ `stock_levels` hiện có (snapshot `system_quantity`, gán `abc_class`).
+2. **Đếm thực tế** (`getStocktakeLinesBlind` → RPC `get_stocktake_lines_blind`, `submitCountRound`, `saveStocktakeDraft`): nhập `counted_quantity` theo từng `round_no`; blind mode ẩn `system_quantity` cho người đếm. Zone lock chống đếm trùng dùng `acquireZoneLock` / `heartbeatZoneLock` / `releaseZoneLock`.
+3. **Đóng vòng đếm** (RPC `close_recount_round`): so chênh lệch theo ngưỡng (chặt hơn cho `abc_class = 'A'`) → đánh `needs_recount` / `is_final` → mở `round_no` kế tiếp nếu còn dòng phải đếm lại; round hội tụ được post `count_adjustment` vào `stock_movements` + cập nhật `stock_levels`.
 
 ### 8.2 Bảng
 
-- `stocktake_sessions`: `id, tenant_id, branch_id, started_at, completed_at, status, notes, created_by`
-  - Status: `in_progress` | `completed` | `cancelled`
+- `stocktake_sessions`: `id, tenant_id, branch_id, location_id, started_at, completed_at, status, notes, created_by, mode, blind_mode, auditor_id, auditor_branch_id, is_unaudited, variance_threshold_pct/vnd (+ class_a), abc_snapshot_at, current_round, offline_enabled`
+  - Status: `in_progress` | `completed` | `cancelled`; `current_round` 1..4
   - Partial unique: chỉ 1 phiên `in_progress` mỗi chi nhánh
-- `stocktake_lines`: `id, tenant_id, session_id, ingredient_id, system_quantity, counted_quantity, variance (generated), variance_reason`
-  - `variance = counted_quantity - system_quantity` (generated column)
+- `stocktake_lines`: `id, tenant_id, session_id, ingredient_id, system_quantity, counted_quantity, variance (generated), variance_reason, round_no, counted_by, counted_at, needs_recount, is_final, abc_class`
+  - `variance = counted_quantity - system_quantity` (generated column); `round_no` 1..4
 
 ### 8.3 UI
 
 - **Danh sách phiên**: mã phiên (KK-{id}), chi nhánh, ngày, trạng thái. Tìm kiếm theo mã/tên CN.
-- **Chi tiết đếm** (in_progress): bảng nguyên liệu + input số lượng đếm + lý do chênh lệch. Auto-save khi blur.
+- **Chi tiết đếm** (in_progress): bảng nguyên liệu + input số lượng đếm + lý do chênh lệch theo vòng đếm; blind mode ẩn SL hệ thống. Auto-save khi blur.
 - **Kết quả** (completed): bảng SL hệ thống vs SL thực đếm + chênh lệch + color coding (xanh <1%, vàng 1-5%, đỏ >5%).
 - **Tiến độ**: hiển thị `{đã đếm}/{tổng}` khi đang thực hiện.
 
 ### 8.4 ACL
 
-- `branch_manager`: tạo + đếm + hoàn tất kiểm kê cho chi nhánh của mình.
+- `branch_manager`, `warehouse_manager`: tạo + đếm + hoàn tất kiểm kê cho chi nhánh trong phạm vi của mình (`inventory:stocktake_create` / `inventory:stocktake_complete`).
 - `owner`: tạo kiểm kê cho bất kỳ chi nhánh nào, xem toàn bộ lịch sử.
 
 ---

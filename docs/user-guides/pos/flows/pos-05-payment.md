@@ -30,12 +30,12 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 
 **Bạn thấy:** Sheet "Phương thức thanh toán" mở từ phải:
 
-- 3 phương thức: **Tiền mặt** (mặc định chọn), **VietQR** (chuyển khoản), **MoMo**.
+- Phương thức thanh toán: **Tiền mặt** (mặc định chọn nếu thu ngân có quyền) + các ví điện tử/chuyển khoản đang bật trong cấu hình (VietQR…). Danh sách lấy từ cấu hình tenant, không cố định.
 - "Tổng tạm tính: {tổng}đ".
 - Ô "Tổng nhận" (mặc định = tổng tiền — tức khách trả đúng).
-- 5 chip mệnh giá nhanh: 15k / 16k / 20k / 30k / 100k (auto-fit theo tổng).
+- Tối đa 6 chip mệnh giá nhanh tự tính theo tổng (tờ tiền chẵn gần nhất ≥ tổng).
 - "Tiền trả khách": 0đ (tự cộng nếu khách đưa thừa).
-- Checkbox "Xuất hóa đơn điện tử" (mặc định KHÔNG tick).
+- Checkbox "Người mua không lấy hóa đơn" (mặc định TICK — không nhập thông tin người mua).
 - 3 nút bottom: **Hủy**, **Đã thanh toán** (đỏ, lớn), **In tạm tính**.
 
 ### Bước 2 — Nhập tiền khách đưa (cho tiền mặt)
@@ -54,15 +54,15 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 - Tổng tạm tính 15.000đ, khách đưa tờ 20.000đ → chạm chip 20.000đ → "Tiền trả khách: 5.000đ" → trả khách 5.000đ.
 - Khách đưa đúng 15.000đ → giữ "Tổng nhận" mặc định → "Tiền trả khách: 0đ".
 
-> 💡 Khách đưa nhỏ hơn tổng (ví dụ thiếu 1.000đ) — vẫn xác nhận được, "Tiền trả khách" sẽ là số âm. Hệ thống cảnh báo nhưng không khóa — manager xử lý sau.
+> 💡 Khách đưa nhỏ hơn tổng (ví dụ thiếu 1.000đ) — nút **Đã thanh toán** bị khóa, hiện lý do "Khách chưa thanh toán đủ tổng đơn". Phải nhập đủ "Tổng nhận" ≥ tổng tạm tính mới xác nhận được.
 
 ### Bước 3 — Thông tin người mua
 
 ![Bước 3 - Invoice toggle](../mockups/pos-05/pos-05-step-03-invoice-toggle.png)
 
-**Bạn làm:** Hỏi khách có lấy hóa đơn ghi thông tin/MST không. Nếu không lấy → giữ **Người mua không lấy hóa đơn**. Nếu khách cần ghi thông tin → bỏ tick và nhập tên khách / công ty / mã số thuế.
+**Bạn làm:** Hỏi khách có lấy hóa đơn ghi thông tin/MST không. Nếu không lấy → giữ tick **Người mua không lấy hóa đơn**. Nếu khách cần ghi thông tin → bỏ tick và nhập tên người mua / công ty / mã số thuế.
 
-**Bạn thấy (khi bỏ tick):** Form thông tin người mua mở rộng — nhập tên khách / công ty / mã số thuế / email.
+**Bạn thấy (khi bỏ tick):** Form thông tin người mua mở rộng — nhập tên người mua / công ty / mã số thuế / địa chỉ.
 
 > 💡 Dù khách không lấy hóa đơn, hệ thống vẫn phát hành HĐĐT với người mua là "Người mua không lấy hóa đơn".
 
@@ -74,10 +74,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 
 **Bạn thấy ngay sau:**
 
-- Toast hiện trong 1 trong 3 trạng thái:
-  - **"Đã thanh toán & xuất HĐĐT"** ✅ — happy path khi tick HĐĐT.
-  - **"Đã thanh toán — không xuất HĐĐT"** — nếu KHÔNG tick HĐĐT.
-  - **"Đã thu tiền — HĐĐT chưa xuất được"** ⚠️ — nếu tick HĐĐT nhưng phía VAT/CMS lỗi. Tiền vẫn vào, HĐĐT sẽ retry sau.
+- Toast xác nhận hiện (happy path: **"Đã thanh toán & xuất HĐĐT"** ✅). Chi tiết 3 trạng thái toast HĐĐT xem [POS-08 — Xử lý ngoại lệ](./pos-08-exceptions.md).
 - Sheet đóng.
 - Đơn chuyển sang `paid`, bàn về `available` (nếu dine_in).
 - Giấy in (nếu có máy in nhiệt được setup).
@@ -125,29 +122,9 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 
 **Cách xử lý:** Waiter chỉ có thể chọn "Chuyển khoản" + xác nhận khi khách đã chuyển. Nếu khách trả tiền mặt → gọi thu ngân ra confirm.
 
-### Mất mạng giữa lúc thanh toán
+### Mất mạng / máy in lỗi / HĐĐT chưa xuất được
 
-**Bạn thấy:** Spinner "Đang xử lý..." kéo dài >10 giây.
-
-**Cách xử lý:**
-
-1. **Đợi** — hệ thống có cơ chế retry. Đừng chạm lại "Đã thanh toán".
-2. Nếu thật sự đứng → đóng và mở lại chi tiết đơn → xem trạng thái:
-   - Nếu đơn đã `paid` → **xong**, không cần làm lại.
-   - Nếu đơn vẫn `confirmed` → mở bill và thử lại.
-3. Vẫn lỗi → báo kỹ thuật. Ghi mã đơn + số tiền vào sổ tay tạm thời để đối soát sau.
-
-### Lỗi máy in
-
-**Bạn thấy:** Đã thanh toán xong nhưng tờ giấy không in ra.
-
-**Cách xử lý:**
-
-1. Kiểm tra giấy / kẹt giấy.
-2. Mở chi tiết đơn → "Khác..." → "In lại".
-3. Vẫn không in được → ghi lại mã đơn, in tay sau khi sửa máy.
-
-> 💡 Đã thanh toán = xong giao dịch. Không in được giấy không ảnh hưởng đến tiền — chỉ ảnh hưởng giấy đưa khách.
+Các tình huống ngoại lệ khi vận hành (banner mất kết nối, máy in offline, 3 trạng thái toast HĐĐT sau thanh toán) được mô tả đầy đủ ở [POS-08 — Xử lý ngoại lệ](./pos-08-exceptions.md).
 
 ---
 

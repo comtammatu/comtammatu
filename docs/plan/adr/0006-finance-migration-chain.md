@@ -1,7 +1,7 @@
 # ADR 0006 — Finance Migration Chain And Operating-Finance Boundary
 
 **Status:** Accepted (2026-06-16)
-**Decision drivers:** D020 (enterprise accounting outside the HKD product, owner-approved 2026-06-13, applied prod 2026-06-14); D013 (HKD operating-finance posture); baseline-first migration policy
+**Decision drivers:** D020 (enterprise accounting outside the HKD product, owner-approved 2026-06-13, applied prod 2026-06-14); D012 (HKD operating-finance posture); baseline-first migration policy
 
 Má Tư is a Hộ kinh doanh. The current Finance product is operating finance:
 revenue, HĐĐT, operating expenses, food-cost signal, supplier-invoice handoff,
@@ -28,8 +28,9 @@ The canonical D020 chain is:
 4. `20260614100000_d020_retire_enterprise_gl` — one atomic transaction: rewrite
    the 8 business RPCs while preserving every non-accounting behavior, drop the
    accounting FK columns/functions/triggers/tables, and keep
-   `accounting_periods` + `close_period_soft/hard`/`reopen_period` for
-   operational month-close.
+   `accounting_periods` + `close_period_soft/hard`/`reopen_period` at the DB
+   layer only as owner-gated support. Per D035 the app/route surface for
+   period-close is removed; there is no exposed month-close UI.
 5. Run `pnpm db:types`, then `pnpm typecheck && pnpm lint && pnpm build`.
 
 Operating finance explicitly stays in scope:

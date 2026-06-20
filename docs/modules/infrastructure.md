@@ -3,9 +3,9 @@
 ## Overview
 
 Turborepo monorepo deployed to Vercel. Supabase provides database + auth, and
-Upstash Redis handles rate limiting. The current checkout does not carry active
-GitHub workflow files, so local gates remain the dependable verification path
-unless CI is restored.
+Upstash Redis handles rate limiting. CI runs through `.github/workflows/ci.yml`
+on push-to-main and pull requests; local gates mirror the same checks for fast
+feedback.
 
 ## Monorepo Structure
 
@@ -18,6 +18,7 @@ comtammatu/
 │   ├── database/           # Supabase clients + generated types
 │   ├── shared/             # Auth types, ACL, utilities
 │   ├── ui/                 # shadcn/Radix primitives + token runtime
+│   ├── print-render/       # Receipt/template renderer SSoT (agent + web preview)
 │   └── security/           # Rate limiting
 ├── supabase/
 │   └── migrations/         # SQL migrations; owner manually applies prod after merge
@@ -93,9 +94,9 @@ Full setup guide: `docs/ref/setup.md`
   changes manually according to the Environment Registry in
   `docs/agent/rules/database.md`. Do not run file-based `supabase db push`
   against production unless that registry explicitly changes.
-- **CI:** no active `.github/workflows` files are present in the current checkout.
-  If CI is restored, it must run at least `pnpm typecheck`, `pnpm lint`, and
-  `pnpm build`.
+- **CI:** `.github/workflows/ci.yml` runs on push-to-main and pull requests
+  (Node 24, pnpm from `packageManager`), executing `pnpm typecheck`,
+  `pnpm lint`, `pnpm test`, and `pnpm build`.
 
 ## TypeScript Configuration
 

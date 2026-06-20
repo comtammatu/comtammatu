@@ -39,4 +39,4 @@ Hướng dẫn cho **thu ngân**, **phục vụ**, và **quản lý chi nhánh**
 - [x] [POS-08 — Xử lý ngoại lệ (mất mạng / máy in / HĐĐT lỗi)](flows/pos-08-exceptions.md)
 - [x] [POS-09 — Đóng ca POS + đối soát tiền](flows/pos-09-close-session.md)
 
-**8 flows đã có guide. Tổng 38 mockup PNG.** Xem [flow-index.md](flow-index.md) để có ma trận quyền + status.
+**8 flows đã có guide. Tổng 39 mockup PNG.** Xem [flow-index.md](flow-index.md) để có ma trận quyền + status.

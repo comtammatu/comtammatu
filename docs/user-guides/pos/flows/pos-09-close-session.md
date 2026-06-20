@@ -33,13 +33,13 @@ URL: `/br/{branchId}/pos` (đang trong ca POS)
 
 > 💡 Nút Chốt ca chỉ hiện cho vai trò có quyền `pos:close_shift` (thu ngân/quản lý). Phục vụ KHÔNG thấy nút này — phải nhờ thu ngân chốt.
 
-### Bước 2 — Sheet "Đóng ca bán hàng" mở
+### Bước 2 — Sheet "Đóng ca · Đếm tiền mặt / Đối soát" mở
 
 ![Bước 2 - Close sheet](../mockups/pos-09/pos-09-step-02-close-sheet.png)
 
 **Bạn thấy:** Sheet trượt từ phải (full-height trên mobile):
 
-- Tiêu đề: "Đóng ca bán hàng".
+- Tiêu đề: "Đóng ca · Đếm tiền mặt" (bước đếm) / "Đóng ca · Đối soát" (bước đối soát).
 - Progress bar đỏ ở đầu (Bước 1/2 — Đếm tiền mặt cuối ca).
 - Section "ĐẾM TIỀN MẶT THEO MỆNH GIÁ" — hint "Enter để sang dòng kế".
 - 9 dòng input cho mệnh giá VND: 500.000đ, 200.000đ, 100.000đ, 50.000đ, 20.000đ, 10.000đ, 5.000đ, 2.000đ, 1.000đ.
@@ -81,8 +81,8 @@ URL: `/br/{branchId}/pos` (đang trong ca POS)
 **Bạn làm:**
 
 1. Đối chiếu chênh lệch.
-2. **Nếu chênh lệch nhỏ (≤50k):** ghi chú nhanh ("trả tiền dư khách bàn 5...") rồi chạm **Chốt ca với chênh lệch X**.
-3. **Nếu chênh lệch lớn (>50k):** xem Variant.
+2. Ghi chú lý do nếu cần (tuỳ chọn), rồi chạm **Xác nhận & đóng ca**.
+3. **Nếu chênh lệch vượt ngưỡng:** ca vẫn đóng được — xem Variant để biết hệ thống cảnh báo gì.
 
 **Sau khi chốt:**
 
@@ -98,16 +98,13 @@ URL: `/br/{branchId}/pos` (đang trong ca POS)
 
 ## Tình huống ngoại lệ
 
-### Chênh lệch lớn (>50k) — cần ghi chú lý do
+### Chênh lệch vượt ngưỡng — hệ thống cảnh báo quản lý
 
 ![Variant - Significant difference](../mockups/pos-09/pos-09-variant-significant-diff.png)
 
-**Khi nào gặp:** Tiền thực đếm khác tiền dự kiến >50.000đ (lệch két lớn).
+**Khi nào gặp:** Tiền thực đếm lệch tiền dự kiến vượt ngưỡng. Ngưỡng tính tự động = `max(50.000đ, 0.5% × tiền mặt dự kiến)`.
 
-**Bạn thấy:**
-
-- Cảnh báo trong sheet: `"Chênh lệch lớn (>50.000đ). Đã ghi chú chưa?"`
-- Textarea ghi chú **bắt buộc** nhập (placeholder: `"Ví dụ: két lệch 80k do trả tiền dư khách bàn 5..."`).
+**Bạn thấy:** Sau khi chốt, toast cảnh báo `"Lệch quỹ vượt ngưỡng — đã gửi cảnh báo cho quản lý"` (kèm số chênh lệch). Ca **vẫn đóng được** — đây chỉ là cảnh báo, không khóa.
 
 **Cách xử lý:**
 
@@ -116,20 +113,10 @@ URL: `/br/{branchId}/pos` (đang trong ca POS)
    - Tiền dư trả khách thiếu / thừa.
    - Đổi tờ rách cho khách.
    - Quên insert tiền vào két sau khi nhận từ khách.
-3. **Ghi chú chi tiết** vào textarea (audit log lưu vĩnh viễn).
-4. Chạm **Chốt ca với chênh lệch X** → sheet đóng + log gửi cho quản lý chi nhánh.
+3. **Ghi chú lý do** vào textarea (tuỳ chọn, audit log lưu lại).
+4. Chạm **Xác nhận & đóng ca** → hệ thống tự gửi cảnh báo cho quản lý chi nhánh.
 
 > 🛡️ Quản lý chi nhánh sẽ review các ca có chênh lệch lớn cuối ngày. Lệch nhiều lần liên tiếp → có thể đào tạo lại hoặc điều tra.
-
-### Chênh lệch RẤT lớn (>200k) — cần manager duyệt
-
-**Bạn thấy:** Toast cảnh báo `"Chênh lệch vượt ngưỡng — cần quản lý chi nhánh đăng nhập để duyệt."`
-
-**Cách xử lý:** Gọi quản lý chi nhánh ra:
-
-1. Đếm lại trước mặt manager.
-2. Manager đăng nhập trên cùng máy → bypass khóa chốt.
-3. Hoặc manager mở app trên máy của họ → chốt thay.
 
 ### Chốt ca khi còn đơn active
 
@@ -169,9 +156,9 @@ Sau khi chốt → màn `/employee` → tap "Bán hàng POS" → mở ca mới (
 
 ### Threshold cấu hình
 
-- Chênh lệch nhỏ: ≤50.000đ — chỉ confirm, ghi chú optional.
-- Chênh lệch trung bình: >50.000đ — ghi chú bắt buộc.
-- Chênh lệch vượt ngưỡng (default >200.000đ): cần manager duyệt.
+- Ngưỡng cảnh báo tính server-side: `variance_threshold = max(50.000đ, 0.5% × expected_cash)`.
+- `|cash_difference| > variance_threshold` → `variance_breached = true`: ca vẫn đóng, hệ thống gửi notification cho manager (trigger `trg_notify_pos_shift_variance`). Không khóa, không cần duyệt.
+- Ghi chú ca luôn tuỳ chọn (`note.trim() || undefined`).
 
 ### Tham chiếu thiết kế
 

@@ -23,9 +23,11 @@ or agent memory.
 - Historical notes may label `iexwsuaqqenyjiskawoj` as "dev"
   (e.g. `tasks/regressions.md` MCP-APPLY-VS-CLI-PUSH, written 2026-04-24 when it
   was). Those labels are stale history.
-- The repo-scoped MCP server in `.mcp.json` points at production with
-  `read_only=true`. Org-scoped MCP servers and the Supabase CLI are NOT
-  read-only — re-check the ref before any write-capable call.
+- The repo-scoped MCP server in `.mcp.json` points at production but is NOT
+  read-only; it is gated by the deny-list plus the `guard-prod-db.mjs` hook.
+  Only Codex's `.codex/config.toml` Supabase URL is pinned `read_only=true`.
+  Org-scoped MCP servers and the Supabase CLI are also NOT read-only — re-check
+  the ref before any write-capable call.
 - Machine enforcement: `scripts/guard-prod-db.mjs` is the single PreToolUse
   guard (blocks write SQL / mutating CLI / write-capable MCP calls against the
   protected refs above). Per-runtime wiring runs that one script:

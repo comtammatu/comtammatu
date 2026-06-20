@@ -5,7 +5,7 @@
 > Hóa đơn chứng từ — NĐ 123/2020 (sửa đổi bởi NĐ 70/2025, hiệu lực 01/06/2025) + TT 32/2025/TT-BTC (thay TT 78/2021, hiệu lực 01/06/2025).
 > Thuế HKD — NQ 198/2025/QH15 (bỏ thuế khoán, miễn lệ phí môn bài từ 01/01/2026) + NĐ 68/2026/NĐ-CP (05/03/2026, chính sách thuế & quản lý thuế HKD/CNKD) + NĐ 141/2026/NĐ-CP (29/04/2026, nâng ngưỡng không chịu GTGT/TNCN lên 1 tỷ/năm, hồi tố 01/01/2026) + Luật Thuế GTGT 48/2024/QH15 + NQ 204/2025/QH15 + NĐ 174/2025/NĐ-CP (giảm GTGT 01/07/2025–31/12/2026) + Luật Thuế TNCN sửa đổi 2025 (hiệu lực 01/07/2026).
 > Kế toán HKD — TT 152/2025/TT-BTC (31/12/2025, thay TT 88/2021 từ 01/01/2026).
-> Last updated: 2026-06-16 (Viettel S-invoice only, HKD model; audit thuế — xem `tax-audit-2026-06.md`)
+> Last updated: 2026-06-16 (Viettel S-invoice only, HKD model)
 
 ---
 
@@ -235,7 +235,7 @@ draft → not_required                       ← không được tạo mới
 
 #### Allowed transitions (DB enforced)
 
-State machine enforce qua RPC `transition_tax_invoice_state(id, to_status, payload?, note?)` (`supabase/migrations/20260425035346_tax_invoice_state_machine.sql:72-160`). Mọi UPDATE status PHẢI đi qua RPC — không cho phép client UPDATE trực tiếp.
+State machine enforce qua RPC `transition_tax_invoice_state(id, to_status, payload?, note?)` (định nghĩa trong `supabase/migrations/00000000000000_baseline.sql`). Mọi UPDATE status PHẢI đi qua RPC — không cho phép client UPDATE trực tiếp.
 
 ```
 draft     → signing, cancelled, not_required
@@ -527,22 +527,26 @@ thành **dữ liệu thuế trực tiếp**, không chỉ là hồ sơ tham chi�
 
 ## 5. Provider HĐĐT
 
-Hệ thống abstract qua interface `InvoiceProvider` (`packages/shared/src/providers/invoice.ts:48-93`) nhưng runtime chỉ register Viettel S-invoice. Không còn env `INVOICE_PROVIDER`; init logic ở `apps/web/lib/invoice-provider-init.ts`.
+Hệ thống abstract qua interface `InvoiceProvider` (`packages/shared/src/providers/invoice.ts:185-213`) nhưng runtime chỉ register Viettel S-invoice. Không còn env `INVOICE_PROVIDER`; init logic ở `apps/web/lib/invoice-provider-init.ts`.
 
 ### 5.1 Interface `InvoiceProvider`
 
 ```typescript
 interface InvoiceProvider {
-  createInvoice(req: CreateInvoiceRequest): Promise<InvoiceResult>;
+  readonly name: string;
+  createInvoice(request: InvoiceRequest): Promise<InvoiceResult>;
+  createBatchInvoice(requests: InvoiceRequest[]): Promise<BatchInvoiceItemResult[]>; // batch issue (daily summary)
   getStatus(providerRef: string): Promise<InvoiceStatus>;
   cancelInvoice(providerRef: string, reason: string): Promise<void>;
+  downloadInvoice(request: InvoiceDownloadRequest): Promise<InvoiceArchive>; // PDF/XML pass-through
 }
 
 type InvoiceResult = {
   status: "draft" | "signing" | "submitted" | "issued" | "failed";
   invoiceNumber: string | null; // null khi draft/signing
   providerRef: string; // unique ID phía provider
-  providerData: Record<string, unknown>;
+  codeOfTax?: string | null; // Mã CQT khi provider trả ngay (instant-issue D038)
+  providerData?: Record<string, unknown>;
 };
 ```
 
@@ -630,7 +634,7 @@ Auth flow:
 
 ### 6.2 Dashboard `/finance` (RPC `get_finance_dashboard_summary`)
 
-`supabase/migrations/20260527020000_finance_dashboard_summary_rpc.sql:17-182` cung cấp counters:
+RPC `get_finance_dashboard_summary` (định nghĩa trong `supabase/migrations/00000000000000_baseline.sql`) cung cấp counters:
 
 ```sql
 SELECT public.get_finance_dashboard_summary(
@@ -795,16 +799,20 @@ Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-viettel-op
 
 ---
 
-## 10. Migration files đã ship (timestamp order)
+## 10. Schema HĐĐT trong baseline
 
-| Timestamp        | File                                | Mô tả                                                                                                                                                        |
-| ---------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `20260425035346` | `tax_invoice_state_machine.sql`     | RPC `transition_tax_invoice_state` + matrix + `tax_invoice_events` + `signing_started_at` + `uq_tax_invoices_active_per_order`                               |
-| `20260502000000` | `pos_hddt_not_required_d4.sql`      | Thêm state `not_required` (D4 — đã retire)                                                                                                                   |
-| `20260508053555` | `hddt_summary_schema.sql`           | `tax_invoices` cols + `tax_invoice_orders` junction + `summary_run_queue` + `uq_tax_invoices_active_per_summary`                                             |
-| `20260508055046` | `hddt_summary_rpcs.sql`             | `transition_tax_invoice_state_as_system` + `_compute_vat_breakdown` + `aggregate_daily_b2c_invoice` (v1) + trigger `tio_assert_one_active_summary_per_order` |
-| `20260508055230` | `hddt_aggregate_rpc_fixes.sql`      | Fix bucket `payments.paid_at` (orders không có column) + `pg_advisory_xact_lock(BIGINT)` 1-arg                                                               |
-| `20260527020000` | `finance_dashboard_summary_rpc.sql` | `get_finance_dashboard_summary` cho `/finance` dashboard                                                                                                     |
+Toàn bộ schema + RPC HĐĐT đã gộp vào `supabase/migrations/00000000000000_baseline.sql`
+(baseline-first consolidation). Các file timestamped gốc nằm ở
+`supabase/migrations/_archive/`; bảng dưới mô tả từng feature theo file gốc đó.
+
+| File gốc (`_archive/`)              | Mô tả                                                                                                                                                        |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tax_invoice_state_machine.sql`     | RPC `transition_tax_invoice_state` + matrix + `tax_invoice_events` + `signing_started_at` + `uq_tax_invoices_active_per_order`                               |
+| `pos_hddt_not_required_d4.sql`      | Thêm state `not_required` (D4 — đã retire)                                                                                                                   |
+| `hddt_summary_schema.sql`           | `tax_invoices` cols + `tax_invoice_orders` junction + `summary_run_queue` + `uq_tax_invoices_active_per_summary`                                             |
+| `hddt_summary_rpcs.sql`             | `transition_tax_invoice_state_as_system` + `_compute_vat_breakdown` + `aggregate_daily_b2c_invoice` (v1) + trigger `tio_assert_one_active_summary_per_order` |
+| `hddt_aggregate_rpc_fixes.sql`      | Fix bucket `payments.paid_at` (orders không có column) + `pg_advisory_xact_lock(BIGINT)` 1-arg                                                               |
+| `finance_dashboard_summary_rpc.sql` | `get_finance_dashboard_summary` cho `/finance` dashboard                                                                                                     |
 
 ---
 
@@ -840,6 +848,6 @@ Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-viettel-op
 - `apps/web/app/(protected)/finance/summary-invoice-actions.ts` — Manual trigger actions
 - `apps/web/lib/hddt-daily-summary.ts` — Shared `executeSummaryRun`
 - `apps/web/lib/invoice-provider-init.ts` — Viettel S-invoice env injection
-- `packages/shared/src/providers/invoice.ts:48-93` — Interface
+- `packages/shared/src/providers/invoice.ts:185-213` — Interface
 - `packages/shared/src/providers/impl/viettel-sinvoice.ts:115-426` — Sinvoice impl
 - `tasks/regressions.md` — Named failure rules `HDDT-*`

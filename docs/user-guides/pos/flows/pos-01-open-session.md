@@ -63,7 +63,7 @@ Ví dụ: `/br/1/pos`
 
 - Toast xanh "Mở ca thành công" hiện ngắn (1-2s).
 - Màn hình chuyển sang giao diện chính:
-  - Header: "Thoát" + tên chi nhánh + nút **Chốt ca** (góc phải).
+  - Header gọn: logo quán + bối cảnh đang chọn; nút **⋮** (góc phải) mở menu chứa **Chốt ca** và **Trang nhân viên**.
   - 2 tab "Tại bàn" / "Mang về" — default "Tại bàn".
   - Table grid theo zones.
 

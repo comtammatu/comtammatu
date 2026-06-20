@@ -65,6 +65,16 @@
 | `inventory:writeoff`           | Ghi hao hụt / waste / hết hạn                 |
 | `inventory:production_create`  | Tạo lệnh sản xuất (chi nhánh)             |
 | `inventory:production_confirm` | Confirm hoàn thành lệnh sản xuất              |
+| `inventory:waste_approve`      | Duyệt phiếu waste tier-2                       |
+| `inventory:waste_bypass_photo` | Bỏ yêu cầu ảnh khi tạo waste                  |
+| `inventory:stocktake_recount`  | Mở vòng đếm lại trong kiểm kê                 |
+| `inventory:stocktake_unblind`  | Mở khoá blind mode để xem SL hệ thống         |
+| `inventory:adjust_approve`     | Duyệt điều chỉnh tồn thủ công                 |
+| `inventory:grn_express_configure` | Cấu hình GRN express                        |
+| `inventory:grn_express_extend` | Gia hạn cửa sổ GRN express                    |
+| `inventory:grn_hardblock_override` | Override hard-block khi nhận GRN           |
+| `inventory:catalog_review_policy_set` | Đặt policy review danh mục              |
+| `inventory:item_review_override_set` | Override review cho từng item            |
 
 ### 3.2 Procurement module (`inventory_procurement`)
 
@@ -78,8 +88,21 @@
 | `procurement:grn_confirm`     | Xác nhận GRN → cập nhật tồn       |
 | `procurement:invoice_create`  | Nhập hoá đơn NCC                  |
 | `procurement:invoice_match`   | 3-way matching PO ↔ GRN ↔ Invoice |
+| `procurement:grn_amend`       | Sửa GRN đã tạo (draft)            |
+| `procurement:price_list_read` | Xem bảng giá NCC                  |
+| `procurement:price_list_write`| Cập nhật bảng giá NCC             |
+| `procurement:override_code_rotate` | Xoay mã override nhập hàng   |
 
-### 3.3 Menu-adjacent (recipes)
+### 3.3 Supplier return + accounting
+
+| Key                        | Ý nghĩa                                  |
+| -------------------------- | ---------------------------------------- |
+| `supplier_return:read`     | Xem phiếu trả hàng NCC                    |
+| `supplier_return:create`   | Tạo phiếu trả hàng NCC (gồm QC nhận hàng)|
+| `supplier_return:confirm`  | Xác nhận trả hàng NCC                     |
+| `accounting:period_reopen` | Mở lại kỳ kế toán đã đóng                 |
+
+### 3.4 Menu-adjacent (recipes)
 
 | Key                    | Ý nghĩa                                            |
 | ---------------------- | -------------------------------------------------- |

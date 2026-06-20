@@ -25,7 +25,7 @@ URL: `/br/{branchId}/pos` (sau khi ca đã mở, mặc định landing trên mà
 
 **Bạn thấy:**
 
-- Header: nút "Thoát" (về cổng nhân viên), tên máy POS, nút "Chốt ca".
+- Header gọn: logo quán + bối cảnh đang chọn; nút **⋮** (góc phải) mở menu chứa "Chốt ca" và "Trang nhân viên" (về cổng nhân viên).
 - 2 tab "Tại bàn" / "Mang về" — mặc định **Tại bàn** đang chọn.
 - Danh sách bàn theo khu vực (ví dụ "Ngoài sân"), badge `8 trống` ở góc phải zone.
 - Mỗi bàn hiện: số bàn và badge trạng thái (`Trống` xanh / `Đang dùng` vàng / `Đã đặt` xám).
@@ -57,7 +57,7 @@ URL: `/br/{branchId}/pos` (sau khi ca đã mở, mặc định landing trên mà
 
 **Bạn thấy:** Màn chuyển thẳng sang **menu** (không cần chọn bàn):
 
-- Header: "Mang về" + tên máy POS.
+- Header: bối cảnh "Mang về".
 - Cùng layout menu như Bước 2 (tìm món, tabs danh mục, lưới món, nút "Giỏ đơn mới").
 
 ✅ Đã có context Mang về. Bước tiếp: chọn món (xem POS-03).

@@ -2,7 +2,7 @@
 
 ## Tổng quan
 
-Ứng dụng Next.js 16.2 dùng App Router. Snapshot 2026-06-10 tập trung vào các bề mặt chính: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), Branch Command (`/br/[branchId]/dashboard`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Runner customer display (`/br/[branchId]/runner`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Trang nhân viên cho non-admin staff (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho chi nhánh.
+Ứng dụng Next.js 16.2 dùng App Router. Các bề mặt chính: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), Branch Command (`/br/[branchId]/dashboard`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Runner customer display (`/br/[branchId]/runner`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Trang nhân viên cho non-admin staff (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho chi nhánh.
 
 **Phạm vi sở hữu:** `apps/web/`
 
@@ -30,7 +30,7 @@ owner; Branch Manager dùng L1 Branch Command dưới
 | -------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | Root redirect        | `/`                                                                                                          | Shared role default                                       | Delegates to `getDefaultRedirect(claims)`: owner → `/admin/dashboard`; non-admin staff including Branch Manager → `/employee`.                                                | No extra hub surface. Scope remains in JWT + route params.                                  |
 | Public / auth        | `/login`, `/access-denied`, `/payment/momo/return`, `/br/[branchId]/runner`, public health/webhook endpoints | `/login`, external return URL, hoặc Runner display URL    | Không dùng app shell. Không giữ app back link.                                                                                                                                | Không đọc tenant/branch scope từ UI state. Runner display tự validate branch trong page.    |
-| Admin foundation     | `/admin/dashboard`, `/admin/reports/*`, `/admin/staff/*`, tenant `/admin/settings/*`                         | `/admin/dashboard`                                        | `AdminShell` dùng admin sidebar và ẩn back link. Không dùng Admin như home chung cho mọi role hoặc nơi chứa branch setup mới.                                                 | Breadcrumb root là `Quản trị`; AdminShell build breadcrumb từ active nav + path tail.       |
+| Admin foundation     | `/admin/dashboard`, `/admin/reports/*`, `/admin/staff/*`, tenant `/admin/settings/*`                         | `/admin/dashboard`                                        | `OfficeModuleShell` dùng admin sidebar và ẩn back link. Không dùng Admin như home chung cho mọi role hoặc nơi chứa branch setup mới.                                                 | Breadcrumb root là `Quản trị`; OfficeModuleShell build breadcrumb từ active nav + path tail.       |
 | Domain workspaces    | `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/notifications/*`                            | `MODULE_ACL[module].path`                                 | Workspace shell dùng sidebar/domain nav; link rời workspace phải đi qua `resolveRoleHomeLink(role)`. `/hr/payroll/*` là direct-support, không đưa vào discovery/nav mặc định. | Breadcrumb root là nhóm `Công việc`; filter/tab state giữ trong URL, không lưu local state. |
 | Branch operations    | `/br/[branchId]/dashboard`, `/pos/*`, `/kds/*`, `/settings/*`, `/menu-limits/*` dưới cùng branch URL         | `/br/[branchId]/{dashboard,pos,kds,settings,menu-limits}` | Operational chrome hoặc in-flow controls. POS/KDS ưu tiên hành động trong ca, không quay về Admin. Staff discovery vẫn có thể link sang Runner display public.                | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.      |
 | Employee portal      | `/employee/*`                                                                                                | `/employee`                                               | Employee dùng bottom/desktop nav trong surface; admin-level role không vào `/employee/*`.                                                                                     | Breadcrumb nhẹ theo task portal; không trộn HR admin/payroll thành hot path nhân viên.      |
@@ -68,10 +68,11 @@ apps/web/app/
 │   │   └── summary/        # B2C daily-summary trigger
 │   └── employee/           # Non-admin staff portal; URL remains /employee/*
 │
+├── components/
+│   └── office-module-shell.tsx # Shared Management shell (sidebar nav, role-based filtering) for admin/menu/hr/orders
+│
 ├── admin/                  # Operations foundation + executive reporting shell
-│   ├── layout.tsx          # AdminLayout (auth guard + sidebar)
-│   ├── components/
-│   │   └── admin-shell.tsx # Sidebar nav, executive shell, role-based filtering
+│   ├── layout.tsx          # AdminLayout (auth guard) — renders OfficeModuleShell
 │   ├── dashboard/          # Operations cockpit landing
 │   ├── inventory/          # Unsupported; blocked by inventory_admin ACL
 │   ├── staff/              # Staff CRUD with role hierarchy auth, excludes owner
@@ -159,9 +160,9 @@ apps/web/app/
 
 ## Thành phần chính
 
-### Khung quản trị (`apps/web/app/(protected)/admin/components/admin-shell.tsx`)
+### Khung quản trị (`apps/web/app/components/office-module-shell.tsx`)
 
-Layout chính cho toàn bộ route `/admin/*`. Thành phần này render:
+Shell Management dùng chung cho admin/menu/hr/orders; với route `/admin/*` thành phần này render:
 
 - Collapsible sidebar with role-filtered navigation (reads `ADMIN_NAV_GROUPS` from `@comtammatu/shared/auth`)
 - Lớp quản trị giữ nền tảng vận hành và báo cáo điều hành, không phải menu gom mọi domain

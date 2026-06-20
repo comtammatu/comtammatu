@@ -45,7 +45,7 @@
 
 **Bạn thấy:** Banner đỏ trên cùng màn hình:
 
-> 📡 ⚠️ Mất kết nối — không thể tạo đơn hoặc xác nhận thanh toán.
+> 📡 ⚠️ Mất kết nối - không thể cập nhật đơn/thanh toán.
 
 **Hệ quả:**
 
@@ -97,7 +97,7 @@ Sau khi cashier chạm "Đã thanh toán" (POS-05), toast hiện trong **1 trong
 
 #### ✅ "Đã thanh toán — không xuất HĐĐT" (xanh)
 
-**Ý nghĩa:** Khách KHÔNG yêu cầu HĐĐT (checkbox "Xuất hóa đơn điện tử" không tick). Tiền vào DB. Không phát sinh HĐĐT.
+**Ý nghĩa:** Khách KHÔNG yêu cầu ghi thông tin người mua (giữ tick "Người mua không lấy hóa đơn"). Tiền vào DB.
 
 **Bạn làm:** Không cần làm gì. Bình thường.
 
@@ -146,8 +146,8 @@ Sau khi cashier chạm "Đã thanh toán" (POS-05), toast hiện trong **1 trong
 
 ### Code path
 
-- **Online status provider:** [apps/web/app/(protected)/br/[branchId]/pos/\_components/pwa/online-status-provider.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/pwa/online-status-provider.tsx>) — listen `online`/`offline` events trên `navigator`.
-- **PWA toolbar (offline banner):** [apps/web/app/(protected)/br/[branchId]/pos/\_components/pwa/pos-pwa-toolbar.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/pwa/pos-pwa-toolbar.tsx>).
+- **Online status provider:** [apps/web/app/components/pwa-runtime.tsx](../../../../apps/web/app/components/pwa-runtime.tsx) — listen `online`/`offline` events trên `navigator` (`useIsOnline`).
+- **PWA toolbar (offline banner):** [apps/web/app/(protected)/br/[branchId]/\_components/operational-pwa/toolbar.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/_components/operational-pwa/toolbar.tsx>).
 - **Printer status badge:** [apps/web/app/(protected)/br/[branchId]/pos/printer-status-badge.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/printer-status-badge.tsx>) — Realtime subscribe `printer_agents` table, badge re-render khi status đổi.
 - **HĐĐT toast logic:** trong [apps/web/app/(protected)/br/[branchId]/pos/\_components/bill/bill-receipt-sheet.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/bill/bill-receipt-sheet.tsx>) ~line 545-560.
 
@@ -160,7 +160,7 @@ Sau khi cashier chạm "Đã thanh toán" (POS-05), toast hiện trong **1 trong
 ### Service Worker / PWA
 
 - App PWA dùng `serwist` để cache chunks → production offline mode KHÔNG bị "Failed to load chunk" như dev.
-- Submit retry: [apps/web/app/(protected)/br/[branchId]/pos/\_utils/submit-with-retry.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_utils/submit-with-retry.ts>) — exponential backoff 3 lần, 1s/2s/4s.
+- Submit retry: [apps/web/app/(protected)/br/[branchId]/pos/\_utils/submit-with-retry.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_utils/submit-with-retry.ts>) — 3 lần thử, backoff 0ms/400ms/1000ms (tổng wall-budget ~1,4s).
 
 ### Tham chiếu thiết kế
 

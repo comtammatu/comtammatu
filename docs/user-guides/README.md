@@ -20,7 +20,7 @@ Mockup là **screenshot thật** chụp từ ứng dụng đang chạy (Playwrig
 
 ## Module có sẵn
 
-- [POS — Bán hàng tại quầy](pos/README.md) (đang phát triển)
+- [POS — Bán hàng tại quầy](pos/README.md)
 
 ## Quy ước viết
 

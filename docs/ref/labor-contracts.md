@@ -62,9 +62,12 @@
 
 **Mức lương đóng BH** = Lương cơ bản + phụ cấp lương (không tính tiền thưởng, tiền hỗ trợ ăn uống, xăng xe, nhà ở)
 
-**Mức trần BHXH** = 20 × Lương cơ sở nhà nước = 20 × 2,340,000 = **46,800,000 VND/tháng** (từ 01/07/2024, áp dụng kỳ 2026)
+**Mức trần BHXH** = 20 × Lương cơ sở nhà nước: **46,800,000 VND/tháng** (lương cơ
+sở 2,34tr, NĐ 73/2024) đến 30/06/2026, **50,600,000 VND/tháng** (lương cơ sở
+2,53tr, NĐ 161/2026) từ 01/07/2026. SSoT: `docs/ref/legal-framework-2026.md` §6 +
+`packages/shared/src/payroll/legal-versions.ts` (cap version-aware theo `effectiveFrom`).
 
-> ⚠️ **Dev note**: Khi tính lương, trường `insurance_base_salary` trong bảng `employees` là căn cứ đóng BH, có thể khác với `gross_salary`.
+> ⚠️ **Dev note**: Khi tính lương, trường `insurance_base_salary` trong bảng `employees` là căn cứ đóng BH, có thể khác với `base_salary`.
 
 ### 3.2 Điều kiện đóng BHXH
 
@@ -113,45 +116,28 @@
 ```sql
 CREATE TABLE employees (
   id                      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  tenant_id               BIGINT NOT NULL REFERENCES tenants(id),
-  branch_id               BIGINT REFERENCES branches(id),          -- NULL = văn phòng trung tâm
-  profile_id              UUID REFERENCES profiles(id),            -- tài khoản đăng nhập (nullable)
-
-  -- Thông tin cá nhân
-  full_name               TEXT NOT NULL,
-  date_of_birth           DATE,
-  gender                  TEXT,                                     -- 'male' | 'female' | 'other'
+  tenant_id               BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  profile_id              UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE, -- tài khoản đăng nhập
+  employee_code           TEXT,
   id_number               TEXT,                                     -- CCCD/CMND
-  id_issued_date          DATE,
-  id_issued_place         TEXT,
-  phone                   TEXT,
-  address                 TEXT,
-  tax_code_personal       TEXT,                                     -- MST cá nhân (PIT)
-
-  -- Việc làm
-  position                TEXT NOT NULL,                           -- Chức danh
-  department              TEXT,
-  staff_role              TEXT NOT NULL,                           -- waiter|chef|cashier|...
-
-  -- Lương & BH
-  gross_salary            NUMERIC(15,2) NOT NULL,                  -- Lương thỏa thuận (gộp)
-  insurance_base_salary   NUMERIC(15,2) NOT NULL,                  -- Mức lương đóng BH
-  salary_type             TEXT NOT NULL DEFAULT 'monthly',         -- 'monthly' | 'hourly'
-  bank_account_number     TEXT,
+  bank_account            TEXT,
   bank_name               TEXT,
 
-  -- Trạng thái
-  employment_status       TEXT NOT NULL DEFAULT 'active',          -- 'probation' | 'active' | 'terminated'
-  hire_date               DATE NOT NULL,
-  probation_end_date      DATE,
-  termination_date        DATE,
-  termination_reason      TEXT,
+  -- Lương & BH
+  base_salary             NUMERIC(15,2),                            -- Lương gộp (payroll HKD đọc trực tiếp — D031)
+  insurance_base_salary   NUMERIC(15,2) NOT NULL DEFAULT 0,         -- Mức lương đóng BH (0 = BHXH off)
+
+  -- Việc làm
+  start_date              DATE,
+  contract_type           TEXT,                                     -- 'probation' | 'fixed_term' | 'indefinite'
+  dependents_count        INT NOT NULL DEFAULT 0 CHECK (dependents_count >= 0),
+  is_active               BOOLEAN NOT NULL DEFAULT true,
 
   created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-  UNIQUE(id_number, tenant_id),
-  UNIQUE(tax_code_personal, tenant_id)
+  UNIQUE(employee_code, tenant_id),
+  UNIQUE(profile_id, tenant_id)
 );
 ```
 
@@ -199,7 +185,8 @@ Theo luật VN, **mức lương đóng BH** ≠ **lương gross**:
 
 ```
 Mức đóng BH = Lương cơ bản + phụ cấp lương (KHÔNG tính: thưởng, hỗ trợ ăn, xăng xe, nhà ở)
-Trần BHXH   = 20 × Lương cơ sở = 46,800,000 VND/tháng (từ 01/07/2024)
+Trần BHXH   = 20 × Lương cơ sở = 46,800,000 VND/tháng đến 30/06/2026,
+              50,600,000 VND/tháng từ 01/07/2026 (NĐ 161/2026; cap version-aware)
 ```
 
 Trường này tồn tại ở 3 bảng với vai trò khác nhau:

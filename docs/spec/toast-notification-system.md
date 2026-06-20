@@ -337,7 +337,7 @@ Current runtime pieces:
 - `apps/web/app/_hooks/use-notifications.ts`: realtime subscription and refetch.
 - `apps/web/app/_components/notification-list.tsx`: feed composition.
 - `apps/web/app/_components/notification-item.tsx`: item row and action URL navigation.
-- `apps/web/app/notifications/page.tsx`: full feed route.
+- `apps/web/app/(protected)/notifications/page.tsx`: full feed route.
 - Chuông desktop floating: ĐÃ XÓA 2026-06-10 (stub return null từ 24/04, owner quyết xóa). Mobile dùng chuông trong mobile-header; nếu mở lại desktop bell cần shell placement được duyệt + khôi phục component từ git history (`7649253e`).
 
 UI rules:

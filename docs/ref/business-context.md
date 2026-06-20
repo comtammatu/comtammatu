@@ -93,7 +93,7 @@ Chi tiết áp dụng: thuế/hóa đơn ở `einvoice-tax.md`; lương/TNCN/BHX
 
 ## Domain: chuỗi nhà hàng F&B
 
-### Luồng mua hàng (v0.4.0)
+### Luồng mua hàng
 
 ```
 PO (intent) → GRN (actual received) → Supplier Invoice / chứng từ NCC
@@ -107,7 +107,7 @@ PO (intent) → GRN (actual received) → Supplier Invoice / chứng từ NCC
   và hồ sơ thuế
 - Giá vốn thực tế lấy từ GRN, KHÔNG lấy từ PO
 
-### Luồng bán hàng (v0.3.0)
+### Luồng bán hàng
 
 ```
 Waiter (POS) → KDS (realtime) → Chef bumps → Cashier pays → completed
@@ -122,7 +122,7 @@ cashier, waiter, chef, office
 
 Nguồn chuẩn: `ACCESS_BUCKETS` trong `packages/shared/src/auth/types.ts`.
 
-### Phương thức thanh toán (v0.3.0)
+### Phương thức thanh toán
 
 - Tiền mặt
 - VietQR (bank transfer)

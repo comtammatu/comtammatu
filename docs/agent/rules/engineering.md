@@ -10,7 +10,7 @@ Use this file for repo-wide engineering constraints, commands, architecture, imp
 pnpm dev          # Start dev server (Turbopack)
 pnpm build        # Production build
 pnpm typecheck    # Type checking across all packages
-pnpm lint         # Repo guard checks (copy, db-boundary, ui-contract, client-storage, rules-mirror, guard-sync) + ESLint
+pnpm lint         # Repo guard checks (copy, ui-contract, client-storage, rules-mirror, guard-sync, regression-guards, review-tier) + ESLint
 pnpm test         # Test suites (turbo test)
 pnpm verify       # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
 pnpm db:types     # Regenerate Supabase types after migration is applied to the type source schema

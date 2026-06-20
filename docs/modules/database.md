@@ -44,11 +44,11 @@ Defined in `packages/database/package.json`:
 ## Schema — Current Shape
 
 Source of truth: generated types from the schema used by app code. Snapshot
-generated from the current checkout on 2026-06-16 with
+generated from the current checkout on 2026-06-20 with
 `node scripts/project-snapshot.mjs`:
 
-- **108 tables**, **8 views**, **237 RPC/SQL functions**
-- **81 active migration files** in `supabase/migrations/`: the baseline plus
+- **111 tables**, **8 views**, **241 RPC/SQL functions**
+- **88 active migration files** in `supabase/migrations/`: the baseline plus
   forward migrations
 - **0 enums** — staff roles vẫn là strings carried in
   JWT claims; `position` is the canonical claim and `user_role` remains the

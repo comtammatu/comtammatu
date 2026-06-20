@@ -1,6 +1,6 @@
 # Khung pháp lý 2026 — Hộ Kinh Doanh (sổ đăng ký)
 
-> Last verified: 2026-06-16 (audit thuế — xem `tax-audit-2026-06.md`).
+> Last verified: 2026-06-16.
 >
 > **SSoT** cho danh mục văn bản pháp lý áp dụng cho Cơm Tấm Má Tư (HKD). Các doc
 > khác (`business-context.md`, `einvoice-tax.md`, `payroll-pit.md`,
@@ -46,10 +46,9 @@
 | Luật Thuế TNCN 109/2025/QH15 | Hiệu lực chung 01/07/2026; **quy định về thu nhập tiền lương/kinh doanh áp dụng từ kỳ tính thuế 2026 = 01/01/2026** | Biểu thuế lũy tiến **5 bậc** | `payroll-pit.md` §2 |
 | NQ 110/2025/UBTVQH15 | từ kỳ tính thuế 2026 (01/01/2026) | Giảm trừ gia cảnh **15,5tr bản thân / 6,2tr người phụ thuộc** | `payroll-pit.md`, `glossary.md` |
 
-> ⚠️ **Hiệu lực biểu 5 bậc (cần kế toán xác nhận — T3):** theo Luật 109/2025/QH15,
-> biểu 5 bậc + giảm trừ mới áp dụng cho **cả kỳ tính thuế 2026 (từ 01/01/2026)**,
-> không phải chỉ từ 01/07/2026. Code hiện dùng 7 bậc cũ cho T1–T6/2026
-> (`legal-versions.ts:115-122`) — xem `tax-audit-2026-06.md` §2.1.
+> **Hiệu lực biểu 5 bậc:** theo Luật 109/2025/QH15, biểu 5 bậc + giảm trừ mới áp
+> dụng cho **cả kỳ tính thuế 2026 (từ 01/01/2026)**, không phải chỉ từ 01/07/2026.
+> `legal-versions.ts` dùng `PIT_BRACKETS_2026` cho mọi kỳ từ 01/01/2026.
 
 ## 6. Lao động / BHXH
 
@@ -64,17 +63,17 @@
 
 - Payroll engine `packages/shared/src/payroll/legal-versions.ts` được version theo
   `effectiveFrom`. Giảm trừ **15,5tr/6,2tr** áp dụng từ 01/01/2026 (NQ 110/2025).
-  Trần BHXH **46,8tr** áp dụng đến **30/06/2026**.
-  > ⚠️ **Trần BHXH đổi từ 01/07/2026 (chưa cập nhật code — T3):** NĐ 161/2026 nâng
-  > lương cơ sở lên 2,53tr → trần BHXH **50,6tr**. Code đang hardcode `insuranceCap:
-  > 46_800_000` cho mọi version (`legal-versions.ts:110,120,130`). Xem
-  > `tax-audit-2026-06.md` §2.2.
-- Biểu PIT: code hiện tính kỳ **2026-01 → 2026-06** bằng **7 bậc**
-  (`PIT_BRACKETS_2007`), kỳ **≥ 2026-07** bằng **5 bậc** (`PIT_BRACKETS_2026`,
-  version `effectiveFrom: 2026-07-01`). Test khoá:
-  `packages/shared/src/payroll/__tests__/legal-versions.test.ts`.
-  > ⚠️ **Cần xác nhận (T3):** căn cứ luật, biểu 5 bậc áp dụng từ **kỳ tính thuế
-  > 2026 (01/01/2026)**, không phải 01/07/2026 — code có thể đang tính dư thuế
-  > khấu trừ T1–T6/2026 cho thu nhập tính thuế > 10tr. Xem `tax-audit-2026-06.md` §2.1.
+  Trần BHXH bước theo NĐ 161/2026: version `2026-01-01` giữ `insuranceCap:
+  46_800_000` (đến 30/06/2026), version `2026-07-01` nâng lên `insuranceCap:
+  50_600_000` (lương cơ sở 2,53tr). Hai version này khác nhau **chỉ ở** `insuranceCap`.
+- Biểu PIT: code tính **mọi kỳ từ 2026-01** bằng **5 bậc** (`PIT_BRACKETS_2026`),
+  cả version `2026-01-01` lẫn `2026-07-01`. Kỳ ≤ 2025 (version `effectiveFrom` ≤
+  `2024-07-01`) giữ 7 bậc cũ để quyết toán tái lập được. Test khoá:
+  `packages/shared/src/payroll/__tests__/legal-versions.test.ts`; quy tắc
+  regression `PAYROLL-2026-FIVE-BRACKET-AND-BHXH-CAP-STEP` (`tasks/regressions.md`).
+  > **Lưu ý kế toán (không phải lỗi code):** mức khấu trừ hàng tháng H1-2026 có thể
+  > chọn giữ biểu 7 bậc cũ chờ ngày hiệu lực chung 01/07 rồi true-up khi quyết
+  > toán — nghĩa vụ cả năm không đổi. Nếu kế toán chọn vậy thì trỏ version
+  > `2026-01-01` về `PIT_BRACKETS_2007` (một dòng), không đổi giảm trừ/trần.
 - Mã số thuế HKD + pháp danh nằm ở `tenants.tax_code` / `tenants.legal_name`
   (dùng cho HĐĐT `sellerName` + chứng từ in). Không hardcode trong code app.

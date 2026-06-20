@@ -31,14 +31,13 @@ and code below; never restate a number or a rule here or from memory.
   văn bản.
 - When a doc and the code disagree (e.g. PIT bracket count, VAT rate), STOP and
   flag it for the owner/accountant. Do not silently reconcile either side.
-- `docs/ref/tax-audit-2026-06.md` is the audit of doc/code vs current law — read
-  it before touching PIT brackets or the BHXH cap. Resolved 2026-06-16 (T3,
-  worklog `tax-pit-bhxh-legal-versions-2026-06-16.md`): `legal-versions.ts` now
-  uses the 5-bracket schedule for the whole 2026 tax year and steps the BHXH cap
-  46.8M → 50.6M at 2026-07-01 (NĐ 161/2026). One owner/accountant policy choice
-  remains open (NOT a code bug): H1-2026 monthly withholding may use the new
-  5-bracket (installed) or conservatively stay on the old 7-bracket and true up at
-  finalization — see regression rule `PAYROLL-2026-FIVE-BRACKET-AND-BHXH-CAP-STEP`.
+- Before touching PIT brackets or the BHXH cap, read regression rule
+  `PAYROLL-2026-FIVE-BRACKET-AND-BHXH-CAP-STEP` (`tasks/regressions.md`).
+  `legal-versions.ts` uses the 5-bracket schedule for the whole 2026 tax year and
+  steps the BHXH cap 46.8M → 50.6M at 2026-07-01 (NĐ 161/2026). One owner/accountant
+  policy choice remains open (NOT a code bug): H1-2026 monthly withholding may use
+  the new 5-bracket (installed) or conservatively stay on the old 7-bracket and true
+  up at finalization.
 - HKD scope only. Enterprise BCTC/VAS/audit guidance is an advanced layer
   reachable by explicit owner permission (D012/D013), not the default surface.
 - Tax/payroll/HĐĐT changes are T3 (money). Follow `workflow.md`: full

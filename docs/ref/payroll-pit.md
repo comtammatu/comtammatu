@@ -10,9 +10,9 @@
 > 01/07/2026)**; NĐ 293/2025 (lương tối thiểu vùng từ 01/01/2026). Luật Thuế
 > TNCN 2007/TT 111/2013 chỉ còn dùng cho quyết toán các kỳ ≤ 2025.
 >
-> ⚠️ Hai mốc cần kế toán xác nhận trước khi sửa code (T3): (1) hiệu lực biểu 5
-> bậc cho T1–T6/2026; (2) trần BHXH 50,6tr từ 01/07/2026. Chi tiết:
-> `tax-audit-2026-06.md` §2.1–§2.2.
+> `legal-versions.ts` đã áp biểu 5 bậc cho cả kỳ tính thuế 2026 và bước trần BHXH
+> 46,8tr → 50,6tr tại 01/07/2026 (quy tắc regression
+> `PAYROLL-2026-FIVE-BRACKET-AND-BHXH-CAP-STEP`).
 
 ---
 
@@ -62,9 +62,9 @@ Biểu 5 bậc theo Luật Thuế TNCN 2025 (109/2025/QH15), áp dụng từ k�
 > Biểu 7 bậc cũ (Luật 2007) chỉ còn dùng khi quyết toán các kỳ ≤ 2025; cách
 > khấu trừ chuyển tiếp trong năm 2026 theo hướng dẫn của cơ quan thuế.
 
-> **Đồng bộ với mã nguồn:** payroll engine = `packages/shared/src/payroll/calculate.ts` + `legal-versions.ts` (versioned theo `effectiveFrom`). Code hiện tính kỳ **2026-01 → 2026-06** bằng **7 bậc** (`PIT_BRACKETS_2007`); kỳ **≥ 2026-07** bằng **biểu 5 bậc** ở §2 (`PIT_BRACKETS_2026`, version `effectiveFrom: 2026-07-01`). Giảm trừ 15.5M/6.2M áp dụng từ 2026-01; trần BHXH 46.8M đúng đến 30/06/2026. Test khoá: `packages/shared/src/payroll/__tests__/legal-versions.test.ts`.
+> **Đồng bộ với mã nguồn:** payroll engine = `packages/shared/src/payroll/calculate.ts` + `legal-versions.ts` (versioned theo `effectiveFrom`). Code tính **mọi kỳ từ 2026-01** bằng **biểu 5 bậc** ở §2 (`PIT_BRACKETS_2026`) — cả version `effectiveFrom: 2026-01-01` lẫn `2026-07-01`. Giảm trừ 15.5M/6.2M áp dụng từ 2026-01; trần BHXH 46.8M đến 30/06/2026 rồi bước lên 50.6M từ 01/07/2026 (NĐ 161/2026). Test khoá: `packages/shared/src/payroll/__tests__/legal-versions.test.ts`; quy tắc `PAYROLL-2026-FIVE-BRACKET-AND-BHXH-CAP-STEP` (`tasks/regressions.md`).
 >
-> ⚠️ **Cần kế toán xác nhận (T3):** căn cứ Luật 109/2025/QH15, biểu 5 bậc áp dụng cho **cả kỳ tính thuế 2026 (từ 01/01/2026)**, không phải chỉ từ 01/07/2026. Nếu chốt vậy thì version `effectiveFrom: "2026-01-01"` cần trỏ `PIT_BRACKETS_2026`. Hiện code tính dư thuế khấu trừ T1–T6/2026 cho thu nhập tính thuế > 10tr/tháng. Xem `tax-audit-2026-06.md` §2.1.
+> **Lưu ý kế toán (không phải lỗi code):** mức khấu trừ hàng tháng H1-2026 có thể chọn giữ biểu 7 bậc cũ chờ ngày hiệu lực chung 01/07/2026 rồi true-up khi quyết toán — nghĩa vụ cả năm không đổi. Nếu kế toán chốt phương án đó thì trỏ version `effectiveFrom: "2026-01-01"` về `PIT_BRACKETS_2007` (một dòng), không đổi giảm trừ/trần.
 
 ### Ví dụ tính thuế
 
@@ -234,7 +234,8 @@ Khi tính lương, logic phải:
 1. Lấy `insurance_base` từ `employees.insurance_base_salary` (đã sync từ HĐ active)
 2. Apply trần BHXH version-aware: `MIN(insurance_base, version.insuranceCap)` —
    **46,8tr đến 30/06/2026**, **50,6tr từ 01/07/2026** (NĐ 161/2026). KHÔNG
-   hardcode `46_800_000` cho mọi kỳ (xem `tax-audit-2026-06.md` §2.2).
+   hardcode `46_800_000` cho mọi kỳ; cap bước theo `legal-versions.ts` (quy tắc
+   `PAYROLL-2026-FIVE-BRACKET-AND-BHXH-CAP-STEP`).
 3. Ghi snapshot vào `payroll_entries.insurance_base`
 
 > Xem chi tiết rủi ro và luồng dữ liệu tại `docs/ref/labor-contracts.md` § 5.3
@@ -297,8 +298,7 @@ doanh/chủ hộ, không phải CTCP.
 ```sql
 -- Tổng hợp thu nhập và thuế TNCN đã khấu trừ theo năm
 SELECT
-  e.full_name,
-  e.tax_code_personal,
+  p.full_name,
   e.id_number,
   SUM(pe.gross_total) AS total_gross,
   SUM(pe.total_insurance_employee) AS total_insurance,
@@ -307,12 +307,13 @@ SELECT
   SUM(pe.pit_tax) AS total_pit_withheld
 FROM payroll_entries pe
 JOIN employees e ON e.id = pe.employee_id
+JOIN profiles p ON p.id = e.profile_id
 JOIN payroll_periods pp ON pp.id = pe.payroll_period_id
 WHERE pe.tenant_id = $1
   AND pp.period_year = $2
   AND pp.status = 'paid'
-GROUP BY e.id, e.full_name, e.tax_code_personal, e.id_number
-ORDER BY e.full_name;
+GROUP BY e.id, p.full_name, e.id_number
+ORDER BY p.full_name;
 ```
 
 ---

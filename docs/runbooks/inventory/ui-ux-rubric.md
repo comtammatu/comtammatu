@@ -29,7 +29,7 @@ Live route map (mọi route nằm dưới `apps/web/app/(protected)/inventory/*`
 - Kiểm kê: `/inventory/stocktake` (+ `new`, `[id]`, `[id]/count`).
 - Hao hụt / hạn dùng: `/inventory/waste` (+ `new`, `approvals`), `/inventory/expiry`, `/inventory/issues` (+ `[id]`).
 
-Route cố ý trả `notFound()` (reserved, chưa build) — đúng, KHÔNG tính là fail: `/inventory/waste/auto`, `/inventory/stocktake/conflicts`, `/inventory/stocktake/[id]/escalate`. Các trang detail (`grn/[id]`, `purchase-orders/[id]`, `transfers/[id]`, …) 404 khi id sai là guard hợp lệ.
+Các trang detail (`grn/[id]`, `purchase-orders/[id]`, `transfers/[id]`, …) 404 khi id sai là guard hợp lệ, KHÔNG tính là fail.
 
 Boundary:
 

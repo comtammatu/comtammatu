@@ -474,9 +474,9 @@ hàng còn tồn ở site nhận, hay thực chất là tiêu hao/food cost.
 
 | Canonical term | Nhãn chuẩn | Định nghĩa | Không dùng |
 | --- | --- | --- | --- |
-| `payment_method` | phương thức thanh toán | `cash`, `bank_transfer`, `momo`, `vietqr`. | kênh bán |
+| `payment_method` | phương thức thanh toán | Customer payment `payments.method`: `cash`, `vietqr`, `momo`. | kênh bán |
 | `cash` | tiền mặt | Tiền mặt khách trả. | tiền mặt hiện hữu nếu chưa kiểm đếm két |
-| `bank_transfer` | chuyển khoản | Chuyển khoản ngân hàng. | VietQR nếu cần provider cụ thể |
+| `bank_transfer` | chuyển khoản | `supplier_payments.payment_method` cho thanh toán NCC; không phải `payments.method` của khách. | VietQR ở payment khách |
 | `momo` | ví MoMo | Giữ tên thương hiệu. | ví điện tử chung nếu cần đối soát provider |
 | `vietqr` | VietQR | QR chuyển khoản liên ngân hàng. | QR thanh toán chung |
 | `payment_status` | trạng thái thanh toán | `unpaid` -> `partial` -> `paid`. | order status |

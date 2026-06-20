@@ -1,683 +1,252 @@
 # Architecture Decisions
 
-> Log mỗi quyết định kiến trúc quan trọng với rationale.
+> Log mỗi quyết định kiến trúc quan trọng với rationale. Số hiệu `D` là ID cố
+> định (doc khác trỏ tới) — khoảng trống là quyết định đã xoá/bỏ qua, KHÔNG đánh
+> số lại. Đây là bản ghi quyết định + rationale, KHÔNG phải worklog triển khai
+> (worklog ở `tasks/`, `docs/worklog/`, git history).
 
 ## D000: Inventory branch and central site operating model (2026-06-19)
 
-**Decision:** Inventory still uses `branches` as the site table, but `branches.branch_kind` is active with `branch`, `central_supply`, and `central_kitchen`.
+**Decision:** Inventory dùng `branches` làm site table; `branches.branch_kind` active với `branch`, `central_supply`, `central_kitchen`.
 
-**Transfer direction matrix** (enforced by DB trigger `enforce_stock_transfer_direction`):
+**Transfer matrix** (trigger `enforce_stock_transfer_direction`): cho phép `central_supply → branch`, `central_kitchen → branch`, `branch → branch`; chặn thiếu ref, central direction lạ, same-branch.
 
-- Allowed: `central_supply -> branch`, `central_kitchen -> branch`, and `branch -> branch`.
-- Rejected: missing branch references, unsupported central direction, and same-branch transfers.
-
-**Current contract:** PO, GRN, stock levels, production orders, and stock transfers all reference `branch_id` directly. Branch kind decides site behavior: Kho CN keeps branch stock, Kho Tổng keeps supply stock, Bếp Trung Tâm keeps production stock, and Bếp CN consumption is posted as approved consumption movements instead of transfer.
-
-## D001: Greenfield thay vì refactor (2026-04-01)
-
-**Context:** Project cũ tích lũy 326 `brand_id` references, 43 pages với `/b/[brandId]/`, Prisma dependency không cần thiết, multi-brand architecture cho 1 brand duy nhất.
-
-**Decision:** Start fresh. Không reuse data hay source code cũ. Project cũ chỉ dùng làm reference cho domain knowledge.
-
-**Consequences:** Phải rebuild mọi thứ từ đầu nhưng architecture đúng ngay từ đầu. Không tích lũy tech debt.
+**Contract:** PO/GRN/stock levels/production orders/stock transfers ref `branch_id` trực tiếp. Branch kind quyết hành vi site: Kho CN giữ branch stock, Kho Tổng giữ supply stock, Bếp TT giữ production stock, Bếp CN consumption ghi như approved consumption movement (không transfer).
 
 ## D002: Tenant-Branch 2-level thay vì Company-Brand-Branch 3-level (2026-04-01)
 
-**Context:** Chỉ có 1 brand (Cơm Tấm Má Tư). Company-Brand-Branch 3 levels tạo unnecessary complexity.
-
-**Decision:** `Tenant (L0) → Branch (L1)`. Tenant = single row (id=1). Mọi scope qua `tenant_id` + `branch_id`.
-
-**Consequences:** URL đơn giản hơn (`/admin/` thay vì `/b/[brandId]/admin/`). JWT chỉ cần 2 claims thay vì 3. Không cần brand switcher.
-
-## D003: proxy.ts thay vì middleware.ts (2026-04-01)
-
-**Context:** Next.js 16 deprecated `middleware.ts`, rename thành `proxy.ts` với `export function proxy()`.
-
-**Decision:** Dùng `proxy.ts` theo Next.js 16 convention.
-
-**Consequences:** Forward-compatible. Cần nhớ cú pháp mới khi đọc docs cũ.
-
-## D004: Zod 4 thay vì Zod 3 (2026-04-01)
-
-**Context:** Zod 4 là latest stable. Breaking changes: `{ message }` → `{ error }`, `.email()` → `z.email()`.
-
-**Decision:** Dùng Zod 4 từ đầu.
-
-**Consequences:** Phải cẩn thận khi copy code từ project cũ (Zod 3 syntax).
+**Decision:** `Tenant (L0) → Branch (L1)`. Tenant = single row (id=1). Mọi scope qua `tenant_id` + `branch_id`. KHÔNG có tầng brand (chỉ 1 brand Cơm Tấm Má Tư) — không brand switcher; JWT mang 2 scope claim (`tenant_id` + `branch_id`), không có brand scope claim.
 
 ## D005: User tự quản lý infrastructure (2026-04-01)
 
-**Context:** User muốn toàn quyền kiểm soát Supabase/Vercel/Upstash/GitHub.
-
-**Decision:** Code chỉ chứa placeholder env vars. AI agent KHÔNG tạo infrastructure resources.
-
-**Consequences:** Setup guide cần rõ ràng. `.env.example` phải đầy đủ.
+**Decision:** Code chỉ chứa placeholder env vars. AI agent KHÔNG tạo infrastructure resources (Supabase/Vercel/Upstash/GitHub). `.env.example` phải đầy đủ.
 
 ## D006: supabase-js only, no Prisma (2026-04-01)
 
-**Context:** Prisma trong project cũ chỉ dùng cho 1 câu SELECT. Thêm dependency overhead lớn, break Edge Runtime.
-
-**Decision:** Supabase-js (PostgREST) cho tất cả queries. Không Prisma.
-
-**Consequences:** Không có Prisma migration system. Dùng Supabase CLI migrations. Type generation qua `supabase gen types`.
-
-## D006b: system_settings key/value thay vì JSONB column (2026-04-02)
-
-**Context:** Cần lưu tenant-level config (VAT rate, service charge, currency, phone, email). Hai lựa chọn: JSONB column trên `tenants.settings` hoặc separate `system_settings` table.
-
-**Decision:** Separate `system_settings(key, value)` table. Key strings defined as constants in `@comtammatu/shared/settings`.
-
-**Consequences:** Mỗi setting có RLS riêng, audit trail qua `updated_at`, dễ thêm settings mới mà không thay đổi schema. Trade-off: N queries khi upsert nhiều settings cùng lúc (acceptable cho admin-only operation).
+**Decision:** Supabase-js (PostgREST) cho tất cả queries. Không Prisma (break Edge Runtime, overhead lớn cho 1 SELECT). Migration qua Supabase CLI; type qua `supabase gen types`. (Mirror ở AGENTS Critical Constraints.)
 
 ## D008: Cloud-first, local-first Phase 2 (2026-04-04)
 
-**Context:** Cân nhắc local-first (mini PC + SQLite per branch) để POS/KDS hoạt động offline. Phân tích cho thấy:
-
-- Internet hiếm khi mất (< 1 lần/tháng, fiber ổn định)
-- Local-first tăng effort ~3x (2 DB layers, sync logic, deploy per branch, conflict resolution)
-- 200-600 đơn/ngày, < 50 req/s — cloud hoàn toàn đủ
-
-**Decision:** Runtime dùng cloud-first + PWA cache cho offline cơ bản. Local-first (mini PC + SQLite + sync) không nằm trong current product scope sau D012.
-
-**Consequences:** Ship nhanh hơn, validate business logic trước. Muốn mở lại local-first/offline POS phải sửa D012 trước, kèm số liệu vận hành chứng minh nhu cầu thật.
+**Decision:** Runtime cloud-first + PWA cache cho offline cơ bản. Local-first (mini PC + SQLite + sync) KHÔNG nằm trong product scope (internet hiếm mất, ~50 req/s cloud đủ, effort ~3x). Muốn mở lại offline POS phải sửa D012 trước, kèm số liệu vận hành chứng minh nhu cầu thật.
 
 ## D009: Path-based routing, không sub-domain (2026-04-04)
 
-**Context:** Cân nhắc sub-domain per module (pos.comtammatu.com, kds.comtammatu.com). Phân tích:
+**Decision:** Path-based (`/admin/*`, `/br/[branchId]/pos`, `/br/[branchId]/kds`) — 1 domain, auth "just works", ACL tập trung ở `proxy.ts`. Sub-domain không nằm trong backlog (kéo theo cross-origin cookie/CORS/wildcard cert/DNS/deploy surface) → muốn tách phải có quyết định mới.
 
-- Sub-domain: auth phức tạp (cross-origin cookies), CORS, wildcard cert, DNS records, dev env phức tạp
-- Path-based: 1 domain, auth "just works", proxy.ts ACL tập trung, đã có sẵn
-- Team 1 người, monorepo, cùng Supabase Auth → không cần tách deploy
+## D010: RHF + zod + shadcn Field cho mọi form (2026-04-17)
 
-**Decision:** Giữ path-based routing (`/admin/*`, `/br/[branchId]/pos`, `/br/[branchId]/kds`). Sub-domain không nằm trong backlog hiện tại.
+**Decision:** Form CRUD dùng `react-hook-form + zod 4 + @hookform/resolvers + shadcn Field`. App-local helpers ở `apps/web/app/components/form/` (`TextField`/`NumberField`/`SelectField`/`TextareaField`/`FormDialog`/`valuesToFormData`) — bind RHF + field components project-specific (FormattedNumberInput VND), không ở `packages/ui`.
 
-**Consequences:** Đơn giản, ship nhanh. Muốn tách sub-domain sau này phải có quyết định mới vì nó kéo theo auth/cookie/CORS/DNS/deploy surface.
-
-## D010: RHF + zod + shadcn Field cho mọi form, helpers ở app-local (2026-04-17)
-
-**Context:** ~40 form dialogs rải trong app dùng lẫn lộn `useState-per-field + useTransition`, `useActionState + form action`, `CrudDialog` wrapper. Mỗi pattern có error handling khác nhau, a11y không đồng đều, validation chỉ chạy server-side (trễ).
-
-**Decision:** Migrate toàn bộ form sang `react-hook-form 7.72 + zod 4 + @hookform/resolvers 5 + shadcn Field primitives`. Tạo app-local helpers ở `apps/web/app/components/form/`:
-
-- `TextField`, `NumberField`, `SelectField`, `TextareaField` — useController-based field wrappers
-- `FormDialog` — generic Dialog wrapper (schema + defaultValues + onSubmit render-prop)
-- `valuesToFormData` — adapter cho `withFormAction`-wrapped server actions
-
-Helpers ở `apps/web/` (không ở `packages/ui`) vì: bind với RHF + dự án-specific field components (FormattedNumberInput VND).
-
-**Consequences:** Client-side validation trước submit. A11y tự động (aria-invalid, role="alert", htmlFor). Schema-as-truth — không duplicate type + validation. Mỗi dialog CRUD giảm ~20-30% LOC sau helpers. Breakeven tại ~3 dialogs migrated.
-
-**Current state:** RHF helpers là baseline cho CRUD dialog mới và các form đã migrate. Import/export one-field upload và GRN mobile wizard không dùng helper chung vì flow nhập liệu khác shape.
+**Status:** Baseline cho dialog CRUD mới + form đã migrate. Import/export one-field upload và GRN mobile wizard có shape riêng, không dùng helper chung.
 
 ## D011: Print-agent LAN-only transport (2026-05-07)
 
-**Context:** Mỗi chi nhánh dùng một máy Android Super App đã link terminal làm gateway vận hành; máy in dùng LAN. USB transport không còn production payoff và làm tăng surface area vận hành.
-
-**Decision:** `apps/print-agent` chỉ hỗ trợ LAN printer transport. Không giữ runtime flag chọn transport, không giữ USB capability columns, và không giữ USB native binding.
-
-**Migration:** `20260507083322_drop_printer_usb_and_transport.sql` xoá `AGENT_TRANSPORT`, `printer_agents.transport`, `printers.usb_vendor_id`, `printers.usb_product_id`, và `apps/print-agent/src/usb.ts`.
-
-**Consequences:** Branch rollout tập trung vào terminal-linked Android gateway + LAN printer config; không có fallback USB trong runtime hoặc docs active.
+**Decision:** `apps/print-agent` chỉ hỗ trợ LAN printer transport. Không runtime flag chọn transport, không USB capability columns, không USB native binding. LAN-only enforced trong baseline: `printers` CHECK `printers_connection_type_lan_only` (`connection_type='lan'`), không cột `usb_*`, `printer_agents` không cột `transport`; `src/usb.ts` đã gỡ (lịch sử ở `supabase/migrations/_archive/`). Branch rollout = terminal-linked Android gateway + LAN printer.
 
 ## D012: Tier-2 trim + gộp role POS — định hướng phần mềm hỗ trợ Hộ Kinh Doanh (2026-06-10)
 
-**Context:** Sau khi vận hành thật (≈70–75 đơn/ngày trên prod), owner chốt lại phạm vi sản phẩm: đây là phần mềm HỖ TRỢ vận hành Hộ Kinh Doanh, không phải nền tảng F&B đa năng. Dữ liệu prod xác nhận: 14 tài khoản `cashier` vs 2 `waiter` (cùng một người làm cả hai việc trong thực tế), `shift_assignments` = 0 dòng từ trước tới nay (chia ca chưa bao giờ là workflow thật — đã xử lý bằng ca mặc định khi chấm công).
+**Context:** Đây là phần mềm HỖ TRỢ vận hành HKD, không phải nền tảng F&B đa năng. Prod xác nhận: cashier ≫ waiter (cùng người làm cả hai), `shift_assignments` = 0 dòng (chia ca chưa bao giờ là workflow thật).
 
 **Decision:**
 
-1. LOẠI BỎ khỏi backlog (không đề xuất lại): Local-First / offline POS (mini PC + SQLite — fiber ổn định, D008 đã ghi internet hiếm khi mất), VNPay (VietQR + MoMo đã đủ phương thức; vấn đề thật là đối soát tiền về), Native POS migration Flutter/Capacitor (PWA đang chạy production ổn).
-2. GỘP role Thu ngân + Phục vụ thành 1 role POS. Code hiện còn tách `cashier`/`waiter` (`packages/shared/src/auth/types.ts`, `module-acl.ts`, role templates) — việc gộp trong code là task T3 (auth/ACL/template/RLS) cần migration riêng.
-3. Mọi đề xuất tính năng mới phải qua phễu "phần mềm hỗ trợ HKD": giảm thao tác hằng ngày của chủ + nhân viên hiện có; không thêm nghi thức quản trị (phân ca, duyệt nhiều tầng, kế toán doanh nghiệp) mà HKD không dùng.
-
-**Consequences:** Tracker Tier-2 đã rút gọn tương ứng. Threat-model quyền POS đổi theo: khi role đã gộp, mọi người đứng quầy đều có quyền xác nhận thanh toán — việc siết `create_payment` RPC theo `pos:confirm_payment` trở thành hygiene khi gộp role, không còn là lỗ hổng vận hành giữa hai role. Các surface gắn với chia ca (đăng ký ca, duyệt phân ca) không wire thêm; giữ hướng ca-mặc-định.
-
-## D013: Kế toán (khóa kỳ) giữ ngoài nav admin mặc định (2026-06-11)
-
-**Context:** Default Admin nav là bề mặt điều hành HKD hằng ngày. Khóa/mở kỳ kế toán là direct-support cho owner, không phải workflow mặc định trong sidebar.
-
-**Decision:** Mục Kế toán KHÔNG nằm trong nav admin mặc định. Route `/admin/accounting/*` vẫn truy cập trực tiếp theo quyền (`accounting` module ACL: owner/super_manager) — chỉ không có lối vào điều hướng. Đây là áp dụng phễu D012 ("không thêm nghi thức quản trị kế toán doanh nghiệp mà HKD không dùng").
-
-**Consequences:** `packages/shared/src/auth/nav-config.ts` không expose entry nav `accounting`; guard test `scope.test.ts` giữ nguyên làm chốt chặn. Muốn đảo lại phải sửa quyết định này trước, rồi sửa test cùng PR.
-
-**Status (2026-06-19):** ĐẢO CHIỀU bởi **D034** — owner chốt gỡ hẳn bề mặt accounting/khóa-kỳ khỏi app (không chỉ ẩn nav). Permission `accounting:period_reopen` + RPC DB giữ lại.
+1. LOẠI khỏi backlog (không đề xuất lại): Local-First/offline POS (D008), VNPay (VietQR+MoMo đủ), native POS Flutter/Capacitor (PWA chạy ổn).
+2. Role POS: KHÔNG gộp `cashier` + `waiter` — D018 (2026-06-13) chốt 8 access bucket canonical, giữ hai role tách (đổi quyền POS là thay đổi tier T3, không phải task tracked).
+3. Mọi tính năng mới qua **phễu "phần mềm hỗ trợ HKD"**: giảm thao tác chủ + nhân viên hiện có; không thêm nghi thức quản trị (phân ca, duyệt nhiều tầng, kế toán doanh nghiệp) HKD không dùng.
 
 ## D014: Chương trình hợp nhất tầng molecule UI — W0–W6 (2026-06-11)
 
-**Context:** Owner đánh giá UI hiện tại "tạp nham". Audit composition-level 2026-06-11 (đa tác tử, có kiểm chứng đối kháng) xác nhận tầng token/contract sạch nhưng tầng molecule vô chủ: 25 map trạng thái cục bộ (cùng trạng thái lệch màu + từ giữa POS/orders/admin; `/orders` dùng vocab `pending/in_progress` mà CHECK constraint của `orders.status` cấm → KPI "đơn chờ" luôn 0, 4/7 trạng thái render key tiếng Anh thô), 0 loading/error/not-found toàn app, 24 màn nuôi 2 cây JSX mobile/desktop đã drift, 10 kiểu KPI card, 5 hệ empty-state, 4 cơ chế confirm, 2 `formatVND` trùng tên khác output, 26 file >600 dòng chiếm 30% UI code.
+**Decision:** 6 wave: W0 khung loading/error/404 → W1 StatusBadge SSOT → W2 formatVND + KpiCard → W3 Empty/Confirm → W4 ListSurface (DataTable) → W5 IA (xem D019) → W6 decompose god-components. Mỗi molecule hợp nhất kèm: mục contract trong `docs/spec/design-system.md` + check ratchet `scripts/check-ui-contract.mjs` với allowlist = baseline, chỉ được giảm.
+
+**Status:** W0–W4 đã ship. W5 chi tiết ở D019; W6 còn lại. Giữ có chủ đích: `pos/_lib/order-status-display.ts` (6→5 nhãn thu ngân), inventory dictionary, employee wrapper layer.
+
+## D015: Một Platform duy nhất — production in-place là system of record (2026-06-12)
 
 **Decision:**
 
-1. Chạy chương trình 6 wave: W0 khung loading/error/404 → W1 StatusBadge SSOT → W2 formatVND + KpiCard → W3 Empty/Confirm → W4 ListSurface (một đường responsive qua DataTable) → W5 IA → W6 decompose god-components. Đợt 2026-06 thực thi W0–W4 liên tục, dừng trước W5.
-2. Hướng W5 chốt trước: gộp điều hướng về 2 shell — "Văn phòng" (admin + finance + hr + menu + orders + inventory chung một sidebar nhiều nhóm) và "Vận hành" (POS/KDS/runner/employee giữ chrome riêng). Plan chi tiết lập sau W4.
-3. Mỗi molecule hợp nhất phải kèm: mục contract trong `docs/spec/design-system.md` + check ratchet trong `scripts/check-ui-contract.mjs` với allowlist = baseline hiện trạng, chỉ được giảm.
+1. Một Platform duy nhất = hệ production hiện tại (repo này, DB `iexwsuaqqenyjiskawoj`). KHÔNG ETL/migrate dữ liệu vận hành sang DB khác.
+2. `matu-platform` (DB `dyksphedgzqsqjqgxzog`) đóng băng vĩnh viễn: không deploy, không mở lại feature; archive read-only sau harvest; DB backup rồi pause/xóa theo owner.
+3. **Harvest một chiều** ở mức spec + migration chọn lọc, viết lại theo convention `with-action.ts`/RPC hiện hành (bê nguyên khối = vi phạm). Danh mục duyệt: pgTAP + CI test-db; idempotency_keys + webhook claim-before-side-effect; inventory ledger-based; HĐĐT worker (queue/retry/awaiting_lookup, vault, token cache, mock-block prod); PBAC anti-escalation; reports net-profit-daily.
 
-**Consequences:** Map trạng thái cục bộ mới, formatVND cục bộ mới, `window.confirm`, skeleton/empty ad-hoc mới bị ratchet chặn dần từ W1–W3. Giữ nguyên có chủ đích: `pos/_lib/order-status-display.ts` (collapse 6→5 nhãn cho thu ngân — thiết kế UX), inventory dictionary 31 key (re-model per-entity là wave riêng), employee wrapper layer (family kỷ luật nhất app).
-
-## D015: Một Platform duy nhất — hệ production in-place là system of record; matu-platform đóng băng vĩnh viễn, harvest một chiều (2026-06-12)
-
-**Context:** Owner đặt lại câu hỏi hợp nhất 2 repo về một Platform/một DB/một nguồn số liệu. Khảo sát đối chiếu 2026-06-12 (code 2 repo + dữ liệu prod + kiểm chứng pháp lý web): prod `iexwsuaqqenyjiskawoj` có 50 ngày live (6.138 đơn, 504,6tr VND đã thu, 2.876 tax_invoices với 2.820 issued — dữ liệu pháp lý NĐ 70/2025, 16.664 print jobs), mật độ đơn x2 trong 7 ngày cuối (~101 đơn/ngày, peak 162 ngày 06-07). `matu-platform` (repo `/Users/luongthebinh/matu-platform`, DB `dyksphedgzqsqjqgxzog`): 280 migrations, kiến trúc tốt ở idempotency/PBAC anti-escalation/inventory ledger/e-invoice worker, nhưng 0 deployment production, 0 đơn thật, frozen 2026-06-09. Ước lượng human-pace 1 dev: absorb điểm mạnh vào hệ sống ≈ 11–16 tuần incremental, zero rủi ro dữ liệu; cutover sang matu-platform ≈ 15–23 tuần serial + feature-freeze 4–5 tháng + rủi ro migrate hóa đơn pháp lý. Base rate 5 chương trình rebuild trước đó: 0/5 thành công.
-
-**Decision:**
-
-1. Một Platform duy nhất = hệ production hiện tại (repo này, DB `iexwsuaqqenyjiskawoj`). Không ETL/migrate dữ liệu vận hành sang DB project khác. "Platform" là vai trò của hệ này, không phải tên repo khác.
-2. `matu-platform` đóng băng vĩnh viễn: không deploy, không mở lại bất kỳ feature nào. Repo chuyển archive read-only sau khi trích xong danh mục harvest. DB `dyksphedgzqsqjqgxzog` backup schema rồi pause/xóa — thời điểm do owner xác nhận riêng.
-3. Harvest một chiều từ matu-platform, ở mức spec + migration chọn lọc, viết lại theo convention `with-action.ts`/RPC hiện hành. Danh mục được duyệt: pgTAP harness + CI test-db; idempotency_keys + webhook event-claim-before-side-effect; inventory ledger-based — tận dụng cửa sổ prod inventory 0 dòng; HĐĐT worker pattern (queue/retry/awaiting_lookup, vault credentials, token cache, mock-block prod); PBAC anti-escalation; reports net-profit-daily shape. PR harvest bê nguyên khối code không viết lại theo convention là vi phạm quyết định này.
-4. Active follow-up is tracked in `tasks/todo.md`; this decision only keeps the in-place production system and one-way harvest boundary.
-
-**Consequences:** Chấm dứt re-litigate hướng platform. Mọi đề xuất rebuild/cutover sau này phải sửa quyết định này trước, kèm số liệu chứng minh thắng phương án absorb.
+**Consequences:** Chấm dứt re-litigate hướng platform. Mọi đề xuất rebuild/cutover phải sửa quyết định này trước, kèm số liệu thắng phương án absorb.
 
 ## D016: POS không trừ kho khi thanh toán (2026-05-28; ghi nhận hồi cứu 2026-06-13)
 
-**Context:** Quyết định owner 2026-05-28 trước nay không có bản ghi canonical trong repo — `tasks/regressions.md` và `docs/runbooks/operations-smoke-gate.md` trỏ vào memory riêng của một agent, các agent khác và người đọc repo không thấy. Bối cảnh nghiệp vụ: dữ liệu kho chưa seed (prod inventory 0 dòng), POS trừ kho chỉ sinh số liệu sai.
+**Decision:** Thanh toán POS KHÔNG trừ kho (kho prod 0 dòng → trừ kho chỉ sinh số sai). Action-layer đã gỡ; webhook stock leg disable qua `20260611001000_disable_payment_stock_leg.sql` (applied prod). Amount-recompute + `finalize_paid_order` GIỮ NGUYÊN — chỉ tắt nhánh stock consumption.
 
-**Decision:** Thanh toán POS KHÔNG trừ kho. Action-layer callsites đã gỡ (commit `9ba83205`); webhook stock leg disable qua migration `20260611001000_disable_payment_stock_leg.sql` (đã applied prod). Amount-recompute và `finalize_paid_order` trong các RPC thanh toán GIỮ NGUYÊN — policy chỉ tắt nhánh stock consumption.
-
-**Consequences:** Smoke chain vận hành = POS → payment → KDS/print → HĐĐT (`docs/runbooks/operations-smoke-gate.md`). Đuôi kỹ thuật còn lại: remove `consume_stock_for_order` + RPC liên quan (owner-gated, tracked `tasks/todo.md`). Đảo policy (khi kho seed xong + owner duyệt) = sửa quyết định này trước; khi re-enable, caller của `complete_payment_and_consume_stock` phải check `stock_consumed_status != ok` → webhook trả HTTP 500 + notification severity `high`.
+**Consequences:** Smoke chain = POS → payment → KDS/print → HĐĐT. Đuôi: remove `consume_stock_for_order` + RPC liên quan (owner-gated, `tasks/todo.md`). Đảo policy (kho seed + owner duyệt) phải sửa quyết định này trước; khi re-enable, caller `complete_payment_and_consume_stock` check `stock_consumed_status != ok` → webhook 500 + notification `high`.
 
 ## D017: Admin là L0 Tenant Command; Branch Manager dùng L1 Branch Command (2026-06-13)
 
-**Context:** Admin Dashboard không thể tiếp tục là nơi gom tất cả thứ "quản trị"
-vì hệ thống đã bao phủ gần trọn vận hành HKD F&B: mua/nhập, kho, sản xuất,
-bán hàng, thanh toán, in, HĐĐT, tài chính vận hành, HR, và báo cáo. Mâu thuẫn
-rõ nhất là `branch_manager`: họ phải thiết lập chi nhánh của họ, nhưng nếu quyền
-đó sống trong `/admin/settings` thì BM bị biến thành một Admin thiếu quyền.
-
 **Decision:**
 
-1. Product framing vẫn là `bộ phần mềm quản lý vận hành và bán hàng` cho HKD
-   Cơm Tấm Má Tư. Có thể dùng `ERP` khi so sánh phạm vi/kiến trúc, nhưng không
-   đổi entrypoint sản phẩm thành ERP đa ngành.
-2. `/admin/*` là L0 tenant command và tenant setup cho `owner` /
-   `super_manager`: dashboard chuỗi, báo cáo điều hành, chi nhánh, nhân sự,
-   quyền, thiết lập tenant, và direct-support accounting.
-3. `branch_manager` không phải Admin user. Home mục tiêu của BM là
-   `/employee`; điều hành và thiết lập chi nhánh sống dưới
-   `/br/[branchId]/dashboard` và `/br/[branchId]/settings/*` khi mở đúng việc.
-4. Domain workspaces (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`) là
-   workflow surface độc lập, không phải tab con của Admin.
-5. Role/route chỉ là gate bề mặt. Action và row-level access tiếp tục phải đi
-   qua permission keys, RPC/RLS, và branch scope.
+1. Product framing = `bộ phần mềm quản lý vận hành và bán hàng` cho HKD (dùng `ERP` khi so phạm vi, không đổi entrypoint thành ERP đa ngành).
+2. `/admin/*` = L0 tenant command + tenant setup cho `owner`: dashboard chuỗi, báo cáo, chi nhánh, nhân sự, quyền, thiết lập tenant. (Bề mặt accounting đã gỡ — xem D035.)
+3. `branch_manager` KHÔNG phải Admin user. Home BM = `/employee`; điều hành + thiết lập chi nhánh ở `/br/[branchId]/dashboard` + `/br/[branchId]/settings/*`.
+4. Domain workspaces (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`) là workflow surface độc lập, không phải tab con của Admin.
+5. Role/route chỉ là gate bề mặt; action + row-level access vẫn qua permission keys, RPC/RLS, branch scope.
 
-**Consequences:** Code slice tiếp theo phải sửa đồng bộ `module-acl.ts`,
-`route-resolution.ts`, `route-map.ts`, `nav-config.ts`, `app-discovery.ts`,
-`scope.ts`, và tests. Không thêm workflow branch-scoped mới vào `/admin/*`.
-Ma trận canonical: `docs/spec/role-route-matrix.md`.
+**Canonical:** `docs/spec/role-route-matrix.md`. Không thêm workflow branch-scoped mới vào `/admin/*`.
 
 ## D018: Bỏ role `super_manager` — gộp vào `owner` (2026-06-13)
 
-**Context:** HKD đơn (single-tenant) có cả `owner` (Chủ sở hữu) và
-`super_manager` (Giám đốc điều hành) làm hai tầng tenant-admin. Với một HKD,
-tầng thứ hai là dư thừa — `owner` đã xuất hiện cạnh `super_manager` trong mọi
-allowedRoles/RLS list. Prod chỉ có **1 user** mang `super_manager`.
+**Decision (supersedes phần `super_manager` của D017):** Bỏ access bucket `super_manager` (HKD đơn không cần tầng tenant-admin thứ 2; prod chỉ 1 user). `ACCESS_BUCKETS` còn **8**: `owner`, `branch_manager`, `warehouse_manager`, `production_manager`, `cashier`, `waiter`, `chef`, `office`. `/admin/*` giờ chỉ `owner`. Mọi list/RLS có `super_manager` cạnh `owner` → xoá `super_manager`, `owner` giữ quyền. Cấu hình sàn/bếp gộp vào `owner` + `branch_manager`.
 
-**Decision (supersedes phần `super_manager` của D017 mục 2):**
+**Canonical:** `docs/spec/role-route-matrix.md`.
 
-1. Bỏ hẳn access bucket `super_manager`. Bộ quyền + 1 user prod gộp vào `owner`.
-2. `ACCESS_BUCKETS` còn **8**: `owner`, `branch_manager`, `warehouse_manager`,
-   `production_manager`, `cashier`, `waiter`, `chef`, `office`.
-3. `/admin/*` (L0 tenant command) giờ chỉ `owner`. Mọi list/RLS có
-   `super_manager` cạnh `owner` → xóa `super_manager`, `owner` giữ nguyên quyền.
-4. Cấu hình sàn/bếp (việc trước đây của `super_manager`) gộp vào `owner` +
-   `branch_manager`.
+## D019: W5 — Cấu trúc hoá UI (shell · route home · nav · padding) (2026-06-13)
 
-**Consequences:** TS twins sửa cùng PR (`packages/shared/src/auth/types.ts`
-`ACCESS_BUCKETS` + `POSITION_CODE_TO_STAFF_ROLE` + role-constant arrays; 16
-module-acl lists; 64 file `.ts/.tsx`). Migration
-`20260613110000_remove_super_manager_fold_owner.sql` (owner-applied): reassign
-1 profile → owner, drop position + role_template, retarget 83 notifications +
-auth metadata → owner, cập nhật 3 mapper + `notifications_select` policy,
-DO-block self-check. Inline RLS/function dead role-strings (`super_manager`
-cạnh `owner` ở các policy khác + `admin_update_profile` /
-`toggle_profile_active` / `stock_transfer_list_branches`) để lại như dead-code
-(không user nào resolve ra) — dọn ở một migration cleanup riêng (kèm các token
-intermediate-scope đã loại trước). Canonical: `docs/spec/role-route-matrix.md`.
+**Decision** (chi tiết hoá D014 W5; gốc tái-drift = tầng cấu trúc chỉ là luật chữ, 0 check):
 
-## D019: W5 — Cấu trúc hoá UI (shell · route home · nav · padding), chi tiết hoá D014 W5 (2026-06-13)
+1. **2 họ chrome** (không có họ thứ 3): **Quản trị** = `AppShell` chung (admin + domain workspaces + branch command/setup `/br/[branchId]/*`), một sidebar nhiều nhóm theo role/scope; **Vận hành** = chrome full-screen (POS, KDS, Runner) + `/employee`, dùng chung token/typography/status primitives.
+2. **Một capability = một route home** theo `role-route-matrix.md`. Branch-floor settings (tables/pos/kds/printers/pos-sessions) nhà canonical `/br/[branchId]/settings/*`; Tenant Admin Settings giữ `general`/`branches`/`payments`/tenant printer.
+3. **Padding một chủ = `AppPage`**; `AppShell` main bỏ outer padding; trang lá không tự đặt `p-*` gốc.
+4. **Nav là data**: mọi sidebar/bottom-nav project từ `nav-config.ts` qua resolver chung; cấm `ShellNavGroup[]` literal trong shell.
+5. Hợp đồng chi tiết: `docs/spec/design-system.md` § Structural Governance; mỗi luật kèm ratchet baseline-đóng-băng-chỉ-giảm.
 
-**Context:** D014 đặt chương trình W0–W6; W0–W4 đã ship, W5 (IA) + W6 (decompose)
-chưa làm, và D014 chốt hướng W5 = gộp điều hướng về 2 shell ("Văn phòng" /
-"Vận hành") nhưng để "plan chi tiết lập sau W4". Audit đa-tác-tử xác định gốc tái-drift:
-tầng token được máy enforce (1 nguồn `globals.css`, 0 palette raw, palette ban ở
-ESLint), nhưng tầng cấu trúc (chọn shell, route home, nav, padding) chỉ là luật
-chữ trong `docs/agent/rules/ui.md` — 0 check. Bằng chứng code: nav SSoT
-(`nav-config.ts`) chỉ `admin-shell` dùng (5 shell còn lại hardcode nav inline; 3
-resolver `resolveWorkspaceItems` / `resolveQuickLaunchGroups` /
-`resolveBranchOperationItems` có 0 caller ngoài test); 8 route mồ côi;
-branch-floor settings có 2 nhà (`/br/[branchId]/settings/tables` import thẳng
-`TablesClient` của `/admin/settings`); 2 trang "Kỳ kế toán"; `AppShell` main
-`p-4` (`app-shell.tsx:302`) đè lên `AppPage` `p-4` (`surface.tsx:75`) dù
-`design-system.md:213` nói padding thuộc `AppPage`; ratchet status mù regex (đòi
-ký tự trước "STATUS" nên `STATUS_LABELS` / `STATUS_CONFIG` lọt → xanh giả).
-
-**Decision:**
-
-1. Chốt 2 họ chrome (không có họ thứ ba): **Quản trị** = `AppShell` chung (admin +
-   domain workspaces + branch command/setup `/br/[branchId]/*`), một sidebar
-   nhiều nhóm theo role/scope; **Vận hành** = chrome chuyên dụng full-screen
-   (POS, KDS, Runner) + trang nhân viên `/employee`, dùng chung
-   token/typography/status/header/bottom-nav primitives. Mở rộng D014 W5 để đặt
-   rõ branch command/setup vào họ Quản trị.
-2. **Một capability = một route home** theo `role-route-matrix.md`. Branch-floor
-   settings (tables/pos/kds/printers/pos-sessions) có nhà canonical là
-   `/br/[branchId]/settings/*`; Tenant Admin Settings giữ `general`,
-   `branches`, `payments`, và tenant printer support only. Owner đi từ branch
-   table sang branch setup bằng link "Thiết lập chi nhánh" của từng branch.
-   Accounting/period-close không còn app route hiện hành; D034 là quyết định
-   current cho lớp đó.
-3. **Padding một chủ = `AppPage`** (formalize `design-system.md:213`). `AppShell`
-   main bỏ outer padding; `AppPage` nesting-aware; trang lá không tự đặt `p-*`
-   gốc.
-4. **Nav là data, không phải code per-shell**: mọi sidebar/bottom-nav project từ
-   `nav-config.ts` qua resolver chung; cấm `ShellNavGroup[]` literal trong shell.
-5. Hợp đồng cấu trúc chi tiết: `docs/spec/design-system.md` § Structural
-   Governance. Theo pattern D014: mỗi luật kèm ratchet baseline-đóng-băng-chỉ-giảm
-   trong `scripts/check-ui-contract.mjs`. Cổng Stage 0: `shell-registry`,
-   route-manifest reachability, page-padding, `nav-acl`, và gỡ mù regex status.
-
-**Scope của bản ghi này:** quyết định + hợp đồng (cập nhật `design-system.md`
-§ Structural Governance + bản ghi này). Stage 0/1 code đã bắt đầu trong checkout
-`codex/ui-component-governance`; trạng thái thực thi hiện tại xem
-`docs/plan/ux-ia-remediation-2026-06.md` và `tasks/todo.md`, không dùng đoạn
-quyết định này để mở lại việc đã có code.
-
-**Consequences:** W5 có plan chi tiết để thực thi theo thứ tự governance-first
-(khoá cổng trước, cleanup sau). Khi cổng land, shell/route/nav mới phải qua cổng.
-Branch Manager trải nghiệm Branch Command + Branch Setup là một luồng L1, không
-lạc vào trang hình-Admin. Triệu chứng tầng token (clone status/VND/raw Table)
-thuộc vệ sinh ratchet W1–W4 — burn-down riêng, ngoài W5. Đảo bất kỳ điểm nào (cho
-phép shell thứ 3, đổi padding owner, đổi route home) phải sửa quyết định này
-trước.
+**Consequences:** Đảo bất kỳ điểm nào (shell thứ 3, đổi padding owner, đổi route home) phải sửa quyết định này trước.
 
 ## D020: Enterprise Accounting / TT 200 / VAS is outside the HKD product (2026-06-13)
 
-**Context:** Má Tư is a Hộ kinh doanh. Under the current HKD frame, the product
-needs operating finance, HĐĐT, expenses, payroll, and accountant exports; it does
-not need an enterprise double-entry accounting subsystem.
+**Decision:**
+
+1. Enterprise accounting / TT 200 / VAS KHÔNG thuộc product contract hiện tại.
+2. Finance authority = HKD operating finance: `/finance`, revenue, food-cost signal, operating expenses, cash summary, HĐĐT register, B2C summary, supplier-invoice/AP handoff, accountant export.
+3. `accounting_periods` period close/reopen còn là DB-only owner support; không app route nào expose.
+4. Tái lập enterprise-accounting reports / master-data / double-entry → phải sửa quyết định này + ADR 0006 trước.
+
+**Migration order:** ADR 0006 owns the executed migration chain — không lặp lại ở đây.
+
+## D021: Chiết khấu theo món ngay trong luồng thêm/gọi-thêm (POS) (2026-06-13)
+
+**Decision (T3):** Thêm chiết khấu per-item (KHÔNG promotion engine). In-RPC: nhồi `discount_type/value/note` vào item JSON của `create_order`/`append_order_items`; trigger `pos_normalize_order_item_discount` tự tính, RPC không tự tính tiền. KHÔNG đổi cột/signature (`p_items` jsonb) → generated types không đổi. UI: customizer mode `new`/`append`/`edit`; `edit-sent` giữ luồng hậu kỳ. Ghi chú ≥3 ký tự bắt buộc khi có chiết khấu (constraint `order_items_discount_metadata_paired`); dòng có chiết khấu nhận cart-key riêng.
+
+**Status:** Migration owner-applied (D015); owner smoke trên POS thật (free 100%, vnd clamp, append, idempotent, void, in bill). GAP đã biết ngoài phạm vi: split PARTIAL chưa copy discount; bill nhiệt gộp discount ở khối tổng. Đảo (quay lại chỉ-hậu-kỳ / lên promotion engine) phải sửa quyết định này trước.
+
+## D022: HĐĐT lập realtime tại payment; không nháp-local sau thanh toán (2026-06-14)
+
+**Decision (owner — cổng pháp lý đóng):** Thời điểm lập HĐĐT = **tại thời điểm thanh toán hoàn tất** (einvoice-tax.md §1.1), realtime per-order qua `createInvoice`.
+
+1. KHÔNG triển khai `hddt_issuance_mode='deferred_batch'`, `createDraftTaxInvoice`, `issueDraftBatch`, cron phát hành lô — không defer việc lập/giao HĐ cho khách.
+2. Gộp lô cuối ngày CHỈ áp dụng cho chuyển dữ liệu HĐĐT MTT lên CQT (bảng tổng hợp), không cấp số/giao HĐ muộn. Provider `createBatchInvoice` giữ làm hạ tầng backfill/B2C, không dùng để defer.
+3. Sửa sai sau phát hành đi qua owner/accountant (hủy/thay thế/điều chỉnh theo TT 32/2025). Cashier chỉ được guardrail TRƯỚC payment — chi tiết D023.
+
+**Consequences:** Đảo (defer việc lập) phải sửa quyết định này trước.
+
+## D023: Sửa-sai POS realtime — guardrail TRƯỚC thanh toán + correction ở owner/accountant (2026-06-14)
+
+**Decision (owner):**
+
+1. KHÔNG đưa hủy/thay thế HĐĐT ra màn POS (quá nhiều thao tác thu ngân). Correction (hủy/thay thế, refund, sửa phương thức) chỉ ở Owner (`finance/invoice-list.tsx`, owner-gated) + Kế toán (sau).
+2. Cashier-facing: thanh toán xác nhận **một chạm** từ "Đã thanh toán", KHÔNG có dialog confirm phụ (chốt bằng `pos-payment-single-tap.test.ts`, PR #73 / `ac899cff`). Phòng lỗi dựa vào correction owner/accountant SAU phát hành — không phải gate trước-thanh-toán của thu ngân (đảo so với hướng guardrail-confirm trong dự thảo ban đầu của bản ghi này).
+
+**Đã có:** `refundOrderPayment` (owner); `correct_payment_method` RPC + action (pure record fix — HĐĐT đã phát hành không bị ảnh hưởng). Migration `20260615120000` applied prod.
+
+**Status:** Owner cần **smoke-test live** đường refund + sửa-phương-thức (prod SELECT-only — không tự xác minh số liệu được).
+
+## D025: Không cài `revfactory/harness` — lấy ý tưởng, cải tổ rule governance (2026-06-15)
+
+**Decision:** KHÔNG cài harness làm tool/runtime — pattern lõi bắt buộc `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` (Codex không set được → vỡ "neither runtime privileged"); ghi authority vào `.claude/agents`+`.claude/skills` (Codex không đọc) → governance-capture. Lấy ý tưởng (design-time) vào shared docs: QA cross-boundary taxonomy + incremental coherence (`workflow.md`); re-runnable-skill descriptions, generalize-don't-overfit, per-call-model (`skills.md`).
+
+**Invariant (load-bearing):** KHÔNG rule/workflow nào được PHỤ THUỘC Agent Teams — Codex không có tương đương → orchestration phải runtime-neutral với fallback single-agent/written-transcript. Agent Teams = capability tùy chọn cho Claude (`.claude/settings.json` env), KHÔNG phải policy.
+
+## D026: HRM redesign — trục Người · Ngày công · Lương (2026-06-15)
 
 **Decision:**
 
-1. Enterprise accounting / TT 200 / VAS is not part of the current product contract.
-2. Current Finance authority is HKD operating finance: `/finance`, revenue,
-   food-cost signal, operating expenses, cash summary, HĐĐT register, B2C
-   summary trigger, supplier-invoice/AP handoff, and accountant export support.
-3. `accounting_periods` period close/reopen remains database-only owner support;
-   no current app route exposes it.
-4. Reintroducing enterprise-accounting reports, master-data operations, or
-   double-entry workflows requires amending this decision and ADR 0006 first.
+1. **Ngày công chuẩn:** `standard_days` = số công chuẩn CỐ ĐỊNH owner nhập theo tháng + clamp `working/standard ≤ 1`. Trích helper shared.
+2. **Checklist:** GIỮ. Gán theo `positions.code` (mặc định) + override theo người (`employees.default_checklist_template_id`).
+3. **Lương qua `employees.base_salary`:** UI nhập `base_salary` + `dependents_count`; `calculatePayroll` eligibility theo base_salary (KHÔNG khôi phục `employment_contracts`). BHXH đơn giản.
+4. **Ca làm:** GIỮ (xem D027 — đảo §4 cũ "ca ít giá trị"), đặt ở "Thiết lập".
 
-**Migration order:** ADR 0006 owns the executed migration-chain ordering and
-fresh-environment implications. Do not duplicate that chain here.
+**IA:** gom 5 tab `/hr` → 3 trục **Người · Ngày công · Lương**; Ca + checklist → "Thiết lập". `defaultTab` động (owner→Người, BM→Ngày công).
 
-## D021: Chiết khấu theo món đặt ngay trong luồng thêm/gọi-thêm (POS) (2026-06-13)
+**Consequences:** Scope = truthful daily attendance, checklist-by-position, employee CRUD, leave notifications, payroll via `base_salary`. D012 vẫn áp: KHÔNG rostering/auto-late/auto-absent/số dư phép/duyệt nhiều tầng.
 
-**Context:** Chiết khấu theo món đã có ở DB (`order_items.discount_*` + trigger
-`pos_normalize_order_item_discount` + RPC `apply_order_item_discount`) nhưng chỉ
-thao tác được HẬU KỲ: thêm món → mở chi tiết đơn → chạm món → "Chiết khấu món"
-(~6 chạm). Owner chạy CTKM định kỳ ("đánh giá 5 sao → miễn phí 1 phần nước") nên
-cần đặt chiết khấu cho TỪNG MÓN ngay trong customizer lúc thêm/gọi thêm. Owner
-chốt: chỉ thêm chiết khấu per-item (KHÔNG promotion engine); "spec rồi code".
+**Status (2026-06-20):** IA 3-trục + payroll `base_salary` + checklist-theo-vị-trí ĐÃ SHIP. §1 `standard_days` HIỆN vẫn auto-đếm ngày thường (chưa phải owner nhập) + clamp `working/standard` chưa làm; phần còn lại track ở `tasks/todo.md`.
 
-**Decision (T3 — debate PM/BA/Dev/QA đã chạy):**
+## D027: Chấm công theo CA (per-shift), không theo ngày (2026-06-15)
 
-1. **Approach A (in-RPC):** nhồi 3 khóa `discount_type/discount_value/discount_note`
-   vào item JSON của `create_order` + `append_order_items`; INSERT thẳng — trigger
-   `pos_normalize_order_item_discount` (BEFORE INSERT) tự tính `discount_amount`,
-   trigger order tự cộng `item_discount_amount`/`total_amount`. KHÔNG tự tính tiền
-   trong RPC. Approach B (gọi `apply_order_item_discount` nối tiếp) bị loại vì 2 RPC
-   không trả `order_item_id`.
-2. **Schema KHÔNG đổi cột, KHÔNG đổi signature** (`p_items` là `jsonb`) ⇒ generated
-   types không đổi; bỏ khóa discount = byte-identical với hiện tại. RPC chỉ
-   `CREATE OR REPLACE` từ body SỐNG (baseline — không forward nào redefine) + thêm
-   tối thiểu.
-3. **Phạm vi UI:** customizer mode `new` / `append` / `edit` (giỏ chưa gửi).
-   `edit-sent` GIỮ luồng hậu kỳ. Ghi chú ≥3 ký tự BẮT BUỘC khi có chiết khấu
-   (constraint `order_items_discount_metadata_paired`) — Zod `superRefine` chặn
-   client trước; chip lý do sẵn để giảm ma sát. Dòng có chiết khấu nhận cart-key
-   riêng (không gộp số lượng vào dòng không-chiết-khấu).
-4. **Atomicity & deploy guard:** discount ghi cùng transaction tạo/append. RPC trả
-   thêm `item_discount_amount`; server action so kỳ vọng (tính từ giỏ) với giá trị
-   trả về — lệch ⇒ cảnh báo non-fatal (không chặn bán), phủ cả khoảng trống "deploy
-   code trước khi apply migration" (RPC cũ bỏ qua khóa lạ → món nguyên giá).
-5. **Tương tác đã soi:** order-discount lấy base = `subtotal − item_discount` (stack
-   đúng, total ≥0); void/reduce/edit/cancel/split full-move/merge để trigger tính
-   lại (item discount đi theo row). GAP đã biết, NGOÀI phạm vi: split PARTIAL chưa
-   copy discount sang clone; bill in nhiệt gộp discount ở khối tổng (không in
-   per-line). Cả hai là hành vi sẵn có, không do thay đổi này sinh ra.
-
-**Gate:** Migration owner-applied (file → PR → owner) theo D015; KHÔNG có dev DB ⇒
-chỉ chứng minh được typecheck/lint/build + unit; owner phải smoke trên POS thật sau
-apply (free 100%, vnd clamp, append, idempotent, void, in bill). Đảo quyết định
-(quay lại chỉ-hậu-kỳ, hoặc lên promotion engine) phải sửa quyết định này trước.
-
-## D022: HĐĐT lập realtime tại payment; không dùng nháp-local sau thanh toán (2026-06-14)
-
-**Context:** POS phát hành HĐĐT per-order realtime khi payment hoàn tất. Owner cần
-giảm lỗi vận hành như bấm nhầm phương thức thanh toán, bấm thanh toán trước khi
-khách kiểm tra, hoặc sai số tiền. Cổng pháp lý đã chốt: thời điểm lập HĐĐT khởi
-tạo từ máy tính tiền cho dịch vụ ăn uống là **tại thời điểm thanh toán hoàn tất**
-(`einvoice-tax.md` §1.1).
+**Context:** Toàn bộ NV Má Tư làm 2 ca/ngày (sáng 06–13, chiều 16–21). Mô hình cũ ràng 1 bản ghi/người/ngày → không ghi nổi 2 ca; adoption thấp.
 
 **Decision:**
 
-1. Giữ phát hành **realtime per-order tại payment** qua `createInvoice`.
-2. Không triển khai `hddt_issuance_mode='deferred_batch'`,
-   `createDraftTaxInvoice`, `issueDraftBatch`, hay cron phát hành lô để trì hoãn
-   việc lập HĐĐT cho khách.
-3. Gộp lô cuối ngày chỉ có thể áp dụng cho chuyển dữ liệu HĐĐT máy tính tiền lên
-   CQT nếu có một quyết định riêng; không dùng nó để cấp số/giao HĐ cho khách
-   muộn hơn payment.
-4. Sửa sai sau phát hành đi qua luồng owner/accountant: hủy, thay thế, hoặc điều
-   chỉnh theo TT 32/2025. Cashier-facing chỉ được thêm guardrail trước payment;
-   chi tiết ở D023.
+1. **Đơn vị chấm công = CA.** Unique đổi `(employee_id, date, tenant_id)` → `(employee_id, date, shift_id, tenant_id)`; `shift_id` NOT NULL cho dòng mới. Migration backfill `shift_id` dòng cũ (theo `resolveDefaultShiftId` từ `check_in`) trước khi đổi constraint.
+2. **Ca = xương sống, Global.** 1 bộ ca chung 4 chi nhánh; `shifts.branch_id` NULL = global; seed 2 ca; auto-nhận ca theo giờ check-in.
+3. **Ngày công:** đủ 2 ca = 1 công; 1 ca = 0.5. `working_days = Σ_ngày( min(ca_có_mặt, 2) × 0.5 )`; clamp ≤ standard.
+4. **UX:** 4 mốc/ngày (vào sáng → ra trưa → vào chiều → ra tối); `today-work-state` thành máy trạng thái 2-ca.
+5. **Checklist theo từng ca** (snapshot riêng mỗi bản ghi ca).
 
-**Cổng pháp lý (FLAG kế toán — KHÔNG tự quyết):** "thời điểm lập HĐĐT khởi tạo từ
-máy tính tiền cho dịch vụ ăn uống" — phát hành **theo lô cuối ngày** có khớp
-**NĐ 123/2020 Đ9 (sửa NĐ 70/2025) + TT 32/2025** không? Viettel cung cấp hẳn API
-batch cho HĐ MTT (trả mã CQT) ⇒ *kỹ thuật* rõ là được phép; nhưng *thời điểm lập*
-là quy tắc luật → kế toán + điều khoản đăng ký MTT với CQT phải xác nhận trước khi
-bật. Không recite quy tắc từ trí nhớ (guardrail `tax-vn`).
+**Consequences:** Thứ tự HRM: Thiết lập Ca → chấm công per-shift → ngày công → lương. T3 schema migration file→PR→owner (D015). Mở rộng (không đảo) D026.
 
-**Gate:** T3 (money + HĐĐT). Debate 4 góc nhìn trước khi code; migration
-file→PR→owner (D015). Nối với gap **sửa/hoàn payment đã completed** — cửa sổ chỉ
-hữu dụng nếu sửa được đơn trong ngày. Đảo quyết định (giữ realtime per-order mặc
-định) phải sửa quyết định này trước.
+## D028: Kiểm soát nguyên liệu = đếm thực tế + lát "tài chính trước" (2026-06-15)
 
-**Phán quyết owner (2026-06-14) — cổng pháp lý ĐÓNG, đề xuất §1 BỊ BÁC:** thời
-điểm lập HĐĐT = **tại thời điểm thanh toán hoàn tất** (khớp model POS realtime
-per-order, einvoice-tax.md §1.1). ⇒ KHÔNG defer *việc lập* đến cuối ngày. Gộp lô
-cuối ngày chỉ áp dụng cho **chuyển dữ liệu HĐĐT MTT lên CQT** (bảng tổng hợp),
-KHÔNG phải cấp số/giao HĐ cho khách. Hệ quả:
-- Phát hành giữ **realtime per-order tại payment** (`createInvoice` không đổi).
-- `hddt_issuance_mode='deferred_batch'` + `createDraftTaxInvoice`/`issueDraftBatch`
-  + cron cuối ngày: **không triển khai**.
-- Provider `createBatchInvoice` (đã build + test 2026-06-14, mặc định không caller)
-  **giữ làm hạ tầng** cho backfill/tổng hợp B2C nếu sau cần — không dùng để defer.
-- 'Cửa sổ sửa' không thể nằm SAU khi lập (realtime, bất khả hồi) → dời thành: xác
-  nhận **TRƯỚC khi bấm thanh toán** + sửa **phương thức thanh toán** + **hủy/thay
-  thế** sau phát hành (TT 32/2025; đã có ở `finance/invoice-list.tsx`). Hướng UI:
-  xem **D023**.
+**Decision (owner):**
 
-## D023: Sửa-sai POS realtime — guardrail TRƯỚC thanh toán (cashier) + correction ở owner/accountant (2026-06-14)
+1. **Nguyên liệu tiêu hao = ĐẾM THỰC TẾ** (tiêu hao = tồn đầu + nhập − tồn cuối), dùng module stocktake (mode `daily`) + stock_issues. **GIỮ D016** — KHÔNG bật `consume_stock_for_order`/recipe auto-deduct. Kích hoạt = bài toán seed dữ liệu.
+2. **Thứ tự: TÀI CHÍNH TRƯỚC.** (a) Bảng `expense` (sổ chi phí đơn, ngoài NCC) → `fetchOperatingExpenseTotal` đọc bảng này; (b) **Lợi nhuận ròng** = lãi gộp − chi vận hành − lương − thuế; (c) **Lợi nhuận thực tế** = tiền thực thu − thực chi; (d) **Tiền mặt hiện hữu** = quỹ đầu kỳ + thu − chi tiền mặt. Tạm: giá vốn nhập tay tới khi module kho chạy; lương tạm là 1 danh mục `expense` tới khi D026 populate `payroll_entries`.
 
-**Context:** D022 chốt HĐĐT lập realtime tại payment ⇒ không còn cửa sổ sửa SAU khi
-lập. 3 gap vận hành owner nêu — sai phương thức (CK bấm tiền mặt); lỡ bấm thanh
-toán khi khách chưa kiểm tra; sai HĐ đã phát hành — phải giải bằng UI, không bằng
-deferral.
+**Status:** Cockpit owns operating expenses / net profit / actual cash profit / current cash. `/finance/expenses` = entry surface canonical. Cash balance dùng opening balance owner nhập ở `system_settings` (KHÔNG đoán từ lịch sử payment). Migration `20260615140000_add_expenses_table.sql` — kiểm ledger/schema môi trường trước khi tin live data. Mở rộng (không đảo) D015/D020; giữ D016.
 
-**Phán quyết owner (2026-06-14):**
-1. **KHÔNG đưa hủy/thay thế HĐĐT ra màn POS** — "quá nhiều thao tác cho thu ngân,
-   gây khó dễ và khó sử dụng". Correction (hủy/thay thế, sửa/hoàn payment) **chỉ ở
-   Owner** (đã có `finance/invoice-list.tsx`, owner-gated) + **Kế toán (sau)**.
-2. **Cashier-facing chỉ là guardrail NGĂN lỗi, không phải công cụ SỬA lỗi:** chặn
-   nút thanh toán bằng xác nhận tóm tắt (phương thức + số tiền + cảnh báo "HĐĐT
-   phát hành ngay, sau chỉ hủy/thay thế"). 1 tap, chặn lỡ-bấm + sai-phương-thức từ
-   gốc; không tăng gánh sửa-sai cho thu ngân.
+**Open:** định nghĩa canonical `doanh thu` / khoản-trừ `lãi gộp` chưa chốt — cockpit tạm dùng `netRevenueBeforeVat − ingredientCost` (track `tasks/todo.md`).
 
-**Đã làm (2026-06-14):**
-- Guardrail `confirm()` trước `handleConfirmPaid` (cash + VietQR,
-  [bill-receipt-sheet.tsx](../../apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx)); UX: thêm prop `details` vào `confirm()`
-  chung ([confirm-dialog.tsx](../../packages/ui/src/components/confirm-dialog.tsx)) hiển thị hàng phương thức + số tiền; copy
-  `messages.pos.payment.confirmIssue*`.
-- Refund/đảo thanh toán owner-level: action `refundOrderPayment` (resolve payment
-  → `create_refund` → `reverse_payment_and_post`,
-  [refund-actions.ts](../../apps/web/app/(protected)/finance/refund-actions.ts)) + nút "Hoàn tiền" cạnh hủy/thay thế trong
-  [invoice-list.tsx](../../apps/web/app/(protected)/finance/invoice-list.tsx); copy `messages.finance.invoiceList.refund*`. Dùng RPC sẵn
-  (không migration). Lưu ý: refund KHÔNG tự hủy HĐĐT (cancel/thay thế riêng); post-D020
-  order giữ `payment_status='paid'`. Gate T3: typecheck/eslint/build xanh; **chưa
-  smoke-test live** (DB prod read-only) → owner verify đường tiền thật.
-- Sửa phương thức thanh toán (CK↔tiền mặt khi tiền nhận đúng, ghi sai method):
-  RPC mới `correct_payment_method` ([migration 20260615120000](../../supabase/migrations/20260615120000_correct_payment_method.sql),
-  completed-payment + `orders:refund_approve` + audit) + action `correctPaymentMethod`
-  ([payment-method-actions.ts](../../apps/web/app/(protected)/finance/payment-method-actions.ts)) + nút "Sửa phương thức" trong invoice-list (picker
-  cash/vietqr/momo + lý do); copy `messages.finance.invoiceList.methodFix*`. **Pure
-  record fix**: post-D020 không có enterprise-accounting ledger; method "3"=TM/CK hardcode trên HĐĐT ⇒ HĐĐT đã
-  phát hành KHÔNG bị ảnh hưởng (xác minh `viettel-sinvoice.ts:591`). Gate T3:
-  typecheck/lint/build xanh. **Migration ĐÃ áp prod** (verify 2026-06-15:
-  `correct_payment_method` sống trên prod; ledger ghi dưới name
-  `20260615120000_correct_payment_method` ở version `20260614213338` — lệch
-  version↔name, cần back-fill ledger theo baseline-first); type hand-add tạm vào
-  `database.types.ts` (chạy `pnpm db:types` để khớp). ⚠️ Chưa smoke-test live.
-
-**Còn lại:** không còn hạng mục correction owner-level tồn đọng. Migration
-`20260615120000` đã áp prod; đường refund + sửa-phương-thức cần owner **smoke-test
-live** (prod: 0 refund, 0 correction) + back-fill ledger version↔name trước khi tin dùng.
-
-## D025: Đánh giá `revfactory/harness` — lấy ý tưởng, KHÔNG cài tool; cải tổ 6 rule governance (2026-06-15)
-
-**Context:** Cân nhắc adopt `revfactory/harness` (meta-skill Claude Code sinh agent-team
-+ skill) để tối ưu AI Agent System Structure & Workflow. Đánh giá bằng dynamic workflow
-17-agent + ý kiến ngoài Codex (gpt-5.5, read-only sandbox) + red-team kiểm chứng filesystem.
-Ba nguồn hội tụ độc lập.
-
-**Decision — KHÔNG cài harness làm tool/runtime:**
-1. Pattern lõi harness bắt buộc `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
-   (`TeamCreate`/`SendMessage`/`TaskCreate` flag-gated). Codex — nửa runtime surface — không
-   set được ⇒ vỡ "neither runtime privileged".
-2. Harness ghi authority vào `.claude/agents`+`.claude/skills` (Codex không đọc) ⇒
-   **governance-capture/split-brain**, vi phạm "policy runtime-neutral; `.claude/`+`.codex/`
-   chỉ WIRING". Tệ hơn vendor lock-in.
-3. Mandate prose của harness yếu hơn guard `exit non-zero` mình đã có; `model:opus`-mọi-call
-   = 0 footprint hôm nay (đừng tạo phantom mandate).
-4. `+60%/n=15` là benchmark tác giả tự chấm ⇒ chỉ là input tham khảo, không phải bằng chứng vận hành.
-
-**Lấy ý tưởng (design-time, vào shared docs):** QA cross-boundary taxonomy + incremental
-coherence (`workflow.md`); re-runnable-skill descriptions, generalize-don't-overfit,
-per-call-model, near-miss routing tax-vn (`skills.md`).
-
-**Cải tổ rule (rule là mutable):**
-- `workflow.md`: Skill Plan Gate → MUST(T3)/SHOULD(T2); Verification 2-3 → advisory +
-  attestation bắt buộc (gate thật chỉ `pnpm` + CI xanh); Four Perspectives → chọn lens theo
-  risk type.
-- `scripts/check-review-tier.mjs` (`pnpm lint:review-tier`) — floor tier deterministic theo
-  blast-radius, **warn-only** cho đến khi `REVIEW_TIER_STRICT=1` được owner bật fail-closed.
-- `tasks/regressions.md`: bỏ framing "low retire = fail"; `pnpm regressions:retire-candidates`
-  lister read-only (KHÔNG auto-gate item-3 dead-ref).
-- Ghi nhận nguyên tắc tách goal/refactor theo ranh giới sản phẩm, không theo số dòng thay đổi, trong `skills.md`.
-
-**Gate:** `pnpm lint` xanh (gồm guard mới + rules-mirror in-sync). Không đổi TS/schema ⇒
-typecheck/build không bị ảnh hưởng.
-
-**Open (chờ owner):** (a) tập path forced-T3 của tier guard (đề xuất: `supabase/migrations`,
-`SECURITY DEFINER`, auth/RLS, finance/payments/invoice/hddt/payroll); (b) thời điểm flip tier
-guard sang fail-closed. Đảo quyết định (muốn cài harness/Agent-Teams) phải sửa quyết định này
-trước.
-
-**Addendum 2026-06-15 — bật Agent Teams cho Claude (capability tùy chọn, KHÔNG phải adopt
-harness):** Owner bật `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` ở `.claude/settings.json` (`env`)
-để Claude DÙNG ĐƯỢC `TeamCreate`/`SendMessage`/`TaskCreate` cho live multi-agent coordination.
-Đây là runtime-specific wiring (đúng chỗ: adapter Claude), không phải policy. **Invariant giữ
-nguyên:** không rule/workflow nào được PHỤ THUỘC Agent Teams — Codex không có tương đương, nên
-four-perspective debate + mọi orchestration phải runtime-neutral với fallback single-agent/
-written-transcript (pin ở `skills.md` → Subagents). Cờ experimental ⇒ kỳ vọng churn; không gắn
-governance load-bearing vào nó. Không đụng `check-guard-sync` (chỉ đọc `hooks.PreToolUse`). Caveat:
-nếu feature-gate đọc biến TRƯỚC khi load settings, owner có thể cần `export` ở shell profile (per-user,
-không commit).
-
-**Status:** RESOLVED — owner chốt "lấy ý tưởng, không cài tool"; tier guard đang warn-only. Agent Teams là capability tùy chọn cho Claude, không phải policy load-bearing.
-
-## D026: HRM redesign — trục Người · Ngày công · Lương + 4 quyết định nền (2026-06-15)
-
-**Context (snapshot 2026-06-15, không phải task hiện tại):** Owner phản hồi UX HRM vẫn khó cho cả quản lý lẫn nhân viên. Debate đa tác tử (workflow `hrm-debate`, 18 agents, phản biện đối kháng) verify code + prod (`iexwsuaqqenyjiskawoj`, 2026-06-15): 46/46 attendance `present` (taxonomy late/absent/half_day là code chết), 33/46 `shift_id` NULL, 16 ca treo, `employment_contracts`/`payroll_periods`/`payroll_entries` = 0 (lương xử lý ngoài app ở thời điểm audit), `standard_days` đếm chỉ T2–T6 (sai vì quán mở 7 ngày), 6/32 NV có checklist, payroll chưa có lối vào rõ.
+## D029: Glyph tiền canonical = `đ` (U+0111); vnd-format gate là render-SSoT (2026-06-15)
 
 **Decision:**
 
-1. **Ngày công chuẩn:** `standard_days` = số công chuẩn CỐ ĐỊNH owner nhập theo tháng (thay vì đếm T2–T6) + **clamp** `working/standard ≤ 1` (lương prorate KHÔNG vượt base trừ khi có chính sách trả thêm cuối tuần). Trích thành helper shared dùng chung payroll + hiển thị ngày công.
-2. **Checklist:** GIỮ. Gán theo `positions.code` làm **mặc định** + override theo người (`employees.default_checklist_template_id`). Dựng cơ chế gán theo vị trí (RPC `apply_checklist_template_to_role` hiện chỉ match template Global → mở rộng nếu cần template chi nhánh).
-3. **Lương vào app qua `employees.base_salary`:** thêm UI nhập `base_salary` + `dependents_count` vào hồ sơ NV; gỡ phụ thuộc 0-contract trong `calculatePayroll` (eligibility theo base_salary, KHÔNG khôi phục UI `employment_contracts`). BHXH đơn giản; contract/BHXH đầy đủ để sau nếu cần. → ĐẢO phần "LOẠI field salary trong form" của debate (owner quyết).
-4. **Ca làm:** GIỮ nhưng hạ xuống nhóm "Thiết lập" (ít chạm), KHÔNG ngang hàng tab hằng ngày. Màn nhân viên hiện giờ check-in/out THỰC; ca chỉ là nhãn phụ, ẩn khi `shift_id` NULL. KHÔNG bỏ ca, KHÔNG xây lại phân ca.
+1. Canonical money glyph = `đ` (U+0111) — `formatVND` (`packages/shared/src/format/currency.ts`) + print-render (`packages/print-render/src/format.ts`, `document-render.ts`) đều phát `đ`; khớp single-style khóa `45.000đ` ở `docs/spec/design-system.md`. `₫` (U+20AB) KHÔNG xuất hiện ở render path canonical nào; mọi `₫` còn lại (inventory + finance message catalogs) là drift cần dọn về `đ` ("₫ wave").
+2. `vnd-format-ssot` là render-governance gate, KHÔNG phải mandate route mọi `vi-VN` formatter qua `formatVND`. Chỉ duplicate money-format helper là debt; non-money formatter (count/quantity/date/ratio) giữ typed theo domain — đừng đuổi allowlist về 0.
+3. Đổi glyph app-wide phải update money render + print render + SQL/EMV mirror + receipt template trong một money-render wave.
 
-**IA:** gom 5 tab `/hr` (theo bảng) → **3 trục theo công việc**: Người · Ngày công · Lương. Ca + mẫu checklist → "Thiết lập". `defaultTab` động (owner→Người, BM→Ngày công). Khi W5 gộp `/hr`→`/ops` (Hoàng): mang Người+Ngày công+Thiết lập, tách Lương ở lớp Quản trị owner.
+## D030: Gate-precision — allowlist = sàn false-positive, KHÔNG phải backlog về 0 (2026-06-15)
 
-**Consequences:** HRM work is scoped to truthful daily attendance, checklist-by-position, employee CRUD, leave notifications, and payroll via `base_salary`. D012 still applies: KHÔNG rostering/auto-late/auto-absent/số dư phép/duyệt nhiều tầng. Đảo quyết định phải sửa D026 trước.
+**Decision:** `docs/spec/design-system.md` là canonical cho per-gate semantics (healthy/reframe/mixed gate + active-zone allowlist). Allowlist count tự nó không phải backlog.
 
-**Còn mở (chưa chốt — owner trả lời sau):** (a) payroll đưa vào nav discovery hay giữ direct-support; checkout hiện đã có tab/link `/hr` → `/hr/payroll` nhưng chưa gated; (b) gộp `/admin/staff` + `/hr`-employees ngay hay chờ W5 IA; (c) ảnh selfie check-in có ai xem/dùng không (nếu không → cân nhắc bỏ).
+**Consequences:** Không đuổi reframe allowlist về 0; được reconcile entry cũ khi actual count rớt dưới floor; không hạ gate dưới actual count / không reinterpret gate mà không update spec; UI debt mới fix ở primitive/pattern, không thêm route-local visual language.
 
-## D027: Chấm công theo CA (per-shift), không theo ngày — 2 ca/ngày là mô hình thật của Má Tư (2026-06-15)
+## D031: Đợt remediation UX/IA toàn app — 5 phán quyết owner (2026-06-16)
 
-**Context:** Owner xác nhận sự thật vận hành chưa từng ghi trong repo: **toàn bộ nhân viên Má Tư làm 2 ca/ngày** (sáng 06:00–13:00, chiều 16:00–21:00, nghỉ trưa 13:00–16:00). Mô hình hiện tại ràng buộc **1 bản ghi chấm công/người/ngày** (unique `employee_id,date,tenant_id`) → KHÔNG ghi nổi 2 ca. Bằng chứng prod (`iexwsuaqqenyjiskawoj`, SELECT-only, 2026-06-15, 47 bản ghi / 14 NV / 7 ngày): span vào→ra TB **7.0h** (= một ca, không phải 6→21), **23/47 (49%) không check-out**, check-in tách 2 cụm (5–7h và 18–21h) nhưng mỗi người/ngày chỉ ghi được MỘT, tổng bản ghi 47 (lẽ ra ~196 phiên) → adoption thấp vì hệ không khớp cách làm. Việc này ĐẢO giả định nền của D026 (1 lần chấm/ngày = 1 công) và GỠ phán đoán "Ca làm gần như vô nghĩa" của debate ban đầu.
+**Đính chính từ verify (KHÔNG phải bug, không sửa):** (1) HĐĐT `sellerName` — app không gửi `sellerInfo`, Viettel tự điền người bán từ MST đăng ký (`supplierTaxCode`=`COMPANY_TAX_CODE`); `request.sellerName/sellerTaxCode/sellerAddress` là input chết. (2) Concurrency/idempotency đã khóa ở tầng DB (`FOR UPDATE` + precondition + partial unique index) — đóng.
 
-**Decision:**
+**Phán quyết owner:**
 
-1. **Đơn vị chấm công = CA, không phải NGÀY.** Mỗi ca = 1 bản ghi `attendance_records`. Unique đổi `(employee_id, date, tenant_id)` → `(employee_id, date, shift_id, tenant_id)`; `shift_id` NOT NULL cho dòng mới. Migration: backfill `shift_id` cho dòng cũ (theo `resolveDefaultShiftId` từ `check_in`) trước khi đổi constraint.
-2. **Ca làm = XƯƠNG SỐNG, đặt ở "Thiết lập", phạm vi Global.** 1 bộ ca dùng chung cả 4 chi nhánh (owner chốt giống nhau). `shifts.branch_id` cho phép NULL = global (như checklist template); seed 2 ca global. `resolveDefaultShiftId` đọc ca global (+ override chi nhánh nếu sau này có). Auto-nhận ca theo giờ check-in. GỠ phán đoán "ca ít giá trị" của D026 §4 (vẫn đặt ở Thiết lập vì ít-chạm, nhưng vai trò là NỀN).
-3. **Ngày công:** đủ 2 ca = **1 công**; 1 ca = **nửa công (0.5)**. `half_day` lần đầu có nghĩa thật. `working_days = Σ_ngày( min(số_ca_có_mặt, 2) × 0.5 )`. `standard_days` = số ngày công chuẩn/tháng owner nhập (D026 §1, đếm theo NGÀY) + clamp ≤ standard.
-4. **Chấm công UX = mỗi ca vào/ra riêng (4 mốc/ngày):** vào sáng → ra trưa → vào chiều → ra tối. `today-work-state` thành máy trạng thái 2-ca/ngày (mỗi ca có vòng not_started→working→pending→done riêng). checkout/`cancelCheckoutRequest` thao tác trên ca đang mở. clock-in: tìm ca theo giờ → nếu ca đó chưa có bản ghi hôm nay thì tạo mới (không còn "đã chấm hôm nay" chặn ca thứ 2).
-5. **Checklist theo từng ca:** snapshot checklist riêng cho mỗi bản ghi ca (sáng/chiều khác nhau được). Hợp với D026 §2 (gán theo `positions.code`).
+(a) **Payroll vào app theo mô hình HKD đơn giản** — đọc `employees.base_salary` + ngày công + `dependents_count` + PIT legal-version; KHÔNG `employment_contracts`, BHXH = 0; không migration (cột có sẵn prod). Form NV thu `base_salary`/ID/bank/`dependents_count` (owner-only PII). Đi sau/khớp D026/D027.
+(b) **Runner = đồng hồ chờ**, chỉ hiện đơn ĐANG LÀM (`['pending','preparing']`, không lane `ready`); đổi tên khỏi "Gọi số"; thêm thang tuổi + overflow.
+(c) **Bỏ `customer_count`** (đã drop, `20260616100000`) + **tách hóa đơn** = N partial payment/đơn: 1 migration T3 nguyên tử (DROP `idx_payments_order_active` + nới gate amount ở `create_payment`/`confirm_*` + RPC `record_partial_payment` FOR UPDATE+SUM). Order flip 'paid' khi SUM(completed)>=total; status 'partial' derive-at-read.
+(d) **Danh tính HKD vào UI** — SSoT = `tenants.legal_name`/`tax_code` (KHÔNG `system_settings`); card owner-only. Bỏ 3 field chết General (`service_charge`/`store_phone`/`store_email`). ĐÓNG: card đã ship; print-render seller-name BỎ theo owner (Viettel tự điền từ MST — xem đính chính 1).
+(e) **VAT derive theo bậc, KHÔNG hardcode** — sai lầm gốc = `vat_rate` fix cứng (8.00). Resolver versioned suy ra rate theo `bậc doanh thu × ngày hiệu lực × ngành` (≤1 tỷ miễn; >1–3 tỷ GTGT 3% gốc/2,4% tạm đến 31/12/2026; >3 tỷ TNCN 17%). `resolve_gtgt_rate` + shared mirror đã land; 3.111 HĐ cũ ở 8% = sửa-tiến (đối soát hồi tố là việc kế toán, không tự ghi đè HĐ đã phát hành).
+(f) **Hạ ưu tiên:** refund `reverse_payment_and_post` sum-guard (unreachable); `refundOrderPayment` 2 RPC non-atomic (rough-edge). KDS/checkout concurrency = đóng.
 
-**Consequences:** Đảo thứ tự ưu tiên HRM: **Thiết lập Ca (Global, đủ 2 ca) → chấm công per-shift → ngày công → lương** — Ca là bước 1, không phải mục bị hạ. T3 schema-changing migration → file → PR → owner applies (env dev trỏ prod, KHÔNG test local). Refine D026: §1 giữ (standard_days config), §4 "ca ít giá trị" GỠ. Đợt-1 (a) "Số công = số dòng" tạm thời chưa đúng (1 dòng giờ = 1 ca) → sửa thành công = Σ ca/2 sau rework; nhãn tạm thời ở SummaryView cần ghi chú. Đảo quyết định phải sửa D027 trước. Mở rộng (không đảo) D026.
+**Plan thực thi:** `docs/plan/ux-ia-remediation-2026-06.md`. T3 (payroll RPC, split-bill, food-cost MV) chạy four-perspective debate + migration file→PR→owner (D015). Đảo bất kỳ (a)–(f) → sửa quyết định này trước. **Lưu ý prod:** destructive DB change (drop column) cần expand-contract — deploy đang phục vụ traffic phải zero-ref object bị xoá TRƯỚC khi owner apply.
 
-## D028: Kiểm soát nguyên liệu = đếm thực tế (giữ D016) + lát "tài chính trước" — sổ chi phí, lợi nhuận ròng/thực tế, tiền mặt hiện hữu (2026-06-15)
+**Status (2026-06-20):** (a) payroll, (d) định danh HKD, (e) VAT-derive-theo-bậc, (b) runner lanes/age — ĐÃ SHIP (còn dư nhãn "Gọi số" ở PWA tab title + nav label). (c) drop `customer_count` ĐÃ SHIP; **tách hóa đơn / `record_partial_payment` CHƯA build** (track `tasks/todo.md`).
 
-**Context:** Owner nêu 2 nhu cầu: (1) kiểm soát nguyên liệu tiêu hao 1 ngày + cập nhật tồn kho; (2) chỉ số tài chính: lợi nhuận ròng, lợi nhuận thực tế, tiền mặt hiện hữu. Khảo sát CODE + PROD (`iexwsuaqqenyjiskawoj`, SELECT-only, 2026-06-15):
+## D032: Redesign UI = Hợp nhất (A) + Nâng cấp thị giác trong contract (B) (2026-06-16)
 
-- **Kho:** hạ tầng đầy đủ (ingredients/recipes/stock_levels/stock_movements/stocktake/stock_issues/transfers/PO-GRN) nhưng **prod 0 dòng mọi bảng** (ingredients=0, recipes=0, stock_levels=0, stocktake_sessions=0) → module **chưa từng chạy thật**. Đúng tiền đề **D016** (POS không trừ kho vì kho rỗng).
-- **Tài chính:** doanh thu thật (5.898 payment completed, 4.990 tiền mặt ~85%); **bảng `expense`/`expenses` KHÔNG tồn tại** (`fetchOperatingExpenseTotal` [finance-cockpit.ts:182] hardcode `0`; ô "Chi vận hành" đã render sẵn ở `/finance` + `/admin/dashboard` nhưng nguồn rỗng); cockpit **chưa có field `netProfit`** (`grossProfit` mới = net_revenue − giá vốn); giá vốn hiện = 0 (food-cost MV rỗng vì recipes/GRN trống); lương chưa vào hệ (D026: `payroll_entries`=0, còn Excel); **0 sổ tiền-ra / 0 quỹ chạy** (`cash_movements`/`cash_reconciliation`/`cash_ledger` đều không tồn tại) dù đầu-vào tiền mặt giàu dữ liệu (356 ca đóng có `closing_cash`). NCC đã có `supplier_invoices` (chứng từ chi phí NCC) riêng.
+**Decision (owner):** chọn **A + B**, tránh C (rebrand). Dự án KHÔNG thiếu DS (Concept 01 đã khóa) — "redesign" = hợp nhất + nâng cấp có kiểm soát.
 
-**Phán quyết owner (2026-06-15, qua 2 câu hỏi định hướng — chọn 2 phương án "đề xuất"):**
+- **A (nền, bắt buộc) = thực thi D031** (track nav/IA, status/DataTable, pagination, surface) + HRM (D026/D027). 1 trạng thái = 1 màu/nhãn, DataTable phủ mọi bảng, enforce `AppPage` padding, gộp module-shell về 1 `AppShell` (W5).
+- **B (lớp khác biệt, chỉ làm SAU khi A đủ phủ + update spec TRƯỚC khi apply token):** (1) tách `info`-hue (hiện `--info` == `--foreground`); (2) bật lại dark mode (token `.dark` đủ, đang bị `forcedTheme="light"`) **[OPEN]** phạm vi; (3) chiều sâu dashboard + `chart-1..5`; (4) ⌘K command palette; (5) **[OPEN — taste]** `--radius` 0.625→0.75rem.
+- **GIỮ:** `primary` đỏ gạch + palette Concept 01; Rhythm/Radius/Motion contract. *(Typography Inter/Montserrat/JetBrains → ĐẢO bởi D037: chuyển Geist.)*
 
-1. **Nguyên liệu tiêu hao = ĐẾM THỰC TẾ, KHÔNG định-mức-POS-tự-trừ.** Đo bằng kiểm kê: tiêu hao = tồn đầu + nhập − tồn cuối, dùng đúng module stocktake (mode `daily`) + stock_issues đã có. **GIỮ D016** — KHÔNG bật `consume_stock_for_order`/recipe-based auto-deduct (Approach "định mức" owner đã loại; muốn bật sau phải sửa D016 + có định mức chuẩn). Kích hoạt module = bài toán **seed dữ liệu** (vài món chủ lực + tồn đầu), không phải viết tính năng.
-2. **Thứ tự: TÀI CHÍNH TRƯỚC** (nhịp 1-dev). Phạm vi lát này:
-   - (a) **Bảng `expense`** — sổ chi phí đơn (đúng D020), cho chi phí vận hành NGOÀI NCC. Nối D015 §gap-2 + D020 §3. Implement `fetchOperatingExpenseTotal` đọc bảng này → "Chi vận hành" bật ở cả 2 dashboard.
-   - (b) **Lợi nhuận ròng** (theo phát sinh) = lãi gộp − chi vận hành − lương − thuế → thêm field `netProfit` + card vào cockpit.
-   - (c) **Lợi nhuận thực tế** (theo tiền mặt) = tiền thực thu − tiền thực chi trong kỳ (hợp ghi sổ đơn HKD TT 152/2025).
-   - (d) **Tiền mặt hiện hữu** = quỹ đầu kỳ + thu tiền mặt − chi tiền mặt (tổng hợp từ `closing_cash` + vế chi tiền mặt của `expense`/trả NCC).
-   - Tạm thời: **giá vốn nhập tay** tới khi module kho (mục 1) chạy; **lương** tạm là một danh mục của `expense` tới khi D026 đợt-3 populate `payroll_entries` rồi cockpit chuyển nguồn.
+**Quan hệ:** A = D031 (+ D026/D027); kế thừa D019, D029/D030. Mỗi PR = 1 route family / 1 primitive rollout.
 
-**Quan hệ quyết định:** Mở rộng (KHÔNG đảo) D015 P0-2 + D020 §3. GIỮ D016 (không đụng POS stock leg). Nối D026/D027 (payroll vào hệ = nguồn "lương" tương lai cho P&L). Định nghĩa metric quản trị ("doanh thu" cho P&L = HĐĐT issued vs tiền thu; các khoản trừ của "lợi nhuận") vẫn là việc owner chốt — tạm dùng net (subtotal−discount, trước VAT) cho lãi theo phát sinh + tiền thu cho lãi tiền mặt để không chặn build; chốt chính thức trước khi khóa số.
+## D033: `main` là trunk TS/Supabase hiện hành; `codex/continue-ts` đã hợp nhất vào main rồi nghỉ hưu — bỏ Go-port (2026-06-16)
 
-**Gate:** T3 (finance + money + schema mới + RLS). "Spec rồi code" (chuẩn D021). Migration **file → PR → owner applies trên prod** (không dev DB — D015); chỉ chứng minh được typecheck/lint/build + unit, owner smoke-test số thật sau apply. Đảo quyết định (chọn định-mức-POS / đổi thứ tự / bỏ expense) phải sửa D028 trước.
+**Decision:** `main` là trunk hiện hành cho TS/Supabase product. Go-port không thuộc current architecture (tag `archive/go-port-2026-05`). Active docs/plans/runbooks/branch refs coi `main` là source branch.
 
-**Current status:** Finance cockpit owns operating expenses, net profit, actual cash profit, and current cash balance. `/finance/expenses` is the canonical expense entry surface. Cash balance uses owner-entered opening balance in `system_settings`; it must not guess from all historical cash payments. Expense-backed metrics require the `expenses` migration to exist in the target schema before they can be trusted from live data.
+**Rollback:** `git push --force origin archive/main-go-port:main`.
 
-**Status:** Deliverable 1+2+3 code xong (sổ chi phí · lợi nhuận ròng · tiền mặt hiện hữu · lợi nhuận thực tế). Migration `20260615140000_add_expenses_table.sql` và generated types hiện có trong repo; trước khi tin live data ở môi trường nào, kiểm ledger/schema của môi trường đó và smoke `/finance/expenses`. Track **nguyên liệu đếm-thực-tế** (D028 §1) là pha kế theo thứ tự "tài chính trước".
+## D035: Gỡ hẳn bề mặt accounting/khóa-kỳ khỏi app (2026-06-19)
 
-## D029: Glyph tiền canonical = `₫` (U+20AB); vnd-format gate là render-SSoT, KHÔNG phải "money debt" về 0 (2026-06-15)
+**Context:** `/admin/accounting` (soft-close ngày 5 / hard-close ngày 15) là nghi thức kế toán doanh nghiệp HKD không dùng (thuế khoán, không sổ sách formal); đã bị ẩn khỏi nav và là entry trùng. Owner chốt "Xoá hẳn" thay vì giữ ẩn (đảo chiều quyết định ẩn-nav accounting trước đây).
 
-**Context:** `vnd-format-ssot` mixes two concerns: duplicate money formatting and legitimate non-money locale formatting (counts, quantities, dates, ratios). Treating the whole allowlist as "money debt to zero" creates false positives.
+**Decision (owner):** Gỡ toàn bộ lớp UI/route accounting:
 
-**Decision:**
+- Xoá route `/admin/accounting/*` + redirect `/admin/finance/[[...slug]]` (redirect `/admin/finance → /finance` giữ ở middleware).
+- Xoá chain period-close UI (`period-close-card.tsx` barrel + inventory + actions `closePeriodSoft/Hard/reopenPeriod`).
+- Gỡ ModuleKey `accounting` khỏi `module-acl.ts`/`labels/vi.ts`/`route-map.ts`/`route-resolution.ts`/`shell-primitives.ts`; gỡ copy `finance.periodsAdmin`.
 
-1. Canonical money glyph is `₫` (U+20AB).
-2. `vnd-format-ssot` is a render-governance gate, not a mandate to route every `vi-VN` formatter through `formatVND`.
-3. App-wide glyph changes must update money render, print render, SQL/EMV mirrors, and receipt templates in one coordinated money-render wave.
-
-**Consequences:** Do not chase the `vnd-format-ssot` allowlist to zero. Only duplicate money-format helpers are debt. Non-money formatters must stay typed to their domain. Changing glyph behavior without updating D029 is out of contract.
-
-## D030: Meta gate-precision audit — allowlist = sàn false-positive, KHÔNG phải backlog về 0 (2026-06-15)
-
-**Context:** Several UI ratchet gates intentionally include allowlisted patterns that are valid current implementation, not debt. Some gates also over-match because static regex cannot distinguish all valid JSX composition patterns.
-
-**Decision:** `docs/spec/design-system.md` is the canonical source for per-gate semantics: healthy gates, reframe gates, mixed gates, and active-zone allowlists. Allowlist count is not a backlog by itself.
-
-**Consequences:**
-
-1. Do not chase reframe allowlists to zero.
-2. Reconciling stale allowlist entries is allowed when actual count falls below the recorded floor.
-3. Do not lower a gate below actual count or reinterpret a gate without updating `docs/spec/design-system.md`.
-4. New UI debt should be fixed at the primitive/pattern level, not by adding route-local visual language.
-
-## D031: Đợt remediation UX/IA toàn app — 5 phán quyết owner + đính chính từ verify (2026-06-16)
-
-**Context:** Owner yêu cầu thiết kế lại tỉ mỉ bố cục/IA/direct-route/workflow/visual/spacing, **đặc biệt dữ liệu hiển thị từng màn**, ra vấn đề + giải pháp dứt điểm. Audit đa-tác-tử (16 agent, 100 page, verified vs CODE + PROD `iexwsuaqqenyjiskawoj` SELECT-only) → **185 finding** (5 critical / 40 high / 78 medium / 62 low; dimension lớn nhất = data-display 75). Pass verify (5 agent) chạy TRƯỚC khi chốt phán quyết, lật 2 hạng mục "đáng sợ":
-- **ĐÍNH CHÍNH 1 — HĐĐT `sellerName` KHÔNG phải bug.** App không gửi `sellerInfo`; Viettel tự điền người bán từ tài khoản đăng ký (URL `supplierTaxCode`=`COMPANY_TAX_CODE`). Prod: 3.111 HĐ issued đều mang MST `077200004194`. `request.sellerName/sellerTaxCode/sellerAddress` (`finance/actions.ts:271`, `replace-invoice-actions.ts:300`, `hddt-daily-summary.ts:142`) là **input chết** — không bao giờ lên wire. Gỡ khỏi rủi ro pháp lý.
-- **ĐÍNH CHÍNH 2 — Concurrency/idempotency đã khóa ở tầng DB.** POS double-pay / refund double / KDS double-bump / checkout double-approve đều có `FOR UPDATE` + precondition + partial unique index `idx_payments_order_active`; prod 0 ca trùng. **Đóng**, không sửa (thêm guard = churn trên T3 money RPC).
-
-**Phán quyết owner (2026-06-16):**
-
-(a) **Payroll → vào app theo mô hình HKD đơn giản.** KHÔNG migration cho cột lương căn bản (các cột đã có prod). Owner đã chốt không phụ thuộc `employment_contracts`: payroll đọc `employees.base_salary`, ngày công, `dependents_count`, và PIT legal-version; BHXH trong app = 0 cho scope hiện tại. Build: (i) form tạo/sửa NV thu `base_salary`/ID/bank/`dependents_count` + thêm `updateEmployee` [T2]; (ii) `calculatePayroll` eligibility `is_active && base_salary > 0`, 2 ca/ngày = 1 công, `standard_days` owner nhập + clamp, atomic RPC calculate+status trước go-live [T3]; (iii) overview/đối chiếu/export + StatusBadge `payroll-period` [T2]. Không build surface hợp đồng lao động trong phán quyết này. **Phụ thuộc:** đi sau/khớp HRM redesign D026/D027 (chạm cùng file HR). Quyết owner sau: chủ HKD có vào payroll app hay xử lý ngoài app.
-
-(b) **Runner = đồng hồ chờ, chỉ hiện đơn ĐANG LÀM; KHÔNG lane ready + đổi nhãn.** GIỮ filter `['pending','preparing']` (không thêm `ready`); `resolveRunnerListStatus` giữ "Đang chờ"; **đổi tên khỏi "Gọi số"** (vd "Đơn đang làm"/"Bếp đang làm") để khỏi gợi ý pickup-board. Thêm thang tuổi (age escalation kiểu KDS `getAgeStyle`) + xử lý overflow (xoay/nén) để không giấu đơn chờ lâu. [T2, không migration].
-
-(c) **POS: bỏ hẳn `customer_count` (số khách) + thêm tách hóa đơn (bắt buộc).** `customer_count` cleanup/drop đã được thực thi trong D3 (`c191cce4` + `20260616100000_drop_orders_customer_count.sql`); không mở lại như active work. Phần còn mở của (c) là **tách hóa đơn** = N partial payment/đơn (split-by-amount; split-by-item dùng `split_order` có sẵn). **1 migration T3 nguyên tử**: DROP `idx_payments_order_active` + nới gate amount==total ở `create_payment`/`confirm_cash_payment`/`confirm_vietqr_payment` (0<amount<=remaining) + viết lại `complete_payment_and_consume_stock` (bỏ check ABS>1) + RPC mới `record_partial_payment` (FOR UPDATE + SUM, lock thay index — phải ship CÙNG migration). Order flip 'paid' chỉ khi SUM(completed)>=total. UI: `bill-receipt-sheet` mode "Thanh toán một phần". Owner-default (ghi để khỏi chặn): status 'partial' = **derive-at-read** (ít blast-radius hơn thêm enum); đơn trả-một-phần **KHÔNG** cho split/merge tới khi định nghĩa rõ; QR/MoMo phải encode/khớp số tiền tender.
-
-(d) **Đưa danh tính HKD vào UI + bỏ 3 field chết.** SSoT định danh người bán = **`tenants.legal_name`/`tenants.tax_code`** (+địa chỉ) per `legal-framework-2026.md:66` — KHÔNG phải `system_settings`. Card "Định danh hộ kinh doanh" (owner-only) đọc/sửa `tenants`; print-render + mọi hiển thị người bán đọc từ đó thay literal `''`; dọn 3 literal chết. **KHÔNG** đụng payload Viettel / KHÔNG thêm `SELLER_*` env (docs cấm khi chưa có tài liệu Vinvoice riêng). 3 field chết General (`service_charge`/`store_phone`/`store_email` — prod rỗng, không consumer) → bỏ khỏi `settings-form` + `GENERAL_SYSTEM_SETTING_KEYS`. [T2; gửi `sellerInfo` cho Viettel = T3 gated, chờ HDSD Viettel].
-
-  - **ĐÓNG (d) — cập nhật 2026-06-16:** Card định danh (`tenants.legal_name`/`tax_code`) + bỏ 3 field chết = ĐÃ SHIP (verified). Phần "print-render hiển thị người bán đọc `tenants.legal_name`" = **BỎ theo owner** — KHÔNG phải gap đáng làm. Lý do (chốt, đừng nêu lại lần 3): trên HĐĐT, danh tính người bán do **Viettel S-invoice tự điền từ MST đăng ký** (`supplierTaxCode`=`COMPANY_TAX_CODE`, xem ĐÍNH CHÍNH 1); `sellerName` KHÔNG phải field API S-invoice. Chỉ cần `tax_code` đúng (prod 3.111 HĐ đều MST `077200004194`). Seller-name trên slip in không phải hạng mục compliance → không theo đuổi. **(d) đóng.**
-
-(e) **VAT — DERIVE theo bậc, KHÔNG hardcode (sửa hướng 2026-06-16 theo chỉ đạo owner).** Owner bác cả 2 sai của agent: (1) định "đổi `vat_rate` 8→2,4 + guard" = lặp đúng sai lầm gốc (thay số-cứng này bằng số-cứng khác); (2) đi hỏi kế toán xác nhận số — thừa, vì **8% là phương pháp khấu trừ → HKD trực tiếp KHÔNG BAO GIỜ xuất 8%** (rõ từ `einvoice-tax.md §2`, không cần hỏi). **Sai lầm gốc = `vat_rate` bị fix cứng** (8.00 ở `menu_items` + 3.111 HĐ). Giải pháp đúng = **resolver versioned, suy ra rate theo `bậc doanh thu × ngày hiệu lực × ngành (ăn uống)`** — tự thích nghi khi doanh thu vượt/rớt ngưỡng hoặc luật đổi, KHÔNG hardcode, KHÔNG hỏi:
-- ≤ 1 tỷ/năm → **miễn GTGT/TNCN (0)** [NĐ 141/2026].
-- > 1 – 3 tỷ (nhóm 2) → GTGT **3% gốc / 2,4% tạm đến 31/12/2026 (tự về 3% từ 01/01/2027)**, TNCN 1,5% [NĐ 68/2026 + NQ 204/2025 + NĐ 174/2025 + einvoice §2].
-- > 3 tỷ (nhóm 3) → TNCN **(DT − CP) × 17%** [NĐ 68/2026].
-
-Doanh thu năm = **ước lượng từ dữ liệu** (HĐ issued / paid revenue), không hardcode/không hỏi. Mirror pattern đã có `packages/shared/src/payroll/legal-versions.ts` (versioned `effectiveFrom`) → luật đổi = thêm 1 version. Thay rate fix ở `menu_items.vat_rate`(8.00) / `tax_invoices` / invoice-compute (HĐĐT line-items) / KPI-bucket `get_revenue_kpis` bằng output resolver tại thời điểm phát hành. **T3** (tiền/pháp lý + đường HĐ). 3.111 HĐ cũ ở 8% = **sửa-tiến** (HĐ mới dùng resolver); đối soát hồi tố = việc kế toán/kê khai (flag, KHÔNG tự ghi đè HĐ đã phát hành). **ĐÓNG (e) — cập nhật 2026-06-16:** resolver `resolve_gtgt_rate` + shared mirror đã land; không còn việc đổi số cứng trong settings.
-
-(f) **Hạ ưu tiên (từ verify):** refund `reverse_payment_and_post` sum-guard = T3 defensive low-prio (hiện unreachable); `refundOrderPayment` 2 RPC non-atomic → orphan pending refund = rough-edge riêng (owner chọn gộp RPC hay UI resume). KDS/checkout concurrency = đóng (không việc).
-
-**Quan hệ:** nối D023 (sửa-sai POS), D026/D027 (HRM → payroll nguồn lương cho D028), D028 (finance cockpit số đúng — food-cost grain là gap còn lại của D028), D029 (₫ wave bao trùm double-glyph inventory), D030 (DataTable/StatusBadge/KpiCard wave + HR active-zone off-limits).
-
-**Gate:** mỗi stream theo T-tier ghi trên; T3 (payroll RPC/standard-days, split-bill, food-cost MV) chạy four-perspective debate + migration file→PR→owner→`pnpm db:types` khi schema đổi (D015, không dev DB).
-
-**Plan thực thi chi tiết (track + thứ tự + acceptance criteria):** `docs/plan/ux-ia-remediation-2026-06.md`. Đảo bất kỳ phán quyết (a)-(f) → sửa D031 trước.
-
-**Status:** Phán quyết chốt + verify xong + master plan ghi. Các dòng D3/D5/VAT đã có status đóng trong master plan; active work còn lại nằm ở `tasks/todo.md` và phần "Tiến độ thực thi" của `docs/plan/ux-ia-remediation-2026-06.md`.
-
-**Current production contract:** destructive DB changes such as dropping a column require expand-contract order. The production deployment that is actually serving traffic must already run code with zero references to the removed object before the owner applies the destructive migration. Local typecheck/build and DB-only verification are not sufficient for destructive prod applies.
-
-**Quyết định 1 (Payroll vào app) — chốt mô hình ĐƠN GIẢN/HKD theo owner (2026-06-16):** Payroll chạy kiểu Hộ kinh doanh: `base_salary` + ngày công → lương thực lĩnh, KHÔNG dùng `employment_contracts`, KHÔNG đóng BHXH (`insuranceBaseSalary = 0`), GIỮ TNCN qua bộ legal-version có version (`packages/shared/src/payroll/legal-versions.ts`). Không migration (cột đã có sẵn ở prod). `calculatePayroll` đọc thẳng `employees.base_salary`; điều kiện đủ = `is_active && base_salary > 0`. Form nhân viên thu `base_salary`/`dependents_count`/`id_number`/`bank_account` (owner-only PII, action gated `HR_ROLES=['owner']`). Engine chung KHÔNG sửa.
-
-- **Tradeoff TNCN tầng quản lý:** vì bỏ khấu trừ BHXH (10,5% NLĐ), thu nhập chịu thuế cao hơn → TNCN nhích lên với mức lương quản lý: ~+131k/tháng ở mức 25M, ~+349k/tháng ở mức 35M. Nhân viên vận hành (lương dưới ngưỡng giảm trừ) KHÔNG ảnh hưởng — TNCN vẫn 0.
-- **Cuối năm 05/QTT-TNCN sẽ hiện BHXH = 0:** BHXH của chủ hộ xử lý riêng theo NĐ 158/2025 (ngoài app).
-- **PII rough-edge (pre-existing, follow-up):** `branch_manager` hiện vẫn xem được `base_salary` qua `fetchEmployees` (service-role read path) — không thuộc phạm vi quyết định này, theo dõi riêng.
-- **Phương án thay thế (migration-free) nếu owner muốn sau này:** engine đã hỗ trợ `insuranceBaseSalary` theo từng nhân viên, nên có thể bật BHXH cho riêng tầng quản lý mà không cần migration.
-
-## D032: Redesign UI = Hợp nhất (A) + Nâng cấp thị giác trong contract (B) — KHÔNG đổi ngôn ngữ Concept 01 (2026-06-16)
-
-**Context:** Owner yêu cầu "redesign UI/UX/layout/shell/styles/colors/typo/components/patterns/spacing/radius — hướng đi rõ ràng, đầy đủ giải pháp". Verify vs CODE (`globals.css`, shell, design-system v14.7) + các worklog đang chạy: dự án KHÔNG thiếu DS — đã có Concept 01 khoá (token OKLCH semantic, light+dark token hoá đủ, rhythm/motion/elevation contract, CI ratchet, 2 chrome family, ~45 primitive + adapter). Vấn đề thật = (1) drift/độ phủ chưa 100%, (2) vài trục còn "khô kiểu ERP" + dark mode bị tắt dù đã token, (3) surface chủ lực chưa polish. ⇒ "redesign" đúng = hợp nhất + nâng cấp có kiểm soát, KHÔNG đập đi vẽ lại.
-
-**Phán quyết owner (2026-06-16):** chọn **A + B**, tránh C (rebrand).
-
-- **Hướng A (nền, bắt buộc) = thực thi D031.** Không tạo track mới: A chính là đợt remediation UX/IA toàn app đang chạy (track E nav/IA, F status/DataTable, G pagination, H surface) + HRM (D026/D027). Acceptance theo `docs/plan/ux-ia-remediation-2026-06.md`. 1 trạng thái = 1 màu/nhãn (StatusBadge SSoT), DataTable phủ mọi bảng, KpiCard/Empty SSoT, enforce `AppPage` padding (bỏ self-pad branch-settings), gộp 6 module-shell về 1 `AppShell` (W5).
-- **Hướng B (lớp khác biệt, MỚI — phần D032 này thật sự quyết) — chỉ làm SAU khi A đủ phủ, và cập nhật `docs/spec/design-system.md` TRƯỚC khi apply token (governance: không tạo ngôn ngữ thị giác thứ 2):**
-  1. **Tách `info`-hue.** Hiện `--info` == `--foreground` (navy y hệt màu chữ) ⇒ `text-info`/viền info tàng hình. Cấp info một hue riêng (xanh dương dịu), giữ light+dark.
-  2. **Bật lại dark mode** (token `.dark` đã đủ; đang bị `forcedTheme="light"` chặn ở `layout.tsx`). Re-enable rẻ. **[OPEN]** phạm vi: KDS/POS-bếp-tối trước hay toàn app — chốt khi vào Phase 2.
-  3. **Chiều sâu dashboard + chuẩn `chart-1..5`** (border-first vẫn là nền; thêm depth có kiểm soát, không phá elevation contract).
-  4. **⌘K command palette toàn cục** (đã có `command.tsx` + `Kbd`, thiếu launcher).
-  5. **[OPEN — taste]** nâng `--radius` 0.625rem → 0.75rem (1 dòng, token-driven, an toàn) — chờ owner chốt.
-- **GIỮ nguyên (không đụng):** `primary` đỏ gạch + palette Concept 01; typo Inter/Montserrat/JetBrains + base 17px; Rhythm Contract (p-3/p-4, gap 1–6, heading-by-role); Radius 4-token; Motion functional-only.
-
-**Roadmap:** Phase 0 đo (rubric `ui-ux-rubric.md` cho ~10 surface chủ lực + liệt kê clone còn lại) → Phase 1 = A → Phase 2 = B (sửa contract trước) → Phase 3 polish POS/KDS/Runner/Dashboard. Mỗi PR = 1 route family hoặc 1 primitive rollout (Rebuild Rule).
-
-**Quan hệ:** A = D031 (+ D026/D027 HRM); kế thừa D019 (UI structural governance), D029/D030 (DataTable/StatusBadge/KpiCard waves). B nằm trên cùng — không chặn A.
-
-**Status:** Hướng chốt (owner chọn A+B). Branch chuẩn = **`main`** (D033). Phase 1 hiện bám D031/D026/D027 và chỉ các row còn sống trong `tasks/todo.md`; không giữ baseline audit như backlog phụ.
-
-## D033: `main` bị thay hoàn toàn bằng `codex/continue-ts` — bỏ Go-port (2026-06-16)
-
-**Decision:** `main` là trunk hiện hành cho TypeScript/Supabase product. Go-port không thuộc current product architecture. Active docs, plans, runbooks, and branch references must treat `main` as the source branch unless a new owner decision changes trunk.
-
-**Rollback:** `git push --force origin archive/main-go-port:main` (đưa main về Go-port cũ trong vài giây).
-
-## D034: Xóa server action scaffold chưa wire (E4 stocktake conflict/escalation, supplier-returns write, dashboard/PO/archive analytics) — bỏ scaffold, build lại khi có yêu cầu thật (2026-06-17)
-
-**Decision:** Xóa 17 server action exported-but-unwired (0 caller mọi hình thức, adversarial-verified) + các type return dùng riêng cho chúng. GIỮ anh em LIVE cùng file và GIỮ `DashboardSummary` (return type của `getInventoryDashboard` đang live — scan Pha B nhầm). RPC giữ nguyên: 6-channel scan Pha B cho 13 ứng viên = 0 cái Tier-A `total=0` an toàn → Dead-RPC drop để wave riêng khi prod bật function-tracking (xem todo.md "Dead-RPC drop wave 2").
-
-**Why (verify vs CODE + decisions; nguồn: audit + Codex outside-voice + 6-channel Pha B):**
-- 18 action không caller nào (static/dynamic import, form action, prop, re-export, test — `rg -U` multiline đều 0).
-- Phần lớn là scaffold feature đã park (E4 "Inventory unbuilt scaffolds" — D031 Track E4; supplier returns P1-deferred — regression `INVENTORY-PILOT-CONTRACT-V2`). Owner chốt **bỏ scaffold** thay vì giữ chờ wire: git history là bản lưu, build lại từ đầu khi có yêu cầu thật. Đính chính hướng D031-E4 "chỉ build lại khi cần" = KHÔNG giữ scaffold chết trong cây.
-
-**Danh sách xóa (function + type dùng riêng):**
-- `finance/actions.ts`: `fetchDailyRevenue`
-- `finance/archive-actions.ts`: `forceArchiveTaxInvoice`, `backfillArchiveByDateRange`
-- `inventory/dashboard-actions.ts`: `getInventoryAlerts`, `refreshDashboardMv` (giữ `getInventoryDashboard` + type family `Dashboard*`/`InventoryDashboard`)
-- `inventory/purchase-order-actions.ts`: `fetchPriceDeviations`+`PriceDeviationRow`, `fetchIngredientPriceHistory`+`PriceHistoryRow` (giữ `fetchSinglePriceDeviation`+`SinglePriceDeviation`)
-- `inventory/stocktake-actions.ts`: `closeRecountRound`+`CloseRecountResult`, `escalateRound4`, `finalizeStocktake`, `listStocktakeConflicts`+`StocktakeConflictRow`, `resolveStocktakeConflict`
-- `inventory/supplier-return-actions.ts`: `createSupplierReturnFromGrn`, `createSupplierReturnFromStock`, `confirmSupplierReturn`, `transitionSupplierReturn` (giữ `fetchSupplierReturns`/`fetchSupplierReturnDetail` — supplier-returns list/detail pages dùng)
-- `pos/payment-actions.ts`: `confirmPayment` (base, đã bị thay bởi `confirm{Cash,VietQr}PaymentWithInvoice`) + `ConfirmPaymentResult` (giữ `CashPaymentResult`/`ConfirmVietQrPaymentResult`/`InvoiceOutcome` — live qua `confirm{Cash,VietQr}Payment`)
-
-**Không đụng:** RPC baseline (defer wave có telemetry); `resolve_stocktake_conflict` RPC vẫn dùng inline ở stocktake session detail (giữ). `sendToKitchen` (`pos/print-actions.ts`) GIỮ — KHÔNG dead: 0 runtime caller nhưng là compatibility stub có hợp đồng, regression test `packages/shared/src/kds/__tests__/auto-kitchen-print-trigger.test.ts` assert print-actions.ts chứa `deferred_to: "kds_completion"` (guard chống "revive broad kitchen paper enqueueing"). **Gate:** `pnpm exec turbo run test --force` (cache per-package che fail của source-introspection test cross-package) + `pnpm verify`.
-
-## D035: Gỡ hẳn bề mặt accounting/khóa-kỳ khỏi app (đảo chiều D013) (2026-06-19)
-
-**Context:** Audit Admin (đa tác tử, có kiểm chứng) cho thấy `/admin/accounting` ("Khóa kỳ hỗ trợ kế toán" — soft-close ngày 5 / hard-close ngày 15, khung audit-trail) là nghi thức kế toán doanh nghiệp HKD không dùng (đóng thuế khoán, không sổ sách formal). Tính năng build đủ RPC nhưng đã bị ẩn khỏi nav (D013) và là entry trùng: cùng cơ chế period-close lại được render duy nhất ở đây. Owner chốt: "Xoá hẳn" thay vì giữ ẩn.
-
-**Decision (owner 2026-06-19):** Gỡ toàn bộ lớp UI/route accounting khỏi app:
-- Xoá route `/admin/accounting/*` + redirect `/admin/finance/[[...slug]]` (redirect `/admin/finance → /finance` vẫn do middleware `resolveLegacyRouteRedirectPath` lo, giữ nguyên + test).
-- Xoá chain period-close UI: `app/components/period-close-card.tsx` (barrel), `inventory/_components/period-close-card.tsx`, và actions `closePeriodSoft/Hard/reopenPeriod` trong `inventory/dashboard-actions.ts`.
-- Gỡ ModuleKey `accounting` khỏi `module-acl.ts`, `labels/vi.ts`, `route-map.ts`, `route-resolution.ts`, `shell-primitives.ts`, comment `nav-config.ts`; gỡ copy `finance.periodsAdmin`.
-
-**Giữ lại (KHÔNG đụng):** permission `accounting:period_reopen` (`permissions.ts`) + các RPC DB `close_period_soft/hard`, `reopen_period`, bảng `accounting_periods`. DB-layer thuộc thẩm quyền owner qua migration; chỉ gỡ lớp app.
-
-**Consequences:** Guard test cập nhật cùng đợt — bỏ test "Accounting period support copy" (`finance-revenue-date-range.test.ts`) và assertion `MODULE_LABELS_VI.accounting` (`scope.test.ts`). Muốn dựng lại khóa-kỳ sau này: làm như tính năng "Khóa số liệu tháng" gọn dưới `/admin/settings`, không tái lập khung kế toán.
+**Giữ lại (KHÔNG đụng):** permission `accounting:period_reopen` + RPC DB `close_period_soft/hard`, `reopen_period`, bảng `accounting_periods` (DB-layer thuộc owner qua migration). Dựng lại sau = tính năng "Khóa số liệu tháng" gọn dưới `/admin/settings`, không tái lập khung kế toán.
 
 ## D036: Agentic OS — xương sống Notification/Alert/Report + thang tự chủ (2026-06-19)
 
@@ -705,212 +274,39 @@ Doanh thu năm = **ước lượng từ dữ liệu** (HĐ issued / paid revenue
 
 **Consequences / phasing:** S0 spine+shadow (wedge) → S1 Web Push live + severity gate + retune trigger → S2 Telegram dark → S3 Telegram live + rate-valve + void-after-pay → S4 Đóng ngày → S5 mua hàng/kho/tài chính → S6 POS tail+HR+tuần → S7+ migration batch + LLM digest. Critical path S0→S2→S3→S4; S1 ∥ S2. Tài liệu này (D036) + `notifications.md` + `agentic-os-blueprint.md` là of-record; mọi producer/agent code theo đó.
 
-## D036: Import `m-tu-design-system` bundle — eval gate + touch tier cho form control (2026-06-20)
+## D036: Import `m-tu-design-system` bundle — touch tier cho form control (2026-06-20)
 
-**Context:** Owner đưa bundle `m-t-design-system` (export từ Claude Design, **derive ra từ chính repo này**). Chạy dynamic workflow diff (49 agent, adversarial-verify từng delta) bundle ⟷ codebase. Kết luận: ~85% circular — token/brand asset/3 logo/mascot/pattern/5 symbol **md5-identical** với `apps/web/public/brand` + `brand-glyph.tsx`; palette lệch ΔE<0.018 (chỉ hex-vs-OKLCH); cả 4 template (admin shell, POS, list, edit) tả màn hình app **đã ship**. Không màn hình mới, không token mới.
+**Context:** Bundle derive ra từ chính repo này (~85% circular: token/brand/logo/mascot md5-identical; palette lệch ΔE<0.018; template tả màn đã ship). Không màn mới, không token mới.
 
-**Decisions (owner 2026-06-20):**
-1. **Touch tier form control — THÊM (gated):** thêm value `touch` vào `size` cva của `Select`(trigger)/`Switch`/`Checkbox`/`RadioGroupItem` (`packages/ui/src/components/{select,switch,checkbox,radio-group}.tsx`), theo đúng precedent spec §"Button is the single source of truth for button height" (Toggle/ToggleGroup đã thêm touch cùng rule). `min-h-12` cho trigger, box 20px + hit-area ≥44px cho check/radio. Consumer **opt-in** qua `size="touch"` — POS order-flow đã dùng các control này (`pos/item-customizer.tsx` Checkbox, `pos/_components/order-detail/merge-orders-sheet.tsx` Radio, `.../transfer-table-dialog.tsx` Select, `kds/.../filter-bar.tsx` Select). Spec §Button-height cập nhật cùng đợt liệt kê 4 control này.
-2. **bo-slide deck → standalone:** deck 16:9 thương hiệu KHÔNG vào route surface của app (không dựng report-export capability trong product). Giữ là asset bundle độc lập.
-3. **Glossary casing → vi.ts authoritative:** `packages/shared/src/labels/vi.ts` TitleCase ("Bếp Trung Tâm") là label SSoT (feeds runtime + test pin) — KHÔNG đổi. Bundle phải mirror TitleCase đã ship, không fork sang sentence-case.
-4. **Font Geist → REJECT** *(→ ĐẢO NGƯỢC bởi D037 cùng ngày: owner chốt dùng Geist theo Design System)*: tại thời điểm gate này bundle ép Geist/Geist Mono = fork ngược typography đã khóa (D032 + spec v14.7.1 mandate Inter/Montserrat/JetBrains). Owner sau đó đảo quyết định — xem D037.
+**Decisions (owner):**
 
-**Không làm (out of scope phiên này):** các net-new prop khác bundle quảng cáo (`Button rice`, `Avatar` fill/status/active, `Progress` size/label/showValue/indeterminate, `Textarea showCount`) **chưa được duyệt** — đụng contract khóa (ac899cff), để governance riêng nếu có nhu cầu thật (`Progress` là cái giá trị nhất vì app đang hand-roll). Reconcile docs bên trong bundle (Geist→fonts khóa, version v14.3.0→v14.7.1, 4 hue lệch `--tier-note`/`--muted-foreground`/`--tier-elite`, hạ self-claim "SSoT"→"mirror", guard date-SSoT cho Money/DateText mock) = housekeeping ở folder bundle ngoài repo, không phải app code.
+1. **Touch tier form control (gated):** thêm value `touch` vào `size` cva của `Select`(trigger)/`Switch`/`Checkbox`/`RadioGroupItem` (`min-h-12` trigger, box 20px + hit-area ≥44px), theo precedent §"Button is the single source of truth for button height". Consumer opt-in qua `size="touch"`. Default render KHÔNG đổi.
+2. **bo-slide deck → standalone** (không vào route surface; không dựng report-export capability).
+3. **Glossary casing → `vi.ts` authoritative** (TitleCase "Bếp Trung Tâm" là SSoT; bundle mirror, không fork sentence-case).
+4. **Font Geist** *(ĐẢO bởi D037 cùng ngày — owner chốt dùng Geist; xem D037)*.
 
-**Gate:** `node scripts/check-ui-contract.mjs` + `pnpm --filter @comtammatu/ui typecheck` + lint. Default render của 4 control **không đổi** (size="default" giữ nguyên class cũ) → không regression consumer hiện hữu.
+**Out of scope:** net-new prop khác bundle quảng cáo (`Button rice`, `Avatar` fill/status, `Progress` size/label, `Textarea showCount`) — chưa duyệt, đụng contract khóa.
 
-## D037: Đảo ngược D032 — chuyển typography sang Geist theo Má Tư Design System (2026-06-20)
+## D037: Chuyển typography sang Geist theo Má Tư Design System (2026-06-20)
 
-**Decision (owner 2026-06-20):** Đảo ngược **D032** (và supersede D036 mục 4 "Geist → REJECT" cùng ngày). App-UI typography chuyển sang roster của Design System: **Geist** cho cả body + heading (single-family), **Geist Mono** cho dữ liệu (tiền, mã, ngày giờ, số đơn). Bỏ Inter/Montserrat/JetBrains Mono khỏi runtime UI. Print pipeline (`packages/print-render`, RobotoMono bitmap nhiệt) KHÔNG đụng — pipeline riêng, pixel-locked.
+**Decision (owner — đảo D032, supersede D036 §4):** App-UI typography chuyển sang **Geist** (body + heading, single-family) + **Geist Mono** (tiền/mã/ngày giờ/số đơn). Bỏ Inter/Montserrat/JetBrains khỏi runtime UI. Print pipeline (`packages/print-render`, RobotoMono bitmap nhiệt) KHÔNG đụng (pipeline riêng, pixel-locked).
 
-**Cơ chế load (verify vs code, không đoán):** `next/font/google` Geist/Geist Mono **chỉ có subset cyrillic/latin/latin-ext, KHÔNG có `vietnamese`** (Inter/JetBrains thì có) → app tiếng Việt sẽ vỡ glyph dấu. Vì vậy dùng **`geist` package** (Vercel official, next/font/local, full glyph tiếng Việt, self-hosted/offline) — khớp luôn ý đồ "local variable font, no Google Fonts dependency" của bundle. Package expose `--font-geist-sans` / `--font-geist-mono`; `globals.css` bind `--font-sans`+`--font-heading` → `--font-geist-sans`, `--font-mono` → `--font-geist-mono`. **App code không đổi** (vẫn `font-sans`/`font-heading`/`font-mono`).
-
-**Files (đồng bộ theo spec §Typography Contract "When changing typography runtime"):** `apps/web/package.json` (+`geist`), `apps/web/app/layout.tsx`, `packages/ui/src/styles/globals.css`, `docs/spec/design-system.md`, `docs/agent/rules/ui.md`, `docs/modules/web-app.md`, `tasks/regressions.md` (PRESET Zone C). Spec forbid-list lật: giờ cấm tái nhập Inter/Montserrat/JetBrains/Be Vietnam Pro thay vì cấm Geist.
-
-**Gate:** `lint:ui-contract` + `typecheck` + `lint` + build web (next/font resolve).
+**Cơ chế:** `next/font/google` Geist KHÔNG có subset `vietnamese` → dùng **`geist` package** (Vercel official, next/font/local, full glyph tiếng Việt, self-hosted). `globals.css` bind `--font-sans`/`--font-heading` → `--font-geist-sans`, `--font-mono` → `--font-geist-mono`. App code không đổi. Spec forbid-list lật: cấm tái nhập Inter/Montserrat/JetBrains/Be Vietnam Pro.
 
 ## D038: HĐĐT realtime instant-issue khi provider trả mã CQT đồng bộ (2026-06-20)
 
-**Context:** `createInvoice` (luồng POS per-order realtime) trước đây luôn trả
-status `submitted` khi có `invoiceNo`, KỂ CẢ khi Viettel trả `codeOfTax` (Mã của
-cơ quan thuế) ngay trong response. Với HĐ bán hàng từ MTT (mẫu `2/...`, mặc định
-F&B Má Tư) mã CQT cấp đồng bộ ⇒ hóa đơn đã phát hành hợp pháp ngay, nhưng app
-hiển thị `submitted` tới khi reconcile cron promote (≤15') và archive PDF cũng
-chờ tới đó. `createBatchInvoice` (viettel-sinvoice.ts) và `getStatus` đã coi
-`codeOfTax` có mặt = `issued`; chỉ `createInvoice` lệch.
+**Decision (T3):** Trong `createInvoice`, khi có CẢ `invoiceNo` LẪN `codeOfTax` non-empty (trimmed) → trả `issued` (mirror `createBatchInvoice` + `getStatus`). `codeOfTax` rỗng nhưng có `invoiceNo` → `submitted`; không `invoiceNo` → `signing`. HĐ GTGT mẫu `1/...` (mã async) không đổi hành vi. `createTaxInvoice` capture `codeOfTax` → ghi `tax_invoices.cqt_code` (cột trước đây chết). KHÔNG migration (state machine đã cho `signing/submitted → issued`).
 
-**Decision (T3 — debate PM/BA/Dev/QA đã chạy, 4/4 ship-with-conditions):** trong
-`createInvoice`, khi có CẢ `invoiceNo` LẪN `codeOfTax` non-empty (đã trim) → trả
-`issued` (mirror batch + getStatus). `codeOfTax` rỗng/whitespace nhưng có
-`invoiceNo` → `submitted`; không `invoiceNo` → `signing`. HĐ GTGT mẫu `1/...` (mã
-async) KHÔNG đổi hành vi (chưa có codeOfTax ⇒ submitted → reconcile cron).
+**Trade đã chốt:** realtime direct-INSERT KHÔNG ghi `tax_invoice_events` (như hành vi cũ); issuance audit qua `audit_logs` + `provider_data.codeOfTax` + `cqt_code`. Invariant doc: einvoice-tax.md §3.3.
 
-**Đã làm (2026-06-20):**
-- `viettel-sinvoice.ts createInvoice`: guard strict non-empty `codeOfTax` → status
-  `issued`/`submitted`/`signing`.
-- `finance/actions.ts createTaxInvoice`: capture `result.codeOfTax` → ghi cột
-  `tax_invoices.cqt_code` (cột first-class trước đây CHẾT — không path nào ghi;
-  giờ quyết định issued dựa trên codeOfTax nên persist luôn). Caller đã set
-  `issued_at`/`signing_started_at` cho `issued` từ trước → archive cron nhặt sớm
-  hơn, reconcile cron bỏ qua (`status IN (signing,submitted)`).
-- Test provider: thêm ma trận codeOfTax (non-empty→issued, ''→submitted,
-  whitespace→submitted, no-invoiceNo→signing). 245/245 pass.
-- **KHÔNG migration** (state machine đã cho `signing/submitted → issued`; INSERT
-  trực tiếp đặt status ban đầu, không qua RPC — hành vi sẵn có).
+**Open (chờ owner):** (a) có ghi 1 row `tax_invoice_events` cho realtime issue không (hiện audit_logs-only); (b) instant-issue rút mẫu-2 khỏi pool reconcile → `codeOfTax` là nguồn issuance duy nhất; (c) mẫu-1 có codeOfTax đồng bộ (hiếm) cũng instant-issue; (d) owner smoke Viettel sandbox.
 
-**Trade đã chốt trong scope này (conservative):** realtime direct-INSERT KHÔNG ghi
-`tax_invoice_events` (đúng như hành vi cũ cho submitted/signing) — instant-issue
-mở rộng điều đó sang `issued`. Issuance vẫn được audit qua `audit_logs` +
-`provider_data.codeOfTax` + cột `cqt_code`. Đã sửa invariant doc cho khớp (xem
-einvoice-tax.md §3.3).
+## D039: Tắt `taxPercentage` giả cho mẫu `2/...` (S-invoice) (2026-06-20)
 
-**Open (chờ owner sign-off):**
-- (a) Có muốn ghi 1 row `tax_invoice_events` cho thời điểm phát hành realtime
-  không (cần RPC riêng vì `authenticated` không INSERT thẳng được) — hay chấp
-  nhận `audit_logs`-only cho row instant-issue? Hiện chọn audit_logs-only.
-- (b) Instant-issue rút mẫu-2 khỏi pool reconcile re-poll ⇒ create-response
-  `codeOfTax` thành nguồn issuance duy nhất (không còn lưới an toàn 15' đối soát
-  lại CQT). Cùng rủi ro batch path đã chấp nhận.
-- (c) mẫu-1 mà có codeOfTax đồng bộ (hiếm) cũng sẽ instant-issue — debate cho là
-  đúng (codeOfTax = CQT chấp nhận); xác nhận owner.
-- (d) Owner smoke trên Viettel sandbox (acct `0100109106-509`, template `2/001`):
-  xác nhận mẫu-2 trả codeOfTax đồng bộ và archive bucket nhận PDF ở tick kế.
+**Decision (owner — "phải chuẩn, không để giá trị giả"):** mẫu `2/...` (HĐ bán hàng MTT, direct method) KHÔNG gửi `taxPercentage`/`taxAmount` trên `itemInfo`, `taxBreakdowns: []`. Trước đây hardcode `taxPercentage: -2` (sentinel "không chịu thuế"). Mẫu `1/...` (HĐ GTGT) giữ rate thật.
 
-## D039: ⚠️ OPEN — `taxPercentage = -2` cho mẫu `2/...` là khai sai loại thuế GTGT (2026-06-20)
+**Why (verify vs runtime, không chỉ docs):** test sandbox Viettel + XML iPOS prod thật của Má Tư cho thấy template "Hóa đơn bán hàng" **STRIP toàn bộ `taxPercentage` khỏi XML gửi CQT** — `omit`/`-2`/`0` render byte-identical (không `<TSuat>`, không `<TgTThue>`, total = giá GROSS). Phải gửi giá GROSS + `taxAmount=0` (gửi giá NET làm lệch tổng vì template strip dòng thuế bắc cầu). XML mới ký server-side Viettel-CA, cấu trúc giống hệt iPOS thật.
 
-**Context:** Rà lại S-invoice phát hiện `viettel-sinvoice.ts` gửi
-`taxPercentage: -2` + `taxAmount: 0` cho mọi dòng mẫu `2/...` (HĐ bán hàng từ
-MTT, direct method). Research đa nguồn + phản biện đối kháng (workflow
-`sinvoice-taxpct-and-instant-issue`, 3/3 lens REFUTED "-2 đúng"):
+**Nghĩa vụ %** (nếu doanh thu >1 tỷ → GTGT 2,4%/3%) khai ở **tờ khai trên tổng doanh thu**, KHÔNG trên hóa đơn.
 
-- Spec Viettel chính thức (`Technical_webservice_Sinvoice_en.pdf`) liệt kê
-  `taxPercentage` (Double, `[0-9.]+`): `0%→0, 5%→5, 10%→10, Tax exemption→-1,
-  Non-taxable→-2`. KHÔNG có -3/-4. Nguồn phụ (TLPtech) lệch nhãn -1/-2 (KCT vs
-  KKKNT) nhưng MỌI nguồn đồng ý **-2 là sentinel "không có thuế / ngoài phạm vi
-  GTGT"**, KHÔNG phải mã cho doanh thu chịu thuế theo tỷ lệ %.
-- Mâu thuẫn nội bộ: engine thuế của chính repo
-  (`packages/shared/src/tax/sales-tax-versions.ts` + `resolve-sales-tax`) phân
-  loại `food_service` direct method `gtgtRate` 2,4% (trong cửa sổ)/3,0%,
-  `vatExempt:false` cho mọi nhóm chịu thuế (chỉ ≤1 tỷ mới exempt/0). Hệ thống
-  BIẾT món ăn chịu thuế nhưng provider gửi -2 (không chịu thuế).
-- Hệ quả: taxBreakdown trong XML là phân loại CQT-authoritative (không chỉ hiển
-  thị PDF). Mỗi HĐ mẫu-2 đang khai với CQT rằng doanh thu món ăn là "không chịu
-  thuế" → có thể bị nhặt sai bucket "doanh thu chịu thuế theo tỷ lệ %". HĐ vẫn
-  được CHẤP NHẬN (sentinel hợp lệ) nên sai âm thầm tới khi đối chiếu/thanh tra.
-
-**KHÔNG tự sửa code (guardrail tax-vn: doc↔code lệch → STOP + flag owner/kế
-toán):** giá trị đúng phụ thuộc (1) nhóm doanh thu — ≤1 tỷ miễn GTGT (NĐ
-141/2026) thì -2/exempt mới hợp lý, >1 tỷ thì chịu 2,4%/3%; (2) cửa sổ tạm 2,4%
-đến 31/12/2026 rồi về 3%; (3) cách Viettel encode percentage-method (rate dương
-vs mã KHAC) trên template mẫu-2 ĐÃ ĐĂNG KÝ với CQT. Hardcode -2 bỏ qua cả 3.
-
-**Hướng sửa đề xuất (chờ owner/kế toán + Viettel BU xác nhận):** wire `gtgtRate`/
-`vatExempt` từ `resolve-sales-tax` xuống provider thay vì hardcode; xác nhận
-encoding mẫu-2 đúng với template đăng ký; smoke sandbox; rồi mới đổi hằng số +
-test đang pin -2 (`viettel-sinvoice.test.ts`). T3 (money), migration không cần
-nhưng debate + verify bắt buộc.
-
-**Status:** OPEN — cần owner + kế toán + đối chiếu HDSD Viettel/template CQT trước
-khi đổi. Không recite giá trị từ trí nhớ.
-
-**Addendum 2026-06-20 — bằng chứng sơ cấp (XML iPOS thật của Má Tư) + research mẫu-2:**
-Owner cung cấp 2 XML hóa đơn THẬT từ iPOS (provider cũ trước khi tự build), đã
-được CQT cấp mã: `2C26MAQ00000855` + `2C26MAQ00000876`, mẫu số 2 ("Hoá đơn bán
-hàng"), serial `C26MAQ`, MST `077200004194`, `MCCQT M2-26-...` (mã máy tính tiền).
-
-- **Cách iPOS encode thuế (chuẩn NĐ123 XML):** mỗi dòng `HHDVu` CHỈ có
-  `DGia/SLuong/ThTien` — **KHÔNG có thẻ `<TSuat>` (thuế suất)**. Khối `TToan`
-  CHỈ có `TgTTTBSo` (tổng thanh toán) — **không** `TgTThue`, không bảng
-  `THTTLTSuat`. `VATRate=0`/`VATAmount=0` chỉ nằm trong `TTKhac` (metadata riêng
-  iPOS, không phải trường pháp lý). ⇒ hóa đơn bán hàng MTT của Má Tư khai **không
-  thể hiện thuế suất/tiền thuế per-dòng**, tổng = Σ giá gross.
-- **Kết luận hòa giải iPOS ↔ research (verdict workflow `...mau2-taxpercentage-resolve`):**
-  câu trả lời **phụ thuộc nhóm doanh thu**, không phải 1 hằng số:
-  - **≤ 1 tỷ/năm** (miễn GTGT, NĐ 141/2026 hồi tố 01/01/2026): món ăn KHÔNG chịu
-    thuế ⇒ `-2`/KCT (hoặc no-rate kiểu iPOS) **đúng**. Đây có thể là lý do iPOS
-    để VATRate=0.
-  - **> 1 tỷ/năm** (chịu thuế tỷ lệ %): phải là **rate thực** — `KHAC:2.4%`
-    (trong cửa sổ tới 31/12/2026) / `KHAC:3%` (sau) theo QĐ 1450/QĐ-TCT Phụ lục V
-    + TT 32/2025; `-2` (=không chịu thuế) khai SAI ⇒ understate doanh thu chịu
-    thuế. (Viettel spec ví dụ hóa đơn bán hàng `02GTTT` dùng rate dương 5.0.)
-- **Giả thuyết owner "= 0":** đúng phần bác `-2`, nhưng `0` = "thuế suất 0%"
-  (zero-rate kiểu xuất khẩu) — danh mục khác, cũng không phải "chịu thuế theo tỷ
-  lệ %". `0` chỉ đúng nếu là hàng 0%; không đúng cho ăn uống ở bất kỳ nhóm nào.
-- **`taxAmount`:** dù sửa thế nào, **tổng tiền khách KHÔNG đổi** (giá menu là
-  gross, không có dòng VAT tách; % là nghĩa vụ của hộ tính trên doanh thu lúc kê
-  khai). iPOS để tiền thuế trống — khớp ràng buộc "không thổi tổng". Nếu template
-  đăng ký đòi `taxAmount` ≠ 0 thì phải gửi giá NET (coi menu đã gồm thuế, mirror
-  nhánh `vat_deductible_net`) để total vẫn = gross.
-- **Bằng chứng phụ — XML iPOS VALIDATE phần còn lại của build hiện tại:** tách
-  dòng topping (Cơm sườn + Chả + Bì + Trứng riêng dòng), giá gross theo menu,
-  buyer mặc định "Người mua không lấy hóa đơn", `HTTToan=TM/CK`, MTT có `MCCQT`
-  (⇒ codeOfTax đồng bộ — củng cố D038 instant-issue), `DSCKS` rỗng (MTT mẫu-2
-  KHÔNG chữ ký số — khớp kết luận eSign). Identity người bán đã đăng ký: "HỘ KINH
-  DOANH CƠM TẤM MÁ TƯ", địa chỉ "371, Võ Thị Sáu, ấp Hải Phúc, Xã Phước Hải, TP
-  Hồ Chí Minh", MCHang 146149.
-- **Câu hỏi quyết định (chờ owner/kế toán):** doanh thu/năm của Má Tư **> 1 tỷ**
-  (chịu thuế % ⇒ KHAC:2.4%) hay **≤ 1 tỷ** (miễn ⇒ KCT/-2 đúng)? Và iPOS để
-  no-tax là vì miễn hay vì convention — kế toán xác nhận. Sau đó: wire
-  `gtgtRate`/`vatExempt` từ `resolve-sales-tax` (đã tính sẵn theo nhóm + ngày)
-  xuống provider thay hardcode; xác nhận encoding (Double vs KHAC) + `taxAmount`
-  với Viettel BU; smoke sandbox; rồi đổi hằng số + test.
-
-**Addendum 2 — KẾT QUẢ TEST SANDBOX VIETTEL (2026-06-20) → hạ mức nghiêm trọng:**
-Đã chạy test thật trên sandbox Viettel (tài khoản test công khai `0100109106-509`,
-template `2/001`, KHÔNG đụng tài khoản Má Tư). Tạo 4 biến thể cùng 1 món
-45.000đ, tải XML đã render, so sánh:
-
-| Gửi `taxPercentage` | `<DGia>` | `<TSuat>` trong XML | `<TgTTTBSo>` |
-| --- | --- | --- | --- |
-| bỏ trống (omit) | 45000 | **KHÔNG có** | 45000 |
-| `-2` (code hiện tại) | 45000 | **KHÔNG có** | 45000 |
-| `0` (giả thuyết owner) | 45000 | **KHÔNG có** | 45000 |
-| `2.4` + giá NET | 43945 ⚠️ | không có | 45000 |
-
-- **Phát hiện quyết định:** template "Hóa đơn bán hàng" (mẫu-2) của Viettel
-  **STRIP toàn bộ `taxPercentage` khỏi XML gửi CQT**. `omit`/`-2`/`0` cho XML
-  **byte-identical** ở phần kinh tế (dòng hàng + tổng) — không `<TSuat>`, không
-  tiền thuế, total = gross — **giống hệt iPOS**. Tức là `-2` **KHÔNG** lọt tới
-  CQT dưới dạng "không chịu thuế": giả định gốc của D039 (taxBreakdown là
-  CQT-authoritative cho mẫu-2) bị **bằng chứng thực tế bác bỏ**. Research web tự
-  tin "−2 sai" đã lý luận từ spec/schema chung, KHÔNG đúng với hành vi template
-  hóa đơn bán hàng thật → bài học: verify against prod/runtime, không chỉ docs.
-- **Bẫy đã xác nhận:** chỉ biến thể gửi giá NET (để có taxAmount≠0) mới hỏng —
-  dòng hiện 43945 nhưng tổng 45000, lệch 1.055 không có dòng thuế bắc cầu (template
-  strip). ⇒ mẫu-2 **PHẢI gửi giá GROSS + `taxAmount=0`** (đúng như code đang làm).
-- **eSign re-confirm:** XML sandbox **được Viettel-CA ký server-side** (cert test
-  `CN=TEST, MST:0100109106-509`) — khớp kết luận eSign (ký phía Viettel, không cần
-  cert client).
-- **Mã CQT đồng bộ:** ⚠️ tài khoản 509 trả `codeOfTax=null` (test account không
-  nối CQT thật) — KHÔNG xác nhận được instant-issue đồng bộ qua sandbox này; bằng
-  chứng đồng bộ vẫn là `MCCQT` trên XML iPOS prod thật (D038 giữ nguyên).
-
-**Status → DOWNGRADED:** `-2` **KHÔNG phải defect khai sai CQT** (render giống hệt
-iPOS/0/omit, bị strip). KHÔNG cần đổi code để đúng ở tầng CQT. Còn lại (P3/optional):
-(1) owner xác nhận **prod thật đang phát hành OK với `-2`** (nếu có thì xong); (2)
-caveat: test trên account NO-VALIDATION — validator strict/prod trên template ĐÃ
-ĐĂNG KÝ của Má Tư có thể khác (account strict sandbox không có mẫu-2 để test);
-(3) dọn dẹp cosmetic `-2`→omit (0 tác dụng tới CQT, rủi ro thấp, không gấp). Nghĩa
-vụ % (nếu >1 tỷ) khai ở **tờ khai trên tổng doanh thu**, KHÔNG trên hóa đơn.
-
-**Addendum 3 — QUYẾT ĐỊNH OWNER + ĐÃ IMPLEMENT (2026-06-20):** Owner chốt "phải
-chuẩn, không để giá trị giả `-2`": **TẮT `taxPercentage` cho mẫu-2**, mẫu-1 HĐ GTGT
-giữ rate thật (điền sau khi có nhu cầu GTGT).
-
-- **Đã làm (`viettel-sinvoice.ts`):** nhánh `direct_sales_gross` (mẫu-2) KHÔNG còn
-  gửi `taxPercentage`/`taxAmount` trên `itemInfo`, và `taxBreakdowns: []`. Type
-  `SinvoiceItemInfo.taxPercentage/taxAmount` → optional. Nhánh `vat_deductible_net`
-  (mẫu-1) KHÔNG đổi (vẫn gửi `request.vatRate` + tiền thuế thật). Test cập nhật
-  (assert omitted thay vì `-2`); 245/245 pass; typecheck/lint/build xanh.
-- **Verify end-to-end trên sandbox Viettel (provider thật, code mới):**
-  `createInvoice` body không có taxPercentage → **CHẤP NHẬN** (issue HĐ
-  `C26TYY371/372/373`); tải XML đã ký về: `THDon=Hóa đơn bán hàng`, **không
-  `<TSuat>`**, **không `<TgTThue>`**, `ThTien` = giá gross (45000, 7000), tổng
-  `TgTTTBSo`=52000 đúng, **ký server-side Viettel-CA** — cấu trúc **giống hệt XML
-  iPOS thật của Má Tư**.
-- **Caveat còn lại:** verify trên account no-validation `0100109106-509` (strict
-  sandbox không đăng ký mẫu-2). Validator prod trên template thật của Má Tư về lý
-  thuyết có thể khác → owner **smoke hóa đơn thật đầu tiên** sau deploy để chắc.
-  Nghĩa vụ % (nếu >1 tỷ) vẫn khai ở tờ khai trên doanh thu, không trên hóa đơn.
-
-**Status → RESOLVED (chờ owner smoke prod):** mẫu-2 không còn gửi taxPercentage giả.
+**Status:** RESOLVED — verify trên account no-validation `0100109106-509` (caveat: validator prod trên template ĐÃ ĐĂNG KÝ của Má Tư có thể khác) → owner **smoke hóa đơn thật đầu tiên** sau deploy.

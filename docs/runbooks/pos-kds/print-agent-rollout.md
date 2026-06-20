@@ -51,7 +51,7 @@ Complete all items before opening the branch for the day.
   AGENT_TENANT_ID=<numeric>
   AGENT_BRANCH_ID=<numeric>
   AGENT_ID=pos-<branch-slug>
-  AGENT_VERSION=0.3.0
+  AGENT_VERSION=1.0.0
   WEB_BASE_URL=https://<app-host>
   PRINT_AGENT_PRESENCE_TOKEN=<raw per-agent token>
   ```
@@ -217,6 +217,6 @@ Go criteria for fleet rollout:
 - Agent source: [apps/print-agent/README.md](../../../apps/print-agent/README.md)
 - Install script: [apps/print-agent/scripts/install-service.ps1](../../../apps/print-agent/scripts/install-service.ps1)
 - Admin monitor: `/admin/settings/printers/jobs`
-- DB schema: `supabase/migrations/20260423140000_printing_foundation.sql`,
-  `supabase/migrations/20260423150000_enqueue_print_rpcs.sql`,
-  `supabase/migrations/20260423160000_print_job_retry_audit.sql`
+- DB schema: `supabase/migrations/00000000000000_baseline.sql` (print_jobs,
+  printer_agents, v_print_agent_fleet, enqueue/completion RPCs) +
+  `supabase/managed-surfaces.install.sql`

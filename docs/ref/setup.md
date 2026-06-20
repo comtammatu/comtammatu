@@ -110,7 +110,8 @@ Mật khẩu tất cả: `Test1234!`. Bao phủ toàn bộ `STAFF_ROLES`:
 
 | Email                            | Role                 | Scope                           |
 | -------------------------------- | -------------------- | ------------------------------- |
-| `owner@comtammatu.vn`            | `owner`              | Tenant (pin tenant)                 |
+| `owner@comtammatu.vn`            | `owner`              | Tenant (pin dev branch)             |
+| `keeper@comtammatu.vn`           | `owner`              | Tenant (pin dev branch); FK-reassignment anchor, không bị xoá khi rerun |
 | `warehouse@comtammatu.vn`        | `warehouse_manager`  | Chi nhánh        |
 | `production@comtammatu.vn`       | `production_manager` | chi nhánh (branch production) |
 | `manager.datdo@comtammatu.vn`    | `branch_manager`     | Chi nhánh Đất Đỏ                |

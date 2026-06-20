@@ -117,7 +117,7 @@ Trong hệ thống hiện tại, phần AP/reporting có thể đi qua `owner` h
 | Sự cố                  | Hành động đúng                                                                      |
 | ---------------------- | ----------------------------------------------------------------------------------- |
 | NCC giao thiếu         | Ghi đúng thực nhận trên `GRN`                                                       |
-| Bếp thiếu nguyên liệu  | Tạo transfer bổ sung từ Kho CN xuống Bếp CN                                          |
+| Bếp thiếu nguyên liệu  | Lấy thêm từ Kho CN và ghi tiêu hao (`consumption`), không tạo transfer Kho CN → Bếp CN; nếu Kho CN hết thì kéo transfer thật từ Kho Tổng/Bếp Trung Tâm/chi nhánh khác |
 | Chi nhánh cần hàng gấp | Có thể nhận trực tiếp từ chi nhánh khác tùy loại hàng và vận hành thực tế           |
 | Thiếu BOM              | Dừng confirm sản xuất, cập nhật BOM trước                                           |
 | Chi nhánh nhận thiếu   | Xác nhận theo thực nhận và ghi chú chênh lệch                                       |
