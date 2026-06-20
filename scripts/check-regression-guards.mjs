@@ -38,6 +38,22 @@ const GUARDS = [
     reason:
       "multi-key permission probes fan out via Promise.all, never sequential for-await (N×RTT)",
   },
+  {
+    rule: "PAYROLL-CALCULATE-MUST-BE-ATOMIC-RPC",
+    expect: "present",
+    pattern: /\.rpc\(\s*["']upsert_payroll_calculation["']/,
+    paths: ["apps/web/app/(protected)/hr/payroll-actions.ts"],
+    reason:
+      "calculatePayroll persists entries + period status via one atomic RPC, never two separate PostgREST writes",
+  },
+  {
+    rule: "PAYROLL-CALCULATE-MUST-BE-ATOMIC-RPC",
+    expect: "absent",
+    pattern: /\.update\(\s*\{\s*status:\s*["']calculated["']/,
+    paths: ["apps/web/app/(protected)/hr/payroll-actions.ts"],
+    reason:
+      "the calculated-status flip is folded into upsert_payroll_calculation; a separate status='calculated' update reintroduces the entries/status divergence (approve/pay use 'approved'/'paid', not matched)",
+  },
 ];
 
 const CODE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs"];
