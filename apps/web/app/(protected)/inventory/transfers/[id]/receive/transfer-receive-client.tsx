@@ -15,6 +15,7 @@ import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Button } from "@comtammatu/ui/components/button";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
+import { AppSection } from "@/components/surface";
 import { MobilePage } from "../../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../../_components/mobile/mobile-section-header";
 import { TouchButton } from "../../../_components/mobile/touch-button";
@@ -168,7 +169,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
         title={transfer.code}
       />
 
-      <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
+      <AppSection>
         <div className="flex items-center gap-2 text-sm font-semibold">
           <IconPackageImport className="size-5 text-primary" />
           <span className="truncate">{transfer.fromBranchName}</span>
@@ -208,7 +209,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
             {transfer.notes}
           </p>
         ) : null}
-      </div>
+      </AppSection>
 
       {needsReceiveMode ? (
         <Alert>
@@ -306,7 +307,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
       </section>
 
       {hasShort && !needsReceiveMode ? (
-        <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
+        <AppSection>
           <label htmlFor="short-note" className="text-sm font-semibold">
             {TRANSFER_RECEIVE_COPY.shortNoteLabel}{" "}
             <span className="text-destructive">*</span>
@@ -324,7 +325,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
               {TRANSFER_RECEIVE_COPY.shortNoteMin}
             </p>
           ) : null}
-        </div>
+        </AppSection>
       ) : null}
 
       {!needsReceiveMode ? (

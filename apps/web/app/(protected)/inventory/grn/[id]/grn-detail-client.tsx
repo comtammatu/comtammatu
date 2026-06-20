@@ -16,6 +16,7 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import { Input } from "@comtammatu/ui/components/input";
+import { Item } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { PhotoUploadInput } from "../../_components/photo-upload-input";
@@ -1167,7 +1168,7 @@ function OverviewLinesPreview({ lines }: { lines: GRNDetailItem[] }) {
         mobileCardRender={(row) => {
           const status = getGrnOverviewStatus(row);
           return (
-            <div className="flex flex-col gap-2 rounded-lg border bg-card p-3">
+            <Item variant="outline" className="flex-col items-stretch gap-2 p-3">
               <div className="flex min-w-0 items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="truncate font-medium">{row.line.name}</div>
@@ -1205,7 +1206,7 @@ function OverviewLinesPreview({ lines }: { lines: GRNDetailItem[] }) {
                   </div>
                 </div>
               </div>
-            </div>
+            </Item>
           );
         }}
       />

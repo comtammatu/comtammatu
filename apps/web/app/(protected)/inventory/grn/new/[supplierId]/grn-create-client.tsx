@@ -32,7 +32,7 @@ import { matchesSearch } from "@lib/search";
 import { MobilePage } from "../../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../../_components/mobile/mobile-section-header";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { AppEmptyState } from "@/components/surface";
+import { AppEmptyState, AppSection } from "@/components/surface";
 import { TouchButton } from "../../../_components/mobile/touch-button";
 import { NumberPadSheet } from "../../../_components/mobile/number-pad-sheet";
 import {
@@ -336,7 +336,7 @@ export function GrnCreateClient({
       />
 
       {lineCount > 0 ? (
-        <div className="flex flex-col gap-2 rounded-lg border bg-card p-3">
+        <AppSection size="sm" contentClassName="gap-2">
           <div className="flex items-center justify-between text-2xs font-medium uppercase tracking-wider text-muted-foreground">
             <span>{GRN_CREATE_COPY.addedSummary(lineCount)}</span>
             <span className="text-foreground">
@@ -395,7 +395,7 @@ export function GrnCreateClient({
               </div>
             ))}
           </div>
-        </div>
+        </AppSection>
       ) : null}
 
       <InputGroup className="h-12 rounded-lg">

@@ -25,6 +25,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { Input } from "@comtammatu/ui/components/input";
+import { Item } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Combobox } from "@/components/form";
@@ -1062,7 +1063,7 @@ function PoOverviewLinesPreview({
         getRowKey={(line) => line.lineId}
         emptyTitle={poDetailCopy.overviewLinesTitle}
         mobileCardRender={(line) => (
-          <div className="flex flex-col gap-2 rounded-lg border bg-card p-3">
+          <Item variant="outline" className="flex-col items-stretch gap-2 p-3">
             <div className="min-w-0">
               <div className="truncate font-medium">{line.name}</div>
               {line.sku ? (
@@ -1093,7 +1094,7 @@ function PoOverviewLinesPreview({
                 </div>
               </div>
             </div>
-          </div>
+          </Item>
         )}
       />
       {hasMore ? (
