@@ -50,19 +50,13 @@ BEGIN
       p_method USING ERRCODE = '22023';
   END IF;
 
-  -- Permission mirrors the POS server actions (posConfirmPaymentAuth /
-  -- posUseAuth): a cash payment completes at the drawer and needs
-  -- pos:confirm_payment; a momo payment is a webhook-driven e-wallet flow that
-  -- pos:use operators may start/record. Either way the caller needs a real POS
-  -- permission, which closes the "any authenticated user" hole.
-  IF p_method = 'cash' THEN
-    IF NOT public.has_permission(p_branch_id, 'pos:confirm_payment') THEN
-      RAISE EXCEPTION 'permission denied: pos:confirm_payment' USING ERRCODE = '42501';
-    END IF;
-  ELSE
-    IF NOT public.has_permission(p_branch_id, 'pos:use') THEN
-      RAISE EXCEPTION 'permission denied: pos:use' USING ERRCODE = '42501';
-    END IF;
+  -- Require pos:use — the same gate as the sole caller (the createPayment server
+  -- action, customAuth = posUseAuth). This closes the "any authenticated user"
+  -- hole without changing the established POS authorization model. (Whether
+  -- *completing* a payment should require the tighter pos:confirm_payment is a
+  -- separate product decision; the createPayment action has always run on pos:use.)
+  IF NOT public.has_permission(p_branch_id, 'pos:use') THEN
+    RAISE EXCEPTION 'permission denied: pos:use' USING ERRCODE = '42501';
   END IF;
 
   SELECT id, total_amount, tax_amount, payment_status, branch_id, tenant_id
