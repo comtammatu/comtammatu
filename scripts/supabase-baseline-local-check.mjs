@@ -13,13 +13,16 @@ const DEFAULT_API_PORT = 55421;
 const DEFAULT_DB_PORT = 55432;
 const DEFAULT_SHADOW_PORT = 55430;
 const DEFAULT_TIMEOUT_MS = 600_000;
+const DEFAULT_BASELINE = "supabase/migrations/00000000000000_baseline.sql";
+const DEFAULT_BOOTSTRAP = "supabase/_local-dev/private-bootstrap.sql";
 
 function printHelp() {
   process.stdout.write(`Usage:
   pnpm db:baseline:local-check -- --baseline=<path> [options]
 
 Options:
-  --baseline=<path>        Required SQL baseline file to apply in scratch Supabase Local
+  --baseline=<path>        SQL baseline file to apply. Default: ${DEFAULT_BASELINE}
+  --bootstrap=<path>       Private-schema bootstrap prepended to baseline. Default: ${DEFAULT_BOOTSTRAP}
   --workdir=<path>         Scratch workdir. Default: /tmp/comtammatu-baseline-local-check-<timestamp>
   --api-port=<number>      Supabase API port. Default: ${DEFAULT_API_PORT}
   --db-port=<number>       Postgres port. Default: ${DEFAULT_DB_PORT}
@@ -34,6 +37,7 @@ function parseArgs(argv) {
   const options = {
     apiPort: DEFAULT_API_PORT,
     baseline: null,
+    bootstrap: null,
     dbPort: DEFAULT_DB_PORT,
     help: false,
     keep: false,
@@ -51,6 +55,8 @@ function parseArgs(argv) {
       options.keep = true;
     } else if (arg.startsWith("--baseline=")) {
       options.baseline = arg.slice("--baseline=".length);
+    } else if (arg.startsWith("--bootstrap=")) {
+      options.bootstrap = arg.slice("--bootstrap=".length);
     } else if (arg.startsWith("--workdir=")) {
       options.workdir = arg.slice("--workdir=".length);
     } else if (arg.startsWith("--api-port=")) {
@@ -117,7 +123,7 @@ function run(command, args, options = {}) {
   }
 }
 
-function writeScratchProject(options, baselinePath, workdir) {
+function writeScratchProject(options, baselinePath, bootstrapPath, workdir) {
   const supabaseDir = join(workdir, "supabase");
   const migrationsDir = join(supabaseDir, "migrations");
   mkdirSync(migrationsDir, { recursive: true });
@@ -143,9 +149,13 @@ site_url = "http://localhost:3000"
 `,
   );
 
+  // Prepend the private-schema bootstrap so the baseline's private.* references
+  // resolve on a from-empty replay (the --schema=public dump omits them).
+  const bootstrapSql = readFileSync(bootstrapPath, "utf8");
+  const baselineSql = readFileSync(baselinePath, "utf8");
   writeFileSync(
     join(migrationsDir, "20260526000000_live_schema_baseline.sql"),
-    readFileSync(baselinePath, "utf8"),
+    `${bootstrapSql}\n\n${baselineSql}`,
   );
 }
 
@@ -156,20 +166,21 @@ async function main() {
     return;
   }
 
-  if (!options.baseline) {
-    throw new Error("--baseline is required");
-  }
-
-  const baselinePath = resolve(options.baseline);
+  const baselinePath = resolve(options.baseline ?? DEFAULT_BASELINE);
   if (!existsSync(baselinePath)) {
     throw new Error(`Baseline file does not exist: ${baselinePath}`);
+  }
+
+  const bootstrapPath = resolve(options.bootstrap ?? DEFAULT_BOOTSTRAP);
+  if (!existsSync(bootstrapPath)) {
+    throw new Error(`Bootstrap file does not exist: ${bootstrapPath}`);
   }
 
   const workdir = resolve(
     options.workdir ?? `/tmp/comtammatu-baseline-local-check-${stamp()}`,
   );
 
-  writeScratchProject(options, baselinePath, workdir);
+  writeScratchProject(options, baselinePath, bootstrapPath, workdir);
 
   let startError = null;
   try {

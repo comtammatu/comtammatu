@@ -42,6 +42,9 @@ apps/web/tmp/
 # supabase
 supabase/.temp/
 supabase/.branches/
+# Local dev seed carries a seed password — never commit. The private-bootstrap
+# companion in the same dir IS tracked (schema only, needed by db:baseline:local-check).
+supabase/_local-dev/dev-tenant-seed.sql
 
 # MCP config (contains tokens)
 .mcp.json
