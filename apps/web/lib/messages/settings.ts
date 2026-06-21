@@ -438,6 +438,9 @@ export const settings = {
     deactivate: "Tạm ngừng",
     activate: "Kích hoạt",
     networkGateway: "Cổng mạng POS/KDS",
+    openPos: "Mở POS",
+    openKds: "Mở KDS",
+    openRunner: "Mở màn gọi số",
   },
   posSessions: {
     branchSharedSession: "Ca chung của chi nhánh",

@@ -117,17 +117,17 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   pos: {
     path: "/br/*/pos",
-    allowedRoles: ["cashier", "waiter", "branch_manager"],
+    allowedRoles: ["owner", "cashier", "waiter", "branch_manager"],
     label: getModuleLabelVi("pos"),
   },
   kds: {
     path: "/br/*/kds",
-    allowedRoles: ["chef", "branch_manager"],
+    allowedRoles: ["owner", "chef", "branch_manager"],
     label: getModuleLabelVi("kds"),
   },
   runner: {
     path: "/br/*/runner",
-    allowedRoles: ["cashier", "waiter", "chef", "branch_manager"],
+    allowedRoles: ["owner", "cashier", "waiter", "chef", "branch_manager"],
     label: getModuleLabelVi("runner"),
   },
   branch_dashboard: {

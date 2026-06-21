@@ -385,6 +385,13 @@ test("resolvePostLoginRedirect → branch_manager on own POS → allowed", () =>
   );
 });
 
+test("resolvePostLoginRedirect → owner cover-ca POS/KDS/Runner returnTo resolves cross-branch", () => {
+  // Owner has branch_id null and may cover a shift on any branch surface.
+  for (const path of ["/br/7/pos", "/br/7/kds", "/br/7/runner"]) {
+    assert.equal(resolvePostLoginRedirect(makeClaims("owner"), path), path);
+  }
+});
+
 test("resolvePostLoginRedirect → branch_manager can enter HR shifts but not payroll", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/hr"),
@@ -572,6 +579,34 @@ test("canAccess → checkout approvals are manager-tier, not whole employee port
     "office",
   ] as const) {
     assert.equal(canAccess(role, "employee_checkout_approvals"), false);
+  }
+});
+
+test("canAccess → owner can cover-ca POS/KDS/Runner; floor roles unchanged", () => {
+  for (const moduleKey of ["pos", "kds", "runner"] as const) {
+    assert.equal(canAccess("owner", moduleKey), true);
+  }
+  // POS floor roles unchanged.
+  for (const role of ["cashier", "waiter", "branch_manager"] as const) {
+    assert.equal(canAccess(role, "pos"), true);
+  }
+  assert.equal(canAccess("chef", "pos"), false);
+  // KDS floor roles unchanged.
+  for (const role of ["chef", "branch_manager"] as const) {
+    assert.equal(canAccess(role, "kds"), true);
+  }
+  for (const role of ["cashier", "waiter"] as const) {
+    assert.equal(canAccess(role, "kds"), false);
+  }
+  // No back-office role gained POS/KDS access.
+  for (const role of [
+    "warehouse_manager",
+    "production_manager",
+    "office",
+  ] as const) {
+    assert.equal(canAccess(role, "pos"), false);
+    assert.equal(canAccess(role, "kds"), false);
+    assert.equal(canAccess(role, "runner"), false);
   }
 });
 

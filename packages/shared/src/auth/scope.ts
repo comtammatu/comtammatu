@@ -180,11 +180,10 @@ export function resolvePostLoginRedirect(
     const branchMatch = targetUrl.pathname.match(/^\/br\/(\d+)\//);
     const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
 
-    const allowCrossBranchBranchSurface =
-      (moduleKey === "branch_dashboard" ||
-        moduleKey === "branch_settings" ||
-        moduleKey === "branch_menu_limits") &&
-      claims.user_role === "owner";
+    // Owner has branch_id null and may resolve a returnTo into any branch
+    // surface (branch command/settings/menu-limits plus pos/kds/runner for
+    // cover-ca). The proxy still enforces the branch-active check at runtime.
+    const allowCrossBranchBranchSurface = claims.user_role === "owner";
 
     if (
       routeBranchId === null ||
