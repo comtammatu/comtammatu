@@ -70,13 +70,42 @@ async function loadChecklistTemplateBranch(
   return data?.branch_id;
 }
 
+// Compensation and government-ID PII (base_salary, id_number, bank_account)
+// is owner-only. branch_manager reads a column subset without it: the
+// branch_manager HR list/attendance UI never renders these fields, and the
+// create/edit path is gated to owner. Narrowing the column list keeps the PII
+// out of the branch_manager response payload entirely, not just out of the
+// rendered table.
+const EMPLOYEE_SELECT_OWNER = `
+      id, employee_code, id_number, bank_account, bank_name,
+      base_salary, start_date, contract_type, dependents_count, is_active,
+      default_checklist_template_id,
+      profiles!inner (
+        id, full_name, phone, branch_id,
+        positions ( code, label_vi, default_checklist_template_id ),
+        branches ( name )
+      )
+    `;
+
+const EMPLOYEE_SELECT_BRANCH_MANAGER = `
+      id, employee_code, bank_name,
+      start_date, contract_type, dependents_count, is_active,
+      default_checklist_template_id,
+      profiles!inner (
+        id, full_name, phone, branch_id,
+        positions ( code, label_vi, default_checklist_template_id ),
+        branches ( name )
+      )
+    `;
+
 export async function fetchEmployees(): Promise<ActionResult> {
   const baseCtx = await getAuthContext(HR_EMPLOYEE_VIEW_ROLES);
   if (!baseCtx) return { success: false, error: "Không có quyền" };
 
   const { claims, user } = baseCtx;
+  const isBranchManager = claims.user_role === "branch_manager";
   const canViewEmployeesWithPermission =
-    claims.user_role === "branch_manager" ||
+    isBranchManager ||
     (await Promise.all([
       probePermission(baseCtx, PERMISSION_KEYS.STAFF_MANAGE),
       probePermission(baseCtx, PERMISSION_KEYS.HR_VIEW_EMPLOYEE),
@@ -86,7 +115,7 @@ export async function fetchEmployees(): Promise<ActionResult> {
   }
 
   let branchManagerBranchId = claims.branch_id;
-  if (claims.user_role === "branch_manager" && branchManagerBranchId == null) {
+  if (isBranchManager && branchManagerBranchId == null) {
     const { data: profileBranch } = await baseCtx.supabase
       .from("profiles")
       .select("branch_id")
@@ -100,30 +129,20 @@ export async function fetchEmployees(): Promise<ActionResult> {
   // 1) supports older role-template states where `hr:view_employee`
   //    has not been backfilled yet,
   // 2) keeps tenant/branch scoping enforced in code for explicit safety.
-  const employeeClient =
-    claims.user_role === "branch_manager"
-      ? createServiceClient()
-      : baseCtx.supabase;
+  const employeeClient = isBranchManager
+    ? createServiceClient()
+    : baseCtx.supabase;
 
   let query = employeeClient
     .from("employees")
     .select(
-      `
-      id, employee_code, id_number, bank_account, bank_name,
-      base_salary, start_date, contract_type, dependents_count, is_active,
-      default_checklist_template_id,
-      profiles!inner (
-        id, full_name, phone, branch_id,
-        positions ( code, label_vi, default_checklist_template_id ),
-        branches ( name )
-      )
-    `,
-      )
+      isBranchManager ? EMPLOYEE_SELECT_BRANCH_MANAGER : EMPLOYEE_SELECT_OWNER,
+    )
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false })
     .limit(200);
 
-  if (claims.user_role === "branch_manager") {
+  if (isBranchManager) {
     if (branchManagerBranchId == null) {
       return { success: true, data: [] };
     }
