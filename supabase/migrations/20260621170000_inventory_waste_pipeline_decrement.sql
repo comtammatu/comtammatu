@@ -72,6 +72,19 @@ BEGIN
     UPDATE public.stock_issue_items SET unit_cost = v_wac
      WHERE id = v_item.id AND tenant_id = v_tenant;
 
+    -- The unit_cost UPDATE re-fires the BEFORE waste-tier trigger, which can flip
+    -- the line to approval_required when the locked WAC is higher than the cost it
+    -- was classified with (e.g. a low/stale submitted unit_cost). Posting it here
+    -- would bypass approve_waste. Allow it only when approval was actually granted
+    -- (approve_waste sets approval_status='approved' before calling this).
+    IF v_issue.approval_status <> 'approved' THEN
+      PERFORM 1 FROM public.stock_issue_items
+       WHERE id = v_item.id AND tenant_id = v_tenant AND approval_required = TRUE;
+      IF FOUND THEN
+        RAISE EXCEPTION 'writeoff_requires_approval_for_%', v_item.ingredient_id USING ERRCODE = '42501';
+      END IF;
+    END IF;
+
     INSERT INTO public.stock_movements (
       tenant_id, branch_id, ingredient_id, type, movement_subtype,
       quantity_change, unit_cost, reason, created_by, issue_id, location_id
@@ -221,11 +234,15 @@ BEGIN
       JOIN public.goods_received_notes g ON g.id = gi.grn_id AND g.tenant_id = gi.tenant_id
      WHERE gi.id = p_grn_item_id AND gi.tenant_id = v_tenant
        AND g.branch_id = p_branch_id AND gi.ingredient_id = p_ingredient_id;
-    IF FOUND THEN
-      v_source_ref := v_source_ref || jsonb_build_object(
-        'grn_item_id', v_grn.id, 'grn_id', v_grn.grn_id,
-        'batch_number', v_grn.batch_number, 'expiry_date', v_grn.expiry_date);
+    -- A supplied lot id must resolve, or the alert would never clear (no
+    -- grn_item_id recorded in source_ref). Fail loud instead of silently
+    -- decrementing against a stale/mismatched lot reference.
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'grn_item_not_found' USING ERRCODE = '22023';
     END IF;
+    v_source_ref := v_source_ref || jsonb_build_object(
+      'grn_item_id', v_grn.id, 'grn_id', v_grn.grn_id,
+      'batch_number', v_grn.batch_number, 'expiry_date', v_grn.expiry_date);
   END IF;
 
   v_shift_key := public.inventory_shift_key(p_branch_id, now());
