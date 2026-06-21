@@ -56,7 +56,6 @@ export default async function PayslipPage(props: {
     <EmployeePage
       title={copy.title}
       description={copy.description}
-      badge={{ children: `${copy.yearBadge} ${year}`, variant: "outline" }}
     >
       <YearPicker selectedYear={year} currentYear={currentYear} />
       <PayslipClient entries={(entries ?? []) as unknown as PayslipEntry[]} />

@@ -186,9 +186,6 @@ function AppendDraftPaneComponent({
               {messages.pos.appendDraft.summaryLabel}
             </p>
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <Badge variant="warning">
-                {messages.pos.appendDraft.draftState}
-              </Badge>
               <Badge variant="outline">
                 {messages.pos.appendDraft.itemCount(quantity)}
               </Badge>

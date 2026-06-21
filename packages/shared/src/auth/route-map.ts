@@ -262,8 +262,7 @@ export function resolveRouteFamilyContract(
 
   if (
     isPublicAppPath(normalizedPathname) ||
-    normalizedPathname === "/login" ||
-    normalizedPathname === "/beta/login"
+    normalizedPathname === "/login"
   ) {
     return publicFamily;
   }

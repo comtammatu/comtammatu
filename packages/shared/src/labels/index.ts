@@ -1,14 +1,16 @@
 export type { ModuleLabelKey, SiteKind } from "./vi";
-export { LEGAL_FIXED_VI, RECEIPT_INVARIANT_VI } from "./legal-fixed";
-export type { LegalFixedString, ReceiptInvariantString } from "./legal-fixed";
+export { LEGAL_FIXED_VI } from "./legal-fixed";
+export type { LegalFixedString } from "./legal-fixed";
 export {
   APP_COPY_VI,
   ACTIVE_STATE_LABELS_VI,
   ATTENDANCE_STATUS_LABELS_VI,
   LEAVE_REQUEST_STATUS_LABELS_VI,
+  LEAVE_TYPE_LABELS_VI,
   MODULE_LABELS_VI,
   NAV_GROUP_LABELS_VI,
   PAYROLL_PERIOD_STATUS_LABELS_VI,
+  CONSUMPTION_REPORT_STATUS_LABELS_VI,
   getModuleLabelVi,
   getInventorySiteKindLabelVi,
   getInventorySiteLabelVi,

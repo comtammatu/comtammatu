@@ -8,10 +8,10 @@ import {
   ListChecks as IconListChecks,
   UserCircle as IconUserCircle,
 } from "lucide-react";
-import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { messages } from "@lib/messages";
 import { isNavItemActive } from "@/lib/shell-primitives";
+import { AppBottomNav } from "@/components/app-bottom-nav";
 
 const copy = messages.employee.nav;
 
@@ -41,36 +41,15 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 px-3 pt-2 shadow-sm chrome-safe-pb backdrop-blur lg:hidden print:hidden"
-      aria-label={copy.ariaLabel}
-    >
-      <div className="no-scrollbar mx-auto flex max-w-lg items-stretch gap-1 overflow-x-auto">
-        {NAV_ITEMS.map((item) => {
-          const active = isNavItemActive(item, pathname);
-          const Icon = item.icon;
-          return (
-            <Button
-              key={item.href}
-              asChild
-              variant={active ? "secondary" : "ghost"}
-              size="touch"
-              data-active={active ? "true" : undefined}
-              className={cn(
-                "min-w-0 flex-1 flex-col gap-1 px-1 text-2xs transition-[transform,background-color,color,box-shadow] duration-150 active:translate-y-px",
-                active &&
-                  "shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150",
-              )}
-            >
-              <Link href={item.href} aria-current={active ? "page" : undefined}>
-                <Icon data-icon="inline-start" strokeWidth={active ? 2.4 : 2} />
-                <span>{item.label}</span>
-              </Link>
-            </Button>
-          );
-        })}
-      </div>
-    </nav>
+    <AppBottomNav
+      ariaLabel={copy.ariaLabel}
+      items={NAV_ITEMS.map((item) => ({
+        href: item.href,
+        label: item.label,
+        icon: item.icon,
+        active: isNavItemActive(item, pathname),
+      }))}
+    />
   );
 }
 

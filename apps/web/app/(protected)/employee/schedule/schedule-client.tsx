@@ -40,16 +40,13 @@ import {
   shiftVNMonth,
 } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
-import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
+import {
+  getStatusBadgeMeta,
+  getStatusDotClassName,
+  StatusBadge,
+} from "@/components/status-badge";
 
 const copy = messages.employee.schedule;
-
-const ATTENDANCE_DOT_CLASS_NAMES: Record<string, string> = {
-  present: "bg-success",
-  late: "bg-warning",
-  absent: "bg-destructive",
-  half_day: "bg-info",
-};
 
 interface CalendarCell {
   dateStr: string | null;
@@ -159,7 +156,7 @@ function getAttendanceLabel(attendance: ScheduleAttendance): string {
 }
 
 function getAttendanceDotClassName(attendance: ScheduleAttendance): string {
-  return ATTENDANCE_DOT_CLASS_NAMES[attendance.status] ?? "bg-muted-foreground";
+  return getStatusDotClassName("attendance", attendance.status);
 }
 
 type LeaveDayStatus = ScheduleLeave["status"];
@@ -337,10 +334,9 @@ function CalendarCellContent({
         if (cell.dateStr) onSelectDate(cell.dateStr);
       }}
       className={cn(
-        "flex aspect-square w-full flex-col gap-1 rounded-md bg-background p-1 text-left transition-[background-color,box-shadow,transform] duration-150 active:translate-y-px motion-safe:hover:-translate-y-px sm:aspect-video sm:p-2",
+        "flex aspect-square w-full flex-col gap-1 rounded-md bg-background p-1 text-left transition-[background-color,box-shadow,transform] duration-150 sm:aspect-video sm:p-2",
         cell.isToday && "bg-primary/5 ring-1 ring-primary/30",
-        selected &&
-          "bg-info/10 shadow-sm ring-2 ring-info/40 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150",
+        selected && "bg-info/10 shadow-sm ring-2 ring-info/40",
       )}
     >
       <div className="flex items-start justify-between gap-1">
@@ -603,7 +599,7 @@ export function ScheduleClient({
         <Button
           variant="outline"
           size="touch"
-          className="w-12 px-0 transition-transform duration-150 active:translate-y-px"
+          className="w-12 px-0"
           onClick={goToPrevMonth}
           disabled={isPending}
           aria-label={copy.prevMonth}
@@ -611,7 +607,7 @@ export function ScheduleClient({
           <IconChevronLeft />
         </Button>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
-          <span className="font-heading min-w-0 truncate text-sm font-semibold tabular-nums sm:text-base">
+          <span className="font-heading min-w-0 truncate text-sm font-semibold sm:text-base">
             {formatMonthTitle(monthStart)}
           </span>
           {!isCurrentMonth ? (
@@ -619,7 +615,7 @@ export function ScheduleClient({
               type="button"
               variant="link"
               size="sm"
-              className="h-auto shrink-0 px-0 text-xs"
+              className="shrink-0 px-0 text-xs"
               onClick={goToCurrentMonth}
               disabled={isPending}
             >
@@ -630,7 +626,7 @@ export function ScheduleClient({
         <Button
           variant="outline"
           size="touch"
-          className="w-12 px-0 transition-transform duration-150 active:translate-y-px"
+          className="w-12 px-0"
           onClick={goToNextMonth}
           disabled={isPending}
           aria-label={copy.nextMonth}

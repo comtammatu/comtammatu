@@ -40,20 +40,3 @@ export const LEGAL_FIXED_VI = [
   "Bằng chữ",
 ] as const;
 export type LegalFixedString = (typeof LEGAL_FIXED_VI)[number];
-
-// POS receipt invariants — rendered on bill-receipt-summary printed receipts.
-// Not strictly law-mandated but changing them requires ops/legal review per
-// Phase 2 QA gates.
-// glossary §"In ấn": receipt = "Phiếu tạm tính" canonical (POS print, no CQT code).
-export const RECEIPT_INVARIANT_VI = [
-  "Phiếu tạm tính",
-  "Tiền mặt",
-  "Chuyển khoản",
-  "Tổng cộng",
-  "Khách trả",
-  "Tiền thừa",
-  "Tại bàn",
-  "Mang về",
-  "Cảm ơn quý khách",
-] as const;
-export type ReceiptInvariantString = (typeof RECEIPT_INVARIANT_VI)[number];

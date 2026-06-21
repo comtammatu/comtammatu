@@ -25,7 +25,6 @@ export {
 } from "./document-render";
 export {
   encodeOpsToEscpos,
-  renderDocumentToEscpos,
   renderPayloadBitmap,
 } from "./escpos-encode";
 export {
@@ -38,9 +37,7 @@ export {
   lineSpacingDefault,
   lineSpacingZero,
   renderLineRaster,
-  renderMixedRow,
   type RenderOpts,
-  type Segment,
 } from "./render-bitmap";
 export {
   extractOrderSequence,

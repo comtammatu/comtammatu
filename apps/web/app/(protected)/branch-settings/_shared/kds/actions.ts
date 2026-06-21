@@ -8,11 +8,8 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { TablesUpdate } from "@comtammatu/database/types";
-import {
-  withAction,
-  withFormAction,
-  type ActionContext,
-} from "@/_lib/with-action";
+import { withAction, withFormAction } from "@/_lib/with-action";
+import { canOperateBranch, verifyBranchOwnership } from "../branch-guards";
 
 function revalidateKdsSettings(branchId: number) {
   revalidatePath(`/br/${String(branchId)}/settings/kds`);
@@ -21,28 +18,6 @@ function revalidateKdsSettings(branchId: number) {
 /* ─── Helpers ─── */
 
 const SETTINGS_ROLES: readonly StaffRole[] = BRANCH_FLOOR_SETTINGS_ROLES;
-
-async function verifyBranchOwnership(
-  supabase: ActionContext["supabase"],
-  branchId: number,
-  tenantId: number,
-): Promise<boolean> {
-  const { data } = await supabase
-    .from("branches")
-    .select("id")
-    .eq("id", branchId)
-    .eq("tenant_id", tenantId)
-    .single();
-  return !!data;
-}
-
-function canOperateBranch(
-  claimsBranchId: number | null,
-  targetBranchId: number,
-): boolean {
-  if (claimsBranchId === null) return true;
-  return claimsBranchId === targetBranchId;
-}
 
 function mapStationDbError(code: string | undefined): string {
   if (code === "23505") return "Tên trạm KDS đã tồn tại";

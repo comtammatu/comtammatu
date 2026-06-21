@@ -1,5 +1,6 @@
 import {
   ATTENDANCE_STATUS_LABELS_VI,
+  CONSUMPTION_REPORT_STATUS_LABELS_VI,
   LEAVE_REQUEST_STATUS_LABELS_VI,
   ORDER_ITEM_STATUS_LABELS_VI,
   ORDER_PAYMENT_STATUS_LABELS_VI,
@@ -19,6 +20,7 @@ type BadgeVariant = NonNullable<BadgeProps["variant"]>;
 type DomainConfig = {
   labels: Record<string, string>;
   variants: Record<string, BadgeVariant>;
+  dots?: Record<string, string>;
 };
 
 const STATUS_DOMAINS = {
@@ -122,6 +124,12 @@ const STATUS_DOMAINS = {
       in_shift: "secondary",
       stale_open: "destructive",
     },
+    dots: {
+      present: "bg-success",
+      late: "bg-warning",
+      absent: "bg-destructive",
+      half_day: "bg-info",
+    },
   },
   "leave-request": {
     labels: LEAVE_REQUEST_STATUS_LABELS_VI,
@@ -141,6 +149,17 @@ const STATUS_DOMAINS = {
       paid: "default",
     },
   },
+  "consumption-report": {
+    labels: CONSUMPTION_REPORT_STATUS_LABELS_VI,
+    variants: {
+      draft: "secondary",
+      submitted: "warning",
+      needs_changes: "destructive",
+      approved: "success",
+      applied: "success",
+      cancelled: "secondary",
+    },
+  },
 } satisfies Record<string, DomainConfig>;
 
 export type StatusDomain = keyof typeof STATUS_DOMAINS;
@@ -154,6 +173,14 @@ export function getStatusBadgeMeta(
     label: config.labels[value] ?? value,
     variant: config.variants[value] ?? "outline",
   };
+}
+
+export function getStatusDotClassName(
+  domain: StatusDomain,
+  value: string,
+): string {
+  const config: DomainConfig = STATUS_DOMAINS[domain];
+  return config.dots?.[value] ?? "bg-muted-foreground";
 }
 
 export function StatusBadge({

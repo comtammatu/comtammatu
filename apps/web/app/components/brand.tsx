@@ -1,4 +1,5 @@
 import Image, { type ImageProps } from "next/image";
+import type { ReactNode } from "react";
 import { cn } from "@comtammatu/ui";
 
 export const BRAND_NAME = "Cơm Tấm Má Tư";
@@ -77,6 +78,42 @@ export function BrandMark({
       aria-hidden={decorative ? true : imageProps["aria-hidden"]}
       className={cn("object-contain", markSizeClass[size], className)}
     />
+  );
+}
+
+type BrandLogoBoxTone = "card" | "sidebar" | "sidebar-primary";
+
+const BRAND_LOGO_BOX_TONE: Record<BrandLogoBoxTone, string> = {
+  card: "border bg-background",
+  sidebar: "border bg-sidebar-accent",
+  "sidebar-primary": "bg-sidebar-primary text-sidebar-primary-foreground",
+};
+
+/**
+ * Canonical header brand-lockup logo box: the size-10 rounded-md container that
+ * holds a `BrandMark` (or a fallback icon) in app chrome headers. Single-sourced
+ * here so the Management sidebar header and the Operations (employee/PWA) header
+ * stop hand-rolling the same box (design-system.md § B header lockup).
+ */
+export function BrandLogoBox({
+  tone = "card",
+  className,
+  children,
+}: {
+  tone?: BrandLogoBoxTone;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className={cn(
+        "flex size-10 shrink-0 items-center justify-center rounded-md p-1",
+        BRAND_LOGO_BOX_TONE[tone],
+        className,
+      )}
+    >
+      {children}
+    </span>
   );
 }
 

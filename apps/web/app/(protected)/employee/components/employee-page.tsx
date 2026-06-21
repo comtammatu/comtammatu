@@ -69,7 +69,7 @@ export function EmployeePage({
   children,
 }: EmployeePageProps) {
   return (
-    <div className="flex w-full flex-col gap-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-200">
+    <div className="flex w-full flex-col gap-3">
       <AppPageHeader
         title={title}
         description={description}
@@ -128,10 +128,7 @@ export function EmployeePanel({
           : undefined
       }
       action={action}
-      className={cn(
-        "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200",
-        className,
-      )}
+      className={className}
       contentClassName={contentClassName}
       size={size}
       tone={toneSectionVariant[tone]}
@@ -157,7 +154,7 @@ export function EmployeeFrame({
     <div
       data-employee-frame
       className={cn(
-        "rounded-md border bg-card motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200",
+        "rounded-md border bg-card",
         pad === "sm" && "p-3",
         className,
       )}
@@ -226,7 +223,7 @@ export function EmployeeActionGrid({
     <div
       data-employee-action-grid
       className={cn(
-        "grid gap-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200",
+        "grid gap-2",
         columns === 2 && "sm:grid-cols-2",
         className,
       )}
@@ -273,7 +270,7 @@ export function EmployeeInlineState({
       variant={tone === "default" ? "muted" : "outline"}
       size="sm"
       className={cn(
-        "items-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200",
+        "items-center",
         inlineStateToneClassName[tone],
         className,
       )}
@@ -377,7 +374,7 @@ export function EmployeeStatusStrip({
           key={item.label}
           variant="outline"
           size="xs"
-          className="min-w-0 bg-background transition-[background-color,border-color,box-shadow] duration-150 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-200"
+          className="min-w-0 bg-background transition-[background-color,border-color,box-shadow] duration-150"
         >
           <ItemContent className="min-w-0 gap-1">
             <ItemDescription className="truncate text-2xs font-medium leading-4">
@@ -486,7 +483,7 @@ function EmployeeActionItem({
       variant="outline"
       size={size}
       className={cn(
-        "group/employee-action min-h-14 items-start bg-card transition-[transform,background-color,border-color,box-shadow] duration-150 hover:bg-muted/50 active:translate-y-px motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200 motion-safe:hover:-translate-y-px hover:shadow-sm sm:items-center",
+        "group/employee-action min-h-14 items-start bg-card transition-[background-color,border-color,box-shadow] duration-150 hover:bg-muted/50 hover:shadow-sm sm:items-center",
         size === "sm" && "min-h-12",
       )}
     >
@@ -510,7 +507,7 @@ function EmployeeActionItem({
           ) : null}
         </ItemContent>
         <ItemActions className="self-center text-muted-foreground">
-          <IconChevronRight className="transition-transform duration-150 group-active/employee-action:translate-x-0.5" />
+          <IconChevronRight />
         </ItemActions>
       </Link>
     </Item>

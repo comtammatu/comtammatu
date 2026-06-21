@@ -163,7 +163,6 @@ Rules:
 - Use semantic Tailwind token classes (`bg-background`, `text-muted-foreground`, `border-border`, `bg-success`, etc.).
 - Use `BrandMark` / `BrandLockup` for web runtime logo rendering; do not reference `/brand/logo-*` directly from route components.
 - Purpose-specific mascot assets may be used as decorative public images in customer-facing empty or splash states; they must not replace core workflow content.
-- Use `BrandGlyph` (`@comtammatu/ui/components/brand-glyph`) for the five Concept-01 sub-symbols (`hat-gao`, `to-com`, `dia-tron`, `mai-nha`, `dua`). They are brand DECORATION (packaging, storefront, empty-state accents), never an interactive affordance — `lucide-react` remains the only UI-icon source. It inherits `currentColor`; pass `tone` to paint the glyph's semantic brand color (terracotta=`text-primary`, navy=`text-foreground`, green=`text-success`, gold=`text-warning`). Do not give it a raw color.
 - The three brand patterns (`ke-caro`, `hat-gao`, `vong-to`) ship as tileable SVG under `/brand/patterns` with the `brand-pattern-caro` / `brand-pattern-hat-gao` / `brand-pattern-vong-to` and `brand-strip` utilities in `globals.css`. Use them only as decorative footer strips, packaging trim, or section separators — never as a background behind body text.
 - Do not hardcode raw palette classes for status meaning (`amber`, `emerald`, `zinc`, etc.) when a semantic token exists.
 - Do not add arbitrary dimensions such as `text-[10px]`, `w-[200px]`, or `h-[3rem]`.

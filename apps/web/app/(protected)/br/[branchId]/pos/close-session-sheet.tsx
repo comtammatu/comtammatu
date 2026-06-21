@@ -22,11 +22,8 @@ import { Progress } from "@comtammatu/ui/components/progress";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppSection } from "@/components/surface";
-import {
-  ArrowLeft as IconArrowLeft,
-  ArrowRight as IconArrowRight,
-  CircleCheck as IconCircleCheck,
-} from "lucide-react";
+import { CircleCheck as IconCircleCheck } from "lucide-react";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { closePosSession } from "./actions";
 import {
   DenominationInput,
@@ -86,7 +83,19 @@ export function CloseSessionSheet({
     setSummary(null);
   }, []);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
+    // Closing a shift commits immediately and cannot be reopened (D8). The
+    // confirm gate is the only safe-recovery path required by ui.md; cancel
+    // returns to counting, which is truthful here (pre-commit).
+    const ok = await confirm({
+      title: "Chốt ca?",
+      description:
+        "Sau khi chốt, ca đóng ngay và không thể mở lại. Nếu lệch quỹ vượt ngưỡng, quản lý sẽ nhận cảnh báo tự động.",
+      details: [{ label: "Tiền mặt đã đếm", value: formatVND(totalCounted) }],
+      confirmText: "Chốt ca",
+      cancelText: "Đếm lại",
+    });
+    if (!ok) return;
     startTransition(async () => {
       const result = await closePosSession(
         sessionId,
@@ -99,6 +108,7 @@ export function CloseSessionSheet({
         };
         setSummary(payload);
         setStep("reconcile");
+        toast.success("Chốt ca thành công");
         // D8: a variance breach is only a warning. The server already
         // inserted the manager notification via trigger; the UI just
         // informs the cashier.
@@ -118,12 +128,13 @@ export function CloseSessionSheet({
         return;
       }
 
-      toast.error(result.error ?? "Không thể đóng ca");
+      toast.error(result.error ?? "Không thể chốt ca");
     });
   }, [note, sessionId, totalCounted]);
 
+  // Shift already committed at step 1; this only dismisses the read-only
+  // reconciliation summary and returns to the staff page.
   const handleConfirm = useCallback(() => {
-    toast.success("Đóng ca thành công");
     onOpenChange(false);
     reset();
     router.refresh();
@@ -155,7 +166,7 @@ export function CloseSessionSheet({
       >
         <SheetHeader>
           <SheetTitle>
-            Đóng ca · {step === "count" ? "Đếm tiền mặt" : "Đối soát"}
+            Chốt ca · {step === "count" ? "Đếm tiền mặt" : "Đối soát"}
           </SheetTitle>
           <div className="mt-2">
             <Progress value={step === "count" ? 50 : 100} className="h-2" />
@@ -259,8 +270,8 @@ export function CloseSessionSheet({
 
                 <Alert>
                   <AlertDescription>
-                    Ca đã được ghi lại trong hệ thống. Nhấn xác nhận để đóng
-                    sheet và quay về trang nhân viên.
+                    Ca đã chốt và ghi lại trong hệ thống. Nhấn Xong để quay về
+                    trang nhân viên.
                   </AlertDescription>
                 </Alert>
 
@@ -297,41 +308,28 @@ export function CloseSessionSheet({
                   size="touch"
                   className="flex-1"
                   disabled={isPending}
-                  onClick={handleSubmit}
+                  onClick={() => void handleSubmit()}
                 >
                   {isPending ? (
                     <>
-                      <Spinner data-icon="inline-start" /> Đang gửi
+                      <Spinner data-icon="inline-start" /> Đang chốt ca
                     </>
                   ) : (
-                    <>
-                      Đối soát <IconArrowRight data-icon="inline-end" />
-                    </>
+                    "Chốt ca"
                   )}
                 </Button>
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setStep("count")}
-                disabled={isPending}
-              >
-                <IconArrowLeft data-icon="inline-start" />
-                Đếm lại
-              </Button>
-              <Button
-                type="button"
-                size="touch"
-                className="flex-1"
-                onClick={handleConfirm}
-              >
-                <IconCircleCheck data-icon="inline-start" />
-                Xác nhận & đóng ca
-              </Button>
-            </div>
+            <Button
+              type="button"
+              size="touch"
+              className="w-full"
+              onClick={handleConfirm}
+            >
+              <IconCircleCheck data-icon="inline-start" />
+              Xong
+            </Button>
           )}
         </div>
       </SheetContent>

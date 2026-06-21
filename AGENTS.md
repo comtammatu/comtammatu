@@ -46,7 +46,12 @@ it elsewhere — point here.
 - **Agent-to-agent text → English.** Subagent prompts, T3/T2 debate transcripts, multi-agent handoffs, structured tool I/O, and any reasoning exchanged between agents are English. English keeps the shared context window dense and reads identically across every runtime (Claude Code, Codex).
 - **Code, identifiers, comments, and commit subjects → English** (see Critical Constraints). Comments state only non-obvious constraints.
 - **Owner-facing chat replies → Vietnamese.** Answer the owner in Vietnamese — concise but complete (gọn gàng, không bỏ chi tiết cần truyền đạt). Keep code, symbols, commands, file paths, identifiers, and log/error excerpts verbatim; never translate them.
-- **Persisted docs keep their established language.** Owner/human planning and domain docs stay Vietnamese where already written (`docs/plan/decisions.md`, `tasks/todo.md`, `docs/ref/`, business/legal docs). Agent-internal staging stays English (`docs/worklog/` debate transcripts, `tasks/lessons.md`, `tasks/regressions.md`). Match the file you are editing — never flip an existing file's language as a side effect.
+- **Persisted docs follow a declared per-surface default; never flip an existing file's language as a side effect.** Language is assigned by purpose. Each surface has a default for NEW files; existing files are grandfathered — if a file already differs from its surface default, keep it.
+  - **Vietnamese** (owner/human planning, domain, operator-facing): `docs/ref/`, `docs/user-guides/`, `docs/plan/` (incl. `docs/plan/decisions.md`), `docs/architecture/`, `docs/README.md`, business/legal docs.
+  - **English** (agent rules, technical contracts, agent-internal staging): `docs/agent/rules/`, `docs/modules/`, `docs/spec/`, `docs/plan/adr/`, `docs/worklog/`, `docs/CODEBASE_MAP.md`, `tasks/` (incl. `tasks/todo.md`, `tasks/lessons.md`, `tasks/regressions.md`), and root `AGENTS.md` / `CLAUDE.md`.
+  - **English default, Vietnamese allowed for operator-facing checklists:** `docs/runbooks/`.
+  - Root `README.md` is intentionally bilingual: Vietnamese mission/overview + English tech stack.
+- **One prose language per doc.** Within a single doc, explanatory prose stays in one language. Vietnamese domain/legal terms, UI-copy strings, role labels, env vars, and code identifiers are kept verbatim inside prose of either language and do NOT count as mixing — an English doc carrying verbatim Vietnamese domain nouns (e.g. HĐĐT, HKD, "doanh thu") is a correct English doc, not a half-translated one.
 
 ## Critical Constraints
 

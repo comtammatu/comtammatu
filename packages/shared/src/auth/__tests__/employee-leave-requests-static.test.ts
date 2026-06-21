@@ -110,7 +110,7 @@ test("Cổng nhân viên exposes leave request self-service from Profile", () =>
     "submitLeaveRequest",
     "cancelLeaveRequest",
     "Textarea",
-    "Nghỉ không lương",
+    "LEAVE_TYPE_LABELS_VI",
     'status === "pending"',
   ]) {
     assert.ok(client.includes(expected), `expected client ${expected}`);

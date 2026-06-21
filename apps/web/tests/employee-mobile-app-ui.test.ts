@@ -43,6 +43,7 @@ const employeeHeaderSource = readWebSource(
 const employeeBottomNavSource = readWebSource(
   "app/(protected)/employee/components/bottom-nav.tsx",
 );
+const appBottomNavSource = readWebSource("app/components/app-bottom-nav.tsx");
 const employeePageShellSource = readWebSource(
   "app/(protected)/employee/components/employee-page.tsx",
 );
@@ -119,18 +120,23 @@ test("Employee shell is phone-first and touch-safe", () => {
   );
   assert.match(
     employeeBottomNavSource,
-    /size="touch"[\s\S]*active:translate-y-px/,
-    "Bottom navigation should provide stable native-like touch feedback",
+    /AppBottomNav/,
+    "Employee bottom nav must delegate to the shared AppBottomNav primitive",
   );
   assert.match(
-    employeeBottomNavSource,
-    /data-active=\{active \? "true" : undefined\}/,
-    "Bottom navigation should expose a clear active state for app-like feedback",
+    appBottomNavSource,
+    /size="touch"/,
+    "AppBottomNav items must stay touch-sized",
   );
   assert.match(
-    employeeBottomNavSource,
-    /active &&[\s\S]*motion-safe:zoom-in-95/,
-    "Bottom navigation active tab should use motion-safe feedback only",
+    appBottomNavSource,
+    /data-active=\{item\.active \? "true" : undefined\}/,
+    "AppBottomNav must expose a clear active state for app-like feedback",
+  );
+  assert.doesNotMatch(
+    appBottomNavSource,
+    /active:translate-y-px|motion-safe:/,
+    "AppBottomNav must not hand-roll motion tokens (design-system §313: animate-in only via Radix primitives)",
   );
 });
 
@@ -178,20 +184,20 @@ test("Employee PWA shell explains install and offline state without persisted wo
 });
 
 test("Employee workflow surfaces keep one strong mobile action and list feedback", () => {
-  assert.match(
+  assert.doesNotMatch(
     employeePageShellSource,
-    /motion-safe:animate-in/,
-    "Employee route pages should use motion-safe entry animation only",
+    /motion-safe:|animate-in/,
+    "Employee shell must not hand-roll motion (design-system §313: animate-in only via Radix primitives)",
   );
   assert.match(
     employeePageShellSource,
-    /EmployeePanel[\s\S]*className=\{cn\([\s\S]*motion-safe:slide-in-from-bottom-1/,
-    "Employee panels should inherit a subtle motion-safe entrance effect",
+    /EmployeePanel[\s\S]*className=\{cn\(/,
+    "EmployeePanel must accept a className prop for caller-side customisation",
   );
   assert.match(
     employeePageShellSource,
-    /EmployeeStatusStrip[\s\S]*motion-safe:zoom-in-95/,
-    "Compact status metrics should have app-like motion-safe entry feedback",
+    /EmployeeStatusStrip/,
+    "EmployeeStatusStrip must remain defined in the employee-page shell",
   );
   assert.match(
     employeePageShellSource,
@@ -200,18 +206,18 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeePageShellSource,
-    /group\/employee-action[\s\S]*active:translate-y-px[\s\S]*motion-safe:hover:-translate-y-px/,
-    "Shared Employee action rows should feel tappable on mobile",
+    /group\/employee-action/,
+    "Shared Employee action rows must carry the group/employee-action marker",
   );
   assert.match(
     employeeHomeSource,
-    /const primaryActionClassName =\s*"w-full motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-200 sm:w-fit sm:min-w-44";/,
-    "Home next action should keep a clear mobile-first hit area",
+    /const primaryActionClassName =\s*"w-full sm:w-fit sm:min-w-44";/,
+    "Home next action should keep a clear mobile-first hit area (motion tokens removed per design-system §313)",
   );
   assert.match(
     employeeHomeSource,
-    /<Progress[\s\S]*className="h-2 motion-safe:animate-in/,
-    "Home progress should feel live without relying on motion for meaning",
+    /<Progress[\s\S]*className="h-2/,
+    "Home progress bar must keep its h-2 size class",
   );
   assert.match(
     employeeHomeSource,
@@ -249,8 +255,8 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeTasksSource,
-    /min-h-16 items-center bg-card[\s\S]*motion-safe:hover:-translate-y-px/,
-    "Checklist rows should keep touch feedback",
+    /items-center bg-card/,
+    "Checklist rows must keep their card surface and centered alignment",
   );
   assert.match(
     employeeTasksSource,
@@ -294,13 +300,13 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeClockSource,
-    /cameraActive \? \([\s\S]*motion-safe:zoom-in-95/,
-    "Clock camera frame should enter with motion-safe feedback",
+    /cameraActive \? \(/,
+    "Clock camera frame must be conditionally rendered when camera is active",
   );
   assert.match(
     employeeClockSource,
-    /previewUrl \? \([\s\S]*motion-safe:zoom-in-95/,
-    "Clock photo preview should confirm capture with motion-safe feedback",
+    /previewUrl/,
+    "Clock photo preview must be conditionally rendered when a preview URL exists",
   );
   assert.doesNotMatch(
     employeeClockSource,
@@ -363,8 +369,8 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     calendarCellSource,
-    /selected &&[\s\S]*shadow-sm[\s\S]*motion-safe:zoom-in-95/,
-    "Selected calendar day should provide clear motion-safe feedback",
+    /selected &&[\s\S]*shadow-sm/,
+    "Selected calendar day should provide clear visual feedback via shadow",
   );
   assert.match(
     employeeScheduleClientSource,
@@ -465,7 +471,7 @@ test("Employee route family uses shared surface primitives instead of raw UI fra
   );
   assert.match(
     employeeClockSource,
-    /<EmployeeFrame className="overflow-hidden bg-muted\/40 motion-safe:zoom-in-95">/,
+    /<EmployeeFrame className="overflow-hidden bg-muted\/40">/,
     "Clock camera preview should use EmployeeFrame instead of raw rounded borders",
   );
   assert.match(

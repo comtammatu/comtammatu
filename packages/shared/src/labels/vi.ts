@@ -114,11 +114,28 @@ export const LEAVE_REQUEST_STATUS_LABELS_VI = {
   cancelled: "Đã hủy",
 } as const;
 
+export const LEAVE_TYPE_LABELS_VI = {
+  annual: "Nghỉ phép",
+  sick: "Nghỉ bệnh",
+  unpaid: "Nghỉ không lương",
+  personal: "Việc cá nhân",
+  other: "Khác",
+} as const;
+
 export const PAYROLL_PERIOD_STATUS_LABELS_VI = {
   draft: "Nháp",
   calculated: "Đã tính",
   approved: "Đã duyệt",
   paid: "Đã trả",
+} as const;
+
+export const CONSUMPTION_REPORT_STATUS_LABELS_VI = {
+  draft: "Nháp",
+  submitted: "Chờ duyệt",
+  needs_changes: "Cần chỉnh sửa",
+  approved: "Đã duyệt - không phát sinh",
+  applied: "Đã áp Inventory",
+  cancelled: "Đã hủy",
 } as const;
 
 export function resolveSiteKind(site: SiteLike): SiteKind {

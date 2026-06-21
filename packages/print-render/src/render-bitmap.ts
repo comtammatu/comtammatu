@@ -163,57 +163,6 @@ export const blankLine = (height = LINE_HEIGHT_NORMAL): Uint8Array => {
   return wrapRasterCommand(packed, height);
 };
 
-export type Segment = {
-  text: string;
-  bold?: boolean;
-  double?: boolean;
-  /** Per-segment strikethrough — only the segment's text gets the line. */
-  strikethrough?: boolean;
-};
-
-/**
- * Render a row composed of multiple text segments drawn left-to-right on a
- * single raster, each with its own size/weight. Line height = max segment
- * height. Used by the printer smoke-test scripts.
- */
-export const renderMixedRow = (segments: Segment[]): Uint8Array => {
-  const height = segments.some((s) => s.double)
-    ? LINE_HEIGHT_DOUBLE
-    : LINE_HEIGHT_NORMAL;
-  const img = new Bitmap(DOTS_WIDTH, height);
-  const ctx = img.getContext("2d");
-  ctx.imageSmoothingEnabled = false;
-  ctx.fillStyle = "white";
-  ctx.fillRect(0, 0, DOTS_WIDTH, height);
-  ctx.fillStyle = "black";
-  ctx.textBaseline = "top" as never;
-
-  let x = MARGIN_LEFT;
-  for (const seg of segments) {
-    const fontSize = seg.double ? FONT_SIZE_DOUBLE : FONT_SIZE_NORMAL;
-    const family = seg.bold ? FAMILY_BOLD : FAMILY_REG;
-    ctx.font = `${fontSize} ${family}`;
-    const yOffset = seg.double
-      ? 2
-      : Math.max(2, height - LINE_HEIGHT_NORMAL + 2);
-    ctx.fillText(seg.text, x, yOffset);
-    const metrics = ctx.measureText(seg.text);
-    const segWidth = Math.ceil(metrics.width);
-    if (seg.strikethrough) {
-      const segLineHeight = seg.double
-        ? LINE_HEIGHT_DOUBLE
-        : LINE_HEIGHT_NORMAL;
-      const midY = yOffset + Math.floor(segLineHeight / 2);
-      const strokeH = seg.double ? 3 : 2;
-      ctx.fillRect(x, midY, segWidth, strokeH);
-    }
-    x += segWidth;
-    if (x >= MARGIN_LEFT + DRAW_WIDTH) break; // clipped
-  }
-
-  return wrapRasterCommand(packPixels(img), height);
-};
-
 /** Zero printer line-spacing — MUST wrap raster blocks to prevent the
  * printer from inserting its default ~30-dot feed between raster lines. */
 export const lineSpacingZero = (): Uint8Array =>

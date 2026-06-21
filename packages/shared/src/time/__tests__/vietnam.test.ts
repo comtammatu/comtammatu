@@ -9,7 +9,6 @@ import {
   getVNDayUtcRange,
   getVNMonthEndDateString,
   getVNMonthSequenceBack,
-  getVNWeekEndDateString,
   getVNWeekStartDateString,
   getYesterdayVNDateString,
   getVNMinutesOfDay,
@@ -87,7 +86,6 @@ test("VN month and week helpers handle boundaries", () => {
     { year: 2025, month: 11, date: "2025-11-01" },
   ]);
   assert.equal(getVNWeekStartDateString("2026-05-17T18:00:00Z"), "2026-05-18");
-  assert.equal(getVNWeekEndDateString("2026-05-18"), "2026-05-24");
 });
 
 test("VN date-only helpers avoid runtime timezone", () => {

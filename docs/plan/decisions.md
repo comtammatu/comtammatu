@@ -386,3 +386,42 @@ chỉ cần `pos:use` qua `createPayment` — trong khi `confirm_cash_payment` l
 NGUYÊN; siết completion về `pos:confirm_payment` là PR riêng (phải đổi cả action
 `createPayment` + route UI bill tiền mặt qua đường confirm). Codex flag P1 nhưng đây
 là hành vi sẵn có, không phải regression do PR2.
+
+## D044: DESIGN.md-as-foundation — nâng `DESIGN.md` (Google Labs format) thành nền tảng design agent-facing, hạ `design-system.md` thành lớp enforcement (2026-06-21)
+
+**Decision (owner chốt trong session cải cách Design System):** Áp dụng convention
+`DESIGN.md` của Google Labs Code (YAML token front-matter oklch + markdown
+rationale, thứ tự section cố định: Overview → Colors → Typography → Layout →
+Elevation & Depth → Shapes → Components → Do's and Don'ts) làm **nền tảng design
+agent-facing** đặt ở **root** repo. Hướng cải cách: **nâng cấp bản sắc Má Tư**
+(terracotta / kem gạo / navy + Geist — sâu & nhất quán hơn), KHÔNG làm lại từ đầu;
+phạm vi **toàn bộ surfaces** (POS / KDS-Runner / Admin / Inventory / Employee).
+
+**Phân lớp sau cải cách (đây là điểm thay đổi contract đang khoá):**
+
+| Lớp | Vai trò |
+| --- | --- |
+| `DESIGN.md` (root) | **Foundation agent-facing**: YAML token (oklch) + rationale 8 section. Agent / Claude Design / tool ngoài đọc TRƯỚC. Owner đọc được. |
+| `packages/ui/src/styles/globals.css` | **Token source-of-record lúc runtime** (build ăn file này). |
+| `docs/spec/design-system.md` | Hạ xuống **lớp ENFORCEMENT**: authority order, ratchets, allowlist, surface contracts, lint — *trỏ về* `DESIGN.md` cho token + thẩm mỹ, không còn tự xưng "single source". |
+| Drift-guard | `DESIGN.md` YAML ↔ `globals.css` khoá bằng 1 lint check — đúng pattern `AGENTS.md ↔ engineering.md` (`pnpm lint:rules-mirror`). 1 nguồn giá trị, mirror có chủ đích, có guard → SSoT còn nguyên. |
+
+**Chốt:**
+
+1. **Sửa rule SSoT:** `docs/agent/rules/ui.md` "exactly one UI design-system source
+   of truth = design-system.md" → "one source of token VALUES = globals.css,
+   mirrored vào DESIGN.md; DESIGN.md = foundation, design-system.md = enforcement".
+   Lint anchor `DESIGN-SYSTEM-ONE-SOURCE-ONLY` + `scripts/check-ui-contract.mjs`
+   phải bless path `DESIGN.md` (không coi là "non-current design-folder path").
+2. **AGENTS.md:** thêm pointer root "design foundation = `DESIGN.md`" + 1 dòng vào
+   Rule Loading.
+3. **Phasing (quan trọng):** `DESIGN.md` bản đầu chứa token **TARGET (đã elevate)**;
+   tới code phase mới migrate `globals.css` cho khớp. **Drift-guard chỉ bật SAU khi
+   owner duyệt mockup + globals.css đã migrate** — trước đó `DESIGN.md` là spec mục
+   tiêu, drift với runtime là CHỦ ĐÍCH, không phải lỗi.
+4. **Master prompt cho Claude Design** trỏ vào `DESIGN.md`, chạy phân giai đoạn
+   mockup → owner duyệt → code theo contract.
+
+**Defer (chưa làm tới khi owner duyệt mockup):** migrate `globals.css` sang token
+elevated; hạ cấp `design-system.md`; viết lint drift-guard DESIGN.md↔globals.css;
+sửa `ui.md` + `AGENTS.md`. Tới lúc đó vẫn giữ enforcement hiện hành.

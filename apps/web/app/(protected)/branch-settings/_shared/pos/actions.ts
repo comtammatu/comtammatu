@@ -7,7 +7,8 @@ import {
   PERMISSION_KEYS,
   type StaffRole,
 } from "@comtammatu/shared/auth";
-import { withFormAction, type ActionContext } from "@/_lib/with-action";
+import { withFormAction } from "@/_lib/with-action";
+import { canOperateBranch, verifyBranchOwnership } from "../branch-guards";
 
 const SETTINGS_ROLES: readonly StaffRole[] = BRANCH_FLOOR_SETTINGS_ROLES;
 
@@ -15,28 +16,6 @@ const SETTINGS_ROLES: readonly StaffRole[] = BRANCH_FLOOR_SETTINGS_ROLES;
 
 function revalidatePosSettings(branchId: number) {
   revalidatePath(`/br/${String(branchId)}/settings/pos`);
-}
-
-async function verifyBranchOwnership(
-  supabase: ActionContext["supabase"],
-  branchId: number,
-  tenantId: number,
-): Promise<boolean> {
-  const { data } = await supabase
-    .from("branches")
-    .select("id")
-    .eq("id", branchId)
-    .eq("tenant_id", tenantId)
-    .single();
-  return !!data;
-}
-
-function canOperateBranch(
-  claimsBranchId: number | null,
-  targetBranchId: number,
-): boolean {
-  if (claimsBranchId === null) return true;
-  return claimsBranchId === targetBranchId;
 }
 
 function mapTerminalDbError(code: string | undefined): string {

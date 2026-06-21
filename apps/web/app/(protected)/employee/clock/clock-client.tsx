@@ -564,7 +564,7 @@ export function ClockClient({ state }: ClockClientProps) {
       />
 
       {cameraActive ? (
-        <EmployeeFrame className="overflow-hidden bg-muted/40 motion-safe:zoom-in-95">
+        <EmployeeFrame className="overflow-hidden bg-muted/40">
           <div className="relative aspect-[4/3] w-full">
             <video
               ref={videoRef}
@@ -578,7 +578,7 @@ export function ClockClient({ state }: ClockClientProps) {
               playsInline
             />
             {cameraState === "ready" || cameraState === "capturing" ? null : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200">
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
                 <Spinner />
                 <span>{clockCopy.cameraOpening}</span>
               </div>
@@ -602,7 +602,7 @@ export function ClockClient({ state }: ClockClientProps) {
           mediaClassName="size-12 rounded-md"
           title={clockCopy.photoReadyTitle}
           description={photo?.name}
-          className="bg-muted/40 motion-safe:zoom-in-95"
+          className="bg-muted/40"
         />
       ) : !cameraActive ? (
         <EmployeeInlineState
@@ -682,7 +682,7 @@ export function ClockClient({ state }: ClockClientProps) {
         <Button
           type="button"
           size="touch"
-          className="w-full motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-200 sm:w-fit"
+          className="w-full sm:w-fit"
           onClick={startCamera}
           disabled={isPending || photoState === "submitting"}
         >

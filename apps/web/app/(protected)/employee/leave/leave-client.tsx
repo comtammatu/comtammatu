@@ -8,6 +8,7 @@ import {
   X as IconX,
 } from "lucide-react";
 import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
+import { LEAVE_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
 import { formatVNBusinessDate, getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -25,7 +26,7 @@ import {
   EmployeeStatusStrip,
 } from "../components/employee-page";
 import { cancelLeaveRequest, submitLeaveRequest } from "./actions";
-import type { LeaveRequestRow, LeaveRequestType } from "./page";
+import type { LeaveRequestRow } from "./page";
 import { messages } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
 import {
@@ -46,17 +47,9 @@ const copy = messages.employee.leave;
 
 const LEAVE_TYPES = ["annual", "sick", "unpaid", "personal", "other"] as const;
 
-const LEAVE_TYPE_LABELS: Record<LeaveRequestType, string> = {
-  annual: "Nghỉ phép",
-  sick: "Nghỉ bệnh",
-  unpaid: "Nghỉ không lương",
-  personal: "Việc cá nhân",
-  other: "Khác",
-};
-
 const LEAVE_TYPE_OPTIONS = LEAVE_TYPES.map((value) => ({
   value,
-  label: LEAVE_TYPE_LABELS[value],
+  label: LEAVE_TYPE_LABELS_VI[value],
 }));
 
 const leaveRequestSchema = z
@@ -237,7 +230,7 @@ export function LeaveRequestClient({
                 <Item key={request.id} variant="outline">
                   <ItemContent>
                     <ItemTitle>
-                      {LEAVE_TYPE_LABELS[request.leave_type]}
+                      {LEAVE_TYPE_LABELS_VI[request.leave_type]}
                       <StatusBadge
                         domain="leave-request"
                         value={request.status}
@@ -247,10 +240,12 @@ export function LeaveRequestClient({
                       {formatDateRange(request.start_date, request.end_date)}
                       {days ? ` · ${days} ngày` : null}
                       {request.reason ? ` · ${request.reason}` : null}
-                      {request.status === "rejected" && request.rejected_reason
-                        ? ` · ${copy.rejectedReason}: ${request.rejected_reason}`
-                        : null}
                     </ItemDescription>
+                    {request.status === "rejected" && request.rejected_reason ? (
+                      <p className="text-destructive text-sm">
+                        {copy.rejectedReason}: {request.rejected_reason}
+                      </p>
+                    ) : null}
                   </ItemContent>
                   <ItemActions>
                     {request.status === "pending" ? (

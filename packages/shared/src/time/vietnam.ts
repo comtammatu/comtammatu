@@ -167,10 +167,6 @@ export function getVNWeekStartDateString(
   return addVNDateDays(formatISODateParts(today), diff);
 }
 
-export function getVNWeekEndDateString(weekStartDate: string): string {
-  return addVNDateDays(weekStartDate, 6);
-}
-
 export function getVNDayUtcRange(dateStr: string): {
   startIso: string;
   endIso: string;
@@ -204,16 +200,6 @@ export function formatVNBusinessDate(
     2,
     "0",
   )}/${parts.year}`;
-}
-
-export function formatVNShortBusinessDate(
-  value: string | null | undefined,
-  dash = "—",
-): string {
-  if (!value) return dash;
-  const parts = parseISODateParts(value);
-  if (!parts) return value;
-  return `${parts.day}/${parts.month}`;
 }
 
 export function formatVNDateTime(

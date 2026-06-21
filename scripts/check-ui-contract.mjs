@@ -432,11 +432,10 @@ const checks = [
     pattern:
       /(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
     allowlist: {
-      "apps/web/app/components/workspace-bottom-nav.tsx": 2,
+      "apps/web/app/components/app-bottom-nav.tsx": 1,
       "apps/web/app/(public)/access-denied/page.tsx": 1,
       "apps/web/app/(public)/(auth)/login/page.tsx": 1,
       "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 1,
-      "apps/web/app/(protected)/employee/components/bottom-nav.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/runner-idle-visual.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx": 2,
@@ -898,14 +897,13 @@ const perFileCountBudgets = [
     pattern: /\bshadow-\[[^\]]+\]|\bboxShadow\b|\bbox-shadow\b|--shadow-[\w-]+/g,
     allowlist: {
       "apps/web/app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx": 1,
-      "apps/web/app/(protected)/employee/components/bottom-nav.tsx": 1,
       "apps/web/app/(protected)/employee/components/employee-page.tsx": 2,
       "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 1,
       "apps/web/app/(protected)/employee/tasks/tasks-client.tsx": 1,
       "apps/web/app/(protected)/inventory/settings/settings-section-nav.tsx": 1,
+      "apps/web/app/components/app-bottom-nav.tsx": 1,
       "apps/web/app/components/data-table/interactive-card.tsx": 1,
       "apps/web/app/components/surface.tsx": 3,
-      "apps/web/app/components/workspace-bottom-nav.tsx": 2,
       "packages/ui/src/components/badge.tsx": 1,
       "packages/ui/src/components/button.tsx": 1,
       "packages/ui/src/components/scroll-area.tsx": 1,

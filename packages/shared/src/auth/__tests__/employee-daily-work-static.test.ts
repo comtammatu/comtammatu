@@ -346,9 +346,8 @@ test("HRM consumption report applies Inventory only after manager approval", () 
       tasksClientSrc.includes("Không phát sinh") &&
       tasksClientSrc.includes("defaultIngredientsToDraft") &&
       tasksClientSrc.includes("defaultSortOrder") &&
-      tasksClientSrc.includes("Đã áp Inventory") &&
-      tasksClientSrc.includes("Cần chỉnh sửa"),
-    "Employee tasks UI must expose the consumption report workflow",
+      tasksClientSrc.includes('domain="consumption-report"'),
+    "Employee tasks UI must expose the consumption report workflow (status labels via StatusBadge)",
   );
   assert.ok(
     approvalsClientSrc.includes("approveConsumptionReport") &&

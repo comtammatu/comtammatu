@@ -42,7 +42,7 @@ import {
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
 import { AppShellPaddingBoundary } from "@/components/surface";
-import { BrandMark, type BrandMarkVariant } from "@/components/brand";
+import { BrandLogoBox, BrandMark, type BrandMarkVariant } from "@/components/brand";
 import { WorkspaceBottomNav } from "@/components/workspace-bottom-nav";
 import { messages } from "@lib/messages";
 
@@ -138,13 +138,7 @@ export function AppShell({
             </Link>
           ) : null}
           <div className="flex items-center gap-3">
-            <div
-              className={
-                logoVariant
-                  ? "flex size-10 shrink-0 items-center justify-center rounded-md border bg-sidebar-accent p-1"
-                  : "flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
-              }
-            >
+            <BrandLogoBox tone={logoVariant ? "sidebar" : "sidebar-primary"}>
               {logoVariant ? (
                 <BrandMark
                   variant={logoVariant}
@@ -154,7 +148,7 @@ export function AppShell({
               ) : (
                 <BrandIcon className="size-5" />
               )}
-            </div>
+            </BrandLogoBox>
             <div className="min-w-0 flex-1 flex flex-col gap-1 group-data-[collapsible=icon]:hidden">
               <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
                 {brand.subLabel}

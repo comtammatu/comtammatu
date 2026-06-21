@@ -367,6 +367,14 @@ export const employee = {
     noPayslipTitle: "Chưa có lương đã chốt",
     noPayslipDescription: "Các kỳ lương đã chốt sẽ hiển thị tại đây.",
     print: "In / Lưu PDF",
+    netSalary: "Thực lĩnh",
+    grossTotal: "Lương gộp",
+    insuranceEmployee: "BH (NLĐ đóng)",
+    workingDays: "Ngày công",
+    periodFallback: "Kỳ lương",
+    periodLabel: (month: number, year: number) => `Tháng ${month}/${year}`,
+    workingDaysSummary: (worked: number, standard: number) =>
+      `Ngày công ${worked}/${standard}`,
   },
   permissions: {
     title: "Quyền truy cập",

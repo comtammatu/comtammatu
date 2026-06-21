@@ -275,7 +275,7 @@ export default async function EmployeePage() {
   const progressBadgeVariant =
     tone === "success" ? "success" : tone === "warning" ? "warning" : "info";
   const primaryActionClassName =
-    "w-full motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-200 sm:w-fit sm:min-w-44";
+    "w-full sm:w-fit sm:min-w-44";
   const todayMeta = currentShiftName
     ? `${formatDateVN(state.today)} · ${currentShiftName} ${currentShiftRange}`
     : formatDateVN(state.today);
@@ -444,7 +444,7 @@ export default async function EmployeePage() {
               <Progress
                 value={progressValue}
                 tone={progressTone}
-                className="h-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-300"
+                className="h-2"
               />
             </div>
             <EmployeeStatusStrip items={todaySummaryItems} />

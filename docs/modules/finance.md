@@ -54,7 +54,7 @@ Finance Basic is the current finance surface. It owns four primary metrics:
      discounts/refunds and before VAT; this is the margin denominator.
    - Never ask the owner to choose the meaning of `doanh thu ròng`; adapt legacy
      source fields into either `total_collected` or `net_sales_before_vat`.
-   - Top món dùng đúng `resolved.start→end` như mọi KPI khác; side items trong `order_items.sides` được đếm thành món riêng và doanh thu side bị trừ khỏi dòng món chính để không double-count (migrations `20260609151615` + `20260609161402`, đã apply prod).
+   - Top món uses the same `resolved.start→end` window as every other KPI; side items in `order_items.sides` are counted as their own món and their revenue is subtracted from the parent món line to avoid double-counting (migrations `20260609151615` + `20260609161402`, applied on prod).
 
 2. **Inventory value**
    - Current stock value from inventory stock levels.

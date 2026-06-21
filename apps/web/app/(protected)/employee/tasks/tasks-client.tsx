@@ -34,10 +34,10 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { messages } from "@lib/messages";
+import { StatusBadge } from "@/components/status-badge";
 import { EmployeeFrame } from "../components/employee-page";
 import type {
   ConsumptionIngredientOption,
-  ConsumptionReportStatus,
   ConsumptionReportView,
 } from "../consumption-actions";
 import { submitConsumptionReport } from "../consumption-actions";
@@ -66,24 +66,6 @@ interface DraftConsumptionLine {
   defaultItemId: number | null;
   quantity: string;
   note: string;
-}
-
-const consumptionStatusLabel: Record<ConsumptionReportStatus, string> = {
-  draft: "Nháp",
-  submitted: "Chờ duyệt",
-  needs_changes: "Cần chỉnh sửa",
-  approved: "Đã duyệt - không phát sinh",
-  applied: "Đã áp Inventory",
-  cancelled: "Đã hủy",
-};
-
-function statusVariant(
-  status: ConsumptionReportStatus,
-): "secondary" | "warning" | "destructive" | "success" {
-  if (status === "submitted") return "warning";
-  if (status === "needs_changes") return "destructive";
-  if (status === "approved" || status === "applied") return "success";
-  return "secondary";
 }
 
 function emptyLine(): DraftConsumptionLine {
@@ -223,7 +205,7 @@ export function TasksClient({
                     key={item.id}
                     variant="outline"
                     className={cn(
-                      "min-h-16 items-center bg-card transition-[transform,background-color,border-color,box-shadow] duration-150 active:translate-y-px motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200 motion-safe:hover:-translate-y-px sm:flex-nowrap",
+                      "items-center bg-card transition-[transform,background-color,border-color,box-shadow] duration-150 sm:flex-nowrap",
                       item.done
                         ? "border-success/30 bg-success/5"
                         : "hover:bg-muted/50",
@@ -421,9 +403,7 @@ function ConsumptionReportPanel({
             Inventory chỉ ghi nhận sau khi Trưởng chi nhánh duyệt.
           </p>
         </div>
-        <Badge variant={statusVariant(status)}>
-          {consumptionStatusLabel[status]}
-        </Badge>
+        <StatusBadge domain="consumption-report" value={status} />
       </div>
 
       {status === "needs_changes" && report?.reviewNote ? (
@@ -471,16 +451,20 @@ function ConsumptionReportPanel({
               <EmployeeFrame
                 key={line.key}
                 pad="sm"
-                className="grid gap-2 bg-background md:grid-cols-[minmax(0,1.5fr)_110px_minmax(0,1fr)_auto]"
+                className="grid gap-2 bg-background md:grid-cols-[minmax(0,1.5fr)_minmax(0,0.6fr)_minmax(0,1fr)_auto]"
               >
                 <div className="flex flex-col gap-1.5">
                   <Label>Nguyên liệu</Label>
                   {locked ? (
-                    <p className="min-h-9 rounded-md bg-muted/30 px-3 py-2 text-sm ring-1 ring-border">
-                      {selected?.name ??
+                    <Input
+                      value={
+                        selected?.name ??
                         report?.lines[index]?.ingredientName ??
-                        "Nguyên liệu"}
-                    </p>
+                        "Nguyên liệu"
+                      }
+                      disabled
+                      readOnly
+                    />
                   ) : (
                     <Select
                       value={line.ingredientId}

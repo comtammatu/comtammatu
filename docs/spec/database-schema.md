@@ -37,9 +37,9 @@ The pre-baseline incremental chain could not replay from an empty DB (ordering b
   `storage.objects` owner).
 - **Option X**: production keeps its applied migration history; the baseline is the
   fresh/dev install path. Regeneration via `pnpm db:baseline:extract -- --project-ref=<dev-ref>`
-  (Docker-free libpq engine) is currently **blocked**: matu-dev đã bị xóa và hiện
-  KHÔNG có dev project nào — cần owner cấp/khôi phục một dev ref trước khi chạy
-  lại extract. Fresh-env install notes live in `supabase/migrations/README.md`.
+  (Docker-free libpq engine) is currently **blocked**: matu-dev has been deleted and
+  there is no dev project right now — the owner must provision/restore a dev ref
+  before the extract can be rerun. Fresh-env install notes live in `supabase/migrations/README.md`.
 
 ## Source Ladder
 

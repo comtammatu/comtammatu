@@ -39,8 +39,7 @@ export function YearPicker({ selectedYear, currentYear }: YearPickerProps) {
       <Button
         type="button"
         variant="outline"
-        size="touch"
-        className="w-12 px-0"
+        size="icon-touch"
         aria-label={copy.previousYearAria}
         disabled={isPending}
         onClick={() => go(selectedYear - 1)}
@@ -71,8 +70,7 @@ export function YearPicker({ selectedYear, currentYear }: YearPickerProps) {
       <Button
         type="button"
         variant="outline"
-        size="touch"
-        className="w-12 px-0"
+        size="icon-touch"
         aria-label={copy.nextYearAria}
         disabled={isPending || !canGoNext}
         onClick={() => go(selectedYear + 1)}

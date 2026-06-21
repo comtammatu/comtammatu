@@ -7,11 +7,8 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { revalidatePath, updateTag } from "next/cache";
-import {
-  withAction,
-  withFormAction,
-  type ActionContext,
-} from "@/_lib/with-action";
+import { withAction, withFormAction } from "@/_lib/with-action";
+import { canOperateBranch, verifyBranchOwnership } from "../branch-guards";
 import { TABLE_STATE_VALUES } from "./constants";
 
 /* ─── Helpers ─── */
@@ -23,28 +20,6 @@ function revalidateTableSettings(branchId: number) {
   revalidatePath(`/br/${String(branchId)}/settings/tables`);
   // Bust POS cached tables list (apps/web/app/(protected)/br/[branchId]/pos/session-actions.ts).
   updateTag("tables");
-}
-
-async function verifyBranchOwnership(
-  supabase: ActionContext["supabase"],
-  branchId: number,
-  tenantId: number,
-): Promise<boolean> {
-  const { data } = await supabase
-    .from("branches")
-    .select("id")
-    .eq("id", branchId)
-    .eq("tenant_id", tenantId)
-    .single();
-  return !!data;
-}
-
-function canOperateBranch(
-  claimsBranchId: number | null,
-  targetBranchId: number,
-): boolean {
-  if (claimsBranchId === null) return true;
-  return claimsBranchId === targetBranchId;
 }
 
 function mapZoneDbError(code: string | undefined): string {

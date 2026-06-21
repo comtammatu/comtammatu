@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Bell as IconBell, User as IconUser } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { BrandMark } from "@/components/brand";
+import { BrandLogoBox, BrandMark } from "@/components/brand";
 import { getUnreadCount } from "@/_actions/notifications";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { loadAuthState } from "@/_lib/auth";
@@ -37,9 +37,9 @@ export async function MobileHeader() {
     <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur print:hidden">
       <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-2 px-3 py-1.5 sm:gap-3 sm:py-2 lg:max-w-3xl">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-md border bg-background p-1">
+          <BrandLogoBox>
             <BrandMark decorative className="size-full" />
-          </span>
+          </BrandLogoBox>
           <div className="min-w-0">
             <p className="font-heading truncate text-sm font-semibold sm:text-base">
               {headerTitle}

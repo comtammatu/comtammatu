@@ -1,3 +1,5 @@
+import { LEAVE_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
+
 export const hr = {
   workspace: {
     eyebrow: "Nhân sự",
@@ -111,13 +113,7 @@ export const hr = {
       rejected: "Từ chối",
       cancelled: "Đã huỷ",
     },
-    types: {
-      annual: "Nghỉ phép",
-      sick: "Nghỉ bệnh",
-      unpaid: "Nghỉ không lương",
-      personal: "Việc cá nhân",
-      other: "Khác",
-    },
+    types: LEAVE_TYPE_LABELS_VI,
     dayUnit: "ngày",
     fallbackEmployee: "Nhân viên",
     summary: (pending: number, total: number) =>

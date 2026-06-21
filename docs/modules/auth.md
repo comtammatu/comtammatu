@@ -35,10 +35,10 @@ navigation, and default-landing changes must keep the spec, `module-acl.ts`,
 | `apps/web/app/(protected)/admin/staff/[id]/permissions/`     | Admin UI for grant/revoke + audit (page + client + actions)                                    | Permission admin UI       |
 | `apps/web/app/_lib/permissions.ts`                           | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
 
-Discovery invariant: `MODULE_ACL.hr_payroll` vẫn gate `/hr/payroll/*` cho
-owner, nhưng không nằm trong `DOMAIN_WORKSPACE_ITEMS` hoặc app
-discovery mặc định. HKD operation mở `/hr` cho nhân viên/ca/ngày công trước;
-payroll chỉ là direct-support khi cần đối soát/chốt lương.
+Discovery invariant: `MODULE_ACL.hr_payroll` still gates `/hr/payroll/*` for
+owner, but is not part of `DOMAIN_WORKSPACE_ITEMS` or default app
+discovery. HKD operation opens `/hr` for staff/shifts/workdays first;
+payroll is direct-support only, for reconciling/finalizing pay when needed.
 
 ## Role Hierarchy
 
@@ -135,28 +135,28 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | employee                                                   |       | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
 | notifications                                              | ✓     | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
 
-> `wh_mgr` = `warehouse_manager`, `prod_mgr` = `production_manager`. Route-level ACL đọc `user_role` từ JWT, derived từ `positions.code`. Row-level authz vẫn đi qua `has_permission(branch_id, key)` — matrix này chỉ là fast gate.
+> `wh_mgr` = `warehouse_manager`, `prod_mgr` = `production_manager`. Route-level ACL reads `user_role` from the JWT, derived from `positions.code`. Row-level authz still goes through `has_permission(branch_id, key)` — this matrix is only a fast gate.
 >
-> Inventory mutating RPC chính đã permission-gated; phần `auth_role()` còn lại là route/side/scope guard hoặc legacy helper. Xem `docs/ref/inventory-rbac-matrix.md` §6.
+> The main inventory mutating RPCs are permission-gated; the remaining `auth_role()` usages are route/side/scope guards or legacy helpers. See `docs/ref/inventory-rbac-matrix.md` §6.
 >
 > Runner exception: `/br/[branchId]/runner` is an exact public customer display path. `MODULE_ACL.runner` remains for route metadata and protected future child routes, not for forcing Account Login on the board. Current pilot intentionally skips a public slug; add a tokenized URL again if live operational telemetry exposure or public load becomes a real issue.
 
-**Trang nhân viên boundary:** `employee` là bề mặt self-service / bàn giao vận hành cho staff không thuộc `ADMIN_ROLES`. `owner` không vào `/employee/*`; request trực tiếp được đưa về Admin default route.
+**Employee page boundary:** `employee` is the self-service / operational-handoff surface for staff outside `ADMIN_ROLES`. `owner` does not enter `/employee/*`; a direct request is sent to the Admin default route.
 
-**Owner (chủ sở hữu):** ngoài các module quản trị / giám sát còn có thể vào `orders` và `inventory` để kiểm tra trực tiếp vận hành tenant-level. Tuy vậy owner không được coi là operator hằng ngày trong inventory docs/UI; các bề mặt Inventory hiện tối ưu cho `branch_manager`, `warehouse_manager`, `production_manager`.
+**Owner:** beyond the admin / monitoring modules, can also enter `orders` and `inventory` to directly inspect tenant-level operations. However, the owner is not treated as a daily operator in inventory docs/UI; the Inventory surfaces are currently optimized for `branch_manager`, `warehouse_manager`, `production_manager`.
 
-**Inventory sub-route ACL:** `inventory` allows `owner`, `branch_manager`, `warehouse_manager`, `production_manager` cho tồn kho, điều chuyển thật, tiêu hao, stocktake, expiry, reports, và branch operations. `inventory_procurement`: `owner`, `warehouse_manager`, `production_manager` vào `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, và `receiving` theo `route-resolution.ts`; site nhận có thể là `branch`, `central_supply`, hoặc `central_kitchen`. `inventory_admin` (`/admin/inventory/*`) luôn có `allowedRoles: []` để proxy chặn bằng ACL chuẩn. `production` không dùng module riêng; Server Actions và DB/RPC/RLS hard-deny `branch_manager` dù có manual production/menu grant. Operator production là `production_manager` tại Bếp Trung Tâm; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày. `branch_manager` vì vậy chỉ nên thấy nhịp branch ops: nhận inbound transfer, duyệt tiêu hao, stocktake, adjustment/write-off.
+**Inventory sub-route ACL:** `inventory` allows `owner`, `branch_manager`, `warehouse_manager`, `production_manager` for stock on hand, real transfers, consumption, stocktake, expiry, reports, and branch operations. `inventory_procurement`: `owner`, `warehouse_manager`, `production_manager` access `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, and `receiving` per `route-resolution.ts`; the receiving site can be `branch`, `central_supply`, or `central_kitchen`. `inventory_admin` (`/admin/inventory/*`) always has `allowedRoles: []` so the proxy blocks it via the standard ACL. `production` does not use its own module; Server Actions and DB/RPC/RLS hard-deny `branch_manager` even with a manual production/menu grant. The production operator is `production_manager` at the Central Kitchen (Bếp Trung Tâm); `owner` has inspection/emergency access but is not led through the UX as a daily operator. `branch_manager` should therefore only see the branch-ops rhythm: receive inbound transfers, approve consumption, stocktake, adjustment/write-off.
 
-**UX boundary quan trọng:** nav có thể hẹp hơn module-level ACL để giảm nhiễu vận hành. Ví dụ `branch_manager` vẫn vào được `/inventory/transfers` để nhận hàng, nhưng UI không nên quảng bá action tạo inter-site transfer như tác vụ mặc định của vai trò này.
+**Important UX boundary:** nav can be narrower than the module-level ACL to reduce operational noise. For example `branch_manager` can still reach `/inventory/transfers` to receive goods, but the UI should not promote the create-inter-site-transfer action as a default task for this role.
 
-**Route-map boundary:** `MODULE_ACL` trả lời "role có được vào module không";
-`route-map.ts` trả lời "URL này thuộc surface nào và dùng chrome/back behavior
-nào". Không dùng route-map để cấp quyền. Không dùng shell/nav local để bypass
-`MODULE_ACL`. Route rời workspace phải dùng `resolveRoleHomeLink(role, branchId?)`
-thay vì hardcode `/admin/dashboard`, vì non-admin role sẽ bị proxy đưa về
-default khác.
-Inventory route contract dùng danh sách active prefixes; unknown Inventory URL
-không được giữ trong post-login `returnTo`.
+**Route-map boundary:** `MODULE_ACL` answers "can the role enter the module";
+`route-map.ts` answers "which surface this URL belongs to and which chrome/back
+behavior it uses". Do not use route-map to grant permission. Do not use local
+shell/nav to bypass `MODULE_ACL`. A route leaving the workspace must use
+`resolveRoleHomeLink(role, branchId?)` instead of hardcoding `/admin/dashboard`,
+because non-admin roles get sent by the proxy to a different default.
+The Inventory route contract uses a list of active prefixes; an unknown Inventory
+URL must not be kept in the post-login `returnTo`.
 
 **Settings surface boundary:** Tenant setup belongs under `/admin/settings/*`
 and is for owner. Branch setup belongs under
@@ -176,13 +176,13 @@ The `proxy(request)` function evaluates in order:
 
 1. **Public paths bypass auth:** `/api/health`, `/api/webhooks`, `/sw.js`, `/access-denied`, `/payment/momo/*`, and exact `/br/[branchId]/runner` (`route-resolution.ts:isPublicAppPath`). The access-denied page is public so a blocked-but-authenticated user can read the copy without re-entering the ACL loop.
 2. **Legacy canonical redirects:** `/admin/finance/*` redirects to `/finance/*` through `resolveLegacyRouteRedirectPath()` before module ACL. The same helper is used by post-login `returnTo` resolution.
-3. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo, { surface })`; unauthenticated users see the form.
-4. **Unauthenticated → `/login?returnTo=<current-url>`** (surface-aware: beta users go to `/beta/login`).
+3. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo)`; unauthenticated users see the form.
+4. **Unauthenticated → `/login?returnTo=<current-url>`**.
 5. **Claims extraction:** if `extractClaims()` returns null, proxy redirects to `/access-denied?reason=missing-auth-context&from=<path>`. Proxy **does not** fabricate claims.
 6. **Module ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`, except disallowed Admin URLs and admin-level `/employee/*` visits redirect to the role's Admin default route.
 7. **Branch-scope for POS/KDS/branch settings/menu limits:** if a protected branch-scoped URL is not reachable for the user's branch assignment → `/access-denied?reason=branch-scope-mismatch`. POS/KDS and future protected Runner child routes reject missing, inactive, or non-operational branches in proxy. The exact public Runner display rejects invalid/non-operational branches inside the page because it has no staff claims.
 
-The resolver `resolvePostLoginRedirect(claims, returnTo, { surface?: "legacy" | "beta" })` (`packages/shared/src/auth/scope.ts`) is the **single** post-login destination function. Surface controls beta-prefix wrapping; the underlying ACL + branch-scope rules are shared. Unit tests live in `packages/shared/src/auth/__tests__/scope.test.ts` (run `pnpm --filter @comtammatu/shared test`).
+The resolver `resolvePostLoginRedirect(claims, returnTo)` (`packages/shared/src/auth/scope.ts`) is the **single** post-login destination function. The underlying ACL + branch-scope rules are shared. Unit tests live in `packages/shared/src/auth/__tests__/scope.test.ts` (run `pnpm --filter @comtammatu/shared test`).
 
 Root `/` uses the same shared default resolver as post-login fallback. Branch
 Manager therefore lands in `/employee` by default; Branch Command remains a
@@ -210,26 +210,26 @@ links.
 
 ## Blocked-State Reasons
 
-`packages/shared/src/auth/blocked-state.ts` chốt reason codes của flow "authenticated but blocked":
+`packages/shared/src/auth/blocked-state.ts` defines the reason codes for the "authenticated but blocked" flow:
 
-- `insufficient-permission` — role hiện tại không vào được module/route đó
-- `missing-auth-context` — session có user nhưng không resolve được claims cần thiết để authorize
-- `branch-scope-mismatch` — URL có `branchId` nhưng `claims.branch_id` khác hoặc null (POS/KDS/branch settings/menu limits)
-- `branch-surface-restricted` — POS/KDS mở trên branch không hợp lệ hoặc không active
+- `insufficient-permission` — the current role cannot enter that module/route
+- `missing-auth-context` — the session has a user but the claims needed to authorize cannot be resolved
+- `branch-scope-mismatch` — the URL has a `branchId` but `claims.branch_id` differs or is null (POS/KDS/branch settings/menu limits)
+- `branch-surface-restricted` — POS/KDS opened on an invalid or inactive branch
 
-Nếu reason code bị thiếu hoặc lạ, `/access-denied` fallback về copy generic (`DEFAULT_BLOCKED_STATE_COPY`) thay vì crash.
+If a reason code is missing or unknown, `/access-denied` falls back to generic copy (`DEFAULT_BLOCKED_STATE_COPY`) instead of crashing.
 
 ### `buildAccessDeniedPath(reason, { from? })`
 
-Single canonical helper cho "send blocked user somewhere they can read what happened." Output: `/access-denied?reason=<code>&from=<encoded-path>`. Proxy là consumer duy nhất hiện tại.
+Single canonical helper for "send a blocked user somewhere they can read what happened." Output: `/access-denied?reason=<code>&from=<encoded-path>`. The proxy is the only consumer right now.
 
 ### `/access-denied` page
 
-- Public path (bypasses `updateSession`) — bất kỳ user nào truy cập được.
-- Chỉ đọc `searchParams.reason` + `searchParams.from` → render copy qua `resolveBlockedState()`.
-- Không tự check auth, không tự redirect. Tuân thủ **BLOCKED-STATE-UI-IS-PRESENTATION-ONLY**.
-- Dùng shadcn `Card` + `Button` primitives (tuân **NO-FAKE-PRIMITIVES**).
-- Hai action: "Về phân hệ mặc định" (link to `/`) và "Đăng nhập lại" (link to `/login`).
+- Public path (bypasses `updateSession`) — reachable by any user.
+- Only reads `searchParams.reason` + `searchParams.from` → renders copy via `resolveBlockedState()`.
+- Does not check auth or redirect on its own. Follows **BLOCKED-STATE-UI-IS-PRESENTATION-ONLY**.
+- Uses shadcn `Card` + `Button` primitives (follows **NO-FAKE-PRIMITIVES**).
+- Two actions: "Về phân hệ mặc định" (link to `/`) and "Đăng nhập lại" (link to `/login`).
 
 ## Blast Radius
 

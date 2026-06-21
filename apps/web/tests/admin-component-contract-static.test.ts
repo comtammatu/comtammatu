@@ -8,8 +8,6 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const DATA_TABLE = "apps/web/app/components/data-table/data-table.tsx";
 const SURFACE = "apps/web/app/components/surface.tsx";
-const SETTINGS_FORM = "apps/web/app/components/settings-form.tsx";
-const ACTION_PATTERNS = "apps/web/app/components/action-patterns.tsx";
 const PACKAGE_JSON = "package.json";
 const UI_AUDIT = "scripts/audit-ui-components.mjs";
 const UI_CONTRACT = "scripts/check-ui-contract.mjs";
@@ -47,30 +45,6 @@ test("DataTable renders the toolbar contract it exposes", () => {
   assert.match(dataTable, /actions=\{actions\}/);
   assert.match(dataTable, /mobileCardRender\(row, index\)/);
   assert.match(surface, /variant\?: "card" \| "inline"/);
-});
-
-test("settings form and action pattern primitives exist for follow-up batches", () => {
-  const settingsForm = read(SETTINGS_FORM);
-  const actionPatterns = read(ACTION_PATTERNS);
-
-  for (const symbol of [
-    "SettingsFormSection",
-    "SettingsFieldGrid",
-    "SettingsSwitchRow",
-    "CheckboxCardGroup",
-  ]) {
-    assert.match(settingsForm, new RegExp(`export function ${symbol}`));
-  }
-
-  for (const symbol of [
-    "RowActionsMenu",
-    "InlineRetryAction",
-    "DestructiveConfirmAction",
-  ]) {
-    assert.match(actionPatterns, new RegExp(`export function ${symbol}`));
-  }
-
-  assert.match(actionPatterns, /confirm\(/);
 });
 
 test("Batch 1 admin screens use DataTable instead of raw table/card layout", () => {

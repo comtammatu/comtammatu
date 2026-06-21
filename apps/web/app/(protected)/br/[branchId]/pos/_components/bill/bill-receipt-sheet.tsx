@@ -1205,7 +1205,13 @@ export function BillReceipt({
                       <span className="text-sm font-medium">
                         {messages.pos.payment.cashChange}
                       </span>
-                      <span className="text-lg font-mono font-bold tabular-nums">
+                      <span
+                        className={
+                          cashReceived < totalAmount
+                            ? "text-lg font-mono font-bold tabular-nums text-destructive"
+                            : "text-lg font-mono font-bold tabular-nums"
+                        }
+                      >
                         {cashReceived < totalAmount
                           ? messages.pos.payment.cashShort(
                               formatVND(totalAmount - cashReceived),

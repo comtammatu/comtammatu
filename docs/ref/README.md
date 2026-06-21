@@ -42,8 +42,8 @@ Tài liệu tham chiếu dài hạn cho repo này.
 - [payroll-pit.md](payroll-pit.md)
 - [third-party-integrations.md](third-party-integrations.md)
 
-## Reference Hygiene
+## Vệ sinh tài liệu tham chiếu
 
-Superseded reference packs are not retained here. Promote current business rules
-to the canonical files above, or remove the non-current note instead of linking
-to a stale pack.
+Không lưu lại các bộ tham chiếu đã bị thay thế ở đây. Hãy đưa quy tắc nghiệp vụ
+hiện hành lên các file canonical phía trên, hoặc xóa ghi chú không còn hiệu lực
+thay vì liên kết tới một bộ tài liệu đã cũ.

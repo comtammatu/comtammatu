@@ -50,32 +50,50 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
             key={entry.id}
             title={
               period?.period_month && period?.period_year
-                ? `Tháng ${period.period_month}/${period.period_year}`
-                : "Kỳ lương"
+                ? copy.periodLabel(period.period_month, period.period_year)
+                : copy.periodFallback
             }
-            description={`Ngày công ${Number(entry.working_days)}/${Number(entry.standard_days)}`}
+            description={copy.workingDaysSummary(
+              Number(entry.working_days),
+              Number(entry.standard_days),
+            )}
             badge={{ children: statusMeta.label, variant: statusMeta.variant }}
           >
             <EmployeeDetailList
               columns={1}
               rows={[
                 {
-                  label: "Thực lĩnh",
+                  label: copy.netSalary,
                   value: (
-                    <span className="font-mono tabular-nums text-right text-base font-semibold text-primary">
+                    <span className="font-mono tabular-nums text-base font-semibold text-primary">
                       {fmt(Number(entry.net_salary))}
                     </span>
                   ),
                 },
-                { label: "Lương gộp", value: fmt(Number(entry.gross_total)) },
                 {
-                  label: "BH (NLĐ đóng)",
-                  value: `-${fmt(Number(entry.total_insurance_employee))}`,
+                  label: copy.grossTotal,
+                  value: (
+                    <span className="font-mono tabular-nums">
+                      {fmt(Number(entry.gross_total))}
+                    </span>
+                  ),
+                },
+                {
+                  label: copy.insuranceEmployee,
+                  value: (
+                    <span className="font-mono tabular-nums">
+                      {`-${fmt(Number(entry.total_insurance_employee))}`}
+                    </span>
+                  ),
                   muted: true,
                 },
                 {
-                  label: "Ngày công",
-                  value: `${Number(entry.working_days)}/${Number(entry.standard_days)}`,
+                  label: copy.workingDays,
+                  value: (
+                    <span className="font-mono tabular-nums">
+                      {`${Number(entry.working_days)}/${Number(entry.standard_days)}`}
+                    </span>
+                  ),
                 },
               ]}
             />

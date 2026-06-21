@@ -26,11 +26,9 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { AppEmptyState } from "@/components/surface";
+import { StatusBadge } from "@/components/status-badge";
 import { EmployeeDetailList, EmployeeFrame } from "../components/employee-page";
-import type {
-  ConsumptionReportStatus,
-  ConsumptionReportView,
-} from "../consumption-actions";
+import type { ConsumptionReportView } from "../consumption-actions";
 import {
   approveConsumptionReport,
   requestConsumptionAdjustment,
@@ -351,24 +349,6 @@ export function CheckoutApprovalsClient({
   );
 }
 
-const consumptionStatusLabel: Record<ConsumptionReportStatus, string> = {
-  draft: "Nháp",
-  submitted: "Chờ duyệt tiêu hao",
-  needs_changes: "Cần chỉnh sửa",
-  approved: "Đã duyệt - không phát sinh",
-  applied: "Đã áp Inventory",
-  cancelled: "Đã hủy",
-};
-
-function consumptionBadgeVariant(
-  status: ConsumptionReportStatus,
-): "secondary" | "warning" | "destructive" | "success" {
-  if (status === "submitted") return "warning";
-  if (status === "needs_changes") return "destructive";
-  if (status === "approved" || status === "applied") return "success";
-  return "secondary";
-}
-
 function ConsumptionReview({
   item,
   pending,
@@ -413,9 +393,7 @@ function ConsumptionReview({
             Chỉ áp Inventory sau khi duyệt.
           </p>
         </div>
-        <Badge variant={consumptionBadgeVariant(report.status)}>
-          {consumptionStatusLabel[report.status]}
-        </Badge>
+        <StatusBadge domain="consumption-report" value={report.status} />
       </div>
 
       {report.reviewNote ? (
@@ -433,10 +411,10 @@ function ConsumptionReview({
             <EmployeeFrame
               key={line.id}
               pad="sm"
-              className="grid gap-2 bg-background text-sm sm:grid-cols-[minmax(0,1fr)_120px_minmax(0,1fr)]"
+              className="grid gap-2 bg-background text-sm sm:grid-cols-3 sm:items-baseline"
             >
               <span className="font-medium">{line.ingredientName}</span>
-              <span className="font-mono">
+              <span className="font-mono tabular-nums">
                 {line.quantity} {line.unit}
               </span>
               <span className="text-muted-foreground">{line.note ?? "—"}</span>

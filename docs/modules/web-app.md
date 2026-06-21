@@ -8,10 +8,10 @@
 
 ## Cấu trúc route
 
-Route groups `(protected)` and `(public)` are URL-neutral. The tree below is
-organized by runtime surface; the actual current files live under
-`apps/web/app/(protected)/*` for authenticated app surfaces and
-`apps/web/app/(public)/*` for public/auth/return surfaces.
+Route group `(protected)` và `(public)` là URL-neutral. Cây bên dưới tổ chức
+theo runtime surface; file thực tế hiện nằm dưới
+`apps/web/app/(protected)/*` cho các surface app đã đăng nhập và
+`apps/web/app/(public)/*` cho các surface public/auth/return.
 
 ## Route contract hiện tại
 
@@ -28,7 +28,7 @@ owner; Branch Manager dùng L1 Branch Command dưới
 
 | Surface              | Route family                                                                                                 | Entry point                                               | Navigation / back contract                                                                                                                                                    | Breadcrumb / scope contract                                                                 |
 | -------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Root redirect        | `/`                                                                                                          | Shared role default                                       | Delegates to `getDefaultRedirect(claims)`: owner → `/admin/dashboard`; non-admin staff including Branch Manager → `/employee`.                                                | No extra hub surface. Scope remains in JWT + route params.                                  |
+| Root redirect        | `/`                                                                                                          | Shared role default                                       | Ủy quyền cho `getDefaultRedirect(claims)`: owner → `/admin/dashboard`; staff non-admin gồm cả Branch Manager → `/employee`.                                                | Không có hub surface phụ. Scope nằm trong JWT + route params.                                  |
 | Public / auth        | `/login`, `/access-denied`, `/payment/momo/return`, `/br/[branchId]/runner`, public health/webhook endpoints | `/login`, external return URL, hoặc Runner display URL    | Không dùng app shell. Không giữ app back link.                                                                                                                                | Không đọc tenant/branch scope từ UI state. Runner display tự validate branch trong page.    |
 | Admin foundation     | `/admin/dashboard`, `/admin/reports/*`, `/admin/staff/*`, tenant `/admin/settings/*`                         | `/admin/dashboard`                                        | `OfficeModuleShell` dùng admin sidebar và ẩn back link. Không dùng Admin như home chung cho mọi role hoặc nơi chứa branch setup mới.                                                 | Breadcrumb root là `Quản trị`; OfficeModuleShell build breadcrumb từ active nav + path tail.       |
 | Domain workspaces    | `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/notifications/*`                            | `MODULE_ACL[module].path`                                 | Workspace shell dùng sidebar/domain nav; link rời workspace phải đi qua `resolveRoleHomeLink(role)`. `/hr/payroll/*` là direct-support, không đưa vào discovery/nav mặc định. | Breadcrumb root là nhóm `Công việc`; filter/tab state giữ trong URL, không lưu local state. |
@@ -36,10 +36,10 @@ owner; Branch Manager dùng L1 Branch Command dưới
 | Employee portal      | `/employee/*`                                                                                                | `/employee`                                               | Employee dùng bottom/desktop nav trong surface; admin-level role không vào `/employee/*`.                                                                                     | Breadcrumb nhẹ theo task portal; không trộn HR admin/payroll thành hot path nhân viên.      |
 | Compatibility        | `/admin/inventory*`, `/admin/finance*`                                                                       | Không có active entry point                               | `/admin/finance*` canonical redirect sang `/finance*`; `/admin/inventory*` bị chặn bởi `inventory_admin` empty ACL.                                                           | Docs/runtime không quảng bá URL compatibility như entry point.                              |
 
-History rule: route changes that move the user between pages should use normal
-`Link` / `router.push` so browser Back returns to the previous route. Use
-`router.replace` only for same-page tab/filter/search-param state where Back
-should not step through every filter tweak.
+Quy tắc history: thay đổi route đưa người dùng giữa các trang phải dùng
+`Link` / `router.push` thường để nút Back của trình duyệt quay lại route trước.
+Chỉ dùng `router.replace` cho state tab/filter/search-param trong cùng trang,
+nơi Back không nên duyệt qua từng lần chỉnh filter.
 
 ```
 apps/web/app/
@@ -164,20 +164,20 @@ apps/web/app/
 
 Shell Management dùng chung cho admin/menu/hr/orders; với route `/admin/*` thành phần này render:
 
-- Collapsible sidebar with role-filtered navigation (reads `ADMIN_NAV_GROUPS` from `@comtammatu/shared/auth`)
+- Sidebar thu gọn được với điều hướng lọc theo role (đọc `ADMIN_NAV_GROUPS` từ `@comtammatu/shared/auth`)
 - Lớp quản trị giữ nền tảng vận hành và báo cáo điều hành, không phải menu gom mọi domain
-- Header with user info and sign-out
-- Responsive: sidebar collapses on mobile
+- Header với thông tin user và nút đăng xuất
+- Responsive: sidebar thu gọn trên mobile
 
 Nhóm điều hướng được lọc qua `canAccess(role, moduleKey)` — phân hệ nào không có quyền sẽ bị ẩn.
 
 ### Form đăng nhập (`apps/web/app/(public)/(auth)/login/login-form.tsx`)
 
-"use client" component. Uses React Hook Form + Zod validation. Calls `login()` server action. Displays error toast via Sonner on failure.
+Component "use client". Dùng React Hook Form + Zod validation. Gọi server action `login()`. Hiện error toast qua Sonner khi thất bại.
 
 ### Server action đăng nhập (`apps/web/app/(public)/(auth)/login/actions.ts`)
 
-Server action with rate limiting (`loginRateLimit` from `@comtammatu/security`). Validates with Zod, calls `signInWithPassword()`, extracts claims, redirects through `resolvePostLoginRedirect()`.
+Server action có rate limiting (`loginRateLimit` từ `@comtammatu/security`). Validate bằng Zod, gọi `signInWithPassword()`, trích xuất claims, redirect qua `resolvePostLoginRedirect()`.
 
 ## Inventory workspace hiện tại
 
@@ -236,12 +236,12 @@ Browser request
 
 ## Thêm một trang quản trị mới
 
-1. Create `apps/web/app/(protected)/admin/{module}/page.tsx`
-2. Add `ModuleKey` to `packages/shared/src/auth/module-acl.ts` with allowed roles
-3. Add URL mapping in `packages/shared/src/auth/route-resolution.ts`
-4. Add route family / chrome contract in `packages/shared/src/auth/route-map.ts`
-5. Add nav item in `packages/shared/src/auth/nav-config.ts`
-6. Verify: proxy routes correctly, sidebar shows/hides by role, route family resolves to the intended surface
+1. Tạo `apps/web/app/(protected)/admin/{module}/page.tsx`
+2. Thêm `ModuleKey` vào `packages/shared/src/auth/module-acl.ts` với các role được phép
+3. Thêm URL mapping trong `packages/shared/src/auth/route-resolution.ts`
+4. Thêm route family / chrome contract trong `packages/shared/src/auth/route-map.ts`
+5. Thêm nav item trong `packages/shared/src/auth/nav-config.ts`
+6. Xác minh: proxy route đúng, sidebar hiện/ẩn theo role, route family resolve về đúng surface dự kiến
 
 ## Các lỗi thường gặp
 
@@ -254,10 +254,10 @@ Browser request
 
 ## Lý do thiết kế
 
-- **Proxy as single auth gate:** All auth enforcement happens in `proxy.ts` before any route code runs. Layout-level checks are defense-in-depth, not primary.
-- **RSC by default:** Pages are React Server Components. Only interactive elements (forms, dropdowns) use "use client".
-- **Admin is now narrower by design:** it keeps L0 foundation controls and executive reporting for owner, while Branch Manager uses `/br/[branchId]/*` and deep domain workflows live in dedicated workspaces.
-- **Inventory is a standalone surface:** `/inventory` is the canonical Inventory operations domain. `/admin/inventory/*` is unsupported and blocked by `inventory_admin` with empty `allowedRoles`.
-- **Employee portal is live:** profile, clock, attendance, schedule, leave request, and payslip pages are current employee surfaces. HR workspace defaults to nhân viên/ca/ngày công/nghỉ phép; `/hr/payroll/*` remains owner direct-support for đối soát/chốt lương.
-- **Finance default is HKD operating finance:** revenue, inventory value, food cost/gross profit, operating expenses, cash summary, and HĐĐT support are live. Enterprise-accounting routes and period close/reopen are not part of the current app surface.
+- **Proxy là cổng auth duy nhất:** Mọi enforcement auth xảy ra trong `proxy.ts` trước khi bất kỳ code route nào chạy. Check ở tầng layout là defense-in-depth, không phải tuyến chính.
+- **Mặc định RSC:** Các page là React Server Components. Chỉ phần tử tương tác (form, dropdown) dùng "use client".
+- **Admin nay hẹp lại có chủ đích:** giữ các control nền tảng L0 và báo cáo điều hành cho owner, còn Branch Manager dùng `/br/[branchId]/*` và các workflow domain sâu nằm trong workspace riêng.
+- **Inventory là surface độc lập:** `/inventory` là domain vận hành Inventory canonical. `/admin/inventory/*` không được hỗ trợ và bị chặn bởi `inventory_admin` với `allowedRoles` rỗng.
+- **Employee portal đã live:** các page profile, clock, attendance, schedule, leave request, và payslip là surface nhân viên hiện hành. HR workspace mặc định mở nhân viên/ca/ngày công/nghỉ phép; `/hr/payroll/*` vẫn là direct-support cho owner để đối soát/chốt lương.
+- **Finance mặc định là tài chính vận hành HKD:** doanh thu, giá trị tồn kho, food cost/lãi gộp, chi phí vận hành, tổng kết tiền mặt, và hỗ trợ HĐĐT đã live. Các route kế toán doanh nghiệp và đóng/mở lại kỳ không nằm trong app surface hiện tại.
 - **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ policy/config như expiry; catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`, còn route settings cũ giữ redirect tương thích.
