@@ -54,6 +54,14 @@ const GUARDS = [
     reason:
       "the calculated-status flip is folded into upsert_payroll_calculation; a separate status='calculated' update reintroduces the entries/status divergence (approve/pay use 'approved'/'paid', not matched)",
   },
+  {
+    rule: "PAYROLL-PRORATION-CAP-AT-STANDARD",
+    expect: "present",
+    pattern: /Math\.min\(\s*workingDays\s*,\s*standardDays\s*\)/,
+    paths: ["apps/web/app/(protected)/hr/payroll-actions.ts"],
+    reason:
+      "proration caps the working/standard ratio at 1.0 via min(workingDays, standardDays); a 7-day/2-shift business exceeds weekday standard_days, so an uncapped ratio overpays base salary",
+  },
 ];
 
 const CODE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs"];

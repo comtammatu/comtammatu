@@ -216,9 +216,15 @@ export const calculatePayroll = withAction(
       const workingDays = workdaysFor(emp.id);
       const baseSalary = Number(emp.base_salary ?? 0);
 
+      // Cap proration at 100% of base. Má Tư is a 7-day/2-shift business, so
+      // attendance-days routinely exceed the weekday standard_days; an uncapped
+      // ratio overpays (e.g. 31/22 ≈ 141%). standard_days is the full-month
+      // denominator — meeting or exceeding it earns full base. working_days
+      // below still records actual attendance (PAYROLL-PRORATION-CAP-AT-STANDARD).
+      const effectiveWorkingDays = Math.min(workingDays, standardDays);
       const proratedSalary =
         standardDays > 0
-          ? Math.round((baseSalary * workingDays) / standardDays)
+          ? Math.round((baseSalary * effectiveWorkingDays) / standardDays)
           : baseSalary;
       const grossTotal = proratedSalary;
 
