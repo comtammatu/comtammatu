@@ -351,3 +351,38 @@ chấp nhận ở quy mô single-tenant manual-trigger.
 **Apply:** file → PR → owner apply tay vào prod ref `iexwsuaqqenyjiskawoj`
 (re-confirm `payroll_periods`/`payroll_entries` còn 0 row trước khi apply). Agent
 KHÔNG apply prod.
+
+## D042: Xóa sổ hết hạn đi qua waste pipeline + waste pipeline thực sự trừ kho (2026-06-21)
+
+**Decision (owner):** Nút "xóa sổ" hàng hết hạn KHÔNG dùng `adjustStock` thô nữa mà
+đi qua waste pipeline (`create_expiry_writeoff`): tính tier, cổng ảnh (chụp ảnh
+trong dialog, reuse `photo-upload-input.tsx`), duyệt tier-2, trừ kho theo WAC, lưu
+lô vào `source_ref` (`kind=expiry`, `grn_item_id`) để cảnh báo tự clear. Đồng thời
+sửa nguyên pipeline waste: `create_waste_entry` (tier0) + `approve_waste` (approved)
+trước đây flip `stock_issues.status='confirmed'` mà KHÔNG post `stock_movements` →
+waste không bao giờ trừ kho. Helper `_post_writeoff_movements` (mirror
+`confirm_stock_issue`) post movement giảm kho cho cả ba đường.
+
+**Security (cùng PR):** helper REVOKE khỏi `authenticated`/`anon` (default-privilege
+sống sót qua `REVOKE FROM PUBLIC`); `confirm_stock_issue` chặn confirm writeoff
+đang `pending` (cửa song song bypass duyệt tier-2). PR #84 merged.
+
+**Bài học vận hành:** Supabase preview branch replay FAIL giữa chừng (~migration
+`20260425130000`) → branch KHÔNG phải bản sao prod trung thực; chỉ subsystem đủ mới
+mới test được sau patch bring-to-current nhỏ (vd thêm cột `stock_movements.movement_subtype`).
+Branch-test xác minh logic trừ kho/WAC/guard thật trước khi apply prod.
+
+## D043: create_payment authz nội hàm gate `pos:use`; hoãn siết completion = `pos:confirm_payment` (2026-06-21)
+
+**Decision (owner):** `create_payment` (RPC SECURITY DEFINER, GRANT authenticated)
+thêm authz nội hàm: verify `p_tenant_id = auth_tenant_id()`, `p_created_by =
+auth.uid()`, và require `has_permission(branch, 'pos:use')` — KHỚP gate của caller
+DUY NHẤT (action `createPayment` chạy `posUseAuth`, xử lý cả tiền mặt). Đóng lỗ "any
+authenticated user spoof tham số tạo/chốt thanh toán" (audit PR2). PR #85 merged.
+
+**Defer (owner quyết 2026-06-21):** *Hoàn tất* thanh toán (đánh dấu đơn `paid`) hiện
+chỉ cần `pos:use` qua `createPayment` — trong khi `confirm_cash_payment` lại đòi
+`pos:confirm_payment`. Bất nhất này (waiter chỉ-`pos:use` vẫn chốt được đơn) GIỮ
+NGUYÊN; siết completion về `pos:confirm_payment` là PR riêng (phải đổi cả action
+`createPayment` + route UI bill tiền mặt qua đường confirm). Codex flag P1 nhưng đây
+là hành vi sẵn có, không phải regression do PR2.
