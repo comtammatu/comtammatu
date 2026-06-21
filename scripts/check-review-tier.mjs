@@ -87,7 +87,11 @@ const name = (n) => `T${n}`;
 
 let declared = null;
 try {
-  const hay = `${process.env.REVIEW_TIER || ""}\n${git("log -1 --format=%B")}`;
+  // Scan every commit body in the PR range, not just HEAD: on a pull_request
+  // event the checked-out ref is an auto-generated merge commit whose message
+  // carries no tier note, so `log -1` would miss the author's note and fail
+  // strict mode spuriously. base..HEAD covers the real PR commits.
+  const hay = `${process.env.REVIEW_TIER || ""}\n${git(`log ${base}..HEAD --format=%B`)}`;
   if (/\bT3\b/.test(hay)) declared = 3;
   else if (/\bT2\b/.test(hay)) declared = 2;
   else if (/\bT1\b/.test(hay)) declared = 1;
