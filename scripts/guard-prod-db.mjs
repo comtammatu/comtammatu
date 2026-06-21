@@ -31,6 +31,17 @@ const PROTECTED_REFS = {
 const WRITE_SQL =
   /\b(insert|update|delete|truncate|alter|drop|create|grant|revoke|vacuum|reindex|copy|merge|call|refresh\s+materialized)\b/i;
 
+// WRITE_SQL runs after string literals and comments are stripped, so a write
+// keyword inside a quoted value (e.g. `select ... where note = 'do not delete'`)
+// is not mistaken for a real write. Dollar-quoted bodies are deliberately NOT
+// stripped — a `do $$ ... update ... $$` block is a real write and must match.
+function stripSqlNoise(sql) {
+  return String(sql)
+    .replace(/--[^\n]*/g, " ") // line comments
+    .replace(/\/\*[\s\S]*?\*\//g, " ") // block comments
+    .replace(/'(?:[^']|'')*'/g, "''"); // single-quoted string literals
+}
+
 // Tolerates global flags between "supabase" and the subcommand
 // (e.g. `supabase --debug db push`); line continuations are folded first.
 const MUTATING_CLI =
@@ -95,7 +106,7 @@ if (toolName === "Bash") {
     if (/\bpg_restore\b/.test(cmd)) {
       block(`pg_restore against ${targetLabel} (restore is always a write)`);
     }
-    if (/\bpsql\b/.test(cmd) && (WRITE_SQL.test(cmd) || /\s(-f|--file)\b/.test(cmd))) {
+    if (/\bpsql\b/.test(cmd) && (WRITE_SQL.test(stripSqlNoise(cmd)) || /\s(-f|--file)\b/.test(cmd))) {
       block(
         `psql against ${targetLabel} with write SQL or a script file (cannot verify read-only)`,
       );
@@ -121,7 +132,7 @@ if (mcpMatch) {
 
   if (action === "execute_sql") {
     const query = String(toolInput.query ?? toolInput.sql ?? "");
-    if (WRITE_SQL.test(query)) {
+    if (WRITE_SQL.test(stripSqlNoise(query))) {
       block(`execute_sql with write SQL against ${label}`);
     }
     process.exit(0); // read-only SQL on a protected ref is allowed (SELECT-only policy)
