@@ -116,6 +116,9 @@ const FIXTURES = [
   ["allow: psql SELECT vs prod host", 0, bash(`psql postgres://u@db.${PROD}.supabase.co/postgres -c "select 1"`)],
   ["allow: curl GET vs prod REST", 0, bash(`curl -s "https://${PROD}.supabase.co/rest/v1/orders?select=id" -H "apikey: $KEY"`)],
   ["allow: mcp execute_sql SELECT vs prod", 0, mcp("execute_sql", { project_id: PROD, query: "with t as (select 1) select * from t" })],
+  ["allow: mcp execute_sql SELECT with write-keyword literal vs prod", 0, mcp("execute_sql", { project_id: PROD, query: "select id from orders where notes = 'do not delete this row'" })],
+  ["block: mcp execute_sql write with quoted value vs prod", 2, mcp("execute_sql", { project_id: PROD, query: "update orders set notes = 'keep me' where id = 1" })],
+  ["block: mcp execute_sql DO-block write vs prod", 2, mcp("execute_sql", { project_id: PROD, query: "do $$ begin update orders set x = 1; end $$" })],
   ["allow: mcp write vs unknown ref", 0, mcp("apply_migration", { project_id: "abcdefabcdefabcdefab" })],
   ["allow: unreadable stdin fails open", 0, "not-json"],
 ];
