@@ -56,13 +56,15 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { adjustStock } from "../stock-actions";
+import { createExpiryWriteoff } from "../waste-actions";
 import { fetchExpiryAlerts } from "../alert-actions";
+import { PhotoUploadInput } from "../_components/photo-upload-input";
 import type { BranchOption, ExpiryAlertRow } from "../page";
 
 interface WriteOffTarget {
   alert: ExpiryAlertRow;
   quantity: string;
+  photoUrl: string | null;
 }
 
 type ExpiryDisplayRow = ExpiryAlertRow & { rowKey: string };
@@ -130,11 +132,13 @@ function ExpiryAlertCard({
 export function ExpiryListClient({
   initial,
   branches,
+  tenantId,
   userRole,
   userBranchId,
 }: {
   initial: ExpiryAlertRow[];
   branches: BranchOption[];
+  tenantId: number;
   userRole: StaffRole;
   userBranchId: number | null;
 }) {
@@ -200,7 +204,7 @@ export function ExpiryListClient({
   );
 
   function openWriteOff(alert: ExpiryAlertRow) {
-    setWriteOff({ alert, quantity: "" });
+    setWriteOff({ alert, quantity: "", photoUrl: null });
   }
 
   function handleConfirmWriteOff() {
@@ -211,17 +215,19 @@ export function ExpiryListClient({
       return;
     }
 
-    const { alert } = writeOff;
+    const { alert, photoUrl } = writeOff;
     const lotPart = alert.batch_number ? ` lô ${alert.batch_number}` : "";
     const grnPart = alert.grn_number ? ` (GRN ${alert.grn_number})` : "";
     const expiryPart = alert.expiry_date ? ` HSD ${alert.expiry_date}` : "";
     startTransition(async () => {
-      const res = await adjustStock({
+      const res = await createExpiryWriteoff({
         branchId: alert.branch_id,
         ingredientId: alert.ingredient_id,
-        quantityChange: -qty,
-        type: "adjustment",
-        reason: `Hết hạn sử dụng — ${alert.ingredient_name}${lotPart}${expiryPart}${grnPart}`,
+        quantity: qty,
+        unit: alert.unit,
+        grnItemId: alert.grn_item_id,
+        note: `Hết hạn sử dụng — ${alert.ingredient_name}${lotPart}${expiryPart}${grnPart}`,
+        photoUrls: photoUrl ? [photoUrl] : undefined,
       });
 
       if (!res.success) {
@@ -229,7 +235,13 @@ export function ExpiryListClient({
         return;
       }
 
-      toast.success(`Đã xóa sổ ${qty} ${alert.ingredient_name}`);
+      if (res.data?.requiresApproval) {
+        toast.success(
+          `Đã gửi yêu cầu xóa sổ ${alert.ingredient_name} — chờ QLV duyệt`,
+        );
+      } else {
+        toast.success(`Đã xóa sổ ${qty} ${alert.unit} ${alert.ingredient_name}`);
+      }
       setWriteOff(null);
 
       const again = await fetchExpiryAlerts(
@@ -515,6 +527,25 @@ export function ExpiryListClient({
               }
               maxFractionDigits={3}
             />
+            <div className="flex flex-col gap-1.5">
+              <Label>Ảnh bằng chứng</Label>
+              <PhotoUploadInput
+                tenantId={tenantId}
+                folder={`waste/expiry-${writeOff?.alert.grn_item_id ?? "new"}`}
+                value={writeOff?.photoUrl ?? null}
+                onChange={(url) =>
+                  setWriteOff((prev) =>
+                    prev ? { ...prev, photoUrl: url } : null,
+                  )
+                }
+                acceptTypes="image"
+                allowPaste={false}
+                disabled={isPending}
+              />
+              <p className="text-xs text-muted-foreground">
+                Bắt buộc nếu giá trị xóa sổ vượt ngưỡng (tier ≥ 1).
+              </p>
+            </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>

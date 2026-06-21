@@ -61,6 +61,7 @@ export default async function ExpirySettingsPage({
       <ExpiryListClient
         initial={alerts}
         branches={branches}
+        tenantId={claims?.tenant_id ?? 0}
         userRole={claims?.user_role ?? "branch_manager"}
         userBranchId={scope?.selectedBranchId ?? null}
       />

@@ -8105,6 +8105,10 @@ export type Database = {
           vat_rate: number
         }[]
       }
+      _post_writeoff_movements: {
+        Args: { p_issue_id: number }
+        Returns: undefined
+      }
       acquire_zone_lock: {
         Args: {
           p_session_id: number
@@ -8398,6 +8402,19 @@ export type Database = {
         Returns: Json
       }
       count_unread_notifications: { Args: never; Returns: number }
+      create_expiry_writeoff: {
+        Args: {
+          p_branch_id: number
+          p_grn_item_id?: number
+          p_ingredient_id: number
+          p_location_id: number
+          p_note?: string
+          p_photo_urls?: string[]
+          p_quantity: number
+          p_unit: string
+        }
+        Returns: Json
+      }
       create_grn_from_po: { Args: { p_po_id: number }; Returns: Json }
       create_order: {
         Args: {
