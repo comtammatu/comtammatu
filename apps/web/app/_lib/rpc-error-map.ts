@@ -118,6 +118,14 @@ export function mapRpcError<TData = unknown>(
     }
   }
 
+  // Unmapped: log server-side (code + raw message) so the unmapped tail is
+  // visible for mapper iteration (RPC-ERROR-MUST-MAP-OR-LOG-UNMAPPED). The
+  // client only ever sees fallback.userMessage — raw is never returned.
+  console.error("[mapRpcError] unmapped rpc error", {
+    code: code ?? null,
+    message: raw,
+  });
+
   return {
     success: false,
     error: fallback.userMessage,
