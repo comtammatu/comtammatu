@@ -55,6 +55,26 @@ const createEmployeeAccountSchema = z.object({
   bankAccount: z.string().trim().optional(),
 });
 
+const updateEmployeeSchema = z.object({
+  employeeId: z.coerce.number().int().positive(),
+  fullName: z.string().trim().min(1, { error: "Họ tên không được để trống" }).optional(),
+  phone: z.string().trim().optional(),
+  employeeCode: z.string().trim().optional(),
+  startDate: z.string().optional(),
+  defaultChecklistTemplateId: z
+    .coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .optional(),
+  baseSalary: z.coerce.number().int().nonnegative().optional(),
+  dependentsCount: z.coerce.number().int().min(0).max(20).optional(),
+  idNumber: z.string().trim().optional(),
+  bankAccount: z.string().trim().optional(),
+  isActive: z.boolean().optional(),
+});
+
 async function loadChecklistTemplateBranch(
   tenantId: number,
   templateId: number,
@@ -286,6 +306,133 @@ export const createEmployeeAccount = withAction(
 
     revalidateHrPaths();
     return { success: true, data: result };
+  },
+);
+
+// Edit an existing employee's profile + employment record. Owner-only
+// (HR_ROLES): base_salary/id_number/bank_account are owner PII. Auth identity
+// (email/password) and role/branch are out of scope — those go through
+// /admin/staff + admin_update_profile. Partial update: only provided fields
+// are written.
+export const updateEmployee = withAction(
+  { roles: HR_ROLES, schema: updateEmployeeSchema },
+  async (data, { claims, supabase }) => {
+    const service = createServiceClient();
+
+    const { data: employee, error: loadError } = await service
+      .from("employees")
+      .select("id, profile_id, profiles!inner ( id, branch_id )")
+      .eq("id", data.employeeId)
+      .eq("tenant_id", claims.tenant_id)
+      .maybeSingle();
+
+    if (loadError || !employee) {
+      return { success: false, error: "Không tìm thấy hồ sơ nhân viên." };
+    }
+
+    const employeeBranchId = employee.profiles?.branch_id ?? null;
+
+    if (data.defaultChecklistTemplateId != null) {
+      const templateBranchId = await loadChecklistTemplateBranch(
+        claims.tenant_id,
+        data.defaultChecklistTemplateId,
+      );
+      if (templateBranchId === undefined) {
+        return {
+          success: false,
+          error: "Checklist template không tồn tại hoặc đã bị ngưng sử dụng.",
+        };
+      }
+      if (templateBranchId != null && templateBranchId !== employeeBranchId) {
+        return {
+          success: false,
+          error: "Checklist template không thuộc phạm vi chi nhánh này.",
+        };
+      }
+    }
+
+    const profileUpdate: { full_name?: string; phone?: string } = {};
+    if (data.fullName !== undefined) profileUpdate.full_name = data.fullName;
+    if (data.phone !== undefined) profileUpdate.phone = data.phone;
+
+    if (Object.keys(profileUpdate).length > 0) {
+      const { error: profileError } = await service
+        .from("profiles")
+        .update(profileUpdate)
+        .eq("id", employee.profile_id)
+        .eq("tenant_id", claims.tenant_id);
+      if (profileError) {
+        return { success: false, error: "Không thể cập nhật hồ sơ nhân viên." };
+      }
+    }
+
+    const employeeUpdate: {
+      employee_code?: string | null;
+      start_date?: string | null;
+      dependents_count?: number;
+      base_salary?: number | null;
+      id_number?: string | null;
+      bank_account?: string | null;
+      default_checklist_template_id?: number | null;
+      is_active?: boolean;
+    } = {};
+    if (data.employeeCode !== undefined) {
+      employeeUpdate.employee_code = data.employeeCode || null;
+    }
+    if (data.startDate !== undefined) {
+      employeeUpdate.start_date = data.startDate || null;
+    }
+    if (data.dependentsCount !== undefined) {
+      employeeUpdate.dependents_count = data.dependentsCount;
+    }
+    if (data.baseSalary !== undefined) {
+      employeeUpdate.base_salary = data.baseSalary;
+    }
+    if (data.idNumber !== undefined) {
+      employeeUpdate.id_number = data.idNumber || null;
+    }
+    if (data.bankAccount !== undefined) {
+      employeeUpdate.bank_account = data.bankAccount || null;
+    }
+    if (data.defaultChecklistTemplateId !== undefined) {
+      employeeUpdate.default_checklist_template_id =
+        data.defaultChecklistTemplateId;
+    }
+    if (data.isActive !== undefined) {
+      employeeUpdate.is_active = data.isActive;
+    }
+
+    if (Object.keys(employeeUpdate).length > 0) {
+      const { error: employeeError } = await service
+        .from("employees")
+        .update(employeeUpdate)
+        .eq("id", data.employeeId)
+        .eq("tenant_id", claims.tenant_id);
+      if (employeeError) {
+        if (employeeError.code === "23505") {
+          return { success: false, error: "Mã nhân viên đã tồn tại." };
+        }
+        return { success: false, error: "Không thể cập nhật hồ sơ nhân viên." };
+      }
+    }
+
+    logAudit(supabase, {
+      action: "update",
+      entityType: "employee",
+      entityId: data.employeeId,
+      newData: {
+        ...(data.baseSalary !== undefined
+          ? { base_salary: data.baseSalary }
+          : {}),
+        ...(data.dependentsCount !== undefined
+          ? { dependents_count: data.dependentsCount }
+          : {}),
+        ...(data.isActive !== undefined ? { is_active: data.isActive } : {}),
+      },
+    });
+
+    revalidateHrPaths();
+    return { success: true, data: { id: data.employeeId } };
   },
 );
 
