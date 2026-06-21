@@ -45,13 +45,24 @@ BEGIN
   IF p_created_by IS DISTINCT FROM auth.uid() THEN
     RAISE EXCEPTION 'actor_mismatch' USING ERRCODE = '42501';
   END IF;
-  IF NOT public.has_permission(p_branch_id, 'pos:confirm_payment') THEN
-    RAISE EXCEPTION 'permission denied: pos:confirm_payment' USING ERRCODE = '42501';
-  END IF;
-
   IF p_method NOT IN ('cash', 'momo') THEN
     RAISE EXCEPTION 'invalid payment method: %. VietQR uses confirm_vietqr_payment.',
       p_method USING ERRCODE = '22023';
+  END IF;
+
+  -- Permission mirrors the POS server actions (posConfirmPaymentAuth /
+  -- posUseAuth): a cash payment completes at the drawer and needs
+  -- pos:confirm_payment; a momo payment is a webhook-driven e-wallet flow that
+  -- pos:use operators may start/record. Either way the caller needs a real POS
+  -- permission, which closes the "any authenticated user" hole.
+  IF p_method = 'cash' THEN
+    IF NOT public.has_permission(p_branch_id, 'pos:confirm_payment') THEN
+      RAISE EXCEPTION 'permission denied: pos:confirm_payment' USING ERRCODE = '42501';
+    END IF;
+  ELSE
+    IF NOT public.has_permission(p_branch_id, 'pos:use') THEN
+      RAISE EXCEPTION 'permission denied: pos:use' USING ERRCODE = '42501';
+    END IF;
   END IF;
 
   SELECT id, total_amount, tax_amount, payment_status, branch_id, tenant_id
