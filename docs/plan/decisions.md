@@ -425,3 +425,32 @@ phạm vi **toàn bộ surfaces** (POS / KDS-Runner / Admin / Inventory / Employ
 **Defer (chưa làm tới khi owner duyệt mockup):** migrate `globals.css` sang token
 elevated; hạ cấp `design-system.md`; viết lint drift-guard DESIGN.md↔globals.css;
 sửa `ui.md` + `AGENTS.md`. Tới lúc đó vẫn giữ enforcement hiện hành.
+
+## D045 — Shell điều hướng 2 tầng (icon rail + panel) — 2026-06-22
+
+Quyết định: Chrome Management (AppShell duy nhất) chuyển từ một sidebar phẳng
+(navGroups[]) sang 2 tầng trong CÙNG một SidebarProvider/SidebarInset:
+tầng-1 = icon rail luôn hiện (Sidebar collapsible="none", icon + tooltip) làm
+bộ chuyển mô-đun cross-module, single-sourced bởi resolveOfficeRailItems;
+tầng-2 = deep nav của mô-đun đang mở, render bằng khối Sidebar inset hiện có.
+AppShell nhận `tier1: ShellNavItem[]` + `tier2: ShellNavGroup[]` thay cho
+`navGroups[]`; prop `collapsible` bị bỏ. Rail LUÔN nhận home branchId nên nhóm
+branch-management không còn nhấp nháy giữa các mô-đun. Vẫn là chrome family #1
+(một shell, một header) — rail không phải sidebar thứ hai, chỉ là cột icon cố định.
+
+Hệ quả:
+- Sửa tại chỗ apps/web/app/components/app-shell.tsx; KHÔNG thêm *-shell.tsx,
+  KHÔNG thêm SidebarProvider/main → baseline shell-registry giữ nguyên.
+- 4 wrapper (office-module/finance/inventory/branch-management) đổi sang truyền
+  tier1+tier2; finance giữ realtime channel ở mức shell, inventory giữ nav
+  branch-reactive ở tier-2. RSC vẫn chỉ truyền `module` id serializable.
+- Mobile: bottom-nav = tier-2 (deep nav mô-đun), thêm tab "Mô-đun" mở tier-1 +
+  tab "Menu" mở drawer 2 phần; selectBottomNavItems chỉ flatten trong tier-2.
+- nav-as-data + MODULE_ACL single-source giữ nguyên (không có literal inline,
+  mọi href vẫn resolve về MODULE_ACL). Thêm test resolver tier-1/ACL trước khi
+  refactor (trước đây không có lưới regression).
+- §A/§B của design-system.md được nới: "một sidebar" nay gồm rail icon cố định +
+  panel deep-nav trong cùng SidebarProvider; cập nhật docs/modules/ui.md cùng PR
+  (lint:doc-staleness fail-closed).
+
+Đảo quyết định này phải sửa bản ghi này trước.

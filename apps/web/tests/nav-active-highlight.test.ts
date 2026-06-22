@@ -73,11 +73,11 @@ test("mobile workspace bottom nav reuses the shell nav model", () => {
 
   assert.match(
     appShell,
-    /<WorkspaceBottomNav navGroups=\{navGroups\}/,
-    "AppShell must pass the same nav model to desktop sidebar and mobile bottom nav",
+    /<WorkspaceBottomNav tier1=\{tier1\} tier2=\{tier2\}/,
+    "AppShell must pass the dual-tier nav model to the mobile bottom nav",
   );
-  assert.match(bottomNav, /navGroups: ShellNavGroup\[\]/);
-  assert.match(bottomNav, /flattenNavGroups\(navGroups\)/);
+  assert.match(bottomNav, /tier2: ShellNavGroup\[\]/);
+  assert.match(bottomNav, /flattenNavGroups\(tier2\)/);
   assert.doesNotMatch(
     bottomNav,
     /const NAV_ITEMS|MODULE_ACL|canAccess/,

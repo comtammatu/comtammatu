@@ -786,6 +786,88 @@ export function AppLinkCard({
   );
 }
 
+export type KpiRowProps = {
+  children: ReactNode;
+  className?: string;
+  density?: "comfortable" | "compact";
+};
+
+export function KpiRow({
+  children,
+  className,
+  density = "comfortable",
+}: KpiRowProps) {
+  const isCompact = density === "compact";
+  return (
+    <div
+      className={cn(
+        "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+        isCompact ? "gap-2" : "gap-3",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export type DescriptionListItem = {
+  term: ReactNode;
+  description: ReactNode;
+};
+
+export type DescriptionListProps = {
+  items: DescriptionListItem[];
+  className?: string;
+  termClassName?: string;
+  descriptionClassName?: string;
+};
+
+export function DescriptionList({
+  items,
+  className,
+  termClassName,
+  descriptionClassName,
+}: DescriptionListProps) {
+  return (
+    <dl className={cn("flex flex-col gap-3", className)}>
+      {items.map((item, index) => (
+        <div key={index} className="flex flex-col gap-1">
+          <dt
+            className={cn(
+              "text-xs font-medium uppercase tracking-wide text-muted-foreground",
+              termClassName,
+            )}
+          >
+            {item.term}
+          </dt>
+          <dd className={cn("text-sm leading-6", descriptionClassName)}>
+            {item.description}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+export type LinkCardGridProps = {
+  children: ReactNode;
+  className?: string;
+};
+
+export function LinkCardGrid({ children, className }: LinkCardGridProps) {
+  return (
+    <div
+      className={cn(
+        "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 export type AppDetailFooterProps = {
   leading?: ReactNode;
   trailing?: ReactNode;

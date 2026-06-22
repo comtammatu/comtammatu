@@ -8,6 +8,7 @@ export const admin = {
     inventory: "Kho",
     finance: "Tài chính",
     menu: "Menu",
+    modules: "Mô-đun",
   },
   dashboard: {
     pageTitle: "Tổng quan vận hành",

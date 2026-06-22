@@ -118,8 +118,24 @@ Không dùng local `className="p-0"` hoặc `className="overflow-x-auto"` trên
 - `AppToolbar` cho filter/action toolbar.
 - `AppEmptyState` cho empty/no-result/no-access/error state.
 - `AppLinkCard` cho navigation/action card.
+- `KpiRow` cho grid responsive (1/2/3 cột) bọc các `KpiCard`.
+- `DescriptionList` cho cặp term/description (`<dl>`) ở trang chi tiết.
+- `LinkCardGrid` cho grid responsive (1/2/3 cột) bọc các `AppLinkCard`.
 
 Domain wrappers như Inventory/Employee/Admin có thể giữ API riêng để tránh sửa hàng loạt call site, nhưng phải delegate về các adapter này thay vì tự style lại `Card`, `Empty`, hoặc page container.
+
+## Management Shell Structure
+
+Management chrome (`apps/web/app/components/app-shell.tsx`) render sidebar thành
+2 tầng trong CÙNG một `SidebarProvider` (D045):
+
+- Tầng-1 = icon rail cố định (`collapsible="none"`, icon + tooltip) làm bộ chuyển
+  mô-đun cross-module, single-sourced bởi `resolveOfficeRailItems`.
+- Tầng-2 = deep nav của mô-đun đang mở (grouped), render bằng khối Sidebar inset.
+
+`AppShell` nhận `tier1` + `tier2` thay cho `navGroups[]`. Rail là cột icon cố
+định, không phải sidebar thứ hai — vẫn là một sidebar, một header. Trên mobile,
+bottom-nav = tier-2, có tab "Mô-đun" mở tier-1.
 
 ## Component Governance
 

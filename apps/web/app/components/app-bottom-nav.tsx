@@ -10,8 +10,9 @@ import { Button } from "@comtammatu/ui/components/button";
  * Operations chrome (employee surface) and the Management chrome
  * (`WorkspaceBottomNav`). Per design-system.md § B the bottom nav is an exported
  * primitive, not a per-surface re-implementation. Callers pass pre-resolved
- * items (active computed by the surface's nav model) plus an optional trailing
- * action (e.g. the Management "Menu" drawer toggle).
+ * items (active computed by the surface's nav model) plus optional leading and
+ * trailing actions (e.g. the Management "Mô-đun" switcher and "Menu" drawer
+ * toggles flanking the deep-nav items).
  */
 export const BOTTOM_NAV_ITEM_CLASS =
   "flex-1 flex-col gap-1 px-1 text-2xs transition-[background-color,color,box-shadow] duration-150";
@@ -27,11 +28,13 @@ export function AppBottomNav({
   items,
   ariaLabel,
   itemClassName,
+  leading,
   trailing,
 }: {
   items: AppBottomNavItem[];
   ariaLabel: string;
   itemClassName?: string;
+  leading?: ReactNode;
   trailing?: ReactNode;
 }) {
   return (
@@ -40,6 +43,7 @@ export function AppBottomNav({
       aria-label={ariaLabel}
     >
       <div className="no-scrollbar mx-auto flex max-w-lg items-stretch gap-1 overflow-x-auto">
+        {leading}
         {items.map((item) => {
           const Icon = item.icon;
           return (

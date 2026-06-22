@@ -40,7 +40,8 @@ test("Branch management routes use management contract without a parent branch l
     "menu limits remains a daily operation, not setup",
   );
   assert.match(shell, /<AppShell/);
-  assert.match(shell, /resolveOfficeNavGroups\(role, branchId\)/);
+  assert.match(shell, /tier1=\{resolveOfficeRailItems\(role, branchId\)\}/);
+  assert.match(shell, /tier2=\{resolveBranchDeepNav\(role, branchId\)\}/);
   assert.doesNotMatch(
     shell,
     /bottomNav=\{false\}/,

@@ -349,6 +349,12 @@ The only shared primitive layer is `packages/ui/src/components/*`.
 
 App-level page, section, toolbar, empty-state, and link-card composition is centralized in `apps/web/app/components/surface.tsx`. These exports are adapters around the shared primitives, not a second primitive library.
 
+Shared layout primitives also exported from `surface.tsx`:
+
+- `KpiRow` — responsive grid (1/2/3 columns) wrapping `KpiCard` metric tiles.
+- `DescriptionList` — `<dl>` term/description pairs for detail-page metadata.
+- `LinkCardGrid` — responsive grid (1/2/3 columns) wrapping `AppLinkCard` entries.
+
 Default primitive mapping:
 
 | Need                  | Use                                                                         |
@@ -556,7 +562,11 @@ third.
    workspaces (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`), and branch
    command/setup (`/br/[branchId]/dashboard`, `/br/[branchId]/settings/*`). One
    shell, one sidebar, one header — sidebar groups differ by role/scope, the
-   chrome does not.
+   chrome does not. Per `D045`, the single Management sidebar MAY render as two
+   tiers inside one `SidebarProvider`: a fixed icon rail (`collapsible="none"`,
+   a cross-module switcher) plus the deep-nav panel. The rail is a fixed icon
+   column, not a second sidebar idiom and not a third chrome family — "one
+   sidebar" counts the rail+panel pair as that one sidebar.
 2. Operations chrome — purpose-built, full-screen, single-job surfaces that
    legitimately cannot wear the management sidebar: POS (`/br/[branchId]/pos`),
    KDS and Runner (`/br/[branchId]/{kds,runner}`), and the staff task surface
@@ -593,7 +603,10 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
 - Gate (Stage 0): a `shell-registry` ratchet freezes the current chrome-shell
   set as baseline; a new `*-shell` file or new bespoke chrome
   (`SidebarProvider` / page-owned `<main>`) outside the allowlist fails CI. The
-  baseline only decreases.
+  baseline only decreases. The `D045` dual-tier rail+panel stays inside the
+  one allowlisted `app-shell.tsx` with one `SidebarProvider` — the rail
+  (`collapsible="none"`) is not a second `SidebarProvider` and does not raise
+  the baseline.
 
 ### C. Route Home + IA
 
