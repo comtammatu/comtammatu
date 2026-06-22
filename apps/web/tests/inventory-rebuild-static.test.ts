@@ -181,8 +181,27 @@ test("consumption route is first-class while issues route remains compatible", (
   assert.match(issuesPage, /\.from\("stock_movements"\)/);
   assert.match(issuesPage, /\.eq\("type", "consumption"\)/);
   assert.match(issuesPage, /\.eq\("movement_subtype", "sale_consumption"\)/);
+  assert.match(issuesPage, /parseBusinessDateParam\(params\.startDate\)/);
+  assert.match(issuesPage, /parseBusinessDateParam\(params\.endDate\)/);
+  assert.match(
+    issuesPage,
+    /\.gte\(\s*"created_at",\s*vnBusinessDateBoundaryUtc\(startDate\),\s*\)/,
+  );
+  assert.match(
+    issuesPage,
+    /\.lt\(\s*"created_at",\s*vnBusinessDateBoundaryUtc\(endDate, 1\),\s*\)/,
+  );
+  assert.match(
+    issuesPage,
+    /if \(!hasRecordedDateFilter\) \{[\s\S]*\.limit\(50\)/,
+    "recorded consumption ledger should remove the 50-row cap when date-filtered",
+  );
   assert.match(issuesClient, /recordedConsumptions/);
   assert.match(issuesClient, /Tiêu hao đã ghi nhận/);
+  assert.match(issuesClient, /useSearchParams/);
+  assert.match(issuesClient, /startDate/);
+  assert.match(issuesClient, /endDate/);
+  assert.match(issuesClient, /tieu-hao-da-ghi-nhan/);
 });
 
 test("stock and inventory value exclude legacy branch kitchen locations", () => {

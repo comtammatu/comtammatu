@@ -2,9 +2,9 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing inventory issue surface keeps localized JSX copy until message-catalog extraction */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import {
   ArrowRight as IconArrowRight,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Input } from "@comtammatu/ui/components/input";
 import {
   InputGroup,
   InputGroupAddon,
@@ -105,6 +106,7 @@ const TYPE_FILTER_OPTIONS = [
 
 const CREATE_ISSUE_DIALOG_DESCRIPTION =
   "Chọn điểm vận hành, loại xuất và ghi chú trước khi tạo phiếu nháp.";
+const CONSUMPTION_PATH = "/inventory/consumption";
 
 const createIssueSchema = z.object({
   branchId: z.string().min(1, { error: "Chọn chi nhánh để tạo phiếu xuất." }),
@@ -130,21 +132,39 @@ function toUtf8Base64(value: string): string {
   return btoa(binary);
 }
 
+function buildConsumptionHref(params: URLSearchParams): string {
+  const query = params.toString();
+  return query ? `${CONSUMPTION_PATH}?${query}` : CONSUMPTION_PATH;
+}
+
 export function IssuesClient({
   issues,
   recordedConsumptions,
   branches,
   defaultBranchId,
+  recordedEndDate: initialRecordedEndDate,
+  recordedIsLimited,
+  recordedStartDate: initialRecordedStartDate,
 }: {
   issues: IssueRow[];
   recordedConsumptions: RecordedConsumptionRow[];
   branches: IssueBranchOption[];
   defaultBranchId: number | null;
+  recordedEndDate: string;
+  recordedIsLimited: boolean;
+  recordedStartDate: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeStatus, setActiveStatus] = useState("all");
   const [activeType, setActiveType] = useState("all");
   const [search, setSearch] = useState("");
+  const [recordedStartDate, setRecordedStartDate] = useState(
+    initialRecordedStartDate,
+  );
+  const [recordedEndDate, setRecordedEndDate] = useState(
+    initialRecordedEndDate,
+  );
   const [createOpen, setCreateOpen] = useState(false);
   const createIssueDefaultValues = useMemo<CreateIssueValues>(
     () => ({
@@ -158,6 +178,16 @@ export function IssuesClient({
   // on phones; hiding it by breakpoint forced warehouse staff back to a
   // desktop just to press one button.
   const showExportAction = true;
+  const hasRecordedDateFilter =
+    initialRecordedStartDate !== "" || initialRecordedEndDate !== "";
+  const recordedConsumptionHeaderHint = recordedIsLimited
+    ? `${recordedConsumptions.length} dòng gần nhất`
+    : `${recordedConsumptions.length} dòng`;
+
+  useEffect(() => {
+    setRecordedStartDate(initialRecordedStartDate);
+    setRecordedEndDate(initialRecordedEndDate);
+  }, [initialRecordedEndDate, initialRecordedStartDate]);
 
   const filtered = useMemo(() => {
     let result = issues;
@@ -228,6 +258,71 @@ export function IssuesClient({
     toast.success(`Đã xuất ${String(filtered.length)} phiếu xuất.`);
   }
 
+  function handleExportRecordedCsv() {
+    if (recordedConsumptions.length === 0) {
+      toast.error("Không có dữ liệu tiêu hao để xuất CSV.");
+      return;
+    }
+
+    const header = [
+      "Thời điểm",
+      "Nguyên liệu",
+      BRANCH_VI.long,
+      "Kho trừ",
+      FORM_VI.quantity,
+      "Giá vốn",
+      "Thành tiền",
+    ];
+    const rows = recordedConsumptions.map((row) => [
+      row.recordedAt,
+      row.ingredientName,
+      row.branchName,
+      row.locationName,
+      row.quantity,
+      row.unitCost,
+      row.totalCost,
+    ]);
+    const body = [header, ...rows]
+      .map((line) => line.map((cell) => csvCell(cell)).join(","))
+      .join("\n");
+    const csv = `\uFEFF${body}`;
+    const stamp = new Date()
+      .toISOString()
+      .slice(0, 19)
+      .replaceAll(":", "-")
+      .replace("T", "-");
+
+    downloadCsv(toUtf8Base64(csv), `tieu-hao-da-ghi-nhan-${stamp}.csv`);
+    toast.success(
+      `Đã xuất ${String(recordedConsumptions.length)} dòng tiêu hao.`,
+    );
+  }
+
+  function applyRecordedDateFilter() {
+    const next = new URLSearchParams(searchParams.toString());
+    if (recordedStartDate) {
+      next.set("startDate", recordedStartDate);
+    } else {
+      next.delete("startDate");
+    }
+    if (recordedEndDate) {
+      next.set("endDate", recordedEndDate);
+    } else {
+      next.delete("endDate");
+    }
+
+    router.push(buildConsumptionHref(next));
+  }
+
+  function clearRecordedDateFilter() {
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("startDate");
+    next.delete("endDate");
+    setRecordedStartDate("");
+    setRecordedEndDate("");
+    router.push(buildConsumptionHref(next));
+  }
+
   const filterBar = (
     <AppToolbar variant="inline">
       <div className="flex flex-1 flex-wrap items-end gap-3">
@@ -291,6 +386,50 @@ export function IssuesClient({
           </Button>
         )}
       </div>
+    </AppToolbar>
+  );
+
+  const recordedConsumptionFilterBar = (
+    <AppToolbar variant="inline">
+      <div className="flex flex-1 flex-wrap items-end gap-3">
+        <label className="flex min-w-40 flex-col gap-1 text-xs font-medium text-muted-foreground">
+          Từ ngày
+          <Input
+            type="date"
+            value={recordedStartDate}
+            onChange={(event) => setRecordedStartDate(event.target.value)}
+            className="h-10 w-40 bg-background"
+          />
+        </label>
+        <label className="flex min-w-40 flex-col gap-1 text-xs font-medium text-muted-foreground">
+          Đến ngày
+          <Input
+            type="date"
+            value={recordedEndDate}
+            onChange={(event) => setRecordedEndDate(event.target.value)}
+            className="h-10 w-40 bg-background"
+          />
+        </label>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={applyRecordedDateFilter}
+        >
+          Lọc
+        </Button>
+      </div>
+
+      {hasRecordedDateFilter ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={clearRecordedDateFilter}
+        >
+          <IconFilterX className="mr-1 size-4" />
+          Xóa lọc
+        </Button>
+      ) : null}
     </AppToolbar>
   );
 
@@ -479,9 +618,21 @@ export function IssuesClient({
 
       <AppSection
         title="Tiêu hao đã ghi nhận"
-        headerHint={`${recordedConsumptions.length} dòng gần nhất`}
+        headerHint={recordedConsumptionHeaderHint}
+        action={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleExportRecordedCsv}
+          >
+            <IconFileDownload className="size-4" />
+            Xuất CSV
+          </Button>
+        }
         contentFlush
       >
+        {recordedConsumptionFilterBar}
         <DataTable
           columns={recordedConsumptionColumns}
           data={recordedConsumptions}
