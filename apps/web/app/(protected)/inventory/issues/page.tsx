@@ -27,6 +27,20 @@ function formatUnitCost(unitCost: number, unit: string): string {
   return unit ? `${formatVND(unitCost)}/${unit}` : formatVND(unitCost);
 }
 
+function movementSourceLabel(reason: unknown): string {
+  const rawReason = String(reason ?? "");
+  const transferCode = rawReason.match(/:(TRF[\w-]+)/)?.[1];
+
+  if (rawReason.startsWith("matu-platform import:")) {
+    return transferCode
+      ? `Import matu-platform · ${transferCode}`
+      : "Import matu-platform";
+  }
+  if (/tiêu hao|tieu hao/i.test(rawReason)) return "Báo cáo tiêu hao";
+  if (rawReason) return rawReason;
+  return "—";
+}
+
 function getSingleParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
@@ -87,7 +101,7 @@ export default async function IssuesPage({
   let recordedConsumptionQuery = supabase
     .from("stock_movements")
     .select(
-      "id, branch_id, location_id, ingredient_id, quantity_change, unit_cost, created_at, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, unit )",
+      "id, branch_id, location_id, ingredient_id, quantity_change, unit_cost, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, unit )",
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("type", "consumption")
@@ -166,6 +180,7 @@ export default async function IssuesPage({
 
       return {
         id: row.id as number,
+        branchId: row.branch_id as number,
         recordedAt: row.created_at
           ? formatDateTime(row.created_at as string)
           : "—",
@@ -176,8 +191,10 @@ export default async function IssuesPage({
           "—",
         ingredientName: (ingredient?.name as string) ?? "—",
         quantity: unit ? `${formatQty(quantity)} ${unit}` : formatQty(quantity),
+        sourceLabel: movementSourceLabel(row.reason),
         unitCost: formatUnitCost(unitCost, unit),
         totalCost: formatVND(quantity * unitCost),
+        totalCostValue: quantity * unitCost,
       };
     });
 
@@ -187,6 +204,7 @@ export default async function IssuesPage({
       recordedConsumptions={recordedConsumptions}
       branches={branches}
       defaultBranchId={scope.selectedBranchId ?? branches[0]?.id ?? null}
+      recordedBranchId={branchFilter ?? claims.branch_id ?? null}
       recordedEndDate={endDate ?? ""}
       recordedIsLimited={!hasRecordedDateFilter}
       recordedStartDate={startDate ?? ""}

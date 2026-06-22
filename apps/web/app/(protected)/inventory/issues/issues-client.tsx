@@ -45,6 +45,7 @@ import {
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
+import { formatVND } from "../_lib/format";
 import { getInventoryStatusLabel } from "../_lib/ui";
 import { tNav } from "../_lib/dictionary";
 import { createStockIssueDraft } from "../issue-actions";
@@ -69,13 +70,16 @@ export type IssueBranchOption = {
 
 export type RecordedConsumptionRow = {
   id: number;
+  branchId: number;
   recordedAt: string;
   branchName: string;
   locationName: string;
   ingredientName: string;
   quantity: string;
+  sourceLabel: string;
   unitCost: string;
   totalCost: string;
+  totalCostValue: number;
 };
 
 const ISSUE_TYPES = [
@@ -142,6 +146,7 @@ export function IssuesClient({
   recordedConsumptions,
   branches,
   defaultBranchId,
+  recordedBranchId: initialRecordedBranchId,
   recordedEndDate: initialRecordedEndDate,
   recordedIsLimited,
   recordedStartDate: initialRecordedStartDate,
@@ -150,6 +155,7 @@ export function IssuesClient({
   recordedConsumptions: RecordedConsumptionRow[];
   branches: IssueBranchOption[];
   defaultBranchId: number | null;
+  recordedBranchId: number | null;
   recordedEndDate: string;
   recordedIsLimited: boolean;
   recordedStartDate: string;
@@ -165,6 +171,10 @@ export function IssuesClient({
   const [recordedEndDate, setRecordedEndDate] = useState(
     initialRecordedEndDate,
   );
+  const [recordedBranchId, setRecordedBranchId] = useState(
+    initialRecordedBranchId ? String(initialRecordedBranchId) : "all",
+  );
+  const [recordedSearch, setRecordedSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const createIssueDefaultValues = useMemo<CreateIssueValues>(
     () => ({
@@ -180,14 +190,33 @@ export function IssuesClient({
   const showExportAction = true;
   const hasRecordedDateFilter =
     initialRecordedStartDate !== "" || initialRecordedEndDate !== "";
+  const hasRecordedServerFilter =
+    hasRecordedDateFilter || initialRecordedBranchId !== null;
   const recordedConsumptionHeaderHint = recordedIsLimited
     ? `${recordedConsumptions.length} dòng gần nhất`
     : `${recordedConsumptions.length} dòng`;
+  const recordedBranchOptions = branches.filter(
+    (branch) => branch.branchKind === "branch",
+  );
+  const visibleRecordedBranchOptions =
+    recordedBranchOptions.length > 0 ? recordedBranchOptions : branches;
+  const canSelectAllRecordedBranches = visibleRecordedBranchOptions.length > 1;
+  const selectedRecordedBranchId =
+    recordedBranchId === "all" && !canSelectAllRecordedBranches
+      ? String(visibleRecordedBranchOptions[0]?.id ?? "")
+      : recordedBranchId;
 
   useEffect(() => {
     setRecordedStartDate(initialRecordedStartDate);
     setRecordedEndDate(initialRecordedEndDate);
-  }, [initialRecordedEndDate, initialRecordedStartDate]);
+    setRecordedBranchId(
+      initialRecordedBranchId ? String(initialRecordedBranchId) : "all",
+    );
+  }, [
+    initialRecordedBranchId,
+    initialRecordedEndDate,
+    initialRecordedStartDate,
+  ]);
 
   const filtered = useMemo(() => {
     let result = issues;
@@ -221,6 +250,28 @@ export function IssuesClient({
 
   const hasActiveFilters =
     activeStatus !== "all" || activeType !== "all" || search.trim().length > 0;
+  const visibleRecordedConsumptions = useMemo(() => {
+    const q = recordedSearch.trim();
+    if (!q) return recordedConsumptions;
+    return recordedConsumptions.filter((row) =>
+      matchesSearch(
+        [
+          row.ingredientName,
+          row.branchName,
+          row.locationName,
+          row.sourceLabel,
+        ],
+        q,
+      ),
+    );
+  }, [recordedConsumptions, recordedSearch]);
+  const visibleRecordedConsumptionTotal = visibleRecordedConsumptions.reduce(
+    (sum, row) => sum + row.totalCostValue,
+    0,
+  );
+  const visibleRecordedConsumptionHint = recordedIsLimited
+    ? `${visibleRecordedConsumptions.length}/${recordedConsumptions.length} dòng gần nhất`
+    : `${visibleRecordedConsumptions.length}/${recordedConsumptions.length} dòng`;
 
   function handleExportIssuesCsv() {
     if (filtered.length === 0) {
@@ -259,7 +310,7 @@ export function IssuesClient({
   }
 
   function handleExportRecordedCsv() {
-    if (recordedConsumptions.length === 0) {
+    if (visibleRecordedConsumptions.length === 0) {
       toast.error("Không có dữ liệu tiêu hao để xuất CSV.");
       return;
     }
@@ -272,8 +323,9 @@ export function IssuesClient({
       FORM_VI.quantity,
       "Giá vốn",
       "Thành tiền",
+      "Nguồn",
     ];
-    const rows = recordedConsumptions.map((row) => [
+    const rows = visibleRecordedConsumptions.map((row) => [
       row.recordedAt,
       row.ingredientName,
       row.branchName,
@@ -281,6 +333,7 @@ export function IssuesClient({
       row.quantity,
       row.unitCost,
       row.totalCost,
+      row.sourceLabel,
     ]);
     const body = [header, ...rows]
       .map((line) => line.map((cell) => csvCell(cell)).join(","))
@@ -294,7 +347,7 @@ export function IssuesClient({
 
     downloadCsv(toUtf8Base64(csv), `tieu-hao-da-ghi-nhan-${stamp}.csv`);
     toast.success(
-      `Đã xuất ${String(recordedConsumptions.length)} dòng tiêu hao.`,
+      `Đã xuất ${String(visibleRecordedConsumptions.length)} dòng tiêu hao.`,
     );
   }
 
@@ -310,6 +363,11 @@ export function IssuesClient({
     } else {
       next.delete("endDate");
     }
+    if (selectedRecordedBranchId && selectedRecordedBranchId !== "all") {
+      next.set("branchId", selectedRecordedBranchId);
+    } else {
+      next.delete("branchId");
+    }
 
     router.push(buildConsumptionHref(next));
   }
@@ -318,8 +376,10 @@ export function IssuesClient({
     const next = new URLSearchParams(searchParams.toString());
     next.delete("startDate");
     next.delete("endDate");
+    next.delete("branchId");
     setRecordedStartDate("");
     setRecordedEndDate("");
+    setRecordedBranchId("all");
     router.push(buildConsumptionHref(next));
   }
 
@@ -392,6 +452,24 @@ export function IssuesClient({
   const recordedConsumptionFilterBar = (
     <AppToolbar variant="inline">
       <div className="flex flex-1 flex-wrap items-end gap-3">
+        <Select
+          value={selectedRecordedBranchId}
+          onValueChange={setRecordedBranchId}
+        >
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder={BRANCH_VI.select} />
+          </SelectTrigger>
+          <SelectContent>
+            {canSelectAllRecordedBranches ? (
+              <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+            ) : null}
+            {visibleRecordedBranchOptions.map((branch) => (
+              <SelectItem key={branch.id} value={String(branch.id)}>
+                {branch.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <label className="flex min-w-40 flex-col gap-1 text-xs font-medium text-muted-foreground">
           Từ ngày
           <Input
@@ -417,9 +495,20 @@ export function IssuesClient({
         >
           Lọc
         </Button>
+        <InputGroup className="h-10 min-w-56 flex-1">
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
+          <InputGroupInput
+            value={recordedSearch}
+            onChange={(event) => setRecordedSearch(event.target.value)}
+            placeholder="Tìm nguyên liệu, nguồn..."
+            inputMode="search"
+          />
+        </InputGroup>
       </div>
 
-      {hasRecordedDateFilter ? (
+      {hasRecordedServerFilter ? (
         <Button
           type="button"
           variant="ghost"
@@ -548,6 +637,16 @@ export function IssuesClient({
           </span>
         ),
       },
+      {
+        key: "sourceLabel",
+        header: "Nguồn",
+        className: "min-w-44",
+        render: (item) => (
+          <span className="text-sm text-muted-foreground">
+            {item.sourceLabel}
+          </span>
+        ),
+      },
     ];
 
   const renderIssueCard = (item: IssueRow) => (
@@ -587,6 +686,7 @@ export function IssuesClient({
         <p className="text-xs text-muted-foreground">
           {item.quantity} · {item.recordedAt}
         </p>
+        <p className="text-xs text-muted-foreground">{item.sourceLabel}</p>
       </div>
     </InteractiveCard>
   );
@@ -618,7 +718,7 @@ export function IssuesClient({
 
       <AppSection
         title="Tiêu hao đã ghi nhận"
-        headerHint={recordedConsumptionHeaderHint}
+        headerHint={visibleRecordedConsumptionHint}
         action={
           <Button
             type="button"
@@ -633,9 +733,29 @@ export function IssuesClient({
         contentFlush
       >
         {recordedConsumptionFilterBar}
+        <div className="grid gap-3 border-b p-3 sm:grid-cols-3">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">Dòng hiển thị</span>
+            <span className="font-mono text-sm font-semibold">
+              {visibleRecordedConsumptions.length}/{recordedConsumptions.length}
+            </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">Tổng thành tiền</span>
+            <span className="font-mono text-sm font-semibold">
+              {formatVND(visibleRecordedConsumptionTotal)}
+            </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">Phạm vi</span>
+            <span className="text-sm font-medium">
+              {recordedConsumptionHeaderHint}
+            </span>
+          </div>
+        </div>
         <DataTable
           columns={recordedConsumptionColumns}
-          data={recordedConsumptions}
+          data={visibleRecordedConsumptions}
           getRowKey={(item) => item.id}
           emptyTitle="Chưa có tiêu hao đã ghi nhận"
           emptyDescription="Các báo cáo tiêu hao đã duyệt sẽ xuất hiện ở đây sau khi trừ kho."
