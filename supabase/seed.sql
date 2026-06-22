@@ -214,7 +214,7 @@ BEGIN
       SELECT 'a000000e-0000-4000-8000-00000000000e'::uuid, 'chef.phuochai@comtammatu.vn'::text, 'chef'::text, v_phuochai, 'Bếp Phước Hải'::text, 'EMP-CHEF-PH'::text
     ) q
   LOOP
-    v_crypt := crypt(v_pw, gen_salt('bf'));
+    v_crypt := extensions.crypt(v_pw, extensions.gen_salt('bf'));
 
     -- Idempotent: if keeper exists, rotate password + app metadata
     IF r.user_id = 'a0000002-0000-4000-8000-000000000002'::uuid

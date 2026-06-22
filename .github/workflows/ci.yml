@@ -73,3 +73,41 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:baseline:local-check
+
+  # Separate job (does not block the fast gates): stands up a from-empty Supabase
+  # Local with the self-contained baseline + dev/QA seeds, starts the app, and runs
+  # the Playwright POS->payment->KDS smoke. This is the first automated end-to-end
+  # run of the order/payment hot path against a real (local) database + RPCs.
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node scripts/supabase-e2e-bringup.mjs
+      - run: pnpm --filter @comtammatu/web exec playwright install --with-deps chromium
+      # Production build so the heavy POS route is pre-compiled; `next dev`
+      # compiles it on-demand, which blows the smoke's timeout. The bring-up
+      # already wrote .env.local pointing at the local stack, so the build inlines
+      # the right NEXT_PUBLIC_SUPABASE_URL and `next start` serves against it.
+      - run: pnpm --filter @comtammatu/web build
+      # Scoped to the POS->payment->KDS core (payment-cash) — the deterministic
+      # hot-path smoke. The broader suite (guides/visual/inventory RBAC/realtime
+      # KDS) needs more seed/setup and is out of scope for a fast CI gate.
+      - run: pnpm --filter @comtammatu/web run test:e2e:smoke
+        env:
+          E2E_WEB_COMMAND: pnpm start
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-smoke-results
+          path: apps/web/test-results
+          retention-days: 3
+          if-no-files-found: ignore

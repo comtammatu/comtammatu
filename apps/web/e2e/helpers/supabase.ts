@@ -1132,6 +1132,10 @@ export async function setOrderDiscountPercent(
     .update({
       discount_type: "pct",
       discount_value: percent,
+      // orders_order_discount_metadata_paired: a non-zero order discount must
+      // pair order_discount_amount with type/value AND a discount_note ≥3 chars.
+      order_discount_amount: discountAmount,
+      discount_note: "E2E pricing test",
       discount_amount: discountAmount,
       total_amount: subtotal - discountAmount,
     })

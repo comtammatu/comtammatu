@@ -92,13 +92,15 @@ export default defineConfig({
       dependencies: ["setup"],
     },
   ],
-  // Auto-start Next.js dev server in CI
+  // Auto-start the app in CI. Defaults to `pnpm dev`; the e2e-smoke job sets
+  // E2E_WEB_COMMAND to a production `next start` (after `next build`) so the heavy
+  // POS route is pre-compiled and renders fast instead of on-demand-compiling.
   webServer: process.env.CI
     ? {
-        command: "pnpm dev",
+        command: process.env.E2E_WEB_COMMAND ?? "pnpm dev",
         url: "http://localhost:3000",
         reuseExistingServer: false,
-        timeout: 120_000,
+        timeout: 180_000,
       }
     : undefined,
 });

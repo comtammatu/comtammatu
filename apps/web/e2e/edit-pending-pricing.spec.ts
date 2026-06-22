@@ -47,17 +47,22 @@ test.describe("Edit pending order item — pricing recompute", () => {
 
       await page.goto(`/br/${String(testOrder.branchId)}/pos`);
       await page.waitForLoadState("networkidle");
-      await page.getByTestId("pos-active-orders-tab").click();
 
-      const orderCard = page.getByTestId(
-        `pos-order-card-${String(testOrder.orderId)}`,
-      );
-      await expect(orderCard).toBeVisible({ timeout: 10_000 });
-      await orderCard.click();
+      // Open the order detail. The order list renders in both the desktop shell
+      // and a hidden sidebar panel, so target the visible "Mở đơn" button (the
+      // pos-order-card testid sits on an <Item> wrapper that does not reach the DOM).
+      const detailButton = page
+        .locator(
+          `[data-testid="pos-order-detail-${String(testOrder.orderId)}"]:visible`,
+        )
+        .first();
+      await expect(detailButton).toBeVisible({ timeout: 30_000 });
+      await detailButton.click();
 
-      // Open the item-level actions sheet, then "Sửa món".
+      // Tap the item row (a button labelled by item name + status; no testid),
+      // then "Sửa món" opens the actions sheet.
       const itemRow = page
-        .locator('[data-testid^="pos-order-item-row-"]')
+        .getByRole("button", { name: testOrder.menuItemName })
         .first();
       await expect(itemRow).toBeVisible({ timeout: 5_000 });
       await itemRow.click();
