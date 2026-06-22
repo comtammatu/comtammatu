@@ -27,13 +27,59 @@ function formatUnitCost(unitCost: number, unit: string): string {
   return unit ? `${formatVND(unitCost)}/${unit}` : formatVND(unitCost);
 }
 
+function getSingleParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+function parseBusinessDateParam(
+  value: string | string[] | undefined,
+): string | null {
+  const raw = getSingleParam(value);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw ?? "");
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return raw;
+}
+
+function vnBusinessDateBoundaryUtc(value: string, offsetDays = 0): string {
+  const [year, month, day] = value.split("-").map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  // Inventory date filters are Vietnam business dates; created_at is timestamptz.
+  return new Date(
+    Date.UTC(year, month - 1, day + offsetDays, -7, 0, 0),
+  ).toISOString();
+}
+
 export default async function IssuesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{
+    branchId?: string | string[];
+    endDate?: string | string[];
+    startDate?: string | string[];
+  }>;
 }) {
   const params = await searchParams;
   const requested = await resolveRequestedBranchId(params.branchId);
+  const startDate = parseBusinessDateParam(params.startDate);
+  const endDate = parseBusinessDateParam(params.endDate);
+  const hasRecordedDateFilter = startDate != null || endDate != null;
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
   const branchFilter = scope.selectedBranchId ?? undefined;
@@ -46,8 +92,7 @@ export default async function IssuesPage({
     .eq("tenant_id", claims.tenant_id)
     .eq("type", "consumption")
     .eq("movement_subtype", "sale_consumption")
-    .order("created_at", { ascending: false })
-    .limit(50);
+    .order("created_at", { ascending: false });
 
   if (branchFilter != null) {
     recordedConsumptionQuery = recordedConsumptionQuery.eq(
@@ -59,6 +104,21 @@ export default async function IssuesPage({
       "branch_id",
       claims.branch_id,
     );
+  }
+  if (startDate) {
+    recordedConsumptionQuery = recordedConsumptionQuery.gte(
+      "created_at",
+      vnBusinessDateBoundaryUtc(startDate),
+    );
+  }
+  if (endDate) {
+    recordedConsumptionQuery = recordedConsumptionQuery.lt(
+      "created_at",
+      vnBusinessDateBoundaryUtc(endDate, 1),
+    );
+  }
+  if (!hasRecordedDateFilter) {
+    recordedConsumptionQuery = recordedConsumptionQuery.limit(50);
   }
 
   const [res, recordedConsumptionRes] = await Promise.all([
@@ -127,6 +187,9 @@ export default async function IssuesPage({
       recordedConsumptions={recordedConsumptions}
       branches={branches}
       defaultBranchId={scope.selectedBranchId ?? branches[0]?.id ?? null}
+      recordedEndDate={endDate ?? ""}
+      recordedIsLimited={!hasRecordedDateFilter}
+      recordedStartDate={startDate ?? ""}
     />
   );
 }
