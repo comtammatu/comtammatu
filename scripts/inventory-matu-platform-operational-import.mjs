@@ -65,7 +65,7 @@ function printHelp() {
 
 Builds the operational Inventory import plan:
   - real stock-bearing transfers
-  - branch sale consumption from legacy Bep CN transfer-in
+  - branch sale consumption from retired Bep CN transfer-in
   - balance adjustments so current stock matches matu-platform stock_items
 
 This script does not apply SQL. It writes one transaction file only after blockers are clear.`);
