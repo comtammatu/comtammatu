@@ -5,9 +5,8 @@ Không dùng thư mục này làm archive, backlog, hay source of truth thứ ha
 
 ## Active Notes
 
-Hiện không có worklog active. Current work lives in `tasks/todo.md`; decisions
-live in `docs/plan/decisions.md` or ADRs; operational checklists live in
-`docs/runbooks/`.
+- `inventory-matu-platform-import-dry-run-2026-06-22.md` — T3 contract cho
+  import/dry-run Inventory từ `matu-platform`.
 
 ## Rules
 

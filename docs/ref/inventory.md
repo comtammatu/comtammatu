@@ -22,7 +22,7 @@ kho không map được vào contract hiện có, cập nhật contract trước
 | Biến động `stock_movements`     | Append-only ledger cho `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*` | Không mở lot-first ledger / batch accounting                             |
 | Mô hình site                    | `branches.branch_kind IN ('branch', 'central_supply', 'central_kitchen')`; `branch` giữ Kho CN, `central_supply` là Kho Tổng, `central_kitchen` là Bếp Trung Tâm | V1 không tạo bảng `inventory_sites`                                      |
 | PO / GRN / NCC                  | Bảng PO/GRN/NCC + RPC `confirm_goods_receipt_note`; QC và price variance là control trong luồng nhập | Không mở PR workflow nhiều bước                                          |
-| Luân chuyển nội bộ              | `stock_transfers` chỉ dùng khi site nhận vẫn giữ tồn: Kho Tổng/Bếp Trung Tâm/chi nhánh -> Kho CN, hoặc chi nhánh -> chi nhánh | `Kho CN -> Bếp CN` không phải transfer                                    |
+| Luân chuyển nội bộ              | `stock_transfers` chỉ dùng khi site nhận vẫn giữ tồn: trung tâm -> Kho CN, Kho CN -> trung tâm để return/rebalance, Kho Tổng <-> Bếp Trung Tâm, hoặc chi nhánh -> chi nhánh | `Kho CN -> Bếp CN` không phải transfer                                    |
 | HĐ NCC + 3-way matching         | `supplier_invoices` + matching logic là Finance handoff                                           | Không mở payment proposal engine trong Inventory                         |
 | `recipes` + xuất kho theo order | `recipes` + RPC tiêu hao theo order                                                              | Không mở multi-level BOM                                                 |
 | Thành phẩm + production hub     | `item_kind`, `production_recipes`, `production_orders`, route production cho `central_kitchen`     | Không mở labor / overhead / WIP accounting đầy đủ                        |
@@ -47,21 +47,21 @@ Những thứ dưới đây không thuộc Inventory current contract dù có xu
 **Nguyên tắc vận hành:**
 
 - **Chi nhánh (`branch_kind = 'branch'`):** giữ tồn vận hành tại **Kho CN** (`location_kind = 'warehouse'`). **Bếp CN** là endpoint tiêu hao bán hàng trong ngày, không phải nơi giữ tồn vận hành và không phải destination của `stock_transfers`.
-- **Kho Tổng (`branch_kind = 'central_supply'`):** site giữ tồn phụ gia, nguyên liệu khô, vật tư và hàng cấp cho chi nhánh. Kho Tổng có thể nhập NCC qua PO/GRN và transfer thật về Kho CN.
-- **Bếp Trung Tâm (`branch_kind = 'central_kitchen'`):** site giữ tồn riêng cho đồ tươi/sản xuất trong ngày như thịt, đồ chua, thành phẩm sơ chế. Bếp Trung Tâm có thể nhập NCC qua PO/GRN, tạo `production_order`, và transfer thật về Kho CN.
-- **Phiếu luân chuyển tồn thật:** dùng state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`. Hướng hợp lệ: `central_supply -> branch`, `central_kitchen -> branch`, và `branch -> branch`.
+- **Kho Tổng (`branch_kind = 'central_supply'`):** site giữ tồn phụ gia, nguyên liệu khô, vật tư và hàng cấp cho chi nhánh hoặc cấp sang Bếp Trung Tâm. Kho Tổng có thể nhập NCC qua PO/GRN và transfer thật về Kho CN hoặc Bếp Trung Tâm.
+- **Bếp Trung Tâm (`branch_kind = 'central_kitchen'`):** site giữ tồn riêng cho đồ tươi/sản xuất trong ngày như thịt, đồ chua, thành phẩm sơ chế, và có thể nhận phụ gia/gia vị từ Kho Tổng. Bếp Trung Tâm có thể nhập NCC qua PO/GRN, nhận/trả hàng với Kho Tổng, tạo `production_order`, và transfer thật về Kho CN.
+- **Phiếu luân chuyển tồn thật:** dùng state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`. Hướng hợp lệ: `central_supply -> branch`, `central_kitchen -> branch`, `branch -> central_supply`, `branch -> central_kitchen`, `central_supply -> central_kitchen`, `central_kitchen -> central_supply`, và `branch -> branch`.
 - **Tiêu hao chi nhánh:** nguyên liệu đã dùng để tạo doanh thu được ghi bằng `stock_movements.type = 'consumption'`, `movement_subtype = 'sale_consumption'`, `location_id` là Kho CN/default issue warehouse, `source_type = 'hrm_consumption'` khi đến từ báo cáo kết ca.
 
 ```
-NCC → [PO/GRN] → Kho Tổng (`central_supply`) ─┐
-                                               ├─ [stock_transfer] → Kho CN (`branch/warehouse`)
-NCC → [PO/GRN] → Bếp Trung Tâm (`central_kitchen`) ┘
+NCC → [PO/GRN] → Kho Tổng (`central_supply`) ── [stock_transfer] → Kho CN (`branch/warehouse`)
+                         ⇅
+                  [stock_transfer]
+                         ⇅
+NCC → [PO/GRN] → Bếp Trung Tâm (`central_kitchen`) ── [stock_transfer] → Kho CN
                          │
                          ├─ [production_order]
                          ▼
                   Tồn sản xuất / thành phẩm
-                         │
-                         └─ [stock_transfer] → Kho CN
 
 Kho CN → [duyệt tiêu hao trong ngày] → `stock_movements.consumption`
 

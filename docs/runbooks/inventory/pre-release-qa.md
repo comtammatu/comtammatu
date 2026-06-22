@@ -83,6 +83,10 @@ Các route phải mở đúng theo ACL và nav:
 - Tạo transfer theo hướng hợp lệ:
   - `central_supply -> branch`
   - `central_kitchen -> branch`
+  - `branch -> central_supply`
+  - `branch -> central_kitchen`
+  - `central_supply -> central_kitchen`
+  - `central_kitchen -> central_supply`
   - `branch -> branch`
 - Confirm ship.
 - Mark in transit.
@@ -118,6 +122,16 @@ Các route phải mở đúng theo ACL và nav:
 - Complete session.
 - Kiểm `count_adjustment`.
 - Kiểm `/inventory/stock` và report không cộng `location_kind = kitchen` vào tổng tồn vận hành.
+
+## 5. Matu-platform import smoke
+
+Sau import production, kiểm nhanh:
+
+- `/inventory/stock`: tồn chỉ ở stock-bearing warehouse; không có dòng kitchen trong tổng tồn.
+- `/inventory/transfers`: có đủ transfer thật theo hướng central -> branch, branch -> central, Kho Tổng <-> Bếp Trung Tâm, branch -> branch.
+- `/inventory/consumption`: thấy tiêu hao chi nhánh từ import với `sale_consumption`.
+- Finance food cost/gross profit đọc actual consumption, không đọc recipe-only `mv_food_cost`.
+- 4 dòng legacy source từ `BEP-DD` / `BEP-TT` không import history; tồn cuối đã nằm trong `balance_adjustment`.
 
 ### 4.6 Finance Basic
 

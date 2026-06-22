@@ -9,7 +9,7 @@
 
 **Decision:** Inventory dùng `branches` làm site table; `branches.branch_kind` active với `branch`, `central_supply`, `central_kitchen`.
 
-**Transfer matrix** (trigger `enforce_stock_transfer_direction`): cho phép `central_supply → branch`, `central_kitchen → branch`, `branch → branch`; chặn thiếu ref, central direction lạ, same-branch.
+**Transfer matrix** (trigger `enforce_stock_transfer_direction`): cho phép `central_supply → branch`, `central_kitchen → branch`, `branch → central_supply`, `branch → central_kitchen`, `central_supply ↔ central_kitchen`, `branch → branch`; chặn thiếu ref, central direction lạ, và same-branch.
 
 **Contract:** PO/GRN/stock levels/production orders/stock transfers ref `branch_id` trực tiếp. Branch kind quyết hành vi site: Kho CN giữ branch stock, Kho Tổng giữ supply stock, Bếp TT giữ production stock, Bếp CN consumption ghi như approved consumption movement (không transfer).
 
