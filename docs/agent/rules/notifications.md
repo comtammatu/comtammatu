@@ -112,9 +112,10 @@ Two channels, two independent audiences:
 - **Foreground popup** = role-based via `target_roles[]` (RLS decides who can
   see the row). Fires an OS popup **only while that user's PWA is open** — there
   is no closed-app delivery. Audience is whoever has the app open among the
-  targeted roles. Severity policy is owner-locked: confirm with the owner
-  whether popups fire for all visible severities (e.g. `info` `pos.order_new`)
-  or `critical` only.
+  targeted roles. Severity (owner-locked, decided 2026-06-22): popups fire for
+  **ALL** visible severities (incl. `info` `pos.order_new`), unlike the former
+  critical-only server push — a foreground popup only shows while the app is
+  open, so the noise cost is low.
 - **Telegram supergroup** = audience is **group membership** (owner + specially
   invited people), DECOUPLED from app roles. The dispatcher is role-agnostic and
   routes by `kind` + `severity` → forum topic. Both `critical` and `warning` flow

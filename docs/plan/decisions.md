@@ -466,6 +466,6 @@ Hệ quả:
 **Consequences:**
 - Xoá: `lib/notifications/web-push.ts` + `push-targeting.ts`, route cron `notifications-push`, 4 Server Action push, handler `push` trong `sw.ts` (giữ `notificationclick`), env `WEB_PUSH_*` (turbo/vercel/.env.example), dep `web-push`. Migration `20260622130000_drop_notification_web_push.sql` theo lệ file→PR→owner apply; `database.types.ts` regen SAU khi apply prod.
 - Thêm: `_hooks/use-foreground-notifications.ts`, `_components/notification-popup-control.tsx`, `lib/notifications/popup-preference.ts` (mute qua `device-prefs`, không đụng `localStorage` trực tiếp → qua `check-client-storage` allowlist).
-- **Chưa chốt:** severity của popup — bắn **mọi** severity nhìn thấy (gồm `info` `pos.order_new`) hay chỉ `critical` (như cron cũ lọc). Code hiện bắn mọi severity; chờ owner chốt rồi cập nhật bản ghi này + `notifications.md`.
+- **Severity (owner chốt 2026-06-22):** popup bắn cho **mọi** severity nhìn thấy được (gồm `info` `pos.order_new` — báo đơn mới cho bếp/POS). Khác chính sách push-server cũ (critical-only) vì popup foreground chỉ kêu khi app đang mở nên ít phiền hơn. Code đã đúng — không filter severity.
 
 Đảo quyết định này phải sửa bản ghi này trước.
