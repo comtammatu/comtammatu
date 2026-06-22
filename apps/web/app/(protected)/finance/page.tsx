@@ -6,6 +6,7 @@ import {
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
 } from "lucide-react";
+import { getInventoryValueVisibility } from "@comtammatu/shared/auth";
 import { formatVND } from "@comtammatu/shared/format";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
@@ -23,6 +24,7 @@ import {
   AppSection,
   KpiRow,
 } from "@/components/surface";
+import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { buildCompareDelta } from "@/components/kpi/compare-chip";
 import { KpiCard } from "@/components/kpi/kpi-card";
@@ -190,6 +192,14 @@ export default async function FinancePage({
   const rawParams = searchParams ? await searchParams : {};
   const params = parseFinanceParams(rawParams);
   const resolved = resolveFinanceRange(params);
+  const { claims } = await loadAuthState();
+  const inventoryValueVisibility = getInventoryValueVisibility(
+    claims.user_role,
+  );
+  // Drill into the inventory-value report only when the role can see it; the
+  // report's own visibility gate would otherwise render no-access.
+  const canViewInventoryValue =
+    inventoryValueVisibility.system || inventoryValueVisibility.branch;
   const [cockpit, cash] = await Promise.all([
     fetchFinanceCockpit(params, resolved),
     fetchCashSummary(params, resolved),
@@ -242,7 +252,9 @@ export default async function FinancePage({
           label={financeCopy.basic.kpis.inventoryValue}
           value={formatVND(cockpit.kpis.inventoryValue)}
           hint={financeCopy.basic.kpis.inventoryValueHint}
-          href="/admin/reports/inventory-value"
+          href={
+            canViewInventoryValue ? "/finance/inventory-value" : undefined
+          }
         />
 
         <KpiCard

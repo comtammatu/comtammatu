@@ -37,7 +37,7 @@ export function resolveFinanceNav({
           icon: IconBarChart3,
         },
         {
-          href: "/admin/reports/inventory-value",
+          href: "/finance/inventory-value",
           label: financeNav.items.inventoryValue,
           icon: IconBoxes,
         },

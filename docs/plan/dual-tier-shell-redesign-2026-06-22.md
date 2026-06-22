@@ -119,8 +119,11 @@ H1 đúng scale, active ring+bg, empty=AppEmptyState) → review pass riêng
 
 ## 7. Decision đang mở
 
-- **Wave 5 (inventory-value cross-shell):** chọn A hay B (xem bảng). Quyết muộn
-  được — phụ thuộc Wave 0/1/4. Ghi vào đây + `decisions.md` khi chốt.
+- **Wave 5 (inventory-value cross-shell): CHỐT B (owner, 2026-06-22).** Canonical
+  dời sang `/finance/inventory-value` dưới FinanceShell; `/admin/reports/inventory-value`
+  redirect sang route mới; nav Finance + KPI overview repoint + gate theo
+  `getInventoryValueVisibility`; reports hub link sang route Finance (cross-module
+  có chủ đích). Đã land.
 - **Mobile model:** default = bottom-bar tier-2 + tab "Mô-đun". Owner có thể đảo
   sang bottom-bar = tier-1 nếu muốn ưu tiên chuyển module.
 

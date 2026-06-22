@@ -29,7 +29,7 @@ export default function ReportsPage() {
     {
       title: copy.cards.inventoryValue,
       description: copy.cardDescriptions.inventoryValue,
-      href: "/admin/reports/inventory-value",
+      href: "/finance/inventory-value",
       icon: <IconPackage />,
       tone: "info" as const,
       badge: copy.summaryBadge,
