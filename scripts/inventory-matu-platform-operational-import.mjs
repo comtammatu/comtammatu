@@ -15,6 +15,10 @@ function moneyValue(value) {
   return Math.round(numberValue(value) * 100) / 100;
 }
 
+function costValue(quantity, unitCost) {
+  return numberValue(quantity) * moneyValue(unitCost);
+}
+
 function normalizeText(value) {
   return String(value ?? "")
     .normalize("NFD")
@@ -92,9 +96,11 @@ function sumBy(rows, keyFn, valueFn) {
   const out = {};
   for (const row of rows) {
     const key = keyFn(row) ?? "unknown";
-    out[key] = moneyValue((out[key] ?? 0) + valueFn(row));
+    out[key] = (out[key] ?? 0) + valueFn(row);
   }
-  return out;
+  return Object.fromEntries(
+    Object.entries(out).map(([key, value]) => [key, moneyValue(value)]),
+  );
 }
 
 function inFilter(values) {
@@ -496,7 +502,7 @@ function classifyTransfer({ transfer, sourceWarehouseById, sourceBranchById, tar
 }
 
 function transferCost(lines) {
-  return lines.reduce((sum, row) => sum + row.quantity * row.unit_cost, 0);
+  return lines.reduce((sum, row) => sum + costValue(row.quantity, row.unit_cost), 0);
 }
 
 function buildPlan(source, target, options = {}) {
@@ -720,7 +726,7 @@ function buildPlan(source, target, options = {}) {
     const ingredient =
       targetIndex.ingredientBySku.get(String(material?.sku ?? "").toUpperCase()) ??
       targetIndex.ingredientByName.get(normalizeText(material?.name));
-    const value = quantity * numberValue(material?.cost_per_unit);
+    const value = costValue(quantity, material?.cost_per_unit);
 
     if (targetRef.role === "branch_kitchen_endpoint") {
       phantomKitchenStock.push({
@@ -822,7 +828,7 @@ function buildPlan(source, target, options = {}) {
         count: balanceAdjustments.length,
         estimatedAbsValue: moneyValue(
           balanceAdjustments.reduce(
-            (sum, row) => sum + Math.abs(row.quantity_change) * numberValue(row.unit_cost),
+            (sum, row) => sum + costValue(Math.abs(row.quantity_change), row.unit_cost),
             0,
           ),
         ),
@@ -841,14 +847,14 @@ function buildPlan(source, target, options = {}) {
         movementRows: saleConsumptionRows.length,
         estimatedCost: moneyValue(
           saleConsumptionRows.reduce(
-            (sum, row) => sum + Math.abs(row.quantity_change) * numberValue(row.unit_cost),
+            (sum, row) => sum + costValue(Math.abs(row.quantity_change), row.unit_cost),
             0,
           ),
         ),
         byBranch: sumBy(
           saleConsumptionRows,
           (row) => row.sourceBranchCode ?? "unmapped",
-          (row) => Math.abs(row.quantity_change) * numberValue(row.unit_cost),
+          (row) => costValue(Math.abs(row.quantity_change), row.unit_cost),
         ),
       },
       stockMovementRows: movementRows.length,
@@ -1239,6 +1245,11 @@ function printHuman(report) {
 }
 
 function selfTest() {
+  assert.equal(
+    sumBy([{ v: 0.015 }, { v: 0.015 }], () => "same", (row) => row.v).same,
+    0.03,
+  );
+
   const actorId = "a0000001-0000-4000-8000-000000000001";
   const source = {
     branches: [{ id: "b-dd", code: "DD", name: "Dat Do" }],
@@ -1250,7 +1261,7 @@ function selfTest() {
     ],
     materials: [
       { id: "m1", sku: "G001", name: "Rice", cost_per_unit: 10, base_unit: "kg" },
-      { id: "m2", sku: "T001", name: "Pork", cost_per_unit: 20, base_unit: "kg" },
+      { id: "m2", sku: "T001", name: "Pork", cost_per_unit: 20.119, base_unit: "kg" },
     ],
     stockItems: [
       { warehouse_id: "kho-tong", material_id: "m1", quantity: 6 },
@@ -1371,7 +1382,7 @@ function selfTest() {
     ],
     ingredients: [
       { id: 100, tenant_id: 1, sku: "G001", name: "Rice", unit: "kg", unit_cost: 10 },
-      { id: 200, tenant_id: 1, sku: "T001", name: "Pork", unit: "kg", unit_cost: 20 },
+      { id: 200, tenant_id: 1, sku: "T001", name: "Pork", unit: "kg", unit_cost: 20.119 },
     ],
     movements: [],
     profiles: [{ id: actorId, tenant_id: 1, branch_id: null, full_name: "Owner", is_active: true }],
@@ -1398,6 +1409,9 @@ function selfTest() {
     balanceAt: "2026-06-01T00:00:00Z",
   });
   assert.equal(report.blockers.length, 0);
+  assert.equal(report.operationalPlan.realTransfers.estimatedCost, 120.36);
+  assert.equal(report.operationalPlan.saleConsumption.estimatedCost, 40.24);
+  assert.equal(report.operationalPlan.saleConsumption.byBranch.DD, 40.24);
   const sql = generateSql(sqlRows);
   assert.match(sql, /BEGIN;/);
   assert.match(sql, /kitchen_passthrough/);
