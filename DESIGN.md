@@ -1,7 +1,7 @@
 ---
 # DESIGN.md — Cơm Tấm Má Tư design foundation
 # Format: Google Labs Code DESIGN.md (YAML token front-matter + rationale body).
-# Authority: per docs/plan/decisions.md D042, this file is the agent-facing design
+# Authority: per docs/plan/decisions.md D044, this file is the agent-facing design
 # FOUNDATION. Runtime token source-of-record stays packages/ui/src/styles/globals.css;
 # enforcement stays docs/spec/design-system.md. The three must agree (drift-guarded).
 meta:
@@ -52,7 +52,7 @@ colors:
   border-raised:   { oklch: "0.872 0.026 70", dark: "0.978 0.014 64.3 / 22%", note: "L3 lifted-panel firmer edge (lift WITHOUT shadow)" }
   border-strong:   { oklch: "0.840 0.026 71", dark: "0.978 0.014 64.3 / 30%", note: "emphatic divider / strong field border" }
   navy-900:        { oklch: "0.160 0.030 252", dark: "0.978 0.014 64.3", note: "AAA max-contrast ink + scrim source" }
-  info-accent:     { oklch: "0.55 0.13 248", dark: "0.70 0.12 248", note: "OPTIONAL cool-blue accent. Default: info stays navy. Re-hue = owner decision (D042 §Info)." }
+  info-accent:     { oklch: "0.55 0.13 248", dark: "0.70 0.12 248", note: "OPTIONAL cool-blue accent. Default: info stays navy. Re-hue = owner decision (D044 §Info)." }
   chart-grid:      { oklch: "0.903 0.021 72.1 / 60%", dark: "0.978 0.014 64.3 / 12%" }
   chart-axis:      { oklch: "0.512 0.09 62.2", dark: "0.782 0.014 78.2" }
 
@@ -165,14 +165,14 @@ components:   # anatomy lives in body §Components; key token deltas here
 
 > Agent-facing design **foundation**. Read this before any UI work. It carries the
 > token values **and** the design intent behind them. Per `docs/plan/decisions.md`
-> **D042** it sits above `docs/spec/design-system.md` (which keeps the enforcement
+> **D044** it sits above `docs/spec/design-system.md` (which keeps the enforcement
 > rules, authority order, and lint ratchets) and is mirrored to
 > `packages/ui/src/styles/globals.css` (the runtime token source-of-record).
 
 ## Status & Rollout
 
 **This file describes the TARGET system.** The reform direction is owner-locked
-(D042): *upgrade* the existing Má Tư identity — deeper and more consistent — across
+(D044): *upgrade* the existing Má Tư identity — deeper and more consistent — across
 all surfaces (POS, KDS/Runner, Admin, Inventory, Employee). It is **not** a
 reinvention.
 
@@ -510,4 +510,4 @@ constraint is inviolable.)
   to this file's YAML, drift-guarded (pattern: `AGENTS.md ↔ engineering.md`,
   `pnpm lint:rules-mirror`). The drift-guard goes live when `globals.css` is migrated
   at the code phase.
-- Decision of record: `docs/plan/decisions.md` **D042**.
+- Decision of record: `docs/plan/decisions.md` **D044**.

@@ -5,7 +5,7 @@
 > **Cách dùng (tiếng Việt):** copy nguyên khối ``` PROMPT ``` bên dưới và dán cho
 > Claude Design (giai đoạn mockup) rồi Claude Code (giai đoạn code). Prompt phân 2
 > giai đoạn với 1 **cổng dừng** ở giữa — Claude PHẢI dừng cho owner duyệt mockup
-> trước khi đụng runtime. Nền tảng là `DESIGN.md` ở root; quyết định nền là D042.
+> trước khi đụng runtime. Nền tảng là `DESIGN.md` ở root; quyết định nền là D044.
 
 ---
 
@@ -20,7 +20,7 @@ THE FOUNDATION IS DESIGN.md (repo root). Read it first and treat it as authorita
 for tokens, the surface/depth ladder, typography, motion, components, and intent. Also
 read: docs/spec/design-system.md (enforcement layer), packages/ui/src/styles/globals.css
 (current runtime tokens), apps/web/app/components/surface.tsx (app adapters),
-docs/plan/decisions.md D042 (the decision of record).
+docs/plan/decisions.md D044 (the decision of record).
 
 DIRECTION (owner-locked): UPGRADE the existing Má Tư identity — terracotta primary,
 rice-cream (kem gạo) background, deep-navy (xanh đậm) ink, rice-yellow (vàng gạo)
