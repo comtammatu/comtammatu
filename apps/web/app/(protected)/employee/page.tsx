@@ -24,7 +24,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { loadAuthState } from "@/_lib/auth";
-import { NotificationPushControl } from "@/_components/notification-push-control";
+import { NotificationPopupControl } from "@/_components/notification-popup-control";
 import { messages } from "@lib/messages";
 import {
   EmployeeActionSection,
@@ -524,7 +524,7 @@ export default async function EmployeePage() {
         ) : null}
 
         <EmployeePanel tone="info" size="sm">
-          <NotificationPushControl compact />
+          <NotificationPopupControl compact />
         </EmployeePanel>
       </div>
     </EmployeePageShell>

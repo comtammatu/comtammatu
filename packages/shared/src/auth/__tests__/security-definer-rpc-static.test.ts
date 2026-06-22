@@ -69,7 +69,6 @@ test("service-only implementation RPCs are not executable by authenticated users
   for (const signature of [
     "public.consume_stock_for_order_service(BIGINT, UUID)",
     "public.create_waste_from_order(BIGINT, BIGINT, TEXT, JSONB, TEXT)",
-    "public.claim_notification_push_delivery(BIGINT, BIGINT, INTEGER, INTEGER)",
   ]) {
     assert.match(
       securityHardeningMigration,

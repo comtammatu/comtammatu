@@ -3,7 +3,7 @@
 import { AppSection } from "@/components/surface";
 import { useNotifications } from "@/_hooks/use-notifications";
 import { NotificationList } from "@/_components/notification-list";
-import { NotificationPushControl } from "@/_components/notification-push-control";
+import { NotificationPopupControl } from "@/_components/notification-popup-control";
 
 export function NotificationsClient({ tenantId }: { tenantId: number }) {
   const {
@@ -21,7 +21,7 @@ export function NotificationsClient({ tenantId }: { tenantId: number }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <NotificationPushControl />
+      <NotificationPopupControl />
       <AppSection className="overflow-hidden" contentFlush>
         <NotificationList
           items={items}

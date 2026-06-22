@@ -274,6 +274,8 @@
 
 **Consequences / phasing:** S0 spine+shadow (wedge) → S1 Web Push live + severity gate + retune trigger → S2 Telegram dark → S3 Telegram live + rate-valve + void-after-pay → S4 Đóng ngày → S5 mua hàng/kho/tài chính → S6 POS tail+HR+tuần → S7+ migration batch + LLM digest. Critical path S0→S2→S3→S4; S1 ∥ S2. Tài liệu này (D036) + `notifications.md` + `agentic-os-blueprint.md` là of-record; mọi producer/agent code theo đó.
 
+**Cập nhật 2026-06-22 (D046):** Kênh **Web Push server-side** (cron `notifications-push` + VAPID + claim-RPC + ledger) ĐÃ GỠ, thay bằng **popup foreground qua `Notification` API** khi PWA mở (client-side, không ledger, không giao khi app đóng). "S1 Web Push live" không còn áp dụng; Telegram vẫn là dispatcher server thực thụ đầu tiên. In-app feed + spine `notifications` giữ nguyên. Xem D046.
+
 ## D037: Import `m-tu-design-system` bundle — touch tier cho form control (2026-06-20)
 
 **Context:** Bundle derive ra từ chính repo này (~85% circular: token/brand/logo/mascot md5-identical; palette lệch ΔE<0.018; template tả màn đã ship). Không màn mới, không token mới.
@@ -452,5 +454,18 @@ Hệ quả:
 - §A/§B của design-system.md được nới: "một sidebar" nay gồm rail icon cố định +
   panel deep-nav trong cùng SidebarProvider; cập nhật docs/modules/ui.md cùng PR
   (lint:doc-staleness fail-closed).
+
+Đảo quyết định này phải sửa bản ghi này trước.
+
+## D046: Gỡ Web Push server-side, thay bằng popup foreground `Notification` API (2026-06-22)
+
+**Decision:** Bỏ toàn bộ lớp Web Push server (VAPID + cron `notifications-push` + RPC `claim_notification_push_delivery` + bảng `notification_push_subscriptions`/`notification_push_deliveries`). "Thông báo trên thiết bị" nay là **popup OS bắn từ client qua `Notification` API** khi PWA đang mở: Realtime INSERT trên `notifications` → refetch RLS-scoped → `registration.showNotification` cho hàng mới chưa đọc, gắn ở `PwaRuntimeProvider` (phủ nhân viên + POS). In-app feed (`notifications` + `notification_reads` + list/count RPC) GIỮ NGUYÊN. Sửa D036 (kênh Web Push [live]).
+
+**Context:** Web Push để "Chưa cấu hình" (thiếu cặp khoá VAPID); owner không muốn vận hành khoá + cron. Máy POS/KDS mở cả ngày nên popup foreground đủ cho nhu cầu thật (báo đơn/việc khẩn lúc đang dùng). Đánh đổi đã chấp nhận: **KHÔNG có thông báo khi app đóng**.
+
+**Consequences:**
+- Xoá: `lib/notifications/web-push.ts` + `push-targeting.ts`, route cron `notifications-push`, 4 Server Action push, handler `push` trong `sw.ts` (giữ `notificationclick`), env `WEB_PUSH_*` (turbo/vercel/.env.example), dep `web-push`. Migration `20260622130000_drop_notification_web_push.sql` theo lệ file→PR→owner apply; `database.types.ts` regen SAU khi apply prod.
+- Thêm: `_hooks/use-foreground-notifications.ts`, `_components/notification-popup-control.tsx`, `lib/notifications/popup-preference.ts` (mute qua `device-prefs`, không đụng `localStorage` trực tiếp → qua `check-client-storage` allowlist).
+- **Chưa chốt:** severity của popup — bắn **mọi** severity nhìn thấy (gồm `info` `pos.order_new`) hay chỉ `critical` (như cron cũ lọc). Code hiện bắn mọi severity; chờ owner chốt rồi cập nhật bản ghi này + `notifications.md`.
 
 Đảo quyết định này phải sửa bản ghi này trước.

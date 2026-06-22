@@ -114,50 +114,8 @@ const serwist = new Serwist({
   runtimeCaching,
 });
 
-type PushPayload = {
-  title?: string;
-  body?: string;
-  icon?: string;
-  badge?: string;
-  tag?: string;
-  data?: {
-    url?: string;
-    notificationId?: number;
-    kind?: string;
-    severity?: string;
-    createdAt?: string;
-  };
-};
-
-function parsePushPayload(event: PushEvent): PushPayload {
-  if (!event.data) return {};
-  try {
-    return event.data.json() as PushPayload;
-  } catch {
-    return { body: event.data.text() };
-  }
-}
-
-self.addEventListener("push", (event: PushEvent) => {
-  const payload = parsePushPayload(event);
-  const title = payload.title || "Cơm Tấm Má Tư";
-  const options: NotificationOptions = {
-    body: payload.body,
-    icon: payload.icon || "/icons/icon-192.png",
-    badge: payload.badge || "/icons/favicon-32x32.png",
-    tag: payload.tag,
-    data: {
-      url: payload.data?.url || "/notifications",
-      notificationId: payload.data?.notificationId,
-      kind: payload.data?.kind,
-      severity: payload.data?.severity,
-      createdAt: payload.data?.createdAt,
-    },
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
+// Notifications are shown from the foreground (Notification API via the page);
+// this handler routes a tap to the notification's target URL.
 self.addEventListener("notificationclick", (event: NotificationEvent) => {
   event.notification.close();
 
