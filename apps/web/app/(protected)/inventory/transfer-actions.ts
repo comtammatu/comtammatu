@@ -43,10 +43,15 @@ function isAllowedInterSiteDirection(
   fromKind: string,
   toKind: string,
 ): boolean {
-  if (fromKind === "branch" && toKind === "branch") return true;
   return (
-    (fromKind === "central_supply" || fromKind === "central_kitchen") &&
-    toKind === "branch"
+    (fromKind === "branch" &&
+      (toKind === "branch" ||
+        toKind === "central_supply" ||
+        toKind === "central_kitchen")) ||
+    ((fromKind === "central_supply" || fromKind === "central_kitchen") &&
+      toKind === "branch") ||
+    (fromKind === "central_supply" && toKind === "central_kitchen") ||
+    (fromKind === "central_kitchen" && toKind === "central_supply")
   );
 }
 

@@ -11,6 +11,9 @@ const readWeb = (path: string) => readFileSync(resolve(process.cwd(), path), "ut
 const migration = readRepo(
   "supabase/migrations/20260619121446_inventory_rebuild_consumption_central_sites.sql",
 );
+const centralTransferMigration = readRepo(
+  "supabase/migrations/20260622041251_allow_central_supply_central_kitchen_transfers.sql",
+);
 
 function extractSqlFunctionBody(functionName: string): string {
   const escapedName = functionName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -43,6 +46,21 @@ test("central site kinds are valid and branch intra-transfer is rejected", () =>
     migration,
     /v_from_kind IN \('central_supply', 'central_kitchen'\) AND v_to_kind = 'branch'/,
     "central supply and central kitchen should transfer into branches",
+  );
+  assert.match(
+    centralTransferMigration,
+    /v_from_kind = 'central_supply' AND v_to_kind = 'central_kitchen'/,
+    "Kho Tổng should transfer into Bếp Trung Tâm",
+  );
+  assert.match(
+    centralTransferMigration,
+    /v_from_kind = 'central_kitchen' AND v_to_kind = 'central_supply'/,
+    "Bếp Trung Tâm should transfer back into Kho Tổng",
+  );
+  assert.match(
+    centralTransferMigration,
+    /v_from_kind = 'branch' AND v_to_kind IN \('central_supply', 'central_kitchen'\)/,
+    "Kho CN return/rebalance should transfer into central sites",
   );
   assert.match(
     migration,
@@ -106,6 +124,11 @@ test("transfer UI and action surface cannot create branch kitchen transfers", ()
     transferActions,
     /fromKind === "central_supply" \|\| fromKind === "central_kitchen"/,
   );
+  assert.match(transferActions, /fromKind === "branch" &&/);
+  assert.match(transferActions, /toKind === "central_supply"/);
+  assert.match(transferActions, /toKind === "central_kitchen"/);
+  assert.match(transferActions, /fromKind === "central_supply" && toKind === "central_kitchen"/);
+  assert.match(transferActions, /fromKind === "central_kitchen" && toKind === "central_supply"/);
   assert.doesNotMatch(transferForm, /type SlipKind|TabsTrigger/);
   assert.doesNotMatch(transferForm, /is_default_consumption/);
   assert.doesNotMatch(transferForm, /location_kind\s*===\s*"kitchen"/);
@@ -262,6 +285,61 @@ test("legacy kitchen backfill stays dry-run and read-only", () => {
   const output = execFileSync(
     process.execPath,
     ["../../scripts/inventory-legacy-kitchen-backfill.mjs", "--self-test"],
+    { cwd: process.cwd(), encoding: "utf8" },
+  );
+  assert.match(output, /self-test ok/);
+});
+
+test("matu-platform import classifier stays dry-run and maps branch kitchen to consumption", () => {
+  const script = readRepo("scripts/inventory-matu-platform-dry-run.mjs");
+  assert.match(script, /mode: "dry-run"/);
+  assert.match(script, /branch_sale_consumption/);
+  assert.match(script, /real_transfer/);
+  assert.doesNotMatch(script, /\b(insert|update|delete|upsert)\s*\(/i);
+  assert.doesNotMatch(script, /method:\s*["'](?:POST|PATCH|DELETE|PUT)["']/);
+
+  const output = execFileSync(
+    process.execPath,
+    ["../../scripts/inventory-matu-platform-dry-run.mjs", "--self-test"],
+    { cwd: process.cwd(), encoding: "utf8" },
+  );
+  assert.match(output, /self-test ok/);
+});
+
+test("matu-platform master-data import requires explicit apply and maps source material contract", () => {
+  const script = readRepo("scripts/inventory-matu-platform-master-data.mjs");
+  assert.match(script, /--apply/);
+  assert.match(script, /assertProjectUrl\(args\.sourceUrl, SOURCE_REF, "Source"\)/);
+  assert.match(script, /assertProjectUrl\(args\.targetUrl, TARGET_REF, "Target"\)/);
+  assert.match(script, /semi_finished.+finished_good/s);
+  assert.match(script, /storageTypeForCategory/);
+
+  const output = execFileSync(
+    process.execPath,
+    ["../../scripts/inventory-matu-platform-master-data.mjs", "--self-test"],
+    { cwd: process.cwd(), encoding: "utf8" },
+  );
+  assert.match(output, /self-test ok/);
+});
+
+test("matu-platform operational import writes only a guarded SQL transaction", () => {
+  const script = readRepo("scripts/inventory-matu-platform-operational-import.mjs");
+  assert.match(script, /--write-sql/);
+  assert.match(script, /allow-manual-review-skip/);
+  assert.match(script, /branch_sale_consumption/);
+  assert.match(script, /sale_consumption/);
+  assert.match(script, /balance_adjustment/);
+  assert.match(script, /manual_review_disallowed_direction/);
+  assert.match(script, /BEGIN;/);
+  assert.match(script, /target_operational_inventory_not_empty/);
+  assert.match(script, /DISABLE TRIGGER trg_stock_movement_update_levels/);
+  assert.match(script, /ENABLE TRIGGER trg_stock_movement_update_levels/);
+  assert.match(script, /import_rebuilt_stock_levels_negative/);
+  assert.doesNotMatch(script, /method:\s*["'](?:POST|PATCH|DELETE|PUT)["']/);
+
+  const output = execFileSync(
+    process.execPath,
+    ["../../scripts/inventory-matu-platform-operational-import.mjs", "--self-test"],
     { cwd: process.cwd(), encoding: "utf8" },
   );
   assert.match(output, /self-test ok/);

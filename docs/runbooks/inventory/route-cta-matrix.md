@@ -12,7 +12,7 @@ Updated: `2026-06-19`
 
 - `/inventory/transfers` chỉ là phiếu hàng còn tồn tại site nhận.
 - `/inventory/consumption` là tiêu hao thực tế của chi nhánh, không phải transfer.
-- Hướng transfer hợp lệ: `central_supply -> branch`, `central_kitchen -> branch`, `branch -> branch`.
+- Hướng transfer hợp lệ: `central_supply -> branch`, `central_kitchen -> branch`, `branch -> central_supply`, `branch -> central_kitchen`, `central_supply -> central_kitchen`, `central_kitchen -> central_supply`, `branch -> branch`.
 - `Kho CN -> Bếp CN` không tạo transfer; nếu URL cũ `?create=cap-bep` còn được gọi thì phải rẽ sang `/inventory/consumption`.
 - `/inventory/production` là happy path của `central_kitchen`.
 
