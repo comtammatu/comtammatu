@@ -16,10 +16,10 @@ The system has three feedback channels with different durability:
 
 - Toast: short-lived client feedback for the action currently happening on screen. Use `toast` from `@comtammatu/ui/components/sonner`.
 - In-app notification: durable, role/branch-scoped work item stored in `public.notifications`, read state in `public.notification_reads`, and surfaced through `/notifications`, Cổng nhân viên, or an approved bell/entry point.
-- Installed-PWA push: device-level alert for active staff subscriptions stored in `public.notification_push_subscriptions`, delivered through `/api/cron/notifications-push`, and linked back to `/notifications` or the notification action URL.
+- Foreground popup: device-level OS notification fired by the open PWA via the `Notification` API for new unread durable notifications the user can see, shown through the service worker and linked back to `/notifications` or the notification action URL. Fires only while the app is open — there is no closed-app delivery.
 - External outbox: delivery attempt queue in `public.notification_outbox` for configured webhook-style workers.
 
-Do not collapse these channels. A toast is not an audit trail. An in-app notification is not a replacement for immediate form feedback. Installed-PWA push is only an attention layer over durable notifications. The external outbox is not the unread feed.
+Do not collapse these channels. A toast is not an audit trail. An in-app notification is not a replacement for immediate form feedback. The foreground popup is only an attention layer over durable notifications. The external outbox is not the unread feed.
 
 ## Authority
 
@@ -27,9 +27,9 @@ Use these sources in order:
 
 1. Runtime UI contract: `docs/spec/design-system.md`
 2. Toast primitive: `packages/ui/src/components/sonner.tsx`
-3. Durable feed and push actions: `apps/web/app/_actions/notifications.ts`
+3. Durable feed actions: `apps/web/app/_actions/notifications.ts`
 4. Durable feed UI: `apps/web/app/_components/notification-*`
-5. Installed-PWA push runtime: `apps/web/app/sw.ts`, `apps/web/lib/notifications/web-push.ts`, and `/api/cron/notifications-push`
+5. Foreground popup runtime: `apps/web/app/_hooks/use-foreground-notifications.ts`, `apps/web/app/_components/notification-popup-control.tsx`, and `apps/web/app/sw.ts` (notificationclick)
 6. Database contract: `supabase/migrations/00000000000000_baseline.sql` (bảng notifications; migration gốc nằm trong `_archive/`) and forward notification migrations
 7. External outbox: `public.notification_outbox` and module-specific dispatchers
 8. Product vocabulary: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
@@ -49,10 +49,10 @@ Workflow event
   -> useNotifications refreshes list + unread count
   -> /notifications, Cổng nhân viên, shell entry point, or approved bell
 
-Installed PWA push
-  -> public.notification_push_subscriptions row after user permission
-  -> cron dispatcher reads durable notifications idempotently
-  -> Web Push display from service worker
+Foreground popup (PWA open)
+  -> user grants Notification permission
+  -> Realtime INSERT on notifications triggers an RLS-scoped refetch
+  -> Notification API popup via the service worker for new unread rows
   -> notification click focuses or opens the action URL
 
 External delivery
@@ -69,7 +69,7 @@ MVP acceptance:
 - Any workflow event that must survive navigation, involve another role, or require follow-up creates a durable notification.
 - The notification feed supports unread count, mark-read, mark-all-read, entity deep links, severity, expiry, and deduplication.
 - Toasts and notifications share severity semantics and vocabulary, but do not share storage.
-- Android and iOS staff devices can opt in to installed-PWA push where the browser/platform supports Web Push.
+- Android and iOS staff devices can opt in to foreground OS popups while the PWA is open (Notification API); there is no closed-app push.
 - Notification producers can be audited by event kind, entity, target role, target branch, and dedup key.
 
 Out of scope for the current contract:

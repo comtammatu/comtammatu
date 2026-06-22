@@ -2854,119 +2854,6 @@ export type Database = {
           },
         ]
       }
-      notification_push_deliveries: {
-        Row: {
-          attempt_count: number
-          created_at: string
-          error: string | null
-          last_attempt_at: string | null
-          notification_id: number
-          sent_at: string | null
-          status: string
-          subscription_id: number
-          updated_at: string
-        }
-        Insert: {
-          attempt_count?: number
-          created_at?: string
-          error?: string | null
-          last_attempt_at?: string | null
-          notification_id: number
-          sent_at?: string | null
-          status?: string
-          subscription_id: number
-          updated_at?: string
-        }
-        Update: {
-          attempt_count?: number
-          created_at?: string
-          error?: string | null
-          last_attempt_at?: string | null
-          notification_id?: number
-          sent_at?: string | null
-          status?: string
-          subscription_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notification_push_deliveries_notification_id_fkey"
-            columns: ["notification_id"]
-            isOneToOne: false
-            referencedRelation: "notifications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notification_push_deliveries_subscription_id_fkey"
-            columns: ["subscription_id"]
-            isOneToOne: false
-            referencedRelation: "notification_push_subscriptions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      notification_push_subscriptions: {
-        Row: {
-          auth: string
-          created_at: string
-          device_label: string | null
-          disabled_at: string | null
-          endpoint: string
-          failure_count: number
-          id: number
-          last_error: string | null
-          last_seen_at: string
-          last_sent_at: string | null
-          p256dh: string
-          tenant_id: number
-          updated_at: string
-          user_agent: string | null
-          user_id: string
-        }
-        Insert: {
-          auth: string
-          created_at?: string
-          device_label?: string | null
-          disabled_at?: string | null
-          endpoint: string
-          failure_count?: number
-          id?: never
-          last_error?: string | null
-          last_seen_at?: string
-          last_sent_at?: string | null
-          p256dh: string
-          tenant_id: number
-          updated_at?: string
-          user_agent?: string | null
-          user_id: string
-        }
-        Update: {
-          auth?: string
-          created_at?: string
-          device_label?: string | null
-          disabled_at?: string | null
-          endpoint?: string
-          failure_count?: number
-          id?: never
-          last_error?: string | null
-          last_seen_at?: string
-          last_sent_at?: string | null
-          p256dh?: string
-          tenant_id?: number
-          updated_at?: string
-          user_agent?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notification_push_subscriptions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       notification_reads: {
         Row: {
           notification_id: number
@@ -8261,15 +8148,6 @@ export type Database = {
       }
       cancel_production_order: { Args: { p_order_id: number }; Returns: Json }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
-      claim_notification_push_delivery: {
-        Args: {
-          p_max_attempts?: number
-          p_notification_id: number
-          p_processing_ttl_seconds?: number
-          p_subscription_id: number
-        }
-        Returns: Json
-      }
       claim_print_job: {
         Args: { p_agent_id: string; p_job_id: number }
         Returns: boolean

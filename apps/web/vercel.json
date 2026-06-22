@@ -21,10 +21,6 @@
     {
       "path": "/api/cron/kds-maintenance",
       "schedule": "0 5,11,17,23 * * *"
-    },
-    {
-      "path": "/api/cron/notifications-push",
-      "schedule": "*/2 * * * *"
     }
   ]
 }

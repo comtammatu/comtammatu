@@ -14,7 +14,7 @@ agreed, not yet built · **[future]** deferred behind a gate.
 
 ```
 PRODUCERS  →  notifications (single hub, dedup_key)  →  DISPATCHERS  →  CHANNELS  →  AUDIENCES
-triggers/                                              push (role) /              app roles /
+triggers/                                              foreground popup /         app roles /
 detectors/                                             telegram (topic)           TG group
 reports
 ```
@@ -24,18 +24,24 @@ reports
   future camera (`vision_events` reader) and LLM digest are all just producers.
 - A **dispatcher** reads `notifications` cold over a time window and owns its own
   delivery idempotency (a claim-RPC + delivery ledger) and rate budget.
-- **Web Push** is **[live]** (`notifications-push` cron, VAPID,
-  `claim_notification_push_delivery` + `notification_push_deliveries`).
-- **Telegram** is **[designed]** — it MUST mirror the Web Push pattern (its own
-  claim-RPC + `notification_telegram_deliveries` ledger). Do **NOT** reuse
-  `notification_outbox` / `dispatchNotificationOutbox` (user-gated, non-atomic
-  read→loop→update — a double-send race).
+- **Foreground popups** are **[live]** — the open PWA fires an OS notification
+  (`Notification` API, shown via the service worker) for new unread rows it can
+  see, RLS-scoped. Client-side only: no dispatcher, no VAPID, no delivery
+  ledger, **and no delivery when the app is closed**. The former server Web Push
+  layer (`notifications-push` cron, VAPID, `claim_notification_push_delivery` +
+  `notification_push_deliveries`) was removed.
+- **Telegram** is **[designed]** — the first true server dispatcher: it MUST own
+  a claim-RPC + `notification_telegram_deliveries` ledger (the dispatcher
+  pattern above). Do **NOT** reuse `notification_outbox` /
+  `dispatchNotificationOutbox` (user-gated, non-atomic read→loop→update — a
+  double-send race).
 
 ## Producer contract (`notifications` row)
 
 Every producer MUST set: `tenant_id` (single tenant = 1), `target_branch_id`,
 `severity` (`info` | `warning` | `critical`), `kind` (`<domain>.<event>`, stable),
-`dedup_key`, `target_roles[]` (Web Push targeting only). SHOULD set:
+`dedup_key`, `target_roles[]` (drives RLS visibility → who sees the in-app feed
+and the foreground popup; also digest/Telegram targeting). SHOULD set:
 `entity_type` / `entity_id`, `action_url`, `meta` (jsonb structured payload for
 digests / Telegram formatter / future LLM), `expires_at`.
 
@@ -103,9 +109,12 @@ re-derive urgency from `kind`. Test both classifiers against one shared fixture.
 
 Two channels, two independent audiences:
 
-- **Web Push** = role-based via `target_roles[]`. `critical` → `{owner}` only,
-  pushed immediately. `warning` → `{owner, branch_manager}`, **daily digest only
-  (NOT mid-service push)**. `branch_manager` is reachable ONLY on Web Push.
+- **Foreground popup** = role-based via `target_roles[]` (RLS decides who can
+  see the row). Fires an OS popup **only while that user's PWA is open** — there
+  is no closed-app delivery. Audience is whoever has the app open among the
+  targeted roles. Severity policy is owner-locked: confirm with the owner
+  whether popups fire for all visible severities (e.g. `info` `pos.order_new`)
+  or `critical` only.
 - **Telegram supergroup** = audience is **group membership** (owner + specially
   invited people), DECOUPLED from app roles. The dispatcher is role-agnostic and
   routes by `kind` + `severity` → forum topic. Both `critical` and `warning` flow

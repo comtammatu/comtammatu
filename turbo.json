@@ -45,10 +45,7 @@
         "CRON_SECRET",
         "HDDT_ARCHIVE_ENABLED",
         "HDDT_DAILY_SUMMARY_ENABLED",
-        "HDDT_RECONCILE_ENABLED",
-        "WEB_PUSH_VAPID_PUBLIC_KEY",
-        "WEB_PUSH_VAPID_PRIVATE_KEY",
-        "WEB_PUSH_SUBJECT"
+        "HDDT_RECONCILE_ENABLED"
       ],
       "outputs": [
         ".next/**",
