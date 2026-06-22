@@ -235,3 +235,34 @@ Apply order:
 4. Convert all source transfers into branch kitchens to `sale_consumption`.
 5. Import only real stock-bearing transfers.
 6. Resolve manual-review rows before any write.
+
+## Post-Merge Smoke
+
+PR #99 landed on `main` as `0bc9ea2172fb030e61d27a54d09a39c65172dbaf`.
+
+GitHub CI after merge passed:
+
+- `baseline-replay`.
+- `gates`: deps audit, baseline hygiene, typecheck, lint, test, and build.
+
+Vercel production deployment `dpl_7MU1GEV6eESz56irp6kR6nwCmu7S` reached `READY`.
+
+Read-only production Inventory smoke on project `iexwsuaqqenyjiskawoj`:
+
+- `stock_transfers`: 352.
+- `stock_transfer_items`: 551.
+- `stock_movements`: 1,690.
+- `stock_levels`: 124.
+- `sale_consumption` movements: 359.
+- `count_adjustment` movements: 229.
+- `stock_levels` vs movement aggregate mismatches: 0.
+- Negative `stock_levels`: 0.
+- Stock rows on `location_kind = 'kitchen'`: 0.
+- All imported stock transfers are `warehouse -> warehouse`.
+- `trg_stock_movement_update_levels` is enabled.
+
+Legacy `Kho CN -> Bếp CN` backfill audit:
+
+- Command: `node --env-file=.env.local scripts/inventory-legacy-kitchen-backfill.mjs --tenant-id 1 --json`.
+- Result: `legacyTransferCount=0`, `transferInMovementCount=0`, `phantomKitchenQuantity=0`, `phantomKitchenValue=0`, `dryRunCorrections=0`.
+- No correction/backfill write is required.
