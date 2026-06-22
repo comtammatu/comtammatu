@@ -139,6 +139,9 @@ export function HrClient({
           <EmployeeTable
             employees={employees}
             checklistTemplates={checklistTemplates}
+            branches={branches}
+            positionOptions={positionOptions}
+            canManage={canManageEmployees}
           />
           {canManageEmployees ? (
             <EmployeeFormDialog
