@@ -24,6 +24,9 @@ jobs:
       # Fail-closed review-tier floor for T3-blast-radius diffs (auth, money,
       # migrations, definer RPCs) lacking a tier note. Owner decision 2026-06-22.
       REVIEW_TIER_STRICT: "1"
+      # Fail-closed staleness guard: snapshot docs (docs/plan, docs/worklog)
+      # must declare "Reconciled-through <sha>". Owner decision 2026-06-22.
+      DOC_STALENESS_STRICT: "1"
     steps:
       - uses: actions/checkout@v4
         with:
