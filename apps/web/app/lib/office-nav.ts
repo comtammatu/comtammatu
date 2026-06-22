@@ -48,6 +48,74 @@ function mapItem(item: ResolvedNavLink): ShellNavItem {
   };
 }
 
+function dedupeByHref(items: ShellNavItem[]): ShellNavItem[] {
+  const seen = new Set<string>();
+  const result: ShellNavItem[] = [];
+  for (const item of items) {
+    if (seen.has(item.href)) continue;
+    seen.add(item.href);
+    result.push(item);
+  }
+  return result;
+}
+
+// TIER-1 rail (module switcher): flat, single-sourced. Derived lazily from the
+// office nav groups so ACL filtering + ordering stay single-sourced. Callers
+// always pass the home branchId so branch-management entries are stable across
+// modules.
+export function resolveOfficeRailItems(
+  role: StaffRole,
+  branchId?: number | null,
+): ShellNavItem[] {
+  return dedupeByHref(
+    resolveOfficeNavGroups(role, branchId).flatMap((group) => group.items),
+  );
+}
+
+// TIER-2 panel for office modules. admin renders the command groups; the other
+// office modules render a single landing group built from their own workspace
+// entry so the panel is never empty.
+export function resolveOfficeDeepNav(
+  role: StaffRole,
+  module: "admin" | "hr" | "menu" | "orders",
+  _branchId?: number | null,
+): ShellNavGroup[] {
+  if (module === "admin") {
+    return resolveAdminNavGroups(role).map((group: ResolvedNavGroup) => ({
+      title: group.title,
+      items: group.items.map(mapItem),
+    }));
+  }
+
+  const prefix = "/" + module;
+  const workspaceItem = resolveWorkspaceItems(role).find((item) =>
+    item.href === prefix || item.href.startsWith(prefix + "/"),
+  );
+  if (!workspaceItem) return [];
+
+  return [
+    {
+      title: workspaceItem.label,
+      items: [mapItem(workspaceItem)],
+    },
+  ];
+}
+
+// TIER-2 panel for branch-management: the branch-scoped management group.
+export function resolveBranchDeepNav(
+  role: StaffRole,
+  branchId?: number | null,
+): ShellNavGroup[] {
+  const items = resolveBranchManagementItems(role, branchId);
+  if (items.length === 0) return [];
+  return [
+    {
+      title: NAV_GROUP_LABELS_VI.branchManagement,
+      items: items.map(mapItem),
+    },
+  ];
+}
+
 export function resolveOfficeNavGroups(
   role: StaffRole,
   branchId?: number | null,

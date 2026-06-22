@@ -1,13 +1,10 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: menu management page keeps tab labels inline */
-
 import {
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
-import { Badge } from "@comtammatu/ui/components/badge";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
-import { UrlTabs } from "@/_components/url-tabs";
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  AppEmptyState,
+} from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { loadAuthState } from "@/_lib/auth";
 import { CategoryTable } from "./category-table";
 import { AddCategoryButton } from "./add-category-button";
@@ -15,7 +12,9 @@ import { ItemTable } from "./item-table";
 import { AddItemButton } from "./add-item-button";
 import { MenuImportExportMenu } from "./import-export-menu";
 
-import { FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import { MENU_VI } from "./menu-copy";
+
 export default async function MenuPage() {
   const { supabase, claims } = await loadAuthState();
 
@@ -34,8 +33,22 @@ export default async function MenuPage() {
       .order("name"),
   ]);
 
-  if (categoriesRes.error) throw new Error("Không thể tải danh mục");
-  if (itemsRes.error) throw new Error("Không thể tải món ăn");
+  if (categoriesRes.error) {
+    return (
+      <AppPage width="wide">
+        <AppPageHeader eyebrow={MENU_VI.eyebrow} title={MENU_VI.title} />
+        <AppEmptyState mode="error" description={ERRORS_VI.loadFailed} />
+      </AppPage>
+    );
+  }
+  if (itemsRes.error) {
+    return (
+      <AppPage width="wide">
+        <AppPageHeader eyebrow={MENU_VI.eyebrow} title={MENU_VI.title} />
+        <AppEmptyState mode="error" description={MENU_VI.loadItemsFailed} />
+      </AppPage>
+    );
+  }
 
   const categories = categoriesRes.data;
   const items = itemsRes.data.map((item) => ({
@@ -52,56 +65,49 @@ export default async function MenuPage() {
   }));
 
   return (
-    <AppPage>
+    <AppPage width="wide">
       <AppPageHeader
-        eyebrow="Danh mục kinh doanh"
-        title="Thực đơn"
+        eyebrow={MENU_VI.eyebrow}
+        title={MENU_VI.title}
         actions={<MenuImportExportMenu />}
-      />
-
-      <AppSection>
-          <UrlTabs defaultValue="items">
-            <TabsList className="rounded-lg bg-muted/60">
-              <TabsTrigger value="items" className="px-3">
-                Món ăn
-                <Badge variant="secondary" className="ml-1.5 tabular-nums">
-                  {items.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="categories" className="px-3">
-                {FORM_VI.category}
-                <Badge variant="secondary" className="ml-1.5 tabular-nums">
-                  {categories.length}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="items" className="mt-6 flex flex-col gap-4">
-              <div className="flex justify-end">
-                <AddItemButton
-                  categories={categories}
-                  tenantId={claims.tenant_id}
-                />
-              </div>
-              <div className="overflow-hidden rounded-lg border border-border/70">
+        tabs={
+          <AppPageTabs
+            defaultValue="items"
+            items={[
+              { value: "items", label: MENU_VI.itemsTab, count: items.length },
+              {
+                value: "categories",
+                label: FORM_VI.category,
+                count: categories.length,
+              },
+            ]}
+          >
+            <TabsContent value="items" className="flex flex-col gap-4">
+              <AppSection
+                contentFlush
+                action={
+                  <AddItemButton
+                    categories={categories}
+                    tenantId={claims.tenant_id}
+                  />
+                }
+              >
                 <ItemTable
                   items={items}
                   categories={categories}
                   tenantId={claims.tenant_id}
                 />
-              </div>
+              </AppSection>
             </TabsContent>
 
-            <TabsContent value="categories" className="mt-6 flex flex-col gap-4">
-              <div className="flex justify-end">
-                <AddCategoryButton />
-              </div>
-              <div className="overflow-hidden rounded-lg border border-border/70">
+            <TabsContent value="categories" className="flex flex-col gap-4">
+              <AppSection contentFlush action={<AddCategoryButton />}>
                 <CategoryTable categories={categories} />
-              </div>
+              </AppSection>
             </TabsContent>
-          </UrlTabs>
-      </AppSection>
+          </AppPageTabs>
+        }
+      />
     </AppPage>
   );
 }

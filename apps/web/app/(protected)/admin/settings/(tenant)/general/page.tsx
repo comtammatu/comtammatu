@@ -1,15 +1,10 @@
-import { redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { SettingsForm } from "./settings-form";
-import { SettingsPageFrame } from "../settings-page-frame";
+import { SettingsPageFrame } from "../../settings-page-frame";
 import { messages } from "@lib/messages";
 
 export default async function GeneralSettingsPage() {
   const { supabase, claims } = await loadAuthState();
-
-  if (!["owner"].includes(claims.user_role)) {
-    redirect("/access-denied?reason=insufficient-permission");
-  }
 
   const { data: tenant } = await supabase
     .from("tenants")

@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   AlertTriangle as IconAlertTriangle,
@@ -7,16 +6,25 @@ import {
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
 } from "lucide-react";
+import { getInventoryValueVisibility } from "@comtammatu/shared/auth";
 import { formatVND } from "@comtammatu/shared/format";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@comtammatu/ui/components/alert";
 import { cn } from "@comtammatu/ui/lib/utils";
 import {
   AppEmptyState,
   AppPage,
   AppPageHeader,
   AppSection,
+  KpiRow,
 } from "@/components/surface";
+import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { buildCompareDelta } from "@/components/kpi/compare-chip";
 import { KpiCard } from "@/components/kpi/kpi-card";
@@ -32,9 +40,8 @@ import {
   type FinanceException,
 } from "./_lib/finance-cockpit";
 import { fetchCashSummary } from "./_lib/cash-cockpit";
+import type { FinanceOverviewSearchParams } from "./_lib/finance-overview-types";
 import { CashPanel } from "./components/cash-panel";
-
-type SearchParams = Record<string, string | string[] | undefined>;
 
 const financeCopy = messages.finance;
 const powerLiteCopy = financeCopy.powerLite;
@@ -75,22 +82,6 @@ function MetricInline({
   );
 }
 
-function QuickPanel({
-  icon,
-  title,
-  children,
-}: {
-  icon: ReactNode;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <AppSection size="sm" title={title} icon={icon} className="min-w-0">
-      {children}
-    </AppSection>
-  );
-}
-
 function HddtComplianceBand({
   summary,
 }: {
@@ -120,7 +111,7 @@ function HddtComplianceBand({
       }
     >
       {summary ? (
-        <div className="grid gap-3 sm:grid-cols-4">
+        <KpiRow density="compact" className="lg:grid-cols-4">
           <MetricInline
             label={powerLiteCopy.hddtIssued}
             value={formatCount(summary.invoice_issued_count)}
@@ -140,7 +131,7 @@ function HddtComplianceBand({
             value={formatCount(summary.failed_webhook_count)}
             muted={summary.failed_webhook_count === 0}
           />
-        </div>
+        </KpiRow>
       ) : (
         <AppEmptyState
           compact
@@ -157,51 +148,37 @@ function ExceptionList({ items }: { items: FinanceException[] }) {
 
   if (visibleItems.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        {powerLiteCopy.noOwnerNews}
-      </p>
+      <AppEmptyState compact title={powerLiteCopy.noOwnerNews} />
     );
   }
 
   return (
     <div className="flex flex-col gap-2">
       {visibleItems.slice(0, 4).map((item) => (
-        <div
+        <Alert
           key={item.label}
-          className={cn(
-            "rounded-md border p-3",
-            item.tone === "destructive"
-              ? "border-destructive/30 bg-destructive/5"
-              : "border-warning/30 bg-warning/5",
-          )}
+          variant={item.tone === "destructive" ? "destructive" : "default"}
         >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex min-w-0 items-start gap-2">
-            <IconAlertTriangle
-              className={cn(
-                "mt-0.5 size-4 shrink-0",
-                item.tone === "destructive"
-                  ? "text-destructive"
-                  : "text-warning",
-              )}
-            />
-            <div className="min-w-0 flex-1 flex flex-col gap-1">
-              <div className="flex items-center justify-between gap-2">
-                <p className="truncate text-sm font-medium">{item.label}</p>
-                <p className="font-mono text-sm font-semibold tabular-nums">
-                  {item.value}
-                </p>
-              </div>
-              <p className="text-xs text-muted-foreground">{item.hint}</p>
-            </div>
-            </div>
-            {item.href ? (
-              <Button asChild variant="outline" size="sm" className="shrink-0">
+          <IconAlertTriangle
+            className={cn(
+              item.tone === "destructive" ? "text-destructive" : "text-warning",
+            )}
+          />
+          <AlertTitle className="flex items-center justify-between gap-2">
+            <span className="truncate">{item.label}</span>
+            <span className="font-mono font-semibold tabular-nums">
+              {item.value}
+            </span>
+          </AlertTitle>
+          <AlertDescription>{item.hint}</AlertDescription>
+          {item.href ? (
+            <AlertAction>
+              <Button asChild variant="outline" size="sm">
                 <Link href={item.href}>{powerLiteCopy.openWorkItem}</Link>
               </Button>
-            ) : null}
-          </div>
-        </div>
+            </AlertAction>
+          ) : null}
+        </Alert>
       ))}
     </div>
   );
@@ -210,11 +187,19 @@ function ExceptionList({ items }: { items: FinanceException[] }) {
 export default async function FinancePage({
   searchParams,
 }: {
-  searchParams?: Promise<SearchParams>;
+  searchParams?: Promise<FinanceOverviewSearchParams>;
 }) {
   const rawParams = searchParams ? await searchParams : {};
   const params = parseFinanceParams(rawParams);
   const resolved = resolveFinanceRange(params);
+  const { claims } = await loadAuthState();
+  const inventoryValueVisibility = getInventoryValueVisibility(
+    claims.user_role,
+  );
+  // Drill into the inventory-value report only when the role can see it; the
+  // report's own visibility gate would otherwise render no-access.
+  const canViewInventoryValue =
+    inventoryValueVisibility.system || inventoryValueVisibility.branch;
   const [cockpit, cash] = await Promise.all([
     fetchFinanceCockpit(params, resolved),
     fetchCashSummary(params, resolved),
@@ -240,7 +225,7 @@ export default async function FinancePage({
         hide={["granularity", "compare", "payment"]}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <KpiRow density="compact" className="xl:grid-cols-4">
         <KpiCard
           icon={<IconWallet className="size-4 text-muted-foreground" />}
           label={financeCopy.basic.kpis.revenue}
@@ -267,7 +252,9 @@ export default async function FinancePage({
           label={financeCopy.basic.kpis.inventoryValue}
           value={formatVND(cockpit.kpis.inventoryValue)}
           hint={financeCopy.basic.kpis.inventoryValueHint}
-          href="/admin/reports/inventory-value"
+          href={
+            canViewInventoryValue ? "/finance/inventory-value" : undefined
+          }
         />
 
         <KpiCard
@@ -312,7 +299,7 @@ export default async function FinancePage({
               : null
           }
         />
-      </div>
+      </KpiRow>
 
       <CashPanel
         cashOnHand={cash.hasOpening ? cash.cashOnHand : null}
@@ -326,12 +313,13 @@ export default async function FinancePage({
 
       <HddtComplianceBand summary={cockpit.dashboardSummary} />
 
-      <QuickPanel
+      <AppSection
+        size="sm"
         icon={<IconAlertTriangle className="size-4" />}
         title={powerLiteCopy.ownerNewsTitle}
       >
         <ExceptionList items={cockpit.exceptions} />
-      </QuickPanel>
+      </AppSection>
     </AppPage>
   );
 }

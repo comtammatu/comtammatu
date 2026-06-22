@@ -24,16 +24,16 @@ import {
   formatPathSegment,
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
-import { resolveOfficeNavGroups } from "@/lib/office-nav";
+import { resolveOfficeDeepNav, resolveOfficeRailItems } from "@/lib/office-nav";
 import { messages } from "@lib/messages";
 
-// Generic Management shell for modules whose sidebar is the shared office nav
-// and whose chrome carries no shell-scoped client state. Chrome lives in this
-// client registry — keyed by a serializable `module` id — so layouts (server
-// components) pass only the id across the RSC boundary, never an icon. Optional
-// per-module knobs (collapsible mode, back-link, breadcrumb-from-nav,
-// branch-scoped nav, a permission-gated header action) let admin ride this shell
-// alongside hr/menu/orders.
+// Generic Management shell for modules whose chrome is the shared office rail +
+// the module's own deep nav, and whose chrome carries no shell-scoped client
+// state. Chrome lives in this client registry — keyed by a serializable `module`
+// id — so layouts (server components) pass only the id across the RSC boundary,
+// never an icon. Optional per-module knobs (back-link, breadcrumb-from-nav, a
+// permission-gated header action) let admin ride this shell alongside
+// hr/menu/orders.
 // ponytail: the knobs are registry data, not new abstractions. Modules that own
 // shell-scoped client state keep their own wrapper (finance: lifted realtime
 // channel; inventory: branch-reactive nav + branch-filter/mobile header chrome).
@@ -47,16 +47,11 @@ interface ModuleChrome {
   defaultPageTitle: string;
   crumbLabel: string;
   description?: string;
-  /** Sidebar collapse mode; defaults to AppShell's `offcanvas`. */
-  collapsible?: "icon" | "offcanvas";
   /** Show the role-home back link above the brand block; defaults to true. */
   showBackLink?: boolean;
   /** Render a multi-level breadcrumb from the active nav item instead of the
    *  static crumb badge. */
   breadcrumbFromNav?: boolean;
-  /** Pass the branch id into the nav resolver (adds the branch-management
-   *  group); defaults to true. */
-  branchScopedNav?: boolean;
   /** Header action overriding the default role-home link; hidden unless
    *  `gateModule` is accessible. */
   action?: {
@@ -75,10 +70,8 @@ const OFFICE_MODULE_CHROME: Record<OfficeModuleId, ModuleChrome> = {
     mainLabel: "Quản trị",
     defaultPageTitle: APP_COPY_VI.adminSurface,
     crumbLabel: APP_COPY_VI.storeManagement,
-    collapsible: "icon",
     showBackLink: false,
     breadcrumbFromNav: true,
-    branchScopedNav: false,
     action: {
       href: "/employee",
       label: MODULE_LABELS_VI.employee,
@@ -152,10 +145,8 @@ export function OfficeModuleShell({
 }) {
   const chrome = OFFICE_MODULE_CHROME[module];
   const pathname = usePathname();
-  const navGroups = resolveOfficeNavGroups(
-    role,
-    chrome.branchScopedNav === false ? undefined : branchId,
-  );
+  const tier1 = resolveOfficeRailItems(role, branchId);
+  const tier2 = resolveOfficeDeepNav(role, module, branchId);
 
   let actionLink: { href: string; label: string } | null =
     resolveRoleHomeLink(role, branchId);
@@ -178,11 +169,12 @@ export function OfficeModuleShell({
         mainLabel: chrome.mainLabel,
         showBackLink: chrome.showBackLink,
       }}
-      navGroups={navGroups}
+      tier1={tier1}
+      tier2={tier2}
       defaultPageTitle={chrome.defaultPageTitle}
       pageHeader={{
         breadcrumbSegments: chrome.breadcrumbFromNav
-          ? buildBreadcrumbTrail(pathname, navGroups).slice(0, -1)
+          ? buildBreadcrumbTrail(pathname, tier2).slice(0, -1)
           : undefined,
         crumbLabel: chrome.crumbLabel,
         description: chrome.description,
@@ -192,7 +184,6 @@ export function OfficeModuleShell({
           </Button>
         ) : undefined,
       }}
-      collapsible={chrome.collapsible}
     >
       {children}
     </AppShell>

@@ -40,7 +40,8 @@ test("Branch management routes use management contract without a parent branch l
     "menu limits remains a daily operation, not setup",
   );
   assert.match(shell, /<AppShell/);
-  assert.match(shell, /resolveOfficeNavGroups\(role, branchId\)/);
+  assert.match(shell, /tier1=\{resolveOfficeRailItems\(role, branchId\)\}/);
+  assert.match(shell, /tier2=\{resolveBranchDeepNav\(role, branchId\)\}/);
   assert.doesNotMatch(
     shell,
     /bottomNav=\{false\}/,
@@ -59,40 +60,73 @@ test("Branch command dashboard is split into readiness, live operation, setup, a
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/dashboard/page.tsx",
   );
+  // Wave 6 extracted the lane tile/readiness config and lane-rendering markup
+  // into co-located files; assert the moved strings against their new homes.
+  const commandConfig = read(
+    "apps/web/app/(protected)/br/[branchId]/dashboard/_lib/command-config.tsx",
+  );
+  const commandSections = read(
+    "apps/web/app/(protected)/br/[branchId]/dashboard/_components/command-sections.tsx",
+  );
   const actionItem = read(
     "apps/web/app/(protected)/br/[branchId]/_components/branch-action-item.tsx",
   );
 
+  // Lane titles still drive the page's section layout.
   for (const expected of [
     "readinessTitle",
     "liveOperationsTitle",
     "endDayTitle",
     "setupLaneTitle",
     "drilldownTitle",
-    "/br/${branchId}/menu-limits",
-    "/br/${branchId}/settings/pos-sessions",
   ]) {
     assert.ok(dashboard.includes(expected), `expected ${expected}`);
   }
+  // Lane hrefs now live in the extracted tile config (buildTileGroups).
+  for (const expected of [
+    "/br/${branchId}/menu-limits",
+    "/br/${branchId}/settings/pos-sessions",
+  ]) {
+    assert.ok(commandConfig.includes(expected), `expected ${expected}`);
+  }
+  // Nav lanes render through AppLinkCard inside LinkCardGrid (the new DoD),
+  // while the readiness lane keeps the mobile-first BranchActionItem list.
+  assert.match(
+    commandSections,
+    /<AppLinkCard/,
+    "Branch Command nav lanes should render via AppLinkCard",
+  );
+  assert.match(
+    commandSections,
+    /<LinkCardGrid/,
+    "Branch Command nav lanes should grid through LinkCardGrid",
+  );
+  assert.match(
+    commandSections,
+    /<BranchActionItem/,
+    "Branch Command readiness lane should render the mobile-first action list",
+  );
   assert.match(
     dashboard,
-    /<BranchCommandActionList/,
-    "Branch Command lanes should render mobile-first action lists",
+    /<BranchReadinessList/,
+    "Branch Command page should mount the readiness lane",
+  );
+  assert.match(
+    dashboard,
+    /<BranchCommandTileGrid/,
+    "Branch Command page should mount the nav-lane tile grids",
   );
   assert.match(
     actionItem,
     /line-clamp-none/,
     "Branch Command must not clamp critical readiness/action descriptions",
   );
+  // KPI density now flows through <KpiRow>: base grid-cols-1 sm:grid-cols-2
+  // lg:grid-cols-3 with the page adding xl:grid-cols-4 via className.
   assert.match(
     dashboard,
-    /sm:grid-cols-2 xl:grid-cols-4/,
+    /<KpiRow className="xl:grid-cols-4"/,
     "KPI cards should be one column on mobile, then add density at wider breakpoints",
-  );
-  assert.doesNotMatch(
-    dashboard,
-    /AppLinkCard/,
-    "Branch Command lanes should not fall back to equal-weight card grids",
   );
   assert.doesNotMatch(
     dashboard,
@@ -112,25 +146,38 @@ test("Branch settings hub exposes setup and branch operating controls", () => {
     "apps/web/app/(protected)/br/[branchId]/_components/branch-action-item.tsx",
   );
 
+  // Wave 6 relaid the hub from an ItemGroup/BranchActionItem list to AppLinkCard
+  // tiles inside LinkCardGrid, with the tile config (incl. route hrefs) hoisted
+  // into the co-located _lib/hub-tiles.ts.
+  const hubTiles = read(
+    "apps/web/app/(protected)/br/[branchId]/settings/_lib/hub-tiles.ts",
+  );
+
   assert.match(settingsHub, /AttendanceSettingsCard/);
   assert.match(settingsHub, /<AppSection/);
-  assert.match(settingsHub, /<ItemGroup/);
-  assert.match(settingsHub, /BranchActionItem/);
-  assert.match(settingsHub, /settings\/tables/);
-  assert.match(settingsHub, /settings\/pos/);
-  assert.match(settingsHub, /settings\/printers/);
-  assert.match(settingsHub, /settings\/kds/);
-  assert.match(settingsHub, /settings\/pos-sessions/);
-  assert.match(settingsHub, /menu-limits/);
+  assert.match(settingsHub, /<AppLinkCard/);
+  assert.match(settingsHub, /<LinkCardGrid/);
+  // Per-tile ACL gating keeps each tile to surfaces the role can open.
+  assert.match(
+    settingsHub,
+    /canAccess\(role, tile\.moduleKey\)/,
+    "settings hub tiles must be module-ACL gated per tile",
+  );
+  // Setup/operating route hrefs now live in the extracted tile config.
+  assert.match(hubTiles, /settings\/tables/);
+  assert.match(hubTiles, /settings\/pos/);
+  assert.match(hubTiles, /settings\/printers/);
+  assert.match(hubTiles, /settings\/kds/);
+  assert.match(hubTiles, /settings\/pos-sessions/);
+  assert.match(hubTiles, /menu-limits/);
   assert.match(
     actionItem,
     /line-clamp-none/,
     "Attendance setup row should keep setup copy visible on mobile",
   );
   assert.match(attendanceSettingsCard, /BranchActionItem/);
-  assert.doesNotMatch(settingsHub, /href:\s*"\/menu"/);
+  assert.doesNotMatch(hubTiles, /href:\s*"\/menu"/);
   assert.doesNotMatch(settingsHub, /className="md:p-6"/);
-  assert.doesNotMatch(settingsHub, /AppLinkCard/);
   assert.doesNotMatch(
     attendanceSettingsCard,
     /@comtammatu\/ui\/components\/card/,

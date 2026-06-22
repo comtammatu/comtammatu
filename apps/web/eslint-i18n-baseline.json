@@ -5,7 +5,7 @@
   "generatedAt": "2026-06-20",
   "count": 356,
   "entries": [
-    "app/(protected)/admin/settings/branches/add-branch-button.tsx:16:25",
+    "app/(protected)/admin/settings/(tenant)/branches/add-branch-button.tsx:16:25",
     "app/(protected)/admin/staff/[id]/permissions/page.tsx:128:56",
     "app/(protected)/admin/staff/[id]/permissions/page.tsx:148:33",
     "app/(protected)/admin/staff/[id]/permissions/page.tsx:151:79",

@@ -45,6 +45,17 @@ export function findActiveNavItem(
   return undefined;
 }
 
+// Longest-href-first so a deep entry (e.g. /admin/reports) wins over a coarser
+// ancestor (e.g. /admin) when both match the active pathname.
+export function findActiveRailItem(
+  tier1: ShellNavItem[],
+  pathname: string,
+): ShellNavItem | undefined {
+  return [...tier1]
+    .sort((a, b) => b.href.length - a.href.length)
+    .find((item) => isNavItemActive(item, pathname));
+}
+
 const PATH_SEGMENT_LABELS_VI: Record<string, string> = {
   admin: "Quản trị",
   audit: "Nhật ký quyền hạn",

@@ -5,11 +5,12 @@ import { AppPage } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { BranchManagementShell } from "../../_components/branch-management-chrome";
+import { StationsClient } from "@/(protected)/branch-settings/_shared/kds/stations-client";
 import {
-  StationsClient,
+  mapStationRows,
   type CategoryOption,
-  type StationRow,
-} from "@/(protected)/branch-settings/_shared/kds/stations-client";
+  type KdsStationQueryRow,
+} from "./_lib/data";
 
 export default async function BranchKdsSettingsPage({
   params,
@@ -54,6 +55,9 @@ export default async function BranchKdsSettingsPage({
     supabase
       .from("menu_categories")
       .select("id, name, type, sort_order")
+      // menu_categories is tenant-scoped (no branch_id); scope explicitly to
+      // match sibling queries on this page instead of relying solely on RLS.
+      .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
       .order("sort_order"),
   ]);
@@ -62,14 +66,9 @@ export default async function BranchKdsSettingsPage({
   if (stationsRes.error) throw new Error("Không thể tải trạm KDS");
   if (categoriesRes.error) throw new Error("Không thể tải danh mục");
 
-  const stations: StationRow[] = (stationsRes.data ?? []).map((s) => ({
-    id: s.id,
-    name: s.name,
-    branch_id: s.branch_id,
-    position: s.position,
-    is_active: s.is_active,
-    category_ids: s.kds_station_categories?.map((sc) => sc.category_id) ?? [],
-  }));
+  const stations = mapStationRows(
+    (stationsRes.data ?? []) as KdsStationQueryRow[],
+  );
   const categories = categoriesRes.data as CategoryOption[];
   const displayName =
     session.user.user_metadata?.["full_name"] ??
@@ -83,7 +82,7 @@ export default async function BranchKdsSettingsPage({
       branchId={branchId}
       branchName={branchRes.data.name}
       defaultPageTitle={messages.settings.pages.kdsTitle}
-      description={branchRes.data.name}
+      description={messages.settings.pages.kdsDescription}
       breadcrumbSegments={[
         { label: APP_COPY_VI.branchCommand, href: `/br/${branchId}/dashboard` },
         {

@@ -6,6 +6,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { BranchManagementShell } from "../../_components/branch-management-chrome";
 import { TablesClient } from "@/(protected)/branch-settings/_shared/tables/tables-client";
+import { resolveDisplayName, shapeTableRows } from "./_lib/data";
 
 export default async function BranchTablesSettingsPage({
   params,
@@ -47,18 +48,12 @@ export default async function BranchTablesSettingsPage({
   if (zonesRes.error) throw new Error("Không thể tải khu vực");
   if (tablesRes.error) throw new Error("Không thể tải bàn");
 
-  const tables = (tablesRes.data ?? []).map((t) => ({
-    id: t.id,
-    branch_id: t.branch_id,
-    zone_id: t.zone_id,
-    number: t.number,
-    status: t.status,
-    zone_name: t.branch_zones?.name ?? null,
-  }));
-  const displayName =
-    session.user.user_metadata?.["full_name"] ??
-    session.user.email ??
-    claims.user_role;
+  const tables = shapeTableRows(tablesRes.data ?? []);
+  const displayName = resolveDisplayName({
+    fullName: session.user.user_metadata?.["full_name"],
+    email: session.user.email,
+    fallback: claims.user_role,
+  });
 
   return (
     <BranchManagementShell
@@ -67,7 +62,9 @@ export default async function BranchTablesSettingsPage({
       branchId={branchId}
       branchName={branchRes.data.name}
       defaultPageTitle={messages.settings.pages.tablesTitle}
-      description={branchRes.data.name}
+      description={messages.settings.branch.tablesDescription(
+        branchRes.data.name,
+      )}
       breadcrumbSegments={[
         { label: APP_COPY_VI.branchCommand, href: `/br/${branchId}/dashboard` },
         {

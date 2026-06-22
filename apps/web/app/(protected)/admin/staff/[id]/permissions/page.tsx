@@ -2,25 +2,13 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { formatVNDateTime } from "@comtammatu/shared/time";
-import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemGroup,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
-import {
-  AppPage,
-  AppPageHeader,
-  AppSection,
-  AppEmptyState,
-} from "@/components/surface";
+import { messages } from "@lib/messages";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { PermissionsClient } from "./permissions-client";
+import { OverviewTab } from "./overview-tab";
+import { HistoryTab } from "./history-tab";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -96,7 +84,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
   const auditList = recentAudit ?? [];
   const positionLabel = position
     ? `${position.label_vi} (${position.code})`
-    : "Chưa gán";
+    : messages.admin.staffPermissions.positionUnassigned;
 
   // Resolve actor names for the "Lịch sử" tab
   const actorIds = Array.from(
@@ -115,88 +103,62 @@ export default async function StaffPermissionsPage({ params }: Props) {
 
   const defaultBranchName = profile.branch_id
     ? (branchNameById.get(profile.branch_id) ?? String(profile.branch_id))
-    : "tenant-wide";
+    : messages.admin.staffPermissions.tenantWide;
 
   return (
     <AppPage>
       <AppPageHeader
         title={profile.full_name}
-        description={`Chức vụ: ${positionLabel} · Chi nhánh mặc định: ${defaultBranchName}`}
+        description={messages.admin.staffPermissions.headerDescription(
+          positionLabel,
+          defaultBranchName,
+        )}
         breadcrumb={
           <Button asChild variant="ghost" size="sm" className="-ml-3">
             <Link href="/admin/staff">
               <IconArrowLeft className="mr-1 size-4" />
-              Quay lại danh sách
+              {messages.admin.staffPermissions.backToList}
             </Link>
           </Button>
         }
         badge={
           profile.is_active
-            ? { children: "Đang hoạt động", variant: "success" as const }
-            : { children: "Ngưng hoạt động", variant: "secondary" as const }
+            ? {
+                children: messages.admin.staffPermissions.statusActive,
+                variant: "success" as const,
+              }
+            : {
+                children: messages.admin.staffPermissions.statusInactive,
+                variant: "secondary" as const,
+              }
         }
         tabs={
           <AppPageTabs
             items={[
-              { value: "overview", label: "Tổng quan" },
-              { value: "permissions", label: "Quyền" },
-              { value: "history", label: "Lịch sử" },
+              {
+                value: "overview",
+                label: messages.admin.staffPermissions.tabOverview,
+              },
+              {
+                value: "permissions",
+                label: messages.admin.staffPermissions.tabPermissions,
+              },
+              {
+                value: "history",
+                label: messages.admin.staffPermissions.tabHistory,
+              },
             ]}
             defaultValue="overview"
           >
             <TabsContent value="overview">
-              <AppSection title="Thông tin nhân viên">
-                <dl className="grid gap-3 sm:grid-cols-2">
-                  <div className="flex flex-col gap-1">
-                    <dt className="text-xs font-medium text-muted-foreground">
-                      Họ tên
-                    </dt>
-                    <dd className="text-sm">{profile.full_name}</dd>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <dt className="text-xs font-medium text-muted-foreground">
-                      Số điện thoại
-                    </dt>
-                    <dd className="font-mono text-sm">
-                      {profile.phone ?? "—"}
-                    </dd>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <dt className="text-xs font-medium text-muted-foreground">
-                      Chức vụ
-                    </dt>
-                    <dd className="text-sm">{positionLabel}</dd>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <dt className="text-xs font-medium text-muted-foreground">
-                      Chi nhánh mặc định
-                    </dt>
-                    <dd className="text-sm">{defaultBranchName}</dd>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <dt className="text-xs font-medium text-muted-foreground">
-                      Role
-                    </dt>
-                    <dd className="font-mono text-sm">
-                      {staffRoleFromPositionCode(profile.positions?.code)}
-                    </dd>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <dt className="text-xs font-medium text-muted-foreground">
-                      Trạng thái
-                    </dt>
-                    <dd>
-                      <Badge
-                        variant={profile.is_active ? "success" : "secondary"}
-                      >
-                        {profile.is_active
-                          ? "Đang hoạt động"
-                          : "Ngưng hoạt động"}
-                      </Badge>
-                    </dd>
-                  </div>
-                </dl>
-              </AppSection>
+              <OverviewTab
+                fullName={profile.full_name}
+                phone={profile.phone}
+                positionLabel={positionLabel}
+                defaultBranchName={defaultBranchName}
+                positionCode={profile.positions?.code}
+                isActive={profile.is_active ?? false}
+              />
             </TabsContent>
 
             <TabsContent value="permissions">
@@ -232,65 +194,18 @@ export default async function StaffPermissionsPage({ params }: Props) {
             </TabsContent>
 
             <TabsContent value="history">
-              <AppSection
-                title={`Lịch sử thay đổi (${auditList.length} mục gần nhất)`}
-              >
-                {auditList.length === 0 ? (
-                  <AppEmptyState
-                    mode="no-data"
-                    description="Chưa có thay đổi quyền hạn."
-                    compact
-                  />
-                ) : (
-                  <ItemGroup>
-                    {auditList.map((a) => (
-                      <Item key={a.id} variant="outline" size="sm">
-                        <ItemContent>
-                          <ItemTitle
-                            className={
-                              a.action === "revoke"
-                                ? "text-destructive"
-                                : undefined
-                            }
-                          >
-                            <Badge
-                              variant={
-                                a.action === "revoke"
-                                  ? "destructive"
-                                  : a.action === "apply_template"
-                                    ? "outline"
-                                    : "default"
-                              }
-                              className="mr-2 text-xs"
-                            >
-                              {a.action}
-                            </Badge>
-                            <code className="rounded-md bg-muted px-1.5 py-1 font-mono text-xs font-normal">
-                              {a.permission_key}
-                            </code>
-                            <span className="ml-2 text-xs font-normal text-muted-foreground">
-                              {a.branch_id === null
-                                ? "tenant-wide"
-                                : (branchNameById.get(a.branch_id) ??
-                                  `branch #${a.branch_id}`)}
-                            </span>
-                          </ItemTitle>
-                          <p className="text-xs text-muted-foreground">
-                            {nameByUserId.get(a.actor_user_id) ?? (
-                              <code>{a.actor_user_id.slice(0, 8)}</code>
-                            )}
-                          </p>
-                        </ItemContent>
-                        <ItemActions>
-                          <span className="text-xs text-muted-foreground">
-                            {formatVNDateTime(a.at)}
-                          </span>
-                        </ItemActions>
-                      </Item>
-                    ))}
-                  </ItemGroup>
-                )}
-              </AppSection>
+              <HistoryTab
+                entries={auditList.map((a) => ({
+                  id: a.id,
+                  action: a.action,
+                  permissionKey: a.permission_key,
+                  branchId: a.branch_id,
+                  at: a.at,
+                  actorUserId: a.actor_user_id,
+                }))}
+                branchNameById={branchNameById}
+                actorNameById={nameByUserId}
+              />
             </TabsContent>
           </AppPageTabs>
         }

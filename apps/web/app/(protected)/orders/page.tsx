@@ -10,6 +10,7 @@ import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
 import { AppPageTabs } from "@/components/app-page-tabs";
 
 import { ORDER_VI } from "@comtammatu/shared/messages";
+import { ORDERS_COPY } from "./orders-copy";
 export default async function OrdersPage() {
   const { claims } = await loadAuthState();
 
@@ -24,7 +25,7 @@ export default async function OrdersPage() {
         <AppPageHeader title={ORDER_VI.long} />
         <AppEmptyState
           mode="error"
-          description={ordersResult.error ?? "Không thể tải đơn hàng"}
+          description={ordersResult.error ?? ORDERS_COPY.loadFailed}
         />
       </AppPage>
     );
@@ -45,21 +46,21 @@ export default async function OrdersPage() {
   return (
     <AppPage width="wide">
       <AppPageHeader
-        eyebrow="Điều phối giao dịch"
+        eyebrow={ORDERS_COPY.eyebrow}
         title={ORDER_VI.long}
-        description="Theo dõi đơn bán và hoàn tiền trong cùng một nơi để xử lý nhanh."
+        description={ORDERS_COPY.description}
         actions={
           <Button asChild variant="outline" size="sm">
-            <Link href="/admin/reports">Báo cáo</Link>
+            <Link href="/admin/reports">{ORDERS_COPY.reportsAction}</Link>
           </Button>
         }
         tabs={
           <AppPageTabs
             items={[
-              { value: "orders", label: "Danh sách đơn" },
+              { value: "orders", label: ORDERS_COPY.tabOrders },
               {
                 value: "refunds",
-                label: "Hoàn tiền",
+                label: ORDERS_COPY.tabRefunds,
                 count: pendingRefundCount > 0 ? pendingRefundCount : undefined,
               },
             ]}

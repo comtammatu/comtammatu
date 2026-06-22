@@ -1,7 +1,4 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button } from "@comtammatu/ui/components/button";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import {
   canManageBranchFloorSettings,
   TENANT_LEVEL_ROLES,
@@ -15,6 +12,7 @@ import {
 } from "./print-jobs-client";
 import { SettingsPageFrame } from "../../settings-page-frame";
 import { KpiCard } from "@/components/kpi/kpi-card";
+import { KpiRow } from "@/components/surface";
 import { messages } from "@lib/messages";
 
 type SearchParams = {
@@ -170,18 +168,11 @@ export default async function PrintJobsPage({
 
   return (
     <SettingsPageFrame
+      width="wide"
       title={messages.settings.pages.printJobsTitle}
       description={messages.settings.pages.printJobsDescription}
-      actions={
-        <Button asChild variant="outline" size="sm">
-          <Link href="/admin/settings/printers">
-            <IconArrowLeft className="size-4" />
-            {messages.settings.printers.backPrinters}
-          </Link>
-        </Button>
-      }
     >
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <KpiRow>
         <KpiCard
           label={messages.settings.printers.statPending}
           value={pendingRes.count ?? 0}
@@ -204,7 +195,7 @@ export default async function PrintJobsPage({
             onlineCount === agentTotal && agentTotal > 0 ? "success" : "warning"
           }
         />
-      </div>
+      </KpiRow>
 
       <PrintJobsClient
         jobs={jobs}

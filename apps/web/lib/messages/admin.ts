@@ -8,6 +8,7 @@ export const admin = {
     inventory: "Kho",
     finance: "Tài chính",
     menu: "Menu",
+    modules: "Mô-đun",
   },
   dashboard: {
     pageTitle: "Tổng quan vận hành",
@@ -113,6 +114,11 @@ export const admin = {
       adjustment: "Điều chỉnh",
     },
   },
+  printTemplates: {
+    loadErrorTitle: "Không thể tải mẫu phiếu in",
+    loadErrorTemplates: "Không tải được danh sách mẫu phiếu in. Vui lòng thử lại.",
+    loadErrorBranches: "Không tải được danh sách chi nhánh. Vui lòng thử lại.",
+  },
   staffForm: {
     passwordPlaceholder: "Tối thiểu 8 ký tự",
     fullNamePlaceholder: "Nguyễn Văn A",
@@ -126,6 +132,7 @@ export const admin = {
     description:
       "Tạo tài khoản, gán chức vụ hiển thị và phân quyền nhân viên theo chi nhánh. Hồ sơ nhân sự, chấm công và lương ở mục Nhân sự.",
     hrLink: "Nhân sự",
+    moreActions: "Thao tác khác",
   },
   staffAudit: {
     backToStaff: "Quay lại danh sách nhân viên",
@@ -143,5 +150,33 @@ export const admin = {
     expires: "Hạn",
     tenantWide: "toàn quán",
     forever: "vĩnh viễn",
+    filterActionAll: "Tất cả hành động",
+    filterTargetAll: "Tất cả đối tượng",
+    filterSince: "Từ ngày",
+    filterApply: "Áp dụng",
+    filterReset: "Xóa lọc",
+    emptyFiltered: "Không có kết quả phù hợp",
+    emptyFilteredHint: "Thử đổi hành động, đối tượng hoặc mốc thời gian.",
+  },
+  staffPermissions: {
+    backToList: "Quay lại danh sách",
+    statusActive: "Đang hoạt động",
+    statusInactive: "Ngưng hoạt động",
+    tabOverview: "Tổng quan",
+    tabPermissions: "Quyền",
+    tabHistory: "Lịch sử",
+    positionUnassigned: "Chưa gán",
+    tenantWide: "toàn quán",
+    headerDescription: (positionLabel: string, branchName: string) =>
+      `Chức vụ: ${positionLabel} · Chi nhánh mặc định: ${branchName}`,
+    staffInfoTitle: "Thông tin nhân viên",
+    fieldFullName: "Họ tên",
+    fieldPhone: "Số điện thoại",
+    fieldPosition: "Chức vụ",
+    fieldDefaultBranch: "Chi nhánh mặc định",
+    fieldRole: "Role",
+    fieldStatus: "Trạng thái",
+    historyTitle: (count: number) => `Lịch sử thay đổi (${count} mục gần nhất)`,
+    branchFallback: (branchId: number) => `branch #${branchId}`,
   },
 } as const;

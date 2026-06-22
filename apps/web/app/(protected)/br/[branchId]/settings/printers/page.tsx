@@ -11,6 +11,7 @@ import {
   type Category,
   type Printer,
 } from "@/(protected)/branch-settings/_shared/printers/printers-client";
+import { attachPrinterRouting } from "./_lib/printer-routing";
 
 export default async function BranchPrintersPage({
   params,
@@ -73,30 +74,17 @@ export default async function BranchPrintersPage({
 
   if (branchRes.error || !branchRes.data) notFound();
   if (printersRes.error) throw new Error("Không thể tải máy in");
+  if (agentRes.error) throw new Error("Không thể tải trạng thái agent in");
   if (printTypesRes.error) throw new Error("Không thể tải loại phiếu in");
   if (categoryRoutesRes.error)
     throw new Error("Không thể tải routing danh mục");
   if (categoriesRes.error) throw new Error("Không thể tải danh mục");
 
-  const printTypesByPrinter = new Map<number, string[]>();
-  for (const row of printTypesRes.data ?? []) {
-    const list = printTypesByPrinter.get(row.printer_id) ?? [];
-    list.push(row.print_type);
-    printTypesByPrinter.set(row.printer_id, list);
-  }
-
-  const categoryIdsByPrinter = new Map<number, number[]>();
-  for (const row of categoryRoutesRes.data ?? []) {
-    const list = categoryIdsByPrinter.get(row.printer_id) ?? [];
-    list.push(row.category_id);
-    categoryIdsByPrinter.set(row.printer_id, list);
-  }
-
-  const printers = (printersRes.data ?? []).map((printer) => ({
-    ...printer,
-    print_types: printTypesByPrinter.get(printer.id) ?? [],
-    category_ids: categoryIdsByPrinter.get(printer.id) ?? [],
-  }));
+  const printers = attachPrinterRouting(
+    printersRes.data ?? [],
+    printTypesRes.data ?? [],
+    categoryRoutesRes.data ?? [],
+  );
   const displayName =
     session.user.user_metadata?.["full_name"] ??
     session.user.email ??
@@ -109,9 +97,7 @@ export default async function BranchPrintersPage({
       branchId={branchId}
       branchName={branchRes.data.name}
       defaultPageTitle={messages.settings.pages.printersTitle}
-      description={messages.settings.branch.printersDescription(
-        branchRes.data.name,
-      )}
+      description={branchRes.data.name}
       breadcrumbSegments={[
         { label: APP_COPY_VI.branchCommand, href: `/br/${branchId}/dashboard` },
         {

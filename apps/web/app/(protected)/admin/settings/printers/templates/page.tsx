@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button } from "@comtammatu/ui/components/button";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
+import { canManageTenantStrategySettings } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
+import { AppEmptyState } from "@/components/surface";
 import {
   DEFAULT_TEMPLATE_CONTENT,
   PRINT_KINDS,
@@ -17,8 +16,6 @@ import {
 import { SettingsPageFrame } from "../../settings-page-frame";
 import { messages } from "@lib/messages";
 
-const TENANT_TEMPLATE_ROLES = ["owner"] as const;
-
 type TemplateRow = {
   id: number;
   tenant_id: number | null;
@@ -32,9 +29,7 @@ type TemplateRow = {
 export default async function PrintTemplatesPage() {
   const { supabase, claims } = await loadAuthState();
 
-  if (
-    !(TENANT_TEMPLATE_ROLES as readonly string[]).includes(claims.user_role)
-  ) {
+  if (!canManageTenantStrategySettings(claims.user_role)) {
     redirect("/admin/settings/printers");
   }
 
@@ -51,8 +46,24 @@ export default async function PrintTemplatesPage() {
       .order("name"),
   ]);
 
-  if (templatesRes.error) throw new Error("Không thể tải mẫu phiếu in");
-  if (branchesRes.error) throw new Error("Không thể tải chi nhánh");
+  if (templatesRes.error || branchesRes.error) {
+    return (
+      <SettingsPageFrame
+        title={messages.settings.pages.printTemplatesTitle}
+        description={messages.settings.pages.printTemplatesDescription}
+      >
+        <AppEmptyState
+          mode="error"
+          title={messages.admin.printTemplates.loadErrorTitle}
+          description={
+            templatesRes.error
+              ? messages.admin.printTemplates.loadErrorTemplates
+              : messages.admin.printTemplates.loadErrorBranches
+          }
+        />
+      </SettingsPageFrame>
+    );
+  }
 
   const rows = (templatesRes.data ?? []) as TemplateRow[];
 
@@ -78,14 +89,7 @@ export default async function PrintTemplatesPage() {
     <SettingsPageFrame
       title={messages.settings.pages.printTemplatesTitle}
       description={messages.settings.pages.printTemplatesDescription}
-      actions={
-        <Button asChild variant="outline" size="sm" className="gap-1">
-          <Link href="/admin/settings/printers">
-            <IconArrowLeft className="size-3.5" />
-            {messages.settings.pages.printersTitle}
-          </Link>
-        </Button>
-      }
+      width="wide"
     >
       <TemplatesClient
         templates={templates}

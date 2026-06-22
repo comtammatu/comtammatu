@@ -16,7 +16,7 @@ const UI_MODULE = "docs/modules/ui.md";
 const STATUS_BADGE = "apps/web/app/components/status-badge.tsx";
 const SHARED_LABELS = "packages/shared/src/labels/vi.ts";
 const BRANCH_TABLE =
-  "apps/web/app/(protected)/admin/settings/branches/branch-table.tsx";
+  "apps/web/app/(protected)/admin/settings/(tenant)/branches/branch-table.tsx";
 const PRINT_JOBS =
   "apps/web/app/(protected)/admin/settings/printers/jobs/print-jobs-client.tsx";
 const STAFF_AUDIT = "apps/web/app/(protected)/admin/staff/audit/page.tsx";

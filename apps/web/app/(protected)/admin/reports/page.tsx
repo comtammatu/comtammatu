@@ -4,17 +4,20 @@ import {
   TrendingUp as IconTrendingUp,
 } from "lucide-react";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
-import { messages } from "@lib/messages";
 import {
-  SurfaceLinkCard,
-  type SurfaceLinkCardProps,
-} from "@/components/surface-link-card";
+  AppLinkCard,
+  type AppLinkCardProps,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  LinkCardGrid,
+} from "@/components/surface";
+import { messages } from "@lib/messages";
 
 export default function ReportsPage() {
   const copy = messages.admin.reports.index;
 
-  const executiveCards: SurfaceLinkCardProps[] = [
+  const executiveCards: AppLinkCardProps[] = [
     {
       title: copy.cards.revenue,
       description: copy.cardDescriptions.revenue,
@@ -26,7 +29,7 @@ export default function ReportsPage() {
     {
       title: copy.cards.inventoryValue,
       description: copy.cardDescriptions.inventoryValue,
-      href: "/admin/reports/inventory-value",
+      href: "/finance/inventory-value",
       icon: <IconPackage />,
       tone: "info" as const,
       badge: copy.summaryBadge,
@@ -42,7 +45,7 @@ export default function ReportsPage() {
   ];
 
   return (
-    <AppPage width="wide" density="compact">
+    <AppPage width="wide">
       <AppPageHeader
         eyebrow={APP_COPY_VI.reportsLabel}
         title={copy.title}
@@ -53,15 +56,11 @@ export default function ReportsPage() {
         title={copy.aggregateTitle}
         description={copy.aggregateDescription}
       >
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <LinkCardGrid>
           {executiveCards.map((card) => (
-            <SurfaceLinkCard
-              key={card.href}
-              {...card}
-              ctaLabel={copy.openReport}
-            />
+            <AppLinkCard key={card.href} {...card} ctaLabel={copy.openReport} />
           ))}
-        </div>
+        </LinkCardGrid>
       </AppSection>
     </AppPage>
   );

@@ -607,6 +607,21 @@ export const finance = {
       colQrMomo: "QR/MoMo",
       total: "Tổng",
     },
+    drill: {
+      eyebrow: "Tài chính · Doanh thu",
+      back: "Quay lại tổng",
+      invalidDateTitle: "Doanh thu theo ngày",
+      invalidDate: "Ngày không hợp lệ.",
+      selectBranchTitle: (date: string) => `Chi tiết doanh thu ngày ${date}`,
+      selectBranchDescription:
+        'Xem chi tiết từ chế độ "Tất cả chi nhánh" cần chọn cụ thể chi nhánh để hiển thị danh sách đơn theo giờ.',
+      selectBranchSectionTitle: "Chọn chi nhánh",
+      noBranchAccess: "Bạn chưa có quyền xem chi nhánh nào.",
+      detailTitle: (branch: string, date: string) => `${branch} · ${date}`,
+      detailDescription: (orders: string, revenue: string) =>
+        `Tổng ${orders} đơn · ${revenue}. Cột giờ tính theo thời điểm thanh toán (Asia/Ho_Chi_Minh).`,
+      badge: "Chi tiết theo ngày",
+    },
   },
   cashVarianceCard: {
     title: "Lệch quỹ cuối ca",
@@ -624,6 +639,7 @@ export const finance = {
     title: "Hóa đơn điện tử",
     description:
       "Danh sách HĐĐT đã phát hành, đang ký, đã hủy hoặc khách lẻ không yêu cầu MST.",
+    loadError: "Không thể tải danh sách hóa đơn điện tử",
   },
   links: {
     revenue: {
@@ -645,6 +661,12 @@ export const finance = {
     title: "HĐ khách không lấy hóa đơn",
     description:
       "Hóa đơn tổng hợp khách hàng không lấy hóa đơn theo cấu hình HĐĐT hiện hành. Tác vụ tự động chạy 02:00 ICT mỗi ngày cho dữ liệu hôm trước; có thể chạy thủ công cho ngày cụ thể nếu tác vụ lỗi hoặc cần chạy lại.",
+    noAccessTitle: "Không có quyền truy cập",
+    noAccessDescription:
+      "Bạn cần quyền quản trị cấu hình (cấp tổ chức) để xem hàng đợi hóa đơn tổng hợp. Liên hệ chủ cửa hàng nếu cần truy cập.",
+    loadErrorTitle: "Không thể tải hàng đợi tổng hợp",
+    loadErrorDescription:
+      "Đã xảy ra lỗi khi tải hàng đợi HĐ tổng hợp. Vui lòng tải lại trang; nếu vẫn lỗi, kiểm tra cấu hình HĐĐT hoặc thử lại sau.",
   },
   foodCost: {
     estimateNote:
@@ -657,5 +679,8 @@ export const finance = {
     margin: "Biên lãi định mức",
     emptyTitle: "Không có dữ liệu giá vốn món",
     emptyDescription: "Đổi khoảng ngày để kiểm tra món đã bán và giá vốn.",
+    shareOfRevenueHint: (pct: string) => `${pct}% / DT`,
+    marginThresholdHint: (green: number, warn: number) =>
+      `Ngưỡng: ≥${green}% xanh · ≥${warn}% vàng`,
   },
 } as const;

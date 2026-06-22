@@ -39,7 +39,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import type { BranchOption } from "./page";
+import type { BranchOption } from "./_types";
 import {
   archiveChecklistTemplate,
   fetchChecklistTemplates,

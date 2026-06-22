@@ -1,11 +1,17 @@
 "use client";
 
-import { Fragment, useMemo, type ComponentType, type ReactNode } from "react";
+import {
+  Fragment,
+  useMemo,
+  type ComponentType,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowLeft as IconArrowLeft, LogOut as IconLogout } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import { resolveRoleHomeLink, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
+import { resolveRoleHomeLink } from "@comtammatu/shared/auth";
 import { cn } from "@comtammatu/ui";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -36,10 +42,12 @@ import {
 } from "@comtammatu/ui/components/sidebar";
 import {
   findActiveNavItem,
+  findActiveRailItem,
   formatPathSegment,
   getInitials,
   isNavItemActive,
   type ShellNavGroup,
+  type ShellNavItem,
 } from "@/lib/shell-primitives";
 import { AppShellPaddingBoundary } from "@/components/surface";
 import { BrandLogoBox, BrandMark, type BrandMarkVariant } from "@/components/brand";
@@ -77,11 +85,12 @@ export interface AppShellProps {
   role: StaffRole;
   branchId?: number | null;
   brand: BrandConfig;
-  navGroups: ShellNavGroup[];
+  /** TIER-1 rail: cross-module switcher. Flat, icon-only. */
+  tier1: ShellNavItem[];
+  /** TIER-2 panel: the active module's deep nav (grouped). */
+  tier2: ShellNavGroup[];
   defaultPageTitle: string;
   pageHeader: PageHeaderConfig;
-  /** Sidebar collapsible mode. Default "offcanvas" (mobile drawer). */
-  collapsible?: "icon" | "offcanvas";
   /**
    * Mobile-only workspace bottom navbar (same nav model as the sidebar +
    * drawer trigger). Default true for all back-office shells.
@@ -95,16 +104,16 @@ export function AppShell({
   role,
   branchId,
   brand,
-  navGroups,
+  tier1,
+  tier2,
   defaultPageTitle,
   pageHeader,
-  collapsible = "offcanvas",
   bottomNav = true,
 }: AppShellProps) {
   const pathname = usePathname();
   const copy = messages.common;
   const pageTitle = useMemo(() => {
-    const active = findActiveNavItem(navGroups, pathname);
+    const active = findActiveNavItem(tier2, pathname);
     if (!active) return defaultPageTitle;
     const pathTail = pathname
       .slice(active.href.length)
@@ -112,7 +121,12 @@ export function AppShell({
       .filter(Boolean)
       .map((segment) => formatPathSegment(segment));
     return pathTail[pathTail.length - 1] ?? active.label;
-  }, [navGroups, pathname, defaultPageTitle]);
+  }, [tier2, pathname, defaultPageTitle]);
+
+  const activeRailItem = useMemo(
+    () => findActiveRailItem(tier1, pathname),
+    [tier1, pathname],
+  );
 
   const BrandIcon = brand.icon;
   const logoVariant =
@@ -121,12 +135,74 @@ export function AppShell({
   const defaultBackLink = resolveRoleHomeLink(role, branchId);
   const backHref = brand.backHref ?? defaultBackLink.href;
   const backLabel = brand.backLabel ?? defaultBackLink.label;
-  const triggerClass = collapsible === "icon" ? undefined : "md:hidden";
   const breadcrumbSegments = pageHeader.breadcrumbSegments ?? [];
 
   return (
     <SidebarProvider>
-      <Sidebar variant="inset" collapsible={collapsible}>
+      <Sidebar
+        collapsible="none"
+        // Rail is a fixed icon column: drive the primitive's own w-(--sidebar-width)
+        // to the icon width via the CSS var (no arbitrary sizing, no competing width class).
+        style={{ "--sidebar-width": "var(--sidebar-width-icon)" } as CSSProperties}
+        className="border-r"
+      >
+        <SidebarHeader className="items-center p-2">
+          <BrandLogoBox tone={logoVariant ? "sidebar" : "sidebar-primary"}>
+            {logoVariant ? (
+              <BrandMark
+                variant={logoVariant}
+                alt={brand.logoAlt}
+                className="size-full"
+              />
+            ) : (
+              <BrandIcon className="size-5" />
+            )}
+          </BrandLogoBox>
+        </SidebarHeader>
+
+        <SidebarContent className="px-1 pb-2">
+          <SidebarMenu className="items-center gap-1">
+            {tier1.map((item) => {
+              const Icon = item.icon;
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={item === activeRailItem}
+                    tooltip={item.label}
+                    className="justify-center rounded-md"
+                  >
+                    <Link href={item.href} aria-label={item.label}>
+                      <Icon className="size-4" />
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarContent>
+
+        <SidebarFooter className="p-2">
+          <div className="flex flex-col items-center justify-center gap-1">
+            <Avatar size="sm">
+              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+            </Avatar>
+            <form action="/api/auth/signout" method="post">
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon-sm"
+                className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
+                aria-label={copy.signOut}
+              >
+                <IconLogout className="size-4" />
+              </Button>
+            </form>
+          </div>
+        </SidebarFooter>
+      </Sidebar>
+
+      <Sidebar variant="inset" collapsible="offcanvas">
         <SidebarHeader className="gap-3 p-4">
           {showBackLink ? (
             <Link
@@ -161,7 +237,7 @@ export function AppShell({
         </SidebarHeader>
 
         <SidebarContent className="px-2 pb-4">
-          {navGroups.map((group) => (
+          {tier2.map((group) => (
             <SidebarGroup key={group.title} className="px-0 py-1">
               <SidebarGroupLabel className="px-2 pb-1 text-xs font-medium text-sidebar-foreground/70">
                 {group.title}
@@ -193,33 +269,6 @@ export function AppShell({
             </SidebarGroup>
           ))}
         </SidebarContent>
-
-        <SidebarFooter className="p-2">
-          <div className="flex items-center gap-2 px-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-1 group-data-[collapsible=icon]:px-0">
-            <Avatar size="sm">
-              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-              <p className="truncate text-sm font-medium text-sidebar-foreground">
-                {user.name}
-              </p>
-              <p className="truncate text-xs text-sidebar-foreground/65">
-                {ROLE_LABEL_VI[role]}
-              </p>
-            </div>
-            <form action="/api/auth/signout" method="post">
-              <Button
-                type="submit"
-                variant="ghost"
-                size="icon-sm"
-                className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
-                aria-label={copy.signOut}
-              >
-                <IconLogout className="size-4" />
-              </Button>
-            </form>
-          </div>
-        </SidebarFooter>
         <SidebarRail />
       </Sidebar>
 
@@ -227,7 +276,7 @@ export function AppShell({
         <header className="border-b px-4 py-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-1 items-center gap-3">
-              <SidebarTrigger className={triggerClass} />
+              <SidebarTrigger className="md:hidden" />
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 {breadcrumbSegments.length > 0 ? (
                   <Breadcrumb>
@@ -306,7 +355,7 @@ export function AppShell({
           </AppShellPaddingBoundary>
         </main>
       </SidebarInset>
-      {bottomNav ? <WorkspaceBottomNav navGroups={navGroups} /> : null}
+      {bottomNav ? <WorkspaceBottomNav tier1={tier1} tier2={tier2} /> : null}
     </SidebarProvider>
   );
 }

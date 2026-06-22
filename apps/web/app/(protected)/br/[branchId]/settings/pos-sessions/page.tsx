@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
-import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { AppPage } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
@@ -9,9 +8,13 @@ import { BranchManagementShell } from "../../_components/branch-management-chrom
 import {
   PosSessionsClient,
   type PosSessionOrder,
-  type PosSessionRow,
 } from "./pos-sessions-client";
 import { getPosSessionReport, type PosSessionReport } from "./report-actions";
+import {
+  normalizeOrderRows,
+  normalizeSessionRows,
+  resolveSelectedSessionId,
+} from "./_lib/normalize";
 
 export default async function BranchPosSessionsPage({
   params,
@@ -83,20 +86,7 @@ export default async function BranchPosSessionsPage({
   if (branchError || !branch) notFound();
   if (error) throw new Error("Không thể tải ca POS");
 
-  const sessionRows = ((sessions ?? []) as unknown as PosSessionRow[]).map(
-    (session) => ({
-      ...session,
-      opening_cash: Number(session.opening_cash),
-      closing_cash:
-        session.closing_cash == null ? null : Number(session.closing_cash),
-      expected_cash:
-        session.expected_cash == null ? null : Number(session.expected_cash),
-      cash_difference:
-        session.cash_difference == null
-          ? null
-          : Number(session.cash_difference),
-    }),
-  );
+  const sessionRows = normalizeSessionRows(sessions);
 
   const selectedSessionId = resolveSelectedSessionId(sp.session, sessionRows);
 
@@ -144,24 +134,7 @@ export default async function BranchPosSessionsPage({
       .order("created_at", { ascending: false });
 
     if (orderError) throw new Error("Không thể tải bill của ca POS");
-    orders = ((orderRows ?? []) as unknown as PosSessionOrder[]).map(
-      (order) => ({
-        ...order,
-        subtotal: Number(order.subtotal),
-        tax_amount: Number(order.tax_amount),
-        service_charge: Number(order.service_charge),
-        discount_amount: Number(order.discount_amount),
-        total_amount: Number(order.total_amount),
-        order_items: order.order_items.map((item) => ({
-          ...item,
-          quantity: Number(item.quantity),
-          unit_price: Number(item.unit_price),
-          subtotal: Number(item.subtotal),
-          modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
-          sides: Array.isArray(item.sides) ? item.sides : [],
-        })),
-      }),
-    );
+    orders = normalizeOrderRows(orderRows);
 
     const reportResult = await getPosSessionReport(selectedSessionId);
     if (reportResult.success && reportResult.data) {
@@ -179,12 +152,14 @@ export default async function BranchPosSessionsPage({
       role={claims.user_role}
       branchId={branchId}
       branchName={branch.name}
-      defaultPageTitle={messages.settings.branch.commandPosSessionsTitle}
-      description={messages.settings.branch.commandPosSessionsDescription}
+      defaultPageTitle={messages.settings.pages.posSessionsTitle}
+      description={messages.settings.pages.posSessionsDescription}
       breadcrumbSegments={[
-        { label: APP_COPY_VI.branchCommand, href: `/br/${branchId}/dashboard` },
-        messages.settings.branch.endDayTitle,
-        messages.settings.branch.commandPosSessionsTitle,
+        {
+          label: messages.settings.branch.hubTitle,
+          href: `/br/${branchId}/settings`,
+        },
+        messages.settings.pages.posSessionsTitle,
       ]}
     >
       <AppPage width="wide">
@@ -198,21 +173,4 @@ export default async function BranchPosSessionsPage({
       </AppPage>
     </BranchManagementShell>
   );
-}
-
-function resolveSelectedSessionId(
-  requested: string | undefined,
-  sessions: PosSessionRow[],
-): number | null {
-  if (sessions.length === 0) return null;
-
-  const parsed = requested != null ? Number(requested) : NaN;
-  if (
-    Number.isInteger(parsed) &&
-    sessions.some((session) => session.id === parsed)
-  ) {
-    return parsed;
-  }
-
-  return sessions[0]?.id ?? null;
 }

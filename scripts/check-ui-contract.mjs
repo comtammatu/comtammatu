@@ -794,7 +794,7 @@ const perFileCountBudgets = [
       /className=\{?(?:cn\()?['"][^'"]*\b(?:p|px|py|pt|pb|pl|pr)-(?:5|6|7|8|9|10|11|12|14|16|20|24)\b/g,
     allowlist: {
       "apps/web/app/_components/notification-list.tsx": 1,
-      "apps/web/app/(protected)/admin/settings/branches/network-config-dialog.tsx": 2,
+      "apps/web/app/(protected)/admin/settings/(tenant)/branches/network-config-dialog.tsx": 2,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/components/focus-view.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/menu-limits/menu-limits-sheet.tsx": 1,
@@ -942,7 +942,7 @@ const frozenPrimitiveImportBaselines = [
     label: "Dialog",
     replacement: "FormDialog, Sheet, Page, or an approved contextual dialog",
     allowlist: {
-      "apps/web/app/(protected)/admin/settings/branches/network-config-dialog.tsx": 1,
+      "apps/web/app/(protected)/admin/settings/(tenant)/branches/network-config-dialog.tsx": 1,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/_components/operational-pwa/toolbar.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,

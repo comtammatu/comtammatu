@@ -20,7 +20,7 @@ import {
   type EmployeeChecklistCoverageIssueRow,
   type PositionChecklistCoverageRow,
 } from "./checklist-coverage";
-import type { EmployeeRow } from "./page";
+import type { EmployeeRow } from "./_types";
 import type {
   ChecklistTemplateRow,
   ConsumptionDefaultItemRow,

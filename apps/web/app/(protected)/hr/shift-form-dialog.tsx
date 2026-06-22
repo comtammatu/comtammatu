@@ -6,7 +6,7 @@ import { useMemo } from "react";
 import { z } from "zod";
 import { FormDialog, TextField } from "@/components/form";
 import { createShift, updateShift } from "./actions";
-import type { ShiftRow } from "./page";
+import type { ShiftRow } from "./_types";
 
 const shiftSchema = z.object({
   name: z.string().trim().min(1, { error: "Tên ca không được trống" }),

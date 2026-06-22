@@ -37,13 +37,13 @@ export function resolveFinanceNav({
           icon: IconBarChart3,
         },
         {
-          href: "/admin/reports/inventory-value",
+          href: "/finance/inventory-value",
           label: financeNav.items.inventoryValue,
           icon: IconBoxes,
         },
         {
           href: "/finance/food-cost",
-          label: financeNav.items.grossProfit,
+          label: financeNav.items.foodCost,
           icon: IconTrendingUp,
         },
         {

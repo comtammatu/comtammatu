@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
-import { AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, type AppPageProps } from "@/components/surface";
 
 interface SettingsPageFrameProps {
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
+  // Settings forms default to a focused column; jobs/data views pass "wide".
+  width?: AppPageProps["width"];
 }
 
 export function SettingsPageFrame({
@@ -13,15 +15,12 @@ export function SettingsPageFrame({
   description,
   actions,
   children,
+  width = "default",
 }: SettingsPageFrameProps) {
   return (
-    <div className="flex flex-col gap-4">
-      <AppPageHeader
-        title={title}
-        description={description}
-        actions={actions}
-      />
+    <AppPage width={width}>
+      <AppPageHeader title={title} description={description} actions={actions} />
       {children}
-    </div>
+    </AppPage>
   );
 }

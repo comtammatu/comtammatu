@@ -10,7 +10,7 @@ import {
   checklistTemplateLabel,
   type ChecklistTemplateRow,
 } from "./checklist-types";
-import type { BranchOption, EmployeeRow } from "./page";
+import type { BranchOption, EmployeeRow } from "./_types";
 
 const NO_BRANCH = "none";
 const NO_TEMPLATE = "none";

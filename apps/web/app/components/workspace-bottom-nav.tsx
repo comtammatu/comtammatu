@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Menu as IconMenu } from "lucide-react";
+import { LayoutGrid as IconLayoutGrid, Menu as IconMenu } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { useSidebar } from "@comtammatu/ui/components/sidebar";
@@ -49,19 +49,25 @@ function selectBottomNavItems(
 }
 
 /**
- * Mobile bottom navbar for the back-office workspace. Destinations come from
- * the same resolved nav model as the desktop sidebar; the trailing "Menu" tab
- * opens the full sidebar drawer. Must render inside `SidebarProvider`
- * (AppShell does this).
+ * Mobile bottom navbar for the back-office workspace. Bar destinations are the
+ * active module's deep nav (tier-2); the leading "Mô-đun" tab opens the drawer
+ * for cross-module switching (tier-1) and the trailing "Menu" tab opens the
+ * same drawer's deep-nav body. Must render inside `SidebarProvider` (AppShell
+ * does this).
  */
 export function WorkspaceBottomNav({
-  navGroups,
+  tier1,
+  tier2,
 }: {
-  navGroups: ShellNavGroup[];
+  tier1: ShellNavItem[];
+  tier2: ShellNavGroup[];
 }) {
   const pathname = usePathname();
   const { toggleSidebar } = useSidebar();
-  const items = selectBottomNavItems(flattenNavGroups(navGroups), pathname);
+  // tier1 is surfaced through the drawer the leading tab toggles; the bar items
+  // stay scoped to tier-2 so the module's deep actions win the top-5 race.
+  void tier1;
+  const items = selectBottomNavItems(flattenNavGroups(tier2), pathname);
 
   return (
     <AppBottomNav
@@ -73,6 +79,17 @@ export function WorkspaceBottomNav({
         icon: item.icon,
         active: isNavItemActive(item, pathname),
       }))}
+      leading={
+        <Button
+          variant="ghost"
+          size="touch"
+          onClick={toggleSidebar}
+          className={cn(BOTTOM_NAV_ITEM_CLASS, "min-w-16")}
+        >
+          <IconLayoutGrid data-icon="inline-start" />
+          <span>{copy.modules}</span>
+        </Button>
+      }
       trailing={
         <Button
           variant="ghost"

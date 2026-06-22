@@ -22,7 +22,7 @@ import {
   markPayrollPaid,
   fetchPayrollEntries,
 } from "../../payroll-actions";
-import type { PayrollEntryRow } from "./page";
+import type { PayrollEntryRow } from "./_types";
 import { useState } from "react";
 import { ERRORS_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";

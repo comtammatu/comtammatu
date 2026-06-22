@@ -138,15 +138,24 @@ test("HRM exposes branch-scoped leave approval tab", () => {
   const actions = read("apps/web/app/(protected)/hr/leave-request-actions.ts");
   const messages = read("apps/web/lib/messages/hr.ts");
 
-  for (const expected of [
-    "LeaveRequestsTable",
-    'TabsTrigger value="attendance"',
-    "copy.tabs.attendance",
-  ]) {
+  for (const expected of ["LeaveRequestsTable", "copy.tabs.attendance"]) {
     assert.ok(hrClient.includes(expected), `expected HR client ${expected}`);
   }
+  // HR tabs migrated from raw shadcn TabsTrigger to AppPageTabs items; the
+  // attendance tab is declared as an items entry with its content body.
+  assert.match(
+    hrClient,
+    /value:\s*"attendance",\s*label:\s*copy\.tabs\.attendance/,
+    "attendance tab must be declared in the AppPageTabs items list",
+  );
+  assert.match(
+    hrClient,
+    /<TabsContent value="attendance"/,
+    "attendance tab must render its content body",
+  );
   assert.ok(
-    !hrClient.includes('TabsTrigger value="leave"'),
+    !/value:\s*"leave"/.test(hrClient) &&
+      !hrClient.includes('TabsContent value="leave"'),
     "leave approval must stay inside HR attendance flow, not add a separate Employee-style HR tab",
   );
 

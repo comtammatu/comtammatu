@@ -167,7 +167,8 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
     "HR checklist actions must save templates through the JSON RPC and set employee defaults",
   );
   assert.ok(
-    hrClientSrc.includes('<TabsTrigger value="setup">') &&
+    /value:\s*"setup",\s*label:\s*copy\.tabs\.setup/.test(hrClientSrc) &&
+      hrClientSrc.includes('<TabsContent value="setup"') &&
       hrClientSrc.includes("ChecklistTemplatesTable") &&
       employeeTableSrc.includes("Checklist mặc định"),
     "HR UI must expose template library and employee defaults",

@@ -8,7 +8,7 @@ import {
   canManageBranchFloorSettings,
   TENANT_LEVEL_ROLES,
 } from "@comtammatu/shared/auth";
-import { AppLinkCard } from "@/components/surface";
+import { AppLinkCard, LinkCardGrid } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { SettingsPageFrame } from "../settings-page-frame";
 import { messages } from "@lib/messages";
@@ -31,7 +31,7 @@ export default async function PrintHubPage() {
       title={copy.printersTitle}
       description={copy.printHubDescription}
     >
-      <div className="grid gap-3 sm:grid-cols-2">
+      <LinkCardGrid>
         <AppLinkCard
           href="/admin/settings/branches"
           title={copy.printBranchConfigTitle}
@@ -52,7 +52,7 @@ export default async function PrintHubPage() {
           description={copy.printJobsDescription}
           icon={<IconActivity />}
         />
-      </div>
+      </LinkCardGrid>
     </SettingsPageFrame>
   );
 }

@@ -1,11 +1,12 @@
 "use server";
 
 import { z } from "zod";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  TENANT_STRATEGY_SETTINGS_ROLES,
+} from "@comtammatu/shared/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction } from "@/_lib/with-action";
-
-const SETTINGS_ROLES: StaffRole[] = ["owner"];
 
 /* ─── Schemas ─── */
 
@@ -32,7 +33,7 @@ const toggleIdSchema = z.object({
 
 export const createBranch = withFormAction(
   {
-    roles: SETTINGS_ROLES,
+    roles: TENANT_STRATEGY_SETTINGS_ROLES,
     schema: branchSchema,
     extract: (fd) => ({
       name: fd.get("name"),
@@ -73,7 +74,7 @@ export const createBranch = withFormAction(
 
 export const updateBranch = withFormAction(
   {
-    roles: SETTINGS_ROLES,
+    roles: TENANT_STRATEGY_SETTINGS_ROLES,
     schema: updateBranchSchema,
     extract: (fd) => ({
       id: fd.get("id"),
@@ -115,7 +116,7 @@ export const updateBranch = withFormAction(
 
 export const toggleBranchActive = withAction(
   {
-    roles: SETTINGS_ROLES,
+    roles: TENANT_STRATEGY_SETTINGS_ROLES,
     schema: toggleIdSchema,
     permission: PERMISSION_KEYS.SETTINGS_TENANT,
   },

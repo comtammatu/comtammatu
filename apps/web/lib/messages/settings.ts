@@ -53,6 +53,10 @@ export const settings = {
       "Mẫu phiếu, giám sát job in, và cấu hình máy in theo từng chi nhánh.",
     printBranchConfigTitle: "Cấu hình theo chi nhánh",
     tablesTitle: "Sơ đồ bàn",
+    posTitle: "Máy POS",
+    posSessionsTitle: "Ca POS",
+    posSessionsDescription:
+      "Lịch sử ca, bill, doanh thu, số món và đối soát chênh lệch.",
   },
   printTemplates: {
     layoutTitle: "Bố cục phiếu",
@@ -399,10 +403,15 @@ export const settings = {
     branchSettingsBack: "Cài đặt chi nhánh",
     hubTitle: "Thiết lập chi nhánh",
     hubDescription: (branchName: string) => branchName,
+    hubEmptyTitle: "Không có mục thiết lập khả dụng",
+    hubEmptyDescription:
+      "Tài khoản của bạn chưa được cấp quyền cho các mục thiết lập của chi nhánh này. Liên hệ chủ/quản lý nếu cần truy cập.",
     infoTitle: "Thông tin",
     tablesSetupTitle: "Bàn & khu vực",
     tablesSetupDescription:
       "Khu vực ăn uống, danh sách bàn và trạng thái vận hành tại chi nhánh.",
+    tablesDescription: (branchName: string) =>
+      `Sơ đồ khu vực và bàn của ${branchName}: thêm khu vực, quản lý bàn và trạng thái phục vụ.`,
     posSetupTitle: "Máy POS",
     posSetupDescription: "Máy POS đăng ký tại chi nhánh và điểm bán tương ứng.",
     printersSetupTitle: "Máy in",

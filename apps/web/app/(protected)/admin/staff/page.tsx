@@ -1,18 +1,13 @@
 import { Suspense } from "react";
-import Link from "next/link";
-import {
-  Briefcase as IconBriefcase,
-  ScrollText as IconScrollText,
-} from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { STAFF_ROLES, staffRoleFromPositionCode } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
-import { messages } from "@lib/messages";
 import { StaffTable } from "./staff-table";
 import { StaffFilters } from "./staff-filters";
 import { AddStaffButton } from "./add-staff-button";
+import { StaffHeaderOverflow } from "./staff-header-actions";
+import { messages } from "@lib/messages";
 import type { StaffRow } from "./staff-table";
 
 interface StaffPageProps {
@@ -104,39 +99,30 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   });
 
   return (
-    <AppPage>
+    <AppPage width="wide">
       <AppPageHeader
         title={messages.admin.staffPage.title}
         description={messages.admin.staffPage.description}
         actions={
           <>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/hr">
-                <IconBriefcase className="mr-1 size-4" />
-                {messages.admin.staffPage.hrLink}
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/admin/staff/audit">
-                <IconScrollText className="mr-1 size-4" />
-                {messages.admin.staffAudit.linkLabel}
-              </Link>
-            </Button>
             <AddStaffButton
               branches={branchOptions}
               positionOptions={positionOptions}
             />
+            <StaffHeaderOverflow />
           </>
         }
       />
-      <AppToolbar>
-        <Suspense>
-          <StaffFilters
-            branches={branchOptions}
-            positionOptions={positionOptions}
-          />
-        </Suspense>
-      </AppToolbar>
+      <AppToolbar
+        filters={
+          <Suspense>
+            <StaffFilters
+              branches={branchOptions}
+              positionOptions={positionOptions}
+            />
+          </Suspense>
+        }
+      />
       <StaffTable
         staff={staff}
         branches={branchOptions}
