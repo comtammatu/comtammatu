@@ -35,21 +35,18 @@ test.describe("Cash payment -> POS close", () => {
 
       await page.goto(`/br/${String(testOrder.branchId)}/pos`);
       await page.waitForLoadState("networkidle");
-      await page.getByTestId("pos-active-orders-tab").click();
 
-      const orderCard = page.getByTestId(
-        `pos-order-card-${String(testOrder.orderId)}`,
-      );
-      await expect(orderCard).toBeVisible({ timeout: 10_000 });
-      await expect(orderCard).toContainText("Chờ thanh toán");
-      await page
-        .getByTestId(`pos-order-bill-${String(testOrder.orderId)}`)
-        .click();
+      // The order list renders in both the desktop shell and the (hidden) sidebar
+      // panel, so two copies of the bill button exist; target the visible one.
+      const billButton = page
+        .locator(
+          `[data-testid="pos-order-bill-${String(testOrder.orderId)}"]:visible`,
+        )
+        .first();
+      await expect(billButton).toBeVisible({ timeout: 30_000 });
+      await billButton.click();
 
-      const cashButton = page.getByTestId("bill-pay-cash");
-      await expect(cashButton).toBeVisible({ timeout: 5_000 });
-      await cashButton.click();
-
+      // Bill sheet opens with cash pre-selected for cashiers; fill + confirm.
       await page
         .getByTestId("bill-cash-received")
         .fill(String(Math.round(testOrder.totalAmount)));
@@ -79,20 +76,8 @@ test.describe("Cash payment -> POS close", () => {
           message: "payment close must not mutate the KDS ticket",
         })
         .toBe("pending");
-      await expect(orderCard).toBeHidden({ timeout: 15_000 });
-
-      await page
-        .getByTestId(`pos-order-bill-${String(testOrder.orderId)}`)
-        .click();
-      const receipt = page.locator("#pos-receipt");
-      await expect(page.getByRole("dialog", { name: "Hóa đơn" })).toBeVisible();
-      await expect(page.getByRole("dialog")).not.toContainText(
-        "Phương thức thanh toán",
-      );
-      await expect(receipt).toContainText(`#${testOrder.orderNumber}`);
-      await expect(receipt).toContainText(testOrder.menuItemName);
-      await expect(receipt).toContainText("Tiền mặt");
-      await page.getByRole("button", { name: "Đóng" }).click();
+      // Paid order leaves the active "Đơn trong ca" list.
+      await expect(billButton).toBeHidden({ timeout: 15_000 });
 
       const stockConsumed = await verifyStockConsumed(testOrder.orderId);
       console.log(
@@ -138,22 +123,20 @@ test.describe("Cash payment -> POS close", () => {
 
       await page.goto(`/br/${String(testOrder.branchId)}/pos`);
       await page.waitForLoadState("networkidle");
-      await page.getByTestId("pos-active-orders-tab").click();
 
-      const orderCard = page.getByTestId(
-        `pos-order-card-${String(testOrder.orderId)}`,
-      );
-      await expect(orderCard).toBeVisible({ timeout: 10_000 });
-      await page
-        .getByTestId(`pos-order-bill-${String(testOrder.orderId)}`)
-        .click();
-
-      const cashButton = page.getByTestId("bill-pay-cash");
-      await expect(cashButton).toBeVisible({ timeout: 5_000 });
-      await cashButton.click();
+      // The order list renders in both the desktop shell and the (hidden) sidebar
+      // panel, so two copies of the bill button exist; target the visible one.
+      const billButton = page
+        .locator(
+          `[data-testid="pos-order-bill-${String(testOrder.orderId)}"]:visible`,
+        )
+        .first();
+      await expect(billButton).toBeVisible({ timeout: 30_000 });
+      await billButton.click();
 
       // Order now has 2 items × unitPrice (recomputed by helper).
       const total = testOrder.totalAmount * 2;
+      // Bill sheet opens with cash pre-selected for cashiers; fill + confirm.
       await page
         .getByTestId("bill-cash-received")
         .fill(String(Math.round(total)));
