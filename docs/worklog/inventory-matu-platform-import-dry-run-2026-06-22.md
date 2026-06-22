@@ -266,3 +266,33 @@ Legacy `Kho CN -> Bếp CN` backfill audit:
 - Command: `node --env-file=.env.local scripts/inventory-legacy-kitchen-backfill.mjs --tenant-id 1 --json`.
 - Result: `legacyTransferCount=0`, `transferInMovementCount=0`, `phantomKitchenQuantity=0`, `phantomKitchenValue=0`, `dryRunCorrections=0`.
 - No correction/backfill write is required.
+
+Deployed route smoke after the next production deploy:
+
+- Latest production deployment: `dpl_FAi4XnEzLed75pw2axHY7PDqqW6K`, `READY`, commit `ae9158a29d325b619bb3ae56c78e850b42723303`.
+- The latest deployed commit is doc/CI-only; runtime Inventory behavior still comes from PR #99.
+- Vercel Authentication direct fetch returns `401`; smoke used a temporary Vercel share cookie and performed no app login.
+- `/api/health`: `200`, `{"status":"ok","db":"ok"}`.
+- `/inventory/stock`: `200`, final URL `/login?returnTo=%2Finventory%2Fstock`.
+- `/inventory/transfers`: `200`, final URL `/login?returnTo=%2Finventory%2Ftransfers`.
+- `/inventory/consumption`: `200`, final URL `/login?returnTo=%2Finventory%2Fconsumption`.
+- `/finance/food-cost`: `200`, final URL `/login?returnTo=%2Ffinance%2Ffood-cost`.
+
+Read-only data smoke for route data:
+
+- `stock_levels`: 124.
+- Stock rows by location kind: `warehouse`: 124 rows, quantity `647098.754000`.
+- `stock_levels` vs movement aggregate mismatches: 0.
+- Negative `stock_levels`: 0.
+- Stock rows on `location_kind = 'kitchen'`: 0.
+- `stock_transfers`: 352.
+- `stock_transfer_items`: 551.
+- Transfer matrix: `warehouse -> warehouse`: 352.
+- `sale_consumption` movements: 359.
+- Actual food cost by branch: branch 2 = `40,760,298.68`, branch 3 = `180,972,110.83`.
+- Actual food cost total from `sale_consumption`: `221,732,409.51`.
+
+Authenticated UI smoke is still blocked until a safe smoke account is provided or explicitly created:
+
+- `.env.test.local` is missing.
+- `.env.local` has Supabase production credentials but no `E2E_CASHIER_EMAIL`, `E2E_CASHIER_PASSWORD`, `E2E_INVENTORY_MANAGER_EMAIL`, or `E2E_INVENTORY_MANAGER_PASSWORD`.
