@@ -21,7 +21,7 @@ const read = (path: string) => {
 
 test("edit pending quantity migration enqueues kitchen-visible print deltas", () => {
   const src = read(
-    "supabase/migrations/20260601790000_edit_pending_quantity_print.sql",
+    "supabase/migrations/_archive/20260601790000_edit_pending_quantity_print.sql",
   );
 
   assert.match(

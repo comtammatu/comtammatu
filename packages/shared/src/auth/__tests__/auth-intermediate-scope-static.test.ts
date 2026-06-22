@@ -48,7 +48,7 @@ const SKIP_PATH_PARTS = [
   "supabase/migrations/_rollback",
   // The one-shot dead-role-string cleanup must name the tokens in its strip
   // regexes; it removes them rather than using them in the active contract.
-  "supabase/migrations/20260613130000_drop_dead_role_strings.sql",
+  "supabase/migrations/_archive/20260613130000_drop_dead_role_strings.sql",
   "packages/shared/src/auth/__tests__/auth-intermediate-scope-static.test.ts",
 ] as const;
 
@@ -163,7 +163,7 @@ test("proxy branch-surface cache fails closed for inactive or missing branches",
 
 test("remove intermediate scope migration preserves branch helper before dropping retired schema", () => {
   const migration = readRepoFile(
-    "supabase/migrations/20260609103000_remove_intermediate_scope.sql",
+    "supabase/migrations/_archive/20260609103000_remove_intermediate_scope.sql",
   );
   const helperIndex = migration.indexOf(
     "CREATE OR REPLACE FUNCTION public.can_access_branch",

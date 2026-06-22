@@ -44,7 +44,7 @@ test("MoMo webhook accepts completed unconditionally per no-stock-deduction poli
 
 test("payment completion migration recomputes amount and does not complete on stock failure", () => {
   const source = readRepoFile(
-    "supabase/migrations/20260601780000_payment_completion_failhard_recompute.sql",
+    "supabase/migrations/_archive/20260601780000_payment_completion_failhard_recompute.sql",
   );
 
   assert.match(source, /amount_mismatch_recomputed/);
@@ -55,7 +55,7 @@ test("payment completion migration recomputes amount and does not complete on st
 
 test("VietQR confirm uses fail-hard payment completion instead of caller-side stock deduction", () => {
   const migration = readRepoFile(
-    "supabase/migrations/20260601930000_harden_confirm_vietqr_payment.sql",
+    "supabase/migrations/_archive/20260601930000_harden_confirm_vietqr_payment.sql",
   );
   const action = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",

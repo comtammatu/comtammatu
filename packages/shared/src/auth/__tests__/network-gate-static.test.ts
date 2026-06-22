@@ -28,7 +28,7 @@ const printAgentRunbook = readRepoFile(
   "docs/runbooks/pos-kds/print-agent-rollout.md",
 );
 const migration = readRepoFile(
-  "supabase/migrations/20260601870000_network_gate_presence_token_registry.sql",
+  "supabase/migrations/_archive/20260601870000_network_gate_presence_token_registry.sql",
 );
 
 test("branch-presence route uses token hash + RPC instead of a global shared token", () => {

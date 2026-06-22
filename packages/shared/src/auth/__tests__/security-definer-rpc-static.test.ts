@@ -20,10 +20,10 @@ function readRepoFile(path: string): string {
 }
 
 const migration = readRepoFile(
-  "supabase/migrations/20260601860000_security_definer_rpc_hardening.sql",
+  "supabase/migrations/_archive/20260601860000_security_definer_rpc_hardening.sql",
 );
 const securityHardeningMigration = readRepoFile(
-  "supabase/migrations/20260619062853_security_rpc_cron_runner_hardening.sql",
+  "supabase/migrations/_archive/20260619062853_security_rpc_cron_runner_hardening.sql",
 );
 
 test("payment and print implementation RPCs are not directly executable by authenticated users", () => {

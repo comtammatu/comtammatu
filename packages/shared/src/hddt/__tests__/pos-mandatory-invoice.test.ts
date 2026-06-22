@@ -117,7 +117,7 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
 
 test("POS item-level discount migration and actions exist", () => {
   const migration = read(
-    "supabase/migrations/20260609094000_pos_item_level_discount.sql",
+    "supabase/migrations/_archive/20260609094000_pos_item_level_discount.sql",
   );
   const actions = read(
     "apps/web/app/(protected)/br/[branchId]/pos/discount-actions.ts",

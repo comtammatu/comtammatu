@@ -14,7 +14,10 @@ const DEFAULT_DB_PORT = 55432;
 const DEFAULT_SHADOW_PORT = 55430;
 const DEFAULT_TIMEOUT_MS = 600_000;
 const DEFAULT_BASELINE = "supabase/migrations/00000000000000_baseline.sql";
-const DEFAULT_BOOTSTRAP = "supabase/_local-dev/private-bootstrap.sql";
+// The baseline is self-contained (public + private dumped together), so no
+// bootstrap is prepended by default. Pass --bootstrap=<path> only for an older
+// public-only baseline whose private.* references need a separate prepend.
+const DEFAULT_BOOTSTRAP = null;
 
 function printHelp() {
   process.stdout.write(`Usage:
@@ -22,7 +25,7 @@ function printHelp() {
 
 Options:
   --baseline=<path>        SQL baseline file to apply. Default: ${DEFAULT_BASELINE}
-  --bootstrap=<path>       Private-schema bootstrap prepended to baseline. Default: ${DEFAULT_BOOTSTRAP}
+  --bootstrap=<path>       Optional private-schema bootstrap prepended to baseline (none by default; baseline is self-contained).
   --workdir=<path>         Scratch workdir. Default: /tmp/comtammatu-baseline-local-check-<timestamp>
   --api-port=<number>      Supabase API port. Default: ${DEFAULT_API_PORT}
   --db-port=<number>       Postgres port. Default: ${DEFAULT_DB_PORT}
@@ -149,13 +152,14 @@ site_url = "http://localhost:3000"
 `,
   );
 
-  // Prepend the private-schema bootstrap so the baseline's private.* references
-  // resolve on a from-empty replay (the --schema=public dump omits them).
-  const bootstrapSql = readFileSync(bootstrapPath, "utf8");
+  // Optionally prepend a private-schema bootstrap (only needed for an older
+  // public-only baseline). The current baseline dumps public + private together,
+  // so bootstrapPath is null and the baseline is applied as-is.
+  const bootstrapSql = bootstrapPath ? readFileSync(bootstrapPath, "utf8") : "";
   const baselineSql = readFileSync(baselinePath, "utf8");
   writeFileSync(
     join(migrationsDir, "20260526000000_live_schema_baseline.sql"),
-    `${bootstrapSql}\n\n${baselineSql}`,
+    bootstrapSql ? `${bootstrapSql}\n\n${baselineSql}` : baselineSql,
   );
 }
 
@@ -171,8 +175,9 @@ async function main() {
     throw new Error(`Baseline file does not exist: ${baselinePath}`);
   }
 
-  const bootstrapPath = resolve(options.bootstrap ?? DEFAULT_BOOTSTRAP);
-  if (!existsSync(bootstrapPath)) {
+  const bootstrapOption = options.bootstrap ?? DEFAULT_BOOTSTRAP;
+  const bootstrapPath = bootstrapOption ? resolve(bootstrapOption) : null;
+  if (bootstrapPath && !existsSync(bootstrapPath)) {
     throw new Error(`Bootstrap file does not exist: ${bootstrapPath}`);
   }
 

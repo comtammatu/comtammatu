@@ -56,11 +56,11 @@ jobs:
 
       - run: pnpm build
 
-  # Separate job (does not block the fast gates): replays baseline +
-  # private-bootstrap on a from-empty Supabase Local (docker) so a fresh-env
-  # regression — e.g. the baseline referencing a private.* object it never
-  # creates — fails CI. This is baseline self-containment only, NOT the full
-  # forward chain (see the re-baseline runbook for the squash-vs-history work).
+  # Separate job (does not block the fast gates): replays the self-contained
+  # baseline (public + private) on a from-empty Supabase Local (docker) so a
+  # fresh-env regression — e.g. the baseline referencing a private.* object it
+  # never creates — fails CI. The forward chain is squashed into this baseline
+  # (see the re-baseline runbook).
   baseline-replay:
     runs-on: ubuntu-latest
     timeout-minutes: 20

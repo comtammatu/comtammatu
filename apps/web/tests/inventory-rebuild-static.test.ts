@@ -9,10 +9,10 @@ const readRepo = (path: string) => readFileSync(resolve(repoRoot, path), "utf8")
 const readWeb = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
 const migration = readRepo(
-  "supabase/migrations/20260619121446_inventory_rebuild_consumption_central_sites.sql",
+  "supabase/migrations/_archive/20260619121446_inventory_rebuild_consumption_central_sites.sql",
 );
 const centralTransferMigration = readRepo(
-  "supabase/migrations/20260622041251_allow_central_supply_central_kitchen_transfers.sql",
+  "supabase/migrations/_archive/20260622041251_allow_central_supply_central_kitchen_transfers.sql",
 );
 
 function extractSqlFunctionBody(functionName: string): string {
