@@ -1,5 +1,7 @@
 # Master prompt — Cơm Tấm Má Tư design-system reform
 
+> **⚠️ SNAPSHOT (master prompt, hướng-tới) — Reconciled-through `0fe2761b` (2026-06-22).** Prompt thực thi reform, không phải trạng thái hệ thống. Nền + quyết định bền: `DESIGN.md` (root) + `decisions.md` D042/D044 — verify vào đó trước.
+
 > **Cách dùng (tiếng Việt):** copy nguyên khối ``` PROMPT ``` bên dưới và dán cho
 > Claude Design (giai đoạn mockup) rồi Claude Code (giai đoạn code). Prompt phân 2
 > giai đoạn với 1 **cổng dừng** ở giữa — Claude PHẢI dừng cho owner duyệt mockup

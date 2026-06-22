@@ -264,7 +264,7 @@
 
 **Why (kiến trúc + ràng buộc):**
 - Producer → `notifications` (dedup_key) → Dispatchers (Web Push role-based **[live]** + Telegram topic-based **[designed]**, mỗi cái claim-RPC + ledger riêng) → Channels → Audiences. **Telegram phải SOI Web Push, KHÔNG dùng `notification_outbox`** (user-gated + read→loop→update đua double-send).
-- **Tool của agent = 885 RPC `SECURITY DEFINER` sẵn có** (allowlist + cap), không xây action API mới. Precedent role-hardening: migration `20260619062853`.
+- **Tool của agent = 214 RPC `SECURITY DEFINER` sẵn có** (allowlist + cap), không xây action API mới. Precedent role-hardening: migration `20260619062853`.
 - Cron mới CHỈ làm phần trigger không làm được (aggregate + staleness); test khẳng định 0 trùng kind của trigger (#1, #6).
 - Migration: file → PR → owner (no dev DB; `guard-prod-db.mjs`). Agent ghi file trong git worktree riêng (kỷ luật shared-tree). Single tenant (`tenant_id=1`).
 - Đội thực thi = mô hình `docs/agent/rules/team.md` chĩa vào backlog (KHÔNG org mới): Orchestrator + Contract/Migration/Detector/Dispatcher/Briefer + Verify + Codex stage-6. 1 sprint = 1 workflow run. 3 cổng owner: DoR (T3) · apply migration · duyệt R0→R1.

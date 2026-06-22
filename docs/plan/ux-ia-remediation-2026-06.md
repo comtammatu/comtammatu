@@ -1,5 +1,7 @@
 # Master plan — Remediation UX/IA/Data-display toàn app (2026-06)
 
+> **⚠️ SNAPSHOT (kế hoạch thực thi) — Reconciled-through `0fe2761b` (2026-06-22).** Track bên dưới là việc-đã-lên-kế-hoạch; nhiều cái đã land bằng PR sau — verify từng track vào git trước khi coi là việc đang mở. Đã land kể từ plan: **D1a** updateEmployee → ✅ #96 `13b647bd`; **D1b** clamp proration payroll → ✅ #95 `499da348` (owner-input `standard_days` còn OPEN). Bản ghi quyết định: `decisions.md` D031.
+
 > Nguồn: audit đa-tác-tử 16-agent (185 finding, verified vs CODE + PROD) + pass verify 5-agent
 > (lật 2 hạng mục đáng sợ, khóa data-model). Phán quyết owner ghi ở `decisions.md` **D031**.
 > Doc này là **kế hoạch thực thi** (track → PR → acceptance). `D031` là bản ghi quyết định; doc này không

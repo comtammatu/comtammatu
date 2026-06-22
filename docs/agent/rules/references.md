@@ -101,6 +101,15 @@ that list.
 - Keep rules concrete and verifiable. Avoid vague guidance such as "write good code" or "be careful".
 - Do not add an archive tree or keep superseded implementation plans in the repo. When a decision is current, promote it into the source-of-truth doc above; when it is not current, remove it.
 
+## Transient Snapshot Docs
+
+`docs/plan/*` dated audit/remediation files and `docs/worklog/*` are **point-in-time snapshots, not source of truth**. Their findings get fixed by later PRs; an unreconciled snapshot reads as if every finding is still open and misleads the next agent (and any model reading the repo cold).
+
+- **Verify before acting.** Treat a finding in a snapshot doc as a claim to re-verify against current code + git history, never a live fact. Durable truth lives in the `docs/agent/rules/`, `docs/ref/`, `docs/spec/`, `docs/modules/` zones above.
+- **Required banner.** Every snapshot doc MUST carry, in its first 15 lines, a status line naming the commit it was last reconciled against: `Reconciled-through <git-sha>`. `pnpm lint:doc-staleness` flags snapshot docs missing it (advisory; `DOC_STALENESS_STRICT=1` fails closed). `docs/plan/decisions.md`, `docs/plan/adr/`, and `README.md` are durable and exempt.
+- **Reconcile-on-merge.** When a PR lands a finding tracked in a snapshot doc, tag that finding `✅ #<PR>` in place and bump the doc's `Reconciled-through` sha. Never leave a landed finding presented as open.
+- **Retire when empty.** When all findings have landed, delete the doc (git is the archive) or promote any durable rule to its canonical doc above. Do not keep a fully-resolved audit as a tombstone.
+
 ## Open Knowledge Format Export
 
 - OKF is an exchange/export format for agent-readable project knowledge, not a

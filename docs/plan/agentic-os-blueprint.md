@@ -1,5 +1,7 @@
 # Agentic OS Blueprint — Má Tư
 
+> **⚠️ SNAPSHOT (vision/kế hoạch) — Reconciled-through `0fe2761b` (2026-06-22).** Nhãn `[live]`/`[designed]`/`[future]` bên dưới drift theo thời gian — verify trạng thái thật vào code/git trước khi tin. Quyết định bền: `decisions.md` D036.
+
 Vision + architecture of record for the Má Tư Agentic OS: a mostly-deterministic
 operations layer on the existing platform that senses, detects, informs, and —
 inside hard, reversible, human-gated limits — acts. Sober and grounded; no hype.

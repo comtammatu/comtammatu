@@ -1,5 +1,7 @@
 # Inventory Matu Platform Import Dry-Run
 
+> **⚠️ SNAPSHOT (dry-run log) — Reconciled-through `0fe2761b` (2026-06-22).** Bản ghi một lần của dry-run import, không phải nguồn sự thật vận hành. Verify tồn/inventory thật vào prod + code trước khi dùng.
+
 Owner: current Inventory import task.
 
 ## Skill Plan
