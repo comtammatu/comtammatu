@@ -58,12 +58,64 @@ body must say it was T1/doc-only.
 Load the minimum useful set. Do not stack several overlapping skills unless each
 one owns a different risk surface.
 
+## Layer Skill Map
+
+Layer-indexed entry view for the way an agent thinks about a change ("I'm
+touching FE / BE / Infra…"). It is a dispatch table over the same rule docs and
+the same skill set as the task-signal **Required Routing Matrix** below — not a
+competing authority. Pick the **minimum useful set** per the anti-stacking rule;
+each skill named owns a distinct risk surface. Skills are capability contracts:
+if one is unavailable, use the closest installed equivalent and continue with the
+rule docs, which every runtime loads. Most of these skills are per-user Claude
+state, not repo-pinned (see Toolset Reproducibility).
+
+| Layer (you're touching…)                       | Load rules first                                                          | Matrix row → verify lives there       | Default tier         | Skills by risk-surface (use what's available)                                                                                                                                  |
+| ---------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **UI** / UX / copy / route surface             | `ui.md`, `spec/design-system.md`, `modules/ui.md`, `tasks/regressions.md` | "UI, UX, route surface…"              | T2 (T3 if auth-gated flow) | primitives: a shadcn skill (`vercel:shadcn`); composition/anti-slop: `frontend-design`; a11y: `design:accessibility-review`; copy: `design:ux-copy`; audit/polish: `impeccable-design-polish`; brand/landing only: `taste-skill` |
+| **FE** (RSC / Server Actions / proxy / perf)   | `engineering.md` (+ `database.md` if data/auth)                           | "Next.js App Router…", "React perf…"  | T2                   | `vercel:nextjs`, `vercel:react-best-practices`; caching/routing: `vercel:next-cache-components`, `vercel:routing-middleware`; build: `vercel:turbopack`                          |
+| **BE** (Supabase / RLS / RPC / auth / money)   | `database.md`, `workflow.md`, `tasks/regressions.md`, `spec/database-schema.md` | "Supabase queries…", "Money…HĐĐT…" | T3                   | `supabase`, `supabase-postgres-best-practices`; tax/HĐĐT/payroll rules: `tax-vn` (repo skill); serverless: `vercel:vercel-functions`                                            |
+| **Infra** (deploy / CI / env / print-agent)    | `engineering.md`, `modules/infrastructure.md`, `workflow.md`, runbooks    | "Deployment, Vercel, CI…"             | T2 (T3 if prod-affecting) | `vercel:deployments-cicd`, `vercel:env-vars`, `vercel:vercel-cli`, `vercel:vercel-firewall`; `gh` CLI; publish (only when owner asks): `ship`, `land-and-deploy`, `canary` |
+| **Architecture** (cross-cutting design)        | `engineering.md`, `architecture/README.md`, `spec/architecture.md`, `CODEBASE_MAP.md` | "Broad repo audit…orientation"   | T3                   | orient: `codegraph_explore`; design process: `superpowers:brainstorming` → `superpowers:writing-plans`; structured deliverable: `eos-system-design`, `eos-tech-spec`; deep advisory (opt-in): OMC `architect`/`planner`/`critic` |
+| **Review** / PR / regression / security        | `workflow.md`, `tasks/regressions.md`, relevant module docs               | "Code review, PR review…"             | per diff blast-radius | repo flow first (`review` + T-tier); structured: `eos-code-review`; second opinion: `codex`; security/threat-model: `cso` / `security-review`; process: `superpowers:requesting-code-review` / `receiving-code-review` |
+| **Process** (debug / test / QA — cross-layer)  | `workflow.md`                                                             | "Browser QA, route smoke…" for QA     | inherit              | debug: `superpowers:systematic-debugging` / `investigate`; test: `superpowers:test-driven-development`; QA: `qa` / `qa-only` / `playwright`; done-gate: `superpowers:verification-before-completion` |
+
+## Toolset Reproducibility
+
+These plugins/skills are **per-user Claude state, not repo-pinned**: the rich set
+(`frontend-design`, `vercel:*`, `supabase`, `playwright`, `superpowers`, …) lives
+in `~/.claude/settings.json`; the gitignored `.claude/settings.local.json` only
+adds `oh-my-claudecode`. The only git-tracked repo skill is `tax-vn`
+(`.claude/skills/tax-vn/`). What survives a different machine or runtime:
+
+- **The durable, runtime-neutral contract is the Layer Skill Map + Routing Matrix
+  in THIS file.** Codex (no plugin loading) and any other-machine agent read it
+  and route to the closest available capability. This is why no rule may DEPEND on
+  a plugin (see Plugin Lanes and Anti-Patterns).
+- **Reproducible Claude default:** the project-relevant official-marketplace
+  plugins are pinned in shared `.claude/settings.json` → `enabledPlugins`
+  (`frontend-design`, `vercel`, `supabase`, `playwright`, `superpowers`,
+  `claude-md-management`) so a new Claude dev gets the toolset without
+  rediscovering it.
+- **Per-user marketplace plugins — NOT pinned, keep in your own config:**
+  `oh-my-claudecode`, `ponytail`, `telegram`; `engineering-os` is a local-path
+  marketplace (machine-specific, not reproducible).
+- **`gstack` is not a marketplace plugin** — it is a separately-installed project
+  under `~/.claude/skills/gstack/` (its own installer / `gstack-upgrade`), so it
+  cannot be pinned via `enabledPlugins`; a dev installs it themselves. The Layer
+  Skill Map names gstack skills (`review`, `qa`, `investigate`, `cso`,
+  `ship`/`land-and-deploy`/`canary`) only as capability contracts — each pairs in
+  the same row with a reproducible or runtime-neutral fallback (T-tier debate,
+  `playwright`, `superpowers:systematic-debugging`, `security-review` / OMC
+  `security-reviewer`, `gh` + `vercel:*`). Nothing is load-bearing on gstack.
+
 ## Required Routing Matrix
 
-Skill names below are capability contracts (see Repository Boundary), not a
-promise that the exact skill is installed. Inventory last re-verified
-2026-06-17. When a named skill is missing, use the closest installed
-equivalent, or `find-skills` if the owner asked for new tooling.
+The Layer Skill Map above is the layer-indexed companion to this table; rows below
+are the task-signal view, and the verification column lives here. Skill names in
+both are capability contracts (see Repository Boundary), not a promise that the
+exact skill is installed. Inventory last re-verified 2026-06-22. When a named
+skill is missing, use the closest installed equivalent, or `find-skills` if the
+owner asked for new tooling.
 
 | Task signal                                                                       | Required repo rules/docs                                                                         | Required skills/plugins when available                                                                                                                            | Required verification                                                                                                                |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |

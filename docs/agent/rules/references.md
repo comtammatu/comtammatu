@@ -35,6 +35,11 @@ per runtime. `pnpm lint:guard-sync` enforces that every adapter in `ADAPTER_PATH
 A new IDE without a registered adapter runs **UNGUARDED against the production
 DB** — add the adapter and register it in `check-guard-sync.mjs` before using it.
 
+Per-user toolsets are not repo-pinned: the reproducible Claude plugin set lives in
+`.claude/settings.json`, while `gstack` QA/review/deploy skills are self-installed
+(`~/.claude/skills/gstack/`, own installer) and optional. Details and per-layer
+fallbacks: `docs/agent/rules/skills.md` → Toolset Reproducibility.
+
 ## Intentional Mirrors
 
 Two duplications are deliberate and machine-enforced — do NOT "de-duplicate" them:

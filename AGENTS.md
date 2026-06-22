@@ -15,7 +15,7 @@ This file is the agent entrypoint. Keep it short and stable. Detailed, topic-spe
 Before implementation, read the applicable rule files:
 
 - Always read `docs/agent/rules/engineering.md` for repo commands, architecture, import boundaries, and core constraints.
-- Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents.
+- Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents. It opens with a **Layer Skill Map** (UI / FE / BE / Infra / Architecture / Review / Process) for layer-first routing into the rules, skills, and verification a task needs.
 - Read `docs/agent/rules/database.md` for Supabase, migrations, RLS, ACL, auth, Server Actions, RPCs, or database type work.
 - Read `docs/agent/rules/ui.md` before any UI, UX, route surface, component, styling, or copy change.
 - Read `docs/agent/rules/workflow.md` for review-tier rules (T3 full debate / T2 self-review / T1 skip), verification, and completion gates.
