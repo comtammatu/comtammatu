@@ -54,7 +54,7 @@ const branchSchema = z
 const FINANCE_DEFAULTS = {
   range: "mtd" as FinanceRange,
   granularity: "day" as FinanceGranularity,
-  compare: "prev_period" as FinanceCompareMode,
+  compare: "prev_month" as FinanceCompareMode,
   payment: "all" as FinancePayment,
 } as const;
 
@@ -236,9 +236,10 @@ export function getPresetRange(
 }
 
 // Compare period semantics (BA §3 + Q4):
-//   prev_period  = same length, immediately preceding (default)
+//   prev_period  = same length, immediately preceding
 //   prev_week    = shift exactly 7 days back
-//   prev_month   = shift to same DOM in previous month, pad if missing
+//   prev_month   = shift to same DOM in previous month, pad if missing (default
+//                  — matches the admin dashboard overview's MoM comparison)
 //   prev_year    = shift exactly 1 year back
 //
 // Returns null when mode = none or current range is empty.
