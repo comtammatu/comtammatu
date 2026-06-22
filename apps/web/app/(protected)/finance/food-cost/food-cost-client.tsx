@@ -24,8 +24,6 @@ interface Props {
   params: FinanceParams;
   branches: { id: number; name: string }[];
   rows: FoodCostRow[];
-  resolvedStart: string;
-  resolvedEnd: string;
 }
 
 const foodCopy = messages.finance.foodCost;
@@ -61,8 +59,6 @@ export function FoodCostClient({
   params,
   branches,
   rows,
-  resolvedStart,
-  resolvedEnd,
 }: Props) {
   const totalRevenue = rows.reduce((s, r) => s + Number(r.revenue ?? 0), 0);
   const totalCost = rows.reduce(
@@ -128,13 +124,7 @@ export function FoodCostClient({
         hide={["compare", "payment", "granularity"]}
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <KpiCard
-          label={foodCopy.totalRevenue}
-          value={formatVND(totalRevenue)}
-          hint={`${resolvedStart} → ${resolvedEnd}`}
-          tone="primary"
-        />
+      <div className="grid gap-3 sm:grid-cols-2">
         <KpiCard
           label={foodCopy.totalFoodCost}
           value={formatVND(totalCost)}

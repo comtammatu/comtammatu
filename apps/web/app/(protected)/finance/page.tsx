@@ -30,7 +30,6 @@ import {
   fetchFinanceCockpit,
   type FinanceCockpitData,
   type FinanceException,
-  type FinanceInventoryItem,
 } from "./_lib/finance-cockpit";
 import { fetchCashSummary } from "./_lib/cash-cockpit";
 import { CashPanel } from "./components/cash-panel";
@@ -150,42 +149,6 @@ function HddtComplianceBand({
         />
       )}
     </AppSection>
-  );
-}
-
-function InventoryCapitalList({ items }: { items: FinanceInventoryItem[] }) {
-  if (items.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        {powerLiteCopy.emptyInventoryRanking}
-      </p>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      {items.slice(0, 3).map((item) => (
-        <div
-          key={`${item.branchName}-${item.ingredientName}`}
-          className="grid gap-2 rounded-md border p-3 sm:grid-cols-[1fr_auto]"
-        >
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">
-              {item.ingredientName}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {item.branchName} ·{" "}
-              {powerLiteCopy.labels.inventoryQuantity(
-                formatCount(item.quantity),
-              )}
-            </p>
-          </div>
-          <p className="font-mono text-sm font-semibold tabular-nums">
-            {formatVND(item.value)}
-          </p>
-        </div>
-      ))}
-    </div>
   );
 }
 
@@ -363,73 +326,12 @@ export default async function FinancePage({
 
       <HddtComplianceBand summary={cockpit.dashboardSummary} />
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <QuickPanel
-          icon={<IconWallet className="size-4" />}
-          title={powerLiteCopy.cashBreakdownTitle}
-        >
-          <div className="grid gap-3 sm:grid-cols-4">
-            <MetricInline
-              label={powerLiteCopy.labels.cash}
-              value={formatVND(cockpit.kpis.cashRevenue)}
-            />
-            <MetricInline
-              label={powerLiteCopy.labels.vietqr}
-              value={formatVND(cockpit.kpis.vietqrRevenue)}
-            />
-            <MetricInline
-              label={powerLiteCopy.labels.momo}
-              value={formatVND(cockpit.kpis.momoRevenue)}
-            />
-            <MetricInline
-              label={powerLiteCopy.labels.revenueBeforeVat}
-              value={formatVND(cockpit.kpis.netRevenueBeforeVat)}
-            />
-          </div>
-        </QuickPanel>
-
-        <QuickPanel
-          icon={<IconTrendingUp className="size-4" />}
-          title={powerLiteCopy.profitBreakdownTitle}
-        >
-          <div className="grid gap-3 sm:grid-cols-3">
-            <MetricInline
-              label={powerLiteCopy.labels.revenueBeforeVat}
-              value={formatVND(cockpit.kpis.netRevenueBeforeVat)}
-            />
-            <MetricInline
-              label={powerLiteCopy.labels.ingredientCost}
-              value={
-                cockpit.kpis.costAvailable
-                  ? formatVND(cockpit.kpis.ingredientCost)
-                  : financeCopy.common.noValue
-              }
-            />
-            <MetricInline
-              label={powerLiteCopy.labels.grossMargin}
-              value={
-                cockpit.kpis.costAvailable
-                  ? formatPercent(cockpit.kpis.grossMargin)
-                  : financeCopy.common.noValue
-              }
-            />
-          </div>
-        </QuickPanel>
-
-        <QuickPanel
-          icon={<IconBoxes className="size-4" />}
-          title={powerLiteCopy.inventoryModelTitle}
-        >
-          <InventoryCapitalList items={cockpit.inventoryItems} />
-        </QuickPanel>
-
-        <QuickPanel
-          icon={<IconAlertTriangle className="size-4" />}
-          title={powerLiteCopy.ownerNewsTitle}
-        >
-          <ExceptionList items={cockpit.exceptions} />
-        </QuickPanel>
-      </div>
+      <QuickPanel
+        icon={<IconAlertTriangle className="size-4" />}
+        title={powerLiteCopy.ownerNewsTitle}
+      >
+        <ExceptionList items={cockpit.exceptions} />
+      </QuickPanel>
     </AppPage>
   );
 }

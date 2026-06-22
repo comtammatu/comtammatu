@@ -63,16 +63,9 @@ export function FinanceShell({
         crumbLabel: financeCopy.shell.crumbLabel,
         description: financeCopy.shell.description,
         actions: (
-          <>
-            <Button asChild variant="outline" size="sm">
-              <Link href={homeLink.href}>{homeLink.label}</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link href="/finance/revenue">
-                {financeCopy.basic.actions.revenue}
-              </Link>
-            </Button>
-          </>
+          <Button asChild variant="outline" size="sm">
+            <Link href={homeLink.href}>{homeLink.label}</Link>
+          </Button>
         ),
       }}
     >

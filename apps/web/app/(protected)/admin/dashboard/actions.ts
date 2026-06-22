@@ -19,55 +19,6 @@ const branchOperatingStatusSchema = z.object({
   endDate: z.string().date().optional(),
 });
 
-interface RecentOrder {
-  id: number;
-  order_number: string;
-  branch_name: string;
-  total_amount: number;
-  status: string;
-  payment_status: string | null;
-  created_at: string;
-}
-
-export interface DashboardStats {
-  recentOrders: RecentOrder[];
-}
-
-export async function fetchDashboardStats(): Promise<DashboardStats> {
-  const ctx = await getAuthContextWithPermission(
-    DASHBOARD_ROLES,
-    PERMISSION_KEYS.DASHBOARD_VIEW,
-  );
-  if (!ctx) return { recentOrders: [] };
-
-  const { supabase, claims } = ctx;
-
-  const { data: recentRows } = await supabase
-    .from("orders")
-    .select(
-      "id, order_number, total_amount, status, payment_status, created_at, branches!orders_branch_id_fkey(name)",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .order("created_at", { ascending: false })
-    .limit(5);
-
-  const recentOrders: RecentOrder[] = (recentRows ?? []).map((r) => {
-    // branches is a joined object due to foreign key select
-    const branches = r.branches as { name: string } | null;
-    return {
-      id: r.id,
-      order_number: r.order_number,
-      branch_name: branches?.name ?? "—",
-      total_amount: Number(r.total_amount),
-      status: r.status,
-      payment_status: r.payment_status,
-      created_at: r.created_at,
-    };
-  });
-
-  return { recentOrders };
-}
-
 export interface BranchOperatingRow {
   branchId: number;
   branchName: string;

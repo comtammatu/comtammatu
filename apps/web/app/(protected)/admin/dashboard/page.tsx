@@ -1,11 +1,7 @@
 import Link from "next/link";
 import {
-  AlertTriangle as IconAlertTriangle,
   DollarSign as IconCurrencyDollar,
   Package as IconPackage,
-  Receipt as IconReceipt,
-  Store as IconStore,
-  TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
 } from "lucide-react";
 import { canAccess, MODULE_ACL } from "@comtammatu/shared/auth";
@@ -21,7 +17,6 @@ import {
 } from "@comtammatu/ui/components/item";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNTime } from "@comtammatu/shared/time";
-import { StatusBadge } from "@/components/status-badge";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
@@ -42,7 +37,6 @@ import {
 } from "../../finance/_lib/finance-params";
 import {
   fetchBranchOperatingStatus,
-  fetchDashboardStats,
   type BranchOperatingRow,
 } from "./actions";
 import {
@@ -52,48 +46,6 @@ import {
   type OwnerWorkQueueItem,
   type OwnerWorkQueueSeverity,
 } from "./owner-view-model";
-
-type RecentOrders = Awaited<
-  ReturnType<typeof fetchDashboardStats>
->["recentOrders"];
-
-function RecentOrderList({ orders }: { orders: RecentOrders }) {
-  if (orders.length === 0) {
-    return (
-      <AppEmptyState
-        compact
-        title={ADMIN_DASHBOARD_COPY.noRecentOrderTitle}
-        description={ADMIN_DASHBOARD_COPY.noRecentOrderDescription}
-      />
-    );
-  }
-
-  return (
-    <ul className="divide-y divide-border">
-      {orders.map((order) => (
-        <li
-          key={order.id}
-          className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">
-              #{order.order_number}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {order.branch_name} · {formatVNTime(order.created_at)}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <StatusBadge domain="order" value={order.status} />
-            <span className="font-mono text-sm font-medium tabular-nums">
-              {formatVND(order.total_amount)}
-            </span>
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 function BranchOperatingItem({ row }: { row: BranchOperatingRow }) {
   const posOpen = row.posOpenedAt !== null;
@@ -317,9 +269,8 @@ export default async function DashboardPage() {
     compare: "prev_month",
   });
   const ownerFinanceRange = resolveFinanceRange(ownerFinanceParams);
-  const [{ claims }, stats, financeCockpit, branchStatus] = await Promise.all([
+  const [{ claims }, financeCockpit, branchStatus] = await Promise.all([
     loadAuthState(),
-    fetchDashboardStats(),
     fetchFinanceCockpit(ownerFinanceParams, ownerFinanceRange),
     fetchBranchOperatingStatus({
       startDate: ownerFinanceRange.start,
@@ -330,9 +281,6 @@ export default async function DashboardPage() {
   const role = claims.user_role;
   const reportsHref = canAccess(role, "reports")
     ? "/finance/revenue"
-    : undefined;
-  const ordersHref = canAccess(role, "orders")
-    ? MODULE_ACL.orders.path
     : undefined;
   const financeHref = canAccess(role, "finance")
     ? "/finance?range=mtd&compare=prev_month"
@@ -354,17 +302,6 @@ export default async function DashboardPage() {
   const financeKpis = financeCockpit.kpis;
   const compareFinanceKpis = financeCockpit.compareKpis;
   const collectedMonth = Math.round(financeKpis.totalCollected);
-  const monthOrderCount = financeKpis.orderCount;
-  const monthAvgOrderValue =
-    monthOrderCount > 0 ? financeKpis.totalCollected / monthOrderCount : 0;
-  const compareAvgOrderValue =
-    compareFinanceKpis && compareFinanceKpis.orderCount > 0
-      ? compareFinanceKpis.totalCollected / compareFinanceKpis.orderCount
-      : 0;
-  const cashRevenue = Math.round(financeKpis.cashRevenue);
-  const transferRevenue = Math.round(
-    financeKpis.vietqrRevenue + financeKpis.momoRevenue,
-  );
 
   return (
     <AppPage width="wide" density="compact">
@@ -377,7 +314,7 @@ export default async function DashboardPage() {
         }}
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <KpiCard
           label={ADMIN_DASHBOARD_COPY.revenueLabel}
           value={formatVND(collectedMonth)}
@@ -390,26 +327,6 @@ export default async function DashboardPage() {
           hint={ADMIN_DASHBOARD_COPY.revenueHelper}
           icon={<IconCurrencyDollar />}
           href={revenueHref}
-          className="sm:col-span-2 lg:col-span-2"
-        />
-        <KpiCard
-          label={ADMIN_DASHBOARD_COPY.cashCollectedLabel}
-          value={formatVND(cashRevenue)}
-          hint={ADMIN_DASHBOARD_COPY.cashCollectedHelper}
-          icon={<IconWallet />}
-          href={revenueHref}
-          className="lg:col-span-2"
-        />
-        <KpiCard
-          label={ADMIN_DASHBOARD_COPY.transferCollectedLabel}
-          value={formatVND(transferRevenue)}
-          hint={ADMIN_DASHBOARD_COPY.transferCollectedHelper(
-            formatVND(Math.round(financeKpis.vietqrRevenue)),
-            formatVND(Math.round(financeKpis.momoRevenue)),
-          )}
-          icon={<IconCurrencyDollar />}
-          href={revenueHref}
-          className="lg:col-span-2"
         />
         <KpiCard
           label={ADMIN_DASHBOARD_COPY.operatingExpenseLabel}
@@ -423,7 +340,6 @@ export default async function DashboardPage() {
           hint={ADMIN_DASHBOARD_COPY.operatingExpenseHelper}
           icon={<IconWallet />}
           href={financeHref}
-          className="sm:col-span-2 lg:col-span-3"
         />
         <KpiCard
           label={ADMIN_DASHBOARD_COPY.inventoryValueLabel}
@@ -431,60 +347,8 @@ export default async function DashboardPage() {
           hint={ADMIN_DASHBOARD_COPY.inventoryValueHelper}
           icon={<IconPackage />}
           href={inventoryHref}
-          className="lg:col-span-3"
         />
       </div>
-
-      <AppSection
-        title={ADMIN_DASHBOARD_COPY.operatingPulseTitle}
-        description={ADMIN_DASHBOARD_COPY.operatingPulseDescription}
-      >
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KpiCard
-            label={ADMIN_DASHBOARD_COPY.todayOrdersLabel}
-            value={formatCount(monthOrderCount)}
-            delta={buildCompareDelta(
-              monthOrderCount,
-              compareFinanceKpis?.orderCount ?? 0,
-              "higher_better",
-            )}
-            compareHint={ADMIN_DASHBOARD_COPY.compareHint}
-            hint={ADMIN_DASHBOARD_COPY.ordersHelper}
-            icon={<IconReceipt />}
-            href={ordersHref}
-          />
-          <KpiCard
-            label={ADMIN_DASHBOARD_COPY.avgOrderLabel}
-            value={formatVND(Math.round(monthAvgOrderValue))}
-            delta={buildCompareDelta(
-              monthAvgOrderValue,
-              compareAvgOrderValue,
-              "higher_better",
-            )}
-            compareHint={ADMIN_DASHBOARD_COPY.compareHint}
-            hint={ADMIN_DASHBOARD_COPY.avgOrderHelper}
-            icon={<IconTrendingUp />}
-          />
-          <KpiCard
-            label={ADMIN_DASHBOARD_COPY.branchNeedsReviewLabel}
-            value={formatCount(ownerSummary.branchNeedsReview)}
-            hint={ADMIN_DASHBOARD_COPY.branchNeedsReviewHelper(
-              ownerSummary.branchCount,
-            )}
-            icon={<IconStore />}
-            tone={ownerSummary.branchNeedsReview > 0 ? "warning" : "success"}
-            href="#branch-health"
-          />
-          <KpiCard
-            label={ADMIN_DASHBOARD_COPY.attentionLabel}
-            value={formatCount(ownerSummary.attentionTotal)}
-            hint={ADMIN_DASHBOARD_COPY.attentionHelper}
-            icon={<IconAlertTriangle />}
-            tone={ownerSummary.attentionTotal > 0 ? "warning" : "success"}
-            href="#owner-work-queue"
-          />
-        </div>
-      </AppSection>
 
       <div id="owner-work-queue">
         <AppSection
@@ -501,33 +365,23 @@ export default async function DashboardPage() {
         </AppSection>
       </div>
 
-      <div id="branch-health">
-        <AppSection
-          title={ADMIN_DASHBOARD_COPY.branchStatusTitle}
-          description={ADMIN_DASHBOARD_COPY.branchStatusDescription}
-        >
-          {branchStatus.length === 0 ? (
-            <AppEmptyState
-              compact
-              title={ADMIN_DASHBOARD_COPY.branchStatusEmptyTitle}
-              description={ADMIN_DASHBOARD_COPY.branchStatusEmptyDescription}
-            />
-          ) : (
-            <ItemGroup className="gap-2">
-              {branchStatus.map((row) => (
-                <BranchOperatingItem key={row.branchId} row={row} />
-              ))}
-            </ItemGroup>
-          )}
-        </AppSection>
-      </div>
-
       <AppSection
-        title={ADMIN_DASHBOARD_COPY.recentOrdersTitle}
-        description={ADMIN_DASHBOARD_COPY.recentOrdersDescription}
-        contentClassName="gap-0"
+        title={ADMIN_DASHBOARD_COPY.branchStatusTitle}
+        description={ADMIN_DASHBOARD_COPY.branchStatusDescription}
       >
-        <RecentOrderList orders={stats.recentOrders} />
+        {branchStatus.length === 0 ? (
+          <AppEmptyState
+            compact
+            title={ADMIN_DASHBOARD_COPY.branchStatusEmptyTitle}
+            description={ADMIN_DASHBOARD_COPY.branchStatusEmptyDescription}
+          />
+        ) : (
+          <ItemGroup className="gap-2">
+            {branchStatus.map((row) => (
+              <BranchOperatingItem key={row.branchId} row={row} />
+            ))}
+          </ItemGroup>
+        )}
       </AppSection>
     </AppPage>
   );

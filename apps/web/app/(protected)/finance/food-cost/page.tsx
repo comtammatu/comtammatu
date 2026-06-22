@@ -48,14 +48,9 @@ export default async function FoodCostPage({
       <AppPageHeader
         eyebrow={messages.finance.shell.subLabel}
         title={messages.finance.nav.items.foodCost}
+        description={messages.finance.foodCost.estimateNote}
       />
-      <FoodCostClient
-        params={params}
-        branches={branches}
-        rows={rows}
-        resolvedStart={resolved.start}
-        resolvedEnd={resolved.end}
-      />
+      <FoodCostClient params={params} branches={branches} rows={rows} />
     </AppPage>
   );
 }

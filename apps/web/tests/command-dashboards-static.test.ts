@@ -42,15 +42,18 @@ test("admin dashboard only promotes finance metrics with direct contracts", () =
   const page = read(ADMIN_PAGE);
   const copy = read(ADMIN_COPY);
 
-  assert.match(page, /label=\{ADMIN_DASHBOARD_COPY\.cashCollectedLabel\}/);
-  assert.match(page, /value=\{formatVND\(cashRevenue\)\}/);
-  assert.match(page, /label=\{ADMIN_DASHBOARD_COPY\.transferCollectedLabel\}/);
-  assert.match(page, /value=\{formatVND\(transferRevenue\)\}/);
+  assert.match(page, /label=\{ADMIN_DASHBOARD_COPY\.revenueLabel\}/);
+  assert.match(page, /label=\{ADMIN_DASHBOARD_COPY\.operatingExpenseLabel\}/);
+  assert.match(page, /label=\{ADMIN_DASHBOARD_COPY\.inventoryValueLabel\}/);
+  assert.doesNotMatch(page, /label=\{ADMIN_DASHBOARD_COPY\.cashCollectedLabel\}/);
+  assert.doesNotMatch(page, /label=\{ADMIN_DASHBOARD_COPY\.transferCollectedLabel\}/);
   assert.doesNotMatch(page, /label=\{ADMIN_DASHBOARD_COPY\.cashOnHandLabel\}/);
   assert.doesNotMatch(page, /label=\{ADMIN_DASHBOARD_COPY\.grossProfitLabel\}/);
   assert.doesNotMatch(page, /label=\{ADMIN_DASHBOARD_COPY\.netProfitLabel\}/);
   assert.doesNotMatch(page, /label=\{ADMIN_DASHBOARD_COPY\.kitchenCostLabel\}/);
   assert.doesNotMatch(page, /financeKpis\.netProfit/);
+  assert.doesNotMatch(copy, /cashCollectedLabel/);
+  assert.doesNotMatch(copy, /transferCollectedLabel/);
   assert.doesNotMatch(copy, /cashOnHandLabel/);
   assert.doesNotMatch(copy, /grossProfitLabel/);
   assert.doesNotMatch(copy, /netProfitLabel/);

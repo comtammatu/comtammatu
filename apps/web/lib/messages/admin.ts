@@ -14,33 +14,13 @@ export const admin = {
     pageDescription:
       "Theo dõi tiền đã thu, chi vận hành, tồn kho và việc cần chủ xử lý.",
     pageBadge: "Tháng này",
-    overviewTitle: "Tiền và nhịp bán tháng này",
-    overviewDescription:
-      "Dữ liệu lấy theo kỳ tháng hiện tại, tính theo ngày Việt Nam.",
     revenueLabel: "Tiền đã thu tháng này",
-    todayOrdersLabel: "Đơn trong tháng",
-    avgOrderLabel: "Trung bình/đơn",
     revenueHelper: "Tổng thanh toán hoàn tất trong tháng.",
-    ordersHelper: "Số đơn đã thanh toán trong tháng.",
-    avgOrderHelper: "Giá trị trung bình mỗi đơn trong tháng.",
-    branchNeedsReviewLabel: "Chi nhánh cần xem",
-    branchNeedsReviewHelper: (total: number) =>
-      `Trên ${total.toLocaleString("vi-VN")} chi nhánh đang hoạt động.`,
-    attentionLabel: "Cần xử lý",
-    attentionHelper: "Số nhóm việc đang cần chủ xem.",
     operatingExpenseLabel: "Chi vận hành đã ghi nhận",
     operatingExpenseHelper: "Chi vận hành đã ghi nhận trong tháng.",
-    cashCollectedLabel: "Tiền mặt đã thu",
-    cashCollectedHelper: "Thanh toán hoàn tất bằng tiền mặt trong tháng.",
-    transferCollectedLabel: "Chuyển khoản/ví đã thu",
-    transferCollectedHelper: (vietqr: string, momo: string) =>
-      `VietQR ${vietqr} + MoMo ${momo} trong tháng.`,
     inventoryValueLabel: "Giá trị tồn kho",
     inventoryValueHelper: "Tồn kho hiện tại theo phạm vi quản trị.",
     compareHint: "so với cùng kỳ tháng trước",
-    operatingPulseTitle: "Nhịp bán trong tháng",
-    operatingPulseDescription:
-      "Số đơn, trung bình mỗi đơn và các tín hiệu vận hành cần chủ xem.",
     workQueueTitle: "Việc cần xử lý trước",
     workQueueDescription:
       "Ưu tiên lỗi chặn vận hành, sau đó tới cảnh báo tiền, hóa đơn và dữ liệu giá vốn.",
@@ -76,11 +56,6 @@ export const admin = {
     branchStatusEmptyTitle: "Chưa có chi nhánh hoạt động",
     branchStatusEmptyDescription:
       "Khai báo chi nhánh trong Thiết lập hệ thống để bắt đầu vận hành.",
-    recentOrdersTitle: "Kiểm tra nhanh đơn gần đây",
-    recentOrdersDescription:
-      "Các đơn mới nhất trong phạm vi quản trị hiện tại.",
-    noRecentOrderTitle: "Chưa có đơn hàng mới",
-    noRecentOrderDescription: "Đơn hàng bán trong ngày sẽ xuất hiện tại đây.",
   },
   reports: {
     index: {
