@@ -8,10 +8,11 @@
 // POS->payment->KDS smoke does not use them, and it keeps startup fast and free
 // of port contention with any other local Supabase project.
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const REPO = process.cwd();
+const PROJECT_ID = "comtammatu-e2e";
 const WORKDIR = process.env["E2E_SUPABASE_WORKDIR"] || "/tmp/comtammatu-e2e-stack";
 const API_PORT = Number(process.env["E2E_API_PORT"] || 55421);
 const DB_PORT = Number(process.env["E2E_DB_PORT"] || 55432);
@@ -26,6 +27,48 @@ function supabase(args, { timeoutMs = 600_000 } = {}) {
   return r;
 }
 
+// Realtime publication membership is a managed surface the baseline pg_dump
+// excludes (Section D of supabase/managed-surfaces.install.sql, "fresh env only").
+// Without it, realtime-dependent specs fail: the daily-limit broadcast test and
+// the kds-queue new-ticket-hydration tests get no postgres_changes events. Extract
+// Section D and apply it to the fresh stack via the db container (no psql binary
+// needed in CI). The stack is always fresh, so a plain ADD never hits "already a
+// member".
+function applyRealtimePublication() {
+  const managed = readFileSync(
+    join(REPO, "supabase/managed-surfaces.install.sql"),
+    "utf8",
+  );
+  const m = managed.match(
+    /Section D:[\s\S]*?(ALTER PUBLICATION supabase_realtime ADD TABLE[\s\S]*?;)/,
+  );
+  if (!m) {
+    process.stderr.write(
+      "could not extract realtime publication (Section D) from managed-surfaces.install.sql\n",
+    );
+    process.exit(1);
+  }
+  const r = spawnSync(
+    "docker",
+    ["exec", "-i", `supabase_db_${PROJECT_ID}`, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c", m[1]],
+    { encoding: "utf8" },
+  );
+  if (r.status !== 0) {
+    const out = (r.stdout || "") + (r.stderr || "");
+    // Idempotent: a re-run against a non-fresh stack hits "already a member".
+    // The goal (tables present in the publication) already holds, so treat as ok.
+    if (!/already member of publication/i.test(out)) {
+      process.stderr.write("realtime publication apply failed:\n" + out);
+      process.exit(1);
+    }
+    process.stdout.write(
+      "Realtime publication membership already present (idempotent skip).\n",
+    );
+    return;
+  }
+  process.stdout.write("Applied realtime publication membership (Section D).\n");
+}
+
 function writeScratch() {
   rmSync(WORKDIR, { recursive: true, force: true });
   mkdirSync(join(WORKDIR, "supabase", "migrations"), { recursive: true });
@@ -35,7 +78,7 @@ function writeScratch() {
   cpSync(join(REPO, "supabase/seed.sql"), join(WORKDIR, "supabase/seed.sql"));
   writeFileSync(
     join(WORKDIR, "supabase", "config.toml"),
-    `project_id = "comtammatu-e2e"
+    `project_id = "${PROJECT_ID}"
 [api]
 port = ${API_PORT}
 [db]
@@ -86,6 +129,8 @@ function main() {
     process.exit(1);
   }
 
+  applyRealtimePublication();
+
   const status = supabase(["status", "--workdir", WORKDIR, "-o", "env"], { timeoutMs: 60_000 });
   const env = parseEnv(status.stdout || "");
   const apiUrl = env["API_URL"];
@@ -105,6 +150,8 @@ E2E_CASHIER_EMAIL=cashier.datdo@comtammatu.vn
 E2E_CASHIER_PASSWORD=Test1234!
 E2E_CHEF_EMAIL=chef.datdo@comtammatu.vn
 E2E_CHEF_PASSWORD=Test1234!
+E2E_INVENTORY_MANAGER_EMAIL=warehouse@comtammatu.vn
+E2E_INVENTORY_MANAGER_PASSWORD=Test1234!
 `;
   writeFileSync(resolve(REPO, "apps/web/.env.test.local"), testEnv);
 
