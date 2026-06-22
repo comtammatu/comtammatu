@@ -12,7 +12,7 @@ function readRepo(path: string): string {
 }
 
 const taskKindMigration = readRepo(
-  "supabase/migrations/20260619042223_employee_consumption_task_kind.sql",
+  "supabase/migrations/_archive/20260619042223_employee_consumption_task_kind.sql",
 );
 const todayWorkStateSource = readWeb(
   "app/(protected)/employee/_lib/today-work-state.ts",

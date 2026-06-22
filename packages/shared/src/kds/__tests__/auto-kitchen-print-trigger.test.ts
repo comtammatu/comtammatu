@@ -20,11 +20,11 @@ const read = (path: string) => {
 };
 
 const migrationPath =
-  "supabase/migrations/20260602000000_kds_print_on_completion.sql";
+  "supabase/migrations/_archive/20260602000000_kds_print_on_completion.sql";
 const cleanupMigrationPath =
-  "supabase/migrations/20260602001000_drop_kds_auto_print_trigger_function.sql";
+  "supabase/migrations/_archive/20260602001000_drop_kds_auto_print_trigger_function.sql";
 const nonKdsDispatchMigrationPath =
-  "supabase/migrations/20260602002000_non_kds_dispatch_print_on_pos_send.sql";
+  "supabase/migrations/_archive/20260602002000_non_kds_dispatch_print_on_pos_send.sql";
 
 test("KDS ticket creation no longer auto-enqueues kitchen print jobs", () => {
   const src = `${read(migrationPath)}\n${read(cleanupMigrationPath)}`;

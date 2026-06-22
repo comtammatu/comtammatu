@@ -21,7 +21,7 @@ function readRepoFile(path: string): string {
 
 test("classic stocktake completion RPC is gated by stocktake_complete permission", () => {
   const source = readRepoFile(
-    "supabase/migrations/20260524010000_stocktake_complete_permission_gate.sql",
+    "supabase/migrations/_archive/20260524010000_stocktake_complete_permission_gate.sql",
   );
 
   assert.match(source, /CREATE OR REPLACE FUNCTION public\.complete_stocktake/);

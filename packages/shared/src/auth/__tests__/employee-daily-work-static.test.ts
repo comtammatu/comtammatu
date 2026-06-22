@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("Employee Daily Work migration hardens attendance and adds checklist RPCs", () => {
   const migration = read(
-    "supabase/migrations/20260609093000_employee_daily_work.sql",
+    "supabase/migrations/_archive/20260609093000_employee_daily_work.sql",
   );
 
   for (const expected of [
@@ -106,7 +106,7 @@ test("Employee clock client and actions no longer use GPS for clock-in/out", () 
 
 test("Employee checklist templates are managed as HR templates, not roles", () => {
   const migration = read(
-    "supabase/migrations/20260610170000_hr_checklist_template_library.sql",
+    "supabase/migrations/_archive/20260610170000_hr_checklist_template_library.sql",
   );
   const actionSrc = read("apps/web/app/(protected)/employee/clock/actions.ts");
   const checklistActionSrc = read(
@@ -184,7 +184,7 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
 
 test("HRM consumption checklist is optional for each canonical template", () => {
   const migration = read(
-    "supabase/migrations/20260618060957_hrm_checkout_consumption_checklist.sql",
+    "supabase/migrations/_archive/20260618060957_hrm_checkout_consumption_checklist.sql",
   );
 
   for (const expected of [
@@ -229,10 +229,10 @@ test("HRM consumption checklist is optional for each canonical template", () => 
 
 test("HRM consumption report applies Inventory only after manager approval", () => {
   const migration = read(
-    "supabase/migrations/20260618070000_hrm_consumption_report_approval.sql",
+    "supabase/migrations/_archive/20260618070000_hrm_consumption_report_approval.sql",
   );
   const taskKindMigration = read(
-    "supabase/migrations/20260619042223_employee_consumption_task_kind.sql",
+    "supabase/migrations/_archive/20260619042223_employee_consumption_task_kind.sql",
   );
   const actionsSrc = read(
     "apps/web/app/(protected)/employee/consumption-actions.ts",
@@ -379,10 +379,10 @@ test("HRM consumption report applies Inventory only after manager approval", () 
 
 test("Employee checkout approval keeps checkout pending until Branch Manager approves", () => {
   const migration = read(
-    "supabase/migrations/20260609100000_employee_checkout_approval.sql",
+    "supabase/migrations/_archive/20260609100000_employee_checkout_approval.sql",
   );
   const grantMigration = read(
-    "supabase/migrations/20260609132012_grant_private_schema_usage_to_service_role.sql",
+    "supabase/migrations/_archive/20260609132012_grant_private_schema_usage_to_service_role.sql",
   );
   const actionSrc = read("apps/web/app/(protected)/employee/clock/actions.ts");
   const workStateSrc = read(

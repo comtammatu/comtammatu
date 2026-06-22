@@ -7,24 +7,20 @@
 
 ## Why this exists
 
-`supabase/migrations/00000000000000_baseline.sql` is a `--schema=public` dump from
-2026-05-30. Two gaps make a from-empty replay diverge from prod:
+`supabase/migrations/00000000000000_baseline.sql` is a point-in-time `pg_dump` of
+prod (`public` + `private`). Over time the forward chain accumulates and stops
+replaying cleanly on top of the snapshot — the **squash-vs-history** class:
 
-1. **Self-containment (FIXED, tier 1).** The dump references `private.*` objects it
-   never creates. `supabase/_local-dev/private-bootstrap.sql` (tracked) supplies
-   the `private` schema + helpers and `db:baseline:local-check` prepends it, so the
-   **baseline alone now replays clean** on local docker (CI job `baseline-replay`).
-2. **Forward-chain divergence (this runbook, tier 2).** The 98 forward migrations
-   after the baseline do **not** cleanly replay on top of the squashed baseline.
-   First failure: `20260609103000_remove_intermediate_scope.sql` does
-   `DROP TABLE areas` **before** dropping `profiles.area_id`, so the FK
-   `profiles_area_id_fkey` blocks it (SQLSTATE 2BP01). On prod this migration
-   succeeded because `area_id` was already gone by 2026-06-09; the 2026-05-30
-   baseline snapshot still contains it. This is the squash-vs-history class
-   (same as the D042 preview-branch replay failure). Likely more divergences
-   follow this one.
+- **Drop ordering.** `20260609103000_remove_intermediate_scope.sql` does
+  `DROP TABLE areas` **before** dropping `profiles.area_id`, so the FK
+  `profiles_area_id_fkey` blocks it (SQLSTATE 2BP01) on a fresh replay. It
+  succeeded on prod because `area_id` was already gone by then; an older snapshot
+  still contained it.
+- **State self-assertions.** `20260616200000_rls_dedup_stock_transfer_payroll.sql`
+  asserts a production-only RLS policy count (`payroll_entries survivors expected
+  3, got 2`) that a baseline-plus-forwards replay does not reproduce.
 
-The clean fix is **not** to rewrite ~90 historical migrations — it is to
+The clean fix is **not** to rewrite historical migrations — it is to
 **re-baseline**: regenerate the baseline from current prod and archive the
 now-squashed forward chain.
 
@@ -37,26 +33,40 @@ now-squashed forward chain.
 
 ## Procedure
 
-1. **Dump public + private from prod** (captures both schemas → self-contained):
+1. **Dump public + private from prod** (owner-run; read-only). Use the repo tool —
+   it builds the direct privileged libpq connection from `.env.local`
+   (`SUPABASE_PASSWORD_IEXW` + `supabase/.temp/pooler-url`):
 
    ```bash
-   pg_dump "$PROD_DB_URL" \
-     --schema=public --schema=private \
-     --no-owner --no-privileges --schema-only \
-     --file=supabase/migrations/00000000000000_baseline.sql
+   pnpm db:baseline:extract -- --schemas=public,private
+   ```
+
+   It writes `public.schema.sql` + `private.schema.sql` under
+   `.baseline-artifacts/supabase-live-baseline-<ts>/`. Assemble the baseline —
+   `private` first, function-body checking off, managed default-privileges
+   stripped:
+
+   ```bash
+   ART=.baseline-artifacts/supabase-live-baseline-<ts>
+   { echo "SET check_function_bodies = false;"; echo;
+     cat "$ART/private.schema.sql"; echo;
+     grep -v "^ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin " "$ART/public.schema.sql";
+   } > supabase/migrations/00000000000000_baseline.sql
    ```
 
    Notes:
-   - Keep `--no-owner`; drop `--no-privileges` only if you want GRANTs inlined
-     (the current baseline carries them — match whichever the team standardized).
-   - Confirm the dump emits `CREATE SCHEMA private;` and the 9 `private.*`
-     functions. If it does, the separate `private-bootstrap.sql` becomes
-     redundant for replay — keep it only if you still want the permissive stubs
-     for local QA, otherwise delete it and drop the prepend in
-     `scripts/supabase-baseline-local-check.mjs`.
-   - Managed surfaces (storage buckets/policies, exotic extensions) stay in
-     `supabase/managed-surfaces.install.sql` — `pg_dump --schema` does not emit
-     them. Do not try to fold them into the baseline.
+   - `private` first so public triggers/policies referencing `private.*` resolve;
+     `SET check_function_bodies = false` so private SQL helpers that read public
+     tables create before those tables exist.
+   - Strip `ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin …` — Supabase-managed
+     defaults the local migration role cannot set (`42501`); keep the
+     `FOR ROLE postgres` ones. A fresh Supabase env configures them itself.
+   - The extract uses `--no-owner` and keeps GRANTs inlined (do NOT pass
+     `--no-privileges`). Never use `supabase db dump --linked` — it silently drops
+     RLS-restricted tables.
+   - The baseline is self-contained — there is no separate `private-bootstrap.sql`.
+   - Managed surfaces (storage buckets/policies, extensions, realtime, cron) stay
+     in `supabase/managed-surfaces.install.sql` — `pg_dump --schema` omits them.
 
 2. **Archive the squashed forward chain.** Every migration with a timestamp at or
    before the new dump's cutoff is now represented by the baseline:

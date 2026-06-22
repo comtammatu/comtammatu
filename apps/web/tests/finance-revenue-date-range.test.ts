@@ -40,7 +40,7 @@ test("Finance Revenue top items follows the selected date range", () => {
 
 test("Finance top-items migration keeps compatibility and adds range RPC", () => {
   const migration = read(
-    "supabase/migrations/20260609151615_finance_top_items_date_range.sql",
+    "supabase/migrations/_archive/20260609151615_finance_top_items_date_range.sql",
   );
 
   assert.match(
@@ -67,7 +67,7 @@ test("Finance top-items migration keeps compatibility and adds range RPC", () =>
 
 test("Finance top-items decomposes side-items without double-counting revenue", () => {
   const migration = read(
-    "supabase/migrations/20260609161402_finance_top_items_side_items.sql",
+    "supabase/migrations/_archive/20260609161402_finance_top_items_side_items.sql",
   );
 
   assert.match(

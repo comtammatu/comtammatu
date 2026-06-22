@@ -1,17 +1,703 @@
--- =====================================================================
--- Consolidated baseline — public schema (canonical fresh-env install).
--- Generated 2026-05-30 via libpq pg_dump 18.
--- Validated: replays from an empty public schema (psql --single-transaction, exit 0)
--- and rebuilds the source schema exactly (118 tables / 279 fns / 273 policies / 523 indexes);
--- db:types from the rebuilt DB == committed types. Supersedes _archive/ chain.
--- Managed surfaces (extensions, storage buckets+policies, realtime publication,
--- cron jobs) are NOT in this public dump — see supabase/migrations/README.md.
--- =====================================================================
+-- Self-contained install baseline (public + private) for fresh environments.
+-- private schema is dumped first so public triggers/policies referencing private.* resolve;
+-- check_function_bodies is disabled so private.* SQL functions referencing public tables create
+-- before those tables exist in the concatenated replay.
+SET check_function_bodies = false;
+
 --
 -- PostgreSQL database dump
 --
 
--- \restrict 9ogGhrdgidzHLr4W08xFqeuO5fJ4snQIJ4Gjcb0h90dqBKnyLmzn8TwzcDVqYIL
+-- \restrict x1z1jhWinpKchWuDDTc3acYZUglKgc9JbvyVjVioirTppd3n52JQ2sOZPGWFKoK
+
+-- Dumped from database version 17.6
+-- Dumped by pg_dump version 18.3
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Name: private; Type: SCHEMA; Schema: -; Owner: -
+--
+
+CREATE SCHEMA private;
+
+
+--
+-- Name: enqueue_kitchen_completion_print_internal(bigint, bigint[], uuid); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.enqueue_kitchen_completion_print_internal(p_branch_id bigint, p_ticket_ids bigint[], p_actor uuid DEFAULT NULL::uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    SET join_collapse_limit TO '1'
+    SET from_collapse_limit TO '1'
+    AS $$
+DECLARE
+  v_ticket_ids BIGINT[] := ARRAY[]::BIGINT[];
+  v_requested_count INT := 0;
+  v_printed_ticket_count INT := 0;
+  v_route RECORD;
+  v_payload JSONB;
+  v_idempotency TEXT;
+  v_job_id BIGINT;
+  v_jobs JSONB := '[]'::jsonb;
+BEGIN
+  SELECT COALESCE(array_agg(DISTINCT ticket_id), ARRAY[]::BIGINT[])
+  INTO v_ticket_ids
+  FROM unnest(COALESCE(p_ticket_ids, ARRAY[]::BIGINT[])) AS input(ticket_id)
+  WHERE ticket_id IS NOT NULL AND ticket_id > 0;
+
+  v_requested_count := COALESCE(array_length(v_ticket_ids, 1), 0);
+
+  IF v_requested_count = 0 THEN
+    RETURN jsonb_build_object(
+      'jobs', v_jobs,
+      'requested_ticket_count', 0,
+      'printed_ticket_count', 0,
+      'skipped_ticket_count', 0
+    );
+  END IF;
+
+  FOR v_route IN
+    WITH routed_items AS (
+      SELECT
+        kt.id AS ticket_id,
+        kt.order_id,
+        kt.order_item_id,
+        kt.kitchen_send_batch_id,
+        o.tenant_id,
+        o.branch_id,
+        o.order_number,
+        o.order_type,
+        o.note AS order_note,
+        tbl.number AS table_number,
+        COALESCE(profile.full_name, '') AS cashier_name,
+        p.id AS printer_id,
+        p.role AS printer_role,
+        CASE WHEN p.role = 'kitchen_2' THEN 2 ELSE 1 END AS slot,
+        COALESCE(ksb.kitchen_ticket_number, o.order_number) AS kitchen_ticket_number,
+        COALESCE(ksb.send_seq, o.kitchen_send_count) AS send_seq,
+        COALESCE(ksb.kind, 'manual') AS send_kind,
+        jsonb_build_object(
+          'item_name', oi.item_name,
+          'variant_name', oi.variant_name,
+          'quantity', oi.quantity,
+          'modifiers', oi.modifiers,
+          'sides', oi.sides,
+          'note', oi.note
+        ) AS item_payload
+      FROM public.kds_tickets kt
+      JOIN public.order_items oi
+        ON oi.tenant_id = kt.tenant_id
+       AND oi.id = kt.order_item_id
+      JOIN public.orders o
+        ON o.tenant_id = kt.tenant_id
+       AND o.id = kt.order_id
+      LEFT JOIN public.tables tbl
+        ON tbl.id = o.table_id
+      LEFT JOIN public.profiles profile
+        ON profile.id = o.created_by
+      JOIN public.menu_items mi
+        ON mi.id = oi.menu_item_id
+      JOIN public.printer_menu_categories pmc
+        ON pmc.category_id = mi.category_id
+       AND pmc.tenant_id = o.tenant_id
+       AND pmc.branch_id = o.branch_id
+      JOIN public.printers p
+        ON p.id = pmc.printer_id
+       AND p.tenant_id = pmc.tenant_id
+       AND p.branch_id = pmc.branch_id
+       AND p.is_active = TRUE
+      JOIN public.printer_print_types ppt
+        ON ppt.printer_id = p.id
+       AND ppt.tenant_id = p.tenant_id
+       AND ppt.branch_id = p.branch_id
+       AND ppt.print_type = 'kitchen_ticket'
+      LEFT JOIN public.kitchen_send_batches ksb
+        ON ksb.id = kt.kitchen_send_batch_id
+      WHERE kt.id = ANY(v_ticket_ids)
+        AND kt.branch_id = p_branch_id
+        AND oi.sent_to_kitchen_at IS NULL
+    ),
+    grouped_routes AS (
+      SELECT
+        tenant_id,
+        branch_id,
+        order_id,
+        printer_id,
+        printer_role,
+        slot,
+        kitchen_ticket_number,
+        order_number,
+        order_type,
+        table_number,
+        cashier_name,
+        send_seq,
+        send_kind,
+        order_note,
+        array_agg(order_item_id ORDER BY order_item_id) AS item_ids,
+        array_agg(ticket_id ORDER BY order_item_id) AS ticket_ids,
+        jsonb_agg(item_payload ORDER BY order_item_id) AS items
+      FROM routed_items
+      GROUP BY
+        tenant_id,
+        branch_id,
+        order_id,
+        printer_id,
+        printer_role,
+        slot,
+        kitchen_ticket_number,
+        order_number,
+        order_type,
+        table_number,
+        cashier_name,
+        send_seq,
+        send_kind,
+        order_note
+    )
+    SELECT *
+    FROM grouped_routes
+    ORDER BY order_id, printer_role, printer_id
+  LOOP
+    v_job_id := NULL;
+
+    v_payload := jsonb_build_object(
+      'kind', 'kitchen_ticket',
+      'kitchen_ticket_number', v_route.kitchen_ticket_number,
+      'source_order_number', v_route.order_number,
+      'order_number', v_route.order_number,
+      'order_type', v_route.order_type,
+      'table_number', v_route.table_number,
+      'cashier_name', v_route.cashier_name,
+      'send_seq', v_route.send_seq,
+      'send_kind', v_route.send_kind,
+      'slot', v_route.slot,
+      'note', v_route.order_note,
+      'items', v_route.items,
+      'printed_at', to_char(now() AT TIME ZONE 'Asia/Ho_Chi_Minh',
+                            'YYYY-MM-DD"T"HH24:MI:SS')
+    );
+
+    v_idempotency := 'order:' || v_route.order_id::TEXT
+      || ':kds-complete:printer:' || v_route.printer_id::TEXT
+      || ':tickets:' || md5(array_to_string(v_route.ticket_ids, ','));
+
+    INSERT INTO public.print_jobs (
+      tenant_id, branch_id, printer_id, job_type,
+      order_id, payload, idempotency_key, created_by
+    )
+    VALUES (
+      v_route.tenant_id, v_route.branch_id, v_route.printer_id,
+      'kitchen_ticket', v_route.order_id, v_payload, v_idempotency, p_actor
+    )
+    ON CONFLICT (idempotency_key) DO NOTHING
+    RETURNING id INTO v_job_id;
+
+    IF v_job_id IS NULL THEN
+      SELECT id INTO v_job_id
+      FROM public.print_jobs
+      WHERE idempotency_key = v_idempotency;
+    END IF;
+
+    UPDATE public.order_items
+       SET sent_to_kitchen_at = COALESCE(sent_to_kitchen_at, now())
+     WHERE id = ANY(v_route.item_ids)
+       AND sent_to_kitchen_at IS NULL;
+
+    v_printed_ticket_count := v_printed_ticket_count
+      + COALESCE(array_length(v_route.ticket_ids, 1), 0);
+
+    v_jobs := v_jobs || jsonb_build_object(
+      'printer_id', v_route.printer_id,
+      'job_id', v_job_id,
+      'item_count', jsonb_array_length(v_route.items),
+      'ticket_count', COALESCE(array_length(v_route.ticket_ids, 1), 0),
+      'kitchen_ticket_number', v_route.kitchen_ticket_number,
+      'send_seq', v_route.send_seq
+    );
+  END LOOP;
+
+  RETURN jsonb_build_object(
+    'jobs', v_jobs,
+    'requested_ticket_count', v_requested_count,
+    'printed_ticket_count', v_printed_ticket_count,
+    'skipped_ticket_count', GREATEST(v_requested_count - v_printed_ticket_count, 0)
+  );
+END;
+$$;
+
+
+--
+-- Name: enqueue_kitchen_print_internal(bigint, uuid, boolean); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.enqueue_kitchen_print_internal(p_order_id bigint, p_actor_override uuid DEFAULT NULL::uuid, p_enforce_request_auth boolean DEFAULT true) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $_$
+DECLARE
+  v_request_uid            UUID;
+  v_uid                    UUID;
+  v_order                  public.orders%ROWTYPE;
+  v_table_no               INT;
+  v_cashier_name           TEXT;
+  v_route                  RECORD;
+  v_payload                JSONB;
+  v_idempotency            TEXT;
+  v_job_id                 BIGINT;
+  v_jobs                   JSONB := '[]'::jsonb;
+  v_mapped_pending         INT;
+  v_null_batch_pending     INT;
+  v_fallback_batch_id      BIGINT;
+  v_fallback_ticket_number TEXT;
+  v_fallback_send_seq      INT;
+  v_fallback_kind          TEXT;
+  v_ticket_seq             INT;
+  v_order_number_clean     TEXT;
+  v_order_number_match     TEXT[];
+  v_ticket_base            TEXT;
+BEGIN
+  v_request_uid := auth.uid();
+
+  SELECT * INTO v_order FROM public.orders WHERE id = p_order_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'order not found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF p_enforce_request_auth THEN
+    IF v_request_uid IS NULL THEN
+      RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+    END IF;
+
+    IF v_order.tenant_id IS DISTINCT FROM public.auth_tenant_id() THEN
+      RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
+    END IF;
+
+    IF NOT public.has_permission_any('pos:send_kitchen') THEN
+      RAISE EXCEPTION 'permission denied: pos:send_kitchen' USING ERRCODE = '42501';
+    END IF;
+
+    v_uid := v_request_uid;
+  ELSE
+    v_uid := COALESCE(p_actor_override, v_request_uid, v_order.created_by);
+    IF v_uid IS NULL THEN
+      RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+    END IF;
+  END IF;
+
+  IF v_order.table_id IS NOT NULL THEN
+    SELECT number INTO v_table_no FROM public.tables WHERE id = v_order.table_id;
+  END IF;
+
+  SELECT full_name INTO v_cashier_name
+  FROM public.profiles WHERE id = v_order.created_by;
+
+  SELECT COUNT(*)
+  INTO v_mapped_pending
+  FROM public.order_items oi
+  JOIN public.menu_items mi ON mi.id = oi.menu_item_id
+  JOIN public.printer_menu_categories pmc
+    ON pmc.category_id = mi.category_id
+   AND pmc.tenant_id = v_order.tenant_id
+   AND pmc.branch_id = v_order.branch_id
+  WHERE oi.order_id = p_order_id
+    AND oi.sent_to_kitchen_at IS NULL;
+
+  IF v_mapped_pending = 0 THEN
+    RETURN jsonb_build_object(
+      'order_id', p_order_id,
+      'send_seq', v_order.kitchen_send_count,
+      'jobs', v_jobs
+    );
+  END IF;
+
+  SELECT COUNT(*)
+  INTO v_null_batch_pending
+  FROM public.order_items oi
+  JOIN public.menu_items mi ON mi.id = oi.menu_item_id
+  JOIN public.printer_menu_categories pmc
+    ON pmc.category_id = mi.category_id
+   AND pmc.tenant_id = v_order.tenant_id
+   AND pmc.branch_id = v_order.branch_id
+  LEFT JOIN public.kds_tickets kt
+    ON kt.tenant_id = v_order.tenant_id
+   AND kt.order_item_id = oi.id
+  LEFT JOIN public.kitchen_send_batches ksb
+    ON ksb.id = kt.kitchen_send_batch_id
+  WHERE oi.order_id = p_order_id
+    AND oi.sent_to_kitchen_at IS NULL
+    AND ksb.id IS NULL;
+
+  IF v_null_batch_pending > 0 THEN
+    SELECT ksb.id, ksb.kitchen_ticket_number, ksb.send_seq, ksb.kind
+    INTO v_fallback_batch_id, v_fallback_ticket_number, v_fallback_send_seq, v_fallback_kind
+    FROM public.order_items oi
+    JOIN public.kds_tickets kt
+      ON kt.tenant_id = v_order.tenant_id
+     AND kt.order_item_id = oi.id
+    JOIN public.kitchen_send_batches ksb
+      ON ksb.id = kt.kitchen_send_batch_id
+    WHERE oi.order_id = p_order_id
+      AND oi.sent_to_kitchen_at IS NULL
+    ORDER BY ksb.created_at DESC, ksb.id DESC
+    LIMIT 1;
+
+    IF v_fallback_batch_id IS NULL THEN
+      UPDATE public.orders
+         SET kitchen_send_count = kitchen_send_count + 1
+       WHERE id = p_order_id
+       RETURNING kitchen_send_count INTO v_fallback_send_seq;
+
+      INSERT INTO public.kitchen_daily_counters (
+        tenant_id, branch_id, counter_date, last_seq
+      )
+      VALUES (
+        v_order.tenant_id,
+        v_order.branch_id,
+        (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,
+        1
+      )
+      ON CONFLICT (tenant_id, branch_id, counter_date)
+      DO UPDATE SET
+        last_seq = public.kitchen_daily_counters.last_seq + 1,
+        updated_at = now()
+      RETURNING last_seq INTO v_ticket_seq;
+
+      v_order_number_clean := regexp_replace(
+        btrim(COALESCE(v_order.order_number, '')),
+        '^#+',
+        ''
+      );
+      v_order_number_match := regexp_match(
+        v_order_number_clean,
+        '^(?:TC|MV)-(?:(?:[0-9]{6}|[0-9]{8})-)?([0-9]{1,5})(?:-.+)?$',
+        'i'
+      );
+      v_ticket_base := COALESCE(
+        v_order_number_match[1],
+        NULLIF(v_order_number_clean, ''),
+        p_order_id::TEXT
+      );
+      v_fallback_ticket_number := '#' || v_ticket_base
+        || CASE
+             WHEN v_fallback_send_seq > 1
+               THEN '-' || v_fallback_send_seq::TEXT
+             ELSE ''
+           END;
+      v_fallback_kind := CASE WHEN v_fallback_send_seq = 1 THEN 'initial' ELSE 'append' END;
+
+      INSERT INTO public.kitchen_send_batches (
+        tenant_id, branch_id, order_id, counter_date, ticket_seq,
+        kitchen_ticket_number, send_seq, kind, created_by
+      )
+      VALUES (
+        v_order.tenant_id,
+        v_order.branch_id,
+        p_order_id,
+        (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,
+        v_ticket_seq,
+        v_fallback_ticket_number,
+        v_fallback_send_seq,
+        v_fallback_kind,
+        v_uid
+      )
+      RETURNING id INTO v_fallback_batch_id;
+    END IF;
+
+    UPDATE public.kds_tickets kt
+       SET kitchen_send_batch_id = v_fallback_batch_id,
+           updated_at = now()
+      FROM public.order_items oi
+      JOIN public.menu_items mi ON mi.id = oi.menu_item_id
+      JOIN public.printer_menu_categories pmc
+        ON pmc.category_id = mi.category_id
+       AND pmc.tenant_id = v_order.tenant_id
+       AND pmc.branch_id = v_order.branch_id
+     WHERE kt.tenant_id = v_order.tenant_id
+       AND kt.order_item_id = oi.id
+       AND oi.order_id = p_order_id
+       AND oi.sent_to_kitchen_at IS NULL
+       AND kt.kitchen_send_batch_id IS NULL;
+  END IF;
+
+  FOR v_route IN
+    WITH routed_items AS (
+      SELECT
+        p.id AS printer_id,
+        p.role AS printer_role,
+        CASE WHEN p.role = 'kitchen_2' THEN 2 ELSE 1 END AS slot,
+        COALESCE(ksb.id, v_fallback_batch_id) AS batch_id,
+        COALESCE(ksb.kitchen_ticket_number, v_fallback_ticket_number) AS kitchen_ticket_number,
+        COALESCE(ksb.send_seq, v_fallback_send_seq) AS send_seq,
+        COALESCE(ksb.kind, v_fallback_kind) AS send_kind,
+        COALESCE(ksb.created_at, now()) AS batch_created_at,
+        oi.id AS order_item_id,
+        jsonb_build_object(
+          'item_name',    oi.item_name,
+          'variant_name', oi.variant_name,
+          'quantity',     oi.quantity,
+          'modifiers',    oi.modifiers,
+          'sides',        oi.sides,
+          'note',         oi.note
+        ) AS item_payload
+      FROM public.order_items oi
+      JOIN public.menu_items mi ON mi.id = oi.menu_item_id
+      JOIN public.printer_menu_categories pmc
+        ON pmc.category_id = mi.category_id
+       AND pmc.tenant_id = v_order.tenant_id
+       AND pmc.branch_id = v_order.branch_id
+      JOIN public.printers p
+        ON p.id = pmc.printer_id
+       AND p.tenant_id = pmc.tenant_id
+       AND p.branch_id = pmc.branch_id
+       AND p.is_active = TRUE
+      JOIN public.printer_print_types ppt
+        ON ppt.printer_id = p.id
+       AND ppt.tenant_id = p.tenant_id
+       AND ppt.branch_id = p.branch_id
+       AND ppt.print_type = 'kitchen_ticket'
+      LEFT JOIN public.kds_tickets kt
+        ON kt.tenant_id = v_order.tenant_id
+       AND kt.order_item_id = oi.id
+      LEFT JOIN public.kitchen_send_batches ksb
+        ON ksb.id = kt.kitchen_send_batch_id
+      WHERE oi.order_id = p_order_id
+        AND oi.sent_to_kitchen_at IS NULL
+    ),
+    grouped_routes AS (
+      SELECT
+        printer_id,
+        printer_role,
+        slot,
+        batch_id,
+        kitchen_ticket_number,
+        send_seq,
+        send_kind,
+        batch_created_at,
+        array_agg(order_item_id ORDER BY order_item_id) AS item_ids,
+        jsonb_agg(item_payload ORDER BY order_item_id) AS items
+      FROM routed_items
+      GROUP BY
+        printer_id,
+        printer_role,
+        slot,
+        batch_id,
+        kitchen_ticket_number,
+        send_seq,
+        send_kind,
+        batch_created_at
+    )
+    SELECT
+      gr.*,
+      EXISTS (
+        SELECT 1
+        FROM public.order_items sent_oi
+        JOIN public.kds_tickets sent_kt
+          ON sent_kt.tenant_id = v_order.tenant_id
+         AND sent_kt.order_item_id = sent_oi.id
+        WHERE sent_oi.order_id = p_order_id
+          AND sent_oi.sent_to_kitchen_at IS NOT NULL
+          AND sent_kt.kitchen_send_batch_id = gr.batch_id
+      ) AS batch_has_sent_items
+    FROM grouped_routes gr
+    ORDER BY gr.batch_created_at, gr.printer_role, gr.printer_id
+  LOOP
+    v_job_id := NULL;
+
+    v_payload := jsonb_build_object(
+      'kind',                  'kitchen_ticket',
+      'kitchen_ticket_number', v_route.kitchen_ticket_number,
+      'source_order_number',   v_order.order_number,
+      'order_number',          v_order.order_number,
+      'order_type',            v_order.order_type,
+      'table_number',          v_table_no,
+      'cashier_name',          COALESCE(v_cashier_name, ''),
+      'send_seq',              v_route.send_seq,
+      'send_kind',             CASE
+                                  WHEN v_route.batch_has_sent_items THEN 'append'
+                                  ELSE v_route.send_kind
+                                END,
+      'slot',                  v_route.slot,
+      'note',                  v_order.note,
+      'items',                 v_route.items,
+      'printed_at',            to_char(now() AT TIME ZONE 'Asia/Ho_Chi_Minh',
+                                       'YYYY-MM-DD"T"HH24:MI:SS')
+    );
+
+    v_idempotency := 'order:' || p_order_id::TEXT
+      || ':kitchen:printer:' || v_route.printer_id::TEXT
+      || ':batch:' || v_route.batch_id::TEXT
+      || ':items:' || md5(array_to_string(v_route.item_ids, ','));
+
+    INSERT INTO public.print_jobs (
+      tenant_id, branch_id, printer_id, job_type,
+      order_id, payload, idempotency_key, created_by
+    )
+    VALUES (
+      v_order.tenant_id, v_order.branch_id, v_route.printer_id, 'kitchen_ticket',
+      p_order_id, v_payload, v_idempotency, v_uid
+    )
+    ON CONFLICT (idempotency_key) DO NOTHING
+    RETURNING id INTO v_job_id;
+
+    IF v_job_id IS NULL THEN
+      SELECT id INTO v_job_id
+      FROM public.print_jobs
+      WHERE idempotency_key = v_idempotency;
+    END IF;
+
+    UPDATE public.order_items
+       SET sent_to_kitchen_at = now()
+     WHERE id = ANY(v_route.item_ids)
+       AND sent_to_kitchen_at IS NULL;
+
+    v_jobs := v_jobs || jsonb_build_object(
+      'slot', v_route.slot,
+      'printer_id', v_route.printer_id,
+      'job_id', v_job_id,
+      'item_count', jsonb_array_length(v_route.items),
+      'kitchen_ticket_number', v_route.kitchen_ticket_number,
+      'send_seq', v_route.send_seq
+    );
+  END LOOP;
+
+  IF jsonb_array_length(v_jobs) = 0 THEN
+    RAISE EXCEPTION 'no active kitchen printer for branch %', v_order.branch_id
+      USING ERRCODE = 'P0002';
+  END IF;
+
+  RETURN jsonb_build_object(
+    'order_id', p_order_id,
+    'send_seq', COALESCE(v_fallback_send_seq, v_order.kitchen_send_count),
+    'jobs', v_jobs
+  );
+END;
+$_$;
+
+
+--
+-- Name: finance_scope(uuid, text); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.finance_scope(p_uid uuid, p_key text DEFAULT 'finance:view'::text) RETURNS TABLE(has_tenant_scope boolean, branch_ids bigint[])
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  WITH owner_scope AS (
+    SELECT 1
+    FROM public.profiles pr
+    JOIN public.positions po ON po.id = pr.position_id
+    WHERE pr.id = p_uid
+      AND po.code = 'owner'
+  ),
+  active_permissions AS (
+    SELECT sp.branch_id
+    FROM public.staff_permissions sp
+    WHERE sp.user_id = p_uid
+      AND sp.permission_key = p_key
+      AND sp.valid_from <= now()
+      AND (sp.valid_until IS NULL OR sp.valid_until > now())
+  )
+  SELECT
+    (
+      EXISTS (SELECT 1 FROM owner_scope)
+      OR EXISTS (
+        SELECT 1
+        FROM active_permissions ap
+        WHERE ap.branch_id IS NULL
+      )
+    ) AS has_tenant_scope,
+    COALESCE(
+      (
+        SELECT array_agg(DISTINCT ap.branch_id)
+        FROM active_permissions ap
+        WHERE ap.branch_id IS NOT NULL
+      ),
+      ARRAY[]::BIGINT[]
+    ) AS branch_ids;
+$$;
+
+
+--
+-- Name: staff_role_from_position_code(text); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_role_from_position_code(p_code text) RETURNS text
+    LANGUAGE sql IMMUTABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  SELECT CASE p_code
+    WHEN 'owner' THEN 'owner' WHEN 'branch_manager' THEN 'branch_manager' WHEN 'warehouse_manager' THEN 'warehouse_manager'
+    WHEN 'production_manager' THEN 'production_manager' WHEN 'head_chef' THEN 'production_manager' WHEN 'kitchen_helper' THEN 'chef'
+    WHEN 'chef' THEN 'chef' WHEN 'cashier' THEN 'cashier' WHEN 'waiter' THEN 'waiter' WHEN 'office' THEN 'office' ELSE NULL END
+$$;
+
+
+--
+-- Name: FUNCTION staff_role_from_position_code(p_code text); Type: COMMENT; Schema: private; Owner: -
+--
+
+COMMENT ON FUNCTION private.staff_role_from_position_code(p_code text) IS 'SQL twin of POSITION_CODE_TO_STAFF_ROLE (packages/shared/src/auth/types.ts). Canonical English codes only (10) — no aliases, no super_manager. ELSE NULL is fail-closed: auth hook RAISEs on unknown codes.';
+
+
+--
+-- Name: SCHEMA private; Type: ACL; Schema: -; Owner: -
+--
+
+GRANT USAGE ON SCHEMA private TO service_role;
+
+
+--
+-- Name: FUNCTION enqueue_kitchen_completion_print_internal(p_branch_id bigint, p_ticket_ids bigint[], p_actor uuid); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.enqueue_kitchen_completion_print_internal(p_branch_id bigint, p_ticket_ids bigint[], p_actor uuid) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION enqueue_kitchen_print_internal(p_order_id bigint, p_actor_override uuid, p_enforce_request_auth boolean); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.enqueue_kitchen_print_internal(p_order_id bigint, p_actor_override uuid, p_enforce_request_auth boolean) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION finance_scope(p_uid uuid, p_key text); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.finance_scope(p_uid uuid, p_key text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION staff_role_from_position_code(p_code text); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_role_from_position_code(p_code text) FROM PUBLIC;
+GRANT ALL ON FUNCTION private.staff_role_from_position_code(p_code text) TO service_role;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+-- \unrestrict x1z1jhWinpKchWuDDTc3acYZUglKgc9JbvyVjVioirTppd3n52JQ2sOZPGWFKoK
+
+
+--
+-- PostgreSQL database dump
+--
+
+-- \restrict C2IdDG3NWONiLx7pLrefdOFVMowUWE0Q54uaT0PFVnbQq1cozXDtS2ABTBSGVFf
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.3
@@ -40,123 +726,6 @@ CREATE SCHEMA IF NOT EXISTS public;
 --
 
 COMMENT ON SCHEMA public IS 'standard public schema';
-
-
---
--- Name: shift_request_status; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.shift_request_status AS ENUM (
-    'pending',
-    'approved',
-    'rejected',
-    'cancelled'
-);
-
-
---
--- Name: _auth_v2_check_area_scope(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public._auth_v2_check_area_scope() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public', 'extensions', 'pg_catalog'
-    AS $$
-DECLARE
-  v_code TEXT;
-BEGIN
-  IF NEW.area_id IS NULL THEN
-    RETURN NEW;
-  END IF;
-  SELECT private.staff_role_from_position_code(code) INTO v_code
-  FROM public.positions WHERE id = NEW.position_id;
-  IF v_code IS NULL OR v_code NOT IN ('area_manager','warehouse_manager','production_manager') THEN
-    RAISE EXCEPTION 'area_id only allowed for area_manager / warehouse_manager / production_manager (got %)', COALESCE(v_code, '<null>')
-      USING ERRCODE = '23514';
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-
---
--- Name: _auth_v2_check_branch_required(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public._auth_v2_check_branch_required() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public', 'extensions', 'pg_catalog'
-    AS $$
-DECLARE
-  v_code TEXT;
-BEGIN
-  SELECT private.staff_role_from_position_code(code) INTO v_code
-  FROM public.positions WHERE id = NEW.position_id;
-
-  IF v_code IN ('cashier','waiter','chef','branch_manager','warehouse_manager','production_manager')
-     AND NEW.branch_id IS NULL THEN
-    RAISE EXCEPTION 'branch_required_for_operational_role: position=%', v_code
-      USING ERRCODE = '23514';
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-
---
--- Name: _auth_v2_is_owner(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public._auth_v2_is_owner(p_user uuid) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.profiles pr
-    JOIN public.positions po ON po.id = pr.position_id
-    WHERE pr.id = p_user AND po.code = 'owner'
-  );
-$$;
-
-
---
--- Name: _auth_v2_position_id_from_role(text, bigint); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public._auth_v2_position_id_from_role(p_role text, p_tenant bigint) RETURNS bigint
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-  SELECT id
-  FROM public.positions
-  WHERE tenant_id = p_tenant
-    AND code = public._auth_v2_role_to_position(p_role)
-  LIMIT 1;
-$$;
-
-
---
--- Name: _auth_v2_role_to_position(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public._auth_v2_role_to_position(p_role text) RETURNS text
-    LANGUAGE sql IMMUTABLE SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-  SELECT CASE p_role
-    WHEN 'owner'              THEN 'owner'
-    WHEN 'super_manager'      THEN 'super_manager'
-    WHEN 'area_manager'       THEN 'area_manager'
-    WHEN 'branch_manager'     THEN 'branch_manager'
-    WHEN 'warehouse_manager'  THEN 'warehouse_head'
-    WHEN 'production_manager' THEN 'head_chef'
-    WHEN 'cashier'            THEN 'cashier'
-    WHEN 'waiter'             THEN 'waiter'
-    WHEN 'chef'               THEN 'chef'
-    WHEN 'office'             THEN 'office'
-    ELSE NULL
-  END
-$$;
 
 
 --
@@ -249,6 +818,93 @@ COMMENT ON FUNCTION public._compute_vat_breakdown(p_order_ids bigint[]) IS 'Per-
 
 
 --
+-- Name: _post_writeoff_movements(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._post_writeoff_movements(p_issue_id bigint) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_uid    uuid   := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_issue  RECORD;
+  v_item   RECORD;
+  v_loc    RECORD;
+  v_sl_q   numeric(15, 3);
+  v_wac    numeric(15, 2);
+BEGIN
+  SELECT * INTO v_issue
+    FROM public.stock_issues
+   WHERE id = p_issue_id AND tenant_id = v_tenant
+   FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'issue_not_found' USING ERRCODE = 'P0002';
+  END IF;
+  IF v_issue.issue_type <> 'writeoff' THEN
+    RAISE EXCEPTION 'not_a_writeoff' USING ERRCODE = '22023';
+  END IF;
+  IF v_issue.status <> 'draft' THEN
+    RAISE EXCEPTION 'issue_not_draft' USING ERRCODE = '22023';
+  END IF;
+  IF v_issue.source_location_id IS NULL THEN
+    RAISE EXCEPTION 'issue_source_location_missing' USING ERRCODE = '23502';
+  END IF;
+
+  SELECT id, branch_id INTO v_loc
+    FROM public.inventory_locations
+   WHERE id = v_issue.source_location_id AND tenant_id = v_tenant AND is_active = TRUE;
+  IF NOT FOUND OR v_loc.branch_id <> v_issue.branch_id THEN
+    RAISE EXCEPTION 'issue_source_location_invalid' USING ERRCODE = '23514';
+  END IF;
+
+  FOR v_item IN
+    SELECT * FROM public.stock_issue_items
+     WHERE issue_id = p_issue_id AND tenant_id = v_tenant
+  LOOP
+    SELECT sl.current_quantity, sl.avg_unit_cost INTO v_sl_q, v_wac
+      FROM public.stock_levels sl
+     WHERE sl.tenant_id = v_tenant
+       AND sl.branch_id = v_issue.branch_id
+       AND sl.location_id = v_issue.source_location_id
+       AND sl.ingredient_id = v_item.ingredient_id
+     FOR UPDATE;
+
+    IF NOT FOUND OR v_wac IS NULL THEN
+      RAISE EXCEPTION 'wac_not_ready_for_%', v_item.ingredient_id USING ERRCODE = '22023';
+    END IF;
+    IF v_sl_q < v_item.quantity THEN
+      RAISE EXCEPTION 'insufficient_stock_for_%', v_item.ingredient_id USING ERRCODE = '22023';
+    END IF;
+
+    UPDATE public.stock_issue_items SET unit_cost = v_wac
+     WHERE id = v_item.id AND tenant_id = v_tenant;
+
+    IF v_issue.approval_status <> 'approved' THEN
+      PERFORM 1 FROM public.stock_issue_items
+       WHERE id = v_item.id AND tenant_id = v_tenant AND approval_required = TRUE;
+      IF FOUND THEN
+        RAISE EXCEPTION 'writeoff_requires_approval_for_%', v_item.ingredient_id USING ERRCODE = '42501';
+      END IF;
+    END IF;
+
+    INSERT INTO public.stock_movements (
+      tenant_id, branch_id, ingredient_id, type, movement_subtype,
+      quantity_change, unit_cost, reason, created_by, issue_id, location_id
+    ) VALUES (
+      v_tenant, v_issue.branch_id, v_item.ingredient_id, 'consumption', 'writeoff',
+      -v_item.quantity, v_wac, COALESCE(v_item.reason, v_issue.notes),
+      v_uid, p_issue_id, v_issue.source_location_id
+    );
+  END LOOP;
+
+  UPDATE public.stock_issues SET status = 'confirmed'
+   WHERE id = p_issue_id AND tenant_id = v_tenant;
+END;
+$$;
+
+
+--
 -- Name: acquire_zone_lock(bigint, text, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -287,168 +943,79 @@ CREATE FUNCTION public.admin_update_profile(p_target_id uuid, p_full_name text D
     SET search_path TO ''
     AS $$
 DECLARE
-  v_actor_id             UUID := auth.uid();
-  v_actor_tenant         BIGINT;
-  v_actor_role_text      TEXT;
-  v_actor_branch         BIGINT;
-  v_actor_area           BIGINT;
-  v_target               RECORD;
-  v_target_role          TEXT;
-  v_final_role           TEXT;
-  v_final_branch         BIGINT;
-  v_final_position       BIGINT;
-  v_final_position_code  TEXT;
-  v_branch_kind          TEXT;
+  v_actor_id uuid := auth.uid();
+  v_actor_tenant bigint; v_actor_role_text text; v_actor_branch bigint;
+  v_target record; v_target_role text; v_final_role text; v_final_branch bigint;
+  v_final_position bigint; v_final_position_code text; v_branch_kind text;
 BEGIN
   IF v_actor_id IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
   END IF;
-
-  SELECT
-    p.tenant_id,
-    COALESCE(private.staff_role_from_position_code(po.code), 'unassigned') AS role_text,
-    p.branch_id,
-    p.area_id
-  INTO v_actor_tenant, v_actor_role_text, v_actor_branch, v_actor_area
-  FROM public.profiles p
-  JOIN public.positions po ON po.id = p.position_id
-  WHERE p.id = v_actor_id
-    AND COALESCE(p.is_active, true) = true;
-
-  IF NOT FOUND OR v_actor_tenant IS NULL THEN
+  SELECT p.tenant_id, private.staff_role_from_position_code(po.code), p.branch_id
+  INTO v_actor_tenant, v_actor_role_text, v_actor_branch
+  FROM public.profiles p JOIN public.positions po ON po.id = p.position_id AND po.tenant_id = p.tenant_id
+  WHERE p.id = v_actor_id AND COALESCE(p.is_active, true) = true;
+  IF NOT FOUND OR v_actor_tenant IS NULL OR v_actor_role_text IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
   END IF;
-
   IF NOT public.has_permission_any('staff:manage') THEN
     RAISE EXCEPTION 'forbidden: missing staff:manage' USING ERRCODE = '42501';
   END IF;
-
-  IF (p_role IS NOT NULL OR p_branch_id IS NOT NULL)
-     AND NOT public.has_permission_any('staff:assign_position') THEN
+  IF (p_role IS NOT NULL OR p_branch_id IS NOT NULL) AND NOT public.has_permission_any('staff:assign_position') THEN
     RAISE EXCEPTION 'forbidden: missing staff:assign_position' USING ERRCODE = '42501';
   END IF;
-
-  IF p_role IS NOT NULL AND p_role NOT IN (
-    'owner','super_manager','area_manager','branch_manager',
-    'warehouse_manager','production_manager','cashier','waiter','chef','office'
-  ) THEN
-    RAISE EXCEPTION 'invalid_role: %', p_role USING ERRCODE = '22023';
+  IF p_role IS NOT NULL AND p_role NOT IN ('owner','branch_manager','warehouse_manager','production_manager','cashier','waiter','chef','office') THEN
+    RAISE EXCEPTION 'invalid_access_bucket: %', p_role USING ERRCODE = '22023';
   END IF;
-
-  SELECT
-    p.id, p.branch_id, p.full_name, p.phone, p.tenant_id, p.position_id,
-    COALESCE(private.staff_role_from_position_code(po.code), 'unassigned') AS role_text
+  SELECT p.id, p.branch_id, p.full_name, p.phone, p.tenant_id, p.position_id, private.staff_role_from_position_code(po.code) AS role_text
   INTO v_target
-  FROM public.profiles p
-  JOIN public.positions po ON po.id = p.position_id
+  FROM public.profiles p JOIN public.positions po ON po.id = p.position_id AND po.tenant_id = p.tenant_id
   WHERE p.id = p_target_id AND p.tenant_id = v_actor_tenant;
-
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'target profile not found in tenant';
+    RAISE EXCEPTION 'target_profile_not_found_in_tenant' USING ERRCODE = 'P0002';
   END IF;
-
-  v_target_role  := v_target.role_text;
-  v_final_role   := COALESCE(p_role, v_target_role);
+  v_target_role := v_target.role_text;
+  v_final_role := COALESCE(p_role, v_target_role);
   v_final_branch := COALESCE(p_branch_id, v_target.branch_id);
-
-  IF v_final_role IN ('cashier','waiter','chef','branch_manager','warehouse_manager','production_manager')
-     AND v_final_branch IS NULL THEN
-    RAISE EXCEPTION 'branch_required_for_operational_role' USING ERRCODE = 'P0001';
+  IF v_final_role IN ('cashier','waiter','chef','branch_manager','warehouse_manager','production_manager') AND v_final_branch IS NULL THEN
+    RAISE EXCEPTION 'branch_required_for_operational_position' USING ERRCODE = 'P0001';
   END IF;
-
   IF v_final_branch IS NOT NULL THEN
-    SELECT branch_kind INTO v_branch_kind
-    FROM public.branches
-    WHERE id = v_final_branch AND tenant_id = v_actor_tenant;
-
+    SELECT branch_kind INTO v_branch_kind FROM public.branches WHERE id = v_final_branch AND tenant_id = v_actor_tenant;
     IF NOT FOUND THEN
       RAISE EXCEPTION 'branch_not_found_in_tenant' USING ERRCODE = 'P0002';
     END IF;
-
-    IF v_final_role IN ('cashier','waiter','chef','branch_manager','warehouse_manager','production_manager')
-       AND v_branch_kind <> 'branch' THEN
-      RAISE EXCEPTION 'operational roles must be assigned to branch site' USING ERRCODE = 'P0001';
+    IF v_final_role IN ('cashier','waiter','chef','branch_manager','warehouse_manager','production_manager') AND v_branch_kind <> 'branch' THEN
+      RAISE EXCEPTION 'operational positions must be assigned to branch site' USING ERRCODE = 'P0001';
     END IF;
   END IF;
-
   IF v_actor_role_text = 'owner' THEN
     NULL;
-  ELSIF v_actor_role_text = 'super_manager' THEN
-    IF v_target_role = 'owner' OR v_final_role = 'owner' THEN
-      RAISE EXCEPTION 'super_manager cannot modify owner';
-    END IF;
-  ELSIF v_actor_role_text = 'area_manager' THEN
-    IF v_target_role IN ('owner','super_manager','area_manager') THEN
-      RAISE EXCEPTION 'area_manager cannot modify owner/super_manager/peer area_manager';
-    END IF;
-    IF v_final_role IN ('owner','super_manager','area_manager') THEN
-      RAISE EXCEPTION 'area_manager cannot set role above branch_manager';
-    END IF;
-    IF v_target.branch_id IS NOT NULL THEN
-      PERFORM 1 FROM public.area_branches
-      WHERE area_id = v_actor_area AND branch_id = v_target.branch_id AND tenant_id = v_actor_tenant;
-      IF NOT FOUND THEN RAISE EXCEPTION 'area_manager: target not in your area branches'; END IF;
-    END IF;
-    IF v_final_branch IS NOT NULL THEN
-      PERFORM 1 FROM public.area_branches
-      WHERE area_id = v_actor_area AND branch_id = v_final_branch AND tenant_id = v_actor_tenant;
-      IF NOT FOUND THEN RAISE EXCEPTION 'area_manager: target branch not in your area'; END IF;
-    END IF;
   ELSIF v_actor_role_text = 'branch_manager' THEN
     IF v_target.branch_id IS DISTINCT FROM v_actor_branch THEN
-      RAISE EXCEPTION 'branch_manager: target not in your branch';
+      RAISE EXCEPTION 'branch_manager_target_not_in_branch' USING ERRCODE = '42501';
     END IF;
     IF v_target_role = 'branch_manager' THEN
-      RAISE EXCEPTION 'branch_manager cannot modify peer branch_manager';
+      RAISE EXCEPTION 'branch_manager_cannot_modify_peer' USING ERRCODE = '42501';
     END IF;
     IF v_final_role NOT IN ('cashier','waiter','chef') THEN
-      RAISE EXCEPTION 'branch_manager can only assign cashier/waiter/chef';
+      RAISE EXCEPTION 'branch_manager_can_only_assign_branch_staff' USING ERRCODE = '42501';
     END IF;
     IF v_final_branch IS DISTINCT FROM v_actor_branch THEN
-      RAISE EXCEPTION 'branch_manager cannot reassign to other branch';
+      RAISE EXCEPTION 'branch_manager_cannot_reassign_branch' USING ERRCODE = '42501';
     END IF;
   ELSE
-    RAISE EXCEPTION 'insufficient privileges for profile management';
+    RAISE EXCEPTION 'insufficient_privileges_for_profile_management' USING ERRCODE = '42501';
   END IF;
-
-  v_final_position := public._auth_v2_position_id_from_role(v_final_role, v_actor_tenant);
-
+  v_final_position := public.position_id_from_access_bucket(v_final_role, v_actor_tenant);
   IF v_final_position IS NULL THEN
-    RAISE EXCEPTION
-      'admin_update_profile: position_not_resolved for role=% tenant=% - verify positions seeded',
-      v_final_role, v_actor_tenant
-      USING ERRCODE = 'P0001';
+    RAISE EXCEPTION 'admin_update_profile: position_not_resolved for access_bucket=% tenant=%', v_final_role, v_actor_tenant USING ERRCODE = 'P0001';
   END IF;
-
-  SELECT code INTO v_final_position_code
-    FROM public.positions
-   WHERE id = v_final_position
-     AND tenant_id = v_actor_tenant;
-
-  UPDATE public.profiles SET
-    full_name   = COALESCE(p_full_name, full_name),
-    phone       = COALESCE(p_phone,     phone),
-    position_id = v_final_position,
-    branch_id   = v_final_branch,
-    is_active   = COALESCE(p_is_active, is_active),
-    updated_at  = now()
+  SELECT po.code INTO v_final_position_code FROM public.positions po WHERE po.id = v_final_position AND po.tenant_id = v_actor_tenant;
+  UPDATE public.profiles SET full_name = COALESCE(p_full_name, full_name), phone = COALESCE(p_phone, phone), position_id = v_final_position, branch_id = v_final_branch, is_active = COALESCE(p_is_active, is_active), updated_at = now()
   WHERE id = p_target_id AND tenant_id = v_actor_tenant;
-
-  IF p_role IS NOT NULL AND p_role <> v_target_role THEN
-    UPDATE auth.users
-    SET raw_app_meta_data = raw_app_meta_data ||
-      jsonb_build_object(
-        'user_role', v_final_role,
-        'role', v_final_role,
-        'position', v_final_position_code
-      )
-    WHERE id = p_target_id;
-  END IF;
-  IF p_branch_id IS NOT NULL AND p_branch_id IS DISTINCT FROM v_target.branch_id THEN
-    UPDATE auth.users
-    SET raw_app_meta_data = raw_app_meta_data || jsonb_build_object('branch_id', v_final_branch)
-    WHERE id = p_target_id;
-  END IF;
+  UPDATE auth.users SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object('user_role', v_final_role, 'role', v_final_role, 'access_bucket', v_final_role, 'position', v_final_position_code, 'position_code', v_final_position_code, 'branch_id', v_final_branch)
+  WHERE id = p_target_id;
 END;
 $$;
 
@@ -457,7 +1024,7 @@ $$;
 -- Name: FUNCTION admin_update_profile(p_target_id uuid, p_full_name text, p_phone text, p_role text, p_branch_id bigint, p_is_active boolean); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.admin_update_profile(p_target_id uuid, p_full_name text, p_phone text, p_role text, p_branch_id bigint, p_is_active boolean) IS 'Staff profile update RPC. SECURITY DEFINER with staff:manage plus staff:assign_position gate; role hierarchy derives from positions.code.';
+COMMENT ON FUNCTION public.admin_update_profile(p_target_id uuid, p_full_name text, p_phone text, p_role text, p_branch_id bigint, p_is_active boolean) IS 'Staff profile update RPC. SECURITY DEFINER with staff:manage plus staff:assign_position gate before role hierarchy checks.';
 
 
 --
@@ -932,6 +1499,7 @@ DECLARE
   v_subtotal        NUMERIC(15,2);
   v_discount_amount NUMERIC(15,2);
   v_total_amount    NUMERIC(15,2);
+  v_item_discount   NUMERIC(15,2);
   v_note_parts      TEXT[] := ARRAY[]::TEXT[];
   v_item_name       TEXT;
 BEGIN
@@ -990,7 +1558,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -1068,7 +1636,8 @@ BEGIN
     INSERT INTO public.order_items (
       tenant_id, order_id, menu_item_id, variant_id,
       item_name, variant_name, quantity, unit_price,
-      modifiers, sides, subtotal, note, status, request_key
+      modifiers, sides, subtotal, note, status, request_key,
+      discount_type, discount_value, discount_note
     )
     VALUES (
       v_order.tenant_id, p_order_id, v_menu_item_id, v_variant_id,
@@ -1078,7 +1647,12 @@ BEGIN
       COALESCE(v_item -> 'modifiers', '[]'::JSONB),
       COALESCE(v_enriched_sides, '[]'::JSONB),
       v_item_subtotal, v_item ->> 'note', 'pending',
-      p_idempotency_key
+      p_idempotency_key,
+      NULLIF(v_item ->> 'discount_type', ''),
+      CASE WHEN NULLIF(v_item ->> 'discount_value', '') IS NOT NULL
+           THEN (v_item ->> 'discount_value')::NUMERIC
+           ELSE NULL END,
+      NULLIF(trim(COALESCE(v_item ->> 'discount_note', '')), '')
     );
   END LOOP;
 
@@ -1117,12 +1691,21 @@ BEGIN
 
   PERFORM public.route_order_to_kds(p_order_id);
 
+  -- Re-read the final stored totals: the order-level normalize trigger fires
+  -- on the UPDATE above and recomputes discount_amount/total_amount to include
+  -- per-item discounts, overwriting the order-only figures computed here.
+  SELECT o.subtotal, o.total_amount, COALESCE(o.item_discount_amount, 0)
+  INTO v_subtotal, v_total_amount, v_item_discount
+  FROM public.orders o
+  WHERE o.id = p_order_id;
+
   RETURN jsonb_build_object(
-    'success',      TRUE,
-    'order_id',     p_order_id,
-    'added_count',  jsonb_array_length(p_items),
-    'subtotal',     v_subtotal,
-    'total_amount', v_total_amount
+    'success',              TRUE,
+    'order_id',             p_order_id,
+    'added_count',          jsonb_array_length(p_items),
+    'subtotal',             v_subtotal,
+    'total_amount',         v_total_amount,
+    'item_discount_amount', v_item_discount
   );
 END;
 $$;
@@ -1133,6 +1716,132 @@ $$;
 --
 
 COMMENT ON FUNCTION public.append_order_items(p_order_id bigint, p_items jsonb, p_idempotency_key uuid) IS 'Atomic append of order_items to an existing appendable order. pg_advisory_xact_lock(order_id) serializes with other mutations. If p_idempotency_key matches a prior append on the same order, short-circuits returning current totals (no duplicate insert). Returns {success, order_id, added_count, subtotal, total_amount[, idempotent]}.';
+
+
+--
+-- Name: append_order_items_with_daily_limit_hold(bigint, jsonb, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.append_order_items_with_daily_limit_hold(p_order_id bigint, p_items jsonb, p_idempotency_key uuid DEFAULT NULL::uuid, p_daily_limit_hold_token uuid DEFAULT NULL::uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_result jsonb;
+  v_order record;
+BEGIN
+  IF p_daily_limit_hold_token IS NOT NULL THEN
+    PERFORM set_config(
+      'comtammatu.daily_limit_hold_token',
+      p_daily_limit_hold_token::text,
+      true
+    );
+  END IF;
+
+  v_result := public.append_order_items(
+    p_order_id,
+    p_items,
+    p_idempotency_key
+  );
+
+  IF p_daily_limit_hold_token IS NOT NULL THEN
+    SELECT o.tenant_id, o.branch_id
+    INTO v_order
+    FROM public.orders o
+    WHERE o.id = p_order_id;
+
+    IF FOUND THEN
+      UPDATE public.branch_menu_item_daily_holds h
+      SET committed_at = COALESCE(h.committed_at, now()),
+          order_id = COALESCE(h.order_id, p_order_id),
+          updated_at = now()
+      WHERE h.tenant_id = v_order.tenant_id
+        AND h.branch_id = v_order.branch_id
+        AND h.hold_token = p_daily_limit_hold_token
+        AND h.held_by = v_uid
+        AND h.committed_at IS NULL
+        AND h.released_at IS NULL
+        AND h.expires_at > now();
+    END IF;
+  END IF;
+
+  RETURN v_result;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION append_order_items_with_daily_limit_hold(p_order_id bigint, p_items jsonb, p_idempotency_key uuid, p_daily_limit_hold_token uuid); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.append_order_items_with_daily_limit_hold(p_order_id bigint, p_items jsonb, p_idempotency_key uuid, p_daily_limit_hold_token uuid) IS 'Wrapper around append_order_items that sets transaction-local daily-limit hold token so the quota trigger excludes the caller hold, then commits matching active holds to the target order.';
+
+
+--
+-- Name: apply_checklist_template_to_role(bigint, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.apply_checklist_template_to_role(p_tenant_id bigint, p_role text, p_template_name text) RETURNS bigint
+    LANGUAGE plpgsql
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_template_id bigint;
+  v_updated bigint;
+BEGIN
+  IF p_tenant_id IS NULL OR p_role IS NULL OR btrim(p_role) = '' THEN
+    RAISE EXCEPTION 'invalid_cashier_role' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_template_name IS NULL OR btrim(p_template_name) = '' THEN
+    RAISE EXCEPTION 'invalid_template_name' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT id
+    INTO v_template_id
+  FROM public.shift_checklist_templates
+  WHERE tenant_id = p_tenant_id
+    AND is_active = true
+    AND branch_id IS NULL
+    AND lower(trim(name)) = lower(trim(p_template_name))
+  ORDER BY id
+  LIMIT 1;
+
+  IF v_template_id IS NULL THEN
+    RAISE EXCEPTION 'checklist_template_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  -- profiles không có cột role — vai trò canonical nằm ở positions.code.
+  WITH target_employees AS (
+    SELECT e.id
+    FROM public.employees e
+    JOIN public.profiles p
+      ON p.id = e.profile_id
+     AND p.tenant_id = e.tenant_id
+    JOIN public.positions po
+      ON po.id = p.position_id
+     AND po.tenant_id = p.tenant_id
+    WHERE e.tenant_id = p_tenant_id
+      AND e.is_active = true
+      AND lower(trim(po.code)) = lower(trim(p_role))
+  )
+  UPDATE public.employees e
+  SET default_checklist_template_id = v_template_id
+  FROM target_employees t
+  WHERE e.id = t.id;
+
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  RETURN COALESCE(v_updated, 0);
+END;
+$$;
+
+
+--
+-- Name: FUNCTION apply_checklist_template_to_role(p_tenant_id bigint, p_role text, p_template_name text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.apply_checklist_template_to_role(p_tenant_id bigint, p_role text, p_template_name text) IS 'Assigns one checklist template to all active employees in the tenant matching a role.';
 
 
 --
@@ -1242,15 +1951,16 @@ CREATE FUNCTION public.apply_order_discount(p_order_id bigint, p_type text, p_va
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_uid             UUID;
-  v_prof_tenant     BIGINT;
-  v_prof_branch     BIGINT;
-  v_prof_role       TEXT;
-  v_order           RECORD;
-  v_clamped_value   NUMERIC(15,2);
+  v_uid UUID;
+  v_prof_tenant BIGINT;
+  v_prof_branch BIGINT;
+  v_prof_role TEXT;
+  v_order RECORD;
+  v_note_trim TEXT;
+  v_clamped_value NUMERIC(15,2);
+  v_discount_base NUMERIC(15,2);
   v_discount_amount NUMERIC(15,2);
-  v_total_amount    NUMERIC(15,2);
-  v_note_trim       TEXT;
+  v_updated_order RECORD;
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
@@ -1267,16 +1977,12 @@ BEGIN
     RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
   END IF;
 
-  -- Bất kỳ nhân viên POS nào (cashier/waiter/branch_manager+) đều áp được.
-  -- Không gate theo % — owner đã chốt tại 4-agent debate (C1).
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'branch_manager', 'cashier', 'waiter')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  -- Validate type / value / note BEFORE locking — fail fast without
-  -- holding the advisory lock.
   IF p_type IS NULL OR p_type NOT IN ('pct', 'vnd') THEN
     RAISE EXCEPTION 'discount_invalid_type' USING ERRCODE = '22023';
   END IF;
@@ -1293,7 +1999,7 @@ BEGIN
   PERFORM pg_advisory_xact_lock(p_order_id);
 
   SELECT o.id, o.tenant_id, o.branch_id, o.status, o.payment_status,
-         o.subtotal, o.service_charge
+         o.subtotal, o.service_charge, o.item_discount_amount
   INTO v_order
   FROM public.orders o
   WHERE o.id = p_order_id
@@ -1307,8 +2013,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  -- Branch scope (SECURITY DEFINER — RLS bypass; manual check required).
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -1318,8 +2023,6 @@ BEGIN
     RAISE EXCEPTION 'branch mismatch' USING ERRCODE = '42501';
   END IF;
 
-  -- Block on terminal / paid orders. Discount = pre-payment cashier action;
-  -- editing an already-completed order rewrites recorded revenue silently.
   IF v_order.status IN ('completed', 'cancelled') THEN
     RAISE EXCEPTION 'order terminal' USING ERRCODE = '22023';
   END IF;
@@ -1328,55 +2031,55 @@ BEGIN
     RAISE EXCEPTION 'order already paid' USING ERRCODE = '22023';
   END IF;
 
-  -- Auto-clamp at the boundary (UI also clamps; this is defense-in-depth):
-  -- pct beyond 100 -> 100, vnd beyond subtotal -> subtotal.
+  v_discount_base := GREATEST(
+    COALESCE(v_order.subtotal, 0) - COALESCE(v_order.item_discount_amount, 0),
+    0
+  );
+
   IF p_type = 'pct' THEN
     v_clamped_value := LEAST(p_value, 100);
   ELSE
-    v_clamped_value := LEAST(p_value, COALESCE(v_order.subtotal, 0));
+    v_clamped_value := LEAST(p_value, v_discount_base);
   END IF;
 
   v_discount_amount := public.compute_discount_amount(
-    p_type, v_clamped_value, v_order.subtotal
+    p_type,
+    v_clamped_value,
+    v_discount_base
   );
 
-  -- Edge: cashier types 0 — that's NOT an apply, it's a clear. Force the
-  -- caller to use clear_order_discount instead (so audit history reads
-  -- "discount_cleared" not "discount_applied: 0%").
   IF v_discount_amount = 0 THEN
     RAISE EXCEPTION 'discount_zero_amount' USING ERRCODE = '22023';
   END IF;
 
-  v_total_amount := COALESCE(v_order.subtotal, 0)
-                  + COALESCE(v_order.service_charge, 0)
-                  - v_discount_amount;
-
   UPDATE public.orders
-     SET discount_type   = p_type,
-         discount_value  = v_clamped_value,
-         discount_note   = v_note_trim,
-         discount_amount = v_discount_amount,
-         total_amount    = v_total_amount,
-         updated_at      = now()
-   WHERE id = p_order_id;
+     SET discount_type  = p_type,
+         discount_value = v_clamped_value,
+         discount_note  = v_note_trim,
+         updated_at     = now()
+   WHERE id = p_order_id
+   RETURNING discount_type, discount_value, order_discount_amount,
+             item_discount_amount, discount_amount, total_amount
+   INTO v_updated_order;
 
-  -- Audit row in order_status_history. Re-stamps current status (no state
-  -- transition) — the `note` column is the discount audit. Pattern matches
-  -- append_order_items / void_order_item history entries.
   INSERT INTO public.order_status_history (
     tenant_id, order_id, from_status, to_status, changed_by, note
   ) VALUES (
     v_order.tenant_id, p_order_id, v_order.status, v_order.status, v_uid,
     'discount_applied: ' || p_type || ' ' || v_clamped_value::TEXT
-      || ' (' || v_discount_amount::TEXT || 'đ) :: ' || v_note_trim
+      || ' (' || v_updated_order.order_discount_amount::TEXT || 'đ) :: '
+      || v_note_trim
   );
 
   RETURN jsonb_build_object(
-    'order_id',        p_order_id,
-    'discount_type',   p_type,
-    'discount_value',  v_clamped_value,
-    'discount_amount', v_discount_amount,
-    'total_amount',    v_total_amount
+    'order_id', p_order_id,
+    'discount_type', v_updated_order.discount_type,
+    'discount_value', v_updated_order.discount_value,
+    'discount_amount', v_updated_order.order_discount_amount,
+    'order_discount_amount', v_updated_order.order_discount_amount,
+    'item_discount_amount', v_updated_order.item_discount_amount,
+    'total_discount_amount', v_updated_order.discount_amount,
+    'total_amount', v_updated_order.total_amount
   );
 END;
 $$;
@@ -1386,7 +2089,165 @@ $$;
 -- Name: FUNCTION apply_order_discount(p_order_id bigint, p_type text, p_value numeric, p_note text); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.apply_order_discount(p_order_id bigint, p_type text, p_value numeric, p_note text) IS 'Set order-level discount (% or VND) with required note (>=3 chars). Auto-clamps pct to 100 and vnd to subtotal. Recomputes discount_amount + total_amount via compute_discount_amount helper. Blocks on paid/terminal orders. Inserts audit row to order_status_history.';
+COMMENT ON FUNCTION public.apply_order_discount(p_order_id bigint, p_type text, p_value numeric, p_note text) IS 'Set order-level discount on the post-item-discount base. Total discount is normalized by triggers.';
+
+
+--
+-- Name: apply_order_item_discount(bigint, text, numeric, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.apply_order_item_discount(p_order_item_id bigint, p_type text, p_value numeric, p_note text) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_uid UUID;
+  v_prof_tenant BIGINT;
+  v_prof_branch BIGINT;
+  v_prof_role TEXT;
+  v_row RECORD;
+  v_note_trim TEXT;
+  v_clamped_value NUMERIC(15,2);
+  v_updated_item RECORD;
+  v_order_totals RECORD;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF p_type IS NULL OR p_type NOT IN ('pct', 'vnd') THEN
+    RAISE EXCEPTION 'discount_invalid_type' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_value IS NULL OR p_value < 0 THEN
+    RAISE EXCEPTION 'discount_invalid_value' USING ERRCODE = '22023';
+  END IF;
+
+  v_note_trim := COALESCE(trim(p_note), '');
+  IF length(v_note_trim) < 3 THEN
+    RAISE EXCEPTION 'discount_note_required' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  INTO v_prof_tenant, v_prof_branch, v_prof_role
+  FROM public.profiles p
+  LEFT JOIN public.positions po ON po.id = p.position_id
+  WHERE p.id = v_uid;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
+  END IF;
+
+  IF v_prof_role IS NULL OR v_prof_role NOT IN
+     ('owner', 'branch_manager', 'cashier', 'waiter')
+  THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT oi.id AS order_item_id, oi.order_id, oi.tenant_id, oi.status AS item_status,
+         oi.subtotal AS item_subtotal,
+         o.branch_id, o.status AS order_status, o.payment_status
+  INTO v_row
+  FROM public.order_items oi
+  JOIN public.orders o ON o.id = oi.order_id AND o.tenant_id = oi.tenant_id
+  WHERE oi.id = p_order_item_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'order item not found' USING ERRCODE = 'P0002';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(v_row.order_id);
+
+  SELECT oi.id AS order_item_id, oi.order_id, oi.tenant_id, oi.status AS item_status,
+         oi.subtotal AS item_subtotal,
+         o.branch_id, o.status AS order_status, o.payment_status
+  INTO v_row
+  FROM public.order_items oi
+  JOIN public.orders o ON o.id = oi.order_id AND o.tenant_id = oi.tenant_id
+  WHERE oi.id = p_order_item_id
+  FOR UPDATE OF oi, o;
+
+  IF v_row.tenant_id <> v_prof_tenant THEN
+    RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_prof_role IN ('owner') THEN
+    PERFORM 1 FROM public.branches b
+    WHERE b.id = v_row.branch_id AND b.tenant_id = v_prof_tenant;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'invalid branch' USING ERRCODE = 'P0002';
+    END IF;
+  ELSIF v_prof_branch IS NULL OR v_row.branch_id IS DISTINCT FROM v_prof_branch THEN
+    RAISE EXCEPTION 'branch mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_row.order_status IN ('completed', 'cancelled') THEN
+    RAISE EXCEPTION 'order terminal' USING ERRCODE = '22023';
+  END IF;
+
+  IF COALESCE(v_row.payment_status, 'unpaid') = 'paid' THEN
+    RAISE EXCEPTION 'order already paid' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_row.item_status = 'cancelled' THEN
+    RAISE EXCEPTION 'order item cancelled' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_type = 'pct' THEN
+    v_clamped_value := LEAST(p_value, 100);
+  ELSE
+    v_clamped_value := LEAST(p_value, COALESCE(v_row.item_subtotal, 0));
+  END IF;
+
+  IF public.compute_discount_amount(p_type, v_clamped_value, v_row.item_subtotal) = 0 THEN
+    RAISE EXCEPTION 'discount_zero_amount' USING ERRCODE = '22023';
+  END IF;
+
+  UPDATE public.order_items
+     SET discount_type = p_type,
+         discount_value = v_clamped_value,
+         discount_note = v_note_trim,
+         updated_at = now()
+   WHERE id = p_order_item_id
+   RETURNING id, discount_type, discount_value, discount_amount, discount_note
+   INTO v_updated_item;
+
+  SELECT discount_amount, item_discount_amount, order_discount_amount, total_amount
+  INTO v_order_totals
+  FROM public.orders
+  WHERE id = v_row.order_id;
+
+  INSERT INTO public.order_status_history (
+    tenant_id, order_id, from_status, to_status, changed_by, note
+  ) VALUES (
+    v_row.tenant_id, v_row.order_id, v_row.order_status, v_row.order_status, v_uid,
+    'item_discount_applied: item ' || p_order_item_id::TEXT || ' '
+      || p_type || ' ' || v_clamped_value::TEXT
+      || ' (' || v_updated_item.discount_amount::TEXT || 'đ) :: ' || v_note_trim
+  );
+
+  RETURN jsonb_build_object(
+    'order_id', v_row.order_id,
+    'order_item_id', p_order_item_id,
+    'discount_type', v_updated_item.discount_type,
+    'discount_value', v_updated_item.discount_value,
+    'discount_amount', v_updated_item.discount_amount,
+    'discount_note', v_updated_item.discount_note,
+    'order_discount_amount', v_order_totals.order_discount_amount,
+    'item_discount_amount', v_order_totals.item_discount_amount,
+    'total_discount_amount', v_order_totals.discount_amount,
+    'total_amount', v_order_totals.total_amount
+  );
+END;
+$$;
+
+
+--
+-- Name: FUNCTION apply_order_item_discount(p_order_item_id bigint, p_type text, p_value numeric, p_note text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.apply_order_item_discount(p_order_item_id bigint, p_type text, p_value numeric, p_note text) IS 'Set item-level discount (% or VND) with required note. Blocks paid/terminal orders. Order total is normalized by triggers.';
 
 
 --
@@ -1398,17 +2259,20 @@ CREATE FUNCTION public.apply_template_to_user(p_target_user uuid, p_branch_id bi
     SET search_path TO ''
     AS $$
 DECLARE
-  v_tenant_id BIGINT;
+  v_tenant_id     BIGINT;
   v_target_tenant BIGINT;
-  v_template RECORD;
-  v_perm_key TEXT;
-  v_inserted INTEGER := 0;
-  v_rows INTEGER;
-  v_from TIMESTAMPTZ := COALESCE(p_valid_from, now());
-  v_effective_branch_id BIGINT;
+  v_template      RECORD;
+  v_perm_key      TEXT;
+  v_inserted      INTEGER := 0;
+  v_rows          INTEGER;
+  v_from          TIMESTAMPTZ := COALESCE(p_valid_from, now());
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF NOT public.has_permission(p_branch_id, 'staff:assign_permission') THEN
+    RAISE EXCEPTION 'forbidden: missing staff:assign_permission' USING ERRCODE = '42501';
   END IF;
 
   SELECT tenant_id INTO v_tenant_id FROM public.profiles WHERE id = auth.uid();
@@ -1417,13 +2281,7 @@ BEGIN
     RAISE EXCEPTION 'target_not_in_tenant' USING ERRCODE = '42501';
   END IF;
 
-  IF p_branch_id IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM public.branches WHERE id = p_branch_id AND tenant_id = v_tenant_id
-  ) THEN
-    RAISE EXCEPTION 'branch_not_in_tenant' USING ERRCODE = '42501';
-  END IF;
-
-  IF public._auth_v2_is_owner(p_target_user) THEN
+  IF public.auth_is_owner(p_target_user) THEN
     RAISE EXCEPTION 'cannot_manage_owner_permissions' USING ERRCODE = '42501';
   END IF;
 
@@ -1432,45 +2290,34 @@ BEGIN
   END IF;
 
   SELECT id, tenant_id, permission_keys
-    INTO v_template
-    FROM public.role_templates
-   WHERE id = p_template_id;
+  INTO v_template
+  FROM public.role_templates
+  WHERE id = p_template_id;
 
   IF v_template.id IS NULL OR v_template.tenant_id <> v_tenant_id THEN
     RAISE EXCEPTION 'template_not_in_tenant' USING ERRCODE = '42501';
   END IF;
 
   FOREACH v_perm_key IN ARRAY v_template.permission_keys LOOP
-    v_effective_branch_id := private.staff_permission_effective_branch_id(
-      v_perm_key,
-      p_branch_id
-    );
-
-    IF NOT public.has_permission(v_effective_branch_id, 'staff:assign_permission') THEN
-      RAISE EXCEPTION 'forbidden: missing staff:assign_permission' USING ERRCODE = '42501';
-    END IF;
-
     INSERT INTO public.staff_permissions (
       user_id, tenant_id, branch_id, permission_key, source_template, granted_by,
       valid_from, valid_until
     ) VALUES (
-      p_target_user, v_tenant_id, v_effective_branch_id, v_perm_key, v_template.id, auth.uid(),
+      p_target_user, v_tenant_id, p_branch_id, v_perm_key, v_template.id, auth.uid(),
       v_from, p_valid_until
     )
     ON CONFLICT DO NOTHING;
     GET DIAGNOSTICS v_rows = ROW_COUNT;
-
     IF v_rows > 0 THEN
       INSERT INTO public.permission_audit_log (
         tenant_id, actor_user_id, target_user_id, branch_id,
         permission_key, action, source_template_id, metadata
       ) VALUES (
-        v_tenant_id, auth.uid(), p_target_user, v_effective_branch_id,
+        v_tenant_id, auth.uid(), p_target_user, p_branch_id,
         v_perm_key, 'apply_template', v_template.id,
         jsonb_build_object(
-          'requested_branch_id', p_branch_id,
           'template_id', v_template.id,
-          'valid_from', v_from,
+          'valid_from',  v_from,
           'valid_until', p_valid_until
         )
       );
@@ -1484,61 +2331,75 @@ $$;
 
 
 --
--- Name: approve_shift_request(bigint); Type: FUNCTION; Schema: public; Owner: -
+-- Name: approve_leave_request(bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.approve_shift_request(p_request_id bigint) RETURNS bigint
+CREATE FUNCTION public.approve_leave_request(p_request_id bigint) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public', 'pg_temp'
     AS $$
 DECLARE
-  v_tenant_id    BIGINT := public.auth_tenant_id();
-  v_user_id      UUID   := auth.uid();
-  v_request      public.shift_requests%ROWTYPE;
-  v_assignment_id BIGINT;
+  v_tenant_id BIGINT := public.auth_tenant_id();
+  v_user_id   UUID   := auth.uid();
+  v_request   public.leave_requests%ROWTYPE;
 BEGIN
   IF v_user_id IS NULL OR v_tenant_id IS NULL THEN
-    RAISE EXCEPTION 'approve_shift_request: missing auth context' USING ERRCODE = 'insufficient_privilege';
+    RAISE EXCEPTION 'approve_leave_request: missing auth context'
+      USING ERRCODE = 'insufficient_privilege';
   END IF;
-  SELECT * INTO v_request FROM public.shift_requests
-  WHERE id = p_request_id AND tenant_id = v_tenant_id FOR UPDATE;
+
+  SELECT * INTO v_request
+  FROM public.leave_requests
+  WHERE id = p_request_id
+    AND tenant_id = v_tenant_id
+  FOR UPDATE;
+
   IF v_request.id IS NULL THEN
-    RAISE EXCEPTION 'approve_shift_request: request not found' USING ERRCODE = 'no_data_found';
+    RAISE EXCEPTION 'approve_leave_request: request not found'
+      USING ERRCODE = 'no_data_found';
   END IF;
-  IF NOT public.has_permission(v_request.branch_id, 'hr:approve_shift_request') THEN
-    RAISE EXCEPTION 'approve_shift_request: missing permission for this branch' USING ERRCODE = 'insufficient_privilege';
+
+  IF NOT public.has_permission(v_request.branch_id, 'hr:approve_leave_request') THEN
+    RAISE EXCEPTION 'approve_leave_request: missing permission for this branch'
+      USING ERRCODE = 'insufficient_privilege';
   END IF;
+
   IF v_request.status <> 'pending' THEN
-    RAISE EXCEPTION 'approve_shift_request: request is %, not pending', v_request.status USING ERRCODE = 'check_violation';
+    RAISE EXCEPTION 'approve_leave_request: request is %, not pending', v_request.status
+      USING ERRCODE = 'check_violation';
   END IF;
+
   IF EXISTS (
     SELECT 1 FROM public.employees e
-    WHERE e.id = v_request.employee_id AND e.profile_id = v_user_id
+    WHERE e.id = v_request.employee_id
+      AND e.profile_id = v_user_id
   ) THEN
-    RAISE EXCEPTION 'approve_shift_request: cannot approve own request' USING ERRCODE = 'insufficient_privilege';
+    RAISE EXCEPTION 'approve_leave_request: cannot review own request'
+      USING ERRCODE = 'insufficient_privilege';
   END IF;
-  INSERT INTO public.shift_assignments
-    (tenant_id, branch_id, employee_id, shift_id, date)
-  VALUES
-    (v_request.tenant_id, v_request.branch_id, v_request.employee_id,
-     v_request.shift_id, v_request.date)
-  ON CONFLICT (employee_id, date, tenant_id) DO NOTHING
-  RETURNING id INTO v_assignment_id;
-  IF v_assignment_id IS NULL THEN
-    SELECT id INTO v_assignment_id FROM public.shift_assignments
-    WHERE employee_id = v_request.employee_id AND date = v_request.date AND tenant_id = v_request.tenant_id;
-  END IF;
-  UPDATE public.shift_requests
-  SET status = 'approved', reviewed_by = v_user_id, reviewed_at = now(), assignment_id = v_assignment_id
+
+  UPDATE public.leave_requests
+  SET status = 'approved',
+      reviewed_by = v_user_id,
+      reviewed_at = now()
   WHERE id = p_request_id;
+
   PERFORM public.log_audit(
-    'approve'::TEXT, 'shift_request'::TEXT, p_request_id,
+    'approve'::TEXT,
+    'leave_request'::TEXT,
+    p_request_id,
     jsonb_build_object('status', 'pending'),
-    jsonb_build_object('status', 'approved', 'assignment_id', v_assignment_id)
+    jsonb_build_object('status', 'approved')
   );
-  RETURN v_assignment_id;
 END;
 $$;
+
+
+--
+-- Name: FUNCTION approve_leave_request(p_request_id bigint); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.approve_leave_request(p_request_id bigint) IS 'Manager approves a pending leave_request within branch scope. Does not mutate attendance or payroll.';
 
 
 --
@@ -1564,11 +2425,22 @@ BEGIN
   IF v_issue.created_by = v_uid AND NOT public.has_permission(NULL, 'accounting:period_reopen') THEN
     RAISE EXCEPTION 'self-approval forbidden: approver cannot be the creator' USING ERRCODE = '42501';
   END IF;
-  UPDATE public.stock_issues SET approval_status = p_decision, approved_by = v_uid, approved_at = now(),
-    status = CASE WHEN p_decision = 'approved' THEN 'confirmed' ELSE 'cancelled' END,
-    notes = COALESCE(notes, '') || CASE WHEN p_note IS NOT NULL
-      THEN E'\n[' || p_decision || ' by ' || v_uid::TEXT || '] ' || p_note ELSE '' END
-  WHERE id = p_issue_id;
+
+  IF p_decision = 'approved' THEN
+    UPDATE public.stock_issues
+       SET approval_status = 'approved', approved_by = v_uid, approved_at = now(),
+           notes = COALESCE(notes, '') || CASE WHEN p_note IS NOT NULL
+             THEN E'\n[approved by ' || v_uid::TEXT || '] ' || p_note ELSE '' END
+     WHERE id = p_issue_id;
+    -- Posts the decrementing movements and sets status='confirmed'.
+    PERFORM public._post_writeoff_movements(p_issue_id);
+  ELSE
+    UPDATE public.stock_issues
+       SET approval_status = 'rejected', approved_by = v_uid, approved_at = now(), status = 'cancelled',
+           notes = COALESCE(notes, '') || CASE WHEN p_note IS NOT NULL
+             THEN E'\n[rejected by ' || v_uid::TEXT || '] ' || p_note ELSE '' END
+     WHERE id = p_issue_id;
+  END IF;
 END; $$;
 
 
@@ -1639,21 +2511,6 @@ COMMENT ON FUNCTION public.attach_print_document_to_payload(p_tenant_id bigint, 
 
 
 --
--- Name: auth_area_id(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.auth_area_id() RETURNS bigint
-    LANGUAGE sql STABLE
-    SET search_path TO 'public', 'pg_temp'
-    AS $$
-  SELECT NULLIF(
-    auth.jwt() -> 'app_metadata' ->> 'area_id',
-    ''
-  )::BIGINT;
-$$;
-
-
---
 -- Name: auth_branch_id(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1666,6 +2523,27 @@ $$;
 
 
 --
+-- Name: auth_is_owner(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.auth_is_owner(p_user uuid) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.profiles pr
+    JOIN public.positions po
+      ON po.id = pr.position_id
+     AND po.tenant_id = pr.tenant_id
+    WHERE pr.id = p_user
+      AND po.code = 'owner'
+      AND COALESCE(pr.is_active, true) = true
+  );
+$$;
+
+
+--
 -- Name: auth_role(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1673,16 +2551,14 @@ CREATE FUNCTION public.auth_role() RETURNS text
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO ''
     AS $$
-  SELECT COALESCE(
-    (
-      SELECT private.staff_role_from_position_code(po.code)
-        FROM public.profiles p
-        JOIN public.positions po ON po.id = p.position_id
-       WHERE p.id = auth.uid()
-       LIMIT 1
-    ),
-    'unassigned'
-  )
+  SELECT COALESCE(private.staff_role_from_position_code(po.code), 'unassigned')
+  FROM public.profiles p
+  JOIN public.positions po
+    ON po.id = p.position_id
+   AND po.tenant_id = p.tenant_id
+  WHERE p.id = auth.uid()
+    AND COALESCE(p.is_active, true) = true
+  LIMIT 1;
 $$;
 
 
@@ -1690,7 +2566,29 @@ $$;
 -- Name: FUNCTION auth_role(); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.auth_role() IS 'Compatibility helper: returns the StaffRole bucket derived from positions.code for the caller.';
+COMMENT ON FUNCTION public.auth_role() IS 'Shadow helper: returns legacy_role_code for the caller. Kept to preserve admin_update_profile/handle_new_user internals after profiles.role drop. JWT user_role claim is now derived from positions by the hook.';
+
+
+--
+-- Name: auth_role_to_position(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.auth_role_to_position(p_role text) RETURNS text
+    LANGUAGE sql IMMUTABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  SELECT CASE p_role
+    WHEN 'owner' THEN 'owner' WHEN 'branch_manager' THEN 'branch_manager' WHEN 'warehouse_manager' THEN 'warehouse_manager'
+    WHEN 'production_manager' THEN 'head_chef' WHEN 'head_chef' THEN 'head_chef' WHEN 'kitchen_helper' THEN 'kitchen_helper'
+    WHEN 'chef' THEN 'chef' WHEN 'cashier' THEN 'cashier' WHEN 'waiter' THEN 'waiter' WHEN 'office' THEN 'office' ELSE NULL END
+$$;
+
+
+--
+-- Name: FUNCTION auth_role_to_position(p_role text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.auth_role_to_position(p_role text) IS 'Maps access buckets to the canonical HR position code used at Auth user creation. English-only since 20260610230000.';
 
 
 --
@@ -1746,161 +2644,452 @@ COMMENT ON FUNCTION public.auto_close_periods() IS 'Daily automation — day 5+ 
 
 
 --
--- Name: auto_post_journal(bigint, bigint, text, bigint, text, jsonb, timestamp with time zone, uuid); Type: FUNCTION; Schema: public; Owner: -
+-- Name: branch_manager_approve_consumption_report(bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.auto_post_journal(p_tenant_id bigint, p_branch_id bigint, p_reference_type text, p_reference_id bigint, p_description text, p_lines jsonb, p_entry_date timestamp with time zone DEFAULT now(), p_posted_by uuid DEFAULT NULL::uuid) RETURNS bigint
+CREATE FUNCTION public.branch_manager_approve_consumption_report(p_tenant_id bigint, p_report_id bigint) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_entry_id      BIGINT;
-  v_entry_number  TEXT;
-  v_line          JSONB;
-  v_rule          RECORD;
-  v_dr_account_id BIGINT;
-  v_cr_account_id BIGINT;
-  v_amount        NUMERIC(15,2);
-  v_line_desc     TEXT;
-  v_lines_count   INT := 0;
-  v_total_dr      NUMERIC(15,2) := 0;
-  v_total_cr      NUMERIC(15,2) := 0;
-  v_actor         UUID;
-  v_period_month  INT;
-  v_period_year   INT;
-  v_period_status TEXT;
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_report record;
+  v_line record;
+  v_issue_id bigint;
+  v_issue_number text;
+  v_source_location_id bigint;
+  v_current_quantity numeric(15,3);
+  v_wac numeric(15,2);
+  v_line_count integer;
 BEGIN
-  -- ═══ TENANT VALIDATION ═══
-  -- Prevent cross-tenant access: caller-supplied p_tenant_id must match auth context.
-  -- Only skip check when called from service-role context (auth.uid() IS NULL).
-  IF auth.uid() IS NOT NULL AND p_tenant_id <> public.auth_tenant_id() THEN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF v_tenant IS NULL OR v_tenant <> p_tenant_id THEN
     RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
   END IF;
 
-  -- Resolve actor
-  v_actor := COALESCE(p_posted_by, auth.uid());
+  SELECT r.*
+  INTO v_report
+  FROM public.attendance_consumption_reports r
+  WHERE r.id = p_report_id
+    AND r.tenant_id = p_tenant_id
+  FOR UPDATE;
 
-  -- ═══ FISCAL PERIOD CHECK (with row lock to prevent TOCTOU race) ═══
-  v_period_month := EXTRACT(MONTH FROM p_entry_date)::INT;
-  v_period_year  := EXTRACT(YEAR FROM p_entry_date)::INT;
-
-  SELECT fp.status INTO v_period_status
-  FROM public.fiscal_periods fp
-  WHERE fp.tenant_id = p_tenant_id
-    AND fp.period_month = v_period_month
-    AND fp.period_year = v_period_year
-  FOR SHARE;
-
-  IF FOUND THEN
-    IF v_period_status = 'closed' THEN
-      RAISE EXCEPTION 'fiscal_period_closed: %-% is closed, cannot post journal',
-        v_period_year, lpad(v_period_month::text, 2, '0')
-        USING ERRCODE = '23514';
-    END IF;
-    -- 'open' or 'closing' → allow (closing permits adjusting entries)
-  ELSE
-    -- Auto-create open period if it doesn't exist
-    INSERT INTO public.fiscal_periods (tenant_id, period_month, period_year, status)
-    VALUES (p_tenant_id, v_period_month, v_period_year, 'open')
-    ON CONFLICT (period_month, period_year, tenant_id) DO NOTHING;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'consumption_report_not_found' USING ERRCODE = 'P0002';
   END IF;
 
-  -- Generate auto entry number: AUTO-YYYYMMDD-NNNNNN
-  v_entry_number := 'AUTO-' || to_char(p_entry_date, 'YYYYMMDD') || '-'
-                    || lpad(nextval('public.auto_journal_seq')::TEXT, 6, '0');
+  IF NOT public.has_permission(v_report.branch_id, 'hr:approve_checkout') THEN
+    RAISE EXCEPTION 'forbidden_checkout_approval' USING ERRCODE = '42501';
+  END IF;
 
-  -- Create journal header (status = posted, skips draft)
-  INSERT INTO public.journal_entries (
-    tenant_id, branch_id, entry_number, entry_date, description,
-    reference_type, reference_id, status,
-    posted_by, posted_at, created_by
-  ) VALUES (
-    p_tenant_id, p_branch_id, v_entry_number, p_entry_date, p_description,
-    p_reference_type, p_reference_id, 'posted',
-    v_actor, now(), v_actor
+  IF v_report.status IN ('approved', 'applied') THEN
+    RETURN jsonb_build_object(
+      'ok', true,
+      'report_id', p_report_id,
+      'stock_issue_id', v_report.stock_issue_id,
+      'status', v_report.status
+    );
+  END IF;
+
+  IF v_report.status <> 'submitted' THEN
+    RAISE EXCEPTION 'consumption_report_not_submitted' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT count(*)
+  INTO v_line_count
+  FROM public.attendance_consumption_report_lines
+  WHERE tenant_id = p_tenant_id
+    AND report_id = p_report_id;
+
+  IF v_report.no_consumption = true AND v_line_count = 0 THEN
+    UPDATE public.attendance_consumption_reports
+    SET status = 'approved',
+        reviewed_by = v_uid,
+        reviewed_at = now(),
+        review_note = NULL
+    WHERE id = p_report_id
+      AND tenant_id = p_tenant_id;
+
+    RETURN jsonb_build_object(
+      'ok', true,
+      'report_id', p_report_id,
+      'stock_issue_id', NULL,
+      'no_consumption', true,
+      'line_count', 0
+    );
+  END IF;
+
+  IF v_line_count = 0 THEN
+    RAISE EXCEPTION 'consumption_lines_required' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT il.id
+  INTO v_source_location_id
+  FROM public.inventory_locations il
+  WHERE il.tenant_id = p_tenant_id
+    AND il.branch_id = v_report.branch_id
+    AND il.is_active = true
+    AND (
+      il.is_default_issue = true
+      OR il.location_kind = 'warehouse'
+    )
+  ORDER BY
+    il.is_default_issue DESC,
+    CASE il.location_kind WHEN 'warehouse' THEN 0 ELSE 1 END,
+    il.sort_order NULLS LAST,
+    il.id
+  LIMIT 1;
+
+  IF v_source_location_id IS NULL THEN
+    RAISE EXCEPTION 'consumption_location_missing' USING ERRCODE = '23502';
+  END IF;
+
+  v_issue_number := 'THB-' || p_report_id::text;
+
+  INSERT INTO public.stock_issues (
+    tenant_id,
+    branch_id,
+    issue_number,
+    issue_type,
+    status,
+    notes,
+    issued_at,
+    created_by,
+    source_location_id,
+    target_location_id,
+    approval_status,
+    approved_by,
+    approved_at,
+    source_type,
+    source_ref
   )
-  RETURNING id INTO v_entry_id;
+  VALUES (
+    p_tenant_id,
+    v_report.branch_id,
+    v_issue_number,
+    'consumption',
+    'draft',
+    COALESCE(v_report.note, 'Tiêu hao bếp trong ngày'),
+    now(),
+    v_uid,
+    v_source_location_id,
+    NULL,
+    'approved',
+    v_uid,
+    now(),
+    'hrm_consumption',
+    jsonb_build_object(
+      'source', 'attendance_consumption_report',
+      'source_label', 'HRM - Tiêu hao bếp trong ngày',
+      'report_id', p_report_id,
+      'attendance_record_id', v_report.attendance_record_id,
+      'employee_id', v_report.employee_id,
+      'branch_id', v_report.branch_id,
+      'reviewed_by', v_uid,
+      'reviewed_at', now()
+    )
+  )
+  RETURNING id INTO v_issue_id;
 
-  -- Process each line from p_lines JSONB array
-  FOR v_line IN SELECT * FROM jsonb_array_elements(p_lines)
+  FOR v_line IN
+    SELECT l.*, i.name AS ingredient_name
+    FROM public.attendance_consumption_report_lines l
+    JOIN public.ingredients i
+      ON i.id = l.ingredient_id
+     AND i.tenant_id = l.tenant_id
+     AND i.is_active = true
+    WHERE l.tenant_id = p_tenant_id
+      AND l.report_id = p_report_id
+    ORDER BY l.sort_order, l.id
   LOOP
-    -- Lookup posting rule
-    SELECT pr.*
-    INTO v_rule
-    FROM public.posting_rules pr
-    WHERE pr.tenant_id = p_tenant_id
-      AND pr.rule_code = (v_line ->> 'rule_code')
-      AND pr.is_active = true;
+    SELECT sl.current_quantity, sl.avg_unit_cost
+    INTO v_current_quantity, v_wac
+    FROM public.stock_levels sl
+    WHERE sl.tenant_id = p_tenant_id
+      AND sl.branch_id = v_report.branch_id
+      AND sl.location_id = v_source_location_id
+      AND sl.ingredient_id = v_line.ingredient_id
+    FOR UPDATE;
 
-    IF NOT FOUND THEN
-      RAISE EXCEPTION 'posting_rule_not_found: % for tenant %', (v_line ->> 'rule_code'), p_tenant_id
-        USING ERRCODE = 'P0002';
+    IF NOT FOUND OR v_wac IS NULL THEN
+      RAISE EXCEPTION 'wac_not_ready_for_%', v_line.ingredient_id
+        USING ERRCODE = '22023';
     END IF;
 
-    v_amount := (v_line ->> 'amount')::NUMERIC(15,2);
-    v_line_desc := v_line ->> 'line_description';
-
-    -- Skip zero-amount lines (legitimate: e.g. COGS=0 when no stock consumed)
-    IF v_amount IS NULL OR v_amount <= 0 THEN
-      CONTINUE;
+    IF v_current_quantity < v_line.quantity THEN
+      RAISE EXCEPTION 'insufficient_stock_for_%', v_line.ingredient_id
+        USING ERRCODE = '22023';
     END IF;
 
-    -- Resolve debit account_id
-    SELECT id INTO v_dr_account_id
-    FROM public.chart_of_accounts
-    WHERE tenant_id = p_tenant_id AND account_code = v_rule.debit_account_code AND is_active = true;
-
-    IF NOT FOUND THEN
-      RAISE EXCEPTION 'gl_account_not_found: debit % for rule %', v_rule.debit_account_code, v_rule.rule_code
-        USING ERRCODE = 'P0002';
-    END IF;
-
-    -- Resolve credit account_id
-    SELECT id INTO v_cr_account_id
-    FROM public.chart_of_accounts
-    WHERE tenant_id = p_tenant_id AND account_code = v_rule.credit_account_code AND is_active = true;
-
-    IF NOT FOUND THEN
-      RAISE EXCEPTION 'gl_account_not_found: credit % for rule %', v_rule.credit_account_code, v_rule.rule_code
-        USING ERRCODE = 'P0002';
-    END IF;
-
-    -- Insert debit line
-    INSERT INTO public.journal_entry_lines (
-      tenant_id, journal_entry_id, account_id, debit_amount, credit_amount, description
-    ) VALUES (
-      p_tenant_id, v_entry_id, v_dr_account_id, v_amount, 0,
-      COALESCE(v_line_desc, v_rule.description)
+    INSERT INTO public.stock_issue_items (
+      tenant_id,
+      issue_id,
+      ingredient_id,
+      quantity,
+      unit,
+      unit_cost,
+      reason
+    )
+    VALUES (
+      p_tenant_id,
+      v_issue_id,
+      v_line.ingredient_id,
+      v_line.quantity,
+      v_line.unit,
+      v_wac,
+      v_line.note
     );
 
-    -- Insert credit line
-    INSERT INTO public.journal_entry_lines (
-      tenant_id, journal_entry_id, account_id, debit_amount, credit_amount, description
-    ) VALUES (
-      p_tenant_id, v_entry_id, v_cr_account_id, 0, v_amount,
-      COALESCE(v_line_desc, v_rule.description)
+    INSERT INTO public.stock_movements (
+      tenant_id,
+      branch_id,
+      ingredient_id,
+      type,
+      movement_subtype,
+      quantity_change,
+      unit_cost,
+      reason,
+      created_by,
+      issue_id,
+      location_id
+    )
+    VALUES (
+      p_tenant_id,
+      v_report.branch_id,
+      v_line.ingredient_id,
+      'consumption',
+      'sale_consumption',
+      -v_line.quantity,
+      v_wac,
+      COALESCE(v_line.note, v_report.note, 'Tiêu hao bếp trong ngày'),
+      v_uid,
+      v_issue_id,
+      v_source_location_id
     );
-
-    v_total_dr := v_total_dr + v_amount;
-    v_total_cr := v_total_cr + v_amount;
-    v_lines_count := v_lines_count + 1;
   END LOOP;
 
-  -- If no valid lines, delete empty header and return NULL
-  IF v_lines_count = 0 THEN
-    DELETE FROM public.journal_entries WHERE id = v_entry_id;
-    RETURN NULL;
-  END IF;
+  UPDATE public.stock_issues
+  SET status = 'confirmed',
+      updated_at = now()
+  WHERE id = v_issue_id
+    AND tenant_id = p_tenant_id;
 
-  -- Safety: validate balance
-  IF NOT public.validate_journal_balance(v_entry_id) THEN
-    RAISE EXCEPTION 'auto_post_journal: balance validation failed for entry %', v_entry_id
-      USING ERRCODE = '23514';
-  END IF;
+  UPDATE public.attendance_consumption_reports
+  SET status = 'applied',
+      reviewed_by = v_uid,
+      reviewed_at = now(),
+      review_note = NULL,
+      stock_issue_id = v_issue_id
+  WHERE id = p_report_id
+    AND tenant_id = p_tenant_id;
 
-  RETURN v_entry_id;
+  RETURN jsonb_build_object(
+    'ok', true,
+    'report_id', p_report_id,
+    'stock_issue_id', v_issue_id,
+    'line_count', v_line_count
+  );
 END;
 $$;
+
+
+--
+-- Name: FUNCTION branch_manager_approve_consumption_report(p_tenant_id bigint, p_report_id bigint); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.branch_manager_approve_consumption_report(p_tenant_id bigint, p_report_id bigint) IS 'Checkout approver approves a submitted consumption report and atomically posts Inventory consumption movements.';
+
+
+--
+-- Name: branch_manager_approve_employee_clock_out(bigint, bigint, bigint, uuid, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.branch_manager_approve_employee_clock_out(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_approved_by uuid, p_note text DEFAULT NULL::text) RETURNS timestamp with time zone
+    LANGUAGE plpgsql
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_record_branch_id bigint;
+  v_requester_profile_id uuid;
+  v_requester_role text;
+  v_approver_branch_id bigint;
+  v_approver_role text;
+  v_requested_at timestamptz;
+  v_check_out timestamptz;
+BEGIN
+  SELECT
+    ar.branch_id,
+    e.profile_id,
+    COALESCE(ar.checkout_requested_by_role, private.staff_role_from_position_code(po.code), 'office'),
+    ar.checkout_requested_at
+  INTO
+    v_record_branch_id,
+    v_requester_profile_id,
+    v_requester_role,
+    v_requested_at
+  FROM public.attendance_records ar
+  JOIN public.employees e
+    ON e.id = ar.employee_id
+   AND e.tenant_id = ar.tenant_id
+  LEFT JOIN public.profiles p
+    ON p.id = e.profile_id
+   AND p.tenant_id = e.tenant_id
+  LEFT JOIN public.positions po
+    ON po.id = p.position_id
+   AND po.tenant_id = p.tenant_id
+  WHERE ar.id = p_attendance_id
+    AND ar.tenant_id = p_tenant_id
+    AND ar.branch_id = p_branch_id
+    AND ar.check_out IS NULL
+    AND ar.checkout_requested_at IS NOT NULL
+  FOR UPDATE OF ar;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'checkout_request_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_requester_profile_id = p_approved_by THEN
+    RAISE EXCEPTION 'cannot_approve_own_checkout' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT
+    p.branch_id,
+    private.staff_role_from_position_code(po.code)
+  INTO v_approver_branch_id, v_approver_role
+  FROM public.profiles p
+  JOIN public.positions po
+    ON po.id = p.position_id
+   AND po.tenant_id = p.tenant_id
+  WHERE p.id = p_approved_by
+    AND p.tenant_id = p_tenant_id
+    AND COALESCE(p.is_active, true) = true;
+
+  IF NOT FOUND OR v_approver_role IS NULL THEN
+    RAISE EXCEPTION 'checkout_approver_not_found' USING ERRCODE = '42501';
+  END IF;
+
+  v_requester_role := COALESCE(v_requester_role, 'office');
+
+  IF v_requester_role = 'branch_manager' THEN
+    IF v_approver_role NOT IN ('owner') THEN
+      RAISE EXCEPTION 'checkout_requires_upper_manager' USING ERRCODE = '42501';
+    END IF;
+  ELSIF v_approver_role = 'branch_manager' THEN
+    IF v_approver_branch_id IS DISTINCT FROM p_branch_id THEN
+      RAISE EXCEPTION 'checkout_approver_wrong_branch' USING ERRCODE = '42501';
+    END IF;
+
+    IF v_requester_role NOT IN ('cashier', 'waiter', 'chef') THEN
+      RAISE EXCEPTION 'branch_manager_can_only_approve_branch_staff' USING ERRCODE = '42501';
+    END IF;
+  ELSIF v_approver_role NOT IN ('owner') THEN
+    RAISE EXCEPTION 'checkout_approver_not_allowed' USING ERRCODE = '42501';
+  END IF;
+
+  UPDATE public.attendance_records
+  SET
+    check_out = v_requested_at,
+    check_out_code_verified = false,
+    checkout_approved_at = now(),
+    checkout_approved_by = p_approved_by,
+    checkout_approval_note = NULLIF(btrim(p_note), ''),
+    updated_at = now()
+  WHERE id = p_attendance_id
+    AND tenant_id = p_tenant_id
+    AND branch_id = p_branch_id
+    AND check_out IS NULL
+  RETURNING check_out INTO v_check_out;
+
+  RETURN v_check_out;
+END;
+$$;
+
+
+--
+-- Name: branch_manager_request_consumption_adjustment(bigint, bigint, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.branch_manager_request_consumption_adjustment(p_tenant_id bigint, p_report_id bigint, p_review_note text) RETURNS bigint
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_report record;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF v_tenant IS NULL OR v_tenant <> p_tenant_id THEN
+    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  IF NULLIF(btrim(COALESCE(p_review_note, '')), '') IS NULL THEN
+    RAISE EXCEPTION 'review_note_required' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT r.*, ar.id AS attendance_id
+  INTO v_report
+  FROM public.attendance_consumption_reports r
+  JOIN public.attendance_records ar
+    ON ar.id = r.attendance_record_id
+   AND ar.tenant_id = r.tenant_id
+  WHERE r.id = p_report_id
+    AND r.tenant_id = p_tenant_id
+  FOR UPDATE OF r, ar;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'consumption_report_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF NOT public.has_permission(v_report.branch_id, 'hr:approve_checkout') THEN
+    RAISE EXCEPTION 'forbidden_checkout_approval' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_report.status NOT IN ('submitted', 'needs_changes') THEN
+    RAISE EXCEPTION 'consumption_report_not_reviewable' USING ERRCODE = '22023';
+  END IF;
+
+  UPDATE public.attendance_consumption_reports
+  SET status = 'needs_changes',
+      reviewed_by = v_uid,
+      reviewed_at = now(),
+      review_note = NULLIF(btrim(p_review_note), '')
+  WHERE id = p_report_id
+    AND tenant_id = p_tenant_id;
+
+  UPDATE public.attendance_records
+  SET checkout_requested_at = NULL,
+      checkout_requested_by_role = NULL,
+      checkout_approval_target_roles = ARRAY[]::text[],
+      updated_at = now()
+  WHERE id = v_report.attendance_id
+    AND tenant_id = p_tenant_id
+    AND check_out IS NULL;
+
+  UPDATE public.attendance_checklist_items
+  SET is_done = false,
+      completed_at = NULL
+  WHERE tenant_id = p_tenant_id
+    AND attendance_record_id = v_report.attendance_id
+    AND task_kind = 'consumption_report';
+
+  RETURN p_report_id;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION branch_manager_request_consumption_adjustment(p_tenant_id bigint, p_report_id bigint, p_review_note text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.branch_manager_request_consumption_adjustment(p_tenant_id bigint, p_report_id bigint, p_review_note text) IS 'Checkout approver requests correction, reopens the consumption checklist item, and clears pending checkout for employee resubmission.';
 
 
 --
@@ -1968,19 +3157,85 @@ CREATE FUNCTION public.can_access_branch(p_branch_id bigint) RETURNS boolean
     SET search_path TO 'public', 'pg_temp'
     AS $$
   SELECT CASE
-    WHEN public.auth_role() IN ('owner', 'super_manager', 'office') THEN true
-    WHEN public.auth_role() = 'area_manager' THEN
-      public.auth_area_id() IS NOT NULL
-      AND EXISTS (
-        SELECT 1
-        FROM public.area_branches ab
-        WHERE ab.tenant_id = public.auth_tenant_id()
-          AND ab.area_id = public.auth_area_id()
-          AND ab.branch_id = p_branch_id
-      )
+    WHEN public.auth_role() IN ('owner') THEN true
     ELSE p_branch_id = public.auth_branch_id()
   END;
 $$;
+
+
+--
+-- Name: FUNCTION can_access_branch(p_branch_id bigint); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.can_access_branch(p_branch_id bigint) IS 'Branch access helper after intermediate scope removal. Tenant-level roles access all branches; other roles are limited to their JWT branch.';
+
+
+--
+-- Name: cancel_leave_request(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.cancel_leave_request(p_request_id bigint) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_tenant_id BIGINT := public.auth_tenant_id();
+  v_user_id   UUID   := auth.uid();
+  v_request   public.leave_requests%ROWTYPE;
+BEGIN
+  IF v_user_id IS NULL OR v_tenant_id IS NULL THEN
+    RAISE EXCEPTION 'cancel_leave_request: missing auth context'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  SELECT * INTO v_request
+  FROM public.leave_requests
+  WHERE id = p_request_id
+    AND tenant_id = v_tenant_id
+  FOR UPDATE;
+
+  IF v_request.id IS NULL THEN
+    RAISE EXCEPTION 'cancel_leave_request: request not found'
+      USING ERRCODE = 'no_data_found';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.employees e
+    WHERE e.id = v_request.employee_id
+      AND e.profile_id = v_user_id
+      AND e.tenant_id = v_tenant_id
+  ) THEN
+    RAISE EXCEPTION 'cancel_leave_request: not the request owner'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  IF v_request.status <> 'pending' THEN
+    RAISE EXCEPTION 'cancel_leave_request: request is %, not pending', v_request.status
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  UPDATE public.leave_requests
+  SET status = 'cancelled',
+      reviewed_by = v_user_id,
+      reviewed_at = now()
+  WHERE id = p_request_id;
+
+  PERFORM public.log_audit(
+    'cancel'::TEXT,
+    'leave_request'::TEXT,
+    p_request_id,
+    jsonb_build_object('status', 'pending'),
+    jsonb_build_object('status', 'cancelled')
+  );
+END;
+$$;
+
+
+--
+-- Name: FUNCTION cancel_leave_request(p_request_id bigint); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.cancel_leave_request(p_request_id bigint) IS 'Employee cancels own pending leave request. Caller must own the underlying employee row.';
 
 
 --
@@ -2132,6 +3387,13 @@ BEGIN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
   END IF;
 
+  IF p_tenant_id IS DISTINCT FROM public.auth_tenant_id() THEN
+    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
+  END IF;
+  IF NOT public.has_permission(p_branch_id, 'pos:use') THEN
+    RAISE EXCEPTION 'permission denied: pos:use' USING ERRCODE = '42501';
+  END IF;
+
   SELECT id, order_id, status
   INTO v_payment
   FROM public.payments
@@ -2214,45 +3476,45 @@ $$;
 
 
 --
--- Name: cancel_shift_request(bigint); Type: FUNCTION; Schema: public; Owner: -
+-- Name: check_branch_required(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.cancel_shift_request(p_request_id bigint) RETURNS void
+CREATE FUNCTION public.check_branch_required() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public', 'pg_temp'
+    SET search_path TO ''
     AS $$
 DECLARE
-  v_tenant_id BIGINT := public.auth_tenant_id();
-  v_user_id   UUID   := auth.uid();
-  v_request   public.shift_requests%ROWTYPE;
+  v_access_bucket text;
 BEGIN
-  IF v_user_id IS NULL OR v_tenant_id IS NULL THEN
-    RAISE EXCEPTION 'cancel_shift_request: missing auth context' USING ERRCODE = 'insufficient_privilege';
+  SELECT private.staff_role_from_position_code(po.code)
+  INTO v_access_bucket
+  FROM public.positions po
+  WHERE po.id = NEW.position_id
+    AND po.tenant_id = NEW.tenant_id;
+
+  IF v_access_bucket IN (
+    'cashier',
+    'waiter',
+    'chef',
+    'branch_manager',
+    'warehouse_manager',
+    'production_manager'
+  )
+  AND NEW.branch_id IS NULL THEN
+    RAISE EXCEPTION 'branch_required_for_operational_position: position_id=%', NEW.position_id
+      USING ERRCODE = '23514';
   END IF;
-  SELECT * INTO v_request FROM public.shift_requests
-  WHERE id = p_request_id AND tenant_id = v_tenant_id FOR UPDATE;
-  IF v_request.id IS NULL THEN
-    RAISE EXCEPTION 'cancel_shift_request: request not found' USING ERRCODE = 'no_data_found';
-  END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM public.employees e
-    WHERE e.id = v_request.employee_id AND e.profile_id = v_user_id AND e.tenant_id = v_tenant_id
-  ) THEN
-    RAISE EXCEPTION 'cancel_shift_request: not the request owner' USING ERRCODE = 'insufficient_privilege';
-  END IF;
-  IF v_request.status <> 'pending' THEN
-    RAISE EXCEPTION 'cancel_shift_request: request is %, not pending', v_request.status USING ERRCODE = 'check_violation';
-  END IF;
-  UPDATE public.shift_requests
-  SET status = 'cancelled', reviewed_by = v_user_id, reviewed_at = now()
-  WHERE id = p_request_id;
-  PERFORM public.log_audit(
-    'cancel'::TEXT, 'shift_request'::TEXT, p_request_id,
-    jsonb_build_object('status', 'pending'),
-    jsonb_build_object('status', 'cancelled')
-  );
+
+  RETURN NEW;
 END;
 $$;
+
+
+--
+-- Name: FUNCTION check_branch_required(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.check_branch_required() IS 'Profiles branch-required guard. SECURITY DEFINER because it uses the private staff-role mapper.';
 
 
 --
@@ -2589,7 +3851,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  IF v_role NOT IN ('owner', 'super_manager', 'area_manager',
+  IF v_role NOT IN ('owner',
                     'branch_manager', 'cashier', 'chef') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -2620,12 +3882,12 @@ CREATE FUNCTION public.clear_order_discount(p_order_id bigint) RETURNS jsonb
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_uid          UUID;
-  v_prof_tenant  BIGINT;
-  v_prof_branch  BIGINT;
-  v_prof_role    TEXT;
-  v_order        RECORD;
-  v_total_amount NUMERIC(15,2);
+  v_uid UUID;
+  v_prof_tenant BIGINT;
+  v_prof_branch BIGINT;
+  v_prof_role TEXT;
+  v_order RECORD;
+  v_updated_order RECORD;
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
@@ -2643,7 +3905,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'branch_manager', 'cashier', 'waiter')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -2651,7 +3913,7 @@ BEGIN
   PERFORM pg_advisory_xact_lock(p_order_id);
 
   SELECT o.id, o.tenant_id, o.branch_id, o.status, o.payment_status,
-         o.subtotal, o.service_charge, o.discount_amount
+         o.discount_amount, o.order_discount_amount
   INTO v_order
   FROM public.orders o
   WHERE o.id = p_order_id
@@ -2665,7 +3927,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -2683,82 +3945,168 @@ BEGIN
     RAISE EXCEPTION 'order already paid' USING ERRCODE = '22023';
   END IF;
 
-  v_total_amount := COALESCE(v_order.subtotal, 0)
-                  + COALESCE(v_order.service_charge, 0);
-
   UPDATE public.orders
-     SET discount_type   = NULL,
-         discount_value  = NULL,
-         discount_note   = NULL,
-         discount_amount = 0,
-         total_amount    = v_total_amount,
-         updated_at      = now()
-   WHERE id = p_order_id;
+     SET discount_type  = NULL,
+         discount_value = NULL,
+         discount_note  = NULL,
+         updated_at     = now()
+   WHERE id = p_order_id
+   RETURNING order_discount_amount, item_discount_amount,
+             discount_amount, total_amount
+   INTO v_updated_order;
 
   INSERT INTO public.order_status_history (
     tenant_id, order_id, from_status, to_status, changed_by, note
   ) VALUES (
     v_order.tenant_id, p_order_id, v_order.status, v_order.status, v_uid,
     'discount_cleared (was '
-      || COALESCE(v_order.discount_amount::TEXT, '0') || 'đ)'
+      || COALESCE(v_order.order_discount_amount::TEXT, '0') || 'đ order-level)'
   );
 
   RETURN jsonb_build_object(
-    'order_id',     p_order_id,
-    'total_amount', v_total_amount
+    'order_id', p_order_id,
+    'order_discount_amount', v_updated_order.order_discount_amount,
+    'item_discount_amount', v_updated_order.item_discount_amount,
+    'total_discount_amount', v_updated_order.discount_amount,
+    'total_amount', v_updated_order.total_amount
   );
 END;
 $$;
 
 
 --
--- Name: close_fiscal_period(bigint, integer, integer, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: FUNCTION clear_order_discount(p_order_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.close_fiscal_period(p_tenant_id bigint, p_year integer, p_month integer, p_notes text DEFAULT NULL::text) RETURNS jsonb
+COMMENT ON FUNCTION public.clear_order_discount(p_order_id bigint) IS 'Clear order-level discount only; item-level discounts remain active. Total discount is normalized by triggers.';
+
+
+--
+-- Name: clear_order_item_discount(bigint, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.clear_order_item_discount(p_order_item_id bigint, p_reason text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_uid       UUID := auth.uid();
-  v_period    RECORD;
-  v_recon     JSONB;
-  v_has_diff  BOOLEAN := FALSE;
-  v_item      JSONB;
+  v_uid UUID;
+  v_prof_tenant BIGINT;
+  v_prof_branch BIGINT;
+  v_prof_role TEXT;
+  v_row RECORD;
+  v_reason_trim TEXT;
+  v_order_totals RECORD;
 BEGIN
-  IF v_uid IS NULL THEN RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000'; END IF;
-  IF NOT public.has_permission_any('settings:tenant') THEN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+  END IF;
+
+  v_reason_trim := COALESCE(trim(p_reason), '');
+  IF length(v_reason_trim) < 3 THEN
+    RAISE EXCEPTION 'discount_note_required' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  INTO v_prof_tenant, v_prof_branch, v_prof_role
+  FROM public.profiles p
+  LEFT JOIN public.positions po ON po.id = p.position_id
+  WHERE p.id = v_uid;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
+  END IF;
+
+  IF v_prof_role IS NULL OR v_prof_role NOT IN
+     ('owner', 'branch_manager', 'cashier', 'waiter')
+  THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
-  IF p_tenant_id <> public.auth_tenant_id() THEN
-    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
+
+  SELECT oi.id AS order_item_id, oi.order_id, oi.tenant_id, oi.status AS item_status,
+         oi.discount_amount AS old_discount_amount,
+         o.branch_id, o.status AS order_status, o.payment_status
+  INTO v_row
+  FROM public.order_items oi
+  JOIN public.orders o ON o.id = oi.order_id AND o.tenant_id = oi.tenant_id
+  WHERE oi.id = p_order_item_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'order item not found' USING ERRCODE = 'P0002';
   END IF;
 
-  SELECT fp.* INTO v_period FROM public.fiscal_periods fp
-  WHERE fp.tenant_id = p_tenant_id AND fp.period_month = p_month AND fp.period_year = p_year
-  FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'fiscal_period_not_found' USING ERRCODE = 'P0002'; END IF;
-  IF v_period.status = 'closed' THEN RAISE EXCEPTION 'fiscal_period_already_closed' USING ERRCODE = '22023'; END IF;
+  PERFORM pg_advisory_xact_lock(v_row.order_id);
 
-  UPDATE public.fiscal_periods SET status = 'closing', updated_at = now() WHERE id = v_period.id;
-  PERFORM public.refresh_finance_views();
-  v_recon := public.gl_reconciliation(p_tenant_id, p_year, p_month);
+  SELECT oi.id AS order_item_id, oi.order_id, oi.tenant_id, oi.status AS item_status,
+         oi.discount_amount AS old_discount_amount,
+         o.branch_id, o.status AS order_status, o.payment_status
+  INTO v_row
+  FROM public.order_items oi
+  JOIN public.orders o ON o.id = oi.order_id AND o.tenant_id = oi.tenant_id
+  WHERE oi.id = p_order_item_id
+  FOR UPDATE OF oi, o;
 
-  FOR v_item IN SELECT * FROM jsonb_array_elements(v_recon) LOOP
-    IF ABS((v_item ->> 'difference')::NUMERIC) > 1 THEN v_has_diff := TRUE; END IF;
-  END LOOP;
+  IF v_row.tenant_id <> v_prof_tenant THEN
+    RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
+  END IF;
 
-  UPDATE public.fiscal_periods
-  SET status = 'closed', closed_by = v_uid, closed_at = now(),
-      notes = concat_ws(' ', NULLIF(v_period.notes, ''), NULLIF(p_notes, ''),
-                       CASE WHEN v_has_diff THEN '[CẢNH BÁO: Có chênh lệch đối chiếu]' END),
-      updated_at = now()
-  WHERE id = v_period.id;
+  IF v_prof_role IN ('owner') THEN
+    PERFORM 1 FROM public.branches b
+    WHERE b.id = v_row.branch_id AND b.tenant_id = v_prof_tenant;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'invalid branch' USING ERRCODE = 'P0002';
+    END IF;
+  ELSIF v_prof_branch IS NULL OR v_row.branch_id IS DISTINCT FROM v_prof_branch THEN
+    RAISE EXCEPTION 'branch mismatch' USING ERRCODE = '42501';
+  END IF;
 
-  RETURN jsonb_build_object('period_id', v_period.id, 'status', 'closed',
-                            'has_discrepancies', v_has_diff, 'reconciliation', v_recon);
+  IF v_row.order_status IN ('completed', 'cancelled') THEN
+    RAISE EXCEPTION 'order terminal' USING ERRCODE = '22023';
+  END IF;
+
+  IF COALESCE(v_row.payment_status, 'unpaid') = 'paid' THEN
+    RAISE EXCEPTION 'order already paid' USING ERRCODE = '22023';
+  END IF;
+
+  UPDATE public.order_items
+     SET discount_type = NULL,
+         discount_value = NULL,
+         discount_note = NULL,
+         updated_at = now()
+   WHERE id = p_order_item_id;
+
+  SELECT discount_amount, item_discount_amount, order_discount_amount, total_amount
+  INTO v_order_totals
+  FROM public.orders
+  WHERE id = v_row.order_id;
+
+  INSERT INTO public.order_status_history (
+    tenant_id, order_id, from_status, to_status, changed_by, note
+  ) VALUES (
+    v_row.tenant_id, v_row.order_id, v_row.order_status, v_row.order_status, v_uid,
+    'item_discount_cleared: item ' || p_order_item_id::TEXT
+      || ' (was ' || COALESCE(v_row.old_discount_amount::TEXT, '0') || 'đ)'
+      || ' :: ' || v_reason_trim
+  );
+
+  RETURN jsonb_build_object(
+    'order_id', v_row.order_id,
+    'order_item_id', p_order_item_id,
+    'order_discount_amount', v_order_totals.order_discount_amount,
+    'item_discount_amount', v_order_totals.item_discount_amount,
+    'total_discount_amount', v_order_totals.discount_amount,
+    'total_amount', v_order_totals.total_amount
+  );
 END;
 $$;
+
+
+--
+-- Name: FUNCTION clear_order_item_discount(p_order_item_id bigint, p_reason text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.clear_order_item_discount(p_order_item_id bigint, p_reason text) IS 'Clear item-level discount with required reason. Blocks paid/terminal orders. Order total is normalized by triggers.';
 
 
 --
@@ -2997,221 +4345,17 @@ CREATE FUNCTION public.commit_intra_branch_transfer(p_branch_id bigint, p_from_l
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-DECLARE
-  v_uid          UUID := auth.uid();
-  v_tenant       BIGINT := public.auth_tenant_id();
-  v_branch_kind  TEXT;
-  v_from_loc     RECORD;
-  v_to_loc       RECORD;
-  v_transfer_id  BIGINT;
-  v_line         JSONB;
-  v_ingredient   BIGINT;
-  v_qty          NUMERIC(15,3);
-  v_unit         TEXT;
-  v_src_q        NUMERIC(15,3);
-  v_src_wac      NUMERIC(15,2);
-  v_dst_old_q    NUMERIC(15,3);
-  v_dst_old_wac  NUMERIC(15,2);
-  v_dst_new_q    NUMERIC(15,3);
-  v_dst_new_wac  NUMERIC(15,2);
 BEGIN
-  IF v_uid IS NULL THEN
-    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
-  END IF;
-
-  IF v_tenant IS NULL THEN
-    RAISE EXCEPTION 'tenant_not_found' USING ERRCODE = '22023';
-  END IF;
-
-  IF NOT public.has_permission(p_branch_id, 'inventory:transfer_create') THEN
-    RAISE EXCEPTION 'forbidden_transfer_create' USING ERRCODE = '42501';
-  END IF;
-
-  SELECT branch_kind INTO v_branch_kind
-  FROM public.branches
-  WHERE id = p_branch_id
-    AND tenant_id = v_tenant
-    AND is_active = TRUE;
-
-  IF v_branch_kind IS DISTINCT FROM 'branch' THEN
-    RAISE EXCEPTION 'intra_branch_requires_branch_site' USING ERRCODE = '23514';
-  END IF;
-
-  IF p_from_location_id = p_to_location_id THEN
-    RAISE EXCEPTION 'intra_branch_same_location' USING ERRCODE = '22023';
-  END IF;
-
-  SELECT id, branch_id, location_kind, is_default_consumption
-  INTO v_from_loc
-  FROM public.inventory_locations
-  WHERE id = p_from_location_id
-    AND tenant_id = v_tenant
-    AND is_active = TRUE;
-
-  IF NOT FOUND OR v_from_loc.branch_id <> p_branch_id OR v_from_loc.location_kind <> 'warehouse' THEN
-    RAISE EXCEPTION 'intra_branch_source_must_be_warehouse' USING ERRCODE = '23514';
-  END IF;
-
-  SELECT id, branch_id, location_kind, is_default_consumption
-  INTO v_to_loc
-  FROM public.inventory_locations
-  WHERE id = p_to_location_id
-    AND tenant_id = v_tenant
-    AND is_active = TRUE;
-
-  IF NOT FOUND
-     OR v_to_loc.branch_id <> p_branch_id
-     OR v_to_loc.location_kind <> 'kitchen' THEN
-    RAISE EXCEPTION 'intra_branch_target_must_be_kitchen' USING ERRCODE = '23514';
-  END IF;
-
-  IF v_to_loc.is_default_consumption IS DISTINCT FROM TRUE THEN
-    RAISE WARNING 'default_consumption_location_not_marked:branch %, location %',
-      p_branch_id,
-      p_to_location_id;
-  END IF;
-
-  IF p_lines IS NULL OR jsonb_typeof(p_lines) <> 'array' OR jsonb_array_length(p_lines) = 0 THEN
-    RAISE EXCEPTION 'transfer_lines_required' USING ERRCODE = '22023';
-  END IF;
-
-  INSERT INTO public.stock_transfers (
-    tenant_id,
-    from_branch_id,
-    to_branch_id,
-    from_location_id,
-    to_location_id,
-    transfer_number,
-    status,
-    notes,
-    vehicle_info,
-    created_by,
-    shipped_at,
-    received_at,
-    receive_started_at
-  ) VALUES (
-    v_tenant,
-    p_branch_id,
-    p_branch_id,
-    p_from_location_id,
-    p_to_location_id,
-    p_transfer_number,
-    'received',
-    p_notes,
-    NULL,
-    v_uid,
-    now(),
-    now(),
-    now()
-  )
-  RETURNING id INTO v_transfer_id;
-
-  FOR v_line IN SELECT value FROM jsonb_array_elements(p_lines) AS line(value)
-  LOOP
-    IF NOT (v_line ? 'ingredientId') OR NOT (v_line ? 'quantity') OR NOT (v_line ? 'unit') THEN
-      RAISE EXCEPTION 'transfer_lines_invalid' USING ERRCODE = '22023';
-    END IF;
-
-    v_ingredient := (v_line->>'ingredientId')::BIGINT;
-    v_qty := (v_line->>'quantity')::NUMERIC(15,3);
-    v_unit := NULLIF(BTRIM(v_line->>'unit'), '');
-
-    IF v_qty <= 0 OR v_unit IS NULL THEN
-      RAISE EXCEPTION 'transfer_lines_invalid' USING ERRCODE = '22023';
-    END IF;
-
-    IF NOT EXISTS (
-      SELECT 1 FROM public.ingredients
-      WHERE id = v_ingredient AND tenant_id = v_tenant
-    ) THEN
-      RAISE EXCEPTION 'transfer_ingredient_invalid:%', v_ingredient USING ERRCODE = '23514';
-    END IF;
-
-    SELECT sl.current_quantity, sl.avg_unit_cost
-    INTO v_src_q, v_src_wac
-    FROM public.stock_levels sl
-    WHERE sl.tenant_id = v_tenant
-      AND sl.branch_id = p_branch_id
-      AND sl.location_id = p_from_location_id
-      AND sl.ingredient_id = v_ingredient
-    FOR UPDATE;
-
-    IF NOT FOUND OR COALESCE(v_src_q, 0) < v_qty THEN
-      RAISE EXCEPTION 'insufficient_stock:%', v_ingredient USING ERRCODE = 'P0001';
-    END IF;
-
-    IF v_src_wac IS NULL THEN
-      RAISE EXCEPTION 'wac_not_ready_for_%', v_ingredient USING ERRCODE = '22023';
-    END IF;
-
-    SELECT sl.current_quantity, sl.avg_unit_cost
-    INTO v_dst_old_q, v_dst_old_wac
-    FROM public.stock_levels sl
-    WHERE sl.tenant_id = v_tenant
-      AND sl.branch_id = p_branch_id
-      AND sl.location_id = p_to_location_id
-      AND sl.ingredient_id = v_ingredient
-    FOR UPDATE;
-
-    IF NOT FOUND THEN
-      v_dst_old_q := 0;
-      v_dst_old_wac := NULL;
-    END IF;
-
-    INSERT INTO public.stock_transfer_items (
-      tenant_id,
-      transfer_id,
-      ingredient_id,
-      quantity,
-      unit,
-      unit_cost_at_ship,
-      quantity_received
-    ) VALUES (
-      v_tenant,
-      v_transfer_id,
-      v_ingredient,
-      v_qty,
-      v_unit,
-      v_src_wac,
-      v_qty
-    );
-
-    INSERT INTO public.stock_movements (
-      tenant_id, branch_id, ingredient_id, type, quantity_change,
-      reason, created_by, transfer_id, unit_cost, location_id
-    ) VALUES (
-      v_tenant, p_branch_id, v_ingredient, 'transfer_out', -v_qty,
-      'Transfer ' || p_transfer_number, v_uid, v_transfer_id, v_src_wac,
-      p_from_location_id
-    );
-
-    INSERT INTO public.stock_movements (
-      tenant_id, branch_id, ingredient_id, type, quantity_change,
-      reason, created_by, transfer_id, unit_cost, location_id
-    ) VALUES (
-      v_tenant, p_branch_id, v_ingredient, 'transfer_in', v_qty,
-      'Transfer ' || p_transfer_number, v_uid, v_transfer_id, v_src_wac,
-      p_to_location_id
-    );
-
-    v_dst_new_q := COALESCE(v_dst_old_q, 0) + v_qty;
-    v_dst_new_wac := (
-      COALESCE(v_dst_old_q, 0) * COALESCE(v_dst_old_wac, 0)
-        + v_qty * v_src_wac
-    ) / v_dst_new_q;
-
-    UPDATE public.stock_levels sl
-    SET avg_unit_cost = v_dst_new_wac,
-        updated_at = now()
-    WHERE sl.tenant_id = v_tenant
-      AND sl.branch_id = p_branch_id
-      AND sl.location_id = p_to_location_id
-      AND sl.ingredient_id = v_ingredient;
-  END LOOP;
-
-  RETURN jsonb_build_object('id', v_transfer_id, 'status', 'received');
+  RAISE EXCEPTION 'intra_branch_transfer_not_supported' USING ERRCODE = '22023';
 END;
 $$;
+
+
+--
+-- Name: FUNCTION commit_intra_branch_transfer(p_branch_id bigint, p_from_location_id bigint, p_to_location_id bigint, p_transfer_number text, p_notes text, p_lines jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.commit_intra_branch_transfer(p_branch_id bigint, p_from_location_id bigint, p_to_location_id bigint, p_transfer_number text, p_notes text, p_lines jsonb) IS 'Branch kitchen consumption must post through stock_movements consumption, not stock transfer.';
 
 
 --
@@ -3382,8 +4526,6 @@ DECLARE
   v_order            RECORD;
   v_line_subtotal    NUMERIC(15,2) := 0;
   v_recomputed_total NUMERIC(15,2) := 0;
-  v_stock_status     TEXT := NULL;
-  v_stock_detail     TEXT := NULL;
 BEGIN
   SELECT p.id, p.order_id, p.tenant_id, p.branch_id, p.amount, p.status
   INTO v_payment
@@ -3469,81 +4611,14 @@ BEGIN
     RETURN;
   END IF;
 
-  BEGIN
-    PERFORM public.consume_stock_for_order_service(v_payment.order_id, p_actor_id);
-    v_stock_status := 'ok';
-  EXCEPTION WHEN OTHERS THEN
-    v_stock_detail := SQLERRM;
-    v_stock_status := CASE
-      WHEN lower(SQLERRM) LIKE '%out_of_stock%' OR lower(SQLERRM) LIKE '%insufficient%' THEN 'out_of_stock'
-      WHEN lower(SQLERRM) LIKE '%recipe%' THEN 'recipe_missing'
-      ELSE 'internal_error'
-    END;
-
-    UPDATE public.payments
-       SET stock_consumed_status = v_stock_status,
-           provider_data = COALESCE(p_provider_data, provider_data),
-           updated_at = now()
-     WHERE id = v_payment.id;
-
-    INSERT INTO public.notifications (
-      tenant_id,
-      target_branch_id,
-      target_roles,
-      kind,
-      severity,
-      title,
-      body,
-      entity_type,
-      entity_id,
-      action_url,
-      dedup_key,
-      meta
-    )
-    VALUES (
-      v_payment.tenant_id,
-      v_payment.branch_id,
-      ARRAY['owner', 'super_manager', 'branch_manager'],
-      'pos.payment_stock_failed',
-      'critical',
-      'Thanh toán chưa thể hoàn tất do tồn kho',
-      'Hệ thống chưa ghi nhận thanh toán vì trừ tồn kho không thành công. Vui lòng kiểm tra định mức và tồn kho trước khi xác nhận lại.',
-      'payment',
-      v_payment.id,
-      '/orders',
-      'payment_stock_failed:' || v_payment.id::TEXT,
-      jsonb_build_object(
-        'payment_id', v_payment.id,
-        'order_id', v_payment.order_id,
-        'branch_id', v_payment.branch_id,
-        'stock_status', v_stock_status
-      )
-    )
-    ON CONFLICT (tenant_id, dedup_key) WHERE dedup_key IS NOT NULL
-    DO UPDATE SET
-      severity = EXCLUDED.severity,
-      body = EXCLUDED.body,
-      meta = EXCLUDED.meta,
-      created_at = now(),
-      expires_at = NULL;
-
-    RAISE WARNING '[complete_payment_and_consume_stock] stock consumption blocked for payment %, order %: %',
-      v_payment.id, v_payment.order_id, v_stock_detail;
-
-    RETURN QUERY SELECT
-      'stock_failed'::TEXT,
-      v_payment.id,
-      v_payment.order_id,
-      FALSE,
-      ('stock_consumed_status=' || v_stock_status)::TEXT;
-    RETURN;
-  END;
+  -- Nhánh trừ kho đã gỡ theo chính sách owner 2026-05-28 "không trừ kho khi
+  -- thanh toán". stock_consumed_status để NULL (đồng nhất cash/VietQR =
+  -- "không trừ kho"); 'stock_failed' không còn là kết quả khả dĩ.
 
   UPDATE public.payments
      SET status        = 'completed',
          paid_at       = COALESCE(paid_at, now()),
          provider_data = COALESCE(p_provider_data, provider_data),
-         stock_consumed_status = 'ok',
          updated_at    = now()
    WHERE id = v_payment.id;
 
@@ -3559,8 +4634,8 @@ BEGIN
     'completed'::TEXT,
     v_payment.id,
     v_payment.order_id,
-    TRUE,
-    'stock=ok'::TEXT;
+    FALSE,
+    'stock=skipped_per_policy_2026-05-28'::TEXT;
 END;
 $$;
 
@@ -3569,7 +4644,7 @@ $$;
 -- Name: FUNCTION complete_payment_and_consume_stock(p_payment_id bigint, p_expected_amount numeric, p_provider_data jsonb, p_actor_id uuid); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.complete_payment_and_consume_stock(p_payment_id bigint, p_expected_amount numeric, p_provider_data jsonb, p_actor_id uuid) IS 'Recomputes order total at payment time, consumes stock before marking paid, and returns stock_failed without completing payment/order when inventory cannot be consumed.';
+COMMENT ON FUNCTION public.complete_payment_and_consume_stock(p_payment_id bigint, p_expected_amount numeric, p_provider_data jsonb, p_actor_id uuid) IS 'Recomputes order total at payment time and marks paid. Stock leg REMOVED per owner policy 2026-05-28 (không trừ kho); stock_consumed always false, stock_consumed_status left NULL. Name kept for caller compatibility.';
 
 
 --
@@ -4030,9 +5105,6 @@ DECLARE
   v_new_q           NUMERIC(15,3);
   v_new_wac         NUMERIC(15,2);
   v_location_id     BIGINT;
-  v_inventory_total NUMERIC(15,2) := 0;
-  v_journal_id      BIGINT;
-  v_lines           JSONB;
   v_all_fulfilled   BOOLEAN;
   v_po_status       TEXT;
   v_review_pct      NUMERIC(5,2);
@@ -4063,10 +5135,10 @@ BEGIN
   FROM public.branches b
   WHERE b.id = v_grn.branch_id
     AND b.tenant_id = v_tenant
-    AND b.branch_kind = 'branch';
+    AND b.branch_kind IN ('branch', 'central_supply', 'central_kitchen');
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'grn_branch_must_be_procurement' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'grn_branch_must_be_operational' USING ERRCODE = '23514';
   END IF;
 
   SELECT il.id INTO v_location_id
@@ -4149,30 +5221,11 @@ BEGIN
     UPDATE public.ingredients i
     SET unit_cost = v_cost, updated_at = now()
     WHERE i.id = v_item.ingredient_id AND i.tenant_id = v_tenant;
-
-    v_inventory_total := v_inventory_total + (v_recv * v_cost);
   END LOOP;
 
   UPDATE public.goods_received_notes
   SET status = 'confirmed', updated_at = now()
   WHERE id = p_grn_id;
-
-  IF v_inventory_total > 0 THEN
-    v_lines := jsonb_build_array(jsonb_build_object(
-      'rule_code', 'GRN_INVENTORY',
-      'amount', v_inventory_total,
-      'line_description', 'Nhap kho GRN #' || v_grn.grn_number
-    ));
-    v_journal_id := public.auto_post_journal(
-      v_tenant, v_grn.branch_id, 'purchase', p_grn_id,
-      'Nhap kho phieu ' || v_grn.grn_number, v_lines, now(), v_uid
-    );
-    IF v_journal_id IS NOT NULL THEN
-      UPDATE public.goods_received_notes
-      SET journal_entry_id = v_journal_id
-      WHERE id = p_grn_id;
-    END IF;
-  END IF;
 
   IF v_grn.po_id IS NOT NULL THEN
     PERFORM 1
@@ -4225,7 +5278,6 @@ BEGIN
   RETURN jsonb_build_object(
     'grn_id', p_grn_id,
     'status', 'confirmed',
-    'journal_entry_id', v_journal_id,
     'po_id', v_grn.po_id,
     'po_status', v_po_status,
     'review_count', v_review_count
@@ -4253,11 +5305,6 @@ DECLARE
   v_uid           UUID := auth.uid();
   v_payment       RECORD;
   v_order         RECORD;
-  v_journal_id    BIGINT;
-  v_cogs_amount   NUMERIC(15,2);
-  v_lines         JSONB;
-  v_tax_amount    NUMERIC(15,2);
-  v_net_amount    NUMERIC(15,2);
 BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
@@ -4301,67 +5348,11 @@ BEGIN
   WHERE id = v_payment.order_id
     AND tenant_id = p_tenant_id;
 
-  v_tax_amount := COALESCE(v_order.tax_amount, 0);
-  v_net_amount := v_payment.amount - v_tax_amount;
-
-  SELECT COALESCE(SUM(ABS(sm.quantity_change) * sm.unit_cost), 0)
-  INTO v_cogs_amount
-  FROM public.stock_movements sm
-  WHERE sm.order_id = v_payment.order_id
-    AND sm.tenant_id = p_tenant_id
-    AND sm.type = 'consumption';
-
-  v_lines := '[]'::JSONB;
-
-  IF v_net_amount > 0 THEN
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-      'rule_code', 'SALE_BANK',
-      'amount', v_net_amount,
-      'line_description', 'Doanh thu don hang #' || v_payment.order_id
-    ));
-  END IF;
-
-  IF v_tax_amount > 0 THEN
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-      'rule_code', 'SALE_VAT_BANK',
-      'amount', v_tax_amount,
-      'line_description', 'Thue GTGT don hang #' || v_payment.order_id
-    ));
-  END IF;
-
-  IF v_cogs_amount > 0 THEN
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-      'rule_code', 'SALE_COGS',
-      'amount', v_cogs_amount,
-      'line_description', 'Gia von don hang #' || v_payment.order_id
-    ));
-  END IF;
-
-  BEGIN
-    v_journal_id := public.auto_post_journal(
-      p_tenant_id, p_branch_id, 'sale', v_payment.order_id,
-      'Ban hang don #' || v_payment.order_id || ' (' || v_payment.method || ')',
-      v_lines, now(), v_uid
-    );
-  EXCEPTION
-    WHEN OTHERS THEN
-      RAISE NOTICE '[confirm_payment_and_post] auto_post_journal skipped for order %: %',
-        v_payment.order_id, SQLERRM;
-      v_journal_id := NULL;
-  END;
-
-  IF v_journal_id IS NOT NULL THEN
-    UPDATE public.payments
-    SET journal_entry_id = v_journal_id
-    WHERE id = p_payment_id;
-  END IF;
-
   PERFORM public.finalize_paid_order(v_payment.order_id, v_uid);
 
   RETURN jsonb_build_object(
     'payment_id', p_payment_id,
-    'status', 'completed',
-    'journal_entry_id', v_journal_id
+    'status', 'completed'
   );
 END;
 $$;
@@ -4385,8 +5376,6 @@ DECLARE
   v_new_q NUMERIC(15,3); v_new_wac NUMERIC(15,2);
   v_need_map JSONB := '{}'::JSONB; v_cost_map JSONB := '{}'::JSONB;
   v_key TEXT; v_need_qty NUMERIC(15,3); v_cost_total NUMERIC(15,2); v_has_recipe BOOLEAN;
-  v_total_consumption NUMERIC(15,2) := 0; v_total_output NUMERIC(15,2) := 0;
-  v_journal_id BIGINT; v_lines JSONB;
   v_location_id BIGINT;
   v_shortages JSONB := '[]'::JSONB;
 BEGIN
@@ -4411,7 +5400,7 @@ BEGIN
   IF v_order.status <> 'draft' THEN
     RAISE EXCEPTION 'production_order_not_draft' USING ERRCODE = '22023';
   END IF;
-  IF v_order.branch_kind <> 'branch' THEN
+  IF v_order.branch_kind NOT IN ('branch', 'central_kitchen') THEN
     RAISE EXCEPTION 'branch_must_be_operational' USING ERRCODE = '23514';
   END IF;
 
@@ -4533,7 +5522,6 @@ BEGIN
       'Production ' || v_order.production_number, v_uid, p_order_id,
       COALESCE(v_old_wac, 0), v_location_id
     );
-    v_total_consumption := v_total_consumption + (v_need_qty * COALESCE(v_old_wac, 0));
   END LOOP;
 
   FOR v_item IN
@@ -4575,31 +5563,12 @@ BEGIN
     UPDATE public.ingredients SET unit_cost = v_cost_total, updated_at = now()
     WHERE id = v_item.finished_good_id AND tenant_id = v_tenant;
 
-    v_total_output := v_total_output + (v_item.quantity * v_cost_total);
   END LOOP;
 
   UPDATE public.production_orders SET status = 'completed', completed_at = now(), updated_at = now()
   WHERE id = p_order_id AND tenant_id = v_tenant;
 
-  v_lines := '[]'::JSONB;
-  IF v_total_consumption > 0 THEN
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-      'rule_code', 'PRODUCTION_CONSUME', 'amount', v_total_consumption,
-      'line_description', 'NVL san xuat ' || v_order.production_number));
-  END IF;
-  IF v_total_output > 0 THEN
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-      'rule_code', 'PRODUCTION_OUTPUT', 'amount', v_total_output,
-      'line_description', 'Thanh pham ' || v_order.production_number));
-  END IF;
-  IF jsonb_array_length(v_lines) > 0 THEN
-    v_journal_id := public.auto_post_journal(v_tenant, v_order.branch_id, 'production', p_order_id,
-      'San xuat ' || v_order.production_number, v_lines, now(), v_uid);
-    IF v_journal_id IS NOT NULL THEN
-      UPDATE public.production_orders SET journal_entry_id = v_journal_id WHERE id = p_order_id;
-    END IF;
-  END IF;
-  RETURN jsonb_build_object('production_order_id', p_order_id, 'status', 'completed', 'journal_entry_id', v_journal_id);
+  RETURN jsonb_build_object('production_order_id', p_order_id, 'status', 'completed');
 END;
 $$;
 
@@ -4643,6 +5612,10 @@ BEGIN
 
   IF v_issue.status <> 'draft' THEN
     RAISE EXCEPTION 'issue_not_draft' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_issue.issue_type = 'writeoff' AND v_issue.approval_status = 'pending' THEN
+    RAISE EXCEPTION 'writeoff_pending_approval' USING ERRCODE = '42501';
   END IF;
 
   IF v_issue.source_location_id IS NULL THEN
@@ -4744,7 +5717,7 @@ $$;
 -- Name: FUNCTION confirm_stock_issue(p_issue_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.confirm_stock_issue(p_issue_id bigint) IS 'Atomically confirm a stock_issue. Strict WAC override from stock_levels.avg_unit_cost (FOR UPDATE). Derives stock_movements.movement_subtype from (issue_type x branch_kind). Raises wac_not_ready_for_<id> or insufficient_stock_for_<id>.';
+COMMENT ON FUNCTION public.confirm_stock_issue(p_issue_id bigint) IS 'Atomically confirms a stock issue with strict WAC lookup and movement subtype derivation.';
 
 
 --
@@ -4873,11 +5846,6 @@ DECLARE
   v_existing_id    BIGINT;
   v_existing_status TEXT;
   v_idempotent     BOOLEAN := FALSE;
-  v_journal_id     BIGINT;
-  v_cogs_amount    NUMERIC(15,2);
-  v_tax_amount     NUMERIC(15,2);
-  v_net_amount     NUMERIC(15,2);
-  v_lines          JSONB;
   v_receipt_res    JSONB;
   v_print_job_id   BIGINT;
   v_print_failed   BOOLEAN := FALSE;
@@ -4966,65 +5934,6 @@ BEGIN
         payment_method = 'vietqr',
         updated_at     = now()
     WHERE id = p_order_id;
-
-    v_tax_amount := COALESCE(v_order.tax_amount, 0);
-    v_net_amount := p_amount - v_tax_amount;
-
-    SELECT COALESCE(SUM(ABS(sm.quantity_change) * sm.unit_cost), 0)
-    INTO v_cogs_amount
-    FROM public.stock_movements sm
-    WHERE sm.order_id  = p_order_id
-      AND sm.tenant_id = p_tenant_id
-      AND sm.type      = 'consumption';
-
-    v_lines := '[]'::JSONB;
-
-    IF v_net_amount > 0 THEN
-      v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-        'rule_code',       'SALE_BANK',
-        'amount',          v_net_amount,
-        'line_description','Doanh thu đơn hàng #' || p_order_id
-      ));
-    END IF;
-
-    IF v_tax_amount > 0 THEN
-      v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-        'rule_code',       'SALE_VAT_BANK',
-        'amount',          v_tax_amount,
-        'line_description','Thuế GTGT đơn hàng #' || p_order_id
-      ));
-    END IF;
-
-    IF v_cogs_amount > 0 THEN
-      v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-        'rule_code',       'SALE_COGS',
-        'amount',          v_cogs_amount,
-        'line_description','Giá vốn đơn hàng #' || p_order_id
-      ));
-    END IF;
-
-    BEGIN
-      v_journal_id := public.auto_post_journal(
-        p_tenant_id,
-        p_branch_id,
-        'sale',
-        p_order_id,
-        'Bán hàng đơn #' || p_order_id || ' (vietqr)',
-        v_lines,
-        now(),
-        p_created_by
-      );
-    EXCEPTION WHEN OTHERS THEN
-      RAISE NOTICE '[confirm_vietqr_payment] auto_post_journal skipped for order %: %',
-        p_order_id, SQLERRM;
-      v_journal_id := NULL;
-    END;
-
-    IF v_journal_id IS NOT NULL THEN
-      UPDATE public.payments
-      SET journal_entry_id = v_journal_id
-      WHERE id = v_payment_id;
-    END IF;
 
     PERFORM public.finalize_paid_order(p_order_id, p_created_by);
   END IF;
@@ -5204,6 +6113,10 @@ DECLARE
   v_location_id BIGINT;
   v_location_is_default BOOLEAN;
 BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+    RAISE EXCEPTION 'forbidden_service_role_only' USING ERRCODE = '42501';
+  END IF;
+
   SELECT o.id, o.tenant_id, o.branch_id, o.status
   INTO v_order
   FROM public.orders o
@@ -5313,6 +6226,91 @@ $$;
 
 
 --
+-- Name: correct_payment_method(bigint, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.correct_payment_method(p_payment_id bigint, p_new_method text, p_reason text) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_actor   uuid   := auth.uid();
+  v_tenant  bigint := public.auth_tenant_id();
+  v_payment RECORD;
+BEGIN
+  IF v_actor IS NULL THEN
+    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+  END IF;
+  IF v_tenant IS NULL THEN
+    RAISE EXCEPTION 'tenant claim missing' USING ERRCODE = '28000';
+  END IF;
+
+  IF p_new_method IS NULL OR p_new_method NOT IN ('cash', 'vietqr', 'momo') THEN
+    RAISE EXCEPTION 'invalid method: %', p_new_method USING ERRCODE = '22023';
+  END IF;
+  IF p_reason IS NULL OR length(trim(p_reason)) < 1 THEN
+    RAISE EXCEPTION 'reason required' USING ERRCODE = '22023';
+  END IF;
+  IF length(p_reason) > 500 THEN
+    RAISE EXCEPTION 'reason exceeds 500 chars' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT id, tenant_id, branch_id, status, method
+  INTO v_payment
+  FROM public.payments
+  WHERE id = p_payment_id
+    AND tenant_id = v_tenant
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'payment % not found', p_payment_id USING ERRCODE = 'P0002';
+  END IF;
+
+  IF NOT public.has_permission(v_payment.branch_id, 'orders:refund_approve') THEN
+    RAISE EXCEPTION 'permission denied: orders:refund_approve required'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF v_payment.status <> 'completed' THEN
+    RAISE EXCEPTION 'payment_not_completed: status=%', v_payment.status
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  IF v_payment.method = p_new_method THEN
+    RAISE EXCEPTION 'method_unchanged: already %', p_new_method
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  UPDATE public.payments
+  SET method = p_new_method,
+      updated_at = now()
+  WHERE id = v_payment.id;
+
+  PERFORM public.log_audit(
+    'payment.method_correct',
+    'payment',
+    v_payment.id,
+    jsonb_build_object('method', v_payment.method),
+    jsonb_build_object('method', p_new_method, 'reason', p_reason)
+  );
+
+  RETURN jsonb_build_object(
+    'status',     'corrected',
+    'payment_id', v_payment.id,
+    'old_method', v_payment.method,
+    'new_method', p_new_method
+  );
+END;
+$$;
+
+
+--
+-- Name: FUNCTION correct_payment_method(p_payment_id bigint, p_new_method text, p_reason text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.correct_payment_method(p_payment_id bigint, p_new_method text, p_reason text) IS 'Owner-level fix for a wrongly-recorded payment method (branch-scoped orders:refund_approve, completed-payment precondition, new<>old, audited). Pure record correction — post-D020 there is no GL and the HĐĐT payment field is hardcoded TM/CK, so an issued invoice is unaffected.';
+
+
+--
 -- Name: count_unread_notifications(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -5338,7 +6336,7 @@ CREATE FUNCTION public.count_unread_notifications() RETURNS bigint
     AND (
       n.target_branch_id IS NULL
       OR n.target_branch_id = ctx.branch_id
-      OR ctx.user_role IN ('owner', 'super_manager', 'area_manager')
+      OR ctx.user_role IN ('owner')
     )
     AND NOT EXISTS (
       SELECT 1
@@ -5347,6 +6345,80 @@ CREATE FUNCTION public.count_unread_notifications() RETURNS bigint
         AND r.user_id = ctx.user_id
     )
     AND (n.expires_at IS NULL OR n.expires_at > now());
+$$;
+
+
+--
+-- Name: create_expiry_writeoff(bigint, bigint, bigint, numeric, text, bigint, text, text[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text, p_photo_urls text[] DEFAULT ARRAY[]::text[]) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_loc RECORD; v_grn RECORD;
+  v_shift_key text; v_issue_id bigint; v_issue_no text; v_approval text;
+  v_seed_cost numeric(15, 2);
+  v_source_ref jsonb := jsonb_build_object('kind', 'expiry');
+BEGIN
+  IF v_uid IS NULL THEN RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000'; END IF;
+  IF NOT public.has_permission(p_branch_id, 'inventory:writeoff') THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
+  IF p_quantity IS NULL OR p_quantity <= 0 THEN RAISE EXCEPTION 'quantity must be positive' USING ERRCODE = '22023'; END IF;
+  IF v_tenant IS NULL THEN RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501'; END IF;
+
+  SELECT id, tenant_id, branch_id, is_active INTO v_loc
+    FROM public.inventory_locations WHERE id = p_location_id;
+  IF NOT FOUND OR NOT v_loc.is_active OR v_loc.tenant_id <> v_tenant OR v_loc.branch_id <> p_branch_id THEN
+    RAISE EXCEPTION 'location_scope_mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_grn_item_id IS NOT NULL THEN
+    SELECT gi.id, gi.batch_number, gi.expiry_date, gi.grn_id INTO v_grn
+      FROM public.grn_items gi
+      JOIN public.goods_received_notes g ON g.id = gi.grn_id AND g.tenant_id = gi.tenant_id
+     WHERE gi.id = p_grn_item_id AND gi.tenant_id = v_tenant
+       AND g.branch_id = p_branch_id AND gi.ingredient_id = p_ingredient_id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'grn_item_not_found' USING ERRCODE = '22023';
+    END IF;
+    v_source_ref := v_source_ref || jsonb_build_object(
+      'grn_item_id', v_grn.id, 'grn_id', v_grn.grn_id,
+      'batch_number', v_grn.batch_number, 'expiry_date', v_grn.expiry_date);
+  END IF;
+
+  v_shift_key := public.inventory_shift_key(p_branch_id, now());
+  v_issue_no := 'WO-' || to_char(now(), 'YYMMDDHH24MISS') || '-' || substr(gen_random_uuid()::text, 1, 4);
+
+  INSERT INTO public.stock_issues (tenant_id, branch_id, issue_number, issue_type, status, notes,
+    issued_at, created_by, source_location_id, approval_status, shift_key, source_type, source_ref)
+  VALUES (v_tenant, p_branch_id, v_issue_no, 'writeoff', 'draft', p_note,
+    now(), v_uid, p_location_id, 'not_required', v_shift_key, 'manual', v_source_ref)
+  RETURNING id INTO v_issue_id;
+
+  SELECT avg_unit_cost INTO v_seed_cost
+    FROM public.stock_levels
+   WHERE tenant_id = v_tenant AND branch_id = p_branch_id
+     AND location_id = p_location_id AND ingredient_id = p_ingredient_id;
+
+  INSERT INTO public.stock_issue_items (tenant_id, issue_id, ingredient_id, quantity, unit, unit_cost,
+    reason_code, photo_urls, reason)
+  VALUES (v_tenant, v_issue_id, p_ingredient_id, p_quantity, COALESCE(p_unit, 'kg'),
+    COALESCE(v_seed_cost, 0),
+    'expired', COALESCE(p_photo_urls, ARRAY[]::text[]), p_note);
+
+  SELECT approval_status INTO v_approval FROM public.stock_issues WHERE id = v_issue_id;
+  IF v_approval = 'pending' THEN
+    RETURN jsonb_build_object('issue_id', v_issue_id, 'issue_number', v_issue_no,
+      'requires_approval', true, 'stock_decremented', false);
+  END IF;
+
+  PERFORM public._post_writeoff_movements(v_issue_id);
+  RETURN jsonb_build_object('issue_id', v_issue_id, 'issue_number', v_issue_no,
+    'requires_approval', false, 'stock_decremented', true);
+END;
 $$;
 
 
@@ -5411,8 +6483,8 @@ BEGIN
     RAISE EXCEPTION 'create_grn_from_po: branch inactive or out of scope'
       USING ERRCODE = 'check_violation';
   END IF;
-  IF v_branch.branch_kind <> 'branch' THEN
-    RAISE EXCEPTION 'create_grn_from_po: branch is not active branch'
+  IF v_branch.branch_kind NOT IN ('branch', 'central_supply', 'central_kitchen') THEN
+    RAISE EXCEPTION 'create_grn_from_po: branch is not a procurement site'
       USING ERRCODE = 'check_violation';
   END IF;
 
@@ -5521,146 +6593,10 @@ $$;
 
 
 --
--- Name: create_manual_journal_entry(date, text, jsonb, text, bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_order(bigint, bigint, uuid, jsonb, text, bigint, bigint, text, uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_manual_journal_entry(p_entry_date date, p_description text, p_lines jsonb, p_reference_type text DEFAULT 'manual'::text, p_reference_id bigint DEFAULT NULL::bigint, p_branch_id bigint DEFAULT NULL::bigint) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-DECLARE
-  v_actor        UUID := auth.uid();
-  v_tenant       BIGINT := public.auth_tenant_id();
-  v_description  TEXT;
-  v_ref_type     TEXT := COALESCE(NULLIF(btrim(p_reference_type), ''), 'manual');
-  v_entry_id     BIGINT;
-  v_entry_number TEXT;
-  v_line         JSONB;
-  v_lines        JSONB := '[]'::JSONB;
-  v_account_id   BIGINT;
-  v_debit        NUMERIC(15,2);
-  v_credit       NUMERIC(15,2);
-  v_line_count   INT := 0;
-  v_total_debit  NUMERIC(15,2) := 0;
-  v_total_credit NUMERIC(15,2) := 0;
-BEGIN
-  PERFORM public.ensure_journal_write_permission(p_branch_id);
-
-  IF p_entry_date IS NULL THEN
-    RAISE EXCEPTION 'entry_date required' USING ERRCODE = '22023';
-  END IF;
-
-  v_description := btrim(COALESCE(p_description, ''));
-  IF length(v_description) = 0 OR length(v_description) > 500 THEN
-    RAISE EXCEPTION 'description invalid' USING ERRCODE = '22023';
-  END IF;
-
-  IF v_ref_type NOT IN (
-    'sale', 'purchase', 'payroll', 'manual', 'adjustment',
-    'transfer', 'production', 'refund'
-  ) THEN
-    RAISE EXCEPTION 'reference_type invalid' USING ERRCODE = '22023';
-  END IF;
-
-  IF p_lines IS NULL OR jsonb_typeof(p_lines) <> 'array' THEN
-    RAISE EXCEPTION 'journal lines must be an array' USING ERRCODE = '22023';
-  END IF;
-
-  FOR v_line IN SELECT value FROM jsonb_array_elements(p_lines)
-  LOOP
-    v_account_id := NULLIF(v_line->>'account_id', '')::BIGINT;
-    v_debit := COALESCE(NULLIF(v_line->>'debit_amount', '')::NUMERIC, 0);
-    v_credit := COALESCE(NULLIF(v_line->>'credit_amount', '')::NUMERIC, 0);
-
-    IF v_account_id IS NULL OR v_debit < 0 OR v_credit < 0 THEN
-      RAISE EXCEPTION 'journal line invalid' USING ERRCODE = '22023';
-    END IF;
-    IF (v_debit = 0 AND v_credit = 0) OR (v_debit > 0 AND v_credit > 0) THEN
-      RAISE EXCEPTION 'journal line must have exactly one debit or credit amount'
-        USING ERRCODE = '22023';
-    END IF;
-
-    PERFORM 1
-    FROM public.chart_of_accounts coa
-    WHERE coa.id = v_account_id
-      AND coa.tenant_id = v_tenant
-      AND coa.is_active = TRUE;
-    IF NOT FOUND THEN
-      RAISE EXCEPTION 'chart account invalid for tenant' USING ERRCODE = '23503';
-    END IF;
-
-    v_line_count := v_line_count + 1;
-    v_total_debit := v_total_debit + v_debit;
-    v_total_credit := v_total_credit + v_credit;
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-      'account_id', v_account_id,
-      'debit_amount', v_debit,
-      'credit_amount', v_credit,
-      'description', NULLIF(btrim(COALESCE(v_line->>'description', '')), '')
-    ));
-  END LOOP;
-
-  IF v_line_count < 2 THEN
-    RAISE EXCEPTION 'journal entry requires at least two lines' USING ERRCODE = '22023';
-  END IF;
-  IF abs(v_total_debit - v_total_credit) > 0.01 OR v_total_debit <= 0 THEN
-    RAISE EXCEPTION 'journal entry not balanced' USING ERRCODE = '22023';
-  END IF;
-
-  v_entry_number := public.next_manual_journal_entry_number(v_tenant, p_entry_date);
-
-  INSERT INTO public.journal_entries (
-    tenant_id, branch_id, entry_number, entry_date, description,
-    reference_type, reference_id, status, created_by
-  ) VALUES (
-    v_tenant, p_branch_id, v_entry_number,
-    p_entry_date::TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh',
-    v_description, v_ref_type, p_reference_id, 'draft', v_actor
-  )
-  RETURNING id INTO v_entry_id;
-
-  PERFORM 1 FROM public.journal_entries
-  WHERE id = v_entry_id AND tenant_id = v_tenant FOR UPDATE;
-
-  INSERT INTO public.journal_entry_lines (
-    tenant_id, journal_entry_id, account_id,
-    debit_amount, credit_amount, description
-  )
-  SELECT v_tenant, v_entry_id,
-    x.account_id, x.debit_amount, x.credit_amount, x.description
-  FROM jsonb_to_recordset(v_lines) AS x(
-    account_id BIGINT, debit_amount NUMERIC,
-    credit_amount NUMERIC, description TEXT
-  );
-
-  PERFORM public.log_audit(
-    'journal.create', 'journal_entry', v_entry_id, NULL,
-    jsonb_build_object(
-      'status', 'draft', 'entry_number', v_entry_number,
-      'line_count', v_line_count,
-      'total_debit', v_total_debit, 'total_credit', v_total_credit
-    )
-  );
-
-  RETURN jsonb_build_object(
-    'id', v_entry_id, 'entry_number', v_entry_number, 'status', 'draft'
-  );
-END;
-$$;
-
-
---
--- Name: FUNCTION create_manual_journal_entry(p_entry_date date, p_description text, p_lines jsonb, p_reference_type text, p_reference_id bigint, p_branch_id bigint); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.create_manual_journal_entry(p_entry_date date, p_description text, p_lines jsonb, p_reference_type text, p_reference_id bigint, p_branch_id bigint) IS 'Creates a draft manual journal entry and all lines atomically. Gated by finance:expense_approve.';
-
-
---
--- Name: create_order(bigint, bigint, uuid, jsonb, text, bigint, bigint, integer, text, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.create_order(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text DEFAULT 'dine_in'::text, p_table_id bigint DEFAULT NULL::bigint, p_pos_session_id bigint DEFAULT NULL::bigint, p_customer_count integer DEFAULT 1, p_note text DEFAULT NULL::text, p_idempotency_key uuid DEFAULT NULL::uuid) RETURNS jsonb
+CREATE FUNCTION public.create_order(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text DEFAULT 'dine_in'::text, p_table_id bigint DEFAULT NULL::bigint, p_pos_session_id bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text, p_idempotency_key uuid DEFAULT NULL::uuid) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
@@ -5687,6 +6623,7 @@ DECLARE
   v_prof_branch      BIGINT;
   v_prof_role        TEXT;
   v_branch_code      TEXT;
+  v_item_discount    NUMERIC(15,2);
 BEGIN
   v_created_by := auth.uid();
   IF v_created_by IS NULL THEN
@@ -5707,7 +6644,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner') THEN
     SELECT b.code INTO v_branch_code
       FROM public.branches b
      WHERE b.id = p_branch_id AND b.tenant_id = p_tenant_id;
@@ -5796,12 +6733,12 @@ BEGIN
   BEGIN
     INSERT INTO public.orders (
       tenant_id, branch_id, table_id, order_number, order_type,
-      subtotal, total_amount, customer_count, note, created_by,
+      subtotal, total_amount, note, created_by,
       pos_session_id, idempotency_key
     )
     VALUES (
       p_tenant_id, p_branch_id, p_table_id, v_order_number, p_order_type,
-      0, 0, p_customer_count, p_note, v_created_by,
+      0, 0, p_note, v_created_by,
       p_pos_session_id, p_idempotency_key
     )
     RETURNING id INTO v_order_id;
@@ -5867,7 +6804,8 @@ BEGIN
     INSERT INTO public.order_items (
       tenant_id, order_id, menu_item_id, variant_id,
       item_name, variant_name, quantity, unit_price,
-      modifiers, sides, subtotal, note
+      modifiers, sides, subtotal, note,
+      discount_type, discount_value, discount_note
     )
     VALUES (
       p_tenant_id, v_order_id, v_menu_item_id, v_variant_id,
@@ -5875,7 +6813,12 @@ BEGIN
       v_quantity, v_unit_price,
       COALESCE(v_item -> 'modifiers', '[]'::JSONB),
       COALESCE(v_enriched_sides, '[]'::JSONB),
-      v_item_subtotal, v_item ->> 'note'
+      v_item_subtotal, v_item ->> 'note',
+      NULLIF(v_item ->> 'discount_type', ''),
+      CASE WHEN NULLIF(v_item ->> 'discount_value', '') IS NOT NULL
+           THEN (v_item ->> 'discount_value')::NUMERIC
+           ELSE NULL END,
+      NULLIF(trim(COALESCE(v_item ->> 'discount_note', '')), '')
     );
   END LOOP;
 
@@ -5899,9 +6842,77 @@ BEGIN
 
   PERFORM public.route_order_to_kds(v_order_id);
 
-  RETURN jsonb_build_object('order_id', v_order_id, 'order_number', v_order_number);
+  SELECT COALESCE(o.item_discount_amount, 0) INTO v_item_discount
+    FROM public.orders o WHERE o.id = v_order_id;
+
+  RETURN jsonb_build_object(
+    'order_id', v_order_id,
+    'order_number', v_order_number,
+    'item_discount_amount', v_item_discount
+  );
 END;
 $$;
+
+
+--
+-- Name: create_order_with_daily_limit_hold(bigint, bigint, uuid, jsonb, text, bigint, bigint, text, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_order_with_daily_limit_hold(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text DEFAULT 'dine_in'::text, p_table_id bigint DEFAULT NULL::bigint, p_pos_session_id bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text, p_idempotency_key uuid DEFAULT NULL::uuid, p_daily_limit_hold_token uuid DEFAULT NULL::uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_result jsonb;
+  v_order_id bigint;
+BEGIN
+  IF p_daily_limit_hold_token IS NOT NULL THEN
+    PERFORM set_config(
+      'comtammatu.daily_limit_hold_token',
+      p_daily_limit_hold_token::text,
+      true
+    );
+  END IF;
+
+  v_result := public.create_order(
+    p_tenant_id,
+    p_branch_id,
+    p_created_by,
+    p_items,
+    p_order_type,
+    p_table_id,
+    p_pos_session_id,
+    p_note,
+    p_idempotency_key
+  );
+
+  v_order_id := NULLIF(v_result ->> 'order_id', '')::bigint;
+
+  IF p_daily_limit_hold_token IS NOT NULL AND v_order_id IS NOT NULL THEN
+    UPDATE public.branch_menu_item_daily_holds h
+    SET committed_at = COALESCE(h.committed_at, now()),
+        order_id = COALESCE(h.order_id, v_order_id),
+        updated_at = now()
+    WHERE h.tenant_id = p_tenant_id
+      AND h.branch_id = p_branch_id
+      AND h.hold_token = p_daily_limit_hold_token
+      AND h.held_by = v_uid
+      AND h.committed_at IS NULL
+      AND h.released_at IS NULL
+      AND h.expires_at > now();
+  END IF;
+
+  RETURN v_result;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION create_order_with_daily_limit_hold(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_note text, p_idempotency_key uuid, p_daily_limit_hold_token uuid); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_order_with_daily_limit_hold(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_note text, p_idempotency_key uuid, p_daily_limit_hold_token uuid) IS 'Wrapper around create_order that sets transaction-local daily-limit hold token so the quota trigger excludes the caller hold, then commits matching active holds to the new order.';
 
 
 --
@@ -5920,22 +6931,26 @@ DECLARE
   v_existing_method              TEXT;
   v_effective_method             TEXT;
   v_final_status                 TEXT;
-  v_journal_id                   BIGINT;
-  v_cogs_amount                  NUMERIC(15,2);
-  v_revenue_rule                 TEXT;
-  v_vat_rule                     TEXT;
-  v_lines                        JSONB;
-  v_tax_amount                   NUMERIC(15,2);
-  v_net_amount                   NUMERIC(15,2);
   v_skip_completion_side_effects BOOLEAN := FALSE;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
   END IF;
 
+  IF p_tenant_id IS DISTINCT FROM public.auth_tenant_id() THEN
+    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
+  END IF;
+  IF p_created_by IS DISTINCT FROM auth.uid() THEN
+    RAISE EXCEPTION 'actor_mismatch' USING ERRCODE = '42501';
+  END IF;
+
   IF p_method NOT IN ('cash', 'momo') THEN
     RAISE EXCEPTION 'invalid payment method: %. VietQR uses confirm_vietqr_payment.',
       p_method USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT public.has_permission(p_branch_id, 'pos:use') THEN
+    RAISE EXCEPTION 'permission denied: pos:use' USING ERRCODE = '42501';
   END IF;
 
   SELECT id, total_amount, tax_amount, payment_status, branch_id, tenant_id
@@ -5983,118 +6998,35 @@ BEGIN
     v_skip_completion_side_effects := TRUE;
   ELSIF v_existing_status = 'pending' THEN
     UPDATE public.payments
-    SET method       = p_method,
-        amount       = p_amount,
-        status       = v_final_status,
-        provider_ref = p_provider_ref,
-        provider_data = NULL,
-        paid_at      = CASE WHEN v_final_status = 'completed' THEN now() ELSE NULL END,
-        updated_at   = now()
+    SET method = p_method, amount = p_amount, status = v_final_status,
+        provider_ref = p_provider_ref, provider_data = NULL,
+        paid_at = CASE WHEN v_final_status = 'completed' THEN now() ELSE NULL END,
+        updated_at = now()
     WHERE id = v_existing_payment_id
     RETURNING id INTO v_payment_id;
   ELSIF v_existing_payment_id IS NOT NULL THEN
-    RAISE EXCEPTION 'payment_not_pending: status=%', v_existing_status
-      USING ERRCODE = '22023';
+    RAISE EXCEPTION 'payment_not_pending: status=%', v_existing_status USING ERRCODE = '22023';
   ELSE
     INSERT INTO public.payments (
-      tenant_id, branch_id, order_id,
-      method, amount, status, provider_ref, paid_at, created_by
+      tenant_id, branch_id, order_id, method, amount, status, provider_ref, paid_at, created_by
     ) VALUES (
-      p_tenant_id, p_branch_id, p_order_id,
-      p_method, p_amount, v_final_status,
-      p_provider_ref,
-      CASE WHEN v_final_status = 'completed' THEN now() ELSE NULL END,
-      p_created_by
+      p_tenant_id, p_branch_id, p_order_id, p_method, p_amount, v_final_status, p_provider_ref,
+      CASE WHEN v_final_status = 'completed' THEN now() ELSE NULL END, p_created_by
     )
     RETURNING id INTO v_payment_id;
   END IF;
 
   UPDATE public.orders
   SET payment_method = v_effective_method,
-      payment_status = CASE
-        WHEN v_final_status = 'completed' THEN 'paid'
-        ELSE payment_status
-      END,
-      updated_at     = now()
+      payment_status = CASE WHEN v_final_status = 'completed' THEN 'paid' ELSE payment_status END,
+      updated_at = now()
   WHERE id = p_order_id;
 
   IF v_final_status = 'completed' AND NOT v_skip_completion_side_effects THEN
-    IF p_method = 'cash' THEN
-      v_revenue_rule := 'SALE_CASH';
-      v_vat_rule     := 'SALE_VAT_CASH';
-    ELSE
-      v_revenue_rule := 'SALE_BANK';
-      v_vat_rule     := 'SALE_VAT_BANK';
-    END IF;
-
-    v_tax_amount := COALESCE(v_order.tax_amount, 0);
-    v_net_amount := p_amount - v_tax_amount;
-
-    SELECT COALESCE(SUM(ABS(sm.quantity_change) * sm.unit_cost), 0)
-    INTO v_cogs_amount
-    FROM public.stock_movements sm
-    WHERE sm.order_id  = p_order_id
-      AND sm.tenant_id = p_tenant_id
-      AND sm.type      = 'consumption';
-
-    v_lines := '[]'::JSONB;
-
-    IF v_net_amount > 0 THEN
-      v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-        'rule_code',        v_revenue_rule,
-        'amount',           v_net_amount,
-        'line_description', 'Doanh thu đơn hàng #' || p_order_id
-      ));
-    END IF;
-
-    IF v_tax_amount > 0 THEN
-      v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-        'rule_code',        v_vat_rule,
-        'amount',           v_tax_amount,
-        'line_description', 'Thuế GTGT đơn hàng #' || p_order_id
-      ));
-    END IF;
-
-    IF v_cogs_amount > 0 THEN
-      v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-        'rule_code',        'SALE_COGS',
-        'amount',           v_cogs_amount,
-        'line_description', 'Giá vốn đơn hàng #' || p_order_id
-      ));
-    END IF;
-
-    BEGIN
-      v_journal_id := public.auto_post_journal(
-        p_tenant_id,
-        p_branch_id,
-        'sale',
-        p_order_id,
-        'Bán hàng đơn #' || p_order_id || ' (' || p_method || ')',
-        v_lines,
-        now(),
-        p_created_by
-      );
-    EXCEPTION WHEN OTHERS THEN
-      RAISE NOTICE '[create_payment] auto_post_journal skipped for order %: %',
-        p_order_id, SQLERRM;
-      v_journal_id := NULL;
-    END;
-
-    IF v_journal_id IS NOT NULL THEN
-      UPDATE public.payments
-      SET journal_entry_id = v_journal_id
-      WHERE id = v_payment_id;
-    END IF;
-
     PERFORM public.finalize_paid_order(p_order_id, p_created_by);
   END IF;
 
-  RETURN jsonb_build_object(
-    'payment_id',   v_payment_id,
-    'status',       v_final_status,
-    'journal_entry_id', v_journal_id,
-    'idempotent',   v_skip_completion_side_effects
-  );
+  RETURN jsonb_build_object('payment_id', v_payment_id, 'status', v_final_status, 'idempotent', v_skip_completion_side_effects);
 END;
 $$;
 
@@ -6141,7 +7073,7 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'branch_not_found' USING ERRCODE = 'P0002';
   END IF;
-  IF v_branch.branch_kind <> 'branch' THEN
+  IF v_branch.branch_kind NOT IN ('branch', 'central_kitchen') THEN
     RAISE EXCEPTION 'branch_must_be_operational' USING ERRCODE = '23514';
   END IF;
 
@@ -6166,6 +7098,89 @@ BEGIN
   END IF;
 
   RETURN jsonb_build_object('id', v_order_id);
+END;
+$$;
+
+
+--
+-- Name: create_purchase_order_with_lines(bigint, bigint, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_purchase_order_with_lines(p_supplier_id bigint, p_branch_id bigint, p_notes text, p_lines jsonb) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_uid       uuid    := auth.uid();
+  v_tenant_id bigint  := public.auth_tenant_id();
+  v_branch    RECORD;
+  v_po_id     bigint;
+  v_display   text;
+  v_count     integer;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+  IF v_tenant_id IS NULL THEN
+    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
+  END IF;
+  IF NOT public.has_permission_any('procurement:po_create') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+  IF p_lines IS NULL OR jsonb_typeof(p_lines) <> 'array'
+     OR jsonb_array_length(p_lines) = 0 THEN
+    RAISE EXCEPTION 'invalid_po_lines' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT id, branch_kind, is_active INTO v_branch
+    FROM public.branches
+   WHERE id = p_branch_id AND tenant_id = v_tenant_id;
+  IF NOT FOUND OR NOT v_branch.is_active
+     OR v_branch.branch_kind NOT IN ('branch', 'central_supply', 'central_kitchen') THEN
+    RAISE EXCEPTION 'invalid_branch' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.suppliers
+     WHERE id = p_supplier_id AND tenant_id = v_tenant_id AND is_active
+  ) THEN
+    RAISE EXCEPTION 'invalid_supplier' USING ERRCODE = 'P0002';
+  END IF;
+
+  v_display := public.next_po_display_id(v_tenant_id);
+
+  INSERT INTO public.purchase_orders (
+    tenant_id, branch_id, supplier_id, po_number, display_id, status, notes, created_by
+  ) VALUES (
+    v_tenant_id, p_branch_id, p_supplier_id, v_display, v_display, 'draft',
+    NULLIF(btrim(p_notes), ''), v_uid
+  ) RETURNING id INTO v_po_id;
+
+  INSERT INTO public.purchase_order_items (
+    tenant_id, po_id, ingredient_id, quantity, unit, unit_price_est, line_total
+  )
+  SELECT
+    v_tenant_id, v_po_id, x.ingredient_id, x.quantity, x.unit, x.unit_price_est,
+    CASE WHEN x.unit_price_est IS NULL THEN NULL
+         ELSE round(x.quantity * x.unit_price_est, 2) END
+  FROM jsonb_to_recordset(p_lines) AS x(
+    ingredient_id  bigint,
+    quantity       numeric,
+    unit           text,
+    unit_price_est numeric
+  )
+  ON CONFLICT (po_id, ingredient_id, tenant_id) DO UPDATE SET
+    quantity       = EXCLUDED.quantity,
+    unit           = EXCLUDED.unit,
+    unit_price_est = EXCLUDED.unit_price_est,
+    line_total     = EXCLUDED.line_total;
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  IF v_count = 0 THEN
+    RAISE EXCEPTION 'invalid_po_lines' USING ERRCODE = '22023';
+  END IF;
+
+  RETURN jsonb_build_object('id', v_po_id, 'display_id', v_display, 'lines', v_count);
 END;
 $$;
 
@@ -6505,7 +7520,6 @@ CREATE FUNCTION public.create_supplier_payment(p_tenant_id bigint, p_supplier_in
 DECLARE
   v_uid UUID := auth.uid(); v_invoice RECORD; v_branch_id BIGINT;
   v_payment_id BIGINT; v_new_paid NUMERIC(15,2); v_new_status TEXT;
-  v_journal_id BIGINT; v_rule_code TEXT; v_lines JSONB;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000'; END IF;
   IF NOT public.has_permission_any('finance:ap_pay') THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
@@ -6535,19 +7549,7 @@ BEGIN
          paid_at = CASE WHEN v_new_status = 'paid' THEN now() ELSE paid_at END, updated_at = now()
    WHERE id = p_supplier_invoice_id;
 
-  v_rule_code := CASE WHEN p_payment_method = 'cash' THEN 'SUPPLIER_PAYMENT_CASH' ELSE 'SUPPLIER_PAYMENT_BANK' END;
-  v_lines := jsonb_build_array(jsonb_build_object(
-    'rule_code', v_rule_code, 'amount', p_amount,
-    'line_description', 'Thanh toán hóa đơn NCC #' || COALESCE(v_invoice.invoice_number, v_invoice.id::text)
-  ));
-  v_journal_id := public.auto_post_journal(p_tenant_id, v_branch_id, 'purchase',
-    p_supplier_invoice_id, 'Thanh toán NCC hóa đơn #' || COALESCE(v_invoice.invoice_number, v_invoice.id::text),
-    v_lines, now(), v_uid);
-  IF v_journal_id IS NOT NULL THEN
-    UPDATE public.supplier_payments SET journal_entry_id = v_journal_id WHERE id = v_payment_id;
-  END IF;
-
-  RETURN jsonb_build_object('payment_id', v_payment_id, 'payment_status', v_new_status, 'journal_entry_id', v_journal_id);
+  RETURN jsonb_build_object('payment_id', v_payment_id, 'payment_status', v_new_status);
 END;
 $$;
 
@@ -6761,13 +7763,20 @@ CREATE FUNCTION public.create_waste_entry(p_branch_id bigint, p_location_id bigi
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_uid UUID := auth.uid(); v_tenant BIGINT; v_shift_key TEXT; v_issue_id BIGINT;
+  v_uid UUID := auth.uid(); v_tenant BIGINT; v_location RECORD; v_shift_key TEXT; v_issue_id BIGINT;
   v_issue_no TEXT; v_item JSONB; v_photos TEXT[]; v_created INT := 0; v_needs_appr BOOLEAN := false;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000'; END IF;
   IF NOT public.has_permission(p_branch_id, 'inventory:writeoff') THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
   SELECT tenant_id INTO v_tenant FROM public.branches WHERE id = p_branch_id;
   IF v_tenant IS NULL THEN RAISE EXCEPTION 'branch not found' USING ERRCODE = 'P0002'; END IF;
+  SELECT tenant_id, branch_id INTO v_location FROM public.inventory_locations WHERE id = p_location_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'location_scope_mismatch' USING ERRCODE = '42501';
+  END IF;
+  IF v_location.tenant_id <> v_tenant OR v_location.branch_id <> p_branch_id THEN
+    RAISE EXCEPTION 'location_scope_mismatch' USING ERRCODE = '42501';
+  END IF;
   v_shift_key := public.inventory_shift_key(p_branch_id, now());
   v_issue_no := 'WO-' || to_char(now(), 'YYMMDDHH24MISS') || '-' || substr(gen_random_uuid()::TEXT, 1, 4);
   INSERT INTO public.stock_issues (tenant_id, branch_id, issue_number, issue_type, status, notes,
@@ -6787,7 +7796,11 @@ BEGIN
     v_created := v_created + 1;
   END LOOP;
   SELECT bool_or(approval_required) INTO v_needs_appr FROM public.stock_issue_items WHERE issue_id = v_issue_id;
-  IF NOT v_needs_appr THEN UPDATE public.stock_issues SET status = 'confirmed' WHERE id = v_issue_id; END IF;
+  -- Tier0 (no approval): post the decrementing movements + confirm. Tier2 stays
+  -- draft/pending for approve_waste.
+  IF NOT COALESCE(v_needs_appr, false) THEN
+    PERFORM public._post_writeoff_movements(v_issue_id);
+  END IF;
   RETURN jsonb_build_object('issue_id', v_issue_id, 'issue_number', v_issue_no,
     'shift_key', v_shift_key, 'items_created', v_created, 'requires_approval', COALESCE(v_needs_appr, false));
 END; $$;
@@ -6842,25 +7855,40 @@ CREATE FUNCTION public.custom_access_token_hook(event jsonb) RETURNS jsonb
     SET search_path TO ''
     AS $$
 DECLARE
-  claims JSONB;
-  user_profile RECORD;
+  claims jsonb;
+  user_profile record;
 BEGIN
   claims := event -> 'claims';
+  claims := jsonb_set(
+    claims,
+    '{app_metadata}',
+    COALESCE(claims -> 'app_metadata', '{}'::jsonb)
+    - ('ar' || 'ea_' || 'id')
+    - 'tenant_id'
+    - 'branch_id'
+    - 'user_role'
+    - 'role'
+    - 'access_bucket'
+    - 'position'
+    - 'position_code'
+  );
 
   SELECT
     p.tenant_id,
     p.branch_id,
-    p.area_id,
-    private.staff_role_from_position_code(po.code) AS user_role,
+    private.staff_role_from_position_code(po.code) AS access_bucket,
     po.code AS position_code
   INTO user_profile
   FROM public.profiles p
-  JOIN public.positions po ON po.id = p.position_id
+  JOIN public.positions po
+    ON po.id = p.position_id
+   AND po.tenant_id = p.tenant_id
   WHERE p.id = (event ->> 'user_id')::uuid
+    AND COALESCE(p.is_active, true) = true
   LIMIT 1;
 
   IF user_profile.tenant_id IS NOT NULL THEN
-    IF user_profile.user_role IS NULL THEN
+    IF user_profile.access_bucket IS NULL THEN
       RAISE EXCEPTION
         'custom_access_token_hook: position_role_not_resolved for position=% tenant=%',
         user_profile.position_code, user_profile.tenant_id
@@ -6874,9 +7902,11 @@ BEGIN
       jsonb_build_object(
         'tenant_id', user_profile.tenant_id,
         'branch_id', user_profile.branch_id,
-        'area_id', user_profile.area_id,
-        'user_role', user_profile.user_role,
-        'position', user_profile.position_code
+        'user_role', user_profile.access_bucket,
+        'role', user_profile.access_bucket,
+        'access_bucket', user_profile.access_bucket,
+        'position', user_profile.position_code,
+        'position_code', user_profile.position_code
       )
     );
   END IF;
@@ -6891,7 +7921,7 @@ $$;
 -- Name: FUNCTION custom_access_token_hook(event jsonb); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.custom_access_token_hook(event jsonb) IS 'Auth hook emits tenant/branch/area plus position and a StaffRole bucket derived from positions.code.';
+COMMENT ON FUNCTION public.custom_access_token_hook(event jsonb) IS 'Auth hook emits tenant/branch plus position and compatibility access bucket claims.';
 
 
 --
@@ -7168,6 +8198,546 @@ COMMENT ON FUNCTION public.edit_pending_order_item(p_order_item_id bigint, p_var
 
 
 --
+-- Name: employee_clock_in_with_checklist(bigint, bigint, bigint, bigint, date, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.employee_clock_in_with_checklist(p_tenant_id bigint, p_employee_id bigint, p_branch_id bigint, p_shift_id bigint, p_business_date date, p_photo_path text) RETURNS bigint
+    LANGUAGE plpgsql
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_attendance_id bigint;
+  v_shift_id bigint;
+  v_shift_start time;
+  v_is_open boolean;
+  v_is_close boolean;
+  v_template_id bigint;
+BEGIN
+  IF p_photo_path IS NULL OR btrim(p_photo_path) = '' THEN
+    RAISE EXCEPTION 'photo_required' USING ERRCODE = '23514';
+  END IF;
+
+  SELECT COALESCE(e.default_checklist_template_id, po.default_checklist_template_id)
+  INTO v_template_id
+  FROM public.employees e
+  JOIN public.profiles p
+    ON p.id = e.profile_id
+   AND p.tenant_id = e.tenant_id
+  LEFT JOIN public.positions po
+    ON po.id = p.position_id
+   AND po.tenant_id = p.tenant_id
+  WHERE e.id = p_employee_id
+    AND e.tenant_id = p_tenant_id
+    AND e.is_active = true
+    AND p.branch_id = p_branch_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'employee_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.branches b
+    WHERE b.id = p_branch_id
+      AND b.tenant_id = p_tenant_id
+      AND COALESCE(b.is_active, true) = true
+  ) THEN
+    RAISE EXCEPTION 'branch_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF p_shift_id IS NULL OR p_shift_id = 0 THEN
+    RAISE EXCEPTION 'shift_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  SELECT s.id, s.start_time
+  INTO v_shift_id, v_shift_start
+  FROM public.shifts s
+  WHERE s.id = p_shift_id
+    AND s.tenant_id = p_tenant_id
+    AND (s.branch_id IS NULL OR s.branch_id = p_branch_id)
+    AND COALESCE(s.is_active, true) = true;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'shift_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  SELECT v_shift_start = min(s.start_time), v_shift_start = max(s.start_time)
+  INTO v_is_open, v_is_close
+  FROM public.shifts s
+  WHERE s.tenant_id = p_tenant_id
+    AND (s.branch_id IS NULL OR s.branch_id = p_branch_id)
+    AND COALESCE(s.is_active, true) = true;
+
+  IF v_template_id IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.shift_checklist_templates t
+      WHERE t.id = v_template_id
+        AND t.tenant_id = p_tenant_id
+        AND t.is_active = true
+        AND (t.branch_id IS NULL OR t.branch_id = p_branch_id)
+    ) THEN
+    v_template_id := NULL;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.attendance_records ar
+    WHERE ar.tenant_id = p_tenant_id
+      AND ar.employee_id = p_employee_id
+      AND ar.date = p_business_date
+      AND ar.shift_id = v_shift_id
+  ) THEN
+    RAISE EXCEPTION 'duplicate_clock_in' USING ERRCODE = '23505';
+  END IF;
+
+  INSERT INTO public.attendance_records (
+    tenant_id,
+    branch_id,
+    employee_id,
+    shift_id,
+    date,
+    check_in,
+    status,
+    method,
+    code_verified,
+    check_in_photo_path,
+    checklist_template_id
+  )
+  VALUES (
+    p_tenant_id,
+    p_branch_id,
+    p_employee_id,
+    v_shift_id,
+    p_business_date,
+    now(),
+    'present',
+    'pwa',
+    false,
+    p_photo_path,
+    v_template_id
+  )
+  RETURNING id INTO v_attendance_id;
+
+  INSERT INTO public.attendance_checklist_items (
+    tenant_id,
+    attendance_record_id,
+    template_item_id,
+    title,
+    phase,
+    done_definition,
+    is_required,
+    scope,
+    task_kind,
+    sort_order
+  )
+  SELECT
+    p_tenant_id,
+    v_attendance_id,
+    i.id,
+    i.title,
+    i.phase,
+    i.done_definition,
+    i.is_required,
+    i.scope,
+    i.task_kind,
+    row_number() OVER (ORDER BY i.sort_order, i.id)::integer
+  FROM public.shift_checklist_template_items i
+  WHERE i.tenant_id = p_tenant_id
+    AND i.template_id = v_template_id
+    AND i.is_active = true
+    AND (
+      i.scope = 'every_shift'
+      OR (i.scope = 'opening' AND v_is_open)
+      OR (i.scope = 'closing' AND v_is_close)
+    )
+  ORDER BY i.sort_order, i.id;
+
+  RETURN v_attendance_id;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION employee_clock_in_with_checklist(p_tenant_id bigint, p_employee_id bigint, p_branch_id bigint, p_shift_id bigint, p_business_date date, p_photo_path text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.employee_clock_in_with_checklist(p_tenant_id bigint, p_employee_id bigint, p_branch_id bigint, p_shift_id bigint, p_business_date date, p_photo_path text) IS 'Per-shift employee clock-in: validates a global-or-branch shift, dedupes per (employee, date, shift), snapshots the employee default checklist filtered by item scope for this shift (opening shift gets every_shift+opening, closing gets every_shift+closing; weekly excluded).';
+
+
+--
+-- Name: employee_clock_out_with_code(bigint, bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.employee_clock_out_with_code(p_tenant_id bigint, p_employee_id bigint, p_attendance_id bigint) RETURNS timestamp with time zone
+    LANGUAGE plpgsql
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+BEGIN
+  RETURN public.employee_request_clock_out(
+    p_tenant_id,
+    p_employee_id,
+    p_attendance_id
+  );
+END;
+$$;
+
+
+--
+-- Name: employee_request_clock_out(bigint, bigint, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.employee_request_clock_out(p_tenant_id bigint, p_employee_id bigint, p_attendance_id bigint) RETURNS timestamp with time zone
+    LANGUAGE plpgsql
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_record public.attendance_records%ROWTYPE;
+  v_remaining integer;
+  v_requested_at timestamptz;
+  v_employee_name text;
+  v_requester_role text;
+  v_target_roles text[];
+BEGIN
+  SELECT *
+  INTO v_record
+  FROM public.attendance_records ar
+  WHERE ar.id = p_attendance_id
+    AND ar.tenant_id = p_tenant_id
+    AND ar.employee_id = p_employee_id
+    AND ar.check_out IS NULL
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'open_attendance_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  SELECT count(*)::integer
+  INTO v_remaining
+  FROM public.attendance_checklist_items i
+  WHERE i.tenant_id = p_tenant_id
+    AND i.attendance_record_id = p_attendance_id
+    AND i.is_required = true
+    AND i.is_done = false;
+
+  IF v_remaining > 0 THEN
+    RAISE EXCEPTION 'checklist_incomplete' USING ERRCODE = '23514';
+  END IF;
+
+  IF v_record.checkout_requested_at IS NOT NULL THEN
+    RETURN v_record.checkout_requested_at;
+  END IF;
+
+  v_requested_at := now();
+
+  SELECT
+    p.full_name,
+    COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  INTO v_employee_name, v_requester_role
+  FROM public.employees e
+  LEFT JOIN public.profiles p
+    ON p.id = e.profile_id
+   AND p.tenant_id = e.tenant_id
+  LEFT JOIN public.positions po
+    ON po.id = p.position_id
+   AND po.tenant_id = p.tenant_id
+  WHERE e.id = p_employee_id
+    AND e.tenant_id = p_tenant_id;
+
+  v_requester_role := COALESCE(v_requester_role, 'office');
+  v_target_roles := CASE
+    WHEN v_requester_role = 'branch_manager' THEN ARRAY['owner']::text[]
+    WHEN v_requester_role IN ('cashier', 'waiter', 'chef') THEN ARRAY['branch_manager']::text[]
+    ELSE ARRAY['owner']::text[]
+  END;
+
+  UPDATE public.attendance_records
+  SET
+    checkout_requested_at = v_requested_at,
+    checkout_requested_by_role = v_requester_role,
+    checkout_approval_target_roles = v_target_roles,
+    check_out_code_verified = false,
+    updated_at = now()
+  WHERE id = p_attendance_id
+    AND tenant_id = p_tenant_id
+    AND employee_id = p_employee_id
+    AND check_out IS NULL;
+
+  INSERT INTO public.notifications (
+    tenant_id,
+    target_branch_id,
+    target_roles,
+    kind,
+    severity,
+    title,
+    body,
+    entity_type,
+    entity_id,
+    action_url,
+    meta,
+    dedup_key
+  )
+  VALUES (
+    p_tenant_id,
+    v_record.branch_id,
+    v_target_roles,
+    'attendance.checkout_requested',
+    'info',
+    'Yêu cầu duyệt kết ca',
+    format(
+      '%s đã gửi yêu cầu kết ca lúc %s.',
+      COALESCE(v_employee_name, 'Nhân viên'),
+      to_char(v_requested_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'HH24:MI DD/MM')
+    ),
+    'attendance_record',
+    p_attendance_id,
+    '/employee/checkout-approvals',
+    jsonb_build_object(
+      'attendance_id', p_attendance_id,
+      'employee_id', p_employee_id,
+      'requester_role', v_requester_role,
+      'approval_target_roles', to_jsonb(v_target_roles),
+      'branch_id', v_record.branch_id,
+      'business_date', v_record.date,
+      'requested_at', v_requested_at
+    ),
+    format('attendance.checkout_request:%s', p_attendance_id)
+  )
+  ON CONFLICT (tenant_id, dedup_key)
+    WHERE dedup_key IS NOT NULL
+  DO UPDATE SET
+    created_at = EXCLUDED.created_at,
+    expires_at = NULL,
+    meta = EXCLUDED.meta;
+
+  RETURN v_requested_at;
+END;
+$$;
+
+
+--
+-- Name: employee_submit_consumption_report(bigint, bigint, jsonb, text, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.employee_submit_consumption_report(p_tenant_id bigint, p_attendance_id bigint, p_lines jsonb, p_note text DEFAULT NULL::text, p_no_consumption boolean DEFAULT false) RETURNS bigint
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant bigint := public.auth_tenant_id();
+  v_attendance record;
+  v_report_id bigint;
+  v_checklist_item_id bigint;
+  v_line_count integer;
+  v_distinct_line_count integer;
+  v_no_consumption boolean := COALESCE(p_no_consumption, false);
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF v_tenant IS NULL OR v_tenant <> p_tenant_id THEN
+    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_lines IS NULL OR jsonb_typeof(p_lines) <> 'array' THEN
+    RAISE EXCEPTION 'invalid_consumption_lines' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_no_consumption AND jsonb_array_length(p_lines) <> 0 THEN
+    RAISE EXCEPTION 'no_consumption_with_lines' USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT v_no_consumption AND jsonb_array_length(p_lines) = 0 THEN
+    RAISE EXCEPTION 'consumption_lines_required' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT ar.id, ar.tenant_id, ar.branch_id, ar.employee_id, ar.check_in, ar.check_out,
+         ar.checkout_requested_at
+  INTO v_attendance
+  FROM public.attendance_records ar
+  JOIN public.employees e
+    ON e.id = ar.employee_id
+   AND e.tenant_id = ar.tenant_id
+  WHERE ar.id = p_attendance_id
+    AND ar.tenant_id = p_tenant_id
+    AND e.profile_id = v_uid
+  FOR UPDATE OF ar;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'attendance_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_attendance.check_in IS NULL OR v_attendance.check_out IS NOT NULL THEN
+    RAISE EXCEPTION 'attendance_not_open' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_attendance.checkout_requested_at IS NOT NULL THEN
+    RAISE EXCEPTION 'checkout_already_requested' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT ci.id
+  INTO v_checklist_item_id
+  FROM public.attendance_checklist_items ci
+  WHERE ci.tenant_id = p_tenant_id
+    AND ci.attendance_record_id = v_attendance.id
+    AND ci.task_kind = 'consumption_report'
+  LIMIT 1;
+
+  IF v_checklist_item_id IS NULL THEN
+    RAISE EXCEPTION 'consumption_checklist_not_assigned' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT count(*)
+  INTO v_line_count
+  FROM jsonb_to_recordset(p_lines) AS src(
+    default_item_id bigint,
+    ingredient_id bigint,
+    quantity numeric,
+    note text
+  )
+  JOIN public.ingredients i
+    ON i.id = src.ingredient_id
+   AND i.tenant_id = p_tenant_id
+   AND i.is_active = true
+  LEFT JOIN public.shift_checklist_consumption_default_items d
+    ON d.id = src.default_item_id
+   AND d.tenant_id = p_tenant_id
+   AND d.ingredient_id = src.ingredient_id
+   AND d.is_active = true
+  LEFT JOIN public.attendance_checklist_items ci
+    ON ci.tenant_id = p_tenant_id
+   AND ci.attendance_record_id = v_attendance.id
+   AND ci.task_kind = 'consumption_report'
+   AND ci.template_item_id = d.template_item_id
+  WHERE src.quantity > 0
+    AND (src.default_item_id IS NULL OR ci.id IS NOT NULL);
+
+  SELECT count(DISTINCT src.ingredient_id)
+  INTO v_distinct_line_count
+  FROM jsonb_to_recordset(p_lines) AS src(
+    default_item_id bigint,
+    ingredient_id bigint,
+    quantity numeric,
+    note text
+  );
+
+  IF v_line_count <> jsonb_array_length(p_lines)
+     OR v_distinct_line_count <> jsonb_array_length(p_lines) THEN
+    RAISE EXCEPTION 'invalid_consumption_line' USING ERRCODE = '22023';
+  END IF;
+
+  INSERT INTO public.attendance_consumption_reports (
+    tenant_id,
+    attendance_record_id,
+    branch_id,
+    employee_id,
+    status,
+    note,
+    submitted_by,
+    submitted_at,
+    reviewed_by,
+    reviewed_at,
+    review_note,
+    stock_issue_id,
+    no_consumption
+  )
+  VALUES (
+    p_tenant_id,
+    v_attendance.id,
+    v_attendance.branch_id,
+    v_attendance.employee_id,
+    'submitted',
+    NULLIF(btrim(COALESCE(p_note, '')), ''),
+    v_uid,
+    now(),
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    v_no_consumption
+  )
+  ON CONFLICT (tenant_id, attendance_record_id)
+  DO UPDATE SET
+    status = 'submitted',
+    note = EXCLUDED.note,
+    submitted_by = EXCLUDED.submitted_by,
+    submitted_at = EXCLUDED.submitted_at,
+    reviewed_by = NULL,
+    reviewed_at = NULL,
+    review_note = NULL,
+    stock_issue_id = NULL,
+    no_consumption = EXCLUDED.no_consumption
+  WHERE attendance_consumption_reports.status IN ('draft', 'submitted', 'needs_changes')
+  RETURNING id INTO v_report_id;
+
+  IF v_report_id IS NULL THEN
+    RAISE EXCEPTION 'consumption_report_locked' USING ERRCODE = '22023';
+  END IF;
+
+  DELETE FROM public.attendance_consumption_report_lines
+  WHERE tenant_id = p_tenant_id
+    AND report_id = v_report_id;
+
+  INSERT INTO public.attendance_consumption_report_lines (
+    tenant_id,
+    report_id,
+    ingredient_id,
+    default_item_id,
+    quantity,
+    unit,
+    note,
+    sort_order
+  )
+  SELECT
+    p_tenant_id,
+    v_report_id,
+    src.ingredient_id,
+    src.default_item_id,
+    src.quantity,
+    i.purchase_unit,
+    NULLIF(btrim(COALESCE(src.note, '')), ''),
+    src.sort_order
+  FROM (
+    SELECT
+      row_number() OVER ()::integer AS sort_order,
+      default_item_id,
+      ingredient_id,
+      quantity,
+      note
+    FROM jsonb_to_recordset(p_lines) AS parsed(
+      default_item_id bigint,
+      ingredient_id bigint,
+      quantity numeric,
+      note text
+    )
+  ) src
+  JOIN public.ingredients i
+    ON i.id = src.ingredient_id
+   AND i.tenant_id = p_tenant_id
+   AND i.is_active = true;
+
+  UPDATE public.attendance_checklist_items
+  SET is_done = true,
+      completed_at = now()
+  WHERE tenant_id = p_tenant_id
+    AND attendance_record_id = v_attendance.id
+    AND task_kind = 'consumption_report';
+
+  RETURN v_report_id;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION employee_submit_consumption_report(p_tenant_id bigint, p_attendance_id bigint, p_lines jsonb, p_note text, p_no_consumption boolean); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.employee_submit_consumption_report(p_tenant_id bigint, p_attendance_id bigint, p_lines jsonb, p_note text, p_no_consumption boolean) IS 'Employee submits daily kitchen consumption lines or an explicit no-consumption confirmation for an open attendance record. Does not affect Inventory.';
+
+
+--
 -- Name: enable_offline_for_session(bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7200,18 +8770,31 @@ CREATE FUNCTION public.enforce_branch_menu_daily_limit() RETURNS trigger
     SET search_path TO ''
     AS $_$
 DECLARE
-  v_branch_id  BIGINT;
-  v_order_date DATE;
-  v_target     RECORD;
-  v_limit      RECORD;
+  v_branch_id       bigint;
+  v_order_date      date;
+  v_tenant_id       bigint;
+  v_target          record;
+  v_limit           record;
+  v_hold_token_text text;
+  v_hold_token      uuid;
+  v_active_hold_qty integer;
 BEGIN
   IF COALESCE(current_setting('comtammatu.skip_quota_enforcement', true), 'false') = 'true' THEN
     RETURN NEW;
   END IF;
 
-  SELECT o.branch_id,
+  v_hold_token_text := NULLIF(
+    current_setting('comtammatu.daily_limit_hold_token', true),
+    ''
+  );
+  IF v_hold_token_text IS NOT NULL THEN
+    v_hold_token := v_hold_token_text::uuid;
+  END IF;
+
+  SELECT o.tenant_id,
+         o.branch_id,
          (o.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
-  INTO v_branch_id, v_order_date
+  INTO v_tenant_id, v_branch_id, v_order_date
   FROM public.orders o
   WHERE o.id = NEW.order_id;
 
@@ -7221,16 +8804,16 @@ BEGIN
 
   FOR v_target IN
     WITH agg AS (
-      SELECT NEW.menu_item_id::BIGINT AS item_id,
-             NEW.quantity::INT        AS need_qty
+      SELECT NEW.menu_item_id::bigint AS item_id,
+             NEW.quantity::integer    AS need_qty
       UNION ALL
-      SELECT (s.elem ->> 'side_item_id')::BIGINT,
-             (NEW.quantity * COALESCE(NULLIF(s.elem ->> 'quantity', '')::INT, 1))::INT
+      SELECT (s.elem ->> 'side_item_id')::bigint,
+             (NEW.quantity * COALESCE(NULLIF(s.elem ->> 'quantity', '')::integer, 1))::integer
       FROM jsonb_array_elements(COALESCE(NEW.sides, '[]'::jsonb)) AS s(elem)
       WHERE s.elem ? 'side_item_id'
         AND (s.elem ->> 'side_item_id') ~ '^[0-9]+$'
     )
-    SELECT item_id, SUM(need_qty)::INT AS need_qty
+    SELECT item_id, SUM(need_qty)::integer AS need_qty
     FROM agg
     WHERE item_id IS NOT NULL
     GROUP BY item_id
@@ -7238,9 +8821,9 @@ BEGIN
   LOOP
     SELECT * INTO v_limit
     FROM public.branch_menu_item_daily_limits
-    WHERE branch_id    = v_branch_id
+    WHERE branch_id = v_branch_id
       AND menu_item_id = v_target.item_id
-      AND limit_date   = v_order_date
+      AND limit_date = v_order_date
     FOR UPDATE;
 
     IF NOT FOUND THEN
@@ -7248,15 +8831,38 @@ BEGIN
     END IF;
 
     IF v_limit.is_disabled THEN
-      RAISE EXCEPTION 'daily_limit_item_disabled: %', v_target.item_id
-        USING ERRCODE = 'P0001';
+      RAISE EXCEPTION 'daily_limit_item_disabled'
+        USING ERRCODE = 'P0001',
+              DETAIL = jsonb_build_object(
+                'reason', 'daily_limit_item_disabled',
+                'menu_item_id', v_target.item_id
+              )::text;
     END IF;
 
+    SELECT COALESCE(SUM(h.quantity), 0)::integer
+    INTO v_active_hold_qty
+    FROM public.branch_menu_item_daily_holds h
+    WHERE h.tenant_id = v_tenant_id
+      AND h.branch_id = v_branch_id
+      AND h.menu_item_id = v_target.item_id
+      AND h.limit_date = v_order_date
+      AND (v_hold_token IS NULL OR h.hold_token <> v_hold_token)
+      AND h.committed_at IS NULL
+      AND h.released_at IS NULL
+      AND h.expires_at > now();
+
     IF v_limit.limit_quantity IS NOT NULL
-       AND v_limit.sold_today + v_target.need_qty > v_limit.limit_quantity THEN
-      RAISE EXCEPTION 'daily_limit_exceeded: item %, limit %, sold %, requested %',
-        v_target.item_id, v_limit.limit_quantity, v_limit.sold_today, v_target.need_qty
-        USING ERRCODE = 'P0001';
+       AND v_limit.sold_today + v_active_hold_qty + v_target.need_qty > v_limit.limit_quantity THEN
+      RAISE EXCEPTION 'daily_limit_exceeded'
+        USING ERRCODE = 'P0001',
+              DETAIL = jsonb_build_object(
+                'reason', 'daily_limit_exceeded',
+                'menu_item_id', v_target.item_id,
+                'limit_quantity', v_limit.limit_quantity,
+                'sold_today', v_limit.sold_today,
+                'held_quantity', v_active_hold_qty,
+                'requested_quantity', v_target.need_qty
+              )::text;
     END IF;
 
     UPDATE public.branch_menu_item_daily_limits
@@ -7273,7 +8879,7 @@ $_$;
 -- Name: FUNCTION enforce_branch_menu_daily_limit(); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.enforce_branch_menu_daily_limit() IS 'AFTER INSERT on order_items: aggregate main + sides (JSONB) by menu_item_id ASC, lock each limit row FOR UPDATE, raise P0001 daily_limit_item_disabled / daily_limit_exceeded, increment sold_today. Skip-hatch: GUC comtammatu.skip_quota_enforcement = ''true'' (set by split-partial RPC).';
+COMMENT ON FUNCTION public.enforce_branch_menu_daily_limit() IS 'AFTER INSERT on order_items: aggregate main + sides by menu_item_id ASC, lock each limit row, count active daily-limit holds except comtammatu.daily_limit_hold_token, raise P0001 daily_limit_item_disabled / daily_limit_exceeded, increment sold_today. Skip-hatch: comtammatu.skip_quota_enforcement=true.';
 
 
 --
@@ -7328,13 +8934,16 @@ CREATE FUNCTION public.enforce_po_grn_branch_is_procurement() RETURNS trigger
     AS $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM public.branches b
+    SELECT 1
+    FROM public.branches b
     WHERE b.id = NEW.branch_id
       AND b.tenant_id = NEW.tenant_id
-      AND b.branch_kind = 'branch'
+      AND b.branch_kind IN ('branch', 'central_supply', 'central_kitchen')
+      AND b.is_active = true
   ) THEN
-    RAISE EXCEPTION 'branch must be active branch' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'branch must be active procurement site' USING ERRCODE = '23514';
   END IF;
+
   RETURN NEW;
 END;
 $$;
@@ -7349,27 +8958,46 @@ CREATE FUNCTION public.enforce_stock_transfer_direction() RETURNS trigger
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_from_kind TEXT;
-  v_to_kind   TEXT;
+  v_from_kind text;
+  v_to_kind text;
 BEGIN
-  -- Intra-branch (same id): allowed; rely on app layer for location semantics.
   IF NEW.from_branch_id = NEW.to_branch_id THEN
-    RETURN NEW;
+    RAISE EXCEPTION 'intra_branch_transfer_not_supported' USING ERRCODE = '23514';
   END IF;
 
-  SELECT b.branch_kind INTO v_from_kind
+  SELECT b.branch_kind
+  INTO v_from_kind
   FROM public.branches b
-  WHERE b.id = NEW.from_branch_id AND b.tenant_id = NEW.tenant_id;
+  WHERE b.id = NEW.from_branch_id
+    AND b.tenant_id = NEW.tenant_id;
 
-  SELECT b.branch_kind INTO v_to_kind
+  SELECT b.branch_kind
+  INTO v_to_kind
   FROM public.branches b
-  WHERE b.id = NEW.to_branch_id AND b.tenant_id = NEW.tenant_id;
+  WHERE b.id = NEW.to_branch_id
+    AND b.tenant_id = NEW.tenant_id;
 
   IF v_from_kind IS NULL OR v_to_kind IS NULL THEN
     RAISE EXCEPTION 'stock_transfers: invalid branch reference' USING ERRCODE = '23514';
   END IF;
 
   IF v_from_kind = 'branch' AND v_to_kind = 'branch' THEN
+    RETURN NEW;
+  END IF;
+
+  IF v_from_kind = 'branch' AND v_to_kind IN ('central_supply', 'central_kitchen') THEN
+    RETURN NEW;
+  END IF;
+
+  IF v_from_kind IN ('central_supply', 'central_kitchen') AND v_to_kind = 'branch' THEN
+    RETURN NEW;
+  END IF;
+
+  IF v_from_kind = 'central_supply' AND v_to_kind = 'central_kitchen' THEN
+    RETURN NEW;
+  END IF;
+
+  IF v_from_kind = 'central_kitchen' AND v_to_kind = 'central_supply' THEN
     RETURN NEW;
   END IF;
 
@@ -7383,7 +9011,7 @@ $$;
 -- Name: FUNCTION enforce_stock_transfer_direction(); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.enforce_stock_transfer_direction() IS 'Allowed transfers: branch-to-branch and intra-branch. Reject all others.';
+COMMENT ON FUNCTION public.enforce_stock_transfer_direction() IS 'Allowed transfers: branch-to-branch, branch-to-central, central-to-branch, central_supply-to-central_kitchen, and central_kitchen-to-central_supply. Reject same-site.';
 
 
 --
@@ -8129,7 +9757,6 @@ BEGIN
     'order_number',     v_order.order_number,
     'order_type',       v_order.order_type,
     'table_number',     v_table_no,
-    'customer_count',   v_order.customer_count,
     'cashier_name',     COALESCE(v_cashier_name, ''),
     'note',             v_order.note,
     'items',            COALESCE(v_items, '[]'::jsonb),
@@ -8185,6 +9812,12 @@ DECLARE
   v_printer_id   BIGINT;
   v_cashier_name TEXT;
   v_branch_tax   TEXT;
+  v_qr_type      TEXT;
+  v_vietqr_bank  TEXT;
+  v_vietqr_acc   TEXT;
+  v_vietqr_name  TEXT;
+  v_qr_content   TEXT;
+  v_payment_qr   JSONB;
   v_items        JSONB;
   v_payload      JSONB;
   v_idempotency  TEXT;
@@ -8243,6 +9876,47 @@ BEGIN
      WHERE id = p_order_id;
   END IF;
 
+  SELECT value INTO v_qr_type
+  FROM public.system_settings
+  WHERE tenant_id = v_order.tenant_id AND key = 'payment_qr_type';
+  v_qr_type := COALESCE(v_qr_type, 'vietqr');
+
+  IF v_qr_type = 'vietqr' THEN
+    SELECT value INTO v_vietqr_bank FROM public.system_settings
+     WHERE tenant_id = v_order.tenant_id AND key = 'payment_vietqr_bank_code';
+    SELECT value INTO v_vietqr_acc FROM public.system_settings
+     WHERE tenant_id = v_order.tenant_id AND key = 'payment_vietqr_account_no';
+    SELECT value INTO v_vietqr_name FROM public.system_settings
+     WHERE tenant_id = v_order.tenant_id AND key = 'payment_vietqr_account_name';
+
+    BEGIN
+      v_qr_content := public.print_vietqr_emvco(
+        v_vietqr_bank,
+        v_vietqr_acc,
+        v_vietqr_name,
+        v_order.total_amount,
+        'DH ' || v_order.order_number
+      );
+    EXCEPTION WHEN OTHERS THEN
+      v_qr_content := NULL;
+      RAISE WARNING '[enqueue_receipt_print] vietqr emv build failed for order %: %',
+        p_order_id, SQLERRM;
+    END;
+
+    IF v_qr_content IS NOT NULL THEN
+      v_payment_qr := jsonb_build_object(
+        'type',         'vietqr',
+        'content',      v_qr_content,
+        'header_label', upper(COALESCE(v_vietqr_bank, ''))
+                          || ' (BIN ' || public.print_vietqr_bank_bin(v_vietqr_bank) || ')',
+        'account_no',   v_vietqr_acc,
+        'account_name', v_vietqr_name,
+        'amount',       v_order.total_amount,
+        'description',  'DH ' || v_order.order_number
+      );
+    END IF;
+  END IF;
+
   SELECT jsonb_agg(
     jsonb_build_object(
       'item_name',    oi.item_name,
@@ -8270,7 +9944,6 @@ BEGIN
     'order_number',     v_order.order_number,
     'order_type',       v_order.order_type,
     'table_number',     v_table_no,
-    'customer_count',   v_order.customer_count,
     'cashier_name',     COALESCE(v_cashier_name, ''),
     'note',             v_order.note,
     'items',            COALESCE(v_items, '[]'::jsonb),
@@ -8280,6 +9953,7 @@ BEGIN
     'discount_amount',  v_order.discount_amount,
     'total_amount',     v_order.total_amount,
     'payment_method',   v_order.payment_method,
+    'payment_qr',       v_payment_qr,
     'cash_received',    p_cash_received,
     'cash_change',      p_cash_change,
     'created_at',       to_char(v_order.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh',
@@ -8338,6 +10012,7 @@ DECLARE
   v_printer_id          BIGINT;
   v_breakdown           JSONB;
   v_total_revenue       NUMERIC(15,2);
+  v_discount_total      NUMERIC(15,2);
   v_item_breakdown      JSONB;
   v_total_item_quantity INT;
   v_payload             JSONB;
@@ -8417,6 +10092,14 @@ BEGIN
       AND status <> 'cancelled'
     GROUP BY payment_method
   ) AS grp;
+
+  SELECT COALESCE(SUM(discount_amount), 0)
+  INTO v_discount_total
+  FROM public.orders
+  WHERE pos_session_id = p_session_id
+    AND tenant_id = v_session.tenant_id
+    AND payment_status = 'paid'
+    AND status <> 'cancelled';
 
   WITH paid_items AS (
     SELECT
@@ -8510,7 +10193,7 @@ BEGIN
         'qty', qty,
         'revenue', revenue
       )
-      ORDER BY source_order, qty DESC, name
+      ORDER BY revenue DESC, qty DESC, source_order, name
     ), '[]'::jsonb),
     COALESCE(SUM(qty), 0)::INT
   INTO v_item_breakdown, v_total_item_quantity
@@ -8557,6 +10240,7 @@ BEGIN
     ),
     'payment_breakdown',     v_breakdown,
     'total_revenue',         v_total_revenue,
+    'discount_total',        COALESCE(v_discount_total, 0),
     'total_item_quantity',   COALESCE(v_total_item_quantity, 0),
     'item_breakdown',        COALESCE(v_item_breakdown, '[]'::jsonb),
     'printed_at',            to_char(v_now AT TIME ZONE 'Asia/Ho_Chi_Minh',
@@ -8588,6 +10272,13 @@ BEGIN
   );
 END;
 $$;
+
+
+--
+-- Name: FUNCTION enqueue_shift_close_print(p_session_id bigint); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.enqueue_shift_close_print(p_session_id bigint) IS 'Enqueue data-driven shift-close print payload. Includes paid-order discount_total and sold-item breakdown ordered by revenue desc.';
 
 
 --
@@ -8768,48 +10459,6 @@ BEGIN
       is_default_consumption = TRUE,
       sort_order = EXCLUDED.sort_order,
       updated_at = now();
-END;
-$$;
-
-
---
--- Name: ensure_journal_write_permission(bigint); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.ensure_journal_write_permission(p_branch_id bigint DEFAULT NULL::bigint) RETURNS void
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-DECLARE
-  v_actor  UUID := auth.uid();
-  v_tenant BIGINT := public.auth_tenant_id();
-BEGIN
-  IF v_actor IS NULL THEN
-    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
-  END IF;
-  IF v_tenant IS NULL THEN
-    RAISE EXCEPTION 'tenant claim missing' USING ERRCODE = '28000';
-  END IF;
-
-  IF p_branch_id IS NOT NULL THEN
-    PERFORM 1
-    FROM public.branches b
-    WHERE b.id = p_branch_id
-      AND b.tenant_id = v_tenant;
-    IF NOT FOUND THEN
-      RAISE EXCEPTION 'branch not found for tenant' USING ERRCODE = 'P0002';
-    END IF;
-
-    IF NOT public.has_permission(p_branch_id, 'finance:expense_approve') THEN
-      RAISE EXCEPTION 'permission denied: finance:expense_approve required'
-        USING ERRCODE = '42501';
-    END IF;
-  ELSE
-    IF NOT public.has_permission(NULL, 'finance:expense_approve') THEN
-      RAISE EXCEPTION 'permission denied: finance:expense_approve required'
-        USING ERRCODE = '42501';
-    END IF;
-  END IF;
 END;
 $$;
 
@@ -9044,886 +10693,6 @@ COMMENT ON FUNCTION public.find_payment_order_desync(p_since timestamp with time
 
 
 --
--- Name: fn_eval_account_expr(bigint, date, date, jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.fn_eval_account_expr(p_tenant_id bigint, p_start_date date, p_end_date date, p_expr jsonb) RETURNS numeric
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $_$
-DECLARE
-  v_op   TEXT;
-  v_acc  TEXT;
-  v_sum  NUMERIC(15,2) := 0;
-  v_arg  JSONB;
-  v_val  NUMERIC(15,2);
-BEGIN
-  IF p_tenant_id IS NULL THEN
-    RAISE EXCEPTION 'tenant_required' USING ERRCODE = '22023';
-  END IF;
-  IF auth.uid() IS NOT NULL AND p_tenant_id <> public.auth_tenant_id() THEN
-    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
-  END IF;
-
-  v_op := p_expr ->> 'op';
-
-  IF v_op IN ('balance', 'debit_balance', 'credit_balance', 'period_credit', 'period_debit') THEN
-    v_acc := p_expr ->> 'account';
-    IF v_acc IS NULL OR v_acc !~ '^[0-9]{3,8}$' THEN
-      RAISE EXCEPTION 'invalid_account_code: %', COALESCE(v_acc, '<null>')
-        USING ERRCODE = '22023';
-    END IF;
-  END IF;
-
-  IF v_op = 'balance' THEN
-    SELECT COALESCE(SUM(jel.debit_amount - jel.credit_amount), 0)
-    INTO v_sum
-    FROM public.journal_entry_lines jel
-    JOIN public.chart_of_accounts coa ON coa.id = jel.account_id
-    JOIN public.journal_entries je ON je.id = jel.journal_entry_id
-    WHERE je.tenant_id = p_tenant_id
-      AND je.status = 'posted'
-      AND je.entry_date <= p_end_date
-      AND (p_start_date IS NULL OR je.entry_date >= p_start_date)
-      AND coa.account_code LIKE v_acc || '%';
-    RETURN v_sum;
-  ELSIF v_op = 'debit_balance' THEN
-    SELECT COALESCE(SUM(jel.debit_amount - jel.credit_amount), 0)
-    INTO v_sum
-    FROM public.journal_entry_lines jel
-    JOIN public.chart_of_accounts coa ON coa.id = jel.account_id
-    JOIN public.journal_entries je ON je.id = jel.journal_entry_id
-    WHERE je.tenant_id = p_tenant_id
-      AND je.status = 'posted'
-      AND je.entry_date <= p_end_date
-      AND (p_start_date IS NULL OR je.entry_date >= p_start_date)
-      AND coa.account_code LIKE v_acc || '%';
-    RETURN GREATEST(v_sum, 0);
-  ELSIF v_op = 'credit_balance' THEN
-    SELECT COALESCE(SUM(jel.credit_amount - jel.debit_amount), 0)
-    INTO v_sum
-    FROM public.journal_entry_lines jel
-    JOIN public.chart_of_accounts coa ON coa.id = jel.account_id
-    JOIN public.journal_entries je ON je.id = jel.journal_entry_id
-    WHERE je.tenant_id = p_tenant_id
-      AND je.status = 'posted'
-      AND je.entry_date <= p_end_date
-      AND (p_start_date IS NULL OR je.entry_date >= p_start_date)
-      AND coa.account_code LIKE v_acc || '%';
-    RETURN GREATEST(v_sum, 0);
-  ELSIF v_op = 'period_credit' THEN
-    IF p_start_date IS NULL THEN RETURN 0; END IF;
-    SELECT COALESCE(SUM(jel.credit_amount), 0)
-    INTO v_sum
-    FROM public.journal_entry_lines jel
-    JOIN public.chart_of_accounts coa ON coa.id = jel.account_id
-    JOIN public.journal_entries je ON je.id = jel.journal_entry_id
-    WHERE je.tenant_id = p_tenant_id
-      AND je.status = 'posted'
-      AND je.entry_date >= p_start_date
-      AND je.entry_date <= p_end_date
-      AND coa.account_code LIKE v_acc || '%';
-    RETURN v_sum;
-  ELSIF v_op = 'period_debit' THEN
-    IF p_start_date IS NULL THEN RETURN 0; END IF;
-    SELECT COALESCE(SUM(jel.debit_amount), 0)
-    INTO v_sum
-    FROM public.journal_entry_lines jel
-    JOIN public.chart_of_accounts coa ON coa.id = jel.account_id
-    JOIN public.journal_entries je ON je.id = jel.journal_entry_id
-    WHERE je.tenant_id = p_tenant_id
-      AND je.status = 'posted'
-      AND je.entry_date >= p_start_date
-      AND je.entry_date <= p_end_date
-      AND coa.account_code LIKE v_acc || '%';
-    RETURN v_sum;
-  ELSIF v_op = 'sum' THEN
-    FOR v_arg IN SELECT * FROM jsonb_array_elements(p_expr -> 'args') LOOP
-      v_sum := v_sum + public.fn_eval_account_expr(p_tenant_id, p_start_date, p_end_date, v_arg);
-    END LOOP;
-    RETURN v_sum;
-  ELSIF v_op = 'negate' THEN
-    RETURN -1 * public.fn_eval_account_expr(p_tenant_id, p_start_date, p_end_date, p_expr -> 'arg');
-  ELSIF v_op = 'max_zero' THEN
-    v_val := public.fn_eval_account_expr(p_tenant_id, p_start_date, p_end_date, p_expr -> 'arg');
-    RETURN GREATEST(v_val, 0);
-  ELSIF v_op = 'literal' THEN
-    RETURN COALESCE((p_expr ->> 'value')::NUMERIC(15,2), 0);
-  ELSE
-    RAISE EXCEPTION 'unknown_dsl_op: %', v_op USING ERRCODE = '22023';
-  END IF;
-END;
-$_$;
-
-
---
--- Name: fn_generate_b01_dn(bigint, date); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.fn_generate_b01_dn(p_tenant_id bigint, p_as_of_date date) RETURNS jsonb
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_lines    JSONB := '[]'::JSONB;
-  v_row      RECORD;
-  v_amount   NUMERIC(15,2);
-  v_period   RECORD;
-  v_status   TEXT := 'draft';
-BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
-  END IF;
-  IF NOT public.has_permission_any('finance:view') THEN
-    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
-  END IF;
-  IF p_tenant_id <> public.auth_tenant_id() THEN
-    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
-  END IF;
-
-  SELECT fp.status INTO v_period
-  FROM public.fiscal_periods fp
-  WHERE fp.tenant_id = p_tenant_id
-    AND fp.period_year = EXTRACT(YEAR FROM p_as_of_date)::INT
-    AND fp.period_month = EXTRACT(MONTH FROM p_as_of_date)::INT;
-  IF FOUND AND v_period.status = 'closed' THEN
-    v_status := 'final';
-  END IF;
-
-  FOR v_row IN
-    SELECT line_code, line_label_vi, parent_line, level, formula, display_order, is_total
-    FROM public.vas_report_lines
-    WHERE form_code = 'B01-DN'
-      AND tenant_id IS NULL
-    ORDER BY display_order
-  LOOP
-    v_amount := public.fn_eval_account_expr(p_tenant_id, NULL, p_as_of_date, v_row.formula);
-
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-      'line_code',  v_row.line_code,
-      'line_label', v_row.line_label_vi,
-      'parent',     v_row.parent_line,
-      'level',      v_row.level,
-      'amount',     v_amount,
-      'is_total',   v_row.is_total
-    ));
-  END LOOP;
-
-  RETURN jsonb_build_object(
-    'form', 'B01-DN',
-    'tenant_id', p_tenant_id,
-    'as_of_date', p_as_of_date,
-    'status', v_status,
-    'generated_at', now(),
-    'lines', v_lines
-  );
-END;
-$$;
-
-
---
--- Name: fn_generate_b02_dn(bigint, date, date); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.fn_generate_b02_dn(p_tenant_id bigint, p_start_date date, p_end_date date) RETURNS jsonb
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_lines  JSONB := '[]'::JSONB;
-  v_row    RECORD;
-  v_amount NUMERIC(15,2);
-  v_status TEXT := 'draft';
-  v_open_count INT;
-BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
-  END IF;
-  IF NOT public.has_permission_any('finance:view') THEN
-    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
-  END IF;
-  IF p_tenant_id <> public.auth_tenant_id() THEN
-    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
-  END IF;
-  IF p_end_date < p_start_date THEN
-    RAISE EXCEPTION 'invalid_date_range' USING ERRCODE = '22023';
-  END IF;
-
-  SELECT COUNT(*) INTO v_open_count
-  FROM generate_series(
-    date_trunc('month', p_start_date)::DATE,
-    date_trunc('month', p_end_date)::DATE,
-    INTERVAL '1 month'
-  ) AS m
-  LEFT JOIN public.fiscal_periods fp
-    ON fp.tenant_id = p_tenant_id
-   AND fp.period_year = EXTRACT(YEAR FROM m)::INT
-   AND fp.period_month = EXTRACT(MONTH FROM m)::INT
-  WHERE COALESCE(fp.status, 'open') <> 'closed';
-  IF v_open_count = 0 THEN
-    v_status := 'final';
-  END IF;
-
-  FOR v_row IN
-    SELECT line_code, line_label_vi, parent_line, level, formula, display_order, is_total
-    FROM public.vas_report_lines
-    WHERE form_code = 'B02-DN'
-      AND tenant_id IS NULL
-    ORDER BY display_order
-  LOOP
-    v_amount := public.fn_eval_account_expr(p_tenant_id, p_start_date, p_end_date, v_row.formula);
-
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-      'line_code',  v_row.line_code,
-      'line_label', v_row.line_label_vi,
-      'parent',     v_row.parent_line,
-      'level',      v_row.level,
-      'amount',     v_amount,
-      'is_total',   v_row.is_total
-    ));
-  END LOOP;
-
-  RETURN jsonb_build_object(
-    'form', 'B02-DN',
-    'tenant_id', p_tenant_id,
-    'start_date', p_start_date,
-    'end_date', p_end_date,
-    'status', v_status,
-    'generated_at', now(),
-    'lines', v_lines
-  );
-END;
-$$;
-
-
---
--- Name: fn_generate_b03_dn(bigint, date, date); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.fn_generate_b03_dn(p_tenant_id bigint, p_start_date date, p_end_date date) RETURNS jsonb
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_lines  JSONB := '[]'::JSONB;
-  v_row    RECORD;
-  v_amount NUMERIC(15,2);
-  v_status TEXT := 'draft';
-  v_open_count INT;
-  -- Per-line buckets to support derived subtotals
-  v_t01 NUMERIC(15,2) := 0;
-  v_t02 NUMERIC(15,2) := 0;
-  v_t09 NUMERIC(15,2) := 0;
-  v_t10 NUMERIC(15,2) := 0;
-  v_t11 NUMERIC(15,2) := 0;
-  v_t20 NUMERIC(15,2) := 0;
-  v_t21 NUMERIC(15,2) := 0;
-  v_t22 NUMERIC(15,2) := 0;
-  v_t30 NUMERIC(15,2) := 0;
-  v_t31 NUMERIC(15,2) := 0;
-  v_t34 NUMERIC(15,2) := 0;
-  v_t40 NUMERIC(15,2) := 0;
-  v_t50 NUMERIC(15,2) := 0;
-  v_t60 NUMERIC(15,2) := 0;
-  v_t70 NUMERIC(15,2) := 0;
-BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
-  END IF;
-  IF NOT public.has_permission_any('finance:view') THEN
-    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
-  END IF;
-  IF p_tenant_id <> public.auth_tenant_id() THEN
-    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
-  END IF;
-  IF p_end_date < p_start_date THEN
-    RAISE EXCEPTION 'invalid_date_range' USING ERRCODE = '22023';
-  END IF;
-
-  -- 'final' only if every month spanned is closed (mirror B02-DN)
-  SELECT COUNT(*) INTO v_open_count
-  FROM generate_series(
-    date_trunc('month', p_start_date)::DATE,
-    date_trunc('month', p_end_date)::DATE,
-    INTERVAL '1 month'
-  ) AS m
-  LEFT JOIN public.fiscal_periods fp
-    ON fp.tenant_id = p_tenant_id
-   AND fp.period_year = EXTRACT(YEAR FROM m)::INT
-   AND fp.period_month = EXTRACT(MONTH FROM m)::INT
-  WHERE COALESCE(fp.status, 'open') <> 'closed';
-  IF v_open_count = 0 THEN
-    v_status := 'final';
-  END IF;
-
-  -- Iterate lines in display_order. Subtotals (20, 30, 40, 50) and
-  -- opening cash (60) are computed from buckets; everything else
-  -- evaluates through the DSL.
-  FOR v_row IN
-    SELECT line_code, line_label_vi, parent_line, level, formula, display_order, is_total
-    FROM public.vas_report_lines
-    WHERE form_code = 'B03-DN'
-      AND tenant_id IS NULL
-    ORDER BY display_order
-  LOOP
-    IF v_row.line_code = '20' THEN
-      v_amount := v_t01 + v_t02 + v_t09 + v_t10 + v_t11;
-      v_t20 := v_amount;
-    ELSIF v_row.line_code = '30' THEN
-      v_amount := v_t21 + v_t22;
-      v_t30 := v_amount;
-    ELSIF v_row.line_code = '40' THEN
-      v_amount := v_t31 + v_t34;
-      v_t40 := v_amount;
-    ELSIF v_row.line_code = '50' THEN
-      v_amount := v_t20 + v_t30 + v_t40;
-      v_t50 := v_amount;
-    ELSIF v_row.line_code = '60' THEN
-      -- Opening cash = balance(111+112) up to (start_date - 1)
-      v_amount := public.fn_eval_account_expr(
-        p_tenant_id,
-        NULL,
-        (p_start_date - INTERVAL '1 day')::DATE,
-        '{"op":"sum","args":[
-           {"op":"debit_balance","account":"111"},
-           {"op":"debit_balance","account":"112"}
-         ]}'::JSONB
-      );
-      v_t60 := v_amount;
-    ELSE
-      v_amount := public.fn_eval_account_expr(
-        p_tenant_id,
-        p_start_date,
-        p_end_date,
-        v_row.formula
-      );
-      -- Capture into bucket vars for subtotal computation
-      IF v_row.line_code = '01' THEN v_t01 := v_amount;
-      ELSIF v_row.line_code = '02' THEN v_t02 := v_amount;
-      ELSIF v_row.line_code = '09' THEN v_t09 := v_amount;
-      ELSIF v_row.line_code = '10' THEN v_t10 := v_amount;
-      ELSIF v_row.line_code = '11' THEN v_t11 := v_amount;
-      ELSIF v_row.line_code = '21' THEN v_t21 := v_amount;
-      ELSIF v_row.line_code = '22' THEN v_t22 := v_amount;
-      ELSIF v_row.line_code = '31' THEN v_t31 := v_amount;
-      ELSIF v_row.line_code = '34' THEN v_t34 := v_amount;
-      ELSIF v_row.line_code = '70' THEN v_t70 := v_amount;
-      END IF;
-    END IF;
-
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-      'line_code',  v_row.line_code,
-      'line_label', v_row.line_label_vi,
-      'parent',     v_row.parent_line,
-      'level',      v_row.level,
-      'amount',     v_amount,
-      'is_total',   v_row.is_total
-    ));
-  END LOOP;
-
-  RETURN jsonb_build_object(
-    'form', 'B03-DN',
-    'tenant_id', p_tenant_id,
-    'start_date', p_start_date,
-    'end_date', p_end_date,
-    'status', v_status,
-    'generated_at', now(),
-    'lines', v_lines,
-    'consistency_check', jsonb_build_object(
-      'opening_cash', v_t60,
-      'closing_cash', v_t70,
-      'closing_minus_opening', v_t70 - v_t60,
-      'net_cashflow', v_t50,
-      'difference', (v_t70 - v_t60) - v_t50,
-      'consistent', ABS((v_t70 - v_t60) - v_t50) < 1
-    )
-  );
-END;
-$$;
-
-
---
--- Name: FUNCTION fn_generate_b03_dn(p_tenant_id bigint, p_start_date date, p_end_date date); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.fn_generate_b03_dn(p_tenant_id bigint, p_start_date date, p_end_date date) IS 'TT200 B03-DN Báo cáo lưu chuyển tiền tệ (indirect method). Returns lines + consistency_check (closing_minus_opening should equal net_cashflow). Subtotals 20/30/40/50 and opening cash 60 computed in wrapper; other lines via fn_eval_account_expr DSL.';
-
-
---
--- Name: fn_generate_form_01_gtgt(bigint, integer, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.fn_generate_form_01_gtgt(p_tenant_id bigint, p_year integer, p_month integer) RETURNS jsonb
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_lines  JSONB := '[]'::JSONB;
-  v_row    RECORD;
-  v_amount NUMERIC(15,2);
-  v_start  DATE;
-  v_end    DATE;
-  v_status TEXT := 'draft';
-  v_period RECORD;
-BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
-  END IF;
-  IF NOT public.has_permission_any('finance:view') THEN
-    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
-  END IF;
-  IF p_tenant_id <> public.auth_tenant_id() THEN
-    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
-  END IF;
-
-  v_start := make_date(p_year, p_month, 1);
-  v_end   := (v_start + INTERVAL '1 month' - INTERVAL '1 day')::DATE;
-
-  SELECT fp.status INTO v_period
-  FROM public.fiscal_periods fp
-  WHERE fp.tenant_id = p_tenant_id
-    AND fp.period_year = p_year
-    AND fp.period_month = p_month;
-  IF FOUND AND v_period.status = 'closed' THEN
-    v_status := 'final';
-  END IF;
-
-  FOR v_row IN
-    SELECT line_code, line_label_vi, parent_line, level, formula, display_order, is_total
-    FROM public.vas_report_lines
-    WHERE form_code = '01-GTGT'
-      AND tenant_id IS NULL
-    ORDER BY display_order
-  LOOP
-    v_amount := public.fn_eval_account_expr(p_tenant_id, v_start, v_end, v_row.formula);
-
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-      'line_code',  v_row.line_code,
-      'line_label', v_row.line_label_vi,
-      'parent',     v_row.parent_line,
-      'level',      v_row.level,
-      'amount',     v_amount,
-      'is_total',   v_row.is_total
-    ));
-  END LOOP;
-
-  RETURN jsonb_build_object(
-    'form', '01-GTGT',
-    'tenant_id', p_tenant_id,
-    'year', p_year,
-    'month', p_month,
-    'status', v_status,
-    'generated_at', now(),
-    'lines', v_lines
-  );
-END;
-$$;
-
-
---
--- Name: fn_reconcile_drilldown(bigint, date, date, text, text, bigint, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.fn_reconcile_drilldown(p_tenant_id bigint, p_start_date date, p_end_date date, p_category text, p_side text, p_branch_id bigint DEFAULT NULL::bigint, p_limit integer DEFAULT 200) RETURNS TABLE(ref_id bigint, ref_label text, ref_date timestamp with time zone, branch_id bigint, amount numeric, description text)
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE v_entry_ids BIGINT[];
-BEGIN
-  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000'; END IF;
-  IF NOT public.has_permission_any('finance:view') THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
-  IF p_tenant_id <> public.auth_tenant_id() THEN RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501'; END IF;
-  IF p_side NOT IN ('subledger','gl') THEN RAISE EXCEPTION 'invalid_side' USING ERRCODE = '22023'; END IF;
-  IF p_category NOT IN ('sales','cogs','inventory_in','payroll','ap_payment') THEN RAISE EXCEPTION 'invalid_category' USING ERRCODE = '22023'; END IF;
-  IF p_limit IS NULL OR p_limit < 1 OR p_limit > 1000 THEN p_limit := 200; END IF;
-
-  IF p_side = 'gl' THEN
-    SELECT ARRAY_AGG(je.id) INTO v_entry_ids
-      FROM public.journal_entries je
-     WHERE je.tenant_id = p_tenant_id AND je.status = 'posted'
-       AND je.entry_date >= p_start_date AND je.entry_date < (p_end_date + INTERVAL '1 day')
-       AND (p_branch_id IS NULL OR je.branch_id = p_branch_id);
-    IF v_entry_ids IS NULL THEN RETURN; END IF;
-    RETURN QUERY
-    SELECT je.id, je.entry_number, je.entry_date::TIMESTAMPTZ, je.branch_id,
-      CASE WHEN p_category IN ('sales') THEN jel.credit_amount
-           WHEN p_category IN ('cogs','inventory_in','payroll','ap_payment') THEN jel.debit_amount
-           ELSE 0 END,
-      COALESCE(jel.description, je.description)
-    FROM public.journal_entry_lines jel
-    JOIN public.chart_of_accounts coa ON coa.id = jel.account_id
-    JOIN public.journal_entries je ON je.id = jel.journal_entry_id
-    WHERE jel.tenant_id = p_tenant_id AND jel.journal_entry_id = ANY(v_entry_ids)
-      AND (
-        (p_category = 'sales'        AND coa.account_code IN ('511','33311') AND je.reference_type = 'sale') OR
-        (p_category = 'cogs'         AND coa.account_code = '621'             AND je.reference_type = 'sale') OR
-        (p_category = 'inventory_in' AND coa.account_code = '152'             AND je.reference_type = 'purchase') OR
-        (p_category = 'payroll'      AND coa.account_code = '622'             AND je.reference_type = 'payroll') OR
-        (p_category = 'ap_payment'   AND coa.account_code = '331'             AND je.reference_type = 'purchase')
-      )
-    ORDER BY je.entry_date DESC, je.id DESC LIMIT p_limit;
-    RETURN;
-  END IF;
-
-  IF p_category = 'sales' THEN
-    RETURN QUERY
-    SELECT p.id, ('PAY#' || p.id::TEXT), p.paid_at, p.branch_id, p.amount,
-      ('Method: ' || COALESCE(p.method, '?'))
-    FROM public.payments p
-    WHERE p.tenant_id = p_tenant_id AND p.status = 'completed'
-      AND p.paid_at >= p_start_date AND p.paid_at < (p_end_date + INTERVAL '1 day')
-      AND (p_branch_id IS NULL OR p.branch_id = p_branch_id)
-    ORDER BY p.paid_at DESC LIMIT p_limit;
-  ELSIF p_category = 'cogs' THEN
-    RETURN QUERY
-    SELECT sm.id, ('SM#' || sm.id::TEXT), sm.created_at, sm.branch_id,
-      (ABS(sm.quantity_change) * sm.unit_cost), sm.type::TEXT
-    FROM public.stock_movements sm
-    WHERE sm.tenant_id = p_tenant_id AND sm.type = 'consumption'
-      AND sm.created_at >= p_start_date AND sm.created_at < (p_end_date + INTERVAL '1 day')
-      AND (p_branch_id IS NULL OR sm.branch_id = p_branch_id)
-    ORDER BY sm.created_at DESC LIMIT p_limit;
-  ELSIF p_category = 'inventory_in' THEN
-    RETURN QUERY
-    SELECT sm.id, ('GRN-SM#' || sm.id::TEXT), sm.created_at, sm.branch_id,
-      (sm.quantity_change * sm.unit_cost), sm.type::TEXT
-    FROM public.stock_movements sm
-    WHERE sm.tenant_id = p_tenant_id AND sm.type = 'grn_receipt'
-      AND sm.created_at >= p_start_date AND sm.created_at < (p_end_date + INTERVAL '1 day')
-      AND (p_branch_id IS NULL OR sm.branch_id = p_branch_id)
-    ORDER BY sm.created_at DESC LIMIT p_limit;
-  ELSIF p_category = 'payroll' THEN
-    RETURN QUERY
-    SELECT pe.id,
-      ('Lương ' || pp.period_year || '-' || lpad(pp.period_month::TEXT, 2, '0')),
-      (make_date(pp.period_year, pp.period_month, 1))::TIMESTAMPTZ,
-      NULL::BIGINT, pe.gross_total, pp.status
-    FROM public.payroll_entries pe
-    JOIN public.payroll_periods pp ON pp.id = pe.payroll_period_id
-    WHERE pe.tenant_id = p_tenant_id
-      AND make_date(pp.period_year, pp.period_month, 1) >= date_trunc('month', p_start_date)::DATE
-      AND make_date(pp.period_year, pp.period_month, 1) <= date_trunc('month', p_end_date)::DATE
-      AND pp.status IN ('approved','paid')
-    ORDER BY pp.period_year DESC, pp.period_month DESC, pe.id DESC LIMIT p_limit;
-  ELSIF p_category = 'ap_payment' THEN
-    RETURN QUERY
-    SELECT sp.id, ('SP#' || sp.id::TEXT), sp.payment_date::TIMESTAMPTZ, NULL::BIGINT, sp.amount,
-      ('NCC ' || COALESCE(s.name, '#' || si.supplier_id::TEXT)
-        || ' / HĐ ' || COALESCE(si.invoice_number, si.id::TEXT))
-    FROM public.supplier_payments sp
-    JOIN public.supplier_invoices si ON si.id = sp.supplier_invoice_id
-    LEFT JOIN public.suppliers      s ON s.id  = si.supplier_id
-    WHERE sp.tenant_id = p_tenant_id
-      AND sp.payment_date >= p_start_date
-      AND sp.payment_date < (p_end_date + INTERVAL '1 day')
-    ORDER BY sp.payment_date DESC LIMIT p_limit;
-  END IF;
-END;
-$$;
-
-
---
--- Name: fn_reconcile_period(bigint, date, date, bigint); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.fn_reconcile_period(p_tenant_id bigint, p_start_date date, p_end_date date, p_branch_id bigint DEFAULT NULL::bigint) RETURNS jsonb
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_result     JSONB := '[]'::JSONB;
-  v_sub_total  NUMERIC(15,2);
-  v_gl_total   NUMERIC(15,2);
-  v_entry_ids  BIGINT[];
-  v_branch_active BOOLEAN := p_branch_id IS NOT NULL;
-BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
-  END IF;
-  IF NOT public.has_permission_any('finance:view') THEN
-    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
-  END IF;
-  IF p_tenant_id <> public.auth_tenant_id() THEN
-    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
-  END IF;
-  IF p_end_date < p_start_date THEN
-    RAISE EXCEPTION 'invalid_date_range' USING ERRCODE = '22023';
-  END IF;
-  IF (p_end_date - p_start_date) > 366 THEN
-    RAISE EXCEPTION 'date_range_too_large' USING ERRCODE = '22023';
-  END IF;
-
-  SELECT ARRAY_AGG(je.id)
-  INTO v_entry_ids
-  FROM public.journal_entries je
-  WHERE je.tenant_id = p_tenant_id
-    AND je.status = 'posted'
-    AND je.entry_date >= p_start_date
-    AND je.entry_date < (p_end_date + INTERVAL '1 day')
-    AND (p_branch_id IS NULL OR je.branch_id = p_branch_id);
-
-  IF v_entry_ids IS NULL THEN
-    v_entry_ids := ARRAY[]::BIGINT[];
-  END IF;
-
-  SELECT COALESCE(SUM(p.amount), 0) INTO v_sub_total
-  FROM public.payments p
-  WHERE p.tenant_id = p_tenant_id
-    AND p.status = 'completed'
-    AND p.paid_at >= p_start_date
-    AND p.paid_at < (p_end_date + INTERVAL '1 day')
-    AND (p_branch_id IS NULL OR p.branch_id = p_branch_id);
-
-  SELECT COALESCE(SUM(jel.credit_amount), 0) INTO v_gl_total
-  FROM public.journal_entry_lines jel
-  JOIN public.chart_of_accounts coa ON coa.id = jel.account_id
-  JOIN public.journal_entries je ON je.id = jel.journal_entry_id
-  WHERE jel.tenant_id = p_tenant_id
-    AND jel.journal_entry_id = ANY(v_entry_ids)
-    AND coa.account_code IN ('511', '33311')
-    AND je.reference_type = 'sale';
-
-  v_result := v_result || jsonb_build_array(jsonb_build_object(
-    'category', 'sales',
-    'label', 'Doanh thu + VAT (511+33311)',
-    'subledger_total', v_sub_total,
-    'gl_total', v_gl_total,
-    'difference', v_sub_total - v_gl_total,
-    'branch_scoped', true
-  ));
-
-  SELECT COALESCE(SUM(ABS(sm.quantity_change) * sm.unit_cost), 0) INTO v_sub_total
-  FROM public.stock_movements sm
-  WHERE sm.tenant_id = p_tenant_id
-    AND sm.type = 'consumption'
-    AND sm.created_at >= p_start_date
-    AND sm.created_at < (p_end_date + INTERVAL '1 day')
-    AND (p_branch_id IS NULL OR sm.branch_id = p_branch_id);
-
-  SELECT COALESCE(SUM(jel.debit_amount), 0) INTO v_gl_total
-  FROM public.journal_entry_lines jel
-  JOIN public.chart_of_accounts coa ON coa.id = jel.account_id
-  JOIN public.journal_entries je ON je.id = jel.journal_entry_id
-  WHERE jel.tenant_id = p_tenant_id
-    AND jel.journal_entry_id = ANY(v_entry_ids)
-    AND coa.account_code = '621'
-    AND je.reference_type = 'sale';
-
-  v_result := v_result || jsonb_build_array(jsonb_build_object(
-    'category', 'cogs',
-    'label', 'Giá vốn bán hàng (621-sale)',
-    'subledger_total', v_sub_total,
-    'gl_total', v_gl_total,
-    'difference', v_sub_total - v_gl_total,
-    'branch_scoped', true
-  ));
-
-  SELECT COALESCE(SUM(sm.quantity_change * sm.unit_cost), 0) INTO v_sub_total
-  FROM public.stock_movements sm
-  WHERE sm.tenant_id = p_tenant_id
-    AND sm.type = 'grn_receipt'
-    AND sm.created_at >= p_start_date
-    AND sm.created_at < (p_end_date + INTERVAL '1 day')
-    AND (p_branch_id IS NULL OR sm.branch_id = p_branch_id);
-
-  SELECT COALESCE(SUM(jel.debit_amount), 0) INTO v_gl_total
-  FROM public.journal_entry_lines jel
-  JOIN public.chart_of_accounts coa ON coa.id = jel.account_id
-  JOIN public.journal_entries je ON je.id = jel.journal_entry_id
-  WHERE jel.tenant_id = p_tenant_id
-    AND jel.journal_entry_id = ANY(v_entry_ids)
-    AND coa.account_code = '152'
-    AND je.reference_type = 'purchase';
-
-  v_result := v_result || jsonb_build_array(jsonb_build_object(
-    'category', 'inventory_in',
-    'label', 'Nhập kho NVL (152-purchase)',
-    'subledger_total', v_sub_total,
-    'gl_total', v_gl_total,
-    'difference', v_sub_total - v_gl_total,
-    'branch_scoped', true
-  ));
-
-  IF v_branch_active THEN
-    v_sub_total := NULL;
-    v_gl_total  := NULL;
-  ELSE
-    SELECT COALESCE(SUM(pe.gross_total), 0) INTO v_sub_total
-    FROM public.payroll_entries pe
-    JOIN public.payroll_periods pp ON pp.id = pe.payroll_period_id
-    WHERE pe.tenant_id = p_tenant_id
-      AND make_date(pp.period_year, pp.period_month, 1) >= date_trunc('month', p_start_date)::DATE
-      AND make_date(pp.period_year, pp.period_month, 1) <= date_trunc('month', p_end_date)::DATE
-      AND pp.status IN ('approved', 'paid');
-
-    SELECT COALESCE(SUM(jel.debit_amount), 0) INTO v_gl_total
-    FROM public.journal_entry_lines jel
-    JOIN public.chart_of_accounts coa ON coa.id = jel.account_id
-    JOIN public.journal_entries je ON je.id = jel.journal_entry_id
-    WHERE jel.tenant_id = p_tenant_id
-      AND jel.journal_entry_id = ANY(v_entry_ids)
-      AND coa.account_code = '622'
-      AND je.reference_type = 'payroll';
-  END IF;
-
-  v_result := v_result || jsonb_build_array(jsonb_build_object(
-    'category', 'payroll',
-    'label', 'Lương nhân công (622)',
-    'subledger_total', v_sub_total,
-    'gl_total', v_gl_total,
-    'difference', CASE
-      WHEN v_sub_total IS NULL OR v_gl_total IS NULL THEN NULL
-      ELSE v_sub_total - v_gl_total
-    END,
-    'branch_scoped', false
-  ));
-
-  IF v_branch_active THEN
-    v_sub_total := NULL;
-    v_gl_total  := NULL;
-  ELSE
-    SELECT COALESCE(SUM(sp.amount), 0) INTO v_sub_total
-    FROM public.supplier_payments sp
-    WHERE sp.tenant_id = p_tenant_id
-      AND sp.payment_date >= p_start_date
-      AND sp.payment_date < (p_end_date + INTERVAL '1 day');
-
-    SELECT COALESCE(SUM(jel.debit_amount), 0) INTO v_gl_total
-    FROM public.journal_entry_lines jel
-    JOIN public.chart_of_accounts coa ON coa.id = jel.account_id
-    JOIN public.journal_entries je ON je.id = jel.journal_entry_id
-    WHERE jel.tenant_id = p_tenant_id
-      AND jel.journal_entry_id = ANY(v_entry_ids)
-      AND coa.account_code = '331'
-      AND je.reference_type = 'purchase';
-  END IF;
-
-  v_result := v_result || jsonb_build_array(jsonb_build_object(
-    'category', 'ap_payment',
-    'label', 'Thanh toán NCC (331-purchase)',
-    'subledger_total', v_sub_total,
-    'gl_total', v_gl_total,
-    'difference', CASE
-      WHEN v_sub_total IS NULL OR v_gl_total IS NULL THEN NULL
-      ELSE v_sub_total - v_gl_total
-    END,
-    'branch_scoped', false
-  ));
-
-  RETURN jsonb_build_object(
-    'tenant_id', p_tenant_id,
-    'branch_id', p_branch_id,
-    'start_date', p_start_date,
-    'end_date', p_end_date,
-    'generated_at', now(),
-    'categories', v_result
-  );
-END;
-$$;
-
-
---
--- Name: fn_reconcile_sales_by_day(bigint, date, date); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.fn_reconcile_sales_by_day(p_branch_id bigint, p_start_date date, p_end_date date) RETURNS TABLE(date date, revenue_paid numeric, gl_credit numeric, diff numeric)
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_uid    UUID;
-  v_tenant BIGINT;
-BEGIN
-  v_uid := auth.uid();
-  IF v_uid IS NULL THEN
-    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
-  END IF;
-
-  SELECT pr.tenant_id INTO v_tenant
-  FROM public.profiles pr WHERE pr.id = v_uid;
-
-  IF v_tenant IS NULL THEN
-    RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
-  END IF;
-
-  IF p_branch_id IS NOT NULL THEN
-    IF NOT public.has_permission(p_branch_id, 'finance:view') THEN
-      RAISE EXCEPTION 'permission denied: finance:view required'
-        USING ERRCODE = '42501';
-    END IF;
-  ELSE
-    IF NOT public.has_permission_any('finance:view') THEN
-      RAISE EXCEPTION 'permission denied: finance:view required'
-        USING ERRCODE = '42501';
-    END IF;
-  END IF;
-
-  RETURN QUERY
-  WITH pos_by_day AS (
-    SELECT
-      (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS day,
-      COALESCE(SUM(p.amount), 0) AS revenue_paid
-    FROM public.payments p
-    JOIN public.orders o
-      ON o.id        = p.order_id
-     AND o.tenant_id = p.tenant_id
-    WHERE p.tenant_id = v_tenant
-      AND p.status = 'completed'
-      AND p.paid_at IS NOT NULL
-      AND (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date >= p_start_date
-      AND (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date <= p_end_date
-      AND o.status <> 'cancelled'
-      AND o.payment_status = 'paid'
-      AND (
-        (p_branch_id IS NOT NULL AND p.branch_id = p_branch_id)
-        OR (p_branch_id IS NULL AND public.has_permission(p.branch_id, 'finance:view'))
-      )
-    GROUP BY 1
-  ),
-  gl_by_day AS (
-    SELECT
-      (je.entry_date AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS day,
-      COALESCE(SUM(jel.credit_amount), 0) AS gl_credit
-    FROM public.journal_entry_lines jel
-    JOIN public.journal_entries je
-      ON je.id = jel.journal_entry_id
-     AND je.tenant_id = jel.tenant_id
-    JOIN public.chart_of_accounts coa
-      ON coa.id = jel.account_id
-    WHERE jel.tenant_id = v_tenant
-      AND coa.account_code IN ('511', '33311')
-      AND je.reference_type = 'sale'
-      AND je.status = 'posted'
-      AND (je.entry_date AT TIME ZONE 'Asia/Ho_Chi_Minh')::date >= p_start_date
-      AND (je.entry_date AT TIME ZONE 'Asia/Ho_Chi_Minh')::date <= p_end_date
-      AND (
-        (p_branch_id IS NOT NULL AND je.branch_id = p_branch_id)
-        OR (p_branch_id IS NULL
-            AND je.branch_id IS NOT NULL
-            AND public.has_permission(je.branch_id, 'finance:view'))
-      )
-    GROUP BY 1
-  )
-  SELECT
-    COALESCE(pos.day, gl.day)                            AS date,
-    COALESCE(pos.revenue_paid, 0)                        AS revenue_paid,
-    COALESCE(gl.gl_credit, 0)                            AS gl_credit,
-    COALESCE(pos.revenue_paid, 0) - COALESCE(gl.gl_credit, 0) AS diff
-  FROM pos_by_day pos
-  FULL OUTER JOIN gl_by_day gl ON gl.day = pos.day
-  ORDER BY 1;
-END;
-$$;
-
-
---
--- Name: FUNCTION fn_reconcile_sales_by_day(p_branch_id bigint, p_start_date date, p_end_date date); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.fn_reconcile_sales_by_day(p_branch_id bigint, p_start_date date, p_end_date date) IS 'Per-day POS revenue (paid_at local) vs GL credit (511+33311, reference_type=sale, entry_date local). FULL OUTER JOIN — rows present on either side surface so missing-postings days are visible. NULL branch = sum across branches caller has finance:view.';
-
-
---
 -- Name: get_branch_menu_daily_limits_for_pos(bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9941,7 +10710,7 @@ CREATE FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint) 
     AND bl.branch_id = p_branch_id
     AND bl.limit_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
     AND (
-      public.auth_role() IN ('owner', 'super_manager', 'area_manager')
+      public.auth_role() IN ('owner')
       OR public.auth_branch_id() = p_branch_id
     );
 $$;
@@ -10150,7 +10919,7 @@ COMMENT ON FUNCTION public.get_daily_revenue(p_branch_id bigint, p_start_date da
 -- Name: get_finance_dashboard_summary(date, date, bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_finance_dashboard_summary(p_start_date date, p_end_date date, p_branch_id bigint DEFAULT NULL::bigint) RETURNS TABLE(invoice_attention_count bigint, invoice_issued_count bigint, invoice_not_required_count bigint, journal_draft_count bigint, journal_posted_count bigint, failed_webhook_count bigint)
+CREATE FUNCTION public.get_finance_dashboard_summary(p_start_date date, p_end_date date, p_branch_id bigint DEFAULT NULL::bigint) RETURNS TABLE(invoice_attention_count bigint, invoice_issued_count bigint, invoice_not_required_count bigint, failed_webhook_count bigint)
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     SET search_path TO ''
     AS $$
@@ -10222,21 +10991,6 @@ BEGIN
         )
       )
   ),
-  scoped_journals AS MATERIALIZED (
-    SELECT je.*
-    FROM public.journal_entries je
-    WHERE je.tenant_id = v_tenant
-      AND (
-        (p_branch_id IS NOT NULL AND je.branch_id = p_branch_id)
-        OR (
-          p_branch_id IS NULL
-          AND (
-            v_has_tenant_scope
-            OR je.branch_id = ANY(v_branch_ids)
-          )
-        )
-      )
-  ),
   scoped_failed_webhooks AS MATERIALIZED (
     SELECT we.id
     FROM public.webhook_events we
@@ -10280,29 +11034,10 @@ BEGIN
     ) AS invoice_not_required_count,
     (
       SELECT COUNT(*)::BIGINT
-      FROM scoped_journals je
-      WHERE je.status = 'draft'
-    ) AS journal_draft_count,
-    (
-      SELECT COUNT(*)::BIGINT
-      FROM scoped_journals je
-      WHERE je.status = 'posted'
-        AND je.entry_date >= v_start_utc
-        AND je.entry_date < v_end_utc
-    ) AS journal_posted_count,
-    (
-      SELECT COUNT(*)::BIGINT
       FROM scoped_failed_webhooks
     ) AS failed_webhook_count;
 END;
 $$;
-
-
---
--- Name: FUNCTION get_finance_dashboard_summary(p_start_date date, p_end_date date, p_branch_id bigint); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.get_finance_dashboard_summary(p_start_date date, p_end_date date, p_branch_id bigint) IS 'Finance home work-queue counters. Uses caller finance:view permission, branch scope, and Asia/Ho_Chi_Minh local date windows. p_branch_id NULL returns rows scoped to branches the caller can view plus tenant-wide journal entries.';
 
 
 --
@@ -10502,7 +11237,7 @@ END; $$;
 -- Name: get_orders_for_day(bigint, date); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_orders_for_day(p_branch_id bigint, p_date date) RETURNS TABLE(order_id bigint, order_number text, branch_id bigint, branch_name text, paid_at timestamp with time zone, paid_hour integer, order_type text, customer_count integer, subtotal numeric, discount_amount numeric, tax_amount numeric, total_amount numeric, payment_method text, item_count bigint, invoice_status text, invoice_number text)
+CREATE FUNCTION public.get_orders_for_day(p_branch_id bigint, p_date date) RETURNS TABLE(order_id bigint, order_number text, branch_id bigint, branch_name text, paid_at timestamp with time zone, paid_hour integer, order_type text, subtotal numeric, discount_amount numeric, tax_amount numeric, total_amount numeric, payment_method text, item_count bigint, invoice_status text, invoice_number text)
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
@@ -10542,7 +11277,6 @@ BEGIN
       EXTRACT(HOUR FROM (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh'))::INT
         AS paid_hour,
       o.order_type,
-      o.customer_count,
       o.subtotal,
       o.discount_amount,
       o.tax_amount,
@@ -10573,6 +11307,27 @@ BEGIN
       AND (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date = p_date
     ORDER BY p.paid_at;
 END;
+$$;
+
+
+--
+-- Name: get_orders_paid_summary(text, bigint, date, date); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_orders_paid_summary(p_status text DEFAULT NULL::text, p_branch_id bigint DEFAULT NULL::bigint, p_date_from date DEFAULT NULL::date, p_date_to date DEFAULT NULL::date) RETURNS TABLE(paid_count bigint, paid_revenue numeric)
+    LANGUAGE sql STABLE
+    SET search_path TO 'public'
+    AS $$
+  SELECT
+    count(*)::bigint,
+    COALESCE(sum(o.total_amount), 0)::numeric(15, 2)
+  FROM public.orders o
+  WHERE o.payment_status = 'paid'
+    AND o.status <> 'cancelled'
+    AND (p_status IS NULL OR o.status = p_status)
+    AND (p_branch_id IS NULL OR o.branch_id = p_branch_id)
+    AND (p_date_from IS NULL OR o.created_at >= (p_date_from::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'))
+    AND (p_date_to IS NULL OR o.created_at < ((p_date_to + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'));
 $$;
 
 
@@ -11120,7 +11875,7 @@ $$;
 -- Name: get_revenue_kpis(bigint, date, date); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_revenue_kpis(p_branch_id bigint, p_start_date date, p_end_date date) RETURNS TABLE(net_revenue numeric, subtotal_revenue numeric, discount_amount numeric, total_tax numeric, vat_8_amount numeric, vat_10_amount numeric, order_count bigint, total_covers bigint, cash_revenue numeric, vietqr_revenue numeric, momo_revenue numeric, dine_in_revenue numeric, takeaway_revenue numeric, voided_amount numeric, voided_count bigint, refreshed_at timestamp with time zone)
+CREATE FUNCTION public.get_revenue_kpis(p_branch_id bigint, p_start_date date, p_end_date date) RETURNS TABLE(net_revenue numeric, subtotal_revenue numeric, discount_amount numeric, total_tax numeric, vat_by_rate jsonb, vat_total numeric, order_count bigint, total_covers bigint, cash_revenue numeric, vietqr_revenue numeric, momo_revenue numeric, dine_in_revenue numeric, takeaway_revenue numeric, voided_amount numeric, voided_count bigint, refreshed_at timestamp with time zone)
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
@@ -11175,7 +11930,6 @@ BEGIN
       o.subtotal,
       o.discount_amount,
       o.tax_amount,
-      o.customer_count,
       o.order_type,
       p.method
     FROM public.payments p
@@ -11204,7 +11958,7 @@ BEGIN
       COALESCE(SUM(discount_amount), 0) AS discount_amount,
       COALESCE(SUM(tax_amount), 0) AS total_tax,
       COUNT(*)::BIGINT AS order_count,
-      COALESCE(SUM(customer_count), 0)::BIGINT AS total_covers,
+      COALESCE(COUNT(id), 0)::BIGINT AS total_covers,
       COALESCE(SUM(total_amount) FILTER (WHERE method = 'cash'), 0) AS cash_revenue,
       COALESCE(SUM(total_amount) FILTER (WHERE method = 'vietqr'), 0) AS vietqr_revenue,
       COALESCE(SUM(total_amount) FILTER (WHERE method = 'momo'), 0) AS momo_revenue,
@@ -11212,20 +11966,10 @@ BEGIN
       COALESCE(SUM(total_amount) FILTER (WHERE order_type = 'takeaway'), 0) AS takeaway_revenue
     FROM paid_orders
   ),
-  vat_split AS (
+  vat_lines AS (
     SELECT
-      COALESCE(SUM(
-        CASE WHEN ROUND(oi.vat_rate::numeric, 2) = 8.00
-          THEN (oi.subtotal * scaled.scale) - ((oi.subtotal * scaled.scale) / (1 + oi.vat_rate / 100))
-          ELSE 0
-        END
-      ), 0) AS vat_8_amount,
-      COALESCE(SUM(
-        CASE WHEN ROUND(oi.vat_rate::numeric, 2) = 10.00
-          THEN (oi.subtotal * scaled.scale) - ((oi.subtotal * scaled.scale) / (1 + oi.vat_rate / 100))
-          ELSE 0
-        END
-      ), 0) AS vat_10_amount
+      ROUND(oi.vat_rate::numeric, 2) AS rate,
+      SUM((oi.subtotal * scaled.scale) - ((oi.subtotal * scaled.scale) / (1 + oi.vat_rate / 100))) AS vat
     FROM (
       SELECT
         po.id AS order_id,
@@ -11245,6 +11989,13 @@ BEGIN
       ON oi.tenant_id = scaled.tenant_id
      AND oi.order_id = scaled.order_id
      AND oi.status <> 'cancelled'
+    GROUP BY ROUND(oi.vat_rate::numeric, 2)
+  ),
+  vat_split AS (
+    SELECT
+      COALESCE(jsonb_object_agg(rate::text, vat), '{}'::jsonb) AS vat_by_rate,
+      COALESCE(SUM(vat), 0) AS vat_total
+    FROM vat_lines
   ),
   refunds AS (
     SELECT
@@ -11272,8 +12023,8 @@ BEGIN
     sales.subtotal_revenue,
     sales.discount_amount,
     sales.total_tax,
-    vat_split.vat_8_amount,
-    vat_split.vat_10_amount,
+    vat_split.vat_by_rate,
+    vat_split.vat_total,
     sales.order_count,
     sales.total_covers,
     sales.cash_revenue,
@@ -11289,13 +12040,6 @@ BEGIN
   CROSS JOIN refunds;
 END;
 $$;
-
-
---
--- Name: FUNCTION get_revenue_kpis(p_branch_id bigint, p_start_date date, p_end_date date); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.get_revenue_kpis(p_branch_id bigint, p_start_date date, p_end_date date) IS 'Live KPI bundle for Finance revenue. refreshed_at is request time, not MV refresh time.';
 
 
 --
@@ -11366,7 +12110,7 @@ BEGIN
       COALESCE(SUM(o.total_amount) FILTER (WHERE p.method = 'momo'), 0) AS momo_revenue,
       COALESCE(SUM(o.total_amount) FILTER (WHERE o.order_type = 'dine_in'), 0) AS dine_in_revenue,
       COALESCE(SUM(o.total_amount) FILTER (WHERE o.order_type = 'takeaway'), 0) AS takeaway_revenue,
-      COALESCE(SUM(o.customer_count), 0)::BIGINT AS total_covers
+      COALESCE(COUNT(DISTINCT o.id), 0)::BIGINT AS total_covers
     FROM public.payments p
     JOIN public.orders o
       ON o.id = p.order_id
@@ -11491,11 +12235,46 @@ CREATE FUNCTION public.get_top_items(p_branch_id bigint DEFAULT NULL::bigint, p_
     SET search_path TO 'public'
     AS $$
 DECLARE
+  v_period_start DATE;
+  v_period_end DATE;
+BEGIN
+  v_period_start := COALESCE(
+    p_period_start,
+    date_trunc('month', (now() AT TIME ZONE 'Asia/Ho_Chi_Minh'))::date
+  );
+  v_period_end := (date_trunc('month', v_period_start)::date + INTERVAL '1 month - 1 day')::date;
+
+  RETURN QUERY
+  SELECT *
+  FROM public.get_top_items(
+    p_branch_id,
+    v_period_start,
+    v_period_end,
+    p_limit
+  );
+END;
+$$;
+
+
+--
+-- Name: FUNCTION get_top_items(p_branch_id bigint, p_period_start date, p_limit integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_top_items(p_branch_id bigint, p_period_start date, p_limit integer) IS 'Compatibility wrapper for month-bucket top items; delegates to get_top_items(branch, start, end, limit).';
+
+
+--
+-- Name: get_top_items(bigint, date, date, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_top_items(p_branch_id bigint, p_start_date date, p_end_date date, p_limit integer DEFAULT 20) RETURNS TABLE(period_start date, period_end date, branch_id bigint, tenant_id bigint, menu_item_id bigint, item_name text, quantity_sold numeric, revenue numeric)
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $_$
+DECLARE
   v_uid UUID;
   v_tenant BIGINT;
   v_effective_limit INT;
-  v_period_start DATE;
-  v_period_end DATE;
   v_start_utc TIMESTAMPTZ;
   v_end_utc TIMESTAMPTZ;
   v_has_tenant_scope BOOLEAN;
@@ -11514,12 +12293,20 @@ BEGIN
     RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
   END IF;
 
+  IF p_start_date IS NULL OR p_end_date IS NULL THEN
+    RAISE EXCEPTION 'start/end required' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_start_date > p_end_date THEN
+    RAISE EXCEPTION 'start > end' USING ERRCODE = '22023';
+  END IF;
+
   SELECT fs.has_tenant_scope, fs.branch_ids
     INTO v_has_tenant_scope, v_branch_ids
   FROM private.finance_scope(v_uid, 'finance:view') fs;
 
   IF p_branch_id IS NULL THEN
-    IF NOT (v_has_tenant_scope OR cardinality(v_branch_ids) > 0) THEN
+    IF NOT (v_has_tenant_scope OR COALESCE(cardinality(v_branch_ids), 0) > 0) THEN
       RAISE EXCEPTION 'permission denied: finance:view required'
         USING ERRCODE = '42501';
     END IF;
@@ -11531,13 +12318,8 @@ BEGIN
   END IF;
 
   v_effective_limit := GREATEST(1, LEAST(COALESCE(p_limit, 20), 200));
-  v_period_start := COALESCE(
-    p_period_start,
-    date_trunc('month', (now() AT TIME ZONE 'Asia/Ho_Chi_Minh'))::date
-  );
-  v_period_end := (date_trunc('month', v_period_start)::date + INTERVAL '1 month - 1 day')::date;
-  v_start_utc := (v_period_start::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh');
-  v_end_utc := ((v_period_end + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh');
+  v_start_utc := (p_start_date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh');
+  v_end_utc := ((p_end_date + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh');
 
   RETURN QUERY
   WITH paid_orders AS MATERIALIZED (
@@ -11563,64 +12345,122 @@ BEGIN
           AND (v_has_tenant_scope OR o.branch_id = ANY(v_branch_ids))
         )
       )
+  ),
+  paid_items AS MATERIALIZED (
+    SELECT
+      oi.id AS order_item_id,
+      po.branch_id,
+      po.tenant_id,
+      oi.menu_item_id,
+      oi.item_name,
+      oi.quantity::NUMERIC AS parent_quantity,
+      COALESCE(oi.subtotal, 0)::NUMERIC AS line_revenue,
+      CASE
+        WHEN jsonb_typeof(oi.sides) = 'array' THEN oi.sides
+        ELSE '[]'::JSONB
+      END AS sides
+    FROM paid_orders po
+    JOIN public.order_items oi
+      ON oi.tenant_id = po.tenant_id
+     AND oi.order_id = po.id
+     AND oi.status <> 'cancelled'
+  ),
+  side_lines AS (
+    SELECT
+      pi.order_item_id,
+      pi.branch_id,
+      pi.tenant_id,
+      (side_el ->> 'side_item_id')::BIGINT AS menu_item_id,
+      COALESCE(NULLIF(side_el ->> 'name', ''), 'Mon an kem')::TEXT AS item_name,
+      pi.parent_quantity,
+      CASE
+        WHEN COALESCE(side_el ->> 'quantity', '') ~ '^[0-9]+(\.[0-9]+)?$'
+          THEN GREATEST((side_el ->> 'quantity')::NUMERIC, 0)
+        ELSE 1
+      END AS quantity_per_parent,
+      CASE
+        WHEN COALESCE(side_el ->> 'price', '') ~ '^[0-9]+(\.[0-9]+)?$'
+          THEN GREATEST((side_el ->> 'price')::NUMERIC, 0)
+        ELSE 0
+      END AS unit_price
+    FROM paid_items pi
+    CROSS JOIN LATERAL jsonb_array_elements(pi.sides) AS side_el
+    WHERE side_el ? 'side_item_id'
+      AND (side_el ->> 'side_item_id') ~ '^[0-9]+$'
+  ),
+  side_totals_by_line AS (
+    SELECT
+      order_item_id,
+      COALESCE(SUM(quantity_per_parent * unit_price * parent_quantity), 0)::NUMERIC AS side_revenue
+    FROM side_lines
+    GROUP BY order_item_id
+  ),
+  main_components AS (
+    SELECT
+      pi.branch_id,
+      pi.tenant_id,
+      pi.menu_item_id,
+      pi.item_name,
+      COALESCE(SUM(pi.parent_quantity), 0)::NUMERIC AS quantity_sold,
+      COALESCE(
+        SUM(GREATEST(pi.line_revenue - COALESCE(st.side_revenue, 0), 0)),
+        0
+      )::NUMERIC AS revenue
+    FROM paid_items pi
+    LEFT JOIN side_totals_by_line st
+      ON st.order_item_id = pi.order_item_id
+    GROUP BY pi.branch_id, pi.tenant_id, pi.menu_item_id, pi.item_name
+  ),
+  side_components AS (
+    SELECT
+      branch_id,
+      tenant_id,
+      menu_item_id,
+      MAX(item_name) AS item_name,
+      COALESCE(SUM(parent_quantity * quantity_per_parent), 0)::NUMERIC AS quantity_sold,
+      COALESCE(SUM(parent_quantity * quantity_per_parent * unit_price), 0)::NUMERIC AS revenue
+    FROM side_lines
+    GROUP BY branch_id, tenant_id, menu_item_id
+  ),
+  component_rows AS (
+    SELECT branch_id, tenant_id, menu_item_id, item_name, quantity_sold, revenue
+    FROM main_components
+    UNION ALL
+    SELECT branch_id, tenant_id, menu_item_id, item_name, quantity_sold, revenue
+    FROM side_components
+  ),
+  component_agg AS (
+    SELECT
+      cr.branch_id,
+      cr.tenant_id,
+      cr.menu_item_id,
+      MAX(cr.item_name) AS item_name,
+      COALESCE(SUM(cr.quantity_sold), 0)::NUMERIC AS quantity_sold,
+      COALESCE(SUM(cr.revenue), 0)::NUMERIC AS revenue
+    FROM component_rows cr
+    GROUP BY cr.branch_id, cr.tenant_id, cr.menu_item_id
   )
   SELECT
-    v_period_start AS period_start,
-    v_period_end AS period_end,
-    po.branch_id,
-    po.tenant_id,
-    oi.menu_item_id,
-    MAX(oi.item_name) AS item_name,
-    COALESCE(SUM(oi.quantity), 0)::NUMERIC AS quantity_sold,
-    COALESCE(SUM(oi.subtotal), 0)::NUMERIC AS revenue
-  FROM paid_orders po
-  JOIN public.order_items oi
-    ON oi.tenant_id = po.tenant_id
-   AND oi.order_id = po.id
-   AND oi.status <> 'cancelled'
-  GROUP BY po.branch_id, po.tenant_id, oi.menu_item_id
-  ORDER BY quantity_sold DESC, revenue DESC
+    p_start_date AS period_start,
+    p_end_date AS period_end,
+    ca.branch_id,
+    ca.tenant_id,
+    ca.menu_item_id,
+    ca.item_name,
+    ca.quantity_sold,
+    ca.revenue
+  FROM component_agg ca
+  ORDER BY ca.quantity_sold DESC, ca.revenue DESC, ca.item_name ASC
   LIMIT v_effective_limit;
 END;
-$$;
+$_$;
 
 
 --
--- Name: FUNCTION get_top_items(p_branch_id bigint, p_period_start date, p_limit integer); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION get_top_items(p_branch_id bigint, p_start_date date, p_end_date date, p_limit integer); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.get_top_items(p_branch_id bigint, p_period_start date, p_limit integer) IS 'Live paid-at top items. p_branch_id NULL still checks finance:view per returned branch row.';
-
-
---
--- Name: gl_reconciliation(bigint, integer, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.gl_reconciliation(p_tenant_id bigint, p_year integer, p_month integer) RETURNS jsonb
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_start_date DATE;
-  v_end_date   DATE;
-  v_full       JSONB;
-BEGIN
-  v_start_date := make_date(p_year, p_month, 1);
-  v_end_date   := (v_start_date + INTERVAL '1 month' - INTERVAL '1 day')::DATE;
-
-  v_full := public.fn_reconcile_period(p_tenant_id, v_start_date, v_end_date, NULL);
-
-  RETURN (
-    SELECT jsonb_agg(jsonb_build_object(
-      'category', cat ->> 'label',
-      'subledger_total', cat ->> 'subledger_total',
-      'gl_total', cat ->> 'gl_total',
-      'difference', cat ->> 'difference'
-    ))
-    FROM jsonb_array_elements(v_full -> 'categories') cat
-  );
-END;
-$$;
+COMMENT ON FUNCTION public.get_top_items(p_branch_id bigint, p_start_date date, p_end_date date, p_limit integer) IS 'Live paid-at top items for an explicit Vietnam-local date range. Decomposes order_items.sides into separate menu-item rows and subtracts side revenue from the main line.';
 
 
 --
@@ -11634,18 +12474,16 @@ CREATE FUNCTION public.grant_permission(p_target_user uuid, p_branch_id bigint, 
 DECLARE
   v_tenant_id BIGINT;
   v_target_tenant BIGINT;
-  v_grant_id BIGINT;
-  v_from TIMESTAMPTZ := COALESCE(p_valid_from, now());
-  v_effective_branch_id BIGINT;
+  v_grant_id  BIGINT;
+  v_from      TIMESTAMPTZ := COALESCE(p_valid_from, now());
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
   END IF;
 
-  v_effective_branch_id := private.staff_permission_effective_branch_id(
-    p_permission_key,
-    p_branch_id
-  );
+  IF NOT public.has_permission(p_branch_id, 'staff:assign_permission') THEN
+    RAISE EXCEPTION 'forbidden: missing staff:assign_permission' USING ERRCODE = '42501';
+  END IF;
 
   SELECT tenant_id INTO v_tenant_id FROM public.profiles WHERE id = auth.uid();
   IF v_tenant_id IS NULL THEN
@@ -11657,31 +12495,35 @@ BEGIN
     RAISE EXCEPTION 'target_not_in_tenant' USING ERRCODE = '42501';
   END IF;
 
+  IF public.auth_is_owner(p_target_user) THEN
+    RAISE EXCEPTION 'cannot_manage_owner_permissions' USING ERRCODE = '42501';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM public.permission_keys WHERE key = p_permission_key) THEN
+    RAISE EXCEPTION 'unknown_permission_key: %', p_permission_key USING ERRCODE = '22023';
+  END IF;
+
   IF p_branch_id IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM public.branches WHERE id = p_branch_id AND tenant_id = v_tenant_id
   ) THEN
     RAISE EXCEPTION 'branch_not_in_tenant' USING ERRCODE = '42501';
   END IF;
 
-  IF NOT public.has_permission(v_effective_branch_id, 'staff:assign_permission') THEN
-    RAISE EXCEPTION 'forbidden: missing staff:assign_permission' USING ERRCODE = '42501';
-  END IF;
-
-  IF public._auth_v2_is_owner(p_target_user) THEN
-    RAISE EXCEPTION 'cannot_manage_owner_permissions' USING ERRCODE = '42501';
-  END IF;
-
   IF p_valid_until IS NOT NULL AND p_valid_until <= v_from THEN
     RAISE EXCEPTION 'invalid_validity_window: valid_until must be after valid_from' USING ERRCODE = '22023';
   END IF;
 
+  -- Upsert semantics:
+  --   Existing row for same (user, branch, key) → UPDATE validity if longer,
+  --   else leave alone. This keeps audit meaningful: re-granting extends the
+  --   window rather than creating duplicates.
   SELECT id INTO v_grant_id
   FROM public.staff_permissions
   WHERE user_id = p_target_user
     AND permission_key = p_permission_key
     AND (
-      (v_effective_branch_id IS NULL AND branch_id IS NULL)
-      OR branch_id = v_effective_branch_id
+      (p_branch_id IS NULL AND branch_id IS NULL)
+      OR branch_id = p_branch_id
     )
   LIMIT 1;
 
@@ -11690,7 +12532,7 @@ BEGIN
       user_id, tenant_id, branch_id, permission_key, source_template, granted_by,
       valid_from, valid_until
     ) VALUES (
-      p_target_user, v_tenant_id, v_effective_branch_id, p_permission_key, p_source_template, auth.uid(),
+      p_target_user, v_tenant_id, p_branch_id, p_permission_key, p_source_template, auth.uid(),
       v_from, p_valid_until
     )
     RETURNING id INTO v_grant_id;
@@ -11699,23 +12541,23 @@ BEGIN
       tenant_id, actor_user_id, target_user_id, branch_id,
       permission_key, action, source_template_id, metadata
     ) VALUES (
-      v_tenant_id, auth.uid(), p_target_user, v_effective_branch_id,
+      v_tenant_id, auth.uid(), p_target_user, p_branch_id,
       p_permission_key, 'grant', p_source_template,
       jsonb_build_object(
-        'requested_branch_id', p_branch_id,
-        'valid_from', v_from,
+        'valid_from',  v_from,
         'valid_until', p_valid_until
       )
     );
   ELSE
+    -- Extend validity if new window is broader (or change explicit)
     UPDATE public.staff_permissions
-       SET valid_from = LEAST(valid_from, v_from),
-           valid_until = CASE
-             WHEN p_valid_until IS NULL THEN NULL
-             WHEN valid_until IS NULL THEN valid_until
-             ELSE GREATEST(valid_until, p_valid_until)
-           END
-     WHERE id = v_grant_id;
+    SET valid_from  = LEAST(valid_from, v_from),
+        valid_until = CASE
+          WHEN p_valid_until IS NULL THEN NULL  -- make permanent
+          WHEN valid_until  IS NULL THEN valid_until  -- already permanent, keep
+          ELSE GREATEST(valid_until, p_valid_until)
+        END
+    WHERE id = v_grant_id;
   END IF;
 
   RETURN v_grant_id;
@@ -11862,110 +12704,6 @@ END; $$;
 
 
 --
--- Name: guard_journal_entry_no_delete_posted(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.guard_journal_entry_no_delete_posted() RETURNS trigger
-    LANGUAGE plpgsql
-    SET search_path TO 'public', 'pg_temp'
-    AS $$
-BEGIN
-  IF OLD.status IN ('posted', 'voided') THEN
-    RAISE EXCEPTION
-      'cannot_delete_posted_journal_entry: entry % has status=%; void it (status flag) to preserve sequence continuity per Luật Kế toán Đ24',
-      OLD.entry_number,
-      OLD.status
-      USING ERRCODE = '23514';
-  END IF;
-  -- status='draft' → allow delete (pre-posting working set)
-  RETURN OLD;
-END;
-$$;
-
-
---
--- Name: FUNCTION guard_journal_entry_no_delete_posted(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.guard_journal_entry_no_delete_posted() IS 'Blocks DELETE of journal_entries with status posted/voided. Rule JE-VOID-REVERSING-ONLY + Luật Kế toán 2015 Đ24 sequence continuity.';
-
-
---
--- Name: guard_journal_entry_period(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.guard_journal_entry_period() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_period_status TEXT;
-  v_period_year   INT;
-  v_period_month  INT;
-BEGIN
-  IF NEW.status = 'posted' AND OLD.status = 'draft' THEN
-    v_period_year := EXTRACT(YEAR FROM NEW.entry_date AT TIME ZONE 'Asia/Ho_Chi_Minh')::INT;
-    v_period_month := EXTRACT(MONTH FROM NEW.entry_date AT TIME ZONE 'Asia/Ho_Chi_Minh')::INT;
-
-    SELECT fp.status INTO v_period_status
-    FROM public.fiscal_periods fp
-    WHERE fp.tenant_id = NEW.tenant_id
-      AND fp.period_year = v_period_year
-      AND fp.period_month = v_period_month
-    FOR SHARE;
-
-    IF v_period_status = 'closed' THEN
-      RAISE EXCEPTION
-        'fiscal_period_closed_cannot_post: %-% is closed, cannot post journal entry %',
-        v_period_year,
-        lpad(v_period_month::TEXT, 2, '0'),
-        NEW.entry_number
-        USING ERRCODE = '23514';
-    END IF;
-
-    IF v_period_status IS NULL THEN
-      INSERT INTO public.fiscal_periods (tenant_id, period_month, period_year, status)
-      VALUES (NEW.tenant_id, v_period_month, v_period_year, 'open')
-      ON CONFLICT (period_month, period_year, tenant_id) DO NOTHING;
-    END IF;
-  END IF;
-
-  -- Only fire when a POSTED entry is being voided. Drafts have no
-  -- GL impact yet; their void/delete is a working-set operation.
-  IF NEW.status = 'voided' AND OLD.status = 'posted' THEN
-    v_period_year := EXTRACT(YEAR FROM OLD.entry_date AT TIME ZONE 'Asia/Ho_Chi_Minh')::INT;
-    v_period_month := EXTRACT(MONTH FROM OLD.entry_date AT TIME ZONE 'Asia/Ho_Chi_Minh')::INT;
-
-    SELECT fp.status INTO v_period_status
-    FROM public.fiscal_periods fp
-    WHERE fp.tenant_id = OLD.tenant_id
-      AND fp.period_year = v_period_year
-      AND fp.period_month = v_period_month
-    FOR SHARE;
-
-    IF v_period_status = 'closed' THEN
-      RAISE EXCEPTION
-        'period_closed_cannot_void: entry % was posted in %-% which is closed; create a reversing entry in the current open period instead',
-        OLD.entry_number,
-        v_period_year,
-        lpad(v_period_month::TEXT, 2, '0')
-        USING ERRCODE = '23514';
-    END IF;
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-
---
--- Name: FUNCTION guard_journal_entry_period(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.guard_journal_entry_period() IS 'Blocks posting/voiding journal entries when the relevant fiscal period is closed. Period boundary uses Asia/Ho_Chi_Minh.';
-
-
---
 -- Name: handle_new_user(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11974,36 +12712,40 @@ CREATE FUNCTION public.handle_new_user() RETURNS trigger
     SET search_path TO ''
     AS $$
 DECLARE
-  v_tenant_id   BIGINT;
-  v_branch_id   BIGINT;
-  v_role_text   TEXT;
-  v_position_id BIGINT;
+  v_tenant_id bigint;
+  v_branch_id bigint;
+  v_access_bucket text;
+  v_position_id bigint;
 BEGIN
   v_tenant_id := COALESCE(
     (NEW.raw_app_meta_data ->> 'tenant_id')::bigint,
     (SELECT id FROM public.tenants WHERE slug = 'comtammatu' LIMIT 1)
   );
   v_branch_id := NULLIF(NEW.raw_app_meta_data ->> 'branch_id', '')::bigint;
-  v_role_text := COALESCE(NEW.raw_app_meta_data ->> 'role', 'owner');
-  v_position_id := public._auth_v2_position_id_from_role(v_role_text, v_tenant_id);
+  v_access_bucket := COALESCE(
+    NEW.raw_app_meta_data ->> 'access_bucket',
+    NEW.raw_app_meta_data ->> 'user_role',
+    NEW.raw_app_meta_data ->> 'role',
+    'owner'
+  );
+  v_position_id := public.position_id_from_access_bucket(v_access_bucket, v_tenant_id);
 
-  -- H3a invariant: profiles.position_id is NOT NULL. Refuse to insert a
-  -- broken row — surface the misconfiguration to the operator instead of
-  -- silently demoting the new user (or — worse — auto-falling-back to
-  -- 'office', which historically defaulted to 'owner' and would be a
-  -- privilege-escalation vector via raw_app_meta_data role typos).
   IF v_position_id IS NULL THEN
     RAISE EXCEPTION
-      'handle_new_user: position_not_resolved for role=% tenant=% — verify positions seeded for tenant + role string is one of (owner, super_manager, area_manager, branch_manager, warehouse_manager, production_manager, cashier, waiter, chef, office)',
-      v_role_text, v_tenant_id
+      'handle_new_user: position_not_resolved for access_bucket=% tenant=%',
+      v_access_bucket, v_tenant_id
       USING ERRCODE = 'P0001';
   END IF;
 
   INSERT INTO public.profiles (id, tenant_id, branch_id, position_id, full_name)
   VALUES (
-    NEW.id, v_tenant_id, v_branch_id, v_position_id,
+    NEW.id,
+    v_tenant_id,
+    v_branch_id,
+    v_position_id,
     COALESCE(NEW.raw_app_meta_data ->> 'full_name', NEW.raw_user_meta_data ->> 'full_name', '')
   );
+
   RETURN NEW;
 END;
 $$;
@@ -12229,7 +12971,7 @@ CREATE FUNCTION public.is_inventory_production_operator() RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO ''
     AS $$
-  SELECT public.auth_role() IN ('owner', 'super_manager', 'production_manager');
+  SELECT public.auth_role() IN ('owner', 'production_manager');
 $$;
 
 
@@ -12261,7 +13003,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  IF v_role NOT IN ('owner', 'super_manager', 'area_manager')
+  IF v_role NOT IN ('owner')
      AND (v_branch IS NULL OR v_branch <> p_branch_id) THEN
     RAISE EXCEPTION 'branch scope mismatch' USING ERRCODE = '42501';
   END IF;
@@ -12294,6 +13036,31 @@ BEGIN
     AND mi.is_active = TRUE
   ORDER BY mc.sort_order, mi.sort_order, mi.name;
 END;
+$$;
+
+
+--
+-- Name: list_notifications(integer, timestamp with time zone, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.list_notifications(p_limit integer DEFAULT 20, p_before timestamp with time zone DEFAULT NULL::timestamp with time zone, p_unread_only boolean DEFAULT false) RETURNS TABLE(id bigint, tenant_id bigint, target_branch_id bigint, target_roles text[], kind text, severity text, title text, body text, entity_type text, entity_id bigint, action_url text, meta jsonb, created_at timestamp with time zone, expires_at timestamp with time zone, read_at timestamp with time zone)
+    LANGUAGE sql STABLE
+    SET search_path TO ''
+    AS $$
+  SELECT
+    n.id, n.tenant_id, n.target_branch_id, n.target_roles,
+    n.kind, n.severity, n.title, n.body,
+    n.entity_type, n.entity_id, n.action_url, n.meta,
+    n.created_at, n.expires_at,
+    r.read_at
+  FROM public.notifications n
+  LEFT JOIN public.notification_reads r
+    ON r.notification_id = n.id
+   AND r.user_id = (SELECT auth.uid())
+  WHERE (p_before IS NULL OR n.created_at < p_before)
+    AND (NOT p_unread_only OR r.read_at IS NULL)
+  ORDER BY n.created_at DESC, n.id DESC
+  LIMIT least(greatest(p_limit, 1), 50) + 1;
 $$;
 
 
@@ -12390,7 +13157,7 @@ BEGIN
       AND (
         n.target_branch_id IS NULL
         OR n.target_branch_id = ctx.branch_id
-        OR ctx.user_role IN ('owner', 'super_manager', 'area_manager')
+        OR ctx.user_role IN ('owner')
       )
       AND NOT EXISTS (
         SELECT 1
@@ -12700,10 +13467,17 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
-    NULL;
-  ELSIF v_prof_branch IS NOT NULL AND v_item.branch_id <> v_prof_branch THEN
-    RAISE EXCEPTION 'branch mismatch' USING ERRCODE = '42501';
+  IF v_prof_role <> 'owner' THEN
+    IF v_prof_branch IS NULL THEN
+      RAISE EXCEPTION 'branch scope required' USING ERRCODE = '42501';
+    END IF;
+    IF v_item.branch_id <> v_prof_branch THEN
+      RAISE EXCEPTION 'branch mismatch' USING ERRCODE = '42501';
+    END IF;
+  END IF;
+
+  IF NOT public.has_permission(v_item.branch_id, 'pos:use') THEN
+    RAISE EXCEPTION 'forbidden: missing pos:use' USING ERRCODE = '42501';
   END IF;
 
   IF v_item.order_status IN ('completed', 'cancelled') THEN
@@ -12989,9 +13763,7 @@ DECLARE
   v_target_discount_type   TEXT;
   v_target_discount_value  NUMERIC(15,2);
   v_target_discount_note   TEXT;
-  v_target_discount_amount NUMERIC(15,2);
   v_target_total           NUMERIC(15,2);
-  v_source_total           NUMERIC(15,2);
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
@@ -13009,7 +13781,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'branch_manager', 'cashier', 'waiter')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -13046,25 +13818,25 @@ BEGIN
     SELECT o.id, o.tenant_id, o.branch_id, o.table_id, o.order_type, o.status,
            o.payment_status, o.subtotal, o.service_charge,
            o.discount_type, o.discount_value, o.discount_amount, o.discount_note,
-           o.merged_into_order_id, o.note, o.customer_count, o.order_number
+           o.merged_into_order_id, o.note, o.order_number
     INTO v_source FROM public.orders o WHERE o.id = p_source_order_id FOR UPDATE;
 
     SELECT o.id, o.tenant_id, o.branch_id, o.table_id, o.order_type, o.status,
            o.payment_status, o.subtotal, o.service_charge,
            o.discount_type, o.discount_value, o.discount_amount, o.discount_note,
-           o.merged_into_order_id, o.note, o.customer_count, o.order_number
+           o.merged_into_order_id, o.note, o.order_number
     INTO v_target FROM public.orders o WHERE o.id = p_target_order_id FOR UPDATE;
   ELSE
     SELECT o.id, o.tenant_id, o.branch_id, o.table_id, o.order_type, o.status,
            o.payment_status, o.subtotal, o.service_charge,
            o.discount_type, o.discount_value, o.discount_amount, o.discount_note,
-           o.merged_into_order_id, o.note, o.customer_count, o.order_number
+           o.merged_into_order_id, o.note, o.order_number
     INTO v_target FROM public.orders o WHERE o.id = p_target_order_id FOR UPDATE;
 
     SELECT o.id, o.tenant_id, o.branch_id, o.table_id, o.order_type, o.status,
            o.payment_status, o.subtotal, o.service_charge,
            o.discount_type, o.discount_value, o.discount_amount, o.discount_note,
-           o.merged_into_order_id, o.note, o.customer_count, o.order_number
+           o.merged_into_order_id, o.note, o.order_number
     INTO v_source FROM public.orders o WHERE o.id = p_source_order_id FOR UPDATE;
   END IF;
 
@@ -13083,7 +13855,7 @@ BEGIN
     RAISE EXCEPTION 'merge_different_branch' USING ERRCODE = '22023';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_source.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -13175,28 +13947,15 @@ BEGIN
   FROM public.order_items
   WHERE order_id = p_target_order_id AND status <> 'cancelled';
 
-  v_target_discount_amount := public.compute_discount_amount(
-    v_target_discount_type, v_target_discount_value, v_target_subtotal
-  );
-
-  v_target_total := v_target_subtotal
-                  + COALESCE(v_target.service_charge, 0)
-                  - v_target_discount_amount;
-
-  IF v_target_discount_amount = 0 THEN
-    v_target_discount_type  := NULL;
-    v_target_discount_value := NULL;
-    v_target_discount_note  := NULL;
-  END IF;
-
+  -- Set only the trigger inputs. pos_normalize_order_discount_totals fires on
+  -- subtotal/discount_* and computes discount_amount, item_discount_amount,
+  -- order_discount_amount, and total_amount (including the re-pointed items'
+  -- per-item discounts), nulling the order-level metadata if it resolves to 0.
   UPDATE public.orders
      SET subtotal             = v_target_subtotal,
          discount_type        = v_target_discount_type,
          discount_value       = v_target_discount_value,
          discount_note        = v_target_discount_note,
-         discount_amount      = v_target_discount_amount,
-         total_amount         = v_target_total,
-         customer_count       = GREATEST(v_target.customer_count, v_source.customer_count),
          note                 = CASE
                                   WHEN v_source.note IS NOT NULL AND length(trim(v_source.note)) > 0
                                   THEN COALESCE(v_target.note || E'\n', '')
@@ -13207,19 +13966,18 @@ BEGIN
          updated_at           = now()
    WHERE id = p_target_order_id;
 
-  v_source_total := 0 + COALESCE(v_source.service_charge, 0);
-
   UPDATE public.orders
      SET status               = 'cancelled',
          subtotal             = 0,
          discount_type        = NULL,
          discount_value       = NULL,
          discount_note        = NULL,
-         discount_amount      = 0,
-         total_amount         = v_source_total,
          merged_into_order_id = p_target_order_id,
          updated_at           = now()
    WHERE id = p_source_order_id;
+
+  SELECT total_amount INTO v_target_total
+  FROM public.orders WHERE id = p_target_order_id;
 
   INSERT INTO public.order_status_history (
     tenant_id, order_id, from_status, to_status, changed_by, note
@@ -13237,7 +13995,7 @@ BEGIN
     'target_order_id',  p_target_order_id,
     'moved_count',      v_moved_count,
     'target_subtotal',  v_target_subtotal,
-    'target_total',     v_target_total
+    'target_total',     COALESCE(v_target_total, 0)
   );
 END;
 $$;
@@ -13248,51 +14006,6 @@ $$;
 --
 
 COMMENT ON FUNCTION public.merge_orders(p_source_order_id bigint, p_target_order_id bigint, p_idempotency_key uuid) IS 'Gộp source vào target (cùng table + branch + dine_in, cả 2 chưa paid). Source bị cancel với merged_into_order_id pointer. Items + KDS tickets re-point sang target. Discount: pct ở bên nào → BLOCK; VND cộng dồn. Source-side clears discount_type/value/note when subtotal collapses to 0 (satisfies orders_discount_metadata_paired). Lock LEAST/GREATEST(a,b) tránh deadlock cross-merge. Idempotent qua p_idempotency_key.';
-
-
---
--- Name: next_manual_journal_entry_number(bigint, date); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.next_manual_journal_entry_number(p_tenant_id bigint, p_entry_date date) RETURNS text
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO ''
-    AS $_$
-DECLARE
-  v_date_key TEXT;
-  v_next     INT;
-  v_suffix   TEXT;
-BEGIN
-  IF p_tenant_id IS NULL OR p_entry_date IS NULL THEN
-    RAISE EXCEPTION 'journal_entry_number: tenant and date required'
-      USING ERRCODE = '22023';
-  END IF;
-
-  v_date_key := to_char(p_entry_date, 'YYYYMMDD');
-
-  PERFORM pg_advisory_xact_lock(
-    hashtextextended('journal_entry_number:' || p_tenant_id::TEXT || ':' || v_date_key, 0)
-  );
-
-  SELECT COALESCE(
-    MAX(
-      substring(entry_number FROM ('^JE-' || v_date_key || '-([0-9]{3,})$'))::INT
-    ),
-    0
-  ) + 1
-  INTO v_next
-  FROM public.journal_entries
-  WHERE tenant_id = p_tenant_id
-    AND entry_number LIKE 'JE-' || v_date_key || '-%';
-
-  v_suffix := CASE
-    WHEN v_next < 1000 THEN lpad(v_next::TEXT, 3, '0')
-    ELSE v_next::TEXT
-  END;
-
-  RETURN 'JE-' || v_date_key || '-' || v_suffix;
-END;
-$_$;
 
 
 --
@@ -13416,16 +14129,7 @@ BEGIN
   -- Only fill when caller didn't explicitly set it. Treats 0.00 as
   -- a legitimate value (VAT-exempt item) so we don't overwrite it.
   IF NEW.vat_rate IS NULL THEN
-    SELECT mi.vat_rate INTO NEW.vat_rate
-    FROM public.menu_items mi
-    WHERE mi.id = NEW.menu_item_id;
-
-    -- Fallback when menu_item is missing (e.g. orphaned reference,
-    -- legacy data, or NULL menu_item_id). Default 8% matches the
-    -- system-wide default for food.
-    IF NEW.vat_rate IS NULL THEN
-      NEW.vat_rate := 8.00;
-    END IF;
+    NEW.vat_rate := public.resolve_gtgt_rate(NEW.tenant_id);
   END IF;
   RETURN NEW;
 END;
@@ -13436,7 +14140,61 @@ $$;
 -- Name: FUNCTION populate_order_item_vat_rate(); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.populate_order_item_vat_rate() IS 'Fills order_items.vat_rate from menu_items.vat_rate at INSERT time. Rule VAT-PER-LINE-NOT-PER-INVOICE — every order line carries its own VAT rate snapshot so invoice issuance can aggregate correctly even for mixed-rate orders.';
+COMMENT ON FUNCTION public.populate_order_item_vat_rate() IS 'Fills order_items.vat_rate from resolve_gtgt_rate(tenant) at INSERT time — the HKD revenue-tier GTGT % (canonical SoT packages/shared/src/tax/sales-tax-versions.ts). Rule VAT-PER-LINE-NOT-PER-INVOICE — every order line carries its own VAT rate snapshot so invoice issuance can aggregate correctly even for mixed-rate orders.';
+
+
+--
+-- Name: pos_daily_limit_item_quantities(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.pos_daily_limit_item_quantities(p_items jsonb) RETURNS TABLE(menu_item_id bigint, quantity integer)
+    LANGUAGE sql STABLE
+    SET search_path TO ''
+    AS $_$
+  WITH input AS (
+    SELECT elem AS item
+    FROM jsonb_array_elements(COALESCE(p_items, '[]'::jsonb)) AS item_rows(elem)
+  ),
+  agg AS (
+    SELECT
+      (item ->> 'menu_item_id')::bigint AS menu_item_id,
+      COALESCE(NULLIF(item ->> 'quantity', '')::integer, 0) AS quantity
+    FROM input
+    WHERE item ? 'menu_item_id'
+      AND (item ->> 'menu_item_id') ~ '^[0-9]+$'
+
+    UNION ALL
+
+    SELECT
+      (side_rows.elem ->> 'side_item_id')::bigint AS menu_item_id,
+      (
+        COALESCE(NULLIF(input.item ->> 'quantity', '')::integer, 0)
+        * GREATEST(
+            COALESCE(NULLIF(side_rows.elem ->> 'quantity', '')::integer, 1),
+            1
+          )
+      )::integer AS quantity
+    FROM input
+    CROSS JOIN LATERAL jsonb_array_elements(
+      COALESCE(input.item -> 'sides', '[]'::jsonb)
+    ) AS side_rows(elem)
+    WHERE side_rows.elem ? 'side_item_id'
+      AND (side_rows.elem ->> 'side_item_id') ~ '^[0-9]+$'
+  )
+  SELECT agg.menu_item_id, SUM(agg.quantity)::integer
+  FROM agg
+  WHERE agg.menu_item_id IS NOT NULL
+    AND agg.quantity > 0
+  GROUP BY agg.menu_item_id
+  ORDER BY agg.menu_item_id ASC;
+$_$;
+
+
+--
+-- Name: FUNCTION pos_daily_limit_item_quantities(p_items jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.pos_daily_limit_item_quantities(p_items jsonb) IS 'Aggregate POS RPC items into daily-limit demand. Counts each main item quantity and side_item_id demand as parent quantity times side quantity.';
 
 
 --
@@ -13568,6 +14326,132 @@ $_$;
 
 
 --
+-- Name: pos_normalize_order_discount_totals(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.pos_normalize_order_discount_totals() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_item_discount NUMERIC(15,2) := 0;
+  v_order_discount NUMERIC(15,2) := 0;
+  v_discount_base NUMERIC(15,2) := 0;
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    v_item_discount := COALESCE(NEW.item_discount_amount, 0);
+  ELSE
+    SELECT COALESCE(SUM(LEAST(COALESCE(oi.discount_amount, 0), COALESCE(oi.subtotal, 0))), 0)
+    INTO v_item_discount
+    FROM public.order_items oi
+    WHERE oi.order_id = NEW.id
+      AND oi.tenant_id = NEW.tenant_id
+      AND oi.status <> 'cancelled';
+  END IF;
+
+  IF NEW.status = 'cancelled' THEN
+    NEW.item_discount_amount := 0;
+    NEW.order_discount_amount := 0;
+    NEW.discount_amount := 0;
+    NEW.discount_type := NULL;
+    NEW.discount_value := NULL;
+    NEW.discount_note := NULL;
+    NEW.total_amount := GREATEST(0, COALESCE(NEW.service_charge, 0));
+    RETURN NEW;
+  END IF;
+
+  v_item_discount := LEAST(GREATEST(v_item_discount, 0), COALESCE(NEW.subtotal, 0));
+  v_discount_base := GREATEST(COALESCE(NEW.subtotal, 0) - v_item_discount, 0);
+
+  IF NEW.discount_type IS NOT NULL AND NEW.discount_value IS NOT NULL THEN
+    IF NEW.discount_type = 'pct' THEN
+      NEW.discount_value := LEAST(GREATEST(COALESCE(NEW.discount_value, 0), 0), 100);
+    ELSIF NEW.discount_type = 'vnd' THEN
+      NEW.discount_value := LEAST(GREATEST(COALESCE(NEW.discount_value, 0), 0), v_discount_base);
+    END IF;
+
+    v_order_discount := public.compute_discount_amount(
+      NEW.discount_type,
+      NEW.discount_value,
+      v_discount_base
+    );
+  END IF;
+
+  IF v_order_discount <= 0 THEN
+    NEW.order_discount_amount := 0;
+    NEW.discount_type := NULL;
+    NEW.discount_value := NULL;
+    NEW.discount_note := NULL;
+  ELSE
+    NEW.order_discount_amount := v_order_discount;
+    NEW.discount_note := NULLIF(trim(COALESCE(NEW.discount_note, '')), '');
+  END IF;
+
+  NEW.item_discount_amount := v_item_discount;
+  NEW.discount_amount := COALESCE(NEW.order_discount_amount, 0) + v_item_discount;
+  NEW.total_amount := GREATEST(
+    0,
+    COALESCE(NEW.subtotal, 0)
+      + COALESCE(NEW.service_charge, 0)
+      - COALESCE(NEW.discount_amount, 0)
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: pos_normalize_order_item_discount(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.pos_normalize_order_item_discount() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_discount NUMERIC(15,2);
+BEGIN
+  IF NEW.discount_type IS NULL OR NEW.discount_value IS NULL THEN
+    NEW.discount_type := NULL;
+    NEW.discount_value := NULL;
+    NEW.discount_note := NULL;
+    NEW.discount_amount := 0;
+    RETURN NEW;
+  END IF;
+
+  IF NEW.discount_type NOT IN ('pct', 'vnd') THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.discount_type = 'pct' THEN
+    NEW.discount_value := LEAST(GREATEST(COALESCE(NEW.discount_value, 0), 0), 100);
+  ELSE
+    NEW.discount_value := LEAST(GREATEST(COALESCE(NEW.discount_value, 0), 0), COALESCE(NEW.subtotal, 0));
+  END IF;
+
+  v_discount := public.compute_discount_amount(
+    NEW.discount_type,
+    NEW.discount_value,
+    COALESCE(NEW.subtotal, 0)
+  );
+
+  IF v_discount <= 0 THEN
+    NEW.discount_type := NULL;
+    NEW.discount_value := NULL;
+    NEW.discount_note := NULL;
+    NEW.discount_amount := 0;
+  ELSE
+    NEW.discount_amount := v_discount;
+    NEW.discount_note := NULLIF(trim(COALESCE(NEW.discount_note, '')), '');
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: pos_order_modifier_sum(bigint, bigint, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -13636,161 +14520,62 @@ $_$;
 
 
 --
--- Name: post_manual_journal_entry(bigint); Type: FUNCTION; Schema: public; Owner: -
+-- Name: pos_touch_order_discount_totals(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.post_manual_journal_entry(p_entry_id bigint) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-DECLARE
-  v_actor        UUID := auth.uid();
-  v_tenant       BIGINT := public.auth_tenant_id();
-  v_entry        RECORD;
-  v_total_debit  NUMERIC(15,2);
-  v_total_credit NUMERIC(15,2);
-  v_line_count   INT;
-BEGIN
-  IF v_actor IS NULL THEN
-    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
-  END IF;
-  IF v_tenant IS NULL THEN
-    RAISE EXCEPTION 'tenant claim missing' USING ERRCODE = '28000';
-  END IF;
-
-  IF p_entry_id IS NULL THEN
-    RAISE EXCEPTION 'entry id required' USING ERRCODE = '22023';
-  END IF;
-
-  SELECT id, tenant_id, branch_id, entry_number, status
-  INTO v_entry
-  FROM public.journal_entries
-  WHERE id = p_entry_id AND tenant_id = v_tenant
-  FOR UPDATE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'journal entry not found' USING ERRCODE = 'P0002';
-  END IF;
-
-  PERFORM public.ensure_journal_write_permission(v_entry.branch_id);
-
-  IF v_entry.status <> 'draft' THEN
-    RAISE EXCEPTION 'journal entry must be draft to post' USING ERRCODE = '22023';
-  END IF;
-
-  SELECT COUNT(*), COALESCE(SUM(debit_amount), 0), COALESCE(SUM(credit_amount), 0)
-  INTO v_line_count, v_total_debit, v_total_credit
-  FROM public.journal_entry_lines
-  WHERE journal_entry_id = p_entry_id AND tenant_id = v_tenant;
-
-  IF v_line_count < 2 OR abs(v_total_debit - v_total_credit) > 0.01 OR v_total_debit <= 0 THEN
-    RAISE EXCEPTION 'journal entry not balanced' USING ERRCODE = '22023';
-  END IF;
-
-  UPDATE public.journal_entries
-     SET status = 'posted',
-         posted_by = v_actor,
-         posted_at = now()
-   WHERE id = p_entry_id AND tenant_id = v_tenant;
-
-  PERFORM public.log_audit(
-    'journal.post', 'journal_entry', p_entry_id,
-    jsonb_build_object('status', 'draft'),
-    jsonb_build_object('status', 'posted')
-  );
-
-  RETURN jsonb_build_object(
-    'id', p_entry_id, 'entry_number', v_entry.entry_number, 'status', 'posted'
-  );
-END;
-$$;
-
-
---
--- Name: FUNCTION post_manual_journal_entry(p_entry_id bigint); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.post_manual_journal_entry(p_entry_id bigint) IS 'Posts a draft manual journal entry atomically after locking the header and validating balance.';
-
-
---
--- Name: post_payroll_journal(bigint); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.post_payroll_journal(p_payroll_period_id bigint) RETURNS bigint
-    LANGUAGE plpgsql SECURITY DEFINER
+CREATE FUNCTION public.pos_touch_order_discount_totals() RETURNS trigger
+    LANGUAGE plpgsql
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_uid UUID := auth.uid();
-  v_tenant BIGINT := public.auth_tenant_id();
-  v_period RECORD; v_totals RECORD; v_lines JSONB := '[]'::JSONB; v_journal_id BIGINT; v_desc TEXT;
+  v_order_id BIGINT;
+  v_tenant_id BIGINT;
 BEGIN
-  IF v_uid IS NULL THEN RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000'; END IF;
-  IF NOT public.has_permission_any('finance:payroll_approve') THEN
-    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  v_order_id := COALESCE(NEW.order_id, OLD.order_id);
+  v_tenant_id := COALESCE(NEW.tenant_id, OLD.tenant_id);
+
+  IF v_order_id IS NOT NULL THEN
+    UPDATE public.orders
+       SET updated_at = now()
+     WHERE id = v_order_id
+       AND tenant_id = v_tenant_id;
   END IF;
 
-  SELECT pp.* INTO v_period FROM public.payroll_periods pp
-  WHERE pp.id = p_payroll_period_id AND pp.tenant_id = v_tenant FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'payroll_period_not_found' USING ERRCODE = 'P0002'; END IF;
-  IF v_period.status NOT IN ('approved', 'paid') THEN RAISE EXCEPTION 'payroll_not_approved' USING ERRCODE = '22023'; END IF;
-  IF v_period.journal_entry_id IS NOT NULL THEN RETURN v_period.journal_entry_id; END IF;
-
-  SELECT
-    COALESCE(SUM(pe.gross_total), 0) AS total_gross,
-    COALESCE(SUM(pe.bhxh_employee), 0) AS total_bhxh_ee,
-    COALESCE(SUM(pe.bhyt_employee), 0) AS total_bhyt_ee,
-    COALESCE(SUM(pe.bhtn_employee), 0) AS total_bhtn_ee,
-    COALESCE(SUM(pe.bhxh_employer), 0) AS total_bhxh_er,
-    COALESCE(SUM(pe.bhyt_employer), 0) AS total_bhyt_er,
-    COALESCE(SUM(pe.bhtn_employer), 0) AS total_bhtn_er,
-    COALESCE(SUM(pe.pit_tax), 0) AS total_pit
-  INTO v_totals
-  FROM public.payroll_entries pe
-  WHERE pe.payroll_period_id = p_payroll_period_id AND pe.tenant_id = v_tenant;
-
-  IF v_totals.total_gross > 0 THEN
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object('rule_code','PAYROLL_SALARY','amount',v_totals.total_gross,
-      'line_description','Lương T'||v_period.period_month||'/'||v_period.period_year));
-  END IF;
-  IF v_totals.total_bhxh_er > 0 THEN
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object('rule_code','PAYROLL_BHXH_ER','amount',v_totals.total_bhxh_er,
-      'line_description','BHXH DN T'||v_period.period_month||'/'||v_period.period_year));
-  END IF;
-  IF v_totals.total_bhyt_er > 0 THEN
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object('rule_code','PAYROLL_BHYT_ER','amount',v_totals.total_bhyt_er,
-      'line_description','BHYT DN T'||v_period.period_month||'/'||v_period.period_year));
-  END IF;
-  IF v_totals.total_bhtn_er > 0 THEN
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object('rule_code','PAYROLL_BHTN_ER','amount',v_totals.total_bhtn_er,
-      'line_description','BHTN DN T'||v_period.period_month||'/'||v_period.period_year));
-  END IF;
-  IF v_totals.total_pit > 0 THEN
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object('rule_code','PAYROLL_PIT','amount',v_totals.total_pit,
-      'line_description','Thuế TNCN T'||v_period.period_month||'/'||v_period.period_year));
-  END IF;
-  IF v_totals.total_bhxh_ee > 0 THEN
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object('rule_code','PAYROLL_BHXH_EE','amount',v_totals.total_bhxh_ee,
-      'line_description','BHXH NLĐ T'||v_period.period_month||'/'||v_period.period_year));
-  END IF;
-  IF v_totals.total_bhyt_ee > 0 THEN
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object('rule_code','PAYROLL_BHYT_EE','amount',v_totals.total_bhyt_ee,
-      'line_description','BHYT NLĐ T'||v_period.period_month||'/'||v_period.period_year));
-  END IF;
-  IF v_totals.total_bhtn_ee > 0 THEN
-    v_lines := v_lines || jsonb_build_array(jsonb_build_object('rule_code','PAYROLL_BHTN_EE','amount',v_totals.total_bhtn_ee,
-      'line_description','BHTN NLĐ T'||v_period.period_month||'/'||v_period.period_year));
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
   END IF;
 
-  v_desc := 'Lương tháng ' || v_period.period_month || '/' || v_period.period_year;
-  v_journal_id := public.auto_post_journal(v_tenant, NULL, 'payroll', p_payroll_period_id, v_desc, v_lines,
-    (make_date(v_period.period_year, v_period.period_month, 1) + INTERVAL '1 month' - INTERVAL '1 day')::TIMESTAMPTZ, v_uid);
-  IF v_journal_id IS NOT NULL THEN
-    UPDATE public.payroll_periods SET journal_entry_id = v_journal_id WHERE id = p_payroll_period_id;
-  END IF;
-  RETURN v_journal_id;
+  RETURN NEW;
 END;
 $$;
+
+
+--
+-- Name: position_id_from_access_bucket(text, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.position_id_from_access_bucket(p_access_bucket text, p_tenant bigint) RETURNS bigint
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  WITH resolved AS (
+    SELECT public.auth_role_to_position(p_access_bucket) AS preferred_position_code,
+      COALESCE(private.staff_role_from_position_code(public.auth_role_to_position(p_access_bucket)), p_access_bucket) AS access_bucket
+  )
+  SELECT po.id FROM public.positions po CROSS JOIN resolved r
+  WHERE po.tenant_id = p_tenant AND COALESCE(po.is_active, true) = true
+    AND private.staff_role_from_position_code(po.code) = r.access_bucket
+  ORDER BY CASE WHEN po.code = r.preferred_position_code THEN -1 ELSE 0 END,
+    CASE po.code WHEN 'owner' THEN 0 WHEN 'branch_manager' THEN 0 WHEN 'warehouse_manager' THEN 0 WHEN 'head_chef' THEN 0 WHEN 'chef' THEN 0 WHEN 'cashier' THEN 0 WHEN 'waiter' THEN 0 WHEN 'office' THEN 0 WHEN 'kitchen_helper' THEN 1 WHEN 'production_manager' THEN 1 ELSE 9 END,
+    po.id LIMIT 1;
+$$;
+
+
+--
+-- Name: FUNCTION position_id_from_access_bucket(p_access_bucket text, p_tenant bigint); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.position_id_from_access_bucket(p_access_bucket text, p_tenant bigint) IS 'Resolves an access bucket to the tenant HR position used when Auth creates a profile. Canonical English codes only.';
 
 
 --
@@ -13969,6 +14754,7 @@ BEGIN
           jsonb_build_object('type', 'totals'),
           jsonb_build_object('type', 'cashChange'),
           jsonb_build_object('type', 'note', 'prefix', 'Ghi chú: '),
+          jsonb_build_object('type', 'paymentQr', 'heading', 'QUÉT QR THANH TOÁN'),
           jsonb_build_object('type', 'footer', 'lines', jsonb_build_array('Thịt tươi 100%'))
         )
       );
@@ -14642,6 +15428,10 @@ BEGIN
   FOR v_row IN
     SELECT value
     FROM jsonb_array_elements(v_items)
+    ORDER BY
+      COALESCE(NULLIF(value->>'revenue', '')::numeric, 0) DESC,
+      COALESCE(NULLIF(value->>'qty', '')::numeric, 0) DESC,
+      COALESCE(NULLIF(value->>'name', ''), 'Món')
   LOOP
     v_name := COALESCE(NULLIF(v_row->>'name', ''), 'Món');
     v_display_name := CASE
@@ -14663,6 +15453,13 @@ BEGIN
   RETURN v_out;
 END;
 $$;
+
+
+--
+-- Name: FUNCTION print_template_shift_item_breakdown_blocks(p_payload jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.print_template_shift_item_breakdown_blocks(p_payload jsonb) IS 'Build shift-close sold-item breakdown blocks ordered by revenue desc.';
 
 
 --
@@ -14697,6 +15494,7 @@ DECLARE
   v_unpaid NUMERIC := public.print_template_payload_number(p_payload, 'unpaid_order_count');
   v_cancelled NUMERIC := public.print_template_payload_number(p_payload, 'cancelled_order_count');
   v_revenue NUMERIC := public.print_template_payload_number(p_payload, 'total_revenue');
+  v_discount NUMERIC := public.print_template_payload_number(p_payload, 'discount_total');
 BEGIN
   v_out := v_out || jsonb_build_array(
     public.print_template_divider_block('='),
@@ -14707,7 +15505,19 @@ BEGIN
       public.print_template_money(v_revenue),
       true,
       true
-    ),
+    )
+  );
+
+  IF v_discount > 0 THEN
+    v_out := v_out || jsonb_build_array(
+      public.print_template_row_block(
+        'Chiết khấu',
+        '-' || public.print_template_money(v_discount)
+      )
+    );
+  END IF;
+
+  v_out := v_out || jsonb_build_array(
     public.print_template_row_block(
       'Đơn đã thu tiền',
       trim(to_char(v_paid, 'FM999999')) || ' đơn'
@@ -14735,6 +15545,13 @@ BEGIN
   RETURN v_out;
 END;
 $$;
+
+
+--
+-- Name: FUNCTION print_template_shift_summary_blocks(p_payload jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.print_template_shift_summary_blocks(p_payload jsonb) IS 'Build shift-close summary print blocks. Displays discount_total when present.';
 
 
 --
@@ -14834,6 +15651,192 @@ CREATE FUNCTION public.print_template_variance_approval_blocks(p_payload jsonb) 
     AS $$
   SELECT public.print_template_shift_variance_notice_blocks(p_payload);
 $$;
+
+
+--
+-- Name: print_vietqr_ascii(text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.print_vietqr_ascii(p_value text, p_max integer) RETURNS text
+    LANGUAGE sql IMMUTABLE
+    SET search_path TO 'public'
+    AS $$
+  SELECT left(
+    btrim(
+      regexp_replace(
+        regexp_replace(
+          translate(
+            COALESCE(p_value, ''),
+            'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ',
+            repeat('a', 17) || repeat('e', 11) || repeat('i', 5)
+              || repeat('o', 17) || repeat('u', 11) || repeat('y', 5) || 'd'
+              || repeat('A', 17) || repeat('E', 11) || repeat('I', 5)
+              || repeat('O', 17) || repeat('U', 11) || repeat('Y', 5) || 'D'
+          ),
+          '[^0-9A-Za-z ]', ' ', 'g'
+        ),
+        '\s+', ' ', 'g'
+      )
+    ),
+    p_max
+  );
+$$;
+
+
+--
+-- Name: print_vietqr_bank_bin(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.print_vietqr_bank_bin(p_bank_code text) RETURNS text
+    LANGUAGE sql IMMUTABLE
+    SET search_path TO 'public'
+    AS $$
+  SELECT CASE upper(COALESCE(p_bank_code, ''))
+    WHEN 'VIETCOMBANK' THEN '970436'
+    WHEN 'VCB' THEN '970436'
+    WHEN 'VIETINBANK' THEN '970415'
+    WHEN 'CTG' THEN '970415'
+    WHEN 'BIDV' THEN '970418'
+    WHEN 'AGRIBANK' THEN '970405'
+    WHEN 'AGR' THEN '970405'
+    WHEN 'TECHCOMBANK' THEN '970407'
+    WHEN 'TCB' THEN '970407'
+    WHEN 'MBBANK' THEN '970422'
+    WHEN 'MB' THEN '970422'
+    WHEN 'TPBANK' THEN '970423'
+    WHEN 'TPB' THEN '970423'
+    WHEN 'ACB' THEN '970416'
+    WHEN 'VPBANK' THEN '970432'
+    WHEN 'VPB' THEN '970432'
+    WHEN 'SACOMBANK' THEN '970403'
+    WHEN 'STB' THEN '970403'
+    WHEN 'HDBANK' THEN '970437'
+    WHEN 'HDB' THEN '970437'
+    WHEN 'SHBANK' THEN '970443'
+    WHEN 'SHB' THEN '970443'
+    WHEN 'OCEANBANK' THEN '970414'
+    WHEN 'EXIMBANK' THEN '970431'
+    WHEN 'EIB' THEN '970431'
+    WHEN 'MSBANK' THEN '970426'
+    WHEN 'MSB' THEN '970426'
+    WHEN 'NAMABANK' THEN '970428'
+    WHEN 'NAB' THEN '970428'
+    WHEN 'BAOVIETBANK' THEN '970438'
+    WHEN 'BVB' THEN '970438'
+    WHEN 'PVCOMBANK' THEN '970412'
+    WHEN 'PVB' THEN '970412'
+    WHEN 'VIETABANK' THEN '970427'
+    WHEN 'VAB' THEN '970427'
+    WHEN 'ABBANK' THEN '970423'
+    WHEN 'ABB' THEN '970423'
+    WHEN 'LIENVIETPOSTBANK' THEN '970449'
+    WHEN 'LPB' THEN '970449'
+    WHEN 'KIENLONGBANK' THEN '970452'
+    WHEN 'KLB' THEN '970452'
+    WHEN 'SAIGONBANK' THEN '970400'
+    WHEN 'SGB' THEN '970400'
+    ELSE upper(COALESCE(p_bank_code, ''))
+  END;
+$$;
+
+
+--
+-- Name: print_vietqr_crc16(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.print_vietqr_crc16(p_input text) RETURNS text
+    LANGUAGE plpgsql IMMUTABLE
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_crc INT := 65535;
+  v_i INT;
+  v_j INT;
+BEGIN
+  FOR v_i IN 1..length(COALESCE(p_input, '')) LOOP
+    v_crc := (v_crc # ((ascii(substring(p_input FROM v_i FOR 1)) << 8) & 65535)) & 65535;
+    FOR v_j IN 1..8 LOOP
+      IF (v_crc & 32768) <> 0 THEN
+        v_crc := ((v_crc << 1) # 4129) & 65535;
+      ELSE
+        v_crc := (v_crc << 1) & 65535;
+      END IF;
+    END LOOP;
+  END LOOP;
+  RETURN lpad(upper(to_hex(v_crc)), 4, '0');
+END;
+$$;
+
+
+--
+-- Name: print_vietqr_emvco(text, text, text, numeric, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.print_vietqr_emvco(p_bank_code text, p_account_no text, p_account_name text, p_amount numeric, p_description text) RETURNS text
+    LANGUAGE plpgsql IMMUTABLE
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_bin TEXT;
+  v_amount TEXT;
+  v_description TEXT;
+  v_merchant_name TEXT;
+  v_beneficiary TEXT;
+  v_merchant_account_info TEXT;
+  v_additional TEXT := '';
+  v_payload TEXT;
+BEGIN
+  IF COALESCE(p_bank_code, '') = ''
+     OR COALESCE(p_account_no, '') = ''
+     OR COALESCE(p_amount, 0) <= 0 THEN
+    RETURN NULL;
+  END IF;
+
+  v_bin := public.print_vietqr_bank_bin(p_bank_code);
+  v_amount := trim(to_char(round(p_amount), 'FM9999999999999999'));
+  v_description := public.print_vietqr_ascii(p_description, 25);
+  v_merchant_name := COALESCE(
+    NULLIF(public.print_vietqr_ascii(p_account_name, 25), ''),
+    'MERCHANT'
+  );
+
+  v_beneficiary :=
+    '00' || lpad(length(v_bin)::text, 2, '0') || v_bin
+    || '01' || lpad(length(p_account_no)::text, 2, '0') || p_account_no;
+  v_merchant_account_info :=
+    '0010A000000727'
+    || '01' || lpad(length(v_beneficiary)::text, 2, '0') || v_beneficiary
+    || '0208QRIBFTTA';
+
+  IF v_description <> '' THEN
+    v_additional := '08' || lpad(length(v_description)::text, 2, '0') || v_description;
+  END IF;
+
+  v_payload :=
+    '000201'
+    || '010212'
+    || '38' || lpad(length(v_merchant_account_info)::text, 2, '0') || v_merchant_account_info
+    || '5303704'
+    || '54' || lpad(length(v_amount)::text, 2, '0') || v_amount
+    || '5802VN'
+    || '59' || lpad(length(v_merchant_name)::text, 2, '0') || v_merchant_name
+    || '6007VIETNAM'
+    || CASE WHEN v_additional <> ''
+         THEN '62' || lpad(length(v_additional)::text, 2, '0') || v_additional
+         ELSE ''
+       END;
+
+  v_payload := v_payload || '6304';
+  RETURN v_payload || public.print_vietqr_crc16(v_payload);
+END;
+$$;
+
+
+--
+-- Name: FUNCTION print_vietqr_emvco(p_bank_code text, p_account_no text, p_account_name text, p_amount numeric, p_description text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.print_vietqr_emvco(p_bank_code text, p_account_no text, p_account_name text, p_amount numeric, p_description text) IS 'VietQR EMVCo payload for thermal printing. Mirrors buildVietQrEmvco in packages/shared/src/providers/impl/vietqr.ts; keep outputs identical.';
 
 
 --
@@ -15140,6 +16143,12 @@ CREATE FUNCTION public.refresh_finance_views() RETURNS void
     SET search_path TO 'public'
     AS $$
 BEGIN
+  -- Authenticated callers must hold settings:tenant (matches the server action);
+  -- pg_cron runs with no JWT (auth.uid() IS NULL) and bypasses the check.
+  IF auth.uid() IS NOT NULL AND NOT public.has_permission_any('settings:tenant') THEN
+    RAISE EXCEPTION 'permission denied: settings:tenant required' USING ERRCODE = '42501';
+  END IF;
+
   REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_daily_revenue;
   INSERT INTO public.mv_refresh_log(view_name, refreshed_at)
     VALUES ('mv_daily_revenue', now())
@@ -15308,42 +16317,142 @@ COMMENT ON FUNCTION public.register_branch_presence(p_tenant_id bigint, p_branch
 
 
 --
--- Name: reject_shift_request(bigint, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: reject_leave_request(bigint, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.reject_shift_request(p_request_id bigint, p_reason text DEFAULT NULL::text) RETURNS void
+CREATE FUNCTION public.reject_leave_request(p_request_id bigint, p_reason text DEFAULT NULL::text) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public', 'pg_temp'
     AS $$
 DECLARE
   v_tenant_id BIGINT := public.auth_tenant_id();
   v_user_id   UUID   := auth.uid();
-  v_request   public.shift_requests%ROWTYPE;
+  v_request   public.leave_requests%ROWTYPE;
+  v_reason    TEXT := NULLIF(trim(COALESCE(p_reason, '')), '');
 BEGIN
   IF v_user_id IS NULL OR v_tenant_id IS NULL THEN
-    RAISE EXCEPTION 'reject_shift_request: missing auth context' USING ERRCODE = 'insufficient_privilege';
+    RAISE EXCEPTION 'reject_leave_request: missing auth context'
+      USING ERRCODE = 'insufficient_privilege';
   END IF;
-  SELECT * INTO v_request FROM public.shift_requests
-  WHERE id = p_request_id AND tenant_id = v_tenant_id FOR UPDATE;
+
+  IF v_reason IS NOT NULL AND char_length(v_reason) > 500 THEN
+    RAISE EXCEPTION 'reject_leave_request: reason too long'
+      USING ERRCODE = 'string_data_right_truncation';
+  END IF;
+
+  SELECT * INTO v_request
+  FROM public.leave_requests
+  WHERE id = p_request_id
+    AND tenant_id = v_tenant_id
+  FOR UPDATE;
+
   IF v_request.id IS NULL THEN
-    RAISE EXCEPTION 'reject_shift_request: request not found' USING ERRCODE = 'no_data_found';
+    RAISE EXCEPTION 'reject_leave_request: request not found'
+      USING ERRCODE = 'no_data_found';
   END IF;
-  IF NOT public.has_permission(v_request.branch_id, 'hr:approve_shift_request') THEN
-    RAISE EXCEPTION 'reject_shift_request: missing permission for this branch' USING ERRCODE = 'insufficient_privilege';
+
+  IF NOT public.has_permission(v_request.branch_id, 'hr:approve_leave_request') THEN
+    RAISE EXCEPTION 'reject_leave_request: missing permission for this branch'
+      USING ERRCODE = 'insufficient_privilege';
   END IF;
+
   IF v_request.status <> 'pending' THEN
-    RAISE EXCEPTION 'reject_shift_request: request is %, not pending', v_request.status USING ERRCODE = 'check_violation';
+    RAISE EXCEPTION 'reject_leave_request: request is %, not pending', v_request.status
+      USING ERRCODE = 'check_violation';
   END IF;
-  UPDATE public.shift_requests
-  SET status = 'rejected', reviewed_by = v_user_id, reviewed_at = now(), rejected_reason = p_reason
+
+  IF EXISTS (
+    SELECT 1 FROM public.employees e
+    WHERE e.id = v_request.employee_id
+      AND e.profile_id = v_user_id
+  ) THEN
+    RAISE EXCEPTION 'reject_leave_request: cannot review own request'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  UPDATE public.leave_requests
+  SET status = 'rejected',
+      reviewed_by = v_user_id,
+      reviewed_at = now(),
+      rejected_reason = v_reason
   WHERE id = p_request_id;
+
   PERFORM public.log_audit(
-    'reject'::TEXT, 'shift_request'::TEXT, p_request_id,
+    'reject'::TEXT,
+    'leave_request'::TEXT,
+    p_request_id,
     jsonb_build_object('status', 'pending'),
-    jsonb_build_object('status', 'rejected', 'reason', p_reason)
+    jsonb_build_object('status', 'rejected', 'reason', v_reason)
   );
 END;
 $$;
+
+
+--
+-- Name: FUNCTION reject_leave_request(p_request_id bigint, p_reason text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.reject_leave_request(p_request_id bigint, p_reason text) IS 'Manager rejects a pending leave_request within branch scope and records an optional reason.';
+
+
+--
+-- Name: release_branch_menu_daily_holds(bigint, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.release_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant_id bigint := public.auth_tenant_id();
+  v_branch_id bigint := public.auth_branch_id();
+  v_role text := public.auth_role();
+  v_released integer := 0;
+BEGIN
+  IF v_uid IS NULL OR v_tenant_id IS NULL THEN
+    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF p_hold_token IS NULL THEN
+    RAISE EXCEPTION 'hold_token required' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_role NOT IN ('owner', 'branch_manager', 'cashier', 'waiter') THEN
+    RAISE EXCEPTION 'permission denied: pos daily-limit hold' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_role NOT IN ('owner')
+     AND (v_branch_id IS NULL OR v_branch_id <> p_branch_id) THEN
+    RAISE EXCEPTION 'branch scope mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  UPDATE public.branch_menu_item_daily_holds h
+  SET released_at = now(),
+      updated_at = now()
+  WHERE h.tenant_id = v_tenant_id
+    AND h.branch_id = p_branch_id
+    AND h.hold_token = p_hold_token
+    AND h.held_by = v_uid
+    AND h.committed_at IS NULL
+    AND h.released_at IS NULL;
+
+  GET DIAGNOSTICS v_released = ROW_COUNT;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'hold_token', p_hold_token,
+    'released_count', v_released
+  );
+END;
+$$;
+
+
+--
+-- Name: FUNCTION release_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.release_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid) IS 'Release active POS daily-limit holds owned by the caller token for a branch.';
 
 
 --
@@ -15564,6 +16673,225 @@ COMMENT ON FUNCTION public.replace_tax_invoice(p_old_id bigint, p_reason text, p
 
 
 --
+-- Name: reserve_branch_menu_daily_holds(bigint, uuid, jsonb, text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reserve_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid, p_items jsonb, p_source text DEFAULT 'pos_cart'::text, p_ttl_seconds integer DEFAULT 180) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tenant_id bigint := public.auth_tenant_id();
+  v_branch_id bigint := public.auth_branch_id();
+  v_role text := public.auth_role();
+  v_limit_date date := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
+  v_ttl_seconds integer := LEAST(GREATEST(COALESCE(p_ttl_seconds, 180), 30), 600);
+  v_expires_at timestamptz := now() + make_interval(secs => LEAST(GREATEST(COALESCE(p_ttl_seconds, 180), 30), 600));
+  v_target record;
+  v_limit record;
+  v_other_hold_qty integer;
+  v_items jsonb := '[]'::jsonb;
+  v_released integer := 0;
+BEGIN
+  IF v_uid IS NULL OR v_tenant_id IS NULL THEN
+    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF p_hold_token IS NULL THEN
+    RAISE EXCEPTION 'hold_token required' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_source NOT IN ('pos_cart', 'pos_append') THEN
+    RAISE EXCEPTION 'invalid hold source' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_items IS NULL OR jsonb_typeof(p_items) <> 'array' THEN
+    RAISE EXCEPTION 'p_items must be a JSON array' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_role NOT IN ('owner', 'branch_manager', 'cashier', 'waiter') THEN
+    RAISE EXCEPTION 'permission denied: pos daily-limit hold' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_role NOT IN ('owner')
+     AND (v_branch_id IS NULL OR v_branch_id <> p_branch_id) THEN
+    RAISE EXCEPTION 'branch scope mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  PERFORM 1
+  FROM public.branches b
+  WHERE b.id = p_branch_id
+    AND b.tenant_id = v_tenant_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'branch not found' USING ERRCODE = 'P0002';
+  END IF;
+
+  UPDATE public.branch_menu_item_daily_holds h
+  SET released_at = h.expires_at,
+      updated_at = now()
+  WHERE h.tenant_id = v_tenant_id
+    AND h.branch_id = p_branch_id
+    AND h.limit_date = v_limit_date
+    AND h.committed_at IS NULL
+    AND h.released_at IS NULL
+    AND h.expires_at <= now();
+
+  IF jsonb_array_length(p_items) = 0 THEN
+    UPDATE public.branch_menu_item_daily_holds h
+    SET released_at = now(),
+        updated_at = now()
+    WHERE h.tenant_id = v_tenant_id
+      AND h.branch_id = p_branch_id
+      AND h.hold_token = p_hold_token
+      AND h.held_by = v_uid
+      AND h.committed_at IS NULL
+      AND h.released_at IS NULL;
+
+    GET DIAGNOSTICS v_released = ROW_COUNT;
+
+    RETURN jsonb_build_object(
+      'success', true,
+      'hold_token', p_hold_token,
+      'items', '[]'::jsonb,
+      'released_count', v_released
+    );
+  END IF;
+
+  FOR v_target IN
+    SELECT *
+    FROM public.pos_daily_limit_item_quantities(p_items)
+  LOOP
+    SELECT * INTO v_limit
+    FROM public.branch_menu_item_daily_limits bl
+    WHERE bl.tenant_id = v_tenant_id
+      AND bl.branch_id = p_branch_id
+      AND bl.menu_item_id = v_target.menu_item_id
+      AND bl.limit_date = v_limit_date
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+      CONTINUE;
+    END IF;
+
+    IF v_limit.is_disabled THEN
+      RAISE EXCEPTION 'daily_limit_item_disabled'
+        USING ERRCODE = 'P0001',
+              DETAIL = jsonb_build_object(
+                'reason', 'daily_limit_item_disabled',
+                'menu_item_id', v_target.menu_item_id
+              )::text;
+    END IF;
+
+    IF v_limit.limit_quantity IS NULL THEN
+      CONTINUE;
+    END IF;
+
+    SELECT COALESCE(SUM(h.quantity), 0)::integer
+    INTO v_other_hold_qty
+    FROM public.branch_menu_item_daily_holds h
+    WHERE h.tenant_id = v_tenant_id
+      AND h.branch_id = p_branch_id
+      AND h.menu_item_id = v_target.menu_item_id
+      AND h.limit_date = v_limit_date
+      AND h.hold_token <> p_hold_token
+      AND h.committed_at IS NULL
+      AND h.released_at IS NULL
+      AND h.expires_at > now();
+
+    IF v_limit.sold_today + v_other_hold_qty + v_target.quantity > v_limit.limit_quantity THEN
+      RAISE EXCEPTION 'daily_limit_exceeded'
+        USING ERRCODE = 'P0001',
+              DETAIL = jsonb_build_object(
+                'reason', 'daily_limit_exceeded',
+                'menu_item_id', v_target.menu_item_id,
+                'limit_quantity', v_limit.limit_quantity,
+                'sold_today', v_limit.sold_today,
+                'held_quantity', v_other_hold_qty,
+                'requested_quantity', v_target.quantity
+              )::text;
+    END IF;
+  END LOOP;
+
+  UPDATE public.branch_menu_item_daily_holds h
+  SET released_at = now(),
+      updated_at = now()
+  WHERE h.tenant_id = v_tenant_id
+    AND h.branch_id = p_branch_id
+    AND h.hold_token = p_hold_token
+    AND h.held_by = v_uid
+    AND h.committed_at IS NULL
+    AND h.released_at IS NULL;
+
+  WITH requested AS (
+    SELECT *
+    FROM public.pos_daily_limit_item_quantities(p_items)
+  ),
+  inserted AS (
+    INSERT INTO public.branch_menu_item_daily_holds (
+      tenant_id,
+      branch_id,
+      menu_item_id,
+      limit_date,
+      hold_token,
+      held_by,
+      source,
+      quantity,
+      expires_at
+    )
+    SELECT
+      v_tenant_id,
+      p_branch_id,
+      r.menu_item_id,
+      v_limit_date,
+      p_hold_token,
+      v_uid,
+      p_source,
+      r.quantity,
+      v_expires_at
+    FROM requested r
+    JOIN public.branch_menu_item_daily_limits bl
+      ON bl.tenant_id = v_tenant_id
+     AND bl.branch_id = p_branch_id
+     AND bl.menu_item_id = r.menu_item_id
+     AND bl.limit_date = v_limit_date
+    WHERE bl.limit_quantity IS NOT NULL
+      AND bl.is_disabled = false
+    RETURNING menu_item_id, quantity, expires_at
+  )
+  SELECT COALESCE(
+    jsonb_agg(
+      jsonb_build_object(
+        'menu_item_id', inserted.menu_item_id,
+        'quantity', inserted.quantity,
+        'expires_at', inserted.expires_at
+      )
+      ORDER BY inserted.menu_item_id
+    ),
+    '[]'::jsonb
+  )
+  INTO v_items
+  FROM inserted;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'hold_token', p_hold_token,
+    'expires_at', v_expires_at,
+    'ttl_seconds', v_ttl_seconds,
+    'items', v_items
+  );
+END;
+$$;
+
+
+--
+-- Name: FUNCTION reserve_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid, p_items jsonb, p_source text, p_ttl_seconds integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.reserve_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid, p_items jsonb, p_source text, p_ttl_seconds integer) IS 'Replace a POS cart daily-limit hold snapshot. Locks limit rows by menu_item_id ASC, excludes the caller token, raises daily_limit_item_disabled / daily_limit_exceeded, and stores short-lived active holds.';
+
+
+--
 -- Name: resolve_branch_printer_for_type(bigint, bigint, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15595,6 +16923,61 @@ CREATE FUNCTION public.resolve_branch_printer_for_type(p_tenant_id bigint, p_bra
     END,
     p.id
   LIMIT 1;
+$$;
+
+
+--
+-- Name: resolve_gtgt_rate(bigint, date); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.resolve_gtgt_rate(p_tenant_id bigint, p_at_date date DEFAULT ((now() AT TIME ZONE 'Asia/Ho_Chi_Minh'::text))::date) RETURNS numeric
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_year_start  date;
+  v_days_elapsed int;
+  v_ytd_gross   numeric;
+  v_annual      numeric;
+  v_in_window   boolean;
+  v_base        numeric;
+BEGIN
+  v_year_start := date_trunc('year', p_at_date)::date;
+  v_days_elapsed := (p_at_date - v_year_start) + 1;
+
+  -- YTD gross paid revenue (rate-independent → use orders.total_amount), keyed
+  -- on the completed payment whose paid_at VN-date falls in the current year.
+  SELECT COALESCE(SUM(o.total_amount), 0)
+    INTO v_ytd_gross
+  FROM public.payments p
+  JOIN public.orders o
+    ON o.id = p.order_id
+   AND o.tenant_id = p.tenant_id
+   AND o.branch_id = p.branch_id
+  WHERE p.tenant_id = p_tenant_id
+    AND p.status = 'completed'
+    AND (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date >= v_year_start
+    AND (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date <= p_at_date
+    AND o.status <> 'cancelled'
+    AND o.payment_status = 'paid';
+
+  -- Annualize YTD: gross / days_elapsed * 365.
+  v_annual := v_ytd_gross / NULLIF(v_days_elapsed, 0) * 365;
+
+  -- Exempt tier: < 1 tỷ/năm.
+  IF v_annual < 1000000000 THEN
+    RETURN 0::numeric(5,2);
+  END IF;
+
+  -- Temporary GTGT reduction window (NQ 204/2025 + NĐ 174/2025): ăn uống
+  -- trực tiếp 3% → 2,4% for dates in [2025-07-01, 2026-12-31].
+  v_in_window := p_at_date >= DATE '2025-07-01' AND p_at_date <= DATE '2026-12-31';
+
+  -- Chargeable tiers (group2 <3 tỷ, group3/4 ≥3 tỷ) share the same base rate.
+  v_base := CASE WHEN v_in_window THEN 2.40 ELSE 3.00 END;
+
+  RETURN v_base::numeric(5,2);
+END;
 $$;
 
 
@@ -15832,11 +17215,6 @@ DECLARE
   v_order           RECORD;
   v_actor           UUID := auth.uid();
   v_tenant          BIGINT := public.auth_tenant_id();
-  v_je_id           BIGINT;
-  v_dr_account_id   BIGINT;
-  v_cr_account_id   BIGINT;
-  v_cr_account_code TEXT;
-  v_entry_number    TEXT;
   v_stock_count     INT := 0;
 BEGIN
   IF v_actor IS NULL THEN
@@ -15872,8 +17250,7 @@ BEGIN
       USING ERRCODE = 'P0001';
   END IF;
 
-  SELECT id, tenant_id, branch_id, amount, status, method,
-         COALESCE(stock_consumed_status, 'ok') AS stock_consumed_status
+  SELECT id, tenant_id, branch_id, amount, status, stock_consumed_status
   INTO v_payment
   FROM public.payments
   WHERE id = v_refund.payment_id
@@ -15892,6 +17269,8 @@ BEGIN
       v_refund.amount, v_payment.amount USING ERRCODE = 'P0001';
   END IF;
 
+  -- Lock kept for serialization against concurrent payment/cancel flows even
+  -- though the order row is no longer mutated.
   SELECT id, tenant_id, branch_id, payment_status
   INTO v_order
   FROM public.orders
@@ -15903,49 +17282,8 @@ BEGIN
       USING ERRCODE = 'P0002';
   END IF;
 
-  v_cr_account_code := CASE
-    WHEN v_payment.method = 'cash' THEN '1111'
-    ELSE '1121'
-  END;
-
-  SELECT id INTO v_dr_account_id
-  FROM public.chart_of_accounts
-  WHERE tenant_id = v_tenant AND account_code = '5111'
-  LIMIT 1;
-  IF v_dr_account_id IS NULL THEN
-    RAISE EXCEPTION 'chart_of_accounts: 5111 missing for tenant %',
-      v_tenant USING ERRCODE = 'P0002';
-  END IF;
-
-  SELECT id INTO v_cr_account_id
-  FROM public.chart_of_accounts
-  WHERE tenant_id = v_tenant AND account_code = v_cr_account_code
-  LIMIT 1;
-  IF v_cr_account_id IS NULL THEN
-    RAISE EXCEPTION 'chart_of_accounts: % missing for tenant %',
-      v_cr_account_code, v_tenant USING ERRCODE = 'P0002';
-  END IF;
-
-  v_entry_number := 'JE-' || to_char(now() AT TIME ZONE 'UTC', 'YYYYMMDD') ||
-                    '-RFN' || lpad(p_refund_id::TEXT, 4, '0');
-
-  INSERT INTO public.journal_entries
-    (tenant_id, branch_id, entry_number, entry_date, description,
-     reference_type, reference_id, status, posted_by, posted_at, created_by)
-  VALUES
-    (v_tenant, v_payment.branch_id, v_entry_number, now(),
-     'Refund reversal journal for refund #' || p_refund_id::TEXT,
-     'refund', p_refund_id, 'posted', v_actor, now(), v_actor)
-  RETURNING id INTO v_je_id;
-
-  INSERT INTO public.journal_entry_lines
-    (tenant_id, journal_entry_id, account_id, debit_amount, credit_amount, description)
-  VALUES
-    (v_tenant, v_je_id, v_dr_account_id, v_refund.amount, 0,
-     'Reverse revenue (refund #' || p_refund_id::TEXT || ')'),
-    (v_tenant, v_je_id, v_cr_account_id, 0, v_refund.amount,
-     'Reverse cash/bank (refund #' || p_refund_id::TEXT || ')');
-
+  -- Restore stock only when this payment actually consumed stock ('ok').
+  -- NULL means stock was never consumed, so nothing is restored.
   IF v_payment.stock_consumed_status = 'ok' THEN
     BEGIN
       v_stock_count := public.restore_stock_for_order(v_refund.order_id, v_actor);
@@ -15957,10 +17295,6 @@ BEGIN
   UPDATE public.payments
      SET status = 'refunded', updated_at = now()
    WHERE id = v_payment.id;
-
-  UPDATE public.orders
-     SET payment_status = 'refunded', updated_at = now()
-   WHERE id = v_order.id;
 
   UPDATE public.refunds
      SET status      = 'approved',
@@ -15976,7 +17310,6 @@ BEGIN
     jsonb_build_object('status', 'pending'),
     jsonb_build_object(
       'status', 'approved',
-      'journal_entry_id', v_je_id,
       'stock_movements_created', v_stock_count
     )
   );
@@ -15984,10 +17317,8 @@ BEGIN
   RETURN jsonb_build_object(
     'status', 'approved',
     'refund_id', v_refund.id,
-    'journal_entry_id', v_je_id,
     'stock_movements_created', v_stock_count,
-    'payment_new_status', 'refunded',
-    'order_new_status', 'refunded'
+    'payment_new_status', 'refunded'
   );
 END;
 $$;
@@ -15997,7 +17328,7 @@ $$;
 -- Name: FUNCTION reverse_payment_and_post(p_refund_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.reverse_payment_and_post(p_refund_id bigint) IS 'Atomic refund reversal with branch-scoped orders:refund_approve permission. Locks refund/payment/order, posts GL reversal, restores stock when stock_consumed_status=ok, flips payment/order/refund, and audits.';
+COMMENT ON FUNCTION public.reverse_payment_and_post(p_refund_id bigint) IS 'Atomic refund reversal with branch-scoped orders:refund_approve permission. Locks refund/payment/order, restores stock ONLY when stock_consumed_status=''ok'' strictly (NULL = never consumed), flips payment and refund, and audits. orders.payment_status intentionally stays ''paid'' (CHECK allows unpaid/pending/paid only; partial refunds make an order-level refunded label wrong) — refund truth = payments.status + refunds.';
 
 
 --
@@ -16012,16 +17343,14 @@ DECLARE
   v_tenant_id BIGINT;
   v_target_tenant BIGINT;
   v_deleted INTEGER;
-  v_effective_branch_id BIGINT;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
   END IF;
 
-  v_effective_branch_id := private.staff_permission_effective_branch_id(
-    p_permission_key,
-    p_branch_id
-  );
+  IF NOT public.has_permission(p_branch_id, 'staff:assign_permission') THEN
+    RAISE EXCEPTION 'forbidden: missing staff:assign_permission' USING ERRCODE = '42501';
+  END IF;
 
   SELECT tenant_id INTO v_tenant_id FROM public.profiles WHERE id = auth.uid();
   SELECT tenant_id INTO v_target_tenant FROM public.profiles WHERE id = p_target_user;
@@ -16029,17 +17358,7 @@ BEGIN
     RAISE EXCEPTION 'target_not_in_tenant' USING ERRCODE = '42501';
   END IF;
 
-  IF p_branch_id IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM public.branches WHERE id = p_branch_id AND tenant_id = v_tenant_id
-  ) THEN
-    RAISE EXCEPTION 'branch_not_in_tenant' USING ERRCODE = '42501';
-  END IF;
-
-  IF NOT public.has_permission(v_effective_branch_id, 'staff:assign_permission') THEN
-    RAISE EXCEPTION 'forbidden: missing staff:assign_permission' USING ERRCODE = '42501';
-  END IF;
-
-  IF public._auth_v2_is_owner(p_target_user) THEN
+  IF public.auth_is_owner(p_target_user) THEN
     RAISE EXCEPTION 'cannot_manage_owner_permissions' USING ERRCODE = '42501';
   END IF;
 
@@ -16047,19 +17366,18 @@ BEGIN
   WHERE user_id = p_target_user
     AND permission_key = p_permission_key
     AND (
-      (v_effective_branch_id IS NULL AND branch_id IS NULL)
-      OR branch_id = v_effective_branch_id
+      (p_branch_id IS NULL AND branch_id IS NULL)
+      OR branch_id = p_branch_id
     );
   GET DIAGNOSTICS v_deleted = ROW_COUNT;
 
   IF v_deleted > 0 THEN
     INSERT INTO public.permission_audit_log (
       tenant_id, actor_user_id, target_user_id, branch_id,
-      permission_key, action, metadata
+      permission_key, action
     ) VALUES (
-      v_tenant_id, auth.uid(), p_target_user, v_effective_branch_id,
-      p_permission_key, 'revoke',
-      jsonb_build_object('requested_branch_id', p_branch_id)
+      v_tenant_id, auth.uid(), p_target_user, p_branch_id,
+      p_permission_key, 'revoke'
     );
   END IF;
 
@@ -16121,6 +17439,7 @@ DECLARE
   v_payload JSONB;
   v_idempotency TEXT;
   v_job_id BIGINT;
+  v_unrouted INT;
 BEGIN
   SELECT tenant_id, branch_id, order_number, order_type, note, created_by,
          table_id, kitchen_send_count
@@ -16483,6 +17802,29 @@ BEGIN
          AND sent_to_kitchen_at IS NULL;
     END LOOP;
   END IF;
+
+  -- Fail-loud guard. After both the KDS-ticket loop and the printer-dispatch
+  -- block, any non-cancelled item that is still unsent (sent_to_kitchen_at IS
+  -- NULL) AND has no kds_tickets row was routed nowhere — its category has no
+  -- active station, no fallback station, and no kitchen-ticket printer. Raising
+  -- here rolls the whole send back so the order is never half-sent silently.
+  SELECT count(*)::int INTO v_unrouted
+  FROM public.order_items oi
+  WHERE oi.order_id = p_order_id
+    AND oi.status <> 'cancelled'
+    AND oi.sent_to_kitchen_at IS NULL
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.kds_tickets kt
+      WHERE kt.tenant_id = v_order.tenant_id
+        AND kt.order_item_id = oi.id
+    );
+
+  IF v_unrouted > 0 THEN
+    RAISE EXCEPTION 'kds_no_route: order % has % unroutable item(s)',
+      p_order_id, v_unrouted
+      USING ERRCODE = '22023';
+  END IF;
 END;
 $_$;
 
@@ -16631,6 +17973,84 @@ $$;
 
 
 --
+-- Name: save_print_template_version(text, text, integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.save_print_template_version(p_kind text, p_name text, p_paper_width_mm integer, p_content jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_tenant  BIGINT := public.auth_tenant_id();
+  v_uid     UUID := auth.uid();
+  v_name    TEXT := NULLIF(btrim(COALESCE(p_name, '')), '');
+  v_version INT;
+  v_id      BIGINT;
+BEGIN
+  IF v_uid IS NULL OR v_tenant IS NULL THEN
+    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF p_kind NOT IN (
+    'receipt', 'provisional_bill', 'kitchen_ticket',
+    'cancel_ticket', 'shift_close_report'
+  ) THEN
+    RAISE EXCEPTION 'invalid kind' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_paper_width_mm NOT IN (58, 80) THEN
+    RAISE EXCEPTION 'invalid paper width' USING ERRCODE = '22023';
+  END IF;
+
+  IF jsonb_typeof(p_content) <> 'object'
+     OR jsonb_typeof(p_content->'blocks') <> 'array' THEN
+    RAISE EXCEPTION 'invalid content' USING ERRCODE = '22023';
+  END IF;
+
+  IF jsonb_array_length(p_content->'blocks') > 160 THEN
+    RAISE EXCEPTION 'too many blocks' USING ERRCODE = '22023';
+  END IF;
+
+  UPDATE public.print_template_versions
+     SET is_active = false,
+         updated_by = v_uid,
+         updated_at = now()
+   WHERE tenant_id = v_tenant
+     AND branch_id IS NULL
+     AND kind = p_kind
+     AND is_active;
+
+  SELECT COALESCE(MAX(version), 0) + 1
+    INTO v_version
+    FROM public.print_template_versions
+   WHERE tenant_id = v_tenant
+     AND branch_id IS NULL
+     AND kind = p_kind;
+
+  INSERT INTO public.print_template_versions (
+    tenant_id, branch_id, kind, version, name,
+    paper_width_mm, content, is_active, created_by, updated_by
+  )
+  VALUES (
+    v_tenant, NULL, p_kind, v_version,
+    COALESCE(v_name, 'Bản tùy chỉnh v' || v_version::TEXT),
+    p_paper_width_mm, p_content, true, v_uid, v_uid
+  )
+  RETURNING id INTO v_id;
+
+  RETURN jsonb_build_object('id', v_id, 'version', v_version);
+END;
+$$;
+
+
+--
+-- Name: FUNCTION save_print_template_version(p_kind text, p_name text, p_paper_width_mm integer, p_content jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.save_print_template_version(p_kind text, p_name text, p_paper_width_mm integer, p_content jsonb) IS 'Template editor save: deactivates the active tenant-scope template for the kind and inserts the next version atomically. SECURITY INVOKER — RLS policies on print_template_versions decide authorization.';
+
+
+--
 -- Name: save_station_categories(bigint, bigint[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -16709,7 +18129,7 @@ BEGIN
     SELECT
       sl.tenant_id,
       sl.branch_id,
-      ARRAY['branch_manager', 'super_manager', 'owner']::TEXT[],
+      ARRAY['branch_manager', 'owner']::TEXT[],
       'inventory.stock_low',
       'warning',
       format('Tồn kho thấp: %s', ing.name),
@@ -16752,7 +18172,7 @@ BEGIN
     SELECT
       gi.tenant_id,
       g.branch_id,
-      ARRAY['branch_manager', 'super_manager', 'owner']::TEXT[],
+      ARRAY['branch_manager', 'owner']::TEXT[],
       'inventory.expiry_soon',
       CASE
         WHEN gi.expiry_date <= (now()::date + interval '2 days') THEN 'critical'
@@ -16808,99 +18228,6 @@ COMMENT ON FUNCTION public.scan_inventory_alerts() IS 'Emit inventory.stock_low 
 
 
 --
--- Name: seed_chart_of_accounts(bigint); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.seed_chart_of_accounts(p_tenant_id bigint) RETURNS void
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-BEGIN
-  -- Skip if already seeded
-  IF EXISTS (SELECT 1 FROM public.chart_of_accounts WHERE tenant_id = p_tenant_id LIMIT 1) THEN
-    RETURN;
-  END IF;
-
-  INSERT INTO public.chart_of_accounts
-    (tenant_id, account_code, account_name, account_type, level, cashflow_section)
-  VALUES
-    -- Tài sản (Assets)
-    (p_tenant_id, '111',   'Tiền mặt',                                'asset',     1, 'operating'),
-    (p_tenant_id, '1111',  'Tiền Việt Nam',                           'asset',     2, 'operating'),
-    (p_tenant_id, '112',   'Tiền gửi ngân hàng',                      'asset',     1, 'operating'),
-    (p_tenant_id, '1121',  'Tiền Việt Nam gửi ngân hàng',             'asset',     2, 'operating'),
-    (p_tenant_id, '131',   'Phải thu khách hàng',                     'asset',     1, 'operating'),
-    (p_tenant_id, '152',   'Nguyên liệu, vật liệu',                   'asset',     1, 'operating'),
-    (p_tenant_id, '153',   'Công cụ, dụng cụ',                        'asset',     1, 'operating'),
-    (p_tenant_id, '156',   'Hàng hóa',                                'asset',     1, 'operating'),
-    (p_tenant_id, '211',   'TSCĐ hữu hình',                           'asset',     1, 'investing'),
-    (p_tenant_id, '214',   'Hao mòn TSCĐ',                            'asset',     1, 'investing'),
-    -- Nợ phải trả (Liabilities)
-    (p_tenant_id, '331',   'Phải trả người bán',                      'liability', 1, 'operating'),
-    (p_tenant_id, '334',   'Phải trả người lao động',                 'liability', 1, 'operating'),
-    (p_tenant_id, '335',   'Chi phí phải trả',                        'liability', 1, 'operating'),
-    (p_tenant_id, '338',   'Phải trả, phải nộp khác',                 'liability', 1, 'operating'),
-    (p_tenant_id, '3383',  'BHXH',                                    'liability', 2, 'operating'),
-    (p_tenant_id, '3384',  'BHYT',                                    'liability', 2, 'operating'),
-    (p_tenant_id, '3386',  'BHTN',                                    'liability', 2, 'operating'),
-    (p_tenant_id, '3335',  'Thuế TNCN',                               'liability', 2, 'operating'),
-    (p_tenant_id, '33311', 'Thuế GTGT đầu ra',                        'liability', 2, 'operating'),
-    (p_tenant_id, '33312', 'Thuế GTGT đầu vào',                       'liability', 2, 'operating'),
-    -- Vốn chủ sở hữu (Equity) — financing for B03-DN
-    (p_tenant_id, '411',   'Vốn đầu tư của chủ sở hữu',               'equity',    1, 'financing'),
-    (p_tenant_id, '4111',  'Vốn góp của chủ sở hữu',                  'equity',    2, 'financing'),
-    (p_tenant_id, '421',   'Lợi nhuận sau thuế chưa phân phối',       'equity',    1, 'financing'),
-    -- Doanh thu (Revenue)
-    (p_tenant_id, '511',   'Doanh thu bán hàng và cung cấp dịch vụ',  'revenue',   1, 'operating'),
-    (p_tenant_id, '515',   'Doanh thu hoạt động tài chính',           'revenue',   1, 'operating'),
-    (p_tenant_id, '521',   'Các khoản giảm trừ doanh thu',            'revenue',   1, 'operating'),
-    -- Chi phí (Expenses)
-    (p_tenant_id, '621',   'Chi phí nguyên liệu trực tiếp',           'expense',   1, 'operating'),
-    (p_tenant_id, '622',   'Chi phí nhân công trực tiếp',             'expense',   1, 'operating'),
-    (p_tenant_id, '627',   'Chi phí sản xuất chung',                  'expense',   1, 'operating'),
-    (p_tenant_id, '641',   'Chi phí bán hàng',                        'expense',   1, 'operating'),
-    (p_tenant_id, '642',   'Chi phí quản lý doanh nghiệp',            'expense',   1, 'operating'),
-    (p_tenant_id, '811',   'Chi phí khác',                            'expense',   1, 'operating'),
-    -- Xác định kết quả (clearing — none for B03-DN)
-    (p_tenant_id, '911',   'Xác định kết quả kinh doanh',             'expense',   1, 'none');
-
-  -- Set parent_id for cash sub-accounts
-  UPDATE public.chart_of_accounts SET parent_id = (
-    SELECT id FROM public.chart_of_accounts c2
-    WHERE c2.tenant_id = p_tenant_id AND c2.account_code = '111'
-  ) WHERE tenant_id = p_tenant_id AND account_code = '1111';
-
-  UPDATE public.chart_of_accounts SET parent_id = (
-    SELECT id FROM public.chart_of_accounts c2
-    WHERE c2.tenant_id = p_tenant_id AND c2.account_code = '112'
-  ) WHERE tenant_id = p_tenant_id AND account_code = '1121';
-
-  -- Set parent_id for equity sub-accounts
-  UPDATE public.chart_of_accounts SET parent_id = (
-    SELECT id FROM public.chart_of_accounts c2
-    WHERE c2.tenant_id = p_tenant_id AND c2.account_code = '411'
-  ) WHERE tenant_id = p_tenant_id AND account_code = '4111';
-
-  -- Set parent_id for sub-accounts of 338
-  UPDATE public.chart_of_accounts SET parent_id = (
-    SELECT id FROM public.chart_of_accounts c2
-    WHERE c2.tenant_id = p_tenant_id AND c2.account_code = '338'
-  ) WHERE tenant_id = p_tenant_id AND account_code IN ('3383', '3384', '3386');
-
-  UPDATE public.chart_of_accounts SET parent_id = (
-    SELECT id FROM public.chart_of_accounts c2
-    WHERE c2.tenant_id = p_tenant_id AND c2.account_code = '338'
-  ) WHERE tenant_id = p_tenant_id AND account_code = '3335';
-
-  UPDATE public.chart_of_accounts SET parent_id = (
-    SELECT id FROM public.chart_of_accounts c2
-    WHERE c2.tenant_id = p_tenant_id AND c2.account_code = '338'
-  ) WHERE tenant_id = p_tenant_id AND account_code IN ('33311', '33312');
-END;
-$$;
-
-
---
 -- Name: set_branch_kind(bigint, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -16909,8 +18236,8 @@ CREATE FUNCTION public.set_branch_kind(p_branch_id bigint, p_kind text DEFAULT '
     SET search_path TO ''
     AS $$
 DECLARE
-  v_actor_id UUID := auth.uid();
-  v_tenant   BIGINT;
+  v_actor_id uuid := auth.uid();
+  v_tenant bigint;
 BEGIN
   IF v_actor_id IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
@@ -16930,13 +18257,13 @@ BEGIN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  IF p_kind <> 'branch' THEN
-    RAISE EXCEPTION 'invalid branch_kind: %', p_kind USING ERRCODE = '22023';
+  IF p_kind NOT IN ('branch', 'central_supply', 'central_kitchen') THEN
+    RAISE EXCEPTION 'invalid branch_kind' USING ERRCODE = '22023';
   END IF;
 
   UPDATE public.branches
   SET branch_kind = p_kind,
-      updated_at  = now()
+      updated_at = now()
   WHERE id = p_branch_id
     AND tenant_id = v_tenant
     AND is_active = true;
@@ -16952,7 +18279,7 @@ $$;
 -- Name: FUNCTION set_branch_kind(p_branch_id bigint, p_kind text); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.set_branch_kind(p_branch_id bigint, p_kind text) IS 'Auth v3 alpha4b: gates tenant branch-kind changes with settings:tenant permission instead of cached JWT auth_role.';
+COMMENT ON FUNCTION public.set_branch_kind(p_branch_id bigint, p_kind text) IS 'Sets the operating site kind for a branch-backed inventory site.';
 
 
 --
@@ -16974,7 +18301,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  IF v_role NOT IN ('owner', 'super_manager', 'area_manager',
+  IF v_role NOT IN ('owner',
                     'branch_manager', 'cashier', 'chef') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -17061,7 +18388,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'branch_manager', 'cashier', 'waiter')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -17096,7 +18423,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -17224,7 +18551,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner') THEN
     PERFORM 1
     FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
@@ -17340,7 +18667,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner') THEN
     PERFORM 1
     FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
@@ -17636,14 +18963,14 @@ BEGIN
 
   INSERT INTO public.orders (
     tenant_id, branch_id, table_id, order_number, order_type,
-    status, subtotal, total_amount, customer_count, note, created_by,
+    status, subtotal, total_amount, note, created_by,
     pos_session_id, idempotency_key, split_from_order_id
   )
   VALUES (
     v_source.tenant_id, v_source.branch_id, v_source.table_id,
     v_new_order_number, v_source.order_type,
     v_source.status,
-    0, 0, 1, NULL, v_uid,
+    0, 0, NULL, v_uid,
     v_source.pos_session_id, p_idempotency_key, p_source_order_id
   )
   RETURNING id INTO v_new_order_id;
@@ -18201,8 +19528,6 @@ CREATE FUNCTION public.stock_transfer_list_branches() RETURNS TABLE(id bigint, n
     AND b.is_active = true
     AND public.auth_role() IN (
       'owner',
-      'super_manager',
-      'area_manager',
       'branch_manager',
       'warehouse_manager',
       'production_manager'
@@ -18294,9 +19619,6 @@ DECLARE
   v_new_q        NUMERIC(15,3);
   v_new_wac      NUMERIC(15,2);
   v_key          TEXT;
-  v_transfer_total NUMERIC(15,2) := 0;
-  v_journal_id      BIGINT;
-  v_lines           JSONB;
   v_to_loc          RECORD;
 BEGIN
   IF v_uid IS NULL THEN
@@ -18423,8 +19745,6 @@ BEGIN
     SET quantity_received = v_recv,
         receive_note = v_note
     WHERE id = v_line.id;
-
-    v_transfer_total := v_transfer_total + (v_recv * v_cost);
   END LOOP;
 
   UPDATE public.stock_transfers
@@ -18433,35 +19753,9 @@ BEGIN
       updated_at = now()
   WHERE id = p_transfer_id;
 
-  IF v_transfer_total > 0 THEN
-    v_lines := jsonb_build_array(jsonb_build_object(
-      'rule_code', 'TRANSFER_INVENTORY',
-      'amount', v_transfer_total,
-      'line_description', 'Chuyen kho ' || v_tr.transfer_number
-    ));
-
-    v_journal_id := public.auto_post_journal(
-      v_tenant,
-      v_tr.to_branch_id,
-      'transfer',
-      p_transfer_id,
-      'Nhan chuyen kho ' || v_tr.transfer_number,
-      v_lines,
-      now(),
-      v_uid
-    );
-
-    IF v_journal_id IS NOT NULL THEN
-      UPDATE public.stock_transfers
-      SET journal_entry_id = v_journal_id
-      WHERE id = p_transfer_id;
-    END IF;
-  END IF;
-
   RETURN jsonb_build_object(
     'transfer_id', p_transfer_id,
-    'status', 'received',
-    'journal_entry_id', v_journal_id
+    'status', 'received'
   );
 END;
 $$;
@@ -18526,61 +19820,189 @@ END; $$;
 
 
 --
--- Name: submit_shift_request(bigint, bigint, date, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: submit_leave_request(bigint, date, date, text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.submit_shift_request(p_branch_id bigint, p_shift_id bigint, p_date date, p_note text DEFAULT NULL::text) RETURNS bigint
+CREATE FUNCTION public.submit_leave_request(p_branch_id bigint, p_start_date date, p_end_date date, p_leave_type text DEFAULT 'annual'::text, p_reason text DEFAULT NULL::text) RETURNS bigint
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public', 'pg_temp'
     AS $$
 DECLARE
-  v_tenant_id   BIGINT := public.auth_tenant_id();
-  v_user_id     UUID   := auth.uid();
-  v_employee_id BIGINT;
-  v_request_id  BIGINT;
+  v_tenant_id     BIGINT := public.auth_tenant_id();
+  v_user_id       UUID   := auth.uid();
+  v_employee_id   BIGINT;
+  v_request_id    BIGINT;
+  v_today         DATE := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
+  v_leave_type    TEXT := COALESCE(NULLIF(trim(p_leave_type), ''), 'annual');
+  v_reason        TEXT := NULLIF(trim(COALESCE(p_reason, '')), '');
+  v_employee_name TEXT;
+  v_requester_bucket TEXT := public.auth_role();
+  v_target_roles  TEXT[];
 BEGIN
   IF v_user_id IS NULL OR v_tenant_id IS NULL THEN
-    RAISE EXCEPTION 'submit_shift_request: missing auth context' USING ERRCODE = 'insufficient_privilege';
+    RAISE EXCEPTION 'submit_leave_request: missing auth context'
+      USING ERRCODE = 'insufficient_privilege';
   END IF;
-  IF NOT public.has_permission_any('hr:register_shift') THEN
-    RAISE EXCEPTION 'submit_shift_request: missing permission hr:register_shift' USING ERRCODE = 'insufficient_privilege';
+
+  IF NOT public.has_permission(p_branch_id, 'hr:request_leave') THEN
+    RAISE EXCEPTION 'submit_leave_request: missing permission hr:request_leave'
+      USING ERRCODE = 'insufficient_privilege';
   END IF;
-  IF p_date < CURRENT_DATE THEN
-    RAISE EXCEPTION 'submit_shift_request: cannot register a past date' USING ERRCODE = 'check_violation';
+
+  IF p_start_date IS NULL OR p_end_date IS NULL OR p_start_date > p_end_date THEN
+    RAISE EXCEPTION 'submit_leave_request: invalid date range'
+      USING ERRCODE = 'check_violation';
   END IF;
-  SELECT id INTO v_employee_id
-  FROM public.employees
-  WHERE profile_id = v_user_id AND tenant_id = v_tenant_id AND is_active = true
-  LIMIT 1;
-  IF v_employee_id IS NULL THEN
-    RAISE EXCEPTION 'submit_shift_request: no active employee record' USING ERRCODE = 'insufficient_privilege';
+
+  IF p_start_date < v_today THEN
+    RAISE EXCEPTION 'submit_leave_request: cannot request past date'
+      USING ERRCODE = 'check_violation';
   END IF;
+
+  IF v_leave_type NOT IN ('annual', 'sick', 'unpaid', 'personal', 'other') THEN
+    RAISE EXCEPTION 'submit_leave_request: invalid leave type'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  IF v_reason IS NOT NULL AND char_length(v_reason) > 500 THEN
+    RAISE EXCEPTION 'submit_leave_request: reason too long'
+      USING ERRCODE = 'string_data_right_truncation';
+  END IF;
+
   IF NOT EXISTS (
-    SELECT 1 FROM public.shifts s
-    WHERE s.id = p_shift_id AND s.branch_id = p_branch_id AND s.tenant_id = v_tenant_id AND s.is_active = true
+    SELECT 1
+    FROM public.branches b
+    WHERE b.id = p_branch_id
+      AND b.tenant_id = v_tenant_id
+      AND b.is_active = true
   ) THEN
-    RAISE EXCEPTION 'submit_shift_request: shift not found or inactive' USING ERRCODE = 'foreign_key_violation';
+    RAISE EXCEPTION 'submit_leave_request: branch not found or inactive'
+      USING ERRCODE = 'foreign_key_violation';
   END IF;
+
+  SELECT e.id, p.full_name INTO v_employee_id, v_employee_name
+  FROM public.employees e
+  JOIN public.profiles p ON p.id = e.profile_id
+  WHERE e.profile_id = v_user_id
+    AND e.tenant_id = v_tenant_id
+    AND e.is_active = true
+    AND p.tenant_id = v_tenant_id
+    AND p.branch_id = p_branch_id
+  LIMIT 1;
+
+  IF v_employee_id IS NULL THEN
+    RAISE EXCEPTION 'submit_leave_request: no active employee in this branch'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(v_employee_id);
+
   IF EXISTS (
-    SELECT 1 FROM public.shift_assignments sa
-    WHERE sa.employee_id = v_employee_id AND sa.shift_id = p_shift_id
-      AND sa.date = p_date AND sa.tenant_id = v_tenant_id
+    SELECT 1
+    FROM public.leave_requests lr
+    WHERE lr.tenant_id = v_tenant_id
+      AND lr.employee_id = v_employee_id
+      AND lr.status IN ('pending', 'approved')
+      AND daterange(lr.start_date, lr.end_date, '[]')
+          && daterange(p_start_date, p_end_date, '[]')
   ) THEN
-    RAISE EXCEPTION 'submit_shift_request: already assigned to this shift' USING ERRCODE = 'unique_violation';
+    RAISE EXCEPTION 'submit_leave_request: date range overlaps existing request'
+      USING ERRCODE = 'unique_violation';
   END IF;
-  INSERT INTO public.shift_requests
-    (tenant_id, branch_id, employee_id, shift_id, date, status, note)
+
+  INSERT INTO public.leave_requests
+    (tenant_id, branch_id, employee_id, start_date, end_date, leave_type, status, reason)
   VALUES
-    (v_tenant_id, p_branch_id, v_employee_id, p_shift_id, p_date, 'pending', p_note)
+    (v_tenant_id, p_branch_id, v_employee_id, p_start_date, p_end_date, v_leave_type, 'pending', v_reason)
   RETURNING id INTO v_request_id;
+
+  -- Người gửi là branch_manager thì chỉ cấp trên duyệt (RPC duyệt đã chặn
+  -- tự duyệt; target_roles mang access bucket, không phải position code).
+  IF v_requester_bucket = 'branch_manager' THEN
+    v_target_roles := ARRAY[ 'owner'];
+  ELSE
+    v_target_roles := ARRAY['branch_manager', 'owner'];
+  END IF;
+
+  INSERT INTO public.notifications (
+    tenant_id,
+    target_branch_id,
+    target_roles,
+    kind,
+    severity,
+    title,
+    body,
+    entity_type,
+    entity_id,
+    action_url,
+    meta,
+    dedup_key
+  )
+  VALUES (
+    v_tenant_id,
+    p_branch_id,
+    v_target_roles,
+    'hr.leave_requested',
+    'info',
+    'Yêu cầu nghỉ phép mới',
+    format(
+      '%s xin nghỉ %s.',
+      COALESCE(v_employee_name, 'Nhân viên'),
+      CASE
+        WHEN p_start_date = p_end_date
+          THEN format('ngày %s', to_char(p_start_date, 'DD/MM'))
+        ELSE format(
+          'từ %s đến %s',
+          to_char(p_start_date, 'DD/MM'),
+          to_char(p_end_date, 'DD/MM')
+        )
+      END
+    ),
+    'leave_request',
+    v_request_id,
+    '/hr',
+    jsonb_build_object(
+      'leave_request_id', v_request_id,
+      'employee_id', v_employee_id,
+      'branch_id', p_branch_id,
+      'start_date', p_start_date,
+      'end_date', p_end_date,
+      'leave_type', v_leave_type,
+      'requester_bucket', v_requester_bucket
+    ),
+    format('hr.leave_request:%s', v_request_id)
+  )
+  ON CONFLICT (tenant_id, dedup_key)
+    WHERE dedup_key IS NOT NULL
+  DO UPDATE SET
+    created_at = EXCLUDED.created_at,
+    expires_at = NULL,
+    meta = EXCLUDED.meta;
+
   PERFORM public.log_audit(
-    'submit'::TEXT, 'shift_request'::TEXT, v_request_id, NULL,
-    jsonb_build_object('branch_id', p_branch_id, 'shift_id', p_shift_id,
-      'date', p_date, 'employee_id', v_employee_id)
+    'submit'::TEXT,
+    'leave_request'::TEXT,
+    v_request_id,
+    NULL,
+    jsonb_build_object(
+      'branch_id', p_branch_id,
+      'employee_id', v_employee_id,
+      'start_date', p_start_date,
+      'end_date', p_end_date,
+      'leave_type', v_leave_type
+    )
   );
+
   RETURN v_request_id;
 END;
 $$;
+
+
+--
+-- Name: FUNCTION submit_leave_request(p_branch_id bigint, p_start_date date, p_end_date date, p_leave_type text, p_reason text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.submit_leave_request(p_branch_id bigint, p_start_date date, p_end_date date, p_leave_type text, p_reason text) IS 'Employee submits a branch-scoped leave request. Resolves employee_id from auth.uid(), enforces hr:request_leave, blocks past/overlapping pending+approved ranges, notifies approver buckets. Does not mutate attendance or payroll.';
 
 
 --
@@ -18624,85 +20046,71 @@ CREATE FUNCTION public.sync_missing_permissions_from_template() RETURNS TABLE(ro
     SET search_path TO ''
     AS $$
 DECLARE
-  v_profile RECORD;
-  v_template RECORD;
-  v_perm_key TEXT;
-  v_branch BIGINT;
-  v_ab RECORD;
-  v_added INTEGER := 0;
-  v_rows INTEGER;
-  v_effective_branch_id BIGINT;
+  v_profile record;
+  v_template record;
+  v_perm_key text;
+  v_branch bigint;
+  v_added integer := 0;
+  v_rows integer;
 BEGIN
   FOR v_profile IN
-    SELECT p.id AS user_id,
-           p.tenant_id,
-           p.branch_id,
-           p.area_id,
-           pos.code AS position_code,
-           private.staff_role_from_position_code(pos.code) AS role
-      FROM public.profiles p
-      JOIN public.positions pos ON pos.id = p.position_id
-     WHERE p.is_active = TRUE
-       AND p.position_id IS NOT NULL
+    SELECT
+      p.id AS user_id,
+      p.tenant_id,
+      p.branch_id,
+      pos.code AS position_code,
+      private.staff_role_from_position_code(pos.code) AS access_bucket
+    FROM public.profiles p
+    JOIN public.positions pos
+      ON pos.id = p.position_id
+     AND pos.tenant_id = p.tenant_id
+    WHERE p.is_active = true
+      AND p.position_id IS NOT NULL
   LOOP
-    IF v_profile.role IS NULL THEN
-      RAISE EXCEPTION
-        'sync_missing_permissions_from_template: position_role_not_resolved for position=% tenant=%',
-        v_profile.position_code, v_profile.tenant_id
-        USING ERRCODE = 'P0001';
+    IF v_profile.access_bucket IS NULL THEN
+      CONTINUE;
     END IF;
 
     SELECT rt.id, rt.permission_keys
-      INTO v_template
-      FROM public.role_templates rt
-     WHERE rt.tenant_id = v_profile.tenant_id
-       AND rt.position_code = v_profile.position_code
-     LIMIT 1;
+    INTO v_template
+    FROM public.role_templates rt
+    WHERE rt.tenant_id = v_profile.tenant_id
+      AND rt.position_code = v_profile.position_code
+    LIMIT 1;
 
     IF v_template.permission_keys IS NULL THEN
       CONTINUE;
     END IF;
 
-    IF v_profile.role = 'area_manager' THEN
-      FOR v_ab IN
-        SELECT ab.branch_id
-          FROM public.area_branches ab
-         WHERE ab.tenant_id = v_profile.tenant_id
-           AND ab.area_id = v_profile.area_id
-      LOOP
-        FOREACH v_perm_key IN ARRAY v_template.permission_keys LOOP
-          v_effective_branch_id := private.staff_permission_effective_branch_id(v_perm_key, v_ab.branch_id);
-          INSERT INTO public.staff_permissions (user_id, tenant_id, branch_id, permission_key, source_template)
-          VALUES (v_profile.user_id, v_profile.tenant_id, v_effective_branch_id, v_perm_key, v_template.id)
-          ON CONFLICT DO NOTHING;
-          GET DIAGNOSTICS v_rows = ROW_COUNT;
-          v_added := v_added + v_rows;
-        END LOOP;
-      END LOOP;
-    ELSIF v_profile.role IN ('owner', 'super_manager', 'office') THEN
-      FOREACH v_perm_key IN ARRAY v_template.permission_keys LOOP
-        v_effective_branch_id := private.staff_permission_effective_branch_id(v_perm_key, NULL);
-        INSERT INTO public.staff_permissions (user_id, tenant_id, branch_id, permission_key, source_template)
-        VALUES (v_profile.user_id, v_profile.tenant_id, v_effective_branch_id, v_perm_key, v_template.id)
-        ON CONFLICT DO NOTHING;
-        GET DIAGNOSTICS v_rows = ROW_COUNT;
-        v_added := v_added + v_rows;
-      END LOOP;
+    IF v_profile.access_bucket IN ('owner') THEN
+      v_branch := NULL;
     ELSE
       v_branch := v_profile.branch_id;
       IF v_branch IS NULL THEN
         CONTINUE;
       END IF;
-
-      FOREACH v_perm_key IN ARRAY v_template.permission_keys LOOP
-        v_effective_branch_id := private.staff_permission_effective_branch_id(v_perm_key, v_branch);
-        INSERT INTO public.staff_permissions (user_id, tenant_id, branch_id, permission_key, source_template)
-        VALUES (v_profile.user_id, v_profile.tenant_id, v_effective_branch_id, v_perm_key, v_template.id)
-        ON CONFLICT DO NOTHING;
-        GET DIAGNOSTICS v_rows = ROW_COUNT;
-        v_added := v_added + v_rows;
-      END LOOP;
     END IF;
+
+    FOREACH v_perm_key IN ARRAY v_template.permission_keys LOOP
+      INSERT INTO public.staff_permissions (
+        user_id,
+        tenant_id,
+        branch_id,
+        permission_key,
+        source_template
+      )
+      VALUES (
+        v_profile.user_id,
+        v_profile.tenant_id,
+        v_branch,
+        v_perm_key,
+        v_template.id
+      )
+      ON CONFLICT DO NOTHING;
+
+      GET DIAGNOSTICS v_rows = ROW_COUNT;
+      v_added := v_added + v_rows;
+    END LOOP;
   END LOOP;
 
   RETURN QUERY SELECT v_added;
@@ -18854,90 +20262,46 @@ CREATE FUNCTION public.toggle_profile_active(p_target_id uuid) RETURNS boolean
     SET search_path TO ''
     AS $$
 DECLARE
-  v_actor_id      UUID := auth.uid();
-  v_actor_role    TEXT;
-  v_actor_tenant  BIGINT;
-  v_actor_branch  BIGINT;
-  v_actor_area    BIGINT;
-  v_target_role   TEXT;
-  v_target_branch BIGINT;
-  v_target_active BOOLEAN;
-  v_new_state     BOOLEAN;
+  v_actor_id UUID := auth.uid();
+  v_actor_role TEXT; v_actor_tenant BIGINT; v_actor_branch BIGINT;
+  v_target_role TEXT; v_target_branch BIGINT; v_target_active BOOLEAN; v_new_state BOOLEAN;
 BEGIN
   IF v_actor_id IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
   END IF;
-
-  SELECT
-    COALESCE(private.staff_role_from_position_code(po.code), 'unassigned') AS role_text,
-    p.tenant_id,
-    p.branch_id,
-    p.area_id
-  INTO v_actor_role, v_actor_tenant, v_actor_branch, v_actor_area
-  FROM public.profiles p
-  JOIN public.positions po ON po.id = p.position_id
-  WHERE p.id = v_actor_id
-    AND COALESCE(p.is_active, true) = true;
-
+  SELECT COALESCE(private.staff_role_from_position_code(po.code), 'unassigned'), p.tenant_id, p.branch_id
+  INTO v_actor_role, v_actor_tenant, v_actor_branch
+  FROM public.profiles p LEFT JOIN public.positions po ON po.id = p.position_id
+  WHERE p.id = v_actor_id AND COALESCE(p.is_active, true) = true;
   IF NOT FOUND OR v_actor_tenant IS NULL THEN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
   END IF;
-
   IF NOT public.has_permission_any('staff:manage') THEN
     RAISE EXCEPTION 'forbidden: missing staff:manage' USING ERRCODE = '42501';
   END IF;
-
-  SELECT COALESCE(private.staff_role_from_position_code(po.code), 'unassigned'),
-         p.branch_id,
-         p.is_active
-    INTO v_target_role, v_target_branch, v_target_active
-    FROM public.profiles p
-    JOIN public.positions po ON po.id = p.position_id
-    WHERE p.id = p_target_id AND p.tenant_id = v_actor_tenant;
-
+  SELECT COALESCE(private.staff_role_from_position_code(po.code), 'unassigned'), p.branch_id, p.is_active
+  INTO v_target_role, v_target_branch, v_target_active
+  FROM public.profiles p LEFT JOIN public.positions po ON po.id = p.position_id
+  WHERE p.id = p_target_id AND p.tenant_id = v_actor_tenant;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'not_found';
   END IF;
-
   IF p_target_id = v_actor_id THEN
     RAISE EXCEPTION 'cannot_toggle_self';
   END IF;
-
   IF v_actor_role = 'owner' THEN
     NULL;
-  ELSIF v_actor_role = 'super_manager' THEN
-    IF v_target_role = 'owner' THEN
-      RAISE EXCEPTION 'permission_denied';
-    END IF;
-  ELSIF v_actor_role = 'area_manager' THEN
-    IF v_target_role IN ('owner', 'super_manager', 'area_manager') THEN
-      RAISE EXCEPTION 'permission_denied';
-    END IF;
-    IF v_target_branch IS NOT NULL THEN
-      PERFORM 1 FROM public.area_branches
-      WHERE area_id = v_actor_area
-        AND branch_id = v_target_branch
-        AND tenant_id = v_actor_tenant;
-      IF NOT FOUND THEN
-        RAISE EXCEPTION 'area_manager: target not in your area';
-      END IF;
-    END IF;
   ELSIF v_actor_role = 'branch_manager' THEN
     IF v_target_branch IS DISTINCT FROM v_actor_branch THEN
       RAISE EXCEPTION 'branch_manager: target not in your branch';
     END IF;
-    IF v_target_role IN ('owner', 'super_manager', 'area_manager', 'branch_manager') THEN
+    IF v_target_role IN ('owner','branch_manager') THEN
       RAISE EXCEPTION 'permission_denied';
     END IF;
   ELSE
     RAISE EXCEPTION 'permission_denied';
   END IF;
-
-  UPDATE public.profiles
-    SET is_active = NOT is_active
-    WHERE id = p_target_id AND tenant_id = v_actor_tenant
-    RETURNING is_active INTO v_new_state;
-
+  UPDATE public.profiles SET is_active = NOT is_active WHERE id = p_target_id AND tenant_id = v_actor_tenant RETURNING is_active INTO v_new_state;
   RETURN v_new_state;
 END;
 $$;
@@ -18947,7 +20311,7 @@ $$;
 -- Name: FUNCTION toggle_profile_active(p_target_id uuid); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.toggle_profile_active(p_target_id uuid) IS 'Staff active-state toggle RPC. SECURITY DEFINER with staff:manage gate; role hierarchy derives from positions.code.';
+COMMENT ON FUNCTION public.toggle_profile_active(p_target_id uuid) IS 'Staff active-state toggle RPC. SECURITY DEFINER with staff:manage gate before role hierarchy checks.';
 
 
 --
@@ -19000,18 +20364,19 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
-    NULL;
-  ELSIF v_prof_branch IS NOT NULL AND v_order.branch_id <> v_prof_branch THEN
-    RAISE EXCEPTION 'branch mismatch' USING ERRCODE = '42501';
+  IF v_prof_role <> 'owner' THEN
+    IF v_prof_branch IS NULL THEN
+      RAISE EXCEPTION 'branch scope required' USING ERRCODE = '42501';
+    END IF;
+    IF v_order.branch_id <> v_prof_branch THEN
+      RAISE EXCEPTION 'branch mismatch' USING ERRCODE = '42501';
+    END IF;
   END IF;
 
-  -- Idempotent replay: same key as the last completed transfer on this
-  -- order. Returns the order's CURRENT table (post-prior-transfer) with
-  -- an `idempotent: true` marker so the action layer can suppress a
-  -- duplicate audit toast if it wants. Note this is a per-order replay
-  -- check, not a global key-uniqueness check — keys are minted client-
-  -- side per click, so a different click on the same order overwrites.
+  IF NOT public.has_permission(v_order.branch_id, 'pos:use') THEN
+    RAISE EXCEPTION 'forbidden: missing pos:use' USING ERRCODE = '42501';
+  END IF;
+
   IF p_idempotency_key IS NOT NULL
      AND v_order.last_transfer_idempotency_key = p_idempotency_key THEN
     RETURN jsonb_build_object(
@@ -19038,8 +20403,6 @@ BEGIN
   END IF;
 
   IF p_new_table_id = v_order.table_id THEN
-    -- Same-table no-op: still record the key so a retry of the same
-    -- intent collapses cleanly on subsequent calls.
     UPDATE public.orders
     SET last_transfer_idempotency_key = COALESCE(p_idempotency_key, last_transfer_idempotency_key),
         updated_at = now()
@@ -19047,9 +20410,6 @@ BEGIN
     RETURN jsonb_build_object('order_id', p_order_id, 'table_id', p_new_table_id);
   END IF;
 
-  -- Multi-order-per-table alignment: target may be available OR occupied.
-  -- Reserved / maintenance still block — those signal bàn is intentionally
-  -- unavailable for service.
   IF v_new_table.status NOT IN ('available', 'occupied') THEN
     RAISE EXCEPTION 'table not available' USING ERRCODE = '22023';
   END IF;
@@ -19062,8 +20422,6 @@ BEGIN
       updated_at = now()
   WHERE id = p_order_id;
 
-  -- Idempotent: if target was already occupied, this is a no-op; the bàn
-  -- continues to host its prior order(s) plus the freshly transferred one.
   UPDATE public.tables
   SET status = 'occupied', updated_at = now()
   WHERE id = p_new_table_id AND tenant_id = v_order.tenant_id;
@@ -19656,7 +21014,7 @@ BEGIN
     VALUES (
       NEW.tenant_id,
       NEW.branch_id,
-      ARRAY['branch_manager', 'super_manager', 'owner']::TEXT[],
+      ARRAY['branch_manager', 'owner']::TEXT[],
       'workflow.grn_pending',
       'info',
       format('GRN %s đang chờ chốt', NEW.grn_number),
@@ -19730,7 +21088,7 @@ BEGIN
     VALUES (
       NEW.tenant_id,
       NEW.branch_id,
-      ARRAY['branch_manager', 'super_manager', 'owner']::TEXT[],
+      ARRAY['branch_manager', 'owner']::TEXT[],
       'workflow.po_sent',
       'info',
       format('PO %s đã gửi NCC', NEW.po_number),
@@ -19799,7 +21157,7 @@ BEGIN
       VALUES (
         NEW.tenant_id,
         NEW.branch_id,
-        ARRAY['branch_manager', 'super_manager', 'area_manager', 'owner']::TEXT[],
+        ARRAY['branch_manager', 'owner']::TEXT[],
         'pos.shift_variance',
         v_severity,
         format('Lệch quỹ ca #%s: %s %sđ', NEW.id, v_diff_label, v_diff_amount),
@@ -19862,7 +21220,7 @@ BEGIN
     VALUES (
       NEW.tenant_id,
       NEW.branch_id,
-      ARRAY['branch_manager', 'super_manager', 'owner']::TEXT[],
+      ARRAY['branch_manager', 'owner']::TEXT[],
       'workflow.stocktake_submitted',
       'warning',
       format('Kiểm kê #%s đã nộp', NEW.id),
@@ -19897,7 +21255,7 @@ BEGIN
     VALUES (
       NEW.tenant_id,
       NEW.to_branch_id,
-      ARRAY['branch_manager', 'super_manager', 'owner']::TEXT[],
+      ARRAY['branch_manager', 'owner']::TEXT[],
       'workflow.transfer_in_transit',
       'info',
       format('Chuyển kho %s đang về', NEW.transfer_number),
@@ -20037,24 +21395,39 @@ BEGIN
       USING ERRCODE = '23502';
   END IF;
 
-  INSERT INTO public.stock_levels (
-    tenant_id, branch_id, ingredient_id, location_id, current_quantity
-  )
-  VALUES (
-    NEW.tenant_id, NEW.branch_id, NEW.ingredient_id, NEW.location_id, NEW.quantity_change
-  )
-  ON CONFLICT (ingredient_id, branch_id, location_id, tenant_id)
-  DO UPDATE SET
-    current_quantity = public.stock_levels.current_quantity + NEW.quantity_change,
-    updated_at = now();
+  UPDATE public.stock_levels
+  SET
+    current_quantity = current_quantity + NEW.quantity_change,
+    updated_at = now()
+  WHERE ingredient_id = NEW.ingredient_id
+    AND branch_id IS NOT DISTINCT FROM NEW.branch_id
+    AND location_id = NEW.location_id
+    AND tenant_id = NEW.tenant_id;
+
+  IF NOT FOUND THEN
+    INSERT INTO public.stock_levels (
+      tenant_id,
+      branch_id,
+      ingredient_id,
+      location_id,
+      current_quantity
+    )
+    VALUES (
+      NEW.tenant_id,
+      NEW.branch_id,
+      NEW.ingredient_id,
+      NEW.location_id,
+      NEW.quantity_change
+    );
+  END IF;
 
   IF NEW.type = 'count_adjustment' THEN
     UPDATE public.stock_levels
     SET last_counted_at = now()
     WHERE ingredient_id = NEW.ingredient_id
-      AND branch_id     = NEW.branch_id
-      AND location_id   = NEW.location_id
-      AND tenant_id     = NEW.tenant_id;
+      AND branch_id IS NOT DISTINCT FROM NEW.branch_id
+      AND location_id = NEW.location_id
+      AND tenant_id = NEW.tenant_id;
   END IF;
 
   RETURN NEW;
@@ -20405,7 +21778,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner') THEN
     NULL;
   ELSIF v_prof_branch IS NOT NULL AND v_order.branch_id <> v_prof_branch THEN
     RAISE EXCEPTION 'branch mismatch' USING ERRCODE = '42501';
@@ -20495,6 +21868,41 @@ COMMENT ON FUNCTION public.update_pos_order_status(p_order_id bigint, p_new_stat
 
 
 --
+-- Name: update_tenant_identity(text, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_tenant_identity(p_legal_name text, p_tax_code text, p_legal_address text, p_representative text) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_tenant BIGINT;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF NOT public.has_permission_any('settings:tenant') THEN
+    RAISE EXCEPTION 'permission denied: settings:tenant' USING ERRCODE = '42501';
+  END IF;
+
+  v_tenant := public.auth_tenant_id();
+  IF v_tenant IS NULL THEN
+    RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
+  END IF;
+
+  UPDATE public.tenants
+  SET legal_name = NULLIF(btrim(p_legal_name), ''),
+      tax_code = NULLIF(btrim(p_tax_code), ''),
+      legal_address = NULLIF(btrim(p_legal_address), ''),
+      representative = NULLIF(btrim(p_representative), ''),
+      updated_at = now()
+  WHERE id = v_tenant;
+END;
+$$;
+
+
+--
 -- Name: update_updated_at(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -20505,6 +21913,116 @@ CREATE FUNCTION public.update_updated_at() RETURNS trigger
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: upsert_payroll_calculation(bigint, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.upsert_payroll_calculation(p_period_id bigint, p_entries jsonb) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_uid UUID := auth.uid();
+  v_tenant BIGINT := public.auth_tenant_id();
+  v_period RECORD;
+  v_count INTEGER;
+BEGIN
+  IF v_uid IS NULL THEN RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000'; END IF;
+  IF v_tenant IS NULL THEN RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501'; END IF;
+  IF NOT public.has_permission_any('finance:payroll_calculate') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_entries IS NULL OR jsonb_typeof(p_entries) <> 'array' OR jsonb_array_length(p_entries) = 0 THEN
+    RAISE EXCEPTION 'invalid_payroll_entries' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT pp.id, pp.status INTO v_period
+  FROM public.payroll_periods pp
+  WHERE pp.id = p_period_id AND pp.tenant_id = v_tenant
+  FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'payroll_period_not_found' USING ERRCODE = 'P0002'; END IF;
+  IF v_period.status NOT IN ('draft', 'calculated') THEN
+    RAISE EXCEPTION 'payroll_locked' USING ERRCODE = '22023';
+  END IF;
+
+  DELETE FROM public.payroll_entries pe
+  WHERE pe.payroll_period_id = p_period_id
+    AND pe.tenant_id = v_tenant
+    AND NOT EXISTS (
+      SELECT 1 FROM jsonb_array_elements(p_entries) x
+      WHERE (x->>'employee_id')::bigint = pe.employee_id
+    );
+
+  INSERT INTO public.payroll_entries (
+    tenant_id, payroll_period_id, employee_id,
+    working_days, standard_days, overtime_hours, base_salary, allowances,
+    tax_exempt_allowances, overtime_pay, bonus, gross_total,
+    bhxh_employee, bhyt_employee, bhtn_employee, total_insurance_employee,
+    bhxh_employer, bhyt_employer, bhtn_employer, total_insurance_employer,
+    personal_deduction, dependent_count, dependent_deduction, charity_deduction,
+    taxable_income, pit_tax, advance_deduction, other_deductions, net_salary, insurance_base
+  )
+  SELECT
+    v_tenant, p_period_id, x.employee_id,
+    x.working_days, x.standard_days, x.overtime_hours, x.base_salary, x.allowances,
+    x.tax_exempt_allowances, x.overtime_pay, x.bonus, x.gross_total,
+    x.bhxh_employee, x.bhyt_employee, x.bhtn_employee, x.total_insurance_employee,
+    x.bhxh_employer, x.bhyt_employer, x.bhtn_employer, x.total_insurance_employer,
+    x.personal_deduction, x.dependent_count, x.dependent_deduction, x.charity_deduction,
+    x.taxable_income, x.pit_tax, x.advance_deduction, x.other_deductions, x.net_salary, x.insurance_base
+  FROM jsonb_to_recordset(p_entries) AS x(
+    employee_id bigint,
+    working_days numeric, standard_days numeric, overtime_hours numeric,
+    base_salary numeric, allowances numeric, tax_exempt_allowances numeric,
+    overtime_pay numeric, bonus numeric, gross_total numeric,
+    bhxh_employee numeric, bhyt_employee numeric, bhtn_employee numeric, total_insurance_employee numeric,
+    bhxh_employer numeric, bhyt_employer numeric, bhtn_employer numeric, total_insurance_employer numeric,
+    personal_deduction numeric, dependent_count integer, dependent_deduction numeric, charity_deduction numeric,
+    taxable_income numeric, pit_tax numeric, advance_deduction numeric, other_deductions numeric,
+    net_salary numeric, insurance_base numeric
+  )
+  ON CONFLICT (payroll_period_id, employee_id, tenant_id) DO UPDATE SET
+    working_days = EXCLUDED.working_days,
+    standard_days = EXCLUDED.standard_days,
+    overtime_hours = EXCLUDED.overtime_hours,
+    base_salary = EXCLUDED.base_salary,
+    allowances = EXCLUDED.allowances,
+    tax_exempt_allowances = EXCLUDED.tax_exempt_allowances,
+    overtime_pay = EXCLUDED.overtime_pay,
+    bonus = EXCLUDED.bonus,
+    gross_total = EXCLUDED.gross_total,
+    bhxh_employee = EXCLUDED.bhxh_employee,
+    bhyt_employee = EXCLUDED.bhyt_employee,
+    bhtn_employee = EXCLUDED.bhtn_employee,
+    total_insurance_employee = EXCLUDED.total_insurance_employee,
+    bhxh_employer = EXCLUDED.bhxh_employer,
+    bhyt_employer = EXCLUDED.bhyt_employer,
+    bhtn_employer = EXCLUDED.bhtn_employer,
+    total_insurance_employer = EXCLUDED.total_insurance_employer,
+    personal_deduction = EXCLUDED.personal_deduction,
+    dependent_count = EXCLUDED.dependent_count,
+    dependent_deduction = EXCLUDED.dependent_deduction,
+    charity_deduction = EXCLUDED.charity_deduction,
+    taxable_income = EXCLUDED.taxable_income,
+    pit_tax = EXCLUDED.pit_tax,
+    advance_deduction = EXCLUDED.advance_deduction,
+    other_deductions = EXCLUDED.other_deductions,
+    net_salary = EXCLUDED.net_salary,
+    insurance_base = EXCLUDED.insurance_base,
+    updated_at = now();
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+
+  UPDATE public.payroll_periods
+  SET status = 'calculated'
+  WHERE id = p_period_id AND tenant_id = v_tenant;
+
+  RETURN jsonb_build_object('employee_count', v_count, 'status', 'calculated');
 END;
 $$;
 
@@ -20859,23 +22377,270 @@ COMMENT ON FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines js
 
 
 --
--- Name: validate_journal_balance(bigint); Type: FUNCTION; Schema: public; Owner: -
+-- Name: upsert_shift_checklist_template(bigint, bigint, bigint, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.validate_journal_balance(p_entry_id bigint) RETURNS boolean
+CREATE FUNCTION public.upsert_shift_checklist_template(p_tenant_id bigint, p_branch_id bigint, p_template_id bigint, p_name text, p_items jsonb) RETURNS bigint
+    LANGUAGE plpgsql
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_template_id bigint;
+  v_items jsonb := COALESCE(p_items, '[]'::jsonb);
+  v_item jsonb;
+  v_title text;
+  v_phase text;
+  v_done_definition text;
+  v_is_required boolean;
+  v_scope text;
+  v_task_kind text;
+  v_sort integer := 0;
+  v_name text := btrim(COALESCE(p_name, ''));
+BEGIN
+  IF v_name = '' THEN
+    RAISE EXCEPTION 'template_name_required' USING ERRCODE = '23514';
+  END IF;
+
+  IF char_length(v_name) > 120 THEN
+    RAISE EXCEPTION 'template_name_too_long' USING ERRCODE = '23514';
+  END IF;
+
+  IF p_branch_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1
+    FROM public.branches b
+    WHERE b.id = p_branch_id
+      AND b.tenant_id = p_tenant_id
+      AND COALESCE(b.is_active, true) = true
+  ) THEN
+    RAISE EXCEPTION 'branch_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF jsonb_typeof(v_items) <> 'array' THEN
+    RAISE EXCEPTION 'checklist_items_invalid' USING ERRCODE = '23514';
+  END IF;
+
+  IF jsonb_array_length(v_items) = 0 THEN
+    RAISE EXCEPTION 'checklist_empty' USING ERRCODE = '23514';
+  END IF;
+
+  IF jsonb_array_length(v_items) > 40 THEN
+    RAISE EXCEPTION 'checklist_too_many_items' USING ERRCODE = '23514';
+  END IF;
+
+  IF p_template_id IS NULL THEN
+    INSERT INTO public.shift_checklist_templates (
+      tenant_id,
+      branch_id,
+      role_code,
+      name,
+      is_active
+    )
+    VALUES (
+      p_tenant_id,
+      p_branch_id,
+      NULL,
+      v_name,
+      true
+    )
+    RETURNING id INTO v_template_id;
+  ELSE
+    SELECT id
+    INTO v_template_id
+    FROM public.shift_checklist_templates
+    WHERE id = p_template_id
+      AND tenant_id = p_tenant_id
+      AND branch_id IS NOT DISTINCT FROM p_branch_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'template_not_found' USING ERRCODE = 'P0002';
+    END IF;
+
+    UPDATE public.shift_checklist_templates
+    SET
+      name = v_name,
+      is_active = true
+    WHERE id = v_template_id;
+  END IF;
+
+  DELETE FROM public.shift_checklist_template_items
+  WHERE tenant_id = p_tenant_id
+    AND template_id = v_template_id;
+
+  FOR v_item IN SELECT value FROM jsonb_array_elements(v_items)
+  LOOP
+    v_title := btrim(COALESCE(v_item ->> 'title', ''));
+    v_phase := COALESCE(NULLIF(v_item ->> 'phase', ''), 'during_shift');
+    v_done_definition := btrim(
+      COALESCE(
+        v_item ->> 'doneDefinition',
+        v_item ->> 'done_definition',
+        ''
+      )
+    );
+    v_is_required := COALESCE(
+      NULLIF(v_item ->> 'isRequired', '')::boolean,
+      NULLIF(v_item ->> 'is_required', '')::boolean,
+      true
+    );
+    v_scope := COALESCE(NULLIF(v_item ->> 'scope', ''), 'every_shift');
+    v_task_kind := COALESCE(NULLIF(v_item ->> 'taskKind', ''), 'standard');
+
+    IF v_title = '' THEN
+      CONTINUE;
+    END IF;
+
+    IF char_length(v_title) > 120 THEN
+      RAISE EXCEPTION 'checklist_item_too_long' USING ERRCODE = '23514';
+    END IF;
+
+    IF v_phase <> ALL (ARRAY['start_of_shift', 'during_shift', 'end_of_shift']::text[]) THEN
+      RAISE EXCEPTION 'checklist_phase_invalid' USING ERRCODE = '23514';
+    END IF;
+
+    IF v_scope <> ALL (ARRAY['every_shift', 'opening', 'closing', 'weekly']::text[]) THEN
+      RAISE EXCEPTION 'checklist_scope_invalid' USING ERRCODE = '23514';
+    END IF;
+
+    IF v_task_kind <> ALL (ARRAY['standard', 'consumption_report']::text[]) THEN
+      RAISE EXCEPTION 'checklist_task_kind_invalid' USING ERRCODE = '23514';
+    END IF;
+
+    IF char_length(v_done_definition) > 240 THEN
+      RAISE EXCEPTION 'done_definition_too_long' USING ERRCODE = '23514';
+    END IF;
+
+    v_sort := v_sort + 1;
+
+    INSERT INTO public.shift_checklist_template_items (
+      tenant_id,
+      template_id,
+      title,
+      phase,
+      done_definition,
+      is_required,
+      scope,
+      task_kind,
+      sort_order,
+      is_active
+    )
+    VALUES (
+      p_tenant_id,
+      v_template_id,
+      v_title,
+      v_phase,
+      v_done_definition,
+      v_is_required,
+      v_scope,
+      v_task_kind,
+      v_sort,
+      true
+    );
+  END LOOP;
+
+  IF v_sort = 0 THEN
+    RAISE EXCEPTION 'checklist_empty' USING ERRCODE = '23514';
+  END IF;
+
+  RETURN v_template_id;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION upsert_shift_checklist_template(p_tenant_id bigint, p_branch_id bigint, p_template_id bigint, p_name text, p_items jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.upsert_shift_checklist_template(p_tenant_id bigint, p_branch_id bigint, p_template_id bigint, p_name text, p_items jsonb) IS 'Service-role-only atomic checklist template save. Payload includes item title, phase, done definition, and required flag.';
+
+
+--
+-- Name: upsert_station_with_categories(bigint, bigint, text, integer, boolean, bigint[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.upsert_station_with_categories(p_station_id bigint DEFAULT NULL::bigint, p_branch_id bigint DEFAULT NULL::bigint, p_name text DEFAULT NULL::text, p_position integer DEFAULT 0, p_is_active boolean DEFAULT true, p_category_ids bigint[] DEFAULT ARRAY[]::bigint[]) RETURNS bigint
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
 DECLARE
-  v_debit  NUMERIC(15,2);
-  v_credit NUMERIC(15,2);
+  v_uid             uuid    := auth.uid();
+  v_tenant_id       bigint  := public.auth_tenant_id();
+  v_claim_branch_id bigint  := public.auth_branch_id();
+  v_existing        RECORD;
+  v_station_id      bigint;
+  v_category_id     bigint;
 BEGIN
-  SELECT COALESCE(SUM(debit_amount), 0), COALESCE(SUM(credit_amount), 0)
-  INTO v_debit, v_credit
-  FROM public.journal_entry_lines
-  WHERE journal_entry_id = p_entry_id;
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+  IF v_tenant_id IS NULL THEN
+    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
+  END IF;
+  IF p_branch_id IS NULL OR NULLIF(btrim(COALESCE(p_name, '')), '') IS NULL THEN
+    RAISE EXCEPTION 'invalid_station_payload' USING ERRCODE = '22023';
+  END IF;
+  IF COALESCE(p_position, 0) < 0 THEN
+    RAISE EXCEPTION 'invalid_station_payload' USING ERRCODE = '22023';
+  END IF;
 
-  RETURN v_debit = v_credit AND v_debit > 0;
+  IF v_claim_branch_id IS NOT NULL AND v_claim_branch_id <> p_branch_id THEN
+    RAISE EXCEPTION 'branch_mismatch' USING ERRCODE = '42501';
+  END IF;
+  IF NOT public.has_permission(p_branch_id, 'settings:branch') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  PERFORM 1 FROM public.branches WHERE id = p_branch_id AND tenant_id = v_tenant_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'branch_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  FOREACH v_category_id IN ARRAY COALESCE(p_category_ids, ARRAY[]::bigint[])
+  LOOP
+    PERFORM 1 FROM public.menu_categories
+     WHERE id = v_category_id AND tenant_id = v_tenant_id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'category_not_found' USING ERRCODE = 'P0002';
+    END IF;
+  END LOOP;
+
+  IF p_station_id IS NOT NULL THEN
+    SELECT id, branch_id INTO v_existing
+      FROM public.kds_stations
+     WHERE id = p_station_id AND tenant_id = v_tenant_id
+     FOR UPDATE;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'station_not_found' USING ERRCODE = 'P0002';
+    END IF;
+    IF v_existing.branch_id <> p_branch_id THEN
+      RAISE EXCEPTION 'cannot_move_station_across_branches' USING ERRCODE = '22023';
+    END IF;
+
+    UPDATE public.kds_stations
+       SET name = btrim(p_name),
+           position = COALESCE(p_position, 0),
+           is_active = COALESCE(p_is_active, TRUE),
+           updated_at = now()
+     WHERE id = p_station_id AND tenant_id = v_tenant_id
+     RETURNING id INTO v_station_id;
+  ELSE
+    INSERT INTO public.kds_stations (tenant_id, branch_id, name, position, is_active)
+    VALUES (v_tenant_id, p_branch_id, btrim(p_name), COALESCE(p_position, 0), COALESCE(p_is_active, TRUE))
+    RETURNING id INTO v_station_id;
+  END IF;
+
+  DELETE FROM public.kds_station_categories
+   WHERE station_id = v_station_id AND tenant_id = v_tenant_id;
+
+  IF COALESCE(array_length(p_category_ids, 1), 0) > 0 THEN
+    INSERT INTO public.kds_station_categories (tenant_id, station_id, category_id)
+    SELECT DISTINCT v_tenant_id, v_station_id, x.category_id
+      FROM unnest(p_category_ids) AS x(category_id)
+     WHERE x.category_id IS NOT NULL
+    ON CONFLICT (station_id, category_id, tenant_id) DO NOTHING;
+  END IF;
+
+  RETURN v_station_id;
 END;
 $$;
 
@@ -20901,171 +22666,6 @@ BEGIN
   RETURN v_ok;
 END;
 $$;
-
-
---
--- Name: void_manual_journal_entry(bigint, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.void_manual_journal_entry(p_entry_id bigint, p_reason text) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-DECLARE
-  v_actor                UUID := auth.uid();
-  v_tenant               BIGINT := public.auth_tenant_id();
-  v_entry                RECORD;
-  v_reason               TEXT;
-  v_reverse_id           BIGINT;
-  v_reverse_entry_number TEXT;
-  v_reverse_date         DATE := (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE;
-  v_period_status        TEXT;
-  v_period_year          INT;
-  v_period_month         INT;
-  v_line_count           INT;
-BEGIN
-  IF v_actor IS NULL THEN
-    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
-  END IF;
-  IF v_tenant IS NULL THEN
-    RAISE EXCEPTION 'tenant claim missing' USING ERRCODE = '28000';
-  END IF;
-
-  IF p_entry_id IS NULL THEN
-    RAISE EXCEPTION 'entry id required' USING ERRCODE = '22023';
-  END IF;
-
-  v_reason := btrim(COALESCE(p_reason, ''));
-  IF length(v_reason) < 20 OR length(v_reason) > 500 THEN
-    RAISE EXCEPTION 'void reason invalid' USING ERRCODE = '22023';
-  END IF;
-
-  SELECT id, tenant_id, branch_id, entry_number, entry_date, description,
-         reference_type, reference_id, status, void_journal_entry_id
-  INTO v_entry
-  FROM public.journal_entries
-  WHERE id = p_entry_id AND tenant_id = v_tenant
-  FOR UPDATE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'journal entry not found' USING ERRCODE = 'P0002';
-  END IF;
-
-  PERFORM public.ensure_journal_write_permission(v_entry.branch_id);
-
-  IF v_entry.status = 'voided' THEN
-    RETURN jsonb_build_object(
-      'id', p_entry_id, 'status', 'already_voided',
-      'void_journal_entry_id', v_entry.void_journal_entry_id
-    );
-  END IF;
-  IF v_entry.status NOT IN ('draft', 'posted') THEN
-    RAISE EXCEPTION 'journal entry cannot be voided from status %', v_entry.status
-      USING ERRCODE = '22023';
-  END IF;
-
-  IF v_entry.status = 'draft' THEN
-    UPDATE public.journal_entries
-       SET status = 'voided',
-           voided_reason = v_reason,
-           voided_by = v_actor,
-           voided_at = now()
-     WHERE id = p_entry_id AND tenant_id = v_tenant;
-
-    PERFORM public.log_audit(
-      'journal.void', 'journal_entry', p_entry_id,
-      jsonb_build_object('status', 'draft'),
-      jsonb_build_object('status', 'voided', 'reason', v_reason)
-    );
-
-    RETURN jsonb_build_object(
-      'id', p_entry_id, 'status', 'voided', 'void_journal_entry_id', NULL
-    );
-  END IF;
-
-  v_period_year := EXTRACT(YEAR FROM v_reverse_date)::INT;
-  v_period_month := EXTRACT(MONTH FROM v_reverse_date)::INT;
-
-  SELECT fp.status INTO v_period_status
-  FROM public.fiscal_periods fp
-  WHERE fp.tenant_id = v_tenant
-    AND fp.period_year = v_period_year
-    AND fp.period_month = v_period_month
-  FOR SHARE;
-
-  IF v_period_status = 'closed' THEN
-    RAISE EXCEPTION 'current_period_closed_cannot_reverse' USING ERRCODE = '23514';
-  END IF;
-
-  IF v_period_status IS NULL THEN
-    INSERT INTO public.fiscal_periods (tenant_id, period_month, period_year, status)
-    VALUES (v_tenant, v_period_month, v_period_year, 'open')
-    ON CONFLICT (period_month, period_year, tenant_id) DO NOTHING;
-  END IF;
-
-  v_reverse_entry_number := public.next_manual_journal_entry_number(v_tenant, v_reverse_date);
-
-  INSERT INTO public.journal_entries (
-    tenant_id, branch_id, entry_number, entry_date, description,
-    reference_type, reference_id, status,
-    posted_by, posted_at, created_by
-  ) VALUES (
-    v_tenant, v_entry.branch_id, v_reverse_entry_number,
-    v_reverse_date::TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh',
-    'Đảo bút toán ' || v_entry.entry_number || ': ' || v_reason,
-    'adjustment', p_entry_id, 'posted',
-    v_actor, now(), v_actor
-  )
-  RETURNING id INTO v_reverse_id;
-
-  PERFORM 1 FROM public.journal_entries
-  WHERE id = v_reverse_id AND tenant_id = v_tenant FOR UPDATE;
-
-  INSERT INTO public.journal_entry_lines (
-    tenant_id, journal_entry_id, account_id,
-    debit_amount, credit_amount, description
-  )
-  SELECT v_tenant, v_reverse_id,
-    account_id, credit_amount, debit_amount,
-    'Đảo dòng từ ' || v_entry.entry_number
-  FROM public.journal_entry_lines
-  WHERE journal_entry_id = p_entry_id AND tenant_id = v_tenant;
-
-  GET DIAGNOSTICS v_line_count = ROW_COUNT;
-  IF v_line_count = 0 THEN
-    RAISE EXCEPTION 'posted journal entry has no lines' USING ERRCODE = '22023';
-  END IF;
-
-  UPDATE public.journal_entries
-     SET status = 'voided',
-         voided_reason = v_reason,
-         voided_by = v_actor,
-         voided_at = now(),
-         void_journal_entry_id = v_reverse_id
-   WHERE id = p_entry_id AND tenant_id = v_tenant;
-
-  PERFORM public.log_audit(
-    'journal.void', 'journal_entry', p_entry_id,
-    jsonb_build_object('status', 'posted'),
-    jsonb_build_object(
-      'status', 'voided', 'reason', v_reason,
-      'void_journal_entry_id', v_reverse_id
-    )
-  );
-
-  RETURN jsonb_build_object(
-    'id', p_entry_id, 'status', 'voided',
-    'void_journal_entry_id', v_reverse_id,
-    'void_journal_entry_number', v_reverse_entry_number
-  );
-END;
-$$;
-
-
---
--- Name: FUNCTION void_manual_journal_entry(p_entry_id bigint, p_reason text); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.void_manual_journal_entry(p_entry_id bigint, p_reason text) IS 'Voids draft entries directly. For posted entries, creates a reversing posted entry in the current period, then marks the original voided.';
 
 
 --
@@ -21233,7 +22833,7 @@ BEGIN
     GROUP BY ho.tenant_id, ho.branch_id HAVING COUNT(*) >= 1
   LOOP
     INSERT INTO public.notifications (tenant_id, target_branch_id, target_roles, kind, severity, title, body, meta, dedup_key)
-    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','super_manager','quan_ly_vung']::TEXT[],
+    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','quan_ly_vung']::TEXT[],
             'inventory.grn.weekly_override_report',
             CASE WHEN v_row.override_count >= 5 THEN 'warning' ELSE 'info' END,
             'GRN hardblock override — weekly report',
@@ -21268,7 +22868,7 @@ BEGIN
     GROUP BY si.tenant_id, si.branch_id
   LOOP
     INSERT INTO public.notifications (tenant_id, target_branch_id, target_roles, kind, severity, title, body, meta, dedup_key)
-    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','super_manager','quan_ly_vung','quan_ly_CN']::TEXT[],
+    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','quan_ly_vung','quan_ly_CN']::TEXT[],
       'inventory.waste.weekly_report',
       CASE WHEN v_row.pending_count >= 5 THEN 'warning' ELSE 'info' END,
       'Báo cáo waste — tuần vừa qua',
@@ -21363,24 +22963,63 @@ ALTER TABLE public.archive_run_log ALTER COLUMN id ADD GENERATED ALWAYS AS IDENT
 
 
 --
--- Name: area_branches; Type: TABLE; Schema: public; Owner: -
+-- Name: attendance_checklist_items; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.area_branches (
+CREATE TABLE public.attendance_checklist_items (
     id bigint NOT NULL,
     tenant_id bigint NOT NULL,
-    area_id bigint NOT NULL,
-    branch_id bigint NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    attendance_record_id bigint NOT NULL,
+    template_item_id bigint,
+    title text NOT NULL,
+    sort_order integer NOT NULL,
+    is_done boolean DEFAULT false NOT NULL,
+    completed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    phase text DEFAULT 'during_shift'::text NOT NULL,
+    done_definition text DEFAULT ''::text NOT NULL,
+    is_required boolean DEFAULT true NOT NULL,
+    scope text DEFAULT 'every_shift'::text NOT NULL,
+    task_kind text DEFAULT 'standard'::text NOT NULL,
+    CONSTRAINT attendance_checklist_items_completed_consistent CHECK (((is_done AND (completed_at IS NOT NULL)) OR ((NOT is_done) AND (completed_at IS NULL)))),
+    CONSTRAINT attendance_checklist_items_done_definition_length CHECK ((char_length(done_definition) <= 240)),
+    CONSTRAINT attendance_checklist_items_phase_valid CHECK ((phase = ANY (ARRAY['start_of_shift'::text, 'during_shift'::text, 'end_of_shift'::text]))),
+    CONSTRAINT attendance_checklist_items_scope_valid CHECK ((scope = ANY (ARRAY['every_shift'::text, 'opening'::text, 'closing'::text, 'weekly'::text]))),
+    CONSTRAINT attendance_checklist_items_sort_positive CHECK ((sort_order > 0)),
+    CONSTRAINT attendance_checklist_items_task_kind_valid CHECK ((task_kind = ANY (ARRAY['standard'::text, 'consumption_report'::text]))),
+    CONSTRAINT attendance_checklist_items_title_length CHECK ((char_length(title) <= 120)),
+    CONSTRAINT attendance_checklist_items_title_not_blank CHECK ((btrim(title) <> ''::text))
 );
 
 
 --
--- Name: area_branches_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: COLUMN attendance_checklist_items.phase; Type: COMMENT; Schema: public; Owner: -
 --
 
-ALTER TABLE public.area_branches ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.area_branches_id_seq
+COMMENT ON COLUMN public.attendance_checklist_items.phase IS 'Checklist phase: start_of_shift, during_shift, or end_of_shift.';
+
+
+--
+-- Name: COLUMN attendance_checklist_items.done_definition; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.attendance_checklist_items.done_definition IS 'Snapshot of the template item acceptance criteria at clock-in time.';
+
+
+--
+-- Name: COLUMN attendance_checklist_items.is_required; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.attendance_checklist_items.is_required IS 'Snapshot of whether this item blocks checkout.';
+
+
+--
+-- Name: attendance_checklist_items_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.attendance_checklist_items ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.attendance_checklist_items_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -21390,25 +23029,90 @@ ALTER TABLE public.area_branches ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTIT
 
 
 --
--- Name: areas; Type: TABLE; Schema: public; Owner: -
+-- Name: attendance_consumption_report_lines; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.areas (
+CREATE TABLE public.attendance_consumption_report_lines (
     id bigint NOT NULL,
     tenant_id bigint NOT NULL,
-    name text NOT NULL,
-    is_active boolean DEFAULT true NOT NULL,
+    report_id bigint NOT NULL,
+    ingredient_id bigint NOT NULL,
+    default_item_id bigint,
+    quantity numeric(15,3) NOT NULL,
+    unit text NOT NULL,
+    note text,
+    sort_order integer DEFAULT 1 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT attendance_consumption_report_lines_note_length CHECK (((note IS NULL) OR (char_length(note) <= 500))),
+    CONSTRAINT attendance_consumption_report_lines_quantity_positive CHECK ((quantity > (0)::numeric)),
+    CONSTRAINT attendance_consumption_report_lines_sort_positive CHECK ((sort_order > 0)),
+    CONSTRAINT attendance_consumption_report_lines_unit_not_blank CHECK ((btrim(unit) <> ''::text))
 );
 
 
 --
--- Name: areas_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: TABLE attendance_consumption_report_lines; Type: COMMENT; Schema: public; Owner: -
 --
 
-ALTER TABLE public.areas ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.areas_id_seq
+COMMENT ON TABLE public.attendance_consumption_report_lines IS 'Line-level ingredients/materials reported as daily consumption before branch-manager approval.';
+
+
+--
+-- Name: attendance_consumption_report_lines_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.attendance_consumption_report_lines ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.attendance_consumption_report_lines_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: attendance_consumption_reports; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.attendance_consumption_reports (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    attendance_record_id bigint NOT NULL,
+    branch_id bigint NOT NULL,
+    employee_id bigint NOT NULL,
+    status text DEFAULT 'draft'::text NOT NULL,
+    note text,
+    submitted_by uuid,
+    submitted_at timestamp with time zone,
+    reviewed_by uuid,
+    reviewed_at timestamp with time zone,
+    review_note text,
+    stock_issue_id bigint,
+    no_consumption boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT attendance_consumption_reports_no_consumption_stock_check CHECK (((NOT no_consumption) OR (stock_issue_id IS NULL))),
+    CONSTRAINT attendance_consumption_reports_note_length CHECK (((note IS NULL) OR (char_length(note) <= 1000))),
+    CONSTRAINT attendance_consumption_reports_review_note_length CHECK (((review_note IS NULL) OR (char_length(review_note) <= 1000))),
+    CONSTRAINT attendance_consumption_reports_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'submitted'::text, 'needs_changes'::text, 'approved'::text, 'applied'::text, 'cancelled'::text])))
+);
+
+
+--
+-- Name: TABLE attendance_consumption_reports; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.attendance_consumption_reports IS 'Daily kitchen consumption reports submitted from Employee checkout flow. Inventory is only applied after checkout approver review.';
+
+
+--
+-- Name: attendance_consumption_reports_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.attendance_consumption_reports ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.attendance_consumption_reports_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -21426,7 +23130,7 @@ CREATE TABLE public.attendance_records (
     tenant_id bigint NOT NULL,
     branch_id bigint NOT NULL,
     employee_id bigint NOT NULL,
-    shift_id bigint,
+    shift_id bigint NOT NULL,
     date date NOT NULL,
     check_in timestamp with time zone,
     check_out timestamp with time zone,
@@ -21438,9 +23142,81 @@ CREATE TABLE public.attendance_records (
     lng numeric(10,7),
     method text DEFAULT 'manual'::text,
     code_verified boolean DEFAULT false,
+    check_in_photo_path text,
+    check_out_code_verified boolean DEFAULT false NOT NULL,
+    checkout_requested_at timestamp with time zone,
+    checkout_requested_by_role text,
+    checkout_approval_target_roles text[] DEFAULT ARRAY['branch_manager'::text] NOT NULL,
+    checkout_approved_at timestamp with time zone,
+    checkout_approved_by uuid,
+    checkout_approval_note text,
+    checklist_template_id bigint,
     CONSTRAINT attendance_records_method_check CHECK ((method = ANY (ARRAY['pwa'::text, 'manual'::text, 'admin'::text]))),
     CONSTRAINT attendance_records_status_check CHECK ((status = ANY (ARRAY['present'::text, 'absent'::text, 'late'::text, 'half_day'::text])))
 );
+
+
+--
+-- Name: COLUMN attendance_records.check_in_photo_path; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.attendance_records.check_in_photo_path IS 'Private Storage path in attendance-photos bucket for the employee clock-in photo.';
+
+
+--
+-- Name: COLUMN attendance_records.check_out_code_verified; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.attendance_records.check_out_code_verified IS 'Legacy checkout-code flag retained for old attendance rows. Current Employee checkout uses manager approval.';
+
+
+--
+-- Name: COLUMN attendance_records.checkout_requested_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.attendance_records.checkout_requested_at IS 'When the employee submitted checkout for Branch Manager approval.';
+
+
+--
+-- Name: COLUMN attendance_records.checkout_requested_by_role; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.attendance_records.checkout_requested_by_role IS 'StaffRole bucket of the requester at the time they submitted checkout.';
+
+
+--
+-- Name: COLUMN attendance_records.checkout_approval_target_roles; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.attendance_records.checkout_approval_target_roles IS 'Access buckets that should approve this checkout request. Branch staff target branch_manager; manager and non-branch staff target owner/super_manager.';
+
+
+--
+-- Name: COLUMN attendance_records.checkout_approved_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.attendance_records.checkout_approved_at IS 'When an authorized manager approved the checkout request.';
+
+
+--
+-- Name: COLUMN attendance_records.checkout_approved_by; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.attendance_records.checkout_approved_by IS 'Auth user id of the manager who approved the checkout request.';
+
+
+--
+-- Name: COLUMN attendance_records.checkout_approval_note; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.attendance_records.checkout_approval_note IS 'Optional manager note attached to checkout approval.';
+
+
+--
+-- Name: COLUMN attendance_records.checklist_template_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.attendance_records.checklist_template_id IS 'Template used to snapshot checklist items for this attendance record.';
 
 
 --
@@ -21599,6 +23375,52 @@ CREATE TABLE public.branch_feature_flags (
 --
 
 COMMENT ON TABLE public.branch_feature_flags IS 'Per-branch feature flag for UI wiring rollout.';
+
+
+--
+-- Name: branch_menu_item_daily_holds; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.branch_menu_item_daily_holds (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    branch_id bigint NOT NULL,
+    menu_item_id bigint NOT NULL,
+    limit_date date DEFAULT ((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh'::text))::date NOT NULL,
+    hold_token uuid NOT NULL,
+    held_by uuid NOT NULL,
+    source text DEFAULT 'pos_cart'::text NOT NULL,
+    quantity integer NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    committed_at timestamp with time zone,
+    released_at timestamp with time zone,
+    order_id bigint,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT branch_menu_item_daily_holds_quantity_check CHECK ((quantity > 0)),
+    CONSTRAINT branch_menu_item_daily_holds_source_check CHECK ((source = ANY (ARRAY['pos_cart'::text, 'pos_append'::text])))
+);
+
+
+--
+-- Name: TABLE branch_menu_item_daily_holds; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.branch_menu_item_daily_holds IS 'Short-lived POS cart reservations for branch_menu_item_daily_limits. Active rows reserve quota before order submit; commit/release/expiry removes them from availability.';
+
+
+--
+-- Name: branch_menu_item_daily_holds_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.branch_menu_item_daily_holds ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.branch_menu_item_daily_holds_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
 
 
 --
@@ -21779,7 +23601,7 @@ CREATE TABLE public.branches (
     longitude numeric(10,7),
     timezone text DEFAULT 'Asia/Ho_Chi_Minh'::text NOT NULL,
     code text,
-    CONSTRAINT branches_branch_kind_check CHECK ((branch_kind = 'branch'::text)),
+    CONSTRAINT branches_branch_kind_check CHECK ((branch_kind = ANY (ARRAY['branch'::text, 'central_supply'::text, 'central_kitchen'::text]))),
     CONSTRAINT branches_code_format_chk CHECK (((branch_kind <> 'branch'::text) OR ((code IS NOT NULL) AND (code ~ '^[A-Z]{2,4}$'::text))))
 );
 
@@ -21797,48 +23619,6 @@ COMMENT ON COLUMN public.branches.timezone IS 'IANA timezone name (e.g. Asia/Ho_
 
 ALTER TABLE public.branches ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.branches_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
--- Name: chart_of_accounts; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.chart_of_accounts (
-    id bigint NOT NULL,
-    tenant_id bigint NOT NULL,
-    account_code text NOT NULL,
-    account_name text NOT NULL,
-    account_type text NOT NULL,
-    parent_id bigint,
-    level integer DEFAULT 1 NOT NULL,
-    is_active boolean DEFAULT true NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    cashflow_section text DEFAULT 'operating'::text NOT NULL,
-    CONSTRAINT chart_of_accounts_account_type_check CHECK ((account_type = ANY (ARRAY['asset'::text, 'liability'::text, 'equity'::text, 'revenue'::text, 'expense'::text]))),
-    CONSTRAINT chart_of_accounts_cashflow_section_check CHECK ((cashflow_section = ANY (ARRAY['operating'::text, 'investing'::text, 'financing'::text, 'none'::text])))
-);
-
-
---
--- Name: COLUMN chart_of_accounts.cashflow_section; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.chart_of_accounts.cashflow_section IS 'B03-DN classification: operating (working capital + ops cash), investing (FA acquisition/disposal: 21x, 22x, 24x), financing (equity 4xx + long-term debt 34x), none (clearing accounts like 911 that do not represent cash movement)';
-
-
---
--- Name: chart_of_accounts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.chart_of_accounts ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.chart_of_accounts_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -21867,9 +23647,17 @@ CREATE TABLE public.employees (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     insurance_base_salary numeric(15,2) DEFAULT 0 NOT NULL,
+    default_checklist_template_id bigint,
     CONSTRAINT employees_contract_type_check CHECK ((contract_type = ANY (ARRAY['probation'::text, 'fixed_term'::text, 'indefinite'::text]))),
     CONSTRAINT employees_dependents_count_check CHECK ((dependents_count >= 0))
 );
+
+
+--
+-- Name: COLUMN employees.default_checklist_template_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.employees.default_checklist_template_id IS 'Default checklist template used when a shift assignment has no override.';
 
 
 --
@@ -21932,32 +23720,38 @@ ALTER TABLE public.employment_contracts ALTER COLUMN id ADD GENERATED ALWAYS AS 
 
 
 --
--- Name: fiscal_periods; Type: TABLE; Schema: public; Owner: -
+-- Name: expenses; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.fiscal_periods (
+CREATE TABLE public.expenses (
     id bigint NOT NULL,
     tenant_id bigint NOT NULL,
-    period_month integer NOT NULL,
-    period_year integer NOT NULL,
-    status text DEFAULT 'open'::text NOT NULL,
-    closed_by uuid,
-    closed_at timestamp with time zone,
-    notes text,
+    branch_id bigint,
+    expense_date date NOT NULL,
+    category text NOT NULL,
+    amount numeric(15,2) NOT NULL,
+    payment_method text DEFAULT 'cash'::text NOT NULL,
+    paid_at timestamp with time zone,
+    vendor_name text,
+    note text,
+    created_by uuid,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT fiscal_periods_period_month_check CHECK (((period_month >= 1) AND (period_month <= 12))),
-    CONSTRAINT fiscal_periods_period_year_check CHECK ((period_year >= 2020)),
-    CONSTRAINT fiscal_periods_status_check CHECK ((status = ANY (ARRAY['open'::text, 'closing'::text, 'closed'::text])))
+    CONSTRAINT expenses_amount_positive_check CHECK ((amount > (0)::numeric)),
+    CONSTRAINT expenses_category_check CHECK ((category = ANY (ARRAY['rent'::text, 'utilities'::text, 'gas_fuel'::text, 'salary'::text, 'cogs_manual'::text, 'supplies'::text, 'repair'::text, 'marketing'::text, 'fees_tax'::text, 'other'::text]))),
+    CONSTRAINT expenses_note_length_check CHECK (((note IS NULL) OR (char_length(note) <= 500))),
+    CONSTRAINT expenses_paid_at_unpaid_check CHECK (((payment_method <> 'unpaid'::text) OR (paid_at IS NULL))),
+    CONSTRAINT expenses_payment_method_check CHECK ((payment_method = ANY (ARRAY['cash'::text, 'transfer'::text, 'unpaid'::text]))),
+    CONSTRAINT expenses_vendor_name_length_check CHECK (((vendor_name IS NULL) OR (char_length(vendor_name) <= 200)))
 );
 
 
 --
--- Name: fiscal_periods_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: expenses_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-ALTER TABLE public.fiscal_periods ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.fiscal_periods_id_seq
+ALTER TABLE public.expenses ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.expenses_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -21984,7 +23778,6 @@ CREATE TABLE public.goods_received_notes (
     created_by uuid NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    journal_entry_id bigint,
     express_approved boolean,
     CONSTRAINT goods_received_notes_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'confirmed'::text, 'cancelled'::text])))
 );
@@ -22365,88 +24158,6 @@ CREATE TABLE public.inventory_qc_settings (
 
 
 --
--- Name: journal_entries; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.journal_entries (
-    id bigint NOT NULL,
-    tenant_id bigint NOT NULL,
-    branch_id bigint,
-    entry_number text NOT NULL,
-    entry_date timestamp with time zone NOT NULL,
-    description text NOT NULL,
-    reference_type text DEFAULT 'manual'::text NOT NULL,
-    reference_id bigint,
-    status text DEFAULT 'draft'::text NOT NULL,
-    posted_by uuid,
-    posted_at timestamp with time zone,
-    voided_reason text,
-    created_by uuid,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    void_journal_entry_id bigint,
-    voided_by uuid,
-    voided_at timestamp with time zone,
-    CONSTRAINT journal_entries_reference_type_check CHECK ((reference_type = ANY (ARRAY['sale'::text, 'purchase'::text, 'payroll'::text, 'manual'::text, 'adjustment'::text, 'transfer'::text, 'production'::text, 'refund'::text]))),
-    CONSTRAINT journal_entries_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'posted'::text, 'voided'::text])))
-);
-
-
---
--- Name: COLUMN journal_entries.void_journal_entry_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.journal_entries.void_journal_entry_id IS 'For posted-entry voids, points to the reversing journal entry created by void_manual_journal_entry.';
-
-
---
--- Name: journal_entries_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.journal_entries ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.journal_entries_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
--- Name: journal_entry_lines; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.journal_entry_lines (
-    id bigint NOT NULL,
-    tenant_id bigint NOT NULL,
-    journal_entry_id bigint NOT NULL,
-    account_id bigint NOT NULL,
-    debit_amount numeric(15,2) DEFAULT 0 NOT NULL,
-    credit_amount numeric(15,2) DEFAULT 0 NOT NULL,
-    description text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT journal_entry_lines_check CHECK (((debit_amount > (0)::numeric) OR (credit_amount > (0)::numeric))),
-    CONSTRAINT journal_entry_lines_credit_amount_check CHECK ((credit_amount >= (0)::numeric)),
-    CONSTRAINT journal_entry_lines_debit_amount_check CHECK ((debit_amount >= (0)::numeric))
-);
-
-
---
--- Name: journal_entry_lines_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.journal_entry_lines ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.journal_entry_lines_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
 -- Name: kds_station_categories; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -22628,6 +24339,47 @@ ALTER TABLE public.kitchen_send_batches ALTER COLUMN id ADD GENERATED ALWAYS AS 
 
 
 --
+-- Name: leave_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.leave_requests (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    branch_id bigint NOT NULL,
+    employee_id bigint NOT NULL,
+    start_date date NOT NULL,
+    end_date date NOT NULL,
+    leave_type text DEFAULT 'annual'::text NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    reason text,
+    reviewed_by uuid,
+    reviewed_at timestamp with time zone,
+    rejected_reason text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT leave_requests_date_range_check CHECK ((start_date <= end_date)),
+    CONSTRAINT leave_requests_reason_length_check CHECK (((reason IS NULL) OR (char_length(reason) <= 500))),
+    CONSTRAINT leave_requests_rejected_reason_length_check CHECK (((rejected_reason IS NULL) OR (char_length(rejected_reason) <= 500))),
+    CONSTRAINT leave_requests_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'cancelled'::text]))),
+    CONSTRAINT leave_requests_type_check CHECK ((leave_type = ANY (ARRAY['annual'::text, 'sick'::text, 'unpaid'::text, 'personal'::text, 'other'::text])))
+);
+
+
+--
+-- Name: leave_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.leave_requests ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.leave_requests_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: menu_categories; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -22767,17 +24519,8 @@ CREATE TABLE public.menu_items (
     sort_order integer DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    vat_rate numeric(5,2) DEFAULT 8.00 NOT NULL,
-    CONSTRAINT chk_menu_items_base_price CHECK ((base_price >= (0)::numeric)),
-    CONSTRAINT menu_items_vat_rate_check CHECK (((vat_rate >= (0)::numeric) AND (vat_rate <= (100)::numeric)))
+    CONSTRAINT chk_menu_items_base_price CHECK ((base_price >= (0)::numeric))
 );
-
-
---
--- Name: COLUMN menu_items.vat_rate; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.menu_items.vat_rate IS 'VAT rate (%) snapshotted onto order_items at order creation. Default 8.00 = Nghị định 15/2022 reduced rate for food. F&B beverages typically 10%; non-VAT exempt items 0%.';
 
 
 --
@@ -22811,7 +24554,6 @@ CREATE TABLE public.orders (
     service_charge numeric(15,2) DEFAULT 0 NOT NULL,
     discount_amount numeric(15,2) DEFAULT 0 NOT NULL,
     total_amount numeric(15,2) DEFAULT 0 NOT NULL,
-    customer_count integer DEFAULT 1 NOT NULL,
     note text,
     created_by uuid NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -22834,11 +24576,14 @@ CREATE TABLE public.orders (
     priority_note text,
     priority_marked_at timestamp with time zone,
     priority_marked_by uuid,
-    CONSTRAINT orders_customer_count_check CHECK ((customer_count > 0)),
-    CONSTRAINT orders_discount_metadata_paired CHECK ((((discount_amount = (0)::numeric) AND (discount_type IS NULL) AND (discount_value IS NULL) AND (discount_note IS NULL)) OR ((discount_amount > (0)::numeric) AND (discount_type IS NOT NULL) AND (discount_value IS NOT NULL) AND (discount_note IS NOT NULL) AND (length(TRIM(BOTH FROM discount_note)) >= 3)))),
+    order_discount_amount numeric(15,2) DEFAULT 0 NOT NULL,
+    item_discount_amount numeric(15,2) DEFAULT 0 NOT NULL,
+    CONSTRAINT orders_discount_amount_source_check CHECK ((discount_amount = (order_discount_amount + item_discount_amount))),
+    CONSTRAINT orders_discount_sources_nonnegative_check CHECK (((discount_amount >= (0)::numeric) AND (order_discount_amount >= (0)::numeric) AND (item_discount_amount >= (0)::numeric))),
     CONSTRAINT orders_discount_type_check CHECK (((discount_type IS NULL) OR (discount_type = ANY (ARRAY['pct'::text, 'vnd'::text])))),
     CONSTRAINT orders_discount_value_check CHECK (((discount_value IS NULL) OR (discount_value >= (0)::numeric))),
     CONSTRAINT orders_no_self_merge CHECK ((merged_into_order_id IS DISTINCT FROM id)),
+    CONSTRAINT orders_order_discount_metadata_paired CHECK ((((order_discount_amount = (0)::numeric) AND (discount_type IS NULL) AND (discount_value IS NULL) AND (discount_note IS NULL)) OR ((order_discount_amount > (0)::numeric) AND (discount_type IS NOT NULL) AND (discount_value IS NOT NULL) AND (discount_note IS NOT NULL) AND (length(TRIM(BOTH FROM discount_note)) >= 3)))),
     CONSTRAINT orders_order_type_check CHECK ((order_type = ANY (ARRAY['dine_in'::text, 'takeaway'::text]))),
     CONSTRAINT orders_payment_status_check CHECK ((payment_status = ANY (ARRAY['unpaid'::text, 'pending'::text, 'paid'::text]))),
     CONSTRAINT orders_status_check CHECK ((status = ANY (ARRAY['new'::text, 'confirmed'::text, 'preparing'::text, 'ready'::text, 'served'::text, 'completed'::text, 'cancelled'::text])))
@@ -22911,6 +24656,20 @@ COMMENT ON COLUMN public.orders.is_priority IS 'POS/KDS kitchen priority signal 
 
 
 --
+-- Name: COLUMN orders.order_discount_amount; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.orders.order_discount_amount IS 'Whole-order discount amount derived from orders.discount_type/value. Part of orders.discount_amount.';
+
+
+--
+-- Name: COLUMN orders.item_discount_amount; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.orders.item_discount_amount IS 'Sum of active order_items.discount_amount. Part of orders.discount_amount.';
+
+
+--
 -- Name: payments; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -22928,13 +24687,13 @@ CREATE TABLE public.payments (
     created_by uuid NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    journal_entry_id bigint,
     stock_consumed_status text,
     CONSTRAINT payments_amount_check CHECK ((amount >= (0)::numeric)),
     CONSTRAINT payments_method_check CHECK ((method = ANY (ARRAY['cash'::text, 'vietqr'::text, 'momo'::text]))),
     CONSTRAINT payments_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'completed'::text, 'failed'::text, 'refunded'::text]))),
     CONSTRAINT payments_stock_consumed_status_check CHECK (((stock_consumed_status IS NULL) OR (stock_consumed_status = ANY (ARRAY['ok'::text, 'out_of_stock'::text, 'recipe_missing'::text, 'internal_error'::text]))))
-);
+)
+WITH (autovacuum_vacuum_scale_factor='0.05', autovacuum_vacuum_threshold='200', autovacuum_analyze_scale_factor='0.02', autovacuum_analyze_threshold='100');
 
 ALTER TABLE ONLY public.payments REPLICA IDENTITY FULL;
 
@@ -22971,7 +24730,7 @@ CREATE MATERIALIZED VIEW public.mv_daily_revenue AS
     COALESCE(sum(o.total_amount) FILTER (WHERE (o.payment_method = 'momo'::text)), (0)::numeric) AS momo_revenue,
     COALESCE(sum(o.total_amount) FILTER (WHERE (o.order_type = 'dine_in'::text)), (0)::numeric) AS dine_in_revenue,
     COALESCE(sum(o.total_amount) FILTER (WHERE (o.order_type = 'takeaway'::text)), (0)::numeric) AS takeaway_revenue,
-    COALESCE(sum(o.customer_count), (0)::bigint) AS total_covers
+    COALESCE(count(o.id), (0)::bigint) AS total_covers
    FROM (public.orders o
      JOIN public.payments p ON (((p.order_id = o.id) AND (p.tenant_id = o.tenant_id) AND (p.status = 'completed'::text) AND (p.paid_at IS NOT NULL))))
   WHERE ((o.status <> 'cancelled'::text) AND (o.payment_status = 'paid'::text))
@@ -23003,15 +24762,24 @@ CREATE TABLE public.order_items (
     sent_to_kitchen_at timestamp with time zone,
     cancel_reason text,
     request_key uuid,
-    vat_rate numeric(5,2) DEFAULT 8.00 NOT NULL,
+    vat_rate numeric(5,2) NOT NULL,
     is_priority boolean DEFAULT false NOT NULL,
     priority_note text,
     priority_marked_at timestamp with time zone,
     priority_marked_by uuid,
+    discount_type text,
+    discount_value numeric(15,2),
+    discount_amount numeric(15,2) DEFAULT 0 NOT NULL,
+    discount_note text,
+    CONSTRAINT order_items_discount_amount_check CHECK (((discount_amount >= (0)::numeric) AND (discount_amount <= subtotal))),
+    CONSTRAINT order_items_discount_metadata_paired CHECK ((((discount_amount = (0)::numeric) AND (discount_type IS NULL) AND (discount_value IS NULL) AND (discount_note IS NULL)) OR ((discount_amount > (0)::numeric) AND (discount_type IS NOT NULL) AND (discount_value IS NOT NULL) AND (discount_note IS NOT NULL) AND (length(TRIM(BOTH FROM discount_note)) >= 3)))),
+    CONSTRAINT order_items_discount_type_check CHECK (((discount_type IS NULL) OR (discount_type = ANY (ARRAY['pct'::text, 'vnd'::text])))),
+    CONSTRAINT order_items_discount_value_check CHECK (((discount_value IS NULL) OR (discount_value >= (0)::numeric))),
     CONSTRAINT order_items_quantity_check CHECK ((quantity > 0)),
     CONSTRAINT order_items_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'preparing'::text, 'ready'::text, 'served'::text, 'cancelled'::text]))),
     CONSTRAINT order_items_vat_rate_check CHECK (((vat_rate IS NULL) OR ((vat_rate >= (0)::numeric) AND (vat_rate <= (100)::numeric))))
-);
+)
+WITH (autovacuum_vacuum_scale_factor='0.05', autovacuum_vacuum_threshold='200', autovacuum_analyze_scale_factor='0.02', autovacuum_analyze_threshold='100');
 
 
 --
@@ -23047,6 +24815,34 @@ COMMENT ON COLUMN public.order_items.request_key IS 'UUID carried by the append_
 --
 
 COMMENT ON COLUMN public.order_items.is_priority IS 'POS/KDS kitchen priority signal for a single dish. Operational only; does not affect financial totals.';
+
+
+--
+-- Name: COLUMN order_items.discount_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.order_items.discount_type IS 'Item-level discount type: pct or vnd. Null when no item discount.';
+
+
+--
+-- Name: COLUMN order_items.discount_value; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.order_items.discount_value IS 'Item-level discount input value. pct is percent; vnd is clamped to item subtotal.';
+
+
+--
+-- Name: COLUMN order_items.discount_amount; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.order_items.discount_amount IS 'Item-level discount amount in VND, kept separate from gross subtotal.';
+
+
+--
+-- Name: COLUMN order_items.discount_note; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.order_items.discount_note IS 'Item-level discount reason, required when discount_amount > 0.';
 
 
 --
@@ -23157,7 +24953,8 @@ CREATE TABLE public.stock_levels (
     last_counted_at timestamp with time zone,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     avg_unit_cost numeric(15,2),
-    location_id bigint NOT NULL
+    location_id bigint NOT NULL,
+    CONSTRAINT stock_levels_current_quantity_nonneg CHECK ((current_quantity >= (0)::numeric))
 );
 
 
@@ -23564,7 +25361,6 @@ CREATE TABLE public.payroll_periods (
     paid_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    journal_entry_id bigint,
     CONSTRAINT payroll_periods_period_month_check CHECK (((period_month >= 1) AND (period_month <= 12))),
     CONSTRAINT payroll_periods_period_year_check CHECK ((period_year >= 2020)),
     CONSTRAINT payroll_periods_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'calculated'::text, 'approved'::text, 'paid'::text])))
@@ -23752,7 +25548,8 @@ CREATE TABLE public.positions (
     label_en text,
     is_active boolean DEFAULT true NOT NULL,
     is_system boolean DEFAULT false NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    default_checklist_template_id bigint
 );
 
 
@@ -23764,51 +25561,11 @@ COMMENT ON TABLE public.positions IS 'HR-only chức vụ. Does NOT grant permis
 
 
 --
--- Name: COLUMN positions.code; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.positions.code IS 'Canonical English lower_snake_case HR position code. Vietnamese display names live in label_vi.';
-
-
---
 -- Name: positions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 ALTER TABLE public.positions ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.positions_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
--- Name: posting_rules; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.posting_rules (
-    id bigint NOT NULL,
-    tenant_id bigint NOT NULL,
-    rule_code text NOT NULL,
-    description text NOT NULL,
-    transaction_type text NOT NULL,
-    debit_account_code text NOT NULL,
-    credit_account_code text NOT NULL,
-    is_active boolean DEFAULT true NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT posting_rules_transaction_type_check CHECK ((transaction_type = ANY (ARRAY['sale'::text, 'purchase'::text, 'payroll'::text, 'transfer'::text, 'production'::text, 'expense'::text, 'depreciation'::text, 'equity'::text])))
-);
-
-
---
--- Name: posting_rules_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.posting_rules ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.posting_rules_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -23986,6 +25743,13 @@ CREATE VIEW public.printer_agent_status WITH (security_invoker='true') AS
 
 
 --
+-- Name: VIEW printer_agent_status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON VIEW public.printer_agent_status IS 'Printer agent fleet status with security_invoker=true so caller RLS on printer_agents is enforced.';
+
+
+--
 -- Name: printer_menu_categories; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -24141,7 +25905,6 @@ CREATE TABLE public.production_orders (
     created_by uuid,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    journal_entry_id bigint,
     CONSTRAINT production_orders_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'completed'::text, 'cancelled'::text])))
 );
 
@@ -24215,7 +25978,6 @@ CREATE TABLE public.profiles (
     is_active boolean DEFAULT true,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
-    area_id bigint,
     position_id bigint NOT NULL
 );
 
@@ -24433,13 +26195,6 @@ COMMENT ON TABLE public.role_templates IS 'Preset bundles for bulk-granting perm
 
 
 --
--- Name: COLUMN role_templates.position_code; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.role_templates.position_code IS 'Canonical English lower_snake_case HR position code for template lookup.';
-
-
---
 -- Name: role_templates_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -24454,26 +26209,37 @@ ALTER TABLE public.role_templates ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTI
 
 
 --
--- Name: shift_assignments; Type: TABLE; Schema: public; Owner: -
+-- Name: shift_checklist_consumption_default_items; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.shift_assignments (
+CREATE TABLE public.shift_checklist_consumption_default_items (
     id bigint NOT NULL,
     tenant_id bigint NOT NULL,
-    branch_id bigint NOT NULL,
-    employee_id bigint NOT NULL,
-    shift_id bigint NOT NULL,
-    date date NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    template_item_id bigint NOT NULL,
+    ingredient_id bigint NOT NULL,
+    sort_order integer DEFAULT 1 NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    note text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT shift_checklist_consumption_default_items_note_length CHECK (((note IS NULL) OR (char_length(note) <= 500))),
+    CONSTRAINT shift_checklist_consumption_default_items_sort_positive CHECK ((sort_order > 0))
 );
 
 
 --
--- Name: shift_assignments_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: TABLE shift_checklist_consumption_default_items; Type: COMMENT; Schema: public; Owner: -
 --
 
-ALTER TABLE public.shift_assignments ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.shift_assignments_id_seq
+COMMENT ON TABLE public.shift_checklist_consumption_default_items IS 'Default ingredients/materials suggested for a consumption checklist template item by position or branch.';
+
+
+--
+-- Name: shift_checklist_consumption_default_items_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.shift_checklist_consumption_default_items ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.shift_checklist_consumption_default_items_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -24483,33 +26249,97 @@ ALTER TABLE public.shift_assignments ALTER COLUMN id ADD GENERATED ALWAYS AS IDE
 
 
 --
--- Name: shift_requests; Type: TABLE; Schema: public; Owner: -
+-- Name: shift_checklist_template_items; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.shift_requests (
+CREATE TABLE public.shift_checklist_template_items (
     id bigint NOT NULL,
     tenant_id bigint NOT NULL,
-    branch_id bigint NOT NULL,
-    employee_id bigint NOT NULL,
-    shift_id bigint NOT NULL,
-    date date NOT NULL,
-    status public.shift_request_status DEFAULT 'pending'::public.shift_request_status NOT NULL,
-    note text,
-    reviewed_by uuid,
-    reviewed_at timestamp with time zone,
-    rejected_reason text,
-    assignment_id bigint,
+    template_id bigint NOT NULL,
+    title text NOT NULL,
+    sort_order integer NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    phase text DEFAULT 'during_shift'::text NOT NULL,
+    done_definition text DEFAULT ''::text NOT NULL,
+    is_required boolean DEFAULT true NOT NULL,
+    scope text DEFAULT 'every_shift'::text NOT NULL,
+    task_kind text DEFAULT 'standard'::text NOT NULL,
+    CONSTRAINT shift_checklist_template_items_done_definition_length CHECK ((char_length(done_definition) <= 240)),
+    CONSTRAINT shift_checklist_template_items_phase_valid CHECK ((phase = ANY (ARRAY['start_of_shift'::text, 'during_shift'::text, 'end_of_shift'::text]))),
+    CONSTRAINT shift_checklist_template_items_scope_valid CHECK ((scope = ANY (ARRAY['every_shift'::text, 'opening'::text, 'closing'::text, 'weekly'::text]))),
+    CONSTRAINT shift_checklist_template_items_sort_positive CHECK ((sort_order > 0)),
+    CONSTRAINT shift_checklist_template_items_task_kind_valid CHECK ((task_kind = ANY (ARRAY['standard'::text, 'consumption_report'::text]))),
+    CONSTRAINT shift_checklist_template_items_title_length CHECK ((char_length(title) <= 120)),
+    CONSTRAINT shift_checklist_template_items_title_not_blank CHECK ((btrim(title) <> ''::text))
 );
 
 
 --
--- Name: shift_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: COLUMN shift_checklist_template_items.phase; Type: COMMENT; Schema: public; Owner: -
 --
 
-ALTER TABLE public.shift_requests ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.shift_requests_id_seq
+COMMENT ON COLUMN public.shift_checklist_template_items.phase IS 'Checklist phase: start_of_shift, during_shift, or end_of_shift.';
+
+
+--
+-- Name: COLUMN shift_checklist_template_items.done_definition; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.shift_checklist_template_items.done_definition IS 'Short acceptance criteria shown to employees and managers.';
+
+
+--
+-- Name: COLUMN shift_checklist_template_items.is_required; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.shift_checklist_template_items.is_required IS 'Required items must be done before checkout can be requested.';
+
+
+--
+-- Name: shift_checklist_template_items_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.shift_checklist_template_items ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.shift_checklist_template_items_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: shift_checklist_templates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.shift_checklist_templates (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    branch_id bigint,
+    name text DEFAULT 'Checklist ca làm'::text NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    role_code text,
+    CONSTRAINT shift_checklist_templates_name_not_blank CHECK ((btrim(name) <> ''::text))
+);
+
+
+--
+-- Name: COLUMN shift_checklist_templates.role_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.shift_checklist_templates.role_code IS 'Legacy compatibility only. Checklist selection no longer uses role_code.';
+
+
+--
+-- Name: shift_checklist_templates_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.shift_checklist_templates ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.shift_checklist_templates_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -24525,7 +26355,7 @@ ALTER TABLE public.shift_requests ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTI
 CREATE TABLE public.shifts (
     id bigint NOT NULL,
     tenant_id bigint NOT NULL,
-    branch_id bigint NOT NULL,
+    branch_id bigint,
     name text NOT NULL,
     start_time time without time zone NOT NULL,
     end_time time without time zone NOT NULL,
@@ -24670,7 +26500,7 @@ CREATE TABLE public.stock_issues (
     source_ref jsonb,
     CONSTRAINT stock_issues_approval_status_check CHECK ((approval_status = ANY (ARRAY['not_required'::text, 'pending'::text, 'approved'::text, 'rejected'::text]))),
     CONSTRAINT stock_issues_issue_type_check CHECK ((issue_type = ANY (ARRAY['consumption'::text, 'writeoff'::text, 'other'::text]))),
-    CONSTRAINT stock_issues_source_type_check CHECK ((source_type = ANY (ARRAY['manual'::text, 'pos_return'::text, 'kds_cancel_before_cook'::text, 'kds_cancel_mid_cook'::text, 'kds_cancel_after_cook'::text]))),
+    CONSTRAINT stock_issues_source_type_check CHECK ((source_type = ANY (ARRAY['manual'::text, 'pos_return'::text, 'kds_cancel_before_cook'::text, 'kds_cancel_mid_cook'::text, 'kds_cancel_after_cook'::text, 'hrm_consumption'::text]))),
     CONSTRAINT stock_issues_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'confirmed'::text, 'cancelled'::text])))
 );
 
@@ -24679,7 +26509,7 @@ CREATE TABLE public.stock_issues (
 -- Name: COLUMN stock_issues.issue_type; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.stock_issues.issue_type IS 'Type of internal stock issue voucher: consumption (Tiêu hao at branch / Hao hụt kho at branch/branch — label derived via movement_subtype), writeoff (hủy hỏng), other (khác). kitchen_use retired 2026-04-25 — use intra-branch stock_transfer (from_location=warehouse, to_location=kitchen_line) instead.';
+COMMENT ON COLUMN public.stock_issues.issue_type IS 'Type of internal stock issue voucher: consumption, writeoff, other.';
 
 
 --
@@ -24762,7 +26592,7 @@ COMMENT ON COLUMN public.stock_movements.location_id IS 'Compatibility column fo
 -- Name: COLUMN stock_movements.movement_subtype; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.stock_movements.movement_subtype IS 'Discriminator for stock_issue-originated consumption movements: storage_loss | sale_consumption | writeoff | other. Derived from (issue_type x branch_kind) at confirm_stock_issue time. NULL for non-issue movements (grn_receipt, transfer_*, production_*, ...).';
+COMMENT ON COLUMN public.stock_movements.movement_subtype IS 'Discriminator for stock_issue-originated movements: storage_loss | sale_consumption | writeoff | other. NULL for non-issue movements.';
 
 
 --
@@ -24839,7 +26669,6 @@ CREATE TABLE public.stock_transfers (
     receive_started_at timestamp with time zone,
     from_location_id bigint,
     to_location_id bigint,
-    journal_entry_id bigint,
     CONSTRAINT stock_transfers_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'confirmed_ship'::text, 'in_transit'::text, 'confirmed_receive'::text, 'received'::text, 'cancelled'::text])))
 );
 
@@ -25173,7 +27002,6 @@ CREATE TABLE public.supplier_invoices (
     payment_status text DEFAULT 'unpaid'::text NOT NULL,
     paid_amount numeric(15,2) DEFAULT 0 NOT NULL,
     paid_at timestamp with time zone,
-    journal_entry_id bigint,
     credit_applied_amount numeric(15,2) DEFAULT 0 NOT NULL,
     CONSTRAINT supplier_invoices_credit_applied_amount_check CHECK ((credit_applied_amount >= (0)::numeric)),
     CONSTRAINT supplier_invoices_matching_status_check CHECK ((matching_status = ANY (ARRAY['pending'::text, 'matched'::text, 'discrepancy'::text, 'approved'::text]))),
@@ -25255,7 +27083,7 @@ CREATE TABLE public.supplier_items (
 -- Name: TABLE supplier_items; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.supplier_items IS 'Tenant-level supplier SKU mapping catalog. Read may be branch/either permission; writes require tenant-level price_list_write.';
+COMMENT ON TABLE public.supplier_items IS 'Supplier-specific SKU mapping (Q6 phase 3 scaffold). Wiring into PO form DEFERRED.';
 
 
 --
@@ -25284,7 +27112,6 @@ CREATE TABLE public.supplier_payments (
     amount numeric(15,2) NOT NULL,
     payment_date timestamp with time zone DEFAULT now() NOT NULL,
     reference_note text,
-    journal_entry_id bigint,
     created_by uuid,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -25345,7 +27172,7 @@ END) STORED NOT NULL,
 -- Name: TABLE supplier_price_list; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.supplier_price_list IS 'Tenant-level supplier price catalog. Read may be branch/either permission; writes require tenant-level price_list_write.';
+COMMENT ON TABLE public.supplier_price_list IS 'Hybrid price list with 3 data sources. Priority: contract > quotation > grn_last > manual.';
 
 
 --
@@ -25458,13 +27285,6 @@ CREATE TABLE public.suppliers (
     payment_terms_days integer,
     payment_terms_note text
 );
-
-
---
--- Name: TABLE suppliers; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.suppliers IS 'Tenant-level supplier catalog. Do not add branch_id; branch/source boundaries live on procurement transactions.';
 
 
 --
@@ -25628,7 +27448,7 @@ CREATE TABLE public.tax_invoices (
     buyer_tax_code text,
     buyer_address text,
     subtotal numeric(15,2) NOT NULL,
-    vat_rate numeric(5,2) DEFAULT 8.00 NOT NULL,
+    vat_rate numeric(5,2) NOT NULL,
     vat_amount numeric(15,2) NOT NULL,
     total_amount numeric(15,2) NOT NULL,
     provider text DEFAULT 'viettel'::text NOT NULL,
@@ -25887,41 +27707,6 @@ COMMENT ON VIEW public.v_print_agent_fleet IS 'Fleet-wide print-agent status. St
 
 
 --
--- Name: vas_report_lines; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.vas_report_lines (
-    id bigint NOT NULL,
-    tenant_id bigint,
-    form_code text NOT NULL,
-    line_code text NOT NULL,
-    line_label_vi text NOT NULL,
-    parent_line text,
-    level integer DEFAULT 1 NOT NULL,
-    formula jsonb NOT NULL,
-    formula_version text DEFAULT 'TT200-2014'::text NOT NULL,
-    display_order integer NOT NULL,
-    is_total boolean DEFAULT false NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT vas_report_lines_form_code_check CHECK ((form_code = ANY (ARRAY['B01-DN'::text, 'B02-DN'::text, 'B03-DN'::text, '01-GTGT'::text])))
-);
-
-
---
--- Name: vas_report_lines_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.vas_report_lines ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.vas_report_lines_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
 -- Name: webhook_events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -25981,43 +27766,35 @@ ALTER TABLE ONLY public.archive_run_log
 
 
 --
--- Name: area_branches area_branches_area_id_branch_id_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: attendance_checklist_items attendance_checklist_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.area_branches
-    ADD CONSTRAINT area_branches_area_id_branch_id_tenant_id_key UNIQUE (area_id, branch_id, tenant_id);
-
-
---
--- Name: area_branches area_branches_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.area_branches
-    ADD CONSTRAINT area_branches_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.attendance_checklist_items
+    ADD CONSTRAINT attendance_checklist_items_pkey PRIMARY KEY (id);
 
 
 --
--- Name: areas areas_name_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: attendance_consumption_report_lines attendance_consumption_report_lines_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.areas
-    ADD CONSTRAINT areas_name_tenant_id_key UNIQUE (name, tenant_id);
-
-
---
--- Name: areas areas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.areas
-    ADD CONSTRAINT areas_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.attendance_consumption_report_lines
+    ADD CONSTRAINT attendance_consumption_report_lines_pkey PRIMARY KEY (id);
 
 
 --
--- Name: attendance_records attendance_records_employee_id_date_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: attendance_consumption_reports attendance_consumption_reports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_consumption_reports
+    ADD CONSTRAINT attendance_consumption_reports_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: attendance_records attendance_records_employee_id_date_shift_id_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.attendance_records
-    ADD CONSTRAINT attendance_records_employee_id_date_tenant_id_key UNIQUE (employee_id, date, tenant_id);
+    ADD CONSTRAINT attendance_records_employee_id_date_shift_id_tenant_id_key UNIQUE (employee_id, date, shift_id, tenant_id);
 
 
 --
@@ -26074,6 +27851,14 @@ ALTER TABLE ONLY public.branch_express_window
 
 ALTER TABLE ONLY public.branch_feature_flags
     ADD CONSTRAINT branch_feature_flags_pkey PRIMARY KEY (branch_id, flag_key);
+
+
+--
+-- Name: branch_menu_item_daily_holds branch_menu_item_daily_holds_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.branch_menu_item_daily_holds
+    ADD CONSTRAINT branch_menu_item_daily_holds_pkey PRIMARY KEY (id);
 
 
 --
@@ -26157,22 +27942,6 @@ ALTER TABLE ONLY public.branches
 
 
 --
--- Name: chart_of_accounts chart_of_accounts_account_code_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.chart_of_accounts
-    ADD CONSTRAINT chart_of_accounts_account_code_tenant_id_key UNIQUE (account_code, tenant_id);
-
-
---
--- Name: chart_of_accounts chart_of_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.chart_of_accounts
-    ADD CONSTRAINT chart_of_accounts_pkey PRIMARY KEY (id);
-
-
---
 -- Name: employees employees_employee_code_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -26213,19 +27982,11 @@ ALTER TABLE ONLY public.employment_contracts
 
 
 --
--- Name: fiscal_periods fiscal_periods_period_month_period_year_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: expenses expenses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.fiscal_periods
-    ADD CONSTRAINT fiscal_periods_period_month_period_year_tenant_id_key UNIQUE (period_month, period_year, tenant_id);
-
-
---
--- Name: fiscal_periods fiscal_periods_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.fiscal_periods
-    ADD CONSTRAINT fiscal_periods_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.expenses
+    ADD CONSTRAINT expenses_pkey PRIMARY KEY (id);
 
 
 --
@@ -26349,30 +28110,6 @@ ALTER TABLE ONLY public.inventory_qc_settings
 
 
 --
--- Name: journal_entries journal_entries_entry_number_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.journal_entries
-    ADD CONSTRAINT journal_entries_entry_number_tenant_id_key UNIQUE (entry_number, tenant_id);
-
-
---
--- Name: journal_entries journal_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.journal_entries
-    ADD CONSTRAINT journal_entries_pkey PRIMARY KEY (id);
-
-
---
--- Name: journal_entry_lines journal_entry_lines_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.journal_entry_lines
-    ADD CONSTRAINT journal_entry_lines_pkey PRIMARY KEY (id);
-
-
---
 -- Name: kds_station_categories kds_station_categories_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -26458,6 +28195,14 @@ ALTER TABLE ONLY public.kitchen_send_batches
 
 ALTER TABLE ONLY public.kitchen_send_batches
     ADD CONSTRAINT kitchen_send_batches_tenant_id_order_id_send_seq_key UNIQUE (tenant_id, order_id, send_seq);
+
+
+--
+-- Name: leave_requests leave_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leave_requests
+    ADD CONSTRAINT leave_requests_pkey PRIMARY KEY (id);
 
 
 --
@@ -26717,22 +28462,6 @@ ALTER TABLE ONLY public.positions
 
 
 --
--- Name: posting_rules posting_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.posting_rules
-    ADD CONSTRAINT posting_rules_pkey PRIMARY KEY (id);
-
-
---
--- Name: posting_rules posting_rules_rule_code_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.posting_rules
-    ADD CONSTRAINT posting_rules_rule_code_tenant_id_key UNIQUE (rule_code, tenant_id);
-
-
---
 -- Name: print_jobs print_jobs_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -26989,27 +28718,27 @@ ALTER TABLE ONLY public.role_templates
 
 
 --
--- Name: shift_assignments shift_assignments_employee_id_date_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: shift_checklist_consumption_default_items shift_checklist_consumption_default_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.shift_assignments
-    ADD CONSTRAINT shift_assignments_employee_id_date_tenant_id_key UNIQUE (employee_id, date, tenant_id);
-
-
---
--- Name: shift_assignments shift_assignments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shift_assignments
-    ADD CONSTRAINT shift_assignments_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.shift_checklist_consumption_default_items
+    ADD CONSTRAINT shift_checklist_consumption_default_items_pkey PRIMARY KEY (id);
 
 
 --
--- Name: shift_requests shift_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: shift_checklist_template_items shift_checklist_template_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.shift_requests
-    ADD CONSTRAINT shift_requests_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.shift_checklist_template_items
+    ADD CONSTRAINT shift_checklist_template_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: shift_checklist_templates shift_checklist_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shift_checklist_templates
+    ADD CONSTRAINT shift_checklist_templates_pkey PRIMARY KEY (id);
 
 
 --
@@ -27106,6 +28835,14 @@ ALTER TABLE ONLY public.stock_transfer_items
 
 ALTER TABLE ONLY public.stock_transfer_items
     ADD CONSTRAINT stock_transfer_items_transfer_id_ingredient_id_tenant_id_key UNIQUE (transfer_id, ingredient_id, tenant_id);
+
+
+--
+-- Name: stock_transfers stock_transfers_no_intra_branch_new; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.stock_transfers
+    ADD CONSTRAINT stock_transfers_no_intra_branch_new CHECK ((from_branch_id <> to_branch_id)) NOT VALID;
 
 
 --
@@ -27218,14 +28955,6 @@ ALTER TABLE ONLY public.supplier_invoices
 
 ALTER TABLE ONLY public.supplier_invoices
     ADD CONSTRAINT supplier_invoices_pkey PRIMARY KEY (id);
-
-
---
--- Name: supplier_invoices supplier_invoices_source_required; Type: CHECK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE public.supplier_invoices
-    ADD CONSTRAINT supplier_invoices_source_required CHECK (((grn_id IS NOT NULL) OR (po_id IS NOT NULL))) NOT VALID;
 
 
 --
@@ -27413,22 +29142,6 @@ ALTER TABLE ONLY public.user_trust_score
 
 
 --
--- Name: vas_report_lines vas_report_lines_form_code_line_code_tenant_id_formula_vers_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.vas_report_lines
-    ADD CONSTRAINT vas_report_lines_form_code_line_code_tenant_id_formula_vers_key UNIQUE (form_code, line_code, tenant_id, formula_version);
-
-
---
--- Name: vas_report_lines vas_report_lines_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.vas_report_lines
-    ADD CONSTRAINT vas_report_lines_pkey PRIMARY KEY (id);
-
-
---
 -- Name: webhook_events webhook_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -27449,34 +29162,6 @@ ALTER TABLE ONLY public.webhook_events
 --
 
 CREATE UNIQUE INDEX branches_tenant_code_unique ON public.branches USING btree (tenant_id, code) WHERE (code IS NOT NULL);
-
-
---
--- Name: idx_area_branches_area; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_area_branches_area ON public.area_branches USING btree (area_id);
-
-
---
--- Name: idx_area_branches_branch; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_area_branches_branch ON public.area_branches USING btree (branch_id);
-
-
---
--- Name: idx_area_branches_tenant; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_area_branches_tenant ON public.area_branches USING btree (tenant_id);
-
-
---
--- Name: idx_areas_tenant; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_areas_tenant ON public.areas USING btree (tenant_id);
 
 
 --
@@ -27508,6 +29193,41 @@ CREATE INDEX idx_attendance_branch ON public.attendance_records USING btree (bra
 
 
 --
+-- Name: idx_attendance_checklist_items_tenant_attendance; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_attendance_checklist_items_tenant_attendance ON public.attendance_checklist_items USING btree (tenant_id, attendance_record_id);
+
+
+--
+-- Name: idx_attendance_consumption_report_lines_default_item; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_attendance_consumption_report_lines_default_item ON public.attendance_consumption_report_lines USING btree (tenant_id, default_item_id) WHERE (default_item_id IS NOT NULL);
+
+
+--
+-- Name: idx_attendance_consumption_report_lines_report; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_attendance_consumption_report_lines_report ON public.attendance_consumption_report_lines USING btree (tenant_id, report_id, sort_order);
+
+
+--
+-- Name: idx_attendance_consumption_reports_branch_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_attendance_consumption_reports_branch_status ON public.attendance_consumption_reports USING btree (tenant_id, branch_id, status);
+
+
+--
+-- Name: idx_attendance_consumption_reports_employee; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_attendance_consumption_reports_employee ON public.attendance_consumption_reports USING btree (tenant_id, employee_id);
+
+
+--
 -- Name: idx_attendance_date; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -27519,6 +29239,27 @@ CREATE INDEX idx_attendance_date ON public.attendance_records USING btree (branc
 --
 
 CREATE INDEX idx_attendance_employee ON public.attendance_records USING btree (employee_id);
+
+
+--
+-- Name: idx_attendance_records_checklist_template; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_attendance_records_checklist_template ON public.attendance_records USING btree (tenant_id, checklist_template_id) WHERE (checklist_template_id IS NOT NULL);
+
+
+--
+-- Name: idx_attendance_records_checkout_pending; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_attendance_records_checkout_pending ON public.attendance_records USING btree (tenant_id, branch_id, checkout_requested_at DESC) WHERE ((check_out IS NULL) AND (checkout_requested_at IS NOT NULL));
+
+
+--
+-- Name: idx_attendance_records_checkout_target_roles; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_attendance_records_checkout_target_roles ON public.attendance_records USING gin (checkout_approval_target_roles) WHERE ((check_out IS NULL) AND (checkout_requested_at IS NOT NULL));
 
 
 --
@@ -27575,6 +29316,34 @@ CREATE INDEX idx_bac_tenant ON public.branch_attendance_config USING btree (tena
 --
 
 CREATE INDEX idx_baseline_pause_lookup ON public.grn_baseline_pause USING btree (tenant_id, supplier_id, ingredient_id, uom, paused_until DESC);
+
+
+--
+-- Name: idx_bmidh_active_lookup; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_bmidh_active_lookup ON public.branch_menu_item_daily_holds USING btree (branch_id, limit_date, menu_item_id) WHERE ((committed_at IS NULL) AND (released_at IS NULL));
+
+
+--
+-- Name: idx_bmidh_order; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_bmidh_order ON public.branch_menu_item_daily_holds USING btree (order_id) WHERE (order_id IS NOT NULL);
+
+
+--
+-- Name: idx_bmidh_token_active; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_bmidh_token_active ON public.branch_menu_item_daily_holds USING btree (hold_token, branch_id, limit_date) WHERE ((committed_at IS NULL) AND (released_at IS NULL));
+
+
+--
+-- Name: idx_bmidh_user_active; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_bmidh_user_active ON public.branch_menu_item_daily_holds USING btree (tenant_id, held_by, expires_at) WHERE ((committed_at IS NULL) AND (released_at IS NULL));
 
 
 --
@@ -27641,34 +29410,6 @@ CREATE INDEX idx_btei_tenant ON public.branch_trusted_egress_ips USING btree (te
 
 
 --
--- Name: idx_coa_cashflow_section; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_coa_cashflow_section ON public.chart_of_accounts USING btree (tenant_id, cashflow_section);
-
-
---
--- Name: idx_coa_parent; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_coa_parent ON public.chart_of_accounts USING btree (parent_id);
-
-
---
--- Name: idx_coa_tenant; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_coa_tenant ON public.chart_of_accounts USING btree (tenant_id);
-
-
---
--- Name: idx_coa_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_coa_type ON public.chart_of_accounts USING btree (account_type);
-
-
---
 -- Name: idx_conflicts_pending; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -27697,6 +29438,13 @@ CREATE INDEX idx_contracts_tenant ON public.employment_contracts USING btree (te
 
 
 --
+-- Name: idx_employees_default_checklist_template; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_employees_default_checklist_template ON public.employees USING btree (tenant_id, default_checklist_template_id) WHERE (default_checklist_template_id IS NOT NULL);
+
+
+--
 -- Name: idx_employees_profile; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -27711,17 +29459,24 @@ CREATE INDEX idx_employees_tenant ON public.employees USING btree (tenant_id);
 
 
 --
--- Name: idx_fp_status; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_expenses_tenant_branch_date; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_fp_status ON public.fiscal_periods USING btree (status);
+CREATE INDEX idx_expenses_tenant_branch_date ON public.expenses USING btree (tenant_id, branch_id, expense_date);
 
 
 --
--- Name: idx_fp_tenant; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_expenses_tenant_category_date; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_fp_tenant ON public.fiscal_periods USING btree (tenant_id);
+CREATE INDEX idx_expenses_tenant_category_date ON public.expenses USING btree (tenant_id, category, expense_date);
+
+
+--
+-- Name: idx_expenses_tenant_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_expenses_tenant_date ON public.expenses USING btree (tenant_id, expense_date);
 
 
 --
@@ -27757,13 +29512,6 @@ CREATE INDEX idx_grn_items_grn ON public.grn_items USING btree (grn_id);
 --
 
 CREATE INDEX idx_grn_items_requires_review ON public.grn_items USING btree (tenant_id) WHERE (requires_review = true);
-
-
---
--- Name: idx_grn_journal; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_grn_journal ON public.goods_received_notes USING btree (journal_entry_id) WHERE (journal_entry_id IS NOT NULL);
 
 
 --
@@ -27848,69 +29596,6 @@ CREATE UNIQUE INDEX idx_inventory_locations_one_default_receive ON public.invent
 --
 
 CREATE INDEX idx_inventory_locations_tenant ON public.inventory_locations USING btree (tenant_id);
-
-
---
--- Name: idx_je_branch_date; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_je_branch_date ON public.journal_entries USING btree (tenant_id, branch_id, entry_date) WHERE (status = 'posted'::text);
-
-
---
--- Name: idx_je_date; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_je_date ON public.journal_entries USING btree (entry_date);
-
-
---
--- Name: idx_je_ref; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_je_ref ON public.journal_entries USING btree (reference_type, reference_id);
-
-
---
--- Name: idx_je_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_je_status ON public.journal_entries USING btree (status);
-
-
---
--- Name: idx_je_tenant; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_je_tenant ON public.journal_entries USING btree (tenant_id);
-
-
---
--- Name: idx_jel_account; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_jel_account ON public.journal_entry_lines USING btree (account_id);
-
-
---
--- Name: idx_jel_entry; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_jel_entry ON public.journal_entry_lines USING btree (journal_entry_id);
-
-
---
--- Name: idx_jel_tenant; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_jel_tenant ON public.journal_entry_lines USING btree (tenant_id);
-
-
---
--- Name: idx_journal_entries_finance_summary; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_journal_entries_finance_summary ON public.journal_entries USING btree (tenant_id, branch_id, status, entry_date);
 
 
 --
@@ -28016,6 +29701,41 @@ CREATE INDEX idx_kitchen_daily_counters_tenant_branch ON public.kitchen_daily_co
 --
 
 CREATE INDEX idx_kitchen_send_batches_branch_created ON public.kitchen_send_batches USING btree (tenant_id, branch_id, created_at);
+
+
+--
+-- Name: idx_kitchen_send_batches_order; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_kitchen_send_batches_order ON public.kitchen_send_batches USING btree (tenant_id, order_id, send_seq);
+
+
+--
+-- Name: idx_leave_requests_branch_status_start; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_leave_requests_branch_status_start ON public.leave_requests USING btree (tenant_id, branch_id, status, start_date);
+
+
+--
+-- Name: idx_leave_requests_employee_range; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_leave_requests_employee_range ON public.leave_requests USING btree (tenant_id, employee_id, start_date, end_date);
+
+
+--
+-- Name: idx_leave_requests_employee_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_leave_requests_employee_status ON public.leave_requests USING btree (tenant_id, employee_id, status);
+
+
+--
+-- Name: idx_leave_requests_pending_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_leave_requests_pending_unique ON public.leave_requests USING btree (tenant_id, employee_id, start_date, end_date) WHERE (status = 'pending'::text);
 
 
 --
@@ -28278,13 +29998,6 @@ CREATE INDEX idx_orders_pos_session ON public.orders USING btree (pos_session_id
 
 
 --
--- Name: idx_orders_pos_session_created_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_orders_pos_session_created_at ON public.orders USING btree (pos_session_id, created_at) WHERE (pos_session_id IS NOT NULL);
-
-
---
 -- Name: idx_orders_pos_session_payment_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -28359,13 +30072,6 @@ CREATE INDEX idx_payments_completed_paid_at ON public.payments USING btree (tena
 --
 
 CREATE INDEX idx_payments_finance_tenant_paid_at ON public.payments USING btree (tenant_id, status, paid_at) INCLUDE (branch_id, order_id, method, amount, created_by) WHERE (paid_at IS NOT NULL);
-
-
---
--- Name: idx_payments_journal; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_payments_journal ON public.payments USING btree (journal_entry_id) WHERE (journal_entry_id IS NOT NULL);
 
 
 --
@@ -28537,13 +30243,6 @@ CREATE INDEX idx_pos_terminals_tenant ON public.pos_terminals USING btree (tenan
 
 
 --
--- Name: idx_pp_journal; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_pp_journal ON public.payroll_periods USING btree (journal_entry_id) WHERE (journal_entry_id IS NOT NULL);
-
-
---
 -- Name: idx_pp_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -28555,20 +30254,6 @@ CREATE INDEX idx_pp_status ON public.payroll_periods USING btree (status);
 --
 
 CREATE INDEX idx_pp_tenant ON public.payroll_periods USING btree (tenant_id);
-
-
---
--- Name: idx_pr_tenant; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_pr_tenant ON public.posting_rules USING btree (tenant_id);
-
-
---
--- Name: idx_pr_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_pr_type ON public.posting_rules USING btree (transaction_type);
 
 
 --
@@ -28663,13 +30348,6 @@ CREATE INDEX idx_production_orders_branch ON public.production_orders USING btre
 
 
 --
--- Name: idx_production_orders_journal; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_production_orders_journal ON public.production_orders USING btree (journal_entry_id) WHERE (journal_entry_id IS NOT NULL);
-
-
---
 -- Name: idx_production_orders_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -28695,13 +30373,6 @@ CREATE INDEX idx_production_recipes_finished_good ON public.production_recipes U
 --
 
 CREATE INDEX idx_production_recipes_tenant ON public.production_recipes USING btree (tenant_id);
-
-
---
--- Name: idx_profiles_area; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_profiles_area ON public.profiles USING btree (area_id);
 
 
 --
@@ -28796,59 +30467,45 @@ CREATE INDEX idx_rrl_tenant_recent ON public.reconcile_run_log USING btree (tena
 
 
 --
--- Name: idx_shift_assignments_branch; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_shift_checklist_consumption_default_items_template; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_shift_assignments_branch ON public.shift_assignments USING btree (branch_id);
-
-
---
--- Name: idx_shift_assignments_date; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_shift_assignments_date ON public.shift_assignments USING btree (branch_id, date);
+CREATE INDEX idx_shift_checklist_consumption_default_items_template ON public.shift_checklist_consumption_default_items USING btree (tenant_id, template_item_id, sort_order);
 
 
 --
--- Name: idx_shift_assignments_employee; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_shift_checklist_template_items_tenant_template; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_shift_assignments_employee ON public.shift_assignments USING btree (employee_id);
-
-
---
--- Name: idx_shift_assignments_tenant; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_shift_assignments_tenant ON public.shift_assignments USING btree (tenant_id);
+CREATE INDEX idx_shift_checklist_template_items_tenant_template ON public.shift_checklist_template_items USING btree (tenant_id, template_id);
 
 
 --
--- Name: idx_shift_requests_branch_date; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_shift_checklist_templates_tenant_branch; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_shift_requests_branch_date ON public.shift_requests USING btree (branch_id, date);
-
-
---
--- Name: idx_shift_requests_employee; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_shift_requests_employee ON public.shift_requests USING btree (employee_id, status);
+CREATE INDEX idx_shift_checklist_templates_tenant_branch ON public.shift_checklist_templates USING btree (tenant_id, branch_id);
 
 
 --
--- Name: idx_shift_requests_pending_unique; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_shift_checklist_templates_tenant_branch_role; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_shift_requests_pending_unique ON public.shift_requests USING btree (employee_id, shift_id, date, tenant_id) WHERE (status = 'pending'::public.shift_request_status);
+CREATE INDEX idx_shift_checklist_templates_tenant_branch_role ON public.shift_checklist_templates USING btree (tenant_id, branch_id, role_code);
 
 
 --
--- Name: idx_shift_requests_tenant; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_shift_checklist_templates_tenant_name; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_shift_requests_tenant ON public.shift_requests USING btree (tenant_id);
+CREATE INDEX idx_shift_checklist_templates_tenant_name ON public.shift_checklist_templates USING btree (tenant_id, lower(name));
+
+
+--
+-- Name: idx_shift_checklist_templates_tenant_scope; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_shift_checklist_templates_tenant_scope ON public.shift_checklist_templates USING btree (tenant_id, branch_id, is_active);
 
 
 --
@@ -28866,24 +30523,10 @@ CREATE INDEX idx_shifts_tenant ON public.shifts USING btree (tenant_id);
 
 
 --
--- Name: idx_si_journal; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_si_journal ON public.supplier_invoices USING btree (journal_entry_id) WHERE (journal_entry_id IS NOT NULL);
-
-
---
 -- Name: idx_sp_invoice; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_sp_invoice ON public.supplier_payments USING btree (supplier_invoice_id);
-
-
---
--- Name: idx_sp_journal; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_sp_journal ON public.supplier_payments USING btree (journal_entry_id) WHERE (journal_entry_id IS NOT NULL);
 
 
 --
@@ -28912,13 +30555,6 @@ CREATE INDEX idx_srq_invoice ON public.summary_run_queue USING btree (tax_invoic
 --
 
 CREATE INDEX idx_srq_tenant_status ON public.summary_run_queue USING btree (tenant_id, status);
-
-
---
--- Name: idx_st_journal; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_st_journal ON public.stock_transfers USING btree (journal_entry_id) WHERE (journal_entry_id IS NOT NULL);
 
 
 --
@@ -29454,13 +31090,6 @@ CREATE INDEX idx_tio_tenant ON public.tax_invoice_orders USING btree (tenant_id)
 
 
 --
--- Name: idx_vrl_form_order; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_vrl_form_order ON public.vas_report_lines USING btree (form_code, display_order) WHERE (tenant_id IS NULL);
-
-
---
 -- Name: idx_webhook_events_created; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -29531,13 +31160,6 @@ CREATE INDEX ix_notifications_tenant_branch_created ON public.notifications USIN
 
 
 --
--- Name: ix_notifications_tenant_branch_created_cover; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX ix_notifications_tenant_branch_created_cover ON public.notifications USING btree (tenant_id, target_branch_id, created_at DESC) INCLUDE (target_roles, expires_at);
-
-
---
 -- Name: ix_notifications_tenant_created; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -29549,6 +31171,27 @@ CREATE INDEX ix_notifications_tenant_created ON public.notifications USING btree
 --
 
 CREATE UNIQUE INDEX kitchen_send_batches_branch_date_ticket_number_unique ON public.kitchen_send_batches USING btree (tenant_id, branch_id, counter_date, kitchen_ticket_number);
+
+
+--
+-- Name: kitchen_send_batches_branch_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX kitchen_send_batches_branch_id_idx ON public.kitchen_send_batches USING btree (branch_id);
+
+
+--
+-- Name: kitchen_send_batches_order_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX kitchen_send_batches_order_id_idx ON public.kitchen_send_batches USING btree (order_id);
+
+
+--
+-- Name: notifications_target_branch_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX notifications_target_branch_id_idx ON public.notifications USING btree (target_branch_id);
 
 
 --
@@ -29566,6 +31209,20 @@ CREATE UNIQUE INDEX orders_idempotency_per_tenant_uidx ON public.orders USING bt
 
 
 --
+-- Name: print_jobs_printer_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX print_jobs_printer_id_idx ON public.print_jobs USING btree (printer_id);
+
+
+--
+-- Name: shifts_global_name_tenant_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX shifts_global_name_tenant_key ON public.shifts USING btree (tenant_id, name) WHERE (branch_id IS NULL);
+
+
+--
 -- Name: suppliers_tax_code_tenant_unique; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -29577,6 +31234,27 @@ CREATE UNIQUE INDEX suppliers_tax_code_tenant_unique ON public.suppliers USING b
 --
 
 COMMENT ON INDEX public.suppliers_tax_code_tenant_unique IS 'Partial UNIQUE — blocks duplicate tax_code inside a tenant to stop supplier-swap gaming for Q3 baseline.';
+
+
+--
+-- Name: uq_attendance_checklist_items_order; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_attendance_checklist_items_order ON public.attendance_checklist_items USING btree (attendance_record_id, sort_order);
+
+
+--
+-- Name: uq_attendance_consumption_report_lines_ingredient; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_attendance_consumption_report_lines_ingredient ON public.attendance_consumption_report_lines USING btree (tenant_id, report_id, ingredient_id);
+
+
+--
+-- Name: uq_attendance_consumption_reports_attendance; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_attendance_consumption_reports_attendance ON public.attendance_consumption_reports USING btree (tenant_id, attendance_record_id);
 
 
 --
@@ -29640,6 +31318,20 @@ CREATE UNIQUE INDEX uq_print_template_versions_active_scope ON public.print_temp
 --
 
 CREATE UNIQUE INDEX uq_print_template_versions_scope_version ON public.print_template_versions USING btree (COALESCE(tenant_id, (0)::bigint), COALESCE(branch_id, (0)::bigint), kind, version);
+
+
+--
+-- Name: uq_shift_checklist_consumption_default_items_active; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_shift_checklist_consumption_default_items_active ON public.shift_checklist_consumption_default_items USING btree (tenant_id, template_item_id, ingredient_id) WHERE is_active;
+
+
+--
+-- Name: uq_shift_checklist_template_items_order; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_shift_checklist_template_items_order ON public.shift_checklist_template_items USING btree (template_id, sort_order);
 
 
 --
@@ -29713,10 +31405,24 @@ CREATE TRIGGER notify_transfer_in_transit_after_update AFTER UPDATE OF status ON
 
 
 --
--- Name: areas trg_areas_updated_at; Type: TRIGGER; Schema: public; Owner: -
+-- Name: attendance_checklist_items trg_attendance_checklist_items_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER trg_areas_updated_at BEFORE UPDATE ON public.areas FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+CREATE TRIGGER trg_attendance_checklist_items_updated_at BEFORE UPDATE ON public.attendance_checklist_items FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+
+--
+-- Name: attendance_consumption_report_lines trg_attendance_consumption_report_lines_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_attendance_consumption_report_lines_updated_at BEFORE UPDATE ON public.attendance_consumption_report_lines FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+
+--
+-- Name: attendance_consumption_reports trg_attendance_consumption_reports_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_attendance_consumption_reports_updated_at BEFORE UPDATE ON public.attendance_consumption_reports FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 
 --
@@ -29724,6 +31430,13 @@ CREATE TRIGGER trg_areas_updated_at BEFORE UPDATE ON public.areas FOR EACH ROW E
 --
 
 CREATE TRIGGER trg_attendance_updated_at BEFORE UPDATE ON public.attendance_records FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+
+--
+-- Name: branch_menu_item_daily_holds trg_bmidh_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_bmidh_updated_at BEFORE UPDATE ON public.branch_menu_item_daily_holds FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 
 --
@@ -29759,13 +31472,6 @@ CREATE TRIGGER trg_branches_ensure_inventory_locations AFTER INSERT OR UPDATE OF
 --
 
 CREATE TRIGGER trg_branches_updated_at BEFORE UPDATE ON public.branches FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
-
-
---
--- Name: chart_of_accounts trg_coa_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_coa_updated_at BEFORE UPDATE ON public.chart_of_accounts FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 
 --
@@ -29811,10 +31517,10 @@ CREATE TRIGGER trg_enforce_period_close_stock_issues BEFORE INSERT OR UPDATE OF 
 
 
 --
--- Name: fiscal_periods trg_fp_updated_at; Type: TRIGGER; Schema: public; Owner: -
+-- Name: expenses trg_expenses_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER trg_fp_updated_at BEFORE UPDATE ON public.fiscal_periods FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+CREATE TRIGGER trg_expenses_updated_at BEFORE UPDATE ON public.expenses FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 
 --
@@ -29867,27 +31573,6 @@ CREATE TRIGGER trg_inventory_locations_updated_at BEFORE UPDATE ON public.invent
 
 
 --
--- Name: journal_entries trg_je_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_je_updated_at BEFORE UPDATE ON public.journal_entries FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
-
-
---
--- Name: journal_entries trg_journal_entries_no_delete_posted; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_journal_entries_no_delete_posted BEFORE DELETE ON public.journal_entries FOR EACH ROW EXECUTE FUNCTION public.guard_journal_entry_no_delete_posted();
-
-
---
--- Name: journal_entries trg_journal_entries_period_guard; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_journal_entries_period_guard BEFORE UPDATE OF status ON public.journal_entries FOR EACH ROW EXECUTE FUNCTION public.guard_journal_entry_period();
-
-
---
 -- Name: kds_stations trg_kds_stations_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -29899,6 +31584,13 @@ CREATE TRIGGER trg_kds_stations_updated_at BEFORE UPDATE ON public.kds_stations 
 --
 
 CREATE TRIGGER trg_kds_tickets_updated_at BEFORE UPDATE ON public.kds_tickets FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+
+--
+-- Name: leave_requests trg_leave_requests_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_leave_requests_updated_at BEFORE UPDATE ON public.leave_requests FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 
 --
@@ -29958,10 +31650,38 @@ CREATE TRIGGER trg_menu_items_updated_at BEFORE UPDATE ON public.menu_items FOR 
 
 
 --
+-- Name: order_items trg_order_items_normalize_discount; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_order_items_normalize_discount BEFORE INSERT OR UPDATE OF subtotal, discount_type, discount_value, discount_note ON public.order_items FOR EACH ROW EXECUTE FUNCTION public.pos_normalize_order_item_discount();
+
+
+--
 -- Name: order_items trg_order_items_populate_vat_rate; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_order_items_populate_vat_rate BEFORE INSERT ON public.order_items FOR EACH ROW EXECUTE FUNCTION public.populate_order_item_vat_rate();
+
+
+--
+-- Name: order_items trg_order_items_touch_order_discount_delete; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_order_items_touch_order_discount_delete AFTER DELETE ON public.order_items FOR EACH ROW EXECUTE FUNCTION public.pos_touch_order_discount_totals();
+
+
+--
+-- Name: order_items trg_order_items_touch_order_discount_insert; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_order_items_touch_order_discount_insert AFTER INSERT ON public.order_items FOR EACH ROW EXECUTE FUNCTION public.pos_touch_order_discount_totals();
+
+
+--
+-- Name: order_items trg_order_items_touch_order_discount_update; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_order_items_touch_order_discount_update AFTER UPDATE OF subtotal, status, discount_type, discount_value, discount_amount, discount_note ON public.order_items FOR EACH ROW EXECUTE FUNCTION public.pos_touch_order_discount_totals();
 
 
 --
@@ -29976,6 +31696,13 @@ CREATE TRIGGER trg_order_items_updated_at BEFORE UPDATE ON public.order_items FO
 --
 
 CREATE TRIGGER trg_order_release_table AFTER UPDATE OF status ON public.orders FOR EACH ROW EXECUTE FUNCTION public.trg_release_table_on_order_status();
+
+
+--
+-- Name: orders trg_orders_normalize_discount_totals; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_orders_normalize_discount_totals BEFORE INSERT OR UPDATE OF subtotal, service_charge, discount_type, discount_value, discount_note, order_discount_amount, item_discount_amount, discount_amount, status, updated_at ON public.orders FOR EACH ROW EXECUTE FUNCTION public.pos_normalize_order_discount_totals();
 
 
 --
@@ -30028,13 +31755,6 @@ CREATE TRIGGER trg_pp_updated_at BEFORE UPDATE ON public.payroll_periods FOR EAC
 
 
 --
--- Name: posting_rules trg_pr_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_pr_updated_at BEFORE UPDATE ON public.posting_rules FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
-
-
---
 -- Name: print_jobs trg_print_jobs_attach_document; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -30070,17 +31790,10 @@ CREATE TRIGGER trg_production_recipes_updated_at BEFORE UPDATE ON public.product
 
 
 --
--- Name: profiles trg_profiles_area_scope; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_profiles_area_scope BEFORE INSERT OR UPDATE OF position_id, area_id ON public.profiles FOR EACH ROW EXECUTE FUNCTION public._auth_v2_check_area_scope();
-
-
---
 -- Name: profiles trg_profiles_branch_required; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER trg_profiles_branch_required BEFORE INSERT OR UPDATE OF position_id, branch_id ON public.profiles FOR EACH ROW EXECUTE FUNCTION public._auth_v2_check_branch_required();
+CREATE TRIGGER trg_profiles_branch_required BEFORE INSERT OR UPDATE OF tenant_id, position_id, branch_id ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.check_branch_required();
 
 
 --
@@ -30105,10 +31818,17 @@ CREATE TRIGGER trg_refunds_updated_at BEFORE UPDATE ON public.refunds FOR EACH R
 
 
 --
--- Name: shift_requests trg_shift_requests_updated_at; Type: TRIGGER; Schema: public; Owner: -
+-- Name: shift_checklist_consumption_default_items trg_shift_checklist_consumption_default_items_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER trg_shift_requests_updated_at BEFORE UPDATE ON public.shift_requests FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+CREATE TRIGGER trg_shift_checklist_consumption_default_items_updated_at BEFORE UPDATE ON public.shift_checklist_consumption_default_items FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+
+--
+-- Name: shift_checklist_templates trg_shift_checklist_templates_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_shift_checklist_templates_updated_at BEFORE UPDATE ON public.shift_checklist_templates FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 
 --
@@ -30123,13 +31843,6 @@ CREATE TRIGGER trg_shifts_updated_at BEFORE UPDATE ON public.shifts FOR EACH ROW
 --
 
 CREATE TRIGGER trg_sp_updated_at BEFORE UPDATE ON public.supplier_payments FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
-
-
---
--- Name: staff_permissions trg_staff_permissions_scope; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_staff_permissions_scope BEFORE INSERT OR UPDATE OF permission_key, branch_id ON public.staff_permissions FOR EACH ROW EXECUTE FUNCTION private.enforce_staff_permission_scope();
 
 
 --
@@ -30314,35 +32027,99 @@ ALTER TABLE ONLY public.archive_run_log
 
 
 --
--- Name: area_branches area_branches_area_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: attendance_checklist_items attendance_checklist_items_attendance_record_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.area_branches
-    ADD CONSTRAINT area_branches_area_id_fkey FOREIGN KEY (area_id) REFERENCES public.areas(id) ON DELETE CASCADE;
-
-
---
--- Name: area_branches area_branches_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.area_branches
-    ADD CONSTRAINT area_branches_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.attendance_checklist_items
+    ADD CONSTRAINT attendance_checklist_items_attendance_record_id_fkey FOREIGN KEY (attendance_record_id) REFERENCES public.attendance_records(id) ON DELETE CASCADE;
 
 
 --
--- Name: area_branches area_branches_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: attendance_checklist_items attendance_checklist_items_template_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.area_branches
-    ADD CONSTRAINT area_branches_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.attendance_checklist_items
+    ADD CONSTRAINT attendance_checklist_items_template_item_id_fkey FOREIGN KEY (template_item_id) REFERENCES public.shift_checklist_template_items(id) ON DELETE SET NULL;
 
 
 --
--- Name: areas areas_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: attendance_checklist_items attendance_checklist_items_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.areas
-    ADD CONSTRAINT areas_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.attendance_checklist_items
+    ADD CONSTRAINT attendance_checklist_items_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: attendance_consumption_report_lines attendance_consumption_report_lines_default_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_consumption_report_lines
+    ADD CONSTRAINT attendance_consumption_report_lines_default_item_id_fkey FOREIGN KEY (default_item_id) REFERENCES public.shift_checklist_consumption_default_items(id) ON DELETE SET NULL;
+
+
+--
+-- Name: attendance_consumption_report_lines attendance_consumption_report_lines_ingredient_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_consumption_report_lines
+    ADD CONSTRAINT attendance_consumption_report_lines_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: attendance_consumption_report_lines attendance_consumption_report_lines_report_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_consumption_report_lines
+    ADD CONSTRAINT attendance_consumption_report_lines_report_id_fkey FOREIGN KEY (report_id) REFERENCES public.attendance_consumption_reports(id) ON DELETE CASCADE;
+
+
+--
+-- Name: attendance_consumption_report_lines attendance_consumption_report_lines_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_consumption_report_lines
+    ADD CONSTRAINT attendance_consumption_report_lines_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: attendance_consumption_reports attendance_consumption_reports_attendance_record_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_consumption_reports
+    ADD CONSTRAINT attendance_consumption_reports_attendance_record_id_fkey FOREIGN KEY (attendance_record_id) REFERENCES public.attendance_records(id) ON DELETE CASCADE;
+
+
+--
+-- Name: attendance_consumption_reports attendance_consumption_reports_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_consumption_reports
+    ADD CONSTRAINT attendance_consumption_reports_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE CASCADE;
+
+
+--
+-- Name: attendance_consumption_reports attendance_consumption_reports_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_consumption_reports
+    ADD CONSTRAINT attendance_consumption_reports_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id) ON DELETE CASCADE;
+
+
+--
+-- Name: attendance_consumption_reports attendance_consumption_reports_stock_issue_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_consumption_reports
+    ADD CONSTRAINT attendance_consumption_reports_stock_issue_id_fkey FOREIGN KEY (stock_issue_id) REFERENCES public.stock_issues(id) ON DELETE SET NULL;
+
+
+--
+-- Name: attendance_consumption_reports attendance_consumption_reports_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_consumption_reports
+    ADD CONSTRAINT attendance_consumption_reports_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -30351,6 +32128,22 @@ ALTER TABLE ONLY public.areas
 
 ALTER TABLE ONLY public.attendance_records
     ADD CONSTRAINT attendance_records_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE CASCADE;
+
+
+--
+-- Name: attendance_records attendance_records_checklist_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_records
+    ADD CONSTRAINT attendance_records_checklist_template_id_fkey FOREIGN KEY (checklist_template_id) REFERENCES public.shift_checklist_templates(id) ON DELETE SET NULL;
+
+
+--
+-- Name: attendance_records attendance_records_checkout_approved_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_records
+    ADD CONSTRAINT attendance_records_checkout_approved_by_fkey FOREIGN KEY (checkout_approved_by) REFERENCES auth.users(id);
 
 
 --
@@ -30366,7 +32159,7 @@ ALTER TABLE ONLY public.attendance_records
 --
 
 ALTER TABLE ONLY public.attendance_records
-    ADD CONSTRAINT attendance_records_shift_id_fkey FOREIGN KEY (shift_id) REFERENCES public.shifts(id) ON DELETE SET NULL;
+    ADD CONSTRAINT attendance_records_shift_id_fkey FOREIGN KEY (shift_id) REFERENCES public.shifts(id) ON DELETE RESTRICT;
 
 
 --
@@ -30447,6 +32240,46 @@ ALTER TABLE ONLY public.branch_feature_flags
 
 ALTER TABLE ONLY public.branch_feature_flags
     ADD CONSTRAINT branch_feature_flags_enabled_by_fkey FOREIGN KEY (enabled_by) REFERENCES auth.users(id);
+
+
+--
+-- Name: branch_menu_item_daily_holds branch_menu_item_daily_holds_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.branch_menu_item_daily_holds
+    ADD CONSTRAINT branch_menu_item_daily_holds_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE CASCADE;
+
+
+--
+-- Name: branch_menu_item_daily_holds branch_menu_item_daily_holds_held_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.branch_menu_item_daily_holds
+    ADD CONSTRAINT branch_menu_item_daily_holds_held_by_fkey FOREIGN KEY (held_by) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: branch_menu_item_daily_holds branch_menu_item_daily_holds_menu_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.branch_menu_item_daily_holds
+    ADD CONSTRAINT branch_menu_item_daily_holds_menu_item_id_fkey FOREIGN KEY (menu_item_id) REFERENCES public.menu_items(id) ON DELETE CASCADE;
+
+
+--
+-- Name: branch_menu_item_daily_holds branch_menu_item_daily_holds_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.branch_menu_item_daily_holds
+    ADD CONSTRAINT branch_menu_item_daily_holds_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE SET NULL;
+
+
+--
+-- Name: branch_menu_item_daily_holds branch_menu_item_daily_holds_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.branch_menu_item_daily_holds
+    ADD CONSTRAINT branch_menu_item_daily_holds_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -30562,19 +32395,11 @@ ALTER TABLE ONLY public.branches
 
 
 --
--- Name: chart_of_accounts chart_of_accounts_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: employees employees_default_checklist_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.chart_of_accounts
-    ADD CONSTRAINT chart_of_accounts_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.chart_of_accounts(id) ON DELETE SET NULL;
-
-
---
--- Name: chart_of_accounts chart_of_accounts_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.chart_of_accounts
-    ADD CONSTRAINT chart_of_accounts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.employees
+    ADD CONSTRAINT employees_default_checklist_template_id_fkey FOREIGN KEY (default_checklist_template_id) REFERENCES public.shift_checklist_templates(id) ON DELETE SET NULL;
 
 
 --
@@ -30610,19 +32435,27 @@ ALTER TABLE ONLY public.employment_contracts
 
 
 --
--- Name: fiscal_periods fiscal_periods_closed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: expenses expenses_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.fiscal_periods
-    ADD CONSTRAINT fiscal_periods_closed_by_fkey FOREIGN KEY (closed_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.expenses
+    ADD CONSTRAINT expenses_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE SET NULL;
 
 
 --
--- Name: fiscal_periods fiscal_periods_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: expenses expenses_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.fiscal_periods
-    ADD CONSTRAINT fiscal_periods_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.expenses
+    ADD CONSTRAINT expenses_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: expenses expenses_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.expenses
+    ADD CONSTRAINT expenses_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -30639,14 +32472,6 @@ ALTER TABLE ONLY public.goods_received_notes
 
 ALTER TABLE ONLY public.goods_received_notes
     ADD CONSTRAINT goods_received_notes_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id);
-
-
---
--- Name: goods_received_notes goods_received_notes_journal_entry_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.goods_received_notes
-    ADD CONSTRAINT goods_received_notes_journal_entry_id_fkey FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id) ON DELETE SET NULL;
 
 
 --
@@ -30890,78 +32715,6 @@ ALTER TABLE ONLY public.inventory_qc_settings
 
 
 --
--- Name: journal_entries journal_entries_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.journal_entries
-    ADD CONSTRAINT journal_entries_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE SET NULL;
-
-
---
--- Name: journal_entries journal_entries_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.journal_entries
-    ADD CONSTRAINT journal_entries_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
-
-
---
--- Name: journal_entries journal_entries_posted_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.journal_entries
-    ADD CONSTRAINT journal_entries_posted_by_fkey FOREIGN KEY (posted_by) REFERENCES auth.users(id) ON DELETE SET NULL;
-
-
---
--- Name: journal_entries journal_entries_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.journal_entries
-    ADD CONSTRAINT journal_entries_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
-
-
---
--- Name: journal_entries journal_entries_void_journal_entry_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.journal_entries
-    ADD CONSTRAINT journal_entries_void_journal_entry_id_fkey FOREIGN KEY (void_journal_entry_id) REFERENCES public.journal_entries(id) ON DELETE RESTRICT;
-
-
---
--- Name: journal_entries journal_entries_voided_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.journal_entries
-    ADD CONSTRAINT journal_entries_voided_by_fkey FOREIGN KEY (voided_by) REFERENCES auth.users(id) ON DELETE SET NULL;
-
-
---
--- Name: journal_entry_lines journal_entry_lines_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.journal_entry_lines
-    ADD CONSTRAINT journal_entry_lines_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.chart_of_accounts(id) ON DELETE RESTRICT;
-
-
---
--- Name: journal_entry_lines journal_entry_lines_journal_entry_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.journal_entry_lines
-    ADD CONSTRAINT journal_entry_lines_journal_entry_id_fkey FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id) ON DELETE CASCADE;
-
-
---
--- Name: journal_entry_lines journal_entry_lines_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.journal_entry_lines
-    ADD CONSTRAINT journal_entry_lines_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
-
-
---
 -- Name: kds_station_categories kds_station_categories_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -31103,6 +32856,38 @@ ALTER TABLE ONLY public.kitchen_send_batches
 
 ALTER TABLE ONLY public.kitchen_send_batches
     ADD CONSTRAINT kitchen_send_batches_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: leave_requests leave_requests_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leave_requests
+    ADD CONSTRAINT leave_requests_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE CASCADE;
+
+
+--
+-- Name: leave_requests leave_requests_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leave_requests
+    ADD CONSTRAINT leave_requests_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id) ON DELETE CASCADE;
+
+
+--
+-- Name: leave_requests leave_requests_reviewed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leave_requests
+    ADD CONSTRAINT leave_requests_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: leave_requests leave_requests_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leave_requests
+    ADD CONSTRAINT leave_requests_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -31386,14 +33171,6 @@ ALTER TABLE ONLY public.payments
 
 
 --
--- Name: payments payments_journal_entry_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payments
-    ADD CONSTRAINT payments_journal_entry_id_fkey FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id) ON DELETE SET NULL;
-
-
---
 -- Name: payments payments_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -31439,14 +33216,6 @@ ALTER TABLE ONLY public.payroll_entries
 
 ALTER TABLE ONLY public.payroll_periods
     ADD CONSTRAINT payroll_periods_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES auth.users(id) ON DELETE SET NULL;
-
-
---
--- Name: payroll_periods payroll_periods_journal_entry_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payroll_periods
-    ADD CONSTRAINT payroll_periods_journal_entry_id_fkey FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id) ON DELETE SET NULL;
 
 
 --
@@ -31562,19 +33331,19 @@ ALTER TABLE ONLY public.pos_terminals
 
 
 --
+-- Name: positions positions_default_checklist_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.positions
+    ADD CONSTRAINT positions_default_checklist_template_id_fkey FOREIGN KEY (default_checklist_template_id) REFERENCES public.shift_checklist_templates(id) ON DELETE SET NULL;
+
+
+--
 -- Name: positions positions_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.positions
     ADD CONSTRAINT positions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
-
-
---
--- Name: posting_rules posting_rules_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.posting_rules
-    ADD CONSTRAINT posting_rules_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -31810,14 +33579,6 @@ ALTER TABLE ONLY public.production_orders
 
 
 --
--- Name: production_orders production_orders_journal_entry_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.production_orders
-    ADD CONSTRAINT production_orders_journal_entry_id_fkey FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id) ON DELETE SET NULL;
-
-
---
 -- Name: production_orders production_orders_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -31847,14 +33608,6 @@ ALTER TABLE ONLY public.production_recipes
 
 ALTER TABLE ONLY public.production_recipes
     ADD CONSTRAINT production_recipes_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
-
-
---
--- Name: profiles profiles_area_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.profiles
-    ADD CONSTRAINT profiles_area_id_fkey FOREIGN KEY (area_id) REFERENCES public.areas(id) ON DELETE SET NULL;
 
 
 --
@@ -32058,83 +33811,59 @@ ALTER TABLE ONLY public.role_templates
 
 
 --
--- Name: shift_assignments shift_assignments_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: shift_checklist_consumption_default_items shift_checklist_consumption_default_items_ingredient_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.shift_assignments
-    ADD CONSTRAINT shift_assignments_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE CASCADE;
-
-
---
--- Name: shift_assignments shift_assignments_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shift_assignments
-    ADD CONSTRAINT shift_assignments_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.shift_checklist_consumption_default_items
+    ADD CONSTRAINT shift_checklist_consumption_default_items_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id) ON DELETE RESTRICT;
 
 
 --
--- Name: shift_assignments shift_assignments_shift_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: shift_checklist_consumption_default_items shift_checklist_consumption_default_items_template_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.shift_assignments
-    ADD CONSTRAINT shift_assignments_shift_id_fkey FOREIGN KEY (shift_id) REFERENCES public.shifts(id) ON DELETE CASCADE;
-
-
---
--- Name: shift_assignments shift_assignments_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shift_assignments
-    ADD CONSTRAINT shift_assignments_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.shift_checklist_consumption_default_items
+    ADD CONSTRAINT shift_checklist_consumption_default_items_template_item_id_fkey FOREIGN KEY (template_item_id) REFERENCES public.shift_checklist_template_items(id) ON DELETE CASCADE;
 
 
 --
--- Name: shift_requests shift_requests_assignment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: shift_checklist_consumption_default_items shift_checklist_consumption_default_items_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.shift_requests
-    ADD CONSTRAINT shift_requests_assignment_id_fkey FOREIGN KEY (assignment_id) REFERENCES public.shift_assignments(id) ON DELETE SET NULL;
-
-
---
--- Name: shift_requests shift_requests_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shift_requests
-    ADD CONSTRAINT shift_requests_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.shift_checklist_consumption_default_items
+    ADD CONSTRAINT shift_checklist_consumption_default_items_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
--- Name: shift_requests shift_requests_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: shift_checklist_template_items shift_checklist_template_items_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.shift_requests
-    ADD CONSTRAINT shift_requests_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id) ON DELETE CASCADE;
-
-
---
--- Name: shift_requests shift_requests_reviewed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shift_requests
-    ADD CONSTRAINT shift_requests_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.shift_checklist_template_items
+    ADD CONSTRAINT shift_checklist_template_items_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.shift_checklist_templates(id) ON DELETE CASCADE;
 
 
 --
--- Name: shift_requests shift_requests_shift_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: shift_checklist_template_items shift_checklist_template_items_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.shift_requests
-    ADD CONSTRAINT shift_requests_shift_id_fkey FOREIGN KEY (shift_id) REFERENCES public.shifts(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.shift_checklist_template_items
+    ADD CONSTRAINT shift_checklist_template_items_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
--- Name: shift_requests shift_requests_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: shift_checklist_templates shift_checklist_templates_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.shift_requests
-    ADD CONSTRAINT shift_requests_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.shift_checklist_templates
+    ADD CONSTRAINT shift_checklist_templates_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE CASCADE;
+
+
+--
+-- Name: shift_checklist_templates shift_checklist_templates_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shift_checklist_templates
+    ADD CONSTRAINT shift_checklist_templates_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -32434,14 +34163,6 @@ ALTER TABLE ONLY public.stock_transfers
 
 
 --
--- Name: stock_transfers stock_transfers_journal_entry_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.stock_transfers
-    ADD CONSTRAINT stock_transfers_journal_entry_id_fkey FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id) ON DELETE SET NULL;
-
-
---
 -- Name: stock_transfers stock_transfers_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -32722,14 +34443,6 @@ ALTER TABLE ONLY public.supplier_invoices
 
 
 --
--- Name: supplier_invoices supplier_invoices_journal_entry_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.supplier_invoices
-    ADD CONSTRAINT supplier_invoices_journal_entry_id_fkey FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id) ON DELETE SET NULL;
-
-
---
 -- Name: supplier_invoices supplier_invoices_po_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -32791,14 +34504,6 @@ ALTER TABLE ONLY public.supplier_items
 
 ALTER TABLE ONLY public.supplier_payments
     ADD CONSTRAINT supplier_payments_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
-
-
---
--- Name: supplier_payments supplier_payments_journal_entry_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.supplier_payments
-    ADD CONSTRAINT supplier_payments_journal_entry_id_fkey FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id) ON DELETE SET NULL;
 
 
 --
@@ -33114,14 +34819,6 @@ ALTER TABLE ONLY public.user_trust_score
 
 
 --
--- Name: vas_report_lines vas_report_lines_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.vas_report_lines
-    ADD CONSTRAINT vas_report_lines_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
-
-
---
 -- Name: webhook_events webhook_events_payment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -33141,7 +34838,7 @@ ALTER TABLE ONLY public.webhook_events
 -- Name: profiles Users can update own safe fields; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can update own safe fields" ON public.profiles FOR UPDATE TO authenticated USING ((id = auth.uid())) WITH CHECK ((id = auth.uid()));
+CREATE POLICY "Users can update own safe fields" ON public.profiles FOR UPDATE TO authenticated USING ((id = ( SELECT auth.uid() AS uid))) WITH CHECK ((id = ( SELECT auth.uid() AS uid)));
 
 
 --
@@ -33178,50 +34875,59 @@ ALTER TABLE public.accounting_periods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.archive_run_log ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: area_branches; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.area_branches ENABLE ROW LEVEL SECURITY;
-
---
--- Name: area_branches area_branches_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY area_branches_select ON public.area_branches FOR SELECT TO authenticated USING ((tenant_id = public.auth_tenant_id()));
-
-
---
--- Name: area_branches area_branches_write; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY area_branches_write ON public.area_branches TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text)));
-
-
---
--- Name: areas; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.areas ENABLE ROW LEVEL SECURITY;
-
---
--- Name: areas areas_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY areas_select ON public.areas FOR SELECT TO authenticated USING ((tenant_id = public.auth_tenant_id()));
-
-
---
--- Name: areas areas_write; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY areas_write ON public.areas TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text)));
-
-
---
 -- Name: archive_run_log arl_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY arl_select ON public.archive_run_log FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
+CREATE POLICY arl_select ON public.archive_run_log FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:view'::text) AS has_permission_any)));
+
+
+--
+-- Name: attendance_checklist_items; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.attendance_checklist_items ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: attendance_checklist_items attendance_checklist_items_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY attendance_checklist_items_select ON public.attendance_checklist_items FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM public.attendance_records ar
+  WHERE ((ar.id = attendance_checklist_items.attendance_record_id) AND (ar.tenant_id = attendance_checklist_items.tenant_id) AND ((EXISTS ( SELECT 1
+           FROM public.employees e
+          WHERE ((e.id = ar.employee_id) AND (e.profile_id = ( SELECT auth.uid() AS uid))))) OR public.has_permission(ar.branch_id, 'staff:view'::text) OR public.has_permission(ar.branch_id, 'hr:view_employee'::text) OR public.has_permission(ar.branch_id, 'staff:manage'::text)))))));
+
+
+--
+-- Name: attendance_consumption_report_lines; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.attendance_consumption_report_lines ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: attendance_consumption_report_lines attendance_consumption_report_lines_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY attendance_consumption_report_lines_select ON public.attendance_consumption_report_lines FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM public.attendance_consumption_reports r
+  WHERE ((r.id = attendance_consumption_report_lines.report_id) AND (r.tenant_id = attendance_consumption_report_lines.tenant_id) AND ((EXISTS ( SELECT 1
+           FROM public.employees e
+          WHERE ((e.id = r.employee_id) AND (e.tenant_id = r.tenant_id) AND (e.profile_id = auth.uid())))) OR public.has_permission(r.branch_id, 'hr:approve_checkout'::text) OR public.has_permission(r.branch_id, 'inventory:read'::text)))))));
+
+
+--
+-- Name: attendance_consumption_reports; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.attendance_consumption_reports ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: attendance_consumption_reports attendance_consumption_reports_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY attendance_consumption_reports_select ON public.attendance_consumption_reports FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((EXISTS ( SELECT 1
+   FROM public.employees e
+  WHERE ((e.id = attendance_consumption_reports.employee_id) AND (e.tenant_id = attendance_consumption_reports.tenant_id) AND (e.profile_id = auth.uid())))) OR public.has_permission(branch_id, 'hr:approve_checkout'::text) OR public.has_permission(branch_id, 'inventory:read'::text))));
 
 
 --
@@ -33236,31 +34942,7 @@ ALTER TABLE public.attendance_records ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY attendance_select ON public.attendance_records FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((EXISTS ( SELECT 1
    FROM public.employees e
-  WHERE ((e.id = attendance_records.employee_id) AND (e.profile_id = auth.uid())))) OR public.has_permission_any('staff:view'::text) OR public.has_permission_any('hr:view_employee'::text))));
-
-
---
--- Name: attendance_records attendance_self_checkout; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY attendance_self_checkout ON public.attendance_records FOR UPDATE TO authenticated USING (((employee_id IN ( SELECT e.id
-   FROM public.employees e
-  WHERE ((e.profile_id = auth.uid()) AND (e.tenant_id = public.auth_tenant_id())))) AND (tenant_id = public.auth_tenant_id()) AND (check_out IS NULL))) WITH CHECK (((employee_id IN ( SELECT e.id
-   FROM public.employees e
-  WHERE ((e.profile_id = auth.uid()) AND (e.tenant_id = public.auth_tenant_id())))) AND (tenant_id = public.auth_tenant_id())));
-
-
---
--- Name: attendance_records attendance_write; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY attendance_write ON public.attendance_records TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((EXISTS ( SELECT 1
-   FROM public.employees e
-  WHERE ((e.id = attendance_records.employee_id) AND (e.profile_id = auth.uid())))) OR public.has_permission_any('staff:manage'::text)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (((EXISTS ( SELECT 1
-   FROM public.employees e
-  WHERE ((e.id = attendance_records.employee_id) AND (e.profile_id = auth.uid())))) AND (EXISTS ( SELECT 1
-   FROM public.shift_assignments sa
-  WHERE ((sa.employee_id = attendance_records.employee_id) AND (sa.branch_id = attendance_records.branch_id) AND (sa.date = attendance_records.date) AND (sa.tenant_id = attendance_records.tenant_id))))) OR public.has_permission_any('staff:manage'::text))));
+  WHERE ((e.id = attendance_records.employee_id) AND (e.profile_id = ( SELECT auth.uid() AS uid))))) OR public.has_permission(branch_id, 'staff:view'::text) OR public.has_permission(branch_id, 'hr:view_employee'::text) OR public.has_permission(branch_id, 'staff:manage'::text))));
 
 
 --
@@ -33273,7 +34955,7 @@ ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 -- Name: audit_logs audit_logs_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY audit_logs_select ON public.audit_logs FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('settings:tenant'::text) OR public.has_permission_any('staff:assign_permission'::text))));
+CREATE POLICY audit_logs_select ON public.audit_logs FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('settings:tenant'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('staff:assign_permission'::text) AS has_permission_any))));
 
 
 --
@@ -33291,17 +34973,24 @@ CREATE POLICY baseline_pause_read ON public.grn_baseline_pause FOR SELECT TO aut
 
 
 --
+-- Name: branch_menu_item_daily_holds bmidh_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY bmidh_select ON public.branch_menu_item_daily_holds FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((held_by = ( SELECT auth.uid() AS uid)) OR (( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])) OR (public.auth_branch_id() = branch_id))));
+
+
+--
 -- Name: branch_menu_item_daily_limits bmidl_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY bmidl_select ON public.branch_menu_item_daily_limits FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR (public.auth_branch_id() = branch_id))));
+CREATE POLICY bmidl_select ON public.branch_menu_item_daily_limits FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])) OR (public.auth_branch_id() = branch_id))));
 
 
 --
 -- Name: branch_menu_item_daily_limits bmidl_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY bmidl_write ON public.branch_menu_item_daily_limits TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR ((public.auth_role() = ANY (ARRAY['branch_manager'::text, 'cashier'::text, 'chef'::text])) AND (public.auth_branch_id() = branch_id))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR ((public.auth_role() = ANY (ARRAY['branch_manager'::text, 'cashier'::text, 'chef'::text])) AND (public.auth_branch_id() = branch_id)))));
+CREATE POLICY bmidl_write ON public.branch_menu_item_daily_limits TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])) OR ((( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['branch_manager'::text, 'cashier'::text, 'chef'::text])) AND (public.auth_branch_id() = branch_id))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ((( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])) OR ((( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['branch_manager'::text, 'cashier'::text, 'chef'::text])) AND (public.auth_branch_id() = branch_id)))));
 
 
 --
@@ -33334,6 +35023,12 @@ ALTER TABLE public.branch_express_window ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.branch_feature_flags ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: branch_menu_item_daily_holds; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.branch_menu_item_daily_holds ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: branch_menu_item_daily_limits; Type: ROW SECURITY; Schema: public; Owner: -
@@ -33382,14 +35077,14 @@ ALTER TABLE public.branches ENABLE ROW LEVEL SECURITY;
 -- Name: branches branches_delete; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY branches_delete ON public.branches FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text)));
+CREATE POLICY branches_delete ON public.branches FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('settings:tenant'::text) AS has_permission_any)));
 
 
 --
 -- Name: branches branches_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY branches_insert ON public.branches FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text)));
+CREATE POLICY branches_insert ON public.branches FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('settings:tenant'::text) AS has_permission_any)));
 
 
 --
@@ -33403,14 +35098,17 @@ CREATE POLICY branches_select ON public.branches FOR SELECT TO authenticated USI
 -- Name: branches branches_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY branches_update ON public.branches FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text)));
+CREATE POLICY branches_update ON public.branches FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('settings:tenant'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('settings:tenant'::text) AS has_permission_any)));
 
 
 --
 -- Name: branch_trusted_egress_ips btei_delete; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY btei_delete ON public.branch_trusted_egress_ips FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public._auth_v2_is_owner(auth.uid()) AND (EXISTS ( SELECT 1
+CREATE POLICY btei_delete ON public.branch_trusted_egress_ips FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM (public.profiles pr
+     JOIN public.positions po ON (((po.id = pr.position_id) AND (po.tenant_id = pr.tenant_id))))
+  WHERE ((pr.id = ( SELECT auth.uid() AS uid)) AND (pr.tenant_id = public.auth_tenant_id()) AND (po.code = 'owner'::text) AND (COALESCE(pr.is_active, true) = true)))) AND (EXISTS ( SELECT 1
    FROM public.branches b
   WHERE ((b.id = branch_trusted_egress_ips.branch_id) AND (b.tenant_id = public.auth_tenant_id()))))));
 
@@ -33435,14 +35133,14 @@ CREATE POLICY btei_insert ON public.branch_trusted_egress_ips FOR INSERT TO auth
 -- Name: POLICY btei_insert ON branch_trusted_egress_ips; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON POLICY btei_insert ON public.branch_trusted_egress_ips IS 'Auth v2: branch-scoped settings:branch_network controls trusted-IP writes.';
+COMMENT ON POLICY btei_insert ON public.branch_trusted_egress_ips IS 'Branch-scoped settings:branch_network controls trusted-IP writes.';
 
 
 --
 -- Name: branch_trusted_egress_ips btei_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY btei_select ON public.branch_trusted_egress_ips FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])))));
+CREATE POLICY btei_select ON public.branch_trusted_egress_ips FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])))));
 
 
 --
@@ -33460,27 +35158,7 @@ CREATE POLICY btei_update ON public.branch_trusted_egress_ips FOR UPDATE TO auth
 -- Name: POLICY btei_update ON branch_trusted_egress_ips; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON POLICY btei_update ON public.branch_trusted_egress_ips IS 'Auth v2: branch-scoped settings:branch_network controls trusted-IP revoke/retrust.';
-
-
---
--- Name: chart_of_accounts; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.chart_of_accounts ENABLE ROW LEVEL SECURITY;
-
---
--- Name: chart_of_accounts chart_of_accounts_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY chart_of_accounts_select ON public.chart_of_accounts FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
-
-
---
--- Name: chart_of_accounts chart_of_accounts_write; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY chart_of_accounts_write ON public.chart_of_accounts TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text)));
+COMMENT ON POLICY btei_update ON public.branch_trusted_egress_ips IS 'Branch-scoped settings:branch_network controls trusted-IP revoke/retrust.';
 
 
 --
@@ -33503,14 +35181,7 @@ CREATE POLICY conflicts_rpc_only_write ON public.stocktake_conflicts TO authenti
 -- Name: employment_contracts contracts_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY contracts_select ON public.employment_contracts FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('hr:view_employee'::text)));
-
-
---
--- Name: employment_contracts contracts_write; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY contracts_write ON public.employment_contracts TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('hr:contract_create'::text) OR public.has_permission_any('hr:contract_sign'::text) OR public.has_permission_any('hr:terminate'::text)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('hr:contract_create'::text) OR public.has_permission_any('hr:contract_sign'::text) OR public.has_permission_any('hr:terminate'::text))));
+CREATE POLICY contracts_select ON public.employment_contracts FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('hr:view_employee'::text) AS has_permission_any)));
 
 
 --
@@ -33523,14 +35194,14 @@ ALTER TABLE public.employees ENABLE ROW LEVEL SECURITY;
 -- Name: employees employees_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY employees_select ON public.employees FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('hr:view_employee'::text)));
+CREATE POLICY employees_select ON public.employees FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('hr:view_employee'::text) AS has_permission_any)));
 
 
 --
 -- Name: employees employees_select_self; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY employees_select_self ON public.employees FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (profile_id = auth.uid())));
+CREATE POLICY employees_select_self ON public.employees FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (profile_id = ( SELECT auth.uid() AS uid))));
 
 
 --
@@ -33544,7 +35215,7 @@ COMMENT ON POLICY employees_select_self ON public.employees IS 'Self-read regres
 -- Name: employees employees_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY employees_write ON public.employees TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('hr:manage_employee'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('hr:manage_employee'::text)));
+CREATE POLICY employees_write ON public.employees TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('hr:manage_employee'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('hr:manage_employee'::text) AS has_permission_any)));
 
 
 --
@@ -33552,6 +35223,40 @@ CREATE POLICY employees_write ON public.employees TO authenticated USING (((tena
 --
 
 ALTER TABLE public.employment_contracts ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: expenses; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: expenses expenses_delete; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY expenses_delete ON public.expenses FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:expense_create'::text) AS has_permission_any)));
+
+
+--
+-- Name: expenses expenses_insert; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY expenses_insert ON public.expenses FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:expense_create'::text) AS has_permission_any)));
+
+
+--
+-- Name: expenses expenses_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY expenses_select ON public.expenses FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:view'::text) AS has_permission_any)));
+
+
+--
+-- Name: expenses expenses_update; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY expenses_update ON public.expenses FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:expense_create'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:expense_create'::text) AS has_permission_any)));
+
 
 --
 -- Name: branch_express_window express_window_read; Type: POLICY; Schema: public; Owner: -
@@ -33604,26 +35309,6 @@ CREATE POLICY feature_flags_write_settings ON public.branch_feature_flags TO aut
 
 
 --
--- Name: fiscal_periods; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.fiscal_periods ENABLE ROW LEVEL SECURITY;
-
---
--- Name: fiscal_periods fiscal_periods_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY fiscal_periods_select ON public.fiscal_periods FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
-
-
---
--- Name: fiscal_periods fiscal_periods_write; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY fiscal_periods_write ON public.fiscal_periods TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text)));
-
-
---
 -- Name: goods_received_notes; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -33651,7 +35336,7 @@ ALTER TABLE public.grn_hardblock_overrides ENABLE ROW LEVEL SECURITY;
 -- Name: goods_received_notes grn_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY grn_insert ON public.goods_received_notes FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(branch_id, 'procurement:grn_create'::text)));
+CREATE POLICY grn_insert ON public.goods_received_notes FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:grn_create'::text) AS has_permission_any)));
 
 
 --
@@ -33661,45 +35346,31 @@ CREATE POLICY grn_insert ON public.goods_received_notes FOR INSERT TO authentica
 ALTER TABLE public.grn_items ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: grn_items grn_items_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY grn_items_delete ON public.grn_items FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND private.can_access_grn_source(tenant_id, grn_id, 'procurement:grn_create'::text)));
-
-
---
--- Name: grn_items grn_items_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY grn_items_insert ON public.grn_items FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND private.can_access_grn_source(tenant_id, grn_id, 'procurement:grn_create'::text)));
-
-
---
 -- Name: grn_items grn_items_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY grn_items_select ON public.grn_items FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (private.can_access_grn_source(tenant_id, grn_id, 'procurement:read'::text) OR private.can_access_grn_source(tenant_id, grn_id, 'procurement:grn_create'::text) OR private.can_access_grn_source(tenant_id, grn_id, 'procurement:grn_confirm'::text) OR private.can_access_grn_source(tenant_id, grn_id, 'procurement:grn_amend'::text))));
+CREATE POLICY grn_items_select ON public.grn_items FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:read'::text) AS has_permission_any)));
 
 
 --
--- Name: grn_items grn_items_update; Type: POLICY; Schema: public; Owner: -
+-- Name: grn_items grn_items_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY grn_items_update ON public.grn_items FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND private.can_access_grn_source(tenant_id, grn_id, 'procurement:grn_create'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND private.can_access_grn_source(tenant_id, grn_id, 'procurement:grn_create'::text)));
+CREATE POLICY grn_items_write ON public.grn_items TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:grn_create'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:grn_create'::text) AS has_permission_any)));
 
 
 --
 -- Name: goods_received_notes grn_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY grn_select ON public.goods_received_notes FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission(branch_id, 'procurement:read'::text) OR public.has_permission(branch_id, 'procurement:grn_create'::text) OR public.has_permission(branch_id, 'procurement:grn_confirm'::text) OR public.has_permission(branch_id, 'procurement:grn_amend'::text))));
+CREATE POLICY grn_select ON public.goods_received_notes FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:read'::text) AS has_permission_any)));
 
 
 --
 -- Name: goods_received_notes grn_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY grn_update ON public.goods_received_notes FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission(branch_id, 'procurement:grn_create'::text) OR public.has_permission(branch_id, 'procurement:grn_confirm'::text) OR public.has_permission(branch_id, 'procurement:grn_amend'::text)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (public.has_permission(branch_id, 'procurement:grn_create'::text) OR public.has_permission(branch_id, 'procurement:grn_confirm'::text) OR public.has_permission(branch_id, 'procurement:grn_amend'::text))));
+CREATE POLICY grn_update ON public.goods_received_notes FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('procurement:grn_create'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('procurement:grn_confirm'::text) AS has_permission_any)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('procurement:grn_create'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('procurement:grn_confirm'::text) AS has_permission_any))));
 
 
 --
@@ -33738,28 +35409,28 @@ ALTER TABLE public.ingredients ENABLE ROW LEVEL SECURITY;
 -- Name: ingredients ingredients_delete; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY ingredients_delete ON public.ingredients FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('inventory:write'::text)));
+CREATE POLICY ingredients_delete ON public.ingredients FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('inventory:write'::text) AS has_permission_any)));
 
 
 --
 -- Name: ingredients ingredients_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY ingredients_insert ON public.ingredients FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('inventory:write'::text)));
+CREATE POLICY ingredients_insert ON public.ingredients FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('inventory:write'::text) AS has_permission_any)));
 
 
 --
 -- Name: ingredients ingredients_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY ingredients_select ON public.ingredients FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('inventory:read'::text)));
+CREATE POLICY ingredients_select ON public.ingredients FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('inventory:read'::text) AS has_permission_any)));
 
 
 --
 -- Name: ingredients ingredients_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY ingredients_update ON public.ingredients FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('inventory:write'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('inventory:write'::text)));
+CREATE POLICY ingredients_update ON public.ingredients FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('inventory:write'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('inventory:write'::text) AS has_permission_any)));
 
 
 --
@@ -33787,46 +35458,6 @@ CREATE POLICY inventory_locations_write ON public.inventory_locations TO authent
 --
 
 ALTER TABLE public.inventory_qc_settings ENABLE ROW LEVEL SECURITY;
-
---
--- Name: journal_entries; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.journal_entries ENABLE ROW LEVEL SECURITY;
-
---
--- Name: journal_entries journal_entries_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY journal_entries_select ON public.journal_entries FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
-
-
---
--- Name: journal_entries journal_entries_write; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY journal_entries_write ON public.journal_entries TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:expense_approve'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:expense_approve'::text)));
-
-
---
--- Name: journal_entry_lines; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.journal_entry_lines ENABLE ROW LEVEL SECURITY;
-
---
--- Name: journal_entry_lines journal_entry_lines_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY journal_entry_lines_select ON public.journal_entry_lines FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
-
-
---
--- Name: journal_entry_lines journal_entry_lines_write; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY journal_entry_lines_write ON public.journal_entry_lines TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:expense_approve'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:expense_approve'::text)));
-
 
 --
 -- Name: kds_station_categories; Type: ROW SECURITY; Schema: public; Owner: -
@@ -33935,10 +35566,10 @@ CREATE POLICY kds_tickets_update ON public.kds_tickets FOR UPDATE TO authenticat
 ALTER TABLE public.kitchen_daily_counters ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: kitchen_daily_counters kitchen_daily_counters_service_only_no_client_access; Type: POLICY; Schema: public; Owner: -
+-- Name: kitchen_daily_counters kitchen_daily_counters_no_client_access; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY kitchen_daily_counters_service_only_no_client_access ON public.kitchen_daily_counters AS RESTRICTIVE TO authenticated, anon USING (false) WITH CHECK (false);
+CREATE POLICY kitchen_daily_counters_no_client_access ON public.kitchen_daily_counters TO anon, authenticated USING (false) WITH CHECK (false);
 
 
 --
@@ -33951,7 +35582,39 @@ ALTER TABLE public.kitchen_send_batches ENABLE ROW LEVEL SECURITY;
 -- Name: kitchen_send_batches kitchen_send_batches_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY kitchen_send_batches_select ON public.kitchen_send_batches FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])))));
+CREATE POLICY kitchen_send_batches_select ON public.kitchen_send_batches FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])))));
+
+
+--
+-- Name: leave_requests; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.leave_requests ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: leave_requests leave_requests_manager_update; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY leave_requests_manager_update ON public.leave_requests FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(branch_id, 'hr:approve_leave_request'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(branch_id, 'hr:approve_leave_request'::text)));
+
+
+--
+-- Name: leave_requests leave_requests_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY leave_requests_select ON public.leave_requests FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((EXISTS ( SELECT 1
+   FROM public.employees e
+  WHERE ((e.id = leave_requests.employee_id) AND (e.profile_id = ( SELECT auth.uid() AS uid))))) OR public.has_permission(branch_id, 'hr:approve_leave_request'::text) OR ( SELECT public.has_permission_any('hr:view_employee'::text) AS has_permission_any))));
+
+
+--
+-- Name: leave_requests leave_requests_self_insert; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY leave_requests_self_insert ON public.leave_requests FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (status = 'pending'::text) AND (start_date >= ((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh'::text))::date) AND (start_date <= end_date) AND (reviewed_by IS NULL) AND (reviewed_at IS NULL) AND public.has_permission(branch_id, 'hr:request_leave'::text) AND (EXISTS ( SELECT 1
+   FROM (public.employees e
+     JOIN public.profiles p ON ((p.id = e.profile_id)))
+  WHERE ((e.id = leave_requests.employee_id) AND (e.profile_id = ( SELECT auth.uid() AS uid)) AND (e.tenant_id = public.auth_tenant_id()) AND (e.is_active = true) AND (p.tenant_id = public.auth_tenant_id()) AND (p.branch_id = leave_requests.branch_id))))));
 
 
 --
@@ -33964,21 +35627,21 @@ ALTER TABLE public.menu_categories ENABLE ROW LEVEL SECURITY;
 -- Name: menu_categories menu_categories_delete; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_categories_delete ON public.menu_categories FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:manage_category'::text)));
+CREATE POLICY menu_categories_delete ON public.menu_categories FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:manage_category'::text) AS has_permission_any)));
 
 
 --
 -- Name: menu_categories menu_categories_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_categories_insert ON public.menu_categories FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:manage_category'::text)));
+CREATE POLICY menu_categories_insert ON public.menu_categories FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:manage_category'::text) AS has_permission_any)));
 
 
 --
 -- Name: menu_categories menu_categories_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_categories_update ON public.menu_categories FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:manage_category'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:manage_category'::text)));
+CREATE POLICY menu_categories_update ON public.menu_categories FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:manage_category'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:manage_category'::text) AS has_permission_any)));
 
 
 --
@@ -33991,21 +35654,21 @@ ALTER TABLE public.menu_item_available_sides ENABLE ROW LEVEL SECURITY;
 -- Name: menu_item_available_sides menu_item_available_sides_delete; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_item_available_sides_delete ON public.menu_item_available_sides FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY menu_item_available_sides_delete ON public.menu_item_available_sides FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
 -- Name: menu_item_available_sides menu_item_available_sides_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_item_available_sides_insert ON public.menu_item_available_sides FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY menu_item_available_sides_insert ON public.menu_item_available_sides FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
 -- Name: menu_item_available_sides menu_item_available_sides_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_item_available_sides_update ON public.menu_item_available_sides FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY menu_item_available_sides_update ON public.menu_item_available_sides FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
@@ -34018,21 +35681,21 @@ ALTER TABLE public.menu_item_modifiers ENABLE ROW LEVEL SECURITY;
 -- Name: menu_item_modifiers menu_item_modifiers_delete; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_item_modifiers_delete ON public.menu_item_modifiers FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY menu_item_modifiers_delete ON public.menu_item_modifiers FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
 -- Name: menu_item_modifiers menu_item_modifiers_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_item_modifiers_insert ON public.menu_item_modifiers FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY menu_item_modifiers_insert ON public.menu_item_modifiers FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
 -- Name: menu_item_modifiers menu_item_modifiers_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_item_modifiers_update ON public.menu_item_modifiers FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY menu_item_modifiers_update ON public.menu_item_modifiers FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
@@ -34045,21 +35708,21 @@ ALTER TABLE public.menu_item_variants ENABLE ROW LEVEL SECURITY;
 -- Name: menu_item_variants menu_item_variants_delete; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_item_variants_delete ON public.menu_item_variants FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY menu_item_variants_delete ON public.menu_item_variants FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
 -- Name: menu_item_variants menu_item_variants_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_item_variants_insert ON public.menu_item_variants FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY menu_item_variants_insert ON public.menu_item_variants FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
 -- Name: menu_item_variants menu_item_variants_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_item_variants_update ON public.menu_item_variants FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY menu_item_variants_update ON public.menu_item_variants FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
@@ -34072,21 +35735,21 @@ ALTER TABLE public.menu_items ENABLE ROW LEVEL SECURITY;
 -- Name: menu_items menu_items_delete; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_items_delete ON public.menu_items FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY menu_items_delete ON public.menu_items FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
 -- Name: menu_items menu_items_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_items_insert ON public.menu_items FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY menu_items_insert ON public.menu_items FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
 -- Name: menu_items menu_items_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY menu_items_update ON public.menu_items FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY menu_items_update ON public.menu_items FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
@@ -34132,21 +35795,21 @@ ALTER TABLE public.notification_reads ENABLE ROW LEVEL SECURITY;
 -- Name: notification_reads notification_reads_delete_own; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY notification_reads_delete_own ON public.notification_reads FOR DELETE TO authenticated USING ((user_id = auth.uid()));
+CREATE POLICY notification_reads_delete_own ON public.notification_reads FOR DELETE TO authenticated USING ((user_id = ( SELECT auth.uid() AS uid)));
 
 
 --
 -- Name: notification_reads notification_reads_insert_own; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY notification_reads_insert_own ON public.notification_reads FOR INSERT TO authenticated WITH CHECK ((user_id = auth.uid()));
+CREATE POLICY notification_reads_insert_own ON public.notification_reads FOR INSERT TO authenticated WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
 
 
 --
 -- Name: notification_reads notification_reads_select_own; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY notification_reads_select_own ON public.notification_reads FOR SELECT TO authenticated USING ((user_id = auth.uid()));
+CREATE POLICY notification_reads_select_own ON public.notification_reads FOR SELECT TO authenticated USING ((user_id = ( SELECT auth.uid() AS uid)));
 
 
 --
@@ -34159,7 +35822,7 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 -- Name: notifications notifications_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY notifications_select ON public.notifications FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.auth_role() = ANY (target_roles)) AND ((target_branch_id IS NULL) OR (target_branch_id = public.auth_branch_id()) OR (public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])))));
+CREATE POLICY notifications_select ON public.notifications FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.auth_role() AS auth_role) = ANY (target_roles)) AND ((target_branch_id IS NULL) OR (target_branch_id = public.auth_branch_id()) OR (( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])))));
 
 
 --
@@ -34312,16 +35975,16 @@ ALTER TABLE public.payroll_entries ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY payroll_entries_select ON public.payroll_entries FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (((EXISTS ( SELECT 1
    FROM public.employees e
-  WHERE ((e.id = payroll_entries.employee_id) AND (e.profile_id = auth.uid())))) AND (EXISTS ( SELECT 1
+  WHERE ((e.id = payroll_entries.employee_id) AND (e.profile_id = ( SELECT auth.uid() AS uid))))) AND (EXISTS ( SELECT 1
    FROM public.payroll_periods pp
-  WHERE ((pp.id = payroll_entries.payroll_period_id) AND (pp.status = 'paid'::text))))) OR public.has_permission_any('finance:payroll_calculate'::text) OR public.has_permission_any('finance:view'::text))));
+  WHERE ((pp.id = payroll_entries.payroll_period_id) AND (pp.status = 'paid'::text))))) OR ( SELECT public.has_permission_any('finance:payroll_calculate'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('finance:view'::text) AS has_permission_any))));
 
 
 --
 -- Name: payroll_entries payroll_entries_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY payroll_entries_write ON public.payroll_entries TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:payroll_calculate'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:payroll_calculate'::text)));
+CREATE POLICY payroll_entries_write ON public.payroll_entries TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:payroll_calculate'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:payroll_calculate'::text) AS has_permission_any)));
 
 
 --
@@ -34334,14 +35997,23 @@ ALTER TABLE public.payroll_periods ENABLE ROW LEVEL SECURITY;
 -- Name: payroll_periods payroll_periods_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY payroll_periods_select ON public.payroll_periods FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
+CREATE POLICY payroll_periods_select ON public.payroll_periods FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:view'::text) AS has_permission_any)));
 
 
 --
 -- Name: payroll_periods payroll_periods_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY payroll_periods_write ON public.payroll_periods TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:payroll_calculate'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:payroll_calculate'::text)));
+CREATE POLICY payroll_periods_write ON public.payroll_periods TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:payroll_calculate'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:payroll_calculate'::text) AS has_permission_any)));
+
+
+--
+-- Name: payroll_entries pe_employee_self_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY pe_employee_self_select ON public.payroll_entries FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (employee_id IN ( SELECT employees.id
+   FROM public.employees
+  WHERE (employees.profile_id = ( SELECT auth.uid() AS uid))))));
 
 
 --
@@ -34362,14 +36034,14 @@ CREATE POLICY periods_write_reopen_permission ON public.accounting_periods TO au
 -- Name: permission_audit_log perm_audit_admin_view; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY perm_audit_admin_view ON public.permission_audit_log FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('staff:assign_permission'::text) OR public.has_permission_any('settings:tenant'::text))));
+CREATE POLICY perm_audit_admin_view ON public.permission_audit_log FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('staff:assign_permission'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('settings:tenant'::text) AS has_permission_any))));
 
 
 --
 -- Name: permission_audit_log perm_audit_self_view; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY perm_audit_self_view ON public.permission_audit_log FOR SELECT TO authenticated USING ((target_user_id = auth.uid()));
+CREATE POLICY perm_audit_self_view ON public.permission_audit_log FOR SELECT TO authenticated USING ((target_user_id = ( SELECT auth.uid() AS uid)));
 
 
 --
@@ -34389,6 +36061,13 @@ ALTER TABLE public.permission_keys ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY permission_keys_select ON public.permission_keys FOR SELECT TO authenticated USING (true);
+
+
+--
+-- Name: purchase_order_items po_items_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY po_items_select ON public.purchase_order_items FOR SELECT TO authenticated USING ((tenant_id = public.auth_tenant_id()));
 
 
 --
@@ -34473,51 +36152,17 @@ CREATE POLICY positions_select ON public.positions FOR SELECT TO authenticated U
 
 
 --
--- Name: posting_rules; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.posting_rules ENABLE ROW LEVEL SECURITY;
-
---
--- Name: posting_rules posting_rules_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY posting_rules_select ON public.posting_rules FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
-
-
---
--- Name: posting_rules posting_rules_write; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY posting_rules_write ON public.posting_rules TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text)));
-
-
---
--- Name: supplier_price_list price_list_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY price_list_delete ON public.supplier_price_list FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_write'::text)));
-
-
---
--- Name: supplier_price_list price_list_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY price_list_insert ON public.supplier_price_list FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_write'::text)));
-
-
---
 -- Name: supplier_price_list price_list_read; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY price_list_read ON public.supplier_price_list FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('procurement:price_list_read'::text) OR public.has_permission(NULL::bigint, 'procurement:price_list_write'::text))));
+CREATE POLICY price_list_read ON public.supplier_price_list FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_read'::text)));
 
 
 --
--- Name: supplier_price_list price_list_update; Type: POLICY; Schema: public; Owner: -
+-- Name: supplier_price_list price_list_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY price_list_update ON public.supplier_price_list FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_write'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_write'::text)));
+CREATE POLICY price_list_write ON public.supplier_price_list TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_write'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_write'::text)));
 
 
 --
@@ -34530,21 +36175,21 @@ ALTER TABLE public.print_jobs ENABLE ROW LEVEL SECURITY;
 -- Name: print_jobs print_jobs_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY print_jobs_insert ON public.print_jobs FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('pos:print'::text) OR public.has_permission_any('pos:send_kitchen'::text) OR public.has_permission_any('printer:manage'::text))));
+CREATE POLICY print_jobs_insert ON public.print_jobs FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('pos:print'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('pos:send_kitchen'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any))));
 
 
 --
 -- Name: print_jobs print_jobs_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY print_jobs_select ON public.print_jobs FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])))));
+CREATE POLICY print_jobs_select ON public.print_jobs FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])))));
 
 
 --
 -- Name: print_jobs print_jobs_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY print_jobs_update ON public.print_jobs FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('pos:print'::text) OR public.has_permission_any('printer:manage'::text)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('pos:print'::text) OR public.has_permission_any('printer:manage'::text))));
+CREATE POLICY print_jobs_update ON public.print_jobs FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('pos:print'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('pos:print'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any))));
 
 
 --
@@ -34557,14 +36202,14 @@ ALTER TABLE public.print_template_versions ENABLE ROW LEVEL SECURITY;
 -- Name: print_template_versions print_template_versions_delete; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY print_template_versions_delete ON public.print_template_versions FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (((branch_id IS NULL) AND (public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) AND public.has_permission_any('printer:manage'::text)) OR ((branch_id IS NOT NULL) AND public.has_permission(branch_id, 'printer:manage'::text)))));
+CREATE POLICY print_template_versions_delete ON public.print_template_versions FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (((branch_id IS NULL) AND (( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])) AND ( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any)) OR ((branch_id IS NOT NULL) AND public.has_permission(branch_id, 'printer:manage'::text)))));
 
 
 --
 -- Name: print_template_versions print_template_versions_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY print_template_versions_insert ON public.print_template_versions FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (((branch_id IS NULL) AND (public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) AND public.has_permission_any('printer:manage'::text)) OR ((branch_id IS NOT NULL) AND public.has_permission(branch_id, 'printer:manage'::text)))));
+CREATE POLICY print_template_versions_insert ON public.print_template_versions FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (((branch_id IS NULL) AND (( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])) AND ( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any)) OR ((branch_id IS NOT NULL) AND public.has_permission(branch_id, 'printer:manage'::text)))));
 
 
 --
@@ -34578,7 +36223,7 @@ CREATE POLICY print_template_versions_select ON public.print_template_versions F
 -- Name: print_template_versions print_template_versions_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY print_template_versions_update ON public.print_template_versions FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (((branch_id IS NULL) AND (public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) AND public.has_permission_any('printer:manage'::text)) OR ((branch_id IS NOT NULL) AND public.has_permission(branch_id, 'printer:manage'::text))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (((branch_id IS NULL) AND (public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) AND public.has_permission_any('printer:manage'::text)) OR ((branch_id IS NOT NULL) AND public.has_permission(branch_id, 'printer:manage'::text)))));
+CREATE POLICY print_template_versions_update ON public.print_template_versions FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (((branch_id IS NULL) AND (( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])) AND ( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any)) OR ((branch_id IS NOT NULL) AND public.has_permission(branch_id, 'printer:manage'::text))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (((branch_id IS NULL) AND (( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])) AND ( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any)) OR ((branch_id IS NOT NULL) AND public.has_permission(branch_id, 'printer:manage'::text)))));
 
 
 --
@@ -34588,10 +36233,10 @@ CREATE POLICY print_template_versions_update ON public.print_template_versions F
 ALTER TABLE public.printer_agent_presence_tokens ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: printer_agent_presence_tokens printer_agent_presence_tokens_service_only_no_client_access; Type: POLICY; Schema: public; Owner: -
+-- Name: printer_agent_presence_tokens printer_agent_presence_tokens_no_client_access; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY printer_agent_presence_tokens_service_only_no_client_access ON public.printer_agent_presence_tokens AS RESTRICTIVE TO authenticated, anon USING (false) WITH CHECK (false);
+CREATE POLICY printer_agent_presence_tokens_no_client_access ON public.printer_agent_presence_tokens TO anon, authenticated USING (false) WITH CHECK (false);
 
 
 --
@@ -34604,21 +36249,21 @@ ALTER TABLE public.printer_agents ENABLE ROW LEVEL SECURITY;
 -- Name: printer_agents printer_agents_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY printer_agents_select ON public.printer_agents FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])))));
+CREATE POLICY printer_agents_select ON public.printer_agents FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])))));
 
 
 --
 -- Name: printer_agents printer_agents_upsert_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY printer_agents_upsert_insert ON public.printer_agents FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('printer:manage'::text) OR public.has_permission_any('pos:print'::text))));
+CREATE POLICY printer_agents_upsert_insert ON public.printer_agents FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('pos:print'::text) AS has_permission_any))));
 
 
 --
 -- Name: printer_agents printer_agents_upsert_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY printer_agents_upsert_update ON public.printer_agents FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('printer:manage'::text) OR public.has_permission_any('pos:print'::text)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('printer:manage'::text) OR public.has_permission_any('pos:print'::text))));
+CREATE POLICY printer_agents_upsert_update ON public.printer_agents FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('pos:print'::text) AS has_permission_any)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('pos:print'::text) AS has_permission_any))));
 
 
 --
@@ -34699,14 +36344,14 @@ ALTER TABLE public.printers ENABLE ROW LEVEL SECURITY;
 -- Name: printers printers_delete; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY printers_delete ON public.printers FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('printer:manage'::text) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR (branch_id = public.auth_branch_id()))));
+CREATE POLICY printers_delete ON public.printers FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any) AND ((( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])) OR (branch_id = public.auth_branch_id()))));
 
 
 --
 -- Name: printers printers_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY printers_insert ON public.printers FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('printer:manage'::text) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR (branch_id = public.auth_branch_id()))));
+CREATE POLICY printers_insert ON public.printers FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any) AND ((( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])) OR (branch_id = public.auth_branch_id()))));
 
 
 --
@@ -34720,7 +36365,7 @@ CREATE POLICY printers_select ON public.printers FOR SELECT TO authenticated USI
 -- Name: printers printers_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY printers_update ON public.printers FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('printer:manage'::text) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR (branch_id = public.auth_branch_id())))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('printer:manage'::text) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR (branch_id = public.auth_branch_id()))));
+CREATE POLICY printers_update ON public.printers FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any) AND ((( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])) OR (branch_id = public.auth_branch_id())))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('printer:manage'::text) AS has_permission_any) AND ((( SELECT public.auth_role() AS auth_role) = ANY (ARRAY['owner'::text])) OR (branch_id = public.auth_branch_id()))));
 
 
 --
@@ -34743,10 +36388,10 @@ CREATE POLICY production_order_items_select ON public.production_order_items FOR
 CREATE POLICY production_order_items_write ON public.production_order_items TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (EXISTS ( SELECT 1
    FROM (public.production_orders po
      JOIN public.branches b ON ((b.id = po.branch_id)))
-  WHERE ((po.id = production_order_items.production_order_id) AND (po.tenant_id = production_order_items.tenant_id) AND (po.tenant_id = public.auth_tenant_id()) AND (b.tenant_id = po.tenant_id) AND (b.branch_kind = 'branch'::text) AND (public.has_permission(po.branch_id, 'inventory:production_create'::text) OR public.has_permission(po.branch_id, 'inventory:production_confirm'::text))))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (EXISTS ( SELECT 1
+  WHERE ((po.id = production_order_items.production_order_id) AND (po.tenant_id = production_order_items.tenant_id) AND (po.tenant_id = public.auth_tenant_id()) AND (b.tenant_id = po.tenant_id) AND (b.branch_kind = ANY (ARRAY['branch'::text, 'central_kitchen'::text])) AND (public.has_permission(po.branch_id, 'inventory:production_create'::text) OR public.has_permission(po.branch_id, 'inventory:production_confirm'::text))))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (EXISTS ( SELECT 1
    FROM (public.production_orders po
      JOIN public.branches b ON ((b.id = po.branch_id)))
-  WHERE ((po.id = production_order_items.production_order_id) AND (po.tenant_id = production_order_items.tenant_id) AND (po.tenant_id = public.auth_tenant_id()) AND (b.tenant_id = po.tenant_id) AND (b.branch_kind = 'branch'::text) AND (public.has_permission(po.branch_id, 'inventory:production_create'::text) OR public.has_permission(po.branch_id, 'inventory:production_confirm'::text)))))));
+  WHERE ((po.id = production_order_items.production_order_id) AND (po.tenant_id = production_order_items.tenant_id) AND (po.tenant_id = public.auth_tenant_id()) AND (b.tenant_id = po.tenant_id) AND (b.branch_kind = ANY (ARRAY['branch'::text, 'central_kitchen'::text])) AND (public.has_permission(po.branch_id, 'inventory:production_create'::text) OR public.has_permission(po.branch_id, 'inventory:production_confirm'::text)))))));
 
 
 --
@@ -34768,9 +36413,9 @@ CREATE POLICY production_orders_select ON public.production_orders FOR SELECT TO
 
 CREATE POLICY production_orders_write ON public.production_orders TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission(branch_id, 'inventory:production_create'::text) OR public.has_permission(branch_id, 'inventory:production_confirm'::text)) AND (EXISTS ( SELECT 1
    FROM public.branches b
-  WHERE ((b.id = production_orders.branch_id) AND (b.tenant_id = production_orders.tenant_id) AND (b.branch_kind = 'branch'::text)))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission(branch_id, 'inventory:production_create'::text) OR public.has_permission(branch_id, 'inventory:production_confirm'::text)) AND (EXISTS ( SELECT 1
+  WHERE ((b.id = production_orders.branch_id) AND (b.tenant_id = production_orders.tenant_id) AND (b.branch_kind = ANY (ARRAY['branch'::text, 'central_kitchen'::text]))))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission(branch_id, 'inventory:production_create'::text) OR public.has_permission(branch_id, 'inventory:production_confirm'::text)) AND (EXISTS ( SELECT 1
    FROM public.branches b
-  WHERE ((b.id = production_orders.branch_id) AND (b.tenant_id = production_orders.tenant_id) AND (b.branch_kind = 'branch'::text))))));
+  WHERE ((b.id = production_orders.branch_id) AND (b.tenant_id = production_orders.tenant_id) AND (b.branch_kind = ANY (ARRAY['branch'::text, 'central_kitchen'::text])))))));
 
 
 --
@@ -34783,14 +36428,14 @@ ALTER TABLE public.production_recipes ENABLE ROW LEVEL SECURITY;
 -- Name: production_recipes production_recipes_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY production_recipes_select ON public.production_recipes FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (public.has_permission_any('menu:read'::text) OR public.has_permission_any('menu:write'::text))));
+CREATE POLICY production_recipes_select ON public.production_recipes FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND (( SELECT public.has_permission_any('menu:read'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any))));
 
 
 --
 -- Name: production_recipes production_recipes_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY production_recipes_write ON public.production_recipes TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND public.has_permission_any('menu:write'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY production_recipes_write ON public.production_recipes TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.is_inventory_production_operator() AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
@@ -34803,14 +36448,14 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 -- Name: profiles profiles_select_admin; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY profiles_select_admin ON public.profiles FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('staff:view'::text) OR public.has_permission_any('hr:view_employee'::text))));
+CREATE POLICY profiles_select_admin ON public.profiles FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('staff:view'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('hr:view_employee'::text) AS has_permission_any))));
 
 
 --
 -- Name: profiles profiles_select_self; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY profiles_select_self ON public.profiles FOR SELECT TO authenticated USING ((id = auth.uid()));
+CREATE POLICY profiles_select_self ON public.profiles FOR SELECT TO authenticated USING ((id = ( SELECT auth.uid() AS uid)));
 
 
 --
@@ -34820,31 +36465,10 @@ CREATE POLICY profiles_select_self ON public.profiles FOR SELECT TO authenticate
 ALTER TABLE public.purchase_order_items ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: purchase_order_items purchase_order_items_delete; Type: POLICY; Schema: public; Owner: -
+-- Name: purchase_order_items purchase_order_items_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY purchase_order_items_delete ON public.purchase_order_items FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND private.can_access_purchase_order_source(tenant_id, po_id, 'procurement:po_create'::text)));
-
-
---
--- Name: purchase_order_items purchase_order_items_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY purchase_order_items_insert ON public.purchase_order_items FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND private.can_access_purchase_order_source(tenant_id, po_id, 'procurement:po_create'::text)));
-
-
---
--- Name: purchase_order_items purchase_order_items_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY purchase_order_items_select ON public.purchase_order_items FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (private.can_access_purchase_order_source(tenant_id, po_id, 'procurement:read'::text) OR private.can_access_purchase_order_source(tenant_id, po_id, 'procurement:po_create'::text) OR private.can_access_purchase_order_source(tenant_id, po_id, 'procurement:po_approve'::text))));
-
-
---
--- Name: purchase_order_items purchase_order_items_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY purchase_order_items_update ON public.purchase_order_items FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND private.can_access_purchase_order_source(tenant_id, po_id, 'procurement:po_create'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND private.can_access_purchase_order_source(tenant_id, po_id, 'procurement:po_create'::text)));
+CREATE POLICY purchase_order_items_write ON public.purchase_order_items TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:po_create'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:po_create'::text) AS has_permission_any)));
 
 
 --
@@ -34857,21 +36481,21 @@ ALTER TABLE public.purchase_orders ENABLE ROW LEVEL SECURITY;
 -- Name: purchase_orders purchase_orders_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY purchase_orders_insert ON public.purchase_orders FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(branch_id, 'procurement:po_create'::text)));
+CREATE POLICY purchase_orders_insert ON public.purchase_orders FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:po_create'::text) AS has_permission_any)));
 
 
 --
 -- Name: purchase_orders purchase_orders_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY purchase_orders_select ON public.purchase_orders FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission(branch_id, 'procurement:read'::text) OR public.has_permission(branch_id, 'procurement:po_create'::text) OR public.has_permission(branch_id, 'procurement:po_approve'::text))));
+CREATE POLICY purchase_orders_select ON public.purchase_orders FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:read'::text) AS has_permission_any)));
 
 
 --
 -- Name: purchase_orders purchase_orders_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY purchase_orders_update ON public.purchase_orders FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission(branch_id, 'procurement:po_create'::text) OR public.has_permission(branch_id, 'procurement:po_approve'::text)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (public.has_permission(branch_id, 'procurement:po_create'::text) OR public.has_permission(branch_id, 'procurement:po_approve'::text))));
+CREATE POLICY purchase_orders_update ON public.purchase_orders FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('procurement:po_create'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('procurement:po_approve'::text) AS has_permission_any)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('procurement:po_create'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('procurement:po_approve'::text) AS has_permission_any))));
 
 
 --
@@ -34905,7 +36529,7 @@ CREATE POLICY recipes_select ON public.recipes FOR SELECT TO authenticated USING
 -- Name: recipes recipes_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY recipes_write ON public.recipes TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('menu:write'::text)));
+CREATE POLICY recipes_write ON public.recipes TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('menu:write'::text) AS has_permission_any)));
 
 
 --
@@ -34965,60 +36589,51 @@ CREATE POLICY role_templates_select ON public.role_templates FOR SELECT TO authe
 -- Name: reconcile_run_log rrl_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY rrl_select ON public.reconcile_run_log FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
+CREATE POLICY rrl_select ON public.reconcile_run_log FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:view'::text) AS has_permission_any)));
 
 
 --
--- Name: shift_assignments; Type: ROW SECURITY; Schema: public; Owner: -
+-- Name: shift_checklist_consumption_default_items; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
-ALTER TABLE public.shift_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.shift_checklist_consumption_default_items ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: shift_assignments shift_assignments_select; Type: POLICY; Schema: public; Owner: -
+-- Name: shift_checklist_consumption_default_items shift_checklist_consumption_default_items_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY shift_assignments_select ON public.shift_assignments FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((EXISTS ( SELECT 1
-   FROM public.employees e
-  WHERE ((e.id = shift_assignments.employee_id) AND (e.profile_id = auth.uid())))) OR public.has_permission_any('staff:view'::text) OR public.has_permission_any('hr:view_employee'::text))));
-
-
---
--- Name: shift_assignments shift_assignments_write; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shift_assignments_write ON public.shift_assignments TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('staff:manage'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('staff:manage'::text)));
+CREATE POLICY shift_checklist_consumption_default_items_select ON public.shift_checklist_consumption_default_items FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM (public.shift_checklist_template_items i
+     JOIN public.shift_checklist_templates t ON (((t.id = i.template_id) AND (t.tenant_id = i.tenant_id))))
+  WHERE ((i.id = shift_checklist_consumption_default_items.template_item_id) AND (i.tenant_id = shift_checklist_consumption_default_items.tenant_id) AND ((t.branch_id = public.auth_branch_id()) OR public.has_permission(t.branch_id, 'hr:approve_checkout'::text) OR public.has_permission(t.branch_id, 'inventory:read'::text)))))));
 
 
 --
--- Name: shift_requests; Type: ROW SECURITY; Schema: public; Owner: -
+-- Name: shift_checklist_template_items; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
-ALTER TABLE public.shift_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.shift_checklist_template_items ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: shift_requests shift_requests_manager_update; Type: POLICY; Schema: public; Owner: -
+-- Name: shift_checklist_template_items shift_checklist_template_items_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY shift_requests_manager_update ON public.shift_requests FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(branch_id, 'hr:approve_shift_request'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(branch_id, 'hr:approve_shift_request'::text)));
-
-
---
--- Name: shift_requests shift_requests_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shift_requests_select ON public.shift_requests FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((EXISTS ( SELECT 1
-   FROM public.employees e
-  WHERE ((e.id = shift_requests.employee_id) AND (e.profile_id = auth.uid())))) OR public.has_permission(branch_id, 'hr:approve_shift_request'::text) OR public.has_permission_any('hr:view_employee'::text))));
+CREATE POLICY shift_checklist_template_items_select ON public.shift_checklist_template_items FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+   FROM public.shift_checklist_templates t
+  WHERE ((t.id = shift_checklist_template_items.template_id) AND (t.tenant_id = shift_checklist_template_items.tenant_id) AND (( SELECT public.has_permission_any('settings:tenant'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('staff:manage'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('hr:view_employee'::text) AS has_permission_any) OR ((t.branch_id IS NOT NULL) AND (public.has_permission(t.branch_id, 'settings:branch'::text) OR public.has_permission(t.branch_id, 'staff:manage'::text) OR public.has_permission(t.branch_id, 'hr:view_employee'::text)))))))));
 
 
 --
--- Name: shift_requests shift_requests_self_insert; Type: POLICY; Schema: public; Owner: -
+-- Name: shift_checklist_templates; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
-CREATE POLICY shift_requests_self_insert ON public.shift_requests FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (status = 'pending'::public.shift_request_status) AND (date >= CURRENT_DATE) AND (assignment_id IS NULL) AND (reviewed_by IS NULL) AND (reviewed_at IS NULL) AND public.has_permission_any('hr:register_shift'::text) AND (EXISTS ( SELECT 1
-   FROM public.employees e
-  WHERE ((e.id = shift_requests.employee_id) AND (e.profile_id = auth.uid()) AND (e.tenant_id = public.auth_tenant_id()) AND (e.is_active = true))))));
+ALTER TABLE public.shift_checklist_templates ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: shift_checklist_templates shift_checklist_templates_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY shift_checklist_templates_select ON public.shift_checklist_templates FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('settings:tenant'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('staff:manage'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('hr:view_employee'::text) AS has_permission_any) OR ((branch_id IS NOT NULL) AND (public.has_permission(branch_id, 'settings:branch'::text) OR public.has_permission(branch_id, 'staff:manage'::text) OR public.has_permission(branch_id, 'hr:view_employee'::text))))));
 
 
 --
@@ -35045,7 +36660,7 @@ CREATE POLICY shifts_write ON public.shifts TO authenticated USING (((tenant_id 
 -- Name: summary_run_queue srq_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY srq_select ON public.summary_run_queue FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
+CREATE POLICY srq_select ON public.summary_run_queue FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:view'::text) AS has_permission_any)));
 
 
 --
@@ -35180,7 +36795,7 @@ ALTER TABLE public.stock_transfer_items ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY stock_transfer_items_select ON public.stock_transfer_items FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
    FROM public.stock_transfers t
-  WHERE ((t.id = stock_transfer_items.transfer_id) AND (t.tenant_id = stock_transfer_items.tenant_id) AND (public.has_permission(t.from_branch_id, 'inventory:read'::text) OR public.has_permission(t.to_branch_id, 'inventory:read'::text)))))));
+  WHERE ((t.id = stock_transfer_items.transfer_id) AND (t.tenant_id = stock_transfer_items.tenant_id) AND (public.has_permission(t.from_branch_id, 'inventory:read'::text) OR public.has_permission(t.to_branch_id, 'inventory:read'::text) OR public.has_permission(t.from_branch_id, 'inventory:transfer_create'::text) OR public.has_permission(t.from_branch_id, 'inventory:transfer_ship'::text) OR public.has_permission(t.to_branch_id, 'inventory:transfer_receive'::text)))))));
 
 
 --
@@ -35189,9 +36804,9 @@ CREATE POLICY stock_transfer_items_select ON public.stock_transfer_items FOR SEL
 
 CREATE POLICY stock_transfer_items_write ON public.stock_transfer_items TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
    FROM public.stock_transfers t
-  WHERE ((t.id = stock_transfer_items.transfer_id) AND (t.tenant_id = stock_transfer_items.tenant_id) AND (public.has_permission(t.from_branch_id, 'inventory:write'::text) OR public.has_permission(t.to_branch_id, 'inventory:write'::text))))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
+  WHERE ((t.id = stock_transfer_items.transfer_id) AND (t.tenant_id = stock_transfer_items.tenant_id) AND (public.has_permission(t.from_branch_id, 'inventory:write'::text) OR public.has_permission(t.to_branch_id, 'inventory:write'::text) OR public.has_permission(t.from_branch_id, 'inventory:transfer_create'::text) OR public.has_permission(t.from_branch_id, 'inventory:transfer_ship'::text) OR public.has_permission(t.to_branch_id, 'inventory:transfer_receive'::text))))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (EXISTS ( SELECT 1
    FROM public.stock_transfers t
-  WHERE ((t.id = stock_transfer_items.transfer_id) AND (t.tenant_id = stock_transfer_items.tenant_id) AND (public.has_permission(t.from_branch_id, 'inventory:write'::text) OR public.has_permission(t.to_branch_id, 'inventory:write'::text)))))));
+  WHERE ((t.id = stock_transfer_items.transfer_id) AND (t.tenant_id = stock_transfer_items.tenant_id) AND (public.has_permission(t.from_branch_id, 'inventory:write'::text) OR public.has_permission(t.to_branch_id, 'inventory:write'::text) OR public.has_permission(t.from_branch_id, 'inventory:transfer_create'::text) OR public.has_permission(t.from_branch_id, 'inventory:transfer_ship'::text) OR public.has_permission(t.to_branch_id, 'inventory:transfer_receive'::text)))))));
 
 
 --
@@ -35337,7 +36952,7 @@ ALTER TABLE public.supplier_credit_notes ENABLE ROW LEVEL SECURITY;
 -- Name: supplier_credit_notes supplier_credit_notes_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY supplier_credit_notes_select ON public.supplier_credit_notes FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (private.can_access_supplier_return_source(tenant_id, return_id, 'supplier_return:read'::text) OR private.can_access_supplier_return_source(tenant_id, return_id, 'supplier_return:confirm'::text))));
+CREATE POLICY supplier_credit_notes_select ON public.supplier_credit_notes FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:read'::text)));
 
 
 --
@@ -35347,31 +36962,17 @@ CREATE POLICY supplier_credit_notes_select ON public.supplier_credit_notes FOR S
 ALTER TABLE public.supplier_invoices ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: supplier_invoices supplier_invoices_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY supplier_invoices_delete ON public.supplier_invoices FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND private.can_access_supplier_invoice_source(tenant_id, supplier_id, grn_id, po_id, 'procurement:invoice_create'::text)));
-
-
---
--- Name: supplier_invoices supplier_invoices_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY supplier_invoices_insert ON public.supplier_invoices FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND private.can_access_supplier_invoice_source(tenant_id, supplier_id, grn_id, po_id, 'procurement:invoice_create'::text)));
-
-
---
 -- Name: supplier_invoices supplier_invoices_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY supplier_invoices_select ON public.supplier_invoices FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (private.can_access_supplier_invoice_source(tenant_id, supplier_id, grn_id, po_id, 'procurement:read'::text) OR private.can_access_supplier_invoice_source(tenant_id, supplier_id, grn_id, po_id, 'procurement:invoice_create'::text) OR private.can_access_supplier_invoice_source(tenant_id, supplier_id, grn_id, po_id, 'procurement:invoice_match'::text))));
+CREATE POLICY supplier_invoices_select ON public.supplier_invoices FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:read'::text) AS has_permission_any)));
 
 
 --
--- Name: supplier_invoices supplier_invoices_update; Type: POLICY; Schema: public; Owner: -
+-- Name: supplier_invoices supplier_invoices_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY supplier_invoices_update ON public.supplier_invoices FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (private.can_access_supplier_invoice_source(tenant_id, supplier_id, grn_id, po_id, 'procurement:invoice_create'::text) OR private.can_access_supplier_invoice_source(tenant_id, supplier_id, grn_id, po_id, 'procurement:invoice_match'::text)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (private.can_access_supplier_invoice_source(tenant_id, supplier_id, grn_id, po_id, 'procurement:invoice_create'::text) OR private.can_access_supplier_invoice_source(tenant_id, supplier_id, grn_id, po_id, 'procurement:invoice_match'::text))));
+CREATE POLICY supplier_invoices_write ON public.supplier_invoices TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('procurement:invoice_create'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('procurement:invoice_match'::text) AS has_permission_any)))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('procurement:invoice_create'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('procurement:invoice_match'::text) AS has_permission_any))));
 
 
 --
@@ -35381,31 +36982,17 @@ CREATE POLICY supplier_invoices_update ON public.supplier_invoices FOR UPDATE TO
 ALTER TABLE public.supplier_items ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: supplier_items supplier_items_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY supplier_items_delete ON public.supplier_items FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_write'::text)));
-
-
---
--- Name: supplier_items supplier_items_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY supplier_items_insert ON public.supplier_items FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_write'::text)));
-
-
---
 -- Name: supplier_items supplier_items_read; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY supplier_items_read ON public.supplier_items FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('procurement:price_list_read'::text) OR public.has_permission(NULL::bigint, 'procurement:price_list_write'::text))));
+CREATE POLICY supplier_items_read ON public.supplier_items FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_read'::text)));
 
 
 --
--- Name: supplier_items supplier_items_update; Type: POLICY; Schema: public; Owner: -
+-- Name: supplier_items supplier_items_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY supplier_items_update ON public.supplier_items FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_write'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_write'::text)));
+CREATE POLICY supplier_items_write ON public.supplier_items TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_write'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:price_list_write'::text)));
 
 
 --
@@ -35418,14 +37005,14 @@ ALTER TABLE public.supplier_payments ENABLE ROW LEVEL SECURITY;
 -- Name: supplier_payments supplier_payments_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY supplier_payments_select ON public.supplier_payments FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
+CREATE POLICY supplier_payments_select ON public.supplier_payments FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:view'::text) AS has_permission_any)));
 
 
 --
 -- Name: supplier_payments supplier_payments_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY supplier_payments_write ON public.supplier_payments TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:ap_pay'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:ap_pay'::text)));
+CREATE POLICY supplier_payments_write ON public.supplier_payments TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:ap_pay'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:ap_pay'::text) AS has_permission_any)));
 
 
 --
@@ -35444,7 +37031,7 @@ ALTER TABLE public.supplier_return_items ENABLE ROW LEVEL SECURITY;
 -- Name: supplier_return_items supplier_return_items_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY supplier_return_items_select ON public.supplier_return_items FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (private.can_access_supplier_return_source(tenant_id, return_id, 'supplier_return:read'::text) OR private.can_access_supplier_return_source(tenant_id, return_id, 'supplier_return:create'::text) OR private.can_access_supplier_return_source(tenant_id, return_id, 'supplier_return:confirm'::text))));
+CREATE POLICY supplier_return_items_select ON public.supplier_return_items FOR SELECT TO authenticated USING ((tenant_id = public.auth_tenant_id()));
 
 
 --
@@ -35457,7 +37044,7 @@ ALTER TABLE public.supplier_returns ENABLE ROW LEVEL SECURITY;
 -- Name: supplier_returns supplier_returns_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY supplier_returns_select ON public.supplier_returns FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission(branch_id, 'supplier_return:read'::text) OR public.has_permission(branch_id, 'supplier_return:create'::text) OR public.has_permission(branch_id, 'supplier_return:confirm'::text))));
+CREATE POLICY supplier_returns_select ON public.supplier_returns FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(branch_id, 'supplier_return:read'::text)));
 
 
 --
@@ -35467,31 +37054,17 @@ CREATE POLICY supplier_returns_select ON public.supplier_returns FOR SELECT TO a
 ALTER TABLE public.suppliers ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: suppliers suppliers_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY suppliers_delete ON public.suppliers FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:supplier_manage'::text)));
-
-
---
--- Name: suppliers suppliers_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY suppliers_insert ON public.suppliers FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:supplier_manage'::text)));
-
-
---
 -- Name: suppliers suppliers_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY suppliers_select ON public.suppliers FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.has_permission_any('procurement:read'::text) OR public.has_permission(NULL::bigint, 'procurement:supplier_manage'::text))));
+CREATE POLICY suppliers_select ON public.suppliers FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:read'::text) AS has_permission_any)));
 
 
 --
--- Name: suppliers suppliers_update; Type: POLICY; Schema: public; Owner: -
+-- Name: suppliers suppliers_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY suppliers_update ON public.suppliers FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:supplier_manage'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(NULL::bigint, 'procurement:supplier_manage'::text)));
+CREATE POLICY suppliers_write ON public.suppliers TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:supplier_manage'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('procurement:supplier_manage'::text) AS has_permission_any)));
 
 
 --
@@ -35504,7 +37077,7 @@ ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 -- Name: system_settings system_settings_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY system_settings_write ON public.system_settings TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('settings:tenant'::text)));
+CREATE POLICY system_settings_write ON public.system_settings TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('settings:tenant'::text) AS has_permission_any))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('settings:tenant'::text) AS has_permission_any)));
 
 
 --
@@ -35580,10 +37153,10 @@ CREATE POLICY tax_invoices_update ON public.tax_invoices FOR UPDATE TO authentic
 ALTER TABLE public.tenant_po_counters ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: tenant_po_counters tenant_po_counters_service_only_no_client_access; Type: POLICY; Schema: public; Owner: -
+-- Name: tenant_po_counters tenant_po_counters_no_client_access; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY tenant_po_counters_service_only_no_client_access ON public.tenant_po_counters AS RESTRICTIVE TO authenticated, anon USING (false) WITH CHECK (false);
+CREATE POLICY tenant_po_counters_no_client_access ON public.tenant_po_counters TO anon, authenticated USING (false) WITH CHECK (false);
 
 
 --
@@ -35675,21 +37248,21 @@ ALTER TABLE public.tenants ENABLE ROW LEVEL SECURITY;
 -- Name: tax_invoice_events tie_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY tie_select ON public.tax_invoice_events FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
+CREATE POLICY tie_select ON public.tax_invoice_events FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:view'::text) AS has_permission_any)));
 
 
 --
 -- Name: tax_invoice_orders tio_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY tio_select ON public.tax_invoice_orders FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
+CREATE POLICY tio_select ON public.tax_invoice_orders FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:view'::text) AS has_permission_any)));
 
 
 --
 -- Name: user_trust_score trust_score_read_own_or_admin; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY trust_score_read_own_or_admin ON public.user_trust_score FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((user_id = auth.uid()) OR public.has_permission(branch_id, 'inventory:read'::text) OR public.has_permission(NULL::bigint, 'reports:view_branch'::text) OR public.has_permission(NULL::bigint, 'reports:view_tenant'::text))));
+CREATE POLICY trust_score_read_own_or_admin ON public.user_trust_score FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((user_id = ( SELECT auth.uid() AS uid)) OR public.has_permission(branch_id, 'inventory:read'::text) OR public.has_permission(NULL::bigint, 'reports:view_branch'::text) OR public.has_permission(NULL::bigint, 'reports:view_tenant'::text))));
 
 
 --
@@ -35704,19 +37277,6 @@ CREATE POLICY trust_score_rpc_only_write ON public.user_trust_score TO authentic
 --
 
 ALTER TABLE public.user_trust_score ENABLE ROW LEVEL SECURITY;
-
---
--- Name: vas_report_lines; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.vas_report_lines ENABLE ROW LEVEL SECURITY;
-
---
--- Name: vas_report_lines vrl_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY vrl_select ON public.vas_report_lines FOR SELECT TO authenticated USING (((tenant_id IS NULL) OR (tenant_id = public.auth_tenant_id())));
-
 
 --
 -- Name: branch_daily_waste_cap waste_cap_no_client_write; Type: POLICY; Schema: public; Owner: -
@@ -35744,7 +37304,7 @@ ALTER TABLE public.webhook_events ENABLE ROW LEVEL SECURITY;
 -- Name: webhook_events webhook_events_select_admin; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY webhook_events_select_admin ON public.webhook_events FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('finance:view'::text)));
+CREATE POLICY webhook_events_select_admin ON public.webhook_events FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ( SELECT public.has_permission_any('finance:view'::text) AS has_permission_any)));
 
 
 --
@@ -35767,53 +37327,11 @@ CREATE POLICY zone_lock_rpc_only_write ON public.stocktake_zone_locks TO authent
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: -
 --
 
-REVOKE USAGE ON SCHEMA public FROM PUBLIC;
+GRANT USAGE ON SCHEMA public TO postgres;
 GRANT USAGE ON SCHEMA public TO anon;
 GRANT USAGE ON SCHEMA public TO authenticated;
-GRANT ALL ON SCHEMA public TO service_role;
-GRANT USAGE ON SCHEMA public TO postgres;
+GRANT USAGE ON SCHEMA public TO service_role;
 GRANT USAGE ON SCHEMA public TO supabase_auth_admin;
-
-
---
--- Name: FUNCTION _auth_v2_check_area_scope(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public._auth_v2_check_area_scope() FROM PUBLIC;
-GRANT ALL ON FUNCTION public._auth_v2_check_area_scope() TO service_role;
-
-
---
--- Name: FUNCTION _auth_v2_check_branch_required(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public._auth_v2_check_branch_required() FROM PUBLIC;
-GRANT ALL ON FUNCTION public._auth_v2_check_branch_required() TO service_role;
-
-
---
--- Name: FUNCTION _auth_v2_is_owner(p_user uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public._auth_v2_is_owner(p_user uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public._auth_v2_is_owner(p_user uuid) TO service_role;
-GRANT ALL ON FUNCTION public._auth_v2_is_owner(p_user uuid) TO authenticated;
-
-
---
--- Name: FUNCTION _auth_v2_position_id_from_role(p_role text, p_tenant bigint); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public._auth_v2_position_id_from_role(p_role text, p_tenant bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public._auth_v2_position_id_from_role(p_role text, p_tenant bigint) TO service_role;
-
-
---
--- Name: FUNCTION _auth_v2_role_to_position(p_role text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public._auth_v2_role_to_position(p_role text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public._auth_v2_role_to_position(p_role text) TO service_role;
 
 
 --
@@ -35829,7 +37347,17 @@ GRANT ALL ON FUNCTION public._compute_grn_price_baseline(p_tenant_id bigint, p_s
 --
 
 REVOKE ALL ON FUNCTION public._compute_vat_breakdown(p_order_ids bigint[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public._compute_vat_breakdown(p_order_ids bigint[]) TO anon;
+GRANT ALL ON FUNCTION public._compute_vat_breakdown(p_order_ids bigint[]) TO authenticated;
 GRANT ALL ON FUNCTION public._compute_vat_breakdown(p_order_ids bigint[]) TO service_role;
+
+
+--
+-- Name: FUNCTION _post_writeoff_movements(p_issue_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._post_writeoff_movements(p_issue_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public._post_writeoff_movements(p_issue_id bigint) TO service_role;
 
 
 --
@@ -35837,8 +37365,8 @@ GRANT ALL ON FUNCTION public._compute_vat_breakdown(p_order_ids bigint[]) TO ser
 --
 
 REVOKE ALL ON FUNCTION public.acquire_zone_lock(p_session_id bigint, p_zone_id text, p_ttl_seconds integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.acquire_zone_lock(p_session_id bigint, p_zone_id text, p_ttl_seconds integer) TO service_role;
 GRANT ALL ON FUNCTION public.acquire_zone_lock(p_session_id bigint, p_zone_id text, p_ttl_seconds integer) TO authenticated;
+GRANT ALL ON FUNCTION public.acquire_zone_lock(p_session_id bigint, p_zone_id text, p_ttl_seconds integer) TO service_role;
 
 
 --
@@ -35846,8 +37374,8 @@ GRANT ALL ON FUNCTION public.acquire_zone_lock(p_session_id bigint, p_zone_id te
 --
 
 REVOKE ALL ON FUNCTION public.admin_update_profile(p_target_id uuid, p_full_name text, p_phone text, p_role text, p_branch_id bigint, p_is_active boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.admin_update_profile(p_target_id uuid, p_full_name text, p_phone text, p_role text, p_branch_id bigint, p_is_active boolean) TO service_role;
 GRANT ALL ON FUNCTION public.admin_update_profile(p_target_id uuid, p_full_name text, p_phone text, p_role text, p_branch_id bigint, p_is_active boolean) TO authenticated;
+GRANT ALL ON FUNCTION public.admin_update_profile(p_target_id uuid, p_full_name text, p_phone text, p_role text, p_branch_id bigint, p_is_active boolean) TO service_role;
 
 
 --
@@ -35855,6 +37383,7 @@ GRANT ALL ON FUNCTION public.admin_update_profile(p_target_id uuid, p_full_name 
 --
 
 REVOKE ALL ON FUNCTION public.aggregate_daily_b2c_invoice(p_branch_id bigint, p_summary_date date, p_actor uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.aggregate_daily_b2c_invoice(p_branch_id bigint, p_summary_date date, p_actor uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.aggregate_daily_b2c_invoice(p_branch_id bigint, p_summary_date date, p_actor uuid) TO service_role;
 
 
@@ -35863,8 +37392,8 @@ GRANT ALL ON FUNCTION public.aggregate_daily_b2c_invoice(p_branch_id bigint, p_s
 --
 
 REVOKE ALL ON FUNCTION public.amend_grn_line(p_grn_id bigint, p_line_id bigint, p_received_quantity numeric, p_unit_cost numeric, p_reason text, p_rejected_quantity numeric) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.amend_grn_line(p_grn_id bigint, p_line_id bigint, p_received_quantity numeric, p_unit_cost numeric, p_reason text, p_rejected_quantity numeric) TO service_role;
 GRANT ALL ON FUNCTION public.amend_grn_line(p_grn_id bigint, p_line_id bigint, p_received_quantity numeric, p_unit_cost numeric, p_reason text, p_rejected_quantity numeric) TO authenticated;
+GRANT ALL ON FUNCTION public.amend_grn_line(p_grn_id bigint, p_line_id bigint, p_received_quantity numeric, p_unit_cost numeric, p_reason text, p_rejected_quantity numeric) TO service_role;
 
 
 --
@@ -35872,8 +37401,25 @@ GRANT ALL ON FUNCTION public.amend_grn_line(p_grn_id bigint, p_line_id bigint, p
 --
 
 REVOKE ALL ON FUNCTION public.append_order_items(p_order_id bigint, p_items jsonb, p_idempotency_key uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.append_order_items(p_order_id bigint, p_items jsonb, p_idempotency_key uuid) TO service_role;
 GRANT ALL ON FUNCTION public.append_order_items(p_order_id bigint, p_items jsonb, p_idempotency_key uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.append_order_items(p_order_id bigint, p_items jsonb, p_idempotency_key uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION append_order_items_with_daily_limit_hold(p_order_id bigint, p_items jsonb, p_idempotency_key uuid, p_daily_limit_hold_token uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.append_order_items_with_daily_limit_hold(p_order_id bigint, p_items jsonb, p_idempotency_key uuid, p_daily_limit_hold_token uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.append_order_items_with_daily_limit_hold(p_order_id bigint, p_items jsonb, p_idempotency_key uuid, p_daily_limit_hold_token uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.append_order_items_with_daily_limit_hold(p_order_id bigint, p_items jsonb, p_idempotency_key uuid, p_daily_limit_hold_token uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION apply_checklist_template_to_role(p_tenant_id bigint, p_role text, p_template_name text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.apply_checklist_template_to_role(p_tenant_id bigint, p_role text, p_template_name text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.apply_checklist_template_to_role(p_tenant_id bigint, p_role text, p_template_name text) TO service_role;
 
 
 --
@@ -35881,6 +37427,7 @@ GRANT ALL ON FUNCTION public.append_order_items(p_order_id bigint, p_items jsonb
 --
 
 REVOKE ALL ON FUNCTION public.apply_credit_note_to_invoice(p_credit_id bigint, p_invoice_id bigint, p_amount numeric) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.apply_credit_note_to_invoice(p_credit_id bigint, p_invoice_id bigint, p_amount numeric) TO authenticated;
 GRANT ALL ON FUNCTION public.apply_credit_note_to_invoice(p_credit_id bigint, p_invoice_id bigint, p_amount numeric) TO service_role;
 
 
@@ -35889,8 +37436,17 @@ GRANT ALL ON FUNCTION public.apply_credit_note_to_invoice(p_credit_id bigint, p_
 --
 
 REVOKE ALL ON FUNCTION public.apply_order_discount(p_order_id bigint, p_type text, p_value numeric, p_note text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.apply_order_discount(p_order_id bigint, p_type text, p_value numeric, p_note text) TO service_role;
 GRANT ALL ON FUNCTION public.apply_order_discount(p_order_id bigint, p_type text, p_value numeric, p_note text) TO authenticated;
+GRANT ALL ON FUNCTION public.apply_order_discount(p_order_id bigint, p_type text, p_value numeric, p_note text) TO service_role;
+
+
+--
+-- Name: FUNCTION apply_order_item_discount(p_order_item_id bigint, p_type text, p_value numeric, p_note text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.apply_order_item_discount(p_order_item_id bigint, p_type text, p_value numeric, p_note text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.apply_order_item_discount(p_order_item_id bigint, p_type text, p_value numeric, p_note text) TO authenticated;
+GRANT ALL ON FUNCTION public.apply_order_item_discount(p_order_item_id bigint, p_type text, p_value numeric, p_note text) TO service_role;
 
 
 --
@@ -35898,17 +37454,17 @@ GRANT ALL ON FUNCTION public.apply_order_discount(p_order_id bigint, p_type text
 --
 
 REVOKE ALL ON FUNCTION public.apply_template_to_user(p_target_user uuid, p_branch_id bigint, p_template_id bigint, p_valid_from timestamp with time zone, p_valid_until timestamp with time zone) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.apply_template_to_user(p_target_user uuid, p_branch_id bigint, p_template_id bigint, p_valid_from timestamp with time zone, p_valid_until timestamp with time zone) TO service_role;
 GRANT ALL ON FUNCTION public.apply_template_to_user(p_target_user uuid, p_branch_id bigint, p_template_id bigint, p_valid_from timestamp with time zone, p_valid_until timestamp with time zone) TO authenticated;
+GRANT ALL ON FUNCTION public.apply_template_to_user(p_target_user uuid, p_branch_id bigint, p_template_id bigint, p_valid_from timestamp with time zone, p_valid_until timestamp with time zone) TO service_role;
 
 
 --
--- Name: FUNCTION approve_shift_request(p_request_id bigint); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION approve_leave_request(p_request_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.approve_shift_request(p_request_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.approve_shift_request(p_request_id bigint) TO service_role;
-GRANT ALL ON FUNCTION public.approve_shift_request(p_request_id bigint) TO authenticated;
+REVOKE ALL ON FUNCTION public.approve_leave_request(p_request_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.approve_leave_request(p_request_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.approve_leave_request(p_request_id bigint) TO service_role;
 
 
 --
@@ -35916,8 +37472,8 @@ GRANT ALL ON FUNCTION public.approve_shift_request(p_request_id bigint) TO authe
 --
 
 REVOKE ALL ON FUNCTION public.approve_waste(p_issue_id bigint, p_decision text, p_note text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.approve_waste(p_issue_id bigint, p_decision text, p_note text) TO service_role;
 GRANT ALL ON FUNCTION public.approve_waste(p_issue_id bigint, p_decision text, p_note text) TO authenticated;
+GRANT ALL ON FUNCTION public.approve_waste(p_issue_id bigint, p_decision text, p_note text) TO service_role;
 
 
 --
@@ -35925,6 +37481,7 @@ GRANT ALL ON FUNCTION public.approve_waste(p_issue_id bigint, p_decision text, p
 --
 
 REVOKE ALL ON FUNCTION public.assign_auditor(p_session_id bigint, p_auditor_id uuid, p_auditor_branch_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.assign_auditor(p_session_id bigint, p_auditor_id uuid, p_auditor_branch_id bigint) TO authenticated;
 GRANT ALL ON FUNCTION public.assign_auditor(p_session_id bigint, p_auditor_id uuid, p_auditor_branch_id bigint) TO service_role;
 
 
@@ -35937,20 +37494,20 @@ GRANT ALL ON FUNCTION public.attach_print_document_to_payload(p_tenant_id bigint
 
 
 --
--- Name: FUNCTION auth_area_id(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.auth_area_id() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.auth_area_id() TO service_role;
-
-
---
 -- Name: FUNCTION auth_branch_id(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.auth_branch_id() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.auth_branch_id() TO service_role;
+GRANT ALL ON FUNCTION public.auth_branch_id() TO anon;
 GRANT ALL ON FUNCTION public.auth_branch_id() TO authenticated;
+GRANT ALL ON FUNCTION public.auth_branch_id() TO service_role;
+
+
+--
+-- Name: FUNCTION auth_is_owner(p_user uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.auth_is_owner(p_user uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.auth_is_owner(p_user uuid) TO service_role;
 
 
 --
@@ -35958,17 +37515,25 @@ GRANT ALL ON FUNCTION public.auth_branch_id() TO authenticated;
 --
 
 REVOKE ALL ON FUNCTION public.auth_role() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.auth_role() TO service_role;
 GRANT ALL ON FUNCTION public.auth_role() TO authenticated;
+GRANT ALL ON FUNCTION public.auth_role() TO service_role;
+
+
+--
+-- Name: FUNCTION auth_role_to_position(p_role text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.auth_role_to_position(p_role text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.auth_role_to_position(p_role text) TO service_role;
 
 
 --
 -- Name: FUNCTION auth_tenant_id(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.auth_tenant_id() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.auth_tenant_id() TO service_role;
+GRANT ALL ON FUNCTION public.auth_tenant_id() TO anon;
 GRANT ALL ON FUNCTION public.auth_tenant_id() TO authenticated;
+GRANT ALL ON FUNCTION public.auth_tenant_id() TO service_role;
 
 
 --
@@ -35980,11 +37545,29 @@ GRANT ALL ON FUNCTION public.auto_close_periods() TO service_role;
 
 
 --
--- Name: FUNCTION auto_post_journal(p_tenant_id bigint, p_branch_id bigint, p_reference_type text, p_reference_id bigint, p_description text, p_lines jsonb, p_entry_date timestamp with time zone, p_posted_by uuid); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION branch_manager_approve_consumption_report(p_tenant_id bigint, p_report_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.auto_post_journal(p_tenant_id bigint, p_branch_id bigint, p_reference_type text, p_reference_id bigint, p_description text, p_lines jsonb, p_entry_date timestamp with time zone, p_posted_by uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.auto_post_journal(p_tenant_id bigint, p_branch_id bigint, p_reference_type text, p_reference_id bigint, p_description text, p_lines jsonb, p_entry_date timestamp with time zone, p_posted_by uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.branch_manager_approve_consumption_report(p_tenant_id bigint, p_report_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.branch_manager_approve_consumption_report(p_tenant_id bigint, p_report_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.branch_manager_approve_consumption_report(p_tenant_id bigint, p_report_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION branch_manager_approve_employee_clock_out(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_approved_by uuid, p_note text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.branch_manager_approve_employee_clock_out(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_approved_by uuid, p_note text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.branch_manager_approve_employee_clock_out(p_tenant_id bigint, p_branch_id bigint, p_attendance_id bigint, p_approved_by uuid, p_note text) TO service_role;
+
+
+--
+-- Name: FUNCTION branch_manager_request_consumption_adjustment(p_tenant_id bigint, p_report_id bigint, p_review_note text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.branch_manager_request_consumption_adjustment(p_tenant_id bigint, p_report_id bigint, p_review_note text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.branch_manager_request_consumption_adjustment(p_tenant_id bigint, p_report_id bigint, p_review_note text) TO authenticated;
+GRANT ALL ON FUNCTION public.branch_manager_request_consumption_adjustment(p_tenant_id bigint, p_report_id bigint, p_review_note text) TO service_role;
 
 
 --
@@ -35992,17 +37575,26 @@ GRANT ALL ON FUNCTION public.auto_post_journal(p_tenant_id bigint, p_branch_id b
 --
 
 REVOKE ALL ON FUNCTION public.bump_kds_ticket(p_ticket_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.bump_kds_ticket(p_ticket_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.bump_kds_ticket(p_ticket_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.bump_kds_ticket(p_ticket_id bigint) TO service_role;
 
 
 --
 -- Name: FUNCTION can_access_branch(p_branch_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.can_access_branch(p_branch_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.can_access_branch(p_branch_id bigint) TO service_role;
+GRANT ALL ON FUNCTION public.can_access_branch(p_branch_id bigint) TO anon;
 GRANT ALL ON FUNCTION public.can_access_branch(p_branch_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.can_access_branch(p_branch_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION cancel_leave_request(p_request_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.cancel_leave_request(p_request_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.cancel_leave_request(p_request_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.cancel_leave_request(p_request_id bigint) TO service_role;
 
 
 --
@@ -36010,8 +37602,8 @@ GRANT ALL ON FUNCTION public.can_access_branch(p_branch_id bigint) TO authentica
 --
 
 REVOKE ALL ON FUNCTION public.cancel_order(p_order_id bigint, p_reason text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.cancel_order(p_order_id bigint, p_reason text) TO service_role;
 GRANT ALL ON FUNCTION public.cancel_order(p_order_id bigint, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.cancel_order(p_order_id bigint, p_reason text) TO service_role;
 
 
 --
@@ -36019,8 +37611,8 @@ GRANT ALL ON FUNCTION public.cancel_order(p_order_id bigint, p_reason text) TO a
 --
 
 REVOKE ALL ON FUNCTION public.cancel_pending_payment(p_payment_id bigint, p_tenant_id bigint, p_branch_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.cancel_pending_payment(p_payment_id bigint, p_tenant_id bigint, p_branch_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.cancel_pending_payment(p_payment_id bigint, p_tenant_id bigint, p_branch_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.cancel_pending_payment(p_payment_id bigint, p_tenant_id bigint, p_branch_id bigint) TO service_role;
 
 
 --
@@ -36028,24 +37620,24 @@ GRANT ALL ON FUNCTION public.cancel_pending_payment(p_payment_id bigint, p_tenan
 --
 
 REVOKE ALL ON FUNCTION public.cancel_production_order(p_order_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.cancel_production_order(p_order_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.cancel_production_order(p_order_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.cancel_production_order(p_order_id bigint) TO service_role;
 
 
 --
--- Name: FUNCTION cancel_shift_request(p_request_id bigint); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION check_branch_required(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.cancel_shift_request(p_request_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.cancel_shift_request(p_request_id bigint) TO service_role;
-GRANT ALL ON FUNCTION public.cancel_shift_request(p_request_id bigint) TO authenticated;
+REVOKE ALL ON FUNCTION public.check_branch_required() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.check_branch_required() TO service_role;
 
 
 --
 -- Name: FUNCTION check_menu_item_tenant(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.check_menu_item_tenant() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.check_menu_item_tenant() TO anon;
+GRANT ALL ON FUNCTION public.check_menu_item_tenant() TO authenticated;
 GRANT ALL ON FUNCTION public.check_menu_item_tenant() TO service_role;
 
 
@@ -36061,7 +37653,8 @@ GRANT ALL ON FUNCTION public.check_order_ready(p_order_id bigint) TO service_rol
 -- Name: FUNCTION check_sides_tenant(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.check_sides_tenant() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.check_sides_tenant() TO anon;
+GRANT ALL ON FUNCTION public.check_sides_tenant() TO authenticated;
 GRANT ALL ON FUNCTION public.check_sides_tenant() TO service_role;
 
 
@@ -36069,7 +37662,8 @@ GRANT ALL ON FUNCTION public.check_sides_tenant() TO service_role;
 -- Name: FUNCTION check_table_zone_tenant(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.check_table_zone_tenant() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.check_table_zone_tenant() TO anon;
+GRANT ALL ON FUNCTION public.check_table_zone_tenant() TO authenticated;
 GRANT ALL ON FUNCTION public.check_table_zone_tenant() TO service_role;
 
 
@@ -36077,7 +37671,8 @@ GRANT ALL ON FUNCTION public.check_table_zone_tenant() TO service_role;
 -- Name: FUNCTION check_variant_tenant(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.check_variant_tenant() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.check_variant_tenant() TO anon;
+GRANT ALL ON FUNCTION public.check_variant_tenant() TO authenticated;
 GRANT ALL ON FUNCTION public.check_variant_tenant() TO service_role;
 
 
@@ -36110,8 +37705,8 @@ GRANT ALL ON FUNCTION public.cleanup_kds_tickets_as_system(p_older_than timestam
 --
 
 REVOKE ALL ON FUNCTION public.clear_branch_menu_daily_limit(p_branch_id bigint, p_menu_item_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.clear_branch_menu_daily_limit(p_branch_id bigint, p_menu_item_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.clear_branch_menu_daily_limit(p_branch_id bigint, p_menu_item_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.clear_branch_menu_daily_limit(p_branch_id bigint, p_menu_item_id bigint) TO service_role;
 
 
 --
@@ -36119,17 +37714,17 @@ GRANT ALL ON FUNCTION public.clear_branch_menu_daily_limit(p_branch_id bigint, p
 --
 
 REVOKE ALL ON FUNCTION public.clear_order_discount(p_order_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.clear_order_discount(p_order_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.clear_order_discount(p_order_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.clear_order_discount(p_order_id bigint) TO service_role;
 
 
 --
--- Name: FUNCTION close_fiscal_period(p_tenant_id bigint, p_year integer, p_month integer, p_notes text); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION clear_order_item_discount(p_order_item_id bigint, p_reason text); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.close_fiscal_period(p_tenant_id bigint, p_year integer, p_month integer, p_notes text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.close_fiscal_period(p_tenant_id bigint, p_year integer, p_month integer, p_notes text) TO service_role;
-GRANT ALL ON FUNCTION public.close_fiscal_period(p_tenant_id bigint, p_year integer, p_month integer, p_notes text) TO authenticated;
+REVOKE ALL ON FUNCTION public.clear_order_item_discount(p_order_item_id bigint, p_reason text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.clear_order_item_discount(p_order_item_id bigint, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.clear_order_item_discount(p_order_item_id bigint, p_reason text) TO service_role;
 
 
 --
@@ -36137,8 +37732,8 @@ GRANT ALL ON FUNCTION public.close_fiscal_period(p_tenant_id bigint, p_year inte
 --
 
 REVOKE ALL ON FUNCTION public.close_period_hard(p_tenant_id bigint, p_year integer, p_month integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.close_period_hard(p_tenant_id bigint, p_year integer, p_month integer) TO service_role;
 GRANT ALL ON FUNCTION public.close_period_hard(p_tenant_id bigint, p_year integer, p_month integer) TO authenticated;
+GRANT ALL ON FUNCTION public.close_period_hard(p_tenant_id bigint, p_year integer, p_month integer) TO service_role;
 
 
 --
@@ -36146,17 +37741,17 @@ GRANT ALL ON FUNCTION public.close_period_hard(p_tenant_id bigint, p_year intege
 --
 
 REVOKE ALL ON FUNCTION public.close_period_soft(p_tenant_id bigint, p_year integer, p_month integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.close_period_soft(p_tenant_id bigint, p_year integer, p_month integer) TO service_role;
 GRANT ALL ON FUNCTION public.close_period_soft(p_tenant_id bigint, p_year integer, p_month integer) TO authenticated;
+GRANT ALL ON FUNCTION public.close_period_soft(p_tenant_id bigint, p_year integer, p_month integer) TO service_role;
 
 
 --
 -- Name: FUNCTION close_pos_session(p_session_id bigint, p_closing_cash numeric, p_note text, p_variance_note text); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.close_pos_session(p_session_id bigint, p_closing_cash numeric, p_note text, p_variance_note text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.close_pos_session(p_session_id bigint, p_closing_cash numeric, p_note text, p_variance_note text) TO service_role;
+GRANT ALL ON FUNCTION public.close_pos_session(p_session_id bigint, p_closing_cash numeric, p_note text, p_variance_note text) TO anon;
 GRANT ALL ON FUNCTION public.close_pos_session(p_session_id bigint, p_closing_cash numeric, p_note text, p_variance_note text) TO authenticated;
+GRANT ALL ON FUNCTION public.close_pos_session(p_session_id bigint, p_closing_cash numeric, p_note text, p_variance_note text) TO service_role;
 
 
 --
@@ -36164,8 +37759,8 @@ GRANT ALL ON FUNCTION public.close_pos_session(p_session_id bigint, p_closing_ca
 --
 
 REVOKE ALL ON FUNCTION public.close_recount_round(p_session_id bigint, p_round_no smallint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.close_recount_round(p_session_id bigint, p_round_no smallint) TO service_role;
 GRANT ALL ON FUNCTION public.close_recount_round(p_session_id bigint, p_round_no smallint) TO authenticated;
+GRANT ALL ON FUNCTION public.close_recount_round(p_session_id bigint, p_round_no smallint) TO service_role;
 
 
 --
@@ -36173,8 +37768,8 @@ GRANT ALL ON FUNCTION public.close_recount_round(p_session_id bigint, p_round_no
 --
 
 REVOKE ALL ON FUNCTION public.commit_intra_branch_transfer(p_branch_id bigint, p_from_location_id bigint, p_to_location_id bigint, p_transfer_number text, p_notes text, p_lines jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.commit_intra_branch_transfer(p_branch_id bigint, p_from_location_id bigint, p_to_location_id bigint, p_transfer_number text, p_notes text, p_lines jsonb) TO service_role;
 GRANT ALL ON FUNCTION public.commit_intra_branch_transfer(p_branch_id bigint, p_from_location_id bigint, p_to_location_id bigint, p_transfer_number text, p_notes text, p_lines jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.commit_intra_branch_transfer(p_branch_id bigint, p_from_location_id bigint, p_to_location_id bigint, p_transfer_number text, p_notes text, p_lines jsonb) TO service_role;
 
 
 --
@@ -36182,8 +37777,8 @@ GRANT ALL ON FUNCTION public.commit_intra_branch_transfer(p_branch_id bigint, p_
 --
 
 REVOKE ALL ON FUNCTION public.complete_kds_tickets(p_branch_id bigint, p_ticket_ids bigint[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.complete_kds_tickets(p_branch_id bigint, p_ticket_ids bigint[]) TO service_role;
 GRANT ALL ON FUNCTION public.complete_kds_tickets(p_branch_id bigint, p_ticket_ids bigint[]) TO authenticated;
+GRANT ALL ON FUNCTION public.complete_kds_tickets(p_branch_id bigint, p_ticket_ids bigint[]) TO service_role;
 
 
 --
@@ -36207,8 +37802,8 @@ GRANT ALL ON FUNCTION public.complete_print_job(p_job_id bigint, p_success boole
 --
 
 REVOKE ALL ON FUNCTION public.complete_stocktake(p_session_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.complete_stocktake(p_session_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.complete_stocktake(p_session_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.complete_stocktake(p_session_id bigint) TO service_role;
 
 
 --
@@ -36223,7 +37818,8 @@ GRANT ALL ON FUNCTION public.compute_branch_daily_waste_caps() TO service_role;
 -- Name: FUNCTION compute_discount_amount(p_type text, p_value numeric, p_subtotal numeric); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.compute_discount_amount(p_type text, p_value numeric, p_subtotal numeric) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.compute_discount_amount(p_type text, p_value numeric, p_subtotal numeric) TO anon;
+GRANT ALL ON FUNCTION public.compute_discount_amount(p_type text, p_value numeric, p_subtotal numeric) TO authenticated;
 GRANT ALL ON FUNCTION public.compute_discount_amount(p_type text, p_value numeric, p_subtotal numeric) TO service_role;
 
 
@@ -36233,7 +37829,6 @@ GRANT ALL ON FUNCTION public.compute_discount_amount(p_type text, p_value numeri
 
 REVOKE ALL ON FUNCTION public.compute_user_trust_score(p_user_id uuid, p_branch_id bigint) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.compute_user_trust_score(p_user_id uuid, p_branch_id bigint) TO service_role;
-GRANT ALL ON FUNCTION public.compute_user_trust_score(p_user_id uuid, p_branch_id bigint) TO authenticated;
 
 
 --
@@ -36241,6 +37836,7 @@ GRANT ALL ON FUNCTION public.compute_user_trust_score(p_user_id uuid, p_branch_i
 --
 
 REVOKE ALL ON FUNCTION public.configure_express_window(p_branch_id bigint, p_enabled boolean, p_start_time time without time zone, p_end_time time without time zone) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.configure_express_window(p_branch_id bigint, p_enabled boolean, p_start_time time without time zone, p_end_time time without time zone) TO authenticated;
 GRANT ALL ON FUNCTION public.configure_express_window(p_branch_id bigint, p_enabled boolean, p_start_time time without time zone, p_end_time time without time zone) TO service_role;
 
 
@@ -36249,8 +37845,8 @@ GRANT ALL ON FUNCTION public.configure_express_window(p_branch_id bigint, p_enab
 --
 
 REVOKE ALL ON FUNCTION public.confirm_cash_payment(p_order_id bigint, p_cash_received numeric) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.confirm_cash_payment(p_order_id bigint, p_cash_received numeric) TO service_role;
 GRANT ALL ON FUNCTION public.confirm_cash_payment(p_order_id bigint, p_cash_received numeric) TO authenticated;
+GRANT ALL ON FUNCTION public.confirm_cash_payment(p_order_id bigint, p_cash_received numeric) TO service_role;
 
 
 --
@@ -36258,8 +37854,8 @@ GRANT ALL ON FUNCTION public.confirm_cash_payment(p_order_id bigint, p_cash_rece
 --
 
 REVOKE ALL ON FUNCTION public.confirm_goods_receipt_note(p_grn_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.confirm_goods_receipt_note(p_grn_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.confirm_goods_receipt_note(p_grn_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.confirm_goods_receipt_note(p_grn_id bigint) TO service_role;
 
 
 --
@@ -36268,7 +37864,6 @@ GRANT ALL ON FUNCTION public.confirm_goods_receipt_note(p_grn_id bigint) TO auth
 
 REVOKE ALL ON FUNCTION public.confirm_payment_and_post(p_payment_id bigint, p_tenant_id bigint, p_branch_id bigint, p_provider_ref text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.confirm_payment_and_post(p_payment_id bigint, p_tenant_id bigint, p_branch_id bigint, p_provider_ref text) TO service_role;
-GRANT ALL ON FUNCTION public.confirm_payment_and_post(p_payment_id bigint, p_tenant_id bigint, p_branch_id bigint, p_provider_ref text) TO authenticated;
 
 
 --
@@ -36276,8 +37871,8 @@ GRANT ALL ON FUNCTION public.confirm_payment_and_post(p_payment_id bigint, p_ten
 --
 
 REVOKE ALL ON FUNCTION public.confirm_production_order(p_order_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.confirm_production_order(p_order_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.confirm_production_order(p_order_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.confirm_production_order(p_order_id bigint) TO service_role;
 
 
 --
@@ -36285,8 +37880,8 @@ GRANT ALL ON FUNCTION public.confirm_production_order(p_order_id bigint) TO auth
 --
 
 REVOKE ALL ON FUNCTION public.confirm_stock_issue(p_issue_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.confirm_stock_issue(p_issue_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.confirm_stock_issue(p_issue_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.confirm_stock_issue(p_issue_id bigint) TO service_role;
 
 
 --
@@ -36294,8 +37889,8 @@ GRANT ALL ON FUNCTION public.confirm_stock_issue(p_issue_id bigint) TO authentic
 --
 
 REVOKE ALL ON FUNCTION public.confirm_supplier_return(p_return_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.confirm_supplier_return(p_return_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.confirm_supplier_return(p_return_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.confirm_supplier_return(p_return_id bigint) TO service_role;
 
 
 --
@@ -36303,8 +37898,8 @@ GRANT ALL ON FUNCTION public.confirm_supplier_return(p_return_id bigint) TO auth
 --
 
 REVOKE ALL ON FUNCTION public.confirm_vietqr_payment(p_tenant_id bigint, p_branch_id bigint, p_order_id bigint, p_amount numeric, p_created_by uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.confirm_vietqr_payment(p_tenant_id bigint, p_branch_id bigint, p_order_id bigint, p_amount numeric, p_created_by uuid) TO service_role;
 GRANT ALL ON FUNCTION public.confirm_vietqr_payment(p_tenant_id bigint, p_branch_id bigint, p_order_id bigint, p_amount numeric, p_created_by uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.confirm_vietqr_payment(p_tenant_id bigint, p_branch_id bigint, p_order_id bigint, p_amount numeric, p_created_by uuid) TO service_role;
 
 
 --
@@ -36313,7 +37908,6 @@ GRANT ALL ON FUNCTION public.confirm_vietqr_payment(p_tenant_id bigint, p_branch
 
 REVOKE ALL ON FUNCTION public.consume_stock_for_order(p_order_id bigint) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.consume_stock_for_order(p_order_id bigint) TO service_role;
-GRANT ALL ON FUNCTION public.consume_stock_for_order(p_order_id bigint) TO authenticated;
 
 
 --
@@ -36325,12 +37919,30 @@ GRANT ALL ON FUNCTION public.consume_stock_for_order_service(p_order_id bigint, 
 
 
 --
+-- Name: FUNCTION correct_payment_method(p_payment_id bigint, p_new_method text, p_reason text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.correct_payment_method(p_payment_id bigint, p_new_method text, p_reason text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.correct_payment_method(p_payment_id bigint, p_new_method text, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.correct_payment_method(p_payment_id bigint, p_new_method text, p_reason text) TO service_role;
+
+
+--
 -- Name: FUNCTION count_unread_notifications(); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.count_unread_notifications() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.count_unread_notifications() TO service_role;
 GRANT ALL ON FUNCTION public.count_unread_notifications() TO authenticated;
+GRANT ALL ON FUNCTION public.count_unread_notifications() TO service_role;
+
+
+--
+-- Name: FUNCTION create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint, p_note text, p_photo_urls text[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint, p_note text, p_photo_urls text[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint, p_note text, p_photo_urls text[]) TO authenticated;
+GRANT ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint, p_note text, p_photo_urls text[]) TO service_role;
 
 
 --
@@ -36338,26 +37950,26 @@ GRANT ALL ON FUNCTION public.count_unread_notifications() TO authenticated;
 --
 
 REVOKE ALL ON FUNCTION public.create_grn_from_po(p_po_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_grn_from_po(p_po_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.create_grn_from_po(p_po_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.create_grn_from_po(p_po_id bigint) TO service_role;
 
 
 --
--- Name: FUNCTION create_manual_journal_entry(p_entry_date date, p_description text, p_lines jsonb, p_reference_type text, p_reference_id bigint, p_branch_id bigint); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_order(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_note text, p_idempotency_key uuid); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_manual_journal_entry(p_entry_date date, p_description text, p_lines jsonb, p_reference_type text, p_reference_id bigint, p_branch_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_manual_journal_entry(p_entry_date date, p_description text, p_lines jsonb, p_reference_type text, p_reference_id bigint, p_branch_id bigint) TO service_role;
-GRANT ALL ON FUNCTION public.create_manual_journal_entry(p_entry_date date, p_description text, p_lines jsonb, p_reference_type text, p_reference_id bigint, p_branch_id bigint) TO authenticated;
+REVOKE ALL ON FUNCTION public.create_order(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_note text, p_idempotency_key uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_order(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_note text, p_idempotency_key uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.create_order(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_note text, p_idempotency_key uuid) TO service_role;
 
 
 --
--- Name: FUNCTION create_order(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_customer_count integer, p_note text, p_idempotency_key uuid); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_order_with_daily_limit_hold(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_note text, p_idempotency_key uuid, p_daily_limit_hold_token uuid); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_order(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_customer_count integer, p_note text, p_idempotency_key uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_order(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_customer_count integer, p_note text, p_idempotency_key uuid) TO service_role;
-GRANT ALL ON FUNCTION public.create_order(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_customer_count integer, p_note text, p_idempotency_key uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.create_order_with_daily_limit_hold(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_note text, p_idempotency_key uuid, p_daily_limit_hold_token uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_order_with_daily_limit_hold(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_note text, p_idempotency_key uuid, p_daily_limit_hold_token uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.create_order_with_daily_limit_hold(p_tenant_id bigint, p_branch_id bigint, p_created_by uuid, p_items jsonb, p_order_type text, p_table_id bigint, p_pos_session_id bigint, p_note text, p_idempotency_key uuid, p_daily_limit_hold_token uuid) TO service_role;
 
 
 --
@@ -36365,8 +37977,8 @@ GRANT ALL ON FUNCTION public.create_order(p_tenant_id bigint, p_branch_id bigint
 --
 
 REVOKE ALL ON FUNCTION public.create_payment(p_tenant_id bigint, p_branch_id bigint, p_order_id bigint, p_method text, p_amount numeric, p_created_by uuid, p_provider_ref text, p_status text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_payment(p_tenant_id bigint, p_branch_id bigint, p_order_id bigint, p_method text, p_amount numeric, p_created_by uuid, p_provider_ref text, p_status text) TO service_role;
 GRANT ALL ON FUNCTION public.create_payment(p_tenant_id bigint, p_branch_id bigint, p_order_id bigint, p_method text, p_amount numeric, p_created_by uuid, p_provider_ref text, p_status text) TO authenticated;
+GRANT ALL ON FUNCTION public.create_payment(p_tenant_id bigint, p_branch_id bigint, p_order_id bigint, p_method text, p_amount numeric, p_created_by uuid, p_provider_ref text, p_status text) TO service_role;
 
 
 --
@@ -36374,8 +37986,17 @@ GRANT ALL ON FUNCTION public.create_payment(p_tenant_id bigint, p_branch_id bigi
 --
 
 REVOKE ALL ON FUNCTION public.create_production_order(p_branch_id bigint, p_production_number text, p_notes text, p_items jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_production_order(p_branch_id bigint, p_production_number text, p_notes text, p_items jsonb) TO service_role;
 GRANT ALL ON FUNCTION public.create_production_order(p_branch_id bigint, p_production_number text, p_notes text, p_items jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.create_production_order(p_branch_id bigint, p_production_number text, p_notes text, p_items jsonb) TO service_role;
+
+
+--
+-- Name: FUNCTION create_purchase_order_with_lines(p_supplier_id bigint, p_branch_id bigint, p_notes text, p_lines jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_purchase_order_with_lines(p_supplier_id bigint, p_branch_id bigint, p_notes text, p_lines jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_purchase_order_with_lines(p_supplier_id bigint, p_branch_id bigint, p_notes text, p_lines jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.create_purchase_order_with_lines(p_supplier_id bigint, p_branch_id bigint, p_notes text, p_lines jsonb) TO service_role;
 
 
 --
@@ -36383,8 +38004,8 @@ GRANT ALL ON FUNCTION public.create_production_order(p_branch_id bigint, p_produ
 --
 
 REVOKE ALL ON FUNCTION public.create_refund(p_payment_id bigint, p_amount numeric, p_reason text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_refund(p_payment_id bigint, p_amount numeric, p_reason text) TO service_role;
 GRANT ALL ON FUNCTION public.create_refund(p_payment_id bigint, p_amount numeric, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.create_refund(p_payment_id bigint, p_amount numeric, p_reason text) TO service_role;
 
 
 --
@@ -36392,8 +38013,8 @@ GRANT ALL ON FUNCTION public.create_refund(p_payment_id bigint, p_amount numeric
 --
 
 REVOKE ALL ON FUNCTION public.create_stock_transfer_draft(p_from_branch_id bigint, p_to_branch_id bigint, p_transfer_number text, p_notes text, p_vehicle_info text, p_lines jsonb, p_from_location_id bigint, p_to_location_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_stock_transfer_draft(p_from_branch_id bigint, p_to_branch_id bigint, p_transfer_number text, p_notes text, p_vehicle_info text, p_lines jsonb, p_from_location_id bigint, p_to_location_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.create_stock_transfer_draft(p_from_branch_id bigint, p_to_branch_id bigint, p_transfer_number text, p_notes text, p_vehicle_info text, p_lines jsonb, p_from_location_id bigint, p_to_location_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.create_stock_transfer_draft(p_from_branch_id bigint, p_to_branch_id bigint, p_transfer_number text, p_notes text, p_vehicle_info text, p_lines jsonb, p_from_location_id bigint, p_to_location_id bigint) TO service_role;
 
 
 --
@@ -36401,8 +38022,8 @@ GRANT ALL ON FUNCTION public.create_stock_transfer_draft(p_from_branch_id bigint
 --
 
 REVOKE ALL ON FUNCTION public.create_stocktake_session(p_branch_id bigint, p_location_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_stocktake_session(p_branch_id bigint, p_location_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.create_stocktake_session(p_branch_id bigint, p_location_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.create_stocktake_session(p_branch_id bigint, p_location_id bigint) TO service_role;
 
 
 --
@@ -36410,6 +38031,7 @@ GRANT ALL ON FUNCTION public.create_stocktake_session(p_branch_id bigint, p_loca
 --
 
 REVOKE ALL ON FUNCTION public.create_supplier_payment(p_tenant_id bigint, p_supplier_invoice_id bigint, p_amount numeric, p_payment_method text, p_reference_note text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_supplier_payment(p_tenant_id bigint, p_supplier_invoice_id bigint, p_amount numeric, p_payment_method text, p_reference_note text) TO authenticated;
 GRANT ALL ON FUNCTION public.create_supplier_payment(p_tenant_id bigint, p_supplier_invoice_id bigint, p_amount numeric, p_payment_method text, p_reference_note text) TO service_role;
 
 
@@ -36418,8 +38040,8 @@ GRANT ALL ON FUNCTION public.create_supplier_payment(p_tenant_id bigint, p_suppl
 --
 
 REVOKE ALL ON FUNCTION public.create_supplier_return_from_grn(p_grn_id bigint, p_resolution text, p_reason text, p_notes text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_supplier_return_from_grn(p_grn_id bigint, p_resolution text, p_reason text, p_notes text) TO service_role;
 GRANT ALL ON FUNCTION public.create_supplier_return_from_grn(p_grn_id bigint, p_resolution text, p_reason text, p_notes text) TO authenticated;
+GRANT ALL ON FUNCTION public.create_supplier_return_from_grn(p_grn_id bigint, p_resolution text, p_reason text, p_notes text) TO service_role;
 
 
 --
@@ -36427,8 +38049,8 @@ GRANT ALL ON FUNCTION public.create_supplier_return_from_grn(p_grn_id bigint, p_
 --
 
 REVOKE ALL ON FUNCTION public.create_supplier_return_from_stock(p_branch_id bigint, p_supplier_id bigint, p_resolution text, p_reason text, p_notes text, p_lines jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_supplier_return_from_stock(p_branch_id bigint, p_supplier_id bigint, p_resolution text, p_reason text, p_notes text, p_lines jsonb) TO service_role;
 GRANT ALL ON FUNCTION public.create_supplier_return_from_stock(p_branch_id bigint, p_supplier_id bigint, p_resolution text, p_reason text, p_notes text, p_lines jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.create_supplier_return_from_stock(p_branch_id bigint, p_supplier_id bigint, p_resolution text, p_reason text, p_notes text, p_lines jsonb) TO service_role;
 
 
 --
@@ -36436,8 +38058,8 @@ GRANT ALL ON FUNCTION public.create_supplier_return_from_stock(p_branch_id bigin
 --
 
 REVOKE ALL ON FUNCTION public.create_waste_entry(p_branch_id bigint, p_location_id bigint, p_items jsonb, p_source_type text, p_source_ref jsonb, p_notes text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_waste_entry(p_branch_id bigint, p_location_id bigint, p_items jsonb, p_source_type text, p_source_ref jsonb, p_notes text) TO service_role;
 GRANT ALL ON FUNCTION public.create_waste_entry(p_branch_id bigint, p_location_id bigint, p_items jsonb, p_source_type text, p_source_ref jsonb, p_notes text) TO authenticated;
+GRANT ALL ON FUNCTION public.create_waste_entry(p_branch_id bigint, p_location_id bigint, p_items jsonb, p_source_type text, p_source_ref jsonb, p_notes text) TO service_role;
 
 
 --
@@ -36453,6 +38075,7 @@ GRANT ALL ON FUNCTION public.create_waste_from_order(p_order_id bigint, p_locati
 --
 
 REVOKE ALL ON FUNCTION public.current_position() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.current_position() TO authenticated;
 GRANT ALL ON FUNCTION public.current_position() TO service_role;
 
 
@@ -36478,8 +38101,41 @@ GRANT ALL ON FUNCTION public.decrement_branch_menu_daily_limit() TO service_role
 --
 
 REVOKE ALL ON FUNCTION public.edit_pending_order_item(p_order_item_id bigint, p_variant_id bigint, p_variant_name text, p_unit_price numeric, p_modifiers jsonb, p_sides jsonb, p_note text, p_quantity integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.edit_pending_order_item(p_order_item_id bigint, p_variant_id bigint, p_variant_name text, p_unit_price numeric, p_modifiers jsonb, p_sides jsonb, p_note text, p_quantity integer) TO service_role;
 GRANT ALL ON FUNCTION public.edit_pending_order_item(p_order_item_id bigint, p_variant_id bigint, p_variant_name text, p_unit_price numeric, p_modifiers jsonb, p_sides jsonb, p_note text, p_quantity integer) TO authenticated;
+GRANT ALL ON FUNCTION public.edit_pending_order_item(p_order_item_id bigint, p_variant_id bigint, p_variant_name text, p_unit_price numeric, p_modifiers jsonb, p_sides jsonb, p_note text, p_quantity integer) TO service_role;
+
+
+--
+-- Name: FUNCTION employee_clock_in_with_checklist(p_tenant_id bigint, p_employee_id bigint, p_branch_id bigint, p_shift_id bigint, p_business_date date, p_photo_path text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.employee_clock_in_with_checklist(p_tenant_id bigint, p_employee_id bigint, p_branch_id bigint, p_shift_id bigint, p_business_date date, p_photo_path text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.employee_clock_in_with_checklist(p_tenant_id bigint, p_employee_id bigint, p_branch_id bigint, p_shift_id bigint, p_business_date date, p_photo_path text) TO service_role;
+
+
+--
+-- Name: FUNCTION employee_clock_out_with_code(p_tenant_id bigint, p_employee_id bigint, p_attendance_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.employee_clock_out_with_code(p_tenant_id bigint, p_employee_id bigint, p_attendance_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.employee_clock_out_with_code(p_tenant_id bigint, p_employee_id bigint, p_attendance_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION employee_request_clock_out(p_tenant_id bigint, p_employee_id bigint, p_attendance_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.employee_request_clock_out(p_tenant_id bigint, p_employee_id bigint, p_attendance_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.employee_request_clock_out(p_tenant_id bigint, p_employee_id bigint, p_attendance_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION employee_submit_consumption_report(p_tenant_id bigint, p_attendance_id bigint, p_lines jsonb, p_note text, p_no_consumption boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.employee_submit_consumption_report(p_tenant_id bigint, p_attendance_id bigint, p_lines jsonb, p_note text, p_no_consumption boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.employee_submit_consumption_report(p_tenant_id bigint, p_attendance_id bigint, p_lines jsonb, p_note text, p_no_consumption boolean) TO authenticated;
+GRANT ALL ON FUNCTION public.employee_submit_consumption_report(p_tenant_id bigint, p_attendance_id bigint, p_lines jsonb, p_note text, p_no_consumption boolean) TO service_role;
 
 
 --
@@ -36487,6 +38143,7 @@ GRANT ALL ON FUNCTION public.edit_pending_order_item(p_order_item_id bigint, p_v
 --
 
 REVOKE ALL ON FUNCTION public.enable_offline_for_session(p_session_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.enable_offline_for_session(p_session_id bigint) TO authenticated;
 GRANT ALL ON FUNCTION public.enable_offline_for_session(p_session_id bigint) TO service_role;
 
 
@@ -36518,7 +38175,8 @@ GRANT ALL ON FUNCTION public.enforce_period_close_stock_issues() TO service_role
 -- Name: FUNCTION enforce_po_grn_branch_is_procurement(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.enforce_po_grn_branch_is_procurement() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.enforce_po_grn_branch_is_procurement() TO anon;
+GRANT ALL ON FUNCTION public.enforce_po_grn_branch_is_procurement() TO authenticated;
 GRANT ALL ON FUNCTION public.enforce_po_grn_branch_is_procurement() TO service_role;
 
 
@@ -36526,7 +38184,8 @@ GRANT ALL ON FUNCTION public.enforce_po_grn_branch_is_procurement() TO service_r
 -- Name: FUNCTION enforce_stock_transfer_direction(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.enforce_stock_transfer_direction() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.enforce_stock_transfer_direction() TO anon;
+GRANT ALL ON FUNCTION public.enforce_stock_transfer_direction() TO authenticated;
 GRANT ALL ON FUNCTION public.enforce_stock_transfer_direction() TO service_role;
 
 
@@ -36535,8 +38194,8 @@ GRANT ALL ON FUNCTION public.enforce_stock_transfer_direction() TO service_role;
 --
 
 REVOKE ALL ON FUNCTION public.enqueue_cancel_ticket_print(p_order_item_id bigint, p_reason text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.enqueue_cancel_ticket_print(p_order_item_id bigint, p_reason text) TO service_role;
 GRANT ALL ON FUNCTION public.enqueue_cancel_ticket_print(p_order_item_id bigint, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.enqueue_cancel_ticket_print(p_order_item_id bigint, p_reason text) TO service_role;
 
 
 --
@@ -36544,8 +38203,8 @@ GRANT ALL ON FUNCTION public.enqueue_cancel_ticket_print(p_order_item_id bigint,
 --
 
 REVOKE ALL ON FUNCTION public.enqueue_edit_pending_order_item_quantity_print(p_order_item_id bigint, p_old_quantity integer, p_new_quantity integer, p_reason text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.enqueue_edit_pending_order_item_quantity_print(p_order_item_id bigint, p_old_quantity integer, p_new_quantity integer, p_reason text) TO service_role;
 GRANT ALL ON FUNCTION public.enqueue_edit_pending_order_item_quantity_print(p_order_item_id bigint, p_old_quantity integer, p_new_quantity integer, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.enqueue_edit_pending_order_item_quantity_print(p_order_item_id bigint, p_old_quantity integer, p_new_quantity integer, p_reason text) TO service_role;
 
 
 --
@@ -36553,8 +38212,8 @@ GRANT ALL ON FUNCTION public.enqueue_edit_pending_order_item_quantity_print(p_or
 --
 
 REVOKE ALL ON FUNCTION public.enqueue_kitchen_print(p_order_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.enqueue_kitchen_print(p_order_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.enqueue_kitchen_print(p_order_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.enqueue_kitchen_print(p_order_id bigint) TO service_role;
 
 
 --
@@ -36562,8 +38221,8 @@ GRANT ALL ON FUNCTION public.enqueue_kitchen_print(p_order_id bigint) TO authent
 --
 
 REVOKE ALL ON FUNCTION public.enqueue_partial_cancel_ticket_print(p_order_item_id bigint, p_old_quantity integer, p_new_quantity integer, p_reason text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.enqueue_partial_cancel_ticket_print(p_order_item_id bigint, p_old_quantity integer, p_new_quantity integer, p_reason text) TO service_role;
 GRANT ALL ON FUNCTION public.enqueue_partial_cancel_ticket_print(p_order_item_id bigint, p_old_quantity integer, p_new_quantity integer, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.enqueue_partial_cancel_ticket_print(p_order_item_id bigint, p_old_quantity integer, p_new_quantity integer, p_reason text) TO service_role;
 
 
 --
@@ -36571,8 +38230,8 @@ GRANT ALL ON FUNCTION public.enqueue_partial_cancel_ticket_print(p_order_item_id
 --
 
 REVOKE ALL ON FUNCTION public.enqueue_provisional_bill(p_order_id bigint, p_qr_content text, p_qr_header_label text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.enqueue_provisional_bill(p_order_id bigint, p_qr_content text, p_qr_header_label text) TO service_role;
 GRANT ALL ON FUNCTION public.enqueue_provisional_bill(p_order_id bigint, p_qr_content text, p_qr_header_label text) TO authenticated;
+GRANT ALL ON FUNCTION public.enqueue_provisional_bill(p_order_id bigint, p_qr_content text, p_qr_header_label text) TO service_role;
 
 
 --
@@ -36580,8 +38239,8 @@ GRANT ALL ON FUNCTION public.enqueue_provisional_bill(p_order_id bigint, p_qr_co
 --
 
 REVOKE ALL ON FUNCTION public.enqueue_receipt_print(p_order_id bigint, p_cash_received numeric, p_cash_change numeric) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.enqueue_receipt_print(p_order_id bigint, p_cash_received numeric, p_cash_change numeric) TO service_role;
 GRANT ALL ON FUNCTION public.enqueue_receipt_print(p_order_id bigint, p_cash_received numeric, p_cash_change numeric) TO authenticated;
+GRANT ALL ON FUNCTION public.enqueue_receipt_print(p_order_id bigint, p_cash_received numeric, p_cash_change numeric) TO service_role;
 
 
 --
@@ -36589,8 +38248,8 @@ GRANT ALL ON FUNCTION public.enqueue_receipt_print(p_order_id bigint, p_cash_rec
 --
 
 REVOKE ALL ON FUNCTION public.enqueue_shift_close_print(p_session_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.enqueue_shift_close_print(p_session_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.enqueue_shift_close_print(p_session_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.enqueue_shift_close_print(p_session_id bigint) TO service_role;
 
 
 --
@@ -36602,20 +38261,12 @@ GRANT ALL ON FUNCTION public.ensure_branch_inventory_location_defaults(p_tenant_
 
 
 --
--- Name: FUNCTION ensure_journal_write_permission(p_branch_id bigint); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.ensure_journal_write_permission(p_branch_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.ensure_journal_write_permission(p_branch_id bigint) TO service_role;
-
-
---
 -- Name: FUNCTION escalate_round_4(p_session_id bigint, p_ingredient_id bigint, p_final_qty numeric, p_note text); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.escalate_round_4(p_session_id bigint, p_ingredient_id bigint, p_final_qty numeric, p_note text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.escalate_round_4(p_session_id bigint, p_ingredient_id bigint, p_final_qty numeric, p_note text) TO service_role;
 GRANT ALL ON FUNCTION public.escalate_round_4(p_session_id bigint, p_ingredient_id bigint, p_final_qty numeric, p_note text) TO authenticated;
+GRANT ALL ON FUNCTION public.escalate_round_4(p_session_id bigint, p_ingredient_id bigint, p_final_qty numeric, p_note text) TO service_role;
 
 
 --
@@ -36631,8 +38282,8 @@ GRANT ALL ON FUNCTION public.expire_stuck_print_jobs(p_stale_after_seconds integ
 --
 
 REVOKE ALL ON FUNCTION public.extend_express_window(p_branch_id bigint, p_minutes integer, p_note text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.extend_express_window(p_branch_id bigint, p_minutes integer, p_note text) TO service_role;
 GRANT ALL ON FUNCTION public.extend_express_window(p_branch_id bigint, p_minutes integer, p_note text) TO authenticated;
+GRANT ALL ON FUNCTION public.extend_express_window(p_branch_id bigint, p_minutes integer, p_note text) TO service_role;
 
 
 --
@@ -36648,8 +38299,8 @@ GRANT ALL ON FUNCTION public.finalize_paid_order(p_order_id bigint, p_actor_id u
 --
 
 REVOKE ALL ON FUNCTION public.finalize_stocktake(p_session_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.finalize_stocktake(p_session_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.finalize_stocktake(p_session_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.finalize_stocktake(p_session_id bigint) TO service_role;
 
 
 --
@@ -36665,79 +38316,8 @@ GRANT ALL ON FUNCTION public.finance_views_last_refresh() TO service_role;
 --
 
 REVOKE ALL ON FUNCTION public.find_payment_order_desync(p_since timestamp with time zone) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.find_payment_order_desync(p_since timestamp with time zone) TO service_role;
 GRANT ALL ON FUNCTION public.find_payment_order_desync(p_since timestamp with time zone) TO authenticated;
-
-
---
--- Name: FUNCTION fn_eval_account_expr(p_tenant_id bigint, p_start_date date, p_end_date date, p_expr jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.fn_eval_account_expr(p_tenant_id bigint, p_start_date date, p_end_date date, p_expr jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.fn_eval_account_expr(p_tenant_id bigint, p_start_date date, p_end_date date, p_expr jsonb) TO service_role;
-
-
---
--- Name: FUNCTION fn_generate_b01_dn(p_tenant_id bigint, p_as_of_date date); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.fn_generate_b01_dn(p_tenant_id bigint, p_as_of_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.fn_generate_b01_dn(p_tenant_id bigint, p_as_of_date date) TO service_role;
-GRANT ALL ON FUNCTION public.fn_generate_b01_dn(p_tenant_id bigint, p_as_of_date date) TO authenticated;
-
-
---
--- Name: FUNCTION fn_generate_b02_dn(p_tenant_id bigint, p_start_date date, p_end_date date); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.fn_generate_b02_dn(p_tenant_id bigint, p_start_date date, p_end_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.fn_generate_b02_dn(p_tenant_id bigint, p_start_date date, p_end_date date) TO service_role;
-GRANT ALL ON FUNCTION public.fn_generate_b02_dn(p_tenant_id bigint, p_start_date date, p_end_date date) TO authenticated;
-
-
---
--- Name: FUNCTION fn_generate_b03_dn(p_tenant_id bigint, p_start_date date, p_end_date date); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.fn_generate_b03_dn(p_tenant_id bigint, p_start_date date, p_end_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.fn_generate_b03_dn(p_tenant_id bigint, p_start_date date, p_end_date date) TO service_role;
-GRANT ALL ON FUNCTION public.fn_generate_b03_dn(p_tenant_id bigint, p_start_date date, p_end_date date) TO authenticated;
-
-
---
--- Name: FUNCTION fn_generate_form_01_gtgt(p_tenant_id bigint, p_year integer, p_month integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.fn_generate_form_01_gtgt(p_tenant_id bigint, p_year integer, p_month integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.fn_generate_form_01_gtgt(p_tenant_id bigint, p_year integer, p_month integer) TO service_role;
-GRANT ALL ON FUNCTION public.fn_generate_form_01_gtgt(p_tenant_id bigint, p_year integer, p_month integer) TO authenticated;
-
-
---
--- Name: FUNCTION fn_reconcile_drilldown(p_tenant_id bigint, p_start_date date, p_end_date date, p_category text, p_side text, p_branch_id bigint, p_limit integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.fn_reconcile_drilldown(p_tenant_id bigint, p_start_date date, p_end_date date, p_category text, p_side text, p_branch_id bigint, p_limit integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.fn_reconcile_drilldown(p_tenant_id bigint, p_start_date date, p_end_date date, p_category text, p_side text, p_branch_id bigint, p_limit integer) TO service_role;
-GRANT ALL ON FUNCTION public.fn_reconcile_drilldown(p_tenant_id bigint, p_start_date date, p_end_date date, p_category text, p_side text, p_branch_id bigint, p_limit integer) TO authenticated;
-
-
---
--- Name: FUNCTION fn_reconcile_period(p_tenant_id bigint, p_start_date date, p_end_date date, p_branch_id bigint); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.fn_reconcile_period(p_tenant_id bigint, p_start_date date, p_end_date date, p_branch_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.fn_reconcile_period(p_tenant_id bigint, p_start_date date, p_end_date date, p_branch_id bigint) TO service_role;
-GRANT ALL ON FUNCTION public.fn_reconcile_period(p_tenant_id bigint, p_start_date date, p_end_date date, p_branch_id bigint) TO authenticated;
-
-
---
--- Name: FUNCTION fn_reconcile_sales_by_day(p_branch_id bigint, p_start_date date, p_end_date date); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.fn_reconcile_sales_by_day(p_branch_id bigint, p_start_date date, p_end_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.fn_reconcile_sales_by_day(p_branch_id bigint, p_start_date date, p_end_date date) TO service_role;
-GRANT ALL ON FUNCTION public.fn_reconcile_sales_by_day(p_branch_id bigint, p_start_date date, p_end_date date) TO authenticated;
+GRANT ALL ON FUNCTION public.find_payment_order_desync(p_since timestamp with time zone) TO service_role;
 
 
 --
@@ -36745,8 +38325,8 @@ GRANT ALL ON FUNCTION public.fn_reconcile_sales_by_day(p_branch_id bigint, p_sta
 --
 
 REVOKE ALL ON FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint) TO service_role;
 
 
 --
@@ -36754,8 +38334,8 @@ GRANT ALL ON FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bi
 --
 
 REVOKE ALL ON FUNCTION public.get_cash_variance_summary(p_branch_id bigint, p_start_date date, p_end_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_cash_variance_summary(p_branch_id bigint, p_start_date date, p_end_date date) TO service_role;
 GRANT ALL ON FUNCTION public.get_cash_variance_summary(p_branch_id bigint, p_start_date date, p_end_date date) TO authenticated;
+GRANT ALL ON FUNCTION public.get_cash_variance_summary(p_branch_id bigint, p_start_date date, p_end_date date) TO service_role;
 
 
 --
@@ -36763,8 +38343,8 @@ GRANT ALL ON FUNCTION public.get_cash_variance_summary(p_branch_id bigint, p_sta
 --
 
 REVOKE ALL ON FUNCTION public.get_daily_revenue(p_branch_id bigint, p_start_date date, p_end_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_daily_revenue(p_branch_id bigint, p_start_date date, p_end_date date) TO service_role;
 GRANT ALL ON FUNCTION public.get_daily_revenue(p_branch_id bigint, p_start_date date, p_end_date date) TO authenticated;
+GRANT ALL ON FUNCTION public.get_daily_revenue(p_branch_id bigint, p_start_date date, p_end_date date) TO service_role;
 
 
 --
@@ -36772,8 +38352,8 @@ GRANT ALL ON FUNCTION public.get_daily_revenue(p_branch_id bigint, p_start_date 
 --
 
 REVOKE ALL ON FUNCTION public.get_finance_dashboard_summary(p_start_date date, p_end_date date, p_branch_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_finance_dashboard_summary(p_start_date date, p_end_date date, p_branch_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.get_finance_dashboard_summary(p_start_date date, p_end_date date, p_branch_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.get_finance_dashboard_summary(p_start_date date, p_end_date date, p_branch_id bigint) TO service_role;
 
 
 --
@@ -36781,8 +38361,8 @@ GRANT ALL ON FUNCTION public.get_finance_dashboard_summary(p_start_date date, p_
 --
 
 REVOKE ALL ON FUNCTION public.get_food_cost(p_branch_id bigint, p_start_date date, p_end_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_food_cost(p_branch_id bigint, p_start_date date, p_end_date date) TO service_role;
 GRANT ALL ON FUNCTION public.get_food_cost(p_branch_id bigint, p_start_date date, p_end_date date) TO authenticated;
+GRANT ALL ON FUNCTION public.get_food_cost(p_branch_id bigint, p_start_date date, p_end_date date) TO service_role;
 
 
 --
@@ -36790,8 +38370,8 @@ GRANT ALL ON FUNCTION public.get_food_cost(p_branch_id bigint, p_start_date date
 --
 
 REVOKE ALL ON FUNCTION public.get_grn_price_baseline(p_supplier_id bigint, p_ingredient_id bigint, p_uom text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_grn_price_baseline(p_supplier_id bigint, p_ingredient_id bigint, p_uom text) TO service_role;
 GRANT ALL ON FUNCTION public.get_grn_price_baseline(p_supplier_id bigint, p_ingredient_id bigint, p_uom text) TO authenticated;
+GRANT ALL ON FUNCTION public.get_grn_price_baseline(p_supplier_id bigint, p_ingredient_id bigint, p_uom text) TO service_role;
 
 
 --
@@ -36807,8 +38387,8 @@ GRANT ALL ON FUNCTION public.get_ingredient_abc_class(p_branch_id bigint, p_ingr
 --
 
 REVOKE ALL ON FUNCTION public.get_inventory_alerts(p_branch_id bigint, p_types text[], p_limit integer, p_offset integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_inventory_alerts(p_branch_id bigint, p_types text[], p_limit integer, p_offset integer) TO service_role;
 GRANT ALL ON FUNCTION public.get_inventory_alerts(p_branch_id bigint, p_types text[], p_limit integer, p_offset integer) TO authenticated;
+GRANT ALL ON FUNCTION public.get_inventory_alerts(p_branch_id bigint, p_types text[], p_limit integer, p_offset integer) TO service_role;
 
 
 --
@@ -36816,8 +38396,8 @@ GRANT ALL ON FUNCTION public.get_inventory_alerts(p_branch_id bigint, p_types te
 --
 
 REVOKE ALL ON FUNCTION public.get_inventory_dashboard(p_branch_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_inventory_dashboard(p_branch_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.get_inventory_dashboard(p_branch_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.get_inventory_dashboard(p_branch_id bigint) TO service_role;
 
 
 --
@@ -36825,8 +38405,17 @@ GRANT ALL ON FUNCTION public.get_inventory_dashboard(p_branch_id bigint) TO auth
 --
 
 REVOKE ALL ON FUNCTION public.get_orders_for_day(p_branch_id bigint, p_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_orders_for_day(p_branch_id bigint, p_date date) TO service_role;
 GRANT ALL ON FUNCTION public.get_orders_for_day(p_branch_id bigint, p_date date) TO authenticated;
+GRANT ALL ON FUNCTION public.get_orders_for_day(p_branch_id bigint, p_date date) TO service_role;
+
+
+--
+-- Name: FUNCTION get_orders_paid_summary(p_status text, p_branch_id bigint, p_date_from date, p_date_to date); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_orders_paid_summary(p_status text, p_branch_id bigint, p_date_from date, p_date_to date) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_orders_paid_summary(p_status text, p_branch_id bigint, p_date_from date, p_date_to date) TO authenticated;
+GRANT ALL ON FUNCTION public.get_orders_paid_summary(p_status text, p_branch_id bigint, p_date_from date, p_date_to date) TO service_role;
 
 
 --
@@ -36834,8 +38423,9 @@ GRANT ALL ON FUNCTION public.get_orders_for_day(p_branch_id bigint, p_date date)
 --
 
 REVOKE ALL ON FUNCTION public.get_pos_session_report(p_session_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_pos_session_report(p_session_id bigint) TO service_role;
+GRANT ALL ON FUNCTION public.get_pos_session_report(p_session_id bigint) TO anon;
 GRANT ALL ON FUNCTION public.get_pos_session_report(p_session_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.get_pos_session_report(p_session_id bigint) TO service_role;
 
 
 --
@@ -36843,8 +38433,8 @@ GRANT ALL ON FUNCTION public.get_pos_session_report(p_session_id bigint) TO auth
 --
 
 REVOKE ALL ON FUNCTION public.get_revenue_by_cashier(p_branch_id bigint, p_start_date date, p_end_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_revenue_by_cashier(p_branch_id bigint, p_start_date date, p_end_date date) TO service_role;
 GRANT ALL ON FUNCTION public.get_revenue_by_cashier(p_branch_id bigint, p_start_date date, p_end_date date) TO authenticated;
+GRANT ALL ON FUNCTION public.get_revenue_by_cashier(p_branch_id bigint, p_start_date date, p_end_date date) TO service_role;
 
 
 --
@@ -36852,8 +38442,8 @@ GRANT ALL ON FUNCTION public.get_revenue_by_cashier(p_branch_id bigint, p_start_
 --
 
 REVOKE ALL ON FUNCTION public.get_revenue_by_hour(p_branch_id bigint, p_start_date date, p_end_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_revenue_by_hour(p_branch_id bigint, p_start_date date, p_end_date date) TO service_role;
 GRANT ALL ON FUNCTION public.get_revenue_by_hour(p_branch_id bigint, p_start_date date, p_end_date date) TO authenticated;
+GRANT ALL ON FUNCTION public.get_revenue_by_hour(p_branch_id bigint, p_start_date date, p_end_date date) TO service_role;
 
 
 --
@@ -36861,8 +38451,8 @@ GRANT ALL ON FUNCTION public.get_revenue_by_hour(p_branch_id bigint, p_start_dat
 --
 
 REVOKE ALL ON FUNCTION public.get_revenue_kpis(p_branch_id bigint, p_start_date date, p_end_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_revenue_kpis(p_branch_id bigint, p_start_date date, p_end_date date) TO service_role;
 GRANT ALL ON FUNCTION public.get_revenue_kpis(p_branch_id bigint, p_start_date date, p_end_date date) TO authenticated;
+GRANT ALL ON FUNCTION public.get_revenue_kpis(p_branch_id bigint, p_start_date date, p_end_date date) TO service_role;
 
 
 --
@@ -36870,8 +38460,8 @@ GRANT ALL ON FUNCTION public.get_revenue_kpis(p_branch_id bigint, p_start_date d
 --
 
 REVOKE ALL ON FUNCTION public.get_revenue_rollup(p_branch_id bigint, p_start_date date, p_end_date date, p_granularity text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_revenue_rollup(p_branch_id bigint, p_start_date date, p_end_date date, p_granularity text) TO service_role;
 GRANT ALL ON FUNCTION public.get_revenue_rollup(p_branch_id bigint, p_start_date date, p_end_date date, p_granularity text) TO authenticated;
+GRANT ALL ON FUNCTION public.get_revenue_rollup(p_branch_id bigint, p_start_date date, p_end_date date, p_granularity text) TO service_role;
 
 
 --
@@ -36879,8 +38469,8 @@ GRANT ALL ON FUNCTION public.get_revenue_rollup(p_branch_id bigint, p_start_date
 --
 
 REVOKE ALL ON FUNCTION public.get_stocktake_lines_blind(p_session_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_stocktake_lines_blind(p_session_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.get_stocktake_lines_blind(p_session_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.get_stocktake_lines_blind(p_session_id bigint) TO service_role;
 
 
 --
@@ -36888,17 +38478,17 @@ GRANT ALL ON FUNCTION public.get_stocktake_lines_blind(p_session_id bigint) TO a
 --
 
 REVOKE ALL ON FUNCTION public.get_top_items(p_branch_id bigint, p_period_start date, p_limit integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_top_items(p_branch_id bigint, p_period_start date, p_limit integer) TO service_role;
 GRANT ALL ON FUNCTION public.get_top_items(p_branch_id bigint, p_period_start date, p_limit integer) TO authenticated;
+GRANT ALL ON FUNCTION public.get_top_items(p_branch_id bigint, p_period_start date, p_limit integer) TO service_role;
 
 
 --
--- Name: FUNCTION gl_reconciliation(p_tenant_id bigint, p_year integer, p_month integer); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION get_top_items(p_branch_id bigint, p_start_date date, p_end_date date, p_limit integer); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.gl_reconciliation(p_tenant_id bigint, p_year integer, p_month integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.gl_reconciliation(p_tenant_id bigint, p_year integer, p_month integer) TO service_role;
-GRANT ALL ON FUNCTION public.gl_reconciliation(p_tenant_id bigint, p_year integer, p_month integer) TO authenticated;
+REVOKE ALL ON FUNCTION public.get_top_items(p_branch_id bigint, p_start_date date, p_end_date date, p_limit integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_top_items(p_branch_id bigint, p_start_date date, p_end_date date, p_limit integer) TO authenticated;
+GRANT ALL ON FUNCTION public.get_top_items(p_branch_id bigint, p_start_date date, p_end_date date, p_limit integer) TO service_role;
 
 
 --
@@ -36906,8 +38496,8 @@ GRANT ALL ON FUNCTION public.gl_reconciliation(p_tenant_id bigint, p_year intege
 --
 
 REVOKE ALL ON FUNCTION public.grant_permission(p_target_user uuid, p_branch_id bigint, p_permission_key text, p_source_template bigint, p_valid_from timestamp with time zone, p_valid_until timestamp with time zone) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.grant_permission(p_target_user uuid, p_branch_id bigint, p_permission_key text, p_source_template bigint, p_valid_from timestamp with time zone, p_valid_until timestamp with time zone) TO service_role;
 GRANT ALL ON FUNCTION public.grant_permission(p_target_user uuid, p_branch_id bigint, p_permission_key text, p_source_template bigint, p_valid_from timestamp with time zone, p_valid_until timestamp with time zone) TO authenticated;
+GRANT ALL ON FUNCTION public.grant_permission(p_target_user uuid, p_branch_id bigint, p_permission_key text, p_source_template bigint, p_valid_from timestamp with time zone, p_valid_until timestamp with time zone) TO service_role;
 
 
 --
@@ -36916,7 +38506,6 @@ GRANT ALL ON FUNCTION public.grant_permission(p_target_user uuid, p_branch_id bi
 
 REVOKE ALL ON FUNCTION public.grn_is_auto_approvable(p_grn_id bigint) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.grn_is_auto_approvable(p_grn_id bigint) TO service_role;
-GRANT ALL ON FUNCTION public.grn_is_auto_approvable(p_grn_id bigint) TO authenticated;
 
 
 --
@@ -36925,22 +38514,6 @@ GRANT ALL ON FUNCTION public.grn_is_auto_approvable(p_grn_id bigint) TO authenti
 
 REVOKE ALL ON FUNCTION public.grn_items_compute_variance() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.grn_items_compute_variance() TO service_role;
-
-
---
--- Name: FUNCTION guard_journal_entry_no_delete_posted(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.guard_journal_entry_no_delete_posted() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.guard_journal_entry_no_delete_posted() TO service_role;
-
-
---
--- Name: FUNCTION guard_journal_entry_period(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.guard_journal_entry_period() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.guard_journal_entry_period() TO service_role;
 
 
 --
@@ -36956,8 +38529,8 @@ GRANT ALL ON FUNCTION public.handle_new_user() TO service_role;
 --
 
 REVOKE ALL ON FUNCTION public.has_permission(p_branch_id bigint, p_key text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.has_permission(p_branch_id bigint, p_key text) TO service_role;
 GRANT ALL ON FUNCTION public.has_permission(p_branch_id bigint, p_key text) TO authenticated;
+GRANT ALL ON FUNCTION public.has_permission(p_branch_id bigint, p_key text) TO service_role;
 
 
 --
@@ -36965,8 +38538,8 @@ GRANT ALL ON FUNCTION public.has_permission(p_branch_id bigint, p_key text) TO a
 --
 
 REVOKE ALL ON FUNCTION public.has_permission_any(p_key text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.has_permission_any(p_key text) TO service_role;
 GRANT ALL ON FUNCTION public.has_permission_any(p_key text) TO authenticated;
+GRANT ALL ON FUNCTION public.has_permission_any(p_key text) TO service_role;
 
 
 --
@@ -36974,6 +38547,7 @@ GRANT ALL ON FUNCTION public.has_permission_any(p_key text) TO authenticated;
 --
 
 REVOKE ALL ON FUNCTION public.has_position(p_code text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.has_position(p_code text) TO authenticated;
 GRANT ALL ON FUNCTION public.has_position(p_code text) TO service_role;
 
 
@@ -36982,8 +38556,8 @@ GRANT ALL ON FUNCTION public.has_position(p_code text) TO service_role;
 --
 
 REVOKE ALL ON FUNCTION public.heartbeat_zone_lock(p_session_id bigint, p_zone_id text, p_ttl_seconds integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.heartbeat_zone_lock(p_session_id bigint, p_zone_id text, p_ttl_seconds integer) TO service_role;
 GRANT ALL ON FUNCTION public.heartbeat_zone_lock(p_session_id bigint, p_zone_id text, p_ttl_seconds integer) TO authenticated;
+GRANT ALL ON FUNCTION public.heartbeat_zone_lock(p_session_id bigint, p_zone_id text, p_ttl_seconds integer) TO service_role;
 
 
 --
@@ -36999,8 +38573,8 @@ GRANT ALL ON FUNCTION public.inventory_requires_manual_review(p_ingredient_id bi
 --
 
 REVOKE ALL ON FUNCTION public.inventory_shift_key(p_branch_id bigint, p_at timestamp with time zone) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.inventory_shift_key(p_branch_id bigint, p_at timestamp with time zone) TO service_role;
 GRANT ALL ON FUNCTION public.inventory_shift_key(p_branch_id bigint, p_at timestamp with time zone) TO authenticated;
+GRANT ALL ON FUNCTION public.inventory_shift_key(p_branch_id bigint, p_at timestamp with time zone) TO service_role;
 
 
 --
@@ -37008,8 +38582,8 @@ GRANT ALL ON FUNCTION public.inventory_shift_key(p_branch_id bigint, p_at timest
 --
 
 REVOKE ALL ON FUNCTION public.is_feature_enabled(p_branch_id bigint, p_flag_key text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.is_feature_enabled(p_branch_id bigint, p_flag_key text) TO service_role;
 GRANT ALL ON FUNCTION public.is_feature_enabled(p_branch_id bigint, p_flag_key text) TO authenticated;
+GRANT ALL ON FUNCTION public.is_feature_enabled(p_branch_id bigint, p_flag_key text) TO service_role;
 
 
 --
@@ -37017,8 +38591,8 @@ GRANT ALL ON FUNCTION public.is_feature_enabled(p_branch_id bigint, p_flag_key t
 --
 
 REVOKE ALL ON FUNCTION public.is_inventory_production_operator() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.is_inventory_production_operator() TO service_role;
 GRANT ALL ON FUNCTION public.is_inventory_production_operator() TO authenticated;
+GRANT ALL ON FUNCTION public.is_inventory_production_operator() TO service_role;
 
 
 --
@@ -37026,8 +38600,17 @@ GRANT ALL ON FUNCTION public.is_inventory_production_operator() TO authenticated
 --
 
 REVOKE ALL ON FUNCTION public.list_branch_menu_daily_limits(p_branch_id bigint, p_limit_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.list_branch_menu_daily_limits(p_branch_id bigint, p_limit_date date) TO service_role;
 GRANT ALL ON FUNCTION public.list_branch_menu_daily_limits(p_branch_id bigint, p_limit_date date) TO authenticated;
+GRANT ALL ON FUNCTION public.list_branch_menu_daily_limits(p_branch_id bigint, p_limit_date date) TO service_role;
+
+
+--
+-- Name: FUNCTION list_notifications(p_limit integer, p_before timestamp with time zone, p_unread_only boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.list_notifications(p_limit integer, p_before timestamp with time zone, p_unread_only boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.list_notifications(p_limit integer, p_before timestamp with time zone, p_unread_only boolean) TO authenticated;
+GRANT ALL ON FUNCTION public.list_notifications(p_limit integer, p_before timestamp with time zone, p_unread_only boolean) TO service_role;
 
 
 --
@@ -37035,8 +38618,8 @@ GRANT ALL ON FUNCTION public.list_branch_menu_daily_limits(p_branch_id bigint, p
 --
 
 REVOKE ALL ON FUNCTION public.log_audit(p_action text, p_entity_type text, p_entity_id bigint, p_old jsonb, p_new jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.log_audit(p_action text, p_entity_type text, p_entity_id bigint, p_old jsonb, p_new jsonb) TO service_role;
 GRANT ALL ON FUNCTION public.log_audit(p_action text, p_entity_type text, p_entity_id bigint, p_old jsonb, p_new jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.log_audit(p_action text, p_entity_type text, p_entity_id bigint, p_old jsonb, p_new jsonb) TO service_role;
 
 
 --
@@ -37044,8 +38627,8 @@ GRANT ALL ON FUNCTION public.log_audit(p_action text, p_entity_type text, p_enti
 --
 
 REVOKE ALL ON FUNCTION public.mark_all_notifications_read() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.mark_all_notifications_read() TO service_role;
 GRANT ALL ON FUNCTION public.mark_all_notifications_read() TO authenticated;
+GRANT ALL ON FUNCTION public.mark_all_notifications_read() TO service_role;
 
 
 --
@@ -37053,8 +38636,8 @@ GRANT ALL ON FUNCTION public.mark_all_notifications_read() TO authenticated;
 --
 
 REVOKE ALL ON FUNCTION public.mark_kds_item_out_of_stock(p_ticket_id bigint, p_disable_for_day boolean, p_reason text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.mark_kds_item_out_of_stock(p_ticket_id bigint, p_disable_for_day boolean, p_reason text) TO service_role;
 GRANT ALL ON FUNCTION public.mark_kds_item_out_of_stock(p_ticket_id bigint, p_disable_for_day boolean, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.mark_kds_item_out_of_stock(p_ticket_id bigint, p_disable_for_day boolean, p_reason text) TO service_role;
 
 
 --
@@ -37062,8 +38645,8 @@ GRANT ALL ON FUNCTION public.mark_kds_item_out_of_stock(p_ticket_id bigint, p_di
 --
 
 REVOKE ALL ON FUNCTION public.mark_order_item_served(p_item_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.mark_order_item_served(p_item_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.mark_order_item_served(p_item_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.mark_order_item_served(p_item_id bigint) TO service_role;
 
 
 --
@@ -37071,6 +38654,8 @@ GRANT ALL ON FUNCTION public.mark_order_item_served(p_item_id bigint) TO authent
 --
 
 REVOKE ALL ON FUNCTION public.materialize_print_document(p_kind text, p_payload jsonb, p_template_id bigint, p_template_version integer, p_paper_width_mm integer, p_font_profile text, p_content jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.materialize_print_document(p_kind text, p_payload jsonb, p_template_id bigint, p_template_version integer, p_paper_width_mm integer, p_font_profile text, p_content jsonb) TO anon;
+GRANT ALL ON FUNCTION public.materialize_print_document(p_kind text, p_payload jsonb, p_template_id bigint, p_template_version integer, p_paper_width_mm integer, p_font_profile text, p_content jsonb) TO authenticated;
 GRANT ALL ON FUNCTION public.materialize_print_document(p_kind text, p_payload jsonb, p_template_id bigint, p_template_version integer, p_paper_width_mm integer, p_font_profile text, p_content jsonb) TO service_role;
 
 
@@ -37079,16 +38664,8 @@ GRANT ALL ON FUNCTION public.materialize_print_document(p_kind text, p_payload j
 --
 
 REVOKE ALL ON FUNCTION public.merge_orders(p_source_order_id bigint, p_target_order_id bigint, p_idempotency_key uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.merge_orders(p_source_order_id bigint, p_target_order_id bigint, p_idempotency_key uuid) TO service_role;
 GRANT ALL ON FUNCTION public.merge_orders(p_source_order_id bigint, p_target_order_id bigint, p_idempotency_key uuid) TO authenticated;
-
-
---
--- Name: FUNCTION next_manual_journal_entry_number(p_tenant_id bigint, p_entry_date date); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.next_manual_journal_entry_number(p_tenant_id bigint, p_entry_date date) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.next_manual_journal_entry_number(p_tenant_id bigint, p_entry_date date) TO service_role;
+GRANT ALL ON FUNCTION public.merge_orders(p_source_order_id bigint, p_target_order_id bigint, p_idempotency_key uuid) TO service_role;
 
 
 --
@@ -37096,8 +38673,8 @@ GRANT ALL ON FUNCTION public.next_manual_journal_entry_number(p_tenant_id bigint
 --
 
 REVOKE ALL ON FUNCTION public.next_po_display_id(p_tenant_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.next_po_display_id(p_tenant_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.next_po_display_id(p_tenant_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.next_po_display_id(p_tenant_id bigint) TO service_role;
 
 
 --
@@ -37105,8 +38682,8 @@ GRANT ALL ON FUNCTION public.next_po_display_id(p_tenant_id bigint) TO authentic
 --
 
 REVOKE ALL ON FUNCTION public.override_grn_hardblock(p_grn_item_id bigint, p_evidence_url text, p_reason_code text, p_note text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.override_grn_hardblock(p_grn_item_id bigint, p_evidence_url text, p_reason_code text, p_note text) TO service_role;
 GRANT ALL ON FUNCTION public.override_grn_hardblock(p_grn_item_id bigint, p_evidence_url text, p_reason_code text, p_note text) TO authenticated;
+GRANT ALL ON FUNCTION public.override_grn_hardblock(p_grn_item_id bigint, p_evidence_url text, p_reason_code text, p_note text) TO service_role;
 
 
 --
@@ -37121,8 +38698,18 @@ GRANT ALL ON FUNCTION public.period_status_at(p_tenant_id bigint, p_at timestamp
 -- Name: FUNCTION populate_order_item_vat_rate(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.populate_order_item_vat_rate() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.populate_order_item_vat_rate() TO anon;
+GRANT ALL ON FUNCTION public.populate_order_item_vat_rate() TO authenticated;
 GRANT ALL ON FUNCTION public.populate_order_item_vat_rate() TO service_role;
+
+
+--
+-- Name: FUNCTION pos_daily_limit_item_quantities(p_items jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON FUNCTION public.pos_daily_limit_item_quantities(p_items jsonb) TO anon;
+GRANT ALL ON FUNCTION public.pos_daily_limit_item_quantities(p_items jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.pos_daily_limit_item_quantities(p_items jsonb) TO service_role;
 
 
 --
@@ -37130,7 +38717,27 @@ GRANT ALL ON FUNCTION public.populate_order_item_vat_rate() TO service_role;
 --
 
 REVOKE ALL ON FUNCTION public.pos_enrich_order_sides(p_tenant_id bigint, p_main_item_id bigint, p_sides jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.pos_enrich_order_sides(p_tenant_id bigint, p_main_item_id bigint, p_sides jsonb) TO anon;
+GRANT ALL ON FUNCTION public.pos_enrich_order_sides(p_tenant_id bigint, p_main_item_id bigint, p_sides jsonb) TO authenticated;
 GRANT ALL ON FUNCTION public.pos_enrich_order_sides(p_tenant_id bigint, p_main_item_id bigint, p_sides jsonb) TO service_role;
+
+
+--
+-- Name: FUNCTION pos_normalize_order_discount_totals(); Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON FUNCTION public.pos_normalize_order_discount_totals() TO anon;
+GRANT ALL ON FUNCTION public.pos_normalize_order_discount_totals() TO authenticated;
+GRANT ALL ON FUNCTION public.pos_normalize_order_discount_totals() TO service_role;
+
+
+--
+-- Name: FUNCTION pos_normalize_order_item_discount(); Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON FUNCTION public.pos_normalize_order_item_discount() TO anon;
+GRANT ALL ON FUNCTION public.pos_normalize_order_item_discount() TO authenticated;
+GRANT ALL ON FUNCTION public.pos_normalize_order_item_discount() TO service_role;
 
 
 --
@@ -37138,24 +38745,26 @@ GRANT ALL ON FUNCTION public.pos_enrich_order_sides(p_tenant_id bigint, p_main_i
 --
 
 REVOKE ALL ON FUNCTION public.pos_order_modifier_sum(p_tenant_id bigint, p_main_item_id bigint, p_modifiers jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.pos_order_modifier_sum(p_tenant_id bigint, p_main_item_id bigint, p_modifiers jsonb) TO anon;
+GRANT ALL ON FUNCTION public.pos_order_modifier_sum(p_tenant_id bigint, p_main_item_id bigint, p_modifiers jsonb) TO authenticated;
 GRANT ALL ON FUNCTION public.pos_order_modifier_sum(p_tenant_id bigint, p_main_item_id bigint, p_modifiers jsonb) TO service_role;
 
 
 --
--- Name: FUNCTION post_manual_journal_entry(p_entry_id bigint); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION pos_touch_order_discount_totals(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.post_manual_journal_entry(p_entry_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.post_manual_journal_entry(p_entry_id bigint) TO service_role;
-GRANT ALL ON FUNCTION public.post_manual_journal_entry(p_entry_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.pos_touch_order_discount_totals() TO anon;
+GRANT ALL ON FUNCTION public.pos_touch_order_discount_totals() TO authenticated;
+GRANT ALL ON FUNCTION public.pos_touch_order_discount_totals() TO service_role;
 
 
 --
--- Name: FUNCTION post_payroll_journal(p_payroll_period_id bigint); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION position_id_from_access_bucket(p_access_bucket text, p_tenant bigint); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.post_payroll_journal(p_payroll_period_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.post_payroll_journal(p_payroll_period_id bigint) TO service_role;
+REVOKE ALL ON FUNCTION public.position_id_from_access_bucket(p_access_bucket text, p_tenant bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.position_id_from_access_bucket(p_access_bucket text, p_tenant bigint) TO service_role;
 
 
 --
@@ -37171,6 +38780,8 @@ GRANT ALL ON FUNCTION public.print_jobs_attach_document_trigger() TO service_rol
 --
 
 REVOKE ALL ON FUNCTION public.print_template_block_visible(p_block jsonb, p_payload jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_block_visible(p_block jsonb, p_payload jsonb) TO anon;
+GRANT ALL ON FUNCTION public.print_template_block_visible(p_block jsonb, p_payload jsonb) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_block_visible(p_block jsonb, p_payload jsonb) TO service_role;
 
 
@@ -37179,6 +38790,8 @@ GRANT ALL ON FUNCTION public.print_template_block_visible(p_block jsonb, p_paylo
 --
 
 REVOKE ALL ON FUNCTION public.print_template_datetime(p_iso text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_datetime(p_iso text) TO anon;
+GRANT ALL ON FUNCTION public.print_template_datetime(p_iso text) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_datetime(p_iso text) TO service_role;
 
 
@@ -37195,6 +38808,8 @@ GRANT ALL ON FUNCTION public.print_template_default_content(p_kind text) TO serv
 --
 
 REVOKE ALL ON FUNCTION public.print_template_diff_sign(p_value numeric) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_diff_sign(p_value numeric) TO anon;
+GRANT ALL ON FUNCTION public.print_template_diff_sign(p_value numeric) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_diff_sign(p_value numeric) TO service_role;
 
 
@@ -37203,6 +38818,8 @@ GRANT ALL ON FUNCTION public.print_template_diff_sign(p_value numeric) TO servic
 --
 
 REVOKE ALL ON FUNCTION public.print_template_divider_block(p_char text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_divider_block(p_char text) TO anon;
+GRANT ALL ON FUNCTION public.print_template_divider_block(p_char text) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_divider_block(p_char text) TO service_role;
 
 
@@ -37211,6 +38828,8 @@ GRANT ALL ON FUNCTION public.print_template_divider_block(p_char text) TO servic
 --
 
 REVOKE ALL ON FUNCTION public.print_template_duration(p_opened_at text, p_closed_at text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_duration(p_opened_at text, p_closed_at text) TO anon;
+GRANT ALL ON FUNCTION public.print_template_duration(p_opened_at text, p_closed_at text) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_duration(p_opened_at text, p_closed_at text) TO service_role;
 
 
@@ -37219,6 +38838,8 @@ GRANT ALL ON FUNCTION public.print_template_duration(p_opened_at text, p_closed_
 --
 
 REVOKE ALL ON FUNCTION public.print_template_hhmm(p_iso text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_hhmm(p_iso text) TO anon;
+GRANT ALL ON FUNCTION public.print_template_hhmm(p_iso text) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_hhmm(p_iso text) TO service_role;
 
 
@@ -37235,6 +38856,8 @@ GRANT ALL ON FUNCTION public.print_template_interpolate(p_text text, p_payload j
 --
 
 REVOKE ALL ON FUNCTION public.print_template_kitchen_item_blocks(p_payload jsonb, p_strikethrough boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_kitchen_item_blocks(p_payload jsonb, p_strikethrough boolean) TO anon;
+GRANT ALL ON FUNCTION public.print_template_kitchen_item_blocks(p_payload jsonb, p_strikethrough boolean) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_kitchen_item_blocks(p_payload jsonb, p_strikethrough boolean) TO service_role;
 
 
@@ -37243,6 +38866,8 @@ GRANT ALL ON FUNCTION public.print_template_kitchen_item_blocks(p_payload jsonb,
 --
 
 REVOKE ALL ON FUNCTION public.print_template_money(p_value numeric) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_money(p_value numeric) TO anon;
+GRANT ALL ON FUNCTION public.print_template_money(p_value numeric) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_money(p_value numeric) TO service_role;
 
 
@@ -37251,6 +38876,8 @@ GRANT ALL ON FUNCTION public.print_template_money(p_value numeric) TO service_ro
 --
 
 REVOKE ALL ON FUNCTION public.print_template_order_destination(p_payload jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_order_destination(p_payload jsonb) TO anon;
+GRANT ALL ON FUNCTION public.print_template_order_destination(p_payload jsonb) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_order_destination(p_payload jsonb) TO service_role;
 
 
@@ -37267,6 +38894,8 @@ GRANT ALL ON FUNCTION public.print_template_order_header(p_payload jsonb) TO ser
 --
 
 REVOKE ALL ON FUNCTION public.print_template_payload_number(p_payload jsonb, p_field text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_payload_number(p_payload jsonb, p_field text) TO anon;
+GRANT ALL ON FUNCTION public.print_template_payload_number(p_payload jsonb, p_field text) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_payload_number(p_payload jsonb, p_field text) TO service_role;
 
 
@@ -37283,6 +38912,8 @@ GRANT ALL ON FUNCTION public.print_template_payload_text(p_payload jsonb, p_fiel
 --
 
 REVOKE ALL ON FUNCTION public.print_template_payment_breakdown_blocks(p_payload jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_payment_breakdown_blocks(p_payload jsonb) TO anon;
+GRANT ALL ON FUNCTION public.print_template_payment_breakdown_blocks(p_payload jsonb) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_payment_breakdown_blocks(p_payload jsonb) TO service_role;
 
 
@@ -37291,6 +38922,8 @@ GRANT ALL ON FUNCTION public.print_template_payment_breakdown_blocks(p_payload j
 --
 
 REVOKE ALL ON FUNCTION public.print_template_payment_label(p_method text, p_full boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_payment_label(p_method text, p_full boolean) TO anon;
+GRANT ALL ON FUNCTION public.print_template_payment_label(p_method text, p_full boolean) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_payment_label(p_method text, p_full boolean) TO service_role;
 
 
@@ -37299,6 +38932,8 @@ GRANT ALL ON FUNCTION public.print_template_payment_label(p_method text, p_full 
 --
 
 REVOKE ALL ON FUNCTION public.print_template_row_block(p_left text, p_right text, p_bold boolean, p_double boolean, p_strikethrough boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_row_block(p_left text, p_right text, p_bold boolean, p_double boolean, p_strikethrough boolean) TO anon;
+GRANT ALL ON FUNCTION public.print_template_row_block(p_left text, p_right text, p_bold boolean, p_double boolean, p_strikethrough boolean) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_row_block(p_left text, p_right text, p_bold boolean, p_double boolean, p_strikethrough boolean) TO service_role;
 
 
@@ -37307,6 +38942,8 @@ GRANT ALL ON FUNCTION public.print_template_row_block(p_left text, p_right text,
 --
 
 REVOKE ALL ON FUNCTION public.print_template_shift_cash_blocks(p_payload jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_shift_cash_blocks(p_payload jsonb) TO anon;
+GRANT ALL ON FUNCTION public.print_template_shift_cash_blocks(p_payload jsonb) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_shift_cash_blocks(p_payload jsonb) TO service_role;
 
 
@@ -37315,6 +38952,8 @@ GRANT ALL ON FUNCTION public.print_template_shift_cash_blocks(p_payload jsonb) T
 --
 
 REVOKE ALL ON FUNCTION public.print_template_shift_item_breakdown_blocks(p_payload jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_shift_item_breakdown_blocks(p_payload jsonb) TO anon;
+GRANT ALL ON FUNCTION public.print_template_shift_item_breakdown_blocks(p_payload jsonb) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_shift_item_breakdown_blocks(p_payload jsonb) TO service_role;
 
 
@@ -37323,6 +38962,8 @@ GRANT ALL ON FUNCTION public.print_template_shift_item_breakdown_blocks(p_payloa
 --
 
 REVOKE ALL ON FUNCTION public.print_template_shift_signature_blocks() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_shift_signature_blocks() TO anon;
+GRANT ALL ON FUNCTION public.print_template_shift_signature_blocks() TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_shift_signature_blocks() TO service_role;
 
 
@@ -37331,6 +38972,8 @@ GRANT ALL ON FUNCTION public.print_template_shift_signature_blocks() TO service_
 --
 
 REVOKE ALL ON FUNCTION public.print_template_shift_summary_blocks(p_payload jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_shift_summary_blocks(p_payload jsonb) TO anon;
+GRANT ALL ON FUNCTION public.print_template_shift_summary_blocks(p_payload jsonb) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_shift_summary_blocks(p_payload jsonb) TO service_role;
 
 
@@ -37339,6 +38982,8 @@ GRANT ALL ON FUNCTION public.print_template_shift_summary_blocks(p_payload jsonb
 --
 
 REVOKE ALL ON FUNCTION public.print_template_shift_variance_notice_blocks(p_payload jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_shift_variance_notice_blocks(p_payload jsonb) TO anon;
+GRANT ALL ON FUNCTION public.print_template_shift_variance_notice_blocks(p_payload jsonb) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_shift_variance_notice_blocks(p_payload jsonb) TO service_role;
 
 
@@ -37347,6 +38992,8 @@ GRANT ALL ON FUNCTION public.print_template_shift_variance_notice_blocks(p_paylo
 --
 
 REVOKE ALL ON FUNCTION public.print_template_spacer_block(p_lines integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_spacer_block(p_lines integer) TO anon;
+GRANT ALL ON FUNCTION public.print_template_spacer_block(p_lines integer) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_spacer_block(p_lines integer) TO service_role;
 
 
@@ -37355,6 +39002,8 @@ GRANT ALL ON FUNCTION public.print_template_spacer_block(p_lines integer) TO ser
 --
 
 REVOKE ALL ON FUNCTION public.print_template_text_block(p_text text, p_align text, p_bold boolean, p_double boolean, p_inverse boolean, p_strikethrough boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_text_block(p_text text, p_align text, p_bold boolean, p_double boolean, p_inverse boolean, p_strikethrough boolean) TO anon;
+GRANT ALL ON FUNCTION public.print_template_text_block(p_text text, p_align text, p_bold boolean, p_double boolean, p_inverse boolean, p_strikethrough boolean) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_text_block(p_text text, p_align text, p_bold boolean, p_double boolean, p_inverse boolean, p_strikethrough boolean) TO service_role;
 
 
@@ -37363,7 +39012,49 @@ GRANT ALL ON FUNCTION public.print_template_text_block(p_text text, p_align text
 --
 
 REVOKE ALL ON FUNCTION public.print_template_variance_approval_blocks(p_payload jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_template_variance_approval_blocks(p_payload jsonb) TO anon;
+GRANT ALL ON FUNCTION public.print_template_variance_approval_blocks(p_payload jsonb) TO authenticated;
 GRANT ALL ON FUNCTION public.print_template_variance_approval_blocks(p_payload jsonb) TO service_role;
+
+
+--
+-- Name: FUNCTION print_vietqr_ascii(p_value text, p_max integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.print_vietqr_ascii(p_value text, p_max integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_vietqr_ascii(p_value text, p_max integer) TO anon;
+GRANT ALL ON FUNCTION public.print_vietqr_ascii(p_value text, p_max integer) TO authenticated;
+GRANT ALL ON FUNCTION public.print_vietqr_ascii(p_value text, p_max integer) TO service_role;
+
+
+--
+-- Name: FUNCTION print_vietqr_bank_bin(p_bank_code text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.print_vietqr_bank_bin(p_bank_code text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_vietqr_bank_bin(p_bank_code text) TO anon;
+GRANT ALL ON FUNCTION public.print_vietqr_bank_bin(p_bank_code text) TO authenticated;
+GRANT ALL ON FUNCTION public.print_vietqr_bank_bin(p_bank_code text) TO service_role;
+
+
+--
+-- Name: FUNCTION print_vietqr_crc16(p_input text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.print_vietqr_crc16(p_input text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_vietqr_crc16(p_input text) TO anon;
+GRANT ALL ON FUNCTION public.print_vietqr_crc16(p_input text) TO authenticated;
+GRANT ALL ON FUNCTION public.print_vietqr_crc16(p_input text) TO service_role;
+
+
+--
+-- Name: FUNCTION print_vietqr_emvco(p_bank_code text, p_account_no text, p_account_name text, p_amount numeric, p_description text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.print_vietqr_emvco(p_bank_code text, p_account_no text, p_account_name text, p_amount numeric, p_description text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.print_vietqr_emvco(p_bank_code text, p_account_no text, p_account_name text, p_amount numeric, p_description text) TO anon;
+GRANT ALL ON FUNCTION public.print_vietqr_emvco(p_bank_code text, p_account_no text, p_account_name text, p_amount numeric, p_description text) TO authenticated;
+GRANT ALL ON FUNCTION public.print_vietqr_emvco(p_bank_code text, p_account_no text, p_account_name text, p_amount numeric, p_description text) TO service_role;
 
 
 --
@@ -37371,8 +39062,8 @@ GRANT ALL ON FUNCTION public.print_template_variance_approval_blocks(p_payload j
 --
 
 REVOKE ALL ON FUNCTION public.recall_kds_ticket(p_ticket_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.recall_kds_ticket(p_ticket_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.recall_kds_ticket(p_ticket_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.recall_kds_ticket(p_ticket_id bigint) TO service_role;
 
 
 --
@@ -37380,8 +39071,8 @@ GRANT ALL ON FUNCTION public.recall_kds_ticket(p_ticket_id bigint) TO authentica
 --
 
 REVOKE ALL ON FUNCTION public.recompute_supplier_invoice_matching(p_invoice_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.recompute_supplier_invoice_matching(p_invoice_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.recompute_supplier_invoice_matching(p_invoice_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.recompute_supplier_invoice_matching(p_invoice_id bigint) TO service_role;
 
 
 --
@@ -37389,8 +39080,8 @@ GRANT ALL ON FUNCTION public.recompute_supplier_invoice_matching(p_invoice_id bi
 --
 
 REVOKE ALL ON FUNCTION public.reduce_order_item_quantity(p_order_item_id bigint, p_new_quantity integer, p_reason text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.reduce_order_item_quantity(p_order_item_id bigint, p_new_quantity integer, p_reason text) TO service_role;
 GRANT ALL ON FUNCTION public.reduce_order_item_quantity(p_order_item_id bigint, p_new_quantity integer, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.reduce_order_item_quantity(p_order_item_id bigint, p_new_quantity integer, p_reason text) TO service_role;
 
 
 --
@@ -37406,8 +39097,8 @@ GRANT ALL ON FUNCTION public.refresh_abc_classification() TO service_role;
 --
 
 REVOKE ALL ON FUNCTION public.refresh_finance_views() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.refresh_finance_views() TO service_role;
 GRANT ALL ON FUNCTION public.refresh_finance_views() TO authenticated;
+GRANT ALL ON FUNCTION public.refresh_finance_views() TO service_role;
 
 
 --
@@ -37415,8 +39106,8 @@ GRANT ALL ON FUNCTION public.refresh_finance_views() TO authenticated;
 --
 
 REVOKE ALL ON FUNCTION public.refresh_inventory_dashboard() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.refresh_inventory_dashboard() TO service_role;
 GRANT ALL ON FUNCTION public.refresh_inventory_dashboard() TO authenticated;
+GRANT ALL ON FUNCTION public.refresh_inventory_dashboard() TO service_role;
 
 
 --
@@ -37428,19 +39119,29 @@ GRANT ALL ON FUNCTION public.register_branch_presence(p_tenant_id bigint, p_bran
 
 
 --
--- Name: FUNCTION reject_shift_request(p_request_id bigint, p_reason text); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION reject_leave_request(p_request_id bigint, p_reason text); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.reject_shift_request(p_request_id bigint, p_reason text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.reject_shift_request(p_request_id bigint, p_reason text) TO service_role;
-GRANT ALL ON FUNCTION public.reject_shift_request(p_request_id bigint, p_reason text) TO authenticated;
+REVOKE ALL ON FUNCTION public.reject_leave_request(p_request_id bigint, p_reason text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.reject_leave_request(p_request_id bigint, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.reject_leave_request(p_request_id bigint, p_reason text) TO service_role;
+
+
+--
+-- Name: FUNCTION release_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.release_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.release_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.release_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid) TO service_role;
 
 
 --
 -- Name: FUNCTION release_table(p_table_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.release_table(p_table_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.release_table(p_table_id bigint) TO anon;
+GRANT ALL ON FUNCTION public.release_table(p_table_id bigint) TO authenticated;
 GRANT ALL ON FUNCTION public.release_table(p_table_id bigint) TO service_role;
 
 
@@ -37449,8 +39150,8 @@ GRANT ALL ON FUNCTION public.release_table(p_table_id bigint) TO service_role;
 --
 
 REVOKE ALL ON FUNCTION public.release_zone_lock(p_session_id bigint, p_zone_id text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.release_zone_lock(p_session_id bigint, p_zone_id text) TO service_role;
 GRANT ALL ON FUNCTION public.release_zone_lock(p_session_id bigint, p_zone_id text) TO authenticated;
+GRANT ALL ON FUNCTION public.release_zone_lock(p_session_id bigint, p_zone_id text) TO service_role;
 
 
 --
@@ -37458,6 +39159,7 @@ GRANT ALL ON FUNCTION public.release_zone_lock(p_session_id bigint, p_zone_id te
 --
 
 REVOKE ALL ON FUNCTION public.reopen_period(p_tenant_id bigint, p_year integer, p_month integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.reopen_period(p_tenant_id bigint, p_year integer, p_month integer) TO authenticated;
 GRANT ALL ON FUNCTION public.reopen_period(p_tenant_id bigint, p_year integer, p_month integer) TO service_role;
 
 
@@ -37466,8 +39168,17 @@ GRANT ALL ON FUNCTION public.reopen_period(p_tenant_id bigint, p_year integer, p
 --
 
 REVOKE ALL ON FUNCTION public.replace_tax_invoice(p_old_id bigint, p_reason text, p_agreement_ref text, p_agreement_date timestamp with time zone, p_buyer_name text, p_buyer_tax_code text, p_buyer_address text, p_subtotal numeric, p_vat_rate numeric, p_vat_amount numeric, p_total_amount numeric, p_provider text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.replace_tax_invoice(p_old_id bigint, p_reason text, p_agreement_ref text, p_agreement_date timestamp with time zone, p_buyer_name text, p_buyer_tax_code text, p_buyer_address text, p_subtotal numeric, p_vat_rate numeric, p_vat_amount numeric, p_total_amount numeric, p_provider text) TO service_role;
 GRANT ALL ON FUNCTION public.replace_tax_invoice(p_old_id bigint, p_reason text, p_agreement_ref text, p_agreement_date timestamp with time zone, p_buyer_name text, p_buyer_tax_code text, p_buyer_address text, p_subtotal numeric, p_vat_rate numeric, p_vat_amount numeric, p_total_amount numeric, p_provider text) TO authenticated;
+GRANT ALL ON FUNCTION public.replace_tax_invoice(p_old_id bigint, p_reason text, p_agreement_ref text, p_agreement_date timestamp with time zone, p_buyer_name text, p_buyer_tax_code text, p_buyer_address text, p_subtotal numeric, p_vat_rate numeric, p_vat_amount numeric, p_total_amount numeric, p_provider text) TO service_role;
+
+
+--
+-- Name: FUNCTION reserve_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid, p_items jsonb, p_source text, p_ttl_seconds integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.reserve_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid, p_items jsonb, p_source text, p_ttl_seconds integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.reserve_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid, p_items jsonb, p_source text, p_ttl_seconds integer) TO authenticated;
+GRANT ALL ON FUNCTION public.reserve_branch_menu_daily_holds(p_branch_id bigint, p_hold_token uuid, p_items jsonb, p_source text, p_ttl_seconds integer) TO service_role;
 
 
 --
@@ -37479,10 +39190,19 @@ GRANT ALL ON FUNCTION public.resolve_branch_printer_for_type(p_tenant_id bigint,
 
 
 --
+-- Name: FUNCTION resolve_gtgt_rate(p_tenant_id bigint, p_at_date date); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.resolve_gtgt_rate(p_tenant_id bigint, p_at_date date) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.resolve_gtgt_rate(p_tenant_id bigint, p_at_date date) TO service_role;
+
+
+--
 -- Name: FUNCTION resolve_po_price(p_supplier_id bigint, p_ingredient_id bigint, p_uom text); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.resolve_po_price(p_supplier_id bigint, p_ingredient_id bigint, p_uom text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.resolve_po_price(p_supplier_id bigint, p_ingredient_id bigint, p_uom text) TO authenticated;
 GRANT ALL ON FUNCTION public.resolve_po_price(p_supplier_id bigint, p_ingredient_id bigint, p_uom text) TO service_role;
 
 
@@ -37491,6 +39211,7 @@ GRANT ALL ON FUNCTION public.resolve_po_price(p_supplier_id bigint, p_ingredient
 --
 
 REVOKE ALL ON FUNCTION public.resolve_po_prices_batch(p_supplier_id bigint, p_items jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.resolve_po_prices_batch(p_supplier_id bigint, p_items jsonb) TO authenticated;
 GRANT ALL ON FUNCTION public.resolve_po_prices_batch(p_supplier_id bigint, p_items jsonb) TO service_role;
 
 
@@ -37507,8 +39228,8 @@ GRANT ALL ON FUNCTION public.resolve_print_template_version(p_tenant_id bigint, 
 --
 
 REVOKE ALL ON FUNCTION public.resolve_stocktake_conflict(p_conflict_id bigint, p_resolution text, p_manual_qty numeric, p_note text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.resolve_stocktake_conflict(p_conflict_id bigint, p_resolution text, p_manual_qty numeric, p_note text) TO service_role;
 GRANT ALL ON FUNCTION public.resolve_stocktake_conflict(p_conflict_id bigint, p_resolution text, p_manual_qty numeric, p_note text) TO authenticated;
+GRANT ALL ON FUNCTION public.resolve_stocktake_conflict(p_conflict_id bigint, p_resolution text, p_manual_qty numeric, p_note text) TO service_role;
 
 
 --
@@ -37524,8 +39245,8 @@ GRANT ALL ON FUNCTION public.restore_stock_for_order(p_order_id bigint, p_actor_
 --
 
 REVOKE ALL ON FUNCTION public.retry_print_job(p_job_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.retry_print_job(p_job_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.retry_print_job(p_job_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.retry_print_job(p_job_id bigint) TO service_role;
 
 
 --
@@ -37533,8 +39254,8 @@ GRANT ALL ON FUNCTION public.retry_print_job(p_job_id bigint) TO authenticated;
 --
 
 REVOKE ALL ON FUNCTION public.reverse_payment_and_post(p_refund_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.reverse_payment_and_post(p_refund_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.reverse_payment_and_post(p_refund_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.reverse_payment_and_post(p_refund_id bigint) TO service_role;
 
 
 --
@@ -37542,8 +39263,8 @@ GRANT ALL ON FUNCTION public.reverse_payment_and_post(p_refund_id bigint) TO aut
 --
 
 REVOKE ALL ON FUNCTION public.revoke_permission(p_target_user uuid, p_branch_id bigint, p_permission_key text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.revoke_permission(p_target_user uuid, p_branch_id bigint, p_permission_key text) TO service_role;
 GRANT ALL ON FUNCTION public.revoke_permission(p_target_user uuid, p_branch_id bigint, p_permission_key text) TO authenticated;
+GRANT ALL ON FUNCTION public.revoke_permission(p_target_user uuid, p_branch_id bigint, p_permission_key text) TO service_role;
 
 
 --
@@ -37551,6 +39272,7 @@ GRANT ALL ON FUNCTION public.revoke_permission(p_target_user uuid, p_branch_id b
 --
 
 REVOKE ALL ON FUNCTION public.rotate_branch_override_code(p_branch_id bigint, p_new_code text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.rotate_branch_override_code(p_branch_id bigint, p_new_code text) TO authenticated;
 GRANT ALL ON FUNCTION public.rotate_branch_override_code(p_branch_id bigint, p_new_code text) TO service_role;
 
 
@@ -37559,44 +39281,54 @@ GRANT ALL ON FUNCTION public.rotate_branch_override_code(p_branch_id bigint, p_n
 --
 
 REVOKE ALL ON FUNCTION public.route_order_to_kds(p_order_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.route_order_to_kds(p_order_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.route_order_to_kds(p_order_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.route_order_to_kds(p_order_id bigint) TO service_role;
 
 
 --
 -- Name: FUNCTION save_item_modifiers(p_item_id bigint, p_modifiers jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.save_item_modifiers(p_item_id bigint, p_modifiers jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.save_item_modifiers(p_item_id bigint, p_modifiers jsonb) TO service_role;
+GRANT ALL ON FUNCTION public.save_item_modifiers(p_item_id bigint, p_modifiers jsonb) TO anon;
 GRANT ALL ON FUNCTION public.save_item_modifiers(p_item_id bigint, p_modifiers jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.save_item_modifiers(p_item_id bigint, p_modifiers jsonb) TO service_role;
 
 
 --
 -- Name: FUNCTION save_item_sides(p_main_item_id bigint, p_sides jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.save_item_sides(p_main_item_id bigint, p_sides jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.save_item_sides(p_main_item_id bigint, p_sides jsonb) TO service_role;
+GRANT ALL ON FUNCTION public.save_item_sides(p_main_item_id bigint, p_sides jsonb) TO anon;
 GRANT ALL ON FUNCTION public.save_item_sides(p_main_item_id bigint, p_sides jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.save_item_sides(p_main_item_id bigint, p_sides jsonb) TO service_role;
 
 
 --
 -- Name: FUNCTION save_item_variants(p_item_id bigint, p_variants jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.save_item_variants(p_item_id bigint, p_variants jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.save_item_variants(p_item_id bigint, p_variants jsonb) TO service_role;
+GRANT ALL ON FUNCTION public.save_item_variants(p_item_id bigint, p_variants jsonb) TO anon;
 GRANT ALL ON FUNCTION public.save_item_variants(p_item_id bigint, p_variants jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.save_item_variants(p_item_id bigint, p_variants jsonb) TO service_role;
+
+
+--
+-- Name: FUNCTION save_print_template_version(p_kind text, p_name text, p_paper_width_mm integer, p_content jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.save_print_template_version(p_kind text, p_name text, p_paper_width_mm integer, p_content jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.save_print_template_version(p_kind text, p_name text, p_paper_width_mm integer, p_content jsonb) TO anon;
+GRANT ALL ON FUNCTION public.save_print_template_version(p_kind text, p_name text, p_paper_width_mm integer, p_content jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.save_print_template_version(p_kind text, p_name text, p_paper_width_mm integer, p_content jsonb) TO service_role;
 
 
 --
 -- Name: FUNCTION save_station_categories(p_station_id bigint, p_category_ids bigint[]); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.save_station_categories(p_station_id bigint, p_category_ids bigint[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.save_station_categories(p_station_id bigint, p_category_ids bigint[]) TO service_role;
+GRANT ALL ON FUNCTION public.save_station_categories(p_station_id bigint, p_category_ids bigint[]) TO anon;
 GRANT ALL ON FUNCTION public.save_station_categories(p_station_id bigint, p_category_ids bigint[]) TO authenticated;
+GRANT ALL ON FUNCTION public.save_station_categories(p_station_id bigint, p_category_ids bigint[]) TO service_role;
 
 
 --
@@ -37608,19 +39340,11 @@ GRANT ALL ON FUNCTION public.scan_inventory_alerts() TO service_role;
 
 
 --
--- Name: FUNCTION seed_chart_of_accounts(p_tenant_id bigint); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.seed_chart_of_accounts(p_tenant_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.seed_chart_of_accounts(p_tenant_id bigint) TO service_role;
-GRANT ALL ON FUNCTION public.seed_chart_of_accounts(p_tenant_id bigint) TO authenticated;
-
-
---
 -- Name: FUNCTION set_branch_kind(p_branch_id bigint, p_kind text); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.set_branch_kind(p_branch_id bigint, p_kind text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_branch_kind(p_branch_id bigint, p_kind text) TO authenticated;
 GRANT ALL ON FUNCTION public.set_branch_kind(p_branch_id bigint, p_kind text) TO service_role;
 
 
@@ -37629,8 +39353,8 @@ GRANT ALL ON FUNCTION public.set_branch_kind(p_branch_id bigint, p_kind text) TO
 --
 
 REVOKE ALL ON FUNCTION public.set_branch_menu_daily_limit(p_branch_id bigint, p_menu_item_id bigint, p_limit_quantity integer, p_is_disabled boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.set_branch_menu_daily_limit(p_branch_id bigint, p_menu_item_id bigint, p_limit_quantity integer, p_is_disabled boolean) TO service_role;
 GRANT ALL ON FUNCTION public.set_branch_menu_daily_limit(p_branch_id bigint, p_menu_item_id bigint, p_limit_quantity integer, p_is_disabled boolean) TO authenticated;
+GRANT ALL ON FUNCTION public.set_branch_menu_daily_limit(p_branch_id bigint, p_menu_item_id bigint, p_limit_quantity integer, p_is_disabled boolean) TO service_role;
 
 
 --
@@ -37638,8 +39362,8 @@ GRANT ALL ON FUNCTION public.set_branch_menu_daily_limit(p_branch_id bigint, p_m
 --
 
 REVOKE ALL ON FUNCTION public.set_order_service_charge(p_order_id bigint, p_amount numeric, p_note text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.set_order_service_charge(p_order_id bigint, p_amount numeric, p_note text) TO service_role;
 GRANT ALL ON FUNCTION public.set_order_service_charge(p_order_id bigint, p_amount numeric, p_note text) TO authenticated;
+GRANT ALL ON FUNCTION public.set_order_service_charge(p_order_id bigint, p_amount numeric, p_note text) TO service_role;
 
 
 --
@@ -37647,8 +39371,8 @@ GRANT ALL ON FUNCTION public.set_order_service_charge(p_order_id bigint, p_amoun
 --
 
 REVOKE ALL ON FUNCTION public.set_pos_order_item_priority(p_order_item_id bigint, p_is_priority boolean, p_note text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.set_pos_order_item_priority(p_order_item_id bigint, p_is_priority boolean, p_note text) TO service_role;
 GRANT ALL ON FUNCTION public.set_pos_order_item_priority(p_order_item_id bigint, p_is_priority boolean, p_note text) TO authenticated;
+GRANT ALL ON FUNCTION public.set_pos_order_item_priority(p_order_item_id bigint, p_is_priority boolean, p_note text) TO service_role;
 
 
 --
@@ -37656,8 +39380,8 @@ GRANT ALL ON FUNCTION public.set_pos_order_item_priority(p_order_item_id bigint,
 --
 
 REVOKE ALL ON FUNCTION public.set_pos_order_priority(p_order_id bigint, p_is_priority boolean, p_note text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.set_pos_order_priority(p_order_id bigint, p_is_priority boolean, p_note text) TO service_role;
 GRANT ALL ON FUNCTION public.set_pos_order_priority(p_order_id bigint, p_is_priority boolean, p_note text) TO authenticated;
+GRANT ALL ON FUNCTION public.set_pos_order_priority(p_order_id bigint, p_is_priority boolean, p_note text) TO service_role;
 
 
 --
@@ -37665,6 +39389,8 @@ GRANT ALL ON FUNCTION public.set_pos_order_priority(p_order_id bigint, p_is_prio
 --
 
 REVOKE ALL ON FUNCTION public.set_print_template_versions_updated_at() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_print_template_versions_updated_at() TO anon;
+GRANT ALL ON FUNCTION public.set_print_template_versions_updated_at() TO authenticated;
 GRANT ALL ON FUNCTION public.set_print_template_versions_updated_at() TO service_role;
 
 
@@ -37673,8 +39399,8 @@ GRANT ALL ON FUNCTION public.set_print_template_versions_updated_at() TO service
 --
 
 REVOKE ALL ON FUNCTION public.split_order(p_source_order_id bigint, p_item_partials jsonb, p_idempotency_key uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.split_order(p_source_order_id bigint, p_item_partials jsonb, p_idempotency_key uuid) TO service_role;
 GRANT ALL ON FUNCTION public.split_order(p_source_order_id bigint, p_item_partials jsonb, p_idempotency_key uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.split_order(p_source_order_id bigint, p_item_partials jsonb, p_idempotency_key uuid) TO service_role;
 
 
 --
@@ -37682,8 +39408,8 @@ GRANT ALL ON FUNCTION public.split_order(p_source_order_id bigint, p_item_partia
 --
 
 REVOKE ALL ON FUNCTION public.start_stocktake(p_branch_id bigint, p_location_id bigint, p_mode text, p_blind_mode boolean, p_auditor_id uuid, p_threshold_pct numeric, p_threshold_vnd numeric) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.start_stocktake(p_branch_id bigint, p_location_id bigint, p_mode text, p_blind_mode boolean, p_auditor_id uuid, p_threshold_pct numeric, p_threshold_vnd numeric) TO service_role;
 GRANT ALL ON FUNCTION public.start_stocktake(p_branch_id bigint, p_location_id bigint, p_mode text, p_blind_mode boolean, p_auditor_id uuid, p_threshold_pct numeric, p_threshold_vnd numeric) TO authenticated;
+GRANT ALL ON FUNCTION public.start_stocktake(p_branch_id bigint, p_location_id bigint, p_mode text, p_blind_mode boolean, p_auditor_id uuid, p_threshold_pct numeric, p_threshold_vnd numeric) TO service_role;
 
 
 --
@@ -37706,7 +39432,8 @@ GRANT ALL ON FUNCTION public.stock_issue_items_compute_waste_tier() TO service_r
 -- Name: FUNCTION stock_issue_items_reason_immutable(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.stock_issue_items_reason_immutable() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.stock_issue_items_reason_immutable() TO anon;
+GRANT ALL ON FUNCTION public.stock_issue_items_reason_immutable() TO authenticated;
 GRANT ALL ON FUNCTION public.stock_issue_items_reason_immutable() TO service_role;
 
 
@@ -37715,8 +39442,8 @@ GRANT ALL ON FUNCTION public.stock_issue_items_reason_immutable() TO service_rol
 --
 
 REVOKE ALL ON FUNCTION public.stock_transfer_confirm_receive(p_transfer_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.stock_transfer_confirm_receive(p_transfer_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.stock_transfer_confirm_receive(p_transfer_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.stock_transfer_confirm_receive(p_transfer_id bigint) TO service_role;
 
 
 --
@@ -37724,8 +39451,8 @@ GRANT ALL ON FUNCTION public.stock_transfer_confirm_receive(p_transfer_id bigint
 --
 
 REVOKE ALL ON FUNCTION public.stock_transfer_confirm_ship(p_transfer_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.stock_transfer_confirm_ship(p_transfer_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.stock_transfer_confirm_ship(p_transfer_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.stock_transfer_confirm_ship(p_transfer_id bigint) TO service_role;
 
 
 --
@@ -37733,8 +39460,8 @@ GRANT ALL ON FUNCTION public.stock_transfer_confirm_ship(p_transfer_id bigint) T
 --
 
 REVOKE ALL ON FUNCTION public.stock_transfer_list_branches() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.stock_transfer_list_branches() TO service_role;
 GRANT ALL ON FUNCTION public.stock_transfer_list_branches() TO authenticated;
+GRANT ALL ON FUNCTION public.stock_transfer_list_branches() TO service_role;
 
 
 --
@@ -37742,8 +39469,8 @@ GRANT ALL ON FUNCTION public.stock_transfer_list_branches() TO authenticated;
 --
 
 REVOKE ALL ON FUNCTION public.stock_transfer_mark_in_transit(p_transfer_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.stock_transfer_mark_in_transit(p_transfer_id bigint) TO service_role;
 GRANT ALL ON FUNCTION public.stock_transfer_mark_in_transit(p_transfer_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.stock_transfer_mark_in_transit(p_transfer_id bigint) TO service_role;
 
 
 --
@@ -37751,8 +39478,8 @@ GRANT ALL ON FUNCTION public.stock_transfer_mark_in_transit(p_transfer_id bigint
 --
 
 REVOKE ALL ON FUNCTION public.stock_transfer_receive(p_transfer_id bigint, p_items jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.stock_transfer_receive(p_transfer_id bigint, p_items jsonb) TO service_role;
 GRANT ALL ON FUNCTION public.stock_transfer_receive(p_transfer_id bigint, p_items jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.stock_transfer_receive(p_transfer_id bigint, p_items jsonb) TO service_role;
 
 
 --
@@ -37760,17 +39487,17 @@ GRANT ALL ON FUNCTION public.stock_transfer_receive(p_transfer_id bigint, p_item
 --
 
 REVOKE ALL ON FUNCTION public.submit_count_round(p_session_id bigint, p_round_no smallint, p_counts jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.submit_count_round(p_session_id bigint, p_round_no smallint, p_counts jsonb) TO service_role;
 GRANT ALL ON FUNCTION public.submit_count_round(p_session_id bigint, p_round_no smallint, p_counts jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.submit_count_round(p_session_id bigint, p_round_no smallint, p_counts jsonb) TO service_role;
 
 
 --
--- Name: FUNCTION submit_shift_request(p_branch_id bigint, p_shift_id bigint, p_date date, p_note text); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION submit_leave_request(p_branch_id bigint, p_start_date date, p_end_date date, p_leave_type text, p_reason text); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.submit_shift_request(p_branch_id bigint, p_shift_id bigint, p_date date, p_note text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.submit_shift_request(p_branch_id bigint, p_shift_id bigint, p_date date, p_note text) TO service_role;
-GRANT ALL ON FUNCTION public.submit_shift_request(p_branch_id bigint, p_shift_id bigint, p_date date, p_note text) TO authenticated;
+REVOKE ALL ON FUNCTION public.submit_leave_request(p_branch_id bigint, p_start_date date, p_end_date date, p_leave_type text, p_reason text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.submit_leave_request(p_branch_id bigint, p_start_date date, p_end_date date, p_leave_type text, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.submit_leave_request(p_branch_id bigint, p_start_date date, p_end_date date, p_leave_type text, p_reason text) TO service_role;
 
 
 --
@@ -37809,27 +39536,27 @@ GRANT ALL ON FUNCTION public.tio_assert_one_active_summary_per_order() TO servic
 -- Name: FUNCTION toggle_category_active(p_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.toggle_category_active(p_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.toggle_category_active(p_id bigint) TO service_role;
+GRANT ALL ON FUNCTION public.toggle_category_active(p_id bigint) TO anon;
 GRANT ALL ON FUNCTION public.toggle_category_active(p_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.toggle_category_active(p_id bigint) TO service_role;
 
 
 --
 -- Name: FUNCTION toggle_ingredient_active(p_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.toggle_ingredient_active(p_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.toggle_ingredient_active(p_id bigint) TO service_role;
+GRANT ALL ON FUNCTION public.toggle_ingredient_active(p_id bigint) TO anon;
 GRANT ALL ON FUNCTION public.toggle_ingredient_active(p_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.toggle_ingredient_active(p_id bigint) TO service_role;
 
 
 --
 -- Name: FUNCTION toggle_item_active(p_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.toggle_item_active(p_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.toggle_item_active(p_id bigint) TO service_role;
+GRANT ALL ON FUNCTION public.toggle_item_active(p_id bigint) TO anon;
 GRANT ALL ON FUNCTION public.toggle_item_active(p_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION public.toggle_item_active(p_id bigint) TO service_role;
 
 
 --
@@ -37837,8 +39564,8 @@ GRANT ALL ON FUNCTION public.toggle_item_active(p_id bigint) TO authenticated;
 --
 
 REVOKE ALL ON FUNCTION public.toggle_profile_active(p_target_id uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.toggle_profile_active(p_target_id uuid) TO service_role;
 GRANT ALL ON FUNCTION public.toggle_profile_active(p_target_id uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.toggle_profile_active(p_target_id uuid) TO service_role;
 
 
 --
@@ -37846,8 +39573,8 @@ GRANT ALL ON FUNCTION public.toggle_profile_active(p_target_id uuid) TO authenti
 --
 
 REVOKE ALL ON FUNCTION public.transfer_order_table(p_order_id bigint, p_new_table_id bigint, p_idempotency_key uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.transfer_order_table(p_order_id bigint, p_new_table_id bigint, p_idempotency_key uuid) TO service_role;
 GRANT ALL ON FUNCTION public.transfer_order_table(p_order_id bigint, p_new_table_id bigint, p_idempotency_key uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.transfer_order_table(p_order_id bigint, p_new_table_id bigint, p_idempotency_key uuid) TO service_role;
 
 
 --
@@ -37855,6 +39582,7 @@ GRANT ALL ON FUNCTION public.transfer_order_table(p_order_id bigint, p_new_table
 --
 
 REVOKE ALL ON FUNCTION public.transition_order_item_status(p_item_id bigint, p_new_status text, p_expected_status text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.transition_order_item_status(p_item_id bigint, p_new_status text, p_expected_status text) TO authenticated;
 GRANT ALL ON FUNCTION public.transition_order_item_status(p_item_id bigint, p_new_status text, p_expected_status text) TO service_role;
 
 
@@ -37863,6 +39591,7 @@ GRANT ALL ON FUNCTION public.transition_order_item_status(p_item_id bigint, p_ne
 --
 
 REVOKE ALL ON FUNCTION public.transition_order_status(p_order_id bigint, p_new_status text, p_expected_status text, p_note text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.transition_order_status(p_order_id bigint, p_new_status text, p_expected_status text, p_note text) TO authenticated;
 GRANT ALL ON FUNCTION public.transition_order_status(p_order_id bigint, p_new_status text, p_expected_status text, p_note text) TO service_role;
 
 
@@ -37871,8 +39600,8 @@ GRANT ALL ON FUNCTION public.transition_order_status(p_order_id bigint, p_new_st
 --
 
 REVOKE ALL ON FUNCTION public.transition_supplier_return(p_return_id bigint, p_target_status text, p_notes text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.transition_supplier_return(p_return_id bigint, p_target_status text, p_notes text) TO service_role;
 GRANT ALL ON FUNCTION public.transition_supplier_return(p_return_id bigint, p_target_status text, p_notes text) TO authenticated;
+GRANT ALL ON FUNCTION public.transition_supplier_return(p_return_id bigint, p_target_status text, p_notes text) TO service_role;
 
 
 --
@@ -37880,8 +39609,8 @@ GRANT ALL ON FUNCTION public.transition_supplier_return(p_return_id bigint, p_ta
 --
 
 REVOKE ALL ON FUNCTION public.transition_tax_invoice_state(p_tax_invoice_id bigint, p_to_status text, p_payload jsonb, p_note text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.transition_tax_invoice_state(p_tax_invoice_id bigint, p_to_status text, p_payload jsonb, p_note text) TO service_role;
 GRANT ALL ON FUNCTION public.transition_tax_invoice_state(p_tax_invoice_id bigint, p_to_status text, p_payload jsonb, p_note text) TO authenticated;
+GRANT ALL ON FUNCTION public.transition_tax_invoice_state(p_tax_invoice_id bigint, p_to_status text, p_payload jsonb, p_note text) TO service_role;
 
 
 --
@@ -38001,6 +39730,7 @@ GRANT ALL ON FUNCTION public.trg_upsert_grn_last_on_confirm() TO service_role;
 --
 
 REVOKE ALL ON FUNCTION public.try_auto_approve_grn(p_grn_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.try_auto_approve_grn(p_grn_id bigint) TO authenticated;
 GRANT ALL ON FUNCTION public.try_auto_approve_grn(p_grn_id bigint) TO service_role;
 
 
@@ -38009,8 +39739,8 @@ GRANT ALL ON FUNCTION public.try_auto_approve_grn(p_grn_id bigint) TO service_ro
 --
 
 REVOKE ALL ON FUNCTION public.update_ingredient_thresholds_bulk(p_payload jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.update_ingredient_thresholds_bulk(p_payload jsonb) TO service_role;
 GRANT ALL ON FUNCTION public.update_ingredient_thresholds_bulk(p_payload jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.update_ingredient_thresholds_bulk(p_payload jsonb) TO service_role;
 
 
 --
@@ -38018,8 +39748,8 @@ GRANT ALL ON FUNCTION public.update_ingredient_thresholds_bulk(p_payload jsonb) 
 --
 
 REVOKE ALL ON FUNCTION public.update_my_dependents_count(p_count integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.update_my_dependents_count(p_count integer) TO service_role;
 GRANT ALL ON FUNCTION public.update_my_dependents_count(p_count integer) TO authenticated;
+GRANT ALL ON FUNCTION public.update_my_dependents_count(p_count integer) TO service_role;
 
 
 --
@@ -38027,8 +39757,8 @@ GRANT ALL ON FUNCTION public.update_my_dependents_count(p_count integer) TO auth
 --
 
 REVOKE ALL ON FUNCTION public.update_my_profile(p_full_name text, p_phone text, p_avatar_url text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.update_my_profile(p_full_name text, p_phone text, p_avatar_url text) TO service_role;
 GRANT ALL ON FUNCTION public.update_my_profile(p_full_name text, p_phone text, p_avatar_url text) TO authenticated;
+GRANT ALL ON FUNCTION public.update_my_profile(p_full_name text, p_phone text, p_avatar_url text) TO service_role;
 
 
 --
@@ -38036,16 +39766,35 @@ GRANT ALL ON FUNCTION public.update_my_profile(p_full_name text, p_phone text, p
 --
 
 REVOKE ALL ON FUNCTION public.update_pos_order_status(p_order_id bigint, p_new_status text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.update_pos_order_status(p_order_id bigint, p_new_status text) TO service_role;
 GRANT ALL ON FUNCTION public.update_pos_order_status(p_order_id bigint, p_new_status text) TO authenticated;
+GRANT ALL ON FUNCTION public.update_pos_order_status(p_order_id bigint, p_new_status text) TO service_role;
+
+
+--
+-- Name: FUNCTION update_tenant_identity(p_legal_name text, p_tax_code text, p_legal_address text, p_representative text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_tenant_identity(p_legal_name text, p_tax_code text, p_legal_address text, p_representative text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_tenant_identity(p_legal_name text, p_tax_code text, p_legal_address text, p_representative text) TO authenticated;
+GRANT ALL ON FUNCTION public.update_tenant_identity(p_legal_name text, p_tax_code text, p_legal_address text, p_representative text) TO service_role;
 
 
 --
 -- Name: FUNCTION update_updated_at(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.update_updated_at() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_updated_at() TO anon;
+GRANT ALL ON FUNCTION public.update_updated_at() TO authenticated;
 GRANT ALL ON FUNCTION public.update_updated_at() TO service_role;
+
+
+--
+-- Name: FUNCTION upsert_payroll_calculation(p_period_id bigint, p_entries jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.upsert_payroll_calculation(p_period_id bigint, p_entries jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.upsert_payroll_calculation(p_period_id bigint, p_entries jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.upsert_payroll_calculation(p_period_id bigint, p_entries jsonb) TO service_role;
 
 
 --
@@ -38053,8 +39802,8 @@ GRANT ALL ON FUNCTION public.update_updated_at() TO service_role;
 --
 
 REVOKE ALL ON FUNCTION public.upsert_printer_with_routes(p_printer_id bigint, p_branch_id bigint, p_role text, p_name text, p_lan_host text, p_lan_port integer, p_paper_width_mm smallint, p_code_page text, p_is_active boolean, p_print_types text[], p_category_ids bigint[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.upsert_printer_with_routes(p_printer_id bigint, p_branch_id bigint, p_role text, p_name text, p_lan_host text, p_lan_port integer, p_paper_width_mm smallint, p_code_page text, p_is_active boolean, p_print_types text[], p_category_ids bigint[]) TO service_role;
 GRANT ALL ON FUNCTION public.upsert_printer_with_routes(p_printer_id bigint, p_branch_id bigint, p_role text, p_name text, p_lan_host text, p_lan_port integer, p_paper_width_mm smallint, p_code_page text, p_is_active boolean, p_print_types text[], p_category_ids bigint[]) TO authenticated;
+GRANT ALL ON FUNCTION public.upsert_printer_with_routes(p_printer_id bigint, p_branch_id bigint, p_role text, p_name text, p_lan_host text, p_lan_port integer, p_paper_width_mm smallint, p_code_page text, p_is_active boolean, p_print_types text[], p_category_ids bigint[]) TO service_role;
 
 
 --
@@ -38062,8 +39811,8 @@ GRANT ALL ON FUNCTION public.upsert_printer_with_routes(p_printer_id bigint, p_b
 --
 
 REVOKE ALL ON FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb) TO service_role;
 GRANT ALL ON FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb) TO service_role;
 
 
 --
@@ -38071,16 +39820,25 @@ GRANT ALL ON FUNCTION public.upsert_production_recipe_lines(p_finished_good_id b
 --
 
 REVOKE ALL ON FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb) TO service_role;
 GRANT ALL ON FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.upsert_recipe_lines(p_menu_item_id bigint, p_lines jsonb) TO service_role;
 
 
 --
--- Name: FUNCTION validate_journal_balance(p_entry_id bigint); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION upsert_shift_checklist_template(p_tenant_id bigint, p_branch_id bigint, p_template_id bigint, p_name text, p_items jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.validate_journal_balance(p_entry_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.validate_journal_balance(p_entry_id bigint) TO service_role;
+REVOKE ALL ON FUNCTION public.upsert_shift_checklist_template(p_tenant_id bigint, p_branch_id bigint, p_template_id bigint, p_name text, p_items jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.upsert_shift_checklist_template(p_tenant_id bigint, p_branch_id bigint, p_template_id bigint, p_name text, p_items jsonb) TO service_role;
+
+
+--
+-- Name: FUNCTION upsert_station_with_categories(p_station_id bigint, p_branch_id bigint, p_name text, p_position integer, p_is_active boolean, p_category_ids bigint[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.upsert_station_with_categories(p_station_id bigint, p_branch_id bigint, p_name text, p_position integer, p_is_active boolean, p_category_ids bigint[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.upsert_station_with_categories(p_station_id bigint, p_branch_id bigint, p_name text, p_position integer, p_is_active boolean, p_category_ids bigint[]) TO authenticated;
+GRANT ALL ON FUNCTION public.upsert_station_with_categories(p_station_id bigint, p_branch_id bigint, p_name text, p_position integer, p_is_active boolean, p_category_ids bigint[]) TO service_role;
 
 
 --
@@ -38088,17 +39846,8 @@ GRANT ALL ON FUNCTION public.validate_journal_balance(p_entry_id bigint) TO serv
 --
 
 REVOKE ALL ON FUNCTION public.verify_branch_override_code(p_branch_id bigint, p_code text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.verify_branch_override_code(p_branch_id bigint, p_code text) TO service_role;
 GRANT ALL ON FUNCTION public.verify_branch_override_code(p_branch_id bigint, p_code text) TO authenticated;
-
-
---
--- Name: FUNCTION void_manual_journal_entry(p_entry_id bigint, p_reason text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.void_manual_journal_entry(p_entry_id bigint, p_reason text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.void_manual_journal_entry(p_entry_id bigint, p_reason text) TO service_role;
-GRANT ALL ON FUNCTION public.void_manual_journal_entry(p_entry_id bigint, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.verify_branch_override_code(p_branch_id bigint, p_code text) TO service_role;
 
 
 --
@@ -38106,8 +39855,8 @@ GRANT ALL ON FUNCTION public.void_manual_journal_entry(p_entry_id bigint, p_reas
 --
 
 REVOKE ALL ON FUNCTION public.void_order_item(p_order_item_id bigint, p_reason text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.void_order_item(p_order_item_id bigint, p_reason text) TO service_role;
 GRANT ALL ON FUNCTION public.void_order_item(p_order_item_id bigint, p_reason text) TO authenticated;
+GRANT ALL ON FUNCTION public.void_order_item(p_order_item_id bigint, p_reason text) TO service_role;
 
 
 --
@@ -38130,8 +39879,8 @@ GRANT ALL ON FUNCTION public.weekly_waste_report() TO service_role;
 -- Name: TABLE accounting_periods; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.accounting_periods TO anon;
-GRANT ALL ON TABLE public.accounting_periods TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.accounting_periods TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.accounting_periods TO authenticated;
 GRANT ALL ON TABLE public.accounting_periods TO service_role;
 
 
@@ -38139,8 +39888,8 @@ GRANT ALL ON TABLE public.accounting_periods TO service_role;
 -- Name: TABLE archive_run_log; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.archive_run_log TO anon;
-GRANT ALL ON TABLE public.archive_run_log TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.archive_run_log TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.archive_run_log TO authenticated;
 GRANT ALL ON TABLE public.archive_run_log TO service_role;
 
 
@@ -38154,47 +39903,58 @@ GRANT ALL ON SEQUENCE public.archive_run_log_id_seq TO service_role;
 
 
 --
--- Name: TABLE area_branches; Type: ACL; Schema: public; Owner: -
+-- Name: TABLE attendance_checklist_items; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.area_branches TO anon;
-GRANT ALL ON TABLE public.area_branches TO authenticated;
-GRANT ALL ON TABLE public.area_branches TO service_role;
-
-
---
--- Name: SEQUENCE area_branches_id_seq; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON SEQUENCE public.area_branches_id_seq TO anon;
-GRANT ALL ON SEQUENCE public.area_branches_id_seq TO authenticated;
-GRANT ALL ON SEQUENCE public.area_branches_id_seq TO service_role;
+GRANT ALL ON TABLE public.attendance_checklist_items TO service_role;
+GRANT SELECT ON TABLE public.attendance_checklist_items TO authenticated;
 
 
 --
--- Name: TABLE areas; Type: ACL; Schema: public; Owner: -
+-- Name: SEQUENCE attendance_checklist_items_id_seq; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.areas TO anon;
-GRANT ALL ON TABLE public.areas TO authenticated;
-GRANT ALL ON TABLE public.areas TO service_role;
+GRANT ALL ON SEQUENCE public.attendance_checklist_items_id_seq TO anon;
+GRANT ALL ON SEQUENCE public.attendance_checklist_items_id_seq TO authenticated;
+GRANT ALL ON SEQUENCE public.attendance_checklist_items_id_seq TO service_role;
 
 
 --
--- Name: SEQUENCE areas_id_seq; Type: ACL; Schema: public; Owner: -
+-- Name: TABLE attendance_consumption_report_lines; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON SEQUENCE public.areas_id_seq TO anon;
-GRANT ALL ON SEQUENCE public.areas_id_seq TO authenticated;
-GRANT ALL ON SEQUENCE public.areas_id_seq TO service_role;
+GRANT ALL ON TABLE public.attendance_consumption_report_lines TO service_role;
+GRANT SELECT ON TABLE public.attendance_consumption_report_lines TO authenticated;
+
+
+--
+-- Name: SEQUENCE attendance_consumption_report_lines_id_seq; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON SEQUENCE public.attendance_consumption_report_lines_id_seq TO service_role;
+
+
+--
+-- Name: TABLE attendance_consumption_reports; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.attendance_consumption_reports TO service_role;
+GRANT SELECT ON TABLE public.attendance_consumption_reports TO authenticated;
+
+
+--
+-- Name: SEQUENCE attendance_consumption_reports_id_seq; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON SEQUENCE public.attendance_consumption_reports_id_seq TO service_role;
 
 
 --
 -- Name: TABLE attendance_records; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN,UPDATE ON TABLE public.attendance_records TO anon;
-GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN,UPDATE ON TABLE public.attendance_records TO authenticated;
+GRANT SELECT ON TABLE public.attendance_records TO anon;
+GRANT SELECT ON TABLE public.attendance_records TO authenticated;
 GRANT ALL ON TABLE public.attendance_records TO service_role;
 
 
@@ -38202,8 +39962,6 @@ GRANT ALL ON TABLE public.attendance_records TO service_role;
 -- Name: SEQUENCE attendance_records_id_seq; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON SEQUENCE public.attendance_records_id_seq TO anon;
-GRANT ALL ON SEQUENCE public.attendance_records_id_seq TO authenticated;
 GRANT ALL ON SEQUENCE public.attendance_records_id_seq TO service_role;
 
 
@@ -38211,8 +39969,8 @@ GRANT ALL ON SEQUENCE public.attendance_records_id_seq TO service_role;
 -- Name: TABLE audit_logs; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.audit_logs TO anon;
-GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN,UPDATE ON TABLE public.audit_logs TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.audit_logs TO anon;
+GRANT SELECT,DELETE,MAINTAIN,UPDATE ON TABLE public.audit_logs TO authenticated;
 GRANT ALL ON TABLE public.audit_logs TO service_role;
 
 
@@ -38238,8 +39996,8 @@ GRANT ALL ON SEQUENCE public.auto_journal_seq TO service_role;
 -- Name: TABLE branch_attendance_config; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.branch_attendance_config TO anon;
-GRANT ALL ON TABLE public.branch_attendance_config TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_attendance_config TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_attendance_config TO authenticated;
 GRANT ALL ON TABLE public.branch_attendance_config TO service_role;
 
 
@@ -38256,8 +40014,8 @@ GRANT ALL ON SEQUENCE public.branch_attendance_config_id_seq TO service_role;
 -- Name: TABLE branch_daily_waste_cap; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.branch_daily_waste_cap TO anon;
-GRANT ALL ON TABLE public.branch_daily_waste_cap TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_daily_waste_cap TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_daily_waste_cap TO authenticated;
 GRANT ALL ON TABLE public.branch_daily_waste_cap TO service_role;
 
 
@@ -38265,8 +40023,8 @@ GRANT ALL ON TABLE public.branch_daily_waste_cap TO service_role;
 -- Name: TABLE branch_express_window; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.branch_express_window TO anon;
-GRANT ALL ON TABLE public.branch_express_window TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_express_window TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_express_window TO authenticated;
 GRANT ALL ON TABLE public.branch_express_window TO service_role;
 
 
@@ -38274,17 +40032,35 @@ GRANT ALL ON TABLE public.branch_express_window TO service_role;
 -- Name: TABLE branch_feature_flags; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.branch_feature_flags TO anon;
-GRANT ALL ON TABLE public.branch_feature_flags TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_feature_flags TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_feature_flags TO authenticated;
 GRANT ALL ON TABLE public.branch_feature_flags TO service_role;
+
+
+--
+-- Name: TABLE branch_menu_item_daily_holds; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_menu_item_daily_holds TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_menu_item_daily_holds TO authenticated;
+GRANT ALL ON TABLE public.branch_menu_item_daily_holds TO service_role;
+
+
+--
+-- Name: SEQUENCE branch_menu_item_daily_holds_id_seq; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON SEQUENCE public.branch_menu_item_daily_holds_id_seq TO anon;
+GRANT ALL ON SEQUENCE public.branch_menu_item_daily_holds_id_seq TO authenticated;
+GRANT ALL ON SEQUENCE public.branch_menu_item_daily_holds_id_seq TO service_role;
 
 
 --
 -- Name: TABLE branch_menu_item_daily_limits; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.branch_menu_item_daily_limits TO anon;
-GRANT ALL ON TABLE public.branch_menu_item_daily_limits TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_menu_item_daily_limits TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_menu_item_daily_limits TO authenticated;
 GRANT ALL ON TABLE public.branch_menu_item_daily_limits TO service_role;
 
 
@@ -38301,8 +40077,8 @@ GRANT ALL ON SEQUENCE public.branch_menu_item_daily_limits_id_seq TO service_rol
 -- Name: TABLE branch_override_attempts; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.branch_override_attempts TO anon;
-GRANT ALL ON TABLE public.branch_override_attempts TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_override_attempts TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_override_attempts TO authenticated;
 GRANT ALL ON TABLE public.branch_override_attempts TO service_role;
 
 
@@ -38319,8 +40095,8 @@ GRANT ALL ON SEQUENCE public.branch_override_attempts_id_seq TO service_role;
 -- Name: TABLE branch_override_codes; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.branch_override_codes TO anon;
-GRANT ALL ON TABLE public.branch_override_codes TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_override_codes TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_override_codes TO authenticated;
 GRANT ALL ON TABLE public.branch_override_codes TO service_role;
 
 
@@ -38328,8 +40104,8 @@ GRANT ALL ON TABLE public.branch_override_codes TO service_role;
 -- Name: TABLE branch_trusted_egress_ips; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.branch_trusted_egress_ips TO anon;
-GRANT ALL ON TABLE public.branch_trusted_egress_ips TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_trusted_egress_ips TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_trusted_egress_ips TO authenticated;
 GRANT ALL ON TABLE public.branch_trusted_egress_ips TO service_role;
 
 
@@ -38346,8 +40122,8 @@ GRANT ALL ON SEQUENCE public.branch_trusted_egress_ips_id_seq TO service_role;
 -- Name: TABLE branch_zones; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.branch_zones TO anon;
-GRANT ALL ON TABLE public.branch_zones TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_zones TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branch_zones TO authenticated;
 GRANT ALL ON TABLE public.branch_zones TO service_role;
 
 
@@ -38364,8 +40140,8 @@ GRANT ALL ON SEQUENCE public.branch_zones_id_seq TO service_role;
 -- Name: TABLE branches; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.branches TO anon;
-GRANT ALL ON TABLE public.branches TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branches TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.branches TO authenticated;
 GRANT ALL ON TABLE public.branches TO service_role;
 
 
@@ -38379,29 +40155,11 @@ GRANT ALL ON SEQUENCE public.branches_id_seq TO service_role;
 
 
 --
--- Name: TABLE chart_of_accounts; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.chart_of_accounts TO anon;
-GRANT ALL ON TABLE public.chart_of_accounts TO authenticated;
-GRANT ALL ON TABLE public.chart_of_accounts TO service_role;
-
-
---
--- Name: SEQUENCE chart_of_accounts_id_seq; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON SEQUENCE public.chart_of_accounts_id_seq TO anon;
-GRANT ALL ON SEQUENCE public.chart_of_accounts_id_seq TO authenticated;
-GRANT ALL ON SEQUENCE public.chart_of_accounts_id_seq TO service_role;
-
-
---
 -- Name: TABLE employees; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.employees TO anon;
-GRANT ALL ON TABLE public.employees TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.employees TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.employees TO authenticated;
 GRANT ALL ON TABLE public.employees TO service_role;
 
 
@@ -38418,8 +40176,8 @@ GRANT ALL ON SEQUENCE public.employees_id_seq TO service_role;
 -- Name: TABLE employment_contracts; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.employment_contracts TO anon;
-GRANT ALL ON TABLE public.employment_contracts TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.employment_contracts TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.employment_contracts TO authenticated;
 GRANT ALL ON TABLE public.employment_contracts TO service_role;
 
 
@@ -38433,29 +40191,29 @@ GRANT ALL ON SEQUENCE public.employment_contracts_id_seq TO service_role;
 
 
 --
--- Name: TABLE fiscal_periods; Type: ACL; Schema: public; Owner: -
+-- Name: TABLE expenses; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.fiscal_periods TO anon;
-GRANT ALL ON TABLE public.fiscal_periods TO authenticated;
-GRANT ALL ON TABLE public.fiscal_periods TO service_role;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.expenses TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.expenses TO authenticated;
+GRANT ALL ON TABLE public.expenses TO service_role;
 
 
 --
--- Name: SEQUENCE fiscal_periods_id_seq; Type: ACL; Schema: public; Owner: -
+-- Name: SEQUENCE expenses_id_seq; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON SEQUENCE public.fiscal_periods_id_seq TO anon;
-GRANT ALL ON SEQUENCE public.fiscal_periods_id_seq TO authenticated;
-GRANT ALL ON SEQUENCE public.fiscal_periods_id_seq TO service_role;
+GRANT ALL ON SEQUENCE public.expenses_id_seq TO anon;
+GRANT ALL ON SEQUENCE public.expenses_id_seq TO authenticated;
+GRANT ALL ON SEQUENCE public.expenses_id_seq TO service_role;
 
 
 --
 -- Name: TABLE goods_received_notes; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.goods_received_notes TO anon;
-GRANT ALL ON TABLE public.goods_received_notes TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.goods_received_notes TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.goods_received_notes TO authenticated;
 GRANT ALL ON TABLE public.goods_received_notes TO service_role;
 
 
@@ -38472,8 +40230,8 @@ GRANT ALL ON SEQUENCE public.goods_received_notes_id_seq TO service_role;
 -- Name: TABLE grn_baseline_pause; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.grn_baseline_pause TO anon;
-GRANT ALL ON TABLE public.grn_baseline_pause TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.grn_baseline_pause TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.grn_baseline_pause TO authenticated;
 GRANT ALL ON TABLE public.grn_baseline_pause TO service_role;
 
 
@@ -38490,8 +40248,8 @@ GRANT ALL ON SEQUENCE public.grn_baseline_pause_id_seq TO service_role;
 -- Name: TABLE grn_express_extend_audit; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.grn_express_extend_audit TO anon;
-GRANT ALL ON TABLE public.grn_express_extend_audit TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.grn_express_extend_audit TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.grn_express_extend_audit TO authenticated;
 GRANT ALL ON TABLE public.grn_express_extend_audit TO service_role;
 
 
@@ -38508,8 +40266,8 @@ GRANT ALL ON SEQUENCE public.grn_express_extend_audit_id_seq TO service_role;
 -- Name: TABLE grn_hardblock_overrides; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.grn_hardblock_overrides TO anon;
-GRANT ALL ON TABLE public.grn_hardblock_overrides TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.grn_hardblock_overrides TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.grn_hardblock_overrides TO authenticated;
 GRANT ALL ON TABLE public.grn_hardblock_overrides TO service_role;
 
 
@@ -38526,8 +40284,8 @@ GRANT ALL ON SEQUENCE public.grn_hardblock_overrides_id_seq TO service_role;
 -- Name: TABLE grn_items; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.grn_items TO anon;
-GRANT ALL ON TABLE public.grn_items TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.grn_items TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.grn_items TO authenticated;
 GRANT ALL ON TABLE public.grn_items TO service_role;
 
 
@@ -38544,8 +40302,8 @@ GRANT ALL ON SEQUENCE public.grn_items_id_seq TO service_role;
 -- Name: TABLE ingredient_abc_class; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.ingredient_abc_class TO anon;
-GRANT ALL ON TABLE public.ingredient_abc_class TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.ingredient_abc_class TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.ingredient_abc_class TO authenticated;
 GRANT ALL ON TABLE public.ingredient_abc_class TO service_role;
 
 
@@ -38553,8 +40311,8 @@ GRANT ALL ON TABLE public.ingredient_abc_class TO service_role;
 -- Name: TABLE ingredient_category_review_policy; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.ingredient_category_review_policy TO anon;
-GRANT ALL ON TABLE public.ingredient_category_review_policy TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.ingredient_category_review_policy TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.ingredient_category_review_policy TO authenticated;
 GRANT ALL ON TABLE public.ingredient_category_review_policy TO service_role;
 
 
@@ -38562,8 +40320,8 @@ GRANT ALL ON TABLE public.ingredient_category_review_policy TO service_role;
 -- Name: TABLE ingredients; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.ingredients TO anon;
-GRANT ALL ON TABLE public.ingredients TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.ingredients TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.ingredients TO authenticated;
 GRANT ALL ON TABLE public.ingredients TO service_role;
 
 
@@ -38580,8 +40338,8 @@ GRANT ALL ON SEQUENCE public.ingredients_id_seq TO service_role;
 -- Name: TABLE inventory_locations; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.inventory_locations TO anon;
-GRANT ALL ON TABLE public.inventory_locations TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.inventory_locations TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.inventory_locations TO authenticated;
 GRANT ALL ON TABLE public.inventory_locations TO service_role;
 
 
@@ -38598,53 +40356,17 @@ GRANT ALL ON SEQUENCE public.inventory_locations_id_seq TO service_role;
 -- Name: TABLE inventory_qc_settings; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.inventory_qc_settings TO anon;
-GRANT ALL ON TABLE public.inventory_qc_settings TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.inventory_qc_settings TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.inventory_qc_settings TO authenticated;
 GRANT ALL ON TABLE public.inventory_qc_settings TO service_role;
-
-
---
--- Name: TABLE journal_entries; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.journal_entries TO anon;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE public.journal_entries TO authenticated;
-GRANT ALL ON TABLE public.journal_entries TO service_role;
-
-
---
--- Name: SEQUENCE journal_entries_id_seq; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON SEQUENCE public.journal_entries_id_seq TO anon;
-GRANT ALL ON SEQUENCE public.journal_entries_id_seq TO authenticated;
-GRANT ALL ON SEQUENCE public.journal_entries_id_seq TO service_role;
-
-
---
--- Name: TABLE journal_entry_lines; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.journal_entry_lines TO anon;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE public.journal_entry_lines TO authenticated;
-GRANT ALL ON TABLE public.journal_entry_lines TO service_role;
-
-
---
--- Name: SEQUENCE journal_entry_lines_id_seq; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON SEQUENCE public.journal_entry_lines_id_seq TO anon;
-GRANT ALL ON SEQUENCE public.journal_entry_lines_id_seq TO authenticated;
-GRANT ALL ON SEQUENCE public.journal_entry_lines_id_seq TO service_role;
 
 
 --
 -- Name: TABLE kds_station_categories; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.kds_station_categories TO anon;
-GRANT ALL ON TABLE public.kds_station_categories TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.kds_station_categories TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.kds_station_categories TO authenticated;
 GRANT ALL ON TABLE public.kds_station_categories TO service_role;
 
 
@@ -38661,8 +40383,8 @@ GRANT ALL ON SEQUENCE public.kds_station_categories_id_seq TO service_role;
 -- Name: TABLE kds_stations; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.kds_stations TO anon;
-GRANT ALL ON TABLE public.kds_stations TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.kds_stations TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.kds_stations TO authenticated;
 GRANT ALL ON TABLE public.kds_stations TO service_role;
 
 
@@ -38679,8 +40401,8 @@ GRANT ALL ON SEQUENCE public.kds_stations_id_seq TO service_role;
 -- Name: TABLE kds_tickets; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.kds_tickets TO anon;
-GRANT SELECT,INSERT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN,UPDATE ON TABLE public.kds_tickets TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.kds_tickets TO anon;
+GRANT SELECT,INSERT,MAINTAIN,UPDATE ON TABLE public.kds_tickets TO authenticated;
 GRANT ALL ON TABLE public.kds_tickets TO service_role;
 
 
@@ -38713,8 +40435,8 @@ GRANT ALL ON SEQUENCE public.kitchen_daily_counters_id_seq TO service_role;
 -- Name: TABLE kitchen_send_batches; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.kitchen_send_batches TO anon;
-GRANT ALL ON TABLE public.kitchen_send_batches TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.kitchen_send_batches TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.kitchen_send_batches TO authenticated;
 GRANT ALL ON TABLE public.kitchen_send_batches TO service_role;
 
 
@@ -38728,11 +40450,29 @@ GRANT ALL ON SEQUENCE public.kitchen_send_batches_id_seq TO service_role;
 
 
 --
+-- Name: TABLE leave_requests; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.leave_requests TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.leave_requests TO authenticated;
+GRANT ALL ON TABLE public.leave_requests TO service_role;
+
+
+--
+-- Name: SEQUENCE leave_requests_id_seq; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON SEQUENCE public.leave_requests_id_seq TO anon;
+GRANT ALL ON SEQUENCE public.leave_requests_id_seq TO authenticated;
+GRANT ALL ON SEQUENCE public.leave_requests_id_seq TO service_role;
+
+
+--
 -- Name: TABLE menu_categories; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.menu_categories TO anon;
-GRANT ALL ON TABLE public.menu_categories TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.menu_categories TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.menu_categories TO authenticated;
 GRANT ALL ON TABLE public.menu_categories TO service_role;
 
 
@@ -38749,8 +40489,8 @@ GRANT ALL ON SEQUENCE public.menu_categories_id_seq TO service_role;
 -- Name: TABLE menu_item_available_sides; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.menu_item_available_sides TO anon;
-GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE public.menu_item_available_sides TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.menu_item_available_sides TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN ON TABLE public.menu_item_available_sides TO authenticated;
 GRANT ALL ON TABLE public.menu_item_available_sides TO service_role;
 
 
@@ -38767,8 +40507,8 @@ GRANT ALL ON SEQUENCE public.menu_item_available_sides_id_seq TO service_role;
 -- Name: TABLE menu_item_modifiers; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.menu_item_modifiers TO anon;
-GRANT ALL ON TABLE public.menu_item_modifiers TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.menu_item_modifiers TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.menu_item_modifiers TO authenticated;
 GRANT ALL ON TABLE public.menu_item_modifiers TO service_role;
 
 
@@ -38785,8 +40525,8 @@ GRANT ALL ON SEQUENCE public.menu_item_modifiers_id_seq TO service_role;
 -- Name: TABLE menu_item_variants; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.menu_item_variants TO anon;
-GRANT ALL ON TABLE public.menu_item_variants TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.menu_item_variants TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.menu_item_variants TO authenticated;
 GRANT ALL ON TABLE public.menu_item_variants TO service_role;
 
 
@@ -38803,8 +40543,8 @@ GRANT ALL ON SEQUENCE public.menu_item_variants_id_seq TO service_role;
 -- Name: TABLE menu_items; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.menu_items TO anon;
-GRANT ALL ON TABLE public.menu_items TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.menu_items TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.menu_items TO authenticated;
 GRANT ALL ON TABLE public.menu_items TO service_role;
 
 
@@ -38821,8 +40561,8 @@ GRANT ALL ON SEQUENCE public.menu_items_id_seq TO service_role;
 -- Name: TABLE orders; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.orders TO anon;
-GRANT ALL ON TABLE public.orders TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.orders TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.orders TO authenticated;
 GRANT ALL ON TABLE public.orders TO service_role;
 
 
@@ -38830,8 +40570,8 @@ GRANT ALL ON TABLE public.orders TO service_role;
 -- Name: TABLE payments; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.payments TO anon;
-GRANT ALL ON TABLE public.payments TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.payments TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.payments TO authenticated;
 GRANT ALL ON TABLE public.payments TO service_role;
 
 
@@ -38839,6 +40579,8 @@ GRANT ALL ON TABLE public.payments TO service_role;
 -- Name: TABLE mv_daily_revenue; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_daily_revenue TO anon;
+GRANT INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_daily_revenue TO authenticated;
 GRANT ALL ON TABLE public.mv_daily_revenue TO service_role;
 
 
@@ -38846,8 +40588,8 @@ GRANT ALL ON TABLE public.mv_daily_revenue TO service_role;
 -- Name: TABLE order_items; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.order_items TO anon;
-GRANT ALL ON TABLE public.order_items TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.order_items TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.order_items TO authenticated;
 GRANT ALL ON TABLE public.order_items TO service_role;
 
 
@@ -38855,8 +40597,8 @@ GRANT ALL ON TABLE public.order_items TO service_role;
 -- Name: TABLE recipes; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.recipes TO anon;
-GRANT ALL ON TABLE public.recipes TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.recipes TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.recipes TO authenticated;
 GRANT ALL ON TABLE public.recipes TO service_role;
 
 
@@ -38864,6 +40606,8 @@ GRANT ALL ON TABLE public.recipes TO service_role;
 -- Name: TABLE mv_food_cost; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_food_cost TO anon;
+GRANT INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_food_cost TO authenticated;
 GRANT ALL ON TABLE public.mv_food_cost TO service_role;
 
 
@@ -38878,8 +40622,8 @@ GRANT ALL ON TABLE public.mv_grn_price_baseline TO service_role;
 -- Name: TABLE stock_levels; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.stock_levels TO anon;
-GRANT ALL ON TABLE public.stock_levels TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_levels TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_levels TO authenticated;
 GRANT ALL ON TABLE public.stock_levels TO service_role;
 
 
@@ -38901,8 +40645,8 @@ GRANT ALL ON TABLE public.mv_inventory_value_ranking TO service_role;
 -- Name: TABLE mv_refresh_log; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.mv_refresh_log TO anon;
-GRANT ALL ON TABLE public.mv_refresh_log TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_refresh_log TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_refresh_log TO authenticated;
 GRANT ALL ON TABLE public.mv_refresh_log TO service_role;
 
 
@@ -38910,6 +40654,8 @@ GRANT ALL ON TABLE public.mv_refresh_log TO service_role;
 -- Name: TABLE mv_top_items; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_top_items TO anon;
+GRANT INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.mv_top_items TO authenticated;
 GRANT ALL ON TABLE public.mv_top_items TO service_role;
 
 
@@ -38917,8 +40663,8 @@ GRANT ALL ON TABLE public.mv_top_items TO service_role;
 -- Name: TABLE notification_outbox; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.notification_outbox TO anon;
-GRANT ALL ON TABLE public.notification_outbox TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.notification_outbox TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.notification_outbox TO authenticated;
 GRANT ALL ON TABLE public.notification_outbox TO service_role;
 
 
@@ -38935,8 +40681,8 @@ GRANT ALL ON SEQUENCE public.notification_outbox_id_seq TO service_role;
 -- Name: TABLE notification_reads; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.notification_reads TO anon;
-GRANT ALL ON TABLE public.notification_reads TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.notification_reads TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.notification_reads TO authenticated;
 GRANT ALL ON TABLE public.notification_reads TO service_role;
 
 
@@ -38944,8 +40690,8 @@ GRANT ALL ON TABLE public.notification_reads TO service_role;
 -- Name: TABLE notifications; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.notifications TO anon;
-GRANT ALL ON TABLE public.notifications TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.notifications TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.notifications TO authenticated;
 GRANT ALL ON TABLE public.notifications TO service_role;
 
 
@@ -38962,8 +40708,8 @@ GRANT ALL ON SEQUENCE public.notifications_id_seq TO service_role;
 -- Name: TABLE order_daily_counters; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.order_daily_counters TO anon;
-GRANT ALL ON TABLE public.order_daily_counters TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.order_daily_counters TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.order_daily_counters TO authenticated;
 GRANT ALL ON TABLE public.order_daily_counters TO service_role;
 
 
@@ -38989,8 +40735,8 @@ GRANT ALL ON SEQUENCE public.order_items_id_seq TO service_role;
 -- Name: TABLE order_status_history; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.order_status_history TO anon;
-GRANT ALL ON TABLE public.order_status_history TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.order_status_history TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.order_status_history TO authenticated;
 GRANT ALL ON TABLE public.order_status_history TO service_role;
 
 
@@ -39025,8 +40771,8 @@ GRANT ALL ON SEQUENCE public.payments_id_seq TO service_role;
 -- Name: TABLE payroll_entries; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.payroll_entries TO anon;
-GRANT ALL ON TABLE public.payroll_entries TO authenticated;
+GRANT SELECT,MAINTAIN ON TABLE public.payroll_entries TO anon;
+GRANT SELECT,MAINTAIN ON TABLE public.payroll_entries TO authenticated;
 GRANT ALL ON TABLE public.payroll_entries TO service_role;
 
 
@@ -39043,8 +40789,8 @@ GRANT ALL ON SEQUENCE public.payroll_entries_id_seq TO service_role;
 -- Name: TABLE payroll_periods; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.payroll_periods TO anon;
-GRANT ALL ON TABLE public.payroll_periods TO authenticated;
+GRANT SELECT,MAINTAIN ON TABLE public.payroll_periods TO anon;
+GRANT SELECT,MAINTAIN ON TABLE public.payroll_periods TO authenticated;
 GRANT ALL ON TABLE public.payroll_periods TO service_role;
 
 
@@ -39061,8 +40807,8 @@ GRANT ALL ON SEQUENCE public.payroll_periods_id_seq TO service_role;
 -- Name: TABLE permission_audit_log; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.permission_audit_log TO anon;
-GRANT ALL ON TABLE public.permission_audit_log TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.permission_audit_log TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.permission_audit_log TO authenticated;
 GRANT ALL ON TABLE public.permission_audit_log TO service_role;
 
 
@@ -39079,8 +40825,8 @@ GRANT ALL ON SEQUENCE public.permission_audit_log_id_seq TO service_role;
 -- Name: TABLE permission_keys; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.permission_keys TO anon;
-GRANT ALL ON TABLE public.permission_keys TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.permission_keys TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.permission_keys TO authenticated;
 GRANT ALL ON TABLE public.permission_keys TO service_role;
 
 
@@ -39088,8 +40834,8 @@ GRANT ALL ON TABLE public.permission_keys TO service_role;
 -- Name: TABLE pos_sessions; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.pos_sessions TO anon;
-GRANT ALL ON TABLE public.pos_sessions TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.pos_sessions TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.pos_sessions TO authenticated;
 GRANT ALL ON TABLE public.pos_sessions TO service_role;
 
 
@@ -39106,8 +40852,8 @@ GRANT ALL ON SEQUENCE public.pos_sessions_id_seq TO service_role;
 -- Name: TABLE pos_terminals; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.pos_terminals TO anon;
-GRANT ALL ON TABLE public.pos_terminals TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.pos_terminals TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.pos_terminals TO authenticated;
 GRANT ALL ON TABLE public.pos_terminals TO service_role;
 
 
@@ -39124,8 +40870,8 @@ GRANT ALL ON SEQUENCE public.pos_terminals_id_seq TO service_role;
 -- Name: TABLE positions; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.positions TO anon;
-GRANT ALL ON TABLE public.positions TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.positions TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.positions TO authenticated;
 GRANT ALL ON TABLE public.positions TO service_role;
 
 
@@ -39139,29 +40885,11 @@ GRANT ALL ON SEQUENCE public.positions_id_seq TO service_role;
 
 
 --
--- Name: TABLE posting_rules; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.posting_rules TO anon;
-GRANT ALL ON TABLE public.posting_rules TO authenticated;
-GRANT ALL ON TABLE public.posting_rules TO service_role;
-
-
---
--- Name: SEQUENCE posting_rules_id_seq; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON SEQUENCE public.posting_rules_id_seq TO anon;
-GRANT ALL ON SEQUENCE public.posting_rules_id_seq TO authenticated;
-GRANT ALL ON SEQUENCE public.posting_rules_id_seq TO service_role;
-
-
---
 -- Name: TABLE print_jobs; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.print_jobs TO anon;
-GRANT ALL ON TABLE public.print_jobs TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.print_jobs TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.print_jobs TO authenticated;
 GRANT ALL ON TABLE public.print_jobs TO service_role;
 
 
@@ -39178,8 +40906,8 @@ GRANT ALL ON SEQUENCE public.print_jobs_id_seq TO service_role;
 -- Name: TABLE print_template_versions; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.print_template_versions TO anon;
-GRANT ALL ON TABLE public.print_template_versions TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.print_template_versions TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.print_template_versions TO authenticated;
 GRANT ALL ON TABLE public.print_template_versions TO service_role;
 
 
@@ -39212,8 +40940,8 @@ GRANT ALL ON SEQUENCE public.printer_agent_presence_tokens_id_seq TO service_rol
 -- Name: TABLE printer_agents; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.printer_agents TO anon;
-GRANT ALL ON TABLE public.printer_agents TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.printer_agents TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.printer_agents TO authenticated;
 GRANT ALL ON TABLE public.printer_agents TO service_role;
 
 
@@ -39221,7 +40949,8 @@ GRANT ALL ON TABLE public.printer_agents TO service_role;
 -- Name: TABLE printer_agent_status; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.printer_agent_status TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.printer_agent_status TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.printer_agent_status TO authenticated;
 GRANT ALL ON TABLE public.printer_agent_status TO service_role;
 
 
@@ -39229,8 +40958,8 @@ GRANT ALL ON TABLE public.printer_agent_status TO service_role;
 -- Name: TABLE printer_menu_categories; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.printer_menu_categories TO anon;
-GRANT ALL ON TABLE public.printer_menu_categories TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.printer_menu_categories TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.printer_menu_categories TO authenticated;
 GRANT ALL ON TABLE public.printer_menu_categories TO service_role;
 
 
@@ -39247,8 +40976,8 @@ GRANT ALL ON SEQUENCE public.printer_menu_categories_id_seq TO service_role;
 -- Name: TABLE printer_print_types; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.printer_print_types TO anon;
-GRANT ALL ON TABLE public.printer_print_types TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.printer_print_types TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.printer_print_types TO authenticated;
 GRANT ALL ON TABLE public.printer_print_types TO service_role;
 
 
@@ -39265,8 +40994,8 @@ GRANT ALL ON SEQUENCE public.printer_print_types_id_seq TO service_role;
 -- Name: TABLE printers; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.printers TO anon;
-GRANT ALL ON TABLE public.printers TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.printers TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.printers TO authenticated;
 GRANT ALL ON TABLE public.printers TO service_role;
 
 
@@ -39283,8 +41012,8 @@ GRANT ALL ON SEQUENCE public.printers_id_seq TO service_role;
 -- Name: TABLE production_order_items; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.production_order_items TO anon;
-GRANT ALL ON TABLE public.production_order_items TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.production_order_items TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.production_order_items TO authenticated;
 GRANT ALL ON TABLE public.production_order_items TO service_role;
 
 
@@ -39301,8 +41030,8 @@ GRANT ALL ON SEQUENCE public.production_order_items_id_seq TO service_role;
 -- Name: TABLE production_orders; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.production_orders TO anon;
-GRANT ALL ON TABLE public.production_orders TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.production_orders TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.production_orders TO authenticated;
 GRANT ALL ON TABLE public.production_orders TO service_role;
 
 
@@ -39319,8 +41048,8 @@ GRANT ALL ON SEQUENCE public.production_orders_id_seq TO service_role;
 -- Name: TABLE production_recipes; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.production_recipes TO anon;
-GRANT ALL ON TABLE public.production_recipes TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.production_recipes TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.production_recipes TO authenticated;
 GRANT ALL ON TABLE public.production_recipes TO service_role;
 
 
@@ -39337,8 +41066,8 @@ GRANT ALL ON SEQUENCE public.production_recipes_id_seq TO service_role;
 -- Name: TABLE profiles; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.profiles TO anon;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE public.profiles TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.profiles TO anon;
+GRANT SELECT,MAINTAIN ON TABLE public.profiles TO authenticated;
 GRANT ALL ON TABLE public.profiles TO service_role;
 
 
@@ -39367,8 +41096,8 @@ GRANT UPDATE(avatar_url) ON TABLE public.profiles TO authenticated;
 -- Name: TABLE purchase_order_items; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.purchase_order_items TO anon;
-GRANT ALL ON TABLE public.purchase_order_items TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.purchase_order_items TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.purchase_order_items TO authenticated;
 GRANT ALL ON TABLE public.purchase_order_items TO service_role;
 
 
@@ -39385,8 +41114,8 @@ GRANT ALL ON SEQUENCE public.purchase_order_items_id_seq TO service_role;
 -- Name: TABLE purchase_orders; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.purchase_orders TO anon;
-GRANT ALL ON TABLE public.purchase_orders TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.purchase_orders TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.purchase_orders TO authenticated;
 GRANT ALL ON TABLE public.purchase_orders TO service_role;
 
 
@@ -39412,8 +41141,8 @@ GRANT ALL ON SEQUENCE public.recipes_id_seq TO service_role;
 -- Name: TABLE reconcile_run_log; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.reconcile_run_log TO anon;
-GRANT ALL ON TABLE public.reconcile_run_log TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.reconcile_run_log TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.reconcile_run_log TO authenticated;
 GRANT ALL ON TABLE public.reconcile_run_log TO service_role;
 
 
@@ -39430,8 +41159,8 @@ GRANT ALL ON SEQUENCE public.reconcile_run_log_id_seq TO service_role;
 -- Name: TABLE refunds; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.refunds TO anon;
-GRANT ALL ON TABLE public.refunds TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.refunds TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.refunds TO authenticated;
 GRANT ALL ON TABLE public.refunds TO service_role;
 
 
@@ -39448,8 +41177,8 @@ GRANT ALL ON SEQUENCE public.refunds_id_seq TO service_role;
 -- Name: TABLE role_templates; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.role_templates TO anon;
-GRANT ALL ON TABLE public.role_templates TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.role_templates TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.role_templates TO authenticated;
 GRANT ALL ON TABLE public.role_templates TO service_role;
 
 
@@ -39463,47 +41192,60 @@ GRANT ALL ON SEQUENCE public.role_templates_id_seq TO service_role;
 
 
 --
--- Name: TABLE shift_assignments; Type: ACL; Schema: public; Owner: -
+-- Name: TABLE shift_checklist_consumption_default_items; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.shift_assignments TO anon;
-GRANT ALL ON TABLE public.shift_assignments TO authenticated;
-GRANT ALL ON TABLE public.shift_assignments TO service_role;
-
-
---
--- Name: SEQUENCE shift_assignments_id_seq; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON SEQUENCE public.shift_assignments_id_seq TO anon;
-GRANT ALL ON SEQUENCE public.shift_assignments_id_seq TO authenticated;
-GRANT ALL ON SEQUENCE public.shift_assignments_id_seq TO service_role;
+GRANT ALL ON TABLE public.shift_checklist_consumption_default_items TO service_role;
+GRANT SELECT ON TABLE public.shift_checklist_consumption_default_items TO authenticated;
 
 
 --
--- Name: TABLE shift_requests; Type: ACL; Schema: public; Owner: -
+-- Name: SEQUENCE shift_checklist_consumption_default_items_id_seq; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.shift_requests TO anon;
-GRANT ALL ON TABLE public.shift_requests TO authenticated;
-GRANT ALL ON TABLE public.shift_requests TO service_role;
+GRANT ALL ON SEQUENCE public.shift_checklist_consumption_default_items_id_seq TO service_role;
 
 
 --
--- Name: SEQUENCE shift_requests_id_seq; Type: ACL; Schema: public; Owner: -
+-- Name: TABLE shift_checklist_template_items; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON SEQUENCE public.shift_requests_id_seq TO anon;
-GRANT ALL ON SEQUENCE public.shift_requests_id_seq TO authenticated;
-GRANT ALL ON SEQUENCE public.shift_requests_id_seq TO service_role;
+GRANT ALL ON TABLE public.shift_checklist_template_items TO service_role;
+GRANT SELECT ON TABLE public.shift_checklist_template_items TO authenticated;
+
+
+--
+-- Name: SEQUENCE shift_checklist_template_items_id_seq; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON SEQUENCE public.shift_checklist_template_items_id_seq TO anon;
+GRANT ALL ON SEQUENCE public.shift_checklist_template_items_id_seq TO authenticated;
+GRANT ALL ON SEQUENCE public.shift_checklist_template_items_id_seq TO service_role;
+
+
+--
+-- Name: TABLE shift_checklist_templates; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.shift_checklist_templates TO service_role;
+GRANT SELECT ON TABLE public.shift_checklist_templates TO authenticated;
+
+
+--
+-- Name: SEQUENCE shift_checklist_templates_id_seq; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON SEQUENCE public.shift_checklist_templates_id_seq TO anon;
+GRANT ALL ON SEQUENCE public.shift_checklist_templates_id_seq TO authenticated;
+GRANT ALL ON SEQUENCE public.shift_checklist_templates_id_seq TO service_role;
 
 
 --
 -- Name: TABLE shifts; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.shifts TO anon;
-GRANT ALL ON TABLE public.shifts TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.shifts TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.shifts TO authenticated;
 GRANT ALL ON TABLE public.shifts TO service_role;
 
 
@@ -39520,8 +41262,8 @@ GRANT ALL ON SEQUENCE public.shifts_id_seq TO service_role;
 -- Name: TABLE staff_permissions; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.staff_permissions TO anon;
-GRANT ALL ON TABLE public.staff_permissions TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.staff_permissions TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.staff_permissions TO authenticated;
 GRANT ALL ON TABLE public.staff_permissions TO service_role;
 
 
@@ -39538,8 +41280,8 @@ GRANT ALL ON SEQUENCE public.staff_permissions_id_seq TO service_role;
 -- Name: TABLE stock_issue_items; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.stock_issue_items TO anon;
-GRANT ALL ON TABLE public.stock_issue_items TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_issue_items TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_issue_items TO authenticated;
 GRANT ALL ON TABLE public.stock_issue_items TO service_role;
 
 
@@ -39556,8 +41298,8 @@ GRANT ALL ON SEQUENCE public.stock_issue_items_id_seq TO service_role;
 -- Name: TABLE stock_issues; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.stock_issues TO anon;
-GRANT ALL ON TABLE public.stock_issues TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_issues TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_issues TO authenticated;
 GRANT ALL ON TABLE public.stock_issues TO service_role;
 
 
@@ -39583,8 +41325,8 @@ GRANT ALL ON SEQUENCE public.stock_levels_id_seq TO service_role;
 -- Name: TABLE stock_movements; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.stock_movements TO anon;
-GRANT ALL ON TABLE public.stock_movements TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_movements TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_movements TO authenticated;
 GRANT ALL ON TABLE public.stock_movements TO service_role;
 
 
@@ -39601,8 +41343,8 @@ GRANT ALL ON SEQUENCE public.stock_movements_id_seq TO service_role;
 -- Name: TABLE stock_transfer_items; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.stock_transfer_items TO anon;
-GRANT ALL ON TABLE public.stock_transfer_items TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_transfer_items TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_transfer_items TO authenticated;
 GRANT ALL ON TABLE public.stock_transfer_items TO service_role;
 
 
@@ -39619,8 +41361,8 @@ GRANT ALL ON SEQUENCE public.stock_transfer_items_id_seq TO service_role;
 -- Name: TABLE stock_transfers; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.stock_transfers TO anon;
-GRANT ALL ON TABLE public.stock_transfers TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_transfers TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stock_transfers TO authenticated;
 GRANT ALL ON TABLE public.stock_transfers TO service_role;
 
 
@@ -39637,8 +41379,8 @@ GRANT ALL ON SEQUENCE public.stock_transfers_id_seq TO service_role;
 -- Name: TABLE stocktake_conflicts; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.stocktake_conflicts TO anon;
-GRANT ALL ON TABLE public.stocktake_conflicts TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stocktake_conflicts TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stocktake_conflicts TO authenticated;
 GRANT ALL ON TABLE public.stocktake_conflicts TO service_role;
 
 
@@ -39655,8 +41397,8 @@ GRANT ALL ON SEQUENCE public.stocktake_conflicts_id_seq TO service_role;
 -- Name: TABLE stocktake_drafts; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.stocktake_drafts TO anon;
-GRANT ALL ON TABLE public.stocktake_drafts TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stocktake_drafts TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stocktake_drafts TO authenticated;
 GRANT ALL ON TABLE public.stocktake_drafts TO service_role;
 
 
@@ -39664,8 +41406,8 @@ GRANT ALL ON TABLE public.stocktake_drafts TO service_role;
 -- Name: TABLE stocktake_lines; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.stocktake_lines TO anon;
-GRANT ALL ON TABLE public.stocktake_lines TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stocktake_lines TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stocktake_lines TO authenticated;
 GRANT ALL ON TABLE public.stocktake_lines TO service_role;
 
 
@@ -39682,8 +41424,8 @@ GRANT ALL ON SEQUENCE public.stocktake_lines_id_seq TO service_role;
 -- Name: TABLE stocktake_sessions; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.stocktake_sessions TO anon;
-GRANT ALL ON TABLE public.stocktake_sessions TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stocktake_sessions TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stocktake_sessions TO authenticated;
 GRANT ALL ON TABLE public.stocktake_sessions TO service_role;
 
 
@@ -39700,8 +41442,8 @@ GRANT ALL ON SEQUENCE public.stocktake_sessions_id_seq TO service_role;
 -- Name: TABLE stocktake_zone_locks; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.stocktake_zone_locks TO anon;
-GRANT ALL ON TABLE public.stocktake_zone_locks TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stocktake_zone_locks TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.stocktake_zone_locks TO authenticated;
 GRANT ALL ON TABLE public.stocktake_zone_locks TO service_role;
 
 
@@ -39718,8 +41460,8 @@ GRANT ALL ON SEQUENCE public.stocktake_zone_locks_id_seq TO service_role;
 -- Name: TABLE summary_run_queue; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.summary_run_queue TO anon;
-GRANT ALL ON TABLE public.summary_run_queue TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.summary_run_queue TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.summary_run_queue TO authenticated;
 GRANT ALL ON TABLE public.summary_run_queue TO service_role;
 
 
@@ -39736,8 +41478,8 @@ GRANT ALL ON SEQUENCE public.summary_run_queue_id_seq TO service_role;
 -- Name: TABLE supplier_credit_notes; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.supplier_credit_notes TO anon;
-GRANT ALL ON TABLE public.supplier_credit_notes TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_credit_notes TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_credit_notes TO authenticated;
 GRANT ALL ON TABLE public.supplier_credit_notes TO service_role;
 
 
@@ -39754,8 +41496,8 @@ GRANT ALL ON SEQUENCE public.supplier_credit_notes_id_seq TO service_role;
 -- Name: TABLE supplier_invoices; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.supplier_invoices TO anon;
-GRANT ALL ON TABLE public.supplier_invoices TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_invoices TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_invoices TO authenticated;
 GRANT ALL ON TABLE public.supplier_invoices TO service_role;
 
 
@@ -39772,8 +41514,8 @@ GRANT ALL ON SEQUENCE public.supplier_invoices_id_seq TO service_role;
 -- Name: TABLE supplier_items; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.supplier_items TO anon;
-GRANT ALL ON TABLE public.supplier_items TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_items TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_items TO authenticated;
 GRANT ALL ON TABLE public.supplier_items TO service_role;
 
 
@@ -39790,8 +41532,8 @@ GRANT ALL ON SEQUENCE public.supplier_items_id_seq TO service_role;
 -- Name: TABLE supplier_payments; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.supplier_payments TO anon;
-GRANT ALL ON TABLE public.supplier_payments TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_payments TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_payments TO authenticated;
 GRANT ALL ON TABLE public.supplier_payments TO service_role;
 
 
@@ -39808,8 +41550,8 @@ GRANT ALL ON SEQUENCE public.supplier_payments_id_seq TO service_role;
 -- Name: TABLE supplier_price_list; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.supplier_price_list TO anon;
-GRANT ALL ON TABLE public.supplier_price_list TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_price_list TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_price_list TO authenticated;
 GRANT ALL ON TABLE public.supplier_price_list TO service_role;
 
 
@@ -39826,8 +41568,8 @@ GRANT ALL ON SEQUENCE public.supplier_price_list_id_seq TO service_role;
 -- Name: TABLE supplier_return_items; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.supplier_return_items TO anon;
-GRANT ALL ON TABLE public.supplier_return_items TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_return_items TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_return_items TO authenticated;
 GRANT ALL ON TABLE public.supplier_return_items TO service_role;
 
 
@@ -39844,8 +41586,8 @@ GRANT ALL ON SEQUENCE public.supplier_return_items_id_seq TO service_role;
 -- Name: TABLE supplier_returns; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.supplier_returns TO anon;
-GRANT ALL ON TABLE public.supplier_returns TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_returns TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.supplier_returns TO authenticated;
 GRANT ALL ON TABLE public.supplier_returns TO service_role;
 
 
@@ -39862,8 +41604,8 @@ GRANT ALL ON SEQUENCE public.supplier_returns_id_seq TO service_role;
 -- Name: TABLE suppliers; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.suppliers TO anon;
-GRANT ALL ON TABLE public.suppliers TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.suppliers TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.suppliers TO authenticated;
 GRANT ALL ON TABLE public.suppliers TO service_role;
 
 
@@ -39880,8 +41622,8 @@ GRANT ALL ON SEQUENCE public.suppliers_id_seq TO service_role;
 -- Name: TABLE system_settings; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.system_settings TO anon;
-GRANT ALL ON TABLE public.system_settings TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.system_settings TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.system_settings TO authenticated;
 GRANT ALL ON TABLE public.system_settings TO service_role;
 
 
@@ -39898,8 +41640,8 @@ GRANT ALL ON SEQUENCE public.system_settings_id_seq TO service_role;
 -- Name: TABLE tables; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.tables TO anon;
-GRANT ALL ON TABLE public.tables TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.tables TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.tables TO authenticated;
 GRANT ALL ON TABLE public.tables TO service_role;
 
 
@@ -39916,8 +41658,8 @@ GRANT ALL ON SEQUENCE public.tables_id_seq TO service_role;
 -- Name: TABLE tax_invoice_events; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.tax_invoice_events TO anon;
-GRANT ALL ON TABLE public.tax_invoice_events TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.tax_invoice_events TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.tax_invoice_events TO authenticated;
 GRANT ALL ON TABLE public.tax_invoice_events TO service_role;
 
 
@@ -39934,8 +41676,8 @@ GRANT ALL ON SEQUENCE public.tax_invoice_events_id_seq TO service_role;
 -- Name: TABLE tax_invoice_orders; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.tax_invoice_orders TO anon;
-GRANT ALL ON TABLE public.tax_invoice_orders TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.tax_invoice_orders TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.tax_invoice_orders TO authenticated;
 GRANT ALL ON TABLE public.tax_invoice_orders TO service_role;
 
 
@@ -39943,8 +41685,8 @@ GRANT ALL ON TABLE public.tax_invoice_orders TO service_role;
 -- Name: TABLE tax_invoices; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.tax_invoices TO anon;
-GRANT ALL ON TABLE public.tax_invoices TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.tax_invoices TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.tax_invoices TO authenticated;
 GRANT ALL ON TABLE public.tax_invoices TO service_role;
 
 
@@ -39968,8 +41710,8 @@ GRANT ALL ON TABLE public.tenant_po_counters TO service_role;
 -- Name: TABLE tenants; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.tenants TO anon;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE public.tenants TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.tenants TO anon;
+GRANT SELECT,MAINTAIN ON TABLE public.tenants TO authenticated;
 GRANT ALL ON TABLE public.tenants TO service_role;
 
 
@@ -39986,8 +41728,8 @@ GRANT ALL ON SEQUENCE public.tenants_id_seq TO service_role;
 -- Name: TABLE user_trust_score; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.user_trust_score TO anon;
-GRANT ALL ON TABLE public.user_trust_score TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.user_trust_score TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.user_trust_score TO authenticated;
 GRANT ALL ON TABLE public.user_trust_score TO service_role;
 
 
@@ -39995,34 +41737,17 @@ GRANT ALL ON TABLE public.user_trust_score TO service_role;
 -- Name: TABLE v_print_agent_fleet; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.v_print_agent_fleet TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.v_print_agent_fleet TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.v_print_agent_fleet TO authenticated;
 GRANT ALL ON TABLE public.v_print_agent_fleet TO service_role;
-
-
---
--- Name: TABLE vas_report_lines; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.vas_report_lines TO anon;
-GRANT ALL ON TABLE public.vas_report_lines TO authenticated;
-GRANT ALL ON TABLE public.vas_report_lines TO service_role;
-
-
---
--- Name: SEQUENCE vas_report_lines_id_seq; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON SEQUENCE public.vas_report_lines_id_seq TO anon;
-GRANT ALL ON SEQUENCE public.vas_report_lines_id_seq TO authenticated;
-GRANT ALL ON SEQUENCE public.vas_report_lines_id_seq TO service_role;
 
 
 --
 -- Name: TABLE webhook_events; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.webhook_events TO anon;
-GRANT ALL ON TABLE public.webhook_events TO authenticated;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.webhook_events TO anon;
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE public.webhook_events TO authenticated;
 GRANT ALL ON TABLE public.webhook_events TO service_role;
 
 
@@ -40046,11 +41771,24 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENC
 
 
 --
+-- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: -
+--
+
+
+
+--
 -- Name: DEFAULT PRIVILEGES FOR FUNCTIONS; Type: DEFAULT ACL; Schema: public; Owner: -
 --
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO postgres;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO authenticated;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO service_role;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR FUNCTIONS; Type: DEFAULT ACL; Schema: public; Owner: -
+--
+
 
 
 --
@@ -40058,13 +41796,20 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIO
 --
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO postgres;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO anon;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLES TO anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLES TO authenticated;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO service_role;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: -
+--
+
 
 
 --
 -- PostgreSQL database dump complete
 --
 
--- \unrestrict 9ogGhrdgidzHLr4W08xFqeuO5fJ4snQIJ4Gjcb0h90dqBKnyLmzn8TwzcDVqYIL
+-- \unrestrict C2IdDG3NWONiLx7pLrefdOFVMowUWE0Q54uaT0PFVnbQq1cozXDtS2ABTBSGVFf
+

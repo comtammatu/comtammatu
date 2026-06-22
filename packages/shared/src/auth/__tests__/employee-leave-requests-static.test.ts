@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("Employee leave migration uses branch-scoped RLS and RPC workflow", () => {
   const migration = read(
-    "supabase/migrations/20260610110000_employee_leave_requests.sql",
+    "supabase/migrations/_archive/20260610110000_employee_leave_requests.sql",
   );
 
   for (const expected of [
