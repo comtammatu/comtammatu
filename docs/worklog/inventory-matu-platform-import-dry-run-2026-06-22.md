@@ -1,6 +1,6 @@
 # Inventory Matu Platform Import Dry-Run
 
-> **⚠️ SNAPSHOT (dry-run log) — Reconciled-through `0fe2761b` (2026-06-22).** Bản ghi một lần của dry-run import, không phải nguồn sự thật vận hành. Verify tồn/inventory thật vào prod + code trước khi dùng.
+> **⚠️ SNAPSHOT (dry-run log) — Reconciled-through `e6c18313` (2026-06-22).** Bản ghi một lần của dry-run import, không phải nguồn sự thật vận hành. Verify tồn/inventory thật vào prod + code trước khi dùng.
 
 Owner: current Inventory import task.
 
@@ -296,3 +296,159 @@ Authenticated UI smoke is still blocked until a safe smoke account is provided o
 
 - `.env.test.local` is missing.
 - `.env.local` has Supabase production credentials but no `E2E_CASHIER_EMAIL`, `E2E_CASHIER_PASSWORD`, `E2E_INVENTORY_MANAGER_EMAIL`, or `E2E_INVENTORY_MANAGER_PASSWORD`.
+
+## Production Kitchen Location Cleanup
+
+Review tier: T3, owner-approved production data cleanup.
+
+Skill plan: repo rules = database + workflow; external skills = Supabase; runtime tools = Supabase MCP; skipped = no migration/PR because this was a two-row orphan data cleanup approved in-session.
+
+PM: remove active branch-kitchen location rows that contradict the Inventory contract. Done means branch kitchens are no longer active `inventory_locations`.
+
+BA: deletion is valid only when target locations have no FK references and no stock ledger rows. If any reference exists, stop.
+
+Senior Dev: use one guarded `DELETE` against `inventory_locations` for `id in (6, 8)`, scoped to `tenant_id = 1`, `code = 'kitchen'`, `location_kind = 'kitchen'`, and `NOT EXISTS` checks for every FK table.
+
+QA/QC: verify no `location_kind = 'kitchen'` remains, stock ledger still matches movement aggregate, no negative stock appears, and transfers remain `warehouse -> warehouse`.
+
+Pre-delete FK audit for `location_id in (6, 8)`:
+
+- `stock_issues.source_location_id`: 0.
+- `stock_issues.target_location_id`: 0.
+- `stock_levels.location_id`: 0.
+- `stock_movements.location_id`: 0.
+- `stock_transfers.from_location_id`: 0.
+- `stock_transfers.to_location_id`: 0.
+- `stocktake_sessions.location_id`: 0.
+
+Deleted rows:
+
+- `location_id = 6`, Đất Đỏ, `code = kitchen`, `location_kind = kitchen`.
+- `location_id = 8`, Phước Hải, `code = kitchen`, `location_kind = kitchen`.
+
+Post-delete verification:
+
+- Remaining `inventory_locations`: 4.
+- Remaining `kitchen` locations: 0.
+- Remaining locations: Đất Đỏ warehouse `5`, Phước Hải warehouse `7`, Kho Tổng warehouse `9`, Bếp Trung Tâm warehouse `10`.
+- `stock_levels`: 124.
+- `stock_movements`: 1,690.
+- `stock_levels` vs movement aggregate mismatches: 0.
+- Negative `stock_levels`: 0.
+- Transfer matrix: `warehouse -> warehouse`: 352.
+
+## Reset And Reimport Guard Checkpoint
+
+Review tier: T3, production data cleanup/backfill preparation. No production write was performed in this checkpoint.
+
+Skill plan: repo rules = engineering + database + workflow; external skills = Supabase + Supabase Postgres best practices; runtime tools = CodeGraph, REST read-only dry-run, Node self-test, local SQL file generation.
+
+PM: allow a clean rebuild of the previous smoke/import ledger without touching any future real Inventory data. Done means the script can emit a reset transaction only when target Inventory rows are all tagged import rows.
+
+BA: reset is allowed only for previous `matu-platform import:` rows. Any real `stock_movements`, real `stock_transfers`, orphan transfer items, `stock_issues`, or `stocktake_sessions` must block reset generation.
+
+Senior Dev: add `--write-reset-sql` to the operational import script. The script audits target rows through REST first, then the generated SQL repeats the guard inside a short transaction before deleting import rows and derived `stock_levels`.
+
+QA/QC: self-test covers clean reset generation and dirty non-import movement blocking. Live dry-run must show zero reset blockers before a reset SQL file is written. Repo gate must pass.
+
+Current target reset audit:
+
+- `stock_movements`: 1,690 total, 1,690 import-tagged, 0 non-import.
+- `stock_transfers`: 352 total, 352 import-tagged, 0 non-import.
+- `stock_transfer_items`: 551 total, 0 orphan, 0 attached to non-import transfers.
+- `stock_levels`: 124.
+- `stock_issues`: 0.
+- `stocktake_sessions`: 0.
+- Reset blockers: none.
+
+Current regenerated import dry-run after kitchen passthrough handling:
+
+- Blockers before reset: `target operational inventory is not empty`, `target transfer number already exists`.
+- Manual-review rows: 0.
+- Missing mapping rows: 0.
+- Ignored rows: 11.
+  - `ignored_not_received`: 7.
+  - `ignored_legacy_branch_kitchen_source`: 1.
+  - `ignored_kitchen_passthrough_inbound`: 2.
+  - `ignored_same_target_site`: 1.
+- Real stock-bearing transfers: 354 transfers, 568 item rows, estimated cost 269,819,701.43.
+- Sale consumption: 342 movement rows, estimated cost 217,488,973.38.
+  - DD: 36,517,024.45.
+  - PH: 180,971,948.95.
+- Balance adjustments: 216 rows, estimated absolute value 396,914,995.08.
+- Total planned `stock_movements`: 1,694.
+
+Generated local reset SQL:
+
+- Path: `/tmp/comtammatu-inventory-reset-import.sql`.
+- Lines: 76.
+- Applies no changes unless executed manually by an approved operator.
+- Guard exceptions include `target_has_non_import_stock_movements`, `target_has_non_import_stock_transfers`, `target_has_stock_issues`, `target_has_stocktakes`, `target_has_non_import_stock_transfer_items`, and `target_has_stock_levels_without_import_ledger`.
+
+Verification:
+
+- `pnpm inventory:matu-platform:operational -- --self-test`.
+- `pnpm inventory:matu-platform:operational -- --json`.
+- `pnpm inventory:matu-platform:operational -- --write-reset-sql /tmp/comtammatu-inventory-reset-import.sql --json`.
+- `git diff --check`.
+- `pnpm typecheck && pnpm lint && pnpm build`.
+
+## Production Reset And Reimport Apply Checkpoint
+
+Review tier: T3, owner-approved production data cleanup and reimport.
+
+Applied files:
+
+- Reset SQL: `/tmp/comtammatu-inventory-reset-import.sql`.
+- Reimport SQL: `/tmp/comtammatu-inventory-reimport.sql`.
+
+Pre-reset guard:
+
+- `stock_movements`: 1,690 total, 1,690 import-tagged, 0 non-import.
+- `stock_transfers`: 352 total, 352 import-tagged, 0 non-import.
+- Non-import/orphan transfer items: 0.
+- `stock_levels`: 124.
+- `stock_issues`: 0.
+- `stocktake_sessions`: 0.
+
+Reset apply result:
+
+- `stock_movements`: 0.
+- `stock_transfers`: 0.
+- `stock_transfer_items`: 0.
+- `stock_levels`: 0.
+- `stock_issues`: 0.
+- `stocktake_sessions`: 0.
+
+Reimport generation result:
+
+- Blockers: none.
+- Manual-review rows: 0.
+- Missing mapping rows: 0.
+- Real stock-bearing transfers: 354.
+- Transfer item rows: 568.
+- Sale consumption movement rows: 342.
+- Balance adjustment rows: 216.
+- Total planned stock movement rows: 1,694.
+
+Post-reimport smoke:
+
+- `stock_transfers`: 354.
+- `stock_transfer_items`: 568.
+- `stock_movements`: 1,694.
+- `stock_levels`: 124.
+- `sale_consumption` movements: 342.
+- `count_adjustment` movements: 216.
+- `stock_levels` vs movement aggregate mismatches: 0.
+- Negative `stock_levels`: 0.
+- Stock rows on `location_kind = 'warehouse'`: 124.
+- Stock rows on `location_kind = 'kitchen'`: 0.
+- Active `kitchen` inventory locations: 0.
+- Transfer matrix: `warehouse -> warehouse`: 354.
+- Kitchen passthrough transfers imported as real stock-bearing passthrough: 2.
+- `trg_stock_movement_update_levels` enabled: `O`.
+- Import-tagged movement rows: 1,694; non-import movement rows: 0.
+- Import-tagged transfer rows: 354; non-import transfer rows: 0.
+- Actual food cost by branch:
+  - branch 2: 36,517,029.78.
+  - branch 3: 180,972,110.83.

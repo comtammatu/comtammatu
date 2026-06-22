@@ -35,6 +35,7 @@ function parseArgs(argv) {
     sourceUrl: process.env.MATU_PLATFORM_SUPABASE_URL ?? "",
     targetKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
     targetUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "",
+    writeResetSql: null,
     writeSql: null,
   };
 
@@ -51,6 +52,7 @@ function parseArgs(argv) {
     else if (arg === "--source-key") out.sourceKey = argv[++i] ?? "";
     else if (arg === "--target-url") out.targetUrl = argv[++i] ?? "";
     else if (arg === "--target-key") out.targetKey = argv[++i] ?? "";
+    else if (arg === "--write-reset-sql") out.writeResetSql = argv[++i] ?? null;
     else if (arg === "--write-sql") out.writeSql = argv[++i] ?? null;
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -62,13 +64,15 @@ function printHelp() {
   console.log(`Usage:
   pnpm inventory:matu-platform:operational -- [--json]
   pnpm inventory:matu-platform:operational -- --write-sql /tmp/import.sql --allow-manual-review-skip
+  pnpm inventory:matu-platform:operational -- --write-reset-sql /tmp/reset.sql
 
 Builds the operational Inventory import plan:
   - real stock-bearing transfers
   - branch sale consumption from retired Bep CN transfer-in
   - balance adjustments so current stock matches matu-platform stock_items
 
-This script does not apply SQL. It writes one transaction file only after blockers are clear.`);
+This script does not apply SQL. It writes one transaction file only after blockers are clear.
+The reset SQL is guarded and only targets previous matu-platform import rows.`);
 }
 
 function assertProjectUrl(url, ref, label) {
@@ -182,30 +186,58 @@ async function loadSource(ctx) {
 }
 
 async function loadTarget(ctx) {
-  const [tenants, branches, locations, ingredients, profiles, transfers, movements] =
+  const [
+    tenants,
+    branches,
+    locations,
+    ingredients,
+    profiles,
+    transfers,
+    movements,
+    transferItems,
+    levels,
+    issues,
+    stocktakes,
+  ] =
     await Promise.all([
       fetchAll({ ...ctx, table: "tenants", select: "id,slug,name" }),
-      fetchAll({ ...ctx, table: "branches", select: "id,code,name,branch_kind" }),
+      fetchAll({ ...ctx, table: "branches", select: "id,tenant_id,code,name,branch_kind" }),
       fetchAll({
         ...ctx,
         table: "inventory_locations",
-        select: "id,branch_id,code,name,location_kind,is_default_issue,is_active",
+        select: "id,tenant_id,branch_id,code,name,location_kind,is_default_issue,is_active",
       }),
       fetchAll({
         ...ctx,
         table: "ingredients",
-        select: "id,sku,name,unit,unit_cost,is_active",
+        select: "id,tenant_id,sku,name,unit,unit_cost,is_active",
       }),
       fetchAll({
         ...ctx,
         table: "profiles",
         select: "id,tenant_id,branch_id,full_name,is_active,created_at",
       }),
-      fetchAll({ ...ctx, table: "stock_transfers", select: "id,transfer_number" }),
+      fetchAll({ ...ctx, table: "stock_transfers", select: "id,transfer_number,notes" }),
       fetchAll({ ...ctx, table: "stock_movements", select: "id,type,reason" }),
+      fetchAll({ ...ctx, table: "stock_transfer_items", select: "id,transfer_id" }),
+      fetchAll({ ...ctx, table: "stock_levels", select: "id" }),
+      fetchAll({ ...ctx, table: "stock_issues", select: "id" }),
+      fetchAll({ ...ctx, table: "stocktake_sessions", select: "id" }),
     ]);
 
-  return { branches, ingredients, locations, movements, profiles, tenants, transfers };
+  return {
+    branches,
+    ingredients,
+    issues,
+    levels,
+    locations,
+    movements,
+    profiles,
+    stocktakes,
+    tenants,
+    transferItems,
+    transfers,
+  };
 }
 
 function getTargetTenant(target) {
@@ -259,18 +291,27 @@ function isAllowedTargetTransferDirection(fromKind, toKind) {
   );
 }
 
-function makeTargetIndex(target) {
-  const branchByCode = new Map(
-    target.branches
-      .filter((branch) => branch.code)
-      .map((branch) => [String(branch.code).toUpperCase(), branch]),
+function locationKey(code, kind) {
+  return `${String(code ?? "").toLowerCase()}:${String(kind ?? "").toLowerCase()}`;
+}
+
+function makeTargetIndex(target, tenantId) {
+  const branches = target.branches.filter((branch) => branch.tenant_id === tenantId);
+  const locations = target.locations.filter((location) => location.tenant_id === tenantId);
+  const ingredients = target.ingredients.filter((ingredient) => ingredient.tenant_id === tenantId);
+  const branchByCodeKind = new Map(
+    branches
+      .filter((branch) => branch.code && branch.branch_kind)
+      .map((branch) => [`${String(branch.code).toUpperCase()}:${branch.branch_kind}`, branch]),
   );
-  const branchByName = new Map(target.branches.map((branch) => [normalizeText(branch.name), branch]));
-  const centralSupply = target.branches.find((branch) => branch.branch_kind === "central_supply") ?? null;
+  const branchByNameKind = new Map(
+    branches.map((branch) => [`${normalizeText(branch.name)}:${branch.branch_kind}`, branch]),
+  );
+  const centralSupply = branches.find((branch) => branch.branch_kind === "central_supply") ?? null;
   const centralKitchen =
-    target.branches.find((branch) => branch.branch_kind === "central_kitchen") ?? null;
+    branches.find((branch) => branch.branch_kind === "central_kitchen") ?? null;
   const locationsByBranch = new Map();
-  for (const loc of target.locations.filter((row) => row.is_active !== false)) {
+  for (const loc of locations.filter((row) => row.is_active !== false)) {
     const list = locationsByBranch.get(loc.branch_id) ?? [];
     list.push(loc);
     locationsByBranch.set(loc.branch_id, list);
@@ -278,6 +319,7 @@ function makeTargetIndex(target) {
   const stockLocationForBranch = (branchId) => {
     const list = locationsByBranch.get(branchId) ?? [];
     return (
+      list.find((loc) => locationKey(loc.code, loc.location_kind) === "main_warehouse:warehouse") ??
       list.find((loc) => loc.is_default_issue && loc.location_kind === "warehouse") ??
       list.find((loc) => loc.location_kind === "warehouse") ??
       list.find((loc) => loc.location_kind === "production_storage") ??
@@ -285,18 +327,27 @@ function makeTargetIndex(target) {
     );
   };
   const ingredientBySku = new Map(
-    target.ingredients
+    ingredients
       .filter((ingredient) => ingredient.sku)
       .map((ingredient) => [String(ingredient.sku).toUpperCase(), ingredient]),
   );
-  return { branchByCode, branchByName, centralKitchen, centralSupply, ingredientBySku, stockLocationForBranch };
+  const ingredientByName = new Map(ingredients.map((ingredient) => [normalizeText(ingredient.name), ingredient]));
+  return {
+    branchByCodeKind,
+    branchByNameKind,
+    centralKitchen,
+    centralSupply,
+    ingredientByName,
+    ingredientBySku,
+    stockLocationForBranch,
+  };
 }
 
-function sourceBranchToTarget(sourceBranch, targetIndex) {
+function sourceBranchToTarget(sourceBranch, targetIndex, branchKind = "branch") {
   if (!sourceBranch) return null;
   return (
-    targetIndex.branchByCode.get(String(sourceBranch.code ?? "").toUpperCase()) ??
-    targetIndex.branchByName.get(normalizeText(sourceBranch.name)) ??
+    targetIndex.branchByCodeKind.get(`${String(sourceBranch.code ?? "").toUpperCase()}:${branchKind}`) ??
+    targetIndex.branchByNameKind.get(`${normalizeText(sourceBranch.name)}:${branchKind}`) ??
     null
   );
 }
@@ -312,7 +363,7 @@ function sourceWarehouseTarget(warehouse, sourceBranchById, targetIndex) {
     return { branch, location: branch ? targetIndex.stockLocationForBranch(branch.id) : null, role };
   }
   const sourceBranch = sourceBranchById.get(warehouse?.branch_id);
-  const branch = sourceBranchToTarget(sourceBranch, targetIndex);
+  const branch = sourceBranchToTarget(sourceBranch, targetIndex, "branch");
   const location =
     role === "branch_warehouse" && branch ? targetIndex.stockLocationForBranch(branch.id) : null;
   return { branch, location, role };
@@ -340,7 +391,9 @@ function aggregateItems(items, materialById, targetIndex, missingRows) {
   const byIngredient = new Map();
   for (const item of items) {
     const material = materialById.get(item.material_id);
-    const ingredient = targetIndex.ingredientBySku.get(String(material?.sku ?? "").toUpperCase());
+    const ingredient =
+      targetIndex.ingredientBySku.get(String(material?.sku ?? "").toUpperCase()) ??
+      targetIndex.ingredientByName.get(normalizeText(material?.name));
     if (!material || !ingredient) {
       missingRows.push({
         materialId: item.material_id,
@@ -366,6 +419,51 @@ function aggregateItems(items, materialById, targetIndex, missingRows) {
   return [...byIngredient.values()].filter((row) => row.quantity > 0);
 }
 
+function transferLineSignature(items) {
+  return items
+    .map((item) => `${item.material_id}:${numberValue(item.quantity)}`)
+    .sort()
+    .join("|");
+}
+
+function findKitchenPassthroughs({ sourceWarehouseById, transferItemsByTransfer, transfers }) {
+  const inboundByKitchen = new Map();
+  const pairedInboundIds = new Set();
+  const passthroughByOutboundId = new Map();
+  const received = transfers
+    .filter((transfer) => transfer.status === "received")
+    .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+
+  for (const transfer of received) {
+    const toWarehouse = sourceWarehouseById.get(transfer.to_warehouse_id);
+    if (sourceWarehouseRole(toWarehouse) !== "branch_kitchen_endpoint") continue;
+    const signature = transferLineSignature(transferItemsByTransfer.get(transfer.id) ?? []);
+    if (!signature) continue;
+    const key = `${transfer.to_warehouse_id}:${signature}`;
+    const list = inboundByKitchen.get(key) ?? [];
+    list.push(transfer);
+    inboundByKitchen.set(key, list);
+  }
+
+  for (const transfer of received) {
+    const fromWarehouse = sourceWarehouseById.get(transfer.from_warehouse_id);
+    if (sourceWarehouseRole(fromWarehouse) !== "branch_kitchen_endpoint") continue;
+    const signature = transferLineSignature(transferItemsByTransfer.get(transfer.id) ?? []);
+    if (!signature) continue;
+    const key = `${transfer.from_warehouse_id}:${signature}`;
+    const candidates = inboundByKitchen.get(key) ?? [];
+    const inbound = candidates
+      .filter((candidate) => !pairedInboundIds.has(candidate.id))
+      .filter((candidate) => String(candidate.created_at ?? "") <= String(transfer.created_at ?? ""))
+      .at(-1);
+    if (!inbound) continue;
+    pairedInboundIds.add(inbound.id);
+    passthroughByOutboundId.set(transfer.id, { inbound });
+  }
+
+  return { pairedInboundIds, passthroughByOutboundId };
+}
+
 function classifyTransfer({ transfer, sourceWarehouseById, sourceBranchById, targetIndex }) {
   const from = sourceWarehouseById.get(transfer.from_warehouse_id);
   const to = sourceWarehouseById.get(transfer.to_warehouse_id);
@@ -382,10 +480,12 @@ function classifyTransfer({ transfer, sourceWarehouseById, sourceBranchById, tar
 
   if (transfer.status !== "received") return { ...base, class: "ignored_not_received" };
   if (toTarget.role === "branch_kitchen_endpoint") return { ...base, class: "branch_sale_consumption" };
-  if (fromTarget.role === "branch_kitchen_endpoint") return { ...base, class: "manual_review_kitchen_source" };
+  if (fromTarget.role === "branch_kitchen_endpoint") {
+    return { ...base, class: "ignored_legacy_branch_kitchen_source" };
+  }
   if (fromTarget.location && toTarget.location) {
     if (fromTarget.location.id === toTarget.location.id || fromTarget.branch?.id === toTarget.branch?.id) {
-      return { ...base, class: "manual_review_same_target_site" };
+      return { ...base, class: "ignored_same_target_site" };
     }
     if (!isAllowedTargetTransferDirection(fromTarget.branch?.branch_kind, toTarget.branch?.branch_kind)) {
       return { ...base, class: "manual_review_disallowed_direction" };
@@ -402,7 +502,7 @@ function transferCost(lines) {
 function buildPlan(source, target, options = {}) {
   const tenant = getTargetTenant(target);
   const actor = selectActor(target, tenant.id, options.actorId ?? "");
-  const targetIndex = makeTargetIndex(target);
+  const targetIndex = makeTargetIndex(target, tenant.id);
   const sourceBranchById = new Map(source.branches.map((branch) => [branch.id, branch]));
   const sourceWarehouseById = new Map(source.warehouses.map((warehouse) => [warehouse.id, warehouse]));
   const materialById = new Map(source.materials.map((material) => [material.id, material]));
@@ -412,6 +512,11 @@ function buildPlan(source, target, options = {}) {
     list.push(item);
     transferItemsByTransfer.set(item.transfer_id, list);
   }
+  const { pairedInboundIds, passthroughByOutboundId } = findKitchenPassthroughs({
+    sourceWarehouseById,
+    transferItemsByTransfer,
+    transfers: source.transfers,
+  });
 
   const missingRows = [];
   const manualReview = [];
@@ -428,12 +533,54 @@ function buildPlan(source, target, options = {}) {
   };
 
   for (const transfer of source.transfers) {
-    const classified = classifyTransfer({
-      sourceBranchById,
-      sourceWarehouseById,
-      targetIndex,
-      transfer,
-    });
+    const pairedInbound = pairedInboundIds.has(transfer.id);
+    if (pairedInbound) {
+      const from = sourceWarehouseById.get(transfer.from_warehouse_id);
+      const to = sourceWarehouseById.get(transfer.to_warehouse_id);
+      ignored.push({
+        class: "ignored_kitchen_passthrough_inbound",
+        cost: moneyValue(
+          transferCost(
+            aggregateItems(
+              transferItemsByTransfer.get(transfer.id) ?? [],
+              materialById,
+              targetIndex,
+              missingRows,
+            ),
+          ),
+        ),
+        fromCode: from?.code ?? null,
+        id: transfer.id,
+        lineCount: (transferItemsByTransfer.get(transfer.id) ?? []).length,
+        status: transfer.status,
+        toCode: to?.code ?? null,
+        transferCode: transfer.code,
+      });
+      continue;
+    }
+
+    const passthrough = passthroughByOutboundId.get(transfer.id);
+    const classified = passthrough
+      ? classifyTransfer({
+          sourceBranchById,
+          sourceWarehouseById,
+          targetIndex,
+          transfer: {
+            ...transfer,
+            from_warehouse_id: passthrough.inbound.from_warehouse_id,
+          },
+        })
+      : classifyTransfer({
+          sourceBranchById,
+          sourceWarehouseById,
+          targetIndex,
+          transfer,
+        });
+    if (passthrough) {
+      classified.class =
+        classified.class === "real_transfer" ? "kitchen_passthrough_transfer" : classified.class;
+      classified.inboundTransfer = passthrough.inbound;
+    }
     const lines = aggregateItems(
       transferItemsByTransfer.get(transfer.id) ?? [],
       materialById,
@@ -456,20 +603,34 @@ function buildPlan(source, target, options = {}) {
       ignored.push(sample);
       continue;
     }
-    if (classified.class !== "real_transfer" && classified.class !== "branch_sale_consumption") {
+    if (classified.class.startsWith("ignored_")) {
+      ignored.push(sample);
+      continue;
+    }
+    if (
+      classified.class !== "real_transfer" &&
+      classified.class !== "kitchen_passthrough_transfer" &&
+      classified.class !== "branch_sale_consumption"
+    ) {
       manualReview.push(sample);
       continue;
     }
 
-    if (classified.class === "real_transfer") {
+    if (classified.class === "real_transfer" || classified.class === "kitchen_passthrough_transfer") {
+      const sourceTransfer = classified.inboundTransfer ?? transfer;
+      const transferClass =
+        classified.class === "kitchen_passthrough_transfer" ? "kitchen_passthrough" : "real_transfer";
       const transferRow = {
-        created_at: transfer.created_at,
+        created_at: sourceTransfer.created_at,
         created_by: actor.id,
         from_branch_id: classified.fromTarget.branch.id,
         from_location_id: classified.fromTarget.location.id,
-        notes: `matu-platform import:real_transfer:${transfer.id}`,
+        notes:
+          classified.class === "kitchen_passthrough_transfer"
+            ? `matu-platform import:${transferClass}:${sourceTransfer.id}->${transfer.id}`
+            : `matu-platform import:${transferClass}:${transfer.id}`,
         received_at: transfer.received_at ?? transfer.sent_at ?? transfer.created_at,
-        shipped_at: transfer.sent_at ?? transfer.created_at,
+        shipped_at: sourceTransfer.sent_at ?? sourceTransfer.created_at,
         status: "received",
         tenant_id: tenant.id,
         to_branch_id: classified.toTarget.branch.id,
@@ -492,13 +653,13 @@ function buildPlan(source, target, options = {}) {
         });
         addMovement({
           branch_id: classified.fromTarget.branch.id,
-          created_at: transfer.sent_at ?? transfer.created_at,
+          created_at: sourceTransfer.sent_at ?? sourceTransfer.created_at,
           created_by: actor.id,
           ingredient_id: line.ingredient_id,
           location_id: classified.fromTarget.location.id,
           movement_subtype: null,
           quantity_change: -line.quantity,
-          reason: `matu-platform import:real_transfer:${transfer.code}:transfer_out`,
+          reason: `matu-platform import:${transferClass}:${transfer.code}:transfer_out`,
           source_transfer_number: transfer.code,
           tenant_id: tenant.id,
           type: "transfer_out",
@@ -512,7 +673,7 @@ function buildPlan(source, target, options = {}) {
           location_id: classified.toTarget.location.id,
           movement_subtype: null,
           quantity_change: line.quantity,
-          reason: `matu-platform import:real_transfer:${transfer.code}:transfer_in`,
+          reason: `matu-platform import:${transferClass}:${transfer.code}:transfer_in`,
           source_transfer_number: transfer.code,
           tenant_id: tenant.id,
           type: "transfer_in",
@@ -556,7 +717,9 @@ function buildPlan(source, target, options = {}) {
     const warehouse = sourceWarehouseById.get(stock.warehouse_id);
     const targetRef = sourceWarehouseTarget(warehouse, sourceBranchById, targetIndex);
     const material = materialById.get(stock.material_id);
-    const ingredient = targetIndex.ingredientBySku.get(String(material?.sku ?? "").toUpperCase());
+    const ingredient =
+      targetIndex.ingredientBySku.get(String(material?.sku ?? "").toUpperCase()) ??
+      targetIndex.ingredientByName.get(normalizeText(material?.name));
     const value = quantity * numberValue(material?.cost_per_unit);
 
     if (targetRef.role === "branch_kitchen_endpoint") {
@@ -625,7 +788,7 @@ function buildPlan(source, target, options = {}) {
   if (!targetIndex.centralSupply) blockers.push("missing target central_supply");
   if (!targetIndex.centralKitchen) blockers.push("missing target central_kitchen");
   if (target.ingredients.length === 0) blockers.push("target ingredients empty");
-  if (target.transfers.length > 0 || target.movements.length > 0) {
+  if (target.transfers.length > 0 || target.movements.length > 0 || (target.levels ?? []).length > 0) {
     blockers.push("target operational inventory is not empty");
   }
   if (missingRows.length > 0) blockers.push("missing target mapping rows");
@@ -643,6 +806,7 @@ function buildPlan(source, target, options = {}) {
     blockers,
     ignored: {
       count: ignored.length,
+      byClass: countBy(ignored, (row) => row.class),
       samples: ignored.slice(0, 10),
     },
     manualReview: {
@@ -696,19 +860,159 @@ function buildPlan(source, target, options = {}) {
       transferItemRows: transferItems.length,
       movementRows: movementRows.length,
     },
+    reset: buildResetPlan(target),
     target: {
       branches: target.branches.length,
       ingredients: target.ingredients.length,
       locations: target.locations.length,
+      stockIssues: (target.issues ?? []).length,
+      stockLevels: (target.levels ?? []).length,
       stockMovements: target.movements.length,
+      stocktakes: (target.stocktakes ?? []).length,
+      stockTransferItems: (target.transferItems ?? []).length,
       stockTransfers: target.transfers.length,
     },
   };
   return { report, sqlRows };
 }
 
+function isImportReason(row) {
+  return String(row?.reason ?? "").startsWith("matu-platform import:");
+}
+
+function isImportTransfer(row) {
+  return String(row?.notes ?? "").startsWith("matu-platform import:");
+}
+
+function buildResetPlan(target) {
+  const movements = target.movements ?? [];
+  const transfers = target.transfers ?? [];
+  const transferItems = target.transferItems ?? [];
+  const levels = target.levels ?? [];
+  const issues = target.issues ?? [];
+  const stocktakes = target.stocktakes ?? [];
+  const transferById = new Map(transfers.map((row) => [row.id, row]));
+  const nonImportMovements = movements.filter((row) => !isImportReason(row));
+  const nonImportTransfers = transfers.filter((row) => !isImportTransfer(row));
+  const orphanTransferItems = transferItems.filter((row) => !transferById.has(row.transfer_id));
+  const nonImportTransferItems = transferItems.filter((row) => {
+    const transfer = transferById.get(row.transfer_id);
+    return transfer && !isImportTransfer(transfer);
+  });
+  const blockers = [];
+
+  if (nonImportMovements.length > 0) blockers.push("target has non-import stock movements");
+  if (nonImportTransfers.length > 0) blockers.push("target has non-import stock transfers");
+  if (orphanTransferItems.length > 0) blockers.push("target has orphan stock transfer items");
+  if (nonImportTransferItems.length > 0) blockers.push("target has non-import stock transfer items");
+  if (issues.length > 0) blockers.push("target has stock issues");
+  if (stocktakes.length > 0) blockers.push("target has stocktakes");
+  if (levels.length > 0 && movements.length === 0 && transfers.length === 0) {
+    blockers.push("target has stock levels without import ledger");
+  }
+
+  return {
+    blockers,
+    canWrite: blockers.length === 0,
+    counts: {
+      importStockMovements: movements.length - nonImportMovements.length,
+      importStockTransfers: transfers.length - nonImportTransfers.length,
+      orphanTransferItems: orphanTransferItems.length,
+      stockIssues: issues.length,
+      stockLevels: levels.length,
+      stockMovements: movements.length,
+      stockTransferItems: transferItems.length,
+      stockTransfers: transfers.length,
+      stocktakes: stocktakes.length,
+      nonImportStockMovements: nonImportMovements.length,
+      nonImportStockTransferItems: nonImportTransferItems.length,
+      nonImportStockTransfers: nonImportTransfers.length,
+    },
+  };
+}
+
 function jsonSql(tag, rows) {
   return `$${tag}$${JSON.stringify(rows)}$${tag}$::jsonb`;
+}
+
+function generateResetSql() {
+  return `BEGIN;
+
+SET LOCAL statement_timeout = '30s';
+
+DO $guard$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.stock_movements
+    WHERE reason IS NULL
+       OR reason NOT LIKE 'matu-platform import:%'
+  ) THEN
+    RAISE EXCEPTION 'target_has_non_import_stock_movements';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.stock_transfers
+    WHERE notes IS NULL
+       OR notes NOT LIKE 'matu-platform import:%'
+  ) THEN
+    RAISE EXCEPTION 'target_has_non_import_stock_transfers';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM public.stock_issues) THEN
+    RAISE EXCEPTION 'target_has_stock_issues';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM public.stocktake_sessions) THEN
+    RAISE EXCEPTION 'target_has_stocktakes';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.stock_transfer_items sti
+    LEFT JOIN public.stock_transfers st ON st.id = sti.transfer_id
+    WHERE st.id IS NULL
+       OR st.notes NOT LIKE 'matu-platform import:%'
+  ) THEN
+    RAISE EXCEPTION 'target_has_non_import_stock_transfer_items';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM public.stock_levels)
+     AND NOT EXISTS (
+       SELECT 1
+       FROM public.stock_movements
+       WHERE reason LIKE 'matu-platform import:%'
+     )
+     AND NOT EXISTS (
+       SELECT 1
+       FROM public.stock_transfers
+       WHERE notes LIKE 'matu-platform import:%'
+     ) THEN
+    RAISE EXCEPTION 'target_has_stock_levels_without_import_ledger';
+  END IF;
+END
+$guard$;
+
+ALTER TABLE public.stock_movements DISABLE TRIGGER trg_stock_movement_update_levels;
+
+DELETE FROM public.stock_levels;
+
+DELETE FROM public.stock_movements
+WHERE reason LIKE 'matu-platform import:%';
+
+DELETE FROM public.stock_transfer_items sti
+USING public.stock_transfers st
+WHERE st.id = sti.transfer_id
+  AND st.notes LIKE 'matu-platform import:%';
+
+DELETE FROM public.stock_transfers
+WHERE notes LIKE 'matu-platform import:%';
+
+ALTER TABLE public.stock_movements ENABLE TRIGGER trg_stock_movement_update_levels;
+
+COMMIT;
+`;
 }
 
 function generateSql(rows) {
@@ -915,6 +1219,7 @@ function printHuman(report) {
   console.log("Matu-platform Inventory operational import dry-run");
   console.log(`Actor: ${report.actor.fullName ?? report.actor.id}`);
   console.log(`Blockers: ${report.blockers.length ? report.blockers.join("; ") : "none"}`);
+  console.log(`Reset blockers: ${report.reset.blockers.length ? report.reset.blockers.join("; ") : "none"}`);
   console.log("Operational plan:");
   console.table({
     realTransfers: report.operationalPlan.realTransfers.count,
@@ -997,6 +1302,26 @@ function selfTest() {
         status: "received",
         created_at: "2026-05-05T00:00:00Z",
       },
+      {
+        id: "t6",
+        code: "TR-6",
+        from_warehouse_id: "kho-tong",
+        to_warehouse_id: "bep-dd",
+        status: "received",
+        created_at: "2026-05-06T00:00:00Z",
+        sent_at: "2026-05-06T01:00:00Z",
+        received_at: "2026-05-06T02:00:00Z",
+      },
+      {
+        id: "t7",
+        code: "TR-7",
+        from_warehouse_id: "bep-dd",
+        to_warehouse_id: "kho-tt",
+        status: "received",
+        created_at: "2026-05-06T03:00:00Z",
+        sent_at: "2026-05-06T04:00:00Z",
+        received_at: "2026-05-06T05:00:00Z",
+      },
     ],
     transferItems: [
       { transfer_id: "t1", material_id: "m1", quantity: 4 },
@@ -1004,37 +1329,68 @@ function selfTest() {
       { transfer_id: "t3", material_id: "m1", quantity: 1 },
       { transfer_id: "t4", material_id: "m1", quantity: 1 },
       { transfer_id: "t5", material_id: "m1", quantity: 1 },
+      { transfer_id: "t6", material_id: "m2", quantity: 3 },
+      { transfer_id: "t7", material_id: "m2", quantity: 3 },
     ],
   };
   const target = {
     tenants: [{ id: 1, slug: "comtammatu", name: "Cơm Tấm Má Tư" }],
     branches: [
-      { id: 2, code: "DD", name: "Dat Do", branch_kind: "branch" },
-      { id: 15, code: "KT", name: "Kho Tong", branch_kind: "central_supply" },
-      { id: 16, code: "BTT", name: "Bep Trung Tam", branch_kind: "central_kitchen" },
+      { id: 2, tenant_id: 1, code: "DD", name: "Dat Do", branch_kind: "branch" },
+      { id: 15, tenant_id: 1, code: "KT", name: "Kho Tong", branch_kind: "central_supply" },
+      { id: 16, tenant_id: 1, code: "BTT", name: "Bep Trung Tam", branch_kind: "central_kitchen" },
     ],
     locations: [
-      { id: 5, branch_id: 2, location_kind: "warehouse", is_default_issue: true, is_active: true },
-      { id: 9, branch_id: 15, location_kind: "warehouse", is_default_issue: true, is_active: true },
-      { id: 10, branch_id: 16, location_kind: "warehouse", is_default_issue: true, is_active: true },
+      {
+        id: 5,
+        tenant_id: 1,
+        branch_id: 2,
+        code: "main_warehouse",
+        location_kind: "warehouse",
+        is_default_issue: true,
+        is_active: true,
+      },
+      {
+        id: 9,
+        tenant_id: 1,
+        branch_id: 15,
+        code: "main_warehouse",
+        location_kind: "warehouse",
+        is_default_issue: true,
+        is_active: true,
+      },
+      {
+        id: 10,
+        tenant_id: 1,
+        branch_id: 16,
+        code: "main_warehouse",
+        location_kind: "warehouse",
+        is_default_issue: true,
+        is_active: true,
+      },
     ],
     ingredients: [
-      { id: 100, sku: "G001", name: "Rice", unit: "kg", unit_cost: 10 },
-      { id: 200, sku: "T001", name: "Pork", unit: "kg", unit_cost: 20 },
+      { id: 100, tenant_id: 1, sku: "G001", name: "Rice", unit: "kg", unit_cost: 10 },
+      { id: 200, tenant_id: 1, sku: "T001", name: "Pork", unit: "kg", unit_cost: 20 },
     ],
     movements: [],
     profiles: [{ id: actorId, tenant_id: 1, branch_id: null, full_name: "Owner", is_active: true }],
+    transferItems: [],
     transfers: [],
+    levels: [],
+    issues: [],
+    stocktakes: [],
   };
   const blocked = buildPlan(source, target, {
     actorId,
     balanceAt: "2026-06-01T00:00:00Z",
   }).report;
-  assert.equal(blocked.operationalPlan.realTransfers.count, 3);
+  assert.equal(blocked.operationalPlan.realTransfers.count, 4);
   assert.equal(blocked.operationalPlan.saleConsumption.movementRows, 1);
-  assert.equal(blocked.operationalPlan.balanceAdjustments.count, 4);
-  assert.equal(blocked.manualReview.count, 1);
-  assert.ok(blocked.blockers.includes("manual review rows require owner decision"));
+  assert.equal(blocked.manualReview.count, 0);
+  assert.equal(blocked.ignored.byClass.ignored_legacy_branch_kitchen_source, 1);
+  assert.equal(blocked.ignored.byClass.ignored_kitchen_passthrough_inbound, 1);
+  assert.ok(!blocked.blockers.includes("manual review rows require owner decision"));
 
   const { report, sqlRows } = buildPlan(source, target, {
     actorId,
@@ -1044,8 +1400,34 @@ function selfTest() {
   assert.equal(report.blockers.length, 0);
   const sql = generateSql(sqlRows);
   assert.match(sql, /BEGIN;/);
+  assert.match(sql, /kitchen_passthrough/);
   assert.match(sql, /sale_consumption/);
   assert.match(sql, /balance_adjustment/);
+
+  const resetTarget = {
+    ...target,
+    movements: [{ id: 1, type: "count_adjustment", reason: "matu-platform import:balance_adjustment" }],
+    transferItems: [{ id: 1, transfer_id: 1 }],
+    transfers: [
+      { id: 1, transfer_number: "TR-OLD", notes: "matu-platform import:real_transfer:old" },
+    ],
+    levels: [{ id: 1 }],
+  };
+  const resetPlan = buildResetPlan(resetTarget);
+  assert.equal(resetPlan.canWrite, true);
+  assert.equal(resetPlan.counts.importStockMovements, 1);
+  assert.equal(resetPlan.counts.importStockTransfers, 1);
+  const resetSql = generateResetSql();
+  assert.match(resetSql, /target_has_non_import_stock_movements/);
+  assert.match(resetSql, /DELETE FROM public.stock_levels/);
+  assert.match(resetSql, /DELETE FROM public.stock_transfer_items/);
+
+  const dirtyResetPlan = buildResetPlan({
+    ...target,
+    movements: [{ id: 2, type: "consumption", reason: null }],
+  });
+  assert.equal(dirtyResetPlan.canWrite, false);
+  assert.deepEqual(dirtyResetPlan.blockers, ["target has non-import stock movements"]);
   console.log("self-test ok");
 }
 
@@ -1058,6 +1440,9 @@ if (args.help) {
   if (!args.sourceUrl || !args.sourceKey || !args.targetUrl || !args.targetKey) {
     throw new Error("Missing source/target Supabase env");
   }
+  if (args.writeSql && args.writeResetSql) {
+    throw new Error("Choose either --write-sql or --write-reset-sql");
+  }
   assertProjectUrl(args.sourceUrl, SOURCE_REF, "Source");
   assertProjectUrl(args.targetUrl, TARGET_REF, "Target");
 
@@ -1066,6 +1451,13 @@ if (args.help) {
     loadTarget({ baseUrl: args.targetUrl, key: args.targetKey }),
   ]);
   const { report, sqlRows } = buildPlan(source, target, args);
+  if (args.writeResetSql) {
+    if (report.reset.blockers.length > 0) {
+      throw new Error(`Cannot write reset SQL while blockers remain: ${report.reset.blockers.join("; ")}`);
+    }
+    writeFileSync(args.writeResetSql, generateResetSql());
+    report.reset.writtenTo = args.writeResetSql;
+  }
   if (args.writeSql) {
     if (report.blockers.length > 0) {
       throw new Error(`Cannot write SQL while blockers remain: ${report.blockers.join("; ")}`);
