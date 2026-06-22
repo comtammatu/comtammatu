@@ -37,6 +37,7 @@
     "inventory:matu-platform:dry-run": "node --env-file=.env.local scripts/inventory-matu-platform-dry-run.mjs",
     "inventory:matu-platform:master-data": "node --env-file=.env.local scripts/inventory-matu-platform-master-data.mjs",
     "inventory:matu-platform:operational": "node --env-file=.env.local scripts/inventory-matu-platform-operational-import.mjs",
+    "inventory:matu-platform:delta-transfer": "node --env-file=.env.local scripts/inventory-matu-platform-delta-transfer.mjs",
     "inventory:matu-platform:reconcile": "node --env-file=.env.local scripts/inventory-matu-platform-reconcile.mjs",
     "clean:web": "node scripts/clean-web.mjs",
     "docs:okf": "node scripts/export-okf.mjs"
