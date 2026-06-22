@@ -1,18 +1,18 @@
 # Inventory Post-Import Audit
 
-> **SNAPSHOT (post-import baseline) — Reconciled-through `e5e1340e` (2026-06-22).** One-time production audit for the `matu-platform` Inventory import. Re-run the live audit before using these figures for future decisions.
+> **SNAPSHOT (post-import baseline) — Reconciled-through `2decaa5a` (2026-06-23 ICT).** One-time production audit for the `matu-platform` Inventory import. Re-run the live audit before using these figures for future decisions.
 
 Owner: current Inventory import task.
 
 ## Scope
 
-Review tier: T1 doc-only plus read-only production audit. No schema, runtime, or data mutation.
+Review tier: T1 doc-only plus read-only production audit/browser smoke. No schema, runtime, or data mutation.
 
-Skill plan: repo rules = engineering + database + workflow + team + references; external skills = Supabase; runtime tools = CodeGraph + `supabase-js` read-only REST calls from `apps/web`; skipped = migrations, reset, import writes, UI smoke.
+Skill plan: repo rules = engineering + database + workflow + skills; external skills = Playwright; runtime tools = Vercel deployment lookup + `supabase-js` read-only REST calls from `apps/web` + browser smoke; skipped = migrations, reset, import writes.
 
 Target project: `comtammatu` production Supabase ref `iexwsuaqqenyjiskawoj`.
 
-Audit time: `2026-06-22T13:33:25.355Z`.
+Audit time: `2026-06-23 00:48 ICT` (`2026-06-22T17:48:48.338Z`).
 
 ## Mapping Baseline
 
@@ -40,13 +40,13 @@ No active `location_kind = 'kitchen'` locations remain in target Inventory.
 | --- | ---: |
 | `branches` | 4 |
 | `inventory_locations` | 4 |
-| `stock_transfers` | 354 |
-| `stock_transfer_items` | 568 |
-| `stock_movements` | 1,696 |
-| `stock_levels` | 127 |
+| `stock_transfers` | 356 |
+| `stock_transfer_items` | 570 |
+| `stock_movements` | 1,710 |
+| `stock_levels` | 129 |
 | `stock_issues` | 0 |
 | `stocktake_sessions` | 0 |
-| `sale_consumption` movements | 343 |
+| `sale_consumption` movements | 353 |
 | `count_adjustment` movements | 217 |
 
 ## Integrity Checks
@@ -67,10 +67,10 @@ Movement aggregate reconciliation is keyed by `tenant_id + location_id + ingredi
 
 | Branch kind | Location kind | Stock rows | Quantity | Inventory value |
 | --- | --- | ---: | ---: | ---: |
-| branch | warehouse | 49 | 42,656.200 | 28,303,180.88 |
-| central_kitchen | warehouse | 37 | 113,983.554 | 13,041,703.17 |
-| central_supply | warehouse | 41 | 501,459.000 | 48,533,946.32 |
-| **Total** |  | **127** | **658,098.754** | **89,878,830.37** |
+| branch | warehouse | 50 | 41,909.500 | 23,739,567.43 |
+| central_kitchen | warehouse | 37 | 110,783.550 | 10,261,703.17 |
+| central_supply | warehouse | 42 | 501,659.000 | 51,133,946.32 |
+| **Total** |  | **129** | **654,352.050** | **85,135,216.91** |
 
 ## Transfer Matrix
 
@@ -79,11 +79,11 @@ Movement aggregate reconciliation is keyed by `tenant_id + location_id + ingredi
 | branch:warehouse -> branch:warehouse | 4 |
 | branch:warehouse -> central_kitchen:warehouse | 7 |
 | branch:warehouse -> central_supply:warehouse | 2 |
-| central_kitchen:warehouse -> branch:warehouse | 129 |
-| central_kitchen:warehouse -> central_supply:warehouse | 1 |
+| central_kitchen:warehouse -> branch:warehouse | 130 |
+| central_kitchen:warehouse -> central_supply:warehouse | 2 |
 | central_supply:warehouse -> branch:warehouse | 116 |
 | central_supply:warehouse -> central_kitchen:warehouse | 95 |
-| **Total** | **354** |
+| **Total** | **356** |
 
 These directions match the accepted operating contract: central-to-branch, central-to-central, branch return/rebalance to central, and branch-to-branch stock-bearing transfers are valid.
 
@@ -92,8 +92,8 @@ These directions match the accepted operating contract: central-to-branch, centr
 | Branch | Rows | Actual food cost |
 | --- | ---: | ---: |
 | DD / Đất Đỏ | 117 | 36,063,029.78 |
-| PH / Phước Hải | 226 | 179,889,268.83 |
-| **Total** | **343** | **215,952,298.61** |
+| PH / Phước Hải | 236 | 184,632,882.28 |
+| **Total** | **353** | **220,695,912.06** |
 
 ### Daily Actual Food Cost
 
@@ -132,7 +132,22 @@ These directions match the accepted operating contract: central-to-branch, centr
 | PH | 2026-06-19 | 13,626,472.28 |
 | PH | 2026-06-20 | 8,645,904.42 |
 | PH | 2026-06-21 | 2,979,862.60 |
-| PH | 2026-06-22 | 253,073.78 |
+| PH | 2026-06-22 | 4,996,687.24 |
+
+## UI Smoke
+
+Deployment: `comtammatu-o38wiun34-matu-platforms.vercel.app` (`2decaa5a`, production latest at audit time).
+
+Artifact folder: `apps/web/output/playwright/prod-inventory-smoke-2026-06-23/`.
+
+| Route | Result | Evidence |
+| --- | --- | --- |
+| `/inventory/stock` | 200 | Shows `85.135.217đ`, no `Bếp CN` text |
+| `/inventory/transfers` | 200 | Shows transfer list, no `Bếp CN` text |
+| `/inventory/consumption` | 200 | Shows imported sale consumption rows, no `Bếp CN` text |
+| `/finance` | 200 | Shows inventory value and June actual food cost `115.841.004đ` |
+| `/finance/inventory-value` | 200 | Shows `85.135.217đ` |
+| `/finance/food-cost` | 200 | Still theoretical/reference food cost; actual gross profit stays on `/finance` |
 
 ## Operational Conclusion
 
