@@ -14,11 +14,12 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Plus as IconPlus } from "lucide-react";
 import { createPayrollPeriod, fetchPayrollPeriods } from "../payroll-actions";
-import type { PayrollPeriodRow } from "./page";
+import type { PayrollPeriodRow } from "./_types";
 import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { formatVNDate, getVNMonthYear } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import { StatusBadge } from "@/components/status-badge";
+import { AppToolbar } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -110,19 +111,23 @@ export function PayrollListClient({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {copy.count(periods.length)}
-        </p>
-        <Button onClick={handleCreate} disabled={isPending}>
-          {isPending ? (
-            <Spinner className="mr-2" />
-          ) : (
-            <IconPlus className="mr-2 size-4" />
-          )}
-          {copy.createCurrentMonth}
-        </Button>
-      </div>
+      <AppToolbar
+        search={
+          <p className="text-sm text-muted-foreground">
+            {copy.count(periods.length)}
+          </p>
+        }
+        actions={
+          <Button onClick={handleCreate} disabled={isPending}>
+            {isPending ? (
+              <Spinner className="mr-2" />
+            ) : (
+              <IconPlus className="mr-2 size-4" />
+            )}
+            {copy.createCurrentMonth}
+          </Button>
+        }
+      />
 
       <DataTable
         columns={columns}

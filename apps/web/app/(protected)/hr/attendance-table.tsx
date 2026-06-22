@@ -49,7 +49,7 @@ import {
   getAttendancePhotoUrl,
 } from "./actions";
 import { fetchApprovedLeaveMonth } from "./leave-request-actions";
-import type { BranchOption } from "./page";
+import type { BranchOption } from "./_types";
 import { StatusBadge } from "@/components/status-badge";
 import { AppEmptyState } from "@/components/surface";
 import {

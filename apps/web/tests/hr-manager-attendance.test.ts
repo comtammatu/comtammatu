@@ -27,8 +27,13 @@ const hrActionsSource = readFileSync(
 test("HR attendance is a manager read surface for clock in and clock out", () => {
   assert.match(
     hrPageSource,
-    /title=\{isBranchManager \? copy\.branchManagerTitle : copy\.ownerTitle\}/,
-    "HR page should read its role-specific title from the HR message dictionary",
+    /isBranchManager=\{isBranchManager\}/,
+    "HR page should pass the role flag to the client that owns the page header",
+  );
+  assert.match(
+    hrClientSource,
+    /isBranchManager[\s\S]{0,40}branchManagerTitle[\s\S]{0,40}ownerTitle/,
+    "HR client should read its role-specific title from the HR message dictionary",
   );
   assert.match(
     hrMessagesSource,
@@ -47,12 +52,12 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
   );
   assert.match(
     hrClientSource,
-    /<TabsTrigger value="attendance">\{copy\.tabs\.attendance\}<\/TabsTrigger>/,
+    /value: "attendance",\s*label: copy\.tabs\.attendance/,
     "HR attendance tab should read from the HR message dictionary",
   );
   assert.match(
     hrClientSource,
-    /<TabsTrigger value="setup">\{copy\.tabs\.setup\}<\/TabsTrigger>/,
+    /value: "setup",\s*label: copy\.tabs\.setup/,
     "HR setup should group shift and checklist configuration",
   );
   assert.doesNotMatch(

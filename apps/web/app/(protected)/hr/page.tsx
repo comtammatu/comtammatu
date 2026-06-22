@@ -10,14 +10,12 @@ import type {
   PositionDefaultRow,
 } from "./checklist-types";
 import { HrClient } from "./hr-client";
+import type { BranchOption, EmployeeRow } from "./_types";
 import { loadAuthState } from "@/_lib/auth";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { AppPage, AppPageHeader } from "@/components/surface";
-import { messages } from "@lib/messages";
 
 export default async function HrPage() {
   const { supabase, claims } = await loadAuthState();
-  const copy = messages.hr.workspace;
   const canManageEmployees = claims.user_role === "owner";
   const isBranchManager = claims.user_role === "branch_manager";
   const canViewEmployees = canManageEmployees || isBranchManager;
@@ -118,68 +116,18 @@ export default async function HrPage() {
   }));
 
   return (
-    <AppPage width="wide">
-      <AppPageHeader
-        eyebrow={copy.eyebrow}
-        title={isBranchManager ? copy.branchManagerTitle : copy.ownerTitle}
-        description={
-          isBranchManager
-            ? copy.branchManagerDescription
-            : copy.ownerDescription
-        }
-      />
-      <HrClient
-        employees={employees}
-        branches={branchOptions}
-        canManageEmployees={canManageEmployees}
-        canViewEmployees={canViewEmployees}
-        checklistTemplates={checklistTemplates}
-        consumptionChecklistItems={consumptionChecklistItems}
-        consumptionIngredients={consumptionIngredients}
-        consumptionDefaults={consumptionDefaults}
-        canManageGlobalChecklist={canManageEmployees}
-        positionDefaults={positionDefaults}
-      />
-    </AppPage>
+    <HrClient
+      employees={employees}
+      branches={branchOptions}
+      isBranchManager={isBranchManager}
+      canManageEmployees={canManageEmployees}
+      canViewEmployees={canViewEmployees}
+      checklistTemplates={checklistTemplates}
+      consumptionChecklistItems={consumptionChecklistItems}
+      consumptionIngredients={consumptionIngredients}
+      consumptionDefaults={consumptionDefaults}
+      canManageGlobalChecklist={canManageEmployees}
+      positionDefaults={positionDefaults}
+    />
   );
-}
-
-// Re-export types so client components can share them
-export interface BranchOption {
-  id: number;
-  name: string;
-}
-
-export interface EmployeeRow {
-  id: number;
-  employee_code: string | null;
-  id_number: string | null;
-  bank_account: string | null;
-  bank_name: string | null;
-  base_salary: number | null;
-  start_date: string | null;
-  contract_type: string | null;
-  dependents_count: number;
-  is_active: boolean;
-  default_checklist_template_id: number | null;
-  profiles: {
-    id: string;
-    full_name: string;
-    phone: string | null;
-    positions: {
-      code: string | null;
-      label_vi: string | null;
-      default_checklist_template_id: number | null;
-    } | null;
-    branch_id: number | null;
-    branches: { name: string } | null;
-  } | null;
-}
-
-export interface ShiftRow {
-  id: number;
-  name: string;
-  start_time: string;
-  end_time: string;
-  is_active: boolean;
 }

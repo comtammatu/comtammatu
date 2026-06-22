@@ -22,7 +22,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { ShiftFormDialog } from "./shift-form-dialog";
 import { deactivateShift } from "./actions";
-import type { ShiftRow } from "./page";
+import type { ShiftRow } from "./_types";
 import {
   DataTable,
   type DataTableColumn,

@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import type { BranchOption, EmployeeRow } from "./page";
+import type { BranchOption, EmployeeRow } from "./_types";
 import {
   DataTable,
   type DataTableColumn,

@@ -51,7 +51,7 @@ import {
   fetchLeaveRequests,
   rejectLeaveRequest,
 } from "./leave-request-actions";
-import type { BranchOption } from "./page";
+import type { BranchOption } from "./_types";
 
 type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
 type LeaveType = "annual" | "sick" | "unpaid" | "personal" | "other";
