@@ -8,7 +8,7 @@
 // POS->payment->KDS smoke does not use them, and it keeps startup fast and free
 // of port contention with any other local Supabase project.
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const REPO = process.cwd();
@@ -25,48 +25,6 @@ function supabase(args, { timeoutMs = 600_000 } = {}) {
     r = spawnSync("pnpm", ["dlx", "supabase", ...args], { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs });
   }
   return r;
-}
-
-// Realtime publication membership is a managed surface the baseline pg_dump
-// excludes (Section D of supabase/managed-surfaces.install.sql, "fresh env only").
-// Without it, realtime-dependent specs fail: the daily-limit broadcast test and
-// the kds-queue new-ticket-hydration tests get no postgres_changes events. Extract
-// Section D and apply it to the fresh stack via the db container (no psql binary
-// needed in CI). The stack is always fresh, so a plain ADD never hits "already a
-// member".
-function applyRealtimePublication() {
-  const managed = readFileSync(
-    join(REPO, "supabase/managed-surfaces.install.sql"),
-    "utf8",
-  );
-  const m = managed.match(
-    /Section D:[\s\S]*?(ALTER PUBLICATION supabase_realtime ADD TABLE[\s\S]*?;)/,
-  );
-  if (!m) {
-    process.stderr.write(
-      "could not extract realtime publication (Section D) from managed-surfaces.install.sql\n",
-    );
-    process.exit(1);
-  }
-  const r = spawnSync(
-    "docker",
-    ["exec", "-i", `supabase_db_${PROJECT_ID}`, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c", m[1]],
-    { encoding: "utf8" },
-  );
-  if (r.status !== 0) {
-    const out = (r.stdout || "") + (r.stderr || "");
-    // Idempotent: a re-run against a non-fresh stack hits "already a member".
-    // The goal (tables present in the publication) already holds, so treat as ok.
-    if (!/already member of publication/i.test(out)) {
-      process.stderr.write("realtime publication apply failed:\n" + out);
-      process.exit(1);
-    }
-    process.stdout.write(
-      "Realtime publication membership already present (idempotent skip).\n",
-    );
-    return;
-  }
-  process.stdout.write("Applied realtime publication membership (Section D).\n");
 }
 
 function writeScratch() {
@@ -128,8 +86,6 @@ function main() {
     process.stderr.write("\nsupabase start failed\n");
     process.exit(1);
   }
-
-  applyRealtimePublication();
 
   const status = supabase(["status", "--workdir", WORKDIR, "-o", "env"], { timeoutMs: 60_000 });
   const env = parseEnv(status.stdout || "");
