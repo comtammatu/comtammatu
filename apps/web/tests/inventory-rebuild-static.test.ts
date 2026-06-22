@@ -179,8 +179,11 @@ test("consumption route is first-class while issues route remains compatible", (
   assert.match(issueDetailClient, /\/inventory\/consumption/);
   assert.match(issueDetailClient, /Phiếu tiêu hao/);
   assert.match(issuesPage, /\.from\("stock_movements"\)/);
+  assert.match(issuesPage, /created_at, reason/);
   assert.match(issuesPage, /\.eq\("type", "consumption"\)/);
   assert.match(issuesPage, /\.eq\("movement_subtype", "sale_consumption"\)/);
+  assert.match(issuesPage, /recordedBranchId=\{branchFilter \?\? claims\.branch_id \?\? null\}/);
+  assert.match(issuesPage, /movementSourceLabel\(row\.reason\)/);
   assert.match(issuesPage, /parseBusinessDateParam\(params\.startDate\)/);
   assert.match(issuesPage, /parseBusinessDateParam\(params\.endDate\)/);
   assert.match(
@@ -201,6 +204,11 @@ test("consumption route is first-class while issues route remains compatible", (
   assert.match(issuesClient, /useSearchParams/);
   assert.match(issuesClient, /startDate/);
   assert.match(issuesClient, /endDate/);
+  assert.match(issuesClient, /selectedRecordedBranchId/);
+  assert.match(issuesClient, /Tất cả chi nhánh/);
+  assert.match(issuesClient, /Tìm nguyên liệu, nguồn/);
+  assert.match(issuesClient, /Tổng thành tiền/);
+  assert.match(issuesClient, /sourceLabel/);
   assert.match(issuesClient, /tieu-hao-da-ghi-nhan/);
 });
 
