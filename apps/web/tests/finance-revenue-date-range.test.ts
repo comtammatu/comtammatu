@@ -7,13 +7,15 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("Finance Revenue top items follows the selected date range", () => {
-  const revenuePage = read("apps/web/app/(protected)/finance/revenue/page.tsx");
+  const revenueLoader = read(
+    "apps/web/app/(protected)/finance/revenue/_lib/revenue-loader.ts",
+  );
   const cockpit = read(
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
   const actions = read("apps/web/app/(protected)/finance/actions.ts");
 
-  for (const source of [revenuePage, cockpit]) {
+  for (const source of [revenueLoader, cockpit]) {
     assert.match(
       source,
       /fetchTopItems\(params\.branch,\s*resolved\.start,\s*resolved\.end\)/,

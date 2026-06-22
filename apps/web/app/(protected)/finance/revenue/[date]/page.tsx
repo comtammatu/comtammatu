@@ -1,5 +1,4 @@
 import Link from "next/link";
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing finance revenue detail page keeps operational copy inline */
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { formatVND } from "@comtammatu/shared/format";
@@ -9,35 +8,15 @@ import {
   AppPageHeader,
   AppSection,
 } from "@/components/surface";
+import { messages } from "@lib/messages";
 import { fetchAccessibleBranches, fetchOrdersForDay } from "../../actions";
 import { RevenueDrillTabs } from "./revenue-drill-tabs";
+import type { HourSummary, OrderRow } from "./_lib/revenue-drill-types";
 
-export interface OrderRow {
-  order_id: number;
-  order_number: string;
-  branch_id: number;
-  branch_name: string | null;
-  paid_at: string;
-  paid_hour: number;
-  order_type: "dine_in" | "takeaway";
-  subtotal: number;
-  discount_amount: number;
-  tax_amount: number;
-  total_amount: number;
-  payment_method: string | null;
-  item_count: number;
-  invoice_status: string | null;
-  invoice_number: string | null;
-}
+const copy = messages.finance.revenue.drill;
 
 function isValidIsoDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
-}
-
-export interface HourSummary {
-  hour: number;
-  order_count: number;
-  total_revenue: number;
 }
 
 function summarizeByHour(orders: OrderRow[]): HourSummary[] {
@@ -58,6 +37,17 @@ function summarizeByHour(orders: OrderRow[]): HourSummary[] {
   return Array.from(map.values()).sort((a, b) => a.hour - b.hour);
 }
 
+function BackToRevenue() {
+  return (
+    <Button asChild variant="ghost" size="sm" className="-ml-2">
+      <Link href="/finance/revenue" className="gap-2">
+        <IconArrowLeft className="size-4" />
+        {copy.back}
+      </Link>
+    </Button>
+  );
+}
+
 export default async function RevenueDrillPage({
   params,
   searchParams,
@@ -70,12 +60,14 @@ export default async function RevenueDrillPage({
 
   if (!isValidIsoDate(date)) {
     return (
-      <div className="flex flex-col gap-4">
-        <p className="text-sm text-destructive">Ngày không hợp lệ.</p>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/finance/revenue">Về báo cáo doanh thu</Link>
-        </Button>
-      </div>
+      <AppPage>
+        <AppPageHeader
+          eyebrow={copy.eyebrow}
+          title={copy.invalidDateTitle}
+          breadcrumb={<BackToRevenue />}
+        />
+        <AppEmptyState mode="error" title={copy.invalidDate} />
+      </AppPage>
     );
   }
 
@@ -91,19 +83,16 @@ export default async function RevenueDrillPage({
       name: string;
     }[];
     return (
-      <div className="flex flex-col gap-4">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/finance/revenue" className="gap-2">
-            <IconArrowLeft className="size-4" />
-            Quay lại
-          </Link>
-        </Button>
-        <AppSection
-          title={`Chọn chi nhánh để xem chi tiết ngày ${date}`}
-          description='Drill-down từ chế độ "Tất cả chi nhánh" cần chọn cụ thể chi nhánh để hiển thị danh sách đơn theo giờ.'
-        >
+      <AppPage>
+        <AppPageHeader
+          eyebrow={copy.eyebrow}
+          title={copy.selectBranchTitle(date)}
+          description={copy.selectBranchDescription}
+          breadcrumb={<BackToRevenue />}
+        />
+        <AppSection title={copy.selectBranchSectionTitle}>
           {branches.length === 0 ? (
-            <AppEmptyState compact title="Bạn chưa có quyền xem chi nhánh nào." />
+            <AppEmptyState compact mode="no-access" title={copy.noBranchAccess} />
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
               {branches.map((b) => (
@@ -122,7 +111,7 @@ export default async function RevenueDrillPage({
             </ul>
           )}
         </AppSection>
-      </div>
+      </AppPage>
     );
   }
 
@@ -136,7 +125,8 @@ export default async function RevenueDrillPage({
     name: string;
   }[];
   const branchName =
-    branches.find((b) => b.id === branchId)?.name ?? `Chi nhánh ${branchId}`;
+    branches.find((b) => b.id === branchId)?.name ??
+    messages.finance.common.branchFallback(branchId);
   const orders = (
     ordersRes.success ? (ordersRes.data ?? []) : []
   ) as OrderRow[];
@@ -151,20 +141,16 @@ export default async function RevenueDrillPage({
   const totalTax = orders.reduce((s, o) => s + Number(o.tax_amount), 0);
 
   return (
-    <AppPage>
+    <AppPage density="compact">
       <AppPageHeader
-        eyebrow="Tài chính · Doanh thu"
-        title={`${branchName} · ${date}`}
-        description={`Tổng ${totalOrders.toLocaleString("vi-VN")} đơn · ${formatVND(totalRevenue)}. Cột giờ tính theo thời điểm thanh toán (Asia/Ho_Chi_Minh).`}
-        breadcrumb={
-          <Button asChild variant="ghost" size="sm" className="-ml-2">
-            <Link href="/finance/revenue" className="gap-2">
-              <IconArrowLeft className="size-4" />
-              Quay lại tổng
-            </Link>
-          </Button>
-        }
-        badge={{ children: "Drill-down theo ngày", variant: "secondary" }}
+        eyebrow={copy.eyebrow}
+        title={copy.detailTitle(branchName, date)}
+        description={copy.detailDescription(
+          totalOrders.toLocaleString("vi-VN"),
+          formatVND(totalRevenue),
+        )}
+        breadcrumb={<BackToRevenue />}
+        badge={{ children: copy.badge, variant: "secondary" }}
       />
 
       <RevenueDrillTabs

@@ -7,17 +7,7 @@ import {
   resolveFinanceRange,
 } from "../_lib/finance-params";
 import { FoodCostClient } from "./food-cost-client";
-
-export interface FoodCostRow {
-  period_start: string | null;
-  branch_id: number | null;
-  menu_item_id: number | null;
-  item_name: string | null;
-  quantity_sold: number | null;
-  revenue: number | null;
-  ingredient_cost: number | null;
-  food_cost_pct: number | null;
-}
+import type { FoodCostRow } from "./_types";
 
 export default async function FoodCostPage({
   searchParams,
@@ -49,6 +39,7 @@ export default async function FoodCostPage({
         eyebrow={messages.finance.shell.subLabel}
         title={messages.finance.nav.items.foodCost}
         description={messages.finance.foodCost.estimateNote}
+        meta={messages.finance.basic.periodMeta(resolved.start, resolved.end)}
       />
       <FoodCostClient params={params} branches={branches} rows={rows} />
     </AppPage>

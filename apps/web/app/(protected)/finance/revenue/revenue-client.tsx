@@ -66,7 +66,7 @@ import type {
   HourBucket,
   KpiBundle,
   RollupRow,
-} from "./page";
+} from "./_lib/finance-types-revenue";
 
 const filterCopy = messages.finance.filterBar;
 const revCopy = messages.finance.revenue;

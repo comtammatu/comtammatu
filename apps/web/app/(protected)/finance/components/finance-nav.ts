@@ -43,7 +43,7 @@ export function resolveFinanceNav({
         },
         {
           href: "/finance/food-cost",
-          label: financeNav.items.grossProfit,
+          label: financeNav.items.foodCost,
           icon: IconTrendingUp,
         },
         {

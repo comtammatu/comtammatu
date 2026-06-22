@@ -9,7 +9,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { formatVND } from "@comtammatu/shared/format";
 import { PRODUCT_VI } from "@comtammatu/shared/messages";
-import { AppSection } from "@/components/surface";
+import { AppSection, KpiRow } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -18,7 +18,7 @@ import { messages } from "@lib/messages";
 import { FilterBar } from "../components/filter-bar";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import type { FinanceParams } from "../_lib/finance-params";
-import type { FoodCostRow } from "./page";
+import type { FoodCostRow } from "./_types";
 
 interface Props {
   params: FinanceParams;
@@ -124,23 +124,25 @@ export function FoodCostClient({
         hide={["compare", "payment", "granularity"]}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <KpiRow>
         <KpiCard
           label={foodCopy.totalFoodCost}
           value={formatVND(totalCost)}
           hint={
             totalRevenue > 0
-              ? `${((totalCost / totalRevenue) * 100).toFixed(1)}% / DT`
+              ? foodCopy.shareOfRevenueHint(
+                  ((totalCost / totalRevenue) * 100).toFixed(1),
+                )
               : "—"
           }
         />
         <KpiCard
           label={foodCopy.averageMargin}
           value={avgMarginPct == null ? "—" : `${avgMarginPct.toFixed(1)}%`}
-          hint={`Thresholds: ≥${MARGIN_GREEN}% xanh · ≥${MARGIN_WARN}% vàng`}
+          hint={foodCopy.marginThresholdHint(MARGIN_GREEN, MARGIN_WARN)}
           tone={avgMarginTone}
         />
-      </div>
+      </KpiRow>
 
       <AppSection contentFlush contentScroll>
         <DataTable

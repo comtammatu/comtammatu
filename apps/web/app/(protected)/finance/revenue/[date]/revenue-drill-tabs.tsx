@@ -21,7 +21,7 @@ import {
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import { formatVNTime } from "@/_lib/format-datetime";
-import type { HourSummary, OrderRow } from "./page";
+import type { HourSummary, OrderRow } from "./_lib/revenue-drill-types";
 
 const ORDER_TYPE_LABEL: Record<string, string> = {
   dine_in: "Tại bàn",
