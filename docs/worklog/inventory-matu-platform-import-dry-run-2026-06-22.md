@@ -1,6 +1,6 @@
 # Inventory Matu Platform Import Dry-Run
 
-> **⚠️ SNAPSHOT (dry-run log) — Reconciled-through `e6c18313` (2026-06-22).** Bản ghi một lần của dry-run import, không phải nguồn sự thật vận hành. Verify tồn/inventory thật vào prod + code trước khi dùng.
+> **⚠️ SNAPSHOT (import closeout log) — Reconciled-through `637d0bbd` (2026-06-22).** Bản ghi một lần của dry-run/import closeout, không phải nguồn sự thật vận hành. Verify tồn/inventory thật vào prod + code trước khi dùng.
 
 Owner: current Inventory import task.
 
@@ -452,3 +452,101 @@ Post-reimport smoke:
 - Actual food cost by branch:
   - branch 2: 36,517,029.78.
   - branch 3: 180,972,110.83.
+
+## Closeout Reconciliation
+
+Review tier: T1 doc-only reconciliation note. No schema, runtime, or data mutation.
+
+Read-only reconciliation scope:
+
+- Source project: `matu-platform` / `dyksphedgzqsqjqgxzog`.
+- Target project: `comtammatu` / `iexwsuaqqenyjiskawoj`.
+- Target commit: `637d0bbd`.
+- Method: REST reads through `supabase-js`; no SQL write, RPC write, migration, or reset.
+
+Target ledger counts:
+
+- `stock_transfers`: 354.
+- `stock_transfer_items`: 568.
+- `stock_movements`: 1,694.
+- `stock_levels`: 124.
+- `sale_consumption` movement rows: 342.
+- `count_adjustment` movement rows: 216.
+- Active `location_kind = 'kitchen'` locations: 0.
+- `stock_levels` on `location_kind = 'kitchen'`: 0.
+- Non-import `stock_movements`: 0.
+- Non-import `stock_transfers`: 0.
+- Transfer matrix: `warehouse -> warehouse`: 354.
+
+Planner closeout:
+
+- Current dry-run blockers are expected because the import is already applied:
+  `target operational inventory is not empty` and `target transfer number already exists`.
+- Manual review rows: 0.
+- Missing mapping rows: 0.
+- Ignored source rows: 11.
+  - `ignored_not_received`: 7.
+  - `ignored_legacy_branch_kitchen_source`: 1.
+  - `ignored_kitchen_passthrough_inbound`: 2.
+  - `ignored_same_target_site`: 1.
+- Phantom source Bep CN stock remains excluded from target operating stock:
+  - `BEP-PH`: 180,971,948.96 estimated value.
+  - `BEP-DD`: 35,962,024.43 estimated value.
+
+Sample reconciliation:
+
+| Flow | Source transfer | Source route | Target route | Quantity delta | Value delta |
+| --- | --- | --- | --- | ---: | ---: |
+| Kho Tổng -> Kho CN | `TRF20260514-000011` | `KHO-TONG -> KHO-DD` | `central_supply -> branch` | 0 | 0 |
+| Bếp Trung Tâm -> Kho CN | `TRF20260514-000014` | `KHO-TT -> KHO-PH` | `central_kitchen -> branch` | 0 | -0.04 |
+| Kho Tổng -> Bếp Trung Tâm | `TRF20260514-000006` | `KHO-TONG -> KHO-TT` via kitchen passthrough | `central_supply -> central_kitchen` | 0 | 48.70 |
+| Bếp Trung Tâm -> Kho Tổng | `TRF20260515-000040` | `KHO-TT -> KHO-TONG` | `central_kitchen -> central_supply` | 0 | 0 |
+| Branch -> central | `TRF-20260529-000388` | `KHO-PH -> KHO-TT` | `branch -> central_kitchen` | 0 | 0 |
+
+Consumption sample check:
+
+- 5 sampled source transfers from `Kho CN -> Bep CN` all map to
+  `stock_movements.type = 'consumption'` and
+  `movement_subtype = 'sale_consumption'`.
+- Target branch kind is `branch`.
+- Target location kind is `warehouse`.
+- Quantity deltas are 0.
+- Value deltas are only rounding noise from `numeric(15,2)` unit-cost columns.
+
+Full-row reconciliation:
+
+- Real stock-bearing transfer count: 354.
+- Kitchen passthrough transfer count inside real transfers: 2.
+- Branch consumption source transfers: 120.
+- Target import transfers: 354.
+- Target sale-consumption movement rows: 342.
+- Missing transfer rows: 0.
+- Transfer quantity mismatches: 0.
+- Missing consumption rows: 0.
+- Consumption quantity mismatches: 0.
+- Extra target import transfers: 0.
+- Extra target sale-consumption reasons: 0.
+
+Known rounding:
+
+- `stock_movements.unit_cost` and `stock_transfer_items.unit_cost_at_ship` are
+  `numeric(15,2)`.
+- Total transfer value delta vs raw source plan: +1,278.81 VND on
+  269,819,701.43 VND.
+- Total consumption value delta vs raw source plan: +167.23 VND on
+  217,488,973.38 VND.
+- Maximum per-transfer delta observed: 115.92 VND.
+- Maximum per-consumption-transfer delta observed: 63.54 VND.
+
+Closeout decision:
+
+- Import mapping is accepted for operations.
+- Bep CN is not stock-bearing in target.
+- Former branch kitchen inbound transfers are actual branch consumption, not
+  target `stock_transfers`.
+- Kho Tong, Bep Trung Tam, branch warehouses, central-to-branch,
+  central-to-central, branch-to-central, and branch-to-branch stock-bearing
+  transfers remain valid as real transfers.
+- A future T3 may decide whether unit-cost columns need higher precision than
+  `numeric(15,2)` for raw per-gram/per-ml rates; this is not required to close
+  the import milestone.

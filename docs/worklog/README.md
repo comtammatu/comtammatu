@@ -5,8 +5,8 @@ Không dùng thư mục này làm archive, backlog, hay source of truth thứ ha
 
 ## Active Notes
 
-- `inventory-matu-platform-import-dry-run-2026-06-22.md` — T3 contract cho
-  import/dry-run Inventory từ `matu-platform`.
+- `inventory-matu-platform-import-dry-run-2026-06-22.md` — T3 contract và
+  closeout reconciliation cho import Inventory từ `matu-platform`.
 
 ## Rules
 
