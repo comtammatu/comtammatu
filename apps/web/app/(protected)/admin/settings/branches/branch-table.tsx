@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
   Building as IconBuilding,
+  ChefHat as IconChefHat,
   Ellipsis as IconDots,
+  Monitor as IconMonitor,
+  MonitorUp as IconMonitorUp,
   Pencil as IconPencil,
   Shield as IconShield,
   SlidersHorizontal as IconSliders,
@@ -94,6 +97,25 @@ export function BranchTable({ branches }: BranchTableProps) {
                 <Link href={`/br/${branch.id}/settings`}>
                   <IconSliders className="mr-2 size-4" />
                   {messages.settings.branch.hubTitle}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href={`/br/${branch.id}/pos`}>
+                  <IconMonitor className="mr-2 size-4" />
+                  {copy.openPos}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={`/br/${branch.id}/kds`}>
+                  <IconChefHat className="mr-2 size-4" />
+                  {copy.openKds}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={`/br/${branch.id}/runner`}>
+                  <IconMonitorUp className="mr-2 size-4" />
+                  {copy.openRunner}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

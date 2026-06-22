@@ -192,7 +192,7 @@ export async function proxy(request: NextRequest) {
 
     // Branch-scoped protected routes enforce
     // URL branchId matches the user's assigned branch_id. Tenant-level roles
-    // (owner) may traverse any branch's settings.
+    // (owner) may traverse any branch's settings and pos/kds/runner (cover-ca).
     // POS/KDS also require the branch record to be active and usable.
     // The exact Runner customer board path is public and bypasses proxy auth;
     // keep runner here only for any future non-public runner child route.
@@ -208,11 +208,10 @@ export async function proxy(request: NextRequest) {
       if (pathMatch) {
         const routeBranchId = Number(pathMatch[1]);
 
-        const allowCrossBranch =
-          (moduleKey === "branch_dashboard" ||
-            moduleKey === "branch_settings" ||
-            moduleKey === "branch_menu_limits") &&
-          claims.user_role === "owner";
+        // Owner has branch_id null and may traverse any branch surface in
+        // this gate. The branch-active check below still constrains owner to
+        // a real active branch for pos/kds/runner.
+        const allowCrossBranch = claims.user_role === "owner";
 
         if (
           !allowCrossBranch &&
@@ -276,9 +275,9 @@ export async function proxy(request: NextRequest) {
           // 307 to /access-denied. Vercel preview deploys run as production;
           // set POS_NETWORK_GATE=off on those if you don't want the gate there.
           //
-          // Admin roles already fail the branch-scope check above (their
-          // branch_id is null), so they never reach this point — no explicit
-          // bypass needed here.
+          // Owner reaches this point via allowCrossBranch (cover-ca) and is
+          // intentionally subject to the same network gate: covering a shift
+          // means being on the branch network. No owner bypass here.
           const networkGateEnabled =
             process.env.NODE_ENV === "production" &&
             process.env.POS_NETWORK_GATE !== "off";
