@@ -1,11 +1,23 @@
 import Link from "next/link";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
+import {
+  ArrowLeft as IconArrowLeft,
+  History as IconHistory,
+} from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
 import { messages } from "@lib/messages";
 import { PermissionAuditTable } from "./permission-audit-table";
+import {
+  PermissionAuditFilters,
+  type PermissionAuditTargetOption,
+} from "./permission-audit-filters";
 
 interface Props {
   searchParams: Promise<{
@@ -76,6 +88,30 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
     (branches ?? []).map((b) => [b.id, b.name]),
   );
   const copy = messages.admin.staffAudit;
+
+  // Target filter options derived from the visible rows. The active target is
+  // appended even when no row surfaces it, so the Select can echo its value.
+  const targetOptionById = new Map<string, PermissionAuditTargetOption>();
+  for (const r of auditRows) {
+    const id = r.target_user_id ? String(r.target_user_id) : "";
+    if (!id || targetOptionById.has(id)) continue;
+    targetOptionById.set(id, {
+      id,
+      label: nameByUserId.get(id) ?? id.slice(0, 8),
+    });
+  }
+  if (params.target && !targetOptionById.has(params.target)) {
+    targetOptionById.set(params.target, {
+      id: params.target,
+      label: nameByUserId.get(params.target) ?? params.target.slice(0, 8),
+    });
+  }
+  const targetOptions = Array.from(targetOptionById.values()).sort((a, b) =>
+    a.label.localeCompare(b.label),
+  );
+
+  const hasFilters = Boolean(params.action || params.target || params.since);
+
   const auditDisplayRows = auditRows.map((r) => {
     const meta = (r.metadata ?? {}) as Record<string, unknown>;
     const validUntil =
@@ -100,7 +136,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
   });
 
   return (
-    <AppPage>
+    <AppPage width="wide">
       <AppPageHeader
         title={copy.title}
         description={copy.description}
@@ -114,9 +150,27 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
         }
       />
 
-      <AppSection title={copy.recentItems(auditRows.length)} contentFlush>
-        <PermissionAuditTable rows={auditDisplayRows} />
-      </AppSection>
+      <PermissionAuditFilters
+        value={{
+          action: params.action ?? null,
+          target: params.target ?? null,
+          since: params.since ?? null,
+        }}
+        targetOptions={targetOptions}
+      />
+
+      {auditDisplayRows.length === 0 ? (
+        <AppEmptyState
+          mode={hasFilters ? "no-results" : "no-data"}
+          title={hasFilters ? copy.emptyFiltered : copy.empty}
+          description={hasFilters ? copy.emptyFilteredHint : undefined}
+          icon={<IconHistory />}
+        />
+      ) : (
+        <AppSection title={copy.recentItems(auditDisplayRows.length)} contentFlush>
+          <PermissionAuditTable rows={auditDisplayRows} />
+        </AppSection>
+      )}
     </AppPage>
   );
 }

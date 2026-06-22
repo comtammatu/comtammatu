@@ -13,14 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
 import { cn } from "@comtammatu/ui";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  AppToolbar,
+} from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
   DataTable,
   type DataTableColumn,
@@ -43,6 +44,7 @@ import { messages } from "@lib/messages";
 const stockMovementCopy = messages.admin.reports.stockMovement;
 
 interface StockMovementClientProps {
+  eyebrow: string;
   branches: { id: number; name: string }[];
   userBranchId: number | null;
 }
@@ -86,6 +88,7 @@ function fmt(n: number) {
 }
 
 export function StockMovementClient({
+  eyebrow,
   branches,
   userBranchId,
 }: StockMovementClientProps) {
@@ -243,111 +246,117 @@ export function StockMovementClient({
     setEndDate(endDate);
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      {/* Filters */}
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
-          <Label htmlFor="startDate">{FORM_VI.fromDate}</Label>
-          <Input
-            id="startDate"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full sm:w-40"
-          />
+  const showResults = loaded && !error;
+
+  const filters = (
+    <>
+      <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
+        <Label htmlFor="startDate">{FORM_VI.fromDate}</Label>
+        <Input
+          id="startDate"
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="w-full sm:w-40"
+        />
+      </div>
+      <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
+        <Label htmlFor="endDate">{FORM_VI.toDate}</Label>
+        <Input
+          id="endDate"
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="w-full sm:w-40"
+        />
+      </div>
+      {!userBranchId && (
+        <div className="flex w-full flex-col gap-1.5 sm:w-48 sm:flex-none">
+          <Label>{BRANCH_VI.long}</Label>
+          <Select value={branchId} onValueChange={setBranchId}>
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue
+                placeholder={stockMovementCopy.allBranchesPlaceholder}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={String(b.id)}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
-          <Label htmlFor="endDate">{FORM_VI.toDate}</Label>
-          <Input
-            id="endDate"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-full sm:w-40"
-          />
-        </div>
-        {!userBranchId && (
-          <div className="flex w-full flex-col gap-1.5 sm:w-48 sm:flex-none">
-            <Label>{BRANCH_VI.long}</Label>
-            <Select value={branchId} onValueChange={setBranchId}>
-              <SelectTrigger className="w-full sm:w-44">
-                <SelectValue
-                  placeholder={stockMovementCopy.allBranchesPlaceholder}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={String(b.id)}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-        <div className="flex w-full gap-1.5 sm:w-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPreset(7)}
-            className="flex-1 text-xs sm:flex-none"
-          >
-            {stockMovementCopy.dayPreset(7)}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPreset(14)}
-            className="flex-1 text-xs sm:flex-none"
-          >
-            {stockMovementCopy.dayPreset(14)}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPreset(30)}
-            className="flex-1 text-xs sm:flex-none"
-          >
-            {stockMovementCopy.dayPreset(30)}
-          </Button>
-        </div>
+      )}
+      <div className="flex w-full gap-1.5 sm:w-auto">
         <Button
-          onClick={load}
-          disabled={isPending}
-          className="w-full sm:w-auto"
+          variant="outline"
+          size="sm"
+          onClick={() => setPreset(7)}
+          className="flex-1 text-xs sm:flex-none"
         >
-          {isPending ? stockMovementCopy.loading : stockMovementCopy.viewReport}
+          {stockMovementCopy.dayPreset(7)}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setPreset(14)}
+          className="flex-1 text-xs sm:flex-none"
+        >
+          {stockMovementCopy.dayPreset(14)}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setPreset(30)}
+          className="flex-1 text-xs sm:flex-none"
+        >
+          {stockMovementCopy.dayPreset(30)}
         </Button>
       </div>
+    </>
+  );
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+  const loadAction = (
+    <Button onClick={load} disabled={isPending} className="w-full sm:w-auto">
+      {isPending ? stockMovementCopy.loading : stockMovementCopy.viewReport}
+    </Button>
+  );
 
-      {!loaded && !error && (
-        <AppEmptyState title={stockMovementCopy.choosePeriodTitle} />
-      )}
-
-      {loaded && (
-        <Tabs defaultValue="detail">
-          <TabsList variant="toolbar">
-            <TabsTrigger value="detail">
-              {stockMovementCopy.detailTab(movementRows.length)}
-            </TabsTrigger>
-            <TabsTrigger value="branch">
-              {stockMovementCopy.branchTab(branchRows.length)}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="detail">
-<DataTable
-              columns={detailColumns}
-              data={movementRows}
-              getRowKey={(row) => row.ingredient_id}
-              emptyTitle={stockMovementCopy.emptyTitle}
-              emptyDescription={stockMovementCopy.detailEmptyDescription}
-              className="md:overflow-x-auto"
-              mobileCardRender={(row) => (
+  return (
+    <AppPage width="wide">
+      <AppPageHeader
+        eyebrow={eyebrow}
+        title={stockMovementCopy.pageTitle}
+        description={stockMovementCopy.pageDescription}
+        tabs={
+          showResults ? (
+            <AppPageTabs
+              paramKey="view"
+              defaultValue="detail"
+              items={[
+                {
+                  value: "detail",
+                  label: stockMovementCopy.detailTab(movementRows.length),
+                },
+                {
+                  value: "branch",
+                  label: stockMovementCopy.branchTab(branchRows.length),
+                },
+              ]}
+            >
+              <TabsContent value="detail">
+                <AppSection contentFlush>
+                  <DataTable
+                    columns={detailColumns}
+                    data={movementRows}
+                    getRowKey={(row) => row.ingredient_id}
+                    emptyTitle={stockMovementCopy.emptyTitle}
+                    emptyDescription={stockMovementCopy.detailEmptyDescription}
+                    className="md:overflow-x-auto"
+                    mobileCardRender={(row) => (
                 <Item variant="outline" className="flex-col items-stretch">
                   <ItemHeader className="items-start">
                     <div>
@@ -426,21 +435,23 @@ export function StockMovementClient({
                       </p>
                       <p className="mt-1 font-mono">{fmt(row.adjustment)}</p>
                     </div>
-                  </ItemContent>
-                </Item>
-              )}
-            />
-          </TabsContent>
+                        </ItemContent>
+                      </Item>
+                    )}
+                  />
+                </AppSection>
+              </TabsContent>
 
-          <TabsContent value="branch">
-<DataTable
-              columns={branchColumns}
-              data={branchRows}
-              getRowKey={(row) => row.branch_id}
-              emptyTitle={stockMovementCopy.emptyTitle}
-              emptyDescription={stockMovementCopy.branchEmptyDescription}
-              className="md:overflow-x-auto"
-              mobileCardRender={(row) => (
+              <TabsContent value="branch">
+                <AppSection contentFlush>
+                  <DataTable
+                    columns={branchColumns}
+                    data={branchRows}
+                    getRowKey={(row) => row.branch_id}
+                    emptyTitle={stockMovementCopy.emptyTitle}
+                    emptyDescription={stockMovementCopy.branchEmptyDescription}
+                    className="md:overflow-x-auto"
+                    mobileCardRender={(row) => (
                 <Item variant="outline" className="flex-col items-stretch">
                   <p className="font-medium">{row.branch_name}</p>
                   <ItemContent className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -498,13 +509,24 @@ export function StockMovementClient({
                       </p>
                       <p className="mt-1 font-mono">{fmt(row.adjustment)}</p>
                     </div>
-                  </ItemContent>
-                </Item>
-              )}
-            />
-          </TabsContent>
-        </Tabs>
-      )}
-    </div>
+                        </ItemContent>
+                      </Item>
+                    )}
+                  />
+                </AppSection>
+              </TabsContent>
+            </AppPageTabs>
+          ) : undefined
+        }
+      />
+
+      <AppToolbar filters={filters} actions={loadAction} />
+
+      {error ? (
+        <AppEmptyState mode="error" description={error} />
+      ) : !loaded ? (
+        <AppEmptyState title={stockMovementCopy.choosePeriodTitle} />
+      ) : null}
+    </AppPage>
   );
 }

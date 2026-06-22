@@ -12,7 +12,7 @@ export default async function InventoryValueReportPage() {
   );
 
   return (
-    <AppPage>
+    <AppPage width="wide">
       <InventoryValuePanel visibility={inventoryValueVisibility} />
     </AppPage>
   );

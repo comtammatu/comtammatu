@@ -8,6 +8,8 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const ADMIN_PAGE = "apps/web/app/(protected)/admin/dashboard/page.tsx";
 const ADMIN_ACTIONS = "apps/web/app/(protected)/admin/dashboard/actions.ts";
+const ADMIN_WORK_QUEUE =
+  "apps/web/app/(protected)/admin/dashboard/_components/owner-work-queue.tsx";
 const ADMIN_COPY = "apps/web/lib/messages/admin.ts";
 const FINANCE_PAGE = "apps/web/app/(protected)/finance/page.tsx";
 const FINANCE_CASH_PANEL =
@@ -163,6 +165,9 @@ test("inventory copy uses Vietnamese operational labels on active surfaces", () 
 
 test("admin dashboard is the L0 tenant command surface (D017 step 4)", () => {
   const page = read(ADMIN_PAGE);
+  // Owner work-queue rendering (incl. the per-branch command links) is
+  // extracted into the co-located component; assert links against both.
+  const surface = page + read(ADMIN_WORK_QUEUE);
 
   assert.match(page, /fetchBranchOperatingStatus/);
   assert.match(page, /branchStatusTitle/);
@@ -171,9 +176,9 @@ test("admin dashboard is the L0 tenant command surface (D017 step 4)", () => {
   assert.doesNotMatch(page, /SurfaceLinkCard/);
   assert.doesNotMatch(page, /buildSetupCards/);
   assert.doesNotMatch(page, /buildDomainCards/);
-  assert.match(page, /\/admin\/settings\/printers\/jobs\?branch=/);
-  assert.match(page, /status=needs_attention/);
-  assert.match(page, /\/br\/\$\{String\(row\.branchId\)\}\/dashboard/);
+  assert.match(surface, /\/admin\/settings\/printers\/jobs\?branch=/);
+  assert.match(surface, /status=needs_attention/);
+  assert.match(surface, /\/br\/\$\{String\(row\.branchId\)\}\/dashboard/);
 });
 
 test("admin dashboard actions stay scoped to the dashboard audience", () => {
