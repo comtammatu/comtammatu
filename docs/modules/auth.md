@@ -126,9 +126,9 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | finance                                                    | ✓     |            |        |          |         |        |      |        |
 | reports                                                    | ✓     |            |        |          |         |        |      |        |
 | settings                                                   | ✓     |            |        |          |         |        |      |        |
-| pos                                                        |       | ✓          |        |          | ✓       | ✓      |      |        |
-| kds                                                        |       | ✓          |        |          |         |        | ✓    |        |
-| runner (public display route)                              |       | ✓          |        |          | ✓       | ✓      | ✓    |        |
+| pos                                                        | ✓     | ✓          |        |          | ✓       | ✓      |      |        |
+| kds                                                        | ✓     | ✓          |        |          |         |        | ✓    |        |
+| runner (public display route)                              | ✓     | ✓          |        |          | ✓       | ✓      | ✓    |        |
 | branch_dashboard                                           | ✓     | ✓          |        |          |         |        |      |        |
 | branch_settings                                            | ✓     | ✓          |        |          |         |        |      |        |
 | branch_menu_limits                                         | ✓     | ✓          |        |          | ✓       |        | ✓    |        |

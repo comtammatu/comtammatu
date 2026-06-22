@@ -95,8 +95,9 @@ Full setup guide: `docs/ref/setup.md`
   `docs/agent/rules/database.md`. Do not run file-based `supabase db push`
   against production unless that registry explicitly changes.
 - **CI:** `.github/workflows/ci.yml` runs on push-to-main and pull requests
-  (Node 24, pnpm from `packageManager`), executing `pnpm typecheck`,
-  `pnpm lint`, `pnpm test`, and `pnpm build`.
+  (Node 24, pnpm from `packageManager`), executing `pnpm deps:audit`,
+  `pnpm lint:baseline`, `pnpm typecheck`, `pnpm lint`, `pnpm test`, and
+  `pnpm build`, plus a separate from-empty baseline-replay job.
 
 ## TypeScript Configuration
 
@@ -112,7 +113,9 @@ Base config (`tsconfig.base.json`):
 pnpm dev          # Start dev server (Turbopack)
 pnpm build        # Production build (all packages + web)
 pnpm typecheck    # Type checking across all packages
-pnpm lint         # ESLint across all packages
-pnpm db:types     # Regenerate Supabase types
+pnpm lint         # Full lint gate: 8 repo guards + ESLint (see package.json "lint")
+pnpm test         # Test suites (turbo test)
+pnpm verify       # Full gate: deps audit + baseline + typecheck + lint + build + test
+pnpm db:types     # Regenerate Supabase types after a migration
 pnpm format       # Prettier format
 ```

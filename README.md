@@ -35,7 +35,7 @@ Active tracker: [`tasks/todo.md`](tasks/todo.md).
 - **Monorepo:** Turborepo 2.9 + pnpm 10.33
 - **PWA:** Serwist service worker, per-branch installable POS manifest
 - **Rate limiting:** Upstash Redis
-- **Native printer:** ESC-POS USB print-agent (Node 24, packaged via `@yao-pkg/pkg`)
+- **Native printer:** ESC-POS LAN print-agent (Node 24, packaged via `@yao-pkg/pkg`)
 - **Hosting:** Vercel
 
 ## Project Structure
@@ -43,7 +43,7 @@ Active tracker: [`tasks/todo.md`](tasks/todo.md).
 ```
 apps/
   web/              # Next.js 16 app (POS, KDS, admin, inventory, finance, hr, employee)
-  print-agent/      # ESC-POS USB printer daemon (Windows .exe via pkg)
+  print-agent/      # ESC-POS LAN printer daemon (packaged via pkg)
 packages/
   database/         # Supabase clients (server / client / service / middleware) + types
   shared/           # Auth (module-acl, permissions, scope), labels, payroll calc, formatters
@@ -71,7 +71,7 @@ scripts/            # SQL seeds, lint helpers
 | `/admin/*`                  | Manager+         | Dashboard, settings, staff, reports           |
 | `/menu`                     | Manager+         | Menu CRUD                                     |
 | `/inventory/*`              | Inventory roles  | Canonical inventory hub (PO, GRN, stocktake…) |
-| `/finance/*`                | Finance roles    | COA, journal, statements, food-cost, periods  |
+| `/finance/*`                | Finance roles    | Finance Basic, doanh thu ròng, food-cost, chi phí, HĐĐT |
 | `/hr/*`                     | HR/payroll       | Payroll periods, payslips                     |
 | `/orders`                   | Manager+         | Cross-branch order browser                    |
 | `/notifications`            | All staff        | Notification center                           |
@@ -101,10 +101,11 @@ pnpm dev:web            # Web only
 pnpm dev:print          # Print agent only
 pnpm build              # Production build (next build + Serwist service worker)
 pnpm typecheck          # TS check across packages
-pnpm lint               # ESLint + copy/db-boundary/UI-contract/client-storage guards
+pnpm lint               # ESLint + repo guards (copy, ui-contract, client-storage, rules-mirror, guard-sync, regression-guards, review-tier, doc-staleness)
+pnpm test               # Test suites (turbo test)
+pnpm verify             # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
 pnpm format             # Prettier
-pnpm bones:build        # Pre-render skeleton boneyard
-pnpm db:types           # Regenerate Supabase types — needs SUPABASE_PROJECT_ID env
+pnpm db:types           # Regenerate Supabase types after a migration
 ```
 
 End-to-end testing (Playwright):
@@ -119,6 +120,7 @@ pnpm --filter @comtammatu/web guides:capture     # Capture POS flow screenshots
 | Doc                                                            | Purpose                                        |
 | -------------------------------------------------------------- | ---------------------------------------------- |
 | [`AGENTS.md`](AGENTS.md)                                       | Canonical agent entrypoint + rule loading      |
+| [`DESIGN.md`](DESIGN.md)                                       | Design foundation — tokens, typography, motion |
 | [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)                 | Codebase map + hub files + module index        |
 | [`tasks/todo.md`](tasks/todo.md)                               | Active work tracker                            |
 | [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Architecture decisions log                     |
