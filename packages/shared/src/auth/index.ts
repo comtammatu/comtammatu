@@ -8,7 +8,9 @@ export {
   MANAGEABLE_STAFF_ROLES,
   BRANCH_REQUIRED_OPERATIONAL_ROLES,
   BRANCH_FLOOR_SETTINGS_ROLES,
+  TENANT_STRATEGY_SETTINGS_ROLES,
   canManageBranchFloorSettings,
+  canManageTenantStrategySettings,
   ROLE_LABEL_VI,
   staffRoleFromPositionCode,
 } from "./types";

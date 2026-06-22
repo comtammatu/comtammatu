@@ -2,13 +2,14 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  TENANT_STRATEGY_SETTINGS_ROLES,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
-
-const SETTINGS_ROLES: readonly StaffRole[] = ["owner"];
 
 const paymentSettingsSchema = z.object({
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]: z.enum(["true", "false"]),
@@ -91,7 +92,7 @@ export async function updatePaymentSettings(
   }
 
   const ctx = await getAuthContextWithPermission(
-    SETTINGS_ROLES,
+    TENANT_STRATEGY_SETTINGS_ROLES,
     PERMISSION_KEYS.SETTINGS_TENANT,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };

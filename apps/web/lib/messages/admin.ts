@@ -114,6 +114,11 @@ export const admin = {
       adjustment: "Điều chỉnh",
     },
   },
+  printTemplates: {
+    loadErrorTitle: "Không thể tải mẫu phiếu in",
+    loadErrorTemplates: "Không tải được danh sách mẫu phiếu in. Vui lòng thử lại.",
+    loadErrorBranches: "Không tải được danh sách chi nhánh. Vui lòng thử lại.",
+  },
   staffForm: {
     passwordPlaceholder: "Tối thiểu 8 ký tự",
     fullNamePlaceholder: "Nguyễn Văn A",

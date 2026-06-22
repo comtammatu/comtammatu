@@ -1,12 +1,13 @@
 "use server";
 
 import { z } from "zod";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  TENANT_STRATEGY_SETTINGS_ROLES,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
-
-const SETTINGS_ROLES: readonly StaffRole[] = ["owner"];
 
 const tenantIdentitySchema = z.object({
   legal_name: z.string().trim(),
@@ -40,7 +41,7 @@ export async function updateTenantIdentity(
   }
 
   const ctx = await getAuthContextWithPermission(
-    SETTINGS_ROLES,
+    TENANT_STRATEGY_SETTINGS_ROLES,
     PERMISSION_KEYS.SETTINGS_TENANT,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };

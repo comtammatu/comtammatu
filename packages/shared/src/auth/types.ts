@@ -69,6 +69,19 @@ export function canManageBranchFloorSettings(role: StaffRole): boolean {
 }
 
 /**
+ * Tenant-strategy settings (chain identity, payments, branch roster, print
+ * templates) are owner-only. Single source for the owner-only settings gate so
+ * pages, nav, and layouts never re-declare a local `["owner"]` array.
+ */
+export const TENANT_STRATEGY_SETTINGS_ROLES: readonly StaffRole[] = [
+  "owner",
+] as const;
+
+export function canManageTenantStrategySettings(role: StaffRole): boolean {
+  return TENANT_STRATEGY_SETTINGS_ROLES.some((r) => r === role);
+}
+
+/**
  * Vietnamese labels for compatibility access buckets.
  * Staff/HR UI should display `positions.label_vi` instead.
  */
