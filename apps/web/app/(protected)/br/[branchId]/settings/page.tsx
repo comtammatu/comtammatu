@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import type { ReactNode } from "react";
 import {
   Armchair as IconArmchair,
   ChefHat as IconChefHat,
@@ -8,21 +7,20 @@ import {
   ReceiptText as IconReceiptText,
   SlidersHorizontal as IconSlidersHorizontal,
 } from "lucide-react";
+import { canAccess } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import { ItemGroup } from "@comtammatu/ui/components/item";
-import { AppPage, AppSection } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppLinkCard,
+  AppPage,
+  AppSection,
+  LinkCardGrid,
+} from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
-import { BranchActionItem } from "../_components/branch-action-item";
 import { BranchManagementShell } from "../_components/branch-management-chrome";
 import { AttendanceSettingsCard } from "./attendance-settings-card";
-
-type Tile = {
-  href: string;
-  title: string;
-  description: string;
-  icon: ReactNode;
-};
+import { buildHubTiles } from "./_lib/hub-tiles";
 
 export default async function BranchSettingsHubPage({
   params,
@@ -47,44 +45,22 @@ export default async function BranchSettingsHubPage({
   if (!branch || !branch.is_active) notFound();
 
   const copy = messages.settings.branch;
-  const operationalTiles: Tile[] = [
-    {
-      href: `/br/${branchId}/settings/tables`,
-      title: copy.tablesSetupTitle,
-      description: copy.tablesSetupDescription,
-      icon: <IconArmchair />,
-    },
-    {
-      href: `/br/${branchId}/settings/pos`,
-      title: copy.posSetupTitle,
-      description: copy.posSetupDescription,
-      icon: <IconDeviceDesktop />,
-    },
-    {
-      href: `/br/${branchId}/settings/printers`,
-      title: copy.printersSetupTitle,
-      description: copy.printersSetupDescription,
-      icon: <IconPrinter />,
-    },
-    {
-      href: `/br/${branchId}/settings/kds`,
-      title: copy.kdsSetupTitle,
-      description: copy.kdsSetupDescription,
-      icon: <IconChefHat />,
-    },
-    {
-      href: `/br/${branchId}/settings/pos-sessions`,
-      title: copy.commandPosSessionsTitle,
-      description: copy.commandPosSessionsDescription,
-      icon: <IconReceiptText />,
-    },
-    {
-      href: `/br/${branchId}/menu-limits`,
-      title: copy.menuLimitsTitle,
-      description: copy.commandMenuLimitsDescription,
-      icon: <IconSlidersHorizontal />,
-    },
-  ];
+  const role = claims.user_role;
+
+  const tiles = buildHubTiles(branchId, copy, {
+    tables: <IconArmchair />,
+    pos: <IconDeviceDesktop />,
+    printers: <IconPrinter />,
+    kds: <IconChefHat />,
+    posSessions: <IconReceiptText />,
+    menuLimits: <IconSlidersHorizontal />,
+  });
+  const visibleTiles = tiles.filter((tile) => canAccess(role, tile.moduleKey));
+  // Attendance config links into /hr; gate it so roles without HR access do not
+  // land on a dead-end tile (mirrors the dashboard per-tile ACL pattern).
+  const showAttendance = canAccess(role, "hr");
+  const hasContent = visibleTiles.length > 0 || showAttendance;
+
   const displayName =
     session.user.user_metadata?.["full_name"] ??
     session.user.email ??
@@ -93,7 +69,7 @@ export default async function BranchSettingsHubPage({
   return (
     <BranchManagementShell
       user={{ name: displayName }}
-      role={claims.user_role}
+      role={role}
       branchId={branchId}
       branchName={branch.name}
       defaultPageTitle={copy.hubTitle}
@@ -104,29 +80,51 @@ export default async function BranchSettingsHubPage({
       ]}
     >
       <AppPage width="wide">
-        <AppSection
-          title={copy.setupLaneTitle}
-          description={copy.setupLaneDescription}
-        >
-          <ItemGroup className="gap-2">
-            <AttendanceSettingsCard
-              branch={{
-                id: branch.id,
-                name: branch.name,
-              }}
-            />
-            {operationalTiles.map((tile) => (
-              <BranchActionItem
-                key={`${tile.title}-${tile.href}`}
-                href={tile.href}
-                title={tile.title}
-                description={tile.description}
-                icon={tile.icon}
-                ctaLabel={copy.openAction}
-              />
-            ))}
-          </ItemGroup>
-        </AppSection>
+        {hasContent ? (
+          <>
+            <AppSection
+              title={copy.setupLaneTitle}
+              description={copy.setupLaneDescription}
+            >
+              {visibleTiles.length > 0 ? (
+                <LinkCardGrid>
+                  {visibleTiles.map((tile) => (
+                    <AppLinkCard
+                      key={`${tile.moduleKey}-${tile.href}`}
+                      href={tile.href}
+                      title={tile.title}
+                      description={tile.description}
+                      icon={tile.icon}
+                      ctaLabel={copy.openAction}
+                    />
+                  ))}
+                </LinkCardGrid>
+              ) : (
+                <AppEmptyState
+                  mode="no-access"
+                  title={copy.hubEmptyTitle}
+                  description={copy.hubEmptyDescription}
+                />
+              )}
+            </AppSection>
+            {showAttendance ? (
+              <AppSection
+                title={copy.attendanceChecklistTitle}
+                description={copy.attendanceChecklistDescription}
+              >
+                <AttendanceSettingsCard
+                  branch={{ id: branch.id, name: branch.name }}
+                />
+              </AppSection>
+            ) : null}
+          </>
+        ) : (
+          <AppEmptyState
+            mode="no-access"
+            title={copy.hubEmptyTitle}
+            description={copy.hubEmptyDescription}
+          />
+        )}
       </AppPage>
     </BranchManagementShell>
   );

@@ -54,7 +54,7 @@ export default async function BranchPosSettingsPage({
       role={claims.user_role}
       branchId={branchId}
       branchName={branchRes.data.name}
-      defaultPageTitle={messages.settings.nav.pos}
+      defaultPageTitle={messages.settings.pages.posTitle}
       description={branchRes.data.name}
       breadcrumbSegments={[
         { label: APP_COPY_VI.branchCommand, href: `/br/${branchId}/dashboard` },
@@ -62,7 +62,7 @@ export default async function BranchPosSettingsPage({
           label: messages.settings.branch.hubTitle,
           href: `/br/${branchId}/settings`,
         },
-        messages.settings.nav.pos,
+        messages.settings.pages.posTitle,
       ]}
     >
       <AppPage width="wide">

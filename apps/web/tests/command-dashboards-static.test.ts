@@ -21,6 +21,8 @@ const PRINT_JOBS_PAGE =
 const PRINT_JOBS_CLIENT =
   "apps/web/app/(protected)/admin/settings/printers/jobs/print-jobs-client.tsx";
 const BRANCH_PAGE = "apps/web/app/(protected)/br/[branchId]/dashboard/page.tsx";
+const BRANCH_COMMAND_CONFIG =
+  "apps/web/app/(protected)/br/[branchId]/dashboard/_lib/command-config.tsx";
 const BRANCH_DATA = "apps/web/app/(protected)/br/[branchId]/dashboard/data.ts";
 const BACKTICK = "`";
 
@@ -213,14 +215,17 @@ test("print job monitor supports the owner recovery filter from admin dashboard"
 
 test("branch command landing surfaces day metrics and readiness (D017 step 5)", () => {
   const page = read(BRANCH_PAGE);
+  // Per-row readiness config (buildReadinessItems) is extracted into the
+  // co-located command-config; assert readiness keys against both sources.
+  const surface = page + read(BRANCH_COMMAND_CONFIG);
 
   assert.match(page, /from "@\/components\/kpi\/kpi-card"/);
   assert.match(page, /fetchBranchDayStatus/);
   assert.match(page, /readinessTitle/);
-  assert.match(page, /readinessPosTitle/);
-  assert.match(page, /readinessPrinterTitle/);
-  assert.match(page, /readinessCheckoutTitle/);
-  assert.match(page, /\/employee\/checkout-approvals/);
+  assert.match(surface, /readinessPosTitle/);
+  assert.match(surface, /readinessPrinterTitle/);
+  assert.match(surface, /readinessCheckoutTitle/);
+  assert.match(surface, /\/employee\/checkout-approvals/);
 });
 
 test("branch day status service-client reads carry explicit tenant+branch filters", () => {
