@@ -32,7 +32,12 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { downloadCsv } from "@/_lib/download-file";
 import { matchesSearch } from "@lib/search";
 import { FormDialog, SelectField, TextareaField } from "@/components/form";
-import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import {
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  AppToolbar,
+} from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -59,6 +64,17 @@ export type IssueBranchOption = {
   id: number;
   name: string;
   branchKind: string | null;
+};
+
+export type RecordedConsumptionRow = {
+  id: number;
+  recordedAt: string;
+  branchName: string;
+  locationName: string;
+  ingredientName: string;
+  quantity: string;
+  unitCost: string;
+  totalCost: string;
 };
 
 const ISSUE_TYPES = [
@@ -116,10 +132,12 @@ function toUtf8Base64(value: string): string {
 
 export function IssuesClient({
   issues,
+  recordedConsumptions,
   branches,
   defaultBranchId,
 }: {
   issues: IssueRow[];
+  recordedConsumptions: RecordedConsumptionRow[];
   branches: IssueBranchOption[];
   defaultBranchId: number | null;
 }) {
@@ -211,7 +229,7 @@ export function IssuesClient({
   }
 
   const filterBar = (
-    <AppToolbar>
+    <AppToolbar variant="inline">
       <div className="flex flex-1 flex-wrap items-end gap-3">
         <Select value={activeStatus} onValueChange={setActiveStatus}>
           <SelectTrigger className="w-48">
@@ -331,6 +349,68 @@ export function IssuesClient({
     },
   ];
 
+  const recordedConsumptionColumns: DataTableColumn<RecordedConsumptionRow>[] =
+    [
+      {
+        key: "recordedAt",
+        header: "Thời điểm",
+        render: (item) => (
+          <span className="text-sm text-muted-foreground">
+            {item.recordedAt}
+          </span>
+        ),
+      },
+      {
+        key: "ingredientName",
+        header: "Nguyên liệu",
+        render: (item) => (
+          <span className="text-sm font-medium">{item.ingredientName}</span>
+        ),
+      },
+      {
+        key: "branchName",
+        header: BRANCH_VI.long,
+        render: (item) => (
+          <span className="text-sm text-muted-foreground">
+            {item.branchName}
+          </span>
+        ),
+      },
+      {
+        key: "locationName",
+        header: "Kho trừ",
+        render: (item) => (
+          <span className="text-sm text-muted-foreground">
+            {item.locationName}
+          </span>
+        ),
+      },
+      {
+        key: "quantity",
+        header: FORM_VI.quantity,
+        render: (item) => (
+          <span className="font-mono text-sm">{item.quantity}</span>
+        ),
+      },
+      {
+        key: "unitCost",
+        header: "Giá vốn",
+        render: (item) => (
+          <span className="font-mono text-sm">{item.unitCost}</span>
+        ),
+      },
+      {
+        key: "totalCost",
+        header: "Thành tiền",
+        className: "text-right",
+        render: (item) => (
+          <span className="font-mono text-sm font-medium">
+            {item.totalCost}
+          </span>
+        ),
+      },
+    ];
+
   const renderIssueCard = (item: IssueRow) => (
     <InteractiveCard asChild minHeight="mobile" padding="default">
       <Link href={`/inventory/consumption/${item.id}`} className="block">
@@ -348,6 +428,27 @@ export function IssuesClient({
         </div>
         <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
       </Link>
+    </InteractiveCard>
+  );
+
+  const renderRecordedConsumptionCard = (item: RecordedConsumptionRow) => (
+    <InteractiveCard minHeight="tap" padding="compact">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <span className="truncate text-sm font-medium">
+            {item.ingredientName}
+          </span>
+          <span className="shrink-0 font-mono text-sm font-semibold">
+            {item.totalCost}
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {item.branchName} · {item.locationName}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {item.quantity} · {item.recordedAt}
+        </p>
+      </div>
     </InteractiveCard>
   );
 
@@ -375,21 +476,39 @@ export function IssuesClient({
           </>
         }
       />
-      {filterBar}
 
-      <DataTable
-        columns={issueColumns}
-        data={filtered}
-        getRowKey={(item) => item.id}
-        emptyTitle={
-          hasActiveFilters
-            ? "Không tìm thấy phiếu xuất phù hợp"
-            : "Chưa có phiếu xuất kho nào"
-        }
-        emptyDescription="Điều chỉnh bộ lọc hoặc tạo phiếu xuất mới để bắt đầu."
-        emptyMode={hasActiveFilters ? "no-results" : "no-data"}
-        mobileCardRender={renderIssueCard}
-      />
+      <AppSection
+        title="Tiêu hao đã ghi nhận"
+        headerHint={`${recordedConsumptions.length} dòng gần nhất`}
+        contentFlush
+      >
+        <DataTable
+          columns={recordedConsumptionColumns}
+          data={recordedConsumptions}
+          getRowKey={(item) => item.id}
+          emptyTitle="Chưa có tiêu hao đã ghi nhận"
+          emptyDescription="Các báo cáo tiêu hao đã duyệt sẽ xuất hiện ở đây sau khi trừ kho."
+          emptyMode="no-data"
+          mobileCardRender={renderRecordedConsumptionCard}
+        />
+      </AppSection>
+
+      <AppSection title="Phiếu tiêu hao" contentFlush>
+        {filterBar}
+        <DataTable
+          columns={issueColumns}
+          data={filtered}
+          getRowKey={(item) => item.id}
+          emptyTitle={
+            hasActiveFilters
+              ? "Không tìm thấy phiếu xuất phù hợp"
+              : "Chưa có phiếu xuất kho nào"
+          }
+          emptyDescription="Điều chỉnh bộ lọc hoặc tạo phiếu xuất mới để bắt đầu."
+          emptyMode={hasActiveFilters ? "no-results" : "no-data"}
+          mobileCardRender={renderIssueCard}
+        />
+      </AppSection>
 
       <FormDialog
         open={createOpen}

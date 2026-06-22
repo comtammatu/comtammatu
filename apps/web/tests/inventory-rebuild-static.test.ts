@@ -153,6 +153,7 @@ test("consumption route is first-class while issues route remains compatible", (
   const consumptionDetailPage = readWeb(
     "app/(protected)/inventory/consumption/[id]/page.tsx",
   );
+  const issuesPage = readWeb("app/(protected)/inventory/issues/page.tsx");
   const issuesClient = readWeb(
     "app/(protected)/inventory/issues/issues-client.tsx",
   );
@@ -177,6 +178,11 @@ test("consumption route is first-class while issues route remains compatible", (
   assert.match(issuesClient, /\/inventory\/consumption/);
   assert.match(issueDetailClient, /\/inventory\/consumption/);
   assert.match(issueDetailClient, /Phiếu tiêu hao/);
+  assert.match(issuesPage, /\.from\("stock_movements"\)/);
+  assert.match(issuesPage, /\.eq\("type", "consumption"\)/);
+  assert.match(issuesPage, /\.eq\("movement_subtype", "sale_consumption"\)/);
+  assert.match(issuesClient, /recordedConsumptions/);
+  assert.match(issuesClient, /Tiêu hao đã ghi nhận/);
 });
 
 test("stock and inventory value exclude legacy branch kitchen locations", () => {

@@ -16,7 +16,7 @@ export function formatQty(n: number): string {
     ? n.toLocaleString("vi-VN")
     : n.toLocaleString("vi-VN", {
         minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
+        maximumFractionDigits: 3,
       });
 }
 
