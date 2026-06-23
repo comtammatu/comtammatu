@@ -144,7 +144,7 @@ export function AppShell({
         // Rail is a fixed icon column: drive the primitive's own w-(--sidebar-width)
         // to the icon width via the CSS var (no arbitrary sizing, no competing width class).
         style={{ "--sidebar-width": "var(--sidebar-width-icon)" } as CSSProperties}
-        className="border-r"
+        className="hidden border-r md:flex"
       >
         <SidebarHeader className="items-center p-2">
           <BrandLogoBox tone={logoVariant ? "sidebar" : "sidebar-primary"}>
@@ -202,7 +202,11 @@ export function AppShell({
         </SidebarFooter>
       </Sidebar>
 
-      <Sidebar variant="inset" collapsible="offcanvas">
+      <Sidebar
+        variant="inset"
+        collapsible="offcanvas"
+        className="md:data-[side=left]:left-(--sidebar-width-icon)"
+      >
         <SidebarHeader className="gap-3 p-4">
           {showBackLink ? (
             <Link
