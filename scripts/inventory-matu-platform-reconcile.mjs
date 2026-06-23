@@ -17,6 +17,10 @@ function moneyValue(value) {
   return Math.round(numberValue(value) * 100) / 100;
 }
 
+function quantityValue(value) {
+  return Math.round(numberValue(value) * 1000) / 1000;
+}
+
 function countBy(rows, keyFn) {
   const out = {};
   for (const row of rows) {
@@ -153,7 +157,7 @@ function movementRef(row, maps) {
     ingredientId: row.ingredient_id ?? null,
     locationId: row.location_id ?? null,
     locationKind: location?.location_kind ?? "unknown",
-    quantity: moneyValue(quantity),
+    quantity: quantityValue(quantity),
     reason: row.reason ?? null,
     unit: ingredient?.unit ?? null,
     unitCost: row.unit_cost == null ? null : moneyValue(row.unit_cost),
@@ -170,8 +174,8 @@ function stockRef(row, maps, netQuantity = null) {
     branchId,
     ingredient: ingredient?.name ?? `#${row.ingredient_id ?? "unknown"}`,
     ingredientId: row.ingredient_id ?? null,
-    ledgerQuantity: netQuantity == null ? null : moneyValue(netQuantity),
-    levelQuantity: moneyValue(row.current_quantity),
+    ledgerQuantity: netQuantity == null ? null : quantityValue(netQuantity),
+    levelQuantity: quantityValue(row.current_quantity),
     locationId: row.location_id ?? null,
     locationKind: location?.location_kind ?? "unknown",
     unit: ingredient?.unit ?? null,
@@ -209,7 +213,7 @@ function groupSaleConsumption(rows, maps) {
     .map((row) => ({
       ...row,
       cost: moneyValue(row.cost),
-      quantity: moneyValue(row.quantity),
+      quantity: quantityValue(row.quantity),
     }))
     .sort((a, b) => a.branch.localeCompare(b.branch) || a.date.localeCompare(b.date) || b.cost - a.cost);
 }
@@ -404,20 +408,20 @@ function buildTargetAudit(data) {
   const movementByStockKey = new Map();
   for (const row of data.movements) {
     const key = stockKey(row);
-    net.set(key, moneyValue((net.get(key) ?? 0) + numberValue(row.quantity_change)));
+    net.set(key, (net.get(key) ?? 0) + numberValue(row.quantity_change));
     if (!movementByStockKey.has(key)) movementByStockKey.set(key, row);
   }
 
   const levelByKey = new Map();
   const levelRowByKey = new Map();
   for (const row of data.levels) {
-    levelByKey.set(stockKey(row), moneyValue(row.current_quantity));
+    levelByKey.set(stockKey(row), quantityValue(row.current_quantity));
     levelRowByKey.set(stockKey(row), row);
   }
 
   const stockMismatchKeys = new Set([...net.keys(), ...levelByKey.keys()]);
   const stockLevelMismatches = [...stockMismatchKeys].filter(
-    (key) => Math.abs((net.get(key) ?? 0) - (levelByKey.get(key) ?? 0)) > 0.000001,
+    (key) => Math.abs(quantityValue(net.get(key) ?? 0) - (levelByKey.get(key) ?? 0)) > 0.000001,
   );
   const stockMismatchDetails = stockLevelMismatches.map((key) => {
     const [tenantId, locationId, ingredientId] = key.split(":").map((value) => Number(value));
@@ -432,7 +436,7 @@ function buildTargetAudit(data) {
         tenant_id: sample.tenant_id ?? tenantId,
       },
       maps,
-      net.get(key) ?? 0,
+      quantityValue(net.get(key) ?? 0),
     );
   });
   const saleConsumption = data.movements.filter(
@@ -1036,7 +1040,7 @@ function selfTest() {
         balanceAdjustments: { count: 1 },
         realTransfers: { count: 1, itemRows: 1 },
         saleConsumption: { estimatedCost: 60000, movementRows: 1 },
-        stockMovementRows: 4,
+        stockMovementRows: 5,
       },
       plannedRows: {
         transferItems: [
@@ -1096,6 +1100,15 @@ function selfTest() {
             tenant_id: 1,
             type: "count_adjustment",
           },
+          {
+            branch_id: 2,
+            ingredient_id: 3,
+            location_id: 20,
+            quantity_change: 1.234,
+            reason: "matu-platform import:balance_adjustment",
+            tenant_id: 1,
+            type: "count_adjustment",
+          },
         ],
       },
     },
@@ -1107,6 +1120,7 @@ function selfTest() {
       ingredients: [
         { id: 1, name: "Rice", unit: "kg" },
         { id: 2, name: "Pork", unit: "kg" },
+        { id: 3, name: "Tea", unit: "g" },
       ],
       issues: [],
       locations: [
@@ -1180,11 +1194,23 @@ function selfTest() {
           type: "count_adjustment",
           reason: "matu-platform import:balance_adjustment",
         },
+        {
+          id: 5,
+          branch_id: 2,
+          created_at: "2026-06-01T01:04:00.000Z",
+          tenant_id: 1,
+          location_id: 20,
+          ingredient_id: 3,
+          quantity_change: 1.234,
+          type: "count_adjustment",
+          reason: "matu-platform import:balance_adjustment",
+        },
       ],
       levels: [
         { tenant_id: 1, branch_id: 1, location_id: 10, ingredient_id: 1, current_quantity: -2, avg_unit_cost: 1 },
         { tenant_id: 1, branch_id: 2, location_id: 20, ingredient_id: 1, current_quantity: 5, avg_unit_cost: 1 },
         { tenant_id: 1, branch_id: 1, location_id: 10, ingredient_id: 2, current_quantity: -2, avg_unit_cost: 30000 },
+        { tenant_id: 1, branch_id: 2, location_id: 20, ingredient_id: 3, current_quantity: 1.234, avg_unit_cost: 1 },
       ],
     },
   );
@@ -1197,6 +1223,7 @@ function selfTest() {
   assert.equal(report.sourceDriftDetails.saleConsumption.extraInTarget.length, 1);
   assert.equal(report.sourceDriftDetails.transfer.missingFromTarget.length, 0);
   assert.equal(report.sourceDriftDetails.transferItem.missingFromTarget.length, 0);
+  assert.equal(report.target.stockExceptions.ledgerMismatches.length, 0);
   console.log("self-test ok");
 }
 
