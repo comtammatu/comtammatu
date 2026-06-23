@@ -144,7 +144,7 @@ export function AppShell({
         // Rail is a fixed icon column: drive the primitive's own w-(--sidebar-width)
         // to the icon width via the CSS var (no arbitrary sizing, no competing width class).
         style={{ "--sidebar-width": "var(--sidebar-width-icon)" } as CSSProperties}
-        className="hidden border-r md:flex"
+        className="sticky top-0 hidden h-svh self-start border-r md:flex"
       >
         <SidebarHeader className="items-center p-2">
           <BrandLogoBox tone={logoVariant ? "sidebar" : "sidebar-primary"}>
@@ -169,7 +169,7 @@ export function AppShell({
                   <SidebarMenuButton
                     asChild
                     isActive={item === activeRailItem}
-                    tooltip={item.label}
+                    tooltip={{ children: item.label, hidden: false }}
                     className="justify-center rounded-md"
                   >
                     <Link href={item.href} aria-label={item.label}>
