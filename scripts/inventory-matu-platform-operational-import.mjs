@@ -33,6 +33,7 @@ function parseArgs(argv) {
     allowManualReviewSkip: false,
     balanceAt: null,
     help: false,
+    includeRows: false,
     json: false,
     selfTest: false,
     sourceKey: process.env.MATU_PLATFORM_SUPABASE_SERVICE_ROLE_KEY ?? "",
@@ -48,6 +49,7 @@ function parseArgs(argv) {
     if (arg === "--") continue;
     if (arg === "--allow-manual-review-skip") out.allowManualReviewSkip = true;
     else if (arg === "--help" || arg === "-h") out.help = true;
+    else if (arg === "--include-rows") out.includeRows = true;
     else if (arg === "--json") out.json = true;
     else if (arg === "--self-test") out.selfTest = true;
     else if (arg === "--actor-id") out.actorId = argv[++i] ?? "";
@@ -67,6 +69,7 @@ function parseArgs(argv) {
 function printHelp() {
   console.log(`Usage:
   pnpm inventory:matu-platform:operational -- [--json]
+  pnpm inventory:matu-platform:operational -- --json --include-rows
   pnpm inventory:matu-platform:operational -- --write-sql /tmp/import.sql --allow-manual-review-skip
   pnpm inventory:matu-platform:operational -- --write-reset-sql /tmp/reset.sql
 
@@ -879,6 +882,7 @@ function buildPlan(source, target, options = {}) {
       stockTransfers: target.transfers.length,
     },
   };
+  if (options.includeRows) report.plannedRows = sqlRows;
   return { report, sqlRows };
 }
 
@@ -1407,8 +1411,12 @@ function selfTest() {
     actorId,
     allowManualReviewSkip: true,
     balanceAt: "2026-06-01T00:00:00Z",
+    includeRows: true,
   });
   assert.equal(report.blockers.length, 0);
+  assert.equal(report.plannedRows.movements.length, report.operationalPlan.stockMovementRows);
+  assert.equal(report.plannedRows.transfers.length, report.operationalPlan.realTransfers.count);
+  assert.equal(report.plannedRows.transferItems.length, report.operationalPlan.realTransfers.itemRows);
   assert.equal(report.operationalPlan.realTransfers.estimatedCost, 120.36);
   assert.equal(report.operationalPlan.saleConsumption.estimatedCost, 40.24);
   assert.equal(report.operationalPlan.saleConsumption.byBranch.DD, 40.24);
