@@ -158,7 +158,18 @@ async function fetchByIds(ctx, table, ids, select = "*", column = "id") {
 }
 
 async function loadSource(ctx) {
-  const [branches, warehouses, materials, stockItems, transfers] = await Promise.all([
+  const [
+    branches,
+    warehouses,
+    materials,
+    stockItems,
+    transfers,
+    goodsReceipts,
+    goodsReceiptItems,
+    productionRuns,
+    recipes,
+    recipeItems,
+  ] = await Promise.all([
     fetchAll({ ...ctx, table: "branches", select: "id,code,name" }),
     fetchAll({
       ...ctx,
@@ -168,7 +179,7 @@ async function loadSource(ctx) {
     fetchAll({
       ...ctx,
       table: "materials",
-      select: "id,sku,name,kind,cost_per_unit,base_unit,purchase_unit",
+      select: "id,sku,name,kind,cost_per_unit,base_unit,purchase_unit,purchase_to_base_factor",
     }),
     fetchAll({
       ...ctx,
@@ -181,6 +192,32 @@ async function loadSource(ctx) {
       select:
         "id,code,from_warehouse_id,to_warehouse_id,status,requested_at,sent_at,received_at,created_at",
     }),
+    fetchAll({
+      ...ctx,
+      table: "goods_receipts",
+      select: "id,code,warehouse_id,status,received_at,posted_at,created_at",
+    }),
+    fetchAll({
+      ...ctx,
+      table: "goods_receipt_items",
+      select: "receipt_id,material_id,quantity,qty_base,unit_cost,unit_cost_base",
+    }),
+    fetchAll({
+      ...ctx,
+      table: "production_runs",
+      select:
+        "id,code,recipe_id,actual_quantity,consume_warehouse_id,output_warehouse_id,status,completed_at,created_at",
+    }),
+    fetchAll({
+      ...ctx,
+      table: "recipes",
+      select: "id,name,output_material_id,output_quantity,output_unit",
+    }),
+    fetchAll({
+      ...ctx,
+      table: "recipe_items",
+      select: "recipe_id,material_id,quantity",
+    }),
   ]);
 
   const transferItems = await fetchByIds(
@@ -191,7 +228,19 @@ async function loadSource(ctx) {
     "transfer_id",
   );
 
-  return { branches, materials, stockItems, transferItems, transfers, warehouses };
+  return {
+    branches,
+    goodsReceiptItems,
+    goodsReceipts,
+    materials,
+    productionRuns,
+    recipeItems,
+    recipes,
+    stockItems,
+    transferItems,
+    transfers,
+    warehouses,
+  };
 }
 
 async function loadTarget(ctx) {
@@ -396,19 +445,40 @@ function addDesiredStock(desired, row) {
   desired.set(key, existing);
 }
 
+function targetIngredientForMaterial(material, targetIndex) {
+  return (
+    targetIndex.ingredientBySku.get(String(material?.sku ?? "").toUpperCase()) ??
+    targetIndex.ingredientByName.get(normalizeText(material?.name))
+  );
+}
+
+function addMissingMaterialRow(missingRows, material, materialId, sourceWarehouseCode = null) {
+  missingRows.push({
+    materialId,
+    materialSku: material?.sku ?? null,
+    materialName: material?.name ?? null,
+    sourceWarehouseCode,
+  });
+}
+
+function sourceQuantityToBase(material, quantity, unit) {
+  const value = numberValue(quantity);
+  const sourceUnit = normalizeText(unit);
+  if (!sourceUnit) return value;
+  if (sourceUnit === normalizeText(material?.base_unit)) return value;
+  if (sourceUnit === normalizeText(material?.purchase_unit)) {
+    return value * numberValue(material?.purchase_to_base_factor ?? 1);
+  }
+  return value;
+}
+
 function aggregateItems(items, materialById, targetIndex, missingRows) {
   const byIngredient = new Map();
   for (const item of items) {
     const material = materialById.get(item.material_id);
-    const ingredient =
-      targetIndex.ingredientBySku.get(String(material?.sku ?? "").toUpperCase()) ??
-      targetIndex.ingredientByName.get(normalizeText(material?.name));
+    const ingredient = targetIngredientForMaterial(material, targetIndex);
     if (!material || !ingredient) {
-      missingRows.push({
-        materialId: item.material_id,
-        materialSku: material?.sku ?? null,
-        materialName: material?.name ?? null,
-      });
+      addMissingMaterialRow(missingRows, material, item.material_id);
       continue;
     }
     const key = ingredient.id;
@@ -508,6 +578,17 @@ function transferCost(lines) {
   return lines.reduce((sum, row) => sum + costValue(row.quantity, row.unit_cost), 0);
 }
 
+function indexBy(rows, keyFn) {
+  const out = new Map();
+  for (const row of rows) {
+    const key = keyFn(row);
+    const list = out.get(key) ?? [];
+    list.push(row);
+    out.set(key, list);
+  }
+  return out;
+}
+
 function buildPlan(source, target, options = {}) {
   const tenant = getTargetTenant(target);
   const actor = selectActor(target, tenant.id, options.actorId ?? "");
@@ -515,6 +596,9 @@ function buildPlan(source, target, options = {}) {
   const sourceBranchById = new Map(source.branches.map((branch) => [branch.id, branch]));
   const sourceWarehouseById = new Map(source.warehouses.map((warehouse) => [warehouse.id, warehouse]));
   const materialById = new Map(source.materials.map((material) => [material.id, material]));
+  const goodsReceiptItemsByReceipt = indexBy(source.goodsReceiptItems ?? [], (item) => item.receipt_id);
+  const recipesById = new Map((source.recipes ?? []).map((recipe) => [recipe.id, recipe]));
+  const recipeItemsByRecipe = indexBy(source.recipeItems ?? [], (item) => item.recipe_id);
   const transferItemsByTransfer = new Map();
   for (const item of source.transferItems) {
     const list = transferItemsByTransfer.get(item.transfer_id) ?? [];
@@ -534,12 +618,150 @@ function buildPlan(source, target, options = {}) {
   const transferItems = [];
   const movementRows = [];
   const movementNet = new Map();
+  const goodsReceiptRows = [];
+  const productionConsumptionRows = [];
+  const productionOutputRows = [];
   const saleConsumptionRows = [];
 
   const addMovement = (row) => {
     movementRows.push(row);
     addNetMovement(movementNet, row);
   };
+
+  for (const receipt of source.goodsReceipts ?? []) {
+    if (receipt.status !== "posted") {
+      ignored.push({
+        class: "ignored_grn_not_posted",
+        id: receipt.id,
+        status: receipt.status,
+        transferCode: receipt.code,
+      });
+      continue;
+    }
+    const warehouse = sourceWarehouseById.get(receipt.warehouse_id);
+    const targetRef = sourceWarehouseTarget(warehouse, sourceBranchById, targetIndex);
+    if (!targetRef.branch || !targetRef.location) {
+      manualReview.push({
+        class: "manual_review_missing_grn_target",
+        fromCode: warehouse?.code ?? null,
+        id: receipt.id,
+        status: receipt.status,
+        transferCode: receipt.code,
+      });
+      continue;
+    }
+    for (const item of goodsReceiptItemsByReceipt.get(receipt.id) ?? []) {
+      const material = materialById.get(item.material_id);
+      const ingredient = targetIngredientForMaterial(material, targetIndex);
+      if (!material || !ingredient) {
+        addMissingMaterialRow(missingRows, material, item.material_id, warehouse?.code ?? null);
+        continue;
+      }
+      const quantity = numberValue(item.qty_base ?? item.quantity);
+      if (quantity <= 0) continue;
+      const row = {
+        branch_id: targetRef.branch.id,
+        created_at: receipt.posted_at ?? receipt.received_at ?? receipt.created_at,
+        created_by: actor.id,
+        ingredient_id: ingredient.id,
+        location_id: targetRef.location.id,
+        movement_subtype: null,
+        quantity_change: quantity,
+        reason: `matu-platform import:grn_receipt:${receipt.code}:${receipt.id}`,
+        source_transfer_number: null,
+        tenant_id: tenant.id,
+        type: "grn_receipt",
+        unit_cost: numberValue(item.unit_cost_base ?? item.unit_cost ?? material.cost_per_unit),
+      };
+      goodsReceiptRows.push(row);
+      addMovement(row);
+    }
+  }
+
+  for (const run of source.productionRuns ?? []) {
+    if (run.status !== "completed") {
+      ignored.push({
+        class: "ignored_production_not_completed",
+        id: run.id,
+        status: run.status,
+        transferCode: run.code,
+      });
+      continue;
+    }
+    const recipe = recipesById.get(run.recipe_id);
+    const outputMaterial = materialById.get(recipe?.output_material_id);
+    const outputIngredient = targetIngredientForMaterial(outputMaterial, targetIndex);
+    const consumeWarehouse = sourceWarehouseById.get(run.consume_warehouse_id);
+    const outputWarehouse = sourceWarehouseById.get(run.output_warehouse_id);
+    const consumeTarget = sourceWarehouseTarget(consumeWarehouse, sourceBranchById, targetIndex);
+    const outputTarget = sourceWarehouseTarget(outputWarehouse, sourceBranchById, targetIndex);
+    const recipeItems = recipeItemsByRecipe.get(run.recipe_id) ?? [];
+    if (!recipe || !outputMaterial || !outputIngredient) {
+      addMissingMaterialRow(missingRows, outputMaterial, recipe?.output_material_id, outputWarehouse?.code ?? null);
+      continue;
+    }
+    if (!consumeTarget.branch || !consumeTarget.location || !outputTarget.branch || !outputTarget.location) {
+      manualReview.push({
+        class: "manual_review_missing_production_target",
+        fromCode: consumeWarehouse?.code ?? null,
+        id: run.id,
+        status: run.status,
+        toCode: outputWarehouse?.code ?? null,
+        transferCode: run.code,
+      });
+      continue;
+    }
+
+    const ratio = numberValue(run.actual_quantity) / (numberValue(recipe.output_quantity) || 1);
+    let inputCost = 0;
+    for (const item of recipeItems) {
+      const material = materialById.get(item.material_id);
+      const ingredient = targetIngredientForMaterial(material, targetIndex);
+      if (!material || !ingredient) {
+        addMissingMaterialRow(missingRows, material, item.material_id, consumeWarehouse?.code ?? null);
+        continue;
+      }
+      const quantity = numberValue(item.quantity) * ratio;
+      if (quantity <= 0) continue;
+      const unitCost = numberValue(material.cost_per_unit);
+      inputCost += quantity * unitCost;
+      const row = {
+        branch_id: consumeTarget.branch.id,
+        created_at: run.completed_at ?? run.created_at,
+        created_by: actor.id,
+        ingredient_id: ingredient.id,
+        location_id: consumeTarget.location.id,
+        movement_subtype: null,
+        quantity_change: -quantity,
+        reason: `matu-platform import:production_consumption:${run.code}:${run.id}`,
+        source_transfer_number: null,
+        tenant_id: tenant.id,
+        type: "production_consumption",
+        unit_cost: unitCost,
+      };
+      productionConsumptionRows.push(row);
+      addMovement(row);
+    }
+
+    const outputQuantity = sourceQuantityToBase(outputMaterial, run.actual_quantity, recipe.output_unit);
+    if (outputQuantity <= 0) continue;
+    const row = {
+      branch_id: outputTarget.branch.id,
+      created_at: run.completed_at ?? run.created_at,
+      created_by: actor.id,
+      ingredient_id: outputIngredient.id,
+      location_id: outputTarget.location.id,
+      movement_subtype: null,
+      quantity_change: outputQuantity,
+      reason: `matu-platform import:production_output:${run.code}:${run.id}`,
+      source_transfer_number: null,
+      tenant_id: tenant.id,
+      type: "production_output",
+      unit_cost: inputCost > 0 ? inputCost / outputQuantity : numberValue(outputMaterial.cost_per_unit),
+    };
+    productionOutputRows.push(row);
+    addMovement(row);
+  }
 
   for (const transfer of source.transfers) {
     const pairedInbound = pairedInboundIds.has(transfer.id);
@@ -726,9 +948,7 @@ function buildPlan(source, target, options = {}) {
     const warehouse = sourceWarehouseById.get(stock.warehouse_id);
     const targetRef = sourceWarehouseTarget(warehouse, sourceBranchById, targetIndex);
     const material = materialById.get(stock.material_id);
-    const ingredient =
-      targetIndex.ingredientBySku.get(String(material?.sku ?? "").toUpperCase()) ??
-      targetIndex.ingredientByName.get(normalizeText(material?.name));
+    const ingredient = targetIngredientForMaterial(material, targetIndex);
     const value = costValue(quantity, material?.cost_per_unit);
 
     if (targetRef.role === "branch_kitchen_endpoint") {
@@ -741,12 +961,7 @@ function buildPlan(source, target, options = {}) {
       continue;
     }
     if (!targetRef.branch || !targetRef.location || !ingredient) {
-      missingRows.push({
-        materialId: stock.material_id,
-        materialSku: material?.sku ?? null,
-        materialName: material?.name ?? null,
-        sourceWarehouseCode: warehouse?.code ?? null,
-      });
+      addMissingMaterialRow(missingRows, material, stock.material_id, warehouse?.code ?? null);
       continue;
     }
     addDesiredStock(desiredStock, {
@@ -845,6 +1060,31 @@ function buildPlan(source, target, options = {}) {
         count: realTransfers.length,
         estimatedCost: moneyValue(realTransfers.reduce((sum, row) => sum + row.cost, 0)),
         itemRows: transferItems.length,
+      },
+      goodsReceipts: {
+        movementRows: goodsReceiptRows.length,
+        estimatedCost: moneyValue(
+          goodsReceiptRows.reduce(
+            (sum, row) => sum + costValue(row.quantity_change, row.unit_cost),
+            0,
+          ),
+        ),
+      },
+      production: {
+        consumptionRows: productionConsumptionRows.length,
+        outputRows: productionOutputRows.length,
+        estimatedConsumptionCost: moneyValue(
+          productionConsumptionRows.reduce(
+            (sum, row) => sum + costValue(Math.abs(row.quantity_change), row.unit_cost),
+            0,
+          ),
+        ),
+        estimatedOutputCost: moneyValue(
+          productionOutputRows.reduce(
+            (sum, row) => sum + costValue(row.quantity_change, row.unit_cost),
+            0,
+          ),
+        ),
       },
       saleConsumption: {
         movementRows: saleConsumptionRows.length,
@@ -1272,6 +1512,53 @@ function selfTest() {
       { warehouse_id: "kho-dd", material_id: "m1", quantity: 5 },
       { warehouse_id: "bep-dd", material_id: "m2", quantity: 3 },
     ],
+    goodsReceipts: [
+      {
+        id: "g1",
+        code: "GRN-1",
+        warehouse_id: "kho-tong",
+        status: "posted",
+        received_at: "2026-04-30T00:00:00Z",
+        posted_at: "2026-04-30T01:00:00Z",
+        created_at: "2026-04-30T00:00:00Z",
+      },
+      {
+        id: "g2",
+        code: "GRN-2",
+        warehouse_id: "kho-tong",
+        status: "cancelled",
+        received_at: "2026-04-30T00:00:00Z",
+        posted_at: null,
+        created_at: "2026-04-30T00:00:00Z",
+      },
+    ],
+    goodsReceiptItems: [
+      { receipt_id: "g1", material_id: "m1", quantity: 2, qty_base: 2, unit_cost: 9, unit_cost_base: 9 },
+      { receipt_id: "g2", material_id: "m1", quantity: 2, qty_base: 2, unit_cost: 9, unit_cost_base: 9 },
+    ],
+    productionRuns: [
+      {
+        id: "p1",
+        code: "PRD-1",
+        recipe_id: "r1",
+        actual_quantity: 1,
+        consume_warehouse_id: "kho-tong",
+        output_warehouse_id: "kho-tt",
+        status: "completed",
+        completed_at: "2026-04-30T02:00:00Z",
+        created_at: "2026-04-30T01:30:00Z",
+      },
+    ],
+    recipes: [
+      {
+        id: "r1",
+        name: "Pork prep",
+        output_material_id: "m2",
+        output_quantity: 1,
+        output_unit: "kg",
+      },
+    ],
+    recipeItems: [{ recipe_id: "r1", material_id: "m1", quantity: 2 }],
     transfers: [
       {
         id: "t1",
@@ -1417,12 +1704,19 @@ function selfTest() {
   assert.equal(report.plannedRows.movements.length, report.operationalPlan.stockMovementRows);
   assert.equal(report.plannedRows.transfers.length, report.operationalPlan.realTransfers.count);
   assert.equal(report.plannedRows.transferItems.length, report.operationalPlan.realTransfers.itemRows);
+  assert.equal(report.operationalPlan.goodsReceipts.movementRows, 1);
+  assert.equal(report.operationalPlan.production.consumptionRows, 1);
+  assert.equal(report.operationalPlan.production.outputRows, 1);
+  assert.equal(report.ignored.byClass.ignored_grn_not_posted, 1);
   assert.equal(report.operationalPlan.realTransfers.estimatedCost, 120.36);
   assert.equal(report.operationalPlan.saleConsumption.estimatedCost, 40.24);
   assert.equal(report.operationalPlan.saleConsumption.byBranch.DD, 40.24);
   const sql = generateSql(sqlRows);
   assert.match(sql, /BEGIN;/);
+  assert.match(sql, /grn_receipt/);
   assert.match(sql, /kitchen_passthrough/);
+  assert.match(sql, /production_consumption/);
+  assert.match(sql, /production_output/);
   assert.match(sql, /sale_consumption/);
   assert.match(sql, /balance_adjustment/);
 
