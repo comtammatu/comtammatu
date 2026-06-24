@@ -32,6 +32,7 @@ function parseArgs(argv) {
     actorId: process.env.MATU_IMPORT_ACTOR_ID ?? "",
     allowManualReviewSkip: false,
     balanceAt: null,
+    deltaCutoff: null,
     help: false,
     includeRows: false,
     json: false,
@@ -39,8 +40,10 @@ function parseArgs(argv) {
     sourceKey: process.env.MATU_PLATFORM_SUPABASE_SERVICE_ROLE_KEY ?? "",
     sourceUrl: process.env.MATU_PLATFORM_SUPABASE_URL ?? "",
     targetKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
-    targetUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "",
+    targetUrl:
+      process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "",
     writeResetSql: null,
+    writeDeltaSql: null,
     writeSql: null,
   };
 
@@ -54,10 +57,12 @@ function parseArgs(argv) {
     else if (arg === "--self-test") out.selfTest = true;
     else if (arg === "--actor-id") out.actorId = argv[++i] ?? "";
     else if (arg === "--balance-at") out.balanceAt = argv[++i] ?? null;
+    else if (arg === "--delta-cutoff") out.deltaCutoff = argv[++i] ?? null;
     else if (arg === "--source-url") out.sourceUrl = argv[++i] ?? "";
     else if (arg === "--source-key") out.sourceKey = argv[++i] ?? "";
     else if (arg === "--target-url") out.targetUrl = argv[++i] ?? "";
     else if (arg === "--target-key") out.targetKey = argv[++i] ?? "";
+    else if (arg === "--write-delta-sql") out.writeDeltaSql = argv[++i] ?? null;
     else if (arg === "--write-reset-sql") out.writeResetSql = argv[++i] ?? null;
     else if (arg === "--write-sql") out.writeSql = argv[++i] ?? null;
     else throw new Error(`Unknown argument: ${arg}`);
@@ -71,6 +76,7 @@ function printHelp() {
   pnpm inventory:matu-platform:operational -- [--json]
   pnpm inventory:matu-platform:operational -- --json --include-rows
   pnpm inventory:matu-platform:operational -- --write-sql /tmp/import.sql --allow-manual-review-skip
+  pnpm inventory:matu-platform:operational -- --delta-cutoff 2026-06-24T00:00:00+07:00 --write-delta-sql /tmp/delta.sql
   pnpm inventory:matu-platform:operational -- --write-reset-sql /tmp/reset.sql
 
 Builds the operational Inventory import plan:
@@ -78,6 +84,7 @@ Builds the operational Inventory import plan:
   - branch sale consumption from retired Bep CN transfer-in
   - balance adjustments so current stock matches matu-platform stock_items
 
+Delta mode imports only missing real transfers, GRN receipts, and sale consumption movements up to a fixed cutoff.
 This script does not apply SQL. It writes one transaction file only after blockers are clear.
 The reset SQL is guarded and only targets previous matu-platform import rows.`);
 }
@@ -112,7 +119,8 @@ function inFilter(values) {
 
 function chunk(values, size = 200) {
   const out = [];
-  for (let i = 0; i < values.length; i += size) out.push(values.slice(i, i + size));
+  for (let i = 0; i < values.length; i += size)
+    out.push(values.slice(i, i + size));
   return out;
 }
 
@@ -122,7 +130,8 @@ async function fetchAll({ baseUrl, key, table, select = "*", filters = {} }) {
     const url = new URL(`/rest/v1/${table}`, baseUrl);
     url.searchParams.set("select", select);
     for (const [name, value] of Object.entries(filters)) {
-      if (value != null && value !== "") url.searchParams.set(name, String(value));
+      if (value != null && value !== "")
+        url.searchParams.set(name, String(value));
     }
 
     const res = await fetch(url, {
@@ -179,7 +188,8 @@ async function loadSource(ctx) {
     fetchAll({
       ...ctx,
       table: "materials",
-      select: "id,sku,name,kind,cost_per_unit,base_unit,purchase_unit,purchase_to_base_factor",
+      select:
+        "id,sku,name,kind,cost_per_unit,base_unit,purchase_unit,purchase_to_base_factor",
     }),
     fetchAll({
       ...ctx,
@@ -200,7 +210,8 @@ async function loadSource(ctx) {
     fetchAll({
       ...ctx,
       table: "goods_receipt_items",
-      select: "receipt_id,material_id,quantity,qty_base,unit_cost,unit_cost_base",
+      select:
+        "receipt_id,material_id,quantity,qty_base,unit_cost,unit_cost_base",
     }),
     fetchAll({
       ...ctx,
@@ -256,32 +267,44 @@ async function loadTarget(ctx) {
     levels,
     issues,
     stocktakes,
-  ] =
-    await Promise.all([
-      fetchAll({ ...ctx, table: "tenants", select: "id,slug,name" }),
-      fetchAll({ ...ctx, table: "branches", select: "id,tenant_id,code,name,branch_kind" }),
-      fetchAll({
-        ...ctx,
-        table: "inventory_locations",
-        select: "id,tenant_id,branch_id,code,name,location_kind,is_default_issue,is_active",
-      }),
-      fetchAll({
-        ...ctx,
-        table: "ingredients",
-        select: "id,tenant_id,sku,name,unit,unit_cost,is_active",
-      }),
-      fetchAll({
-        ...ctx,
-        table: "profiles",
-        select: "id,tenant_id,branch_id,full_name,is_active,created_at",
-      }),
-      fetchAll({ ...ctx, table: "stock_transfers", select: "id,transfer_number,notes" }),
-      fetchAll({ ...ctx, table: "stock_movements", select: "id,type,reason" }),
-      fetchAll({ ...ctx, table: "stock_transfer_items", select: "id,transfer_id" }),
-      fetchAll({ ...ctx, table: "stock_levels", select: "id" }),
-      fetchAll({ ...ctx, table: "stock_issues", select: "id" }),
-      fetchAll({ ...ctx, table: "stocktake_sessions", select: "id" }),
-    ]);
+  ] = await Promise.all([
+    fetchAll({ ...ctx, table: "tenants", select: "id,slug,name" }),
+    fetchAll({
+      ...ctx,
+      table: "branches",
+      select: "id,tenant_id,code,name,branch_kind",
+    }),
+    fetchAll({
+      ...ctx,
+      table: "inventory_locations",
+      select:
+        "id,tenant_id,branch_id,code,name,location_kind,is_default_issue,is_active",
+    }),
+    fetchAll({
+      ...ctx,
+      table: "ingredients",
+      select: "id,tenant_id,sku,name,unit,unit_cost,is_active",
+    }),
+    fetchAll({
+      ...ctx,
+      table: "profiles",
+      select: "id,tenant_id,branch_id,full_name,is_active,created_at",
+    }),
+    fetchAll({
+      ...ctx,
+      table: "stock_transfers",
+      select: "id,transfer_number,notes",
+    }),
+    fetchAll({ ...ctx, table: "stock_movements", select: "id,type,reason" }),
+    fetchAll({
+      ...ctx,
+      table: "stock_transfer_items",
+      select: "id,transfer_id",
+    }),
+    fetchAll({ ...ctx, table: "stock_levels", select: "id" }),
+    fetchAll({ ...ctx, table: "stock_issues", select: "id" }),
+    fetchAll({ ...ctx, table: "stocktake_sessions", select: "id" }),
+  ]);
 
   return {
     branches,
@@ -299,15 +322,20 @@ async function loadTarget(ctx) {
 }
 
 function getTargetTenant(target) {
-  const tenant = target.tenants.find((row) => row.slug === "comtammatu") ?? target.tenants[0];
+  const tenant =
+    target.tenants.find((row) => row.slug === "comtammatu") ??
+    target.tenants[0];
   if (!tenant) throw new Error("Target tenant not found");
   return tenant;
 }
 
 function selectActor(target, tenantId, actorId) {
   if (actorId) {
-    const actor = target.profiles.find((row) => row.id === actorId && row.tenant_id === tenantId);
-    if (!actor) throw new Error("Import actor profile not found in target tenant");
+    const actor = target.profiles.find(
+      (row) => row.id === actorId && row.tenant_id === tenantId,
+    );
+    if (!actor)
+      throw new Error("Import actor profile not found in target tenant");
     return actor;
   }
   const actor = target.profiles
@@ -315,17 +343,22 @@ function selectActor(target, tenantId, actorId) {
     .sort((a, b) => {
       if (a.branch_id == null && b.branch_id != null) return -1;
       if (a.branch_id != null && b.branch_id == null) return 1;
-      return String(a.created_at ?? "").localeCompare(String(b.created_at ?? ""));
+      return String(a.created_at ?? "").localeCompare(
+        String(b.created_at ?? ""),
+      );
     })[0];
-  if (!actor) throw new Error("No active target profile found for import actor");
+  if (!actor)
+    throw new Error("No active target profile found for import actor");
   return actor;
 }
 
 function sourceWarehouseRole(warehouse) {
   const code = String(warehouse?.code ?? "");
   const name = normalizeText(warehouse?.name);
-  if (warehouse?.branch_id && warehouse?.kind === "warehouse") return "branch_warehouse";
-  if (warehouse?.branch_id && warehouse?.kind === "kitchen") return "branch_kitchen_endpoint";
+  if (warehouse?.branch_id && warehouse?.kind === "warehouse")
+    return "branch_warehouse";
+  if (warehouse?.branch_id && warehouse?.kind === "kitchen")
+    return "branch_kitchen_endpoint";
   if (!warehouse?.branch_id && code === "KHO-TONG") return "central_supply";
   if (
     !warehouse?.branch_id &&
@@ -342,8 +375,11 @@ function sourceWarehouseRole(warehouse) {
 function isAllowedTargetTransferDirection(fromKind, toKind) {
   return (
     (fromKind === "branch" &&
-      (toKind === "branch" || toKind === "central_supply" || toKind === "central_kitchen")) ||
-    ((fromKind === "central_supply" || fromKind === "central_kitchen") && toKind === "branch") ||
+      (toKind === "branch" ||
+        toKind === "central_supply" ||
+        toKind === "central_kitchen")) ||
+    ((fromKind === "central_supply" || fromKind === "central_kitchen") &&
+      toKind === "branch") ||
     (fromKind === "central_supply" && toKind === "central_kitchen") ||
     (fromKind === "central_kitchen" && toKind === "central_supply")
   );
@@ -354,18 +390,31 @@ function locationKey(code, kind) {
 }
 
 function makeTargetIndex(target, tenantId) {
-  const branches = target.branches.filter((branch) => branch.tenant_id === tenantId);
-  const locations = target.locations.filter((location) => location.tenant_id === tenantId);
-  const ingredients = target.ingredients.filter((ingredient) => ingredient.tenant_id === tenantId);
+  const branches = target.branches.filter(
+    (branch) => branch.tenant_id === tenantId,
+  );
+  const locations = target.locations.filter(
+    (location) => location.tenant_id === tenantId,
+  );
+  const ingredients = target.ingredients.filter(
+    (ingredient) => ingredient.tenant_id === tenantId,
+  );
   const branchByCodeKind = new Map(
     branches
       .filter((branch) => branch.code && branch.branch_kind)
-      .map((branch) => [`${String(branch.code).toUpperCase()}:${branch.branch_kind}`, branch]),
+      .map((branch) => [
+        `${String(branch.code).toUpperCase()}:${branch.branch_kind}`,
+        branch,
+      ]),
   );
   const branchByNameKind = new Map(
-    branches.map((branch) => [`${normalizeText(branch.name)}:${branch.branch_kind}`, branch]),
+    branches.map((branch) => [
+      `${normalizeText(branch.name)}:${branch.branch_kind}`,
+      branch,
+    ]),
   );
-  const centralSupply = branches.find((branch) => branch.branch_kind === "central_supply") ?? null;
+  const centralSupply =
+    branches.find((branch) => branch.branch_kind === "central_supply") ?? null;
   const centralKitchen =
     branches.find((branch) => branch.branch_kind === "central_kitchen") ?? null;
   const locationsByBranch = new Map();
@@ -377,8 +426,14 @@ function makeTargetIndex(target, tenantId) {
   const stockLocationForBranch = (branchId) => {
     const list = locationsByBranch.get(branchId) ?? [];
     return (
-      list.find((loc) => locationKey(loc.code, loc.location_kind) === "main_warehouse:warehouse") ??
-      list.find((loc) => loc.is_default_issue && loc.location_kind === "warehouse") ??
+      list.find(
+        (loc) =>
+          locationKey(loc.code, loc.location_kind) ===
+          "main_warehouse:warehouse",
+      ) ??
+      list.find(
+        (loc) => loc.is_default_issue && loc.location_kind === "warehouse",
+      ) ??
       list.find((loc) => loc.location_kind === "warehouse") ??
       list.find((loc) => loc.location_kind === "production_storage") ??
       null
@@ -389,7 +444,12 @@ function makeTargetIndex(target, tenantId) {
       .filter((ingredient) => ingredient.sku)
       .map((ingredient) => [String(ingredient.sku).toUpperCase(), ingredient]),
   );
-  const ingredientByName = new Map(ingredients.map((ingredient) => [normalizeText(ingredient.name), ingredient]));
+  const ingredientByName = new Map(
+    ingredients.map((ingredient) => [
+      normalizeText(ingredient.name),
+      ingredient,
+    ]),
+  );
   return {
     branchByCodeKind,
     branchByNameKind,
@@ -401,11 +461,19 @@ function makeTargetIndex(target, tenantId) {
   };
 }
 
-function sourceBranchToTarget(sourceBranch, targetIndex, branchKind = "branch") {
+function sourceBranchToTarget(
+  sourceBranch,
+  targetIndex,
+  branchKind = "branch",
+) {
   if (!sourceBranch) return null;
   return (
-    targetIndex.branchByCodeKind.get(`${String(sourceBranch.code ?? "").toUpperCase()}:${branchKind}`) ??
-    targetIndex.branchByNameKind.get(`${normalizeText(sourceBranch.name)}:${branchKind}`) ??
+    targetIndex.branchByCodeKind.get(
+      `${String(sourceBranch.code ?? "").toUpperCase()}:${branchKind}`,
+    ) ??
+    targetIndex.branchByNameKind.get(
+      `${normalizeText(sourceBranch.name)}:${branchKind}`,
+    ) ??
     null
   );
 }
@@ -414,16 +482,26 @@ function sourceWarehouseTarget(warehouse, sourceBranchById, targetIndex) {
   const role = sourceWarehouseRole(warehouse);
   if (role === "central_supply") {
     const branch = targetIndex.centralSupply;
-    return { branch, location: branch ? targetIndex.stockLocationForBranch(branch.id) : null, role };
+    return {
+      branch,
+      location: branch ? targetIndex.stockLocationForBranch(branch.id) : null,
+      role,
+    };
   }
   if (role === "central_kitchen") {
     const branch = targetIndex.centralKitchen;
-    return { branch, location: branch ? targetIndex.stockLocationForBranch(branch.id) : null, role };
+    return {
+      branch,
+      location: branch ? targetIndex.stockLocationForBranch(branch.id) : null,
+      role,
+    };
   }
   const sourceBranch = sourceBranchById.get(warehouse?.branch_id);
   const branch = sourceBranchToTarget(sourceBranch, targetIndex, "branch");
   const location =
-    role === "branch_warehouse" && branch ? targetIndex.stockLocationForBranch(branch.id) : null;
+    role === "branch_warehouse" && branch
+      ? targetIndex.stockLocationForBranch(branch.id)
+      : null;
   return { branch, location, role };
 }
 
@@ -447,12 +525,18 @@ function addDesiredStock(desired, row) {
 
 function targetIngredientForMaterial(material, targetIndex) {
   return (
-    targetIndex.ingredientBySku.get(String(material?.sku ?? "").toUpperCase()) ??
-    targetIndex.ingredientByName.get(normalizeText(material?.name))
+    targetIndex.ingredientBySku.get(
+      String(material?.sku ?? "").toUpperCase(),
+    ) ?? targetIndex.ingredientByName.get(normalizeText(material?.name))
   );
 }
 
-function addMissingMaterialRow(missingRows, material, materialId, sourceWarehouseCode = null) {
+function addMissingMaterialRow(
+  missingRows,
+  material,
+  materialId,
+  sourceWarehouseCode = null,
+) {
   missingRows.push({
     materialId,
     materialSku: material?.sku ?? null,
@@ -482,16 +566,18 @@ function aggregateItems(items, materialById, targetIndex, missingRows) {
       continue;
     }
     const key = ingredient.id;
-    const existing =
-      byIngredient.get(key) ??
-      {
-        ingredient_id: ingredient.id,
-        material_id: material.id,
-        name: ingredient.name,
-        quantity: 0,
-        unit: ingredient.unit ?? material.base_unit ?? material.purchase_unit ?? "unit",
-        unit_cost: numberValue(material.cost_per_unit),
-      };
+    const existing = byIngredient.get(key) ?? {
+      ingredient_id: ingredient.id,
+      material_id: material.id,
+      name: ingredient.name,
+      quantity: 0,
+      unit:
+        ingredient.unit ??
+        material.base_unit ??
+        material.purchase_unit ??
+        "unit",
+      unit_cost: numberValue(material.cost_per_unit),
+    };
     existing.quantity += numberValue(item.quantity);
     byIngredient.set(key, existing);
   }
@@ -505,18 +591,27 @@ function transferLineSignature(items) {
     .join("|");
 }
 
-function findKitchenPassthroughs({ sourceWarehouseById, transferItemsByTransfer, transfers }) {
+function findKitchenPassthroughs({
+  sourceWarehouseById,
+  transferItemsByTransfer,
+  transfers,
+}) {
   const inboundByKitchen = new Map();
   const pairedInboundIds = new Set();
   const passthroughByOutboundId = new Map();
   const received = transfers
     .filter((transfer) => transfer.status === "received")
-    .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+    .sort((a, b) =>
+      String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")),
+    );
 
   for (const transfer of received) {
     const toWarehouse = sourceWarehouseById.get(transfer.to_warehouse_id);
-    if (sourceWarehouseRole(toWarehouse) !== "branch_kitchen_endpoint") continue;
-    const signature = transferLineSignature(transferItemsByTransfer.get(transfer.id) ?? []);
+    if (sourceWarehouseRole(toWarehouse) !== "branch_kitchen_endpoint")
+      continue;
+    const signature = transferLineSignature(
+      transferItemsByTransfer.get(transfer.id) ?? [],
+    );
     if (!signature) continue;
     const key = `${transfer.to_warehouse_id}:${signature}`;
     const list = inboundByKitchen.get(key) ?? [];
@@ -526,14 +621,21 @@ function findKitchenPassthroughs({ sourceWarehouseById, transferItemsByTransfer,
 
   for (const transfer of received) {
     const fromWarehouse = sourceWarehouseById.get(transfer.from_warehouse_id);
-    if (sourceWarehouseRole(fromWarehouse) !== "branch_kitchen_endpoint") continue;
-    const signature = transferLineSignature(transferItemsByTransfer.get(transfer.id) ?? []);
+    if (sourceWarehouseRole(fromWarehouse) !== "branch_kitchen_endpoint")
+      continue;
+    const signature = transferLineSignature(
+      transferItemsByTransfer.get(transfer.id) ?? [],
+    );
     if (!signature) continue;
     const key = `${transfer.from_warehouse_id}:${signature}`;
     const candidates = inboundByKitchen.get(key) ?? [];
     const inbound = candidates
       .filter((candidate) => !pairedInboundIds.has(candidate.id))
-      .filter((candidate) => String(candidate.created_at ?? "") <= String(transfer.created_at ?? ""))
+      .filter(
+        (candidate) =>
+          String(candidate.created_at ?? "") <=
+          String(transfer.created_at ?? ""),
+      )
       .at(-1);
     if (!inbound) continue;
     pairedInboundIds.add(inbound.id);
@@ -543,7 +645,12 @@ function findKitchenPassthroughs({ sourceWarehouseById, transferItemsByTransfer,
   return { pairedInboundIds, passthroughByOutboundId };
 }
 
-function classifyTransfer({ transfer, sourceWarehouseById, sourceBranchById, targetIndex }) {
+function classifyTransfer({
+  transfer,
+  sourceWarehouseById,
+  sourceBranchById,
+  targetIndex,
+}) {
   const from = sourceWarehouseById.get(transfer.from_warehouse_id);
   const to = sourceWarehouseById.get(transfer.to_warehouse_id);
   const fromTarget = sourceWarehouseTarget(from, sourceBranchById, targetIndex);
@@ -557,16 +664,26 @@ function classifyTransfer({ transfer, sourceWarehouseById, sourceBranchById, tar
     toTarget,
   };
 
-  if (transfer.status !== "received") return { ...base, class: "ignored_not_received" };
-  if (toTarget.role === "branch_kitchen_endpoint") return { ...base, class: "branch_sale_consumption" };
+  if (transfer.status !== "received")
+    return { ...base, class: "ignored_not_received" };
+  if (toTarget.role === "branch_kitchen_endpoint")
+    return { ...base, class: "branch_sale_consumption" };
   if (fromTarget.role === "branch_kitchen_endpoint") {
     return { ...base, class: "ignored_legacy_branch_kitchen_source" };
   }
   if (fromTarget.location && toTarget.location) {
-    if (fromTarget.location.id === toTarget.location.id || fromTarget.branch?.id === toTarget.branch?.id) {
+    if (
+      fromTarget.location.id === toTarget.location.id ||
+      fromTarget.branch?.id === toTarget.branch?.id
+    ) {
       return { ...base, class: "ignored_same_target_site" };
     }
-    if (!isAllowedTargetTransferDirection(fromTarget.branch?.branch_kind, toTarget.branch?.branch_kind)) {
+    if (
+      !isAllowedTargetTransferDirection(
+        fromTarget.branch?.branch_kind,
+        toTarget.branch?.branch_kind,
+      )
+    ) {
       return { ...base, class: "manual_review_disallowed_direction" };
     }
     return { ...base, class: "real_transfer" };
@@ -575,7 +692,10 @@ function classifyTransfer({ transfer, sourceWarehouseById, sourceBranchById, tar
 }
 
 function transferCost(lines) {
-  return lines.reduce((sum, row) => sum + costValue(row.quantity, row.unit_cost), 0);
+  return lines.reduce(
+    (sum, row) => sum + costValue(row.quantity, row.unit_cost),
+    0,
+  );
 }
 
 function indexBy(rows, keyFn) {
@@ -593,23 +713,39 @@ function buildPlan(source, target, options = {}) {
   const tenant = getTargetTenant(target);
   const actor = selectActor(target, tenant.id, options.actorId ?? "");
   const targetIndex = makeTargetIndex(target, tenant.id);
-  const sourceBranchById = new Map(source.branches.map((branch) => [branch.id, branch]));
-  const sourceWarehouseById = new Map(source.warehouses.map((warehouse) => [warehouse.id, warehouse]));
-  const materialById = new Map(source.materials.map((material) => [material.id, material]));
-  const goodsReceiptItemsByReceipt = indexBy(source.goodsReceiptItems ?? [], (item) => item.receipt_id);
-  const recipesById = new Map((source.recipes ?? []).map((recipe) => [recipe.id, recipe]));
-  const recipeItemsByRecipe = indexBy(source.recipeItems ?? [], (item) => item.recipe_id);
+  const sourceBranchById = new Map(
+    source.branches.map((branch) => [branch.id, branch]),
+  );
+  const sourceWarehouseById = new Map(
+    source.warehouses.map((warehouse) => [warehouse.id, warehouse]),
+  );
+  const materialById = new Map(
+    source.materials.map((material) => [material.id, material]),
+  );
+  const goodsReceiptItemsByReceipt = indexBy(
+    source.goodsReceiptItems ?? [],
+    (item) => item.receipt_id,
+  );
+  const recipesById = new Map(
+    (source.recipes ?? []).map((recipe) => [recipe.id, recipe]),
+  );
+  const recipeItemsByRecipe = indexBy(
+    source.recipeItems ?? [],
+    (item) => item.recipe_id,
+  );
   const transferItemsByTransfer = new Map();
   for (const item of source.transferItems) {
     const list = transferItemsByTransfer.get(item.transfer_id) ?? [];
     list.push(item);
     transferItemsByTransfer.set(item.transfer_id, list);
   }
-  const { pairedInboundIds, passthroughByOutboundId } = findKitchenPassthroughs({
-    sourceWarehouseById,
-    transferItemsByTransfer,
-    transfers: source.transfers,
-  });
+  const { pairedInboundIds, passthroughByOutboundId } = findKitchenPassthroughs(
+    {
+      sourceWarehouseById,
+      transferItemsByTransfer,
+      transfers: source.transfers,
+    },
+  );
 
   const missingRows = [];
   const manualReview = [];
@@ -639,7 +775,11 @@ function buildPlan(source, target, options = {}) {
       continue;
     }
     const warehouse = sourceWarehouseById.get(receipt.warehouse_id);
-    const targetRef = sourceWarehouseTarget(warehouse, sourceBranchById, targetIndex);
+    const targetRef = sourceWarehouseTarget(
+      warehouse,
+      sourceBranchById,
+      targetIndex,
+    );
     if (!targetRef.branch || !targetRef.location) {
       manualReview.push({
         class: "manual_review_missing_grn_target",
@@ -654,14 +794,20 @@ function buildPlan(source, target, options = {}) {
       const material = materialById.get(item.material_id);
       const ingredient = targetIngredientForMaterial(material, targetIndex);
       if (!material || !ingredient) {
-        addMissingMaterialRow(missingRows, material, item.material_id, warehouse?.code ?? null);
+        addMissingMaterialRow(
+          missingRows,
+          material,
+          item.material_id,
+          warehouse?.code ?? null,
+        );
         continue;
       }
       const quantity = numberValue(item.qty_base ?? item.quantity);
       if (quantity <= 0) continue;
       const row = {
         branch_id: targetRef.branch.id,
-        created_at: receipt.posted_at ?? receipt.received_at ?? receipt.created_at,
+        created_at:
+          receipt.posted_at ?? receipt.received_at ?? receipt.created_at,
         created_by: actor.id,
         ingredient_id: ingredient.id,
         location_id: targetRef.location.id,
@@ -671,7 +817,9 @@ function buildPlan(source, target, options = {}) {
         source_transfer_number: null,
         tenant_id: tenant.id,
         type: "grn_receipt",
-        unit_cost: numberValue(item.unit_cost_base ?? item.unit_cost ?? material.cost_per_unit),
+        unit_cost: numberValue(
+          item.unit_cost_base ?? item.unit_cost ?? material.cost_per_unit,
+        ),
       };
       goodsReceiptRows.push(row);
       addMovement(row);
@@ -690,17 +838,38 @@ function buildPlan(source, target, options = {}) {
     }
     const recipe = recipesById.get(run.recipe_id);
     const outputMaterial = materialById.get(recipe?.output_material_id);
-    const outputIngredient = targetIngredientForMaterial(outputMaterial, targetIndex);
+    const outputIngredient = targetIngredientForMaterial(
+      outputMaterial,
+      targetIndex,
+    );
     const consumeWarehouse = sourceWarehouseById.get(run.consume_warehouse_id);
     const outputWarehouse = sourceWarehouseById.get(run.output_warehouse_id);
-    const consumeTarget = sourceWarehouseTarget(consumeWarehouse, sourceBranchById, targetIndex);
-    const outputTarget = sourceWarehouseTarget(outputWarehouse, sourceBranchById, targetIndex);
+    const consumeTarget = sourceWarehouseTarget(
+      consumeWarehouse,
+      sourceBranchById,
+      targetIndex,
+    );
+    const outputTarget = sourceWarehouseTarget(
+      outputWarehouse,
+      sourceBranchById,
+      targetIndex,
+    );
     const recipeItems = recipeItemsByRecipe.get(run.recipe_id) ?? [];
     if (!recipe || !outputMaterial || !outputIngredient) {
-      addMissingMaterialRow(missingRows, outputMaterial, recipe?.output_material_id, outputWarehouse?.code ?? null);
+      addMissingMaterialRow(
+        missingRows,
+        outputMaterial,
+        recipe?.output_material_id,
+        outputWarehouse?.code ?? null,
+      );
       continue;
     }
-    if (!consumeTarget.branch || !consumeTarget.location || !outputTarget.branch || !outputTarget.location) {
+    if (
+      !consumeTarget.branch ||
+      !consumeTarget.location ||
+      !outputTarget.branch ||
+      !outputTarget.location
+    ) {
       manualReview.push({
         class: "manual_review_missing_production_target",
         fromCode: consumeWarehouse?.code ?? null,
@@ -712,13 +881,20 @@ function buildPlan(source, target, options = {}) {
       continue;
     }
 
-    const ratio = numberValue(run.actual_quantity) / (numberValue(recipe.output_quantity) || 1);
+    const ratio =
+      numberValue(run.actual_quantity) /
+      (numberValue(recipe.output_quantity) || 1);
     let inputCost = 0;
     for (const item of recipeItems) {
       const material = materialById.get(item.material_id);
       const ingredient = targetIngredientForMaterial(material, targetIndex);
       if (!material || !ingredient) {
-        addMissingMaterialRow(missingRows, material, item.material_id, consumeWarehouse?.code ?? null);
+        addMissingMaterialRow(
+          missingRows,
+          material,
+          item.material_id,
+          consumeWarehouse?.code ?? null,
+        );
         continue;
       }
       const quantity = numberValue(item.quantity) * ratio;
@@ -743,7 +919,11 @@ function buildPlan(source, target, options = {}) {
       addMovement(row);
     }
 
-    const outputQuantity = sourceQuantityToBase(outputMaterial, run.actual_quantity, recipe.output_unit);
+    const outputQuantity = sourceQuantityToBase(
+      outputMaterial,
+      run.actual_quantity,
+      recipe.output_unit,
+    );
     if (outputQuantity <= 0) continue;
     const row = {
       branch_id: outputTarget.branch.id,
@@ -757,7 +937,10 @@ function buildPlan(source, target, options = {}) {
       source_transfer_number: null,
       tenant_id: tenant.id,
       type: "production_output",
-      unit_cost: inputCost > 0 ? inputCost / outputQuantity : numberValue(outputMaterial.cost_per_unit),
+      unit_cost:
+        inputCost > 0
+          ? inputCost / outputQuantity
+          : numberValue(outputMaterial.cost_per_unit),
     };
     productionOutputRows.push(row);
     addMovement(row);
@@ -809,7 +992,9 @@ function buildPlan(source, target, options = {}) {
         });
     if (passthrough) {
       classified.class =
-        classified.class === "real_transfer" ? "kitchen_passthrough_transfer" : classified.class;
+        classified.class === "real_transfer"
+          ? "kitchen_passthrough_transfer"
+          : classified.class;
       classified.inboundTransfer = passthrough.inbound;
     }
     const lines = aggregateItems(
@@ -847,10 +1032,15 @@ function buildPlan(source, target, options = {}) {
       continue;
     }
 
-    if (classified.class === "real_transfer" || classified.class === "kitchen_passthrough_transfer") {
+    if (
+      classified.class === "real_transfer" ||
+      classified.class === "kitchen_passthrough_transfer"
+    ) {
       const sourceTransfer = classified.inboundTransfer ?? transfer;
       const transferClass =
-        classified.class === "kitchen_passthrough_transfer" ? "kitchen_passthrough" : "real_transfer";
+        classified.class === "kitchen_passthrough_transfer"
+          ? "kitchen_passthrough"
+          : "real_transfer";
       const transferRow = {
         created_at: sourceTransfer.created_at,
         created_by: actor.id,
@@ -860,17 +1050,23 @@ function buildPlan(source, target, options = {}) {
           classified.class === "kitchen_passthrough_transfer"
             ? `matu-platform import:${transferClass}:${sourceTransfer.id}->${transfer.id}`
             : `matu-platform import:${transferClass}:${transfer.id}`,
-        received_at: transfer.received_at ?? transfer.sent_at ?? transfer.created_at,
+        received_at:
+          transfer.received_at ?? transfer.sent_at ?? transfer.created_at,
         shipped_at: sourceTransfer.sent_at ?? sourceTransfer.created_at,
         status: "received",
         tenant_id: tenant.id,
         to_branch_id: classified.toTarget.branch.id,
         to_location_id: classified.toTarget.location.id,
         transfer_number: transfer.code,
-        updated_at: transfer.received_at ?? transfer.sent_at ?? transfer.created_at,
+        updated_at:
+          transfer.received_at ?? transfer.sent_at ?? transfer.created_at,
         vehicle_info: null,
       };
-      realTransfers.push({ ...transferRow, cost: moneyValue(cost), lineCount: lines.length });
+      realTransfers.push({
+        ...transferRow,
+        cost: moneyValue(cost),
+        lineCount: lines.length,
+      });
       for (const line of lines) {
         transferItems.push({
           ingredient_id: line.ingredient_id,
@@ -898,7 +1094,8 @@ function buildPlan(source, target, options = {}) {
         });
         addMovement({
           branch_id: classified.toTarget.branch.id,
-          created_at: transfer.received_at ?? transfer.sent_at ?? transfer.created_at,
+          created_at:
+            transfer.received_at ?? transfer.sent_at ?? transfer.created_at,
           created_by: actor.id,
           ingredient_id: line.ingredient_id,
           location_id: classified.toTarget.location.id,
@@ -915,15 +1112,21 @@ function buildPlan(source, target, options = {}) {
     }
 
     const branch = classified.toTarget.branch;
-    const location = branch ? targetIndex.stockLocationForBranch(branch.id) : null;
+    const location = branch
+      ? targetIndex.stockLocationForBranch(branch.id)
+      : null;
     if (!branch || !location) {
-      manualReview.push({ ...sample, class: "manual_review_missing_consumption_location" });
+      manualReview.push({
+        ...sample,
+        class: "manual_review_missing_consumption_location",
+      });
       continue;
     }
     for (const line of lines) {
       const row = {
         branch_id: branch.id,
-        created_at: transfer.received_at ?? transfer.sent_at ?? transfer.created_at,
+        created_at:
+          transfer.received_at ?? transfer.sent_at ?? transfer.created_at,
         created_by: actor.id,
         ingredient_id: line.ingredient_id,
         location_id: location.id,
@@ -946,7 +1149,11 @@ function buildPlan(source, target, options = {}) {
     const quantity = numberValue(stock.quantity);
     if (quantity === 0) continue;
     const warehouse = sourceWarehouseById.get(stock.warehouse_id);
-    const targetRef = sourceWarehouseTarget(warehouse, sourceBranchById, targetIndex);
+    const targetRef = sourceWarehouseTarget(
+      warehouse,
+      sourceBranchById,
+      targetIndex,
+    );
     const material = materialById.get(stock.material_id);
     const ingredient = targetIngredientForMaterial(material, targetIndex);
     const value = costValue(quantity, material?.cost_per_unit);
@@ -961,7 +1168,12 @@ function buildPlan(source, target, options = {}) {
       continue;
     }
     if (!targetRef.branch || !targetRef.location || !ingredient) {
-      addMissingMaterialRow(missingRows, material, stock.material_id, warehouse?.code ?? null);
+      addMissingMaterialRow(
+        missingRows,
+        material,
+        stock.material_id,
+        warehouse?.code ?? null,
+      );
       continue;
     }
     addDesiredStock(desiredStock, {
@@ -981,7 +1193,8 @@ function buildPlan(source, target, options = {}) {
     const desired = desiredStock.get(key);
     const net = movementNet.get(key);
     const basis = desired ?? net;
-    const delta = numberValue(desired?.quantity) - numberValue(net?.quantity_change);
+    const delta =
+      numberValue(desired?.quantity) - numberValue(net?.quantity_change);
     if (Math.abs(delta) < 0.000001) continue;
     balanceAdjustments.push({
       branch_id: basis.branch_id,
@@ -1000,29 +1213,46 @@ function buildPlan(source, target, options = {}) {
   }
   movementRows.push(...balanceAdjustments);
 
-  const duplicateTransferNumbers = Object.entries(countBy(realTransfers, (row) => row.transfer_number))
+  const duplicateTransferNumbers = Object.entries(
+    countBy(realTransfers, (row) => row.transfer_number),
+  )
     .filter(([, count]) => count > 1)
     .map(([transferNumber]) => transferNumber);
-  const existingTransferNumbers = new Set(target.transfers.map((row) => row.transfer_number));
+  const existingTransferNumbers = new Set(
+    target.transfers.map((row) => row.transfer_number),
+  );
   const targetDuplicates = realTransfers
     .filter((row) => existingTransferNumbers.has(row.transfer_number))
     .map((row) => row.transfer_number);
 
   const blockers = [];
-  if (!targetIndex.centralSupply) blockers.push("missing target central_supply");
-  if (!targetIndex.centralKitchen) blockers.push("missing target central_kitchen");
-  if (target.ingredients.length === 0) blockers.push("target ingredients empty");
-  if (target.transfers.length > 0 || target.movements.length > 0 || (target.levels ?? []).length > 0) {
+  if (!targetIndex.centralSupply)
+    blockers.push("missing target central_supply");
+  if (!targetIndex.centralKitchen)
+    blockers.push("missing target central_kitchen");
+  if (target.ingredients.length === 0)
+    blockers.push("target ingredients empty");
+  if (
+    target.transfers.length > 0 ||
+    target.movements.length > 0 ||
+    (target.levels ?? []).length > 0
+  ) {
     blockers.push("target operational inventory is not empty");
   }
   if (missingRows.length > 0) blockers.push("missing target mapping rows");
-  if (duplicateTransferNumbers.length > 0) blockers.push("duplicate source transfer numbers");
-  if (targetDuplicates.length > 0) blockers.push("target transfer number already exists");
+  if (duplicateTransferNumbers.length > 0)
+    blockers.push("duplicate source transfer numbers");
+  if (targetDuplicates.length > 0)
+    blockers.push("target transfer number already exists");
   if (manualReview.length > 0 && !options.allowManualReviewSkip) {
     blockers.push("manual review rows require owner decision");
   }
 
-  const sqlRows = { movements: movementRows, transferItems, transfers: realTransfers };
+  const sqlRows = {
+    movements: movementRows,
+    transferItems,
+    transfers: realTransfers,
+  };
   const report = {
     generatedAt: new Date().toISOString(),
     mode: "dry-run",
@@ -1046,19 +1276,28 @@ function buildPlan(source, target, options = {}) {
         count: balanceAdjustments.length,
         estimatedAbsValue: moneyValue(
           balanceAdjustments.reduce(
-            (sum, row) => sum + costValue(Math.abs(row.quantity_change), row.unit_cost),
+            (sum, row) =>
+              sum + costValue(Math.abs(row.quantity_change), row.unit_cost),
             0,
           ),
         ),
       },
       phantomKitchenStock: {
         count: phantomKitchenStock.length,
-        estimatedValue: moneyValue(phantomKitchenStock.reduce((sum, row) => sum + row.value, 0)),
-        byWarehouse: sumBy(phantomKitchenStock, (row) => row.sourceWarehouseCode, (row) => row.value),
+        estimatedValue: moneyValue(
+          phantomKitchenStock.reduce((sum, row) => sum + row.value, 0),
+        ),
+        byWarehouse: sumBy(
+          phantomKitchenStock,
+          (row) => row.sourceWarehouseCode,
+          (row) => row.value,
+        ),
       },
       realTransfers: {
         count: realTransfers.length,
-        estimatedCost: moneyValue(realTransfers.reduce((sum, row) => sum + row.cost, 0)),
+        estimatedCost: moneyValue(
+          realTransfers.reduce((sum, row) => sum + row.cost, 0),
+        ),
         itemRows: transferItems.length,
       },
       goodsReceipts: {
@@ -1075,7 +1314,8 @@ function buildPlan(source, target, options = {}) {
         outputRows: productionOutputRows.length,
         estimatedConsumptionCost: moneyValue(
           productionConsumptionRows.reduce(
-            (sum, row) => sum + costValue(Math.abs(row.quantity_change), row.unit_cost),
+            (sum, row) =>
+              sum + costValue(Math.abs(row.quantity_change), row.unit_cost),
             0,
           ),
         ),
@@ -1090,7 +1330,8 @@ function buildPlan(source, target, options = {}) {
         movementRows: saleConsumptionRows.length,
         estimatedCost: moneyValue(
           saleConsumptionRows.reduce(
-            (sum, row) => sum + costValue(Math.abs(row.quantity_change), row.unit_cost),
+            (sum, row) =>
+              sum + costValue(Math.abs(row.quantity_change), row.unit_cost),
             0,
           ),
         ),
@@ -1144,17 +1385,23 @@ function buildResetPlan(target) {
   const transferById = new Map(transfers.map((row) => [row.id, row]));
   const nonImportMovements = movements.filter((row) => !isImportReason(row));
   const nonImportTransfers = transfers.filter((row) => !isImportTransfer(row));
-  const orphanTransferItems = transferItems.filter((row) => !transferById.has(row.transfer_id));
+  const orphanTransferItems = transferItems.filter(
+    (row) => !transferById.has(row.transfer_id),
+  );
   const nonImportTransferItems = transferItems.filter((row) => {
     const transfer = transferById.get(row.transfer_id);
     return transfer && !isImportTransfer(transfer);
   });
   const blockers = [];
 
-  if (nonImportMovements.length > 0) blockers.push("target has non-import stock movements");
-  if (nonImportTransfers.length > 0) blockers.push("target has non-import stock transfers");
-  if (orphanTransferItems.length > 0) blockers.push("target has orphan stock transfer items");
-  if (nonImportTransferItems.length > 0) blockers.push("target has non-import stock transfer items");
+  if (nonImportMovements.length > 0)
+    blockers.push("target has non-import stock movements");
+  if (nonImportTransfers.length > 0)
+    blockers.push("target has non-import stock transfers");
+  if (orphanTransferItems.length > 0)
+    blockers.push("target has orphan stock transfer items");
+  if (nonImportTransferItems.length > 0)
+    blockers.push("target has non-import stock transfer items");
   if (issues.length > 0) blockers.push("target has stock issues");
   if (stocktakes.length > 0) blockers.push("target has stocktakes");
   if (levels.length > 0 && movements.length === 0 && transfers.length === 0) {
@@ -1465,16 +1712,451 @@ COMMIT;
 `;
 }
 
+function parseCutoffMs(value) {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function atOrBeforeCutoff(value, cutoffMs) {
+  const ms = Date.parse(value ?? "");
+  return Number.isFinite(ms) && ms <= cutoffMs;
+}
+
+function movementClass(row) {
+  if (row.type === "grn_receipt") return "grn_receipt";
+  if (
+    row.type === "consumption" &&
+    row.movement_subtype === "sale_consumption"
+  ) {
+    return "sale_consumption";
+  }
+  if (row.type === "transfer_in" || row.type === "transfer_out")
+    return "real_transfer";
+  return "ignored";
+}
+
+function buildDeltaPlan(sqlRows, target, options = {}) {
+  const cutoffMs = parseCutoffMs(options.deltaCutoff);
+  const blockers = [];
+  if (cutoffMs == null)
+    blockers.push("delta cutoff must be a valid ISO timestamp");
+
+  const targetTransferNumbers = new Set(
+    (target.transfers ?? []).map((row) => row.transfer_number).filter(Boolean),
+  );
+  const targetMovementReasons = new Set(
+    (target.movements ?? []).map((row) => row.reason).filter(Boolean),
+  );
+
+  const transferRows =
+    cutoffMs == null
+      ? []
+      : sqlRows.transfers.filter(
+          (row) =>
+            !targetTransferNumbers.has(row.transfer_number) &&
+            atOrBeforeCutoff(
+              row.received_at ?? row.updated_at ?? row.created_at,
+              cutoffMs,
+            ),
+        );
+  const deltaTransferNumbers = new Set(
+    transferRows.map((row) => row.transfer_number),
+  );
+  const transferItems = sqlRows.transferItems.filter((row) =>
+    deltaTransferNumbers.has(row.transfer_number),
+  );
+  const movements =
+    cutoffMs == null
+      ? []
+      : sqlRows.movements.filter((row) => {
+          if (targetMovementReasons.has(row.reason)) return false;
+          if (!atOrBeforeCutoff(row.created_at, cutoffMs)) return false;
+          const klass = movementClass(row);
+          if (klass === "grn_receipt" || klass === "sale_consumption")
+            return true;
+          return (
+            klass === "real_transfer" &&
+            deltaTransferNumbers.has(row.source_transfer_number)
+          );
+        });
+
+  const transferMovementNumbers = new Set(
+    movements
+      .filter(
+        (row) => row.type === "transfer_in" || row.type === "transfer_out",
+      )
+      .map((row) => row.source_transfer_number),
+  );
+  for (const transferNumber of deltaTransferNumbers) {
+    if (!transferMovementNumbers.has(transferNumber)) {
+      blockers.push(`delta transfer has no movement rows: ${transferNumber}`);
+    }
+  }
+
+  if (transferRows.length === 0 && movements.length === 0) {
+    blockers.push("delta has no rows");
+  }
+
+  const duplicateTransferNumbers = Object.entries(
+    countBy(transferRows, (row) => row.transfer_number),
+  )
+    .filter(([, count]) => count > 1)
+    .map(([transferNumber]) => transferNumber);
+  if (duplicateTransferNumbers.length > 0) {
+    blockers.push(
+      `duplicate delta transfer numbers: ${duplicateTransferNumbers.join(", ")}`,
+    );
+  }
+
+  const movementRowsByClass = countBy(movements, movementClass);
+  const movementCostByClass = sumBy(movements, movementClass, (row) =>
+    costValue(Math.abs(row.quantity_change), row.unit_cost),
+  );
+  const saleConsumptionRows = movements.filter(
+    (row) => movementClass(row) === "sale_consumption",
+  );
+
+  const deltaRows = { movements, transferItems, transfers: transferRows };
+  const report = {
+    generatedAt: new Date().toISOString(),
+    mode: "delta-dry-run",
+    cutoff: options.deltaCutoff,
+    blockers: [...new Set(blockers)],
+    operationalPlan: {
+      realTransfers: {
+        count: transferRows.length,
+        estimatedCost: moneyValue(
+          transferRows.reduce((sum, row) => sum + numberValue(row.cost), 0),
+        ),
+        itemRows: transferItems.length,
+      },
+      goodsReceipts: {
+        movementRows: movementRowsByClass.grn_receipt ?? 0,
+        estimatedCost: movementCostByClass.grn_receipt ?? 0,
+      },
+      saleConsumption: {
+        movementRows: movementRowsByClass.sale_consumption ?? 0,
+        estimatedCost: movementCostByClass.sale_consumption ?? 0,
+        byBranch: sumBy(
+          saleConsumptionRows,
+          (row) => row.branch_id,
+          (row) => costValue(Math.abs(row.quantity_change), row.unit_cost),
+        ),
+      },
+      stockMovementRows: movements.length,
+    },
+    skipped: {
+      existingTransferRows: (sqlRows.transfers ?? []).filter((row) =>
+        targetTransferNumbers.has(row.transfer_number),
+      ).length,
+      existingMovementRows: (sqlRows.movements ?? []).filter((row) =>
+        targetMovementReasons.has(row.reason),
+      ).length,
+      outsideCutoffMovementRows:
+        cutoffMs == null
+          ? 0
+          : (sqlRows.movements ?? []).filter(
+              (row) => !atOrBeforeCutoff(row.created_at, cutoffMs),
+            ).length,
+    },
+    sql: {
+      canWrite: blockers.length === 0,
+      movementRows: movements.length,
+      transferItemRows: transferItems.length,
+      transferRows: transferRows.length,
+    },
+  };
+  if (options.includeRows) report.plannedRows = deltaRows;
+  return { report, sqlRows: deltaRows };
+}
+
+function generateDeltaSql(rows) {
+  return `BEGIN;
+
+CREATE TEMP TABLE tmp_matu_delta_transfers ON COMMIT DROP AS
+SELECT *
+FROM jsonb_to_recordset(${jsonSql("matu_delta_transfers", rows.transfers)}) AS x(
+  transfer_number text,
+  tenant_id bigint,
+  from_branch_id bigint,
+  to_branch_id bigint,
+  status text,
+  notes text,
+  vehicle_info text,
+  created_by uuid,
+  shipped_at timestamptz,
+  received_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz,
+  from_location_id bigint,
+  to_location_id bigint
+);
+
+CREATE TEMP TABLE tmp_matu_delta_transfer_items ON COMMIT DROP AS
+SELECT *
+FROM jsonb_to_recordset(${jsonSql("matu_delta_transfer_items", rows.transferItems)}) AS x(
+  transfer_number text,
+  tenant_id bigint,
+  ingredient_id bigint,
+  quantity numeric,
+  unit text,
+  unit_cost_at_ship numeric,
+  quantity_received numeric,
+  receive_note text
+);
+
+CREATE TEMP TABLE tmp_matu_delta_movements ON COMMIT DROP AS
+SELECT *
+FROM jsonb_to_recordset(${jsonSql("matu_delta_movements", rows.movements)}) AS x(
+  tenant_id bigint,
+  branch_id bigint,
+  ingredient_id bigint,
+  type text,
+  quantity_change numeric,
+  reason text,
+  created_by uuid,
+  created_at timestamptz,
+  unit_cost numeric,
+  location_id bigint,
+  movement_subtype text,
+  source_transfer_number text
+);
+
+DO $guard$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.stock_transfers st
+    JOIN tmp_matu_delta_transfers t
+      ON t.tenant_id = st.tenant_id
+     AND t.transfer_number = st.transfer_number
+  ) THEN
+    RAISE EXCEPTION 'delta_transfer_already_imported';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.stock_movements sm
+    JOIN tmp_matu_delta_movements m
+      ON m.tenant_id = sm.tenant_id
+     AND m.reason = sm.reason
+  ) THEN
+    RAISE EXCEPTION 'delta_movement_already_imported';
+  END IF;
+
+  IF EXISTS (
+    WITH net AS (
+      SELECT tenant_id, branch_id, location_id, ingredient_id, sum(quantity_change) AS quantity_change
+      FROM tmp_matu_delta_movements
+      GROUP BY tenant_id, branch_id, location_id, ingredient_id
+    )
+    SELECT 1
+    FROM net n
+    LEFT JOIN public.stock_levels sl
+      ON sl.tenant_id = n.tenant_id
+     AND sl.branch_id IS NOT DISTINCT FROM n.branch_id
+     AND sl.location_id = n.location_id
+     AND sl.ingredient_id = n.ingredient_id
+    WHERE coalesce(sl.current_quantity, 0) + n.quantity_change < -0.0005
+  ) THEN
+    RAISE EXCEPTION 'delta_stock_would_go_negative';
+  END IF;
+END
+$guard$;
+
+INSERT INTO public.stock_transfers (
+  tenant_id,
+  from_branch_id,
+  to_branch_id,
+  transfer_number,
+  status,
+  notes,
+  vehicle_info,
+  created_by,
+  shipped_at,
+  received_at,
+  created_at,
+  updated_at,
+  from_location_id,
+  to_location_id
+)
+SELECT
+  tenant_id,
+  from_branch_id,
+  to_branch_id,
+  transfer_number,
+  status,
+  notes,
+  vehicle_info,
+  created_by,
+  shipped_at,
+  received_at,
+  created_at,
+  updated_at,
+  from_location_id,
+  to_location_id
+FROM tmp_matu_delta_transfers
+ORDER BY created_at, transfer_number;
+
+INSERT INTO public.stock_transfer_items (
+  tenant_id,
+  transfer_id,
+  ingredient_id,
+  quantity,
+  unit,
+  unit_cost_at_ship,
+  quantity_received,
+  receive_note
+)
+SELECT
+  ti.tenant_id,
+  st.id,
+  ti.ingredient_id,
+  ti.quantity,
+  ti.unit,
+  ti.unit_cost_at_ship,
+  ti.quantity_received,
+  ti.receive_note
+FROM tmp_matu_delta_transfer_items ti
+JOIN public.stock_transfers st
+  ON st.tenant_id = ti.tenant_id
+ AND st.transfer_number = ti.transfer_number
+ORDER BY ti.transfer_number, ti.ingredient_id;
+
+ALTER TABLE public.stock_movements DISABLE TRIGGER trg_stock_movement_update_levels;
+
+INSERT INTO public.stock_movements (
+  tenant_id,
+  branch_id,
+  ingredient_id,
+  type,
+  quantity_change,
+  reason,
+  created_by,
+  created_at,
+  transfer_id,
+  unit_cost,
+  location_id,
+  movement_subtype
+)
+SELECT
+  m.tenant_id,
+  m.branch_id,
+  m.ingredient_id,
+  m.type,
+  m.quantity_change,
+  m.reason,
+  m.created_by,
+  m.created_at,
+  st.id,
+  m.unit_cost,
+  m.location_id,
+  m.movement_subtype
+FROM tmp_matu_delta_movements m
+LEFT JOIN public.stock_transfers st
+  ON st.tenant_id = m.tenant_id
+ AND st.transfer_number = m.source_transfer_number
+ORDER BY m.created_at, m.reason, m.ingredient_id;
+
+CREATE TEMP TABLE tmp_matu_delta_affected_keys ON COMMIT DROP AS
+SELECT DISTINCT tenant_id, branch_id, location_id, ingredient_id
+FROM tmp_matu_delta_movements;
+
+DO $stock_levels_nonnegative$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.stock_movements sm
+    JOIN tmp_matu_delta_affected_keys k
+      ON k.tenant_id = sm.tenant_id
+     AND k.branch_id IS NOT DISTINCT FROM sm.branch_id
+     AND k.location_id = sm.location_id
+     AND k.ingredient_id = sm.ingredient_id
+    GROUP BY sm.tenant_id, sm.branch_id, sm.ingredient_id, sm.location_id
+    HAVING round(sum(sm.quantity_change), 3) < 0
+  ) THEN
+    RAISE EXCEPTION 'delta_rebuilt_stock_levels_negative';
+  END IF;
+END
+$stock_levels_nonnegative$;
+
+DELETE FROM public.stock_levels sl
+USING tmp_matu_delta_affected_keys k
+WHERE k.tenant_id = sl.tenant_id
+  AND k.branch_id IS NOT DISTINCT FROM sl.branch_id
+  AND k.location_id = sl.location_id
+  AND k.ingredient_id = sl.ingredient_id;
+
+INSERT INTO public.stock_levels (
+  tenant_id,
+  branch_id,
+  ingredient_id,
+  location_id,
+  current_quantity,
+  avg_unit_cost,
+  last_counted_at
+)
+SELECT
+  sm.tenant_id,
+  sm.branch_id,
+  sm.ingredient_id,
+  sm.location_id,
+  round(sum(sm.quantity_change), 3) AS current_quantity,
+  round(
+    (array_agg(sm.unit_cost ORDER BY CASE WHEN sm.type = 'count_adjustment' THEN 0 ELSE 1 END, sm.created_at DESC))[1],
+    2
+  ) AS avg_unit_cost,
+  max(sm.created_at) FILTER (WHERE sm.type = 'count_adjustment') AS last_counted_at
+FROM public.stock_movements sm
+JOIN tmp_matu_delta_affected_keys k
+  ON k.tenant_id = sm.tenant_id
+ AND k.branch_id IS NOT DISTINCT FROM sm.branch_id
+ AND k.location_id = sm.location_id
+ AND k.ingredient_id = sm.ingredient_id
+GROUP BY sm.tenant_id, sm.branch_id, sm.ingredient_id, sm.location_id
+HAVING round(sum(sm.quantity_change), 3) > 0;
+
+ALTER TABLE public.stock_movements ENABLE TRIGGER trg_stock_movement_update_levels;
+
+COMMIT;
+`;
+}
+
 function printHuman(report) {
+  if (report.mode === "delta-dry-run") {
+    console.log("Matu-platform Inventory delta batch dry-run");
+    console.log(`Cutoff: ${report.cutoff}`);
+    console.log(
+      `Blockers: ${report.blockers.length ? report.blockers.join("; ") : "none"}`,
+    );
+    console.log("Delta plan:");
+    console.table({
+      realTransfers: report.operationalPlan.realTransfers.count,
+      transferItems: report.operationalPlan.realTransfers.itemRows,
+      grnReceiptMovements: report.operationalPlan.goodsReceipts.movementRows,
+      saleConsumptionMovements:
+        report.operationalPlan.saleConsumption.movementRows,
+      totalStockMovements: report.operationalPlan.stockMovementRows,
+    });
+    console.log("Sale consumption cost by branch:");
+    console.table(report.operationalPlan.saleConsumption.byBranch);
+    return;
+  }
   console.log("Matu-platform Inventory operational import dry-run");
   console.log(`Actor: ${report.actor.fullName ?? report.actor.id}`);
-  console.log(`Blockers: ${report.blockers.length ? report.blockers.join("; ") : "none"}`);
-  console.log(`Reset blockers: ${report.reset.blockers.length ? report.reset.blockers.join("; ") : "none"}`);
+  console.log(
+    `Blockers: ${report.blockers.length ? report.blockers.join("; ") : "none"}`,
+  );
+  console.log(
+    `Reset blockers: ${report.reset.blockers.length ? report.reset.blockers.join("; ") : "none"}`,
+  );
   console.log("Operational plan:");
   console.table({
     realTransfers: report.operationalPlan.realTransfers.count,
     transferItems: report.operationalPlan.realTransfers.itemRows,
-    saleConsumptionMovements: report.operationalPlan.saleConsumption.movementRows,
+    saleConsumptionMovements:
+      report.operationalPlan.saleConsumption.movementRows,
     balanceAdjustments: report.operationalPlan.balanceAdjustments.count,
     totalStockMovements: report.operationalPlan.stockMovementRows,
   });
@@ -1490,7 +2172,11 @@ function printHuman(report) {
 
 function selfTest() {
   assert.equal(
-    sumBy([{ v: 0.015 }, { v: 0.015 }], () => "same", (row) => row.v).same,
+    sumBy(
+      [{ v: 0.015 }, { v: 0.015 }],
+      () => "same",
+      (row) => row.v,
+    ).same,
     0.03,
   );
 
@@ -1498,14 +2184,51 @@ function selfTest() {
   const source = {
     branches: [{ id: "b-dd", code: "DD", name: "Dat Do" }],
     warehouses: [
-      { id: "kho-tong", branch_id: null, code: "KHO-TONG", name: "Kho Tong", kind: "warehouse" },
-      { id: "kho-tt", branch_id: null, code: "KHO-TT", name: "Kho Trung Tam", kind: "warehouse", is_production_default: true },
-      { id: "kho-dd", branch_id: "b-dd", code: "KHO-DD", name: "Kho DD", kind: "warehouse" },
-      { id: "bep-dd", branch_id: "b-dd", code: "BEP-DD", name: "Bep DD", kind: "kitchen" },
+      {
+        id: "kho-tong",
+        branch_id: null,
+        code: "KHO-TONG",
+        name: "Kho Tong",
+        kind: "warehouse",
+      },
+      {
+        id: "kho-tt",
+        branch_id: null,
+        code: "KHO-TT",
+        name: "Kho Trung Tam",
+        kind: "warehouse",
+        is_production_default: true,
+      },
+      {
+        id: "kho-dd",
+        branch_id: "b-dd",
+        code: "KHO-DD",
+        name: "Kho DD",
+        kind: "warehouse",
+      },
+      {
+        id: "bep-dd",
+        branch_id: "b-dd",
+        code: "BEP-DD",
+        name: "Bep DD",
+        kind: "kitchen",
+      },
     ],
     materials: [
-      { id: "m1", sku: "G001", name: "Rice", cost_per_unit: 10, base_unit: "kg" },
-      { id: "m2", sku: "T001", name: "Pork", cost_per_unit: 20.119, base_unit: "kg" },
+      {
+        id: "m1",
+        sku: "G001",
+        name: "Rice",
+        cost_per_unit: 10,
+        base_unit: "kg",
+      },
+      {
+        id: "m2",
+        sku: "T001",
+        name: "Pork",
+        cost_per_unit: 20.119,
+        base_unit: "kg",
+      },
     ],
     stockItems: [
       { warehouse_id: "kho-tong", material_id: "m1", quantity: 6 },
@@ -1533,8 +2256,22 @@ function selfTest() {
       },
     ],
     goodsReceiptItems: [
-      { receipt_id: "g1", material_id: "m1", quantity: 2, qty_base: 2, unit_cost: 9, unit_cost_base: 9 },
-      { receipt_id: "g2", material_id: "m1", quantity: 2, qty_base: 2, unit_cost: 9, unit_cost_base: 9 },
+      {
+        receipt_id: "g1",
+        material_id: "m1",
+        quantity: 2,
+        qty_base: 2,
+        unit_cost: 9,
+        unit_cost_base: 9,
+      },
+      {
+        receipt_id: "g2",
+        material_id: "m1",
+        quantity: 2,
+        qty_base: 2,
+        unit_cost: 9,
+        unit_cost_base: 9,
+      },
     ],
     productionRuns: [
       {
@@ -1638,9 +2375,27 @@ function selfTest() {
   const target = {
     tenants: [{ id: 1, slug: "comtammatu", name: "Cơm Tấm Má Tư" }],
     branches: [
-      { id: 2, tenant_id: 1, code: "DD", name: "Dat Do", branch_kind: "branch" },
-      { id: 15, tenant_id: 1, code: "KT", name: "Kho Tong", branch_kind: "central_supply" },
-      { id: 16, tenant_id: 1, code: "BTT", name: "Bep Trung Tam", branch_kind: "central_kitchen" },
+      {
+        id: 2,
+        tenant_id: 1,
+        code: "DD",
+        name: "Dat Do",
+        branch_kind: "branch",
+      },
+      {
+        id: 15,
+        tenant_id: 1,
+        code: "KT",
+        name: "Kho Tong",
+        branch_kind: "central_supply",
+      },
+      {
+        id: 16,
+        tenant_id: 1,
+        code: "BTT",
+        name: "Bep Trung Tam",
+        branch_kind: "central_kitchen",
+      },
     ],
     locations: [
       {
@@ -1672,11 +2427,33 @@ function selfTest() {
       },
     ],
     ingredients: [
-      { id: 100, tenant_id: 1, sku: "G001", name: "Rice", unit: "kg", unit_cost: 10 },
-      { id: 200, tenant_id: 1, sku: "T001", name: "Pork", unit: "kg", unit_cost: 20.119 },
+      {
+        id: 100,
+        tenant_id: 1,
+        sku: "G001",
+        name: "Rice",
+        unit: "kg",
+        unit_cost: 10,
+      },
+      {
+        id: 200,
+        tenant_id: 1,
+        sku: "T001",
+        name: "Pork",
+        unit: "kg",
+        unit_cost: 20.119,
+      },
     ],
     movements: [],
-    profiles: [{ id: actorId, tenant_id: 1, branch_id: null, full_name: "Owner", is_active: true }],
+    profiles: [
+      {
+        id: actorId,
+        tenant_id: 1,
+        branch_id: null,
+        full_name: "Owner",
+        is_active: true,
+      },
+    ],
     transferItems: [],
     transfers: [],
     levels: [],
@@ -1692,7 +2469,9 @@ function selfTest() {
   assert.equal(blocked.manualReview.count, 0);
   assert.equal(blocked.ignored.byClass.ignored_legacy_branch_kitchen_source, 1);
   assert.equal(blocked.ignored.byClass.ignored_kitchen_passthrough_inbound, 1);
-  assert.ok(!blocked.blockers.includes("manual review rows require owner decision"));
+  assert.ok(
+    !blocked.blockers.includes("manual review rows require owner decision"),
+  );
 
   const { report, sqlRows } = buildPlan(source, target, {
     actorId,
@@ -1701,9 +2480,18 @@ function selfTest() {
     includeRows: true,
   });
   assert.equal(report.blockers.length, 0);
-  assert.equal(report.plannedRows.movements.length, report.operationalPlan.stockMovementRows);
-  assert.equal(report.plannedRows.transfers.length, report.operationalPlan.realTransfers.count);
-  assert.equal(report.plannedRows.transferItems.length, report.operationalPlan.realTransfers.itemRows);
+  assert.equal(
+    report.plannedRows.movements.length,
+    report.operationalPlan.stockMovementRows,
+  );
+  assert.equal(
+    report.plannedRows.transfers.length,
+    report.operationalPlan.realTransfers.count,
+  );
+  assert.equal(
+    report.plannedRows.transferItems.length,
+    report.operationalPlan.realTransfers.itemRows,
+  );
   assert.equal(report.operationalPlan.goodsReceipts.movementRows, 1);
   assert.equal(report.operationalPlan.production.consumptionRows, 1);
   assert.equal(report.operationalPlan.production.outputRows, 1);
@@ -1720,12 +2508,44 @@ function selfTest() {
   assert.match(sql, /sale_consumption/);
   assert.match(sql, /balance_adjustment/);
 
+  const { report: deltaReport, sqlRows: deltaRows } = buildDeltaPlan(
+    sqlRows,
+    target,
+    {
+      deltaCutoff: "2026-05-02T23:00:00Z",
+      includeRows: true,
+    },
+  );
+  assert.equal(deltaReport.blockers.length, 0);
+  assert.equal(deltaReport.operationalPlan.realTransfers.count, 1);
+  assert.equal(deltaReport.operationalPlan.realTransfers.itemRows, 1);
+  assert.equal(deltaReport.operationalPlan.goodsReceipts.movementRows, 1);
+  assert.equal(deltaReport.operationalPlan.saleConsumption.movementRows, 1);
+  assert.equal(deltaReport.operationalPlan.stockMovementRows, 4);
+  assert.equal(
+    deltaRows.movements.some((row) => row.type.startsWith("production_")),
+    false,
+  );
+  const deltaSql = generateDeltaSql(deltaRows);
+  assert.match(deltaSql, /delta_rebuilt_stock_levels_negative/);
+  assert.match(deltaSql, /avg_unit_cost/);
+
   const resetTarget = {
     ...target,
-    movements: [{ id: 1, type: "count_adjustment", reason: "matu-platform import:balance_adjustment" }],
+    movements: [
+      {
+        id: 1,
+        type: "count_adjustment",
+        reason: "matu-platform import:balance_adjustment",
+      },
+    ],
     transferItems: [{ id: 1, transfer_id: 1 }],
     transfers: [
-      { id: 1, transfer_number: "TR-OLD", notes: "matu-platform import:real_transfer:old" },
+      {
+        id: 1,
+        transfer_number: "TR-OLD",
+        notes: "matu-platform import:real_transfer:old",
+      },
     ],
     levels: [{ id: 1 }],
   };
@@ -1743,7 +2563,9 @@ function selfTest() {
     movements: [{ id: 2, type: "consumption", reason: null }],
   });
   assert.equal(dirtyResetPlan.canWrite, false);
-  assert.deepEqual(dirtyResetPlan.blockers, ["target has non-import stock movements"]);
+  assert.deepEqual(dirtyResetPlan.blockers, [
+    "target has non-import stock movements",
+  ]);
   console.log("self-test ok");
 }
 
@@ -1753,11 +2575,21 @@ if (args.help) {
 } else if (args.selfTest) {
   selfTest();
 } else {
-  if (!args.sourceUrl || !args.sourceKey || !args.targetUrl || !args.targetKey) {
+  if (
+    !args.sourceUrl ||
+    !args.sourceKey ||
+    !args.targetUrl ||
+    !args.targetKey
+  ) {
     throw new Error("Missing source/target Supabase env");
   }
-  if (args.writeSql && args.writeResetSql) {
-    throw new Error("Choose either --write-sql or --write-reset-sql");
+  const writeModes = [
+    args.writeSql,
+    args.writeResetSql,
+    args.writeDeltaSql,
+  ].filter(Boolean);
+  if (writeModes.length > 1) {
+    throw new Error("Choose only one SQL output flag");
   }
   assertProjectUrl(args.sourceUrl, SOURCE_REF, "Source");
   assertProjectUrl(args.targetUrl, TARGET_REF, "Target");
@@ -1767,16 +2599,39 @@ if (args.help) {
     loadTarget({ baseUrl: args.targetUrl, key: args.targetKey }),
   ]);
   const { report, sqlRows } = buildPlan(source, target, args);
+  if (args.deltaCutoff || args.writeDeltaSql) {
+    const { report: deltaReport, sqlRows: deltaRows } = buildDeltaPlan(
+      sqlRows,
+      target,
+      args,
+    );
+    if (args.writeDeltaSql) {
+      if (deltaReport.blockers.length > 0) {
+        throw new Error(
+          `Cannot write delta SQL while blockers remain: ${deltaReport.blockers.join("; ")}`,
+        );
+      }
+      writeFileSync(args.writeDeltaSql, generateDeltaSql(deltaRows));
+      deltaReport.sql.writtenTo = args.writeDeltaSql;
+    }
+    if (args.json) console.log(JSON.stringify(deltaReport, null, 2));
+    else printHuman(deltaReport);
+    process.exit(0);
+  }
   if (args.writeResetSql) {
     if (report.reset.blockers.length > 0) {
-      throw new Error(`Cannot write reset SQL while blockers remain: ${report.reset.blockers.join("; ")}`);
+      throw new Error(
+        `Cannot write reset SQL while blockers remain: ${report.reset.blockers.join("; ")}`,
+      );
     }
     writeFileSync(args.writeResetSql, generateResetSql());
     report.reset.writtenTo = args.writeResetSql;
   }
   if (args.writeSql) {
     if (report.blockers.length > 0) {
-      throw new Error(`Cannot write SQL while blockers remain: ${report.blockers.join("; ")}`);
+      throw new Error(
+        `Cannot write SQL while blockers remain: ${report.blockers.join("; ")}`,
+      );
     }
     writeFileSync(args.writeSql, generateSql(sqlRows));
     report.sql.writtenTo = args.writeSql;
