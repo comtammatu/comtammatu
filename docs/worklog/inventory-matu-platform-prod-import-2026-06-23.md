@@ -1,5 +1,7 @@
 # Inventory matu-platform prod import acceptance - 2026-06-23
 
+> Reconciled-through bc5070406d321dfccfea40e3e42c9f1eca5281a8
+
 ## Scope
 
 This worklog records the post-merge/prod acceptance state for the `matu-platform`
