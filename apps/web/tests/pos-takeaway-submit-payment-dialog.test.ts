@@ -6,7 +6,7 @@ import { test } from "node:test";
 const source = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx",
+    "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
   ),
   "utf8",
 );

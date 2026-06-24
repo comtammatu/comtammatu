@@ -7,6 +7,11 @@ const posShellSource = readFileSync(
   join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx"),
   "utf8",
 );
+const posDesktopInnerSource = readFileSync(
+  join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx"),
+  "utf8",
+);
+const posDesktopSource = `${posShellSource}\n${posDesktopInnerSource}`;
 
 const appendDraftSource = readFileSync(
   join(
@@ -97,7 +102,7 @@ const orderSyncSource = readFileSync(
 );
 
 const serviceModeSelector =
-  /const serviceModeSelector = \([\s\S]*?\n\s*\);/.exec(posShellSource)?.[0] ??
+  /const serviceModeSelector = \([\s\S]*?\n\s*\);/.exec(posDesktopSource)?.[0] ??
   "";
 
 test("POS service mode uses ToggleGroup primitive state instead of route-local state colors", () => {
@@ -131,43 +136,43 @@ test("POS append draft item rows stay on Item composition instead of Button heig
 });
 
 test("POS takeaway mode uses a context grid before entering the new-order menu", () => {
-  assert.match(posShellSource, /const \[takeawayDraftActive/);
+  assert.match(posDesktopSource, /const \[takeawayDraftActive/);
   assert.match(
-    posShellSource,
+    posDesktopSource,
     /const orderContextReady = takeawayDraftReady \|\| selectedTableUsable;/,
   );
   assert.match(
-    posShellSource,
+    posDesktopSource,
     /const isTakeawayGateActive = !menuContextReady && cartOrderType === "takeaway";/,
   );
   assert.match(
-    posShellSource,
+    posDesktopSource,
     /hideTakeawayOrders: isTakeawayGateActive/,
   );
-  assert.match(posShellSource, /currentOrderTarget/);
-  assert.match(posShellSource, /orderTargetRow/);
-  assert.match(posShellSource, /headerAction=\{serviceModeSelector\}/);
+  assert.match(posDesktopSource, /currentOrderTarget/);
+  assert.match(posDesktopSource, /orderTargetRow/);
+  assert.match(posDesktopSource, /headerAction=\{serviceModeSelector\}/);
   assert.match(tableGateSource, /headerAction\?: ReactNode/);
   assert.doesNotMatch(tableGateSource, /tableGate\.tableCount/);
   assert.doesNotMatch(tableGateSource, /tableGate\.availableCount/);
   assert.match(takeawayGateSource, /headerAction\?: ReactNode/);
   assert.doesNotMatch(takeawayGateSource, /takeawayGate\.activeCount/);
-  assert.match(posShellSource, /onCancelAppend=\{cancelAppendWorkflow\}/);
-  assert.match(posShellSource, /isAppendingToOrder\s*\?\s*cancelAppendWorkflow/);
-  assert.doesNotMatch(posShellSource, /appendBannerRow/);
-  assert.doesNotMatch(posShellSource, /appendBannerTitle/);
-  assert.doesNotMatch(posShellSource, /border-b border-border\/60 bg-background p-0 md:px-4 md:py-3/);
-  assert.doesNotMatch(posShellSource, /bg-background p-0 md:hidden/);
+  assert.match(posDesktopSource, /onCancelAppend=\{cancelAppendWorkflow\}/);
+  assert.match(posDesktopSource, /isAppendingToOrder\s*\?\s*cancelAppendWorkflow/);
+  assert.doesNotMatch(posDesktopSource, /appendBannerRow/);
+  assert.doesNotMatch(posDesktopSource, /appendBannerTitle/);
+  assert.doesNotMatch(posDesktopSource, /border-b border-border\/60 bg-background p-0 md:px-4 md:py-3/);
+  assert.doesNotMatch(posDesktopSource, /bg-background p-0 md:hidden/);
   assert.match(mobileActionBarSource, /onCancelAppend/);
   assert.match(mobileActionBarSource, /messages\.pos\.appendDraft\.cancel/);
   assert.match(mobileActionBarSource, /messages\.pos\.appendDraft\.cancelAria/);
-  assert.match(posShellSource, /const sidebars = isMobile \? null : \(/);
+  assert.match(posDesktopSource, /const sidebars = isMobile \? null : \(/);
   assert.doesNotMatch(
-    posShellSource,
+    posDesktopSource,
     /const sidebars = isMobile \|\| isTakeawayGateActive \? null : \(/,
   );
   assert.doesNotMatch(
-    posShellSource,
+    posDesktopSource,
     /const orderContextReady = cartOrderType === "takeaway" \|\| selectedTableUsable;/,
   );
   assert.match(orderListPaneSource, /hideTakeawayOrders = false/);
@@ -186,8 +191,8 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
   assert.match(sidebarVariantsSource, /targetLabel=\{appendDraft\.target\.targetLabel\}/);
   assert.match(sidebarPanelSource, /hideTakeawayOrders=\{hideTakeawayOrders\}/);
   assert.match(sidebarPanelSource, /pendingNewTitle/);
-  assert.match(posShellSource, /<PosTakeawayGate/);
-  assert.match(posShellSource, /onCreateNew=\{handleCreateTakeawayOrder\}/);
+  assert.match(posDesktopSource, /<PosTakeawayGate/);
+  assert.match(posDesktopSource, /onCreateNew=\{handleCreateTakeawayOrder\}/);
 
   assert.doesNotMatch(takeawayGateSource, /OperationalBoardCard/);
   assert.match(takeawayGateSource, /<OperationalTile/);

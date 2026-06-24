@@ -360,7 +360,7 @@ const checks = [
     allowlist: {
       "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx": 3,
+      "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx": 3,
       "apps/web/app/(protected)/inventory/_components/inventory-shell.tsx": 2,
       "apps/web/app/(protected)/inventory/dashboard-client.tsx": 2,
       "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx": 2,
@@ -853,7 +853,7 @@ const perFileCountBudgets = [
       "apps/web/app/_components/notification-list.tsx": 1,
       "apps/web/app/(protected)/admin/staff/[id]/permissions/permissions-client.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/components/completion-history-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-page-skeleton.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx": 1,
       "apps/web/app/(protected)/employee/components/mobile-header.tsx": 1,
