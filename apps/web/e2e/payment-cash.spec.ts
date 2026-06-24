@@ -33,8 +33,9 @@ test.describe("Cash payment -> POS close", () => {
         .poll(() => getKdsTicketStatus(testOrder.kdsTicketId))
         .toBe("pending");
 
-      await page.goto(`/br/${String(testOrder.branchId)}/pos`);
-      await page.waitForLoadState("networkidle");
+      await page.goto(`/br/${String(testOrder.branchId)}/pos`, {
+        waitUntil: "domcontentloaded",
+      });
 
       // The order list renders in both the desktop shell and the (hidden) sidebar
       // panel, so two copies of the bill button exist; target the visible one.
@@ -121,8 +122,9 @@ test.describe("Cash payment -> POS close", () => {
         .poll(() => getKdsTicketStatus(second.ticketId))
         .toBe("pending");
 
-      await page.goto(`/br/${String(testOrder.branchId)}/pos`);
-      await page.waitForLoadState("networkidle");
+      await page.goto(`/br/${String(testOrder.branchId)}/pos`, {
+        waitUntil: "domcontentloaded",
+      });
 
       // The order list renders in both the desktop shell and the (hidden) sidebar
       // panel, so two copies of the bill button exist; target the visible one.
