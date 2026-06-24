@@ -87,3 +87,59 @@ display that full imported aggregate as a single visible number.
 Do not rerun the full import blindly. If the new `matu-platform` documents need
 to be brought over, run a delta dry-run first for the documents above, review
 stock value and moving-average impact, then apply only the approved delta.
+
+## Delta execution - 2026-06-24
+
+Applied the approved delta for the documents observed on `2026-06-23`.
+
+| Document | Target effect | Value |
+| --- | --- | ---: |
+| `TRF-20260623-001164` | 1 transfer, 1 transfer item, 2 transfer movements | 180000 |
+| `GRN-20260623-001165` | 1 `grn_receipt` movement for `Than` at PH | 1020000 |
+| `GRN-20260623-001166` | 1 `grn_receipt` movement for `Tieu` at BTT | 110000 |
+
+Post-apply checks:
+
+| Check | Value |
+| --- | ---: |
+| Target stock transfers | 362 |
+| Target transfer items | 583 |
+| Target stock movement rows | 3721 |
+| Sale consumption movements | 357 |
+| Sale consumption cost | 211098981.49 |
+| Stock levels | 125 |
+| Stock value | 84439635.09 |
+| Active kitchen locations | 0 |
+| Kitchen stock levels | 0 |
+| Negative stock levels | 0 |
+| Stock level mismatches | 0 |
+
+`stock_movements` trigger `trg_update_stock_on_movement` updates quantity but
+does not seed `stock_levels.avg_unit_cost` for newly created stock levels. The
+delta GRN for `Tieu` at BTT created a new stock level, so its WAC was corrected
+from the imported movement unit cost (`220`) by joining on the movement reason.
+Fixing the trigger itself should be a separate migration/PR, not a prod hot
+edit.
+
+Production smoke after delta:
+
+- `https://app.comtammatu.com/api/health` returned `{"status":"ok","db":"ok"}`.
+- Authenticated routes returned HTTP 200:
+  - `/inventory/stock`
+  - `/inventory/consumption`
+  - `/finance/food-cost`
+- `/inventory/stock` displayed `84.439.635đ`.
+
+Current-source drift remains because `matu-platform` continued to receive new
+Inventory documents after this delta:
+
+| Drift | Missing from target |
+| --- | ---: |
+| Real transfers | 7 |
+| Transfer items | 17 |
+| Stock movement rows | 72 |
+| Sale consumption rows | 19 |
+| Current source sale consumption cost delta | 5239828.22 |
+
+The next import must be another reviewed delta batch. Do not keep chasing the
+live source one row at a time without a cutoff timestamp.
