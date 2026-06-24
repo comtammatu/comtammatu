@@ -13,8 +13,8 @@ const posHeaderSource = readFileSync(
   "utf8",
 );
 
-const posShellSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx"),
+const posDesktopInnerSource = readFileSync(
+  join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx"),
   "utf8",
 );
 
@@ -59,12 +59,12 @@ test("POS exposes menu lock and daily limit only through branch menu-limit ACL",
 
 test("POS menu-limit sheet is fed from POS menu data and shares canonical actions", () => {
   assert.match(
-    posShellSource,
+    posDesktopInnerSource,
     /const menuLimitRows = useMemo<MenuLimitRow\[\]>/,
     "POS shell should derive initial sheet rows from the already-loaded menu",
   );
   assert.match(
-    posShellSource,
+    posDesktopInnerSource,
     /menuLimitRows=\{menuLimitRows\}/,
     "POS mobile and desktop headers must receive the same menu-limit rows",
   );
