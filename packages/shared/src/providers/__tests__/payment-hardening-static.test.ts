@@ -122,7 +122,13 @@ test("Each order owns one immutable DH payment code", () => {
   assert.match(migration, /idx_orders_payment_code_unique/);
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.ensure_order_payment_code/);
   assert.match(migration, /UPDATE public\.orders o[\s\S]*ranked_payment_codes/);
-  assert.match(migration, /lower\(o\.payment_code\) = lower\(v_code\)/);
+  assert.match(migration, /ALTER COLUMN payment_code SET NOT NULL/);
+  assert.match(
+    migration,
+    /CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_payment_code_unique[\s\S]*lower\(payment_code\)/,
+  );
+  assert.match(migration, /FOR v_try IN 1\.\.20 LOOP/);
+  assert.match(migration, /EXCEPTION WHEN unique_violation THEN/);
 });
 
 test("SePay migration extends webhook provider check and keeps RPC service-only", () => {
