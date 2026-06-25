@@ -8246,14 +8246,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      ensure_order_payment_code: {
-        Args: {
-          p_branch_id: number
-          p_order_id: number
-          p_tenant_id: number
-        }
-        Returns: Json
-      }
       confirm_cash_payment: {
         Args: { p_cash_received: number; p_order_id: number }
         Returns: Json
@@ -8552,6 +8544,10 @@ export type Database = {
         Args: { p_branch_id: number; p_tenant_id: number }
         Returns: undefined
       }
+      ensure_order_payment_code: {
+        Args: { p_branch_id: number; p_order_id: number; p_tenant_id: number }
+        Returns: Json
+      }
       escalate_round_4: {
         Args: {
           p_final_qty: number
@@ -8598,6 +8594,7 @@ export type Database = {
           tenant_id: number
         }[]
       }
+      generate_order_payment_code: { Args: never; Returns: string }
       get_branch_menu_daily_limits_for_pos: {
         Args: { p_branch_id: number }
         Returns: {
