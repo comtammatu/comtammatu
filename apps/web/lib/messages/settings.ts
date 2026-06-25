@@ -39,7 +39,7 @@ export const settings = {
     kdsDescription: "Quản lý trạm hiển thị bếp và gán danh mục món ăn",
     paymentsTitle: "Thanh toán",
     paymentsDescription:
-      "Bật VietQR và MoMo trên POS sau khi đã đặt biến môi trường trên hosting (Vercel / server).",
+      "Cấu hình Chuyển khoản, SePay xác nhận tự động và MoMo cho POS.",
     printersTitle: "Máy in",
     printersDescription:
       "Cấu hình máy in theo từng chi nhánh: loại phiếu và danh mục món in trên từng máy.",
@@ -225,15 +225,17 @@ export const settings = {
     saved: "Đã lưu cài đặt thanh toán",
     sectionTitle: "Phương thức thanh toán trên POS",
     vietqrLabel: "VietQR (chuyển khoản QR)",
-    vietqrDescriptionPrefix:
-      "Nhập STK ngân hàng dưới đây. Nếu để trống sẽ dùng biến môi trường",
-    vietqrEnvReady: "✓ có sẵn",
-    vietqrEnvMissing: "chưa đặt",
+    vietqrDescription:
+      "Nhập tài khoản nhận tiền tại đây; POS sẽ dùng cấu hình này để tạo QR chuyển khoản.",
     bankCode: "Mã ngân hàng",
     accountNo: "Số tài khoản",
     accountName: "Chủ tài khoản",
     bankHelp:
       "Mã NH: TCB, VCB, BIDV, MB, ACB, TPB, VPB, STB... (Napas BIN cũng chấp nhận, vd 970407 = Techcombank).",
+    sepayLabel: "SePay tự động xác nhận",
+    sepayDescription:
+      "Dùng cho Chuyển khoản; SePay chỉ xác nhận tiền vào, không phải phương thức thanh toán riêng.",
+    sepayEndpoint: "Webhook: /api/webhooks/sepay",
     momoNeeds: "Cần",
     envStatus: "Trạng thái env:",
     envConfigured: "✓ Đã cấu hình",

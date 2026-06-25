@@ -391,8 +391,7 @@ export function PosDesktopInner({
 
   const getDailyLimitHoldToken = useCallback(
     (source: DailyLimitHoldSource): string => {
-      const ref =
-        source === "pos_cart" ? cartHoldTokenRef : appendHoldTokenRef;
+      const ref = source === "pos_cart" ? cartHoldTokenRef : appendHoldTokenRef;
       ref.current ??= crypto.randomUUID();
       return ref.current;
     },
@@ -401,8 +400,7 @@ export function PosDesktopInner({
 
   const resetDailyLimitHoldToken = useCallback(
     (source: DailyLimitHoldSource): void => {
-      const ref =
-        source === "pos_cart" ? cartHoldTokenRef : appendHoldTokenRef;
+      const ref = source === "pos_cart" ? cartHoldTokenRef : appendHoldTokenRef;
       ref.current = crypto.randomUUID();
     },
     [],
@@ -566,7 +564,8 @@ export function PosDesktopInner({
   const orderContextReady = takeawayDraftReady || selectedTableUsable;
   const isAppendingToOrder = appendTarget != null;
   const menuContextReady = orderContextReady || isAppendingToOrder;
-  const isTakeawayGateActive = !menuContextReady && cartOrderType === "takeaway";
+  const isTakeawayGateActive =
+    !menuContextReady && cartOrderType === "takeaway";
   const selectedTableNumber = selectedTable?.number;
   const appendDraftQuantity = useMemo(
     () => appendDraftItems.reduce((sum, item) => sum + item.quantity, 0),
@@ -713,11 +712,7 @@ export function PosDesktopInner({
     }, 120);
 
     return () => window.clearTimeout(timeout);
-  }, [
-    appendDraftItems,
-    appendTarget,
-    queueDailyLimitHoldSync,
-  ]);
+  }, [appendDraftItems, appendTarget, queueDailyLimitHoldSync]);
 
   const focusOrderWorkflow = useCallback(
     (orderId: number, orderNumber?: string | null) => {

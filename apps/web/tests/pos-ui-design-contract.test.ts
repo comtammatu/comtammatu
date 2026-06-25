@@ -143,7 +143,7 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
   );
   assert.match(
     posDesktopSource,
-    /const isTakeawayGateActive = !menuContextReady && cartOrderType === "takeaway";/,
+    /const isTakeawayGateActive\s*=\s*!menuContextReady\s*&&\s*cartOrderType === "takeaway";/,
   );
   assert.match(
     posDesktopSource,

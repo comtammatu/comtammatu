@@ -13,10 +13,7 @@ import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 import type { ComponentType } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
-import {
-  buildVietQrEmvco,
-  type PaymentMethod,
-} from "@comtammatu/shared/providers";
+import { type PaymentMethod } from "@comtammatu/shared/providers";
 import {
   Alert,
   AlertDescription,
@@ -374,12 +371,10 @@ function ReceiptLoadingFixture() {
 function RemotePaymentDetails({
   method,
   pendingExtras,
-  order,
   isCreating,
 }: {
   method: PaymentMethod;
   pendingExtras: PendingExtras | null;
-  order: OrderData | null;
   isCreating: boolean;
 }) {
   if (method === "momo") {
@@ -422,7 +417,10 @@ function RemotePaymentDetails({
       </dt>
       <dd className="font-mono">
         {pendingExtras?.qr_info?.description ??
-          `DH ${order?.order_number ?? ""}`}
+          pendingExtras?.provider_ref ??
+          (isCreating
+            ? REMOTE_PAYMENT_COPY.creating
+            : REMOTE_PAYMENT_COPY.unavailable)}
       </dd>
     </dl>
   );
@@ -435,7 +433,6 @@ export function BillReceipt({
   initialOrder,
   canConfirmCash,
   initialPaymentMethods,
-  initialVietQrConfig,
   initialHeaderSeed,
   onOrderUpdated,
   onClose,
@@ -452,7 +449,6 @@ export function BillReceipt({
       ),
     [initialPaymentMethods, canConfirmCash],
   );
-  const vietQrConfig: VietQrConfig | null = initialVietQrConfig;
   const [error, setError] = useState<string | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(
     canConfirmCash ? "cash" : "vietqr",
@@ -502,7 +498,7 @@ export function BillReceipt({
     (selectedMethod === "cash"
       ? cashReceived >= totalAmount
       : selectedMethod === "vietqr"
-        ? Boolean(vietQrConfig)
+        ? Boolean(pendingExtras?.payment_id)
         : false); // MoMo: confirmed via IPN webhook, not cashier action
 
   // Tooltip explaining why the button is disabled — a dimmed button must
@@ -519,7 +515,7 @@ export function BillReceipt({
           : selectedMethod === "momo"
             ? "MoMo tự xác nhận qua IPN sau khi khách thanh toán"
             : selectedMethod === "vietqr"
-              ? "VietQR chưa cấu hình — liên hệ quản lý"
+              ? "Chưa tạo mã chuyển khoản"
               : null;
 
   const cashSuggestions = useMemo(
@@ -689,6 +685,16 @@ export function BillReceipt({
     (method: PaymentMethod) => {
       if (!order || orderId === null) return;
 
+      if (pendingExtras?.payment_id !== undefined) {
+        if (method !== selectedMethod) {
+          toast.error("Hủy mã thanh toán hiện tại trước khi đổi phương thức.");
+          return;
+        }
+        if (pendingExtras.qr_data || pendingExtras.redirect_url) {
+          return;
+        }
+      }
+
       setSelectedMethod(method);
       setPaymentCreateError(null);
       setPendingExtras(null);
@@ -699,43 +705,8 @@ export function BillReceipt({
         return;
       }
 
-      if (method === "vietqr") {
-        // QR generated entirely client-side — no DB row created until cashier
-        // taps "Đã thanh toán". Offline guard not needed for display; confirm
-        // button is gated by isOnline via canConfirmPaid.
-        if (!vietQrConfig) {
-          setPaymentCreateError("VietQR chưa cấu hình — liên hệ quản lý.");
-          return;
-        }
-        const amount = Math.round(Number(order.total_amount));
-        const description = `DH ${order.order_number}`;
-        const qrPayload = buildVietQrEmvco({
-          bankCode: vietQrConfig.bankCode,
-          accountNo: vietQrConfig.accountNo,
-          amount,
-          description,
-          accountName: vietQrConfig.accountName,
-        });
-        if (!qrPayload) {
-          setPaymentCreateError(
-            "VietQR cấu hình không hợp lệ — kiểm tra STK và mã ngân hàng.",
-          );
-          return;
-        }
-        setPendingExtras({
-          qr_data: qrPayload,
-          qr_info: {
-            account_no: vietQrConfig.accountNo,
-            account_name: vietQrConfig.accountName || undefined,
-            bank_code: vietQrConfig.bankCode,
-            description,
-          },
-        });
-        return;
-      }
-
-      // MoMo: needs server call to create pending payment row (IPN webhook
-      // relies on the row existing before the customer scans).
+      // Remote methods need a pending payment row before the customer scans
+      // so webhook/manual settlement can match the transfer.
       if (!isOnline) {
         setPendingOfflineMethod(method);
         toast.error("Mất kết nối — sẽ tự thử lại khi có mạng.");
@@ -748,7 +719,7 @@ export function BillReceipt({
           const result = await createPayment(
             branchId,
             orderId,
-            method as "momo",
+            method,
             Number(order.total_amount),
           );
           if (result.success && result.data) {
@@ -775,17 +746,25 @@ export function BillReceipt({
         }
       })();
     },
-    [branchId, isOnline, order, orderId, vietQrConfig],
+    [
+      branchId,
+      isOnline,
+      order,
+      orderId,
+      pendingExtras?.payment_id,
+      selectedMethod,
+    ],
   );
 
   useEffect(() => {
     if (orderId === null || !order) return;
-    // In the new flow MoMo orders stay 'unpaid' (not 'pending') while the
-    // payment row is pending. Guard: skip paid orders and non-MoMo methods.
-    // VietQR has no pending DB row — nothing to hydrate.
+    // Remote orders stay 'unpaid' while the payment row is pending. Guard:
+    // skip paid orders and non-remote methods.
     if (order.payment_status === "paid") return;
-    if (order.payment_method !== "momo") return;
-    if (!methods.includes("momo")) return;
+    if (order.payment_method !== "momo" && order.payment_method !== "vietqr") {
+      return;
+    }
+    if (!methods.includes(order.payment_method)) return;
     if (pendingExtras !== null) return;
     if (hydratedPaymentOrderRef.current === orderId) return;
 
@@ -913,8 +892,8 @@ export function BillReceipt({
         return;
       }
 
-      // VietQR: cashier confirms manually after customer scans and transfers.
-      // confirm_vietqr_payment creates the payment row atomically.
+      // VietQR fallback: cashier confirms manually if SePay has not completed
+      // the pending transfer.
       const result = await confirmVietQrPaymentWithInvoice(
         branchId,
         orderId,
@@ -1134,7 +1113,11 @@ export function BillReceipt({
                       size="touch-lg"
                       className="flex-col gap-2"
                       onClick={() => handleSelectMethod(method)}
-                      disabled={actionPending || methodPending}
+                      disabled={
+                        actionPending ||
+                        methodPending ||
+                        (pendingExtras !== null && selectedMethod !== method)
+                      }
                     >
                       <Icon data-icon="inline-start" />
                       {meta.label}
@@ -1296,7 +1279,6 @@ export function BillReceipt({
                         <RemotePaymentDetails
                           method={selectedMethod}
                           pendingExtras={pendingExtras}
-                          order={order}
                           isCreating={methodPending}
                         />
                       </>

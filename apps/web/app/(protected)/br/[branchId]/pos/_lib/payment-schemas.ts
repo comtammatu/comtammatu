@@ -38,10 +38,9 @@ export const cashConfirmSchema = z.object({
 /**
  * Schema for `createPayment(branchId, orderId, method, amount)`.
  *
- * Aggregates all 4 positional args. `method` enum is `["cash", "momo"]` —
- * VietQR has its own dedicated confirmation paths (`confirmVietQrPayment`
- * / `confirmVietQrPaymentWithInvoice`) and does not flow through this
- * action.
+ * Aggregates all 4 positional args. `method` enum is
+ * `["cash", "vietqr", "momo"]`; remote methods create a pending payment row
+ * before customer transfer so provider/webhook settlement can match it.
  *
  * Field order matters: branchId is validated first, then the remaining
  * three, so the first-issue message stays identical when multiple fields
@@ -56,14 +55,14 @@ export const createPaymentSchema = z.object({
     .int()
     .positive({ error: "Branch ID không hợp lệ" }),
   orderId: z.coerce.number().int().positive(),
-  method: z.enum(["cash", "momo"]),
+  method: z.enum(["cash", "vietqr", "momo"]),
   amount: z.coerce.number().positive({ error: "Số tiền không hợp lệ" }),
 });
 
 /**
  * Shared schema for branch-only read actions:
  *   - `fetchPaymentMethodsForPos(branchId)` — RSC seed for POS bill sheet.
- *   - `fetchVietQrConfig(branchId)` — RSC seed for QR client-side generation.
+ *   - `fetchVietQrConfig(branchId)` — RSC seed for Admin VietQR config.
  *
  * Both reads check `claims.branch_id === input.branchId` inline (different
  * error copy "Không có quyền truy cập chi nhánh này" — kept inside handler
@@ -91,8 +90,5 @@ export const fetchPendingRemotePaymentSchema = z.object({
     .number()
     .int()
     .positive({ error: "Branch ID không hợp lệ" }),
-  orderId: z.coerce
-    .number()
-    .int()
-    .positive({ error: "Order ID không hợp lệ" }),
+  orderId: z.coerce.number().int().positive({ error: "Order ID không hợp lệ" }),
 });

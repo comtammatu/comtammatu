@@ -8,14 +8,14 @@
 
 ## Tóm tắt nhanh — Vendors được chọn
 
-| Nhóm                  | Vendor chọn        | Fallback             | Module               |
-| --------------------- | ------------------ | -------------------- | -------------------- |
-| **QR thanh toán**     | VietQR (NAPAS)     | —                    | Payment              |
-| **E-wallet #1**       | MoMo               | —                    | Payment              |
-| **Card payment**      | VNPay              | —                    | Đã loại bỏ (D012 2026-06-10) |
-| **HĐĐT**              | Viettel S-invoice  | —                    | Finance              |
-| **BHXH**              | iBHXH / VNPT-BHXH  | Manual portal        | Nhân sự & tiền lương |
-| **eTax / GTGT**       | Manual eTax portal | HTKK desktop         | Nhân sự & tiền lương |
+| Nhóm              | Vendor chọn                    | Fallback      | Module                       |
+| ----------------- | ------------------------------ | ------------- | ---------------------------- |
+| **QR thanh toán** | VietQR (NAPAS) + SePay webhook | —             | Payment                      |
+| **E-wallet #1**   | MoMo                           | —             | Payment                      |
+| **Card payment**  | VNPay                          | —             | Đã loại bỏ (D012 2026-06-10) |
+| **HĐĐT**          | Viettel S-invoice              | —             | Finance                      |
+| **BHXH**          | iBHXH / VNPT-BHXH              | Manual portal | Nhân sự & tiền lương         |
+| **eTax / GTGT**   | Manual eTax portal             | HTKK desktop  | Nhân sự & tiền lương         |
 
 ---
 
@@ -33,17 +33,27 @@
 | SDK           | Node.js SDK chính thức                                             |
 | Phí/giao dịch | ~1,600 VND (Plus) hoặc % (Pro) — cần confirm với ngân hàng đối tác |
 | Settlement    | Realtime                                                           |
-| Webhook       | Polling qua API (không có push webhook chuẩn)                      |
+| Webhook       | SePay webhook nếu bật; fallback là cashier xác nhận thủ công       |
 | Onboarding    | Đăng ký qua ngân hàng hoặc QR service provider                     |
 
-**Cách hoạt động**: Cashier tạo QR → Khách quét bằng app ngân hàng bất kỳ → Tiền về tài khoản merchant → Hệ thống poll trạng thái thanh toán.
+**Cách hoạt động**: Cashier chọn Chuyển khoản → Hệ thống tạo một payment pending với mã chuyển khoản ngẫu nhiên trong `payments.provider_ref` (ví dụ `144777 AFFU2`) → Khách quét QR bằng app ngân hàng bất kỳ và giữ nguyên nội dung → Tiền về tài khoản merchant → SePay đẩy webhook vào hệ thống, hoặc cashier xác nhận thủ công khi webhook chưa bật.
 
 **Lưu ý tích hợp**:
 
 ```
-- VietQR không có push webhook — phải poll API hoặc dùng ngân hàng có notification riêng
+- VietQR gốc không có push webhook — Sepay webhook là lớp nhận biến động tài khoản ngân hàng
 - Cần merchant ID từ ngân hàng đối tác (Vietcombank / VPBank / MB phổ biến nhất)
 - Dynamic QR mỗi giao dịch khác nhau (có amount + nội dung) — KHÔNG dùng Static QR cho POS
+```
+
+**SePay webhook settlement**:
+
+```
+- Endpoint: /api/webhooks/sepay
+- Sepay auth: HMAC-SHA256, raw body, header X-SePay-Signature + X-SePay-Timestamp
+- Idempotency: lưu webhook_events(provider='sepay', request_id=payload.id) trước khi chốt payment
+- Match payment: ưu tiên payload.code; fallback đọc nội dung chuyển khoản có mã dạng "144777 AFFU2", khớp với payments.provider_ref
+- Validate: transferType='in', số tiền khớp đơn, tài khoản nhận khớp cấu hình VietQR trong Admin
 ```
 
 ---
@@ -209,12 +219,12 @@ Hệ thống → Export báo cáo thuế GTGT theo tháng (tổng đầu ra / đ
 
 Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 
-| Service                            | Volume      | Đơn giá    | Chi phí/tháng                           |
-| ---------------------------------- | ----------- | ---------- | --------------------------------------- |
-| Viettel S-invoice                  | 15,000 HĐ   | Theo HĐ    | Theo hợp đồng Viettel                   |
-| VietQR (qua ngân hàng)             | 15,000 txn  | ~1,600 VND | **24,000,000 VND**                      |
-| MoMo                               | Variable    | **0%**     | **0 VND**                               |
-| **Tổng**                           |             |            | **Phụ thuộc hợp đồng Viettel + VietQR** |
+| Service                | Volume     | Đơn giá    | Chi phí/tháng                           |
+| ---------------------- | ---------- | ---------- | --------------------------------------- |
+| Viettel S-invoice      | 15,000 HĐ  | Theo HĐ    | Theo hợp đồng Viettel                   |
+| VietQR (qua ngân hàng) | 15,000 txn | ~1,600 VND | **24,000,000 VND**                      |
+| MoMo                   | Variable   | **0%**     | **0 VND**                               |
+| **Tổng**               |            |            | **Phụ thuộc hợp đồng Viettel + VietQR** |
 
 > ⚠️ Phí VietQR là lớn nhất — cần negotiate với ngân hàng đối tác để có gói merchant tốt hơn. Nhiều ngân hàng có gói 0 VND/giao dịch cho SME khi đạt volume.
 
@@ -222,12 +232,12 @@ Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 
 ## 5. Thứ tự tích hợp theo Module
 
-| Module                   | Tích hợp                                              |
-| ------------------------ | ----------------------------------------------------- |
-| **Payment**              | VietQR + MoMo                                         |
-| **Finance**              | Viettel S-invoice                                     |
-| **Nhân sự & tiền lương** | Xuất data BHXH / thuế TNCN (no API, just export)      |
-| **Đã loại bỏ**           | VNPay (D012 2026-06-10)                               |
+| Module                   | Tích hợp                                         |
+| ------------------------ | ------------------------------------------------ |
+| **Payment**              | VietQR + MoMo                                    |
+| **Finance**              | Viettel S-invoice                                |
+| **Nhân sự & tiền lương** | Xuất data BHXH / thuế TNCN (no API, just export) |
+| **Đã loại bỏ**           | VNPay (D012 2026-06-10)                          |
 
 ---
 
@@ -237,10 +247,8 @@ Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 # Payment
 NEXT_PUBLIC_APP_URL=https://pos.comtammatu.vn # HTTPS public; MoMo gọi IPN vào URL này
 
-VIETQR_API_KEY=
-VIETQR_BANK_ID=          # Mã ngân hàng đối tác
-VIETQR_ACCOUNT_NO=       # Số tài khoản merchant
-VIETQR_ACCOUNT_NAME=     # Tên chủ tài khoản hiển thị trên QR
+SEPAY_WEBHOOK_SECRET=    # Secret Key khi tạo webhook HMAC-SHA256 trên SePay
+# VietQR bank/account/name thiết lập trong Admin > Thanh toán, không đặt ENV.
 
 MOMO_PARTNER_CODE=       # Mã đối tác do MoMo cấp
 MOMO_ACCESS_KEY=         # Access key do MoMo cấp
