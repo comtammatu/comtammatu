@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { test } from "node:test";
 
 const repoRoot = new URL("../../../../../", import.meta.url);
@@ -17,6 +17,48 @@ function readRepoFile(path: string): string {
     );
   }
   return readFileSync(candidate, "utf8");
+}
+
+function readForwardMigrations(): Array<{ path: string; source: string }> {
+  const dir = new URL("supabase/migrations/", repoRoot);
+  return readdirSync(dir)
+    .filter((name) => name.endsWith(".sql"))
+    .filter((name) => name !== "00000000000000_baseline.sql")
+    .sort()
+    .map((name) => {
+      const path = `supabase/migrations/${name}`;
+      return { path, source: readRepoFile(path) };
+    });
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const definerFunctionPattern =
+  /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([\s\S]*?\)[\s\S]*?SECURITY\s+DEFINER[\s\S]*?AS\s+(\$[A-Za-z0-9_]*\$)([\s\S]*?)\2\s*;/gi;
+
+const authzPrimitivePattern =
+  /\bpublic\.(?:has_permission|has_permission_any|auth_tenant_id|auth_is_owner)\s*\(|\bauth\.(?:uid|role)\s*\(/i;
+
+function browserGrantPattern(functionName: string): RegExp {
+  return new RegExp(
+    `GRANT\\s+EXECUTE\\s+ON\\s+FUNCTION\\s+(?:public\\.)?${escapeRegExp(functionName)}\\s*\\([^;]*?\\)\\s+TO\\s+[^;]*(?:anon|authenticated)`,
+    "i",
+  );
+}
+
+function browserRevokePattern(functionName: string, role: string): RegExp {
+  return new RegExp(
+    `REVOKE\\s+(?:ALL|EXECUTE)\\s+ON\\s+FUNCTION\\s+(?:public\\.)?${escapeRegExp(functionName)}\\s*\\([^;]*?\\)\\s+FROM\\s+[^;]*\\b${escapeRegExp(role)}\\b`,
+    "i",
+  );
+}
+
+function revokesAllBrowserRoles(source: string, functionName: string): boolean {
+  return ["PUBLIC", "anon", "authenticated"].every((role) =>
+    browserRevokePattern(functionName, role).test(source),
+  );
 }
 
 const migration = readRepoFile(
@@ -77,6 +119,45 @@ function extractSqlFunction(source: string, functionName: string): string {
     )?.[0] ?? ""
   );
 }
+
+test("forward SECURITY DEFINER migrations include an auth boundary or browser-role revoke", () => {
+  const failures: string[] = [];
+
+  for (const migration of readForwardMigrations()) {
+    for (const match of migration.source.matchAll(definerFunctionPattern)) {
+      const functionName = match[1]!;
+      const body = match[3]!;
+      const hasAuthBoundary = authzPrimitivePattern.test(body);
+      const grantsBrowserRole = browserGrantPattern(functionName).test(
+        migration.source,
+      );
+      const revokesBrowserRoles = revokesAllBrowserRoles(
+        migration.source,
+        functionName,
+      );
+      const isServiceRoleOnly =
+        /auth\.role\(\)\s+IS\s+DISTINCT\s+FROM\s+'service_role'/i.test(body);
+
+      if (!hasAuthBoundary && !revokesBrowserRoles) {
+        failures.push(
+          `${migration.path}: public.${functionName} lacks an in-body auth boundary and does not revoke PUBLIC/anon/authenticated in the same migration`,
+        );
+      }
+      if (!hasAuthBoundary && grantsBrowserRole) {
+        failures.push(
+          `${migration.path}: public.${functionName} grants a browser role without an in-body auth boundary`,
+        );
+      }
+      if (isServiceRoleOnly && grantsBrowserRole) {
+        failures.push(
+          `${migration.path}: public.${functionName} is service-role-only but grants a browser role`,
+        );
+      }
+    }
+  }
+
+  assert.deepEqual(failures, []);
+});
 
 test("payment and print implementation RPCs are not directly executable by authenticated users", () => {
   for (const signature of [

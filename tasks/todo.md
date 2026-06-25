@@ -15,10 +15,9 @@ currently in scope: VietQR, MoMo, and Viettel S-invoice. Ongoing work is
 hardening, HRM/payroll completion, print-agent rollout, DB guard cleanup, and
 verification infrastructure.
 
-Current checkout branch `codex/ui-component-governance` contains in-flight UI/IA,
-HR, Finance, and branch-settings work. Treat those changes as checkout-state
-until gated, but do not reopen plan rows that are already represented by code in
-this checkout.
+Verify the live checkout with `git status` before acting on any in-flight notes;
+do not reopen plan rows that are already represented by code in the current
+checkout.
 
 ## Agent-Doable Now
 
@@ -30,18 +29,16 @@ this checkout.
   - `inventory/*.spec.ts` — DB-contract scenarios pass; UI scenarios `test.skip` under the cashier storageState. To exercise the UI, add a `warehouse_manager` storageState (a 2nd `auth.setup` project; `E2E_INVENTORY_MANAGER_*` already wired) + `test.use` it. `issue-label-by-branch-kind` test 3 needs an `ingredients` seed row (tenant 1).
   - `edit-pending-pricing` modifier ca — the qty+discount path is now gated/green; the modifier ca is still deferred: needs `menu_item_modifiers`/`menu_item_variants` fixtures to assert `unit_price = base + variant + modifier + side`.
 
-- [ ] **Payroll upsert atomic RPC** — `hr/payroll-actions.ts` ghi 2 bước rời (upsert `payroll_entries` rồi update `payroll_periods.status='calculated'`); bước 2 fail → status lệch với entries đã ghi. Gom 2 ghi vào 1 RPC transaction. T3 (payroll/money); migration file→PR→owner.
-
 - [ ] **WS-3 — split `grn-detail-client`** — file không có realtime channel; tách `_hooks/` + `views/` theo concern, giữ hành vi hiện tại.
 - [~] **Residual broad grants** — migration `20260616120000_revoke_cosmetic_grants_anon_authenticated.sql` đã land; follow-up definer revoke cũng có `20260616170000_revoke_anon_execute_secdef.sql`. Không còn code task ở đây; chỉ verify prod ledger trước khi owner apply lại ở môi trường nào còn thiếu. Phần `bmidl_write` legacy `auth_role()` gộp vào `α4c`.
 - [~] **HRM Đợt 2** (D026) — tạo NV 1 bước đã land; HR create form trong checkout đã thu `base_salary`/`dependents_count`/ID/bank. Còn thật: `updateEmployee` cho hồ sơ HR, ngưng việc (`employees.end_date`), xác minh notification nghỉ phép 2 chiều + pending toàn chi nhánh, quyết định đổi nhãn `/admin/staff` từ "Nhân viên" sang "Tài khoản & phân quyền" ở module/nav, rồi chạy gate + runtime/owner verify cho flow HR.
-- [~] **HRM payroll/base_salary** (D026/D031) — checkout đã có payroll HKD đơn giản: `calculatePayroll` đọc `employees.base_salary`, lọc `is_active && base_salary > 0`, tính công theo 2 ca/ngày, PIT theo legal-version, và `/hr` có tab/link vào `/hr/payroll`. Còn thật: `standard_days` owner nhập + clamp (code hiện còn đếm T2-T6), export CSV/Excel, màn đối chiếu trước duyệt, atomic RPC cho calculate+status, và runtime verify.
+- [~] **HRM payroll/base_salary** (D026/D031) — checkout đã có payroll HKD đơn giản: `calculatePayroll` đọc `employees.base_salary`, lọc `is_active && base_salary > 0`, tính công theo 2 ca/ngày, PIT theo legal-version, proration đã clamp qua `Math.min(workingDays, standardDays)`, calculate+status đã đi qua `upsert_payroll_calculation`, và `/hr` có tab/link vào `/hr/payroll`. Còn thật: `standard_days` owner nhập (code hiện còn tự đếm T2-T6), export CSV/Excel, màn đối chiếu trước duyệt, và runtime verify.
 - [ ] **UI ratchet real-debt bridge** — chỉ burn down debt thật đã nêu trong `docs/spec/design-system.md` khi nó đi cùng route-family work hiện tại. Dùng `pnpm audit:ui-components -- --family <family>` để chọn file theo route-family trước khi sửa. HR lane trong checkout đã đưa direct `Table` và route-local `STATUS` maps về 0; phần còn lại ở HR là dialog/confirm flow đã có chủ. Lanes tiếp theo: Inventory high-risk panels, Finance table/card remnants, rồi POS/KDS operational adapter exceptions. Không mở cleanup PR để chase `reframe` allowlists hoặc false-positive về 0.
 
 ### Audit 2026-06-21 — Mechanism follow-ups (each = own PR; specs reconstructed, audit worklog gone)
 
 - [x] **Guard regex over-match literal** — ✅ PR #87: `guard-prod-db.mjs` `stripSqlNoise` (strip single-quoted literals + comments, NOT `$$` bodies) trước `WRITE_SQL`; 3 fixture mới khoá. SELECT chứa từ-khoá-write trong literal không còn bị chặn nhầm.
-- [ ] **CI scan: SECURITY DEFINER thiếu authz** — flag function `CREATE … SECURITY DEFINER` mà body KHÔNG có authz primitive (`has_permission`/`has_permission_any`/`auth_tenant_id`/`auth.uid()` check) VÀ không kèm `REVOKE … FROM PUBLIC/authenticated` trong cùng migration → bắt class `create_payment` (D043). Cần allowlist baseline cho internal helper cố ý gateless (vd `_post_writeoff_movements` đã REVOKE). Tune chống false-positive trên ~49 migration hiện có. T2.
+- [x] **CI scan: SECURITY DEFINER thiếu authz** — forward-migration static guard added in `security-definer-rpc-static.test.ts`: every new `SECURITY DEFINER` function must either contain an auth boundary (`has_permission`/`has_permission_any`/`auth_tenant_id`/`auth.uid()`/`auth.role()`) or revoke `PUBLIC`/`anon`/`authenticated` in the same migration; service-role-only bodies must not grant browser roles. Baseline/archive scan intentionally deferred to avoid noisy historical false positives.
 - [ ] **CI scan: RPC grants over-broad** — flag `GRANT EXECUTE … TO authenticated/anon` trên function nội bộ (đặc biệt definer gateless). Bổ trợ scan ở trên. T2.
 - [ ] **CI scan: route → ModuleKey coverage** — mọi `app/(protected)/**/page.tsx` phải resolve về `ROUTE_FAMILY_CONTRACT` non-public có `moduleKeys` (chống route mới rơi ngoài ACL). Lưu ý: `route-map.ts` là TS → scan `.mjs` không import được; viết dạng vitest/tsx test (apps/web/tests) hoặc compile, KHÔNG replicate matcher (drift). T2.
 - [ ] **Surface lỗi đọc DB bị nuốt** — nhiều Server Action nuốt Supabase `error` vào message generic (vd PostgREST `42702` ambiguous `branch_id` làm list rỗng im lặng — xem `database.md` Known Failure Patterns). Log `error.code`/`details` server-side (không leak ra client) để debug. Diện rộng; làm theo từng shell. T2.
