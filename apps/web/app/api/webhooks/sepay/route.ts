@@ -6,7 +6,7 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 
 const SEPAY_WEBHOOK_SECRET = process.env.SEPAY_WEBHOOK_SECRET ?? "";
 const SIGNATURE_TOLERANCE_SECONDS = 300;
-const PAYMENT_CODE_RE = /\b\d{6}\s+[A-Z0-9]{5}\b/i;
+const PAYMENT_CODE_RE = /\bDH\s+\d{6}\s+[A-Z0-9]{5}\b/i;
 
 const sepayAcceptedResponse = () => NextResponse.json({ success: true });
 
@@ -80,7 +80,7 @@ function normalizePaymentCodeCandidate(
   if (!value) return null;
   const text = value.trim().toUpperCase().replace(/\s+/g, " ");
   const match = PAYMENT_CODE_RE.exec(text);
-  return match?.[0].toUpperCase() ?? null;
+  return match?.[0].toUpperCase().replace(/^DH\s+/, "DH ") ?? null;
 }
 
 function extractPaymentCode(payload: SepayPayload): string | null {

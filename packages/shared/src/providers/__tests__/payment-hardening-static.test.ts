@@ -44,6 +44,12 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
   const source = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
 
   assert.match(source, /PAYMENT_CODE_RE/);
+  assert.ok(
+    source.includes(
+      "const PAYMENT_CODE_RE = /\\bDH\\s+\\d{6}\\s+[A-Z0-9]{5}\\b/i;",
+    ),
+  );
+  assert.ok(source.includes('replace(/^DH\\s+/, "DH ")'));
   assert.match(source, /function extractPaymentCode/);
   assert.match(source, /function resolveAccountScope/);
   assert.match(source, /\.from\("system_settings"\)/);
