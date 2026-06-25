@@ -10,6 +10,7 @@ import {
   BUYER_NOT_GET_INVOICE_NAME,
   getPaymentProvider,
   getRegisteredMethods,
+  VietQRProvider,
   type PaymentMethod,
   type PaymentProvider,
   type PaymentResult,
@@ -182,19 +183,28 @@ async function readVietQrSettings(
   if (rows) for (const row of rows) s[row.key] = row.value;
   return {
     enabled: truthySetting(s[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]),
-    bankCode:
-      s[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ||
-      process.env.VIETQR_BANK_ID ||
-      "",
-    accountNo:
-      s[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ||
-      process.env.VIETQR_ACCOUNT_NO ||
-      "",
-    accountName:
-      s[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME] ||
-      process.env.VIETQR_ACCOUNT_NAME ||
-      "",
+    bankCode: s[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] || "",
+    accountNo: s[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] || "",
+    accountName: s[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME] || "",
   };
+}
+
+async function resolvePaymentProviderForMethod(
+  supabase: PosSupabase,
+  tenantId: number,
+  method: PaymentMethod,
+): Promise<PaymentProvider | null> {
+  if (method !== "vietqr") return getPaymentProvider(method);
+
+  const settings = await readVietQrSettings(supabase, tenantId);
+  if (!settings.bankCode || !settings.accountNo) return null;
+
+  return new VietQRProvider({
+    apiKey: "",
+    bankAccount: settings.accountNo,
+    bankCode: settings.bankCode,
+    accountName: settings.accountName,
+  });
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -357,10 +367,9 @@ async function resolveAllowedPaymentMethods(
 
 /* ─── Cached payment-config helpers ───────────────────────────────────────
  *
- * Both `fetchPaymentMethodsForPos` and `fetchVietQrConfig` read tenant-level
- * `system_settings` rows that change rarely (admin payments-settings page).
- * These calls fire on every Server Action route revalidation — caching them
- * collapses ~150ms × 2 fetches to near-zero cache hits.
+ * `fetchPaymentMethodsForPos` reads tenant-level `system_settings` rows that
+ * change rarely (admin payments-settings page). Caching collapses repeated
+ * POS route revalidations to near-zero cache hits.
  *
  * Tag: `payment-config` — admin payment-settings save calls
  *      `revalidateTag('payment-config')` to bust. Existing
@@ -448,14 +457,9 @@ export const fetchPaymentMethodsForPos = withActionPositional(
       methods.push("cash");
     }
     if (truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR])) {
-      const bank =
-        settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ||
-        process.env["VIETQR_BANK_ID"] ||
-        "";
+      const bank = settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] || "";
       const account =
-        settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ||
-        process.env["VIETQR_ACCOUNT_NO"] ||
-        "";
+        settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] || "";
       if (bank && account) {
         methods.push("vietqr");
       }
@@ -491,17 +495,17 @@ export const fetchPaymentMethodsForPos = withActionPositional(
  *     returns "Đơn hàng không tồn tại." on miss and "Đơn hàng đã thanh
  *     toán." when `payment_status === "paid"`; the amount-vs-total equality
  *     check also stays inline ("Số tiền không khớp với tổng đơn hàng.").
- *   - `getPaymentProvider` + `provider.createPayment` (wrapped by
- *     `describeProviderException` / `describeProviderCreateFailure`) is the
- *     source of QR/redirect data.
+ *   - `resolvePaymentProviderForMethod` + `provider.createPayment` (wrapped
+ *     by `describeProviderException` / `describeProviderCreateFailure`) is
+ *     the source of QR/redirect data.
  *   - 23505 unique-violation retry stays handler-only: it queries the
  *     `payments` table for an existing pending row and either reuses it
  *     (idempotent replay — returns success with the existing payment_id and
  *     a freshly persisted provider blob) or surfaces "Đơn hàng đang có
  *     thanh toán chờ xử lý." Neither outcome fits the `RpcErrorMapping`
  *     shape, so it lives outside the mapping table.
- *   - `persistPendingProviderData` fires for remote (MoMo) payments AFTER
- *     RPC success AND inside the 23505-retry branch, so an idempotent replay
+ *   - `persistPendingProviderData` fires for remote payments AFTER RPC
+ *     success AND inside the 23505-retry branch, so an idempotent replay
  *     overwrites the stored provider blob with the fresh QR.
  *   - Cash does NOT consume stock under D016.
  *   - `createPaymentRpcMappings` ordering matters:
@@ -515,7 +519,7 @@ export const createPayment = withActionPositional(
     argsToInput: (
       branchId: number,
       orderId: number,
-      method: "cash" | "momo",
+      method: PaymentMethod,
       amount: number,
     ) => ({ branchId, orderId, method, amount }),
     schema: createPaymentSchema,
@@ -563,14 +567,18 @@ export const createPayment = withActionPositional(
       supabase,
       claims.tenant_id,
     );
-    if (!allowedMethods.includes(method as PaymentMethod)) {
+    if (!allowedMethods.includes(method)) {
       return {
         success: false,
         error: "Phương thức thanh toán không được phép hoặc chưa cấu hình.",
       };
     }
 
-    const provider = getPaymentProvider(method as PaymentMethod);
+    const provider = await resolvePaymentProviderForMethod(
+      supabase,
+      claims.tenant_id,
+      method,
+    );
     if (!provider) {
       return {
         success: false,
@@ -594,7 +602,7 @@ export const createPayment = withActionPositional(
       });
       return {
         success: false,
-        error: describeProviderException(method as PaymentMethod, err),
+        error: describeProviderException(method, err),
       };
     }
 
@@ -608,7 +616,7 @@ export const createPayment = withActionPositional(
       return {
         success: false,
         error: describeProviderCreateFailure(
-          method as PaymentMethod,
+          method,
           providerResult.providerData,
         ),
       };
@@ -1126,12 +1134,8 @@ export interface VietQrConfig {
 }
 
 /**
- * Returns VietQR bank config for client-side QR URL generation.
+ * Returns VietQR bank config from Admin settings.
  * Returns null when VietQR is disabled or not configured.
- *
- * Reuses the `payment-config` tag cache — `getCachedPaymentSettings` already
- * pulls the VietQR rows we need, so a second cache key would just split the
- * cache for no win. Both fetches share the same revalidate window.
  */
 export const fetchVietQrConfig = withActionPositional(
   {
@@ -1161,17 +1165,11 @@ export const fetchVietQrConfig = withActionPositional(
       settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR],
     );
     const bankCode =
-      settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ||
-      process.env["VIETQR_BANK_ID"] ||
-      "";
+      settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] || "";
     const accountNo =
-      settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ||
-      process.env["VIETQR_ACCOUNT_NO"] ||
-      "";
+      settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] || "";
     const accountName =
-      settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME] ||
-      process.env["VIETQR_ACCOUNT_NAME"] ||
-      "";
+      settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME] || "";
 
     if (!enabled || !bankCode || !accountNo) {
       return { success: true, data: null };
@@ -1193,8 +1191,7 @@ export interface ConfirmVietQrPaymentResult {
 }
 
 /**
- * Atomic cashier-confirm for VietQR bank transfer. No payment row is created
- * until the cashier taps "Đã thanh toán" — QR is generated client-side.
+ * Atomic cashier-confirm fallback for a pending VietQR bank transfer.
  * Gated by pos:confirm_payment (cashier / branch_manager+).
  */
 export async function confirmVietQrPayment(

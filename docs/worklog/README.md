@@ -9,6 +9,8 @@ Không dùng thư mục này làm archive, backlog, hay source of truth thứ ha
   soát chốt import Inventory từ `matu-platform`.
 - `inventory-post-import-audit-2026-06-22.md` — mốc nghiệm thu và bằng chứng
   smoke sau import Inventory từ `matu-platform`.
+- `sepay-webhook-payment-2026-06-26.md` — T3 contract cho webhook SePay chốt
+  thanh toán VietQR.
 
 ## Rules
 

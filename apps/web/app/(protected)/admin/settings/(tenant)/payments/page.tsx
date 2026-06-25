@@ -18,10 +18,7 @@ export default async function PaymentSettingsPage() {
     }
   }
 
-  const vietqrEnvConfigured =
-    !!process.env.VIETQR_API_KEY &&
-    !!process.env.VIETQR_ACCOUNT_NO &&
-    !!process.env.VIETQR_BANK_ID;
+  const sepayEnvConfigured = !!process.env.SEPAY_WEBHOOK_SECRET;
 
   const momoEnvConfigured =
     !!process.env.MOMO_PARTNER_CODE &&
@@ -35,7 +32,7 @@ export default async function PaymentSettingsPage() {
     >
       <PaymentsForm
         settings={settings}
-        vietqrEnvConfigured={vietqrEnvConfigured}
+        sepayEnvConfigured={sepayEnvConfigured}
         momoEnvConfigured={momoEnvConfigured}
       />
     </SettingsPageFrame>

@@ -64,23 +64,12 @@ export async function updatePaymentSettings(
     };
   }
 
-  // Block enabling VietQR without a fully-configured payee — otherwise the QR
-  // printed at POS carries no payee/account. Effective value mirrors the POS
-  // resolver precedence (setting || env) in pos/payment-actions.ts.
+  // Block enabling VietQR without a fully-configured payee in Admin settings.
   if (parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR] === "true") {
     const effective = {
-      bankCode:
-        parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ||
-        process.env.VIETQR_BANK_ID ||
-        "",
-      accountNo:
-        parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ||
-        process.env.VIETQR_ACCOUNT_NO ||
-        "",
-      accountName:
-        parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME] ||
-        process.env.VIETQR_ACCOUNT_NAME ||
-        "",
+      bankCode: parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE],
+      accountNo: parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO],
+      accountName: parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME],
     };
     if (!effective.bankCode || !effective.accountNo || !effective.accountName) {
       return {
@@ -116,10 +105,9 @@ export async function updatePaymentSettings(
   }
 
   revalidateSurfacePath("/admin/settings/payments");
-  // POS RSC seeds `paymentMethods` + `vietQrConfig` once per nav (see
-  // `apps/web/app/(protected)/br/[branchId]/pos/page.tsx`). Bust that seed across all
-  // branches when tenant payment config changes — both the route cache
-  // and the tag-keyed unstable_cache the POS Server Actions read from.
+  // POS RSC seeds payment methods and VietQR payee data once per nav. Bust
+  // that seed across all branches when tenant payment config changes, plus
+  // the tag-keyed unstable_cache the POS Server Actions read from.
   revalidatePath("/br/[branchId]/pos", "page");
   updateTag("payment-config");
   return { success: true };

@@ -41,14 +41,14 @@ chứng runtime trên dev/test/staging được duyệt.
 
 ## Mission Checklist
 
-| Mission | Bằng chứng cần có | Không đạt nếu |
-| ------- | ----------------- | ------------- |
-| Bán đúng | POS tạo đúng đơn, đúng bàn/kênh bán, đúng món, đúng giá, đúng giảm giá/phụ thu | Đơn tạo thành công nhưng sai line item, sai tổng tiền, hoặc sai bàn |
-| Bếp nhận đúng | KDS nhận đúng phiếu bếp, đúng thứ tự, đúng món bếp cần làm | KDS thiếu món, nhận trùng phiếu, hoặc ưu tiên thay thế đơn đang làm |
-| Thu tiền đúng | Payment chuyển đúng trạng thái, đúng amount, không complete khi RPC/stock fail | Gateway thành công nhưng order/payment lệch trạng thái hoặc orphan |
-| In/hóa đơn đúng | Print job claim/printed đúng, receipt không mất trường pháp lý, HĐĐT issued hoặc support workflow rõ | Receipt/HĐĐT thiếu dữ liệu, job failed không có đường retry |
-| Kho trừ đúng | Stock movement/consumption phát sinh đúng item/site/quantity, không fail-soft | Payment completed nhưng stock không trừ hoặc trừ sai site |
-| Quản lý nhìn đúng | Finance Basic / reports phản ánh doanh thu, tồn kho, chi vận hành, lợi nhuận gộp sau smoke | Owner dashboard không đổi, số lệch so với order/payment/stock đã tạo |
+| Mission           | Bằng chứng cần có                                                                                    | Không đạt nếu                                                        |
+| ----------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Bán đúng          | POS tạo đúng đơn, đúng bàn/kênh bán, đúng món, đúng giá, đúng giảm giá/phụ thu                       | Đơn tạo thành công nhưng sai line item, sai tổng tiền, hoặc sai bàn  |
+| Bếp nhận đúng     | KDS nhận đúng phiếu bếp, đúng thứ tự, đúng món bếp cần làm                                           | KDS thiếu món, nhận trùng phiếu, hoặc ưu tiên thay thế đơn đang làm  |
+| Thu tiền đúng     | Payment chuyển đúng trạng thái, đúng amount, không complete khi RPC/stock fail                       | Gateway thành công nhưng order/payment lệch trạng thái hoặc orphan   |
+| In/hóa đơn đúng   | Print job claim/printed đúng, receipt không mất trường pháp lý, HĐĐT issued hoặc support workflow rõ | Receipt/HĐĐT thiếu dữ liệu, job failed không có đường retry          |
+| Kho trừ đúng      | Stock movement/consumption phát sinh đúng item/site/quantity, không fail-soft                        | Payment completed nhưng stock không trừ hoặc trừ sai site            |
+| Quản lý nhìn đúng | Finance Basic / reports phản ánh doanh thu, tồn kho, chi vận hành, lợi nhuận gộp sau smoke           | Owner dashboard không đổi, số lệch so với order/payment/stock đã tạo |
 
 ## Happy Path
 
@@ -73,7 +73,7 @@ Ghi lại mọi ID phát sinh: `branch_id`, `terminal_id`, `order_id`, `payment_
 
 5. Thanh toán bằng một phương thức được duyệt cho smoke.
    - Cash: expected RPC `confirm_cash_payment` hoàn tất order/payment.
-   - VietQR: expected pending -> cashier confirm qua `confirm_vietqr_payment`.
+   - VietQR: expected QR hiển thị mã chuyển khoản random từ `payments.provider_ref`, có payment pending trước khi khách chuyển khoản; SePay webhook hoặc cashier confirm qua `confirm_vietqr_payment` hoàn tất order/payment.
    - MoMo: expected chỉ dùng native QR khi provider trả `qrCodeUrl`; webhook hoàn tất qua `complete_payment_and_consume_stock`.
 
 6. Kiểm order/payment sau thanh toán.

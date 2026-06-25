@@ -3,15 +3,15 @@
  * Never hardcode key strings elsewhere.
  */
 export const SYSTEM_SETTING_KEYS = {
-  /** "true" | "false" — POS shows VietQR when env credentials exist */
+  /** "true" | "false" — POS shows VietQR when Admin bank settings exist */
   PAYMENT_ENABLE_VIETQR: "payment_enable_vietqr",
   /** "true" | "false" — POS shows MoMo when env credentials exist */
   PAYMENT_ENABLE_MOMO: "payment_enable_momo",
-  /** Bank shortcode (e.g. "TCB", "VCB"). Per-tenant override of VIETQR_BANK_ID env. */
+  /** Bank shortcode (e.g. "TCB", "VCB"). */
   PAYMENT_VIETQR_BANK_CODE: "payment_vietqr_bank_code",
-  /** Receiving bank account number. Per-tenant override of VIETQR_ACCOUNT_NO env. */
+  /** Receiving bank account number. */
   PAYMENT_VIETQR_ACCOUNT_NO: "payment_vietqr_account_no",
-  /** Account holder name printed on QR. Per-tenant override of VIETQR_ACCOUNT_NAME env. */
+  /** Account holder name printed on QR. */
   PAYMENT_VIETQR_ACCOUNT_NAME: "payment_vietqr_account_name",
   /** Cash-book anchor — owner-counted opening cash balance (VND integer as string). */
   CASH_OPENING_BALANCE: "cash_opening_balance",

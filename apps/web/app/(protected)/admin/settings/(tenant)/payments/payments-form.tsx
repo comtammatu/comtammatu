@@ -40,13 +40,13 @@ type PaymentsFormValues = z.infer<typeof paymentsSchema>;
 
 interface PaymentsFormProps {
   settings: Record<string, string>;
-  vietqrEnvConfigured: boolean;
+  sepayEnvConfigured: boolean;
   momoEnvConfigured: boolean;
 }
 
 export function PaymentsForm({
   settings,
-  vietqrEnvConfigured,
+  sepayEnvConfigured,
   momoEnvConfigured,
 }: PaymentsFormProps) {
   const [isPending, startTransition] = useTransition();
@@ -104,9 +104,7 @@ export function PaymentsForm({
       noValidate
       className="flex flex-col gap-4"
     >
-      <AppSection
-        title={messages.settings.payments.sectionTitle}
-      >
+      <AppSection title={messages.settings.payments.sectionTitle}>
         <div className="flex flex-col gap-3 rounded-md border p-4">
           <Controller
             control={form.control}
@@ -118,12 +116,7 @@ export function PaymentsForm({
                     {messages.settings.payments.vietqrLabel}
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    {messages.settings.payments.vietqrDescriptionPrefix}{" "}
-                    <code className="text-2xs">VIETQR_*</code> (
-                    {vietqrEnvConfigured
-                      ? messages.settings.payments.vietqrEnvReady
-                      : messages.settings.payments.vietqrEnvMissing}
-                    ).
+                    {messages.settings.payments.vietqrDescription}
                   </p>
                 </div>
                 <Switch
@@ -188,6 +181,32 @@ export function PaymentsForm({
           <p className="text-2xs text-muted-foreground">
             {messages.settings.payments.bankHelp}
           </p>
+        </div>
+
+        <div className="flex flex-col gap-2 rounded-md border p-4">
+          <div className="flex flex-col gap-1">
+            <Label className="text-base">
+              {messages.settings.payments.sepayLabel}
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              {messages.settings.payments.sepayDescription}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {messages.settings.payments.envStatus}{" "}
+              {sepayEnvConfigured ? (
+                <span className="text-success">
+                  {messages.settings.payments.envConfigured}
+                </span>
+              ) : (
+                <span className="text-warning">
+                  {messages.settings.payments.envMissing}
+                </span>
+              )}
+            </p>
+            <code className="w-fit rounded-md bg-muted px-2 py-1 text-xs">
+              {messages.settings.payments.sepayEndpoint}
+            </code>
+          </div>
         </div>
 
         <Controller

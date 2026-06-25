@@ -10,10 +10,10 @@ import type {
  *
  * QR format: EMVCo Merchant-Presented (ISO 18004)
  * No external API needed — QR data is generated locally from bank info + amount.
- * Cashier manually confirms payment after customer transfers.
+ * The payment code is the transfer memo; SePay may confirm it automatically,
+ * and cashier confirmation remains the fallback.
  *
  * Bank info comes from system_settings (configured in admin UI).
- * Constructor config comes from env vars (set at deployment).
  */
 
 /**
@@ -66,6 +66,26 @@ const BANK_BINS: Record<string, string> = {
   SGB: "970400",
 };
 
+const PAYMENT_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function randomPaymentChars(length: number): string {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(
+    bytes,
+    (byte) => PAYMENT_CODE_ALPHABET[byte % PAYMENT_CODE_ALPHABET.length],
+  ).join("");
+}
+
+function generateVietQrPaymentCode(): string {
+  const bytes = new Uint8Array(3);
+  crypto.getRandomValues(bytes);
+  const value =
+    ((bytes[0] ?? 0) << 16) + ((bytes[1] ?? 0) << 8) + (bytes[2] ?? 0);
+  const numericCode = String(value % 1_000_000).padStart(6, "0");
+  return `${numericCode} ${randomPaymentChars(5)}`;
+}
+
 export class VietQRProvider implements PaymentProvider {
   readonly method = "vietqr" as const;
 
@@ -91,11 +111,11 @@ export class VietQRProvider implements PaymentProvider {
    * Format follows NAPAS EMVCo specification for Vietnam domestic transfers.
    */
   async createPayment(request: PaymentRequest): Promise<PaymentResult> {
-    const providerRef = `VQR-${request.orderId}-${crypto.randomUUID().slice(0, 8)}`;
+    const providerRef = generateVietQrPaymentCode();
 
     const bin = BANK_BINS[this.bankCode] ?? this.bankCode;
     const amount = Math.round(request.amount).toString();
-    const description = request.description ?? `DH ${request.orderNumber}`;
+    const description = request.description ?? providerRef;
     const truncDesc = sanitizeAscii(description, 25);
 
     // VietQR.io image API: returns a branded PNG (logo + STK + amount + memo)
@@ -126,8 +146,7 @@ export class VietQRProvider implements PaymentProvider {
   }
 
   /**
-   * VietQR has no auto-confirm — cashier confirms manually.
-   * This method returns the current status from the payment record.
+   * VietQR status is held in the payment record.
    */
   async checkStatus(providerRef: string): Promise<PaymentStatus> {
     // No-op: VietQR doesn't support push/poll verification.
