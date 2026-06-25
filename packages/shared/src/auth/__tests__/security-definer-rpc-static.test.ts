@@ -61,6 +61,9 @@ const inventoryRefreshRpcGrantMigration = readRepoFile(
 const branchMenuLimitGrantMigration = readRepoFile(
   "supabase/migrations/20260625172456_restrict_branch_menu_limit_table_grants.sql",
 );
+const orderDailyCounterGrantMigration = readRepoFile(
+  "supabase/migrations/20260625174605_restrict_order_daily_counter_grants.sql",
+);
 
 function extractSqlFunction(source: string, functionName: string): string {
   return (
@@ -226,6 +229,33 @@ test("Branch menu daily limits keep realtime read access but block browser write
   assert.match(
     branchMenuLimitGrantMigration,
     /REVOKE ALL ON SEQUENCE public\.branch_menu_item_daily_limits_id_seq\s+FROM PUBLIC, anon, authenticated/,
+  );
+});
+
+test("Order daily counters are RPC-only implementation state", () => {
+  assert.match(
+    orderDailyCounterGrantMigration,
+    /DROP POLICY IF EXISTS order_daily_counters_write\s+ON public\.order_daily_counters/,
+  );
+  assert.match(
+    orderDailyCounterGrantMigration,
+    /REVOKE ALL ON TABLE public\.order_daily_counters\s+FROM PUBLIC, anon, authenticated/,
+  );
+  assert.match(
+    orderDailyCounterGrantMigration,
+    /GRANT ALL ON TABLE public\.order_daily_counters\s+TO service_role/,
+  );
+  assert.match(
+    orderDailyCounterGrantMigration,
+    /REVOKE ALL ON SEQUENCE public\.order_daily_counters_id_seq\s+FROM PUBLIC, anon, authenticated/,
+  );
+  assert.match(
+    orderDailyCounterGrantMigration,
+    /GRANT ALL ON SEQUENCE public\.order_daily_counters_id_seq\s+TO service_role/,
+  );
+  assert.doesNotMatch(
+    orderDailyCounterGrantMigration,
+    /GRANT[\s\S]+order_daily_counters[\s\S]+TO (?:anon|authenticated)/,
   );
 });
 
