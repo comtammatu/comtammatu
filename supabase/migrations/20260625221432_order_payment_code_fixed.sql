@@ -233,6 +233,8 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.confirm_sepay_payment(bigint, bigint, text, numeric, text, text, jsonb);
+
 CREATE OR REPLACE FUNCTION public.confirm_sepay_payment(
   p_tenant_id bigint,
   p_order_id bigint,
