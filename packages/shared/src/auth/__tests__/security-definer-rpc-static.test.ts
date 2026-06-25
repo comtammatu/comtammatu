@@ -43,6 +43,9 @@ const featureFlagRpcMigration = readRepoFile(
 const hddtSummaryRpcGrantMigration = readRepoFile(
   "supabase/migrations/20260625125528_restrict_hddt_summary_rpc_grant.sql",
 );
+const financeTopItemsWrapperInvokerMigration = readRepoFile(
+  "supabase/migrations/20260625133000_finance_top_items_wrapper_security_invoker.sql",
+);
 
 function extractSqlFunction(source: string, functionName: string): string {
   return (
@@ -122,6 +125,17 @@ test("HDDT daily summary aggregate RPC is service-role only", () => {
     new RegExp(
       `GRANT EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+TO service_role`,
     ),
+  );
+});
+
+test("Finance top-items compatibility wrapper is invoker-rights only", () => {
+  assert.match(
+    financeTopItemsWrapperInvokerMigration,
+    /ALTER FUNCTION public\.get_top_items\(bigint, date, integer\)\s+SECURITY INVOKER/,
+  );
+  assert.doesNotMatch(
+    financeTopItemsWrapperInvokerMigration,
+    /SECURITY DEFINER/i,
   );
 });
 
