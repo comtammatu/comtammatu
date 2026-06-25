@@ -26,6 +26,7 @@ export {
 export {
   encodeOpsToEscpos,
   renderPayloadBitmap,
+  renderPayloadToEscpos,
 } from "./escpos-encode";
 export {
   CHARS_PER_LINE_DOUBLE,

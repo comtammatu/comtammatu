@@ -97,8 +97,10 @@ export async function renderDocumentToEscpos(
  * Render any payload to ESC/POS bytes. Prefers the server-materialized
  * document and falls back to a locally built block list.
  */
-export async function renderPayloadBitmap(
+export async function renderPayloadToEscpos(
   payload: PrintPayload,
 ): Promise<Uint8Array> {
   return renderDocumentToEscpos(resolveDocument(payload));
 }
+
+export const renderPayloadBitmap = renderPayloadToEscpos;

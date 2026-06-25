@@ -1,19 +1,30 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import type { PrintDocumentBlock } from "../print-document";
 import type { PrintPayload } from "../payloads";
 import { buildFallbackDocument } from "../fallback-document";
 import { materializeDocument } from "../materialize";
-import { renderPayloadBitmap } from "../escpos-encode";
+import { renderPayloadToEscpos } from "../escpos-encode";
 import { renderPayloadToPng } from "../render-png";
 import { SAMPLE_PAYLOADS } from "../samples";
 import {
-  extractOrderSequence,
-  formatOrderHeaderLabel,
-} from "../order-display";
+  DEFAULT_TEMPLATE_CONTENT,
+  PRINT_KINDS,
+  type TemplateBlock,
+} from "../template-content";
+import { extractOrderSequence, formatOrderHeaderLabel } from "../order-display";
 
 type TextBlock = Extract<PrintDocumentBlock, { type: "text" }>;
 type RowBlock = Extract<PrintDocumentBlock, { type: "row" }>;
+
+const baselineSql = readFileSync(
+  new URL(
+    "../../../../supabase/migrations/00000000000000_baseline.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 const blocksOf = (payload: PrintPayload): PrintDocumentBlock[] =>
   buildFallbackDocument(payload).blocks;
@@ -54,11 +65,7 @@ function assertText(
   }
 }
 
-function assertRow(
-  blocks: PrintDocumentBlock[],
-  left: string,
-  right?: string,
-) {
+function assertRow(blocks: PrintDocumentBlock[], left: string, right?: string) {
   const block = findRow(blocks, left);
   assert.ok(block, `missing row "${left}"`);
   if (right !== undefined) {
@@ -79,6 +86,36 @@ function assertTextOrder(
   assert.ok(
     firstIndex >= 0 && secondIndex >= 0 && firstIndex < secondIndex,
     `expected "${first}" before "${second}"`,
+  );
+}
+
+function sqlValue(value: unknown): string {
+  if (typeof value === "string") return `'${value.replaceAll("'", "''")}'`;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return `jsonb_build_array(${value.map(sqlValue).join(", ")})`;
+  }
+  throw new Error(`Unsupported default template value: ${String(value)}`);
+}
+
+function sqlBlock(block: TemplateBlock): string {
+  return `jsonb_build_object(${Object.entries(block)
+    .map(([key, value]) => `'${key}', ${sqlValue(value)}`)
+    .join(", ")})`;
+}
+
+function defaultContentSqlSection(kind: string): string {
+  const marker = `WHEN '${kind}' THEN`;
+  const start = baselineSql.indexOf(marker);
+  assert.notEqual(start, -1, `missing SQL default content for ${kind}`);
+
+  const tail = baselineSql.slice(start + marker.length);
+  const next = tail.search(/\n    (WHEN '|ELSE)/);
+  return baselineSql.slice(
+    start,
+    next === -1 ? undefined : start + marker.length + next,
   );
 }
 
@@ -256,9 +293,23 @@ test("custom template content overrides defaults", () => {
   );
 });
 
+test("TS default templates mirror SQL baseline defaults", () => {
+  for (const kind of PRINT_KINDS) {
+    const section = defaultContentSqlSection(kind);
+    const blocks = DEFAULT_TEMPLATE_CONTENT[kind].blocks;
+    const sqlBlockCount =
+      section.match(/jsonb_build_object\('type'/g)?.length ?? 0;
+
+    assert.equal(sqlBlockCount, blocks.length, `${kind}: SQL block count`);
+    for (const block of blocks) {
+      assert.ok(section.includes(sqlBlock(block)), `${kind}: ${block.type}`);
+    }
+  }
+});
+
 test("escpos + png render all sample kinds", async () => {
   for (const payload of Object.values(SAMPLE_PAYLOADS)) {
-    const bytes = await renderPayloadBitmap(payload);
+    const bytes = await renderPayloadToEscpos(payload);
     assert.ok(
       bytes.length >= 100,
       `${payload.kind}: escpos output too small (${bytes.length})`,
