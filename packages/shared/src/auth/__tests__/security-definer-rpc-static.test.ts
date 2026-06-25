@@ -55,6 +55,9 @@ const inventoryProductionOperatorInvokerMigration = readRepoFile(
 const positionHelperRpcGrantMigration = readRepoFile(
   "supabase/migrations/20260625141001_restrict_position_helper_rpc_grants.sql",
 );
+const inventoryRefreshRpcGrantMigration = readRepoFile(
+  "supabase/migrations/20260625151715_restrict_inventory_refresh_rpc_grant.sql",
+);
 
 function extractSqlFunction(source: string, functionName: string): string {
   return (
@@ -185,6 +188,23 @@ test("Position helper RPCs are not directly executable by browser roles", () => 
       ),
     );
   }
+});
+
+test("Inventory dashboard refresh RPC is not directly executable by browser roles", () => {
+  const signature = "public.refresh_inventory_dashboard()";
+
+  assert.match(
+    inventoryRefreshRpcGrantMigration,
+    new RegExp(
+      `REVOKE EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+FROM PUBLIC, anon, authenticated`,
+    ),
+  );
+  assert.match(
+    inventoryRefreshRpcGrantMigration,
+    new RegExp(
+      `GRANT EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+TO service_role`,
+    ),
+  );
 });
 
 test("staff admin RPCs enforce permission gates inside SECURITY DEFINER bodies", () => {
