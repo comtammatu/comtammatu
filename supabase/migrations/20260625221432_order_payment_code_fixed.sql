@@ -36,42 +36,9 @@ UPDATE public.orders o
    AND ranked_payment_codes.order_rank = 1
    AND ranked_payment_codes.code_rank = 1;
 
-DO $$
-DECLARE
-  v_order_id bigint;
-  v_code text;
-  v_try int;
-BEGIN
-  FOR v_order_id IN
-    SELECT id
-    FROM public.orders
-    WHERE payment_code IS NULL
-    ORDER BY id
-  LOOP
-    FOR v_try IN 1..20 LOOP
-      v_code := public.generate_order_payment_code();
-      EXIT WHEN NOT EXISTS (
-        SELECT 1
-        FROM public.orders o
-        WHERE lower(o.payment_code) = lower(v_code)
-      );
-    END LOOP;
-
-    IF EXISTS (
-      SELECT 1
-      FROM public.orders o
-      WHERE lower(o.payment_code) = lower(v_code)
-    ) THEN
-      RAISE EXCEPTION 'payment_code_generation_exhausted' USING ERRCODE = 'P0001';
-    END IF;
-
-    UPDATE public.orders
-       SET payment_code = v_code
-     WHERE id = v_order_id
-       AND payment_code IS NULL;
-  END LOOP;
-END;
-$$;
+UPDATE public.orders
+   SET payment_code = public.generate_order_payment_code()
+ WHERE payment_code IS NULL;
 
 CREATE OR REPLACE FUNCTION public.enqueue_receipt_print(p_order_id bigint, p_cash_received numeric DEFAULT NULL::numeric, p_cash_change numeric DEFAULT NULL::numeric) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
