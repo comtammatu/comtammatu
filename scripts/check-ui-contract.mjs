@@ -395,7 +395,6 @@ const checks = [
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern: /<main\b/g,
     allowlist: {
-      "apps/web/app/components/app-shell.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/layout.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/layout.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/layout.tsx": 1,

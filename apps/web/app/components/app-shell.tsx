@@ -146,7 +146,7 @@ export function AppShell({
         style={{ "--sidebar-width": "var(--sidebar-width-icon)" } as CSSProperties}
         className="sticky top-0 hidden h-svh self-start border-r md:flex"
       >
-        <SidebarHeader className="items-center p-2">
+        <SidebarHeader className="items-center border-b p-2">
           <BrandLogoBox tone={logoVariant ? "sidebar" : "sidebar-primary"}>
             {logoVariant ? (
               <BrandMark
@@ -160,7 +160,7 @@ export function AppShell({
           </BrandLogoBox>
         </SidebarHeader>
 
-        <SidebarContent className="px-1 pb-2">
+        <SidebarContent className="px-1 py-2">
           <SidebarMenu className="items-center gap-1">
             {tier1.map((item) => {
               const Icon = item.icon;
@@ -170,10 +170,16 @@ export function AppShell({
                     asChild
                     isActive={item === activeRailItem}
                     tooltip={{ children: item.label, hidden: false }}
-                    className="justify-center rounded-md"
+                    className="justify-center rounded-md data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground"
                   >
-                    <Link href={item.href} aria-label={item.label}>
-                      <Icon className="size-4" />
+                    <Link
+                      href={item.href}
+                      aria-label={item.label}
+                      aria-current={
+                        item === activeRailItem ? "page" : undefined
+                      }
+                    >
+                      <Icon />
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -182,7 +188,7 @@ export function AppShell({
           </SidebarMenu>
         </SidebarContent>
 
-        <SidebarFooter className="p-2">
+        <SidebarFooter className="border-t p-2">
           <div className="flex flex-col items-center justify-center gap-1">
             <Avatar size="sm">
               <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
@@ -195,7 +201,7 @@ export function AppShell({
                 className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
                 aria-label={copy.signOut}
               >
-                <IconLogout className="size-4" />
+                <IconLogout />
               </Button>
             </form>
           </div>
@@ -207,18 +213,12 @@ export function AppShell({
         collapsible="offcanvas"
         className="md:data-[side=left]:left-(--sidebar-width-icon)"
       >
-        <SidebarHeader className="gap-3 p-4">
-          {showBackLink ? (
-            <Link
-              href={backHref}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground group-data-[collapsible=icon]:hidden"
-            >
-              <IconArrowLeft className="size-3.5" />
-              {backLabel}
-            </Link>
-          ) : null}
+        <SidebarHeader className="gap-3 border-b p-3">
           <div className="flex items-center gap-3">
-            <BrandLogoBox tone={logoVariant ? "sidebar" : "sidebar-primary"}>
+            <BrandLogoBox
+              tone={logoVariant ? "sidebar" : "sidebar-primary"}
+              className="md:hidden"
+            >
               {logoVariant ? (
                 <BrandMark
                   variant={logoVariant}
@@ -229,21 +229,34 @@ export function AppShell({
                 <BrandIcon className="size-5" />
               )}
             </BrandLogoBox>
-            <div className="min-w-0 flex-1 flex flex-col gap-1 group-data-[collapsible=icon]:hidden">
+            <div className="min-w-0 flex flex-1 flex-col gap-1 group-data-[collapsible=icon]:hidden">
               <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
                 {brand.subLabel}
               </p>
-              <p className="font-heading text-lg font-semibold leading-none">
+              <p className="truncate font-heading text-base font-semibold leading-tight">
                 {brand.mainLabel}
               </p>
             </div>
           </div>
+          {showBackLink ? (
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="justify-start text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              <Link href={backHref}>
+                <IconArrowLeft data-icon="inline-start" />
+                {backLabel}
+              </Link>
+            </Button>
+          ) : null}
         </SidebarHeader>
 
-        <SidebarContent className="px-2 pb-4">
+        <SidebarContent className="gap-2 px-2 py-3">
           {tier2.map((group) => (
-            <SidebarGroup key={group.title} className="px-0 py-1">
-              <SidebarGroupLabel className="px-2 pb-1 text-xs font-medium text-sidebar-foreground/70">
+            <SidebarGroup key={group.title} className="px-0 py-0">
+              <SidebarGroupLabel className="h-7 px-2 text-2xs font-medium uppercase tracking-wider text-sidebar-foreground/60">
                 {group.title}
               </SidebarGroupLabel>
               <SidebarGroupContent>
@@ -260,7 +273,10 @@ export function AppShell({
                           tooltip={item.label}
                           className="rounded-md"
                         >
-                          <Link href={item.href}>
+                          <Link
+                            href={item.href}
+                            aria-current={active ? "page" : undefined}
+                          >
                             <Icon />
                             <span>{item.label}</span>
                           </Link>
@@ -276,9 +292,9 @@ export function AppShell({
         <SidebarRail />
       </Sidebar>
 
-      <SidebarInset>
-        <header className="border-b px-4 py-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <SidebarInset id="main-content">
+        <header className="sticky top-0 z-30 border-b bg-background px-4 py-2 print:hidden">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <SidebarTrigger className="md:hidden" />
               <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -339,7 +355,7 @@ export function AppShell({
             ) : null}
           </div>
           {pageHeader.description ? (
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
               {pageHeader.description}
             </p>
           ) : null}
@@ -350,14 +366,13 @@ export function AppShell({
           ) : null}
         </header>
 
-        <main
-          id="main-content"
-          className={cn("flex-1 p-4", bottomNav && "pb-24 lg:pb-4")}
+        <div
+          className={cn("flex-1 p-3 md:p-4", bottomNav && "pb-24 lg:pb-4")}
         >
           <AppShellPaddingBoundary>
-            <div className="flex flex-col gap-4">{children}</div>
+            <div className="flex min-h-0 flex-col gap-4">{children}</div>
           </AppShellPaddingBoundary>
-        </main>
+        </div>
       </SidebarInset>
       {bottomNav ? <WorkspaceBottomNav tier1={tier1} tier2={tier2} /> : null}
     </SidebarProvider>

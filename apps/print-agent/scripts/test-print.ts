@@ -1,6 +1,6 @@
 /**
  * Real-pipeline printer smoke test — renders the package sample payloads
- * through renderPayloadBitmap (the exact path the daemon uses) and sends
+ * through renderPayloadToEscpos (the exact path the daemon uses) and sends
  * them to a thermal printer over TCP:9100. What this prints is what
  * production tickets look like.
  *
@@ -14,7 +14,7 @@ import net from "node:net";
 import {
   PRINT_KINDS,
   SAMPLE_PAYLOADS,
-  renderPayloadBitmap,
+  renderPayloadToEscpos,
 } from "@comtammatu/print-render";
 
 const host = process.env.PRINTER_HOST;
@@ -54,7 +54,7 @@ async function main() {
   }
 
   for (const kind of kinds) {
-    const bytes = await renderPayloadBitmap(SAMPLE_PAYLOADS[kind]);
+    const bytes = await renderPayloadToEscpos(SAMPLE_PAYLOADS[kind]);
     await send(bytes);
     console.log(
       `[test-print] sent ${kind} (${bytes.length} bytes) to ${host}:${port}`,

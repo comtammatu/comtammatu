@@ -1,8 +1,9 @@
 -- =====================================================================
 -- Managed-surfaces install — companion to migrations/00000000000000_baseline.sql
 --
--- The baseline is a `--schema=public` dump, which EXCLUDES Supabase-managed
--- surfaces. Apply THIS after the public baseline to provision a from-zero env.
+-- The baseline is a `--schema=public --schema=private` dump, which EXCLUDES
+-- Supabase-managed surfaces. Apply THIS after the schema baseline to provision
+-- a from-zero env.
 --
 -- Generated 2026-05-30 from matu-dev (extensions / storage buckets / realtime /
 -- cron) and iexws (storage.objects policy DDL). Idempotent (re-runnable).
