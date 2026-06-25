@@ -18,7 +18,7 @@ test("VietQRProvider uses generated payment code as transfer memo", async () => 
   });
 
   assert.equal(result.status, "pending");
-  assert.match(result.providerRef ?? "", /^DH \d{6} [A-Z0-9]{5}$/);
+  assert.match(result.providerRef ?? "", /^DH[A-Z0-9]{10}$/);
   assert.equal(result.providerData?.description, result.providerRef);
   assert.equal(result.providerData?.bankBin, "970407");
 
@@ -26,7 +26,7 @@ test("VietQRProvider uses generated payment code as transfer memo", async () => 
   assert.doesNotMatch(result.qrData ?? "", /^https?:\/\//);
   assert.match(result.qrData ?? "", /970407/);
   assert.match(result.qrData ?? "", /125000/);
-  assert.match(result.qrData ?? "", /DH \d{6} [A-Z0-9]{5}/);
+  assert.match(result.qrData ?? "", /DH[A-Z0-9]{10}/);
 });
 
 test("resolveBankBin covers current VietQR transfer bank codes used by POS", () => {
