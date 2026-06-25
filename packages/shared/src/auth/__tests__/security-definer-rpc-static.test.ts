@@ -58,6 +58,9 @@ const positionHelperRpcGrantMigration = readRepoFile(
 const inventoryRefreshRpcGrantMigration = readRepoFile(
   "supabase/migrations/20260625151715_restrict_inventory_refresh_rpc_grant.sql",
 );
+const branchMenuLimitGrantMigration = readRepoFile(
+  "supabase/migrations/20260625172456_restrict_branch_menu_limit_table_grants.sql",
+);
 
 function extractSqlFunction(source: string, functionName: string): string {
   return (
@@ -204,6 +207,25 @@ test("Inventory dashboard refresh RPC is not directly executable by browser role
     new RegExp(
       `GRANT EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+TO service_role`,
     ),
+  );
+});
+
+test("Branch menu daily limits keep realtime read access but block browser writes", () => {
+  assert.match(
+    branchMenuLimitGrantMigration,
+    /REVOKE ALL ON TABLE public\.branch_menu_item_daily_limits\s+FROM PUBLIC, anon/,
+  );
+  assert.match(
+    branchMenuLimitGrantMigration,
+    /REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN\s+ON TABLE public\.branch_menu_item_daily_limits\s+FROM authenticated/,
+  );
+  assert.match(
+    branchMenuLimitGrantMigration,
+    /GRANT SELECT ON TABLE public\.branch_menu_item_daily_limits\s+TO authenticated/,
+  );
+  assert.match(
+    branchMenuLimitGrantMigration,
+    /REVOKE ALL ON SEQUENCE public\.branch_menu_item_daily_limits_id_seq\s+FROM PUBLIC, anon, authenticated/,
   );
 });
 
