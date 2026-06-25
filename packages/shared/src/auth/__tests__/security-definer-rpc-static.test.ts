@@ -34,6 +34,9 @@ const permissionScopeGrantsMigration = readRepoFile(
 const hddtTaxInvoiceRpcScopeMigration = readRepoFile(
   "supabase/migrations/20260625132000_hddt_tax_invoice_rpc_scope.sql",
 );
+const retiredIntraBranchRpcMigration = readRepoFile(
+  "supabase/migrations/20260625075939_harden_retired_intra_branch_rpc.sql",
+);
 
 function extractSqlFunction(source: string, functionName: string): string {
   return (
@@ -66,6 +69,23 @@ test("payment and print implementation RPCs are not directly executable by authe
       ),
     );
   }
+});
+
+test("retired intra-branch transfer RPC is not directly executable by authenticated users", () => {
+  const signature =
+    "public.commit_intra_branch_transfer(BIGINT, BIGINT, BIGINT, TEXT, TEXT, JSONB)";
+  assert.match(
+    retiredIntraBranchRpcMigration,
+    new RegExp(
+      `REVOKE EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+FROM PUBLIC, anon, authenticated`,
+    ),
+  );
+  assert.match(
+    retiredIntraBranchRpcMigration,
+    new RegExp(
+      `GRANT EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+TO service_role`,
+    ),
+  );
 });
 
 test("staff admin RPCs enforce permission gates inside SECURITY DEFINER bodies", () => {
