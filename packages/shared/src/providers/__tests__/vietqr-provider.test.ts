@@ -18,7 +18,7 @@ test("VietQRProvider uses generated payment code as transfer memo", async () => 
   });
 
   assert.equal(result.status, "pending");
-  assert.match(result.providerRef ?? "", /^\d{6} [A-Z0-9]{5}$/);
+  assert.match(result.providerRef ?? "", /^DH \d{6} [A-Z0-9]{5}$/);
   assert.equal(result.providerData?.description, result.providerRef);
 
   const qrUrl = new URL(result.qrData ?? "");

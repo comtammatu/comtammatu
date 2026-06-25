@@ -83,7 +83,7 @@ function generateVietQrPaymentCode(): string {
   const value =
     ((bytes[0] ?? 0) << 16) + ((bytes[1] ?? 0) << 8) + (bytes[2] ?? 0);
   const numericCode = String(value % 1_000_000).padStart(6, "0");
-  return `${numericCode} ${randomPaymentChars(5)}`;
+  return `DH ${numericCode} ${randomPaymentChars(5)}`;
 }
 
 export class VietQRProvider implements PaymentProvider {

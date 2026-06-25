@@ -7,9 +7,9 @@ Owner: current SePay webhook integration slice. Retire after the PR lands and th
 
 Skill plan: repo rules = engineering + skills + database + workflow + team + references; external skills = supabase + supabase-postgres-best-practices; runtime tools = CodeGraph + Sepay docs + Supabase CLI for migration creation; skipped = direct DB apply because the registry has no dev/test Supabase ref and production is owner-applied only.
 
-PM: scope is webhook settlement for existing VietQR bank transfers, not a new payment method or accounting surface. Done means POS creates one pending `vietqr` payment with a random transfer memo, then SePay can POST a signed bank transaction and the app records one completed payment for that pending row.
+PM: scope is webhook settlement for existing VietQR bank transfers, not a new payment method or accounting surface. Done means POS creates one pending `vietqr` payment with a random `DH ...` transfer memo, then SePay can POST a signed bank transaction and the app records one completed payment for that pending row.
 
-BA: business rules are HMAC required, webhook idempotency by SePay `id`, only `transferType='in'`, tenant scope resolved from the signed receiving `accountNumber`, payment matched by SePay `code` or transfer memo containing the generated `payments.provider_ref` inside that tenant, amount and receiving account validated before completion, duplicate/amount-mismatch/bad-memo events logged without creating a second payment.
+BA: business rules are HMAC required, webhook idempotency by SePay `id`, only `transferType='in'`, tenant scope resolved from the signed receiving `accountNumber`, payment matched by SePay `code` or transfer memo containing the generated `payments.provider_ref` inside that tenant, memo must start with `DH`, amount and receiving account validated before completion, duplicate/amount-mismatch/bad-memo events logged without creating a second payment.
 
 Senior Dev: implementation keeps multi-row writes inside `public.confirm_sepay_payment`, reuses `webhook_events`, `payments.method='vietqr'`, `complete_payment_and_consume_stock`, and receipt enqueue. The route does raw-body auth, account-scope resolution, event claiming, and RPC dispatch only.
 
