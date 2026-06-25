@@ -54,7 +54,7 @@ function mapServiceChargeRpcError(message: string): string | null {
     return "Ghi chú phụ phí tối thiểu 3 ký tự.";
   }
   if (msg.includes("service_charge_payment_pending")) {
-    return "Đơn đang có thanh toán QR chờ xử lý. Vui lòng hủy QR trước khi sửa phụ phí.";
+    return "Đơn đang có thanh toán chờ xử lý. Vui lòng hoàn tất thanh toán trước khi sửa phụ phí.";
   }
   if (msg.includes("order already paid")) {
     return "Đơn đã thanh toán, không thể sửa phụ phí.";

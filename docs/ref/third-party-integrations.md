@@ -36,7 +36,7 @@
 | Webhook       | SePay webhook nếu bật; fallback là cashier xác nhận thủ công       |
 | Onboarding    | Đăng ký qua ngân hàng hoặc QR service provider                     |
 
-**Cách hoạt động**: Cashier chọn Chuyển khoản → Hệ thống tạo một payment pending với mã chuyển khoản ngẫu nhiên trong `payments.provider_ref` (ví dụ `DH 144777 AFFU2`) → Khách quét QR bằng app ngân hàng bất kỳ và giữ nguyên nội dung → Tiền về tài khoản merchant → SePay đẩy webhook vào hệ thống, hoặc cashier xác nhận thủ công khi webhook chưa bật.
+**Cách hoạt động**: Mỗi đơn có sẵn một mã chuyển khoản cố định trong `orders.payment_code` (ví dụ `DHA1A1A1A1A1A1`) → Phiếu tạm tính và hóa đơn dùng mã này để tạo QR, kể cả khi cashier chưa chọn tab VietQR → Khách quét QR bằng app ngân hàng bất kỳ và giữ nguyên nội dung → Tiền về tài khoản merchant → SePay đẩy webhook vào hệ thống, hoặc cashier xác nhận thủ công khi webhook chưa bật.
 
 **Lưu ý tích hợp**:
 
@@ -52,7 +52,7 @@
 - Endpoint: /api/webhooks/sepay
 - Sepay auth: HMAC-SHA256, raw body, header X-SePay-Signature + X-SePay-Timestamp
 - Idempotency: lưu webhook_events(provider='sepay', request_id=payload.id) trước khi chốt payment
-- Match payment: ưu tiên payload.code; fallback đọc nội dung chuyển khoản có mã dạng "DH 144777 AFFU2", khớp với payments.provider_ref
+- Match payment: ưu tiên payload.code; fallback đọc nội dung chuyển khoản có mã dạng "DHA1A1A1A1A1A1", khớp với orders.payment_code
 - Validate: transferType='in', số tiền khớp đơn, tài khoản nhận khớp cấu hình VietQR trong Admin
 ```
 

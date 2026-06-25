@@ -2,11 +2,7 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import {
-  buildVietQrEmvco,
-  resolveBankBin,
-  VietQRProvider,
-} from "@comtammatu/shared/providers";
+import { buildVietQrEmvco, resolveBankBin } from "@comtammatu/shared/providers";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { KITCHEN_PARTIAL_SEND_WARNING } from "./_lib/messages";
@@ -24,6 +20,11 @@ const jobIdSchema = z.coerce
   .positive({ error: "Job ID không hợp lệ" });
 
 const AGENT_OFFLINE_THRESHOLD_MS = 60_000;
+
+type OrderPaymentCodeResult = {
+  order_id?: number;
+  payment_code?: string;
+};
 
 /**
  * Enqueue succeeded but no agent heartbeat within the threshold — the
@@ -270,100 +271,32 @@ export async function printProvisionalBill(
   const accountName = nameRes.data?.value?.toString() ?? "";
 
   if (qrType === "vietqr" && bankCode && accountNo) {
-    const { data: payment, error: paymentError } = await supabase
-      .from("payments")
-      .select("id, method, status, provider_ref")
-      .eq("order_id", parsed.data)
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", orderRes.data.branch_id)
-      .neq("status", "failed")
-      .order("id", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const { data: codeData, error: codeError } = await supabase.rpc(
+      "ensure_order_payment_code",
+      {
+        p_tenant_id: claims.tenant_id,
+        p_branch_id: orderRes.data.branch_id,
+        p_order_id: parsed.data,
+      },
+    );
+    const paymentCode = (codeData as OrderPaymentCodeResult | null)
+      ?.payment_code;
 
-    if (paymentError) {
+    if (codeError || !paymentCode) {
       return {
         success: false,
         error: "Không thể tạo mã QR thanh toán. Vui lòng thử lại.",
       };
     }
 
-    const providerRef =
-      payment?.method === "vietqr" &&
-      payment.status === "pending" &&
-      payment.provider_ref
-        ? payment.provider_ref
-        : null;
-
-    if (payment && !providerRef) {
-      return {
-        success: false,
-        error: "Đơn đang có thanh toán chờ xử lý.",
-      };
-    }
-
-    if (!providerRef) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
-
-      const provider = new VietQRProvider({
-        apiKey: "",
-        bankAccount: accountNo,
+    qrContent =
+      buildVietQrEmvco({
         bankCode,
-        accountName,
-      });
-      const providerResult = await provider.createPayment({
-        tenantId: claims.tenant_id,
-        orderId: parsed.data,
-        orderNumber: orderRes.data.order_number,
+        accountNo,
         amount: Number(orderRes.data.total_amount),
-      });
-
-      if (
-        providerResult.status !== "pending" ||
-        !providerResult.providerRef ||
-        !providerResult.qrData
-      ) {
-        return {
-          success: false,
-          error: "Không tạo được dữ liệu QR cho phiếu tạm tính.",
-        };
-      }
-
-      const { error: createPaymentError } = await supabase.rpc(
-        "create_payment",
-        {
-          p_tenant_id: claims.tenant_id,
-          p_branch_id: orderRes.data.branch_id,
-          p_order_id: parsed.data,
-          p_method: "vietqr",
-          p_amount: Number(orderRes.data.total_amount),
-          p_created_by: user.id,
-          p_provider_ref: providerResult.providerRef,
-          p_status: providerResult.status,
-        },
-      );
-
-      if (createPaymentError) {
-        return {
-          success: false,
-          error: "Không tạo được mã QR thanh toán. Vui lòng thử lại.",
-        };
-      }
-
-      qrContent = providerResult.qrData;
-    } else {
-      qrContent =
-        buildVietQrEmvco({
-          bankCode,
-          accountNo,
-          amount: Number(orderRes.data.total_amount),
-          description: providerRef,
-          accountName,
-        }) ?? undefined;
-    }
+        description: paymentCode,
+        accountName,
+      }) ?? undefined;
 
     if (qrContent) {
       qrHeaderLabel = `${bankCode.toUpperCase()} (BIN ${resolveBankBin(bankCode)})`;

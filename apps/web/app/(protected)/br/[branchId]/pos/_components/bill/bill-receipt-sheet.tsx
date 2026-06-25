@@ -43,7 +43,6 @@ import {
   Printer as IconPrinter,
   QrCode as IconQrcode,
   Receipt as IconReceipt,
-  X as IconXCircle,
   Wallet as IconWallet,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
@@ -53,7 +52,6 @@ import { messages } from "@lib/messages";
 import { fetchOrderForBill } from "../../actions";
 import type { SessionOrder } from "../../order-history";
 import {
-  cancelPendingPayment,
   confirmCashPaymentWithInvoice,
   confirmVietQrPaymentWithInvoice,
   createPayment,
@@ -463,7 +461,6 @@ export function BillReceipt({
   const [actionPending, startActionTransition] = useTransition();
   const [methodPending, setMethodPending] = useState(false);
   const [printPending, startPrintTransition] = useTransition();
-  const [cancelPending, startCancelTransition] = useTransition();
   const [paymentCreateError, setPaymentCreateError] = useState<string | null>(
     null,
   );
@@ -685,14 +682,12 @@ export function BillReceipt({
     (method: PaymentMethod) => {
       if (!order || orderId === null) return;
 
-      if (pendingExtras?.payment_id !== undefined) {
-        if (method !== selectedMethod) {
-          toast.error("Hủy mã thanh toán hiện tại trước khi đổi phương thức.");
-          return;
-        }
-        if (pendingExtras.qr_data || pendingExtras.redirect_url) {
-          return;
-        }
+      if (
+        method === selectedMethod &&
+        pendingExtras?.payment_id !== undefined &&
+        (pendingExtras.qr_data || pendingExtras.redirect_url)
+      ) {
+        return;
       }
 
       setSelectedMethod(method);
@@ -705,8 +700,8 @@ export function BillReceipt({
         return;
       }
 
-      // Remote methods need a pending payment row before the customer scans
-      // so webhook/manual settlement can match the transfer.
+      // When cashier explicitly selects a remote method, create the matching
+      // payment row; provisional bill QR only needs the order payment code.
       if (!isOnline) {
         setPendingOfflineMethod(method);
         toast.error("Mất kết nối — sẽ tự thử lại khi có mạng.");
@@ -752,6 +747,8 @@ export function BillReceipt({
       order,
       orderId,
       pendingExtras?.payment_id,
+      pendingExtras?.qr_data,
+      pendingExtras?.redirect_url,
       selectedMethod,
     ],
   );
@@ -974,29 +971,6 @@ export function BillReceipt({
     });
   }, [orderId]);
 
-  const handleCancelPayment = useCallback(() => {
-    const paymentId = pendingExtras?.payment_id;
-    if (!paymentId) return;
-    startCancelTransition(async () => {
-      const result = await cancelPendingPayment(branchId, paymentId);
-      if (result.success) {
-        setPendingExtras(null);
-        setSelectedMethod(canConfirmCash ? "cash" : "vietqr");
-        autoQrTriggeredRef.current = null;
-        hydratedPaymentOrderRef.current = null;
-        setOrder((cur) =>
-          cur
-            ? { ...cur, payment_status: "unpaid", payment_method: null }
-            : cur,
-        );
-        toast.success(messages.pos.payment.cancelQrSuccess);
-        await onOrderUpdated?.();
-      } else {
-        toast.error(result.error ?? messages.pos.payment.cancelQrFailed);
-      }
-    });
-  }, [branchId, canConfirmCash, onOrderUpdated, pendingExtras?.payment_id]);
-
   const MethodIcon = METHOD_META[selectedMethod]?.icon ?? IconCreditCard;
   const isReceiptIntent = intent === "receipt";
   const isReadOnlyOrder =
@@ -1113,11 +1087,7 @@ export function BillReceipt({
                       size="touch-lg"
                       className="flex-col gap-2"
                       onClick={() => handleSelectMethod(method)}
-                      disabled={
-                        actionPending ||
-                        methodPending ||
-                        (pendingExtras !== null && selectedMethod !== method)
-                      }
+                      disabled={actionPending || methodPending}
                     >
                       <Icon data-icon="inline-start" />
                       {meta.label}
@@ -1304,21 +1274,6 @@ export function BillReceipt({
                 )}
                 {messages.pos.payment.printProvisional}
               </Button>
-              {pendingExtras?.payment_id !== undefined ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancelPayment}
-                  disabled={cancelPending || actionPending || methodPending}
-                >
-                  {cancelPending ? (
-                    <Spinner data-icon="inline-start" />
-                  ) : (
-                    <IconXCircle data-icon="inline-start" />
-                  )}
-                  {messages.pos.payment.cancelQr}
-                </Button>
-              ) : null}
               <Button
                 data-testid={
                   selectedMethod === "cash" ? "bill-confirm-cash" : undefined

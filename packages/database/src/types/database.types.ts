@@ -3212,6 +3212,7 @@ export type Database = {
           order_discount_amount: number
           order_number: string
           order_type: string
+          payment_code: string
           payment_method: string | null
           payment_status: string | null
           pos_session_id: number | null
@@ -3250,6 +3251,7 @@ export type Database = {
           order_discount_amount?: number
           order_number: string
           order_type?: string
+          payment_code?: string
           payment_method?: string | null
           payment_status?: string | null
           pos_session_id?: number | null
@@ -3288,6 +3290,7 @@ export type Database = {
           order_discount_amount?: number
           order_number?: string
           order_type?: string
+          payment_code?: string
           payment_method?: string | null
           payment_status?: string | null
           pos_session_id?: number | null
@@ -8243,6 +8246,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      ensure_order_payment_code: {
+        Args: {
+          p_branch_id: number
+          p_order_id: number
+          p_tenant_id: number
+        }
+        Returns: Json
+      }
       confirm_cash_payment: {
         Args: { p_cash_received: number; p_order_id: number }
         Returns: Json
@@ -8262,7 +8273,7 @@ export type Database = {
         Args: {
           p_account_number: string
           p_bank_reference: string
-          p_payment_id: number
+          p_order_id: number
           p_provider_data: Json
           p_provider_ref: string
           p_tenant_id: number

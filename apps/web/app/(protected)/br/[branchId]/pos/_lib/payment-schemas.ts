@@ -7,22 +7,6 @@
 import { z } from "zod";
 
 /**
- * Schema for `cancelPendingPayment(branchId, paymentId)`. Flips pending
- * MoMo / VietQR payment → failed and resets the parent order so it can
- * be split, merged, or restart a fresh payment session.
- */
-export const cancelPendingPaymentSchema = z.object({
-  branchId: z.coerce
-    .number()
-    .int()
-    .positive({ error: "Branch ID không hợp lệ" }),
-  paymentId: z.coerce
-    .number()
-    .int()
-    .positive({ error: "Payment ID không hợp lệ" }),
-});
-
-/**
  * Schema for `confirmCashPayment(orderId, cashReceived)`. The cashier UI
  * clamps `cashReceived >= total` client-side, but the server-side RPC is
  * the authoritative gate (this schema only enforces non-negative; the

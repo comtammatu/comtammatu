@@ -100,9 +100,6 @@ export const pos = {
     cashShort: (amount: string) => `Thiếu ${amount}`,
     printProvisional: "In tạm tính",
     paidConfirm: "Đã thanh toán",
-    cancelQr: "Hủy QR",
-    cancelQrSuccess: "Đã hủy QR — có thể tạo mới",
-    cancelQrFailed: "Không thể hủy QR",
   },
   receipt: {
     paymentCancelled: "Đã hủy",

@@ -163,32 +163,31 @@ async function resolveAccountScope(
     : { status: "not_found" };
 }
 
-async function resolvePaymentScope(
+async function resolveOrderScope(
   supabase: ServiceClient,
   tenantId: number,
   paymentCode: string,
 ): Promise<
-  | { status: "found"; paymentId: number }
+  | { status: "found"; orderId: number }
   | { status: "not_found" | "ambiguous" | "error" }
 > {
   const { data, error } = await supabase
-    .from("payments")
+    .from("orders")
     .select("id")
     .eq("tenant_id", tenantId)
-    .in("method", ["cash", "vietqr"])
-    .ilike("provider_ref", paymentCode)
-    .neq("status", "failed")
+    .ilike("payment_code", paymentCode)
+    .neq("status", "cancelled")
     .limit(2);
 
   if (error) {
-    console.error("[sepay-webhook] payment lookup failed", error.code);
+    console.error("[sepay-webhook] order lookup failed", error.code);
     return { status: "error" };
   }
   if (!data || data.length === 0) return { status: "not_found" };
   if (data.length > 1) return { status: "ambiguous" };
   const row = data[0];
   if (!row) return { status: "not_found" };
-  return { status: "found", paymentId: row.id };
+  return { status: "found", orderId: row.id };
 }
 
 async function markWebhookEvent(
@@ -354,23 +353,23 @@ export async function POST(request: Request) {
     return sepayAcceptedResponse();
   }
 
-  const paymentScope = await resolvePaymentScope(
+  const orderScope = await resolveOrderScope(
     supabase,
     accountScope.tenantId,
     paymentCode,
   );
-  if (paymentScope.status !== "found") {
-    console.warn("[sepay-webhook] payment scope not found", {
+  if (orderScope.status !== "found") {
+    console.warn("[sepay-webhook] order scope not found", {
       id: payload.id,
       paymentCode,
       tenantId: accountScope.tenantId,
-      status: paymentScope.status,
+      status: orderScope.status,
     });
-    if (paymentScope.status === "error") {
+    if (orderScope.status === "error") {
       await markWebhookEvent(supabase, webhookEventId, {
         processing_status: "failed",
         http_status: 500,
-        error_code: "payment_lookup_failed",
+        error_code: "order_lookup_failed",
       });
       return NextResponse.json({ success: false }, { status: 500 });
     }
@@ -378,9 +377,9 @@ export async function POST(request: Request) {
       processing_status: "failed",
       http_status: 200,
       error_code:
-        paymentScope.status === "ambiguous"
+        orderScope.status === "ambiguous"
           ? "ambiguous_payment_code"
-          : "payment_not_found",
+          : "order_not_found",
     });
     return sepayAcceptedResponse();
   }
@@ -389,7 +388,7 @@ export async function POST(request: Request) {
     "confirm_sepay_payment",
     {
       p_tenant_id: accountScope.tenantId,
-      p_payment_id: paymentScope.paymentId,
+      p_order_id: orderScope.orderId,
       p_provider_ref: paymentCode,
       p_transfer_amount: payload.transferAmount,
       p_account_number: payload.accountNumber,
@@ -404,7 +403,6 @@ export async function POST(request: Request) {
       rpcError.code,
     );
     await markWebhookEvent(supabase, webhookEventId, {
-      payment_id: paymentScope.paymentId,
       processing_status: "failed",
       http_status: 500,
       error_code: "rpc_failed",
@@ -415,7 +413,7 @@ export async function POST(request: Request) {
   const parsedRpcData = sepayRpcResultSchema.safeParse(rawRpcData);
   const rpcData = parsedRpcData.success ? parsedRpcData.data : null;
   const status = rpcData?.status ?? "unknown";
-  const paymentId = rpcData?.payment_id ?? paymentScope.paymentId;
+  const paymentId = rpcData?.payment_id ?? null;
   if (status === "completed" || status === "already_completed") {
     await markWebhookEvent(supabase, webhookEventId, {
       payment_id: paymentId,

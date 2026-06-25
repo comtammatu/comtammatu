@@ -25,14 +25,11 @@ import { mapRpcError } from "@/_lib/rpc-error-map";
 import { posConfirmPaymentAuth, posUseAuth } from "./_lib/auth";
 import {
   branchOnlyReadSchema,
-  cancelPendingPaymentSchema,
   cashConfirmSchema,
   createPaymentSchema,
   fetchPendingRemotePaymentSchema,
 } from "./_lib/payment-schemas";
 import {
-  cancelPendingPaymentRpcFallback,
-  cancelPendingPaymentRpcMappings,
   confirmCashPaymentRpcFallback,
   confirmCashPaymentRpcMappings,
   createPaymentRpcFallback,
@@ -43,6 +40,11 @@ import { POS_ERROR_CODES } from "./_utils/error-codes";
 type PosSupabase = NonNullable<
   Awaited<ReturnType<typeof getAuthContextWithPermission>>
 >["supabase"];
+
+type OrderPaymentCodeResult = {
+  order_id?: number;
+  payment_code?: string;
+};
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 const POS_CONSUMPTION_SETUP_ERROR =
@@ -275,6 +277,35 @@ function buildStoredProviderData(providerResult: PaymentResult): Json {
     redirectUrl: providerResult.redirectUrl,
   };
   return JSON.parse(JSON.stringify(raw)) as Json;
+}
+
+async function ensureOrderPaymentCode(
+  supabase: PosSupabase,
+  input: { tenantId: number; branchId: number; orderId: number },
+): Promise<ActionResult<string>> {
+  const { data, error } = await supabase.rpc("ensure_order_payment_code", {
+    p_tenant_id: input.tenantId,
+    p_branch_id: input.branchId,
+    p_order_id: input.orderId,
+  });
+
+  if (error) {
+    console.error("[ensureOrderPaymentCode] rpc failed:", error.code);
+    return {
+      success: false,
+      error: "Không thể tạo mã chuyển khoản cho đơn này.",
+    };
+  }
+
+  const paymentCode = (data as OrderPaymentCodeResult | null)?.payment_code;
+  if (!paymentCode) {
+    return {
+      success: false,
+      error: "Không thể tạo mã chuyển khoản cho đơn này.",
+    };
+  }
+
+  return { success: true, data: paymentCode };
 }
 
 async function persistPendingProviderData(
@@ -616,6 +647,18 @@ export const createPayment = withActionPositional(
       };
     }
 
+    const orderPaymentCode =
+      method === "vietqr"
+        ? await ensureOrderPaymentCode(supabase, {
+            tenantId: claims.tenant_id,
+            branchId,
+            orderId,
+          })
+        : null;
+    if (orderPaymentCode && !orderPaymentCode.success) {
+      return { success: false, error: orderPaymentCode.error };
+    }
+
     // Call provider to get QR/redirect data (if applicable).
     let providerResult: Awaited<ReturnType<PaymentProvider["createPayment"]>>;
     try {
@@ -624,6 +667,7 @@ export const createPayment = withActionPositional(
         orderId,
         orderNumber: order.order_number,
         amount,
+        ...(orderPaymentCode?.data ? { description: orderPaymentCode.data } : {}),
       });
     } catch (err) {
       console.error("[createPayment] provider threw:", {
@@ -633,6 +677,17 @@ export const createPayment = withActionPositional(
       return {
         success: false,
         error: describeProviderException(method, err),
+      };
+    }
+
+    if (method === "vietqr" && orderPaymentCode?.data) {
+      providerResult = {
+        ...providerResult,
+        providerRef: orderPaymentCode.data,
+        providerData: {
+          ...(providerResult.providerData ?? {}),
+          description: orderPaymentCode.data,
+        },
       };
     }
 
@@ -1113,52 +1168,6 @@ export async function confirmCashPaymentWithInvoice(
     },
   };
 }
-
-/* ─── cancelPendingPayment ─── */
-
-/**
- * Cancel a pending MoMo payment. Flips payment → failed and resets
- * orders.payment_method/payment_status so the order can be split, merged,
- * or start a fresh payment session.
- */
-export const cancelPendingPayment = withActionPositional(
-  {
-    argsToInput: (branchId: number, paymentId: number) => ({
-      branchId,
-      paymentId,
-    }),
-    schema: cancelPendingPaymentSchema,
-    customAuth: posUseAuth,
-  },
-  async (
-    { branchId, paymentId },
-    { supabase, claims },
-  ): Promise<ActionResult<void>> => {
-    if (claims.branch_id !== branchId) {
-      return {
-        success: false,
-        error: "Không có quyền truy cập chi nhánh này",
-        errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
-      };
-    }
-
-    const { error } = await supabase.rpc("cancel_pending_payment", {
-      p_payment_id: paymentId,
-      p_tenant_id: claims.tenant_id,
-      p_branch_id: branchId,
-    });
-
-    if (error) {
-      return mapRpcError<void>(
-        error,
-        cancelPendingPaymentRpcMappings,
-        cancelPendingPaymentRpcFallback,
-      );
-    }
-
-    return { success: true, data: undefined };
-  },
-);
 
 /* ─── fetchVietQrConfig ─── */
 

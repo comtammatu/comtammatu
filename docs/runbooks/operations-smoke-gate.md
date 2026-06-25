@@ -73,7 +73,7 @@ Ghi lại mọi ID phát sinh: `branch_id`, `terminal_id`, `order_id`, `payment_
 
 5. Thanh toán bằng một phương thức được duyệt cho smoke.
    - Cash: expected RPC `confirm_cash_payment` hoàn tất order/payment.
-   - VietQR: expected QR hiển thị mã chuyển khoản random bắt đầu bằng `DH` từ `payments.provider_ref`, có payment pending trước khi khách chuyển khoản; SePay webhook hoặc cashier confirm qua `confirm_vietqr_payment` hoàn tất order/payment.
+   - VietQR: expected QR hiển thị mã chuyển khoản cố định của đơn từ `orders.payment_code` bắt đầu bằng `DH`; SePay webhook hoặc cashier confirm qua `confirm_vietqr_payment` hoàn tất order/payment.
    - MoMo: expected chỉ dùng native QR khi provider trả `qrCodeUrl`; webhook hoàn tất qua `complete_payment_and_consume_stock`.
 
 6. Kiểm order/payment sau thanh toán.

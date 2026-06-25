@@ -107,7 +107,7 @@ function mapDiscountRpcError(message: string): string {
     return "Không thể tách: đơn ở trạng thái không hợp lệ.";
   }
   if (msg.includes("split_payment_pending")) {
-    return "Đơn có thanh toán đang chờ — vui lòng hủy QR trước khi tách.";
+    return "Đơn có thanh toán đang chờ — vui lòng hoàn tất thanh toán trước khi tách.";
   }
   if (msg.includes("split_merge_disabled")) {
     return "Tính năng tách/gộp hóa đơn đang tắt.";
@@ -136,7 +136,7 @@ function mapDiscountRpcError(message: string): string {
     return "Một trong hai đơn đã thanh toán.";
   }
   if (msg.includes("merge_payment_pending")) {
-    return "Có thanh toán đang chờ — vui lòng hủy QR trước khi gộp.";
+    return "Có thanh toán đang chờ — vui lòng hoàn tất thanh toán trước khi gộp.";
   }
   if (msg.includes("merge_pct_discount_blocked")) {
     return "Có chiết khấu % — vui lòng gỡ chiết khấu một trong hai đơn trước khi gộp.";
