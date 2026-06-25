@@ -66,7 +66,7 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
   assert.match(source, /\.eq\("value", normalizedAccount\)/);
   assert.match(source, /\.from\("payments"\)/);
   assert.match(source, /\.eq\("tenant_id", tenantId\)/);
-  assert.match(source, /\.eq\("method", "vietqr"\)/);
+  assert.match(source, /\.in\("method", \["cash", "vietqr"\]\)/);
   assert.match(source, /\.ilike\("provider_ref", paymentCode\)/);
   assert.match(source, /p_tenant_id: accountScope\.tenantId/);
   assert.match(source, /p_payment_id: paymentScope\.paymentId/);
@@ -84,6 +84,23 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
   assert.ok(claimIndex > 0, "claim call should exist");
   assert.ok(rpcIndex > 0, "confirm_sepay_payment RPC call should exist");
   assert.ok(claimIndex < rpcIndex, "claim must happen before settlement RPC");
+});
+
+test("SePay can correct a cash-confirmed QR payment to VietQR", () => {
+  const route = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
+  const migration = readRepoFile(
+    "supabase/migrations/20260625215140_sepay_cash_vietqr_correction.sql",
+  );
+
+  assert.match(route, /\.in\("method", \["cash", "vietqr"\]\)/);
+  assert.match(migration, /provider_ref\s+=\s+v_provider_ref/);
+  assert.doesNotMatch(migration, /provider_ref\s+=\s+NULL/);
+  assert.match(migration, /WHERE p\.method IN \('cash', 'vietqr'\)/);
+  assert.match(migration, /corrected_from_cash/);
+  assert.match(migration, /payment_method = 'vietqr'/);
+  assert.match(migration, /cash_received = NULL/);
+  assert.match(migration, /cash_change = NULL/);
+  assert.match(migration, /v_payment_ref/);
 });
 
 test("SePay migration extends webhook provider check and keeps RPC service-only", () => {
@@ -166,6 +183,18 @@ test("POS VietQR creates a pending payment row before rendering transfer QR", ()
   assert.match(action, /p_provider_ref: providerResult\.providerRef/);
   assert.doesNotMatch(bill, /buildVietQrEmvco/);
   assert.match(bill, /const result = await createPayment\(/);
+});
+
+test("Printed provisional bills use a payment code QR, not order number memo", () => {
+  const action = readRepoFile(
+    "apps/web/app/(protected)/br/[branchId]/pos/print-actions.ts",
+  );
+
+  assert.match(action, /new VietQRProvider/);
+  assert.match(action, /"create_payment"/);
+  assert.match(action, /p_provider_ref: providerResult\.providerRef/);
+  assert.match(action, /description: providerRef/);
+  assert.doesNotMatch(action, /DH \$\{orderRes\.data\.order_number\}/);
 });
 
 test("POS VietQR uses locally generated EMVCo payloads, not VietQR image URLs", () => {

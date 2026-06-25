@@ -175,7 +175,7 @@ async function resolvePaymentScope(
     .from("payments")
     .select("id")
     .eq("tenant_id", tenantId)
-    .eq("method", "vietqr")
+    .in("method", ["cash", "vietqr"])
     .ilike("provider_ref", paymentCode)
     .neq("status", "failed")
     .limit(2);
