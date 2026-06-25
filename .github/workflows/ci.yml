@@ -72,7 +72,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm db:baseline:local-check
+      - run: pnpm db:baseline:local-check -- --api-port=55441 --db-port=55442 --shadow-port=55440
 
   # Separate job (does not block the fast gates): stands up a from-empty Supabase
   # Local with the self-contained baseline + dev/QA seeds, starts the app, and runs
