@@ -138,12 +138,7 @@ function randomPaymentChars(length: number): string {
 }
 
 function generateVietQrPaymentCode(): string {
-  const bytes = new Uint8Array(3);
-  crypto.getRandomValues(bytes);
-  const value =
-    ((bytes[0] ?? 0) << 16) + ((bytes[1] ?? 0) << 8) + (bytes[2] ?? 0);
-  const numericCode = String(value % 1_000_000).padStart(6, "0");
-  return `DH ${numericCode} ${randomPaymentChars(5)}`;
+  return `DH${randomPaymentChars(10)}`;
 }
 
 export class VietQRProvider implements PaymentProvider {

@@ -43,11 +43,19 @@ test("SePay webhook verifies raw-body HMAC and returns SePay success JSON", () =
 test("SePay webhook claims idempotency before payment settlement RPC", () => {
   const source = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
 
-  assert.match(source, /PAYMENT_CODE_RE/);
-  assert.match(source, /id: z\.number\(\)\.int\(\)\.nonnegative\(\)/);
+  assert.match(source, /SEPAY_PAYMENT_CODE_RE/);
+  assert.match(source, /LEGACY_PAYMENT_CODE_RE/);
+  assert.match(source, /id: z\.coerce\.number\(\)\.int\(\)\.nonnegative\(\)/);
+  assert.match(source, /new URLSearchParams\(rawBody\)/);
+  assert.match(source, /transferAmount: z\.coerce\.number\(\)\.nonnegative\(\)/);
   assert.ok(
     source.includes(
-      "const PAYMENT_CODE_RE = /\\bDH\\s+\\d{6}\\s+[A-Z0-9]{5}\\b/i;",
+      "const SEPAY_PAYMENT_CODE_RE = /\\bDH[A-Z0-9]{3,12}\\b/i;",
+    ),
+  );
+  assert.ok(
+    source.includes(
+      "const LEGACY_PAYMENT_CODE_RE = /\\bDH\\s+\\d{6}\\s+[A-Z0-9]{5}\\b/i;",
     ),
   );
   assert.ok(source.includes('replace(/^DH\\s+/, "DH ")'));
@@ -173,6 +181,7 @@ test("POS VietQR uses locally generated EMVCo payloads, not VietQR image URLs", 
   );
 
   assert.match(provider, /const qrData = buildVietQrEmvco\(/);
+  assert.match(provider, /return `DH\$\{randomPaymentChars\(10\)\}`/);
   assert.match(bill, /<PaymentQrCode[\s\S]*value=\{remoteQrValue\}/);
   assert.doesNotMatch(bill, /preferImage=\{selectedMethod === "vietqr"\}/);
   assert.doesNotMatch(provider, /img\.vietqr\.io/);

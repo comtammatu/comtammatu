@@ -6,24 +6,40 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 
 const SEPAY_WEBHOOK_SECRET = process.env.SEPAY_WEBHOOK_SECRET ?? "";
 const SIGNATURE_TOLERANCE_SECONDS = 300;
-const PAYMENT_CODE_RE = /\bDH\s+\d{6}\s+[A-Z0-9]{5}\b/i;
+const SEPAY_PAYMENT_CODE_RE = /\bDH[A-Z0-9]{3,12}\b/i;
+const LEGACY_PAYMENT_CODE_RE = /\bDH\s+\d{6}\s+[A-Z0-9]{5}\b/i;
 
 const sepayAcceptedResponse = () => NextResponse.json({ success: true });
 
+const nullableTrimmedStringSchema = z.preprocess(
+  (value) => (value == null ? "" : value),
+  z.string().trim(),
+);
+
+const nullableOptionalTrimmedStringSchema = z.preprocess(
+  (value) => (value === "" || value == null ? null : value),
+  z.string().trim().nullable(),
+);
+
+const transferTypeSchema = z.preprocess(
+  (value) => String(value ?? "").trim().toLowerCase(),
+  z.enum(["in", "out"]),
+);
+
 const sepayPayloadSchema = z
   .object({
-    id: z.number().int().nonnegative(),
-    gateway: z.string().trim().min(1),
-    transactionDate: z.string().trim().min(1),
-    accountNumber: z.string().trim().min(1),
-    subAccount: z.string().optional().default(""),
-    code: z.string().trim().nullable().optional(),
-    content: z.string().trim().min(1),
-    transferType: z.enum(["in", "out"]),
-    description: z.string().optional().default(""),
-    transferAmount: z.number().positive(),
-    accumulated: z.number().optional().default(0),
-    referenceCode: z.string().optional().default(""),
+    id: z.coerce.number().int().nonnegative(),
+    gateway: nullableTrimmedStringSchema,
+    transactionDate: nullableTrimmedStringSchema,
+    accountNumber: nullableTrimmedStringSchema,
+    subAccount: nullableTrimmedStringSchema.default(""),
+    code: nullableOptionalTrimmedStringSchema.optional(),
+    content: nullableTrimmedStringSchema,
+    transferType: transferTypeSchema,
+    description: nullableTrimmedStringSchema.default(""),
+    transferAmount: z.coerce.number().nonnegative(),
+    accumulated: z.coerce.number().optional().default(0),
+    referenceCode: nullableTrimmedStringSchema.default(""),
   })
   .passthrough();
 
@@ -74,13 +90,32 @@ function verifySepaySignature(request: Request, rawBody: string): boolean {
   return safeEqual(signature, expected);
 }
 
+function parseSepayPayload(request: Request, rawBody: string): unknown {
+  const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+  if (contentType.includes("application/x-www-form-urlencoded")) {
+    return Object.fromEntries(new URLSearchParams(rawBody));
+  }
+  return JSON.parse(rawBody);
+}
+
+function logSepayPayloadIssues(error: z.ZodError) {
+  console.warn("[sepay-webhook] invalid payload", {
+    issues: error.issues.map((issue) => ({
+      path: issue.path.join("."),
+      code: issue.code,
+    })),
+  });
+}
+
 function normalizePaymentCodeCandidate(
   value: string | null | undefined,
 ): string | null {
   if (!value) return null;
   const text = value.trim().toUpperCase().replace(/\s+/g, " ");
-  const match = PAYMENT_CODE_RE.exec(text);
-  return match?.[0].toUpperCase().replace(/^DH\s+/, "DH ") ?? null;
+  const sepayMatch = SEPAY_PAYMENT_CODE_RE.exec(text);
+  if (sepayMatch) return sepayMatch[0].toUpperCase();
+  const legacyMatch = LEGACY_PAYMENT_CODE_RE.exec(text);
+  return legacyMatch?.[0].toUpperCase().replace(/^DH\s+/, "DH ") ?? null;
 }
 
 function extractPaymentCode(payload: SepayPayload): string | null {
@@ -253,12 +288,18 @@ export async function POST(request: Request) {
 
   let payload: SepayPayload;
   try {
-    const parsed = sepayPayloadSchema.safeParse(JSON.parse(rawBody));
+    const parsed = sepayPayloadSchema.safeParse(
+      parseSepayPayload(request, rawBody),
+    );
     if (!parsed.success) {
+      logSepayPayloadIssues(parsed.error);
       return NextResponse.json({ success: false }, { status: 400 });
     }
     payload = parsed.data;
-  } catch {
+  } catch (err) {
+    console.warn("[sepay-webhook] invalid payload body", {
+      error: err instanceof SyntaxError ? "invalid_json" : "parse_failed",
+    });
     return NextResponse.json({ success: false }, { status: 400 });
   }
 
