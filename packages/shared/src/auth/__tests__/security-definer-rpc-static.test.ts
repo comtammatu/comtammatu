@@ -52,6 +52,9 @@ const inventoryShiftKeyInvokerMigration = readRepoFile(
 const inventoryProductionOperatorInvokerMigration = readRepoFile(
   "supabase/migrations/20260625134329_inventory_production_operator_invoker.sql",
 );
+const positionHelperRpcGrantMigration = readRepoFile(
+  "supabase/migrations/20260625141001_restrict_position_helper_rpc_grants.sql",
+);
 
 function extractSqlFunction(source: string, functionName: string): string {
   return (
@@ -162,6 +165,26 @@ test("Inventory production-operator helper is invoker-rights only", () => {
     inventoryProductionOperatorInvokerMigration,
     /SECURITY DEFINER/i,
   );
+});
+
+test("Position helper RPCs are not directly executable by browser roles", () => {
+  for (const signature of [
+    "public.current_position()",
+    "public.has_position(text)",
+  ]) {
+    assert.match(
+      positionHelperRpcGrantMigration,
+      new RegExp(
+        `REVOKE EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+FROM PUBLIC, anon, authenticated`,
+      ),
+    );
+    assert.match(
+      positionHelperRpcGrantMigration,
+      new RegExp(
+        `GRANT EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+TO service_role`,
+      ),
+    );
+  }
 });
 
 test("staff admin RPCs enforce permission gates inside SECURITY DEFINER bodies", () => {
