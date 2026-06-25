@@ -12,7 +12,7 @@ const sepayAcceptedResponse = () => NextResponse.json({ success: true });
 
 const sepayPayloadSchema = z
   .object({
-    id: z.number().int().positive(),
+    id: z.number().int().nonnegative(),
     gateway: z.string().trim().min(1),
     transactionDate: z.string().trim().min(1),
     accountNumber: z.string().trim().min(1),
