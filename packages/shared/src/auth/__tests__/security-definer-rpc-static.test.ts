@@ -40,6 +40,9 @@ const retiredIntraBranchRpcMigration = readRepoFile(
 const featureFlagRpcMigration = readRepoFile(
   "supabase/migrations/20260625123413_gate_feature_flag_rpc.sql",
 );
+const hddtSummaryRpcGrantMigration = readRepoFile(
+  "supabase/migrations/20260625125528_restrict_hddt_summary_rpc_grant.sql",
+);
 
 function extractSqlFunction(source: string, functionName: string): string {
   return (
@@ -101,6 +104,24 @@ test("feature flag RPC preserves tenant boundary inside SECURITY DEFINER body", 
   assert.match(
     featureFlagRpcMigration,
     /REVOKE ALL ON FUNCTION public\.is_feature_enabled\(bigint, text\)\s+FROM PUBLIC, anon/,
+  );
+});
+
+test("HDDT daily summary aggregate RPC is service-role only", () => {
+  const signature =
+    "public.aggregate_daily_b2c_invoice(bigint, date, uuid)";
+
+  assert.match(
+    hddtSummaryRpcGrantMigration,
+    new RegExp(
+      `REVOKE EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+FROM PUBLIC, anon, authenticated`,
+    ),
+  );
+  assert.match(
+    hddtSummaryRpcGrantMigration,
+    new RegExp(
+      `GRANT EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+TO service_role`,
+    ),
   );
 });
 
