@@ -25,6 +25,25 @@ const migration = readRepoFile(
 const securityHardeningMigration = readRepoFile(
   "supabase/migrations/_archive/20260619062853_security_rpc_cron_runner_hardening.sql",
 );
+const branchScopePaymentPrintMigration = readRepoFile(
+  "supabase/migrations/20260625130000_branch_scope_pos_payment_print.sql",
+);
+const permissionScopeGrantsMigration = readRepoFile(
+  "supabase/migrations/20260625131000_permission_scope_grants.sql",
+);
+const hddtTaxInvoiceRpcScopeMigration = readRepoFile(
+  "supabase/migrations/20260625132000_hddt_tax_invoice_rpc_scope.sql",
+);
+
+function extractSqlFunction(source: string, functionName: string): string {
+  return (
+    source.match(
+      new RegExp(
+        `CREATE OR REPLACE FUNCTION public\\.${functionName}\\([\\s\\S]*?\\n\\$\\$;`,
+      ),
+    )?.[0] ?? ""
+  );
+}
 
 test("payment and print implementation RPCs are not directly executable by authenticated users", () => {
   for (const signature of [
@@ -119,4 +138,123 @@ test("POS and inventory RPC bodies enforce branch permission and location scope"
     /v_location\.branch_id <> p_branch_id/,
   );
   assert.match(securityHardeningMigration, /location_scope_mismatch/);
+});
+
+test("POS payment and receipt RPCs enforce branch-scoped permissions", () => {
+  const cash = extractSqlFunction(
+    branchScopePaymentPrintMigration,
+    "confirm_cash_payment",
+  );
+  const vietqr = extractSqlFunction(
+    branchScopePaymentPrintMigration,
+    "confirm_vietqr_payment",
+  );
+  const receipt = extractSqlFunction(
+    branchScopePaymentPrintMigration,
+    "enqueue_receipt_print",
+  );
+
+  assert.match(
+    cash,
+    /public\.has_permission\(v_order\.branch_id,\s*'pos:confirm_payment'\)/,
+  );
+  assert.doesNotMatch(cash, /has_permission_any\('pos:confirm_payment'\)/);
+
+  assert.match(
+    vietqr,
+    /public\.has_permission\(v_order\.branch_id,\s*'pos:confirm_payment'\)/,
+  );
+  assert.match(
+    vietqr,
+    /v_order\.tenant_id IS DISTINCT FROM public\.auth_tenant_id\(\)/,
+  );
+  assert.match(vietqr, /created_by\s*\)\s*VALUES\s*\([\s\S]*now\(\), v_uid/);
+  assert.match(vietqr, /public\.finalize_paid_order\(p_order_id, v_uid\)/);
+  assert.doesNotMatch(vietqr, /has_permission_any\('pos:confirm_payment'\)/);
+
+  assert.match(
+    receipt,
+    /public\.has_permission\(v_order\.branch_id,\s*'pos:print'\)/,
+  );
+  assert.match(
+    receipt,
+    /public\.has_permission\(v_order\.branch_id,\s*'pos:reprint_receipt'\)/,
+  );
+  assert.doesNotMatch(receipt, /has_permission_any\('pos:print'\)/);
+  assert.doesNotMatch(receipt, /has_permission_any\('pos:reprint_receipt'\)/);
+});
+
+test("print_jobs write policies are branch scoped", () => {
+  assert.match(
+    branchScopePaymentPrintMigration,
+    /CREATE POLICY print_jobs_insert[\s\S]*public\.has_permission\(branch_id,\s*'pos:print'\)[\s\S]*public\.has_permission\(branch_id,\s*'pos:send_kitchen'\)[\s\S]*public\.has_permission\(branch_id,\s*'printer:manage'\)/,
+  );
+  assert.match(
+    branchScopePaymentPrintMigration,
+    /CREATE POLICY print_jobs_update[\s\S]*public\.has_permission\(branch_id,\s*'pos:print'\)[\s\S]*public\.has_permission\(branch_id,\s*'printer:manage'\)/,
+  );
+  assert.doesNotMatch(
+    branchScopePaymentPrintMigration,
+    /print_jobs_(?:insert|update)[\s\S]*has_permission_any/,
+  );
+});
+
+test("printer agent write policies are branch scoped", () => {
+  assert.match(
+    branchScopePaymentPrintMigration,
+    /CREATE POLICY printer_agents_upsert_insert[\s\S]*public\.has_permission\(branch_id,\s*'printer:manage'\)[\s\S]*public\.has_permission\(branch_id,\s*'pos:print'\)/,
+  );
+  assert.match(
+    branchScopePaymentPrintMigration,
+    /CREATE POLICY printer_agents_upsert_update[\s\S]*public\.has_permission\(branch_id,\s*'printer:manage'\)[\s\S]*public\.has_permission\(branch_id,\s*'pos:print'\)/,
+  );
+  assert.doesNotMatch(
+    branchScopePaymentPrintMigration,
+    /printer_agents_upsert_(?:insert|update)[\s\S]*has_permission_any/,
+  );
+});
+
+test("staff permission grants enforce permission key scope", () => {
+  const grant = extractSqlFunction(permissionScopeGrantsMigration, "grant_permission");
+  const template = extractSqlFunction(
+    permissionScopeGrantsMigration,
+    "apply_template_to_user",
+  );
+
+  assert.match(grant, /SELECT scope INTO v_scope[\s\S]*FROM public\.permission_keys/);
+  assert.match(grant, /v_scope = 'branch' AND p_branch_id IS NULL/);
+  assert.match(grant, /permission_scope_requires_branch/);
+  assert.match(grant, /v_scope = 'tenant' AND p_branch_id IS NOT NULL/);
+  assert.match(grant, /permission_scope_requires_tenant/);
+
+  assert.match(template, /LEFT JOIN public\.permission_keys pk/);
+  assert.match(template, /unknown_permission_key_in_template/);
+  assert.match(template, /p_branch_id IS NULL AND pk\.scope = 'branch'/);
+  assert.match(template, /p_branch_id IS NOT NULL AND pk\.scope = 'tenant'/);
+  assert.match(template, /permission_scope_mismatch/);
+});
+
+test("HDDT tax invoice RPCs enforce branch and tenant scoped permissions", () => {
+  const transition = extractSqlFunction(
+    hddtTaxInvoiceRpcScopeMigration,
+    "transition_tax_invoice_state",
+  );
+  const replace = extractSqlFunction(
+    hddtTaxInvoiceRpcScopeMigration,
+    "replace_tax_invoice",
+  );
+
+  assert.match(
+    transition,
+    /public\.has_permission\(v_invoice\.branch_id,\s*'orders:write'\)/,
+  );
+  assert.match(
+    transition,
+    /public\.has_permission\(NULL,\s*'settings:tenant'\)/,
+  );
+  assert.doesNotMatch(transition, /has_permission_any\('orders:write'\)/);
+  assert.doesNotMatch(transition, /has_permission_any\('settings:tenant'\)/);
+
+  assert.match(replace, /public\.has_permission\(NULL,\s*'settings:tenant'\)/);
+  assert.doesNotMatch(replace, /has_permission_any\('settings:tenant'\)/);
 });

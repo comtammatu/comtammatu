@@ -62,18 +62,18 @@ source-of-truth inputs.
 | Tests               | Playwright route coverage and shared unit tests                                       |
 | Core                | Repository metadata, E2E helpers, cross-cutting supporting files                      |
 
-Generated checkout snapshot from 2026-06-20 (`node scripts/project-snapshot.mjs`):
+Generated checkout snapshot from 2026-06-25 (`node scripts/project-snapshot.mjs`):
 
 | Area                                                     |                                       Count |
 | -------------------------------------------------------- | ------------------------------------------: |
-| `apps/web/app/**/page.tsx` routes (committed)            |                                          93 |
-| API route handlers (`route.ts`: 10 api + 3 PWA manifest) |                                          13 |
-| Generated DB tables / views / functions / enums          | 111 / 8 / 241 / 0 |
-| Active SQL migrations (baseline-first; +358 archived)    |                                          88 |
-| Test/spec files (`apps/web/e2e` + `packages/shared/src`) |                                          35 |
-| Test files under `apps/web/tests`                        |                                          51 |
+| `apps/web/app/**/page.tsx` routes (committed)            |                                          94 |
+| API routes / route handlers                              |                                      9 / 12 |
+| Generated DB tables / views / functions / enums          |                          109 / 8 / 247 / 0 |
+| Active SQL migrations (baseline-first; +460 archived)    |                                           4 |
+| Test/spec files (`apps/web/e2e` + shared unit tests)     |                                          37 |
+| Playwright specs / shared unit tests                     |                                     10 / 27 |
 
-> Migrations are **baseline-first** since 2026-05-30: `supabase/migrations/00000000000000_baseline.sql` (canonical public-schema install) + forward migrations, with the 358-file historical chain under `supabase/migrations/_archive/` and managed surfaces in `supabase/managed-surfaces.install.sql`. See `docs/spec/database-schema.md`.
+> Migrations are **baseline-first** since 2026-05-30: `supabase/migrations/00000000000000_baseline.sql` (canonical public+private schema install) + forward migrations, with the 460-file historical chain under `supabase/migrations/_archive/` and managed surfaces in `supabase/managed-surfaces.install.sql`. See `docs/spec/database-schema.md`.
 
 The repo is not a flat "apps/packages" map. The operational shape is:
 

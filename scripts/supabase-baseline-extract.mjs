@@ -10,7 +10,7 @@ import {
 import { join, resolve } from "node:path";
 
 const EXPECTED_PROJECT_REF = "iexwsuaqqenyjiskawoj";
-const DEFAULT_SCHEMAS = ["public"];
+const DEFAULT_SCHEMAS = ["public", "private"];
 const DEFAULT_TIMEOUT_MS = 300_000;
 
 // Allowlisted dump targets → which .env.local secrets hold their direct creds.
@@ -30,7 +30,7 @@ function printHelp() {
   pnpm db:baseline:extract -- [options]
 
 Options:
-  --schemas=<list>          Comma-separated schemas to dump. Default: public
+  --schemas=<list>          Comma-separated schemas to dump. Default: public,private
   --out-dir=<path>          Output directory. Default: .baseline-artifacts/supabase-live-baseline-<timestamp>
   --project-ref=<ref>       Expected linked Supabase project ref. Default: ${EXPECTED_PROJECT_REF}
   --timeout-ms=<number>     Per-schema command timeout. Default: ${DEFAULT_TIMEOUT_MS}
@@ -251,7 +251,7 @@ function findPgDump() {
 
 // Docker-free dump via a direct pg_dump binary (libpq). The Supabase CLI wraps
 // pg_dump in Docker; this path needs neither. Applies the two replay fixups that
-// matter for a fresh Supabase restore: idempotent public-schema creation and
+// matter for a fresh Supabase restore: idempotent public/private schema creation and
 // neutralised psql `\restrict`/`\unrestrict` meta-lines (pg_dump 18).
 function runPgDumpEngine({ dbUrl, schema, outputPath, dryRun, timeoutMs }) {
   const bin = findPgDump();

@@ -44,11 +44,11 @@ Defined in `packages/database/package.json`:
 ## Schema — Current Shape
 
 Source of truth: generated types from the schema used by app code. Snapshot
-generated from the current checkout on 2026-06-20 with
+generated from the current checkout on 2026-06-25 with
 `node scripts/project-snapshot.mjs`:
 
-- **111 tables**, **8 views**, **241 RPC/SQL functions**
-- **88 active migration files** in `supabase/migrations/`: the baseline plus
+- **109 tables**, **8 views**, **247 RPC/SQL functions**
+- **4 active migration files** in `supabase/migrations/`: the baseline plus
   forward migrations
 - **0 enums** — staff roles vẫn là strings carried in
   JWT claims; `position` is the canonical claim and `user_role` remains the
@@ -104,7 +104,9 @@ For the per-column / per-policy reference of a specific table, prefer reading th
 
 ## RLS Pattern
 
-Every table follows this pattern:
+Most public application tables follow this pattern. Intentional exceptions such
+as global catalogs, derived logs, and no-client-write tables must be justified by
+their table policy.
 
 ```sql
 -- 1. Enable RLS
@@ -128,7 +130,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.{table} TO authenticated;
 ## Migration Conventions
 
 Fresh/dev installs are baseline-first. `supabase/migrations/00000000000000_baseline.sql`
-is the public-schema install path; `supabase/managed-surfaces.install.sql` is the
+is the public+private schema install path; `supabase/managed-surfaces.install.sql` is the
 privileged companion for extensions, storage policies, realtime, and cron.
 Forward migrations live in `supabase/migrations/` with timestamp-prefixed
 filenames after the baseline.
