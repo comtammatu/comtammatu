@@ -20,7 +20,6 @@ const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 // two shift actions only so the role check in `getAuthContext` does not
 // reject owner before the permission probe runs.
 const POS_SHIFT_ROLES: readonly StaffRole[] = [...POS_ROLES, "owner"];
-const MENU_LIMIT_ROLES = MODULE_ACL.branch_menu_limits.allowedRoles;
 
 const branchIdSchema = z.coerce
   .number()
@@ -232,29 +231,23 @@ export async function fetchActiveSession(
 /* ─── fetchPosPermissionFlags ─── */
 
 /**
- * POS permission flags for the user on a branch (3 RPCs in parallel + 1
- * module-ACL flag).
+ * POS permission flags for the user on a branch (3 RPCs in parallel).
  *
  * - `canOpenShift` (`pos:open_cashbox`): gates SessionGate at page level.
  * - `canCloseShift` (`pos:close_shift`): gates the close-shift button.
  * - `canConfirmCash` (`pos:confirm_payment`): gates the cash method on the
  *   bill — cash touches the physical drawer; e-wallets stay available.
- * - `canManageMenuLimits` (module ACL `branch_menu_limits`): gates menu
- *   lock/limit controls on POS.
- *
  * Defense in depth: server-side RPCs still reject any UI bypass.
  */
 export async function fetchPosPermissionFlags(branchId: number): Promise<{
   canOpenShift: boolean;
   canCloseShift: boolean;
   canConfirmCash: boolean;
-  canManageMenuLimits: boolean;
 }> {
   const deny = {
     canOpenShift: false,
     canCloseShift: false,
     canConfirmCash: false,
-    canManageMenuLimits: false,
   };
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) return deny;
@@ -282,7 +275,6 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
     canOpenShift: !openRes.error && openRes.data === true,
     canCloseShift: !closeRes.error && closeRes.data === true,
     canConfirmCash: !cashRes.error && cashRes.data === true,
-    canManageMenuLimits: MENU_LIMIT_ROLES.includes(ctx.claims.user_role),
   };
 }
 

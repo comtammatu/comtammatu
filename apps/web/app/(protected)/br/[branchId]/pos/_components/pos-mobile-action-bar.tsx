@@ -36,6 +36,9 @@ export interface PosMobileActionBarProps {
 const ACTION_BAR_CLASS =
   "fixed inset-x-3 bottom-0 z-40 flex gap-2 rounded-lg bg-card/95 p-2 shadow-2xl ring-1 ring-border backdrop-blur pos-safe-bottom md:hidden";
 
+const SESSION_ORDERS_BAR_CLASS =
+  "fixed right-3 bottom-0 z-40 pos-safe-bottom md:hidden";
+
 const ACTION_PRIMARY_BUTTON_CLASS =
   "min-w-14 flex-1 text-sm font-bold sm:text-base";
 
@@ -44,6 +47,9 @@ const ACTION_SECONDARY_BUTTON_CLASS =
 
 const ACTION_CANCEL_BUTTON_CLASS =
   "min-w-14 shrink-0 border border-border px-3 text-sm font-semibold text-muted-foreground sm:text-base";
+
+const SESSION_ORDERS_BUTTON_CLASS =
+  "min-w-14 bg-card/95 px-4 text-sm font-bold ring-1 ring-border backdrop-blur sm:text-base";
 
 function PosMobileActionBarComponent({
   isMobile,
@@ -142,13 +148,14 @@ function PosMobileActionBarComponent({
   // order list. Context gates themselves own "create new" tiles in the viewport.
   if (!menuContextReady) {
     return (
-      <div className={ACTION_BAR_CLASS}>
+      <div className={SESSION_ORDERS_BAR_CLASS}>
         <Button
           type="button"
-          variant="secondary"
+          variant="outline"
           size="touch-lg"
-          className={ACTION_SECONDARY_BUTTON_CLASS}
+          className={SESSION_ORDERS_BUTTON_CLASS}
           onClick={onOpenOrdersDrawer}
+          aria-label={messages.pos.mobileActionBar.sessionOrders}
         >
           <IconReceipt data-icon="inline-start" />
           <span>{messages.pos.mobileActionBar.sessionOrders}</span>

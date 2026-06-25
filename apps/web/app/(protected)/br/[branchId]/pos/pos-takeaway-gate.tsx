@@ -134,6 +134,9 @@ function PosTakeawayGateComponent({
     >
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
         <div className="flex w-full flex-col gap-4 px-2 pb-28 pt-2 md:px-4 md:py-4">
+          {headerAction ? (
+            <div className="w-full md:max-w-md">{headerAction}</div>
+          ) : null}
           <section className="flex flex-col gap-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-2">
@@ -144,9 +147,6 @@ function PosTakeawayGateComponent({
                   </p>
                 </div>
               </div>
-              {headerAction ? (
-                <div className="w-full sm:w-72">{headerAction}</div>
-              ) : null}
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 2xl:grid-cols-5">

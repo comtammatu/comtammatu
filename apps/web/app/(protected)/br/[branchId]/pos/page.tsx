@@ -196,7 +196,6 @@ export default async function PosPage({
         initialOpenOrderId={initialOpenOrderId}
         canCloseShift={permFlags.canCloseShift}
         canConfirmCash={permFlags.canConfirmCash}
-        canManageMenuLimits={permFlags.canManageMenuLimits}
         initialPaymentMethods={initialPaymentMethods}
         initialVietQrConfig={initialVietQrConfig}
       />

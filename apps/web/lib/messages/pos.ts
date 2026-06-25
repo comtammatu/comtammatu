@@ -288,7 +288,7 @@ export const pos = {
   },
   desktop: {
     serviceModeAria: "Chọn hình thức phục vụ",
-    dineIn: "Tại bàn",
+    dineIn: "Tại chỗ",
     takeaway: "Mang về",
     newDineInTarget: (tableNumber: number | string) =>
       `Bàn ${tableNumber} · Đơn mới`,
