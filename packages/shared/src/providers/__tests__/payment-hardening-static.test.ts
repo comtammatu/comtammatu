@@ -121,6 +121,17 @@ test("SePay migration extends webhook provider check and keeps RPC service-only"
   );
 });
 
+test("Webhook event audit table is not selectable by anon", () => {
+  const source = readRepoFile(
+    "supabase/migrations/20260626021425_revoke_webhook_events_anon_select.sql",
+  );
+
+  assert.match(
+    source,
+    /REVOKE SELECT ON TABLE public\.webhook_events FROM anon;/,
+  );
+});
+
 test("POS VietQR creates a pending payment row before rendering transfer QR", () => {
   const schema = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/_lib/payment-schemas.ts",
