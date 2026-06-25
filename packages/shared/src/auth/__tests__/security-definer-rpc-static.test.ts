@@ -37,6 +37,9 @@ const hddtTaxInvoiceRpcScopeMigration = readRepoFile(
 const retiredIntraBranchRpcMigration = readRepoFile(
   "supabase/migrations/20260625075939_harden_retired_intra_branch_rpc.sql",
 );
+const featureFlagRpcMigration = readRepoFile(
+  "supabase/migrations/20260625123413_gate_feature_flag_rpc.sql",
+);
 
 function extractSqlFunction(source: string, functionName: string): string {
   return (
@@ -85,6 +88,19 @@ test("retired intra-branch transfer RPC is not directly executable by authentica
     new RegExp(
       `GRANT EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+TO service_role`,
     ),
+  );
+});
+
+test("feature flag RPC preserves tenant boundary inside SECURITY DEFINER body", () => {
+  const body = extractSqlFunction(featureFlagRpcMigration, "is_feature_enabled");
+
+  assert.match(body, /FROM public\.branch_feature_flags bff/);
+  assert.match(body, /JOIN public\.branches b ON b\.id = bff\.branch_id/);
+  assert.match(body, /b\.tenant_id = public\.auth_tenant_id\(\)/);
+  assert.match(body, /auth\.role\(\) = 'service_role'/);
+  assert.match(
+    featureFlagRpcMigration,
+    /REVOKE ALL ON FUNCTION public\.is_feature_enabled\(bigint, text\)\s+FROM PUBLIC, anon/,
   );
 });
 
