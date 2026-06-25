@@ -159,6 +159,42 @@ test("POS VietQR creates a pending payment row before rendering transfer QR", ()
   assert.match(bill, /const result = await createPayment\(/);
 });
 
+test("POS renders VietQR image URLs directly instead of QR-encoding the image URL", () => {
+  const bill = readRepoFile(
+    "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
+  );
+
+  assert.match(
+    bill,
+    /<PaymentQrCode[\s\S]*value=\{remoteQrValue\}[\s\S]*preferImage=\{selectedMethod === "vietqr"\}/,
+  );
+});
+
+test("POS rehydrates pending VietQR QR from current Admin settings", () => {
+  const action = readRepoFile(
+    "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
+  );
+
+  assert.match(action, /\.select\("id, method, status, amount, provider_ref, provider_data"\)/);
+  assert.match(action, /const vietQrSettings =[\s\S]*readVietQrSettings\(supabase, claims\.tenant_id\)/);
+  assert.match(
+    action,
+    /buildPendingRemotePaymentForBillData\(payment, vietQrSettings\)/,
+  );
+
+  const pickStart = action.indexOf("function pickRemoteQrData");
+  const pickEnd = action.indexOf("function buildStoredProviderData", pickStart);
+  const pickRemoteQrDataBlock = action.slice(pickStart, pickEnd);
+  assert.ok(
+    pickRemoteQrDataBlock.indexOf("buildVietQrImageUrlFromProviderData") >
+      pickRemoteQrDataBlock.indexOf('if (method === "vietqr")'),
+  );
+  assert.ok(
+    pickRemoteQrDataBlock.indexOf("buildVietQrImageUrlFromProviderData") <
+      pickRemoteQrDataBlock.indexOf('strValue(providerData, "qrData")'),
+  );
+});
+
 test("VietQR bank account configuration lives in Admin settings, not env", () => {
   const envExample = readRepoFile(".env.example");
   const paymentActions = readRepoFile(

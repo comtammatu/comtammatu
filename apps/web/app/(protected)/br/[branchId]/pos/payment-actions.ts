@@ -207,6 +207,8 @@ async function resolvePaymentProviderForMethod(
   });
 }
 
+type VietQrSettings = Awaited<ReturnType<typeof readVietQrSettings>>;
+
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -252,9 +254,9 @@ function pickRemoteQrData(
 
   if (method === "vietqr") {
     return (
+      buildVietQrImageUrlFromProviderData(providerData) ??
       strValue(providerData, "qrData") ??
-      strValue(providerData, "qrUrl") ??
-      buildVietQrImageUrlFromProviderData(providerData)
+      strValue(providerData, "qrUrl")
     );
   }
 
@@ -296,16 +298,40 @@ async function persistPendingProviderData(
   }
 }
 
-function buildPendingRemotePaymentForBillData(row: {
-  id: number;
-  method: string;
-  provider_ref: string | null;
-  provider_data: unknown;
-}): PendingRemotePaymentForBillData | null {
+function amountToProviderString(
+  amount: number | string | null | undefined,
+): string | undefined {
+  if (amount == null) return undefined;
+  const value = typeof amount === "number" ? amount : Number(amount);
+  return Number.isFinite(value) ? Math.round(value).toString() : undefined;
+}
+
+function buildPendingRemotePaymentForBillData(
+  row: {
+    id: number;
+    method: string;
+    amount: number | string | null;
+    provider_ref: string | null;
+    provider_data: unknown;
+  },
+  vietQrSettings?: VietQrSettings,
+): PendingRemotePaymentForBillData | null {
   if (row.method !== "vietqr" && row.method !== "momo") return null;
 
   const method = row.method;
-  const providerData = asRecord(row.provider_data);
+  const storedProviderData = asRecord(row.provider_data);
+  const amount = amountToProviderString(row.amount);
+  const providerData =
+    method === "vietqr" && vietQrSettings?.bankCode && vietQrSettings.accountNo
+      ? {
+          ...(storedProviderData ?? {}),
+          bankCode: vietQrSettings.bankCode,
+          accountNo: vietQrSettings.accountNo,
+          accountName: vietQrSettings.accountName,
+          ...(amount ? { amount } : {}),
+          ...(row.provider_ref ? { description: row.provider_ref } : {}),
+        }
+      : storedProviderData;
   const qrInfo = pickVietQrInfo(providerData);
   const qrData = pickRemoteQrData(method, providerData);
   const redirectUrl =
@@ -788,7 +814,7 @@ export const fetchPendingRemotePaymentForBill = withActionPositional(
 
     const { data: payment, error } = await supabase
       .from("payments")
-      .select("id, method, status, provider_ref, provider_data")
+      .select("id, method, status, amount, provider_ref, provider_data")
       .eq("order_id", orderId)
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", branchId)
@@ -805,9 +831,14 @@ export const fetchPendingRemotePaymentForBill = withActionPositional(
       return { success: true, data: null };
     }
 
+    const vietQrSettings =
+      payment.method === "vietqr"
+        ? await readVietQrSettings(supabase, claims.tenant_id)
+        : undefined;
+
     return {
       success: true,
-      data: buildPendingRemotePaymentForBillData(payment),
+      data: buildPendingRemotePaymentForBillData(payment, vietQrSettings),
     };
   },
 );

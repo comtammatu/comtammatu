@@ -105,10 +105,7 @@ export class VietQRProvider implements PaymentProvider {
   }
 
   /**
-   * Generate VietQR EMVCo QR data string.
-   *
-   * The returned qrData can be rendered by any QR code library (e.g. qrcode.react).
-   * Format follows NAPAS EMVCo specification for Vietnam domestic transfers.
+   * Generate a VietQR.io payment image URL for browser display.
    */
   async createPayment(request: PaymentRequest): Promise<PaymentResult> {
     const providerRef = generateVietQrPaymentCode();
