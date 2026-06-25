@@ -56,6 +56,8 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
   assert.match(source, /p_tenant_id: accountScope\.tenantId/);
   assert.match(source, /p_payment_id: paymentScope\.paymentId/);
   assert.match(source, /p_provider_ref: paymentCode/);
+  assert.doesNotMatch(source, /type SepayRpcClient/);
+  assert.doesNotMatch(source, /as unknown as SepayRpcClient/);
   assert.doesNotMatch(source, /p_order_number/);
   assert.match(source, /provider: "sepay"/);
   assert.match(source, /request_id: input\.requestId/);
@@ -63,7 +65,7 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
   const claimIndex = source.indexOf(
     "const webhookClaim = await claimWebhookEvent",
   );
-  const rpcIndex = source.indexOf('.rpc("confirm_sepay_payment"');
+  const rpcIndex = source.indexOf('"confirm_sepay_payment"');
   assert.ok(claimIndex > 0, "claim call should exist");
   assert.ok(rpcIndex > 0, "confirm_sepay_payment RPC call should exist");
   assert.ok(claimIndex < rpcIndex, "claim must happen before settlement RPC");

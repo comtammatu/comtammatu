@@ -8258,6 +8258,18 @@ export type Database = {
         Returns: Json
       }
       confirm_production_order: { Args: { p_order_id: number }; Returns: Json }
+      confirm_sepay_payment: {
+        Args: {
+          p_account_number: string
+          p_bank_reference: string
+          p_payment_id: number
+          p_provider_data: Json
+          p_provider_ref: string
+          p_tenant_id: number
+          p_transfer_amount: number
+        }
+        Returns: Json
+      }
       confirm_stock_issue: { Args: { p_issue_id: number }; Returns: Json }
       confirm_supplier_return: { Args: { p_return_id: number }; Returns: Json }
       confirm_vietqr_payment: {

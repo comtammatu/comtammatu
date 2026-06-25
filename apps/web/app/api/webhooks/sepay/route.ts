@@ -27,35 +27,21 @@ const sepayPayloadSchema = z
   })
   .passthrough();
 
+const sepayRpcResultSchema = z
+  .object({
+    status: z.string().optional(),
+    order_id: z.number().nullable().optional(),
+    payment_id: z.number().nullable().optional(),
+    detail: z.string().nullable().optional(),
+  })
+  .passthrough();
+
 type SepayPayload = z.infer<typeof sepayPayloadSchema>;
 type ServiceClient = ReturnType<typeof createServiceClient>;
 type WebhookEventClaim =
   | { status: "claimed"; id: number }
   | { status: "already_final" }
   | { status: "error" };
-
-type SepayRpcClient = {
-  rpc(
-    fn: "confirm_sepay_payment",
-    args: {
-      p_tenant_id: number;
-      p_payment_id: number;
-      p_provider_ref: string;
-      p_transfer_amount: number;
-      p_account_number: string;
-      p_bank_reference: string;
-      p_provider_data: Json;
-    },
-  ): Promise<{
-    data: {
-      status?: string;
-      order_id?: number | null;
-      payment_id?: number | null;
-      detail?: string | null;
-    } | null;
-    error: { code?: string; message?: string } | null;
-  }>;
-};
 
 function payloadToJson(payload: SepayPayload): Json {
   return JSON.parse(JSON.stringify(payload)) as Json;
@@ -358,17 +344,18 @@ export async function POST(request: Request) {
     return sepayAcceptedResponse();
   }
 
-  const { data: rpcData, error: rpcError } = await (
-    supabase as unknown as SepayRpcClient
-  ).rpc("confirm_sepay_payment", {
-    p_tenant_id: accountScope.tenantId,
-    p_payment_id: paymentScope.paymentId,
-    p_provider_ref: paymentCode,
-    p_transfer_amount: payload.transferAmount,
-    p_account_number: payload.accountNumber,
-    p_bank_reference: payload.referenceCode || String(payload.id),
-    p_provider_data: payloadJson,
-  });
+  const { data: rawRpcData, error: rpcError } = await supabase.rpc(
+    "confirm_sepay_payment",
+    {
+      p_tenant_id: accountScope.tenantId,
+      p_payment_id: paymentScope.paymentId,
+      p_provider_ref: paymentCode,
+      p_transfer_amount: payload.transferAmount,
+      p_account_number: payload.accountNumber,
+      p_bank_reference: payload.referenceCode || String(payload.id),
+      p_provider_data: payloadJson,
+    },
+  );
 
   if (rpcError) {
     console.error(
@@ -384,6 +371,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false }, { status: 500 });
   }
 
+  const parsedRpcData = sepayRpcResultSchema.safeParse(rawRpcData);
+  const rpcData = parsedRpcData.success ? parsedRpcData.data : null;
   const status = rpcData?.status ?? "unknown";
   const paymentId = rpcData?.payment_id ?? paymentScope.paymentId;
   if (status === "completed" || status === "already_completed") {
