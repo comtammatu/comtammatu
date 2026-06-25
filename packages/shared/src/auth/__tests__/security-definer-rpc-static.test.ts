@@ -49,6 +49,9 @@ const financeTopItemsWrapperInvokerMigration = readRepoFile(
 const inventoryShiftKeyInvokerMigration = readRepoFile(
   "supabase/migrations/20260625132310_inventory_shift_key_invoker.sql",
 );
+const inventoryProductionOperatorInvokerMigration = readRepoFile(
+  "supabase/migrations/20260625134329_inventory_production_operator_invoker.sql",
+);
 
 function extractSqlFunction(source: string, functionName: string): string {
   return (
@@ -148,6 +151,17 @@ test("Inventory shift-key helper is invoker-rights only", () => {
     /ALTER FUNCTION public\.inventory_shift_key\(bigint, timestamp with time zone\)\s+SECURITY INVOKER/,
   );
   assert.doesNotMatch(inventoryShiftKeyInvokerMigration, /SECURITY DEFINER/i);
+});
+
+test("Inventory production-operator helper is invoker-rights only", () => {
+  assert.match(
+    inventoryProductionOperatorInvokerMigration,
+    /ALTER FUNCTION public\.is_inventory_production_operator\(\)\s+SECURITY INVOKER/,
+  );
+  assert.doesNotMatch(
+    inventoryProductionOperatorInvokerMigration,
+    /SECURITY DEFINER/i,
+  );
 });
 
 test("staff admin RPCs enforce permission gates inside SECURITY DEFINER bodies", () => {
