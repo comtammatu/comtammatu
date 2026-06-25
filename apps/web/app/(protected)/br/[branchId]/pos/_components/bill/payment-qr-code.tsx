@@ -9,25 +9,18 @@ interface PaymentQrCodeProps {
   value: string;
   alt: string;
   className?: string;
-  preferImage?: boolean;
 }
 
 export function PaymentQrCode({
   value,
   alt,
   className,
-  preferImage = false,
 }: PaymentQrCodeProps) {
   const [directImageFailed, setDirectImageFailed] = useState(false);
   const [generatedDataUrl, setGeneratedDataUrl] = useState<string | null>(null);
   const [generationFailed, setGenerationFailed] = useState(false);
 
-  const canTryDirectImage = useMemo(
-    () =>
-      /^data:image\//i.test(value) ||
-      (preferImage && /^https?:\/\//i.test(value)),
-    [preferImage, value],
-  );
+  const canTryDirectImage = useMemo(() => /^data:image\//i.test(value), [value]);
   const useDirectImage = canTryDirectImage && !directImageFailed;
 
   useEffect(() => {

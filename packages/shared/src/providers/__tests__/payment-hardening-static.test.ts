@@ -159,15 +159,26 @@ test("POS VietQR creates a pending payment row before rendering transfer QR", ()
   assert.match(bill, /const result = await createPayment\(/);
 });
 
-test("POS renders VietQR image URLs directly instead of QR-encoding the image URL", () => {
+test("POS VietQR uses locally generated EMVCo payloads, not VietQR image URLs", () => {
   const bill = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
   );
-
-  assert.match(
-    bill,
-    /<PaymentQrCode[\s\S]*value=\{remoteQrValue\}[\s\S]*preferImage=\{selectedMethod === "vietqr"\}/,
+  const provider = readRepoFile("packages/shared/src/providers/impl/vietqr.ts");
+  const action = readRepoFile(
+    "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
   );
+  const migration = readRepoFile(
+    "supabase/migrations/20260626043000_refresh_vietqr_bank_bins.sql",
+  );
+
+  assert.match(provider, /const qrData = buildVietQrEmvco\(/);
+  assert.match(bill, /<PaymentQrCode[\s\S]*value=\{remoteQrValue\}/);
+  assert.doesNotMatch(bill, /preferImage=\{selectedMethod === "vietqr"\}/);
+  assert.doesNotMatch(provider, /img\.vietqr\.io/);
+  assert.doesNotMatch(action, /img\.vietqr\.io/);
+  assert.match(migration, /\('ABB', '970425'\)/);
+  assert.match(migration, /\('MB', '970422'\)/);
+  assert.match(migration, /\('OCB', '970448'\)/);
 });
 
 test("POS rehydrates pending VietQR QR from current Admin settings", () => {
@@ -186,11 +197,11 @@ test("POS rehydrates pending VietQR QR from current Admin settings", () => {
   const pickEnd = action.indexOf("function buildStoredProviderData", pickStart);
   const pickRemoteQrDataBlock = action.slice(pickStart, pickEnd);
   assert.ok(
-    pickRemoteQrDataBlock.indexOf("buildVietQrImageUrlFromProviderData") >
+    pickRemoteQrDataBlock.indexOf("buildVietQrPayloadFromProviderData") >
       pickRemoteQrDataBlock.indexOf('if (method === "vietqr")'),
   );
   assert.ok(
-    pickRemoteQrDataBlock.indexOf("buildVietQrImageUrlFromProviderData") <
+    pickRemoteQrDataBlock.indexOf("buildVietQrPayloadFromProviderData") <
       pickRemoteQrDataBlock.indexOf('strValue(providerData, "qrData")'),
   );
 });

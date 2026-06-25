@@ -1247,7 +1247,6 @@ export function BillReceipt({
                               METHOD_META[selectedMethod]?.label ??
                               REMOTE_PAYMENT_COPY.qrAltFallback
                             }`}
-                            preferImage={selectedMethod === "vietqr"}
                           />
                         ) : (
                           <PaymentQrPlaceholder Icon={MethodIcon} />

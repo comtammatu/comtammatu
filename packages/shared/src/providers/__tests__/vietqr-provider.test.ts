@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { VietQRProvider } from "../impl/vietqr";
+import { resolveBankBin, VietQRProvider } from "../impl/vietqr";
 
 test("VietQRProvider uses generated payment code as transfer memo", async () => {
   const provider = new VietQRProvider({
@@ -20,8 +20,29 @@ test("VietQRProvider uses generated payment code as transfer memo", async () => 
   assert.equal(result.status, "pending");
   assert.match(result.providerRef ?? "", /^DH \d{6} [A-Z0-9]{5}$/);
   assert.equal(result.providerData?.description, result.providerRef);
+  assert.equal(result.providerData?.bankBin, "970407");
 
-  const qrUrl = new URL(result.qrData ?? "");
-  assert.equal(qrUrl.searchParams.get("amount"), "125000");
-  assert.equal(qrUrl.searchParams.get("addInfo"), result.providerRef);
+  assert.match(result.qrData ?? "", /^000201/);
+  assert.doesNotMatch(result.qrData ?? "", /^https?:\/\//);
+  assert.match(result.qrData ?? "", /970407/);
+  assert.match(result.qrData ?? "", /125000/);
+  assert.match(result.qrData ?? "", /DH \d{6} [A-Z0-9]{5}/);
+});
+
+test("resolveBankBin covers current VietQR transfer bank codes used by POS", () => {
+  const cases: Record<string, string> = {
+    ABB: "970425",
+    MB: "970422",
+    OCB: "970448",
+    VIB: "970441",
+    SEAB: "970440",
+    CIMB: "422589",
+    WVN: "970457",
+    CAKE: "546034",
+    UBANK: "546035",
+  };
+
+  for (const [code, bin] of Object.entries(cases)) {
+    assert.equal(resolveBankBin(code), bin);
+  }
 });

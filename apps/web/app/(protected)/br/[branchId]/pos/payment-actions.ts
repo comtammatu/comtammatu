@@ -8,6 +8,7 @@ import { createServiceClient } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   BUYER_NOT_GET_INVOICE_NAME,
+  buildVietQrEmvco,
   getPaymentProvider,
   getRegisteredMethods,
   VietQRProvider,
@@ -223,23 +224,25 @@ function strValue(
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
-function buildVietQrImageUrlFromProviderData(
+function buildVietQrPayloadFromProviderData(
   providerData: Record<string, unknown> | undefined,
 ): string | undefined {
   const bankCode = strValue(providerData, "bankCode");
   const accountNo = strValue(providerData, "accountNo");
-  if (!bankCode || !accountNo) return undefined;
+  const amount = Number(strValue(providerData, "amount"));
+  if (!bankCode || !accountNo || !Number.isFinite(amount) || amount <= 0) {
+    return undefined;
+  }
 
-  const url = new URL(
-    `https://img.vietqr.io/image/${encodeURIComponent(bankCode)}-${encodeURIComponent(accountNo)}-compact.png`,
+  return (
+    buildVietQrEmvco({
+      bankCode,
+      accountNo,
+      amount,
+      description: strValue(providerData, "description"),
+      accountName: strValue(providerData, "accountName"),
+    }) ?? undefined
   );
-  const amount = strValue(providerData, "amount");
-  const description = strValue(providerData, "description");
-  const accountName = strValue(providerData, "accountName");
-  if (amount) url.searchParams.set("amount", amount);
-  if (description) url.searchParams.set("addInfo", description);
-  if (accountName) url.searchParams.set("accountName", accountName);
-  return url.toString();
 }
 
 function pickRemoteQrData(
@@ -253,11 +256,12 @@ function pickRemoteQrData(
   }
 
   if (method === "vietqr") {
-    return (
-      buildVietQrImageUrlFromProviderData(providerData) ??
-      strValue(providerData, "qrData") ??
-      strValue(providerData, "qrUrl")
-    );
+    const payload = buildVietQrPayloadFromProviderData(providerData);
+    if (payload) return payload;
+
+    const stored =
+      strValue(providerData, "qrData") ?? strValue(providerData, "qrUrl");
+    return stored && !/^https?:\/\//i.test(stored) ? stored : undefined;
   }
 
   return undefined;
