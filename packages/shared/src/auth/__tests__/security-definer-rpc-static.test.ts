@@ -64,6 +64,9 @@ const branchMenuLimitGrantMigration = readRepoFile(
 const orderDailyCounterGrantMigration = readRepoFile(
   "supabase/migrations/20260625174605_restrict_order_daily_counter_grants.sql",
 );
+const hddtRunLogGrantMigration = readRepoFile(
+  "supabase/migrations/20260625180722_restrict_hddt_run_log_grants.sql",
+);
 
 function extractSqlFunction(source: string, functionName: string): string {
   return (
@@ -256,6 +259,48 @@ test("Order daily counters are RPC-only implementation state", () => {
   assert.doesNotMatch(
     orderDailyCounterGrantMigration,
     /GRANT[\s\S]+order_daily_counters[\s\S]+TO (?:anon|authenticated)/,
+  );
+});
+
+test("HDDT run logs are service-role-only audit state", () => {
+  for (const table of ["archive_run_log", "reconcile_run_log"]) {
+    const policy = table === "archive_run_log" ? "arl_select" : "rrl_select";
+
+    assert.match(
+      hddtRunLogGrantMigration,
+      new RegExp(`DROP POLICY IF EXISTS ${policy}\\s+ON public\\.${table}`),
+    );
+    assert.match(
+      hddtRunLogGrantMigration,
+      new RegExp(
+        `REVOKE ALL ON TABLE public\\.${table}\\s+FROM PUBLIC, anon, authenticated`,
+      ),
+    );
+    assert.match(
+      hddtRunLogGrantMigration,
+      new RegExp(`GRANT ALL ON TABLE public\\.${table}\\s+TO service_role`),
+    );
+    assert.match(
+      hddtRunLogGrantMigration,
+      new RegExp(
+        `REVOKE ALL ON SEQUENCE public\\.${table}_id_seq\\s+FROM PUBLIC, anon, authenticated`,
+      ),
+    );
+    assert.match(
+      hddtRunLogGrantMigration,
+      new RegExp(
+        `GRANT ALL ON SEQUENCE public\\.${table}_id_seq\\s+TO service_role`,
+      ),
+    );
+  }
+
+  assert.doesNotMatch(
+    hddtRunLogGrantMigration,
+    /GRANT\s+[^;]+ON TABLE public\.(?:archive_run_log|reconcile_run_log)[^;]+TO (?:anon|authenticated)/,
+  );
+  assert.doesNotMatch(
+    hddtRunLogGrantMigration,
+    /GRANT\s+ALL ON SEQUENCE public\.(?:archive_run_log|reconcile_run_log)_id_seq[^;]+TO (?:anon|authenticated)/,
   );
 });
 
