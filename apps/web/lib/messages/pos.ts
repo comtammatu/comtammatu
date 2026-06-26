@@ -54,7 +54,9 @@ export const pos = {
     emptyWithContext: "Chạm món trên thực đơn để thêm vào đơn.",
     emptyNoContext: "Chạm bàn bên trái hoặc chọn 'Mang về' để bắt đầu.",
     itemDiscount: (amount: string, note?: string) =>
-      note ? `Chiết khấu món: -${amount} · ${note}` : `Chiết khấu món: -${amount}`,
+      note
+        ? `Chiết khấu món: -${amount} · ${note}`
+        : `Chiết khấu món: -${amount}`,
     removeItemAria: (name: string) => `Xóa ${name} khỏi món chưa gửi`,
     noteLabel: "Ghi chú đơn",
     notePlaceholder: "Ví dụ: ít đường, không hành...",
@@ -100,6 +102,9 @@ export const pos = {
     cashShort: (amount: string) => `Thiếu ${amount}`,
     printProvisional: "In tạm tính",
     paidConfirm: "Đã thanh toán",
+    cancelPending: "Hủy phiên chờ",
+    cancelPendingTitle: "Chỉ hủy khi khách chưa trả qua mã này",
+    pendingCancelled: "Đã hủy phiên thanh toán chờ",
   },
   receipt: {
     paymentCancelled: "Đã hủy",

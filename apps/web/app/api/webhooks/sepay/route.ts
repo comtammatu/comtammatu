@@ -6,8 +6,8 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 
 const SEPAY_WEBHOOK_SECRET = process.env.SEPAY_WEBHOOK_SECRET ?? "";
 const SIGNATURE_TOLERANCE_SECONDS = 300;
-const SEPAY_PAYMENT_CODE_RE = /\bDH[A-Z0-9]{3,12}\b/i;
-const LEGACY_PAYMENT_CODE_RE = /\bDH\s+\d{6}\s+[A-Z0-9]{5}\b/i;
+const SEPAY_PAYMENT_CODE_RE = /\bDH[A-Z0-9]{3,12}\b/gi;
+const LEGACY_PAYMENT_CODE_RE = /\bDH\s+\d{6}\s+[A-Z0-9]{5}\b/gi;
 
 const sepayAcceptedResponse = () => NextResponse.json({ success: true });
 
@@ -22,7 +22,10 @@ const nullableOptionalTrimmedStringSchema = z.preprocess(
 );
 
 const transferTypeSchema = z.preprocess(
-  (value) => String(value ?? "").trim().toLowerCase(),
+  (value) =>
+    String(value ?? "")
+      .trim()
+      .toLowerCase(),
   z.enum(["in", "out"]),
 );
 
@@ -107,22 +110,30 @@ function logSepayPayloadIssues(error: z.ZodError) {
   });
 }
 
-function normalizePaymentCodeCandidate(
+function normalizePaymentCodeCandidates(
   value: string | null | undefined,
-): string | null {
-  if (!value) return null;
+): string[] {
+  if (!value) return [];
   const text = value.trim().toUpperCase().replace(/\s+/g, " ");
-  const sepayMatch = SEPAY_PAYMENT_CODE_RE.exec(text);
-  if (sepayMatch) return sepayMatch[0].toUpperCase();
-  const legacyMatch = LEGACY_PAYMENT_CODE_RE.exec(text);
-  return legacyMatch?.[0].toUpperCase().replace(/^DH\s+/, "DH ") ?? null;
+  return [
+    ...(text.match(SEPAY_PAYMENT_CODE_RE) ?? []).map((match) =>
+      match.toUpperCase(),
+    ),
+    ...(text.match(LEGACY_PAYMENT_CODE_RE) ?? []).map((match) =>
+      match.toUpperCase().replace(/^DH\s+/, "DH "),
+    ),
+  ];
 }
 
 function extractPaymentCode(payload: SepayPayload): string | null {
   return (
-    normalizePaymentCodeCandidate(payload.code ?? null) ??
-    normalizePaymentCodeCandidate(payload.content) ??
-    normalizePaymentCodeCandidate(payload.description)
+    [
+      ...normalizePaymentCodeCandidates(payload.content),
+      ...normalizePaymentCodeCandidates(payload.description),
+      ...normalizePaymentCodeCandidates(payload.code ?? null),
+    ].sort(
+      (a, b) => b.replace(/\s+/g, "").length - a.replace(/\s+/g, "").length,
+    )[0] ?? null
   );
 }
 

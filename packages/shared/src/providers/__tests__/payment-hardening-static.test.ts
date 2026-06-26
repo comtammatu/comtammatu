@@ -47,15 +47,18 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
   assert.match(source, /LEGACY_PAYMENT_CODE_RE/);
   assert.match(source, /id: z\.coerce\.number\(\)\.int\(\)\.nonnegative\(\)/);
   assert.match(source, /new URLSearchParams\(rawBody\)/);
-  assert.match(source, /transferAmount: z\.coerce\.number\(\)\.nonnegative\(\)/);
+  assert.match(
+    source,
+    /transferAmount: z\.coerce\.number\(\)\.nonnegative\(\)/,
+  );
   assert.ok(
     source.includes(
-      "const SEPAY_PAYMENT_CODE_RE = /\\bDH[A-Z0-9]{3,12}\\b/i;",
+      "const SEPAY_PAYMENT_CODE_RE = /\\bDH[A-Z0-9]{3,12}\\b/gi;",
     ),
   );
   assert.ok(
     source.includes(
-      "const LEGACY_PAYMENT_CODE_RE = /\\bDH\\s+\\d{6}\\s+[A-Z0-9]{5}\\b/i;",
+      "const LEGACY_PAYMENT_CODE_RE = /\\bDH\\s+\\d{6}\\s+[A-Z0-9]{5}\\b/gi;",
     ),
   );
   assert.ok(source.includes('replace(/^DH\\s+/, "DH ")'));
@@ -85,6 +88,25 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
   assert.ok(claimIndex > 0, "claim call should exist");
   assert.ok(rpcIndex > 0, "confirm_sepay_payment RPC call should exist");
   assert.ok(claimIndex < rpcIndex, "claim must happen before settlement RPC");
+});
+
+test("SePay webhook prefers full transfer content code over truncated code field", () => {
+  const source = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
+  const start = source.indexOf("function extractPaymentCode");
+  const end = source.indexOf("function normalizeAccountNumber", start);
+  const block = source.slice(start, end);
+
+  assert.ok(start > 0, "extractPaymentCode should exist");
+  assert.ok(end > start, "extractPaymentCode block should be bounded");
+  assert.match(block, /payload\.content/);
+  assert.match(block, /payload\.description/);
+  assert.match(block, /payload\.code/);
+  assert.match(block, /sort\(/);
+  assert.match(block, /replace\(\/\\s\+\/g, ""\)\.length/);
+  assert.doesNotMatch(
+    block,
+    /normalizePaymentCodeCandidate\(payload\.code \?\? null\)\s*\?\?/,
+  );
 });
 
 test("SePay can correct a cash-confirmed QR payment to VietQR", () => {
@@ -120,7 +142,10 @@ test("Each order owns one immutable DH payment code", () => {
   assert.match(migration, /public\.generate_order_payment_code\(\)/);
   assert.match(migration, /orders_payment_code_format_check/);
   assert.match(migration, /idx_orders_payment_code_unique/);
-  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.ensure_order_payment_code/);
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.ensure_order_payment_code/,
+  );
   assert.match(migration, /UPDATE public\.orders o[\s\S]*ranked_payment_codes/);
   assert.match(migration, /ALTER COLUMN payment_code SET NOT NULL/);
   assert.match(
@@ -228,17 +253,25 @@ test("Printed provisional bills use the order payment code without starting a QR
   assert.doesNotMatch(action, /DH \$\{orderRes\.data\.order_number\}/);
 });
 
-test("POS bill sheet does not expose cancel QR workflow", () => {
+test("POS bill sheet can cancel a stuck pending QR payment", () => {
   const bill = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
   );
+  const action = readRepoFile(
+    "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
+  );
+  const schema = readRepoFile(
+    "apps/web/app/(protected)/br/[branchId]/pos/_lib/payment-schemas.ts",
+  );
   const messages = readRepoFile("apps/web/lib/messages/pos.ts");
 
-  assert.doesNotMatch(bill, /cancelPendingPayment/);
-  assert.doesNotMatch(bill, /handleCancelPayment/);
-  assert.doesNotMatch(bill, /cancelQr/);
-  assert.doesNotMatch(messages, /cancelQr/);
-  assert.doesNotMatch(bill, /Hủy mã thanh toán/);
+  assert.match(schema, /cancelPendingPaymentSchema/);
+  assert.match(action, /export const cancelPendingPayment/);
+  assert.match(action, /"cancel_pending_payment"/);
+  assert.match(bill, /cancelPendingPayment/);
+  assert.match(bill, /handleCancelPendingPayment/);
+  assert.match(bill, /messages\.pos\.payment\.cancelPending/);
+  assert.match(messages, /cancelPending: "Hủy phiên chờ"/);
 });
 
 test("POS VietQR uses locally generated EMVCo payloads, not VietQR image URLs", () => {
@@ -269,8 +302,14 @@ test("POS rehydrates pending VietQR QR from current Admin settings", () => {
     "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
   );
 
-  assert.match(action, /\.select\("id, method, status, amount, provider_ref, provider_data"\)/);
-  assert.match(action, /const vietQrSettings =[\s\S]*readVietQrSettings\(supabase, claims\.tenant_id\)/);
+  assert.match(
+    action,
+    /\.select\("id, method, status, amount, provider_ref, provider_data"\)/,
+  );
+  assert.match(
+    action,
+    /const vietQrSettings =[\s\S]*readVietQrSettings\(supabase, claims\.tenant_id\)/,
+  );
   assert.match(
     action,
     /buildPendingRemotePaymentForBillData\(payment, vietQrSettings\)/,

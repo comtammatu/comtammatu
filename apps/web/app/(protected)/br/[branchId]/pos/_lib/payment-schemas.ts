@@ -76,3 +76,14 @@ export const fetchPendingRemotePaymentSchema = z.object({
     .positive({ error: "Branch ID không hợp lệ" }),
   orderId: z.coerce.number().int().positive({ error: "Order ID không hợp lệ" }),
 });
+
+export const cancelPendingPaymentSchema = z.object({
+  branchId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Branch ID không hợp lệ" }),
+  paymentId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Payment ID không hợp lệ" }),
+});

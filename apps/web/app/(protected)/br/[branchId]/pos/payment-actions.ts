@@ -25,6 +25,7 @@ import { mapRpcError } from "@/_lib/rpc-error-map";
 import { posConfirmPaymentAuth, posUseAuth } from "./_lib/auth";
 import {
   branchOnlyReadSchema,
+  cancelPendingPaymentSchema,
   cashConfirmSchema,
   createPaymentSchema,
   fetchPendingRemotePaymentSchema,
@@ -667,7 +668,9 @@ export const createPayment = withActionPositional(
         orderId,
         orderNumber: order.order_number,
         amount,
-        ...(orderPaymentCode?.data ? { description: orderPaymentCode.data } : {}),
+        ...(orderPaymentCode?.data
+          ? { description: orderPaymentCode.data }
+          : {}),
       });
     } catch (err) {
       console.error("[createPayment] provider threw:", {
@@ -899,6 +902,58 @@ export const fetchPendingRemotePaymentForBill = withActionPositional(
       success: true,
       data: buildPendingRemotePaymentForBillData(payment, vietQrSettings),
     };
+  },
+);
+
+export const cancelPendingPayment = withActionPositional(
+  {
+    argsToInput: (branchId: number, paymentId: number) => ({
+      branchId,
+      paymentId,
+    }),
+    schema: cancelPendingPaymentSchema,
+    customAuth: posUseAuth,
+  },
+  async (
+    { branchId, paymentId },
+    { supabase, claims },
+  ): Promise<ActionResult<{ payment_id: number }>> => {
+    if (claims.branch_id !== branchId) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
+
+    const { error } = await supabase.rpc("cancel_pending_payment", {
+      p_payment_id: paymentId,
+      p_tenant_id: claims.tenant_id,
+      p_branch_id: branchId,
+    });
+
+    if (error) {
+      const message = String(error.message ?? "").toLowerCase();
+      if (message.includes("payment_not_pending")) {
+        return {
+          success: false,
+          error: "Phiên thanh toán này không còn chờ xử lý.",
+        };
+      }
+      if (message.includes("payment_not_found")) {
+        return { success: false, error: "Không tìm thấy phiên thanh toán." };
+      }
+      if (
+        message.includes("not_authenticated") ||
+        message.includes("tenant_mismatch") ||
+        message.includes("permission denied")
+      ) {
+        return {
+          success: false,
+          error: "Không có quyền thực hiện thao tác này.",
+        };
+      }
+      console.error("[cancelPendingPayment] rpc failed:", error.code);
+      return { success: false, error: "Không thể hủy phiên thanh toán." };
+    }
+
+    return { success: true, data: { payment_id: paymentId } };
   },
 );
 

@@ -54,6 +54,7 @@ import type { SessionOrder } from "../../order-history";
 import {
   confirmCashPaymentWithInvoice,
   confirmVietQrPaymentWithInvoice,
+  cancelPendingPayment,
   createPayment,
   fetchPendingRemotePaymentForBill,
   type VietQrConfig,
@@ -934,6 +935,31 @@ export function BillReceipt({
     totalAmount,
   ]);
 
+  const handleCancelPendingPayment = useCallback(() => {
+    const paymentId = pendingExtras?.payment_id;
+    if (!paymentId) return;
+
+    startActionTransition(async () => {
+      const result = await cancelPendingPayment(branchId, paymentId);
+      if (!result.success) {
+        toast.error(result.error ?? "Không thể hủy phiên thanh toán");
+        return;
+      }
+
+      setPendingExtras(null);
+      setPaymentCreateError(null);
+      setOrder((current) =>
+        current
+          ? { ...current, payment_method: null, payment_status: "unpaid" }
+          : current,
+      );
+      autoQrTriggeredRef.current = orderId;
+      if (methods.includes("cash")) setSelectedMethod("cash");
+      toast.success(messages.pos.payment.pendingCancelled);
+      await onOrderUpdated?.();
+    });
+  }, [branchId, methods, onOrderUpdated, orderId, pendingExtras?.payment_id]);
+
   const handlePrintProvisional = useCallback(() => {
     if (orderId === null) return;
     startPrintTransition(async () => {
@@ -1251,6 +1277,19 @@ export function BillReceipt({
                           pendingExtras={pendingExtras}
                           isCreating={methodPending}
                         />
+                        {pendingExtras?.payment_id ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCancelPendingPayment}
+                            disabled={actionPending || methodPending}
+                            title={messages.pos.payment.cancelPendingTitle}
+                          >
+                            <IconAlertTriangle data-icon="inline-start" />
+                            {messages.pos.payment.cancelPending}
+                          </Button>
+                        ) : null}
                       </>
                     )}
                   </>
