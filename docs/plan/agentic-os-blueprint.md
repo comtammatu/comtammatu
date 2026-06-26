@@ -54,7 +54,7 @@ an existing RPC (an actuator). Nothing else is invented.
 | **Sense** | Capture shop reality: POS, KDS, cash, GRN/quality, attendance, print-agent. Camera is "just another sensor", **[future]** | **[live]** |
 | **Record** | Durable ground truth (~118 tables). The moat — reason over rows, not vibes | **[live]** |
 | **Detect** | Deterministic anomaly + threshold + scheduled aggregation by Vercel cron. No LLM. Each detector is a Producer | **[designed]** (greenfield) |
-| **Inform** | Dedup, route, deliver, track reads — the spine | **[live]** push / **[designed]** Telegram |
+| **Inform** | Dedup, route, deliver, track reads — the spine | **[live]** foreground popups (server Web Push removed per D046) / **[designed]** Telegram |
 | **Reason** | Explain why a flagged thing matters; rank; correlate. LLM read-only, on rows the detector surfaced | **[future]** |
 | **Recommend** | Propose an action; never take it. A notification with `action_url` + suggested RPC | **[future]** |
 | **Act** | Execute inside hard limits. Tool surface = existing `SECURITY DEFINER` RPCs, allowlist + caps, under an `agent_runner` role | **[future]** |
@@ -142,6 +142,8 @@ Read the human-normalized column, not the raw one.
 | 4 · Bounded Act | Service Janitor R3 | zero false auto-acts | 1 wk / ~1 month | Service Janitor |
 | 5 · Copilot + tuning | Owner Copilot + threshold tuning | stable, low-noise, trusted | 1–2 wk / ongoing | Owner Copilot, Shift/HR |
 
+> **D046 (2026-06-22):** server Web Push was removed; the "Web-Push live" milestone (Stage 2 / sprint S1) now means the client-side foreground popup channel, not a server push delivery tier. See `decisions.md` D046.
+
 ## 8. Sprint plan (notification system = Stages 1–3, packaged)
 
 1-week sprints, ~15 pts. Critical path **S0 → S2 → S3 → S4**; **S1 ∥ S2**.
@@ -210,11 +212,10 @@ asks; **never give the LLM a DB connection.**
 
 ## Grounding (verified)
 
-Spine: `public.notifications` / `notification_outbox` / `notification_reads` /
-`notification_push_subscriptions` + `claim_notification_push_delivery`. Scheduling:
-5 Vercel cron routes in `apps/web/vercel.json`
-(`hddt-reconcile`, `hddt-daily-summary`, `hddt-archive`, `notifications-push`,
-`kds-maintenance`). Analytics: `mv_daily_revenue`, `mv_food_cost`,
+Spine: `public.notifications` / `notification_outbox` / `notification_reads`
+(server Web Push removed per D046 — delivery is client-side foreground popups).
+Scheduling: 4 Vercel cron routes in `apps/web/vercel.json`
+(`hddt-reconcile`, `hddt-daily-summary`, `hddt-archive`, `kds-maintenance`). Analytics: `mv_daily_revenue`, `mv_food_cost`,
 `mv_grn_price_baseline`, `mv_top_items`, `mv_inventory_stock_current`,
 `mv_inventory_value_ranking`. Action surface: existing `SECURITY DEFINER` RPCs
 (`cancel_order`, `apply_order_discount`, `cleanup_abandoned_payments`,

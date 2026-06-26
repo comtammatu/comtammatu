@@ -153,8 +153,8 @@ Top-level surfaces (see `module-acl.ts` for canonical role lists):
 | HR                 | `/hr/*`                      | owner, branch_manager                                         |
 | Orders             | `/orders`                    | owner, branch_manager, cashier                               |
 | Notifications      | `/notifications`             | all staff                                                     |
-| POS                | `/br/[branchId]/pos`         | cashier, waiter, branch_manager                               |
-| KDS                | `/br/[branchId]/kds`         | chef, branch_manager                                          |
+| POS                | `/br/[branchId]/pos`         | owner, cashier, waiter, branch_manager                        |
+| KDS                | `/br/[branchId]/kds`         | owner, chef, branch_manager                                   |
 | Branch dashboard   | `/br/[branchId]/dashboard`   | owner, branch_manager                                         |
 | Branch settings    | `/br/[branchId]/settings/*`  | owner, branch_manager                                         |
 | Branch menu limits | `/br/[branchId]/menu-limits` | owner, branch_manager, cashier, chef                         |

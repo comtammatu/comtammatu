@@ -151,13 +151,12 @@ apps/web/app/
     ├── cron/hddt-daily-summary/route.ts  # Cron: HĐĐT B2C daily summary (02:05 ICT)
     ├── cron/hddt-reconcile/route.ts      # Cron: poll CQT reconcile trạng thái HĐĐT
     ├── cron/kds-maintenance/route.ts     # Cron: KDS ticket maintenance/cleanup
-    ├── cron/notifications-push/route.ts  # Cron: dispatch Web Push notifications
     ├── debug/claims/route.ts      # Dev: dump JWT claims (gated; not for prod use)
     ├── webhooks/momo/route.ts     # Momo webhook handler (HMAC-validated)
     └── webhooks/sepay/route.ts    # SePay bank-transfer webhook handler (HMAC-validated)
 ```
 
-> Ngoài `api/`, còn 2 `route.ts` PWA manifest: `(protected)/br/[branchId]/pos/manifest.webmanifest/route.ts` + `(protected)/br/[branchId]/kds/manifest.webmanifest/route.ts`.
+> Ngoài `api/`, còn 3 `route.ts` PWA manifest: `(protected)/br/[branchId]/pos/manifest.webmanifest/route.ts` + `(protected)/br/[branchId]/kds/manifest.webmanifest/route.ts` + `(protected)/br/[branchId]/runner/manifest.webmanifest/route.ts`.
 
 ## Thành phần chính
 

@@ -777,7 +777,7 @@ Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-viettel-op
 | `settings:tenant`           | `cancelled` / `replaced` transition; manual trigger summary                                               |
 | `tax:close_period_override` | (Future) bypass period-close hard-block                                                                   |
 
-### 9.2 Module ACL (`packages/shared/src/auth/module-acl.ts:89-93`)
+### 9.2 Module ACL (`packages/shared/src/auth/module-acl.ts:103-106`)
 
 | Module    | Path       | Roles được phép |
 | --------- | ---------- | --------------- |

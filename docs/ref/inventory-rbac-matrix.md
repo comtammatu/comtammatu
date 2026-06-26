@@ -117,7 +117,7 @@
 
 Matrix dưới đây là snapshot template (`role_templates.permission_keys`) mà Auth grant tự động khi assign position:
 
-- `20260423080000_auth_bep_truong_template_fix.sql`
+- `20260423080000_auth_v2_bep_truong_template_fix.sql`
 - `20260505094000_inventory_rbac_template_contract_v2.sql`
 
 Edit template không tự propagate toàn cục. Khi sửa template, quyền của nhân viên cũ chỉ đổi qua thao tác apply/backfill rõ ràng; manual override được giữ lại.

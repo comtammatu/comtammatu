@@ -248,7 +248,7 @@ quy trình hồ sơ thật.
 2. Chọn loại hợp đồng → hệ thống kiểm tra contract_sequence
    - Nếu contract_sequence = 3 và type = 'fixed_term' → cảnh báo: "Phải ký HĐ không xác định thời hạn"
 3. Ký HĐ → upload scan → lưu document_url
-4. Cài đặt tài khoản hệ thống (profiles + staff_role)
+4. Cài đặt tài khoản hệ thống (profiles + position_id; phân quyền qua staff_permissions/role_templates)
 5. Đăng ký BHXH tại cơ quan BHXH địa phương (ngoài hệ thống)
 6. Khai báo người phụ thuộc giảm trừ thuế TNCN (xem payroll-pit.md)
 ```

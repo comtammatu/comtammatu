@@ -34,9 +34,9 @@ Defined in `packages/database/package.json`:
 
 ```
 .                    → src/index.ts (barrel — server only)
-./supabase           → src/supabase/index.ts
 ./supabase/server    → src/supabase/server.ts
 ./supabase/client    → src/supabase/client.ts
+./supabase/service   → src/supabase/service.ts
 ./supabase/middleware → src/supabase/middleware.ts
 ./types              → src/types/database.types.ts
 ```
@@ -44,11 +44,11 @@ Defined in `packages/database/package.json`:
 ## Schema — Current Shape
 
 Source of truth: generated types from the schema used by app code. Snapshot
-generated from the current checkout on 2026-06-25 with
+generated from the current checkout on 2026-06-27 with
 `node scripts/project-snapshot.mjs`:
 
-- **109 tables**, **8 views**, **247 RPC/SQL functions**
-- **4 active migration files** in `supabase/migrations/`: the baseline plus
+- **110 tables**, **8 views**, **251 RPC/SQL functions**
+- **27 active migration files** in `supabase/migrations/`: the baseline plus
   forward migrations
 - **0 enums** — staff roles vẫn là strings carried in
   JWT claims; `position` is the canonical claim and `user_role` remains the
@@ -157,7 +157,7 @@ filenames after the baseline.
 > Auth-bootstrap DEFINER functions only. Permission-management RPCs
 > (`grant_permission`, `revoke_permission`, `apply_template_to_user`, …) are in
 > [`auth.md`](auth.md); print-job claim/complete/expire RPCs are in the
-> print-agent module. Repo total: 214 SECURITY DEFINER functions, all pinned
+> print-agent module. Repo total: ~217 SECURITY DEFINER functions, all pinned
 > `search_path`.
 
 ## Failure Modes
