@@ -27,6 +27,12 @@ function iconFor(kind: string) {
       return IconTruck;
     case "workflow.stocktake_submitted":
       return IconCircleCheck;
+    case "hr.leave_approved":
+      return IconCircleCheck;
+    case "hr.leave_rejected":
+      return IconAlertTriangle;
+    case "hr.leave_requested":
+      return IconClipboardList;
     case "inventory.stock_low":
     case "inventory.expiry_soon":
       return IconAlertTriangle;

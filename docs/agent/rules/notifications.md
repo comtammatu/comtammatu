@@ -69,6 +69,9 @@ pure function per producer (unit-testable).
 | `inventory.expiry_soon` | `inventory.expiry_soon:{ingredient_id}:{date}` | daily | **[designed]** |
 | `procure.grn_price_variance` | `procure.grn_price_variance:{grn_item_id}` | once/line | **[designed]** |
 | `hddt.reconcile_stuck` | `hddt.reconcile_stuck:{tax_invoice_id}` | once/invoice | **[designed]** |
+| `hr.leave_requested` | `hr.leave_request:{request_id}` | once/request | **[live]** RPC (submit) |
+| `hr.leave_approved` | `hr.leave_approved:{request_id}` | once/request | **[live]** RPC (approve) |
+| `hr.leave_rejected` | `hr.leave_rejected:{request_id}` | once/request | **[live]** RPC (reject) |
 | `report.daily_closeout` | `report.daily_closeout:{branch_id}:{date}` | once/day | **[designed]** |
 | `report.weekly` | `report.weekly:{branch_id}:{iso_week}` | once/week | **[designed]** |
 
