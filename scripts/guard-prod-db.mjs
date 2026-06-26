@@ -55,7 +55,7 @@ const HTTP_WRITE =
 // `mcp__codex_apps__supabase._execute_sql` are caught, not only the direct
 // `mcp__supabase__execute_sql` shape. The action stays anchored to `$`.
 const MCP_WRITE_TOOL =
-  /^mcp__.+?[._](apply_migration|execute_sql|deploy_edge_function|pause_project|restore_project|create_branch|merge_branch|reset_branch|rebase_branch|delete_branch)$/;
+  /^mcp__.+?[._](apply_migration|execute_sql|deploy_edge_function|pause_project|restore_project|merge_branch|reset_branch|rebase_branch)$/;
 
 function block(reason) {
   console.error(

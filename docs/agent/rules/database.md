@@ -104,6 +104,16 @@ session; never as a default. The mechanics that work in practice:
   full ledger re-baseline is owner-gated (see D020); until then apply via
   `apply_migration` only.
 
+### Preview Branches (D047)
+
+`create_branch` and `delete_branch` (org-scoped Supabase MCP) are ALLOWED by the
+`guard-prod-db.mjs` hook — preview/dev branches are children of prod and do not
+mutate it. The agent may spawn a branch (cost ~$0.0134/branch/hour), apply
+migrations to the branch's own `project_ref` (non-protected → guard-allowed),
+validate, then delete it. `merge_branch`/`reset_branch`/`rebase_branch` stay
+blocked (merging a branch into prod is a prod write). See
+`docs/runbooks/db/preview-branch-setup.md`.
+
 ## DB Type Boundaries
 
 - Money: `NUMERIC(15,2)`
