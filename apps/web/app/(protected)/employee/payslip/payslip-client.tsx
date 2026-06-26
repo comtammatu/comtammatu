@@ -54,7 +54,7 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
                 : copy.periodFallback
             }
             description={copy.workingDaysSummary(
-              Number(entry.working_days),
+              Number(entry.payable_days),
               Number(entry.standard_days),
             )}
             badge={{ children: statusMeta.label, variant: statusMeta.variant }}
@@ -79,6 +79,15 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
                   ),
                 },
                 {
+                  label: copy.insuranceBase,
+                  value: (
+                    <span className="font-mono tabular-nums">
+                      {fmt(Number(entry.insurance_base))}
+                    </span>
+                  ),
+                  muted: true,
+                },
+                {
                   label: copy.insuranceEmployee,
                   value: (
                     <span className="font-mono tabular-nums">
@@ -91,7 +100,40 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
                   label: copy.workingDays,
                   value: (
                     <span className="font-mono tabular-nums">
-                      {`${Number(entry.working_days)}/${Number(entry.standard_days)}`}
+                      {Number(entry.working_days)}
+                    </span>
+                  ),
+                },
+                {
+                  label: copy.paidLeaveDays,
+                  value: (
+                    <span className="font-mono tabular-nums">
+                      {Number(entry.paid_leave_days)}
+                    </span>
+                  ),
+                },
+                {
+                  label: copy.unpaidLeaveDays,
+                  value: (
+                    <span className="font-mono tabular-nums">
+                      {Number(entry.unpaid_leave_days)}
+                    </span>
+                  ),
+                  muted: true,
+                },
+                {
+                  label: copy.payableDays,
+                  value: (
+                    <span className="font-mono tabular-nums">
+                      {`${Number(entry.payable_days)}/${Number(entry.standard_days)}`}
+                    </span>
+                  ),
+                },
+                {
+                  label: copy.pit,
+                  value: (
+                    <span className="font-mono tabular-nums">
+                      {`-${fmt(Number(entry.pit_tax))}`}
                     </span>
                   ),
                 },

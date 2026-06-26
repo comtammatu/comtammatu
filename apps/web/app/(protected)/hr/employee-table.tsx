@@ -5,6 +5,7 @@ import { Pencil as IconPencil, Users as IconUsers } from "lucide-react";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { formatVND } from "@comtammatu/shared/format";
 import {
   Item,
   ItemActions,
@@ -133,6 +134,34 @@ export function EmployeeTable({
     );
   }
 
+  function hasActiveContract(employee: EmployeeRow) {
+    return (employee.employment_contracts ?? []).some(
+      (contract) => contract.status === "active",
+    );
+  }
+
+  function renderPayrollProfile(employee: EmployeeRow) {
+    const salary = Number(employee.base_salary ?? 0);
+    const insuranceBase = Number(employee.insurance_base_salary ?? 0);
+    return (
+      <div className="flex min-w-40 flex-col gap-1">
+        <span className="font-mono text-sm tabular-nums">
+          {salary > 0 ? formatVND(salary) : "—"}
+        </span>
+        <div className="flex flex-wrap gap-1.5">
+          <Badge
+            variant={hasActiveContract(employee) ? "secondary" : "outline"}
+          >
+            {hasActiveContract(employee) ? "Có HĐ" : "Thiếu HĐ"}
+          </Badge>
+          <Badge variant={insuranceBase > 0 ? "secondary" : "outline"}>
+            {insuranceBase > 0 ? "Có BH" : "BH 0"}
+          </Badge>
+        </div>
+      </div>
+    );
+  }
+
   function renderEdit(employee: EmployeeRow) {
     return (
       <Button
@@ -180,6 +209,15 @@ export function EmployeeTable({
           "—"
         ),
     },
+    ...(canManage
+      ? [
+          {
+            key: "payroll",
+            header: "Lương / HĐ",
+            render: renderPayrollProfile,
+          } satisfies DataTableColumn<EmployeeRow>,
+        ]
+      : []),
     {
       key: "checklist",
       header: "Checklist mặc định",
@@ -227,6 +265,7 @@ export function EmployeeTable({
                   </Badge>
                 ) : null}
                 {renderChecklistSelect(employee)}
+                {canManage ? renderPayrollProfile(employee) : null}
               </div>
             </ItemContent>
             <ItemActions className="flex flex-col items-end gap-2">

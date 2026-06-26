@@ -57,10 +57,20 @@ const GUARDS = [
   {
     rule: "PAYROLL-PRORATION-CAP-AT-STANDARD",
     expect: "present",
-    pattern: /Math\.min\(\s*workingDays\s*,\s*standardDays\s*\)/,
+    pattern:
+      /calculatePayableDays\(\{\s*workingDays,\s*paidLeaveDays,\s*standardDays,\s*\}\)/,
     paths: ["apps/web/app/(protected)/hr/payroll-actions.ts"],
     reason:
-      "proration caps the working/standard ratio at 1.0 via min(workingDays, standardDays); a 7-day/2-shift business exceeds weekday standard_days, so an uncapped ratio overpays base salary",
+      "proration uses payable days, where completed workdays plus paid annual leave are capped at standard_days before base salary is prorated",
+  },
+  {
+    rule: "PAYROLL-PRORATION-CAP-AT-STANDARD",
+    expect: "present",
+    pattern:
+      /return\s+Math\.min\(\s*Math\.max\(0,\s*input\.workingDays\)\s*\+\s*Math\.max\(0,\s*input\.paidLeaveDays\)\s*,\s*Math\.max\(0,\s*input\.standardDays\)\s*,?\s*\)/,
+    paths: ["apps/web/app/(protected)/hr/payroll-day-math.ts"],
+    reason:
+      "calculatePayableDays caps completed workdays + paid annual leave at standard_days, preventing overpay when attendance exceeds the standard period",
   },
 ];
 
@@ -87,13 +97,13 @@ function resolveFiles(relPath) {
 }
 
 function stripComments(src) {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/\/\/[^\n]*/g, "");
+  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
 }
 
 function countMatches(relPath, pattern) {
-  const flags = pattern.flags.includes("g") ? pattern.flags : pattern.flags + "g";
+  const flags = pattern.flags.includes("g")
+    ? pattern.flags
+    : pattern.flags + "g";
   const global = new RegExp(pattern.source, flags);
   let total = 0;
   for (const file of resolveFiles(relPath)) {

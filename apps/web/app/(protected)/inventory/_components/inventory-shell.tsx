@@ -8,7 +8,7 @@ import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { AppShell } from "@/components/app-shell";
 import { messages } from "@lib/messages";
 import { resolveInventoryNav } from "../_lib/inventory-nav";
-import { resolveOfficeRailItems } from "@/lib/office-nav";
+import { resolveOfficePrimaryTabs } from "@/lib/office-nav";
 import type { InventoryBranchOption } from "../_lib/inventory-scope";
 import { MobileTopBar } from "./mobile/mobile-top-bar";
 import { InventoryBranchFilter } from "./inventory-branch-filter";
@@ -75,10 +75,10 @@ export function InventoryShell({
   );
   const effectiveSiteName = activeBranch?.name ?? siteName;
   const effectiveSiteKind = activeBranch?.branch_kind ?? siteKind;
-  // Rail is branch-agnostic (home branch), so it must NOT rebuild on URL branch
-  // change — keyed on userRole/defaultBranchId only.
+  // Primary tabs use the home branch, so they must not rebuild on URL branch
+  // changes — keyed on userRole/defaultBranchId only.
   const tier1 = useMemo(
-    () => resolveOfficeRailItems(userRole, defaultBranchId),
+    () => resolveOfficePrimaryTabs(userRole, defaultBranchId),
     [userRole, defaultBranchId],
   );
   const tier2 = useMemo(

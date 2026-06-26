@@ -11,8 +11,7 @@ import { Button } from "@comtammatu/ui/components/button";
  * (`WorkspaceBottomNav`). Per design-system.md § B the bottom nav is an exported
  * primitive, not a per-surface re-implementation. Callers pass pre-resolved
  * items (active computed by the surface's nav model) plus optional leading and
- * trailing actions (e.g. the Management "Mô-đun" switcher and "Menu" drawer
- * toggles flanking the deep-nav items).
+ * trailing actions.
  */
 export const BOTTOM_NAV_ITEM_CLASS =
   "flex-1 flex-col gap-1 px-1 text-2xs transition-[background-color,color,box-shadow] duration-150";
@@ -27,19 +26,24 @@ export type AppBottomNavItem = {
 export function AppBottomNav({
   items,
   ariaLabel,
+  className,
   itemClassName,
   leading,
   trailing,
 }: {
   items: AppBottomNavItem[];
   ariaLabel: string;
+  className?: string;
   itemClassName?: string;
   leading?: ReactNode;
   trailing?: ReactNode;
 }) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 px-3 pt-2 shadow-sm chrome-safe-pb backdrop-blur lg:hidden print:hidden"
+      className={cn(
+        "fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 px-3 pt-2 shadow-sm chrome-safe-pb backdrop-blur lg:hidden print:hidden",
+        className,
+      )}
       aria-label={ariaLabel}
     >
       <div className="no-scrollbar mx-auto flex max-w-lg items-stretch gap-1 overflow-x-auto">

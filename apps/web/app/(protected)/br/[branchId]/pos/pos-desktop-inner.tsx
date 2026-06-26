@@ -94,6 +94,7 @@ import { usePosAppend } from "./_hooks/use-pos-append";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
+import type { MenuLimitRow } from "../menu-limits/actions";
 import type { BranchTable } from "./page";
 import type { PaymentMethod } from "@comtammatu/shared/providers";
 import type { VietQrConfig } from "./payment-actions";
@@ -177,6 +178,7 @@ export function PosDesktopInner({
   categories: initialCategories,
   canCloseShift,
   canConfirmCash,
+  canManageMenuLimits,
   initialPaymentMethods,
   initialVietQrConfig,
   initialOpenOrderId,
@@ -184,6 +186,7 @@ export function PosDesktopInner({
   categories: MenuCategory[];
   canCloseShift: boolean;
   canConfirmCash: boolean;
+  canManageMenuLimits: boolean;
   initialPaymentMethods: readonly PaymentMethod[];
   initialVietQrConfig: VietQrConfig | null;
   initialOpenOrderId?: number;
@@ -197,6 +200,24 @@ export function PosDesktopInner({
   // MenuItemButton subscribes to the daily-limit slice via
   // `useDailyLimit(item.id)`, so only cards whose limit changed re-render.
   const categories: MenuCategory[] = initialCategories;
+  const menuLimitRows = useMemo<MenuLimitRow[]>(
+    () =>
+      categories.flatMap((category) =>
+        category.menu_items.map((item) => ({
+          menu_item_id: item.id,
+          item_name: item.name,
+          category_id: category.id,
+          category_name: category.name,
+          base_price: item.base_price,
+          limit_id: null,
+          limit_date: null,
+          limit_quantity: item.daily_limit?.limit_quantity ?? null,
+          is_disabled: item.daily_limit?.is_disabled ?? false,
+          sold_today: item.daily_limit?.sold_today ?? 0,
+        })),
+      ),
+    [categories],
+  );
   const cartStore = usePosCartStore();
   const cartOrderType = useCartOrderType();
   const cartItemCount = useCartItemCount();
@@ -1615,9 +1636,9 @@ export function PosDesktopInner({
     <ToggleGroup
       type="single"
       value={cartOrderType}
-      variant="default"
+      variant="outline"
       size="touch"
-      spacing={1}
+      spacing={0}
       className="grid w-full grid-cols-2 rounded-md border bg-muted/40 p-1"
       aria-label={messages.pos.desktop.serviceModeAria}
       onValueChange={(value) => {
@@ -1628,14 +1649,14 @@ export function PosDesktopInner({
     >
       <ToggleGroupItem
         value="dine_in"
-        className="w-full min-w-0 justify-center text-sm font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:hover:bg-primary data-[state=on]:hover:text-primary-foreground"
+        className="w-full min-w-0 justify-center text-sm font-semibold"
         disabled={cartItemCount > 0 && cartOrderType !== "dine_in"}
       >
         {messages.pos.desktop.dineIn}
       </ToggleGroupItem>
       <ToggleGroupItem
         value="takeaway"
-        className="w-full min-w-0 justify-center text-sm font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:hover:bg-primary data-[state=on]:hover:text-primary-foreground"
+        className="w-full min-w-0 justify-center text-sm font-semibold"
         disabled={cartItemCount > 0 && cartOrderType !== "takeaway"}
       >
         {messages.pos.desktop.takeaway}
@@ -1752,6 +1773,8 @@ export function PosDesktopInner({
     <>
       <TabbedSidebar
         canCloseShift={canCloseShift}
+        canManageMenuLimits={canManageMenuLimits}
+        menuLimitRows={menuLimitRows}
         onShowCloseSession={openCloseSession}
         isContextGate={!menuContextReady}
         showOrders={showOrders}
@@ -1760,6 +1783,8 @@ export function PosDesktopInner({
       />
       <SplitSidebar
         canCloseShift={canCloseShift}
+        canManageMenuLimits={canManageMenuLimits}
+        menuLimitRows={menuLimitRows}
         onShowCloseSession={openCloseSession}
         isContextGate={!menuContextReady}
         sidebarContentProps={sidebarContentProps}
@@ -1772,6 +1797,8 @@ export function PosDesktopInner({
       <div className="md:hidden">
         <PosSessionHeader
           canCloseShift={canCloseShift}
+          canManageMenuLimits={canManageMenuLimits}
+          menuLimitRows={menuLimitRows}
           onShowCloseSession={openCloseSession}
           contextLabel={mobileHeaderContextLabel}
           onBack={

@@ -2,9 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS, STAFF_ROLES, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  STAFF_ROLES,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getVNMonthEndDateString } from "@comtammatu/shared/time";
+import {
+  getVNDateString,
+  getVNMonthEndDateString,
+} from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getAuthContext, probePermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
@@ -15,12 +22,10 @@ const HR_EMPLOYEE_VIEW_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",
 ];
-const SHIFT_ROLES: readonly StaffRole[] = [
-  "owner",
-  "branch_manager",
-];
+const SHIFT_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
 const ATTENDANCE_PHOTO_BUCKET = "attendance-photos";
 const ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS = 300;
+const CONTRACT_TYPES = ["probation", "fixed_term", "indefinite"] as const;
 
 /* ─── Employees ─── */
 
@@ -42,38 +47,126 @@ const createEmployeeAccountSchema = z.object({
   branchId: z.coerce.number().int().positive().optional(),
   employeeCode: z.string().trim().optional(),
   startDate: z.string().optional(),
-  defaultChecklistTemplateId: z
-    .coerce
+  contractType: z.enum(CONTRACT_TYPES).nullable().optional(),
+  defaultChecklistTemplateId: z.coerce
     .number()
     .int()
     .positive()
     .nullable()
     .optional(),
   baseSalary: z.coerce.number().int().nonnegative().optional(),
+  insuranceBaseSalary: z.coerce.number().int().nonnegative().optional(),
   dependentsCount: z.coerce.number().int().min(0).max(20).default(0),
+  contractNumber: z.string().trim().optional(),
+  contractSignedDate: z.string().optional(),
+  contractEndDate: z.string().optional(),
   idNumber: z.string().trim().optional(),
   bankAccount: z.string().trim().optional(),
 });
 
 const updateEmployeeSchema = z.object({
   employeeId: z.coerce.number().int().positive(),
-  fullName: z.string().trim().min(1, { error: "Họ tên không được để trống" }).optional(),
+  fullName: z
+    .string()
+    .trim()
+    .min(1, { error: "Họ tên không được để trống" })
+    .optional(),
   phone: z.string().trim().optional(),
   employeeCode: z.string().trim().optional(),
   startDate: z.string().optional(),
-  defaultChecklistTemplateId: z
-    .coerce
+  contractType: z.enum(CONTRACT_TYPES).nullable().optional(),
+  defaultChecklistTemplateId: z.coerce
     .number()
     .int()
     .positive()
     .nullable()
     .optional(),
   baseSalary: z.coerce.number().int().nonnegative().optional(),
+  insuranceBaseSalary: z.coerce.number().int().nonnegative().optional(),
   dependentsCount: z.coerce.number().int().min(0).max(20).optional(),
+  contractNumber: z.string().trim().optional(),
+  contractSignedDate: z.string().optional(),
+  contractEndDate: z.string().optional(),
   idNumber: z.string().trim().optional(),
   bankAccount: z.string().trim().optional(),
   isActive: z.boolean().optional(),
 });
+
+type ServiceClient = ReturnType<typeof createServiceClient>;
+
+interface ContractPayload {
+  tenantId: number;
+  employeeId: number;
+  contractType: (typeof CONTRACT_TYPES)[number] | null | undefined;
+  contractNumber: string | undefined;
+  signedDate: string | undefined;
+  startDate: string | null | undefined;
+  endDate: string | null | undefined;
+  grossSalary: number | null | undefined;
+  insuranceBaseSalary: number | undefined;
+  position: string | null | undefined;
+  workLocation: string | null | undefined;
+}
+
+async function upsertActiveContract(
+  service: ServiceClient,
+  payload: ContractPayload,
+): Promise<ActionResult> {
+  if (!payload.contractNumber) return { success: true };
+  if (!payload.contractType) {
+    return { success: false, error: "Chọn loại hợp đồng trước khi lưu HĐLĐ." };
+  }
+  if (!payload.startDate) {
+    return { success: false, error: "Nhập ngày bắt đầu trước khi lưu HĐLĐ." };
+  }
+
+  const { data: existing } = await service
+    .from("employment_contracts")
+    .select("id")
+    .eq("tenant_id", payload.tenantId)
+    .eq("employee_id", payload.employeeId)
+    .eq("status", "active")
+    .order("start_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const contractRow = {
+    tenant_id: payload.tenantId,
+    employee_id: payload.employeeId,
+    contract_type: payload.contractType,
+    contract_number: payload.contractNumber,
+    signed_date: payload.signedDate || payload.startDate || getVNDateString(),
+    start_date: payload.startDate,
+    end_date: payload.endDate || null,
+    gross_salary: payload.grossSalary ?? 0,
+    insurance_base_salary: payload.insuranceBaseSalary ?? 0,
+    position: payload.position || "Nhân viên",
+    work_location: payload.workLocation || null,
+    status: "active",
+  };
+
+  const query = existing
+    ? service
+        .from("employment_contracts")
+        .update(contractRow)
+        .eq("id", existing.id)
+        .eq("tenant_id", payload.tenantId)
+    : service.from("employment_contracts").insert(contractRow);
+
+  const { error } = await query;
+  if (error) {
+    if (error.code === "23505") {
+      return { success: false, error: "Số hợp đồng đã tồn tại." };
+    }
+    return { success: false, error: "Không thể lưu hợp đồng lao động." };
+  }
+
+  await service.rpc("sync_insurance_base", {
+    p_employee_id: payload.employeeId,
+  });
+
+  return { success: true };
+}
 
 async function loadChecklistTemplateBranch(
   tenantId: number,
@@ -98,8 +191,12 @@ async function loadChecklistTemplateBranch(
 // rendered table.
 const EMPLOYEE_SELECT_OWNER = `
       id, employee_code, id_number, bank_account, bank_name,
-      base_salary, start_date, contract_type, dependents_count, is_active,
+      base_salary, insurance_base_salary, start_date, contract_type, dependents_count, is_active,
       default_checklist_template_id,
+      employment_contracts (
+        id, contract_number, signed_date, start_date, end_date,
+        gross_salary, insurance_base_salary, status
+      ),
       profiles!inner (
         id, full_name, phone, branch_id,
         positions ( code, label_vi, default_checklist_template_id ),
@@ -126,10 +223,12 @@ export async function fetchEmployees(): Promise<ActionResult> {
   const isBranchManager = claims.user_role === "branch_manager";
   const canViewEmployeesWithPermission =
     isBranchManager ||
-    (await Promise.all([
-      probePermission(baseCtx, PERMISSION_KEYS.STAFF_MANAGE),
-      probePermission(baseCtx, PERMISSION_KEYS.HR_VIEW_EMPLOYEE),
-    ])).some(Boolean);
+    (
+      await Promise.all([
+        probePermission(baseCtx, PERMISSION_KEYS.STAFF_MANAGE),
+        probePermission(baseCtx, PERMISSION_KEYS.HR_VIEW_EMPLOYEE),
+      ])
+    ).some(Boolean);
   if (!canViewEmployeesWithPermission) {
     return { success: false, error: "Không có quyền" };
   }
@@ -190,18 +289,25 @@ export const createEmployeeAccount = withAction(
       return { success: false, error: "Vai trò không hợp lệ." };
     }
     if (data.role === "owner") {
-      return { success: false, error: "Không thể tạo tài khoản chủ sở hữu ở đây." };
+      return {
+        success: false,
+        error: "Không thể tạo tài khoản chủ sở hữu ở đây.",
+      };
     }
     if (OPS_ROLES.includes(data.role) && !data.branchId) {
-      return { success: false, error: "Vai trò vận hành phải thuộc một chi nhánh." };
+      return {
+        success: false,
+        error: "Vai trò vận hành phải thuộc một chi nhánh.",
+      };
     }
 
     const service = createServiceClient();
+    let branchName: string | null = null;
 
     if (data.branchId != null) {
       const { data: branch } = await service
         .from("branches")
-        .select("branch_kind")
+        .select("branch_kind, name")
         .eq("id", data.branchId)
         .eq("tenant_id", claims.tenant_id)
         .maybeSingle();
@@ -209,8 +315,12 @@ export const createEmployeeAccount = withAction(
         return { success: false, error: "Chi nhánh không hợp lệ." };
       }
       if (OPS_ROLES.includes(data.role) && branch.branch_kind !== "branch") {
-        return { success: false, error: "Vai trò vận hành cần gắn với chi nhánh." };
+        return {
+          success: false,
+          error: "Vai trò vận hành cần gắn với chi nhánh.",
+        };
       }
+      branchName = branch.name ?? null;
     }
 
     if (data.defaultChecklistTemplateId != null) {
@@ -224,7 +334,10 @@ export const createEmployeeAccount = withAction(
           error: "Checklist template không tồn tại hoặc đã bị ngưng sử dụng.",
         };
       }
-      if (templateBranchId != null && templateBranchId !== (data.branchId ?? null)) {
+      if (
+        templateBranchId != null &&
+        templateBranchId !== (data.branchId ?? null)
+      ) {
         return {
           success: false,
           error: "Checklist template không thuộc phạm vi chi nhánh này.",
@@ -232,18 +345,19 @@ export const createEmployeeAccount = withAction(
       }
     }
 
-    const { data: created, error: authError } = await service.auth.admin.createUser({
-      email: data.email,
-      password: data.password,
-      email_confirm: true,
-      app_metadata: {
-        tenant_id: claims.tenant_id,
-        branch_id: data.branchId ?? null,
-        role: data.role,
-        full_name: data.fullName,
-      },
-      user_metadata: { full_name: data.fullName },
-    });
+    const { data: created, error: authError } =
+      await service.auth.admin.createUser({
+        email: data.email,
+        password: data.password,
+        email_confirm: true,
+        app_metadata: {
+          tenant_id: claims.tenant_id,
+          branch_id: data.branchId ?? null,
+          role: data.role,
+          full_name: data.fullName,
+        },
+        user_metadata: { full_name: data.fullName },
+      });
 
     if (authError || !created?.user) {
       if (
@@ -252,7 +366,10 @@ export const createEmployeeAccount = withAction(
       ) {
         return { success: false, error: "Email này đã được sử dụng." };
       }
-      return { success: false, error: "Không thể tạo tài khoản. Vui lòng thử lại." };
+      return {
+        success: false,
+        error: "Không thể tạo tài khoản. Vui lòng thử lại.",
+      };
     }
 
     const userId = created.user.id;
@@ -276,9 +393,11 @@ export const createEmployeeAccount = withAction(
         profile_id: userId,
         employee_code: data.employeeCode ?? null,
         start_date: data.startDate ?? null,
+        contract_type: data.contractType ?? null,
         dependents_count: data.dependentsCount,
         // owner-only PII (action gated by HR_ROLES=['owner'])
         base_salary: data.baseSalary ?? null,
+        insurance_base_salary: data.insuranceBaseSalary ?? 0,
         id_number: data.idNumber ?? null,
         bank_account: data.bankAccount ?? null,
         default_checklist_template_id: data.defaultChecklistTemplateId ?? null,
@@ -294,12 +413,33 @@ export const createEmployeeAccount = withAction(
       return { success: false, error: "Không thể tạo hồ sơ nhân viên." };
     }
 
+    const contractResult = await upsertActiveContract(service, {
+      tenantId: claims.tenant_id,
+      employeeId: result.id,
+      contractType: data.contractType,
+      contractNumber: data.contractNumber,
+      signedDate: data.contractSignedDate,
+      startDate: data.startDate ?? null,
+      endDate: data.contractEndDate ?? null,
+      grossSalary: data.baseSalary ?? null,
+      insuranceBaseSalary: data.insuranceBaseSalary,
+      position: data.role,
+      workLocation: branchName,
+    });
+    if (!contractResult.success) {
+      await service.auth.admin.deleteUser(userId);
+      return contractResult;
+    }
+
     logAudit(supabase, {
       action: "create",
       entityType: "employee",
       entityId: result.id,
       newData: {
         base_salary: data.baseSalary ?? null,
+        insurance_base_salary: data.insuranceBaseSalary ?? 0,
+        contract_type: data.contractType ?? null,
+        contract_number: data.contractNumber ?? null,
         dependents_count: data.dependentsCount,
       },
     });
@@ -321,7 +461,16 @@ export const updateEmployee = withAction(
 
     const { data: employee, error: loadError } = await service
       .from("employees")
-      .select("id, profile_id, profiles!inner ( id, branch_id )")
+      .select(
+        `
+        id, profile_id,
+        profiles!inner (
+          id, branch_id,
+          positions ( code, label_vi ),
+          branches ( name )
+        )
+      `,
+      )
       .eq("id", data.employeeId)
       .eq("tenant_id", claims.tenant_id)
       .maybeSingle();
@@ -369,8 +518,10 @@ export const updateEmployee = withAction(
     const employeeUpdate: {
       employee_code?: string | null;
       start_date?: string | null;
+      contract_type?: string | null;
       dependents_count?: number;
       base_salary?: number | null;
+      insurance_base_salary?: number;
       id_number?: string | null;
       bank_account?: string | null;
       default_checklist_template_id?: number | null;
@@ -382,11 +533,17 @@ export const updateEmployee = withAction(
     if (data.startDate !== undefined) {
       employeeUpdate.start_date = data.startDate || null;
     }
+    if (data.contractType !== undefined) {
+      employeeUpdate.contract_type = data.contractType ?? null;
+    }
     if (data.dependentsCount !== undefined) {
       employeeUpdate.dependents_count = data.dependentsCount;
     }
     if (data.baseSalary !== undefined) {
       employeeUpdate.base_salary = data.baseSalary;
+    }
+    if (data.insuranceBaseSalary !== undefined) {
+      employeeUpdate.insurance_base_salary = data.insuranceBaseSalary;
     }
     if (data.idNumber !== undefined) {
       employeeUpdate.id_number = data.idNumber || null;
@@ -416,6 +573,24 @@ export const updateEmployee = withAction(
       }
     }
 
+    const contractResult = await upsertActiveContract(service, {
+      tenantId: claims.tenant_id,
+      employeeId: data.employeeId,
+      contractType: data.contractType,
+      contractNumber: data.contractNumber,
+      signedDate: data.contractSignedDate,
+      startDate: data.startDate ?? null,
+      endDate: data.contractEndDate ?? null,
+      grossSalary: data.baseSalary,
+      insuranceBaseSalary: data.insuranceBaseSalary,
+      position:
+        employee.profiles?.positions?.label_vi ??
+        employee.profiles?.positions?.code ??
+        null,
+      workLocation: employee.profiles?.branches?.name ?? null,
+    });
+    if (!contractResult.success) return contractResult;
+
     logAudit(supabase, {
       action: "update",
       entityType: "employee",
@@ -423,6 +598,15 @@ export const updateEmployee = withAction(
       newData: {
         ...(data.baseSalary !== undefined
           ? { base_salary: data.baseSalary }
+          : {}),
+        ...(data.insuranceBaseSalary !== undefined
+          ? { insurance_base_salary: data.insuranceBaseSalary }
+          : {}),
+        ...(data.contractType !== undefined
+          ? { contract_type: data.contractType ?? null }
+          : {}),
+        ...(data.contractNumber !== undefined
+          ? { contract_number: data.contractNumber || null }
           : {}),
         ...(data.dependentsCount !== undefined
           ? { dependents_count: data.dependentsCount }
@@ -590,7 +774,7 @@ export const fetchAttendance = withAction(
     const { data: result, error } = await supabase
       .from("attendance_records")
       .select(
-      `
+        `
       id, date, check_in, check_out, status, note, check_in_photo_path,
       checklist_template_id,
       employee_id,

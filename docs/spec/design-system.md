@@ -511,7 +511,7 @@ do not add a one-off allowlist entry just to make a route compile.
   1. Kiem soat ton: stock on hand, stocktake, expiry, waste/adjustment, reporting.
   2. Nhap/Nhan/Doi soat: purchase order, GRN, supplier invoice/price variance, receiving exceptions.
   3. Dieu phoi/San xuat: transfer, production order, BOM/recipe issue and yield.
-- Sidebar group labels must be compact enough for the fixed rail. Use detail page headings and breadcrumbs for full workflow wording.
+- Sidebar group labels must be compact enough for the fixed sidebar. Use detail page headings and breadcrumbs for full workflow wording.
 - Complex Inventory forms use RHF + Zod + app form helpers when they have line arrays, more than four fields, inline pre-submit validation, or pending submit UX. Plain `<form action>` is only for auth, sign out, or single-reason confirmations.
 - Use Sonner for success/action-level feedback, inline field errors for validation, and `/access-denied?reason=` only for permission, auth, or scope failures.
 - Entity audit history belongs inline on detail pages as a `Lich su` tab filtered by `audit_logs.entity_type` and `audit_logs.entity_id`. Tenant-wide audit search is a compliance surface, not the MVP detail-view default.
@@ -562,11 +562,12 @@ third.
    workspaces (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`), and branch
    command/setup (`/br/[branchId]/dashboard`, `/br/[branchId]/settings/*`). One
    shell, one sidebar, one header — sidebar groups differ by role/scope, the
-   chrome does not. Per `D045`, the single Management sidebar MAY render as two
-   tiers inside one `SidebarProvider`: a fixed icon rail (`collapsible="none"`,
-   a cross-module switcher) plus the deep-nav panel. The rail is a fixed icon
-   column, not a second sidebar idiom and not a third chrome family — "one
-   sidebar" counts the rail+panel pair as that one sidebar.
+   chrome does not. The single Management sidebar renders primary module tabs
+   first and nests the active module's deep nav as sub-tabs under that active
+   primary tab. Admin command pages collapse under one "Quản trị" primary tab;
+   branch management collapses under one "Quản lý chi nhánh" primary tab.
+   Management bottom nav is mobile-only (`<md`); tablet and desktop use the
+   fixed sidebar without a parallel bottom nav.
 2. Operations chrome — purpose-built, full-screen, single-job surfaces that
    legitimately cannot wear the management sidebar: POS (`/br/[branchId]/pos`),
    KDS and Runner (`/br/[branchId]/{kds,runner}`), and the staff task surface
@@ -603,10 +604,10 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
 - Gate (Stage 0): a `shell-registry` ratchet freezes the current chrome-shell
   set as baseline; a new `*-shell` file or new bespoke chrome
   (`SidebarProvider` / page-owned `<main>`) outside the allowlist fails CI. The
-  baseline only decreases. The `D045` dual-tier rail+panel stays inside the
-  one allowlisted `app-shell.tsx` with one `SidebarProvider` — the rail
-  (`collapsible="none"`) is not a second `SidebarProvider` and does not raise
-  the baseline.
+  baseline only decreases. Management navigation stays inside the one
+  allowlisted `app-shell.tsx` with one `SidebarProvider` and one `Sidebar`;
+  module-level sub-nav must not spread into a second shell family or route-local
+  chrome.
 
 ### C. Route Home + IA
 
@@ -630,16 +631,17 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
 ### D. Navigation Single-Source
 
 - Navigation is data, not per-shell code. Every Management route renders the
-  same role/scope-filtered office nav from `resolveOfficeNavGroups`
+  same role/scope-filtered primary tabs from `resolveOfficePrimaryTabs`
   (`apps/web/app/lib/office-nav.ts`, projected from
   `packages/shared/src/auth/nav-config.ts` via the shared `resolveAdminNavGroups`
-  / `resolveWorkspaceItems` resolvers). Modules with deeper nav append a
-  module-local resolver under the same contract (`finance/components/finance-nav.ts`,
-  `inventory/_lib/inventory-nav.ts`); trivial modules (hr/menu/orders) mount the
-  generic `OfficeModuleShell`. Inline `ShellNavGroup[]` literals inside a shell
-  are forbidden (gate `nav-shell-inline-literal`, baseline 0).
-- Desktop sidebar and mobile bottom-nav render from the same resolved model for
-  a role; they may differ in density and item count, never in membership source.
+  / `resolveBranchManagementItems` / `resolveWorkspaceItems` resolvers). Deep nav
+  comes from `resolveOfficeDeepNav`, `resolveBranchDeepNav`, or module-local
+  resolvers (`finance/components/finance-nav.ts`, `inventory/_lib/inventory-nav.ts`).
+  Inline `ShellNavGroup[]` literals inside a shell are forbidden (gate
+  `nav-shell-inline-literal`, baseline 0).
+- Tablet/desktop sidebar and mobile bottom-nav render from the same resolved
+  model for a role; they may differ in density and item count, never in
+  membership source.
 - Active-state matching uses the single `isNavItemActive` helper
   (`apps/web/app/lib/shell-primitives.ts`); per-surface `startsWith` / `isActive`
   reimplementations are forbidden.

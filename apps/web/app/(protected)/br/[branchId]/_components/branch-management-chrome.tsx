@@ -6,7 +6,7 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { BRANCH_VI } from "@comtammatu/shared/messages";
 import { AppShell } from "@/components/app-shell";
-import { resolveBranchDeepNav, resolveOfficeRailItems } from "@/lib/office-nav";
+import { resolveBranchDeepNav, resolveOfficePrimaryTabs } from "@/lib/office-nav";
 
 type BreadcrumbSegment = string | { label: string; href?: string };
 
@@ -44,7 +44,7 @@ export function BranchManagementShell({
         mainLabel: branchName,
         logoVariant: null,
       }}
-      tier1={resolveOfficeRailItems(role, branchId)}
+      tier1={resolveOfficePrimaryTabs(role, branchId)}
       tier2={resolveBranchDeepNav(role, branchId)}
       defaultPageTitle={defaultPageTitle}
       pageHeader={{

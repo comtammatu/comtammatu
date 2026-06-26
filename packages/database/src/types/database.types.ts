@@ -74,6 +74,54 @@ export type Database = {
           },
         ]
       }
+      annual_leave_entitlements: {
+        Row: {
+          created_at: string
+          employee_id: number
+          entitlement_days: number
+          id: number
+          notes: string | null
+          tenant_id: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          employee_id: number
+          entitlement_days?: number
+          id?: never
+          notes?: string | null
+          tenant_id: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          employee_id?: number
+          entitlement_days?: number
+          id?: never
+          notes?: string | null
+          tenant_id?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annual_leave_entitlements_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "annual_leave_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       archive_run_log: {
         Row: {
           attempt_number: number
@@ -3485,6 +3533,8 @@ export type Database = {
           other_deductions: number
           overtime_hours: number
           overtime_pay: number
+          paid_leave_days: number
+          payable_days: number
           payroll_period_id: number
           personal_deduction: number
           pit_tax: number
@@ -3494,6 +3544,7 @@ export type Database = {
           tenant_id: number
           total_insurance_employee: number
           total_insurance_employer: number
+          unpaid_leave_days: number
           updated_at: string
           working_days: number
         }
@@ -3521,6 +3572,8 @@ export type Database = {
           other_deductions?: number
           overtime_hours?: number
           overtime_pay?: number
+          paid_leave_days?: number
+          payable_days?: number
           payroll_period_id: number
           personal_deduction?: number
           pit_tax: number
@@ -3530,6 +3583,7 @@ export type Database = {
           tenant_id: number
           total_insurance_employee: number
           total_insurance_employer: number
+          unpaid_leave_days?: number
           updated_at?: string
           working_days: number
         }
@@ -3557,6 +3611,8 @@ export type Database = {
           other_deductions?: number
           overtime_hours?: number
           overtime_pay?: number
+          paid_leave_days?: number
+          payable_days?: number
           payroll_period_id?: number
           personal_deduction?: number
           pit_tax?: number
@@ -3566,6 +3622,7 @@ export type Database = {
           tenant_id?: number
           total_insurance_employee?: number
           total_insurance_employer?: number
+          unpaid_leave_days?: number
           updated_at?: string
           working_days?: number
         }
@@ -3602,6 +3659,7 @@ export type Database = {
           paid_at: string | null
           period_month: number
           period_year: number
+          standard_days: number
           status: string
           tenant_id: number
           updated_at: string
@@ -3614,6 +3672,7 @@ export type Database = {
           paid_at?: string | null
           period_month: number
           period_year: number
+          standard_days?: number
           status?: string
           tenant_id: number
           updated_at?: string
@@ -3626,6 +3685,7 @@ export type Database = {
           paid_at?: string | null
           period_month?: number
           period_year?: number
+          standard_days?: number
           status?: string
           tenant_id?: number
           updated_at?: string

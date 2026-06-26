@@ -51,6 +51,7 @@ import {
   fetchLeaveRequests,
   rejectLeaveRequest,
 } from "./leave-request-actions";
+import { countInclusiveDays } from "./payroll-day-math";
 import type { BranchOption } from "./_types";
 
 type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
@@ -70,7 +71,14 @@ interface LeaveRequestRow {
   employees: {
     id: number;
     employee_code: string | null;
+    start_date: string | null;
     profiles: { full_name: string } | null;
+  } | null;
+  annual_leave_balance: {
+    year: number;
+    entitlementDays: number;
+    usedDays: number;
+    remainingDays: number;
   } | null;
 }
 
@@ -89,28 +97,6 @@ type RejectFormValues = z.infer<typeof rejectFormSchema>;
 function formatDateRange(startDate: string, endDate: string): string {
   if (startDate === endDate) return formatVNBusinessDate(startDate);
   return `${formatVNBusinessDate(startDate)} - ${formatVNBusinessDate(endDate)}`;
-}
-
-function countInclusiveDays(startDate: string, endDate: string): number | null {
-  const [startYear, startMonth, startDay] = startDate.split("-").map(Number);
-  const [endYear, endMonth, endDay] = endDate.split("-").map(Number);
-
-  if (
-    !Number.isFinite(startYear) ||
-    !Number.isFinite(startMonth) ||
-    !Number.isFinite(startDay) ||
-    !Number.isFinite(endYear) ||
-    !Number.isFinite(endMonth) ||
-    !Number.isFinite(endDay)
-  ) {
-    return null;
-  }
-
-  const startUtc = Date.UTC(startYear!, startMonth! - 1, startDay!);
-  const endUtc = Date.UTC(endYear!, endMonth! - 1, endDay!);
-  const days = Math.round((endUtc - startUtc) / 86_400_000) + 1;
-
-  return days > 0 ? days : null;
 }
 
 function getEmployeeName(request: LeaveRequestRow): string {
@@ -163,11 +149,7 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
         return;
       }
       toast.success("Đã duyệt yêu cầu nghỉ");
-      setRequests((prev) =>
-        prev.map((item) =>
-          item.id === request.id ? { ...item, status: "approved" } : item,
-        ),
-      );
+      if (selectedBranchId !== null) load(selectedBranchId);
     });
   }
 
@@ -206,12 +188,22 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
         <div className="font-medium">
           {formatDateRange(request.start_date, request.end_date)}
         </div>
-        {days ? (
+        {days > 0 ? (
           <div className="text-xs text-muted-foreground">
             {days} {copy.dayUnit}
           </div>
         ) : null}
       </div>
+    );
+  }
+
+  function renderAnnualBalance(request: LeaveRequestRow) {
+    const balance = request.annual_leave_balance;
+    if (request.leave_type !== "annual" || !balance) return "—";
+    return copy.annualBalance(
+      balance.remainingDays,
+      balance.entitlementDays,
+      balance.year,
     );
   }
 
@@ -281,6 +273,11 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
           {request.status !== "pending" ? (
             <div className="mt-2">{renderHistoryStatus(request)}</div>
           ) : null}
+          {request.leave_type === "annual" ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {renderAnnualBalance(request)}
+            </p>
+          ) : null}
         </ItemContent>
         {actions ? <ItemActions>{actions}</ItemActions> : null}
       </Item>
@@ -302,6 +299,12 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
       key: "type",
       header: copy.table.type,
       render: (request) => copy.types[request.leave_type],
+    },
+    {
+      key: "quota",
+      header: copy.table.quota,
+      className: "text-sm text-muted-foreground",
+      render: renderAnnualBalance,
     },
     {
       key: "reason",
@@ -332,6 +335,12 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
       key: "type",
       header: copy.table.type,
       render: (request) => copy.types[request.leave_type],
+    },
+    {
+      key: "quota",
+      header: copy.table.quota,
+      className: "text-sm text-muted-foreground",
+      render: renderAnnualBalance,
     },
     {
       key: "reason",

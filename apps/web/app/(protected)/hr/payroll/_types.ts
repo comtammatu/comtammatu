@@ -3,6 +3,7 @@ export interface PayrollPeriodRow {
   tenant_id: number;
   period_month: number;
   period_year: number;
+  standard_days: number;
   status: string;
   approved_by: string | null;
   approved_at: string | null;

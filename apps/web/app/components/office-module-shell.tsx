@@ -24,10 +24,13 @@ import {
   formatPathSegment,
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
-import { resolveOfficeDeepNav, resolveOfficeRailItems } from "@/lib/office-nav";
+import {
+  resolveOfficeDeepNav,
+  resolveOfficePrimaryTabs,
+} from "@/lib/office-nav";
 import { messages } from "@lib/messages";
 
-// Generic Management shell for modules whose chrome is the shared office rail +
+// Generic Management shell for modules whose chrome is the shared primary tabs +
 // the module's own deep nav, and whose chrome carries no shell-scoped client
 // state. Chrome lives in this client registry — keyed by a serializable `module`
 // id — so layouts (server components) pass only the id across the RSC boundary,
@@ -145,11 +148,13 @@ export function OfficeModuleShell({
 }) {
   const chrome = OFFICE_MODULE_CHROME[module];
   const pathname = usePathname();
-  const tier1 = resolveOfficeRailItems(role, branchId);
+  const tier1 = resolveOfficePrimaryTabs(role, branchId);
   const tier2 = resolveOfficeDeepNav(role, module, branchId);
 
-  let actionLink: { href: string; label: string } | null =
-    resolveRoleHomeLink(role, branchId);
+  let actionLink: { href: string; label: string } | null = resolveRoleHomeLink(
+    role,
+    branchId,
+  );
   if (chrome.action) {
     const allowed =
       !chrome.action.gateModule || canAccess(role, chrome.action.gateModule);

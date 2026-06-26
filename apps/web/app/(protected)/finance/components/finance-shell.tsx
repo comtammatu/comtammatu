@@ -8,7 +8,7 @@ import { resolveRoleHomeLink, type StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppShell } from "@/components/app-shell";
 import { messages } from "@lib/messages";
-import { resolveOfficeRailItems } from "@/lib/office-nav";
+import { resolveOfficePrimaryTabs } from "@/lib/office-nav";
 import { resolveFinanceNav } from "./finance-nav";
 import { useFinanceRealtimeRefresh } from "../use-finance-realtime-refresh";
 
@@ -54,7 +54,7 @@ export function FinanceShell({
         subLabel: financeCopy.shell.subLabel,
         mainLabel: financeCopy.shell.mainLabel,
       }}
-      tier1={resolveOfficeRailItems(role, homeBranchId)}
+      tier1={resolveOfficePrimaryTabs(role, homeBranchId)}
       tier2={resolveFinanceNav({ showInvoices, showSummary })}
       defaultPageTitle={financeCopy.shell.defaultPageTitle}
       pageHeader={{

@@ -11,7 +11,10 @@ import {
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-const navItem = (href: string, extra: Partial<ShellNavItem> = {}): ShellNavItem => ({
+const navItem = (
+  href: string,
+  extra: Partial<ShellNavItem> = {},
+): ShellNavItem => ({
   href,
   label: href,
   icon: (() => null) as unknown as ShellNavItem["icon"],
@@ -74,13 +77,58 @@ test("mobile workspace bottom nav reuses the shell nav model", () => {
   assert.match(
     appShell,
     /<WorkspaceBottomNav tier1=\{tier1\} tier2=\{tier2\}/,
-    "AppShell must pass the dual-tier nav model to the mobile bottom nav",
+    "AppShell must pass the shared nav model to the mobile bottom nav",
   );
   assert.match(bottomNav, /tier2: ShellNavGroup\[\]/);
   assert.match(bottomNav, /flattenNavGroups\(tier2\)/);
+  assert.match(
+    bottomNav,
+    /className="md:hidden"/,
+    "management bottom nav must stop at tablet where the sidebar is visible",
+  );
+  assert.match(
+    appShell,
+    /pb-24 md:pb-4/,
+    "AppShell bottom padding must match the mobile-only bottom nav breakpoint",
+  );
   assert.doesNotMatch(
     bottomNav,
     /const NAV_ITEMS|MODULE_ACL|canAccess/,
     "mobile bottom nav must not carry a second static ACL/nav source",
+  );
+  assert.equal(
+    bottomNav.match(/onClick=\{toggleSidebar\}/g)?.length,
+    1,
+    "mobile bottom nav must not render duplicate drawer toggle tabs",
+  );
+});
+
+test("management shell renders one sidebar with nested active-tab sub-nav", () => {
+  const appShell = read("apps/web/app/components/app-shell.tsx");
+
+  assert.equal(
+    appShell.match(/<Sidebar(?:\s|>)/g)?.length,
+    1,
+    "AppShell must render one Sidebar primitive",
+  );
+  assert.match(
+    appShell,
+    /<SidebarMenuSub>/,
+    "active module sub-nav must render inside the primary sidebar item",
+  );
+  assert.doesNotMatch(
+    appShell,
+    /--sidebar-width-icon/,
+    "management shell must not reintroduce the separate icon rail width",
+  );
+  assert.doesNotMatch(
+    appShell,
+    /<SidebarRail/,
+    "management shell must not reintroduce a rail layer",
+  );
+  assert.match(
+    appShell,
+    /items: group\.items\.filter\(\(item\) => item\.href !== parentHref\)/,
+    "sub-nav must remove the active primary tab href to avoid duplicate tabs",
   );
 });

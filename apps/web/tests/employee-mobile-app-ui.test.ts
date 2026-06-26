@@ -305,6 +305,11 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeClockSource,
+    /setCameraState\("starting"\);[\s\S]*waitForNextAnimationFrame\(\);[\s\S]*const video = videoRef\.current;[\s\S]*navigator\.mediaDevices\.getUserMedia/,
+    "Clock camera startup should mount the video element before requesting a camera stream",
+  );
+  assert.match(
+    employeeClockSource,
     /previewUrl/,
     "Clock photo preview must be conditionally rendered when a preview URL exists",
   );

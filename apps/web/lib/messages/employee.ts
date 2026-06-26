@@ -29,8 +29,7 @@ export const employee = {
     installButtonAria: "Cài Trang nhân viên lên thiết bị",
     dismissLabel: "Tạm ẩn lời nhắc cài đặt",
     iosDialogTitle: "Cài Trang nhân viên trên iPhone/iPad",
-    iosDialogDescription:
-      "iOS cần thêm app từ menu Chia sẻ của Safari.",
+    iosDialogDescription: "iOS cần thêm app từ menu Chia sẻ của Safari.",
     iosSteps: [
       "Mở Trang nhân viên bằng Safari.",
       "Bấm nút Chia sẻ của trình duyệt.",
@@ -284,8 +283,7 @@ export const employee = {
     today: "Hôm nay",
   },
   tasks: {
-    description:
-      "Checklist ca làm hôm nay, gồm mục Tiêu hao bếp nếu được giao",
+    description: "Checklist ca làm hôm nay, gồm mục Tiêu hao bếp nếu được giao",
     notStartedTitle: "Chưa vào ca",
     notStartedDescription: "Chấm công vào trước khi mở việc trong ca.",
     checklistTitle: "Checklist",
@@ -369,12 +367,17 @@ export const employee = {
     print: "In / Lưu PDF",
     netSalary: "Thực lĩnh",
     grossTotal: "Lương gộp",
+    insuranceBase: "Lương đóng BH",
     insuranceEmployee: "BH (NLĐ đóng)",
     workingDays: "Ngày công",
+    paidLeaveDays: "Phép năm có lương",
+    unpaidLeaveDays: "Nghỉ không lương",
+    payableDays: "Ngày tính lương",
+    pit: "Thuế TNCN",
     periodFallback: "Kỳ lương",
     periodLabel: (month: number, year: number) => `Tháng ${month}/${year}`,
-    workingDaysSummary: (worked: number, standard: number) =>
-      `Ngày công ${worked}/${standard}`,
+    workingDaysSummary: (payable: number, standard: number) =>
+      `Ngày tính lương ${payable}/${standard}`,
   },
   permissions: {
     title: "Quyền truy cập",

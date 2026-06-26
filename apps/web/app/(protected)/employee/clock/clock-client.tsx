@@ -50,6 +50,12 @@ const MAX_CLIENT_PHOTO_EDGE = 1280;
 const PHOTO_QUALITY = 0.82;
 const clockCopy = messages.employee.clock;
 
+function waitForNextAnimationFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+}
+
 function formatTime(iso: string | null): string {
   return iso ? formatVNTime(iso) : "—";
 }
@@ -151,6 +157,13 @@ export function ClockClient({ state }: ClockClientProps) {
     stopCamera();
 
     try {
+      await waitForNextAnimationFrame();
+
+      const video = videoRef.current;
+      if (!video) {
+        throw new Error("camera_video_not_ready");
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
@@ -160,11 +173,6 @@ export function ClockClient({ state }: ClockClientProps) {
         },
       });
       cameraStreamRef.current = stream;
-
-      const video = videoRef.current;
-      if (!video) {
-        throw new Error("camera_video_not_ready");
-      }
 
       video.srcObject = stream;
       await video.play();

@@ -20,10 +20,7 @@ export default async function PayslipPage(props: {
 
   if (!ctx) {
     return (
-      <EmployeePage
-        title={copy.title}
-        description={copy.description}
-      >
+      <EmployeePage title={copy.title} description={copy.description}>
         <EmployeeMissingProfileEmpty
           title={copy.missingProfileTitle}
           description={copy.missingProfileDescription}
@@ -40,10 +37,11 @@ export default async function PayslipPage(props: {
     .from("payroll_entries")
     .select(
       `
-      id, working_days, standard_days, base_salary, gross_total,
-      total_insurance_employee, net_salary,
-      payroll_periods!inner ( period_month, period_year, status )
-    `,
+	      id, working_days, paid_leave_days, unpaid_leave_days, payable_days,
+	      standard_days, base_salary, gross_total,
+	      insurance_base, total_insurance_employee, pit_tax, net_salary,
+	      payroll_periods!inner ( period_month, period_year, status )
+	    `,
     )
     .eq("employee_id", employeeId)
     .eq("tenant_id", claims.tenant_id)
@@ -53,10 +51,7 @@ export default async function PayslipPage(props: {
     .limit(12);
 
   return (
-    <EmployeePage
-      title={copy.title}
-      description={copy.description}
-    >
+    <EmployeePage title={copy.title} description={copy.description}>
       <YearPicker selectedYear={year} currentYear={currentYear} />
       <PayslipClient entries={(entries ?? []) as unknown as PayslipEntry[]} />
     </EmployeePage>
@@ -72,10 +67,15 @@ function isValidYear(s: string | undefined): boolean {
 export interface PayslipEntry {
   id: number;
   working_days: number;
+  paid_leave_days: number;
+  unpaid_leave_days: number;
+  payable_days: number;
   standard_days: number;
   base_salary: number;
   gross_total: number;
+  insurance_base: number;
   total_insurance_employee: number;
+  pit_tax: number;
   net_salary: number;
   payroll_periods: {
     period_month: number;

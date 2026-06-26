@@ -1,7 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Input } from "@comtammatu/ui/components/input";
 import {
   Item,
   ItemActions,
@@ -21,13 +22,15 @@ import {
   approvePayroll,
   markPayrollPaid,
   fetchPayrollEntries,
+  fetchPayrollPeriod,
+  updatePayrollPeriodStandardDays,
 } from "../../payroll-actions";
-import type { PayrollEntryRow } from "./_types";
-import { useState } from "react";
+import type { PayrollEntryRow, PayrollPeriodDetail } from "./_types";
 import { ERRORS_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
 import { KpiCard } from "@/components/kpi/kpi-card";
+import { AppSection } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -38,19 +41,40 @@ const copy = messages.hr.payroll.detail;
 
 interface PayrollDetailClientProps {
   periodId: number;
+  initialPeriod: PayrollPeriodDetail | null;
   initialEntries: PayrollEntryRow[];
 }
 
 export function PayrollDetailClient({
   periodId,
+  initialPeriod,
   initialEntries,
 }: PayrollDetailClientProps) {
   const [entries, setEntries] = useState(initialEntries);
+  const [period, setPeriod] = useState(initialPeriod);
+  const [standardDaysInput, setStandardDaysInput] = useState(
+    (
+      initialPeriod?.standard_days ??
+      initialEntries[0]?.standard_days ??
+      26
+    ).toString(),
+  );
   const [isPending, startTransition] = useTransition();
 
   function reload() {
     startTransition(async () => {
-      const result = await fetchPayrollEntries({ periodId });
+      const [periodResult, result] = await Promise.all([
+        fetchPayrollPeriod({ periodId }),
+        fetchPayrollEntries({ periodId }),
+      ]);
+      if (periodResult.success) {
+        const nextPeriod = (periodResult.data ??
+          null) as PayrollPeriodDetail | null;
+        setPeriod(nextPeriod);
+        if (nextPeriod) {
+          setStandardDaysInput(Number(nextPeriod.standard_days).toString());
+        }
+      }
       if (result.success) {
         setEntries((result.data ?? []) as PayrollEntryRow[]);
       }
@@ -73,11 +97,33 @@ export function PayrollDetailClient({
     });
   }
 
+  function handleSaveStandardDays() {
+    const standardDays = Number(standardDaysInput);
+    if (!Number.isFinite(standardDays) || standardDays <= 0) {
+      toast.error(ERRORS_VI.validationFailed);
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await updatePayrollPeriodStandardDays({
+        periodId,
+        standardDays,
+      });
+      if (result.success) {
+        toast.success(copy.toast.standardDaysSaved);
+        reload();
+      } else {
+        toast.error(result.error ?? ERRORS_VI.fallback);
+      }
+    });
+  }
+
   function handleApprove() {
     startTransition(async () => {
       const result = await approvePayroll({ periodId });
       if (result.success) {
         toast.success(copy.toast.approved);
+        reload();
       } else {
         toast.error(result.error ?? ERRORS_VI.fallback);
       }
@@ -89,6 +135,7 @@ export function PayrollDetailClient({
       const result = await markPayrollPaid({ periodId });
       if (result.success) {
         toast.success(copy.toast.paid);
+        reload();
       } else {
         toast.error(result.error ?? ERRORS_VI.fallback);
       }
@@ -97,8 +144,24 @@ export function PayrollDetailClient({
 
   // Totals
   const totalGross = entries.reduce((s, e) => s + Number(e.gross_total), 0);
+  const totalPaidLeaveDays = entries.reduce(
+    (s, e) => s + Number(e.paid_leave_days),
+    0,
+  );
+  const totalUnpaidLeaveDays = entries.reduce(
+    (s, e) => s + Number(e.unpaid_leave_days),
+    0,
+  );
+  const totalPayableDays = entries.reduce(
+    (s, e) => s + Number(e.payable_days),
+    0,
+  );
   const totalInsEmp = entries.reduce(
     (s, e) => s + Number(e.total_insurance_employee),
+    0,
+  );
+  const totalInsEmployer = entries.reduce(
+    (s, e) => s + Number(e.total_insurance_employer),
     0,
   );
   const totalPit = entries.reduce((s, e) => s + Number(e.pit_tax), 0);
@@ -122,8 +185,26 @@ export function PayrollDetailClient({
       key: "working_days",
       header: copy.table.workingDays,
       className: "text-right font-mono tabular-nums text-sm",
+      render: (entry) => Number(entry.working_days),
+    },
+    {
+      key: "paid_leave_days",
+      header: copy.table.paidLeaveDays,
+      className: "text-right font-mono tabular-nums text-sm",
+      render: (entry) => Number(entry.paid_leave_days),
+    },
+    {
+      key: "unpaid_leave_days",
+      header: copy.table.unpaidLeaveDays,
+      className: "text-right font-mono tabular-nums text-sm",
+      render: (entry) => Number(entry.unpaid_leave_days),
+    },
+    {
+      key: "payable_days",
+      header: copy.table.payableDays,
+      className: "text-right font-mono tabular-nums text-sm",
       render: (entry) =>
-        `${Number(entry.working_days)}/${Number(entry.standard_days)}`,
+        `${Number(entry.payable_days)}/${Number(entry.standard_days)}`,
     },
     {
       key: "gross",
@@ -132,10 +213,22 @@ export function PayrollDetailClient({
       render: (entry) => formatVND(Number(entry.gross_total)),
     },
     {
+      key: "insurance_base",
+      header: copy.table.insuranceBase,
+      className: "text-right font-mono tabular-nums text-sm",
+      render: (entry) => formatVND(Number(entry.insurance_base)),
+    },
+    {
       key: "employee_insurance",
       header: copy.table.employeeInsurance,
       className: "text-right font-mono tabular-nums text-sm",
       render: (entry) => formatVND(Number(entry.total_insurance_employee)),
+    },
+    {
+      key: "employer_insurance",
+      header: copy.table.employerInsurance,
+      className: "text-right font-mono tabular-nums text-sm",
+      render: (entry) => formatVND(Number(entry.total_insurance_employer)),
     },
     {
       key: "deductions",
@@ -175,13 +268,34 @@ export function PayrollDetailClient({
               { key: "label", content: copy.table.total(entries.length) },
               { key: "working_days", content: "" },
               {
+                key: "paid_leave_days",
+                content: totalPaidLeaveDays,
+                className: "text-right font-mono tabular-nums",
+              },
+              {
+                key: "unpaid_leave_days",
+                content: totalUnpaidLeaveDays,
+                className: "text-right font-mono tabular-nums",
+              },
+              {
+                key: "payable_days",
+                content: totalPayableDays,
+                className: "text-right font-mono tabular-nums",
+              },
+              {
                 key: "gross",
                 content: formatVND(totalGross),
                 className: "text-right font-mono tabular-nums",
               },
+              { key: "insurance_base", content: "" },
               {
                 key: "employee_insurance",
                 content: formatVND(totalInsEmp),
+                className: "text-right font-mono tabular-nums",
+              },
+              {
+                key: "employer_insurance",
+                content: formatVND(totalInsEmployer),
                 className: "text-right font-mono tabular-nums",
               },
               { key: "deductions", content: "" },
@@ -203,38 +317,94 @@ export function PayrollDetailClient({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={handleCalculate} disabled={isPending}>
-          {isPending ? (
-            <Spinner className="mr-2" />
-          ) : (
-            <IconCalculator className="mr-2 size-4" />
-          )}
-          {copy.actions.calculate}
-        </Button>
-        <Button
-          onClick={handleApprove}
-          disabled={isPending || entries.length === 0}
-          variant="outline"
-        >
-          <IconCircleCheck className="mr-2 size-4" />
-          {copy.actions.approve}
-        </Button>
-        <Button
-          onClick={handlePay}
-          disabled={isPending || entries.length === 0}
-          variant="outline"
-        >
-          <IconCreditCard className="mr-2 size-4" />
-          {copy.actions.pay}
-        </Button>
-      </div>
+      <AppSection
+        title={copy.controlTitle}
+        description={copy.controlDescription}
+        headerHint={period?.status ?? ""}
+      >
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+              <span>{copy.standardDays}</span>
+              <Input
+                aria-label={copy.standardDays}
+                className="h-9 w-24 text-right font-mono tabular-nums"
+                disabled={
+                  isPending ||
+                  (period != null &&
+                    period.status !== "draft" &&
+                    period.status !== "calculated")
+                }
+                inputMode="decimal"
+                min="0.5"
+                max="31"
+                step="0.5"
+                type="number"
+                value={standardDaysInput}
+                onChange={(event) => setStandardDaysInput(event.target.value)}
+              />
+            </label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleSaveStandardDays}
+              disabled={
+                isPending ||
+                (period != null &&
+                  period.status !== "draft" &&
+                  period.status !== "calculated")
+              }
+            >
+              {copy.actions.saveStandardDays}
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handleCalculate} disabled={isPending}>
+              {isPending ? (
+                <Spinner />
+              ) : (
+                <IconCalculator data-icon="inline-start" />
+              )}
+              {copy.actions.calculate}
+            </Button>
+            <Button
+              onClick={handleApprove}
+              disabled={isPending || entries.length === 0}
+              variant="outline"
+            >
+              <IconCircleCheck data-icon="inline-start" />
+              {copy.actions.approve}
+            </Button>
+            <Button
+              onClick={handlePay}
+              disabled={isPending || entries.length === 0}
+              variant="outline"
+            >
+              <IconCreditCard data-icon="inline-start" />
+              {copy.actions.pay}
+            </Button>
+          </div>
+        </div>
+      </AppSection>
 
       {/* Summary */}
       {entries.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-7">
           <KpiCard label={copy.summary.gross} value={formatVND(totalGross)} />
           <KpiCard label={copy.summary.headcount} value={entries.length} />
+          <KpiCard
+            label={copy.summary.paidLeaveDays}
+            value={totalPaidLeaveDays}
+          />
+          <KpiCard
+            label={copy.summary.employeeInsurance}
+            value={formatVND(totalInsEmp)}
+          />
+          <KpiCard
+            label={copy.summary.employerInsurance}
+            value={formatVND(totalInsEmployer)}
+          />
           <KpiCard label={copy.summary.pit} value={formatVND(totalPit)} />
           <KpiCard
             label={copy.summary.net}
@@ -244,62 +414,91 @@ export function PayrollDetailClient({
         </div>
       )}
 
-      <DataTable
-        columns={columns}
-        data={entries}
-        getRowKey={(entry) => entry.id}
-        emptyTitle={copy.table.empty}
-        desktopFooterRows={footerRows}
-        mobileFooter={
-          entries.length > 0 ? (
+      <AppSection
+        title={copy.entriesTitle}
+        description={copy.entriesDescription}
+        headerHint={
+          entries.length > 0 ? copy.table.total(entries.length) : undefined
+        }
+        contentFlush
+      >
+        <DataTable
+          columns={columns}
+          data={entries}
+          getRowKey={(entry) => entry.id}
+          emptyTitle={copy.table.empty}
+          desktopFooterRows={footerRows}
+          mobileFooter={
+            entries.length > 0 ? (
+              <Item variant="outline">
+                <ItemContent>
+                  <ItemTitle className="line-clamp-none text-sm font-semibold">
+                    {copy.table.total(entries.length)}
+                  </ItemTitle>
+                  <ItemDescription className="line-clamp-none text-sm leading-6">
+                    {copy.summary.gross}: {formatVND(totalGross)} ·{" "}
+                    {copy.summary.pit}: {formatVND(totalPit)}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <div className="text-right font-mono tabular-nums font-bold">
+                    {formatVND(totalNet)}
+                  </div>
+                </ItemActions>
+              </Item>
+            ) : null
+          }
+          mobileCardRender={(entry) => (
             <Item variant="outline">
               <ItemContent>
                 <ItemTitle className="line-clamp-none text-sm font-semibold">
-                  {copy.table.total(entries.length)}
+                  {entry.employees?.profiles?.full_name ?? "—"}
                 </ItemTitle>
                 <ItemDescription className="line-clamp-none text-sm leading-6">
-                  {copy.summary.gross}: {formatVND(totalGross)} · {copy.summary.pit}:{" "}
-                  {formatVND(totalPit)}
+                  {entry.employees?.employee_code ?? "—"} ·{" "}
+                  {Number(entry.payable_days)}/{Number(entry.standard_days)}{" "}
+                  {copy.table.payableDays}
                 </ItemDescription>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <span>{copy.table.workingDays}</span>
+                  <span className="text-right font-mono tabular-nums">
+                    {Number(entry.working_days)}
+                  </span>
+                  <span>{copy.table.paidLeaveDays}</span>
+                  <span className="text-right font-mono tabular-nums">
+                    {Number(entry.paid_leave_days)}
+                  </span>
+                  <span>{copy.table.unpaidLeaveDays}</span>
+                  <span className="text-right font-mono tabular-nums">
+                    {Number(entry.unpaid_leave_days)}
+                  </span>
+                  <span>{copy.table.gross}</span>
+                  <span className="text-right font-mono tabular-nums">
+                    {formatVND(Number(entry.gross_total))}
+                  </span>
+                  <span>{copy.table.insuranceBase}</span>
+                  <span className="text-right font-mono tabular-nums">
+                    {formatVND(Number(entry.insurance_base))}
+                  </span>
+                  <span>{copy.table.employeeInsurance}</span>
+                  <span className="text-right font-mono tabular-nums">
+                    {formatVND(Number(entry.total_insurance_employee))}
+                  </span>
+                  <span>{copy.table.pit}</span>
+                  <span className="text-right font-mono tabular-nums">
+                    {formatVND(Number(entry.pit_tax))}
+                  </span>
+                </div>
               </ItemContent>
               <ItemActions>
                 <div className="text-right font-mono tabular-nums font-bold">
-                  {formatVND(totalNet)}
+                  {formatVND(Number(entry.net_salary))}
                 </div>
               </ItemActions>
             </Item>
-          ) : null
-        }
-        mobileCardRender={(entry) => (
-          <Item variant="outline">
-            <ItemContent>
-              <ItemTitle className="line-clamp-none text-sm font-semibold">
-                {entry.employees?.profiles?.full_name ?? "—"}
-              </ItemTitle>
-              <ItemDescription className="line-clamp-none text-sm leading-6">
-                {entry.employees?.employee_code ?? "—"} ·{" "}
-                {Number(entry.working_days)}/{Number(entry.standard_days)}{" "}
-                {copy.table.workingDays}
-              </ItemDescription>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                <span>{copy.table.gross}</span>
-                <span className="text-right font-mono tabular-nums">
-                  {formatVND(Number(entry.gross_total))}
-                </span>
-                <span>{copy.table.pit}</span>
-                <span className="text-right font-mono tabular-nums">
-                  {formatVND(Number(entry.pit_tax))}
-                </span>
-              </div>
-            </ItemContent>
-            <ItemActions>
-              <div className="text-right font-mono tabular-nums font-bold">
-                {formatVND(Number(entry.net_salary))}
-              </div>
-            </ItemActions>
-          </Item>
-        )}
-      />
+          )}
+        />
+      </AppSection>
     </div>
   );
 }

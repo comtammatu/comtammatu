@@ -8,49 +8,82 @@ const payrollActionsSource = readFileSync(
   join(process.cwd(), "app/(protected)/hr/payroll-actions.ts"),
   "utf8",
 );
+const annualLeaveMigrationSource = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260626102342_hr_payroll_annual_leave.sql",
+  ),
+  "utf8",
+);
+const contractInsuranceMigrationSource = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260626144240_hr_contracts_insurance_payroll.sql",
+  ),
+  "utf8",
+);
 
-// Strip the single intentional doc comment that names employment_contracts so
-// the "no live contract reference" guard below only inspects executable code.
 const payrollActionsCode = payrollActionsSource
   .split("\n")
   .filter((line) => !line.trim().startsWith("//"))
   .join("\n");
 
-test("HKD payroll: contract-less eligibility (is_active && base_salary > 0)", () => {
-  assert.match(
-    payrollActionsSource,
-    /\.select\("id, base_salary, dependents_count, is_active"\)/,
-    "employee fetch must include is_active for the eligibility filter",
-  );
-  assert.match(
-    payrollActionsSource,
-    /emp\.is_active && Number\(emp\.base_salary \?\? 0\) > 0/,
-    "eligibility must be is_active AND base_salary > 0 (no contract lookup)",
-  );
-});
-
-test("HKD payroll: BHXH off via insuranceBaseSalary literal 0", () => {
-  assert.match(
+test("Payroll source: active contract first, employee row fallback", () => {
+  assert.ok(payrollActionsSource, "payroll action source should load");
+  for (const expected of [
+    "insurance_base_salary, dependents_count",
+    'from("employment_contracts")',
+    "contractByEmployee",
+    "contract?.gross_salary ?? emp.base_salary ?? 0",
+    "contract?.insurance_base_salary ?? emp.insurance_base_salary ?? 0",
+    "insuranceBaseSalary,",
+  ]) {
+    assert.ok(
+      payrollActionsSource.includes(expected),
+      `expected calculatePayroll to include ${expected}`,
+    );
+  }
+  assert.doesNotMatch(
     payrollActionsSource,
     /insuranceBaseSalary: 0,/,
-    "calculatePayrollEntry must be called with insuranceBaseSalary: 0",
+    "BHXH must come from contract/employee insurance base, not literal 0",
   );
 });
 
 test("HKD payroll: standardDays === 0 guard", () => {
   assert.match(
     payrollActionsSource,
+    /\.select\("id, period_month, period_year, standard_days, status"\)/,
+    "calculatePayroll must read owner-entered standard_days from payroll_periods",
+  );
+  assert.match(
+    payrollActionsSource,
     /if \(standardDays === 0\) \{[\s\S]*?Kỳ lương không có ngày công chuẩn/,
     "calculatePayroll must guard against a zero standard-day period",
   );
+  assert.doesNotMatch(
+    payrollActionsSource,
+    /getUTCDay\(\)|daysInMonth|for \(let d = 1; d <=/,
+    "payroll must not auto-count weekday standard days",
+  );
 });
 
-test("HKD payroll: no live employment_contracts reference remains", () => {
-  assert.doesNotMatch(
-    payrollActionsCode,
-    /employment_contracts|contractByEmployee|contractErr|\bconst contract\b/,
-    "no live contract code may remain (else ReferenceError at runtime)",
-  );
+test("HKD payroll: attendance and leave day snapshots are explicit", () => {
+  for (const expected of [
+    '.select("employee_id, date, check_out")',
+    "buildCompletedWorkdays",
+    "annual_leave_entitlements",
+    "splitAnnualLeaveByQuota",
+    "calculatePayableDays",
+    "paid_leave_days: paidLeaveDays",
+    "unpaid_leave_days: unpaidLeaveDays",
+    "payable_days: payableDays",
+  ]) {
+    assert.ok(
+      payrollActionsSource.includes(expected),
+      `expected calculatePayroll to include ${expected}`,
+    );
+  }
 });
 
 test("HKD payroll: list queries are bounded", () => {
@@ -80,6 +113,43 @@ test("HKD payroll: calculate reports employeeCount from the RPC result", () => {
     /employee_count\s*\?\?\s*entries\.length/,
     "meta.employeeCount must read the RPC's persisted-row count (regression for the calculated(0) toast)",
   );
+});
+
+test("HKD payroll migration adds annual leave quota and payroll day snapshots", () => {
+  for (const expected of [
+    "CREATE TABLE public.annual_leave_entitlements",
+    "CONSTRAINT annual_leave_entitlements_employee_year_key UNIQUE",
+    "ADD COLUMN standard_days numeric(5,1)",
+    "ADD COLUMN paid_leave_days numeric(5,1)",
+    "ADD COLUMN unpaid_leave_days numeric(5,1)",
+    "ADD COLUMN payable_days numeric(5,1)",
+    "pg_advisory_xact_lock(v_request.employee_id)",
+    "annual leave quota exceeded",
+    "working_days, paid_leave_days, unpaid_leave_days, payable_days",
+    "paid_leave_days = EXCLUDED.paid_leave_days",
+    "unpaid_leave_days = EXCLUDED.unpaid_leave_days",
+    "payable_days = EXCLUDED.payable_days",
+  ]) {
+    assert.ok(
+      annualLeaveMigrationSource.includes(expected),
+      `expected annual leave migration to include ${expected}`,
+    );
+  }
+});
+
+test("Contract insurance migration opens HĐLĐ writes and syncs BHXH cache", () => {
+  for (const expected of [
+    "CREATE POLICY contracts_write",
+    "hr:manage_employee",
+    "UPDATE OF status, gross_salary, insurance_base_salary, start_date, end_date",
+    "latest_active_contract",
+    "insurance_base_salary = latest_active_contract.insurance_base_salary",
+  ]) {
+    assert.ok(
+      contractInsuranceMigrationSource.includes(expected),
+      `expected contract insurance migration to include ${expected}`,
+    );
+  }
 });
 
 // Regression: shared engine math under the HKD model (insuranceBaseSalary=0).
@@ -118,6 +188,20 @@ test("HKD engine: 25M / 1 dependent → taxable 3.3M, PIT 165k, BHXH 0", () => {
   assert.equal(r.totalInsuranceEmployee, 0);
   assert.equal(r.taxableIncome, 3_300_000);
   assert.equal(r.pitTax, 165_000);
+});
+
+test("BHXH engine: 25M gross and insurance base → NLĐ pays 10.5%", () => {
+  const r = calculatePayrollEntry({
+    ...HKD,
+    grossTotal: 25_000_000,
+    insuranceBaseSalary: 25_000_000,
+    dependentCount: 1,
+  });
+  assert.equal(r.totalInsuranceEmployee, 2_625_000);
+  assert.equal(r.totalInsuranceEmployer, 5_375_000);
+  assert.equal(r.taxableIncome, 675_000);
+  assert.equal(r.pitTax, 33_750);
+  assert.equal(r.netSalary, 22_341_250);
 });
 
 test("HKD engine: 35M / 0 dependents → taxable 19.5M, BHXH 0", () => {

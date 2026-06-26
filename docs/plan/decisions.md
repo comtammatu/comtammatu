@@ -155,14 +155,14 @@
 
 1. **Ngày công chuẩn:** `standard_days` = số công chuẩn CỐ ĐỊNH owner nhập theo tháng + clamp `working/standard ≤ 1`. Trích helper shared.
 2. **Checklist:** GIỮ. Gán theo `positions.code` (mặc định) + override theo người (`employees.default_checklist_template_id`).
-3. **Lương qua `employees.base_salary`:** UI nhập `base_salary` + `dependents_count`; `calculatePayroll` eligibility theo base_salary (KHÔNG khôi phục `employment_contracts`). BHXH đơn giản.
+3. **Lương qua HĐLĐ khi có, fallback hồ sơ NV:** UI nhập `base_salary` + `dependents_count` + mức lương đóng BH. `calculatePayroll` ưu tiên `employment_contracts` active trong kỳ; nếu chưa có HĐ thì fallback `employees.base_salary` cho dữ liệu HKD cũ.
 4. **Ca làm:** GIỮ (xem D027 — đảo §4 cũ "ca ít giá trị"), đặt ở "Thiết lập".
 
 **IA:** gom 5 tab `/hr` → 3 trục **Người · Ngày công · Lương**; Ca + checklist → "Thiết lập". `defaultTab` động (owner→Người, BM→Ngày công).
 
-**Consequences:** Scope = truthful daily attendance, checklist-by-position, employee CRUD, leave notifications, payroll via `base_salary`. D012 vẫn áp: KHÔNG rostering/auto-late/auto-absent/số dư phép/duyệt nhiều tầng.
+**Consequences:** Scope = truthful daily attendance, checklist-by-position, employee CRUD, leave notifications, payroll via HĐLĐ/fallback hồ sơ. D012 vẫn áp: KHÔNG rostering/auto-late/auto-absent/số dư phép/duyệt nhiều tầng.
 
-**Status (2026-06-20):** IA 3-trục + payroll `base_salary` + checklist-theo-vị-trí ĐÃ SHIP. §1 `standard_days` HIỆN vẫn auto-đếm ngày thường (chưa phải owner nhập) + clamp `working/standard` chưa làm; phần còn lại track ở `tasks/todo.md`.
+**Status (2026-06-26):** IA 3-trục + payroll `standard_days` owner nhập + phép năm + HĐLĐ/BHXH đang được rebuild ở branch `codex/hrm-payroll-annual-leave`. Không apply production DB; owner apply migration thủ công.
 
 ## D027: Chấm công theo CA (per-shift), không theo ngày (2026-06-15)
 
@@ -209,7 +209,7 @@
 
 **Phán quyết owner:**
 
-(a) **Payroll vào app theo mô hình HKD đơn giản** — đọc `employees.base_salary` + ngày công + `dependents_count` + PIT legal-version; KHÔNG `employment_contracts`, BHXH = 0; không migration (cột có sẵn prod). Form NV thu `base_salary`/ID/bank/`dependents_count` (owner-only PII). Đi sau/khớp D026/D027.
+(a) **Payroll vào app theo mô hình HKD có HĐLĐ/BHXH tối thiểu** — đọc HĐLĐ active trong kỳ khi có (`gross_salary`, `insurance_base_salary`), fallback `employees.base_salary`/`employees.insurance_base_salary` cho dữ liệu cũ; ngày công + phép năm + `dependents_count` + PIT/BH legal-version. Form NV thu `base_salary`/mức lương đóng BH/ID/bank/`dependents_count`/thông tin HĐ tối thiểu (owner-only PII). Đi sau/khớp D026/D027.
 (b) **Runner = đồng hồ chờ**, chỉ hiện đơn ĐANG LÀM (`['pending','preparing']`, không lane `ready`); đổi tên khỏi "Gọi số"; thêm thang tuổi + overflow.
 (c) **Bỏ `customer_count`** (đã drop, `20260616100000`) + **tách hóa đơn** = N partial payment/đơn: 1 migration T3 nguyên tử (DROP `idx_payments_order_active` + nới gate amount ở `create_payment`/`confirm_*` + RPC `record_partial_payment` FOR UPDATE+SUM). Order flip 'paid' khi SUM(completed)>=total; status 'partial' derive-at-read.
 (d) **Danh tính HKD vào UI** — SSoT = `tenants.legal_name`/`tax_code` (KHÔNG `system_settings`); card owner-only. Bỏ 3 field chết General (`service_charge`/`store_phone`/`store_email`). ĐÓNG: card đã ship; print-render seller-name BỎ theo owner (Viettel tự điền từ MST — xem đính chính 1).
@@ -226,7 +226,7 @@
 
 - **A (nền, bắt buộc) = thực thi D031** (track nav/IA, status/DataTable, pagination, surface) + HRM (D026/D027). 1 trạng thái = 1 màu/nhãn, DataTable phủ mọi bảng, enforce `AppPage` padding, gộp module-shell về 1 `AppShell` (W5).
 - **B (lớp khác biệt, chỉ làm SAU khi A đủ phủ + update spec TRƯỚC khi apply token):** (1) tách `info`-hue (hiện `--info` == `--foreground`); (2) bật lại dark mode (token `.dark` đủ, đang bị `forcedTheme="light"`) **[OPEN]** phạm vi; (3) chiều sâu dashboard + `chart-1..5`; (4) ⌘K command palette; (5) **[OPEN — taste]** `--radius` 0.625→0.75rem.
-- **GIỮ:** `primary` đỏ gạch + palette Concept 01; Rhythm/Radius/Motion contract. *(Typography Inter/Montserrat/JetBrains → ĐẢO bởi D038: chuyển Geist.)*
+- **GIỮ:** `primary` đỏ gạch + palette Concept 01; Rhythm/Radius/Motion contract. _(Typography Inter/Montserrat/JetBrains → ĐẢO bởi D038: chuyển Geist.)_
 
 **Quan hệ:** A = D031 (+ D026/D027); kế thừa D019, D029/D030. Mỗi PR = 1 route family / 1 primitive rollout.
 
@@ -252,9 +252,10 @@
 
 **Decision:** Xây một "Agentic OS" cho Má Tư theo hướng **95% deterministic + 5% LLM mỏng-bounded**, trên xương sống `notifications` sẵn có. Hợp đồng SSoT = `docs/agent/rules/notifications.md`; tầm nhìn + lộ trình + sprint + agent-team = `docs/plan/agentic-os-blueprint.md`. Bắt đầu bằng **wedge S0**: Cash Sentinel + Till Anomaly chạy **shadow-only** (chỉ ghi `agent_decisions`), 0 blast radius.
 
-**Context:** Phễu "phần mềm hỗ trợ HKD" (D012) + "tài chính trước, tiền mặt hiện hữu" (D028). Rò rỉ ở quầy (lệch quỹ, void/discount, giá NCC trườn, food-cost drift) là tổn thất sống còn mà mắt người không thấy theo mẫu. Owner muốn "agent trông quán" để chuyển từ *canh chừng lo âu* sang *mỗi ngày báo đúng + cờ cái sai kèm đề xuất*.
+**Context:** Phễu "phần mềm hỗ trợ HKD" (D012) + "tài chính trước, tiền mặt hiện hữu" (D028). Rò rỉ ở quầy (lệch quỹ, void/discount, giá NCC trườn, food-cost drift) là tổn thất sống còn mà mắt người không thấy theo mẫu. Owner muốn "agent trông quán" để chuyển từ _canh chừng lo âu_ sang _mỗi ngày báo đúng + cờ cái sai kèm đề xuất_.
 
 **Quyết định owner đã chốt (verify vs CODE + PROD, không từ docs cũ):**
+
 - **Ngưỡng:** lệch quỹ `max(20.000đ, 0.1%×expected_cash)`; void `>10%`/ca; discount `>5%`/ca và `>20%`/đơn; ca mở `>16h`; payment treo `>2h`. (Lệch quỹ #1 ĐÃ có trigger `trg_notify_pos_shift_variance` — chỉ **retune hằng số**, không xây mới.)
 - **Routing 2 kênh tách bạch:** Web Push = theo `target_roles` (critical → owner; warning → owner + branch_manager, **digest cuối ngày**, không push giữa ca). **branch_manager chỉ ở Web Push.** Telegram Supergroup = **theo thành viên group** (owner + người được đặc cách mời), **tách khỏi role app**; cả critical lẫn warning vào topic; dispatcher role-agnostic.
 - **Quiet hours:** warning → digest; critical → push ngay.
@@ -263,6 +264,7 @@
 - **Báo cáo ngày/tuần/tháng** là phần giá trị cao nhất (xác nhận tích cực, không chỉ cảnh báo); "Đóng ngày" 02:05 ICT là flagship.
 
 **Why (kiến trúc + ràng buộc):**
+
 - Producer → `notifications` (dedup_key) → Dispatchers (Web Push role-based **[live]** + Telegram topic-based **[designed]**, mỗi cái claim-RPC + ledger riêng) → Channels → Audiences. **Telegram phải SOI Web Push, KHÔNG dùng `notification_outbox`** (user-gated + read→loop→update đua double-send).
 - **Tool của agent = 214 RPC `SECURITY DEFINER` sẵn có** (allowlist + cap), không xây action API mới. Precedent role-hardening: migration `20260619062853`.
 - Cron mới CHỈ làm phần trigger không làm được (aggregate + staleness); test khẳng định 0 trùng kind của trigger (#1, #6).
@@ -285,7 +287,7 @@
 1. **Touch tier form control (gated):** thêm value `touch` vào `size` cva của `Select`(trigger)/`Switch`/`Checkbox`/`RadioGroupItem` (`min-h-12` trigger, box 20px + hit-area ≥44px), theo precedent §"Button is the single source of truth for button height". Consumer opt-in qua `size="touch"`. Default render KHÔNG đổi.
 2. **bo-slide deck → standalone** (không vào route surface; không dựng report-export capability).
 3. **Glossary casing → `vi.ts` authoritative** (TitleCase "Bếp Trung Tâm" là SSoT; bundle mirror, không fork sentence-case).
-4. **Font Geist** *(ĐẢO bởi D038 cùng ngày — owner chốt dùng Geist; xem D038)*.
+4. **Font Geist** _(ĐẢO bởi D038 cùng ngày — owner chốt dùng Geist; xem D038)_.
 
 **Out of scope:** net-new prop khác bundle quảng cáo (`Button rice`, `Avatar` fill/status, `Progress` size/label, `Textarea showCount`) — chưa duyệt, đụng contract khóa.
 
@@ -382,7 +384,7 @@ auth.uid()`, và require `has_permission(branch, 'pos:use')` — KHỚP gate c�
 DUY NHẤT (action `createPayment` chạy `posUseAuth`, xử lý cả tiền mặt). Đóng lỗ "any
 authenticated user spoof tham số tạo/chốt thanh toán" (audit PR2). PR #85 merged.
 
-**Defer (owner quyết 2026-06-21):** *Hoàn tất* thanh toán (đánh dấu đơn `paid`) hiện
+**Defer (owner quyết 2026-06-21):** _Hoàn tất_ thanh toán (đánh dấu đơn `paid`) hiện
 chỉ cần `pos:use` qua `createPayment` — trong khi `confirm_cash_payment` lại đòi
 `pos:confirm_payment`. Bất nhất này (waiter chỉ-`pos:use` vẫn chốt được đơn) GIỮ
 NGUYÊN; siết completion về `pos:confirm_payment` là PR riêng (phải đổi cả action
@@ -401,12 +403,12 @@ phạm vi **toàn bộ surfaces** (POS / KDS-Runner / Admin / Inventory / Employ
 
 **Phân lớp sau cải cách (đây là điểm thay đổi contract đang khoá):**
 
-| Lớp | Vai trò |
-| --- | --- |
-| `DESIGN.md` (root) | **Foundation agent-facing**: YAML token (oklch) + rationale 8 section. Agent / Claude Design / tool ngoài đọc TRƯỚC. Owner đọc được. |
-| `packages/ui/src/styles/globals.css` | **Token source-of-record lúc runtime** (build ăn file này). |
-| `docs/spec/design-system.md` | Hạ xuống **lớp ENFORCEMENT**: authority order, ratchets, allowlist, surface contracts, lint — *trỏ về* `DESIGN.md` cho token + thẩm mỹ, không còn tự xưng "single source". |
-| Drift-guard | `DESIGN.md` YAML ↔ `globals.css` khoá bằng 1 lint check — đúng pattern `AGENTS.md ↔ engineering.md` (`pnpm lint:rules-mirror`). 1 nguồn giá trị, mirror có chủ đích, có guard → SSoT còn nguyên. |
+| Lớp                                  | Vai trò                                                                                                                                                                                          |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DESIGN.md` (root)                   | **Foundation agent-facing**: YAML token (oklch) + rationale 8 section. Agent / Claude Design / tool ngoài đọc TRƯỚC. Owner đọc được.                                                             |
+| `packages/ui/src/styles/globals.css` | **Token source-of-record lúc runtime** (build ăn file này).                                                                                                                                      |
+| `docs/spec/design-system.md`         | Hạ xuống **lớp ENFORCEMENT**: authority order, ratchets, allowlist, surface contracts, lint — _trỏ về_ `DESIGN.md` cho token + thẩm mỹ, không còn tự xưng "single source".                       |
+| Drift-guard                          | `DESIGN.md` YAML ↔ `globals.css` khoá bằng 1 lint check — đúng pattern `AGENTS.md ↔ engineering.md` (`pnpm lint:rules-mirror`). 1 nguồn giá trị, mirror có chủ đích, có guard → SSoT còn nguyên. |
 
 **Chốt:**
 
@@ -428,32 +430,35 @@ phạm vi **toàn bộ surfaces** (POS / KDS-Runner / Admin / Inventory / Employ
 elevated; hạ cấp `design-system.md`; viết lint drift-guard DESIGN.md↔globals.css;
 sửa `ui.md` + `AGENTS.md`. Tới lúc đó vẫn giữ enforcement hiện hành.
 
-## D045 — Shell điều hướng 2 tầng (icon rail + panel) — 2026-06-22
+## D045 — Shell điều hướng một sidebar (tab + sub-tab) — 2026-06-22
 
-Quyết định: Chrome Management (AppShell duy nhất) chuyển từ một sidebar phẳng
-(navGroups[]) sang 2 tầng trong CÙNG một SidebarProvider/SidebarInset:
-tầng-1 = icon rail luôn hiện (Sidebar collapsible="none", icon + tooltip) làm
-bộ chuyển mô-đun cross-module, single-sourced bởi resolveOfficeRailItems;
-tầng-2 = deep nav của mô-đun đang mở, render bằng khối Sidebar inset hiện có.
-AppShell nhận `tier1: ShellNavItem[]` + `tier2: ShellNavGroup[]` thay cho
-`navGroups[]`; prop `collapsible` bị bỏ. Rail LUÔN nhận home branchId nên nhóm
-branch-management không còn nhấp nháy giữa các mô-đun. Vẫn là chrome family #1
-(một shell, một header) — rail không phải sidebar thứ hai, chỉ là cột icon cố định.
+Quyết định: Chrome Management (AppShell duy nhất) dùng một sidebar trong cùng
+một `SidebarProvider`/`SidebarInset`. `AppShell` nhận
+`tier1: ShellNavItem[]` + `tier2: ShellNavGroup[]` thay cho `navGroups[]`:
+`tier1` là tab chính cross-module, `tier2` là sub-tab/deep nav của mô-đun đang
+mở và render lồng dưới tab chính đang active.
+
+Tab chính không trải phẳng mọi page con. Admin gom về một tab "Quản trị";
+branch management gom về một tab "Quản lý chi nhánh"; domain workspace như
+Kho/Tài chính/Nhân sự/Thực đơn/Đơn hàng giữ vai trò tab chính theo quyền ACL.
+Branch tab nhận home branchId nên nhóm branch-management không nhấp nháy giữa
+các mô-đun. Vẫn là chrome family #1: một shell, một sidebar, một header.
 
 Hệ quả:
-- Sửa tại chỗ apps/web/app/components/app-shell.tsx; KHÔNG thêm *-shell.tsx,
+
+- Sửa tại chỗ apps/web/app/components/app-shell.tsx; KHÔNG thêm \*-shell.tsx,
   KHÔNG thêm SidebarProvider/main → baseline shell-registry giữ nguyên.
 - 4 wrapper (office-module/finance/inventory/branch-management) đổi sang truyền
   tier1+tier2; finance giữ realtime channel ở mức shell, inventory giữ nav
   branch-reactive ở tier-2. RSC vẫn chỉ truyền `module` id serializable.
-- Mobile: bottom-nav = tier-2 (deep nav mô-đun), thêm tab "Mô-đun" mở tier-1 +
-  tab "Menu" mở drawer 2 phần; selectBottomNavItems chỉ flatten trong tier-2.
+- Mobile `<md`: bottom-nav = tier-2 (deep nav mô-đun), chỉ một tab "Mô-đun" mở
+  drawer sidebar đầy đủ; selectBottomNavItems chỉ flatten trong tier-2. Tablet
+  `md` trở lên ẩn bottom-nav vì sidebar cố định đã hiện.
 - nav-as-data + MODULE_ACL single-source giữ nguyên (không có literal inline,
   mọi href vẫn resolve về MODULE_ACL). Thêm test resolver tier-1/ACL trước khi
   refactor (trước đây không có lưới regression).
-- §A/§B của design-system.md được nới: "một sidebar" nay gồm rail icon cố định +
-  panel deep-nav trong cùng SidebarProvider; cập nhật docs/modules/ui.md cùng PR
-  (lint:doc-staleness fail-closed).
+- §A/§B của design-system.md giữ nguyên "một sidebar"; sub-nav mô-đun không được
+  lan thành chrome/sidebar riêng theo route.
 
 Đảo quyết định này phải sửa bản ghi này trước.
 
@@ -464,6 +469,7 @@ Hệ quả:
 **Context:** Web Push để "Chưa cấu hình" (thiếu cặp khoá VAPID); owner không muốn vận hành khoá + cron. Máy POS/KDS mở cả ngày nên popup foreground đủ cho nhu cầu thật (báo đơn/việc khẩn lúc đang dùng). Đánh đổi đã chấp nhận: **KHÔNG có thông báo khi app đóng**.
 
 **Consequences:**
+
 - Xoá: `lib/notifications/web-push.ts` + `push-targeting.ts`, route cron `notifications-push`, 4 Server Action push, handler `push` trong `sw.ts` (giữ `notificationclick`), env `WEB_PUSH_*` (turbo/vercel/.env.example), dep `web-push`. Migration `20260622130000_drop_notification_web_push.sql` theo lệ file→PR→owner apply; `database.types.ts` regen SAU khi apply prod.
 - Thêm: `_hooks/use-foreground-notifications.ts`, `_components/notification-popup-control.tsx`, `lib/notifications/popup-preference.ts` (mute qua `device-prefs`, không đụng `localStorage` trực tiếp → qua `check-client-storage` allowlist).
 - **Severity (owner chốt 2026-06-22):** popup bắn cho **mọi** severity nhìn thấy được (gồm `info` `pos.order_new` — báo đơn mới cho bếp/POS). Khác chính sách push-server cũ (critical-only) vì popup foreground chỉ kêu khi app đang mở nên ít phiền hơn. Code đã đúng — không filter severity.

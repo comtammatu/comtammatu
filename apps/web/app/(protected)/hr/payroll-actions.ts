@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -13,8 +14,22 @@ import {
   type RpcErrorMapping,
   type RpcErrorFallback,
 } from "@/_lib/rpc-error-map";
+import {
+  buildCompletedWorkdays,
+  calculatePayableDays,
+  countOverlapDays,
+  splitAnnualLeaveByQuota,
+  suggestAnnualLeaveEntitlement,
+  type LeaveRange,
+} from "./payroll-day-math";
 
 const PAYROLL_ROLES: readonly StaffRole[] = ["owner"];
+
+function previousDate(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const previous = new Date(Date.UTC(year!, month! - 1, day!) - 86_400_000);
+  return previous.toISOString().slice(0, 10);
+}
 
 /* ─── Fetch Payroll Periods ─── */
 
@@ -47,6 +62,7 @@ export async function fetchPayrollPeriods(): Promise<ActionResult> {
 const createPeriodSchema = z.object({
   month: z.coerce.number().int().min(1).max(12),
   year: z.coerce.number().int().min(2020),
+  standardDays: z.coerce.number().positive().max(31),
 });
 
 export const createPayrollPeriod = withAction(
@@ -62,8 +78,9 @@ export const createPayrollPeriod = withAction(
         tenant_id: claims.tenant_id,
         period_month: data.month,
         period_year: data.year,
+        standard_days: data.standardDays,
       })
-      .select("id, period_month, period_year, status")
+      .select("id, period_month, period_year, standard_days, status")
       .single();
 
     if (error) {
@@ -77,6 +94,69 @@ export const createPayrollPeriod = withAction(
     }
 
     return { success: true, data: result };
+  },
+);
+
+/* ─── Fetch / Update Payroll Period ─── */
+
+const periodIdSchema = z.object({
+  periodId: z.coerce.number().int().positive(),
+});
+
+export const fetchPayrollPeriod = withAction(
+  {
+    roles: PAYROLL_ROLES,
+    schema: periodIdSchema,
+    permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
+  },
+  async (data, { supabase, claims }) => {
+    const { data: period, error } = await supabase
+      .from("payroll_periods")
+      .select(
+        "id, period_month, period_year, standard_days, status, approved_at, paid_at",
+      )
+      .eq("id", data.periodId)
+      .eq("tenant_id", claims.tenant_id)
+      .single();
+
+    if (error || !period) {
+      return { success: false, error: "Kỳ lương không tồn tại." };
+    }
+
+    return { success: true, data: period };
+  },
+);
+
+const updateStandardDaysSchema = periodIdSchema.extend({
+  standardDays: z.coerce.number().positive().max(31),
+});
+
+export const updatePayrollPeriodStandardDays = withAction(
+  {
+    roles: PAYROLL_ROLES,
+    schema: updateStandardDaysSchema,
+    permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
+  },
+  async (data, { supabase, claims }) => {
+    const { data: updated, error } = await supabase
+      .from("payroll_periods")
+      .update({ standard_days: data.standardDays })
+      .eq("id", data.periodId)
+      .eq("tenant_id", claims.tenant_id)
+      .in("status", ["draft", "calculated"])
+      .select("id, period_month, period_year, standard_days, status")
+      .single();
+
+    if (error || !updated) {
+      return {
+        success: false,
+        error: "Chỉ có thể sửa ngày công chuẩn cho kỳ nháp hoặc đã tính.",
+      };
+    }
+
+    revalidatePath("/hr/payroll");
+    revalidatePath(`/hr/payroll/${data.periodId}`);
+    return { success: true, data: updated };
   },
 );
 
@@ -111,10 +191,6 @@ const payrollCalcFallback: RpcErrorFallback = {
   errorCode: "payroll.calculate.unknown",
 };
 
-const periodIdSchema = z.object({
-  periodId: z.coerce.number().int().positive(),
-});
-
 export const calculatePayroll = withAction(
   {
     roles: PAYROLL_ROLES,
@@ -122,11 +198,10 @@ export const calculatePayroll = withAction(
     permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
   },
   async (data, { supabase, claims }) => {
-    // HKD payroll: base_salary direct, no employment_contracts; BHXH off (insuranceBaseSalary=0); TNCN via versioned brackets.
-    // Load period
+    // Payroll source: active contract when present; employee row is fallback for old HKD records.
     const { data: period, error: periodErr } = await supabase
       .from("payroll_periods")
-      .select("id, period_month, period_year, status")
+      .select("id, period_month, period_year, standard_days, status")
       .eq("id", data.periodId)
       .eq("tenant_id", claims.tenant_id)
       .single();
@@ -145,13 +220,7 @@ export const calculatePayroll = withAction(
     const year = period.period_year;
     const month = period.period_month;
     const endDate = getVNMonthEndDateString(year, month);
-    const daysInMonth = Number(endDate.slice(-2));
-
-    let standardDays = 0;
-    for (let d = 1; d <= daysInMonth; d++) {
-      const day = new Date(Date.UTC(year, month - 1, d, 5, 0, 0)).getUTCDay();
-      if (day !== 0 && day !== 6) standardDays++;
-    }
+    const standardDays = Number(period.standard_days ?? 0);
 
     if (standardDays === 0) {
       return { success: false, error: "Kỳ lương không có ngày công chuẩn." };
@@ -161,28 +230,75 @@ export const calculatePayroll = withAction(
 
     const { data: employees, error: empErr } = await supabase
       .from("employees")
-      .select("id, base_salary, dependents_count, is_active")
+      .select(
+        "id, base_salary, insurance_base_salary, dependents_count, is_active, start_date",
+      )
       .eq("tenant_id", claims.tenant_id);
 
     if (empErr) {
       return { success: false, error: "Không thể tải danh sách nhân viên." };
     }
 
-    const eligibleEmployees = employees.filter(
-      (emp) => emp.is_active && Number(emp.base_salary ?? 0) > 0,
-    );
+    const activeEmployees = employees.filter((emp) => emp.is_active);
+    if (activeEmployees.length === 0) {
+      return {
+        success: false,
+        error: "Không có nhân viên đang làm việc trong kỳ này.",
+      };
+    }
+
+    const activeEmployeeIds = activeEmployees.map((emp) => emp.id);
+
+    const { data: contracts, error: contractErr } = await supabase
+      .from("employment_contracts")
+      .select(
+        "employee_id, gross_salary, insurance_base_salary, start_date, end_date, status",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", "active")
+      .in("employee_id", activeEmployeeIds)
+      .lte("start_date", endDate)
+      .or(`end_date.is.null,end_date.gte.${startDate}`);
+
+    if (contractErr) {
+      return {
+        success: false,
+        error: "Không thể tải hợp đồng lao động. Tính lương bị hủy.",
+      };
+    }
+
+    const contractByEmployee = new Map<
+      number,
+      {
+        gross_salary: number;
+        insurance_base_salary: number;
+        start_date: string;
+      }
+    >();
+    for (const contract of [...(contracts ?? [])].sort((a, b) =>
+      b.start_date.localeCompare(a.start_date),
+    )) {
+      if (!contractByEmployee.has(contract.employee_id)) {
+        contractByEmployee.set(contract.employee_id, contract);
+      }
+    }
+
+    const eligibleEmployees = activeEmployees.filter((emp) => {
+      const contract = contractByEmployee.get(emp.id);
+      return Number(contract?.gross_salary ?? emp.base_salary ?? 0) > 0;
+    });
 
     if (eligibleEmployees.length === 0) {
       return {
         success: false,
         error:
-          "Không có nhân viên đang làm việc có lương cơ bản trong kỳ này.",
+          "Không có nhân viên đang làm việc có lương cơ bản hoặc hợp đồng trong kỳ này.",
       };
     }
 
     const { data: attendance, error: attendanceErr } = await supabase
       .from("attendance_records")
-      .select("employee_id, date")
+      .select("employee_id, date, check_out")
       .eq("tenant_id", claims.tenant_id)
       .gte("date", startDate)
       .lte("date", endDate);
@@ -194,43 +310,136 @@ export const calculatePayroll = withAction(
       };
     }
 
-    // Per-shift attendance (D027): 2 shifts/day = 1 workday, 1 shift = 0.5.
-    const shiftsByEmpDay = new Map<number, Map<string, number>>();
-    for (const rec of attendance ?? []) {
-      let days = shiftsByEmpDay.get(rec.employee_id);
-      if (!days) {
-        days = new Map();
-        shiftsByEmpDay.set(rec.employee_id, days);
-      }
-      days.set(rec.date, (days.get(rec.date) ?? 0) + 1);
+    const employeeIds = eligibleEmployees.map((emp) => emp.id);
+    const workdaysByEmployee = buildCompletedWorkdays(
+      (attendance ?? []).map((rec) => ({
+        employeeId: rec.employee_id,
+        date: rec.date,
+        checkOut: rec.check_out,
+      })),
+    );
+
+    const { data: leaveRows, error: leaveErr } = await supabase
+      .from("leave_requests")
+      .select("employee_id, start_date, end_date, leave_type, status")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", "approved")
+      .in("employee_id", employeeIds)
+      .lte("start_date", endDate)
+      .gte("end_date", `${year}-01-01`);
+
+    if (leaveErr) {
+      return {
+        success: false,
+        error: "Không thể tải dữ liệu nghỉ phép. Tính lương bị hủy.",
+      };
     }
-    const workdaysFor = (empId: number): number => {
-      const days = shiftsByEmpDay.get(empId);
-      if (!days) return 0;
-      let total = 0;
-      for (const count of days.values()) total += Math.min(count, 2) * 0.5;
-      return total;
-    };
+
+    const leaveRanges: LeaveRange[] = (leaveRows ?? []).map((leave) => ({
+      employeeId: leave.employee_id,
+      startDate: leave.start_date,
+      endDate: leave.end_date,
+      leaveType: leave.leave_type as LeaveRange["leaveType"],
+    }));
+
+    const periodLeaveSummary = new Map<
+      number,
+      { annualLeaveDays: number; unpaidLeaveDays: number }
+    >();
+    const annualUsedBeforePeriod = new Map<number, number>();
+    for (const leave of leaveRanges) {
+      const daysInPeriod = countOverlapDays(
+        leave.startDate,
+        leave.endDate,
+        startDate,
+        endDate,
+      );
+      if (daysInPeriod > 0) {
+        const current = periodLeaveSummary.get(leave.employeeId) ?? {
+          annualLeaveDays: 0,
+          unpaidLeaveDays: 0,
+        };
+        if (leave.leaveType === "annual") {
+          current.annualLeaveDays += daysInPeriod;
+        } else {
+          current.unpaidLeaveDays += daysInPeriod;
+        }
+        periodLeaveSummary.set(leave.employeeId, current);
+      }
+
+      if (leave.leaveType !== "annual") continue;
+      const usedBefore = countOverlapDays(
+        leave.startDate,
+        leave.endDate,
+        `${year}-01-01`,
+        previousDate(startDate),
+      );
+      if (usedBefore > 0) {
+        annualUsedBeforePeriod.set(
+          leave.employeeId,
+          (annualUsedBeforePeriod.get(leave.employeeId) ?? 0) + usedBefore,
+        );
+      }
+    }
+
+    const { data: entitlementRows, error: entitlementErr } = await supabase
+      .from("annual_leave_entitlements")
+      .select("employee_id, entitlement_days")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("year", year)
+      .in("employee_id", employeeIds);
+
+    if (entitlementErr) {
+      return {
+        success: false,
+        error: "Không thể tải hạn mức phép năm. Tính lương bị hủy.",
+      };
+    }
+
+    const entitlementByEmployee = new Map(
+      (entitlementRows ?? []).map((row) => [
+        row.employee_id,
+        Number(row.entitlement_days ?? 0),
+      ]),
+    );
 
     const entries = eligibleEmployees.map((emp) => {
-      const workingDays = workdaysFor(emp.id);
-      const baseSalary = Number(emp.base_salary ?? 0);
+      const workingDays = workdaysByEmployee.get(emp.id) ?? 0;
+      const periodLeave = periodLeaveSummary.get(emp.id) ?? {
+        annualLeaveDays: 0,
+        unpaidLeaveDays: 0,
+      };
+      const entitlementDays =
+        entitlementByEmployee.get(emp.id) ??
+        suggestAnnualLeaveEntitlement(emp.start_date, year);
+      const annualSplit = splitAnnualLeaveByQuota({
+        entitlementDays,
+        usedBeforePeriodDays: annualUsedBeforePeriod.get(emp.id) ?? 0,
+        annualLeaveDaysInPeriod: periodLeave.annualLeaveDays,
+      });
+      const paidLeaveDays = annualSplit.paidLeaveDays;
+      const unpaidLeaveDays =
+        periodLeave.unpaidLeaveDays + annualSplit.overflowLeaveDays;
+      const payableDays = calculatePayableDays({
+        workingDays,
+        paidLeaveDays,
+        standardDays,
+      });
+      const contract = contractByEmployee.get(emp.id);
+      const baseSalary = Number(contract?.gross_salary ?? emp.base_salary ?? 0);
+      const insuranceBaseSalary = Number(
+        contract?.insurance_base_salary ?? emp.insurance_base_salary ?? 0,
+      );
 
-      // Cap proration at 100% of base. Má Tư is a 7-day/2-shift business, so
-      // attendance-days routinely exceed the weekday standard_days; an uncapped
-      // ratio overpays (e.g. 31/22 ≈ 141%). standard_days is the full-month
-      // denominator — meeting or exceeding it earns full base. working_days
-      // below still records actual attendance (PAYROLL-PRORATION-CAP-AT-STANDARD).
-      const effectiveWorkingDays = Math.min(workingDays, standardDays);
       const proratedSalary =
         standardDays > 0
-          ? Math.round((baseSalary * effectiveWorkingDays) / standardDays)
+          ? Math.round((baseSalary * payableDays) / standardDays)
           : baseSalary;
       const grossTotal = proratedSalary;
 
       const result = calculatePayrollEntry({
         grossTotal,
-        insuranceBaseSalary: 0,
+        insuranceBaseSalary,
         taxExemptAllowances: 0,
         dependentCount: emp.dependents_count ?? 0,
         charityDeduction: 0,
@@ -244,6 +453,9 @@ export const calculatePayroll = withAction(
         payroll_period_id: data.periodId,
         employee_id: emp.id,
         working_days: workingDays,
+        paid_leave_days: paidLeaveDays,
+        unpaid_leave_days: unpaidLeaveDays,
+        payable_days: payableDays,
         standard_days: standardDays,
         overtime_hours: 0,
         base_salary: proratedSalary,
@@ -282,6 +494,15 @@ export const calculatePayroll = withAction(
       return mapRpcError(rpcErr, payrollCalcMappings, payrollCalcFallback);
     }
 
+    const paidLeaveDaysTotal = entries.reduce(
+      (sum, entry) => sum + entry.paid_leave_days,
+      0,
+    );
+    const payableDaysTotal = entries.reduce(
+      (sum, entry) => sum + entry.payable_days,
+      0,
+    );
+
     return {
       success: true,
       meta: {
@@ -289,6 +510,8 @@ export const calculatePayroll = withAction(
           (rpcData as { employee_count?: number } | null)?.employee_count ??
             entries.length,
         ),
+        paidLeaveDaysTotal,
+        payableDaysTotal,
       },
     };
   },

@@ -7,7 +7,6 @@ export const admin = {
     menuItems: "Thực đơn",
     inventory: "Kho",
     finance: "Tài chính",
-    menu: "Menu",
     modules: "Mô-đun",
   },
   dashboard: {

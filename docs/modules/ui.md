@@ -126,16 +126,19 @@ Domain wrappers như Inventory/Employee/Admin có thể giữ API riêng để t
 
 ## Management Shell Structure
 
-Management chrome (`apps/web/app/components/app-shell.tsx`) render sidebar thành
-2 tầng trong CÙNG một `SidebarProvider` (D045):
+Management chrome (`apps/web/app/components/app-shell.tsx`) render một sidebar
+trong một `SidebarProvider`:
 
-- Tầng-1 = icon rail cố định (`collapsible="none"`, icon + tooltip) làm bộ chuyển
-  mô-đun cross-module, single-sourced bởi `resolveOfficeRailItems`.
-- Tầng-2 = deep nav của mô-đun đang mở (grouped), render bằng khối Sidebar inset.
+- Tab chính = mô-đun cross-module, single-sourced bởi `resolveOfficePrimaryTabs`.
+- Sub-tab = deep nav của mô-đun đang mở (`tier2`), render lồng dưới tab chính
+  đang active.
 
-`AppShell` nhận `tier1` + `tier2` thay cho `navGroups[]`. Rail là cột icon cố
-định, không phải sidebar thứ hai — vẫn là một sidebar, một header. Trên mobile,
-bottom-nav = tier-2, có tab "Mô-đun" mở tier-1.
+`AppShell` nhận `tier1` + `tier2` thay cho `navGroups[]`. `tier1` không được
+trải phẳng mọi page con thành tab chính: Admin gom về một tab "Quản trị", branch
+management gom về một tab "Quản lý chi nhánh", còn deep nav nằm trong sub-tab
+của tab đang active. Trên mobile `<md`, bottom-nav ưu tiên `tier2` và chỉ có một
+tab "Mô-đun" mở drawer sidebar đầy đủ. Từ tablet `md` trở lên, bottom-nav ẩn và
+Management dùng một sidebar cố định.
 
 ## Component Governance
 
@@ -251,7 +254,7 @@ Inventory IA phải bám 3 luồng chính:
 2. `Nhập/Nhận/Đối soát` — Đơn đặt hàng, Phiếu nhập/GRN, supplier invoice/price variance, receiving exception.
 3. `Điều phối/Sản xuất` — Điều chuyển, Lệnh sản xuất, BOM/recipe issue, yield.
 
-Sidebar labels phải ngắn và scan được trong rail cố định. Tên đầy đủ của luồng đặt trong page title, breadcrumb, tab, hoặc empty state thay vì ép vào group label dài.
+Sidebar labels phải ngắn và scan được trong sidebar cố định. Tên đầy đủ của luồng đặt trong page title, breadcrumb, tab, hoặc empty state thay vì ép vào group label dài.
 
 ### Overlay Decision
 

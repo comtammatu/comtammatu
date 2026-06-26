@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Fragment,
-  useMemo,
-  type ComponentType,
-  type CSSProperties,
-  type ReactNode,
-} from "react";
+import { Fragment, useMemo, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowLeft as IconArrowLeft, LogOut as IconLogout } from "lucide-react";
@@ -36,13 +30,15 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
-  SidebarRail,
   SidebarTrigger,
 } from "@comtammatu/ui/components/sidebar";
 import {
   findActiveNavItem,
-  findActiveRailItem,
+  findActivePrimaryNavItem,
   formatPathSegment,
   getInitials,
   isNavItemActive,
@@ -50,7 +46,11 @@ import {
   type ShellNavItem,
 } from "@/lib/shell-primitives";
 import { AppShellPaddingBoundary } from "@/components/surface";
-import { BrandLogoBox, BrandMark, type BrandMarkVariant } from "@/components/brand";
+import {
+  BrandLogoBox,
+  BrandMark,
+  type BrandMarkVariant,
+} from "@/components/brand";
 import { WorkspaceBottomNav } from "@/components/workspace-bottom-nav";
 import { messages } from "@lib/messages";
 
@@ -85,9 +85,9 @@ export interface AppShellProps {
   role: StaffRole;
   branchId?: number | null;
   brand: BrandConfig;
-  /** TIER-1 rail: cross-module switcher. Flat, icon-only. */
+  /** Primary module tabs for the single sidebar. */
   tier1: ShellNavItem[];
-  /** TIER-2 panel: the active module's deep nav (grouped). */
+  /** Sub-tabs for the active primary tab. */
   tier2: ShellNavGroup[];
   defaultPageTitle: string;
   pageHeader: PageHeaderConfig;
@@ -96,6 +96,18 @@ export interface AppShellProps {
    * drawer trigger). Default true for all back-office shells.
    */
   bottomNav?: boolean;
+}
+
+function getSidebarSubNavGroups(
+  groups: ShellNavGroup[],
+  parentHref: string,
+): ShellNavGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => item.href !== parentHref),
+    }))
+    .filter((group) => group.items.length > 0);
 }
 
 export function AppShell({
@@ -123,8 +135,8 @@ export function AppShell({
     return pathTail[pathTail.length - 1] ?? active.label;
   }, [tier2, pathname, defaultPageTitle]);
 
-  const activeRailItem = useMemo(
-    () => findActiveRailItem(tier1, pathname),
+  const activePrimaryItem = useMemo(
+    () => findActivePrimaryNavItem(tier1, pathname),
     [tier1, pathname],
   );
 
@@ -136,89 +148,14 @@ export function AppShell({
   const backHref = brand.backHref ?? defaultBackLink.href;
   const backLabel = brand.backLabel ?? defaultBackLink.label;
   const breadcrumbSegments = pageHeader.breadcrumbSegments ?? [];
+  const navCopy = messages.admin.nav;
 
   return (
     <SidebarProvider>
-      <Sidebar
-        collapsible="none"
-        // Rail is a fixed icon column: drive the primitive's own w-(--sidebar-width)
-        // to the icon width via the CSS var (no arbitrary sizing, no competing width class).
-        style={{ "--sidebar-width": "var(--sidebar-width-icon)" } as CSSProperties}
-        className="sticky top-0 hidden h-svh self-start border-r md:flex"
-      >
-        <SidebarHeader className="items-center border-b p-2">
-          <BrandLogoBox tone={logoVariant ? "sidebar" : "sidebar-primary"}>
-            {logoVariant ? (
-              <BrandMark
-                variant={logoVariant}
-                alt={brand.logoAlt}
-                className="size-full"
-              />
-            ) : (
-              <BrandIcon className="size-5" />
-            )}
-          </BrandLogoBox>
-        </SidebarHeader>
-
-        <SidebarContent className="px-1 py-2">
-          <SidebarMenu className="items-center gap-1">
-            {tier1.map((item) => {
-              const Icon = item.icon;
-              return (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={item === activeRailItem}
-                    tooltip={{ children: item.label, hidden: false }}
-                    className="justify-center rounded-md data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground"
-                  >
-                    <Link
-                      href={item.href}
-                      aria-label={item.label}
-                      aria-current={
-                        item === activeRailItem ? "page" : undefined
-                      }
-                    >
-                      <Icon />
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarContent>
-
-        <SidebarFooter className="border-t p-2">
-          <div className="flex flex-col items-center justify-center gap-1">
-            <Avatar size="sm">
-              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-            </Avatar>
-            <form action="/api/auth/signout" method="post">
-              <Button
-                type="submit"
-                variant="ghost"
-                size="icon-sm"
-                className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
-                aria-label={copy.signOut}
-              >
-                <IconLogout />
-              </Button>
-            </form>
-          </div>
-        </SidebarFooter>
-      </Sidebar>
-
-      <Sidebar
-        variant="inset"
-        collapsible="offcanvas"
-        className="md:data-[side=left]:left-(--sidebar-width-icon)"
-      >
+      <Sidebar variant="inset" collapsible="offcanvas">
         <SidebarHeader className="gap-3 border-b p-3">
           <div className="flex items-center gap-3">
-            <BrandLogoBox
-              tone={logoVariant ? "sidebar" : "sidebar-primary"}
-              className="md:hidden"
-            >
+            <BrandLogoBox tone={logoVariant ? "sidebar" : "sidebar-primary"}>
               {logoVariant ? (
                 <BrandMark
                   variant={logoVariant}
@@ -253,43 +190,105 @@ export function AppShell({
           ) : null}
         </SidebarHeader>
 
-        <SidebarContent className="gap-2 px-2 py-3">
-          {tier2.map((group) => (
-            <SidebarGroup key={group.title} className="px-0 py-0">
-              <SidebarGroupLabel className="h-7 px-2 text-2xs font-medium uppercase tracking-wider text-sidebar-foreground/60">
-                {group.title}
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => {
-                    const active = isNavItemActive(item, pathname);
-                    const Icon = item.icon;
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={active}
-                          size="lg"
-                          tooltip={item.label}
-                          className="rounded-md"
+        <SidebarContent className="gap-3 px-2 py-3">
+          <SidebarGroup className="px-0 py-0">
+            <SidebarGroupLabel className="h-7 px-2 text-2xs font-medium uppercase tracking-wider text-sidebar-foreground/60">
+              {navCopy.modules}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {tier1.map((item) => {
+                  const Icon = item.icon;
+                  const active = item === activePrimaryItem;
+                  const subNavGroups = active
+                    ? getSidebarSubNavGroups(tier2, item.href)
+                    : [];
+
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={active}
+                        tooltip={item.label}
+                        className="rounded-md"
+                      >
+                        <Link
+                          href={item.href}
+                          aria-current={active ? "page" : undefined}
                         >
-                          <Link
-                            href={item.href}
-                            aria-current={active ? "page" : undefined}
-                          >
-                            <Icon />
-                            <span>{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))}
+                          <Icon />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                      {subNavGroups.length > 0 ? (
+                        <SidebarMenuSub>
+                          {subNavGroups.map((group) => (
+                            <Fragment key={group.title}>
+                              {subNavGroups.length > 1 ? (
+                                <SidebarMenuSubItem>
+                                  <span className="block px-2 py-1 text-2xs font-medium uppercase tracking-wider text-sidebar-foreground/60">
+                                    {group.title}
+                                  </span>
+                                </SidebarMenuSubItem>
+                              ) : null}
+                              {group.items.map((subItem) => {
+                                const SubIcon = subItem.icon;
+                                const subActive = isNavItemActive(
+                                  subItem,
+                                  pathname,
+                                );
+                                return (
+                                  <SidebarMenuSubItem key={subItem.href}>
+                                    <SidebarMenuSubButton
+                                      asChild
+                                      isActive={subActive}
+                                    >
+                                      <Link
+                                        href={subItem.href}
+                                        aria-current={
+                                          subActive ? "page" : undefined
+                                        }
+                                      >
+                                        <SubIcon />
+                                        <span>{subItem.label}</span>
+                                      </Link>
+                                    </SidebarMenuSubButton>
+                                  </SidebarMenuSubItem>
+                                );
+                              })}
+                            </Fragment>
+                          ))}
+                        </SidebarMenuSub>
+                      ) : null}
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         </SidebarContent>
-        <SidebarRail />
+
+        <SidebarFooter className="border-t p-2">
+          <div className="flex items-center gap-2">
+            <Avatar size="sm">
+              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+            </Avatar>
+            <span className="min-w-0 flex-1 truncate text-xs font-medium">
+              {user.name}
+            </span>
+            <form action="/api/auth/signout" method="post">
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon-sm"
+                className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
+                aria-label={copy.signOut}
+              >
+                <IconLogout />
+              </Button>
+            </form>
+          </div>
+        </SidebarFooter>
       </Sidebar>
 
       <SidebarInset id="main-content">
@@ -303,9 +302,7 @@ export function AppShell({
                     <BreadcrumbList>
                       {breadcrumbSegments.map((segment, idx) => {
                         const label =
-                          typeof segment === "string"
-                            ? segment
-                            : segment.label;
+                          typeof segment === "string" ? segment : segment.label;
                         const href =
                           typeof segment === "string"
                             ? undefined
@@ -366,9 +363,7 @@ export function AppShell({
           ) : null}
         </header>
 
-        <div
-          className={cn("flex-1 p-3 md:p-4", bottomNav && "pb-24 lg:pb-4")}
-        >
+        <div className={cn("flex-1 p-3 md:p-4", bottomNav && "pb-24 md:pb-4")}>
           <AppShellPaddingBoundary>
             <div className="flex min-h-0 flex-col gap-4">{children}</div>
           </AppShellPaddingBoundary>
