@@ -19,16 +19,6 @@ AS $$
        AND p.status IN ('pending', 'failed')
        AND p.provider_ref IS NOT NULL
        AND lower(p.provider_ref) = lower(p_payment_code)
-  ) OR EXISTS (
-    SELECT 1
-      FROM public.print_jobs pj
-     WHERE pj.order_id = p_order_id
-       AND pj.tenant_id = p_tenant_id
-       AND pj.branch_id = p_branch_id
-       AND pj.job_type = 'provisional_bill'
-       AND pj.status <> 'cancelled'
-       AND pj.payload -> 'payment_qr' ->> 'type' = 'vietqr'
-       AND lower(COALESCE(pj.payload -> 'payment_qr' ->> 'description', '')) = lower(p_payment_code)
   );
 $$;
 

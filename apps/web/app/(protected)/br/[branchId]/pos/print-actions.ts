@@ -2,7 +2,6 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import { buildVietQrEmvco, resolveBankBin } from "@comtammatu/shared/providers";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { KITCHEN_PARTIAL_SEND_WARNING } from "./_lib/messages";
@@ -20,11 +19,6 @@ const jobIdSchema = z.coerce
   .positive({ error: "Job ID không hợp lệ" });
 
 const AGENT_OFFLINE_THRESHOLD_MS = 60_000;
-
-type OrderPaymentCodeResult = {
-  order_id?: number;
-  payment_code?: string;
-};
 
 /**
  * Enqueue succeeded but no agent heartbeat within the threshold — the
@@ -223,90 +217,10 @@ export async function printProvisionalBill(
 
   const { supabase, claims } = ctx;
 
-  // Build EMVCo content locally so the printer's native QR command produces
-  // a scannable transfer QR (not a vietqr.io image URL). Skip gracefully if
-  // tenant hasn't configured VietQR — RPC will print without QR block.
-  let qrContent: string | undefined;
-  let qrHeaderLabel: string | undefined;
-
-  const [orderRes, qrTypeRes, bankRes, accRes, nameRes] = await Promise.all([
-    supabase
-      .from("orders")
-      .select("order_number, total_amount, tenant_id, branch_id")
-      .eq("id", parsed.data)
-      .single(),
-    supabase
-      .from("system_settings")
-      .select("value")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("key", "payment_qr_type")
-      .maybeSingle(),
-    supabase
-      .from("system_settings")
-      .select("value")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("key", "payment_vietqr_bank_code")
-      .maybeSingle(),
-    supabase
-      .from("system_settings")
-      .select("value")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("key", "payment_vietqr_account_no")
-      .maybeSingle(),
-    supabase
-      .from("system_settings")
-      .select("value")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("key", "payment_vietqr_account_name")
-      .maybeSingle(),
-  ]);
-
-  if (orderRes.error || !orderRes.data) {
-    return { success: false, error: "Không thể tải đơn hàng" };
-  }
-
-  const qrType = (qrTypeRes.data?.value ?? "vietqr").toString();
-  const bankCode = bankRes.data?.value?.toString() ?? "";
-  const accountNo = accRes.data?.value?.toString() ?? "";
-  const accountName = nameRes.data?.value?.toString() ?? "";
-
-  if (qrType === "vietqr" && bankCode && accountNo) {
-    const { data: codeData, error: codeError } = await supabase.rpc(
-      "ensure_order_payment_code",
-      {
-        p_tenant_id: claims.tenant_id,
-        p_branch_id: orderRes.data.branch_id,
-        p_order_id: parsed.data,
-      },
-    );
-    const paymentCode = (codeData as OrderPaymentCodeResult | null)
-      ?.payment_code;
-
-    if (codeError || !paymentCode) {
-      return {
-        success: false,
-        error: "Không thể tạo mã QR thanh toán. Vui lòng thử lại.",
-      };
-    }
-
-    qrContent =
-      buildVietQrEmvco({
-        bankCode,
-        accountNo,
-        amount: Number(orderRes.data.total_amount),
-        description: paymentCode,
-        accountName,
-      }) ?? undefined;
-
-    if (qrContent) {
-      qrHeaderLabel = `${bankCode.toUpperCase()} (BIN ${resolveBankBin(bankCode)})`;
-    }
-  }
-
   const { data, error } = await supabase.rpc("enqueue_provisional_bill", {
     p_order_id: parsed.data,
-    p_qr_content: qrContent,
-    p_qr_header_label: qrHeaderLabel,
+    p_qr_content: undefined,
+    p_qr_header_label: undefined,
   });
 
   if (error) {

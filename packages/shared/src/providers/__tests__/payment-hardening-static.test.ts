@@ -241,16 +241,17 @@ test("POS VietQR renders transfer QR with the order payment code", () => {
   assert.match(bill, /const result = await createPayment\(/);
 });
 
-test("Printed provisional bills use the order payment code without starting a QR session", () => {
+test("Printed provisional bills do not include payment QR", () => {
   const action = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/print-actions.ts",
   );
 
-  assert.match(action, /"ensure_order_payment_code"/);
-  assert.match(action, /description: paymentCode/);
+  assert.match(action, /p_qr_content: undefined/);
+  assert.match(action, /p_qr_header_label: undefined/);
+  assert.doesNotMatch(action, /"ensure_order_payment_code"/);
+  assert.doesNotMatch(action, /buildVietQrEmvco/);
   assert.doesNotMatch(action, /new VietQRProvider/);
   assert.doesNotMatch(action, /"create_payment"/);
-  assert.doesNotMatch(action, /DH \$\{orderRes\.data\.order_number\}/);
 });
 
 test("Order money mutations are locked after VietQR code exposure", () => {
@@ -275,10 +276,7 @@ test("Order money mutations are locked after VietQR code exposure", () => {
     migration,
     /FROM public\.payments p[\s\S]*p\.method = 'vietqr'[\s\S]*p\.status IN \('pending', 'failed'\)[\s\S]*lower\(p\.provider_ref\) = lower\(p_payment_code\)/,
   );
-  assert.match(
-    migration,
-    /FROM public\.print_jobs pj[\s\S]*pj\.job_type = 'provisional_bill'[\s\S]*pj\.payload -> 'payment_qr' ->> 'type' = 'vietqr'[\s\S]*description/,
-  );
+  assert.doesNotMatch(migration, /FROM public\.print_jobs/);
   assert.match(migration, /CREATE TRIGGER trg_orders_zz_payment_code_lock/);
   assert.match(migration, /BEFORE UPDATE OF[\s\S]*updated_at[\s\S]*ON public\.orders/);
   assert.match(migration, /RAISE EXCEPTION 'payment_code_locked'/);
@@ -297,9 +295,26 @@ test("Order money mutations are locked after VietQR code exposure", () => {
   assert.match(revokeMigration, /FROM anon;/);
   assert.match(revokeMigration, /FROM authenticated;/);
 
-  assert.match(messages, /payment_code_locked/);
-  assert.match(discounts, /payment_code_locked/);
-  assert.match(serviceCharge, /payment_code_locked/);
+  for (const mapping of [
+    "voidRpcMappings",
+    "reduceRpcMappings",
+    "cancelRpcMappings",
+    "editRpcMappings",
+    "appendOrderItemsRpcMappings",
+  ]) {
+    assert.match(
+      messages,
+      new RegExp(`export const ${mapping}[\\s\\S]*payment_code_locked`),
+    );
+  }
+  assert.match(
+    discounts,
+    /function mapDiscountRpcError[\s\S]*payment_code_locked/,
+  );
+  assert.match(
+    serviceCharge,
+    /function mapServiceChargeRpcError[\s\S]*payment_code_locked/,
+  );
 });
 
 test("POS bill sheet can cancel a stuck pending QR payment", () => {
