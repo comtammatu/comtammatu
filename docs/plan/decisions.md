@@ -475,3 +475,19 @@ Hệ quả:
 - **Severity (owner chốt 2026-06-22):** popup bắn cho **mọi** severity nhìn thấy được (gồm `info` `pos.order_new` — báo đơn mới cho bếp/POS). Khác chính sách push-server cũ (critical-only) vì popup foreground chỉ kêu khi app đang mở nên ít phiền hơn. Code đã đúng — không filter severity.
 
 Đảo quyết định này phải sửa bản ghi này trước.
+
+## D047: Non-prod runtime = Supabase preview-branch + Vercel Preview mỗi PR (2026-06-27)
+
+**Decision:** Mở môi trường non-prod bằng **Supabase Branching** (preview branch ephemeral mỗi PR) + **Vercel Preview**, thay vì dựng 1 dev project cố định hay local-only. Mỗi PR → Supabase tạo branch DB tạm (chạy `supabase/migrations/*` + `seed.sql` một lần khi tạo), Vercel Preview tự nhận env của branch qua tích hợp Supabase↔Vercel.
+
+**Rationale:** sát PR, ephemeral (không drift dữ liệu), tận dụng nền #109 (baseline replay sạch, CI-gated) + #110. Mở khoá cụm "No Non-Prod Runtime": design-system tails (W5 + 7 POS/KDS), HRM runtime verify, α4c RLS regression.
+
+**Prerequisite kiến trúc (BLOCKER):** Branching CHỈ chạy migrations + seed (không chạy file ngoài như `managed-surfaces.install.sql`). Phải **fold managed-surfaces vào migration chain** dạng idempotent (`CREATE EXTENSION/POLICY IF NOT EXISTS`, `DO $$…$$` guard) để branch tự đủ extensions / storage policies / realtime publication / cron. Đây là **đảo ngược có chủ đích** việc trước đây tách managed-surfaces khỏi baseline (lý do tách: dump public bỏ rơi managed-surface — nay yêu cầu idempotent + 1 chain để branch self-contained).
+
+**Provisioning thuộc owner (D005, agent không tạo infra):** nâng Supabase Pro, bật Branching + cài Supabase GitHub App, cài tích hợp Supabase↔Vercel. Chi phí ~$0.01344/branch/giờ (Micro) + disk/egress; Compute Credits & Spend Cap KHÔNG cover branching.
+
+**Không chọn:** dev project cố định (drift, refresh thủ công); local-only (không URL chia sẻ để owner click trên điện thoại).
+
+**Ngoài phạm vi env này:** telemetry items (unused indexes ~231, dead-RPC wave 2) KHÔNG cần preview-branch — chỉ cần bật `track_functions`/`pg_stat` trên prod 1 chu kỳ (gồm cuối tháng).
+
+Runbook: `docs/runbooks/db/preview-branch-setup.md`.
