@@ -5,10 +5,9 @@ Không dùng thư mục này làm archive, backlog, hay source of truth thứ ha
 
 ## Active Notes
 
-- `inventory-matu-platform-import-dry-run-2026-06-22.md` — hợp đồng T3 và đối
-  soát chốt import Inventory từ `matu-platform`.
-- `inventory-post-import-audit-2026-06-22.md` — mốc nghiệm thu và bằng chứng
-  smoke sau import Inventory từ `matu-platform`.
+- `order-payment-code-2026-06-26.md` — POS payment-code model (mã `DH...`)
+  follow-up; reconciled-through 682126b0.
+
 ## Rules
 
 - Mỗi worklog phải có owner hiện tại: runbook, task row, decision, hoặc PR đang mở.
