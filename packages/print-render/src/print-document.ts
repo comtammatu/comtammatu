@@ -61,6 +61,7 @@ export type PrintDocumentPaymentMethodBlock = {
 export type PrintDocumentReceiptItem = {
   item_name?: string;
   variant_name?: string | null;
+  category_type?: string | null;
   quantity?: number;
   unit_price?: number;
   subtotal?: number;
@@ -77,10 +78,12 @@ export type PrintDocumentReceiptItem = {
 export type PrintDocumentItemsTableBlock = {
   type: "itemsTable";
   items?: PrintDocumentReceiptItem[];
+  group_by_category?: boolean;
 };
 
 export type PrintDocumentTotalsBlock = {
   type: "totals";
+  always_show_adjustments?: boolean;
   subtotal?: number | null;
   tax_amount?: number | null;
   service_charge?: number | null;

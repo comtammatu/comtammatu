@@ -9921,6 +9921,7 @@ BEGIN
     jsonb_build_object(
       'item_name',    oi.item_name,
       'variant_name', oi.variant_name,
+      'category_type', mc.type,
       'quantity',     oi.quantity,
       'unit_price',   oi.unit_price,
       'modifiers',    oi.modifiers,
@@ -9932,6 +9933,12 @@ BEGIN
   )
   INTO v_items
   FROM public.order_items oi
+  LEFT JOIN public.menu_items mi
+    ON mi.id = oi.menu_item_id
+   AND mi.tenant_id = oi.tenant_id
+  LEFT JOIN public.menu_categories mc
+    ON mc.id = mi.category_id
+   AND mc.tenant_id = oi.tenant_id
   WHERE oi.order_id = p_order_id
     AND oi.status <> 'cancelled';
 
@@ -14742,16 +14749,16 @@ BEGIN
     WHEN 'receipt' THEN
       RETURN jsonb_build_object(
         'blocks', jsonb_build_array(
-          jsonb_build_object('type', 'brandHeader', 'eyebrow', 'TIỆM CƠM TẤM', 'name', 'MÁ TƯ', 'tagline', 'Thịt tươi 100%'),
-          jsonb_build_object('type', 'branchInfo'),
+          jsonb_build_object('type', 'row', 'left', 'MÁ TƯ', 'right', '{{branch_address}}', 'bold', true),
+          jsonb_build_object('type', 'row', 'left', 'Thịt tươi 100%', 'right', ''),
           jsonb_build_object('type', 'divider', 'char', '='),
           jsonb_build_object('type', 'text', 'text', 'HÓA ĐƠN THANH TOÁN', 'align', 'center', 'bold', true, 'double', true),
           jsonb_build_object('type', 'text', 'text', '{{order_header}}', 'align', 'center', 'bold', true, 'double', true),
           jsonb_build_object('type', 'divider', 'char', '='),
           jsonb_build_object('type', 'billMeta'),
           jsonb_build_object('type', 'paymentMethod'),
-          jsonb_build_object('type', 'itemsTable'),
-          jsonb_build_object('type', 'totals'),
+          jsonb_build_object('type', 'itemsTable', 'group_by_category', true),
+          jsonb_build_object('type', 'totals', 'always_show_adjustments', true),
           jsonb_build_object('type', 'cashChange'),
           jsonb_build_object('type', 'note', 'prefix', 'Ghi chú: '),
           jsonb_build_object('type', 'paymentQr', 'heading', 'QUÉT QR THANH TOÁN'),
@@ -14956,6 +14963,8 @@ BEGIN
   v_text := replace(v_text, '{{order_header}}', public.print_template_payload_text(p_payload, 'order_header'));
   v_text := replace(v_text, '{{order_number}}', public.print_template_payload_text(p_payload, 'order_number'));
   v_text := replace(v_text, '{{branch_name}}', public.print_template_payload_text(p_payload, 'branch_name'));
+  v_text := replace(v_text, '{{branch_address}}', public.print_template_payload_text(p_payload, 'branch_address'));
+  v_text := replace(v_text, '{{branch_phone}}', public.print_template_payload_text(p_payload, 'branch_phone'));
   v_text := replace(v_text, '{{cashier_name}}', public.print_template_payload_text(p_payload, 'cashier_name'));
   v_text := replace(v_text, '{{printed_at}}', public.print_template_payload_text(p_payload, 'printed_at'));
   v_text := replace(v_text, '{{printed_time}}', public.print_template_payload_text(p_payload, 'printed_time'));
@@ -41812,4 +41821,3 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES 
 --
 
 -- \unrestrict C2IdDG3NWONiLx7pLrefdOFVMowUWE0Q54uaT0PFVnbQq1cozXDtS2ABTBSGVFf
-

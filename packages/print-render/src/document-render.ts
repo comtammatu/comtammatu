@@ -120,126 +120,191 @@ function renderBillMeta(p: BillBase): RenderOp[] {
 }
 
 // Receipt items table — 4 columns + 9 chars of separators sum to 48:
-//   STT(2) " | " Món(22) " | " SL(2) " | " Thành tiền(13)
-const RECEIPT_COL_NO = 2;
-const RECEIPT_COL_NAME = 22;
+//   Món(17) " | " SL(2) " | " Đơn giá(10) " | " Thành tiền(10)
+const RECEIPT_COL_NAME = 17;
 const RECEIPT_COL_QTY = 2;
-const RECEIPT_COL_AMT = 13;
+const RECEIPT_COL_UNIT = 10;
+const RECEIPT_COL_AMT = 10;
 
 const RECEIPT_TABLE_BORDER =
-  "-".repeat(RECEIPT_COL_NO + 1) +
-  "+" +
   "-".repeat(RECEIPT_COL_NAME + 2) +
   "+" +
   "-".repeat(RECEIPT_COL_QTY + 2) +
   "+" +
+  "-".repeat(RECEIPT_COL_UNIT + 2) +
+  "+" +
   "-".repeat(RECEIPT_COL_AMT + 1);
 
 const receiptRow = (
-  no: string,
   name: string,
   qty: string,
+  unit: string,
   amt: string,
 ): string =>
-  `${padLeft(no, RECEIPT_COL_NO)} | ${padRight(name, RECEIPT_COL_NAME)} | ${padLeft(qty, RECEIPT_COL_QTY)} | ${padLeft(amt, RECEIPT_COL_AMT)}`;
+  `${padRight(name, RECEIPT_COL_NAME)} | ${padLeft(qty, RECEIPT_COL_QTY)} | ${padLeft(unit, RECEIPT_COL_UNIT)} | ${padLeft(amt, RECEIPT_COL_AMT)}`;
 
-/** 4-column table: STT | Món | SL | Thành tiền. Each priced modifier/side
- * (price > 0) renders on its own row with its own amount; price 0 or
- * undefined leaves the amount cell blank (free side). Variant prints on an
+type ReceiptItem = BillBase["items"][number];
+
+const lineCategory = (item: ReceiptItem): "food" | "drink" =>
+  item.category_type === "drink" ? "drink" : "food";
+
+function receiptLineTotals(item: ReceiptItem): {
+  baseUnit: number;
+  baseAmount: number;
+  lineAmount: number;
+} {
+  const modifierSum = (item.modifiers ?? []).reduce(
+    (sum, m) => sum + (m.price ?? 0),
+    0,
+  );
+  const sidesSum = (item.sides ?? []).reduce(
+    (sum, s) => sum + (s.price ?? 0) * (s.quantity ?? 1),
+    0,
+  );
+  const baseUnit = item.unit_price - modifierSum - sidesSum;
+  const baseAmount = baseUnit * item.quantity;
+  const modifierAmount = (item.modifiers ?? []).reduce(
+    (sum, m) => sum + Math.max(0, m.price ?? 0) * item.quantity,
+    0,
+  );
+  const sideAmount = (item.sides ?? []).reduce((sum, s) => {
+    const totalSideQty = sideTotalQuantity(s.quantity, item.quantity);
+    return sum + Math.max(0, s.price ?? 0) * totalSideQty;
+  }, 0);
+  return {
+    baseUnit,
+    baseAmount,
+    lineAmount: baseAmount + modifierAmount + sideAmount,
+  };
+}
+
+function renderReceiptItem(out: RenderOp[], it: ReceiptItem): void {
+  const qty = String(it.quantity);
+  const { baseUnit, baseAmount } = receiptLineTotals(it);
+
+  const nameChunks = wrapText(it.item_name, RECEIPT_COL_NAME);
+  nameChunks.forEach((chunk, i) => {
+    out.push(
+      ops.line(
+        receiptRow(
+          chunk,
+          i === 0 ? qty : "",
+          i === 0 ? fmtMoney(baseUnit) : "",
+          i === 0 ? fmtMoney(baseAmount) : "",
+        ),
+      ),
+    );
+  });
+
+  if (it.variant_name) {
+    const variantChunks = wrapText(
+      `(${it.variant_name})`,
+      RECEIPT_COL_NAME - 2,
+    );
+    for (const chunk of variantChunks) {
+      out.push(ops.line(receiptRow(`  ${chunk}`, "", "", "")));
+    }
+  }
+
+  if (it.modifiers && it.modifiers.length > 0) {
+    for (const m of it.modifiers) {
+      if (!m.name) continue;
+      const modPrice = m.price ?? 0;
+      const modAmt = modPrice > 0 ? fmtMoney(modPrice * it.quantity) : "";
+      const modUnit = modPrice > 0 ? fmtMoney(modPrice) : "";
+      const modChunks = wrapText(`+ ${m.name}`, RECEIPT_COL_NAME);
+      modChunks.forEach((chunk, i) => {
+        out.push(
+          ops.line(
+            receiptRow(
+              chunk,
+              i === 0 ? qty : "",
+              i === 0 ? modUnit : "",
+              i === 0 ? modAmt : "",
+            ),
+          ),
+        );
+      });
+    }
+  }
+
+  if (it.sides && it.sides.length > 0) {
+    for (const s of it.sides) {
+      const sideName = s.name ?? s.side_item_name;
+      if (!sideName) continue;
+      const sidePrice = s.price ?? 0;
+      const totalSideQty = sideTotalQuantity(s.quantity, it.quantity);
+      const sideQtyStr = totalSideQty ? String(totalSideQty) : "";
+      const sideUnit = sidePrice > 0 ? fmtMoney(sidePrice) : "";
+      const sideAmt =
+        sidePrice > 0 && totalSideQty > 0
+          ? fmtMoney(sidePrice * totalSideQty)
+          : "";
+      const sideChunks = wrapText(`- ${sideName}`, RECEIPT_COL_NAME);
+      sideChunks.forEach((chunk, i) => {
+        out.push(
+          ops.line(
+            receiptRow(
+              chunk,
+              i === 0 ? sideQtyStr : "",
+              i === 0 ? sideUnit : "",
+              i === 0 ? sideAmt : "",
+            ),
+          ),
+        );
+      });
+    }
+  }
+}
+
+/** Each priced modifier/side renders on its own row with its own unit and
+ * amount; price 0 or undefined leaves price cells blank. Variant prints on an
  * indented row under the name. Item note is hidden on bills — the kitchen
  * ticket already showed it to the chef. */
-function renderItemsTable(p: BillBase): RenderOp[] {
+function renderItemsTable(p: BillBase, groupByCategory = false): RenderOp[] {
   const out: RenderOp[] = [];
   out.push(ops.line(RECEIPT_TABLE_BORDER));
   out.push(
-    ops.line(receiptRow("#", "Món", "SL", "Thành tiền"), { bold: true }),
+    ops.line(receiptRow("Món", "SL", "Đơn giá", "Thành tiền"), { bold: true }),
   );
   out.push(ops.line(RECEIPT_TABLE_BORDER));
 
-  p.items.forEach((it, idx) => {
-    if (idx > 0) out.push(ops.line(RECEIPT_TABLE_BORDER));
+  const groups = groupByCategory
+    ? [
+        {
+          label: "Đồ ăn",
+          items: p.items.filter((item) => lineCategory(item) === "food"),
+        },
+        {
+          label: "Nước uống",
+          items: p.items.filter((item) => lineCategory(item) === "drink"),
+        },
+      ].filter((group) => group.items.length > 0)
+    : [{ label: null, items: p.items }];
 
-    const stt = String(idx + 1);
-    const qty = String(it.quantity);
+  groups.forEach((group, groupIndex) => {
+    if (groupIndex > 0) out.push(ops.line(RECEIPT_TABLE_BORDER));
+    if (group.label) {
+      out.push(ops.line(group.label, { bold: true }));
+      out.push(ops.line(RECEIPT_TABLE_BORDER));
+    }
 
-    // unit_price in DB = base + variant_adj + modifier_sum + sides_sum
-    // (recomputed server-side) → subtract modifiers + sides to isolate base.
-    const modifierSum = (it.modifiers ?? []).reduce(
-      (sum, m) => sum + (m.price ?? 0),
-      0,
-    );
-    const sidesSum = (it.sides ?? []).reduce(
-      (sum, s) => sum + (s.price ?? 0) * (s.quantity ?? 1),
-      0,
-    );
-    const baseAmount = fmtMoney(
-      (it.unit_price - modifierSum - sidesSum) * it.quantity,
-    );
-
-    const nameChunks = wrapText(it.item_name, RECEIPT_COL_NAME);
-    nameChunks.forEach((chunk, i) => {
-      out.push(
-        ops.line(
-          receiptRow(
-            i === 0 ? stt : "",
-            chunk,
-            i === 0 ? qty : "",
-            i === 0 ? baseAmount : "",
-          ),
-        ),
-      );
+    group.items.forEach((it, idx) => {
+      if (idx > 0) out.push(ops.line(RECEIPT_TABLE_BORDER));
+      renderReceiptItem(out, it);
     });
 
-    if (it.variant_name) {
-      const variantChunks = wrapText(
-        `(${it.variant_name})`,
-        RECEIPT_COL_NAME - 2,
+    if (group.label) {
+      out.push(ops.line(RECEIPT_TABLE_BORDER));
+      const groupTotal = group.items.reduce(
+        (sum, item) => sum + receiptLineTotals(item).lineAmount,
+        0,
       );
-      for (const chunk of variantChunks) {
-        out.push(ops.line(receiptRow("", `  ${chunk}`, "", "")));
-      }
-    }
-
-    if (it.modifiers && it.modifiers.length > 0) {
-      for (const m of it.modifiers) {
-        if (!m.name) continue;
-        const modAmt =
-          (m.price ?? 0) > 0 ? fmtMoney((m.price ?? 0) * it.quantity) : "";
-        const modChunks = wrapText(`+ ${m.name}`, RECEIPT_COL_NAME);
-        modChunks.forEach((chunk, i) => {
-          out.push(
-            ops.line(
-              receiptRow("", chunk, i === 0 ? qty : "", i === 0 ? modAmt : ""),
-            ),
-          );
-        });
-      }
-    }
-
-    if (it.sides && it.sides.length > 0) {
-      for (const s of it.sides) {
-        const sideName = s.name ?? s.side_item_name;
-        if (!sideName) continue;
-        const totalSideQty = sideTotalQuantity(s.quantity, it.quantity);
-        const sideQtyStr = totalSideQty ? String(totalSideQty) : "";
-        const sideAmt =
-          (s.price ?? 0) > 0 && totalSideQty > 0
-            ? fmtMoney((s.price ?? 0) * totalSideQty)
-            : "";
-        const sideChunks = wrapText(`- ${sideName}`, RECEIPT_COL_NAME);
-        sideChunks.forEach((chunk, i) => {
-          out.push(
-            ops.line(
-              receiptRow(
-                "",
-                chunk,
-                i === 0 ? sideQtyStr : "",
-                i === 0 ? sideAmt : "",
-              ),
-            ),
-          );
-        });
-      }
+      out.push(
+        ops.line(pair48(`Tổng ${group.label}`, fmtMoney(groupTotal)), {
+          bold: true,
+        }),
+      );
     }
   });
 
@@ -247,21 +312,28 @@ function renderItemsTable(p: BillBase): RenderOp[] {
   return out;
 }
 
-function renderTotals(p: BillBase): RenderOp[] {
+function renderTotals(p: BillBase, alwaysShowAdjustments = false): RenderOp[] {
   const out: RenderOp[] = [];
   out.push(ops.line(pair48("Tạm tính", fmtMoney(p.subtotal))));
   if ((p.tax_amount ?? 0) > 0)
     out.push(ops.line(pair48("Thuế VAT", fmtMoney(p.tax_amount))));
-  if ((p.service_charge ?? 0) > 0)
-    out.push(ops.line(pair48("Phụ phí", fmtMoney(p.service_charge))));
-  if ((p.discount_amount ?? 0) > 0) {
-    const discountLabel =
-      p.discount_type === "pct" && p.discount_value != null
-        ? `Giảm giá (${p.discount_value}%)`
-        : "Giảm giá";
-    out.push(
-      ops.line(pair48(discountLabel, "-" + fmtMoney(p.discount_amount))),
-    );
+  if (alwaysShowAdjustments || (p.service_charge ?? 0) > 0) {
+    const label = alwaysShowAdjustments ? "Phí dịch vụ" : "Phụ phí";
+    out.push(ops.line(pair48(label, fmtMoney(p.service_charge))));
+  }
+  if (alwaysShowAdjustments || (p.discount_amount ?? 0) > 0) {
+    const discountAmount = p.discount_amount ?? 0;
+    let discountLabel = "Giảm giá";
+    if (alwaysShowAdjustments) {
+      discountLabel = "Chiết khấu";
+    } else if (p.discount_type === "pct" && p.discount_value != null) {
+      discountLabel = `Giảm giá (${p.discount_value}%)`;
+    }
+    const discountValue =
+      discountAmount > 0 ? "-" + fmtMoney(discountAmount) : fmtMoney(0);
+    out.push(ops.line(pair48(discountLabel, discountValue)));
+  }
+  if ((p.discount_amount ?? 0) > 0 && p.discount_note) {
     if (p.discount_note) out.push(ops.line(`  Lý do: ${p.discount_note}`));
   }
   out.push(divider("="));
@@ -349,6 +421,7 @@ function normalizeReceiptItems(
   return (Array.isArray(items) ? items : []).map((item) => ({
     item_name: clampText(item.item_name) || "",
     variant_name: item.variant_name ? clampText(item.variant_name) : null,
+    category_type: item.category_type ? clampText(item.category_type) : null,
     quantity: numberOrZero(item.quantity),
     unit_price: numberOrZero(item.unit_price),
     subtotal: numberOrZero(item.subtotal),
@@ -394,7 +467,7 @@ function renderDocumentItemsTable(
 ): RenderOp[] {
   const items = normalizeReceiptItems(block.items);
   if (items.length === 0) return [];
-  return renderItemsTable(billBaseForDocument({ items }));
+  return renderItemsTable(billBaseForDocument({ items }), block.group_by_category);
 }
 
 function renderDocumentTotals(block: PrintDocumentTotalsBlock): RenderOp[] {
@@ -406,6 +479,7 @@ function renderDocumentTotals(block: PrintDocumentTotalsBlock): RenderOp[] {
       discount_amount: numberOrZero(block.discount_amount),
       total_amount: numberOrZero(block.total_amount),
     }),
+    block.always_show_adjustments,
   );
 }
 
@@ -454,14 +528,24 @@ function renderDocumentPaymentQr(
       align: "center",
     }),
   );
+  out.push(ops.blank());
   out.push(ops.qr(content, 6));
+  out.push(ops.blank());
+  out.push(
+    ops.line("THÔNG TIN TÀI KHOẢN NGÂN HÀNG", {
+      bold: true,
+      align: "center",
+    }),
+  );
   if (q.header_label)
-    out.push(ops.line(clampText(q.header_label), { align: "center" }));
+    out.push(ops.line(`Ngân hàng: ${clampText(q.header_label)}`, { align: "center" }));
   if (q.account_no)
     out.push(ops.line(`STK: ${clampText(q.account_no)}`, { align: "center" }));
   if (q.account_name) {
     out.push(
-      ops.line(clampText(q.account_name).toUpperCase(), { align: "center" }),
+      ops.line(`Chủ TK: ${clampText(q.account_name).toUpperCase()}`, {
+        align: "center",
+      }),
     );
   }
   out.push(ops.line(`Số tiền: ${fmtMoney(q.amount)}`, { align: "center" }));

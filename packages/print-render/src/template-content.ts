@@ -2,7 +2,7 @@
  * Template content model + per-kind defaults.
  *
  * MIRRORS public.print_template_default_content() in SQL (supabase baseline
- * + 20260611120000_receipt_payment_qr.sql). The database materializes these
+ * + receipt payment template migrations). The database materializes these
  * server-side for every print job; this TS copy powers the agent's offline
  * fallback and the admin editor preview. Keep both sides identical.
  */
@@ -63,6 +63,8 @@ export const TEMPLATE_VARIABLES = [
   "order_header",
   "order_number",
   "branch_name",
+  "branch_address",
+  "branch_phone",
   "cashier_name",
   "printed_at",
   "printed_time",
@@ -93,11 +95,15 @@ const brandHeader: TemplateBlock = {
   tagline: "Thịt tươi 100%",
 };
 
+const receiptHeader: TemplateBlock[] = [
+  { type: "row", left: "MÁ TƯ", right: "{{branch_address}}", bold: true },
+  { type: "row", left: "Thịt tươi 100%", right: "" },
+];
+
 export const DEFAULT_TEMPLATE_CONTENT: Record<PrintKind, TemplateContent> = {
   receipt: {
     blocks: [
-      brandHeader,
-      { type: "branchInfo" },
+      ...receiptHeader,
       { type: "divider", char: "=" },
       {
         type: "text",
@@ -116,8 +122,8 @@ export const DEFAULT_TEMPLATE_CONTENT: Record<PrintKind, TemplateContent> = {
       { type: "divider", char: "=" },
       { type: "billMeta" },
       { type: "paymentMethod" },
-      { type: "itemsTable" },
-      { type: "totals" },
+      { type: "itemsTable", group_by_category: true },
+      { type: "totals", always_show_adjustments: true },
       { type: "cashChange" },
       { type: "note", prefix: "Ghi chú: " },
       { type: "paymentQr", heading: "QUÉT QR THANH TOÁN" },

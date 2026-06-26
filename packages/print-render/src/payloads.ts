@@ -66,6 +66,7 @@ export type BillBase = {
   items: Array<{
     item_name: string;
     variant_name?: string | null;
+    category_type?: string | null;
     quantity: number;
     unit_price: number;
     subtotal: number;

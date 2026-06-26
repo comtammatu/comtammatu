@@ -5,6 +5,7 @@ import type { PrintDocumentBlock } from "../print-document";
 import type { PrintPayload } from "../payloads";
 import { buildFallbackDocument } from "../fallback-document";
 import { materializeDocument } from "../materialize";
+import { renderDocumentToOps } from "../document-render";
 import { renderPayloadToEscpos } from "../escpos-encode";
 import { renderPayloadToPng } from "../render-png";
 import { SAMPLE_PAYLOADS } from "../samples";
@@ -112,7 +113,7 @@ function defaultContentSqlSection(kind: string): string {
   assert.notEqual(start, -1, `missing SQL default content for ${kind}`);
 
   const tail = baselineSql.slice(start + marker.length);
-  const next = tail.search(/\n    (WHEN '|ELSE)/);
+  const next = tail.search(/\n {4}(WHEN '|ELSE)/);
   return baselineSql.slice(
     start,
     next === -1 ? undefined : start + marker.length + next,
@@ -150,6 +151,7 @@ test("order display helpers", () => {
 
 test("receipt fallback materializes default layout", () => {
   const blocks = blocksOf(SAMPLE_PAYLOADS.receipt);
+  assertRow(blocks, "MÁ TƯ", "123 Nguyễn Huệ, P. Bến Nghé, Q.1");
   assertText(blocks, "HÓA ĐƠN THANH TOÁN", { bold: true, double: true });
   assertText(blocks, "Bàn 5 #087", { bold: true, double: true });
   assert.ok(
@@ -157,7 +159,7 @@ test("receipt fallback materializes default layout", () => {
     "missing paymentMethod block",
   );
   assert.ok(
-    blocks.some((b) => b.type === "itemsTable" && (b.items?.length ?? 0) === 1),
+    blocks.some((b) => b.type === "itemsTable" && (b.items?.length ?? 0) === 2),
     "missing itemsTable block",
   );
   assert.ok(
@@ -168,6 +170,40 @@ test("receipt fallback materializes default layout", () => {
   assert.ok(qrBlock, "missing paymentQr block");
   assert.equal(qrBlock.qr?.account_no, "1234567890123");
   assertTextOrder(blocks, "HÓA ĐƠN THANH TOÁN", "Bàn 5 #087");
+});
+
+test("receipt render groups food and drink with unit price and always-on totals", () => {
+  const ops = renderDocumentToOps(buildFallbackDocument(SAMPLE_PAYLOADS.receipt));
+  const lines = ops.flatMap((op) => (op.kind === "line" ? [op.text] : []));
+
+  assert.ok(lines.some((line) => line.includes("Đơn giá")), "missing unit price header");
+  assert.ok(lines.includes("Đồ ăn"), "missing food section");
+  assert.ok(lines.includes("Nước uống"), "missing drink section");
+  assert.ok(
+    lines.some((line) => line.includes("Tổng Đồ ăn") && line.includes("110.000đ")),
+    "missing food total",
+  );
+  assert.ok(
+    lines.some((line) => line.includes("Tổng Nước uống") && line.includes("20.000đ")),
+    "missing drink total",
+  );
+  assert.ok(
+    lines.some((line) => line.includes("Phí dịch vụ") && line.includes("0đ")),
+    "service fee must stay visible when zero",
+  );
+  assert.ok(
+    lines.some((line) => line.includes("Chiết khấu") && line.includes("0đ")),
+    "discount must stay visible when zero",
+  );
+
+  const qrIndex = ops.findIndex((op) => op.kind === "qr");
+  assert.ok(qrIndex > 0, "missing QR render op");
+  assert.equal(ops[qrIndex - 1]?.kind, "blank", "missing gap before QR");
+  assert.equal(ops[qrIndex + 1]?.kind, "blank", "missing gap after QR");
+  assert.ok(
+    lines.includes("THÔNG TIN TÀI KHOẢN NGÂN HÀNG"),
+    "missing bank account heading",
+  );
 });
 
 test("receipt without QR skips paymentQr block", () => {
