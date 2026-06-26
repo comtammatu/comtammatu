@@ -253,6 +253,55 @@ test("Printed provisional bills use the order payment code without starting a QR
   assert.doesNotMatch(action, /DH \$\{orderRes\.data\.order_number\}/);
 });
 
+test("Order money mutations are locked after VietQR code exposure", () => {
+  const migration = readRepoFile(
+    "supabase/migrations/20260626072000_lock_order_amount_after_payment_code_exposed.sql",
+  );
+  const messages = readRepoFile(
+    "apps/web/app/(protected)/br/[branchId]/pos/_lib/messages.ts",
+  );
+  const discounts = readRepoFile(
+    "apps/web/app/(protected)/br/[branchId]/pos/discount-actions.ts",
+  );
+  const serviceCharge = readRepoFile(
+    "apps/web/app/(protected)/br/[branchId]/pos/service-charge-actions.ts",
+  );
+
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.order_payment_code_is_exposed/,
+  );
+  assert.match(
+    migration,
+    /FROM public\.payments p[\s\S]*p\.method = 'vietqr'[\s\S]*p\.status IN \('pending', 'failed'\)[\s\S]*lower\(p\.provider_ref\) = lower\(p_payment_code\)/,
+  );
+  assert.match(
+    migration,
+    /FROM public\.print_jobs pj[\s\S]*pj\.job_type = 'provisional_bill'[\s\S]*pj\.payload -> 'payment_qr' ->> 'type' = 'vietqr'[\s\S]*description/,
+  );
+  assert.match(migration, /CREATE TRIGGER trg_orders_zz_payment_code_lock/);
+  assert.match(migration, /BEFORE UPDATE OF[\s\S]*updated_at[\s\S]*ON public\.orders/);
+  assert.match(migration, /RAISE EXCEPTION 'payment_code_locked'/);
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.order_payment_code_is_exposed\(bigint, bigint, bigint, text\) FROM authenticated;/,
+  );
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.prevent_order_amount_mutation_after_payment_code_exposed\(\) FROM authenticated;/,
+  );
+
+  const revokeMigration = readRepoFile(
+    "supabase/migrations/20260626073500_revoke_payment_code_lock_function_exec.sql",
+  );
+  assert.match(revokeMigration, /FROM anon;/);
+  assert.match(revokeMigration, /FROM authenticated;/);
+
+  assert.match(messages, /payment_code_locked/);
+  assert.match(discounts, /payment_code_locked/);
+  assert.match(serviceCharge, /payment_code_locked/);
+});
+
 test("POS bill sheet can cancel a stuck pending QR payment", () => {
   const bill = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",

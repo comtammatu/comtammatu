@@ -8966,6 +8966,15 @@ export type Database = {
         Returns: Json
       }
       next_po_display_id: { Args: { p_tenant_id: number }; Returns: string }
+      order_payment_code_is_exposed: {
+        Args: {
+          p_branch_id: number
+          p_order_id: number
+          p_payment_code: string
+          p_tenant_id: number
+        }
+        Returns: boolean
+      }
       override_grn_hardblock: {
         Args: {
           p_evidence_url: string

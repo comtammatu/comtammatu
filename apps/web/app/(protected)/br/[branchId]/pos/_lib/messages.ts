@@ -241,6 +241,12 @@ export const voidRpcMappings: readonly RpcErrorMapping[] = [
     userMessage: "Cần quyền hủy đơn POS để hủy món.",
   },
   {
+    match: includesAny("payment_code_locked"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Đơn đã phát hành QR/chuyển khoản, không thể đổi số tiền. Vui lòng hoàn tất thanh toán hoặc xử lý lại đơn.",
+  },
+  {
     match: includesAny("voidable", "served"),
     errorCode: POS_ERROR_CODES.RPC_GENERIC,
     userMessage: "Không thể hủy món đã phục vụ hoặc đã hủy.",
@@ -361,6 +367,12 @@ export const reduceRpcMappings: readonly RpcErrorMapping[] = [
     match: includesAny("forbidden"),
     errorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
     userMessage: "Cần quyền hủy đơn POS để giảm SL món.",
+  },
+  {
+    match: includesAny("payment_code_locked"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Đơn đã phát hành QR/chuyển khoản, không thể đổi số tiền. Vui lòng hoàn tất thanh toán hoặc xử lý lại đơn.",
   },
   {
     match: includesAny("no reduction needed"),
@@ -491,6 +503,12 @@ export const cancelRpcMappings: readonly RpcErrorMapping[] = [
     userMessage: "Cần quyền hủy đơn POS để hủy đơn.",
   },
   {
+    match: includesAny("payment_code_locked"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Đơn đã phát hành QR/chuyển khoản, không thể hủy hoặc đổi số tiền. Vui lòng hoàn tất thanh toán hoặc xử lý lại đơn.",
+  },
+  {
     match: includesAny("terminal"),
     errorCode: POS_ERROR_CODES.RPC_GENERIC,
     userMessage: "Đơn đã kết thúc, không thể hủy.",
@@ -540,6 +558,12 @@ export const editRpcMappings: readonly RpcErrorMapping[] = [
     match: includesAny("forbidden"),
     errorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
     userMessage: "Cần quyền hủy đơn POS để sửa món.",
+  },
+  {
+    match: includesAny("payment_code_locked"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Đơn đã phát hành QR/chuyển khoản, không thể đổi số tiền. Vui lòng hoàn tất thanh toán hoặc xử lý lại đơn.",
   },
   {
     match: includesAny("not editable", "preparing", "ready"),
@@ -810,6 +834,12 @@ export const submitOrderRpcFallback: RpcErrorFallback = {
  * adds `order_not_appendable` for orders past the pending state.
  */
 export const appendOrderItemsRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("payment_code_locked"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Đơn đã phát hành QR/chuyển khoản, không thể thêm món làm đổi số tiền. Vui lòng hoàn tất thanh toán hoặc xử lý lại đơn.",
+  },
   {
     match: includesAny(
       "order_items_discount_metadata_paired",

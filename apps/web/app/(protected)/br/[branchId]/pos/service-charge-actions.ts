@@ -56,6 +56,9 @@ function mapServiceChargeRpcError(message: string): string | null {
   if (msg.includes("service_charge_payment_pending")) {
     return "Đơn đang có thanh toán chờ xử lý. Vui lòng hoàn tất thanh toán trước khi sửa phụ phí.";
   }
+  if (msg.includes("payment_code_locked")) {
+    return "Đơn đã phát hành QR/chuyển khoản, không thể đổi số tiền. Vui lòng hoàn tất thanh toán hoặc xử lý lại đơn.";
+  }
   if (msg.includes("order already paid")) {
     return "Đơn đã thanh toán, không thể sửa phụ phí.";
   }

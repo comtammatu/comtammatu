@@ -80,6 +80,9 @@ function mapDiscountRpcError(message: string): string {
   if (msg.includes("order item cancelled")) {
     return "Món đã hủy, không thể sửa chiết khấu.";
   }
+  if (msg.includes("payment_code_locked")) {
+    return "Đơn đã phát hành QR/chuyển khoản, không thể đổi số tiền. Vui lòng hoàn tất thanh toán hoặc xử lý lại đơn.";
+  }
   // Constraint violation when discount metadata partially set (race / bug)
   if (
     msg.includes("orders_discount_metadata_paired") ||
