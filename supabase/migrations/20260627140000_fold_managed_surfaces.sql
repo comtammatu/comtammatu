@@ -1,31 +1,19 @@
--- =====================================================================
--- Managed-surfaces install — companion to migrations/00000000000000_baseline.sql
---
--- The baseline is a `--schema=public --schema=private` dump, which EXCLUDES
--- Supabase-managed surfaces. Apply THIS after the schema baseline to provision
--- a from-zero env.
---
--- Generated 2026-05-30 from matu-dev (extensions / storage buckets / realtime /
--- cron) and iexws (storage.objects policy DDL). Idempotent (re-runnable).
---
--- PRIVILEGES: the storage.objects policies require ownership of storage.objects
--- (supabase_storage_admin). A plain migration/management role may NOT create
--- them — run that section as supabase_storage_admin (or via the Dashboard SQL
--- editor) if it errors with "must be owner of table objects".
--- =====================================================================
--- NOTE (D047): the content below is now mirrored by the migration
--- supabase/migrations/20260627140000_fold_managed_surfaces.sql, which is the
--- SSoT for automated / Supabase-Branching applies. This standalone file is kept
--- only for the manual dashboard / re-baseline path and will be removed once the
--- migration is validated on a preview branch. Keep the two in sync until then.
+-- Fold managed surfaces into the migration chain (D047).
+-- Supabase Branching applies only migrations + seed (not the standalone
+-- supabase/managed-surfaces.install.sql), so a preview branch needs these here
+-- to be self-contained: extensions, storage buckets + storage.objects RLS,
+-- supabase_realtime publication membership, and pg_cron jobs.
+-- Idempotent / re-runnable: safe to apply to prod where these already exist.
+-- Section C (storage.objects policies) requires ownership of storage.objects
+-- (the Supabase migration role / postgres has it; a less-privileged manual apply
+-- path must run that section as supabase_storage_admin).
 
--- ── Section A: extensions (pre-public-schema safe) ──
+-- ── Section A: extensions ──
 CREATE EXTENSION IF NOT EXISTS pgcrypto      WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp"   WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS hypopg        WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS index_advisor WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS pg_cron;
--- pg_stat_statements + supabase_vault are Supabase-managed (pre-installed).
 
 -- ── Section B: storage buckets ──
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES
@@ -75,11 +63,27 @@ CREATE POLICY "menu_images_update" ON storage.objects FOR UPDATE TO authenticate
   USING ((bucket_id = 'menu-images') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text))
   WITH CHECK ((bucket_id = 'menu-images') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text) AND has_permission_any('menu:write'));
 
--- ── Section D: realtime publication membership (fresh env only — ADD errors if already a member) ──
-ALTER PUBLICATION supabase_realtime ADD TABLE
-  public.branch_menu_item_daily_limits, public.kds_tickets,
-  public.notifications, public.order_status_history, public.orders, public.payments,
-  public.pos_sessions, public.print_jobs, public.tables;
+-- ── Section D: realtime publication membership (idempotent — add each table only if not already a member) ──
+DO $$
+DECLARE
+  v_table text;
+  v_tables text[] := ARRAY[
+    'branch_menu_item_daily_limits', 'kds_tickets', 'notifications',
+    'order_status_history', 'orders', 'payments', 'pos_sessions',
+    'print_jobs', 'tables'
+  ];
+BEGIN
+  FOREACH v_table IN ARRAY v_tables LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime'
+        AND schemaname = 'public'
+        AND tablename = v_table
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', v_table);
+    END IF;
+  END LOOP;
+END$$;
 
 -- ── Section E: cron jobs (pg_cron; cron.schedule upserts by jobname) ──
 SELECT cron.schedule('auto_close_periods',                 '0 19 * * *',  'SELECT public.auto_close_periods();');
