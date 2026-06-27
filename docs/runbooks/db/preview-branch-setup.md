@@ -15,13 +15,13 @@ PR tears the branch down.
 - [x] `supabase/config.toml` → `[db.seed] enabled = true`, `sql_paths = ["./seed.sql"]`.
 - [x] `custom_access_token` hook function lives in the migration chain (baseline) so
       Auth can issue tokens on a fresh branch.
-- [~] **Fold managed surfaces into migrations** — migration `20260627140000_fold_managed_surfaces.sql` added (idempotent; Section D guarded), pending first-branch validation + owner prod-apply, after which `managed-surfaces.install.sql` is removed. Branching runs only
-      migrations + seed; it will NOT run `supabase/managed-surfaces.install.sql`.
-      Fold its contents (extensions, storage RLS policies, realtime publication
-      membership, cron) into an idempotent forward migration
-      (`CREATE EXTENSION/POLICY IF NOT EXISTS`, `DO $$ … $$` guards) so every
-      branch is self-contained. Until this lands, preview branches lack storage
-      policies / realtime / cron. This intentionally reverses the earlier
+- [x] **Fold managed surfaces into migrations** — migration `20260627140000_fold_managed_surfaces.sql`
+      landed (idempotent; Section D guarded) and the standalone
+      `managed-surfaces.install.sql` was removed. Branching runs only migrations +
+      seed; managed surfaces (extensions, storage RLS policies, realtime publication
+      membership, cron) now live in this in-chain forward migration
+      (`CREATE EXTENSION/POLICY IF NOT EXISTS`, `DO $$ … $$` guards), so every branch
+      is self-contained. This intentionally reverses the earlier
       "managed-surfaces excluded from baseline" split (see D047).
 - [ ] `supabase/seed.sql` carries no production data and no secrets (branch DBs
       are throwaway).

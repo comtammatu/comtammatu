@@ -482,7 +482,9 @@ Hệ quả:
 
 **Rationale:** sát PR, ephemeral (không drift dữ liệu), tận dụng nền #109 (baseline replay sạch, CI-gated) + #110. Mở khoá cụm "No Non-Prod Runtime": design-system tails (W5 + 7 POS/KDS), HRM runtime verify, α4c RLS regression.
 
-**Prerequisite kiến trúc (BLOCKER):** Branching CHỈ chạy migrations + seed (không chạy file ngoài như `managed-surfaces.install.sql`). Phải **fold managed-surfaces vào migration chain** dạng idempotent (`CREATE EXTENSION/POLICY IF NOT EXISTS`, `DO $$…$$` guard) để branch tự đủ extensions / storage policies / realtime publication / cron. Đây là **đảo ngược có chủ đích** việc trước đây tách managed-surfaces khỏi baseline (lý do tách: dump public bỏ rơi managed-surface — nay yêu cầu idempotent + 1 chain để branch self-contained).
+**Prerequisite kiến trúc (BLOCKER):** Branching CHỈ chạy migrations + seed (không chạy file ngoài). Phải **fold managed-surfaces vào migration chain** dạng idempotent (`CREATE EXTENSION/POLICY IF NOT EXISTS`, `DO $$…$$` guard) để branch tự đủ extensions / storage policies / realtime publication / cron. Đây là **đảo ngược có chủ đích** việc trước đây tách managed-surfaces khỏi baseline (lý do tách: dump public bỏ rơi managed-surface — nay yêu cầu idempotent + 1 chain để branch self-contained).
+
+**Consolidation ĐÃ XONG:** managed-surfaces folded vào chain qua `supabase/migrations/20260627140000_fold_managed_surfaces.sql` (single source of truth). Hai file standalone cũ (`managed-surfaces.install.sql` + `managed-surfaces.advisor-hardening.sql`) đã được xoá; mọi tham chiếu trỏ về fold migration.
 
 **Provisioning thuộc owner (D005, agent không tạo infra):** nâng Supabase Pro, bật Branching + cài Supabase GitHub App, cài tích hợp Supabase↔Vercel. Chi phí ~$0.01344/branch/giờ (Micro) + disk/egress; Compute Credits & Spend Cap KHÔNG cover branching.
 

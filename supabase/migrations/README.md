@@ -21,24 +21,27 @@ squashed baseline exists.
   pre-baseline chain plus the forward chain squashed into the current baseline.
   NOT the install path; NOT applied by a fresh `supabase db reset`.
 
-## Managed surfaces (NOT in the baseline)
+## Managed surfaces (folded into the chain)
 
-`pg_dump --schema=public --schema=private` excludes Supabase-managed surfaces.
-Apply **`../managed-surfaces.install.sql`** (i.e. `supabase/managed-surfaces.install.sql`)
-AFTER the baseline on a fresh env. It is a privileged install step (NOT an
-auto-applied migration), idempotent:
+`pg_dump --schema=public --schema=private` excludes Supabase-managed surfaces, so
+they are folded back in as the forward migration
+`20260627140000_fold_managed_surfaces.sql`. It is idempotent (`CREATE … IF NOT
+EXISTS`, `DROP … IF EXISTS` + recreate, `DO $$ … $$` guards) and applied
+automatically by `supabase db start` / `supabase db reset` / Supabase Branching as
+part of the chain — there is no separate manual apply step:
 
 - extensions (pgcrypto, uuid-ossp, hypopg, index_advisor, pg_cron). pgcrypto's
-  `crypt`/`gen_salt` are required by the QA seed, so apply managed-surfaces
-  before seeding a fresh env.
-- storage buckets (4) + storage.objects RLS policies (12) — **the policy section
-  needs `storage.objects` ownership (`supabase_storage_admin`); run it as that
-  role / via the Dashboard if a plain migration role errors with "must be owner"**
-- realtime publication membership (`ADD TABLE` — fresh env only)
-- cron jobs via `cron.schedule(...)`
+  `crypt`/`gen_salt` are required by the QA seed; the fold migration's Section A
+  runs before the seed, so the seed always has them.
+- storage buckets (4) + storage.objects RLS policies (12). The policy section
+  needs `storage.objects` ownership; the Supabase migration role has it, so it runs
+  in-chain without intervention.
+- realtime publication membership (`ADD TABLE`, guarded so it only adds tables not
+  already members).
+- cron jobs via `cron.schedule(...)`.
 
-The `config.toml` auth-hook setting stays in the repo. `supabase/managed-surfaces.install.sql`
-is the canonical companion install file for fresh environments.
+The `config.toml` auth-hook setting stays in the repo. The fold migration is the
+single source of truth for managed surfaces.
 
 ## Existing environments
 

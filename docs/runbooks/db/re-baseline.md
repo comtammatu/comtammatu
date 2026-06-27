@@ -65,8 +65,10 @@ now-squashed forward chain.
      `--no-privileges`). Never use `supabase db dump --linked` — it silently drops
      RLS-restricted tables.
    - The baseline is self-contained — there is no separate `private-bootstrap.sql`.
-   - Managed surfaces (storage buckets/policies, extensions, realtime, cron) stay
-     in `supabase/managed-surfaces.install.sql` — `pg_dump --schema` omits them.
+   - Managed surfaces (storage buckets/policies, extensions, realtime, cron) are
+     omitted by `pg_dump --schema`, so replaying the chain re-applies them via the
+     fold migration `20260627140000_fold_managed_surfaces.sql` (Section C storage
+     policies etc.).
 
 2. **Archive the squashed forward chain.** Every migration with a timestamp at or
    before the new dump's cutoff is now represented by the baseline:
