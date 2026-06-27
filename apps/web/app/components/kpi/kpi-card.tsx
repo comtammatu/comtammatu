@@ -144,7 +144,7 @@ export function KpiCard({
     <Link
       href={href}
       className={cn(
-        "block h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "block h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2",
         className,
       )}
       aria-label={typeof value === "string" ? `${label}: ${value}` : label}

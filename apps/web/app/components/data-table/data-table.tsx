@@ -272,7 +272,7 @@ export function DataTable<T>({
                   aria-label={getRowAriaLabel?.(row, index)}
                   className={cn(
                     interactive &&
-                      "cursor-pointer hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                      "cursor-pointer hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground",
                     rowClassName?.(row, index),
                   )}
                   onClick={interactive ? () => onRowClick(row) : undefined}

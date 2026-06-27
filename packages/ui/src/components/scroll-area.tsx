@@ -21,7 +21,7 @@ function ScrollArea({
         // Override radix's inner `display:table` to `block` so children's
         // `min-w-0`/`truncate` chain works (we never need horizontal overflow
         // detection — horizontal lists use plain `overflow-x-auto`).
-        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 [&>div]:block! [&>div]:min-w-0!"
+        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-foreground focus-visible:outline-1 [&>div]:block! [&>div]:min-w-0!"
       >
         {children}
       </ScrollAreaPrimitive.Viewport>

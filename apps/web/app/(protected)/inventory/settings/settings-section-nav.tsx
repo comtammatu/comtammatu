@@ -35,7 +35,7 @@ export function SettingsSectionNav({ role }: { role: StaffRole }) {
               key={tab.href}
               href={tab.href}
               className={cn(
-                "relative -mb-2 inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold whitespace-nowrap transition-[background-color,border-color,color,box-shadow] duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none",
+                "relative -mb-2 inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold whitespace-nowrap transition-[background-color,border-color,color,box-shadow] duration-150 focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none",
                 isActive
                   ? "border-primary/30 bg-primary/10 text-primary ring-1 ring-primary/20"
                   : "border-transparent bg-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/70 hover:text-foreground",

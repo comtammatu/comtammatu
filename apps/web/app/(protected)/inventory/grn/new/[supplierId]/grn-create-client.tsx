@@ -604,7 +604,7 @@ function LineEditSheet({
                     </span>
                   </button>
                 ) : (
-                  <label className="flex cursor-text flex-col items-start gap-1 rounded-md border bg-card px-3 py-3 text-left transition focus-within:ring-2 focus-within:ring-ring/30">
+                  <label className="flex cursor-text flex-col items-start gap-1 rounded-md border bg-card px-3 py-3 text-left transition focus-within:ring-2 focus-within:ring-foreground">
                     <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
                       {FORM_VI.quantity}
                     </span>
@@ -640,7 +640,7 @@ function LineEditSheet({
                     </span>
                   </button>
                 ) : (
-                  <label className="flex cursor-text flex-col items-start gap-1 rounded-md border bg-card px-3 py-3 text-left transition focus-within:ring-2 focus-within:ring-ring/30">
+                  <label className="flex cursor-text flex-col items-start gap-1 rounded-md border bg-card px-3 py-3 text-left transition focus-within:ring-2 focus-within:ring-foreground">
                     <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
                       {FORM_VI.unitPrice}
                     </span>
