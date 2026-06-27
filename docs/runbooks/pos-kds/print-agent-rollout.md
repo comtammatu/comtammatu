@@ -219,4 +219,4 @@ Go criteria for fleet rollout:
 - Admin monitor: `/admin/settings/printers/jobs`
 - DB schema: `supabase/migrations/00000000000000_baseline.sql` (print_jobs,
   printer_agents, v_print_agent_fleet, enqueue/completion RPCs) +
-  `supabase/managed-surfaces.install.sql`
+  `supabase/migrations/20260627140000_fold_managed_surfaces.sql`

@@ -73,7 +73,7 @@ Generated checkout snapshot from 2026-06-27 (`node scripts/project-snapshot.mjs`
 | Test/spec files (`apps/web/e2e` + shared unit tests)     |                                          38 |
 | Playwright specs / shared unit tests                     |                                     10 / 28 |
 
-> Migrations are **baseline-first** since 2026-05-30: `supabase/migrations/00000000000000_baseline.sql` (canonical public+private schema install) + forward migrations, with the 460-file historical chain under `supabase/migrations/_archive/` and managed surfaces in `supabase/managed-surfaces.install.sql`. See `docs/spec/database-schema.md`.
+> Migrations are **baseline-first** since 2026-05-30: `supabase/migrations/00000000000000_baseline.sql` (canonical public+private schema install) + forward migrations, with the 460-file historical chain under `supabase/migrations/_archive/` and managed surfaces folded into the chain as `supabase/migrations/20260627140000_fold_managed_surfaces.sql`. See `docs/spec/database-schema.md`.
 
 The repo is not a flat "apps/packages" map. The operational shape is:
 

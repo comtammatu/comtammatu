@@ -130,8 +130,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.{table} TO authenticated;
 ## Migration Conventions
 
 Fresh/dev installs are baseline-first. `supabase/migrations/00000000000000_baseline.sql`
-is the public+private schema install path; `supabase/managed-surfaces.install.sql` is the
-privileged companion for extensions, storage policies, realtime, and cron.
+is the public+private schema install path; the managed surfaces (extensions, storage
+policies, realtime, and cron) are folded into the chain as the forward migration
+`supabase/migrations/20260627140000_fold_managed_surfaces.sql`, applied automatically.
 Forward migrations live in `supabase/migrations/` with timestamp-prefixed
 filenames after the baseline.
 

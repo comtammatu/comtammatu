@@ -31,10 +31,12 @@ The pre-baseline incremental chain could not replay from an empty DB (ordering b
   schema install; validated to replay on an empty DB.
 - `supabase/migrations/<timestamp>_*.sql` after it — forward migrations on the baseline.
 - `supabase/migrations/_archive/` — the 460 historical migrations (retained, NOT applied).
-- `supabase/managed-surfaces.install.sql` — extensions / storage buckets + RLS
-  policies / realtime publication / cron jobs (excluded from the baseline schema dump),
-  applied after the baseline on a fresh env (storage-policy section needs
-  `storage.objects` owner).
+- `supabase/migrations/20260627140000_fold_managed_surfaces.sql` — extensions /
+  storage buckets + RLS policies / realtime publication / cron jobs (excluded from
+  the baseline schema dump, folded back in here). It is a forward migration in the
+  chain, so it is applied automatically after the baseline — not a separate manual
+  step (the storage-policy section needs `storage.objects` owner, which the migration
+  role has).
 - **Option X**: production keeps its applied migration history; the baseline is the
   fresh/dev install path. Regeneration via `pnpm db:baseline:extract -- --project-ref=<dev-ref>`
   (Docker-free libpq engine) is currently **blocked**: matu-dev has been deleted and

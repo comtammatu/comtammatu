@@ -1,8 +1,11 @@
 project_id = "iexwsuaqqenyjiskawoj"
 
+# Fresh-env seed order (Supabase Branching, supabase db reset/start): the dev-tenant
+# bootstrap MUST run before seed.sql, which assumes tenant `comtammatu` + its branches
+# already exist (the base dataset historically lived in archived pre-baseline migrations).
 [db.seed]
 enabled = true
-sql_paths = ["./seed.sql"]
+sql_paths = ["./_local-dev/dev-tenant-seed.sql", "./seed.sql"]
 
 [auth]
 enabled = true
