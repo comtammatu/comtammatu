@@ -356,4 +356,35 @@ BEGIN
   RAISE NOTICE 'Auth seed: staff_permissions rows added=%', v_res.rows_added;
 END $$;
 
+-- ─── QA fixture: a pending annual leave for cashier.datdo so preview branches can
+-- exercise the HR leave approve/reject + notification flow. Guarded: a fixture
+-- failure raises a WARNING and never aborts the seed.
+DO $$
+DECLARE
+  v_tenant BIGINT;
+  v_branch BIGINT;
+  v_emp    BIGINT;
+BEGIN
+  SELECT id INTO v_tenant FROM public.tenants WHERE slug = 'comtammatu' LIMIT 1;
+  SELECT id INTO v_branch FROM public.branches
+    WHERE tenant_id = v_tenant AND name = 'Chi nhánh Đất Đỏ' LIMIT 1;
+  SELECT e.id INTO v_emp FROM public.employees e
+    WHERE e.tenant_id = v_tenant
+      AND e.profile_id = 'a0000004-0000-4000-8000-000000000004'::uuid LIMIT 1;
+  IF v_tenant IS NOT NULL AND v_branch IS NOT NULL AND v_emp IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM public.leave_requests
+       WHERE tenant_id = v_tenant AND employee_id = v_emp
+         AND status = 'pending' AND reason = 'QA seed: pending leave fixture'
+     ) THEN
+    INSERT INTO public.leave_requests
+      (tenant_id, branch_id, employee_id, start_date, end_date, leave_type, status, reason)
+    VALUES
+      (v_tenant, v_branch, v_emp, current_date + 14, current_date + 15, 'annual', 'pending', 'QA seed: pending leave fixture');
+    RAISE NOTICE 'QA leave fixture: pending annual leave created for employee %', v_emp;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  RAISE WARNING 'QA leave fixture skipped: %', SQLERRM;
+END $$;
+
 COMMIT;
