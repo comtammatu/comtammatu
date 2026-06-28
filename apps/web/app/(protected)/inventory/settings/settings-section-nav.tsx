@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { SUPPLIER_RETURN_ROLES, type StaffRole } from "@comtammatu/shared/auth";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { isNavItemActive } from "@/lib/shell-primitives";
 import { tRoute } from "../_lib/dictionary";
 
@@ -26,7 +27,7 @@ export function SettingsSectionNav({ role }: { role: StaffRole }) {
   );
 
   return (
-    <nav className="overflow-x-auto pb-1" aria-label="Mục cài đặt kho">
+    <nav className="overflow-x-auto pb-1" aria-label={INVENTORY_VI.settingsSectionNav}>
       <div className="flex min-w-max items-center gap-2 border-b border-border/40 pb-2">
         {visibleTabs.map((tab) => {
           const isActive = isNavItemActive({ href: tab.href }, pathname);

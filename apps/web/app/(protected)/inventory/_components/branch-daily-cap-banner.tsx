@@ -4,6 +4,7 @@ import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { TriangleAlert as IconAlertTriangle } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 
 interface BranchDailyCapBannerProps {
   /** Today's cumulative branch waste (all users, all SKUs). */
@@ -61,8 +62,8 @@ export function BranchDailyCapBanner({
           {Math.round(pct * 100)}%)
         </strong>
         {willExceed
-          ? "Đã vượt cap branch — mọi waste mới sẽ tự chuyển tier 2 (cần QLV duyệt). Cân nhắc báo QL trước khi submit."
-          : "Gần chạm cap branch — các phiếu waste tiếp theo có thể tự chuyển tier 2."}
+          ? INVENTORY_VI.branchOverCapBanner
+          : INVENTORY_VI.branchNearCapBanner}
       </AlertDescription>
     </Alert>
   );

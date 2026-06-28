@@ -1,5 +1,6 @@
 import { fetchSupplierReturns } from "@/(protected)/inventory/supplier-return-actions";
 import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { SupplierReturnsClient } from "./supplier-returns-client";
 
 export default async function SupplierReturnsPage({
@@ -22,12 +23,12 @@ export default async function SupplierReturnsPage({
   return (
     <AppPage>
       <AppPageHeader
-        eyebrow="Kho hàng"
-        title="Phiếu trả hàng NCC"
-        description="Quản lý các phiếu trả hàng nhà cung cấp."
+        eyebrow={INVENTORY_VI.warehouse}
+        title={INVENTORY_VI.supplierReturnsTitle}
+        description={INVENTORY_VI.supplierReturnsDescription}
       />
       {returns.length === 0 ? (
-        <AppEmptyState mode="no-data" title="Chưa có phiếu trả hàng" />
+        <AppEmptyState mode="no-data" title={INVENTORY_VI.noSupplierReturns} />
       ) : (
         <SupplierReturnsClient initialReturns={returns} />
       )}

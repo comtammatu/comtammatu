@@ -42,29 +42,29 @@ import type { BranchOption, FinishedGoodOption } from "./production-types";
 
 /* ─── Schema ─── */
 
-import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, INVENTORY_VI, PRODUCT_VI, TOAST_VI } from "@comtammatu/shared/messages";
 const productionLineRowSchema = z.object({
   finished_good_id: z
     .string()
-    .min(1, { error: "Chọn thành phẩm" })
+    .min(1, { error: INVENTORY_VI.selectFinishedGood })
     .refine((v) => Number(v) > 0, { error: "Thành phẩm không hợp lệ" }),
   quantity: z
     .string()
-    .min(1, { error: "Nhập số lượng" })
-    .refine((v) => Number(v) > 0, { error: "Số lượng phải > 0" }),
-  unit: z.string().trim().min(1, { error: "Đơn vị không được trống" }),
+    .min(1, { error: INVENTORY_VI.enterQuantity })
+    .refine((v) => Number(v) > 0, { error: INVENTORY_VI.quantityPositive }),
+  unit: z.string().trim().min(1, { error: INVENTORY_VI.unitRequired }),
 });
 
 const productionOrderSchema = z.object({
-  branch_id: z.string().min(1, { error: "Vui lòng chọn chi nhánh sản xuất" }),
+  branch_id: z.string().min(1, { error: INVENTORY_VI.productionBranchRequired }),
   production_number: z
     .string()
     .trim()
-    .min(1, { error: "Số lệnh không được trống" }),
+    .min(1, { error: INVENTORY_VI.orderNumberRequired }),
   notes: z.string().optional(),
   lines: z
     .array(productionLineRowSchema)
-    .min(1, { error: "Cần ít nhất một thành phẩm hợp lệ" }),
+    .min(1, { error: INVENTORY_VI.atLeastOneFinishedGood }),
 });
 
 type ProductionOrderFormValues = z.infer<typeof productionOrderSchema>;
@@ -117,8 +117,8 @@ function LineRowCells({
                 label: good.name,
                 hint: good.unit,
               }))}
-              placeholder="Chọn thành phẩm"
-              searchPlaceholder="Tìm thành phẩm..."
+              placeholder={INVENTORY_VI.selectFinishedGood}
+              searchPlaceholder={INVENTORY_VI.searchFinishedGood}
               aria-invalid={!!rowError?.finished_good_id}
               triggerClassName={cn(
                 rowError?.finished_good_id && "border-destructive",
@@ -152,7 +152,7 @@ function LineRowCells({
             <Input
               {...field}
               value={field.value ?? ""}
-              placeholder="ĐVT"
+              placeholder={INVENTORY_VI.unitAbbrev}
               aria-invalid={!!rowError?.unit}
               className={cn(rowError?.unit && "border-destructive")}
             />
@@ -166,7 +166,7 @@ function LineRowCells({
           onClick={onRemove}
           disabled={!canRemove}
           className="self-start"
-          aria-label="Xóa dòng"
+          aria-label={INVENTORY_VI.removeRow}
         >
           <IconCircleOff className="size-4" />
         </Button>
@@ -272,7 +272,7 @@ export function ProductionOrderForm({
       );
 
     if (payloadLines.length === 0) {
-      setServerError("Cần ít nhất một thành phẩm hợp lệ.");
+      setServerError(INVENTORY_VI.atLeastOneFinishedGoodPeriod);
       return;
     }
 
@@ -285,10 +285,10 @@ export function ProductionOrderForm({
         items: payloadLines,
       });
       if (!result.success) {
-        setServerError(result.error ?? "Không thể tạo lệnh sản xuất");
+        setServerError(result.error ?? INVENTORY_VI.createProductionOrderFailed);
         return;
       }
-      toast.success("Đã tạo lệnh sản xuất");
+      toast.success(TOAST_VI.productionOrderCreated);
       setIsDialogOpen(false);
       router.refresh();
     });
@@ -302,12 +302,12 @@ export function ProductionOrderForm({
       <DialogTrigger asChild>
         <Button disabled={!actionsEnabled}>
           <IconPlus className="mr-2 size-4" />
-          Tạo lệnh sản xuất
+          {INVENTORY_VI.createProductionOrder}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Tạo lệnh sản xuất</DialogTitle>
+          <DialogTitle>{INVENTORY_VI.createProductionOrder}</DialogTitle>
         </DialogHeader>
 
         <form
@@ -317,7 +317,7 @@ export function ProductionOrderForm({
         >
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="productionNumber">Số lệnh</Label>
+              <Label htmlFor="productionNumber">{INVENTORY_VI.productionNumber}</Label>
               <Controller
                 control={form.control}
                 name="production_number"
@@ -341,7 +341,7 @@ export function ProductionOrderForm({
               )}
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="branchId">Chi nhánh sản xuất</Label>
+              <Label htmlFor="branchId">{INVENTORY_VI.productionBranch}</Label>
               <Controller
                 control={form.control}
                 name="branch_id"
@@ -383,7 +383,7 @@ export function ProductionOrderForm({
                   id="notes"
                   {...field}
                   value={field.value ?? ""}
-                  placeholder="Ghi chú lô sản xuất, ca làm việc, yêu cầu đóng gói..."
+                  placeholder={INVENTORY_VI.productionNoteePlaceholder}
                 />
               )}
             />
@@ -398,7 +398,7 @@ export function ProductionOrderForm({
                 size="sm"
                 onClick={() => append(buildEmptyRow(finishedGoodsOptions[0]))}
               >
-                Thêm dòng
+                {INVENTORY_VI.addRow}
               </Button>
             </div>
 
@@ -441,7 +441,7 @@ export function ProductionOrderForm({
             </Button>
             <Button type="submit" disabled={isPending || !actionsEnabled}>
               {isPending && <Spinner className="mr-2" />}
-              Tạo lệnh
+              {INVENTORY_VI.createOrderShort}
             </Button>
           </DialogFooter>
         </form>

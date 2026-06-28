@@ -1,3 +1,4 @@
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import type { AuditLogRow } from "@/_lib/audit";
 import { AppEmptyState } from "@/components/surface";
@@ -11,7 +12,7 @@ import {
 
 export function AuditHistoryList({ logs }: { logs: AuditLogRow[] }) {
   if (!logs.length) {
-    return <AppEmptyState mode="no-data" title="Chưa có lịch sử thao tác" />;
+    return <AppEmptyState mode="no-data" title={INVENTORY_VI.noAuditHistory} />;
   }
   return (
     <ItemGroup>
@@ -20,7 +21,7 @@ export function AuditHistoryList({ logs }: { logs: AuditLogRow[] }) {
           <ItemContent>
             <ItemTitle>{formatAction(log.action)}</ItemTitle>
             <ItemDescription>
-              {log.userId ?? "Hệ thống"} · {formatVNDateTime(log.createdAt)}
+              {log.userId ?? INVENTORY_VI.systemActor} · {formatVNDateTime(log.createdAt)}
             </ItemDescription>
           </ItemContent>
         </Item>

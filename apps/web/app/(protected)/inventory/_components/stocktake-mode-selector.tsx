@@ -1,6 +1,7 @@
 "use client";
 
 import { STOCKTAKE_MODE_LABELS_VI } from "@comtammatu/shared/labels";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 
@@ -33,36 +34,31 @@ const MODE_META: Record<StocktakeMode, ModeMeta> = {
     key: "daily",
     defaultBlind: false,
     unaudited: true,
-    description:
-      "Quick count cuối ca. Không có reviewer — variance được ghi log nhưng không block.",
+    description: INVENTORY_VI.stocktakeModeQuickDesc,
   },
   weekly: {
     key: "weekly",
     defaultBlind: false,
     unaudited: false,
-    description:
-      "Đếm theo nhóm ABC — A mỗi tuần, B/C xoay vòng. Reviewer + QLV duyệt.",
+    description: INVENTORY_VI.stocktakeModeCycleDesc,
   },
   monthly: {
     key: "monthly",
     defaultBlind: true,
     unaudited: false,
-    description:
-      "Full inventory, blind mode. Không hiển thị tồn hệ thống — counter nhập mù.",
+    description: INVENTORY_VI.stocktakeModeFullDesc,
   },
   quarterly: {
     key: "quarterly",
     defaultBlind: true,
     unaudited: false,
-    description:
-      "Peer-cross: nhân sự CN khác đếm. Blind + double-check mọi nhóm.",
+    description: INVENTORY_VI.stocktakeModePeerDesc,
   },
   spot: {
     key: "spot",
     defaultBlind: true,
     unaudited: false,
-    description:
-      "QLV đột xuất. Có thể chỉ vài SKU. Blind default nhưng QLV override.",
+    description: INVENTORY_VI.stocktakeModeSpotDesc,
   },
 };
 
@@ -88,7 +84,7 @@ export function StocktakeModeSelector({
   return (
     <div
       role="radiogroup"
-      aria-label="Chọn chế độ kiểm kê"
+      aria-label={INVENTORY_VI.selectStocktakeMode}
       data-slot="stocktake-mode-selector"
       className={cn("grid gap-2 sm:grid-cols-2", className)}
     >

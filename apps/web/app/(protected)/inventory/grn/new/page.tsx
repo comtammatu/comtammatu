@@ -11,6 +11,7 @@ import {
   canAccess,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   diffVNDateDays,
   formatVNDate,
@@ -91,8 +92,8 @@ async function loadSuppliers(): Promise<SupplierRow[]> {
 function formatLastGrn(iso: string | null): string | null {
   if (!iso) return null;
   const days = diffVNDateDays(getVNDateString(iso), getVNDateString());
-  if (days <= 0) return "Hôm nay";
-  if (days === 1) return "Hôm qua";
+  if (days <= 0) return INVENTORY_VI.today;
+  if (days === 1) return INVENTORY_VI.yesterday;
   if (days < 7) return `${days} ngày trước`;
   if (days < 30) return `${Math.floor(days / 7)} tuần trước`;
   return formatVNDate(iso);
@@ -120,10 +121,10 @@ export default async function GrnNewSupplierPage() {
     <MobilePage>
       <MobileSectionHeader
         backHref="/inventory/grn"
-        backLabel="Danh sách GRN"
-        eyebrow="Nhập hàng"
-        title="Chọn nguồn nhập"
-        description="Nhận hàng theo đơn đặt hàng (PO) đã gửi hoặc nhập ad-hoc."
+        backLabel={INVENTORY_VI.grnListBackLabel}
+        eyebrow={INVENTORY_VI.receivingEyebrow}
+        title={INVENTORY_VI.chooseSourceTitle}
+        description={INVENTORY_VI.chooseSourceDescription}
       />
 
       {openPos.length > 0 ? <GrnFromPoList openPos={openPos} /> : null}
@@ -131,15 +132,15 @@ export default async function GrnNewSupplierPage() {
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between px-1">
           <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-            Nhập ad-hoc theo nhà cung cấp
+            {INVENTORY_VI.adhocBySupplierHeading}
           </p>
         </div>
         {suppliers.length === 0 ? (
           <AppEmptyState
             compact
             icon={<IconUsers />}
-            title="Chưa có nhà cung cấp"
-            description="Thêm nhà cung cấp ở mục Quản lý trước khi tạo phiếu nhập."
+            title={INVENTORY_VI.noSupplierTitle}
+            description={INVENTORY_VI.noSupplierDescription}
           />
         ) : (
           suppliers.map((supplier) => {

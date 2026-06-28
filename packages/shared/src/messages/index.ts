@@ -25,3 +25,7 @@ export type {
   ProductKey,
   CustomerKey,
 } from "./domain";
+export { INVENTORY_VI } from "./inventory";
+export type { InventoryKey } from "./inventory";
+export { TOAST_VI } from "./toast";
+export type { ToastKey } from "./toast";

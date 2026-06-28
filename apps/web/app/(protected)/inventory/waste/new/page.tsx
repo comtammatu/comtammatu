@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
 import {
   INVENTORY_FEATURE_FLAGS,
@@ -33,11 +34,11 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
   if (branchId === null) {
     return (
       <AppPage width="default">
-        <AppPageHeader title="Tạo phiếu hao hụt" />
+        <AppPageHeader title={INVENTORY_VI.createWasteTitle} />
         <AppEmptyState
           mode="no-access"
-          title="Cần chọn chi nhánh"
-          description="Chọn chi nhánh ở thanh điều hướng trước khi tạo phiếu hao hụt mới."
+          title={INVENTORY_VI.branchRequiredTitle}
+          description={INVENTORY_VI.branchRequiredWasteHint}
         />
       </AppPage>
     );

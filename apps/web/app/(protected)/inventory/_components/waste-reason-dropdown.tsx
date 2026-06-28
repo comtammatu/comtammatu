@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { WASTE_REASON_LABELS_VI } from "@comtammatu/shared/labels";
 
 type WasteReason = keyof typeof WASTE_REASON_LABELS_VI;
@@ -66,7 +67,7 @@ export function WasteReasonDropdown({
       disabled={disabled}
     >
       <SelectTrigger id={id}>
-        <SelectValue placeholder="Chọn lý do" />
+        <SelectValue placeholder={INVENTORY_VI.selectReason} />
       </SelectTrigger>
       <SelectContent>
         {options.map((key) => {

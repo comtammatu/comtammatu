@@ -34,7 +34,7 @@ import {
   type ImportIngredientSummary,
 } from "../ingredient-actions";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, INVENTORY_VI, TOAST_VI } from "@comtammatu/shared/messages";
 export function IngredientImportExportMenu({
   onImported,
 }: {
@@ -55,7 +55,7 @@ export function IngredientImportExportMenu({
       } else {
         downloadXlsx(res.data.base64, res.data.filename);
       }
-      toast.success("Đã xuất file");
+      toast.success(TOAST_VI.exported);
     });
   }
 
@@ -63,7 +63,7 @@ export function IngredientImportExportMenu({
     startExport(async () => {
       const res = await downloadIngredientTemplate();
       if (!res.success || !res.data) {
-        toast.error(res.error ?? "Không tạo được template");
+        toast.error(res.error ?? INVENTORY_VI.templateCreateFailed);
         return;
       }
       const data = res.data as { base64: string; filename: string };
@@ -87,20 +87,20 @@ export function IngredientImportExportMenu({
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem onClick={() => setImportOpen(true)}>
             <IconUpload className="mr-2 size-4" />
-            Import từ file
+            {INVENTORY_VI.importFromFile}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleTemplate}>
             <IconFileSpreadsheet className="mr-2 size-4" />
-            Tải template (.xlsx)
+            {INVENTORY_VI.downloadTemplate}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => handleExport("xlsx")}>
             <IconDownload className="mr-2 size-4" />
-            Export .xlsx
+            {INVENTORY_VI.exportXlsx}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleExport("csv")}>
             <IconDownload className="mr-2 size-4" />
-            Export .csv
+            {INVENTORY_VI.exportCsv}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -147,7 +147,7 @@ function IngredientImportDialog({
     e.preventDefault();
     const file = fileRef.current?.files?.[0];
     if (!file) {
-      setError("Vui lòng chọn file");
+      setError(INVENTORY_VI.selectFile);
       return;
     }
     const fd = new FormData();
@@ -181,7 +181,7 @@ function IngredientImportDialog({
     >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Import nguyên liệu từ file</DialogTitle>
+          <DialogTitle>{INVENTORY_VI.importIngredientsTitle}</DialogTitle>
           <DialogDescription>
             Hỗ trợ .xlsx và .csv. Dòng trùng <strong>tên nguyên liệu</strong> sẽ
             được cập nhật.
@@ -191,7 +191,7 @@ function IngredientImportDialog({
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <label htmlFor="ing-import-file" className="text-sm font-medium">
-              Chọn file (.xlsx, .csv)
+              {INVENTORY_VI.chooseFileLabel}
             </label>
             <input
               id="ing-import-file"
@@ -242,7 +242,7 @@ function IngredientImportDialog({
 
           {summary ? (
             <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
-              <p className="font-medium">Kết quả</p>
+              <p className="font-medium">{INVENTORY_VI.importResultHeading}</p>
               <p className="mt-1 text-muted-foreground">
                 Tạo mới {summary.inserted} · Cập nhật {summary.updated}
               </p>
