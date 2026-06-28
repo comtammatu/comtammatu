@@ -112,10 +112,15 @@ reminders, bulk approve.
       fixed: the new inventory routes escaped ACL module coverage (added to
       `INVENTORY_ROUTE_PREFIXES`); a 5th employee bottom-nav tab violated the
       4-item contract (moved to a home-page card).
-- [ ] Owner grants the 3 `inventory:count_*` perms to relevant existing staff via
-      `/admin/staff/[id]/permissions` (role_templates only affect future users;
-      owner auto-bypasses so can test immediately), then commit/PR/merge to deploy
-      the UI (the migration is already on prod; additive → safe to ship code after).
+- [x] **Authz model refined** (owner: "the assignment IS the authorization").
+      Migration `20260628081816_count_slip_drop_submit_perm.sql` (APPLIED to prod):
+      DROPPED `inventory:count_submit` entirely — `submit_inventory_count_slip` now
+      gates on (active employee at branch + active per-line assignment), no separate
+      permission. Backfilled `inventory:count_assign` + `inventory:count_approve` to
+      existing manager-position staff (branch_manager/warehouse_manager/production_manager;
+      owner auto-bypasses) so **managers have them by default** (6 grants for 3 managers).
+      `PERMISSION_KEY_COUNT` 91→90. So the only setup left is assigning ingredients to
+      employees (which itself enables their submit) — no manual permission grants.
 - [ ] (Nice-to-have) Regression guard mirroring STOCKTAKE-BLIND-STRIP-SERVER-SIDE
       for count slip lines.
 

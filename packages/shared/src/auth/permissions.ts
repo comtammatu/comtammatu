@@ -42,7 +42,6 @@ export const PERMISSION_KEYS = {
   INVENTORY_ITEM_REVIEW_OVERRIDE_SET: "inventory:item_review_override_set",
   // inventory — per-employee count slips (đếm tồn theo nhân viên)
   INVENTORY_COUNT_ASSIGN: "inventory:count_assign",
-  INVENTORY_COUNT_SUBMIT: "inventory:count_submit",
   INVENTORY_COUNT_APPROVE: "inventory:count_approve",
 
   // procurement
@@ -133,7 +132,7 @@ export type PermissionKey =
   (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
 
 /** Total count (static assertion — update when adding keys) */
-export const PERMISSION_KEY_COUNT = 91;
+export const PERMISSION_KEY_COUNT = 90;
 
 /**
  * Pure function: check if a permission set contains a given key.

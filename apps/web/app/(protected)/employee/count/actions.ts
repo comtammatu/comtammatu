@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
+import { STAFF_ROLES } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 
 const lineSchema = z.object({
@@ -44,8 +44,6 @@ export const submitCountSlip = withAction(
   {
     roles: STAFF_ROLES,
     schema: submitSchema,
-    permission: PERMISSION_KEYS.INVENTORY_COUNT_SUBMIT,
-    permissionBranchId: (data) => data.branchId,
   },
   async (data, { supabase }) => {
     const pLines = data.lines.map((line) => ({
