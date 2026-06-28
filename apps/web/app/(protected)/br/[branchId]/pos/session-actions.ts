@@ -291,9 +291,10 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
     canCloseShift: !closeRes.error && closeRes.data === true,
     canConfirmCash: !cashRes.error && cashRes.data === true,
     canManageMenuLimits: MENU_LIMIT_ROLES.includes(ctx.claims.user_role),
-    // Default ON when no row exists, matching the RPC's COALESCE(...,'true').
+    // Default ON when no row exists (matches the RPC COALESCE(...,'true')) but
+    // fail CLOSED on a read error, like the sibling flags — the RPC stays the hard gate.
     canSplitMerge:
-      splitMergeRes.error != null || splitMergeRes.data?.value !== "false",
+      !splitMergeRes.error && splitMergeRes.data?.value !== "false",
   };
 }
 

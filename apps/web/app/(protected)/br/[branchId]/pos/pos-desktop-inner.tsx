@@ -1598,25 +1598,21 @@ export function PosDesktopInner({
     }
   }, [orders, postSubmitPaymentOrderId]);
 
-  // Any sheet/modal open: gate the global F9/F10/? shortcuts so they can't
-  // stack a second surface on top of an open one. F2/F4 self-guard and stay
-  // live (see the separate registration below).
-  const anyModalOpen =
+  // Gate operational shortcuts (F9/F10/F2/F4) while any sheet/modal is open so
+  // they can't fire under or stack on top of an open surface. `?` is special:
+  // it must still toggle the help overlay CLOSED while the overlay itself is the
+  // only thing open, so it ignores hotkeyOpen but is still blocked under real sheets.
+  const anyModalOpenExceptHotkey =
     customizerItem !== null ||
     billOrderId !== null ||
     orderDetailId !== null ||
     pickerTableId !== null ||
     archivedSheetOpen ||
-    showCloseSession ||
-    hotkeyOpen;
+    showCloseSession;
+  const anyModalOpen = anyModalOpenExceptHotkey || hotkeyOpen;
 
   useKeyboardShortcut(
     [
-      {
-        key: "?",
-        shift: true,
-        handler: () => setHotkeyOpen((v) => !v),
-      },
       {
         key: "F10",
         preventDefault: true,
@@ -1633,29 +1629,37 @@ export function PosDesktopInner({
           }
         },
       },
+      {
+        key: "F2",
+        preventDefault: true,
+        handler: () => {
+          handleOrderTypeChange(
+            cartOrderType === "takeaway" ? "dine_in" : "takeaway",
+          );
+        },
+      },
+      {
+        key: "F4",
+        preventDefault: true,
+        handler: () => {
+          const el = document.getElementById("pos-menu-search");
+          if (el instanceof HTMLInputElement) el.focus();
+        },
+      },
     ],
     !anyModalOpen,
   );
 
-  useKeyboardShortcut([
-    {
-      key: "F2",
-      preventDefault: true,
-      handler: () => {
-        handleOrderTypeChange(
-          cartOrderType === "takeaway" ? "dine_in" : "takeaway",
-        );
+  useKeyboardShortcut(
+    [
+      {
+        key: "?",
+        shift: true,
+        handler: () => setHotkeyOpen((v) => !v),
       },
-    },
-    {
-      key: "F4",
-      preventDefault: true,
-      handler: () => {
-        const el = document.getElementById("pos-menu-search");
-        if (el instanceof HTMLInputElement) el.focus();
-      },
-    },
-  ]);
+    ],
+    !anyModalOpenExceptHotkey,
+  );
 
   const handleReturnToTables = useCallback(() => {
     setShowOrders(false);
