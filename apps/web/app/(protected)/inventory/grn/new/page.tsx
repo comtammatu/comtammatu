@@ -6,10 +6,9 @@ import {
   Receipt as IconReceipt,
   Users as IconUsers,
 } from "lucide-react";
-import { createClient } from "@comtammatu/database/supabase/server";
+import { loadAuthState } from "@/_lib/auth";
 import {
   canAccess,
-  extractClaimsFromAccessToken,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
 import {
@@ -36,13 +35,7 @@ type SupplierRow = {
 };
 
 async function loadSuppliers(): Promise<SupplierRow[]> {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) return [];
-  const claims = extractClaimsFromAccessToken(session.access_token);
-  if (!claims) return [];
+  const { supabase, claims } = await loadAuthState();
 
   const [suppliersRes, grnRes] = await Promise.all([
     supabase
@@ -106,13 +99,8 @@ function formatLastGrn(iso: string | null): string | null {
 }
 
 export default async function GrnNewSupplierPage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = extractClaimsFromAccessToken(session?.access_token);
+  const { claims } = await loadAuthState();
   if (
-    !claims ||
     !PROCUREMENT_ROLES.includes(claims.user_role) ||
     !canAccess(claims.user_role, "inventory_procurement")
   ) {

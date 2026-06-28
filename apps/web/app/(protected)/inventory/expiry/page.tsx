@@ -1,6 +1,4 @@
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
-import { redirect } from "next/navigation";
+import { loadAuthState } from "@/_lib/auth";
 import { fetchExpiryAlerts } from "@/(protected)/inventory/alert-actions";
 import {
   resolveInventoryBranchScope,
@@ -19,17 +17,7 @@ export default async function ExpiryPage({
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const params = await searchParams;
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = session?.user
-    ? extractClaimsFromAccessToken(session.access_token)
-    : null;
-
-  if (!claims) {
-    redirect("/login");
-  }
+  const { supabase, claims } = await loadAuthState();
 
   // Sidebar-selected branch drives both read filter and client action context.
   const requested = await resolveRequestedBranchId(params.branchId);

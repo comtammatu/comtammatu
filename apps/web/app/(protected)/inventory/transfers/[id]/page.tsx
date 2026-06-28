@@ -1,6 +1,5 @@
-import { createClient } from "@comtammatu/database/supabase/server";
+import { loadAuthState } from "@/_lib/auth";
 import {
-  extractClaimsFromAccessToken,
   PERMISSION_KEYS,
 } from "@comtammatu/shared/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
@@ -23,20 +22,12 @@ export default async function TransferDetailPage({
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = session?.user
-    ? extractClaimsFromAccessToken(session.access_token)
-    : null;
+  const { supabase, claims } = await loadAuthState();
 
   // Sidebar-selected branch scopes action enablement for tenant-wide roles.
   const sp = await searchParams;
   const requested = await resolveRequestedBranchId(sp.branchId);
-  const scope = claims
-    ? await resolveInventoryBranchScope(supabase, claims, requested)
-    : null;
+  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
   const scopedBranchId = scope?.selectedBranchId ?? null;
 
   const [res, auditLogs] = await Promise.all([
@@ -153,7 +144,7 @@ export default async function TransferDetailPage({
   return (
     <TransferDetailClient
       transfer={transfer}
-      userRole={claims?.user_role ?? "branch_manager"}
+      userRole={claims.user_role}
       userBranchId={scopedBranchId}
       correctionBranches={correctionBranches}
       auditLogs={auditLogs}
