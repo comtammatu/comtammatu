@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   useTransition,
 } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -170,6 +171,38 @@ function formatDailyLimitBlockMessage(block: DailyLimitBlock): string {
   }
 
   return `${block.itemName} chỉ còn ${block.available} suất.`;
+}
+
+// lg breakpoint (1024px) gate. Must match the Tailwind `lg:` breakpoints the
+// sidebar variants use: TabbedSidebar is `md:flex lg:hidden`, SplitSidebar is
+// `lg:flex`. SSR returns false so first paint renders the TabbedSidebar tree
+// (correct for the md–lg tablet range); client reads the store synchronously,
+// matching the `useIsMobile` SSR behavior.
+const LG_BREAKPOINT = 1024;
+
+let lgMql: MediaQueryList | null = null;
+
+function getLgMediaQueryList(): MediaQueryList {
+  lgMql ??= window.matchMedia(`(min-width: ${LG_BREAKPOINT}px)`);
+  return lgMql;
+}
+
+function subscribeLg(onStoreChange: () => void): () => void {
+  const list = getLgMediaQueryList();
+  list.addEventListener("change", onStoreChange);
+  return () => list.removeEventListener("change", onStoreChange);
+}
+
+function getLgSnapshot(): boolean {
+  return getLgMediaQueryList().matches;
+}
+
+function getLgServerSnapshot(): boolean {
+  return false;
+}
+
+function useIsLargeUp(): boolean {
+  return useSyncExternalStore(subscribeLg, getLgSnapshot, getLgServerSnapshot);
 }
 
 /* ─── Inner (consumes hooks) ─── */
@@ -378,6 +411,7 @@ export function PosDesktopInner({
     number | null
   >(null);
   const isMobile = useIsMobile();
+  const lgUp = useIsLargeUp();
   const cartHoldTokenRef = useRef<string | null>(null);
   const appendHoldTokenRef = useRef<string | null>(null);
   const cartHoldSyncRef = useRef<DailyLimitHoldSyncState>({
@@ -1528,17 +1562,46 @@ export function PosDesktopInner({
     }
   }, [orders, postSubmitPaymentOrderId]);
 
+  // Any sheet/modal open: gate the global F9/F10/? shortcuts so they can't
+  // stack a second surface on top of an open one. F2/F4 self-guard and stay
+  // live (see the separate registration below).
+  const anyModalOpen =
+    customizerItem !== null ||
+    billOrderId !== null ||
+    orderDetailId !== null ||
+    pickerTableId !== null ||
+    archivedSheetOpen ||
+    showCloseSession ||
+    hotkeyOpen;
+
+  useKeyboardShortcut(
+    [
+      {
+        key: "?",
+        shift: true,
+        handler: () => setHotkeyOpen((v) => !v),
+      },
+      {
+        key: "F10",
+        preventDefault: true,
+        handler: canCloseShift ? openCloseSession : () => {},
+      },
+      {
+        key: "F9",
+        preventDefault: true,
+        handler: () => {
+          if (latestAwaitingPaymentOrderId !== null) {
+            openBill(latestAwaitingPaymentOrderId);
+          } else {
+            toast.message("Không có đơn chờ thanh toán");
+          }
+        },
+      },
+    ],
+    !anyModalOpen,
+  );
+
   useKeyboardShortcut([
-    {
-      key: "?",
-      shift: true,
-      handler: () => setHotkeyOpen((v) => !v),
-    },
-    {
-      key: "F10",
-      preventDefault: true,
-      handler: canCloseShift ? openCloseSession : () => {},
-    },
     {
       key: "F2",
       preventDefault: true,
@@ -1554,17 +1617,6 @@ export function PosDesktopInner({
       handler: () => {
         const el = document.getElementById("pos-menu-search");
         if (el instanceof HTMLInputElement) el.focus();
-      },
-    },
-    {
-      key: "F9",
-      preventDefault: true,
-      handler: () => {
-        if (latestAwaitingPaymentOrderId !== null) {
-          openBill(latestAwaitingPaymentOrderId);
-        } else {
-          toast.message("Không có đơn chờ thanh toán");
-        }
       },
     },
   ]);
@@ -1764,31 +1816,36 @@ export function PosDesktopInner({
     </Drawer>
   ) : null;
 
-  // Mobile uses `mobileSidebarDrawer` exclusively — skip the desktop sidebars
-  // entirely so phones don't carry hidden-via-Tailwind subtrees that still
-  // re-render on every realtime tick. `useIsMobile()` returns false during
-  // SSR/first paint (initial state is undefined → !!undefined === false), so
-  // desktop hydration is unaffected; mobile post-mount unmounts cleanly.
+  // Mobile uses `mobileSidebarDrawer` exclusively; on larger screens render
+  // exactly one of TabbedSidebar (md–lg) / SplitSidebar (lg+). JS-gating (not
+  // CSS hide) keeps the unused variant unmounted so its OrderListPane/CartPane
+  // don't re-render on every realtime tick. The lg gate must match the
+  // sidebar-variants Tailwind breakpoints. Both hooks return false during
+  // SSR/first paint, so first paint is the TabbedSidebar tree; the client
+  // corrects to SplitSidebar in one commit on lg+.
   const sidebars = isMobile ? null : (
     <>
-      <TabbedSidebar
-        canCloseShift={canCloseShift}
-        canManageMenuLimits={canManageMenuLimits}
-        menuLimitRows={menuLimitRows}
-        onShowCloseSession={openCloseSession}
-        isContextGate={!menuContextReady}
-        showOrders={showOrders}
-        onShowOrdersChange={setShowOrders}
-        sidebarContentProps={sidebarContentProps}
-      />
-      <SplitSidebar
-        canCloseShift={canCloseShift}
-        canManageMenuLimits={canManageMenuLimits}
-        menuLimitRows={menuLimitRows}
-        onShowCloseSession={openCloseSession}
-        isContextGate={!menuContextReady}
-        sidebarContentProps={sidebarContentProps}
-      />
+      {!lgUp ? (
+        <TabbedSidebar
+          canCloseShift={canCloseShift}
+          canManageMenuLimits={canManageMenuLimits}
+          menuLimitRows={menuLimitRows}
+          onShowCloseSession={openCloseSession}
+          isContextGate={!menuContextReady}
+          showOrders={showOrders}
+          onShowOrdersChange={setShowOrders}
+          sidebarContentProps={sidebarContentProps}
+        />
+      ) : (
+        <SplitSidebar
+          canCloseShift={canCloseShift}
+          canManageMenuLimits={canManageMenuLimits}
+          menuLimitRows={menuLimitRows}
+          onShowCloseSession={openCloseSession}
+          isContextGate={!menuContextReady}
+          sidebarContentProps={sidebarContentProps}
+        />
+      )}
     </>
   );
 

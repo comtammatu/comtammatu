@@ -9,6 +9,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
+import { Separator } from "@comtammatu/ui/components/separator";
 import {
   Check as IconCheck,
   CircleDollarSign as IconCircleDollarSign,
@@ -224,6 +225,9 @@ export function OrderItemActionsSheet({
               <IconMinus data-icon="inline-start" />
               Giảm số lượng
             </Button>
+          )}
+          {canVoid && (
+            <Separator className="my-1" />
           )}
           {canVoid && (
             <Button

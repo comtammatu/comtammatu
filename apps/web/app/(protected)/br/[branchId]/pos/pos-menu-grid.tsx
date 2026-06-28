@@ -136,7 +136,7 @@ const MenuItemButton = memo(function MenuItemButton({
       </span>
 
       {/* Bottom-up black gradient keeps the white item name readable on bright photos. */}
-      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
 
       {/* Price — top right, primary badge with shadow. */}
       <span
@@ -183,7 +183,7 @@ const MenuItemGrid = memo(function MenuItemGrid({
         "grid grid-cols-2 gap-3",
         sparseMenu
           ? "md:grid-cols-1"
-          : "sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",
+          : "sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4",
       )}
     >
       {items.map((item) => (
@@ -423,7 +423,7 @@ function PosMenuGridComponent({
 
         <ScrollArea className="min-h-0 flex-1 overflow-hidden">
           {visibleItems.length > 0 && isAllMenuActive ? (
-            <div className="flex flex-col gap-4 px-2 pb-28 pt-2 md:gap-6 md:px-3 md:py-3 lg:px-4">
+            <div className="flex flex-col gap-4 px-2 pb-32 pt-2 md:gap-6 md:px-3 md:py-3 lg:px-4">
               {visibleCategories.map((category) => (
                 <section
                   key={category.id}
@@ -449,7 +449,7 @@ function PosMenuGridComponent({
           ) : null}
 
           {visibleItems.length > 0 && !isAllMenuActive ? (
-            <div className="px-2 pb-28 pt-2 md:px-3 md:py-3 lg:px-4">
+            <div className="px-2 pb-32 pt-2 md:px-3 md:py-3 lg:px-4">
               <MenuItemGrid
                 items={visibleItems}
                 sparseMenu={sparseMenu}

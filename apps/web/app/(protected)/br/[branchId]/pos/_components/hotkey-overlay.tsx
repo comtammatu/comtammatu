@@ -32,16 +32,13 @@ const GROUPS: HotkeyGroup[] = [
   },
   {
     title: "Tìm kiếm & chọn bàn",
-    rows: [
-      { keys: ["F4"], label: "Focus ô tìm món" },
-      { keys: ["1", "–", "9"], label: "Chọn bàn nhanh (đang phát triển)" },
-    ],
+    rows: [{ keys: ["F4"], label: "Focus ô tìm món" }],
   },
   {
     title: "Ca làm",
     rows: [
       { keys: ["F10"], label: "Mở sheet đóng ca" },
-      { keys: ["Esc"], label: "Đóng sheet / hủy thao tác" },
+      { keys: ["Esc"], label: "Đóng sheet đang mở" },
     ],
   },
   {

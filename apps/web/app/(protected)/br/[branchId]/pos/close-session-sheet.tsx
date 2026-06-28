@@ -108,22 +108,30 @@ export function CloseSessionSheet({
         };
         setSummary(payload);
         setStep("reconcile");
-        toast.success("Chốt ca thành công");
-        // D8: a variance breach is only a warning. The server already
-        // inserted the manager notification via trigger; the UI just
-        // informs the cashier.
+        // D8: a variance breach is only a warning, and shift-close print is
+        // fail-soft. With a 1-slot toaster, separate warnings would evict the
+        // success toast (and each other), so fold any warning into a single
+        // toast that supersedes and stays longer; otherwise plain success.
+        const warningLines: string[] = [];
         if (payload.variance_breached) {
-          toast.warning("Lệch quỹ vượt ngưỡng — đã gửi cảnh báo cho quản lý", {
-            description: `Chênh lệch ${formatVND(
+          warningLines.push(
+            `Lệch quỹ vượt ngưỡng (chênh lệch ${formatVND(
               payload.cash_difference,
-            )} > ${formatVND(payload.variance_threshold)}.`,
-          });
+            )} > ${formatVND(
+              payload.variance_threshold,
+            )}) — đã gửi cảnh báo cho quản lý.`,
+          );
         }
-        // Best-effort shift-close print is fail-soft inside the Server Action.
         if (payload.print_warning) {
-          toast.warning("Không in được phiếu chốt ca", {
-            description: payload.print_warning,
+          warningLines.push(`Không in được phiếu chốt ca: ${payload.print_warning}`);
+        }
+        if (warningLines.length > 0) {
+          toast.warning("Đã chốt ca", {
+            description: warningLines.join(" "),
+            duration: 8000,
           });
+        } else {
+          toast.success("Chốt ca thành công");
         }
         return;
       }
