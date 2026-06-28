@@ -24,6 +24,7 @@ import { executeArchiveRunForBranch } from "@lib/hddt-archive";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 function timingSafeEquals(a: string, b: string): boolean {
   const MAX = 256;
