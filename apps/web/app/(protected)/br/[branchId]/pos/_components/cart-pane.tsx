@@ -475,7 +475,7 @@ function CartPaneComponent({
                   <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                     {messages.pos.pendingDraft.subtotal}
                   </p>
-                  <p className="ml-auto text-xl font-bold text-primary tabular-nums">
+                  <p className="ml-auto font-mono text-xl font-bold text-primary tabular-nums">
                     {formatVND(cart.total)}
                   </p>
                 </div>

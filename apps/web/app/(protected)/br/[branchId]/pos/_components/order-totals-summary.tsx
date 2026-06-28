@@ -71,20 +71,20 @@ export function OrderTotalsSummary({
     <div className={cn("flex flex-col gap-1", className)}>
       <div className={cn(lineClass, "text-muted-foreground")}>
         <span>{FORM_VI.subtotal}</span>
-        <span className="tabular-nums">{formatVND(subtotal)}</span>
+        <span className="font-mono tabular-nums">{formatVND(subtotal)}</span>
       </div>
 
       {serviceCharge > 0 && (
         <div className={cn(lineClass, "text-muted-foreground")}>
           <span>Phụ phí</span>
-          <span className="tabular-nums">{formatVND(serviceCharge)}</span>
+          <span className="font-mono tabular-nums">{formatVND(serviceCharge)}</span>
         </div>
       )}
 
       {visibleItemDiscount > 0 && (
         <div className={cn(lineClass, "text-success")}>
           <span>Chiết khấu món</span>
-          <span className="tabular-nums">
+          <span className="font-mono tabular-nums">
             -{formatVND(visibleItemDiscount)}
           </span>
         </div>
@@ -99,7 +99,7 @@ export function OrderTotalsSummary({
                 ? ` (${discountValue}%)`
                 : ""}
             </span>
-            <span className="tabular-nums">
+            <span className="font-mono tabular-nums">
               -{formatVND(visibleOrderDiscount)}
             </span>
           </div>
@@ -115,7 +115,7 @@ export function OrderTotalsSummary({
 
       <div className={totalClass}>
         <span>Tổng cộng</span>
-        <span>{formatVND(totalAmount)}</span>
+        <span className="font-mono">{formatVND(totalAmount)}</span>
       </div>
     </div>
   );

@@ -88,7 +88,7 @@ const GRN_COLUMNS: DataTableColumn<GrnRow>[] = [
     key: "total",
     header: FORM_VI.totalAmount,
     className: "text-sm font-medium",
-    render: (g) => <>{formatVND(g.total)} ₫</>,
+    render: (g) => formatVND(g.total),
   },
   {
     key: "status",
@@ -214,7 +214,7 @@ function GrnMobileCard({ grn }: { grn: GrnRow }) {
             {grn.date || "—"}
           </span>
           <span className="font-mono text-sm font-semibold">
-            {formatVND(grn.total)} ₫
+            {formatVND(grn.total)}
           </span>
         </div>
       </Link>

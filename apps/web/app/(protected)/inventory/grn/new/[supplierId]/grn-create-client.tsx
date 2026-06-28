@@ -88,13 +88,13 @@ const GRN_CREATE_COPY = {
   notePlaceholder: "Tình trạng, lô, nhiệt độ...",
   addedSummary: (lineCount: number) => `Đã thêm ${lineCount} mặt hàng`,
   saveDraft: (lineCount: number, total: number) =>
-    `Lưu phiếu nháp · ${lineCount} mặt hàng · ${formatVND(total)} đ`,
+    `Lưu phiếu nháp · ${lineCount} mặt hàng · ${formatVND(total)}`,
   lineUnitCost: (quantity: number, unit: string, unitCost: number) =>
-    `${quantity} ${unit} · ${formatVND(unitCost)} đ/${unit} ·`,
+    `${quantity} ${unit} · ${formatVND(unitCost)}/${unit} ·`,
   unitLabel: (unit: string) => `Đơn vị: ${unit}`,
   unitPriceUnit: (unit: string) => `đ / ${unit}`,
-  moneyVnd: (value: number) => `${formatVND(value)} đ`,
-  lastCost: (value: number, unit: string) => `${formatVND(value)} đ/${unit}`,
+  moneyVnd: (value: number) => formatVND(value),
+  lastCost: (value: number, unit: string) => `${formatVND(value)}/${unit}`,
   varianceWarning: (variance: number) =>
     `Giá chênh ${(variance * 100).toFixed(0)}% so với lần trước — kiểm tra lại trước khi lưu.`,
 };

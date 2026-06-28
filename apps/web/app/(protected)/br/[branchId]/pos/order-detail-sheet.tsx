@@ -207,8 +207,8 @@ function OrderDetailLoadingFixture() {
           <Button
             type="button"
             variant="outline"
-            size="icon"
-            className="size-12 shrink-0"
+            size="icon-touch"
+            className="shrink-0"
             aria-label={messages.pos.orderDetail.moreActionsAria}
           >
             <IconDots />
