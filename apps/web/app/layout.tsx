@@ -7,6 +7,8 @@ import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog"
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { getThemeScriptHtml } from "@comtammatu/ui/components/theme-script";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ResponsiveToaster } from "./_components/responsive-toaster";
 import { DevServiceWorkerReset } from "./dev-service-worker-reset";
 import { SerwistProvider } from "./serwist-provider";
@@ -83,6 +85,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <ResponsiveToaster />
           <ConfirmDialogProvider />
         </ThemeProvider>
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
