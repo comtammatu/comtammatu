@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { VALIDATION_VI } from "@comtammatu/shared/messages";
 import { getVNDateString } from "@comtammatu/shared/time";
 import {
   INVENTORY_CATALOG_ROLES,
@@ -33,22 +34,22 @@ import {
 /* ─── Ingredient catalog (CRUD + CSV import/export) ─── */
 
 const ingredientBaseSchema = z.object({
-  name: z.string().min(1, { error: "Tên nguyên liệu không được để trống" }),
+  name: z.string().min(1, { error: VALIDATION_VI.required("Tên nguyên liệu") }),
   purchase_unit: z
     .string()
     .trim()
-    .min(1, { error: "Đơn vị nhập không được để trống" })
+    .min(1, { error: VALIDATION_VI.required("Đơn vị nhập") })
     .optional(),
   measure_unit: z
     .string()
     .trim()
-    .min(1, { error: "Đơn vị tính không được để trống" })
+    .min(1, { error: VALIDATION_VI.required("Đơn vị tính") })
     .optional(),
   purchase_to_measure_factor: z.coerce.number().positive().default(1),
   unit: z
     .string()
     .trim()
-    .min(1, { error: "Đơn vị không được để trống" })
+    .min(1, { error: VALIDATION_VI.required("Đơn vị") })
     .optional(),
   sku: z.string().optional(),
   unit_cost: z.coerce.number().min(0).optional(),
@@ -72,7 +73,7 @@ const ingredientSchema = ingredientBaseSchema.superRefine((data, ctx) => {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["purchase_unit"],
-      message: "Đơn vị nhập không được để trống",
+      message: VALIDATION_VI.required("Đơn vị nhập"),
     });
   }
 
@@ -80,7 +81,7 @@ const ingredientSchema = ingredientBaseSchema.superRefine((data, ctx) => {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["measure_unit"],
-      message: "Đơn vị tính không được để trống",
+      message: VALIDATION_VI.required("Đơn vị tính"),
     });
   }
 });
@@ -394,7 +395,7 @@ const importIngredientRowSchema = z.object({
   measure_unit: z.string().trim().min(1, { error: "Thiếu đơn vị tính" }),
   purchase_to_measure_factor: z.coerce
     .number()
-    .positive({ error: "Tỉ lệ quy đổi phải lớn hơn 0" })
+    .positive({ error: VALIDATION_VI.positive("Tỉ lệ quy đổi") })
     .default(1),
   category: z.string().trim().optional(),
   item_kind: z.enum(["raw_material", "finished_good"]).default("raw_material"),
