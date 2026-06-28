@@ -4,6 +4,14 @@
 -- immediately after the existing authorization check and before any write,
 -- in grant_permission / revoke_permission / apply_template_to_user.
 --
+-- IMPORTANT: grant_permission and apply_template_to_user are reproduced from
+-- their CURRENT definition (20260625131000_permission_scope_grants), NOT the
+-- baseline — that migration added permission-scope validation
+-- (v_scope / permission_scope_requires_*, unknown_permission_key_in_template,
+-- permission_scope_mismatch). Reproducing from the baseline would silently
+-- revert it. revoke_permission and update_pos_order_status are unchanged since
+-- the baseline, so they are reproduced from the baseline.
+--
 -- RPC-1: Harden update_pos_order_status. (a) Make the branch-scope comparison
 -- NULL-safe (IS DISTINCT FROM) so a non-owner profile with a NULL branch_id can
 -- no longer bypass the branch check. (b) Add a POS-operating role allow-list
@@ -21,6 +29,7 @@ DECLARE
   v_tenant_id BIGINT;
   v_target_tenant BIGINT;
   v_grant_id  BIGINT;
+  v_scope     TEXT;
   v_from      TIMESTAMPTZ := COALESCE(p_valid_from, now());
 BEGIN
   IF auth.uid() IS NULL THEN
@@ -49,8 +58,20 @@ BEGIN
     RAISE EXCEPTION 'cannot_manage_owner_permissions' USING ERRCODE = '42501';
   END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM public.permission_keys WHERE key = p_permission_key) THEN
+  SELECT scope INTO v_scope
+  FROM public.permission_keys
+  WHERE key = p_permission_key;
+
+  IF v_scope IS NULL THEN
     RAISE EXCEPTION 'unknown_permission_key: %', p_permission_key USING ERRCODE = '22023';
+  END IF;
+
+  IF v_scope = 'branch' AND p_branch_id IS NULL THEN
+    RAISE EXCEPTION 'permission_scope_requires_branch: %', p_permission_key USING ERRCODE = '22023';
+  END IF;
+
+  IF v_scope = 'tenant' AND p_branch_id IS NOT NULL THEN
+    RAISE EXCEPTION 'permission_scope_requires_tenant: %', p_permission_key USING ERRCODE = '22023';
   END IF;
 
   IF p_branch_id IS NOT NULL AND NOT EXISTS (
@@ -63,10 +84,6 @@ BEGIN
     RAISE EXCEPTION 'invalid_validity_window: valid_until must be after valid_from' USING ERRCODE = '22023';
   END IF;
 
-  -- Upsert semantics:
-  --   Existing row for same (user, branch, key) → UPDATE validity if longer,
-  --   else leave alone. This keeps audit meaningful: re-granting extends the
-  --   window rather than creating duplicates.
   SELECT id INTO v_grant_id
   FROM public.staff_permissions
   WHERE user_id = p_target_user
@@ -99,12 +116,11 @@ BEGIN
       )
     );
   ELSE
-    -- Extend validity if new window is broader (or change explicit)
     UPDATE public.staff_permissions
     SET valid_from  = LEAST(valid_from, v_from),
         valid_until = CASE
-          WHEN p_valid_until IS NULL THEN NULL  -- make permanent
-          WHEN valid_until  IS NULL THEN valid_until  -- already permanent, keep
+          WHEN p_valid_until IS NULL THEN NULL
+          WHEN valid_until  IS NULL THEN valid_until
           ELSE GREATEST(valid_until, p_valid_until)
         END
     WHERE id = v_grant_id;
@@ -205,6 +221,12 @@ BEGIN
     RAISE EXCEPTION 'cannot_manage_owner_permissions' USING ERRCODE = '42501';
   END IF;
 
+  IF p_branch_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.branches WHERE id = p_branch_id AND tenant_id = v_tenant_id
+  ) THEN
+    RAISE EXCEPTION 'branch_not_in_tenant' USING ERRCODE = '42501';
+  END IF;
+
   IF p_valid_until IS NOT NULL AND p_valid_until <= v_from THEN
     RAISE EXCEPTION 'invalid_validity_window' USING ERRCODE = '22023';
   END IF;
@@ -216,6 +238,25 @@ BEGIN
 
   IF v_template.id IS NULL OR v_template.tenant_id <> v_tenant_id THEN
     RAISE EXCEPTION 'template_not_in_tenant' USING ERRCODE = '42501';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM unnest(v_template.permission_keys) AS template_key(permission_key)
+    LEFT JOIN public.permission_keys pk ON pk.key = template_key.permission_key
+    WHERE pk.key IS NULL
+  ) THEN
+    RAISE EXCEPTION 'unknown_permission_key_in_template' USING ERRCODE = '22023';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM unnest(v_template.permission_keys) AS template_key(permission_key)
+    JOIN public.permission_keys pk ON pk.key = template_key.permission_key
+    WHERE (p_branch_id IS NULL AND pk.scope = 'branch')
+       OR (p_branch_id IS NOT NULL AND pk.scope = 'tenant')
+  ) THEN
+    RAISE EXCEPTION 'permission_scope_mismatch' USING ERRCODE = '22023';
   END IF;
 
   FOREACH v_perm_key IN ARRAY v_template.permission_keys LOOP
