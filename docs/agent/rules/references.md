@@ -7,6 +7,7 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Agent entrypoint: `AGENTS.md`
 - Skill/plugin/tool routing: `docs/agent/rules/skills.md`
 - Multi-agent team loop + Codex orchestration: `docs/agent/rules/team.md`
+- Orchestration routing + context budget + anti-repeat loop: `docs/agent/rules/orchestration.md`
 - Codebase map + module index: `docs/CODEBASE_MAP.md`
 - Auth & ACL: `docs/modules/auth.md`
 - Database: `docs/modules/database.md`
