@@ -24,6 +24,11 @@ import {
   createTaxInvoice,
   resolveExistingInvoiceForOrder,
 } from "@/_actions/finance";
+import {
+  existingIssuedInvoiceOutcome,
+  mapTaxInvoiceOutcome,
+  type InvoiceOutcome,
+} from "./_lib/invoice-outcome";
 import { mapRpcError } from "@/_lib/rpc-error-map";
 import { posConfirmPaymentAuth, posUseAuth } from "./_lib/auth";
 import {
@@ -1100,13 +1105,6 @@ export const confirmCashPayment = withActionPositional(
 
 /* ─── Cash payment + mandatory HĐĐT issuance ─── */
 
-export interface InvoiceOutcome {
-  status: "issued" | "draft" | "submitted" | "signing" | "failed";
-  invoiceId?: number;
-  invoiceNumber?: string | null;
-  error?: string;
-}
-
 export interface CashPaymentWithInvoiceResult extends CashPaymentResult {
   invoice: InvoiceOutcome;
 }
@@ -1130,36 +1128,6 @@ function normalizeInvoicePayload(
       buyerNotGetInvoice: true,
     }
   );
-}
-
-function mapTaxInvoiceOutcome(
-  invoice:
-    | { id: number; invoice_number: string | null; status?: string | null }
-    | undefined,
-): InvoiceOutcome {
-  if (!invoice) {
-    return { status: "failed", error: "Hóa đơn trả về thiếu dữ liệu." };
-  }
-
-  if (
-    invoice.status === "issued" ||
-    invoice.status === "submitted" ||
-    invoice.status === "signing"
-  ) {
-    return {
-      status: invoice.status,
-      invoiceId: invoice.id,
-      invoiceNumber: invoice.invoice_number,
-    };
-  }
-
-  return {
-    status: "failed",
-    invoiceId: invoice.id,
-    invoiceNumber: invoice.invoice_number,
-    error:
-      "HĐĐT chưa được provider chấp nhận; Finance cần kiểm tra và xuất lại.",
-  };
 }
 
 /**
@@ -1187,20 +1155,13 @@ export async function confirmCashPaymentWithInvoice(
   // a draft/orphan or missing row falls through to createTaxInvoice so the
   // legally-required HĐĐT still gets issued/retried (NĐ70/2025).
   if (paymentResult.data.status === "already_completed") {
-    const existing = await resolveExistingInvoiceForOrder(orderId);
-    if (
-      existing.success &&
-      existing.data &&
-      (existing.data.status === "issued" ||
-        existing.data.status === "submitted" ||
-        existing.data.status === "signing")
-    ) {
+    const replayInvoice = existingIssuedInvoiceOutcome(
+      await resolveExistingInvoiceForOrder(orderId),
+    );
+    if (replayInvoice) {
       return {
         success: true,
-        data: {
-          ...paymentResult.data,
-          invoice: mapTaxInvoiceOutcome(existing.data),
-        },
+        data: { ...paymentResult.data, invoice: replayInvoice },
       };
     }
   }
@@ -1466,20 +1427,13 @@ export async function confirmVietQrPaymentWithInvoice(
   // carries no `status` field). Only short-circuit on a genuinely-issued
   // invoice; otherwise fall through to createTaxInvoice (NĐ70/2025).
   if (paymentResult.data.idempotent === true) {
-    const existing = await resolveExistingInvoiceForOrder(orderId);
-    if (
-      existing.success &&
-      existing.data &&
-      (existing.data.status === "issued" ||
-        existing.data.status === "submitted" ||
-        existing.data.status === "signing")
-    ) {
+    const replayInvoice = existingIssuedInvoiceOutcome(
+      await resolveExistingInvoiceForOrder(orderId),
+    );
+    if (replayInvoice) {
       return {
         success: true,
-        data: {
-          ...paymentResult.data,
-          invoice: mapTaxInvoiceOutcome(existing.data),
-        },
+        data: { ...paymentResult.data, invoice: replayInvoice },
       };
     }
   }

@@ -3,23 +3,23 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
-const paymentActionsSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pos/payment-actions.ts",
-  ),
-  "utf8",
-);
+// Static wiring guards for the idempotent-replay path. The behavioral cover
+// (executing the decision + the resolve query) lives in
+// pos-payment-replay-behavioral.test.ts; this file guards the orchestrator
+// wiring those behaviors hang off of.
 
-const financeActionsSource = readFileSync(
-  join(process.cwd(), "app/(protected)/finance/actions.ts"),
-  "utf8",
+const read = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+const paymentActionsSource = read(
+  "app/(protected)/br/[branchId]/pos/payment-actions.ts",
 );
-
-const reexportSource = readFileSync(
-  join(process.cwd(), "app/_actions/finance.ts"),
-  "utf8",
+const invoiceOutcomeSource = read(
+  "app/(protected)/br/[branchId]/pos/_lib/invoice-outcome.ts",
 );
+const invoiceQueriesSource = read(
+  "app/(protected)/finance/_lib/invoice-queries.ts",
+);
+const financeActionsSource = read("app/(protected)/finance/actions.ts");
+const reexportSource = read("app/_actions/finance.ts");
 
 function fnBlock(source: string, name: string): string {
   const block = new RegExp(
@@ -35,51 +35,50 @@ const vietqrBlock = fnBlock(
   "confirmVietQrPaymentWithInvoice",
 );
 
-test("cash orchestrator short-circuits an idempotent replay via the existing-invoice resolve", () => {
+test("cash orchestrator gates replay on already_completed and delegates the decision", () => {
   assert.match(cashBlock, /status === "already_completed"/);
   assert.match(cashBlock, /resolveExistingInvoiceForOrder\(orderId\)/);
-  assert.match(cashBlock, /mapTaxInvoiceOutcome\(existing\.data\)/);
+  assert.match(cashBlock, /existingIssuedInvoiceOutcome\(/);
 });
 
 test("vietqr orchestrator keys replay off `idempotent`, NOT `status` (it has no status field)", () => {
   assert.match(vietqrBlock, /idempotent === true/);
   assert.match(vietqrBlock, /resolveExistingInvoiceForOrder\(orderId\)/);
-  // VietQR's result carries no `status` field — keying off it would be dead code.
+  assert.match(vietqrBlock, /existingIssuedInvoiceOutcome\(/);
   assert.doesNotMatch(vietqrBlock, /status === "already_completed"/);
 });
 
-test("short-circuit only fires for a genuinely-issued invoice (compliance: never fake success)", () => {
-  for (const block of [cashBlock, vietqrBlock]) {
-    assert.match(block, /existing\.data\.status === "issued"/);
-    assert.match(block, /existing\.data\.status === "submitted"/);
-    assert.match(block, /existing\.data\.status === "signing"/);
-  }
+test("short-circuit decision accepts only genuinely-issued invoices (behavior tested separately)", () => {
+  // The issued/submitted/signing decision lives in the pure, behaviorally-tested
+  // existingIssuedInvoiceOutcome (pos-payment-replay-behavioral.test.ts). Guard
+  // that the three lodged states stay defined together here.
+  assert.match(invoiceOutcomeSource, /"issued"/);
+  assert.match(invoiceOutcomeSource, /"submitted"/);
+  assert.match(invoiceOutcomeSource, /"signing"/);
 });
 
-test("the benign-replay decision is made on invoice status, never by matching the duplicate-invoice copy", () => {
+test("the benign-replay decision is never made by matching the duplicate-invoice copy", () => {
   assert.doesNotMatch(cashBlock, /Đơn hàng đã có hóa đơn/);
   assert.doesNotMatch(vietqrBlock, /Đơn hàng đã có hóa đơn/);
 });
 
-test("resolve helper is exported and re-exported through the POS finance boundary", () => {
+test("resolve helper is exported, re-exported, and its filter matches createTaxInvoice (no drift)", () => {
   assert.match(
     financeActionsSource,
     /export async function resolveExistingInvoiceForOrder\(/,
-  );
-  // Byte-identical existing-invoice filter to createTaxInvoice (no drift).
-  assert.match(
-    financeActionsSource,
-    /\.not\("status", "in", '\("cancelled","replaced","not_required"\)'\)/g,
   );
   assert.match(
     reexportSource,
     /export async function resolveExistingInvoiceForOrder\(/,
   );
+  const activeFilter =
+    /\.not\("status", "in", '\("cancelled","replaced","not_required"\)'\)/;
+  // Same filter in the extracted query helper AND createTaxInvoice's own check.
+  assert.match(invoiceQueriesSource, activeFilter);
+  assert.match(financeActionsSource, activeFilter);
 });
 
 test("shared createTaxInvoice keeps its duplicate-guard branches so finance accounting cannot silently break", () => {
-  // Existing-active-invoice guard (drives finance reissue/UI counters).
   assert.match(financeActionsSource, /error: "Đơn hàng đã có hóa đơn\."/);
-  // Concurrent-insert unique-violation guard.
   assert.match(financeActionsSource, /23505/);
 });

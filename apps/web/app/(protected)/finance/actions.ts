@@ -18,6 +18,10 @@ import { estimateAnnualRevenue } from "@lib/estimate-annual-revenue";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
+import {
+  queryActiveInvoiceForOrder,
+  type InvoiceQueryClient,
+} from "./_lib/invoice-queries";
 
 const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
 const INVOICE_CREATE_ROLES: readonly StaffRole[] = [
@@ -80,20 +84,14 @@ export async function resolveExistingInvoiceForOrder(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-
-  const { data, error } = await supabase
-    .from("tax_invoices")
-    .select("id, status, invoice_number")
-    .eq("order_id", parsed.data)
-    .eq("tenant_id", claims.tenant_id)
-    .not("status", "in", '("cancelled","replaced","not_required")')
-    .maybeSingle();
-
-  if (error) {
-    return { success: false, error: "Không thể kiểm tra hóa đơn." };
-  }
-
-  return { success: true, data: data ?? null };
+  // Seam cast: the real client structurally satisfies InvoiceQueryClient, but
+  // matching supabase-js's deep generics against it trips TS2589. The cast
+  // narrows to the small surface the query uses; the mock satisfies it directly.
+  return queryActiveInvoiceForOrder(
+    supabase as unknown as InvoiceQueryClient,
+    claims.tenant_id,
+    parsed.data,
+  );
 }
 
 /**
