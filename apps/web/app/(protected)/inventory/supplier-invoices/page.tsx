@@ -1,4 +1,7 @@
-import { fetchGrns, fetchSupplierInvoicesPage } from "../procurement-actions";
+import {
+  fetchGrnIdsForDropdown,
+  fetchSupplierInvoicesPage,
+} from "../procurement-actions";
 import type { SupplierInvoiceCursor } from "../procurement-actions";
 import { fetchSuppliers } from "../supplier-actions";
 import { resolveRequestedBranchId } from "../_lib/inventory-scope";
@@ -19,7 +22,7 @@ export default async function SupplierInvoicesPage({
   const [res, suppliersRes, grnsRes] = await Promise.all([
     fetchSupplierInvoicesPage({ branchId: branchFilter }),
     fetchSuppliers(),
-    fetchGrns(branchFilter),
+    fetchGrnIdsForDropdown(branchFilter),
   ]);
   const page = res.success
     ? res.data

@@ -64,7 +64,8 @@ export async function fetchStockIssues(opts?: {
       "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, source_type, source_ref, branches ( id, name, branch_kind )",
     )
     .eq("tenant_id", claims.tenant_id)
-    .order("issued_at", { ascending: false });
+    .order("issued_at", { ascending: false })
+    .limit(200);
 
   if (parsed.data.branchId) {
     query = query.eq("branch_id", parsed.data.branchId);

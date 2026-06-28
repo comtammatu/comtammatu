@@ -28,7 +28,8 @@ export async function fetchSupplierReturns(
       "id, return_number, status, source, reason, resolution, total_value, created_at, confirmed_at, branch_id, supplier_id, grn_id, suppliers ( id, name ), branches ( id, name ), goods_received_notes ( id, grn_number )",
     )
     .eq("tenant_id", claims.tenant_id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(50);
 
   if (branchId != null) query = query.eq("branch_id", branchId);
 

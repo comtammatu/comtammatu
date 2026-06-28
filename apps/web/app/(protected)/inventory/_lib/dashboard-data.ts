@@ -8,7 +8,7 @@ import {
 } from "@/_lib/permissions";
 import { fetchStocktakeSessions } from "../actions";
 import { fetchReorderAlerts, fetchExpiryAlerts } from "../alert-actions";
-import { fetchPurchaseOrders } from "../procurement-actions";
+import { countOpenPurchaseOrders } from "../receiving/receiving-counts";
 import { fetchStockTransfers } from "../transfer-actions";
 import { getInventoryDashboard } from "../dashboard-actions";
 import { formatDate } from "./format";
@@ -180,7 +180,7 @@ export async function loadInventoryDashboardData(
 
   const [
     dashboardRes,
-    poRes,
+    pendingPO,
     transferRes,
     stocktakeRes,
     reorderRes,
@@ -190,7 +190,7 @@ export async function loadInventoryDashboardData(
     scope.selectedBranchId != null
       ? getInventoryDashboard(scope.selectedBranchId)
       : Promise.resolve(null),
-    fetchPurchaseOrders(branchFilter),
+    countOpenPurchaseOrders(branchFilter),
     fetchStockTransfers(branchFilter),
     fetchStocktakeSessions(branchFilter),
     fetchReorderAlerts(branchFilter),
@@ -209,13 +209,6 @@ export async function loadInventoryDashboardData(
   const totalStockValue =
     dashboardRes != null && dashboardRes.success && dashboardRes.data
       ? (dashboardRes.data.summary.totalValueVnd ?? 0)
-      : 0;
-
-  const pendingPO =
-    poRes.success && poRes.data
-      ? (poRes.data as Array<{ status: string }>).filter(
-          (po) => po.status === "draft" || po.status === "sent",
-        ).length
       : 0;
 
   const rawTransfers: DashboardTransfer[] =

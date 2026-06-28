@@ -49,7 +49,6 @@ import {
 } from "@/components/surface";
 import {
   createSupplierInvoice,
-  fetchSupplierInvoices,
   fetchSupplierInvoicesPage,
   recomputeInvoiceMatching,
 } from "../procurement-actions";
@@ -438,17 +437,19 @@ export function SupplierInvoicesClient({
       showOnlyOverdue);
 
   async function reloadInvoices(nextSelectedId?: number | null) {
-    const again = await fetchSupplierInvoices();
-    if (!again.success) return;
+    const again = await fetchSupplierInvoicesPage({ branchId });
+    if (!again.success || !again.data) return;
 
-    const nextRows = ((again.data ?? []) as Array<Record<string, unknown>>).map(
+    const { items, hasMore: more, nextCursor: cursor } = again.data;
+    const nextRows = (items as Array<Record<string, unknown>>).map(
       mapSupplierInvoiceRow,
     );
 
     setRows(nextRows);
-    // Full reload returns every invoice, so keyset paging no longer applies.
-    setHasMore(false);
-    setNextCursor(null);
+    // Fresh first page — restore keyset state from the paginated result,
+    // mirroring how the SSR initial load wires hasMore/nextCursor.
+    setHasMore(more);
+    setNextCursor(cursor);
     if (typeof nextSelectedId === "number") {
       setSelectedInvoiceId(nextSelectedId);
     }
