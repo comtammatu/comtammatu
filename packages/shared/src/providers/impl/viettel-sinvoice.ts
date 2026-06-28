@@ -227,6 +227,14 @@ function clampMoney(value: number, max: number): number {
   return Math.min(Math.max(0, value), Math.max(0, max));
 }
 
+// Viettel rejects a `discount` rate carrying >2 decimal places
+// (BAD_REQUEST_INVALID_DECIMAL_POINT_DISCOUNT). The authoritative discount is
+// itemDiscount (đồng) — all strict total validators (43/44/49/87) key off the
+// amount, never this rate — so rounding the rate to 2dp cannot disturb totals.
+function roundDiscountRate(rate: number): number {
+  return Math.round(rate * 100) / 100;
+}
+
 function findNetDiscountForGrossTarget(
   lineNet: number,
   vatRate: number,
@@ -322,7 +330,10 @@ export function buildSinvoiceItemInfo(
         itemTotalAmountWithTax: lineAfterDiscount,
         // Viettel `discount` is a RATE (% of line, 0–100); `itemDiscount` is the
         // amount. Sending an amount as the rate reads as >100% → DISCOUNT_INVALID.
-        discount: lineAmount > 0 ? (lineDiscount / lineAmount) * 100 : 0,
+        discount:
+          lineAmount > 0
+            ? roundDiscountRate((lineDiscount / lineAmount) * 100)
+            : 0,
         itemDiscount: lineDiscount,
         itemNote: null,
         isIncreaseItem: null,
@@ -359,7 +370,7 @@ export function buildSinvoiceItemInfo(
       itemTotalAmountWithoutTax: lineNet,
       itemTotalAmountAfterDiscount: taxableAmount,
       itemTotalAmountWithTax: taxableAmount + lineTax,
-      discount: lineNet > 0 ? (lineDiscount / lineNet) * 100 : 0,
+      discount: lineNet > 0 ? roundDiscountRate((lineDiscount / lineNet) * 100) : 0,
       itemDiscount: lineDiscount,
       itemNote: null,
       isIncreaseItem: null,

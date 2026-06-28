@@ -56,6 +56,13 @@ function assertValidators(
       li.discount >= 0 && li.discount <= 100,
       `discount must be a rate in [0,100], got ${li.discount} for "${li.itemName}"`,
     );
+    // Rate must carry ≤2 decimals or Viettel rejects with
+    // BAD_REQUEST_INVALID_DECIMAL_POINT_DISCOUNT.
+    assert.equal(
+      Math.round(li.discount * 100) / 100,
+      li.discount,
+      `discount rate must have ≤2 decimals, got ${li.discount} for "${li.itemName}"`,
+    );
   }
   // 87: sumOfTotalLineAmountWithoutTax == Σ items.itemTotalAmountWithoutTax
   const sumNetCheck = result.itemInfo.reduce(
@@ -99,6 +106,31 @@ test("validator 43 regression: qty=7 lineGross=100 vatRate=8 (old impl rejected)
     /*callerPassesGross=*/ true,
   );
   assertValidators(result, 8);
+});
+
+test("discount rate rounded to ≤2dp — mẫu-2 (BAD_REQUEST_INVALID_DECIMAL_POINT_DISCOUNT repro)", () => {
+  // Prod bug: 10_000 discount on a 30_000 line → rate 33.3333…% un-rounded →
+  // Viettel rejects, invoice stuck draft. Rounded rate (33.33) is accepted.
+  const result = buildSinvoiceItemInfo(
+    [item("Cơm sườn", 1, 30_000, 10_000)],
+    8,
+    true,
+    "direct_sales_gross",
+  );
+  assertValidators(result, 8);
+  const [line] = result.itemInfo;
+  assert.ok(line);
+  assert.equal(line.itemDiscount, 10_000); // amount (đồng) unchanged — authoritative
+  assert.equal(line.discount, 33.33); // rate rounded to 2dp
+});
+
+test("discount rate rounded to ≤2dp — mẫu-1 net path", () => {
+  const result = buildSinvoiceItemInfo(
+    [item("Cơm sườn", 1, 30_000, 10_000)],
+    8,
+    true,
+  );
+  assertValidators(result, 8); // now enforces the ≤2-decimal rate invariant
 });
 
 test("validators pass for typical single-item B2B sale (qty=1, gross=109k, VAT 8%)", () => {
@@ -218,7 +250,8 @@ test("direct-sales discount serializes as a RATE %, not the amount", () => {
     line.discount >= 0 && line.discount <= 100,
     `discount must be a rate, got ${line.discount}`,
   );
-  assert.ok(Math.abs(line.discount - (5_000 / 15_000) * 100) < 1e-9);
+  // 5_000/15_000 = 33.3333…% → rounded to 2dp (Viettel rejects >2 decimals).
+  assert.equal(line.discount, 33.33);
   assert.equal(line.itemTotalAmountAfterDiscount, 10_000);
 });
 
