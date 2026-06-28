@@ -69,6 +69,7 @@ import {
   mergeOrders,
 } from "./actions";
 import { printReceipt } from "./print-actions";
+import { voidPaidOrder } from "./void-paid-actions";
 import { getPosLineItemDisplayName, type CartItem } from "./types";
 import type { BranchTable } from "./page";
 import { ACTIVE_POS_STATUSES } from "./order-history";
@@ -79,6 +80,7 @@ import { OrderItemActionsSheet } from "./_components/order-detail/order-item-act
 import { VoidItemDialog } from "./_components/order-detail/void-item-dialog";
 import { ReduceQuantityDialog } from "./_components/order-detail/reduce-quantity-dialog";
 import { CancelOrderDialog } from "./_components/order-detail/cancel-order-dialog";
+import { VoidPaidOrderDialog } from "./_components/order-detail/void-paid-order-dialog";
 import { TransferTableDialog } from "./_components/order-detail/transfer-table-dialog";
 import { DiscountSheet } from "./_components/order-detail/discount-sheet";
 import { ServiceChargeSheet } from "./_components/order-detail/service-charge-sheet";
@@ -344,6 +346,7 @@ export function OrderDetailSheet({
 }: OrderDetailSheetProps) {
   const [data, setData] = useState<OrderDetailData | null>(null);
   const [canManage, setCanManage] = useState(false);
+  const [canVoidPaid, setCanVoidPaid] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Two transitions on purpose:
   //   - `isMutating` gates the action buttons (Confirm in dialogs, "Chuyển bàn"
@@ -366,6 +369,8 @@ export function OrderDetailSheet({
   const [reduceReason, setReduceReason] = useState("");
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [showVoidPaid, setShowVoidPaid] = useState(false);
+  const [voidPaidReason, setVoidPaidReason] = useState("");
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTableId, setTransferTableId] = useState<string>("");
   const [showDiscount, setShowDiscount] = useState(false);
@@ -399,6 +404,7 @@ export function OrderDetailSheet({
     if (result.success && result.data) {
       setData(result.data.order as unknown as OrderDetailData);
       setCanManage(result.data.canManageOrders);
+      setCanVoidPaid(result.data.canVoidPaidOrder);
       setError(null);
     } else {
       setData(null);
@@ -451,6 +457,8 @@ export function OrderDetailSheet({
     if (seed != null && seed.id === orderId) {
       setData(seed);
       setCanManage(Boolean(initialCanManageRef.current));
+      // canVoidPaidOrder not available in seed — fresh fetch will populate it
+      setCanVoidPaid(false);
       setError(null);
       return;
     }
@@ -657,6 +665,30 @@ export function OrderDetailSheet({
         onClose();
       } else {
         notify.error(r.error ?? messages.pos.order.cancelFailed);
+      }
+    });
+  };
+
+  const handleVoidPaid = () => {
+    if (orderId === null) return;
+    const reason = voidPaidReason.trim();
+    if (reason.length < 20) {
+      notify.error(messages.pos.order.voidPaidReasonMin);
+      return;
+    }
+    startMutation(async () => {
+      const r = await voidPaidOrder(orderId, reason);
+      if (r.success) {
+        if (r.data?.providerWarning) {
+          notify.warning(r.data.providerWarning);
+        }
+        notify.success(messages.pos.order.voidPaidSuccess);
+        setShowVoidPaid(false);
+        setVoidPaidReason("");
+        await onOrderUpdated?.();
+        onClose();
+      } else {
+        notify.error(r.error ?? messages.pos.order.voidPaidFailed);
       }
     });
   };
@@ -1048,6 +1080,11 @@ export function OrderDetailSheet({
 
   const canShowCancel =
     canManage && data && !["completed", "cancelled"].includes(data.status);
+  const canShowVoidPaid =
+    canVoidPaid &&
+    data != null &&
+    data.payment_status === "paid" &&
+    data.status !== "cancelled";
   const canShowTransfer =
     data?.order_type === "dine_in" &&
     !["completed", "cancelled"].includes(data.status);
@@ -1099,6 +1136,7 @@ export function OrderDetailSheet({
     canPrioritizeOrder ||
     canShowTransfer ||
     canShowCancel ||
+    canShowVoidPaid ||
     canShowDiscount ||
     canShowServiceCharge ||
     canShowSplit ||
@@ -1452,18 +1490,30 @@ export function OrderDetailSheet({
                               </DropdownMenuGroup>
                             </>
                           )}
-                          {canShowCancel && (
+                          {(canShowCancel || canShowVoidPaid) && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuGroup>
-                                <DropdownMenuItem
-                                  variant="destructive"
-                                  disabled={isMutating}
-                                  onClick={() => setShowCancel(true)}
-                                >
-                                  <IconTrash />
-                                  {messages.pos.orderDetail.cancelOrder}
-                                </DropdownMenuItem>
+                                {canShowCancel && (
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    disabled={isMutating}
+                                    onClick={() => setShowCancel(true)}
+                                  >
+                                    <IconTrash />
+                                    {messages.pos.orderDetail.cancelOrder}
+                                  </DropdownMenuItem>
+                                )}
+                                {canShowVoidPaid && (
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    disabled={isMutating}
+                                    onClick={() => setShowVoidPaid(true)}
+                                  >
+                                    <IconTrash />
+                                    {messages.pos.order.voidPaidAction}
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuGroup>
                             </>
                           )}
@@ -1526,6 +1576,16 @@ export function OrderDetailSheet({
         orderType={data?.order_type ?? null}
         tableNumber={data?.tables?.number ?? null}
         itemCount={activeItemCount}
+        isPending={isMutating}
+      />
+
+      <VoidPaidOrderDialog
+        open={showVoidPaid}
+        onOpenChange={setShowVoidPaid}
+        reason={voidPaidReason}
+        onReasonChange={setVoidPaidReason}
+        onConfirm={handleVoidPaid}
+        orderNumber={data?.order_number ?? orderNumber}
         isPending={isMutating}
       />
 

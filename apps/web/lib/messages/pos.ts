@@ -15,6 +15,16 @@ export const pos = {
     completed: "Đã hoàn thành",
     statusUpdateFailed: "Không thể cập nhật",
     reorderLoadFailed: "Không thể tải món",
+    voidPaidTitle: "Huỷ đơn đã thanh toán?",
+    voidPaidDesc:
+      "Thao tác sẽ hoàn tiền và huỷ HĐĐT liên quan. Không thể hoàn tác.",
+    voidPaidKeep: "Giữ đơn",
+    voidPaidConfirm: "Huỷ đơn & hoàn tiền",
+    voidPaidPlaceholder: "Lý do (≥ 20 ký tự)",
+    voidPaidReasonMin: "Lý do huỷ phải có ít nhất 20 ký tự",
+    voidPaidSuccess: "Đã huỷ đơn và hoàn tiền thành công",
+    voidPaidFailed: "Không thể huỷ đơn đã thanh toán",
+    voidPaidAction: "Huỷ đơn đã thanh toán",
   },
   item: {
     added: "Đã thêm món",

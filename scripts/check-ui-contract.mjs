@@ -778,7 +778,7 @@ const countBudgets = [
 	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
 	    pattern:
 	      /from\s+["@']@comtammatu\/ui\/components\/(?:dialog|alert-dialog)["']/g,
-	    maxCount: 22,
+	    maxCount: 23,
 	  },
 	];
 
@@ -989,6 +989,7 @@ const frozenPrimitiveImportBaselines = [
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/void-item-dialog.tsx": 1,
       "apps/web/app/(protected)/finance/invoice-list.tsx": 1,
       "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/void-paid-order-dialog.tsx": 1,
     },
   },
 ];
