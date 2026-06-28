@@ -1,7 +1,6 @@
 export const settings = {
   nav: {
     ariaLabel: "Mục cài đặt",
-    branches: "Điểm vận hành",
     general: "Chung",
     payments: "Thanh toán",
     tables: "Bàn",
@@ -18,6 +17,7 @@ export const settings = {
     edit: "Chỉnh sửa",
   },
   branchForm: {
+    addButton: "Thêm điểm vận hành",
     createTitle: "Thêm điểm vận hành mới",
     editTitle: "Chỉnh sửa điểm vận hành",
     created: "Đã tạo điểm vận hành mới",
@@ -257,6 +257,12 @@ export const settings = {
     deviceIdOptional: "Mã thiết bị (tuỳ chọn)",
     deviceIdPlaceholder: "VD: tablet-thungan-01",
     terminalActive: "Hoạt động",
+    ingredientStockBlockTitle: "Bán theo tồn kho",
+    ingredientStockBlockLabel: "Chặn bán khi hết nguyên liệu trong kho",
+    ingredientStockBlockHelp:
+      "Chỉ bật khi tồn kho của chi nhánh chính xác — nếu kho sai, POS sẽ chặn bán nhầm.",
+    ingredientStockBlockSaved: "Đã cập nhật cấu hình chặn bán",
+    ingredientStockBlockFailed: "Không thể lưu cấu hình. Vui lòng thử lại.",
   },
   printers: {
     backPrinters: "Máy in",
@@ -442,7 +448,9 @@ export const settings = {
     operationPoint: "Điểm vận hành",
     address: "Địa chỉ",
     phone: "Điện thoại",
+    searchPlaceholder: "Tìm chi nhánh…",
     emptyTitle: "Chưa có điểm vận hành nào",
+    emptySearchTitle: "Không tìm thấy chi nhánh phù hợp",
     deactivateTitle: "Tạm ngừng điểm vận hành?",
     deactivateDescription:
       "Điểm vận hành sẽ ngừng hoạt động cho đến khi được kích hoạt lại.",

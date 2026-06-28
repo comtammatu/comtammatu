@@ -3,8 +3,10 @@ import {
   Briefcase as IconBriefcase,
   Building2 as IconBuilding2,
   ClipboardList as IconClipboardList,
+  Key as IconKey,
   LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
+  ScrollText as IconScrollText,
   Settings as IconSettings,
   Users as IconUsers,
   Utensils as IconUtensils,
@@ -12,6 +14,8 @@ import {
 } from "lucide-react";
 import type { ElementType } from "react";
 import {
+  canAccess,
+  MODULE_ACL,
   resolveAdminNavGroups,
   resolveBranchManagementItems,
   resolveWorkspaceItems,
@@ -19,7 +23,11 @@ import {
   type ResolvedNavLink,
   type StaffRole,
 } from "@comtammatu/shared/auth";
-import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "@comtammatu/shared/labels";
+import {
+  APP_COPY_VI,
+  MODULE_LABELS_VI,
+  NAV_GROUP_LABELS_VI,
+} from "@comtammatu/shared/labels";
 import type { ShellNavGroup, ShellNavItem } from "./shell-primitives";
 
 // Unified office sidebar (D019 § A/D). Every Management route renders the same
@@ -39,6 +47,7 @@ const OFFICE_ICON_MAP: Record<string, ElementType> = {
   Package: IconPackage,
   Wallet: IconWallet,
   Briefcase: IconBriefcase,
+  Building2: IconBuilding2,
 };
 
 function mapItem(item: ResolvedNavLink): ShellNavItem {
@@ -99,11 +108,56 @@ export function resolveOfficePrimaryTabs(
   ]);
 }
 
-// Sub-nav for office modules. Admin renders command groups; the other office
-// modules render a single landing group built from their own workspace entry.
+// People deep nav for the HR workspace. The "Nhân sự" landing + payroll come
+// from MODULE_ACL; the account-administration group (roster + audit) is gated by
+// the distinct `staff` ACL key (owner-only) so the role/permission surface keeps
+// its own boundary even though it now lives under /hr.
+function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
+  const groups: ShellNavGroup[] = [];
+
+  const peopleItems: ShellNavItem[] = [
+    {
+      href: MODULE_ACL.hr.path,
+      label: APP_COPY_VI.hrWorkspace,
+      icon: IconBriefcase,
+    },
+  ];
+  if (canAccess(role, "hr_payroll")) {
+    peopleItems.push({
+      href: MODULE_ACL.hr_payroll.path,
+      label: MODULE_LABELS_VI.hr_payroll,
+      icon: IconWallet,
+    });
+  }
+  groups.push({ title: APP_COPY_VI.hrWorkspace, items: peopleItems });
+
+  if (canAccess(role, "staff")) {
+    groups.push({
+      title: APP_COPY_VI.staffLabel,
+      items: [
+        {
+          href: MODULE_ACL.staff.path,
+          label: APP_COPY_VI.staffLabel,
+          icon: IconKey,
+        },
+        {
+          href: `${MODULE_ACL.staff.path}/audit`,
+          label: APP_COPY_VI.staffAuditLabel,
+          icon: IconScrollText,
+        },
+      ],
+    });
+  }
+
+  return groups;
+}
+
+// Sub-nav for office modules. Admin renders command groups; HR renders the
+// People + account-administration groups; the other office modules render a
+// single landing group built from their own workspace entry.
 export function resolveOfficeDeepNav(
   role: StaffRole,
-  module: "admin" | "hr" | "menu" | "orders",
+  module: "admin" | "hr" | "menu" | "orders" | "branches",
   _branchId?: number | null,
 ): ShellNavGroup[] {
   if (module === "admin") {
@@ -111,6 +165,10 @@ export function resolveOfficeDeepNav(
       title: group.title,
       items: group.items.map(mapItem),
     }));
+  }
+
+  if (module === "hr") {
+    return resolveHrDeepNav(role);
   }
 
   const prefix = "/" + module;

@@ -24,6 +24,7 @@ const EXPECTED_MATRIX: Record<
     "branch_dashboard",
     "branch_menu_limits",
     "branch_settings",
+    "branches",
     "dashboard",
     "employee_checkout_approvals",
     "finance",
@@ -57,7 +58,6 @@ const EXPECTED_MATRIX: Record<
     "runner",
   ],
   cashier: [
-    "branch_menu_limits",
     "employee",
     "notifications",
     "orders",

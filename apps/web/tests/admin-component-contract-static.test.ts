@@ -16,12 +16,12 @@ const UI_MODULE = "docs/modules/ui.md";
 const STATUS_BADGE = "apps/web/app/components/status-badge.tsx";
 const SHARED_LABELS = "packages/shared/src/labels/vi.ts";
 const BRANCH_TABLE =
-  "apps/web/app/(protected)/admin/settings/(tenant)/branches/branch-table.tsx";
+  "apps/web/app/(protected)/branches/branch-table.tsx";
 const PRINT_JOBS =
   "apps/web/app/(protected)/admin/settings/printers/jobs/print-jobs-client.tsx";
-const STAFF_AUDIT = "apps/web/app/(protected)/admin/staff/audit/page.tsx";
+const STAFF_AUDIT = "apps/web/app/(protected)/hr/staff/audit/page.tsx";
 const STAFF_AUDIT_TABLE =
-  "apps/web/app/(protected)/admin/staff/audit/permission-audit-table.tsx";
+  "apps/web/app/(protected)/hr/staff/audit/permission-audit-table.tsx";
 const HR_DATA_TABLE_FILES = [
   "apps/web/app/(protected)/hr/attendance-table.tsx",
   "apps/web/app/(protected)/hr/leave-requests-table.tsx",

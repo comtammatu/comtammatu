@@ -13,7 +13,7 @@ import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import {
   getAuthContextWithPermission,
   getAuthContextWithPermissions,
-} from "../_lib/auth";
+} from "../../admin/_lib/auth";
 
 /* ─── Schemas ─── */
 
@@ -188,7 +188,7 @@ export async function createStaff(
     };
   }
 
-  revalidateSurfacePath("/admin/staff");
+  revalidateSurfacePath("/hr/staff");
   return { success: true };
 }
 
@@ -247,7 +247,7 @@ export async function updateStaff(
     return { success: false, error: mapRpcError(error.message) };
   }
 
-  revalidateSurfacePath("/admin/staff");
+  revalidateSurfacePath("/hr/staff");
   return { success: true };
 }
 
@@ -275,6 +275,6 @@ export async function toggleStaffActive(
     return { success: false, error: mapRpcError(error.message) };
   }
 
-  revalidateSurfacePath("/admin/staff");
+  revalidateSurfacePath("/hr/staff");
   return { success: true };
 }

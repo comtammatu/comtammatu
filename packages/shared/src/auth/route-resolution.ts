@@ -24,6 +24,8 @@ export const INVENTORY_PROCUREMENT_PREFIXES = [
 export const INVENTORY_ROUTE_PREFIXES = [
   "/inventory/dashboard",
   "/inventory/consumption",
+  "/inventory/count-assignments",
+  "/inventory/count-slips",
   "/inventory/drafts",
   "/inventory/expiry",
   "/inventory/grn",
@@ -78,6 +80,28 @@ export function resolveLegacyRouteRedirectPath(
     return `/finance${suffix}`;
   }
 
+  if (pathname === "/admin/staff" || pathname.startsWith("/admin/staff/")) {
+    const suffix = pathname.slice("/admin/staff".length);
+    return `/hr/staff${suffix}`;
+  }
+
+  if (
+    pathname === "/admin/settings/branches" ||
+    pathname.startsWith("/admin/settings/branches/")
+  ) {
+    const suffix = pathname.slice("/admin/settings/branches".length);
+    return `/branches${suffix}`;
+  }
+
+  const branchMenuLimitsMatch = pathname.match(
+    /^\/br\/(\d+)\/menu-limits(\/.*|$)/,
+  );
+  if (branchMenuLimitsMatch) {
+    const branchId = branchMenuLimitsMatch[1];
+    const suffix = branchMenuLimitsMatch[2] ?? "";
+    return `/br/${branchId}/settings/menu-limits${suffix}`;
+  }
+
   return null;
 }
 
@@ -86,7 +110,6 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
     return "dashboard";
   }
   if (pathname.startsWith("/admin/dashboard")) return "dashboard";
-  if (pathname.startsWith("/admin/staff")) return "staff";
   if (pathname.startsWith("/admin/reports")) return "reports";
   if (pathname.startsWith("/admin/settings")) return "settings";
   // /admin/inventory/* RETIRED: pages removed; module ACL has empty allowedRoles.
@@ -105,14 +128,18 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
     if (matchesPathPrefix(pathname, prefix)) return "inventory";
   }
   if (pathname.startsWith("/finance")) return "finance";
+  if (pathname.startsWith("/branches")) return "branches";
   if (pathname.startsWith("/menu")) return "menu";
   if (pathname.startsWith("/orders")) return "orders";
+  if (pathname.startsWith("/hr/staff")) return "staff";
   if (pathname.startsWith("/hr/payroll")) return "hr_payroll";
   if (pathname.startsWith("/hr")) return "hr";
   if (/^\/br\/\d+\/dashboard/.test(pathname)) return "branch_dashboard";
-  if (/^\/br\/\d+\/settings/.test(pathname)) return "branch_settings";
-  if (/^\/br\/\d+\/menu-limits/.test(pathname))
+  // menu-limits lives UNDER /settings — check it BEFORE branch_settings so the
+  // broader /settings prefix does not swallow the menu-limits sub-route.
+  if (/^\/br\/\d+\/settings\/menu-limits/.test(pathname))
     return "branch_menu_limits";
+  if (/^\/br\/\d+\/settings/.test(pathname)) return "branch_settings";
   if (/^\/br\/\d+\/pos/.test(pathname)) return "pos";
   if (/^\/br\/\d+\/kds/.test(pathname)) return "kds";
   if (/^\/br\/\d+\/runner/.test(pathname)) return "runner";

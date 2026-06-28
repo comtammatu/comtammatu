@@ -3,6 +3,7 @@ import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { AppPage } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
+import { resolveBranchSwitcherOptions } from "@/_lib/branch-scope";
 import { messages } from "@lib/messages";
 import { BranchManagementShell } from "../../_components/branch-management-chrome";
 import {
@@ -73,6 +74,7 @@ export default async function BranchPrintersPage({
   ]);
 
   if (branchRes.error || !branchRes.data) notFound();
+  const branchOptions = await resolveBranchSwitcherOptions(supabase, claims);
   if (printersRes.error) throw new Error("Không thể tải máy in");
   if (agentRes.error) throw new Error("Không thể tải trạng thái agent in");
   if (printTypesRes.error) throw new Error("Không thể tải loại phiếu in");
@@ -96,6 +98,7 @@ export default async function BranchPrintersPage({
       role={claims.user_role}
       branchId={branchId}
       branchName={branchRes.data.name}
+      branchOptions={branchOptions}
       defaultPageTitle={messages.settings.pages.printersTitle}
       description={branchRes.data.name}
       breadcrumbSegments={[

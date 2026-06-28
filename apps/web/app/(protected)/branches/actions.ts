@@ -67,7 +67,7 @@ export const createBranch = withFormAction(
       };
     }
 
-    revalidateSurfacePath("/admin/settings/branches");
+    revalidateSurfacePath("/branches");
     return { success: true };
   },
 );
@@ -109,7 +109,7 @@ export const updateBranch = withFormAction(
       return { success: false, error: "Không thể cập nhật. Vui lòng thử lại." };
     }
 
-    revalidateSurfacePath("/admin/settings/branches");
+    revalidateSurfacePath("/branches");
     return { success: true };
   },
 );
@@ -142,7 +142,7 @@ export const toggleBranchActive = withAction(
       return { success: false, error: "Không thể cập nhật. Vui lòng thử lại." };
     }
 
-    revalidateSurfacePath("/admin/settings/branches");
+    revalidateSurfacePath("/branches");
     return { success: true };
   },
 );

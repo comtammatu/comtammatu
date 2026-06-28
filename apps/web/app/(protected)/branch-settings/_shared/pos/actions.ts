@@ -7,7 +7,9 @@ import {
   PERMISSION_KEYS,
   type StaffRole,
 } from "@comtammatu/shared/auth";
-import { withFormAction } from "@/_lib/with-action";
+import type { ActionResult } from "@comtammatu/shared/types";
+import { withActionPositional, withFormAction } from "@/_lib/with-action";
+import { INVENTORY_FEATURE_FLAGS } from "@/(protected)/inventory/_lib/feature-flags";
 import { canOperateBranch, verifyBranchOwnership } from "../branch-guards";
 
 const SETTINGS_ROLES: readonly StaffRole[] = BRANCH_FLOOR_SETTINGS_ROLES;
@@ -157,6 +159,59 @@ export const updateTerminal = withFormAction(
     }
 
     revalidatePosSettings(result[0]!.branch_id);
+    return { success: true };
+  },
+);
+
+/* ─── setBranchIngredientStockBlock ─── */
+
+const ingredientStockBlockSchema = z.object({
+  branchId: z.coerce.number().int().positive({ error: "Chọn chi nhánh" }),
+  enabled: z.boolean(),
+});
+
+export const setBranchIngredientStockBlock = withActionPositional(
+  {
+    roles: SETTINGS_ROLES,
+    schema: ingredientStockBlockSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+    argsToInput: (branchId: number, enabled: boolean) => ({
+      branchId,
+      enabled,
+    }),
+  },
+  async (data, { supabase, claims, user }): Promise<ActionResult> => {
+    if (!canOperateBranch(claims.branch_id, data.branchId)) {
+      return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+    }
+
+    if (
+      !(await verifyBranchOwnership(supabase, data.branchId, claims.tenant_id))
+    ) {
+      return { success: false, error: "Chi nhánh không hợp lệ" };
+    }
+
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("branch_feature_flags").upsert(
+      {
+        branch_id: data.branchId,
+        flag_key: INVENTORY_FEATURE_FLAGS.POS_INGREDIENT_STOCK_BLOCK,
+        enabled: data.enabled,
+        enabled_by: user.id,
+        enabled_at: data.enabled ? now : null,
+        disabled_at: data.enabled ? null : now,
+        updated_at: now,
+      },
+      { onConflict: "branch_id,flag_key" },
+    );
+
+    if (error) {
+      return { success: false, error: "Không thể lưu cấu hình. Vui lòng thử lại." };
+    }
+
+    revalidatePosSettings(data.branchId);
     return { success: true };
   },
 );

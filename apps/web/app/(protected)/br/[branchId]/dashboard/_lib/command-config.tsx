@@ -77,7 +77,7 @@ function buildTileGroups(
       },
       {
         moduleKey: "branch_menu_limits",
-        href: `/br/${branchId}/menu-limits`,
+        href: `/br/${branchId}/settings/menu-limits`,
         title: copy.menuLimitsTitle,
         description: copy.commandMenuLimitsDescription,
         icon: <IconUtensils />,

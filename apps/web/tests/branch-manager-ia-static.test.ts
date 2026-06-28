@@ -23,6 +23,11 @@ test("Branch management routes use management contract without a parent branch l
   const shell = read(
     "apps/web/app/(protected)/br/[branchId]/_components/branch-management-chrome.tsx",
   );
+  // S1 (D048) deduped the brand + pageHeader assembly: both Management shells
+  // now delegate to the shared ManagementShell, which owns the <AppShell> mount
+  // and resolves the cross-module primary tabs once. The branch shell stays a
+  // thin caller that supplies its own brand + branch deep nav.
+  const managementChrome = read("apps/web/app/components/management-chrome.tsx");
 
   assert.match(
     routeMap,
@@ -39,8 +44,21 @@ test("Branch management routes use management contract without a parent branch l
     /id: "branch-menu-limits"[\s\S]*?surface: "branch_operation"[\s\S]*?primaryNav: "operational-chrome"/,
     "menu limits remains a daily operation, not setup",
   );
-  assert.match(shell, /<AppShell/);
-  assert.match(shell, /tier1=\{resolveOfficePrimaryTabs\(role, branchId\)\}/);
+  assert.match(
+    managementChrome,
+    /<AppShell/,
+    "the shared ManagementShell mounts the single AppShell chrome",
+  );
+  assert.match(
+    managementChrome,
+    /tier1=\{resolveOfficePrimaryTabs\(role, branchId\)\}/,
+    "the shared ManagementShell resolves the cross-module primary tabs once",
+  );
+  assert.match(
+    shell,
+    /<ManagementShell/,
+    "branch management must delegate to the shared management chrome",
+  );
   assert.match(shell, /tier2=\{resolveBranchDeepNav\(role, branchId\)\}/);
   assert.doesNotMatch(
     shell,
@@ -84,7 +102,7 @@ test("Branch command dashboard is split into readiness, live operation, setup, a
   }
   // Lane hrefs now live in the extracted tile config (buildTileGroups).
   for (const expected of [
-    "/br/${branchId}/menu-limits",
+    "/br/${branchId}/settings/menu-limits",
     "/br/${branchId}/settings/pos-sessions",
   ]) {
     assert.ok(commandConfig.includes(expected), `expected ${expected}`);

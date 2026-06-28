@@ -1,6 +1,6 @@
 "use client";
 
-import { MenuLimitsSheet } from "../../menu-limits/menu-limits-sheet";
+import { MenuLimitsSheet } from "../../settings/menu-limits/menu-limits-sheet";
 import type { KdsMenuLimitRow } from "../types";
 
 interface KdsMenuLimitsSheetProps {

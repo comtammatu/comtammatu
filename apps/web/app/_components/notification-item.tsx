@@ -33,6 +33,12 @@ function iconFor(kind: string) {
       return IconAlertTriangle;
     case "hr.leave_requested":
       return IconClipboardList;
+    case "inventory.count_slip_submitted":
+      return IconClipboardList;
+    case "inventory.count_slip_approved":
+      return IconCircleCheck;
+    case "inventory.count_slip_recount":
+      return IconAlertTriangle;
     case "inventory.stock_low":
     case "inventory.expiry_soon":
       return IconAlertTriangle;

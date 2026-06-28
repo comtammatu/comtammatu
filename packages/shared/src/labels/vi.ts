@@ -11,6 +11,7 @@ export type ModuleLabelKey =
   | "hr"
   | "hr_payroll"
   | "finance"
+  | "branches"
   | "reports"
   | "settings"
   | "pos"
@@ -38,6 +39,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   hr: "Nhân sự",
   hr_payroll: "Lương",
   finance: "Tài chính",
+  branches: "Chi nhánh",
   reports: "Báo cáo",
   settings: "Cài đặt",
   pos: "POS",
@@ -65,6 +67,7 @@ export const APP_COPY_VI = {
   reportsLabel: "Báo cáo",
   ownerHome: "Điều hành hôm nay",
   staffLabel: "Tài khoản & quyền",
+  staffAuditLabel: "Nhật ký quyền hạn",
   settingsLabel: "Thiết lập hệ thống",
   quickAccess: "Mục nhanh",
   quickAccessAria: "Truy cập nhanh chức năng",
@@ -398,4 +401,11 @@ export const STOCKTAKE_SESSION_STATUS_LABELS_VI = {
   in_progress: "Đang thực hiện",
   completed: "Hoàn tất",
   cancelled: "Đã hủy",
+} as const;
+
+/** inventory_count_slips.status (DB inventory_count_slips_status_check). */
+export const COUNT_SLIP_STATUS_LABELS_VI = {
+  submitted: "Chờ duyệt",
+  needs_changes: "Cần đếm lại",
+  approved: "Đã duyệt",
 } as const;

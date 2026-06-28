@@ -72,6 +72,9 @@ pure function per producer (unit-testable).
 | `hr.leave_requested` | `hr.leave_request:{request_id}` | once/request | **[live]** RPC (submit) |
 | `hr.leave_approved` | `hr.leave_approved:{request_id}` | once/request | **[live]** RPC (approve) |
 | `hr.leave_rejected` | `hr.leave_rejected:{request_id}` | once/request | **[live]** RPC (reject) |
+| `inventory.count_slip_submitted` | `inventory.count_slip:{slip_id}:submitted` | once/submit | **[live]** RPC (submit) |
+| `inventory.count_slip_approved` | `inventory.count_slip:{slip_id}:approved` | once/approve | **[live]** RPC (approve) |
+| `inventory.count_slip_recount` | `inventory.count_slip:{slip_id}:recount` | once/recount | **[live]** RPC (recount) |
 | `report.daily_closeout` | `report.daily_closeout:{branch_id}:{date}` | once/day | **[designed]** |
 | `report.weekly` | `report.weekly:{branch_id}:{iso_week}` | once/week | **[designed]** |
 

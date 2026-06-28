@@ -51,10 +51,12 @@ import {
   BrandMark,
   type BrandMarkVariant,
 } from "@/components/brand";
+import { BranchSwitcher } from "@/components/branch-switcher";
 import { WorkspaceBottomNav } from "@/components/workspace-bottom-nav";
 import { messages } from "@lib/messages";
+import type { BranchSwitcherOption } from "@/_lib/branch-scope";
 
-interface BrandConfig {
+export interface BrandConfig {
   icon: ComponentType<{ className?: string }>;
   subLabel: string;
   mainLabel: ReactNode;
@@ -66,7 +68,7 @@ interface BrandConfig {
   backLabel?: string;
 }
 
-interface PageHeaderConfig {
+export interface PageHeaderConfig {
   /** Either a single Badge label or breadcrumb chain segments. */
   crumbLabel?: ReactNode;
   /** Segments with an href render as links; plain strings stay static. */
@@ -91,6 +93,12 @@ export interface AppShellProps {
   tier2: ShellNavGroup[];
   defaultPageTitle: string;
   pageHeader: PageHeaderConfig;
+  /**
+   * Branches the current user can switch to. The `BranchSwitcher` renders in
+   * the brand block only when more than one option is present (hidden for
+   * single-branch users).
+   */
+  branchOptions?: BranchSwitcherOption[];
   /**
    * Mobile-only workspace bottom navbar (same nav model as the sidebar +
    * drawer trigger). Default true for all back-office shells.
@@ -120,6 +128,7 @@ export function AppShell({
   tier2,
   defaultPageTitle,
   pageHeader,
+  branchOptions,
   bottomNav = true,
 }: AppShellProps) {
   const pathname = usePathname();
@@ -175,6 +184,11 @@ export function AppShell({
               </p>
             </div>
           </div>
+          {branchOptions ? (
+            <div className="group-data-[collapsible=icon]:hidden">
+              <BranchSwitcher options={branchOptions} branchId={branchId} />
+            </div>
+          ) : null}
           {showBackLink ? (
             <Button
               asChild

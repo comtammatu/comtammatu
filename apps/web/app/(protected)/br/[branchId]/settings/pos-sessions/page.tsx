@@ -2,7 +2,10 @@ import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
 import { AppPage } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
-import { canAccessBranch } from "@/_lib/branch-scope";
+import {
+  canAccessBranch,
+  resolveBranchSwitcherOptions,
+} from "@/_lib/branch-scope";
 import { messages } from "@lib/messages";
 import { BranchManagementShell } from "../../_components/branch-management-chrome";
 import {
@@ -86,6 +89,8 @@ export default async function BranchPosSessionsPage({
   if (branchError || !branch) notFound();
   if (error) throw new Error("Không thể tải ca POS");
 
+  const branchOptions = await resolveBranchSwitcherOptions(supabase, claims);
+
   const sessionRows = normalizeSessionRows(sessions);
 
   const selectedSessionId = resolveSelectedSessionId(sp.session, sessionRows);
@@ -152,6 +157,7 @@ export default async function BranchPosSessionsPage({
       role={claims.user_role}
       branchId={branchId}
       branchName={branch.name}
+      branchOptions={branchOptions}
       defaultPageTitle={messages.settings.pages.posSessionsTitle}
       description={messages.settings.pages.posSessionsDescription}
       breadcrumbSegments={[

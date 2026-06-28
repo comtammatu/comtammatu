@@ -28,11 +28,6 @@ const TENANT_STRATEGY_ROLES = [
 
 const TABS: Tab[] = [
   {
-    href: "/admin/settings/branches",
-    label: copy.branches,
-    allowedRoles: TENANT_STRATEGY_ROLES,
-  },
-  {
     href: "/admin/settings/general",
     label: copy.general,
     allowedRoles: TENANT_STRATEGY_ROLES,

@@ -36,6 +36,10 @@ const NON_RETRYABLE_ERROR_SUBSTRINGS: readonly string[] = [
   "quyền",
   "Phiên đăng nhập",
   "chi nhánh",
+  // Ingredient-stock hard stop: retrying re-fails (stock won't reappear in
+  // 1.4s). Primary guard is the INGREDIENT_STOCK_INSUFFICIENT errorCode;
+  // this substring is the fallback per the same contract as above.
+  "nguyên liệu",
 ];
 
 /**

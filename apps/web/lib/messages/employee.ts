@@ -138,6 +138,9 @@ export const employee = {
     managerCheckoutApprovalsTitle: "Duyệt kết ca",
     managerCheckoutApprovalsDescription: "Duyệt yêu cầu ra ca của nhân viên",
     checkoutApprovalsTitle: "Duyệt kết ca",
+    countTitle: "Kiểm kê tồn",
+    countDescription: "Bạn có nguyên liệu được giao cần đếm tồn và gửi quản lý duyệt.",
+    countCta: "Đếm tồn ngay",
     staleShiftTitle: "Còn ca chưa kết",
     staleShiftDescription: (date: string) =>
       `Ca ngày ${date} chưa được kết. Báo quản lý để chốt công.`,

@@ -2060,6 +2060,233 @@ export type Database = {
           },
         ]
       }
+      inventory_count_assignments: {
+        Row: {
+          assigned_by: string
+          branch_id: number
+          created_at: string
+          employee_id: number
+          id: number
+          ingredient_id: number
+          is_active: boolean
+          location_id: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          assigned_by: string
+          branch_id: number
+          created_at?: string
+          employee_id: number
+          id?: never
+          ingredient_id: number
+          is_active?: boolean
+          location_id: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string
+          branch_id?: number
+          created_at?: string
+          employee_id?: number
+          id?: never
+          ingredient_id?: number
+          is_active?: boolean
+          location_id?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_count_assignments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_assignments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "inventory_count_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_assignments_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_assignments_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_count_slip_lines: {
+        Row: {
+          counted_quantity: number
+          id: number
+          ingredient_id: number
+          note: string | null
+          slip_id: number
+          system_quantity: number
+          tenant_id: number
+          variance: number | null
+        }
+        Insert: {
+          counted_quantity: number
+          id?: never
+          ingredient_id: number
+          note?: string | null
+          slip_id: number
+          system_quantity: number
+          tenant_id: number
+          variance?: number | null
+        }
+        Update: {
+          counted_quantity?: number
+          id?: never
+          ingredient_id?: number
+          note?: string | null
+          slip_id?: number
+          system_quantity?: number
+          tenant_id?: number
+          variance?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_count_slip_lines_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_slip_lines_slip_id_fkey"
+            columns: ["slip_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_count_slips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_slip_lines_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_count_slips: {
+        Row: {
+          branch_id: number
+          count_date: string
+          created_at: string
+          employee_id: number
+          id: number
+          location_id: number
+          note: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          count_date: string
+          created_at?: string
+          employee_id: number
+          id?: never
+          location_id: number
+          note?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          count_date?: string
+          created_at?: string
+          employee_id?: number
+          id?: never
+          location_id?: number
+          note?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_count_slips_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_slips_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "inventory_count_slips_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_slips_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_slips_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_locations: {
         Row: {
           branch_id: number
@@ -8142,6 +8369,10 @@ export type Database = {
         }
         Returns: number
       }
+      approve_inventory_count_slip: {
+        Args: { p_slip_id: number }
+        Returns: Json
+      }
       approve_leave_request: {
         Args: { p_request_id: number }
         Returns: undefined
@@ -8173,6 +8404,14 @@ export type Database = {
       auth_role_to_position: { Args: { p_role: string }; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
       auto_close_periods: { Args: never; Returns: number }
+      branch_kitchen_ingredient_availability: {
+        Args: { p_branch_id: number; p_tenant_id: number }
+        Returns: {
+          ingredient_id: number
+          on_hand: number
+          pending_demand: number
+        }[]
+      }
       branch_manager_approve_consumption_report: {
         Args: { p_report_id: number; p_tenant_id: number }
         Returns: Json
@@ -8664,6 +8903,13 @@ export type Database = {
           sold_today: number
         }[]
       }
+      get_branch_menu_ingredient_caps_for_pos: {
+        Args: { p_branch_id: number }
+        Returns: {
+          max_sellable: number
+          menu_item_id: number
+        }[]
+      }
       get_cash_variance_summary: {
         Args: { p_branch_id: number; p_end_date: string; p_start_date: string }
         Returns: {
@@ -8752,6 +8998,14 @@ export type Database = {
         }[]
       }
       get_inventory_dashboard: { Args: { p_branch_id: number }; Returns: Json }
+      get_my_count_slip: {
+        Args: { p_slip_id: number }
+        Returns: {
+          counted_quantity: number
+          ingredient_id: number
+          note: string
+        }[]
+      }
       get_orders_for_day: {
         Args: { p_branch_id: number; p_date: string }
         Returns: {
@@ -9243,6 +9497,10 @@ export type Database = {
         }
         Returns: number
       }
+      request_inventory_count_recount: {
+        Args: { p_note?: string; p_slip_id: number }
+        Returns: undefined
+      }
       reserve_branch_menu_daily_holds: {
         Args: {
           p_branch_id: number
@@ -9366,6 +9624,15 @@ export type Database = {
         }
         Returns: Json
       }
+      set_inventory_count_assignments: {
+        Args: {
+          p_branch_id: number
+          p_employee_id: number
+          p_ingredient_ids: number[]
+          p_location_id: number
+        }
+        Returns: Json
+      }
       set_order_service_charge: {
         Args: { p_amount: number; p_note: string; p_order_id: number }
         Returns: Json
@@ -9430,6 +9697,10 @@ export type Database = {
       submit_count_round: {
         Args: { p_counts: Json; p_round_no: number; p_session_id: number }
         Returns: Json
+      }
+      submit_inventory_count_slip: {
+        Args: { p_branch_id: number; p_lines: Json; p_location_id: number }
+        Returns: number
       }
       submit_leave_request: {
         Args: {

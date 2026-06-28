@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   Key as IconKey,
   Ellipsis as IconDots,
   Pencil as IconPencil,
+  Search as IconSearch,
   ToggleLeft as IconToggleLeft,
   ToggleRight as IconToggleRight,
   Users as IconUsers,
@@ -19,11 +20,18 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
+import {
   Item,
   ItemActions,
   ItemContent,
 } from "@comtammatu/ui/components/item";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
+import { matchesSearch } from "@lib/search";
+import { messages } from "@lib/messages";
 import { toggleStaffActive } from "./actions";
 import { StaffFormDialog } from "./staff-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -89,7 +97,7 @@ function StaffActionsMenu({
         {variant === "card" ? (
           <Button variant="ghost" size="sm" className="rounded-full">
             <IconDots className="size-4" />
-            Tác vụ
+            {messages.admin.staffPage.actions}
           </Button>
         ) : (
           <Button variant="ghost" size="icon-lg">
@@ -101,24 +109,24 @@ function StaffActionsMenu({
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={() => onEdit(member)}>
           <IconPencil className="mr-2 size-4" />
-          Chỉnh sửa
+          {messages.admin.staffPage.actionEdit}
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href={`/admin/staff/${member.id}/permissions`}>
+          <Link href={`/hr/staff/${member.id}/permissions`}>
             <IconKey className="mr-2 size-4" />
-            Quyền hạn
+            {messages.admin.staffPage.actionPermissions}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onToggle(member)}>
           {member.is_active !== false ? (
             <>
               <IconToggleLeft className="mr-2 size-4" />
-              Vô hiệu hóa
+              {messages.admin.staffPage.actionDeactivate}
             </>
           ) : (
             <>
               <IconToggleRight className="mr-2 size-4" />
-              Kích hoạt
+              {messages.admin.staffPage.actionActivate}
             </>
           )}
         </DropdownMenuItem>
@@ -133,7 +141,25 @@ export function StaffTable({
   positionOptions,
 }: StaffTableProps) {
   const [editStaff, setEditStaff] = useState<StaffRow | null>(null);
+  const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
+  const staffCopy = messages.admin.staffPage;
+
+  const filtered = useMemo(() => {
+    const q = search.trim();
+    if (!q) return staff;
+    return staff.filter((member) =>
+      matchesSearch(
+        [
+          member.full_name,
+          member.phone,
+          member.position_label ?? member.role,
+          member.branch_name,
+        ],
+        q,
+      ),
+    );
+  }, [staff, search]);
 
   async function handleToggleActive(member: StaffRow) {
     if (member.is_active !== false) {
@@ -180,7 +206,7 @@ export function StaffTable({
     },
     {
       key: "phone",
-      header: "SĐT",
+      header: staffCopy.phoneShort,
       className: "text-muted-foreground",
       render: (member) => member.phone ?? "—",
     },
@@ -206,11 +232,26 @@ export function StaffTable({
 
   return (
     <>
+      <InputGroup className="h-12 sm:h-10">
+        <InputGroupAddon>
+          <IconSearch />
+        </InputGroupAddon>
+        <InputGroupInput
+          type="text"
+          placeholder={staffCopy.searchPlaceholder}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          inputMode="search"
+        />
+      </InputGroup>
       <DataTable
         columns={columns}
-        data={staff}
+        data={filtered}
         getRowKey={(member) => member.id}
-        emptyTitle="Chưa có nhân viên nào"
+        emptyTitle={
+          search.trim() ? staffCopy.emptySearchTitle : "Chưa có nhân viên nào"
+        }
+        emptyMode={search.trim() ? "no-results" : "no-data"}
         emptyIcon={<IconUsers />}
         className={isPending ? "opacity-60" : undefined}
         mobileCardRender={(member) => (
@@ -234,7 +275,7 @@ export function StaffTable({
                   <p>{member.position_label ?? member.role}</p>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <p className="text-muted-foreground">SĐT</p>
+                  <p className="text-muted-foreground">{staffCopy.phoneShort}</p>
                   <p>{member.phone ?? "—"}</p>
                 </div>
               </div>

@@ -803,6 +803,14 @@ export const submitOrderRpcMappings: readonly RpcErrorMapping[] = [
     userMessage: "Có món đã hết suất hôm nay — giảm số lượng hoặc đổi món.",
   },
   {
+    // P0001 from the ingredient-stock trigger:
+    // `insufficient_stock_ingredient:<ingredient_id>`. Hard stop — branch
+    // ran out of a kitchen ingredient a recipe needs. NON-retryable.
+    match: includesAny("insufficient_stock_ingredient"),
+    errorCode: POS_ERROR_CODES.INGREDIENT_STOCK_INSUFFICIENT,
+    userMessage: "Không đủ nguyên liệu trong kho để bán món này.",
+  },
+  {
     match: includesAny(
       "stale_side_or_modifier",
       "stale modifier",
@@ -868,6 +876,13 @@ export const appendOrderItemsRpcMappings: readonly RpcErrorMapping[] = [
     match: includesAny("daily_limit_exceeded"),
     errorCode: POS_ERROR_CODES.DAILY_LIMIT_EXCEEDED,
     userMessage: "Có món đã hết suất hôm nay — giảm số lượng hoặc đổi món.",
+  },
+  {
+    // P0001 from the ingredient-stock trigger:
+    // `insufficient_stock_ingredient:<ingredient_id>`. NON-retryable.
+    match: includesAny("insufficient_stock_ingredient"),
+    errorCode: POS_ERROR_CODES.INGREDIENT_STOCK_INSUFFICIENT,
+    userMessage: "Không đủ nguyên liệu trong kho để bán món này.",
   },
   {
     match: includesAny(

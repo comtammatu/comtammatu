@@ -52,7 +52,7 @@ export async function grantPermissionAction(
     p_valid_until: parsed.data.valid_until ?? undefined,
   });
   if (error) return { success: false, error: mapRpcError(error.message) };
-  revalidatePath(`/admin/staff/${parsed.data.target_user_id}/permissions`);
+  revalidatePath(`/hr/staff/${parsed.data.target_user_id}/permissions`);
   return { success: true, data: { grant_id: data as number } };
 }
 
@@ -78,7 +78,7 @@ export async function revokePermissionAction(
     p_permission_key: parsed.data.permission_key,
   });
   if (error) return { success: false, error: mapRpcError(error.message) };
-  revalidatePath(`/admin/staff/${parsed.data.target_user_id}/permissions`);
+  revalidatePath(`/hr/staff/${parsed.data.target_user_id}/permissions`);
   return { success: true, data: { rows_removed: data as number } };
 }
 
@@ -105,7 +105,7 @@ export async function applyTemplateAction(
     p_valid_until: parsed.data.valid_until ?? undefined,
   });
   if (error) return { success: false, error: mapRpcError(error.message) };
-  revalidatePath(`/admin/staff/${parsed.data.target_user_id}/permissions`);
+  revalidatePath(`/hr/staff/${parsed.data.target_user_id}/permissions`);
   return { success: true, data: { rows_inserted: data as number } };
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   Building as IconBuilding,
   ChefHat as IconChefHat,
@@ -9,6 +9,7 @@ import {
   Monitor as IconMonitor,
   MonitorUp as IconMonitorUp,
   Pencil as IconPencil,
+  Search as IconSearch,
   Shield as IconShield,
   SlidersHorizontal as IconSliders,
   ToggleLeft as IconToggleLeft,
@@ -24,6 +25,11 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
+import {
   Item,
   ItemActions,
   ItemContent,
@@ -31,6 +37,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
+import { matchesSearch } from "@lib/search";
 import { toggleBranchActive } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
 import { NetworkConfigDialog } from "./network-config-dialog";
@@ -46,6 +53,7 @@ import { messages } from "@lib/messages";
 export interface BranchRow {
   id: number;
   name: string;
+  code: string | null;
   address: string | null;
   phone: string | null;
   is_active: boolean | null;
@@ -59,8 +67,17 @@ interface BranchTableProps {
 export function BranchTable({ branches }: BranchTableProps) {
   const [editBranch, setEditBranch] = useState<BranchRow | null>(null);
   const [networkBranch, setNetworkBranch] = useState<BranchRow | null>(null);
+  const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
   const copy = messages.settings.branchTable;
+
+  const filtered = useMemo(() => {
+    const q = search.trim();
+    if (!q) return branches;
+    return branches.filter((branch) =>
+      matchesSearch([branch.name, branch.code, branch.address], q),
+    );
+  }, [branches, search]);
 
   async function handleToggleActive(branch: BranchRow) {
     if (branch.is_active !== false) {
@@ -191,11 +208,24 @@ export function BranchTable({ branches }: BranchTableProps) {
 
   return (
     <>
+      <InputGroup className="h-12 sm:h-10">
+        <InputGroupAddon>
+          <IconSearch />
+        </InputGroupAddon>
+        <InputGroupInput
+          type="text"
+          placeholder={copy.searchPlaceholder}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          inputMode="search"
+        />
+      </InputGroup>
       <DataTable
         columns={columns}
-        data={branches}
+        data={filtered}
         getRowKey={(branch) => branch.id}
-        emptyTitle={copy.emptyTitle}
+        emptyTitle={search.trim() ? copy.emptySearchTitle : copy.emptyTitle}
+        emptyMode={search.trim() ? "no-results" : "no-data"}
         emptyIcon={
           <IconBuilding className="mx-auto size-8 text-muted-foreground" />
         }

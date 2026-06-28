@@ -3,6 +3,7 @@ import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { AppPage } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
+import { resolveBranchSwitcherOptions } from "@/_lib/branch-scope";
 import { messages } from "@lib/messages";
 import { BranchManagementShell } from "../../_components/branch-management-chrome";
 import { TablesClient } from "@/(protected)/branch-settings/_shared/tables/tables-client";
@@ -45,6 +46,7 @@ export default async function BranchTablesSettingsPage({
   ]);
 
   if (branchRes.error || !branchRes.data) notFound();
+  const branchOptions = await resolveBranchSwitcherOptions(supabase, claims);
   if (zonesRes.error) throw new Error("Không thể tải khu vực");
   if (tablesRes.error) throw new Error("Không thể tải bàn");
 
@@ -61,6 +63,7 @@ export default async function BranchTablesSettingsPage({
       role={claims.user_role}
       branchId={branchId}
       branchName={branchRes.data.name}
+      branchOptions={branchOptions}
       defaultPageTitle={messages.settings.pages.tablesTitle}
       description={messages.settings.branch.tablesDescription(
         branchRes.data.name,

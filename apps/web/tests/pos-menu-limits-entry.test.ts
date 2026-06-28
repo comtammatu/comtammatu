@@ -21,7 +21,7 @@ const posDesktopInnerSource = readFileSync(
 const menuLimitsSheetSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/menu-limits/menu-limits-sheet.tsx",
+    "app/(protected)/br/[branchId]/settings/menu-limits/menu-limits-sheet.tsx",
   ),
   "utf8",
 );
@@ -85,7 +85,7 @@ test("POS menu-limit sheet is fed from POS menu data and shares canonical action
   );
   assert.match(
     kdsMenuLimitsSheetSource,
-    /import \{ MenuLimitsSheet \} from "\.\.\/\.\.\/menu-limits\/menu-limits-sheet";/,
+    /import \{ MenuLimitsSheet \} from "\.\.\/\.\.\/settings\/menu-limits\/menu-limits-sheet";/,
     "KDS should reuse the same sheet implementation as POS",
   );
 });

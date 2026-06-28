@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { resolveRoleHomeLink, type StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppShell } from "@/components/app-shell";
+import type { BranchSwitcherOption } from "@/_lib/branch-scope";
 import { messages } from "@lib/messages";
 import { resolveOfficePrimaryTabs } from "@/lib/office-nav";
 import { resolveFinanceNav } from "./finance-nav";
@@ -19,6 +20,7 @@ export interface FinanceShellProps {
   user: { name: string };
   role: StaffRole;
   branchId?: number | null;
+  branchOptions?: BranchSwitcherOption[];
   showInvoices: boolean;
   showSummary: boolean;
 }
@@ -28,6 +30,7 @@ export function FinanceShell({
   user,
   role,
   branchId: homeBranchId,
+  branchOptions,
   showInvoices,
   showSummary,
 }: FinanceShellProps) {
@@ -49,6 +52,7 @@ export function FinanceShell({
       user={user}
       role={role}
       branchId={homeBranchId}
+      branchOptions={branchOptions}
       brand={{
         icon: IconWallet,
         subLabel: financeCopy.shell.subLabel,

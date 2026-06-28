@@ -1,6 +1,7 @@
 import {
   ATTENDANCE_STATUS_LABELS_VI,
   CONSUMPTION_REPORT_STATUS_LABELS_VI,
+  COUNT_SLIP_STATUS_LABELS_VI,
   LEAVE_REQUEST_STATUS_LABELS_VI,
   ORDER_ITEM_STATUS_LABELS_VI,
   ORDER_PAYMENT_STATUS_LABELS_VI,
@@ -158,6 +159,14 @@ const STATUS_DOMAINS = {
       approved: "success",
       applied: "success",
       cancelled: "secondary",
+    },
+  },
+  "count-slip": {
+    labels: COUNT_SLIP_STATUS_LABELS_VI,
+    variants: {
+      submitted: "warning",
+      needs_changes: "destructive",
+      approved: "success",
     },
   },
 } satisfies Record<string, DomainConfig>;

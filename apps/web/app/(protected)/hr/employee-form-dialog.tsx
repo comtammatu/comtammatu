@@ -75,7 +75,7 @@ const employeeSchema = z.object({
 });
 
 // Edit mode never touches auth identity (email/password) or role/branch —
-// those are create-only or managed via /admin/staff.
+// those are create-only or managed via /hr/staff.
 const editEmployeeSchema = z.object({
   full_name: z.string().trim().min(1, { error: "Họ tên không được để trống" }),
   phone: z.string().trim().optional(),

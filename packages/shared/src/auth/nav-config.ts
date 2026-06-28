@@ -52,11 +52,6 @@ export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
     title: NAV_GROUP_LABELS_VI.foundation,
     items: [
       {
-        moduleKey: "staff",
-        icon: "Users",
-        label: APP_COPY_VI.staffLabel,
-      },
-      {
         moduleKey: "settings",
         icon: "Settings",
         label: APP_COPY_VI.settingsLabel,
@@ -72,6 +67,7 @@ export const DOMAIN_WORKSPACE_ITEMS: WorkspaceNavItemConfig[] = [
   { moduleKey: "inventory", icon: "Package", label: "Kho hàng" },
   { moduleKey: "finance", icon: "Wallet", label: "Tài chính" },
   { moduleKey: "hr", icon: "Briefcase", label: APP_COPY_VI.hrWorkspace },
+  { moduleKey: "branches", icon: "Building2", label: "Chi nhánh" },
 ];
 
 /** Branch-scoped management entry points */
@@ -87,15 +83,15 @@ export const BRANCH_MANAGEMENT_ITEMS: BranchManagementNavItemConfig[] = [
     icon: "Settings",
     hrefTemplate: "/br/{branchId}/settings",
   },
+  {
+    moduleKey: "branch_menu_limits",
+    icon: "Utensils",
+    hrefTemplate: "/br/{branchId}/settings/menu-limits",
+  },
 ];
 
 /** Branch-scoped live operation entry points */
 export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
-  {
-    moduleKey: "branch_menu_limits",
-    icon: "Utensils",
-    hrefTemplate: "/br/{branchId}/menu-limits",
-  },
   {
     moduleKey: "pos",
     icon: "Monitor",

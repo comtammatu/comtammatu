@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { MODULE_ACL } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../../_lib/auth";
+import { getAuthContext } from "../../../_lib/auth";
 
 const LIMITS_ROLES = MODULE_ACL.branch_menu_limits.allowedRoles;
 
@@ -140,7 +140,7 @@ export async function setBranchMenuDailyLimit(
     };
   }
 
-  revalidatePath(`/br/${parsed.data.branchId}/menu-limits`);
+  revalidatePath(`/br/${parsed.data.branchId}/settings/menu-limits`);
   revalidatePath(`/br/${parsed.data.branchId}/pos`);
   revalidatePath(`/br/${parsed.data.branchId}/kds`);
 
@@ -199,7 +199,7 @@ export async function clearBranchMenuDailyLimit(
     };
   }
 
-  revalidatePath(`/br/${parsed.data.branchId}/menu-limits`);
+  revalidatePath(`/br/${parsed.data.branchId}/settings/menu-limits`);
   revalidatePath(`/br/${parsed.data.branchId}/pos`);
   revalidatePath(`/br/${parsed.data.branchId}/kds`);
 

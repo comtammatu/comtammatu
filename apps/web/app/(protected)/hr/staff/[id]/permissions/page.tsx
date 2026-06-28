@@ -115,7 +115,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
         )}
         breadcrumb={
           <Button asChild variant="ghost" size="sm" className="-ml-3">
-            <Link href="/admin/staff">
+            <Link href="/hr/staff">
               <IconArrowLeft className="mr-1 size-4" />
               {messages.admin.staffPermissions.backToList}
             </Link>

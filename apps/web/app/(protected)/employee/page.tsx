@@ -146,7 +146,7 @@ function getWorkDescription(state: TodayWorkState): string {
 }
 
 export default async function EmployeePage() {
-  const { supabase, claims } = await loadAuthState();
+  const { supabase, claims, session } = await loadAuthState();
   const state = await getTodayWorkState();
   const branchId = state.branchId;
 
@@ -194,6 +194,20 @@ export default async function EmployeePage() {
     if (permissionResult.data === true) {
       pendingCheckouts = countResult.count ?? 0;
     }
+  }
+
+  // Surface the count-slip task only when this employee actually has active
+  // assignments — RLS + the inner-join on profile_id keep it to their own rows
+  // (a manager who can read branch-wide assignments still only sees their own).
+  let countAssignmentCount = 0;
+  if (session?.user?.id) {
+    const { count } = await supabase
+      .from("inventory_count_assignments")
+      .select("id, employees!inner(profile_id)", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .eq("employees.profile_id", session.user.id);
+    countAssignmentCount = count ?? 0;
   }
 
   const isBranchManager = claims.user_role === "branch_manager";
@@ -512,6 +526,27 @@ export default async function EmployeePage() {
                 {copy.checkoutApprovalsTitle}
               </Link>
             </Button>
+          </EmployeePanel>
+        ) : null}
+
+        {countAssignmentCount > 0 ? (
+          <EmployeePanel
+            icon={IconClipboardCheck}
+            title={copy.countTitle}
+            tone="info"
+            size="sm"
+          >
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-muted-foreground">
+                {copy.countDescription}
+              </p>
+              <Button asChild size="touch" className="w-full sm:w-fit">
+                <Link href="/employee/count">
+                  <IconClipboardCheck data-icon="inline-start" />
+                  {copy.countCta}
+                </Link>
+              </Button>
+            </div>
           </EmployeePanel>
         ) : null}
 

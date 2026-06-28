@@ -34,6 +34,7 @@ export default async function InventoryLayout({
     hasProductionPermission,
     hasProductionBranchAccess,
     canApproveWaste,
+    canManageCounts,
   ] = await Promise.all([
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
     currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
@@ -41,6 +42,10 @@ export default async function InventoryLayout({
     currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
     hasCurrentProductionBranchAccess(supabase, claims),
     currentUserHasPermissionAny(PERMISSION_KEYS.INVENTORY_WASTE_APPROVE),
+    currentUserHasAnyPermissionAny([
+      PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN,
+      PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
+    ]),
   ]);
   const isOversightRole = claims.user_role === "owner";
   const showProcurement =
@@ -80,6 +85,7 @@ export default async function InventoryLayout({
       showCatalogManagement={canManageCatalog}
       showSettings={canOpenSettings}
       showWasteApprovals={showWasteApprovals}
+      showCountManagement={canManageCounts}
       allowedBranches={scope.allowedBranches}
       defaultBranchId={scope.selectedBranchId}
     >

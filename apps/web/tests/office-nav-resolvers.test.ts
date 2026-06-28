@@ -92,13 +92,21 @@ test("owner sidebar tabs include admin + all workspaces + branch management", ()
     );
   }
 
-  for (const key of ["reports", "staff", "settings"] as ModuleKey[]) {
+  for (const key of ["reports", "settings"] as ModuleKey[]) {
     assert.equal(
       hrefs.has(MODULE_ACL[key].path),
       false,
       `${key} must stay inside the admin sub-nav, not the primary tabs`,
     );
   }
+
+  // `staff` now lives under the HR workspace (D048) — its /hr/staff path must
+  // not surface as a standalone primary tab.
+  assert.equal(
+    hrefs.has(MODULE_ACL.staff.path),
+    false,
+    "staff must stay inside the HR sub-nav, not the primary tabs",
+  );
 
   const branchTabs = items.filter((item) =>
     item.href.startsWith(`/br/${BRANCH_ID}`),
@@ -198,7 +206,7 @@ test("resolveOfficeDeepNav returns admin command groups for the admin surface", 
   assert.ok(totalItems > 0, "admin deep nav groups must contain items");
 });
 
-for (const surface of ["hr", "menu", "orders"] as const) {
+for (const surface of ["menu", "orders"] as const) {
   test(`resolveOfficeDeepNav returns a single non-empty landing group for ${surface}`, () => {
     const groups = resolveOfficeDeepNav("owner", surface);
     assert.equal(
@@ -212,6 +220,38 @@ for (const surface of ["hr", "menu", "orders"] as const) {
     );
   });
 }
+
+test("resolveOfficeDeepNav surfaces People + gated account groups for HR", () => {
+  // Owner sees both the People landing group and the owner-only account
+  // administration group (staff roster + audit) folded under /hr (D048).
+  const ownerGroups = resolveOfficeDeepNav("owner", "hr");
+  const ownerHrefs = hrefList(flattenGroups(ownerGroups));
+  assert.ok(
+    ownerHrefs.includes(MODULE_ACL.hr.path),
+    "HR deep nav must include the People landing",
+  );
+  assert.ok(
+    ownerHrefs.includes(MODULE_ACL.staff.path),
+    "owner HR deep nav must include the staff roster",
+  );
+  assert.ok(
+    ownerHrefs.includes(`${MODULE_ACL.staff.path}/audit`),
+    "owner HR deep nav must include the permission audit",
+  );
+
+  // branch_manager reaches HR but not the staff-only account surface.
+  const managerGroups = resolveOfficeDeepNav("branch_manager", "hr");
+  const managerHrefs = hrefList(flattenGroups(managerGroups));
+  assert.ok(
+    managerHrefs.includes(MODULE_ACL.hr.path),
+    "branch_manager HR deep nav must include the People landing",
+  );
+  assert.equal(
+    managerHrefs.includes(MODULE_ACL.staff.path),
+    false,
+    "branch_manager must not see the owner-only staff roster",
+  );
+});
 
 test("resolveBranchDeepNav returns the branch group when branchId + role allow", () => {
   const groups = resolveBranchDeepNav("owner", BRANCH_ID);

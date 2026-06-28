@@ -93,7 +93,7 @@ export function HrClient({
   );
 
   // One role option per access bucket (label = its Vietnamese position label),
-  // mirroring /admin/staff. Owner/unassigned are not creatable here.
+  // mirroring /hr/staff. Owner/unassigned are not creatable here.
   const seenBuckets = new Set<string>();
   const positionOptions = positionDefaults.flatMap((position) => {
     const bucket = staffRoleFromPositionCode(position.code);
@@ -208,7 +208,7 @@ export function HrClient({
                     {canManageEmployees ? (
                       <div className="flex gap-2">
                         <Button asChild variant="ghost">
-                          <Link href="/admin/staff">
+                          <Link href="/hr/staff">
                             <IconShieldCheck data-icon="inline-start" />
                             {copy.staffAccounts}
                           </Link>

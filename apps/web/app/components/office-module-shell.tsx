@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Briefcase as IconBriefcase,
+  Building2 as IconBuilding2,
   Receipt as IconReceipt,
   ShieldCheck as IconShieldCheck,
   Utensils as IconUtensils,
@@ -18,16 +19,14 @@ import {
 import { APP_COPY_VI, MODULE_LABELS_VI } from "@comtammatu/shared/labels";
 import { ORDER_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
-import { AppShell } from "@/components/app-shell";
+import { ManagementShell } from "@/components/management-chrome";
+import type { BranchSwitcherOption } from "@/_lib/branch-scope";
 import {
   findActiveNavItem,
   formatPathSegment,
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
-import {
-  resolveOfficeDeepNav,
-  resolveOfficePrimaryTabs,
-} from "@/lib/office-nav";
+import { resolveOfficeDeepNav } from "@/lib/office-nav";
 import { messages } from "@lib/messages";
 
 // Generic Management shell for modules whose chrome is the shared primary tabs +
@@ -41,7 +40,7 @@ import { messages } from "@lib/messages";
 // shell-scoped client state keep their own wrapper (finance: lifted realtime
 // channel; inventory: branch-reactive nav + branch-filter/mobile header chrome).
 
-export type OfficeModuleId = "admin" | "hr" | "menu" | "orders";
+export type OfficeModuleId = "admin" | "hr" | "menu" | "orders" | "branches";
 
 interface ModuleChrome {
   icon: LucideIcon;
@@ -107,6 +106,15 @@ const OFFICE_MODULE_CHROME: Record<OfficeModuleId, ModuleChrome> = {
     description:
       "Tra cứu lịch sử đơn hàng, xử lý hoàn tiền và đối soát doanh thu.",
   },
+  branches: {
+    icon: IconBuilding2,
+    subLabel: "Toàn chuỗi",
+    mainLabel: MODULE_LABELS_VI.branches,
+    defaultPageTitle: MODULE_LABELS_VI.branches,
+    crumbLabel: MODULE_LABELS_VI.branches,
+    description:
+      "Quản lý danh sách chi nhánh, địa chỉ liên hệ và cổng mạng tin cậy.",
+  },
 };
 
 // Dynamic breadcrumb trail from the active nav item. Only admin opts in via
@@ -138,17 +146,18 @@ export function OfficeModuleShell({
   user,
   role,
   branchId,
+  branchOptions,
   children,
 }: {
   module: OfficeModuleId;
   user: { name: string };
   role: StaffRole;
   branchId?: number | null;
+  branchOptions?: BranchSwitcherOption[];
   children: ReactNode;
 }) {
   const chrome = OFFICE_MODULE_CHROME[module];
   const pathname = usePathname();
-  const tier1 = resolveOfficePrimaryTabs(role, branchId);
   const tier2 = resolveOfficeDeepNav(role, module, branchId);
 
   let actionLink: { href: string; label: string } | null = resolveRoleHomeLink(
@@ -164,17 +173,17 @@ export function OfficeModuleShell({
   }
 
   return (
-    <AppShell
+    <ManagementShell
       user={user}
       role={role}
       branchId={branchId}
+      branchOptions={branchOptions}
       brand={{
         icon: chrome.icon,
         subLabel: chrome.subLabel,
         mainLabel: chrome.mainLabel,
         showBackLink: chrome.showBackLink,
       }}
-      tier1={tier1}
       tier2={tier2}
       defaultPageTitle={chrome.defaultPageTitle}
       pageHeader={{
@@ -191,6 +200,6 @@ export function OfficeModuleShell({
       }}
     >
       {children}
-    </AppShell>
+    </ManagementShell>
   );
 }

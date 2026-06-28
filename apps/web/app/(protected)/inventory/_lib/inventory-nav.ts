@@ -1,6 +1,7 @@
 import {
   ChartBar as IconChartBar,
   CheckCircle as IconCheckCircle,
+  ClipboardCheck as IconClipboardCheck,
   ClipboardList as IconClipboardList,
   Factory as IconBuildingFactory,
   FileCheck as IconFileCheck,
@@ -30,6 +31,7 @@ export function resolveInventoryNav({
   showCatalogManagement,
   showSettings,
   showWasteApprovals,
+  showCountManagement,
   siteKind,
 }: {
   userRole: StaffRole;
@@ -38,6 +40,7 @@ export function resolveInventoryNav({
   showCatalogManagement: boolean;
   showSettings: boolean;
   showWasteApprovals: boolean;
+  showCountManagement: boolean;
   siteKind: string;
 }): ShellNavGroup[] {
   const isBranchSite = siteKind === "branch";
@@ -102,6 +105,20 @@ export function resolveInventoryNav({
         label: tNav("stocktake", "navigation"),
         icon: IconClipboardList,
       },
+      ...(showCountManagement
+        ? [
+            {
+              href: "/inventory/count-assignments",
+              label: "Phân công đếm tồn",
+              icon: IconClipboardList,
+            },
+            {
+              href: "/inventory/count-slips",
+              label: "Duyệt phiếu đếm tồn",
+              icon: IconClipboardCheck,
+            },
+          ]
+        : []),
       {
         href: "/inventory/expiry",
         label: tNav("expiry", "navigation"),

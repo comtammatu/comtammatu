@@ -5,8 +5,9 @@ import type { ReactNode } from "react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { BRANCH_VI } from "@comtammatu/shared/messages";
-import { AppShell } from "@/components/app-shell";
-import { resolveBranchDeepNav, resolveOfficePrimaryTabs } from "@/lib/office-nav";
+import { ManagementShell } from "@/components/management-chrome";
+import type { BranchSwitcherOption } from "@/_lib/branch-scope";
+import { resolveBranchDeepNav } from "@/lib/office-nav";
 
 type BreadcrumbSegment = string | { label: string; href?: string };
 
@@ -16,6 +17,7 @@ interface BranchManagementShellProps {
   role: StaffRole;
   branchId: number;
   branchName: string;
+  branchOptions?: BranchSwitcherOption[];
   defaultPageTitle?: string;
   description?: ReactNode;
   actions?: ReactNode;
@@ -28,23 +30,24 @@ export function BranchManagementShell({
   role,
   branchId,
   branchName,
+  branchOptions,
   defaultPageTitle = APP_COPY_VI.branchCommand,
   description,
   actions,
   breadcrumbSegments,
 }: BranchManagementShellProps) {
   return (
-    <AppShell
+    <ManagementShell
       user={user}
       role={role}
       branchId={branchId}
+      branchOptions={branchOptions}
       brand={{
         icon: IconBuilding2,
         subLabel: BRANCH_VI.long,
         mainLabel: branchName,
         logoVariant: null,
       }}
-      tier1={resolveOfficePrimaryTabs(role, branchId)}
       tier2={resolveBranchDeepNav(role, branchId)}
       defaultPageTitle={defaultPageTitle}
       pageHeader={{
@@ -54,6 +57,6 @@ export function BranchManagementShell({
       }}
     >
       {children}
-    </AppShell>
+    </ManagementShell>
   );
 }

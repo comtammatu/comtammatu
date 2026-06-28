@@ -6,6 +6,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppSection, KpiRow } from "@/components/surface";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { loadAuthState } from "@/_lib/auth";
+import { resolveBranchSwitcherOptions } from "@/_lib/branch-scope";
 import { messages } from "@lib/messages";
 import { BranchManagementShell } from "../_components/branch-management-chrome";
 import { fetchBranchDayStatus } from "./data";
@@ -39,6 +40,8 @@ export default async function BranchCommandPage({
     .maybeSingle();
 
   if (!branch || !branch.is_active) notFound();
+
+  const branchOptions = await resolveBranchSwitcherOptions(supabase, claims);
 
   const day = await fetchBranchDayStatus(supabase, claims, branchId);
 
@@ -99,6 +102,7 @@ export default async function BranchCommandPage({
       role={role}
       branchId={branchId}
       branchName={branch.name}
+      branchOptions={branchOptions}
       defaultPageTitle={copy.commandTitle}
       description={copy.commandDescription(branch.name)}
       breadcrumbSegments={[copy.commandTitle]}

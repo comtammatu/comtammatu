@@ -17,6 +17,7 @@ export type ModuleKey =
   | "hr"
   | "hr_payroll"
   | "finance"
+  | "branches"
   | "reports"
   | "settings"
   | "pos"
@@ -86,7 +87,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     label: getModuleLabelVi("orders"),
   },
   staff: {
-    path: "/admin/staff",
+    path: "/hr/staff",
     allowedRoles: ["owner"],
     label: getModuleLabelVi("staff"),
   },
@@ -104,6 +105,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/finance",
     allowedRoles: ["owner"],
     label: getModuleLabelVi("finance"),
+  },
+  branches: {
+    path: "/branches",
+    allowedRoles: ["owner"],
+    label: getModuleLabelVi("branches"),
   },
   reports: {
     path: "/admin/reports",
@@ -141,18 +147,14 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     label: getModuleLabelVi("branch_settings"),
   },
   /**
-   * Daily sales limits per (branch, menu item). Distinct from
-   * branch_settings so cashier + chef can co-own quota adjustments
-   * without inheriting access to printer/POS/zone configuration.
+   * Daily sales limits per (branch, menu item). Lives under the branch
+   * settings hub and is restricted to branch managers; cashier/chef mark
+   * items out of stock through the separate KDS path
+   * (mark_kds_item_out_of_stock), not this quota-management surface.
    */
   branch_menu_limits: {
-    path: "/br/*/menu-limits",
-    allowedRoles: [
-      "owner",
-      "branch_manager",
-      "cashier",
-      "chef",
-    ],
+    path: "/br/*/settings/menu-limits",
+    allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("branch_menu_limits"),
   },
   employee: {

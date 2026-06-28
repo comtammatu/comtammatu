@@ -131,12 +131,17 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
     "management-sidebar",
   );
   assert.equal(
-    resolveRouteFamilyContract("/br/3/menu-limits")?.surface,
-    "branch_operation",
+    resolveRouteFamilyContract("/br/3/settings/menu-limits")?.surface,
+    "branch_management",
   );
   assert.equal(
-    resolveRouteFamilyContract("/br/3/menu-limits")?.primaryNav,
-    "operational-chrome",
+    resolveRouteFamilyContract("/br/3/settings/menu-limits")?.primaryNav,
+    "management-sidebar",
+  );
+  // The old top-level path now legacy-redirects into the settings hub.
+  assert.equal(
+    resolveRouteFamilyContract("/br/3/menu-limits")?.id,
+    "branch-menu-limits",
   );
   assert.equal(
     resolveRouteFamilyContract("/admin/finance/revenue")?.id,
@@ -445,7 +450,7 @@ test("resolveModuleFromPath → branch menu limits and finance workspace map to 
   assert.equal(resolveModuleFromPath("/hr/payroll"), "hr_payroll");
   assert.equal(resolveModuleFromPath("/br/3/dashboard"), "branch_dashboard");
   assert.equal(
-    resolveModuleFromPath("/br/3/menu-limits"),
+    resolveModuleFromPath("/br/3/settings/menu-limits"),
     "branch_menu_limits",
   );
   assert.equal(resolveModuleFromPath("/br/3/runner"), "runner");
@@ -472,31 +477,40 @@ test("resolvePostLoginRedirect → branch settings follows branch scope", () => 
 });
 
 test("resolvePostLoginRedirect → branch menu limits follows branch scope", () => {
+  // Legacy /menu-limits paths normalize into the settings hub before scope check.
   assert.equal(
     resolvePostLoginRedirect(
       makeClaims("branch_manager", 3),
       "/br/3/menu-limits",
     ),
-    "/br/3/menu-limits",
+    "/br/3/settings/menu-limits",
   );
   assert.equal(
     resolvePostLoginRedirect(
       makeClaims("branch_manager", 3),
-      "/br/7/menu-limits",
+      "/br/3/settings/menu-limits",
+    ),
+    "/br/3/settings/menu-limits",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("branch_manager", 3),
+      "/br/7/settings/menu-limits",
+    ),
+    "/employee",
+  );
+  // Cashier no longer reaches the menu-limits management surface (D048):
+  // access is tightened to owner + branch_manager, so it falls back home.
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("cashier", 3),
+      "/br/3/settings/menu-limits",
     ),
     "/employee",
   );
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/3/menu-limits"),
-    "/br/3/menu-limits",
-  );
-  assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/7/menu-limits"),
-    "/employee",
-  );
-  assert.equal(
-    resolvePostLoginRedirect(makeClaims("owner"), "/br/7/menu-limits"),
-    "/br/7/menu-limits",
+    resolvePostLoginRedirect(makeClaims("owner"), "/br/7/settings/menu-limits"),
+    "/br/7/settings/menu-limits",
   );
 });
 
@@ -653,11 +667,11 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
   );
   assert.deepEqual(
     branchManagementGroup?.items.map((app) => app.moduleKey),
-    ["branch_dashboard", "branch_settings"],
+    ["branch_dashboard", "branch_settings", "branch_menu_limits"],
   );
   assert.deepEqual(
     branchOperationGroup?.items.map((app) => app.moduleKey),
-    ["branch_menu_limits", "pos", "kds", "runner"],
+    ["pos", "kds", "runner"],
   );
   assert.equal(
     branchManagerApps.some((app) => app.moduleKey === "settings"),
@@ -684,13 +698,13 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
     branchManagerApps.some(
       (app) =>
         app.moduleKey === "branch_menu_limits" &&
-        app.href === "/br/3/menu-limits",
+        app.href === "/br/3/settings/menu-limits",
     ),
   );
   assert.equal(
     branchManagerApps.find((app) => app.moduleKey === "branch_menu_limits")
       ?.surface,
-    "branch_operation",
+    "branch_management",
   );
   assert.ok(
     branchManagerApps.some(

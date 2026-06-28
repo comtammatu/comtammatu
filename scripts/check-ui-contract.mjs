@@ -85,6 +85,14 @@ const checks = [
     allowlist: {},
   },
   {
+    id: "focus-ring-contrast",
+    description:
+      "Focus rings must use the high-contrast keyline (ring-foreground), not the diluted gold ring-ring/NN which fails WCAG 1.4.11 (gold ≈ 2:1 on cream). Mirrors the @matu/design-system contrast gate.",
+    roots: [{ dir: "packages/ui/src/components", extensions: [".tsx"] }],
+    pattern: /\bring-ring(?:\/\d+)?\b/g,
+    allowlist: {},
+  },
+  {
     id: "heading-scale",
     description:
       "Locked heading scale forbids app-surface text-4xl/text-5xl/font-black drift.",
@@ -222,7 +230,7 @@ const checks = [
       /<SelectTrigger\b[^>]*className=["'][^"']*\b(?:h-9|w-36|w-44|w-45)\b/g,
     allowlist: {
       "apps/web/app/(protected)/admin/reports/stock-movement/stock-movement-client.tsx": 1,
-      "apps/web/app/(protected)/admin/staff/staff-filters.tsx": 2,
+      "apps/web/app/(protected)/hr/staff/staff-filters.tsx": 2,
     },
   },
   {
@@ -793,10 +801,10 @@ const perFileCountBudgets = [
       /className=\{?(?:cn\()?['"][^'"]*\b(?:p|px|py|pt|pb|pl|pr)-(?:5|6|7|8|9|10|11|12|14|16|20|24)\b/g,
     allowlist: {
       "apps/web/app/_components/notification-list.tsx": 1,
-      "apps/web/app/(protected)/admin/settings/(tenant)/branches/network-config-dialog.tsx": 2,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
+      "apps/web/app/(protected)/branches/network-config-dialog.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/components/focus-view.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/menu-limits/menu-limits-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/settings/menu-limits/menu-limits-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
@@ -851,7 +859,7 @@ const perFileCountBudgets = [
       /className=\{?(?:cn\()?['"](?=[^'"]*\brounded-(?:md|lg)\b)(?=[^'"]*\bborder\b)(?=[^'"]*\bbg-(?:card|background)\b)[^'"]*['"]/g,
     allowlist: {
       "apps/web/app/_components/notification-list.tsx": 1,
-      "apps/web/app/(protected)/admin/staff/[id]/permissions/permissions-client.tsx": 2,
+      "apps/web/app/(protected)/hr/staff/[id]/permissions/permissions-client.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/components/completion-history-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-page-skeleton.tsx": 1,
@@ -942,8 +950,8 @@ const frozenPrimitiveImportBaselines = [
     label: "Dialog",
     replacement: "FormDialog, Sheet, Page, or an approved contextual dialog",
     allowlist: {
-      "apps/web/app/(protected)/admin/settings/(tenant)/branches/network-config-dialog.tsx": 1,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
+      "apps/web/app/(protected)/branches/network-config-dialog.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/_components/operational-pwa/toolbar.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/transfer-table-dialog.tsx": 1,

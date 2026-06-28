@@ -17,6 +17,7 @@ import {
   LinkCardGrid,
 } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
+import { resolveBranchSwitcherOptions } from "@/_lib/branch-scope";
 import { messages } from "@lib/messages";
 import { BranchManagementShell } from "../_components/branch-management-chrome";
 import { AttendanceSettingsCard } from "./attendance-settings-card";
@@ -43,6 +44,8 @@ export default async function BranchSettingsHubPage({
     .maybeSingle();
 
   if (!branch || !branch.is_active) notFound();
+
+  const branchOptions = await resolveBranchSwitcherOptions(supabase, claims);
 
   const copy = messages.settings.branch;
   const role = claims.user_role;
@@ -72,6 +75,7 @@ export default async function BranchSettingsHubPage({
       role={role}
       branchId={branchId}
       branchName={branch.name}
+      branchOptions={branchOptions}
       defaultPageTitle={copy.hubTitle}
       description={copy.hubDescription(branch.name)}
       breadcrumbSegments={[

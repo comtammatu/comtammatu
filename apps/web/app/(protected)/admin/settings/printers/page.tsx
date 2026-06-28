@@ -33,7 +33,7 @@ export default async function PrintHubPage() {
     >
       <LinkCardGrid>
         <AppLinkCard
-          href="/admin/settings/branches"
+          href="/branches"
           title={copy.printBranchConfigTitle}
           description={copy.printersDescription}
           icon={<IconPrinter />}

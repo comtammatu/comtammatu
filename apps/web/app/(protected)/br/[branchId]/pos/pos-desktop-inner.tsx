@@ -94,7 +94,7 @@ import { usePosAppend } from "./_hooks/use-pos-append";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
-import type { MenuLimitRow } from "../menu-limits/actions";
+import type { MenuLimitRow } from "../settings/menu-limits/actions";
 import type { BranchTable } from "./page";
 import type { PaymentMethod } from "@comtammatu/shared/providers";
 import type { VietQrConfig } from "./payment-actions";
@@ -136,6 +136,10 @@ import {
   type DailyLimitBlock,
   type ProposedDailyLimitLine,
 } from "./_utils/daily-limit-draft";
+import {
+  findIngredientCapBlockForProposal,
+  type IngredientCapBlock,
+} from "./_utils/ingredient-cap-draft";
 import { messages } from "@lib/messages";
 
 type DailyLimitHoldSource = "pos_cart" | "pos_append";
@@ -160,7 +164,21 @@ function isOrderAwaitingPayment(order: {
   );
 }
 
-function formatDailyLimitBlockMessage(block: DailyLimitBlock): string {
+/**
+ * Unified add-to-cart block message for both gates. Daily-limit (per-item
+ * quota) and ingredient-cap (shared-stock snapshot) are separate models but
+ * share the same toast surface — whichever blocks first wins.
+ */
+function formatAddToCartBlockMessage(
+  block: DailyLimitBlock | IngredientCapBlock,
+): string {
+  if (block.reason === "ingredient_stock") {
+    if (block.available <= 0) {
+      return `${block.itemName} đã hết nguyên liệu trong kho.`;
+    }
+    return `${block.itemName} chỉ còn đủ nguyên liệu cho ${block.available} phần.`;
+  }
+
   if (block.reason === "disabled") {
     return `${block.itemName} đang tắt hôm nay.`;
   }
@@ -681,18 +699,34 @@ export function PosDesktopInner({
     () => buildDailyLimitDemand(activeDraftLines),
     [activeDraftLines],
   );
-  const getDailyLimitBlock = useCallback(
+  // Composes BOTH add-to-cart gates: the daily-limit quota (reactive store)
+  // and the ingredient-cap snapshot (static `menuItemById`). Returns whichever
+  // blocks first — daily-limit checked first to keep parity with prior copy.
+  // Both gates are optimistic client snapshots; the server triggers are
+  // authoritative (coupled dishes sharing an ingredient may still fail at
+  // submit even when the cap gate passes here).
+  const getAddToCartBlock = useCallback(
     (
       proposed: ProposedDailyLimitLine,
       excludeKeys?: ReadonlySet<string>,
-    ): DailyLimitBlock | null =>
-      findDailyLimitBlockForProposal({
+    ): DailyLimitBlock | IngredientCapBlock | null => {
+      const dailyBlock = findDailyLimitBlockForProposal({
         activeDraftLines,
         excludeKeys,
         proposed,
         getLimit: (menuItemId) => dailyLimitStore.get(menuItemId),
-      }),
-    [activeDraftLines, dailyLimitStore],
+      });
+      if (dailyBlock) return dailyBlock;
+
+      return findIngredientCapBlockForProposal({
+        activeDraftLines,
+        excludeKeys,
+        proposed,
+        getCap: (menuItemId) =>
+          menuItemById.get(menuItemId)?.ingredient_cap ?? null,
+      });
+    },
+    [activeDraftLines, dailyLimitStore, menuItemById],
   );
 
   useEffect(() => {
@@ -1108,14 +1142,14 @@ export function PosDesktopInner({
           setEditingAppendItem(null);
           setCustomizerItem(item);
         } else {
-          const block = getDailyLimitBlock({
+          const block = getAddToCartBlock({
             menuItemId: item.id,
             itemName: item.name,
             quantity: 1,
             sides: [],
           });
           if (block) {
-            toast.warning(formatDailyLimitBlockMessage(block));
+            toast.warning(formatAddToCartBlockMessage(block));
             return;
           }
           const line: CartItem = {
@@ -1137,14 +1171,14 @@ export function PosDesktopInner({
         setEditingAppendItem(null);
         setCustomizerItem(item);
       } else {
-        const block = getDailyLimitBlock({
+        const block = getAddToCartBlock({
           menuItemId: item.id,
           itemName: item.name,
           quantity: 1,
           sides: [],
         });
         if (block) {
-          toast.warning(formatDailyLimitBlockMessage(block));
+          toast.warning(formatAddToCartBlockMessage(block));
           return;
         }
         setShowOrders(false);
@@ -1156,7 +1190,7 @@ export function PosDesktopInner({
       addCartItem,
       appendSubmitting,
       appendTarget,
-      getDailyLimitBlock,
+      getAddToCartBlock,
     ],
   );
 
@@ -1230,7 +1264,7 @@ export function PosDesktopInner({
         discountType !== undefined && discountValue !== undefined;
       if (!editingSentItem) {
         const excludeKey = editingCartItem?.key ?? editingAppendItem?.key;
-        const block = getDailyLimitBlock(
+        const block = getAddToCartBlock(
           {
             menuItemId: item.id,
             itemName: item.name,
@@ -1240,7 +1274,7 @@ export function PosDesktopInner({
           excludeKey ? new Set([excludeKey]) : undefined,
         );
         if (block) {
-          toast.warning(formatDailyLimitBlockMessage(block));
+          toast.warning(formatAddToCartBlockMessage(block));
           return;
         }
       }
@@ -1426,7 +1460,7 @@ export function PosDesktopInner({
       editingAppendItem,
       editingCartItem,
       editingSentItem,
-      getDailyLimitBlock,
+      getAddToCartBlock,
       refreshOperational,
       replaceCartItems,
     ],

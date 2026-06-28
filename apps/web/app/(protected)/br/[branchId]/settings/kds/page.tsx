@@ -3,6 +3,7 @@ import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { AppPage } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
+import { resolveBranchSwitcherOptions } from "@/_lib/branch-scope";
 import { messages } from "@lib/messages";
 import { BranchManagementShell } from "../../_components/branch-management-chrome";
 import { StationsClient } from "@/(protected)/branch-settings/_shared/kds/stations-client";
@@ -63,6 +64,7 @@ export default async function BranchKdsSettingsPage({
   ]);
 
   if (branchRes.error || !branchRes.data) notFound();
+  const branchOptions = await resolveBranchSwitcherOptions(supabase, claims);
   if (stationsRes.error) throw new Error("Không thể tải trạm KDS");
   if (categoriesRes.error) throw new Error("Không thể tải danh mục");
 
@@ -81,6 +83,7 @@ export default async function BranchKdsSettingsPage({
       role={claims.user_role}
       branchId={branchId}
       branchName={branchRes.data.name}
+      branchOptions={branchOptions}
       defaultPageTitle={messages.settings.pages.kdsTitle}
       description={messages.settings.pages.kdsDescription}
       breadcrumbSegments={[

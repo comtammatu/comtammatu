@@ -4,7 +4,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { KdsBoard } from "./kds-board";
-import { fetchBranchMenuDailyLimits } from "../menu-limits/actions";
+import { fetchBranchMenuDailyLimits } from "../settings/menu-limits/actions";
 import {
   dedupeRowsById,
   fetchChunkedRows,

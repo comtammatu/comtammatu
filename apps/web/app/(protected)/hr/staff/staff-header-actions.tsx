@@ -32,7 +32,7 @@ export function StaffHeaderOverflow() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/admin/staff/audit">
+          <Link href="/hr/staff/audit">
             <IconScrollText className="mr-2 size-4" />
             {messages.admin.staffAudit.linkLabel}
           </Link>

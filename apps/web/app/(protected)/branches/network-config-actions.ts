@@ -129,7 +129,7 @@ export const trustCurrentIp = withAction(
       };
     }
 
-    revalidateSurfacePath("/admin/settings/branches");
+    revalidateSurfacePath("/branches");
     return { success: true, data: { ip } };
   },
 );
@@ -167,7 +167,7 @@ export const revokeTrustedIp = withAction(
       return { success: false, error: "Không thể thu hồi IP này." };
     }
 
-    revalidateSurfacePath("/admin/settings/branches");
+    revalidateSurfacePath("/branches");
     return { success: true };
   },
 );

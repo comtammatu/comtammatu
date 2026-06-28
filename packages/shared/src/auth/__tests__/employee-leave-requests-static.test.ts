@@ -63,7 +63,7 @@ test("Employee leave permission and generated type mirrors are wired", () => {
   for (const expected of [
     'HR_REQUEST_LEAVE: "hr:request_leave"',
     'HR_APPROVE_LEAVE_REQUEST: "hr:approve_leave_request"',
-    "PERMISSION_KEY_COUNT = 88",
+    "PERMISSION_KEY_COUNT = 91",
   ]) {
     assert.ok(permissions.includes(expected), `expected ${expected}`);
   }

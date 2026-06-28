@@ -452,7 +452,7 @@ export const createEmployeeAccount = withAction(
 // Edit an existing employee's profile + employment record. Owner-only
 // (HR_ROLES): base_salary/id_number/bank_account are owner PII. Auth identity
 // (email/password) and role/branch are out of scope — those go through
-// /admin/staff + admin_update_profile. Partial update: only provided fields
+// /hr/staff + admin_update_profile. Partial update: only provided fields
 // are written.
 export const updateEmployee = withAction(
   { roles: HR_ROLES, schema: updateEmployeeSchema },

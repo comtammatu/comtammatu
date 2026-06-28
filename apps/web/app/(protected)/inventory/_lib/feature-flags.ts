@@ -8,6 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export const INVENTORY_FEATURE_FLAGS = {
   S11_WASTE_TIER: "inv_s11_waste_tier",
   INVENTORY_STOCKTAKE_REDESIGNED: "inv_stocktake_redesigned",
+  POS_INGREDIENT_STOCK_BLOCK: "pos_ingredient_stock_block",
 } as const;
 
 export type InventoryFeatureFlag =

@@ -152,7 +152,7 @@ export async function markKdsItemOutOfStock(
 
   revalidatePath(`/br/${parsed.data.branchId}/kds`);
   revalidatePath(`/br/${parsed.data.branchId}/pos`);
-  revalidatePath(`/br/${parsed.data.branchId}/menu-limits`);
+  revalidatePath(`/br/${parsed.data.branchId}/settings/menu-limits`);
 
   return {
     success: true,

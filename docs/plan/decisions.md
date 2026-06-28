@@ -493,3 +493,16 @@ Hệ quả:
 **Ngoài phạm vi env này:** telemetry items (unused indexes ~231, dead-RPC wave 2) KHÔNG cần preview-branch — chỉ cần bật `track_functions`/`pg_stat` trên prod 1 chu kỳ (gồm cuối tháng).
 
 Runbook: `docs/runbooks/db/preview-branch-setup.md`.
+
+## D048: Hợp nhất IA quản lý Người + Chi nhánh (Task 3) (2026-06-28)
+
+**Decision:** Gộp IA theo `docs/plan/task3-mgmt-ia-consolidation.md`, chia 5 lát (S0 additive → S4):
+- **Người:** gộp `/admin/staff/*` vào `/hr` (đổi nhãn "Nhân sự"), giữ URL cũ qua redirect (`resolveLegacyRouteRedirectPath`). **Giữ `staff` ACL key tách biệt** (account/role/permission owner-only, lồng trong `/hr` = owner+branch_manager) — ranh giới quyền là rule thật.
+- **Chi nhánh:** list `/admin/settings/(tenant)/branches` → `/branches` (module key mới `branches`, owner-only); `menu-limits` → `/br/[branchId]/settings/menu-limits` trong hub, **siết quyền về owner/branch_manager** (cashier/chef KHÔNG còn vào trang quản lý giới hạn — vẫn 86 món qua KDS `mark_kds_item_out_of_stock`, đường riêng không đổi).
+- **Branch switcher** mới trong `AppShell`: hiện cho mọi role đa-chi-nhánh, **ẩn khi ≤1 CN**.
+- **Search**: list Người + Chi nhánh (reuse `InputGroup`+`matchesSearch`).
+- **Chrome:** KHÔNG gộp 2 shell (đã cùng `AppShell`; gộp phức tạp hơn) — chỉ tách brand/breadcrumb dùng chung.
+
+**Consistency mỗi lát đụng route:** `module-acl.ts` + `route-resolution.ts` (resolveModuleFromPath + prefix + legacy redirect) + `route-map.ts` (ROUTE_FAMILY_CONTRACTS first-match → thứ tự) + nav (`nav-config.ts`/`office-nav.ts`) + gate `protected-route-module-coverage.test.ts`.
+
+**Không chọn:** `/admin/people` mới; gộp 2 shell về 1.

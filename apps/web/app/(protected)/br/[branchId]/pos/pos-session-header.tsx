@@ -12,8 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
-import { MenuLimitsSheet } from "../menu-limits/menu-limits-sheet";
-import type { MenuLimitRow } from "../menu-limits/actions";
+import { MenuLimitsSheet } from "../settings/menu-limits/menu-limits-sheet";
+import type { MenuLimitRow } from "../settings/menu-limits/actions";
 import { PrinterStatusBadge } from "./printer-status-badge";
 import { usePosSession, usePosSound } from "./_providers/pos-desktop-provider";
 import {

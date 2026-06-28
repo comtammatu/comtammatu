@@ -31,7 +31,7 @@ export function StaffFilters({
     } else {
       params.set(key, value);
     }
-    router.push(`/admin/staff?${params.toString()}`);
+    router.push(`/hr/staff?${params.toString()}`);
   }
 
   return (

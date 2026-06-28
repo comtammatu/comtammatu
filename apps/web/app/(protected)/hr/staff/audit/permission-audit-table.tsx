@@ -77,7 +77,7 @@ export function PermissionAuditTable({
       className: "text-sm",
       render: (row) => (
         <Link
-          href={`/admin/staff/${row.targetUserId}/permissions`}
+          href={`/hr/staff/${row.targetUserId}/permissions`}
           className="hover:underline"
         >
           <UserLabel userId={row.targetUserId} name={row.targetName} />
@@ -131,7 +131,7 @@ export function PermissionAuditTable({
             <ItemDescription>
               {copy.target}:{" "}
               <Link
-                href={`/admin/staff/${row.targetUserId}/permissions`}
+                href={`/hr/staff/${row.targetUserId}/permissions`}
                 className="hover:underline"
               >
                 <UserLabel userId={row.targetUserId} name={row.targetName} />
