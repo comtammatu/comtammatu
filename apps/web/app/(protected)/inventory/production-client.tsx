@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { ProductionStats } from "./production-stats";
 import { ProductionOrderList } from "./production-order-list";
@@ -70,9 +71,9 @@ export function ProductionHubClient({
   return (
     <AppPage>
       <AppPageHeader
-        eyebrow="Kho hàng"
-        title="Sản xuất Bếp Trung Tâm"
-        description="Lệnh sản xuất và BOM thành phẩm"
+        eyebrow={INVENTORY_VI.warehouse}
+        title={INVENTORY_VI.productionTitle}
+        description={INVENTORY_VI.productionDescription}
         actions={
           <ProductionOrderForm
             productionBranches={productionBranches}

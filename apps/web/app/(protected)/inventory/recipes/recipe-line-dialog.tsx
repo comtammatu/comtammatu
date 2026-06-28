@@ -39,6 +39,7 @@ import {
   ACTIONS_VI,
   ERRORS_VI,
   FORM_VI,
+  INVENTORY_VI,
   PRODUCT_VI,
 } from "@comtammatu/shared/messages";
 
@@ -64,30 +65,30 @@ export interface RecipeLineDraft {
 /* ─── Schema ─── */
 
 const recipeLineRowSchema = z.object({
-  ingredient_id: z.string().min(1, { error: "Chọn nguyên liệu" }),
+  ingredient_id: z.string().min(1, { error: INVENTORY_VI.selectIngredient }),
   quantity: z
     .string()
-    .min(1, { error: "Nhập số lượng" })
-    .refine((v) => Number(v) > 0, { error: "Số lượng phải > 0" }),
-  unit: z.string().trim().min(1, { error: "Đơn vị không được trống" }),
+    .min(1, { error: INVENTORY_VI.enterQuantity })
+    .refine((v) => Number(v) > 0, { error: INVENTORY_VI.quantityPositive }),
+  unit: z.string().trim().min(1, { error: INVENTORY_VI.unitRequired }),
   yield_factor: z
     .string()
-    .min(1, { error: "Nhập yield" })
-    .refine((v) => Number(v) > 0, { error: "Yield phải > 0" }),
-  note: z.string().max(200, { error: "Ghi chú tối đa 200 ký tự" }).optional(),
+    .min(1, { error: INVENTORY_VI.enterYield })
+    .refine((v) => Number(v) > 0, { error: INVENTORY_VI.yieldPositive }),
+  note: z.string().max(200, { error: INVENTORY_VI.noteMax200 }).optional(),
 });
 
 const recipeSchema = z.object({
-  menu_item_id: z.string().min(1, { error: "Vui lòng chọn món bán" }),
+  menu_item_id: z.string().min(1, { error: INVENTORY_VI.selectMenuItemRequired }),
   lines: z
     .array(recipeLineRowSchema)
-    .min(1, { error: "Định mức món bán phải có ít nhất 1 nguyên liệu" })
+    .min(1, { error: INVENTORY_VI.recipeMinIngredients })
     .refine(
       (arr) => {
         const ids = arr.map((row) => row.ingredient_id).filter(Boolean);
         return new Set(ids).size === ids.length;
       },
-      { error: "Nguyên liệu trùng lặp. Gộp chung vào 1 dòng." },
+      { error: INVENTORY_VI.recipeDuplicateIngredient },
     ),
 });
 
@@ -141,8 +142,8 @@ function LineRowCells({
                 label: ing.name,
                 hint: ing.unit,
               }))}
-              placeholder="Chọn nguyên liệu..."
-              searchPlaceholder="Tìm theo tên..."
+              placeholder={INVENTORY_VI.selectIngredientPlaceholder}
+              searchPlaceholder={INVENTORY_VI.searchByName}
               aria-invalid={!!rowError?.ingredient_id}
               triggerClassName={cn(
                 "h-9",
@@ -227,7 +228,7 @@ function LineRowCells({
           size="icon"
           onClick={onRemove}
           disabled={!canRemove}
-          aria-label="Xóa dòng"
+          aria-label={INVENTORY_VI.removeRow}
         >
           <IconTrash className="size-4 text-muted-foreground" />
         </Button>
@@ -395,10 +396,10 @@ export function RecipeLineDialog({
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Sửa định mức món bán" : "Tạo định mức món bán"}
+            {isEdit ? INVENTORY_VI.editRecipeTitle : INVENTORY_VI.createRecipeTitle}
           </DialogTitle>
           <DialogDescription>
-            Lượng nguyên liệu cho 1 phần món trên menu (khác BOM sản xuất).
+            {INVENTORY_VI.recipeDescription}
           </DialogDescription>
         </DialogHeader>
 
@@ -408,7 +409,7 @@ export function RecipeLineDialog({
           className="flex flex-col gap-4"
         >
           <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium">Món bán *</Label>
+            <Label className="text-sm font-medium">{INVENTORY_VI.recipeMenuItemLabel}</Label>
             <Controller
               control={form.control}
               name="menu_item_id"
@@ -427,12 +428,12 @@ export function RecipeLineDialog({
                     onBlur={field.onBlur}
                     ref={field.ref}
                   >
-                    <SelectValue placeholder="Chọn món bán..." />
+                    <SelectValue placeholder={INVENTORY_VI.selectMenuItemPlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableMenuItems.length === 0 ? (
                       <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                        Tất cả món bán đã có định mức.
+                        {INVENTORY_VI.allMenuItemsHaveRecipe}
                       </div>
                     ) : (
                       availableMenuItems.map((mi) => (
@@ -455,7 +456,7 @@ export function RecipeLineDialog({
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <Label className="text-sm font-medium">
-                Danh sách nguyên liệu *
+                {INVENTORY_VI.ingredientListLabel}
               </Label>
               <div className="flex items-center gap-2">
                 <MultiSelectCombobox
@@ -468,11 +469,11 @@ export function RecipeLineDialog({
                     ),
                   }))}
                   onConfirm={handleBulkAddIngredients}
-                  triggerLabel="Chọn nhiều nguyên liệu"
+                  triggerLabel={INVENTORY_VI.selectMultipleIngredients}
                   confirmLabel={(n) =>
                     n > 0 ? `Thêm ${n} nguyên liệu` : "Thêm nguyên liệu"
                   }
-                  searchPlaceholder="Tìm theo tên..."
+                  searchPlaceholder={INVENTORY_VI.searchByName}
                 />
                 <Button
                   type="button"
@@ -481,7 +482,7 @@ export function RecipeLineDialog({
                   onClick={() => append(EMPTY_ROW)}
                 >
                   <IconPlus className="size-4" />
-                  Thêm 1 dòng
+                  {INVENTORY_VI.addOneRow}
                 </Button>
               </div>
             </div>
@@ -491,7 +492,7 @@ export function RecipeLineDialog({
                 <div>{PRODUCT_VI.rawIngredient}</div>
                 <div>{FORM_VI.quantity}</div>
                 <div>{FORM_VI.unit}</div>
-                <div>Yield</div>
+                <div>{INVENTORY_VI.yield}</div>
                 <div>{FORM_VI.notes}</div>
                 <div className="w-8" />
               </div>
@@ -518,7 +519,7 @@ export function RecipeLineDialog({
               </p>
             )}
             <p className="text-xs text-muted-foreground">
-              Yield mặc định 1.0 (không hao hụt). 0.85 = hao 15% khi chế biến.
+              {INVENTORY_VI.yieldHint}
             </p>
           </div>
 
@@ -540,7 +541,7 @@ export function RecipeLineDialog({
             </Button>
             <Button type="submit" disabled={isPending} size="lg">
               {isPending && <Spinner className="mr-2" />}
-              {isEdit ? "Cập nhật định mức" : "Lưu định mức"}
+              {isEdit ? INVENTORY_VI.updateRecipeBtn : INVENTORY_VI.saveRecipeBtn}
             </Button>
           </DialogFooter>
         </form>

@@ -13,6 +13,7 @@ import {
   formatVNDate,
   getVNDateString,
 } from "@comtammatu/shared/time";
+import { INVENTORY_VI, TOAST_VI } from "@comtammatu/shared/messages";
 import { InteractiveCard } from "../../_components/mobile/interactive-card";
 import { createGrnFromPo } from "../../grn-actions";
 import { formatVND } from "../../_lib/format";
@@ -34,8 +35,8 @@ type Props = {
 function formatOrderedAt(iso: string | null): string {
   if (!iso) return "—";
   const days = diffVNDateDays(getVNDateString(iso), getVNDateString());
-  if (days <= 0) return "Hôm nay";
-  if (days === 1) return "Hôm qua";
+  if (days <= 0) return INVENTORY_VI.today;
+  if (days === 1) return INVENTORY_VI.yesterday;
   if (days < 7) return `${days} ngày trước`;
   return formatVNDate(iso);
 }
@@ -50,7 +51,7 @@ export function GrnFromPoList({ openPos }: Props) {
     startTransition(async () => {
       const res = await createGrnFromPo(poId);
       if (!res.success || !res.data) {
-        toast.error(res.error ?? "Không thể tạo phiếu nhập từ PO.");
+        toast.error(res.error ?? TOAST_VI.createGrnFromPoFailed);
         setPendingPoId(null);
         return;
       }
@@ -64,7 +65,7 @@ export function GrnFromPoList({ openPos }: Props) {
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between px-1">
         <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-          Từ PO chờ nhận
+          {INVENTORY_VI.fromPoPending}
         </p>
         <Badge variant="secondary" className="h-5 px-2 text-3xs">
           {openPos.length}
@@ -96,7 +97,7 @@ export function GrnFromPoList({ openPos }: Props) {
                   </p>
                   {po.status === "partially_received" ? (
                     <Badge variant="outline" className="h-5 px-1.5 text-3xs">
-                      Nhận một phần
+                      {INVENTORY_VI.partialReceive}
                     </Badge>
                   ) : null}
                 </div>

@@ -11,6 +11,7 @@ import type {
 } from "@/(protected)/inventory/page";
 import { getBranchSiteDisplayName } from "@/(protected)/inventory/_lib/branch-site-labels";
 import { AppPage, AppPageHeader } from "@/components/surface";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 
 export default async function ExpirySettingsPage({
   searchParams,
@@ -45,9 +46,9 @@ export default async function ExpirySettingsPage({
   return (
     <AppPage>
       <AppPageHeader
-        eyebrow="Cài đặt kho"
-        title="Cảnh báo hạn sử dụng"
-        description="Quản lý ngưỡng cảnh báo hạn sử dụng nguyên liệu."
+        eyebrow={INVENTORY_VI.settingsEyebrow}
+        title={INVENTORY_VI.expiryAlertTitle}
+        description={INVENTORY_VI.expiryAlertDescription}
       />
       <ExpiryListClient
         initial={alerts}

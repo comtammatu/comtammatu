@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -71,12 +72,12 @@ export function ZoneLockIndicator({
     if (!res.success) {
       setState({
         kind: "error",
-        message: res.error ?? "Không acquire được lock",
+        message: res.error ?? INVENTORY_VI.lockAcquireFailed,
       });
       return;
     }
     if (!res.data) {
-      setState({ kind: "error", message: "Không rõ trạng thái lock" });
+      setState({ kind: "error", message: INVENTORY_VI.lockUnknownState });
       return;
     }
     if (!res.data.acquired) {
@@ -184,7 +185,7 @@ export function ZoneLockIndicator({
             variant="outline"
             className="border-success/40 bg-background text-success"
           >
-            Bạn đang giữ lock
+            {INVENTORY_VI.holdingLock}
           </Badge>
           <span className="tabular-nums text-muted-foreground">
             Hết hạn sau {formatRemaining(state.expiresAt, now)}
@@ -196,7 +197,7 @@ export function ZoneLockIndicator({
             onClick={() => void heartbeat()}
             className="ml-auto h-7 gap-1"
           >
-            <IconRefresh className="size-3.5" /> Gia hạn
+            <IconRefresh className="size-3.5" /> {INVENTORY_VI.extendLock}
           </Button>
         </>
       ) : state.kind === "blocked" ? (
@@ -205,7 +206,7 @@ export function ZoneLockIndicator({
             variant="outline"
             className="border-tier-note/40 bg-background text-tier-note-foreground"
           >
-            Đã có người giữ
+            {INVENTORY_VI.lockHeldByOther}
           </Badge>
           <span className="text-muted-foreground">
             {truncateUid(state.lockedBy)}
@@ -222,7 +223,7 @@ export function ZoneLockIndicator({
         </>
       ) : state.kind === "lost" ? (
         <>
-          <Badge variant="destructive">Mất lock</Badge>
+          <Badge variant="destructive">{INVENTORY_VI.lockLost}</Badge>
           <Button
             type="button"
             size="sm"
@@ -230,18 +231,18 @@ export function ZoneLockIndicator({
             onClick={() => void acquire()}
             className="ml-auto h-7 gap-1"
           >
-            <IconRefresh className="size-3.5" /> Thử lấy lại
+            <IconRefresh className="size-3.5" /> {INVENTORY_VI.retryAcquireLock}
           </Button>
         </>
       ) : state.kind === "acquiring" ? (
-        <span className="text-muted-foreground">Đang yêu cầu lock…</span>
+        <span className="text-muted-foreground">{INVENTORY_VI.requestingLock}</span>
       ) : state.kind === "error" ? (
         <>
-          <Badge variant="destructive">Lỗi lock</Badge>
+          <Badge variant="destructive">{INVENTORY_VI.lockError}</Badge>
           <span className="text-muted-foreground">{state.message}</span>
         </>
       ) : (
-        <span className="text-muted-foreground">Chưa có lock</span>
+        <span className="text-muted-foreground">{INVENTORY_VI.noLock}</span>
       )}
     </div>
   );

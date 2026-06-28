@@ -6,6 +6,7 @@ import {
   type ProgressTone,
 } from "@comtammatu/ui/components/progress";
 import { formatVND } from "@comtammatu/shared/format";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 
 interface ShiftCapMeterProps {
   /** Running total value of user's waste in current shift (VND). */
@@ -72,7 +73,7 @@ export function ShiftCapMeter({
     >
       <div className="flex items-center justify-between gap-2">
         <div className="font-medium">
-          Shift cap người dùng
+          {INVENTORY_VI.userShiftCap}
           {shiftLabel ? (
             <span className="ml-1 text-muted-foreground">({shiftLabel})</span>
           ) : null}
@@ -85,7 +86,7 @@ export function ShiftCapMeter({
       <Progress value={pctDisplay} tone={tone} className="h-1.5 rounded-full" />
       {willExceed ? (
         <p className="text-destructive">
-          ⚠ Phiếu này sẽ trigger tier 2 → QLV phải duyệt
+          {INVENTORY_VI.shiftCapTier2Warn}
         </p>
       ) : pct >= 0.7 ? (
         <p className="text-warning-foreground">

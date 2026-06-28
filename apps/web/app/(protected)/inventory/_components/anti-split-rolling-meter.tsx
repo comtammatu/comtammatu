@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   getIngredientRollingWaste,
   type IngredientRollingStatus,
@@ -62,7 +63,7 @@ export function AntiSplitRollingMeter({
         className={cn("text-xs text-muted-foreground italic", className)}
         data-slot="anti-split-meter"
       >
-        Đang tải lịch sử 15 phút…
+        {INVENTORY_VI.loadingHistory15m}
       </p>
     );
   }

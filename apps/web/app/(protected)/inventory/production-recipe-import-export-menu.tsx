@@ -48,7 +48,7 @@ import {
   type ImportProductionRecipeSummary,
 } from "./production-actions";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, INVENTORY_VI, TOAST_VI } from "@comtammatu/shared/messages";
 export function ProductionRecipeImportExportMenu({
   onImported,
 }: {
@@ -70,7 +70,7 @@ export function ProductionRecipeImportExportMenu({
       } else {
         downloadXlsx(res.data.base64, res.data.filename);
       }
-      toast.success("Đã xuất file BOM sản xuất");
+      toast.success(TOAST_VI.exportedBom);
     });
   }
 
@@ -78,7 +78,7 @@ export function ProductionRecipeImportExportMenu({
     startExport(async () => {
       const res = await downloadProductionRecipeTemplate();
       if (!res.success || !res.data) {
-        toast.error(res.error ?? "Không tạo được template");
+        toast.error(res.error ?? INVENTORY_VI.templateCreateFailed);
         return;
       }
       downloadXlsx(res.data.base64, res.data.filename);
@@ -102,11 +102,11 @@ export function ProductionRecipeImportExportMenu({
           <DropdownMenuGroup>
             <DropdownMenuItem onClick={() => setImportOpen(true)}>
               <IconUpload data-icon="inline-start" />
-              Import từ file
+              {INVENTORY_VI.importFromFile}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleTemplate}>
               <IconFileSpreadsheet data-icon="inline-start" />
-              Tải template (.xlsx)
+              {INVENTORY_VI.downloadTemplate}
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
@@ -162,7 +162,7 @@ function ProductionRecipeImportDialog({
     e.preventDefault();
     const file = fileRef.current?.files?.[0];
     if (!file) {
-      setError("Vui lòng chọn file");
+      setError(INVENTORY_VI.selectFile);
       return;
     }
 
@@ -199,10 +199,9 @@ function ProductionRecipeImportDialog({
     >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Import BOM sản xuất từ file</DialogTitle>
+          <DialogTitle>{INVENTORY_VI.importBomTitle}</DialogTitle>
           <DialogDescription>
-            Hỗ trợ .xlsx và .csv. Mỗi thành phẩm xuất hiện trong file sẽ được
-            thay thế toàn bộ dòng nguyên liệu trong BOM.
+            {INVENTORY_VI.importBomDescription}
           </DialogDescription>
         </DialogHeader>
 
@@ -214,7 +213,7 @@ function ProductionRecipeImportDialog({
           <FieldGroup>
             <Field data-invalid={!!error && !fileName}>
               <FieldLabel htmlFor="production-recipe-import-file">
-                Chọn file (.xlsx, .csv)
+                {INVENTORY_VI.chooseFileLabel}
               </FieldLabel>
               <Input
                 id="production-recipe-import-file"
@@ -244,7 +243,7 @@ function ProductionRecipeImportDialog({
 
           {issues.length > 0 ? (
             <Alert>
-              <AlertTitle>Chi tiết dòng lỗi</AlertTitle>
+              <AlertTitle>{INVENTORY_VI.importErrorDetailHeading}</AlertTitle>
               <AlertDescription>
                 <ul className="flex max-h-52 flex-col gap-1 overflow-auto">
                   {issues.slice(0, 50).map((issue, idx) => (
@@ -262,7 +261,7 @@ function ProductionRecipeImportDialog({
 
           {summary ? (
             <Alert>
-              <AlertTitle>Kết quả</AlertTitle>
+              <AlertTitle>{INVENTORY_VI.importResultHeading}</AlertTitle>
               <AlertDescription>
                 Đã cập nhật {summary.recipes} BOM sản xuất / {summary.lines}{" "}
                 dòng nguyên liệu.

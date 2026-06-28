@@ -8,6 +8,7 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Trash as IconTrash, Upload as IconUpload } from "lucide-react";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { INVENTORY_VI, TOAST_VI } from "@comtammatu/shared/messages";
 
 const DEFAULT_BUCKET = "inventory-attachments";
 
@@ -59,12 +60,12 @@ export function PhotoUploadInput({
     const isImage = file.type.startsWith("image/");
     if (!isImage && !(pdfAllowed && isPdf)) {
       toast.error(
-        pdfAllowed ? "Chỉ chấp nhận ảnh hoặc PDF." : "Chỉ chấp nhận ảnh.",
+        pdfAllowed ? INVENTORY_VI.onlyImageOrPdf : INVENTORY_VI.onlyImage,
       );
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("File vượt quá 10 MB.");
+      toast.error(INVENTORY_VI.fileTooLarge);
       return;
     }
     setUploading(true);
@@ -85,7 +86,7 @@ export function PhotoUploadInput({
       }
       const { data } = supabase.storage.from(bucket).getPublicUrl(path);
       onChange(data.publicUrl);
-      toast.success("Đã tải ảnh lên.");
+      toast.success(TOAST_VI.imageUploaded);
     } finally {
       setUploading(false);
     }
@@ -164,7 +165,7 @@ export function PhotoUploadInput({
               onClick={() => inputRef.current?.click()}
             >
               {uploading ? <Spinner /> : <IconUpload className="size-4" />}
-              {uploading ? "Đang tải…" : "Tải ảnh / PDF"}
+              {uploading ? "Đang tải…" : INVENTORY_VI.uploadImagePdf}
             </Button>
             {allowPaste ? (
               <Button
@@ -174,7 +175,7 @@ export function PhotoUploadInput({
                 onClick={() => setPasteMode((v) => !v)}
                 disabled={disabled}
               >
-                {pasteMode ? "Đóng dán URL" : "Dán URL có sẵn"}
+                {pasteMode ? INVENTORY_VI.pasteUrlClose : INVENTORY_VI.pasteUrlOpen}
               </Button>
             ) : null}
           </div>

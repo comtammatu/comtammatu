@@ -7,7 +7,7 @@ import {
   Trash as IconTrash,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import { ACTIONS_VI, BRANCH_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI, INVENTORY_VI, PRODUCT_VI, TOAST_VI } from "@comtammatu/shared/messages";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -71,15 +71,15 @@ type ExpiryDisplayRow = ExpiryAlertRow & { rowKey: string };
 
 const URGENCY_META: Record<string, { label: string; className: string }> = {
   expired: {
-    label: "Đã hết hạn",
+    label: INVENTORY_VI.expired,
     className: "bg-destructive/10 text-destructive border-destructive/30",
   },
   critical: {
-    label: "Nguy cấp",
+    label: INVENTORY_VI.critical,
     className: "bg-destructive/10 text-destructive border-destructive/30",
   },
   warning: {
-    label: "Sắp hết hạn",
+    label: INVENTORY_VI.warning,
     className: "bg-warning/10 text-warning border-warning/30",
   },
 };
@@ -104,7 +104,7 @@ function ExpiryAlertCard({
           <span className="truncate">{alert.ingredient_name}</span>
           <Badge className={cn("text-xs shrink-0", meta.className)}>
             {alert.urgency === "expired"
-              ? "Đã hết hạn"
+              ? INVENTORY_VI.expired
               : `${alert.days_remaining} ngày`}
           </Badge>
         </ItemTitle>
@@ -122,7 +122,7 @@ function ExpiryAlertCard({
           disabled={disabled}
         >
           <IconTrash className="size-3.5" />
-          Xóa sổ
+          {INVENTORY_VI.writeOff}
         </Button>
       </ItemActions>
     </Item>
@@ -211,7 +211,7 @@ export function ExpiryListClient({
     if (!writeOff) return;
     const qty = Number(writeOff.quantity);
     if (!qty || qty <= 0) {
-      toast.error("Nhập số lượng hợp lệ");
+      toast.error(TOAST_VI.enterValidQuantity);
       return;
     }
 
@@ -231,7 +231,7 @@ export function ExpiryListClient({
       });
 
       if (!res.success) {
-        toast.error(res.error ?? "Không thể xóa sổ.");
+        toast.error(res.error ?? TOAST_VI.writeOffFailed);
         return;
       }
 
@@ -262,23 +262,23 @@ export function ExpiryListClient({
     },
     {
       key: "batch",
-      header: "Lô hàng",
+      header: INVENTORY_VI.batchNumber,
       className: "font-mono text-sm",
       render: (alert) => alert.batch_number ?? "—",
     },
     {
       key: "expiry",
-      header: "Ngày hết hạn",
+      header: INVENTORY_VI.expiryDate,
       className: "text-sm font-mono tabular-nums text-muted-foreground",
       render: (alert) => formatVNDate(alert.expiry_date),
     },
     {
       key: "remaining",
-      header: "Còn lại",
+      header: INVENTORY_VI.remaining,
       render: (alert) =>
         alert.urgency === "expired" ? (
           <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-xs">
-            Đã hết hạn
+            {INVENTORY_VI.expired}
           </Badge>
         ) : (
           <span
@@ -295,7 +295,7 @@ export function ExpiryListClient({
     },
     {
       key: "grn",
-      header: "Phiếu nhập",
+      header: INVENTORY_VI.grnDoc,
       className: "font-mono text-sm",
       render: (alert) => alert.grn_number,
     },
@@ -317,7 +317,7 @@ export function ExpiryListClient({
           disabled={isPending}
         >
           <IconTrash className="size-3.5" />
-          Xóa sổ
+          {INVENTORY_VI.writeOff}
         </Button>
       ),
     },
@@ -333,8 +333,8 @@ export function ExpiryListClient({
         columns={columns}
         data={rows}
         getRowKey={(row) => row.rowKey}
-        emptyTitle="Không có hàng sắp hết hạn"
-        emptyDescription="Tất cả nguyên liệu còn trong hạn sử dụng"
+        emptyTitle={INVENTORY_VI.expiryEmptyTitle}
+        emptyDescription={INVENTORY_VI.expiryEmptyDescription}
         emptyIcon={<IconCircleCheck />}
         mobileCardRender={(row) => (
           <ExpiryAlertCard
@@ -349,7 +349,7 @@ export function ExpiryListClient({
 
   return (
     <AppPage>
-      <AppPageHeader eyebrow="Kho hàng" title="Hạn sử dụng" />
+      <AppPageHeader eyebrow={INVENTORY_VI.warehouse} title={INVENTORY_VI.expiryTitle} />
       {/* IconSearch + branch filter */}
       <AppToolbar>
         <InputGroup className="h-10 flex-1">
@@ -357,7 +357,7 @@ export function ExpiryListClient({
             <IconSearch />
           </InputGroupAddon>
           <InputGroupInput
-            placeholder="Tìm nguyên liệu, lô hàng, phiếu nhập..."
+            placeholder={INVENTORY_VI.expirySearchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -398,7 +398,7 @@ export function ExpiryListClient({
               : "bg-muted/50 text-muted-foreground hover:bg-muted",
           )}
         >
-          Đã hết hạn
+          {INVENTORY_VI.expired}
           <span className="font-mono tabular-nums">
             {urgencyCounts.expired}
           </span>
@@ -419,7 +419,7 @@ export function ExpiryListClient({
               : "bg-muted/50 text-muted-foreground hover:bg-muted",
           )}
         >
-          Nguy cấp
+          {INVENTORY_VI.critical}
           <span className="font-mono tabular-nums">
             {urgencyCounts.critical}
           </span>
@@ -438,7 +438,7 @@ export function ExpiryListClient({
               : "bg-muted/50 text-muted-foreground hover:bg-muted",
           )}
         >
-          Sắp hết hạn
+          {INVENTORY_VI.warning}
           <span className="font-mono tabular-nums">
             {urgencyCounts.warning}
           </span>
@@ -461,14 +461,14 @@ export function ExpiryListClient({
         <TabsList>
           <TabsTrigger value="all">Tất cả ({displayItems.length})</TabsTrigger>
           <TabsTrigger value="expired">
-            Đã hết hạn (
+            {INVENTORY_VI.expired} (
             {urgencyFilter
               ? displayItems.filter((a) => a.urgency === "expired").length
               : expired.length}
             )
           </TabsTrigger>
           <TabsTrigger value="near">
-            Sắp hết hạn (
+            {INVENTORY_VI.warning} (
             {urgencyFilter
               ? displayItems.filter(
                   (a) => a.urgency === "critical" || a.urgency === "warning",
@@ -507,7 +507,7 @@ export function ExpiryListClient({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa sổ</AlertDialogTitle>
+            <AlertDialogTitle>{INVENTORY_VI.writeOffConfirmTitle}</AlertDialogTitle>
             <AlertDialogDescription>
               {writeOff
                 ? `Xóa sổ ${writeOff.alert.ingredient_name} — lô ${writeOff.alert.batch_number ?? "không có mã lô"}. Hành động này sẽ trừ tồn kho.`
@@ -515,7 +515,7 @@ export function ExpiryListClient({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-3">
-            <Label htmlFor="writeoff-qty">Số lượng xóa sổ</Label>
+            <Label htmlFor="writeoff-qty">{INVENTORY_VI.writeOffQty}</Label>
             <FormattedNumberInput
               id="writeoff-qty"
               placeholder="Nhập số lượng..."
@@ -528,7 +528,7 @@ export function ExpiryListClient({
               maxFractionDigits={3}
             />
             <div className="flex flex-col gap-1.5">
-              <Label>Ảnh bằng chứng</Label>
+              <Label>{INVENTORY_VI.evidencePhoto}</Label>
               <PhotoUploadInput
                 tenantId={tenantId}
                 folder={`waste/expiry-${writeOff?.alert.grn_item_id ?? "new"}`}
@@ -543,7 +543,7 @@ export function ExpiryListClient({
                 disabled={isPending}
               />
               <p className="text-xs text-muted-foreground">
-                Bắt buộc nếu giá trị xóa sổ vượt ngưỡng (tier ≥ 1).
+                {INVENTORY_VI.evidenceRequiredHint}
               </p>
             </div>
           </div>
@@ -560,7 +560,7 @@ export function ExpiryListClient({
               }
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isPending ? "Đang xử lý..." : "Xóa sổ"}
+              {isPending ? "Đang xử lý..." : INVENTORY_VI.writeOff}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

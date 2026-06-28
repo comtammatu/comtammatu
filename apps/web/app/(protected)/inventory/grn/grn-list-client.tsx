@@ -35,7 +35,7 @@ import { StatusBadge } from "../_components/status-badge";
 import { formatVND } from "../_lib/format";
 import { tNav } from "../_lib/dictionary";
 
-import { FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 export type GrnRow = {
   id: number;
   code: string;
@@ -48,7 +48,7 @@ export type GrnRow = {
 
 const statusFilterOptions = [
   { value: "all", label: "Tất cả" },
-  { value: "draft", label: "Nháp" },
+  { value: "draft", label: INVENTORY_VI.draft },
   { value: "confirmed", label: "Đã xác nhận" },
   { value: "cancelled", label: "Đã hủy" },
 ];
@@ -56,7 +56,7 @@ const statusFilterOptions = [
 const GRN_COLUMNS: DataTableColumn<GrnRow>[] = [
   {
     key: "code",
-    header: "Mã GRN",
+    header: INVENTORY_VI.grnCode,
     render: (g) => (
       <Link
         href={`/inventory/grn/${g.id}`}
@@ -68,19 +68,19 @@ const GRN_COLUMNS: DataTableColumn<GrnRow>[] = [
   },
   {
     key: "supplier",
-    header: "Nhà cung cấp",
+    header: INVENTORY_VI.supplier,
     className: "text-sm font-medium",
     render: (g) => g.supplierName,
   },
   {
     key: "po",
-    header: "PO liên kết",
+    header: INVENTORY_VI.linkedPo,
     className: "text-sm text-muted-foreground",
     render: (g) => g.poCode || "—",
   },
   {
     key: "date",
-    header: "Ngày kiểm nhận",
+    header: INVENTORY_VI.receiveDate,
     className: "text-sm text-muted-foreground",
     render: (g) => g.date || "—",
   },
@@ -133,13 +133,13 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
   return (
     <AppPage width={isMobile ? "narrow" : "wide"}>
       <AppPageHeader
-        eyebrow="Kho hàng"
+        eyebrow={INVENTORY_VI.warehouse}
         title={tNav("grn", "navigation")}
         actions={
           <Button asChild size="sm">
             <Link href="/inventory/purchase-orders">
               <IconPlus className="size-4" />
-              Chọn PO để tạo GRN
+              {INVENTORY_VI.choosePoToCreateGrn}
             </Link>
           </Button>
         }
@@ -152,7 +152,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
           <InputGroupInput
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm mã GRN, nhà cung cấp, PO..."
+            placeholder={INVENTORY_VI.grnSearchPlaceholder}
             inputMode="search"
           />
         </InputGroup>
@@ -181,8 +181,8 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         getRowKey={(g) => g.id}
         emptyTitle={
           hasActiveFilters
-            ? "Không tìm thấy phiếu nhập phù hợp"
-            : "Chưa có phiếu nhập kho nào"
+            ? INVENTORY_VI.grnNotFoundFiltered
+            : INVENTORY_VI.grnEmptyNoData
         }
         emptyMode={hasActiveFilters ? "no-results" : "no-data"}
         emptyIcon={<IconReceipt className="size-5" />}
