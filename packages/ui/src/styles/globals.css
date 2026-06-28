@@ -207,9 +207,75 @@
   --tier-note-foreground: oklch(0.214 0.009 43.1);
 }
 
+/* Override: effect / depth tokens — adopt the Má Tư Design System --effect-*
+ * elevation family (rings, scrim, quiet float shadows). EXCEPTION to ZONE rule
+ * #2 (OKLCH-only): these are compositing / depth values (box-shadow + scrim),
+ * NOT semantic colors, so they are authored as rgba by design. Border-first
+ * stays the resting default — only floating / overlay surfaces consume an effect
+ * shadow. Ref-based tokens (--effect-ring-border, --effect-focus-ring,
+ * --effect-avatar-ring) theme-flip automatically via var(--border) / var(--ring)
+ * / var(--foreground) / var(--background). The float / overlay / scrim rungs are
+ * consumed through the shadow-effect-* @utility set + bg-effect-scrim +
+ * drawer-scrim (ZONE C). The focus-ring, validation rings (info / success /
+ * warning / destructive / invalid), inline-shadow, control-thumb, and avatar-ring
+ * rungs are the full DS depth family, reserved for the upcoming focus / validation
+ * / avatar passes — defined for parity, not yet wired to a utility. */
+@theme inline {
+  --color-effect-scrim: var(--effect-scrim);
+}
+
+:root {
+  --effect-scrim: rgba(13, 27, 42, 0.45);
+  --effect-drawer-blur: blur(2px);
+  --effect-ring-hairline: inset 0 0 0 1px rgba(13, 27, 42, 0.1);
+  --effect-ring-border: inset 0 0 0 1px var(--border);
+  --effect-ring-info: inset 0 0 0 1px rgba(13, 27, 42, 0.2);
+  --effect-ring-success: inset 0 0 0 1px rgba(106, 143, 91, 0.45);
+  --effect-ring-warning: inset 0 0 0 1px rgba(242, 161, 0, 0.5);
+  --effect-ring-destructive: inset 0 0 0 1px rgba(168, 49, 28, 0.45);
+  --effect-focus-ring: 0 0 0 2px var(--ring), 0 0 0 4px var(--foreground);
+  --effect-invalid-ring: 0 0 0 1px rgba(168, 49, 28, 0.2);
+  --effect-card-hover: var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.1);
+  --effect-inline-shadow: 0 1px 0 rgba(13, 27, 42, 0.1);
+  --effect-control-thumb: 0 1px 2px rgba(13, 27, 42, 0.3);
+  --effect-avatar-ring: 0 0 0 2px var(--background);
+  --effect-popover: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.16);
+  --effect-toast: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.18);
+  --effect-dialog: 0 16px 48px rgba(13, 27, 42, 0.3);
+  --effect-drawer: 0 0 48px rgba(13, 27, 42, 0.3);
+  --effect-tooltip: 0 4px 14px rgba(13, 27, 42, 0.22);
+}
+
+.dark {
+  /* Runtime theme is forced light; .dark is defined to satisfy the dual-mode
+   * governance rule. Pilot mirrors the :root navy rgba (ref-based ring/avatar
+   * tokens already theme-flip). Raise alpha here if dark elevation reads weak
+   * should dark mode ever be re-enabled. */
+  --effect-scrim: rgba(13, 27, 42, 0.45);
+  --effect-drawer-blur: blur(2px);
+  --effect-ring-hairline: inset 0 0 0 1px rgba(13, 27, 42, 0.1);
+  --effect-ring-border: inset 0 0 0 1px var(--border);
+  --effect-ring-info: inset 0 0 0 1px rgba(13, 27, 42, 0.2);
+  --effect-ring-success: inset 0 0 0 1px rgba(106, 143, 91, 0.45);
+  --effect-ring-warning: inset 0 0 0 1px rgba(242, 161, 0, 0.5);
+  --effect-ring-destructive: inset 0 0 0 1px rgba(168, 49, 28, 0.45);
+  --effect-focus-ring: 0 0 0 2px var(--ring), 0 0 0 4px var(--foreground);
+  --effect-invalid-ring: 0 0 0 1px rgba(168, 49, 28, 0.2);
+  --effect-card-hover: var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.1);
+  --effect-inline-shadow: 0 1px 0 rgba(13, 27, 42, 0.1);
+  --effect-control-thumb: 0 1px 2px rgba(13, 27, 42, 0.3);
+  --effect-avatar-ring: 0 0 0 2px var(--background);
+  --effect-popover: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.16);
+  --effect-toast: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.18);
+  --effect-dialog: 0 16px 48px rgba(13, 27, 42, 0.3);
+  --effect-drawer: 0 0 48px rgba(13, 27, 42, 0.3);
+  --effect-tooltip: 0 4px 14px rgba(13, 27, 42, 0.22);
+}
+
 /* Sonner operational preset: keep the dismiss target inside the toast. */
 [data-sonner-toast][data-styled="true"].cn-toast {
   padding-inline-end: 2.75rem;
+  box-shadow: var(--effect-toast);
 }
 
 [data-sonner-toast][data-styled="true"] .cn-toast-close {
@@ -301,6 +367,41 @@
     }
     to {
       height: 0;
+    }
+  }
+}
+
+/* Override: motion / easing tokens — adopt the Má Tư Design System --motion-* /
+ * --ease-* family. EXCEPTION to ZONE rule #2 (OKLCH-only): durations, easing
+ * curves, and the press offset are motion scalars, not colors. Mode-independent
+ * (no .dark mirror needed). App surfaces still author only duration-150 / 300
+ * (== --motion-base / --motion-progress); the packages/ui primitive layer
+ * consumes the finer rungs via duration-[var(--motion-*)] (Tailwind v4 has no
+ * --duration-* / --ease-* utility namespace). All consumption stays compatible
+ * with the prefers-reduced-motion backstop (never add !important). The
+ * --animate-spin rebind retimes the global spinner to the DS 700ms. */
+:root {
+  --motion-fast: 120ms;
+  --motion-base: 150ms;
+  --motion-overlay: 200ms;
+  --motion-drawer: 240ms;
+  --motion-progress: 300ms;
+  --motion-spinner: 700ms;
+  --motion-indeterminate: 1100ms;
+  --motion-skeleton: 1300ms;
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-move: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-linear: linear;
+}
+
+@theme inline {
+  --animate-spin: spin var(--motion-spinner) var(--ease-linear) infinite;
+  /* Cot Let runner idle mascot — Codex Pet Atlas row 0 (idle), 8 frames. */
+  --animate-cotlet-idle: cotlet-idle 1s steps(8) infinite;
+
+  @keyframes cotlet-idle {
+    to {
+      background-position: -1536px 0;
     }
   }
 }
@@ -447,6 +548,51 @@
 @utility brand-strip {
   height: 2.5rem;
   border-radius: var(--radius-md);
+}
+
+/* Effect / depth: named float-shadow utilities backed by the --effect-* token
+ * family (ZONE B). Deterministic box-shadow (no Tailwind shadow-color
+ * substitution on the multi-layer inset values). Resting surfaces stay
+ * border-first — these apply ONLY to floating / overlay primitives. */
+@utility shadow-effect-popover {
+  box-shadow: var(--effect-popover);
+}
+@utility shadow-effect-toast {
+  box-shadow: var(--effect-toast);
+}
+@utility shadow-effect-dialog {
+  box-shadow: var(--effect-dialog);
+}
+@utility shadow-effect-drawer {
+  box-shadow: var(--effect-drawer);
+}
+@utility shadow-effect-tooltip {
+  box-shadow: var(--effect-tooltip);
+}
+@utility shadow-effect-card-hover {
+  box-shadow: var(--effect-card-hover);
+}
+
+/* Modal / drawer backdrop: navy scrim + 2px backdrop blur bundled so
+ * Dialog/Sheet/Drawer overlays share one tuned affordance. Dialog/Sheet use
+ * bg-effect-scrim alone; Drawer uses the full scrim + blur. */
+@utility drawer-scrim {
+  background: var(--effect-scrim);
+  backdrop-filter: var(--effect-drawer-blur);
+}
+
+/* Cot Let runner idle mascot — Codex Pet Atlas (8 cols x 9 rows, 192x208 per
+ * frame; row 0 = idle). The runner idle board is the documented full-screen
+ * idle-visual exception (§G Motion); the sprite loop applies via the
+ * motion-safe:animate-cotlet-idle utility and collapses under the global
+ * prefers-reduced-motion backstop. */
+@utility mascot-cotlet {
+  width: 192px;
+  height: 208px;
+  background-image: url("/brand/mascot/cotlet.spritesheet.webp");
+  background-repeat: no-repeat;
+  background-size: 1536px 1872px;
+  background-position: 0 0;
 }
 
 @layer base {

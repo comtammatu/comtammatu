@@ -2,53 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { DotLottieReact, type DotLottie } from "@lottiefiles/dotlottie-react";
 import { cn } from "@comtammatu/ui";
 
 export type RunnerIdleState = "empty" | "done";
 
 const RUNNER_MASCOT = {
-  src: "/brand/mascot/be-suon-tuoi-runner.png",
+  src: "/brand/mascot/cotlet.png",
   width: 384,
   height: 512,
   alt: "",
 } as const;
-const RUNNER_MASCOT_ANIMATION_SRC =
-  "/brand/mascot/be-suon-tuoi-runner-idle.json";
-const RUNNER_MASCOT_ANIMATION_SEGMENTS: Record<
-  RunnerIdleState,
-  [number, number]
-> = {
-  empty: [0, 119],
-  done: [120, 239],
-};
 
 export function RunnerIdleVisual({ state }: { state: RunnerIdleState }) {
   const canAnimate = usePrefersMotion();
-  const [animationFailed, setAnimationFailed] = useState(false);
-  const [dotLottie, setDotLottie] = useState<DotLottie | null>(null);
-
-  useEffect(() => {
-    setAnimationFailed(false);
-  }, [state]);
-
-  useEffect(() => {
-    if (!dotLottie) return;
-
-    const handleAnimationError = () => {
-      setAnimationFailed(true);
-    };
-
-    dotLottie.addEventListener("loadError", handleAnimationError);
-    dotLottie.addEventListener("renderError", handleAnimationError);
-
-    return () => {
-      dotLottie.removeEventListener("loadError", handleAnimationError);
-      dotLottie.removeEventListener("renderError", handleAnimationError);
-    };
-  }, [dotLottie]);
-
-  const showStaticMascot = !canAnimate || animationFailed;
 
   return (
     <div
@@ -71,13 +37,13 @@ export function RunnerIdleVisual({ state }: { state: RunnerIdleState }) {
         </>
       ) : null}
 
-      <div
-        className={cn(
-          "relative z-10 flex h-56 w-44 items-center justify-center md:h-64 md:w-48",
-          canAnimate && showStaticMascot && "motion-safe:animate-bounce",
-        )}
-      >
-        {showStaticMascot ? (
+      <div className="relative z-10 flex h-56 w-44 items-center justify-center md:h-64 md:w-48">
+        {canAnimate ? (
+          <div
+            className="mascot-cotlet shrink-0 drop-shadow-lg motion-safe:animate-cotlet-idle"
+            data-runner-idle-state={state}
+          />
+        ) : (
           <Image
             src={RUNNER_MASCOT.src}
             width={RUNNER_MASCOT.width}
@@ -85,20 +51,6 @@ export function RunnerIdleVisual({ state }: { state: RunnerIdleState }) {
             alt={RUNNER_MASCOT.alt}
             priority
             className="h-full w-auto shrink-0 object-contain drop-shadow-lg"
-          />
-        ) : (
-          <DotLottieReact
-            key={state}
-            src={RUNNER_MASCOT_ANIMATION_SRC}
-            segment={RUNNER_MASCOT_ANIMATION_SEGMENTS[state]}
-            autoplay
-            loop
-            speed={state === "done" ? 0.85 : 0.7}
-            dotLottieRefCallback={setDotLottie}
-            className={cn(
-              "h-full w-full shrink-0 drop-shadow-lg",
-              state === "done" && "motion-safe:animate-pulse",
-            )}
           />
         )}
       </div>

@@ -149,7 +149,7 @@ const checks = [
   {
     id: "primitive-shadow-overrun",
     description:
-      "Primitive overlays cap at shadow-md for popover/menu/select/chart tooltip and shadow-lg for modal/sheet surfaces.",
+      "Primitive overlays use the named shadow-effect-* family (popover/select/dropdown → shadow-effect-popover, dialog/alert-dialog → shadow-effect-dialog, sheet/drawer → shadow-effect-drawer, tooltip → shadow-effect-tooltip); raw shadow-xl/2xl stays capped to POS/KDS ceiling surfaces (design-system.md § Elevation).",
     roots: [{ dir: "packages/ui/src/components", extensions: [".tsx"] }],
     pattern: /\bshadow-(?:xl|2xl)\b/g,
     allowlist: {},
@@ -425,10 +425,19 @@ const checks = [
   {
     id: "hover-shadow-rung",
     description:
-      "Hover elevation caps at the shadow-sm Hover rung; hover:shadow-md/lg/xl/2xl is an over-elevated rung (design-system.md § Elevation / Shadow).",
+      "Hover elevation caps at the shadow-effect-card-hover Hover rung; hover:shadow-md/lg/xl/2xl is an over-elevated rung (design-system.md § Elevation / Shadow).",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
       /className=\{?(?:cn\()?['"][^'"]*\bhover:shadow-(?:md|lg|xl|2xl)\b/g,
+    allowlist: {},
+  },
+  {
+    id: "app-effect-shadow-rung",
+    description:
+      "App surfaces may use only hover:shadow-effect-card-hover; the shadow-effect-popover/dialog/drawer/tooltip/toast float shadows are primitive-only (design-system.md § Elevation).",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern:
+      /className=\{?(?:cn\()?['"][^'"]*\bshadow-effect-(?:popover|dialog|drawer|tooltip|toast)\b/g,
     allowlist: {},
   },
   {

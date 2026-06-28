@@ -32,10 +32,6 @@ const uiGlobalsSource = readFileSync(
   join(process.cwd(), "../../packages/ui/src/styles/globals.css"),
   "utf8",
 );
-const runnerIdleAnimationSource = readFileSync(
-  join(process.cwd(), "public/brand/mascot/be-suon-tuoi-runner-idle.json"),
-  "utf8",
-);
 
 test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(
@@ -280,82 +276,48 @@ test("Runner public board uses polling, not raw Realtime changes", () => {
   assert.doesNotMatch(runnerRealtimeRefreshSource, /\.channel\(/);
 });
 
-test("Runner idle visual uses local dotLottie asset with static mascot fallback", () => {
+test("Runner idle visual animates the Cot Let sprite atlas with a static fallback", () => {
   assert.match(runnerIdleVisualSource, /"use client";/);
-  assert.match(
-    runnerIdleVisualSource,
-    /import \{\s*DotLottieReact,\s*type DotLottie\s*\} from "@lottiefiles\/dotlottie-react";/,
-  );
+  assert.match(runnerIdleVisualSource, /import Image from "next\/image";/);
   assert.match(
     runnerIdleVisualSource,
     /export type RunnerIdleState = "empty" \| "done";/,
   );
-  assert.match(
-    runnerIdleVisualSource,
-    /src: "\/brand\/mascot\/be-suon-tuoi-runner\.png"/,
-  );
+  assert.match(runnerIdleVisualSource, /src: "\/brand\/mascot\/cotlet\.png"/);
   assert.match(runnerIdleVisualSource, /width: 384/);
   assert.match(runnerIdleVisualSource, /height: 512/);
   assert.match(runnerIdleVisualSource, /alt: ""/);
   assert.match(
     runnerIdleVisualSource,
-    /const RUNNER_MASCOT_ANIMATION_SRC =\s*"\/brand\/mascot\/be-suon-tuoi-runner-idle\.json";/,
-  );
-  assert.match(runnerIdleVisualSource, /empty: \[0, 119\]/);
-  assert.match(runnerIdleVisualSource, /done: \[120, 239\]/);
-  assert.match(
-    runnerIdleVisualSource,
     /window\.matchMedia\("\(prefers-reduced-motion: no-preference\)"\)/,
-  );
-  assert.match(
-    runnerIdleVisualSource,
-    /dotLottie\.addEventListener\("loadError", handleAnimationError\)/,
-  );
-  assert.match(
-    runnerIdleVisualSource,
-    /dotLottie\.addEventListener\("renderError", handleAnimationError\)/,
-  );
-  assert.match(
-    runnerIdleVisualSource,
-    /dotLottie\.removeEventListener\("loadError", handleAnimationError\)/,
-  );
-  assert.match(
-    runnerIdleVisualSource,
-    /dotLottie\.removeEventListener\("renderError", handleAnimationError\)/,
   );
   assert.match(runnerIdleVisualSource, /<Image/);
   assert.match(runnerIdleVisualSource, /priority/);
-  assert.match(runnerIdleVisualSource, /<DotLottieReact/);
-  assert.match(runnerIdleVisualSource, /src=\{RUNNER_MASCOT_ANIMATION_SRC\}/);
-  assert.match(
-    runnerIdleVisualSource,
-    /segment=\{RUNNER_MASCOT_ANIMATION_SEGMENTS\[state\]\}/,
-  );
+  // Animated branch consumes the Codex Pet Atlas sprite via globals utilities.
+  assert.match(runnerIdleVisualSource, /mascot-cotlet/);
+  assert.match(runnerIdleVisualSource, /motion-safe:animate-cotlet-idle/);
   assert.match(runnerIdleVisualSource, /bg-warning\/15/);
   assert.match(runnerIdleVisualSource, /bg-warning\/25/);
-  assert.match(runnerIdleVisualSource, /motion-safe:animate-bounce/);
-  assert.doesNotMatch(runnerIdleVisualSource, /IconCircleCheck/);
-  assert.doesNotMatch(runnerIdleVisualSource, /IconFlame/);
-  assert.doesNotMatch(
-    runnerIdleVisualSource,
-    /data-runner-idle-accent=\{state\}/,
-  );
-  assert.match(runnerIdleVisualSource, /autoplay/);
-  assert.match(runnerIdleVisualSource, /loop/);
   assert.match(runnerIdleVisualSource, /data-runner-idle-state=\{state\}/);
-  assert.doesNotMatch(runnerIdleVisualSource, /@lottiefiles\/dotlottie-web/);
+  assert.doesNotMatch(runnerIdleVisualSource, /DotLottie/);
+  assert.doesNotMatch(runnerIdleVisualSource, /@lottiefiles/);
+  assert.doesNotMatch(runnerIdleVisualSource, /be-suon-tuoi/);
   assert.doesNotMatch(runnerIdleVisualSource, /https?:\/\//);
 
-  const animation = JSON.parse(runnerIdleAnimationSource) as {
-    assets: Array<{ p?: string; u?: string }>;
-    markers: Array<{ cm?: string }>;
-  };
-  assert.equal(animation.assets[0]?.p, "be-suon-tuoi-runner.png");
-  assert.equal(animation.assets[0]?.u, "/brand/mascot/");
-  assert.deepEqual(
-    animation.markers.map((marker) => marker.cm),
-    ["empty", "done"],
+  // Sprite runtime is single-sourced in globals.css: Codex Pet Atlas =
+  // 8 cols × 9 rows, 192×208 per frame, row 0 = idle (8-frame steps loop).
+  assert.match(uiGlobalsSource, /@utility mascot-cotlet/);
+  assert.match(
+    uiGlobalsSource,
+    /background-image: url\("\/brand\/mascot\/cotlet\.spritesheet\.webp"\)/,
   );
+  assert.match(uiGlobalsSource, /background-size: 1536px 1872px;/);
+  assert.match(
+    uiGlobalsSource,
+    /--animate-cotlet-idle: cotlet-idle 1s steps\(8\) infinite;/,
+  );
+  assert.match(uiGlobalsSource, /@keyframes cotlet-idle/);
+  assert.match(uiGlobalsSource, /background-position: -1536px 0;/);
 });
 
 test("Runner board uses responsive design-system text and Tailwind grid tokens", () => {

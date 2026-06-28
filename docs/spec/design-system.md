@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.7.1 | Updated: 2026-06-19 | Status: locked single source for UI agents
+> Version: 14.8.0 | Updated: 2026-06-28 | Status: locked single source for UI agents
 
 ## Single Source Decision
 
@@ -111,6 +111,14 @@ Approved project utilities:
 - `pos-safe-top` / `pos-safe-bottom` are limited to POS PWA floating bars.
 - `chrome-safe-pb` / `chrome-safe-bottom` are limited to fixed or sticky app
   shell chrome affected by mobile safe areas.
+- `shadow-effect-*` (popover / dialog / drawer / tooltip / toast / card-hover),
+  `bg-effect-scrim`, and `drawer-scrim` are the Má Tư DS depth utilities backed by
+  the `--effect-*` token family (see § Elevation). The `--motion-*` / `--ease-*`
+  motion tokens (see § G Motion) are consumed inside `packages/ui` primitives via
+  `duration-[var(--motion-*)]` / `ease-[var(--ease-*)]`. These were
+  adopted **into** this contract from the Má Tư Design System; they are therefore the
+  current semantic contract, not a "parallel namespace" or "external DS token names"
+  per the Forbidden list below.
 - New utilities require a design-system update first; prefer primitive props
   or app surface adapters when the pattern is reusable.
 
@@ -303,8 +311,10 @@ Motion is functional only — it signals state change (loading, enter/exit, focu
 | ----------------------------- | ------------------------------------------------------------------------------------- | -------------- |
 | `duration-150`                | `transition-colors` / focus-ring / border feedback on interactive controls            | app + primitive |
 | `duration-300`                | Overlay / dialog / sheet enter–exit (Radix `animate-in` / `animate-out`)              | app + primitive |
-| `duration-100`, `duration-200`| Primitive-layer defaults inside `packages/ui/*` only — do not introduce in app code    | primitive only |
+| `duration-100`/`200`/`240` (`--motion-*`) | Primitive-layer overlay/drawer enter–exit timings inside `packages/ui/*` only, sourced from the `--motion-*` tokens — do not introduce in app code | primitive only |
 | `duration-500`                | Full-screen idle/empty visuals only (Runner idle board); never on interactive controls | app (exception) |
+
+The primitive layer's finer timings are the **`--motion-*` / `--ease-*` token family** (Má Tư Design System; `globals.css`): `--motion-fast 120ms` / `base 150` / `overlay 200` / `drawer 240` / `progress 300`, the loop rungs `spinner 700` / `indeterminate 1100` / `skeleton 1300`, and `--ease-enter` / `--ease-move` / `--ease-linear`. `packages/ui` primitives consume them as `duration-[var(--motion-*)]` / `ease-[var(--ease-*)]` (Tailwind v4 has no `--duration-*` / `--ease-*` utility namespace); the global spinner is retimed to `--motion-spinner` (700ms) via the `--animate-spin` rebind. App surfaces still author only `duration-150` / `duration-300` (== `--motion-base` / `--motion-progress`).
 
 Arbitrary `duration-[…]` is NOT allowed in app code.
 
@@ -324,24 +334,29 @@ Arbitrary `duration-[…]` is NOT allowed in app code.
 
 ## Elevation / Shadow
 
-The system is **border-first**: resting surfaces are separated by `--border`, not by shadow. Shadow is reserved for surfaces that genuinely float above the page. There is no `--shadow-*` token layer — elevation is expressed through the Tailwind shadow utilities below, locked per role.
+The system is **border-first**: resting surfaces are separated by `--border`, not by shadow. Shadow is reserved for surfaces that genuinely float above the page. Float elevation is the named **`--effect-*` depth token family** (Má Tư Design System; defined in `globals.css` ZONE B as rgba-by-design — an explicit exception to the OKLCH-only token rule — and consumed as `shadow-effect-*` utilities plus `bg-effect-scrim` / `drawer-scrim`). Sticky-CTA and POS/KDS ceiling surfaces still use the Tailwind `shadow-lg` / `shadow-xl` / `shadow-2xl` rungs. Each is locked per role below. Arbitrary `box-shadow`, legacy `--shadow-*` vars, and unnamed `--effect-*` values remain forbidden.
 
 | Rung          | Utility                    | Locked role                                                                                                                          |
 | ------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | Rest          | _(none — border only)_     | Base `Card`, page sections, table rows, resting tiles. `card.tsx` carries no shadow by design.                                       |
-| Hover         | `shadow-sm`                | Interactive/clickable card adapters on hover only — data-table + inventory `interactive-card.tsx`, `AppLinkCard` (`surface.tsx`, `transition-[box-shadow,border-color]`). |
-| Overlay       | `shadow-md`                | Popover-family floating layers: `popover`, `dropdown-menu`, `context-menu`, `menubar`, `navigation-menu`, `select`, `hover-card`.    |
-| Modal / Sheet | `shadow-lg`                | `sheet`, dialogs, and CTAs **inside a genuinely sticky/fixed action bar** (e.g. GRN-create and transfer-receive `sticky chrome-safe-bottom` footers). |
+| Hover         | `shadow-effect-card-hover` | Interactive/clickable card adapters on hover only — data-table + inventory `interactive-card.tsx`, `AppLinkCard` + `OperationalBoardCard` (`surface.tsx`). Hairline ring + `0 1px 3px` drop. |
+| Overlay       | `shadow-effect-popover`    | Popover-family floating layers: `popover`, `dropdown-menu`, `select`. Bakes the `--effect-ring-border` hairline + soft drop (replaces the old `shadow-md ring-1 ring-foreground/10`). |
+| Modal         | `shadow-effect-dialog`     | `dialog` content.                                                                                                                    |
+| Sheet / Drawer| `shadow-effect-drawer`     | `sheet` content and `drawer` (vaul `before:`) panel.                                                                                 |
+| Tooltip       | `shadow-effect-tooltip`    | `tooltip` content.                                                                                                                   |
+| Toast         | `shadow-effect-toast`      | Sonner toasts (applied on `.cn-toast` in `globals.css`).                                                                             |
+| Sticky CTA    | `shadow-lg`                | CTAs **inside a genuinely sticky/fixed action bar** (e.g. GRN-create and transfer-receive `sticky chrome-safe-bottom` footers).      |
 | Ceiling       | `shadow-xl` / `shadow-2xl` | **Only** fixed surfaces floating over scrolling content: POS mobile action bar (`shadow-2xl`), KDS focus card / chart tooltip (`shadow-xl`). Nowhere else. |
+| Overlay scrim | `bg-effect-scrim` / `drawer-scrim` | Dialog/Sheet backdrop = `bg-effect-scrim`; Drawer backdrop = `drawer-scrim` (scrim + `--effect-drawer-blur`).               |
 
 **Non-elevation override.** `pos-text-overlay` (`globals.css`, `filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.6))`) and `drop-shadow-*` image filters (e.g. the runner mascot) are text/image legibility effects, **not** part of the elevation ladder, and must not be reused as surface shadows.
 
 **Forbidden:**
 
 - No drop shadow on a resting `Card`, section, or table row — separate with `--border` instead.
-- No `--shadow-*` CSS variables or custom `box-shadow` values; use the utilities above.
-- No `shadow-lg` / `xl` / `2xl` on a non-floating surface (e.g. a CTA in a non-sticky resting footer) to "make it pop."
-- One rung per role: a popover is `shadow-md`, not `shadow-lg`.
+- No ad-hoc `box-shadow`, no legacy `--shadow-*` vars, and no unnamed `--effect-*` value — use the approved `shadow-effect-*` / `bg-effect-scrim` / `drawer-scrim` set, or the Tailwind sticky/ceiling rungs, only.
+- No `shadow-effect-dialog` / `shadow-effect-drawer` / `shadow-lg`+ on a non-floating surface (e.g. a CTA in a non-sticky resting footer) to "make it pop."
+- One rung per role: a popover is `shadow-effect-popover`, not `shadow-effect-dialog`.
 
 ## Component Authority
 

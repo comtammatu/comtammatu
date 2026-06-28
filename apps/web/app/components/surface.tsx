@@ -580,7 +580,7 @@ export function OperationalBoardCard({
     <Card
       className={cn(
         "transition-[background-color,border-color,box-shadow]",
-        interactive && "hover:shadow-sm",
+        interactive && "hover:shadow-effect-card-hover",
         current && OPERATIONAL_BOARD_CURRENT_CLASSNAME[currentTone],
         className,
       )}
@@ -768,7 +768,7 @@ export function AppLinkCard({
     <Card
       className={cn(
         "h-full transition-[box-shadow,border-color]",
-        disabled ? "cursor-not-allowed opacity-60" : "hover:shadow-sm",
+        disabled ? "cursor-not-allowed opacity-60" : "hover:shadow-effect-card-hover",
       )}
     >
       <CardContent flush className="h-full">
