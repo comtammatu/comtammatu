@@ -493,3 +493,45 @@ Hệ quả:
 **Ngoài phạm vi env này:** telemetry items (unused indexes ~231, dead-RPC wave 2) KHÔNG cần preview-branch — chỉ cần bật `track_functions`/`pg_stat` trên prod 1 chu kỳ (gồm cuối tháng).
 
 Runbook: `docs/runbooks/db/preview-branch-setup.md`.
+
+## D048: Cho phép huỷ toàn phần đơn đã thanh toán tại POS — giới hạn D023 (2026-06-28)
+
+**Decision (owner — đảo D023 ở phạm vi HẸP):** Cho phép **huỷ toàn phần một đơn đã
+thanh toán ngay tại màn POS** (void-after-paid): hoàn tiền + huỷ HĐĐT per_order +
+đưa đơn khỏi board, trong **một transaction nguyên tử**, **manager-gated**, **bắt
+buộc lý do**, **audit đầy đủ**. Đây là giới hạn có chủ đích của **D023** (`docs/plan/decisions.md` —
+"KHÔNG đưa hủy/thay thế HĐĐT ra màn POS; correction chỉ ở Owner + Kế toán"): D023
+GIỮ NGUYÊN cho mọi correction khác; chỉ mở đúng nhánh full-void-after-paid này.
+
+**Chốt:**
+
+1. **Cổng (Q1):** key mới `pos:void_paid_order` — chỉ `owner` + `branch_manager`.
+   KHÔNG cấp cho `cashier`, KHÔNG tái dùng `pos:void_order`. `permissions.ts` thêm
+   `POS_VOID_PAID_ORDER` + bump `PERMISSION_KEY_COUNT` 88→89.
+2. **Lý do (Q2):** trim length ≥ 20 và ≤ 500 ký tự (khớp `cancelInvoiceSchema`).
+3. **HĐĐT (Q3):** huỷ toàn phần một HĐĐT issued = **HUỶ** (cancel), không phải điều
+   chỉnh/thay thế. **CHẶN cross-period:** HĐĐT issued ở **kỳ thuế đã kê khai trước**
+   KHÔNG được huỷ tại POS — route sang kế toán. RPC dùng proxy bảo thủ theo tháng
+   (`issued_at < date_trunc('month', now())` → `cross_period_invoice`); **kế toán
+   phải xác nhận đúng mốc kê khai**, hard-block period-close thật là việc defer
+   riêng.
+4. **HĐĐT actor (Q4):** `branch_manager` ĐƯỢC huỷ HĐĐT issued dưới cổng
+   `pos:void_paid_order` — RPC **inline flip** `tax_invoices.status='cancelled'` +
+   ghi `tax_invoice_events`, KHÔNG gọi `transition_tax_invoice_state` (vốn đòi
+   owner-only `settings:tenant`).
+5. **Mặc định đã chốt:** (Q5) huỷ đơn (`status='cancelled'`) để rời board + rớt khỏi
+   doanh thu; (Q6) refund một chạm tại till (`status='approved'`, manager vừa xin
+   vừa duyệt); (Q7) re-pay = đơn mới; (Q8) full-void-only v1; (Q9) reject
+   `multiple_payments` (đơn Má Tư không có split completed).
+
+**GIỮ ở Owner + Kế toán (KHÔNG mở ra POS):** hoàn **một phần** / theo món, **hoá đơn
+điều chỉnh / thay thế**, và sửa-sai **hoá đơn tổng hợp ngày (daily_summary B2C)** —
+RPC POS **chặn** đơn đã gộp vào daily_summary (`order_in_daily_summary`).
+
+**Apply:** migration `supabase/migrations/20260628120000_pos_refund_void_after_paid.sql`
+(file → PR → owner apply tay vào prod) → `pnpm db:types` → backfill
+`apply_template_to_user` cho manager đang tồn tại (append key vào role_templates
+KHÔNG tự cấp cho user đã có). Agent KHÔNG apply prod. Phase 2 (Server Action + UI +
+test) chỉ build sau khi types regen.
+
+Đảo quyết định này phải sửa bản ghi này trước.

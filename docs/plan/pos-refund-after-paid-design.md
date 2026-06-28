@@ -3,8 +3,8 @@
 > Reconciled-through 86136ae3
 
 Ngày: 2026-06-28
-Nguồn: đánh giá POS `docs/plan/pos-evaluation-2026-06-28.md` (rank 8) + debate T3 (Product / BA-HĐĐT / Senior Dev / QA).
-Trạng thái: **DESIGN — chờ owner quyết định cổng + kế toán xác nhận HĐĐT. CHƯA viết code/migration vào repo.**
+Nguồn: đánh giá POS toàn diện 2026-06-28 (hạng mục rank 8) + debate T3 (Product / BA-HĐĐT / Senior Dev / QA).
+Trạng thái: **Phase 1 ĐÃ VÀO REPO** — Q0–Q9 chốt (D048); migration thật + ACL TS + decision. Owner apply migration → `pnpm db:types` → backfill, rồi Phase 2 (Server Action/UI/test). Kế toán còn phải xác nhận mốc kê khai cho cross-period (Q3).
 
 ## TL;DR
 
@@ -44,20 +44,23 @@ Trạng thái: **DESIGN — chờ owner quyết định cổng + kế toán xác
 
 ---
 
-## ⚠️ Quyết định cần CHỐT trước khi build
+## ✅ Quyết định đã CHỐT (owner — xem D048)
 
-| # | Ai quyết | Câu hỏi | Đề xuất |
+Owner đã chốt toàn bộ Q0–Q9 (`docs/plan/decisions.md` D048, giới hạn D023). Migration
+thật: `supabase/migrations/20260628120000_pos_refund_void_after_paid.sql`.
+
+| # | Ai quyết | Câu hỏi | Chốt |
 |---|---|---|---|
-| **Q0** | **Owner** | Xác nhận đảo D023 (cho phép hủy/hoàn + huỷ HĐĐT ở màn POS, manager-gated). Phải ghi quyết định thay thế vào `decisions.md` trước khi code. | Cần chữ ký rõ ràng của owner. |
-| **Q1** | Owner | "Manager-gated" = `owner + branch_manager` thôi? (cashier xin tại chỗ) | Owner + branch_manager |
-| **Q2** | **Kế toán** | Độ dài lý do tối thiểu: 20 ký tự (chuẩn HĐĐT, khớp `cancelInvoiceSchema`) hay 10? | 20 |
-| **Q3** | **Kế toán** | Hủy toàn phần HĐĐT issued = **HUỶ** (không phải điều chỉnh/thay thế)? Và HĐĐT phát ở **kỳ thuế đã kê khai trước** thì còn được huỷ hay phải điều chỉnh? POS có nên hard-block cross-period không? | Huỷ; cross-period: cảnh báo (hoặc block — cần kế toán) |
-| **Q4** | **Owner** | branch_manager được huỷ HĐĐT issued dưới cổng `pos:void_paid_order` (RPC inline flip, bỏ qua edge owner-only `settings:tenant`) — HAY huỷ HĐĐT issued vẫn **owner-only** (Server Action gọi `cancelTaxInvoice`, chậm hơn nhưng giữ ma trận ACL e-invoice)? Đây là đánh đổi kiểm soát-tiền vs tốc độ. | (Cần owner — quyết định này định hình RPC) |
-| **Q5** | Owner/Kế toán | Cancel đơn để loại khỏi `expected_cash` shift-close — hay muốn 1 dòng "refund trong ca" riêng trên báo cáo chốt ca? | Cancel đơn |
-| **Q6** | Owner | Refund tạo thẳng `status='approved'` (manager vừa xin vừa duyệt 1 chạm) — hay vẫn qua hàng đợi owner-approve (2 mắt soi tiền)? | 1 chạm tại till (đã manager-gated) |
-| **Q7** | Owner | Sau khi void đơn nhầm: thu ngân tạo **đơn mới** (đề xuất) hay re-charge đơn cũ? (`idx_payments_order_active` chặn re-charge đơn cũ) | Đơn mới |
-| **Q8** | Owner | Full-void đủ cho cả wrong-order LẪN returned-food, hay returned-food cần hoàn một phần (defer)? | Full-only v1 |
-| **Q9** | Owner | Xác nhận đơn Má Tư không bao giờ có >1 thanh toán completed (để chấp nhận reject `multiple_payments`)? | — |
+| **Q0** | **Owner** | Đảo D023 (cho phép hủy/hoàn + huỷ HĐĐT ở màn POS, manager-gated)? | **RESOLVED** — đảo D023 ở phạm vi HẸP: chỉ **full void-after-paid** mở ra POS; partial / điều chỉnh / thay thế + daily_summary GIỮ owner+kế toán. Ghi ở D048. |
+| **Q1** | Owner | "Manager-gated" = `owner + branch_manager` thôi? | **RESOLVED** — owner + branch_manager; key mới `pos:void_paid_order` (KHÔNG cashier, KHÔNG tái dùng `pos:void_order`). |
+| **Q2** | **Kế toán** | Độ dài lý do tối thiểu 20 hay 10? | **RESOLVED** — 20 ký tự (trim ≥ 20, ≤ 500). |
+| **Q3** | **Kế toán** | HĐĐT issued = HUỶ? cross-period có hard-block không? | **RESOLVED** — full void HĐĐT issued = **HUỶ**; cross-period **BLOCK** tại POS (`cross_period_invoice`, proxy theo tháng `issued_at < date_trunc('month', now())`). ⚠️ Kế toán phải xác nhận đúng mốc kê khai; hard-block period-close thật là item defer riêng. |
+| **Q4** | **Owner** | branch_manager huỷ HĐĐT issued dưới `pos:void_paid_order` (inline flip) hay vẫn owner-only? | **RESOLVED** — branch_manager ĐƯỢC, RPC **inline flip** `tax_invoices` + ghi `tax_invoice_events`, KHÔNG gọi `transition_tax_invoice_state` (owner-only `settings:tenant`). |
+| **Q5** | Owner/Kế toán | Cancel đơn hay dòng "refund trong ca" riêng? | **RESOLVED** — cancel đơn (`status='cancelled'`) → rời board + rớt khỏi doanh thu. |
+| **Q6** | Owner | Refund thẳng `approved` (1 chạm) hay qua owner-approve? | **RESOLVED** — 1 chạm tại till (`status='approved'`, manager = requester + approver). |
+| **Q7** | Owner | Re-pay = đơn mới hay re-charge đơn cũ? | **RESOLVED** — đơn mới. |
+| **Q8** | Owner | Full-void đủ cho cả wrong-order lẫn returned-food? | **RESOLVED** — full-only v1; returned-food cần hoàn một phần = defer. |
+| **Q9** | Owner | Đơn Má Tư không bao giờ có >1 thanh toán completed? | **RESOLVED** — xác nhận; RPC reject `multiple_payments`. |
 
 ---
 
@@ -71,9 +74,18 @@ Trạng thái: **DESIGN — chờ owner quyết định cổng + kế toán xác
 
 ---
 
-## Migration DRAFT (chờ chốt Q1/Q4 — owner duyệt + tự apply; CHƯA đưa vào repo)
+## Migration (Q1–Q4 ĐÃ CHỐT — owner duyệt + tự apply)
+
+> Migration thật đã vào repo: `supabase/migrations/20260628120000_pos_refund_void_after_paid.sql`.
+> File thật khác bản phác dưới ở các điểm đã chốt: `permission_keys` INSERT thêm
+> `module='pos'` + `scope='branch'` (cột NOT NULL); grant role_templates qua
+> `UPDATE … array_append` cho `position_code IN ('owner','branch_manager')`; thêm
+> block `cross_period_invoice` (Q3); `order_in_daily_summary` lọc đúng
+> `invoice_kind='daily_summary'`; bỏ `BEGIN/COMMIT` (Supabase CLI tự bọc
+> transaction). Bản phác dưới giữ lại để tham chiếu thiết kế.
 
 ```sql
+-- (phác thảo thiết kế — KHÔNG phải file áp dụng; xem file migration thật ở trên)
 -- supabase/migrations/20260628120000_pos_refund_void_after_paid.sql
 -- DRAFT — owner reviews + applies to PROD, then runs `pnpm db:types`. NOT auto-executed.
 -- Reuses existing refund subsystem (refunds, create_refund, reverse_payment_and_post)
