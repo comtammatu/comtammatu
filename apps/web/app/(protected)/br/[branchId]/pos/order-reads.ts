@@ -475,6 +475,7 @@ export const fetchOrderDetail = withActionPositional(
     ActionResult<{
       order: Record<string, unknown>;
       canManageOrders: boolean;
+      canVoidPaidOrder: boolean;
     }>
   > => {
     const { supabase, claims } = ctx;
@@ -548,10 +549,16 @@ export const fetchOrderDetail = withActionPositional(
     // Probe reuses the same supabase client → skips a 2nd getUser() HTTP
     // round-trip + getSession() cookie parse. Server-side void/cancel RPCs
     // remain the authoritative gate; hint=false on probe error is fail-safe.
-    const [{ data: order, error }, canManageOrders] = await Promise.all([
-      detailQuery.single(),
-      probePermission(ctx, PERMISSION_KEYS.POS_VOID_ORDER, claims.branch_id),
-    ]);
+    const [{ data: order, error }, canManageOrders, canVoidPaidOrder] =
+      await Promise.all([
+        detailQuery.single(),
+        probePermission(ctx, PERMISSION_KEYS.POS_VOID_ORDER, claims.branch_id),
+        probePermission(
+          ctx,
+          PERMISSION_KEYS.POS_VOID_PAID_ORDER,
+          claims.branch_id,
+        ),
+      ]);
 
     if (error) {
       if (error.code === "PGRST116") {
@@ -568,6 +575,7 @@ export const fetchOrderDetail = withActionPositional(
       data: {
         order: order as unknown as Record<string, unknown>,
         canManageOrders,
+        canVoidPaidOrder,
       },
     };
   },

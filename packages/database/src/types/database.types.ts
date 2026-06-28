@@ -5287,6 +5287,7 @@ export type Database = {
           payment_id: number
           reason: string
           status: string
+          tax_invoice_id: number | null
           tenant_id: number
           updated_at: string
         }
@@ -5302,6 +5303,7 @@ export type Database = {
           payment_id: number
           reason: string
           status?: string
+          tax_invoice_id?: number | null
           tenant_id: number
           updated_at?: string
         }
@@ -5317,6 +5319,7 @@ export type Database = {
           payment_id?: number
           reason?: string
           status?: string
+          tax_invoice_id?: number | null
           tenant_id?: number
           updated_at?: string
         }
@@ -5347,6 +5350,13 @@ export type Database = {
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_tax_invoice_id_fkey"
+            columns: ["tax_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "tax_invoices"
             referencedColumns: ["id"]
           },
           {
@@ -9448,6 +9458,10 @@ export type Database = {
       refresh_abc_classification: { Args: never; Returns: number }
       refresh_finance_views: { Args: never; Returns: undefined }
       refresh_inventory_dashboard: { Args: never; Returns: string }
+      refund_paid_order: {
+        Args: { p_order_id: number; p_reason: string }
+        Returns: Json
+      }
       register_branch_presence: {
         Args: {
           p_agent_id: string
