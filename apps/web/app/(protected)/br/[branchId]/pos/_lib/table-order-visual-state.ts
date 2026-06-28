@@ -1,3 +1,5 @@
+import { getPosOrderStateVariant } from "./order-status-display";
+
 export type PosTableOrderVisualState = "active" | "ready" | "served";
 export type PosTableTileVisualState =
   | "empty"
@@ -52,6 +54,29 @@ export function deriveTableOrderVisualStates(
   }
 
   return map;
+}
+
+export type PosTableTileTone = "default" | "success" | "warning" | "muted";
+
+/**
+ * Tile tone derives from the SAME canonical status -> variant map the
+ * order-list badge uses (`getPosOrderStateVariant`), so one order renders one
+ * color across the table tile and the list. `empty`/`muted` are tile-only
+ * presentation states with no order workflow color.
+ */
+export function getPosTableTileTone(
+  state: PosTableTileVisualState,
+): PosTableTileTone {
+  switch (state) {
+    case "active":
+    case "ready":
+    case "served":
+      return getPosOrderStateVariant(state);
+    case "muted":
+      return "muted";
+    case "empty":
+      return "default";
+  }
 }
 
 export function getPosTableTileVisualState({

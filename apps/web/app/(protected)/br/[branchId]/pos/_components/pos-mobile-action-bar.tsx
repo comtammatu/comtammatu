@@ -37,7 +37,7 @@ const ACTION_BAR_CLASS =
   "fixed inset-x-3 bottom-0 z-40 flex gap-2 rounded-lg bg-card/95 p-2 shadow-2xl ring-1 ring-border backdrop-blur pos-safe-bottom md:hidden";
 
 const SESSION_ORDERS_BAR_CLASS =
-  "fixed right-3 bottom-0 z-40 pos-safe-bottom md:hidden";
+  "fixed inset-x-3 bottom-0 z-40 flex justify-end pos-safe-bottom md:hidden";
 
 const ACTION_PRIMARY_BUTTON_CLASS =
   "min-w-14 flex-1 text-sm font-bold sm:text-base";

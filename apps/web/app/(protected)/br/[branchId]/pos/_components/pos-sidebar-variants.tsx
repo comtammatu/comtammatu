@@ -23,7 +23,7 @@ export interface TabbedSidebarProps extends SidebarHeaderInputs {
   sidebarContentProps: SidebarContentProps;
 }
 
-/** Tablet-class layout (md through xl-1): tabs-based sidebar. */
+/** Tablet-class layout (md through lg-1): tabs-based sidebar. */
 function TabbedSidebarComponent({
   canCloseShift,
   canManageMenuLimits,
@@ -39,7 +39,7 @@ function TabbedSidebarComponent({
     : sidebarContentProps;
 
   return (
-    <div className="hidden w-96 shrink-0 flex-col border-l border-border/60 bg-background md:flex xl:hidden">
+    <div className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background md:flex lg:hidden">
       <PosSessionHeader
         canCloseShift={canCloseShift}
         canManageMenuLimits={canManageMenuLimits}
@@ -64,7 +64,7 @@ export interface SplitSidebarProps extends SidebarHeaderInputs {
   sidebarContentProps: SidebarContentProps;
 }
 
-/** Wide-desktop layout (xl+): cart + order-list side by side. */
+/** Wide layout (lg+): cart + order-list side by side. */
 function SplitSidebarComponent({
   canCloseShift,
   canManageMenuLimits,
@@ -89,7 +89,7 @@ function SplitSidebarComponent({
 
   if (isContextGate) {
     return (
-      <div className="hidden w-96 shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
+      <div className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background lg:flex xl:w-96">
         <PosSessionHeader
           canCloseShift={canCloseShift}
           canManageMenuLimits={canManageMenuLimits}
@@ -107,7 +107,7 @@ function SplitSidebarComponent({
   }
 
   return (
-    <div className="hidden shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
+    <div className="hidden shrink-0 flex-col border-l border-border/60 bg-background lg:flex">
       <PosSessionHeader
         canCloseShift={canCloseShift}
         canManageMenuLimits={canManageMenuLimits}
@@ -115,7 +115,7 @@ function SplitSidebarComponent({
         onShowCloseSession={onShowCloseSession}
       />
       <div className="flex min-h-0 flex-1">
-        <div className="flex w-96 shrink-0 flex-col">
+        <div className="flex w-72 shrink-0 flex-col xl:w-80 2xl:w-96">
           {appendDraft.target != null ? (
             <AppendDraftPane
               targetLabel={appendDraft.target.targetLabel}
@@ -137,7 +137,7 @@ function SplitSidebarComponent({
             />
           )}
         </div>
-        <div className="flex w-80 shrink-0 flex-col border-l border-border/60 2xl:w-96">
+        <div className="flex w-72 shrink-0 flex-col border-l border-border/60 xl:w-80 2xl:w-96">
           <OrderListPane
             onViewBill={onViewBill}
             onViewDetail={onViewDetail}

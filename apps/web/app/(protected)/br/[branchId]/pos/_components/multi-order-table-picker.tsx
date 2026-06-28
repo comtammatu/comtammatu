@@ -68,7 +68,7 @@ export function MultiOrderTablePicker({
         </DrawerHeader>
 
         <ScrollArea
-          className="h-64 min-h-0 overflow-hidden px-4 sm:h-72"
+          className="flex min-h-0 flex-1 max-h-dvh-80 overflow-hidden px-4"
           data-testid="pos-multi-order-list"
         >
           <div className="flex flex-col gap-3 pr-2 pb-2" data-vaul-no-drag>

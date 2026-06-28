@@ -102,7 +102,7 @@ function useLineChangeFeedback({
 
 function getLineChangeToneClass(tone: LineChangeTone): string | false {
   if (tone === "quantity") {
-    return "bg-warning/10 ring-2 ring-inset ring-warning/40 motion-safe:animate-pulse";
+    return "bg-info/10 ring-2 ring-inset ring-info/40 motion-safe:animate-pulse";
   }
   if (tone === "content") {
     return "bg-info/10 ring-2 ring-inset ring-info/40";
@@ -181,7 +181,7 @@ export function PosLineItemCompact({
         </Badge>
         {quantityDelta !== null ? (
           <Badge
-            variant={quantityDelta > 0 ? "warning" : "destructive"}
+            variant={quantityDelta > 0 ? "info" : "destructive"}
             className="justify-center px-1 py-0 font-mono text-xs font-bold tabular-nums"
           >
             {quantityDelta > 0 ? `+${String(quantityDelta)}` : quantityDelta}
@@ -192,7 +192,7 @@ export function PosLineItemCompact({
         <div className="flex min-w-0 max-w-full flex-wrap items-start gap-x-2 gap-y-1">
           <p
             className={cn(
-              "min-w-0 flex-1 break-words text-base font-semibold leading-snug text-foreground sm:text-lg",
+              "min-w-0 flex-1 break-words text-base font-semibold leading-snug text-foreground",
               titleClassName,
             )}
           >
@@ -253,7 +253,7 @@ export function PosLineItemCompact({
       </div>
       <p
         className={cn(
-          "shrink-0 whitespace-nowrap text-right text-base font-bold leading-snug text-primary tabular-nums sm:text-lg",
+          "shrink-0 whitespace-nowrap text-right text-base font-bold leading-snug text-primary tabular-nums",
           totalClassName,
         )}
       >

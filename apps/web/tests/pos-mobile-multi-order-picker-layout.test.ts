@@ -19,7 +19,7 @@ test("mobile multi-order picker keeps its order list scrollable inside the drawe
   assert.match(source, /DrawerHeader className="shrink-0"/);
   assert.match(
     source,
-    /ScrollArea[\s\S]*className="h-64 min-h-0 overflow-hidden px-4 sm:h-72"/,
+    /ScrollArea[\s\S]*className="flex min-h-0 flex-1 max-h-dvh-80 overflow-hidden px-4"/,
   );
   assert.match(source, /data-vaul-no-drag/);
   assert.match(
