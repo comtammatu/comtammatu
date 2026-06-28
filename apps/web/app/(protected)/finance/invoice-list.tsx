@@ -71,6 +71,7 @@ interface InvoiceListProps {
   initialHasMore?: boolean;
   initialNextCursor?: TaxInvoiceCursor | null;
   branchId?: number;
+  queue?: "attention";
 }
 
 const CANCEL_REASON_MIN = 20;
@@ -92,6 +93,7 @@ export function InvoiceList({
   initialHasMore = false,
   initialNextCursor = null,
   branchId,
+  queue,
 }: InvoiceListProps) {
   const [invoices, setInvoices] = useState(initialInvoices);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -395,6 +397,7 @@ export function InvoiceList({
         const result = await fetchTaxInvoicesPage({
           branchId,
           before: nextCursor,
+          queue,
         });
         if (!result.success || !result.data) {
           toast.error(

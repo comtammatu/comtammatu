@@ -584,6 +584,12 @@ const TAX_INVOICE_LIST_SELECT = `
 
 const TAX_INVOICE_PAGE_SIZE = 50;
 
+// "Attention" queue = invoices still needing operator action (provider-rejected
+// drafts + in-flight issuance), excluding terminal states. Lets
+// /finance/invoices?queue=attention surface drafts on page 1 so the bulk
+// re-issue button appears without manual "Tải thêm" paging.
+const ATTENTION_STATES = ["draft", "signing", "submitted"] as const;
+
 export interface TaxInvoiceCursor {
   createdAt: string;
   id: number;
@@ -603,6 +609,7 @@ const taxInvoiceCursorSchema = z.object({
 const fetchTaxInvoicesPaginatedSchema = z.object({
   branchId: z.coerce.number().int().positive().optional(),
   before: taxInvoiceCursorSchema.optional(),
+  queue: z.enum(["attention"]).optional(),
   pageSize: z.coerce
     .number()
     .int()
@@ -633,7 +640,7 @@ export async function fetchTaxInvoicesPage(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  const { branchId, before, pageSize } = parsed.data;
+  const { branchId, before, pageSize, queue } = parsed.data;
 
   let query = supabase
     .from("tax_invoices")
@@ -642,6 +649,10 @@ export async function fetchTaxInvoicesPage(
 
   if (branchId) {
     query = query.eq("branch_id", branchId);
+  }
+
+  if (queue === "attention") {
+    query = query.in("status", [...ATTENTION_STATES]);
   }
 
   if (before) {

@@ -17,16 +17,16 @@ export default async function InvoicesPage({
   const sp = await searchParams;
   const params = parseFinanceParams(sp);
   const branchId = params.branch ?? undefined;
-  // `?queue=attention` is a deep-link affordance from /finance; read it
-  // cleanly even though the list is not yet narrowed by queue state.
+  // `?queue=attention` deep-link from /finance narrows the list to invoices
+  // still needing action (drafts + in-flight issuance) so the bulk re-issue
+  // button surfaces on page 1 instead of behind many "Tải thêm" clicks.
   const queueValue = sp.queue;
   const queue =
     (Array.isArray(queueValue) ? queueValue[0] : queueValue) === "attention"
-      ? "attention"
+      ? ("attention" as const)
       : undefined;
-  void queue;
 
-  const res = await fetchTaxInvoicesPage({ branchId });
+  const res = await fetchTaxInvoicesPage({ branchId, queue });
 
   return (
     <AppPage>
@@ -43,6 +43,7 @@ export default async function InvoicesPage({
             (res.data?.nextCursor ?? null) as TaxInvoiceCursor | null
           }
           branchId={branchId}
+          queue={queue}
         />
       ) : (
         <AppEmptyState
