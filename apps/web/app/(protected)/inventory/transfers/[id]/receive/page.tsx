@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@comtammatu/database/supabase/server";
+import { loadAuthState } from "@/_lib/auth";
 import {
-  extractClaimsFromAccessToken,
   INVENTORY_OPS_ROLES,
   PERMISSION_KEYS,
   type StaffRole,
@@ -31,12 +30,8 @@ export default async function TransferReceivePage({
     redirect("/inventory/transfers");
   }
 
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = extractClaimsFromAccessToken(session?.access_token);
-  if (!claims || !INVENTORY_OPS_ROLES.includes(claims.user_role)) {
+  const { supabase, claims } = await loadAuthState();
+  if (!INVENTORY_OPS_ROLES.includes(claims.user_role)) {
     redirect("/access-denied?reason=insufficient-permission");
   }
 

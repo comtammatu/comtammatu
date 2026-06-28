@@ -84,7 +84,7 @@ export default async function HrPage() {
   );
   const service = createServiceClient();
   const [ingredientsResult, defaultsResult] =
-    consumptionTemplateItemIds.length > 0
+    canManageEmployees && consumptionTemplateItemIds.length > 0
       ? await Promise.all([
           service
             .from("ingredients")

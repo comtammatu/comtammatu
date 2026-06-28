@@ -1,5 +1,4 @@
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { fetchExpiryAlerts } from "@/(protected)/inventory/alert-actions";
 import {
   parseBranchIdParam,
@@ -19,19 +18,11 @@ export default async function ExpirySettingsPage({
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const params = await searchParams;
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = session?.user
-    ? extractClaimsFromAccessToken(session.access_token)
-    : null;
+  const { supabase, claims } = await loadAuthState();
 
   // URL-selected branch drives client action context for tenant-wide roles.
   const requestedBranchId = parseBranchIdParam(params.branchId);
-  const scope = claims
-    ? await resolveInventoryBranchScope(supabase, claims, requestedBranchId)
-    : null;
+  const scope = await resolveInventoryBranchScope(supabase, claims, requestedBranchId);
 
   const [alertsRes, branchesRes] = await Promise.all([
     fetchExpiryAlerts(),
@@ -61,8 +52,8 @@ export default async function ExpirySettingsPage({
       <ExpiryListClient
         initial={alerts}
         branches={branches}
-        tenantId={claims?.tenant_id ?? 0}
-        userRole={claims?.user_role ?? "branch_manager"}
+        tenantId={claims.tenant_id}
+        userRole={claims.user_role}
         userBranchId={scope?.selectedBranchId ?? null}
       />
     </AppPage>

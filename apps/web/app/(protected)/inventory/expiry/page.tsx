@@ -1,5 +1,4 @@
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { fetchExpiryAlerts } from "@/(protected)/inventory/alert-actions";
 import {
   resolveInventoryBranchScope,
@@ -18,19 +17,11 @@ export default async function ExpiryPage({
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const params = await searchParams;
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = session?.user
-    ? extractClaimsFromAccessToken(session.access_token)
-    : null;
+  const { supabase, claims } = await loadAuthState();
 
   // Sidebar-selected branch drives both read filter and client action context.
   const requested = await resolveRequestedBranchId(params.branchId);
-  const scope = claims
-    ? await resolveInventoryBranchScope(supabase, claims, requested)
-    : null;
+  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
   const branchFilter = scope?.selectedBranchId ?? undefined;
 
   const [alertsRes, branchesRes] = await Promise.all([
@@ -55,8 +46,8 @@ export default async function ExpiryPage({
     <ExpiryListClient
       initial={alerts}
       branches={branches}
-      tenantId={claims?.tenant_id ?? 0}
-      userRole={claims?.user_role ?? "branch_manager"}
+      tenantId={claims.tenant_id}
+      userRole={claims.user_role}
       userBranchId={scope?.selectedBranchId ?? null}
     />
   );

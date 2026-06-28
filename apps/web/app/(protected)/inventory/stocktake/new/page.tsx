@@ -1,6 +1,5 @@
-import { notFound, redirect } from "next/navigation";
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
+import { redirect } from "next/navigation";
+import { loadAuthState } from "@/_lib/auth";
 import {
   INVENTORY_FEATURE_FLAGS,
   isFeatureEnabledForBranch,
@@ -20,23 +19,7 @@ export default async function NewStocktakeSessionPage({
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const sp = await searchParams;
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session?.user) {
-    const params = new URLSearchParams();
-    const branchIdParam = Array.isArray(sp.branchId)
-      ? sp.branchId[0]
-      : sp.branchId;
-    if (branchIdParam) params.set("branchId", branchIdParam);
-    const query = params.toString();
-    const returnTo = `/inventory/stocktake/new${query ? `?${query}` : ""}`;
-    redirect(`/login?returnTo=${encodeURIComponent(returnTo)}`);
-  }
-
-  const claims = extractClaimsFromAccessToken(session.access_token);
-  if (!claims) notFound();
+  const { supabase, claims } = await loadAuthState();
 
   // Sidebar-selected branch drives the feature-flag gate and default session
   // branch. For tenant-wide roles (owner) this is the sidebar picker; for

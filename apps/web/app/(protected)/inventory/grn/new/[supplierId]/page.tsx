@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@comtammatu/database/supabase/server";
+import { loadAuthState } from "@/_lib/auth";
 import {
   canAccess,
-  extractClaimsFromAccessToken,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
 import { fetchProcurementBranches } from "../../../_lib/procurement-branches";
@@ -31,13 +30,8 @@ export default async function GrnCreatePage({
     redirect("/inventory/grn/new");
   }
 
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = extractClaimsFromAccessToken(session?.access_token);
+  const { supabase, claims } = await loadAuthState();
   if (
-    !claims ||
     !PROCUREMENT_ROLES.includes(claims.user_role) ||
     !canAccess(claims.user_role, "inventory_procurement")
   ) {

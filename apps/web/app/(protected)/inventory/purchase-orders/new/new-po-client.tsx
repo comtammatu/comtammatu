@@ -43,6 +43,7 @@ import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
+import { formatVND } from "../../_lib/format";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import {
   createPurchaseOrderWithLines,
@@ -872,7 +873,7 @@ function LineItemsSection({
               </span>
               {hasValue && (
                 <span className="text-sm font-semibold font-mono">
-                  {totalValue.toLocaleString("vi-VN")} ₫
+                  {formatVND(totalValue)}
                 </span>
               )}
             </div>

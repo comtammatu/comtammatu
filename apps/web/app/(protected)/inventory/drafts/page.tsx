@@ -1,21 +1,15 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@comtammatu/database/supabase/server";
+import { loadAuthState } from "@/_lib/auth";
 import {
   canAccess,
-  extractClaimsFromAccessToken,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
 import { listMyGrnDrafts } from "../grn-actions";
 import { MobileDraftsClient, type ServerDraftRow } from "./page-client";
 
 export default async function DraftsPage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = extractClaimsFromAccessToken(session?.access_token);
+  const { claims } = await loadAuthState();
   if (
-    !claims ||
     !PROCUREMENT_ROLES.includes(claims.user_role) ||
     !canAccess(claims.user_role, "inventory_procurement")
   ) {
