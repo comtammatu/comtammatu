@@ -55,7 +55,7 @@ export async function countOpenSupplierInvoices(
   );
   if (!ctx) return 0;
   const { supabase, claims } = ctx;
-  // Branch filter rides the GRN relationship, mirroring fetchSupplierInvoices.
+  // Branch filter rides the GRN relationship (supplier_invoices has no branch_id).
   let query = supabase
     .from("supplier_invoices")
     .select(

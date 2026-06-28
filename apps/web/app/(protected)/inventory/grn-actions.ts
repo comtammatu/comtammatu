@@ -173,7 +173,31 @@ export async function fetchGrns(branchId?: number): Promise<ActionResult> {
       "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( received_quantity, rejected_quantity, unit_cost )",
     )
     .eq("tenant_id", claims.tenant_id)
-    .order("received_date", { ascending: false });
+    .order("received_date", { ascending: false })
+    .limit(100);
+  if (branchId != null) query = query.eq("branch_id", branchId);
+  const { data, error } = await query;
+  if (error) return { success: false, error: "Không thể tải phiếu nhập." };
+  return { success: true, data: data ?? [] };
+}
+
+/* ─── fetchGrnIdsForDropdown ─── */
+
+export async function fetchGrnIdsForDropdown(
+  branchId?: number,
+): Promise<ActionResult> {
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.PROCUREMENT_READ,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+  let query = supabase
+    .from("goods_received_notes")
+    .select("id, grn_number, supplier_id, suppliers ( id, name )")
+    .eq("tenant_id", claims.tenant_id)
+    .order("received_date", { ascending: false })
+    .limit(100);
   if (branchId != null) query = query.eq("branch_id", branchId);
   const { data, error } = await query;
   if (error) return { success: false, error: "Không thể tải phiếu nhập." };

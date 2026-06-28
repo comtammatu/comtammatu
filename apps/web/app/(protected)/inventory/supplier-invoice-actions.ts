@@ -108,28 +108,6 @@ const supplierInvoiceSelect = (branchId?: number) => {
   return `id, invoice_number, invoice_date, total_amount, matching_status, subtotal, supplier_id, grn_id, due_date, payment_status, paid_amount, paid_at, suppliers ( id, name ), ${grnSelect}`;
 };
 
-export async function fetchSupplierInvoices(
-  branchId?: number,
-): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-  let query = supabase
-    .from("supplier_invoices")
-    .select(supplierInvoiceSelect(branchId))
-    .eq("tenant_id", claims.tenant_id)
-    .order("invoice_date", { ascending: false });
-  if (branchId != null) {
-    query = query.eq("goods_received_notes.branch_id", branchId);
-  }
-  const { data, error } = await query;
-  if (error) return { success: false, error: "Không thể tải hóa đơn NCC." };
-  return { success: true, data: data ?? [] };
-}
-
 const SUPPLIER_INVOICE_PAGE_SIZE = 50;
 
 export interface SupplierInvoiceCursor {
@@ -165,8 +143,8 @@ const fetchSupplierInvoicesPaginatedSchema = z.object({
  * tiebreaker). invoice_date is a NOT NULL timestamptz with frequent ties,
  * so the id tiebreaker is required for stable paging. Mirrors
  * fetchArchivedOrders: fetch pageSize+1 to probe hasMore, slice to
- * pageSize, expose the last row as nextCursor. Same tenant + optional
- * branch scope as fetchSupplierInvoices.
+ * pageSize, expose the last row as nextCursor. Scoped to tenant + optional
+ * branch (branch filter rides the GRN relationship).
  */
 export async function fetchSupplierInvoicesPage(
   input: z.input<typeof fetchSupplierInvoicesPaginatedSchema> = {},

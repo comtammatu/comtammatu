@@ -33,13 +33,13 @@ export type {
 export {
   fetchRecentActivity,
   fetchGrns,
+  fetchGrnIdsForDropdown,
   fetchGrnDetail,
   confirmGrn,
   createGrnFromPo,
 } from "./grn-actions";
 export {
   createSupplierInvoice,
-  fetchSupplierInvoices,
   fetchSupplierInvoicesPage,
   recomputeInvoiceMatching,
 } from "./supplier-invoice-actions";
