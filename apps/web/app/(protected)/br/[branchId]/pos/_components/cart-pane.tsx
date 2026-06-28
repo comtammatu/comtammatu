@@ -23,7 +23,7 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { cn } from "@comtammatu/ui";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
-import { AppSection } from "@/components/surface";
+import { AppEmptyState, AppSection } from "@/components/surface";
 import {
   calcItemDiscountAmount,
   calcItemNetSubtotal,
@@ -208,7 +208,7 @@ function CartPaneComponent({
         {!shouldShowOrderTypeSelector && (
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="font-heading text-base font-semibold tracking-tight text-foreground sm:text-xl">
+              <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
                 {messages.pos.desktop.pendingNewTitle}
               </h2>
               <Badge variant="outline" className="mt-1 max-w-full truncate">
@@ -280,8 +280,10 @@ function CartPaneComponent({
           <ToggleGroup
             type="single"
             value={cart.orderType}
+            variant="outline"
             size="touch"
-            className="grid w-full grid-cols-2 overflow-hidden bg-muted/60"
+            spacing={0}
+            className="grid w-full grid-cols-2"
             aria-label={messages.pos.desktop.serviceModeAria}
             onValueChange={(value) => {
               if (
@@ -294,25 +296,25 @@ function CartPaneComponent({
           >
             <ToggleGroupItem
               value="dine_in"
-              className="h-full min-w-0 justify-center gap-2 border-r border-border px-0 text-base font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+              className="min-w-0 justify-center gap-2 text-base font-semibold"
               aria-keyshortcuts="D"
               disabled={modeLocked && cart.orderType !== "dine_in"}
             >
               <IconToolsKitchen data-icon="inline-start" />
               {messages.pos.desktop.dineIn}
-              <Kbd className="hidden md:inline-flex group-data-[state=on]/toggle:bg-primary-foreground/20 group-data-[state=on]/toggle:text-primary-foreground">
+              <Kbd className="hidden [@media(hover:hover)]:inline-flex">
                 D
               </Kbd>
             </ToggleGroupItem>
             <ToggleGroupItem
               value="takeaway"
-              className="h-full min-w-0 justify-center gap-2 px-0 text-base font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+              className="min-w-0 justify-center gap-2 text-base font-semibold"
               aria-keyshortcuts="T"
               disabled={modeLocked && cart.orderType !== "takeaway"}
             >
               <IconPackage data-icon="inline-start" />
               {messages.pos.desktop.takeaway}
-              <Kbd className="hidden md:inline-flex group-data-[state=on]/toggle:bg-primary-foreground/20 group-data-[state=on]/toggle:text-primary-foreground">
+              <Kbd className="hidden [@media(hover:hover)]:inline-flex">
                 T
               </Kbd>
             </ToggleGroupItem>
@@ -321,12 +323,15 @@ function CartPaneComponent({
       </div>
 
       {cart.items.length === 0 ? (
-        <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center">
-          <p className="max-w-64 text-sm leading-6 text-muted-foreground">
-            {cart.orderType === "takeaway" || selectedTableNumber != null
-              ? messages.pos.pendingDraft.emptyWithContext
-              : messages.pos.pendingDraft.emptyNoContext}
-          </p>
+        <div className="flex min-h-0 flex-1 items-center justify-center px-6">
+          <AppEmptyState
+            compact
+            title={
+              cart.orderType === "takeaway" || selectedTableNumber != null
+                ? messages.pos.pendingDraft.emptyWithContext
+                : messages.pos.pendingDraft.emptyNoContext
+            }
+          />
         </div>
       ) : (
         <>
@@ -352,7 +357,7 @@ function CartPaneComponent({
                 const summary = getPosLineItemSummary(item);
                 const itemPaddingClass = isDeleteRevealed
                   ? "pr-20 sm:pr-14"
-                  : "pr-3 sm:pr-14";
+                  : "pr-14";
 
                 return (
                   <div key={item.key} className="relative overflow-hidden">
@@ -415,7 +420,7 @@ function CartPaneComponent({
                     <Button
                       variant="ghost"
                       size="touch"
-                      className="absolute right-2 top-1/2 hidden min-w-12 -translate-y-1/2 px-0 text-muted-foreground hover:text-destructive sm:inline-flex"
+                      className="absolute right-2 top-1/2 inline-flex min-w-12 -translate-y-1/2 px-0 text-muted-foreground hover:text-destructive"
                       aria-label={messages.pos.pendingDraft.removeItemAria(
                         displayName,
                       )}
@@ -436,13 +441,19 @@ function CartPaneComponent({
                 htmlFor="pos-order-note"
                 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground"
               >
-                {messages.pos.pendingDraft.noteLabel}
+                {cart.orderType === "takeaway"
+                  ? messages.pos.pendingDraft.takeawayNoteLabel
+                  : messages.pos.pendingDraft.noteLabel}
               </label>
               <Textarea
                 id="pos-order-note"
                 value={cart.note}
                 onChange={(e) => cart.setNote(e.target.value)}
-                placeholder={messages.pos.pendingDraft.notePlaceholder}
+                placeholder={
+                  cart.orderType === "takeaway"
+                    ? messages.pos.pendingDraft.takeawayNotePlaceholder
+                    : messages.pos.pendingDraft.notePlaceholder
+                }
                 maxLength={500}
                 rows={1}
                 className="resize-none text-base"
@@ -452,7 +463,9 @@ function CartPaneComponent({
                 id="pos-order-note-hint"
                 className="hidden text-xs leading-5 text-muted-foreground sm:block"
               >
-                {messages.pos.pendingDraft.noteHint}
+                {cart.orderType === "takeaway"
+                  ? messages.pos.pendingDraft.takeawayNoteHint
+                  : messages.pos.pendingDraft.noteHint}
               </p>
             </div>
 
@@ -462,7 +475,7 @@ function CartPaneComponent({
                   <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                     {messages.pos.pendingDraft.subtotal}
                   </p>
-                  <p className="ml-auto text-xl font-bold text-primary tabular-nums sm:text-2xl">
+                  <p className="ml-auto text-xl font-bold text-primary tabular-nums">
                     {formatVND(cart.total)}
                   </p>
                 </div>
@@ -484,7 +497,7 @@ function CartPaneComponent({
                     ) : (
                       <>
                         {messages.pos.pendingDraft.submitKitchen(totalQuantity)}
-                        <KbdGroup className="ml-2 hidden md:inline-flex">
+                        <KbdGroup className="ml-2 hidden [@media(hover:hover)]:inline-flex">
                           <Kbd>{"⌘"}</Kbd>
                           <Kbd>Enter</Kbd>
                         </KbdGroup>

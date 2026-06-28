@@ -13,6 +13,7 @@ import {
 import type { BranchTable } from "./page";
 import {
   getPosTableTileVisualState,
+  getPosTableTileTone,
   type PosTableOrderVisualState,
 } from "./_lib/table-order-visual-state";
 import { TABLE_VI } from "@comtammatu/shared/messages";
@@ -53,16 +54,7 @@ const TableButton = memo(function TableButton({
     orderCount,
     orderVisualState,
   });
-  const isSuccessTile =
-    tileVisualState === "ready" || tileVisualState === "served";
-  const tileTone =
-    tileVisualState === "empty"
-      ? "default"
-      : isSuccessTile
-        ? "success"
-        : tileVisualState === "active"
-          ? "warning"
-          : "muted";
+  const tileTone = getPosTableTileTone(tileVisualState);
   const statusLabel = isSelected
     ? messages.pos.tableGate.selected
     : tileVisualState === "empty"
@@ -96,13 +88,11 @@ const TableButton = memo(function TableButton({
           variant={
             isSelected
               ? "outline"
-              : tileVisualState === "empty"
+              : tileTone === "success"
                 ? "success"
-                : isSuccessTile
-                  ? "success"
-                  : tileVisualState === "active"
-                    ? "warning"
-                    : "secondary"
+                : tileTone === "warning"
+                  ? "warning"
+                  : "secondary"
           }
           className={cn(
             "min-w-0 truncate text-xs font-semibold",

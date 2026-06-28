@@ -18,12 +18,39 @@
 
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import type { BadgeProps } from "@comtammatu/ui/components/badge";
+import type { PosTableOrderVisualState } from "./table-order-visual-state";
 
 type OrderStatusVariant = NonNullable<BadgeProps["variant"]>;
 
 export interface OrderStatusInfo {
   label: string;
   variant: OrderStatusVariant;
+}
+
+/**
+ * Canonical workflow-state -> badge variant for active/unpaid POS orders.
+ * One order = one color across the table tile and the order-list badge:
+ * the tile derives its tone from this same map instead of re-deriving tone.
+ * Reserve `warning` for served/awaiting-payment.
+ */
+type PosOrderStateVariant = Extract<
+  OrderStatusVariant,
+  "default" | "success" | "warning"
+>;
+
+const POS_ORDER_STATE_VARIANT: Record<
+  PosTableOrderVisualState,
+  PosOrderStateVariant
+> = {
+  active: "default",
+  ready: "success",
+  served: "warning",
+};
+
+export function getPosOrderStateVariant(
+  state: PosTableOrderVisualState,
+): PosOrderStateVariant {
+  return POS_ORDER_STATE_VARIANT[state];
 }
 
 export interface OrderStatusInput {
@@ -63,16 +90,19 @@ export function getPosOrderStatusInfo(
     case "new":
     case "confirmed":
     case "preparing":
-      return { label: formatOrderAge(order.created_at), variant: "default" };
+      return {
+        label: formatOrderAge(order.created_at),
+        variant: getPosOrderStateVariant("active"),
+      };
     case "ready":
       return {
         label: "Sẵn sàng",
-        variant: getStatusBadgeMeta("order", "ready").variant,
+        variant: getPosOrderStateVariant("ready"),
       };
     case "served":
       return {
         label: "Chờ thanh toán",
-        variant: "warning",
+        variant: getPosOrderStateVariant("served"),
       };
     default:
       return { label: order.status, variant: "outline" };

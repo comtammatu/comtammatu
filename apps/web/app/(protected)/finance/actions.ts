@@ -53,6 +53,50 @@ const createInvoiceSchema = z
   });
 
 /**
+ * Read-only resolve of the active tax invoice for an order, tenant-scoped.
+ * Mirrors the existing-invoice query in createTaxInvoice (same
+ * cancelled/replaced/not_required exclusion) so a POS idempotent payment replay
+ * can report the real invoice state without re-issuing. data is null when no
+ * active invoice row exists.
+ */
+export async function resolveExistingInvoiceForOrder(
+  orderId: number,
+): Promise<
+  ActionResult<{
+    id: number;
+    invoice_number: string | null;
+    status: string | null;
+  } | null>
+> {
+  const parsed = z.coerce.number().int().positive().safeParse(orderId);
+  if (!parsed.success) {
+    return { success: false, error: "Order ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    INVOICE_CREATE_ROLES,
+    PERMISSION_KEYS.ORDERS_WRITE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  const { data, error } = await supabase
+    .from("tax_invoices")
+    .select("id, status, invoice_number")
+    .eq("order_id", parsed.data)
+    .eq("tenant_id", claims.tenant_id)
+    .not("status", "in", '("cancelled","replaced","not_required")')
+    .maybeSingle();
+
+  if (error) {
+    return { success: false, error: "Không thể kiểm tra hóa đơn." };
+  }
+
+  return { success: true, data: data ?? null };
+}
+
+/**
  * Create a draft tax invoice for an order.
  * Production HĐĐT issuance uses Viettel S-invoice. When provider credentials
  * are missing, the invoice remains draft for Finance recovery.

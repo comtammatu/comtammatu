@@ -148,6 +148,18 @@ const VND_DENOMINATIONS = [
   500_000, 200_000, 100_000, 50_000, 20_000, 10_000, 5_000, 2_000, 1_000, 500,
 ] as const;
 
+// The confirm RPCs surface a stale-total failure as a localized message
+// (no structured code crosses the action boundary). Match the stable phrases
+// the server returns so the cashier can re-pull the order total and re-confirm
+// in place instead of hitting a dead-end toast.
+function isAmountMismatchError(message: string | undefined | null): boolean {
+  if (!message) return false;
+  return (
+    message.includes("Tổng tiền đơn đã thay đổi") ||
+    message.includes("Số tiền không khớp")
+  );
+}
+
 function greedyNoteCount(amount: number): number {
   let count = 0;
   let rest = Math.round(amount);
@@ -861,29 +873,42 @@ export function BillReceipt({
         );
         if (!result.success) {
           toast.error(result.error ?? "Không thể xác nhận thanh toán");
+          // Stale total: re-pull the order so the cashier sees the new
+          // amount and can re-confirm in one tap. Keep the sheet open.
+          if (isAmountMismatchError(result.error)) {
+            await onOrderUpdated?.();
+          }
           return;
         }
         const change = result.data?.cash_change ?? 0;
         const inv = result.data?.invoice ?? null;
-        if (inv == null) {
-          toast.success("Đã thanh toán", {
-            description: `Tiền trả khách: ${formatVND(change)}`,
+        const printWarning = result.data?.print_warning;
+        const invFailed = inv != null && inv.status === "failed";
+        const successTitle =
+          inv == null
+            ? "Đã thanh toán"
+            : invFailed
+              ? "Đã thu tiền — HĐĐT chưa xuất được"
+              : "Đã thanh toán & xuất HĐĐT";
+        const successDescription =
+          inv == null
+            ? `Tiền trả khách: ${formatVND(change)}`
+            : invFailed
+              ? (inv.error ?? "Lưu nháp; Finance sẽ xuất lại sau.")
+              : `Số HĐ: ${inv.invoiceNumber ?? `#${inv.invoiceId}`} · Tiền trả khách: ${formatVND(change)}`;
+        // Receipt enqueue is fail-soft inside confirm_cash_payment. With a
+        // 1-slot toaster a separate print warning would evict the success
+        // toast, so fold the printer error into one warning that supersedes
+        // and stays longer; otherwise keep the plain success/warning toast.
+        if (printWarning) {
+          toast.warning(`${successTitle} — không in được hóa đơn`, {
+            description: `${successDescription} · ${printWarning} — bấm "in lại" sau khi sửa máy in.`,
+            duration: 8000,
           });
-        } else if (inv.status === "failed") {
-          toast.warning("Đã thu tiền — HĐĐT chưa xuất được", {
-            description: inv.error ?? "Lưu nháp; Finance sẽ xuất lại sau.",
-          });
+        } else if (invFailed) {
+          toast.warning(successTitle, { description: successDescription });
         } else {
-          toast.success("Đã thanh toán & xuất HĐĐT", {
-            description: `Số HĐ: ${inv.invoiceNumber ?? `#${inv.invoiceId}`} · Tiền trả khách: ${formatVND(change)}`,
-          });
-        }
-        // Receipt enqueue is fail-soft inside confirm_cash_payment — surface
-        // any printer error as a warning so cashier knows to re-print later.
-        if (result.data?.print_warning) {
-          toast.warning("Không in được hóa đơn", {
-            description: `${result.data.print_warning} — bấm "in lại" sau khi sửa máy in.`,
-          });
+          toast.success(successTitle, { description: successDescription });
         }
         await onOrderUpdated?.();
         onClose();
@@ -900,24 +925,42 @@ export function BillReceipt({
       );
       if (!result.success) {
         toast.error(result.error ?? "Không thể xác nhận thanh toán");
+        // Stale total: re-pull the order so the cashier sees the new
+        // amount and can re-confirm in one tap. Keep the sheet open.
+        if (isAmountMismatchError(result.error)) {
+          await onOrderUpdated?.();
+        }
         return;
       }
       const inv = result.data?.invoice ?? null;
-      if (inv == null) {
-        toast.success("Đã thanh toán");
-      } else if (inv.status === "failed") {
-        toast.warning("Đã thanh toán — HĐĐT chưa xuất được", {
-          description: inv.error ?? "Lưu nháp; Finance sẽ xuất lại sau.",
+      const invFailed = inv != null && inv.status === "failed";
+      const printFailed = result.data?.print.failed ?? false;
+      const successTitle =
+        inv == null
+          ? "Đã thanh toán"
+          : invFailed
+            ? "Đã thanh toán — HĐĐT chưa xuất được"
+            : "Đã thanh toán & xuất HĐĐT";
+      const successDescription =
+        inv == null
+          ? undefined
+          : invFailed
+            ? (inv.error ?? "Lưu nháp; Finance sẽ xuất lại sau.")
+            : `Số HĐ: ${inv.invoiceNumber ?? `#${inv.invoiceId}`}`;
+      // 1-slot toaster: fold the print failure into one warning that
+      // supersedes the success and stays longer instead of evicting it.
+      if (printFailed) {
+        const printError = result.data?.print.error ?? "Mở đơn để in lại.";
+        toast.warning(`${successTitle} — chưa in được hóa đơn`, {
+          description: successDescription
+            ? `${successDescription} · ${printError}`
+            : printError,
+          duration: 8000,
         });
+      } else if (invFailed) {
+        toast.warning(successTitle, { description: successDescription });
       } else {
-        toast.success("Đã thanh toán & xuất HĐĐT", {
-          description: `Số HĐ: ${inv.invoiceNumber ?? `#${inv.invoiceId}`}`,
-        });
-      }
-      if (result.data?.print.failed) {
-        toast.warning("Chưa in được hóa đơn", {
-          description: result.data.print.error ?? "Mở đơn để in lại.",
-        });
+        toast.success(successTitle, { description: successDescription });
       }
       await onOrderUpdated?.();
       onClose();
@@ -1073,10 +1116,11 @@ export function BillReceipt({
         ) : isReadOnlyOrder && order ? (
           <div className="flex flex-col gap-3">
             <BillReceiptSummary order={order} />
-            <DialogFooter>
+            <DialogFooter className="sticky bottom-0 -mx-4 -mb-4 border-t bg-popover px-4 py-3">
               <Button
                 type="button"
                 variant="outline"
+                size="touch"
                 onClick={handleReprintReceipt}
                 disabled={printPending}
               >
@@ -1087,7 +1131,7 @@ export function BillReceipt({
                 )}
                 {messages.pos.payment.reprint}
               </Button>
-              <Button type="button" onClick={onClose}>
+              <Button type="button" size="touch-lg" onClick={onClose}>
                 {ACTIONS_VI.close}
               </Button>
             </DialogFooter>
@@ -1172,6 +1216,7 @@ export function BillReceipt({
                           key={amount}
                           type="button"
                           variant="outline"
+                          size="touch"
                           onClick={() => setCashInput(String(amount))}
                           disabled={actionPending}
                         >
@@ -1297,27 +1342,45 @@ export function BillReceipt({
               )}
             </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => void handlePrintProvisional()}
-                disabled={
-                  isPending || methodPending || actionPending || printPending
-                }
-              >
-                {printPending ? (
-                  <Spinner data-icon="inline-start" />
-                ) : (
-                  <IconReceipt data-icon="inline-start" />
-                )}
-                {messages.pos.payment.printProvisional}
-              </Button>
+            <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col gap-2 border-t bg-popover px-4 py-3">
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  className="flex-1"
+                  onClick={() => void handlePrintProvisional()}
+                  disabled={
+                    isPending || methodPending || actionPending || printPending
+                  }
+                >
+                  {printPending ? (
+                    <Spinner data-icon="inline-start" />
+                  ) : (
+                    <IconReceipt data-icon="inline-start" />
+                  )}
+                  {messages.pos.payment.printProvisional}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  className="flex-1"
+                  onClick={onClose}
+                  disabled={actionPending}
+                >
+                  {ACTIONS_VI.cancel}
+                </Button>
+              </div>
+              {disabledReason ? (
+                <p className="text-sm text-muted-foreground">{disabledReason}</p>
+              ) : null}
               <Button
                 data-testid={
                   selectedMethod === "cash" ? "bill-confirm-cash" : undefined
                 }
                 type="button"
+                size="touch-lg"
                 onClick={() => void handleConfirmPaid()}
                 disabled={
                   isPending || methodPending || actionPending || !canConfirmPaid
@@ -1327,15 +1390,7 @@ export function BillReceipt({
                 {actionPending ? <Spinner data-icon="inline-start" /> : null}
                 {messages.pos.payment.paidConfirm}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={actionPending}
-              >
-                {ACTIONS_VI.cancel}
-              </Button>
-            </DialogFooter>
+            </div>
           </>
         )}
       </DialogContent>

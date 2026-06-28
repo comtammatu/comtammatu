@@ -20,7 +20,10 @@ import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { ensurePaymentProvidersRegistered } from "@lib/payment-providers-init";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { withActionPositional } from "@/_lib/with-action";
-import { createTaxInvoice } from "@/_actions/finance";
+import {
+  createTaxInvoice,
+  resolveExistingInvoiceForOrder,
+} from "@/_actions/finance";
 import { mapRpcError } from "@/_lib/rpc-error-map";
 import { posConfirmPaymentAuth, posUseAuth } from "./_lib/auth";
 import {
@@ -980,6 +983,8 @@ export interface CashPaymentResult {
   payment_id: number;
   cash_received: number;
   cash_change: number;
+  /** RPC completion status; "already_completed" marks an idempotent replay. */
+  status?: string | null;
   /** Null when receipt enqueue failed inside the RPC — payment still committed
    * (see fail-soft contract in confirm_cash_payment). UI shows print_warning
    * as a toast and offers "in lại". */
@@ -1175,6 +1180,29 @@ export async function confirmCashPaymentWithInvoice(
   const paymentResult = await confirmCashPayment(orderId, cashReceived);
   if (!paymentResult.success || !paymentResult.data) {
     return paymentResult as ActionResult<CashPaymentWithInvoiceResult>;
+  }
+
+  // Idempotent replay (flaky-Wi-Fi re-tap): payment already committed. Only
+  // short-circuit when the order already has a genuinely-issued invoice —
+  // a draft/orphan or missing row falls through to createTaxInvoice so the
+  // legally-required HĐĐT still gets issued/retried (NĐ70/2025).
+  if (paymentResult.data.status === "already_completed") {
+    const existing = await resolveExistingInvoiceForOrder(orderId);
+    if (
+      existing.success &&
+      existing.data &&
+      (existing.data.status === "issued" ||
+        existing.data.status === "submitted" ||
+        existing.data.status === "signing")
+    ) {
+      return {
+        success: true,
+        data: {
+          ...paymentResult.data,
+          invoice: mapTaxInvoiceOutcome(existing.data),
+        },
+      };
+    }
   }
 
   const parsed = invoicePayloadSchema.safeParse(
@@ -1432,6 +1460,28 @@ export async function confirmVietQrPaymentWithInvoice(
   const paymentResult = await confirmVietQrPayment(branchId, orderId, amount);
   if (!paymentResult.success || !paymentResult.data) {
     return paymentResult as ActionResult<VietQrPaymentWithInvoiceResult>;
+  }
+
+  // Idempotent replay: VietQR signals replay via `idempotent` (its result
+  // carries no `status` field). Only short-circuit on a genuinely-issued
+  // invoice; otherwise fall through to createTaxInvoice (NĐ70/2025).
+  if (paymentResult.data.idempotent === true) {
+    const existing = await resolveExistingInvoiceForOrder(orderId);
+    if (
+      existing.success &&
+      existing.data &&
+      (existing.data.status === "issued" ||
+        existing.data.status === "submitted" ||
+        existing.data.status === "signing")
+    ) {
+      return {
+        success: true,
+        data: {
+          ...paymentResult.data,
+          invoice: mapTaxInvoiceOutcome(existing.data),
+        },
+      };
+    }
   }
 
   const parsed = invoicePayloadSchema.safeParse(

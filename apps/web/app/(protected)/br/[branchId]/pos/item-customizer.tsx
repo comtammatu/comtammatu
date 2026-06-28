@@ -693,20 +693,32 @@ export function ItemCustomizer({
                   +
                 </Button>
               </div>
-              <Button
-                size="touch"
-                className="min-w-32"
-                disabled={!discountValid}
-                onClick={handleConfirm}
-              >
-                {mode === "append"
-                  ? messages.pos.customizer.addToOrder
-                  : mode === "edit"
-                    ? messages.pos.customizer.update
-                    : mode === "edit-sent"
-                      ? messages.pos.customizer.updateSent
-                      : messages.pos.customizer.addToCart}
-              </Button>
+              <div className="flex flex-col items-end gap-1">
+                {discountEnabled && !discountValid ? (
+                  <p className="text-right text-sm text-muted-foreground">
+                    {messages.pos.customizer.discountHint}
+                  </p>
+                ) : null}
+                <Button
+                  size="touch"
+                  className="min-w-32"
+                  disabled={!discountValid}
+                  title={
+                    discountEnabled && !discountValid
+                      ? messages.pos.customizer.discountHint
+                      : undefined
+                  }
+                  onClick={handleConfirm}
+                >
+                  {mode === "append"
+                    ? messages.pos.customizer.addToOrder
+                    : mode === "edit"
+                      ? messages.pos.customizer.update
+                      : mode === "edit-sent"
+                        ? messages.pos.customizer.updateSent
+                        : messages.pos.customizer.addToCart}
+                </Button>
+              </div>
             </div>
           </div>
         )}

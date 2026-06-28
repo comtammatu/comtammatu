@@ -193,6 +193,71 @@ export const ACTIVE_POS_STATUSES = [
   "served",
 ];
 
+interface OrderCardProps {
+  order: SessionOrder;
+  showDineInSequence: boolean;
+  onViewBill: (orderId: number, intent?: BillReceiptIntent) => void;
+  onViewDetail: (
+    orderId: number,
+    orderNumber: string,
+    summary?: SessionOrder,
+  ) => void;
+}
+
+const OrderCard = memo(function OrderCard({
+  order,
+  showDineInSequence,
+  onViewBill,
+  onViewDetail,
+}: OrderCardProps) {
+  return (
+    <Item
+      data-testid={`pos-order-card-${order.id}`}
+      variant="outline"
+      size="sm"
+      role="listitem"
+      className="bg-card"
+    >
+      <OrderCardSummary
+        order={order}
+        amountClassName="text-primary"
+        showDineInSequence={showDineInSequence}
+        rightMeta={
+          <>
+            {order.is_priority ? (
+              <Badge variant="warning" className="text-sm font-semibold">
+                {messages.pos.orderHistory.priority}
+              </Badge>
+            ) : null}
+            <OrderStatusBadge order={order} />
+          </>
+        }
+      />
+      <ItemFooter className="mt-1.5 justify-end border-t border-border/60 pt-2">
+        <Button
+          data-testid={`pos-order-detail-${order.id}`}
+          variant="outline"
+          size="touch"
+          className="px-3 text-sm"
+          onClick={() => onViewDetail(order.id, order.order_number, order)}
+        >
+          {messages.pos.orderHistory.handleOrder}
+        </Button>
+        <Button
+          data-testid={`pos-order-bill-${order.id}`}
+          variant="default"
+          size="touch"
+          className="px-3 text-sm"
+          onClick={() => onViewBill(order.id, "payment")}
+        >
+          <IconReceipt data-icon="inline-start" />
+          {messages.pos.orderHistory.payment}
+        </Button>
+      </ItemFooter>
+    </Item>
+  );
+});
+
 interface ActiveOrdersListProps {
   orders: SessionOrder[];
   onViewBill: (orderId: number, intent?: BillReceiptIntent) => void;
@@ -260,58 +325,16 @@ function ActiveOrdersListComponent({
         <div className="flex flex-col gap-3 px-3 pb-24 pt-2 md:p-2">
           <ItemGroup className="gap-2">
             {activeOrders.map((order) => (
-              <Item
+              <OrderCard
                 key={order.id}
-                data-testid={`pos-order-card-${order.id}`}
-                variant="outline"
-                size="sm"
-                role="listitem"
-                className="bg-card"
-              >
-                <OrderCardSummary
-                  order={order}
-                  amountClassName="text-primary"
-                  showDineInSequence={
-                    order.table_id !== null && multiOrderTableIds.has(order.table_id)
-                  }
-                  rightMeta={
-                    <>
-                      {order.is_priority ? (
-                        <Badge
-                          variant="warning"
-                          className="text-sm font-semibold"
-                        >
-                          {messages.pos.orderHistory.priority}
-                        </Badge>
-                      ) : null}
-                      <OrderStatusBadge order={order} />
-                    </>
-                  }
-                />
-                <ItemFooter className="mt-1.5 justify-end border-t border-border/60 pt-2">
-                  <Button
-                    data-testid={`pos-order-detail-${order.id}`}
-                    variant="outline"
-                    size="touch"
-                    className="px-3 text-sm"
-                    onClick={() =>
-                      onViewDetail(order.id, order.order_number, order)
-                    }
-                  >
-                    {messages.pos.orderHistory.handleOrder}
-                  </Button>
-                  <Button
-                    data-testid={`pos-order-bill-${order.id}`}
-                    variant="default"
-                    size="touch"
-                    className="px-3 text-sm"
-                    onClick={() => onViewBill(order.id, "payment")}
-                  >
-                    <IconReceipt data-icon="inline-start" />
-                    {messages.pos.orderHistory.payment}
-                  </Button>
-                </ItemFooter>
-              </Item>
+                order={order}
+                showDineInSequence={
+                  order.table_id !== null &&
+                  multiOrderTableIds.has(order.table_id)
+                }
+                onViewBill={onViewBill}
+                onViewDetail={onViewDetail}
+              />
             ))}
           </ItemGroup>
         </div>

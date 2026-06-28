@@ -60,7 +60,7 @@ function OrderListPaneComponent({
             {title}
           </p>
           <Badge
-            variant={activeOrderCount > 0 ? "warning" : "outline"}
+            variant={activeOrderCount > 0 ? "secondary" : "outline"}
             className="h-6 min-w-6 px-1.5 text-sm font-bold tabular-nums"
             aria-label={messages.pos.orderHistory.activeCountAria(
               activeOrderCount,
