@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cn } from "@comtammatu/ui";
+import { POS_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 
 interface PosLineItemCompactProps {
@@ -207,12 +208,12 @@ export function PosLineItemCompact({
         </div>
         <div className="mt-1 flex flex-col gap-1 text-muted-foreground">
           <DetailLine
-            label="Tuỳ chọn"
+            label={POS_VI.options}
             values={modifiers}
             className={optionsClassName}
           />
           <DetailLine
-            label="Ăn kèm"
+            label={POS_VI.sides}
             values={sides}
             className={optionsClassName}
           />

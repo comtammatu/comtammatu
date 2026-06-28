@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/client";
+import { POS_VI } from "@comtammatu/shared/messages";
 import {
   Printer as IconPrinter,
   PrinterX as IconPrinterOff,
@@ -135,11 +136,11 @@ export function PrinterStatusBadge({
     <Badge
       variant="outline"
       className="gap-1 text-muted-foreground"
-      title="Chưa có máy in nào kết nối cho chi nhánh này"
+      title={POS_VI.printerNoneTitle}
     >
       <IconPrinter className="size-3.5" />
-      <span className="hidden sm:inline">Máy in: chưa đăng ký</span>
-      <span className="sm:hidden">Chưa có</span>
+      <span className="hidden sm:inline">{POS_VI.printerUnregisteredLong}</span>
+      <span className="sm:hidden">{POS_VI.printerNoneShort}</span>
     </Badge>
   ) : status.isOnline ? (
     <Badge
@@ -148,8 +149,8 @@ export function PrinterStatusBadge({
       title={`Agent ${status.agentId ?? ""} — online`}
     >
       <IconPrinter className="size-3.5" />
-      <span className="hidden sm:inline">Máy in: online</span>
-      <span className="sm:hidden">Online</span>
+      <span className="hidden sm:inline">{POS_VI.printerOnlineLong}</span>
+      <span className="sm:hidden">{POS_VI.printerOnlineShort}</span>
     </Badge>
   ) : (
     <Badge
@@ -158,8 +159,8 @@ export function PrinterStatusBadge({
       title={`Agent ${status.agentId ?? ""} offline lần cuối ${status.lastSeenAt ?? ""}`}
     >
       <IconPrinterOff className="size-3.5" />
-      <span className="hidden sm:inline">Máy in: offline</span>
-      <span className="sm:hidden">Offline</span>
+      <span className="hidden sm:inline">{POS_VI.printerOfflineLong}</span>
+      <span className="sm:hidden">{POS_VI.printerOfflineShort}</span>
     </Badge>
   );
 
@@ -168,7 +169,7 @@ export function PrinterStatusBadge({
       <Link
         href={settingsHref}
         className="inline-flex hover:opacity-80"
-        title="Cấu hình máy in của chi nhánh"
+        title={POS_VI.printerConfigTitle}
       >
         {badge}
       </Link>

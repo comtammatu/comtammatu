@@ -1,5 +1,6 @@
 import { CircleAlert as IconAlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { KDS_VI } from "@comtammatu/shared/messages";
 import { loadAuthState } from "@/_lib/auth";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 import { currentUserHasPermission } from "@/_lib/permissions";
@@ -285,7 +286,7 @@ export default async function KdsPage({
         <Alert variant="destructive" className="max-w-md">
           <IconAlertCircle />
           <AlertDescription>
-            Không tải được danh sách trạm bếp. Vui lòng tải lại trang.
+            {KDS_VI.stationsLoadFailed}
           </AlertDescription>
         </Alert>
       </div>
@@ -304,7 +305,7 @@ export default async function KdsPage({
         <Alert variant="destructive" className="max-w-md">
           <IconAlertCircle />
           <AlertDescription>
-            Không tải được món chờ chế biến. Vui lòng tải lại trang.
+            {KDS_VI.queueLoadFailed}
           </AlertDescription>
         </Alert>
       </div>
@@ -363,7 +364,7 @@ export default async function KdsPage({
           <Alert variant="destructive" className="max-w-md">
             <IconAlertCircle />
             <AlertDescription>
-              Không tải được chi tiết món chờ chế biến. Vui lòng tải lại trang.
+              {KDS_VI.queueDetailLoadFailed}
             </AlertDescription>
           </Alert>
         </div>
@@ -391,7 +392,7 @@ export default async function KdsPage({
           <Alert variant="destructive" className="max-w-md">
             <IconAlertCircle />
             <AlertDescription>
-              Không tải được số phiếu bếp. Vui lòng tải lại trang.
+              {KDS_VI.ticketCountLoadFailed}
             </AlertDescription>
           </Alert>
         </div>

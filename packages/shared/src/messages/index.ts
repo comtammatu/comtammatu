@@ -29,3 +29,7 @@ export { INVENTORY_VI } from "./inventory";
 export type { InventoryKey } from "./inventory";
 export { TOAST_VI } from "./toast";
 export type { ToastKey } from "./toast";
+export { POS_VI } from "./pos";
+export type { PosKey } from "./pos";
+export { KDS_VI } from "./kds";
+export type { KdsKey } from "./kds";

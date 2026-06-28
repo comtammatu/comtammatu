@@ -22,7 +22,7 @@ import { getPosLineItemDisplayName, getPosLineItemSummary } from "../../types";
 import { PosLineItemCompact } from "../pos-line-item-compact";
 import type { OrderItemRowData } from "./order-item-row";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, POS_VI } from "@comtammatu/shared/messages";
 import { ORDER_ITEM_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 
 interface OrderItemActionsSheetProps {
@@ -114,9 +114,9 @@ export function OrderItemActionsSheet({
         className="pos-safe-bottom max-h-dvh-80 gap-0 px-0 sm:mx-auto sm:max-w-md"
       >
         <SheetHeader>
-          <SheetTitle className="text-base">Thao tác món</SheetTitle>
+          <SheetTitle className="text-base">{POS_VI.itemActionsTitle}</SheetTitle>
           <SheetDescription className="sr-only">
-            Đánh dấu đã phục vụ hoặc hủy món được chọn
+            {POS_VI.itemActionsDescription}
           </SheetDescription>
         </SheetHeader>
         {item && (
@@ -161,7 +161,7 @@ export function OrderItemActionsSheet({
               }}
             >
               <IconCheck data-icon="inline-start" />
-              Đã phục vụ
+              {POS_VI.markServed}
             </Button>
           )}
           {canEdit && (
@@ -176,7 +176,7 @@ export function OrderItemActionsSheet({
               }}
             >
               <IconPencil data-icon="inline-start" />
-              Sửa món
+              {POS_VI.editItem}
             </Button>
           )}
           {canDiscount && (
@@ -223,7 +223,7 @@ export function OrderItemActionsSheet({
               }}
             >
               <IconMinus data-icon="inline-start" />
-              Giảm số lượng
+              {POS_VI.reduceQuantity}
             </Button>
           )}
           {canVoid && (
@@ -241,7 +241,7 @@ export function OrderItemActionsSheet({
               }}
             >
               <IconX data-icon="inline-start" />
-              Hủy món
+              {POS_VI.voidItem}
             </Button>
           )}
           {!canMarkServed &&
@@ -251,7 +251,7 @@ export function OrderItemActionsSheet({
             !canDiscount &&
             !canPrioritize && (
               <p className="py-4 text-center text-sm text-muted-foreground">
-                Không có thao tác khả dụng cho món này.
+                {POS_VI.noItemActions}
               </p>
             )}
           <Button

@@ -20,7 +20,7 @@ import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { FormattedNumberInput } from "@/components/form";
 
-import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, POS_VI } from "@comtammatu/shared/messages";
 export type DiscountType = "pct" | "vnd";
 
 interface DiscountSheetProps {
@@ -67,8 +67,8 @@ export function DiscountSheet({
   onOpenChange,
   title = "Chiết khấu",
   subtotalLabel = FORM_VI.subtotal,
-  totalLabel = "Tổng mới",
-  clearLabel = "Bỏ chiết khấu",
+  totalLabel = POS_VI.newTotal,
+  clearLabel = POS_VI.clearDiscount,
   subtotal,
   serviceCharge,
   current,
@@ -163,10 +163,10 @@ export function DiscountSheet({
           >
             <TabsList className="w-full">
               <TabsTrigger value="pct" className="flex-1">
-                Theo %
+                {POS_VI.discountPctTab}
               </TabsTrigger>
               <TabsTrigger value="vnd" className="flex-1">
-                Theo VNĐ
+                {POS_VI.discountVndTab}
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -174,29 +174,29 @@ export function DiscountSheet({
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="discount-value">
-                {type === "pct" ? "Phần trăm giảm" : "Số tiền giảm (VNĐ)"}
+                {type === "pct" ? POS_VI.discountPctLabel : POS_VI.discountVndLabel}
               </FieldLabel>
               <FormattedNumberInput
                 id="discount-value"
                 maxFractionDigits={type === "pct" ? 2 : 0}
                 value={valueText}
                 onValueChange={setValueText}
-                placeholder={type === "pct" ? "Vd: 10" : "Vd: 20000"}
+                placeholder={type === "pct" ? POS_VI.discountPctPlaceholder : POS_VI.discountVndPlaceholder}
               />
               <FieldDescription>
                 {type === "pct"
-                  ? "Tối đa 100% (tự giới hạn nếu nhập quá)."
+                  ? POS_VI.discountPctMaxHint
                   : `Tối đa ${formatVND(subtotal)} (tự giới hạn nếu nhập quá).`}
               </FieldDescription>
             </Field>
 
             <Field data-invalid={!noteValid && noteTrimLen > 0}>
-              <FieldLabel htmlFor="discount-note">Ghi chú lý do</FieldLabel>
+              <FieldLabel htmlFor="discount-note">{POS_VI.discountReasonLabel}</FieldLabel>
               <Textarea
                 id="discount-note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Vd: khách quen, voucher giấy, đền khiếu nại..."
+                placeholder={POS_VI.discountReasonPlaceholder}
                 aria-invalid={!noteValid && noteTrimLen > 0}
                 rows={2}
               />
@@ -214,7 +214,7 @@ export function DiscountSheet({
             </div>
             {serviceCharge > 0 && (
               <div className="flex justify-between text-muted-foreground">
-                <span>Phụ phí</span>
+                <span>{POS_VI.serviceChargeTitle}</span>
                 <span className="tabular-nums">{formatVND(serviceCharge)}</span>
               </div>
             )}
@@ -245,11 +245,7 @@ export function DiscountSheet({
               variant="destructive"
               disabled={!canClear}
               onClick={handleClear}
-              title={
-                !noteValid
-                  ? "Nhập lý do bỏ chiết khấu (≥3 ký tự) — sẽ lưu vào nhật ký kiểm toán."
-                  : undefined
-              }
+              title={!noteValid ? POS_VI.clearDiscountReasonTitle : undefined}
               className="sm:order-first"
             >
               {clearLabel}
@@ -267,7 +263,7 @@ export function DiscountSheet({
               {ACTIONS_VI.cancel}
             </Button>
             <Button type="button" disabled={!canApply} onClick={handleApply}>
-              Áp dụng
+              {POS_VI.apply}
             </Button>
           </div>
         </SheetFooter>

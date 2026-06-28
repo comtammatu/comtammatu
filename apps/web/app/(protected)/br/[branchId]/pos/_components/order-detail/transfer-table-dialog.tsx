@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { POS_VI } from "@comtammatu/shared/messages";
 import type { BranchTable } from "../../page";
 
 interface TransferTableDialogProps {
@@ -83,10 +84,10 @@ export function TransferTableDialog({
 
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="transfer-table">Bàn chuyển đến</FieldLabel>
+            <FieldLabel htmlFor="transfer-table">{POS_VI.transferTargetLabel}</FieldLabel>
             <Select value={tableId} onValueChange={onTableIdChange}>
               <SelectTrigger id="transfer-table">
-                <SelectValue placeholder="Chọn bàn trống" />
+                <SelectValue placeholder={POS_VI.transferSelectPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
@@ -126,7 +127,7 @@ export function TransferTableDialog({
             variant="outline"
             onClick={() => handleOpenChange(false)}
           >
-            Giữ bàn hiện tại
+            {POS_VI.keepCurrentTable}
           </Button>
           <Button
             type="button"

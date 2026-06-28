@@ -8,6 +8,7 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { Kbd, KbdGroup } from "@comtammatu/ui/components/kbd";
 import { Separator } from "@comtammatu/ui/components/separator";
+import { POS_VI } from "@comtammatu/shared/messages";
 
 interface HotkeyRow {
   keys: string[];
@@ -21,29 +22,29 @@ interface HotkeyGroup {
 
 const GROUPS: HotkeyGroup[] = [
   {
-    title: "Đơn",
+    title: POS_VI.hotkeyGroupOrder,
     rows: [
-      { keys: ["⌘", "Enter"], label: "Gửi bếp (từ giỏ)" },
-      { keys: ["T"], label: "Chuyển sang mang về" },
-      { keys: ["D"], label: "Chuyển sang tại bàn" },
-      { keys: ["F2"], label: "Đổi mang về / tại bàn" },
-      { keys: ["F9"], label: "Thanh toán đơn đang mở" },
+      { keys: ["⌘", "Enter"], label: POS_VI.hotkeySubmitKitchen },
+      { keys: ["T"], label: POS_VI.hotkeyToTakeaway },
+      { keys: ["D"], label: POS_VI.hotkeyToDineIn },
+      { keys: ["F2"], label: POS_VI.hotkeyToggleServiceMode },
+      { keys: ["F9"], label: POS_VI.hotkeyPayOpenOrder },
     ],
   },
   {
-    title: "Tìm kiếm & chọn bàn",
-    rows: [{ keys: ["F4"], label: "Focus ô tìm món" }],
+    title: POS_VI.hotkeyGroupSearchTable,
+    rows: [{ keys: ["F4"], label: POS_VI.hotkeyFocusSearch }],
   },
   {
-    title: "Ca làm",
+    title: POS_VI.hotkeyGroupShift,
     rows: [
-      { keys: ["F10"], label: "Mở sheet đóng ca" },
-      { keys: ["Esc"], label: "Đóng sheet đang mở" },
+      { keys: ["F10"], label: POS_VI.hotkeyOpenCloseShift },
+      { keys: ["Esc"], label: POS_VI.hotkeyCloseSheet },
     ],
   },
   {
-    title: "Trợ giúp",
-    rows: [{ keys: ["?"], label: "Mở / đóng bảng phím tắt" }],
+    title: POS_VI.hotkeyGroupHelp,
+    rows: [{ keys: ["?"], label: POS_VI.hotkeyToggleOverlay }],
   },
 ];
 
@@ -58,7 +59,7 @@ export function HotkeyOverlay({ open, onOpenChange }: HotkeyOverlayProps) {
       <SheetContent side="bottom" className="max-h-dvh p-0">
         <div className="flex max-h-dvh flex-col overflow-hidden">
           <SheetHeader>
-            <SheetTitle>Phím tắt</SheetTitle>
+            <SheetTitle>{POS_VI.hotkeyOverlayTitle}</SheetTitle>
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-4 py-4">

@@ -11,10 +11,11 @@ import {
 } from "@comtammatu/ui/components/select";
 import { X as IconX } from "lucide-react";
 import { ORDER_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
+import { KDS_VI } from "@comtammatu/shared/messages";
 import type { FilterOption, OrderTypeFilter } from "../types";
 
 const ORDER_TYPE_OPTIONS: FilterOption<OrderTypeFilter>[] = [
-  { value: "all", label: "Tất cả" },
+  { value: "all", label: KDS_VI.filterAll },
   { value: "dine_in", label: ORDER_TYPE_LABELS_VI.dine_in },
   { value: "takeaway", label: ORDER_TYPE_LABELS_VI.takeaway },
 ];
@@ -43,9 +44,9 @@ export function FilterBar({
         >
           <SelectTrigger
             className="w-auto min-w-24 shrink-0 text-sm"
-            aria-label="Lọc theo loại đơn"
+            aria-label={KDS_VI.filterOrderTypeAria}
           >
-            <SelectValue placeholder="Loại đơn" />
+            <SelectValue placeholder={KDS_VI.filterOrderTypePlaceholder} />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>

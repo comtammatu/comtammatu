@@ -12,6 +12,7 @@ import {
 } from "@comtammatu/ui/components/field";
 import { Input } from "@comtammatu/ui/components/input";
 import { BUYER_NOT_GET_INVOICE_NAME } from "@comtammatu/shared/providers";
+import { POS_VI } from "@comtammatu/shared/messages";
 import { AppSection } from "@/components/surface";
 
 const ADVISORY_THRESHOLD_VND = 200_000;
@@ -114,7 +115,7 @@ export function InvoiceFormSection({
             className="flex flex-1 items-center gap-2 text-sm font-medium"
           >
             <IconReceipt />
-            Người mua không lấy hóa đơn
+            {POS_VI.buyerNoInvoice}
           </FieldLabel>
         </Field>
 
@@ -130,11 +131,11 @@ export function InvoiceFormSection({
           <FieldGroup className="gap-3">
             <Field data-invalid={nameMissing || undefined}>
               <FieldLabel htmlFor={nameId} className="text-xs">
-                Tên người mua / công ty{""}
+                {POS_VI.buyerNameLabel}{""}
                 {mstTrim ? (
                   <span className="text-destructive">*</span>
                 ) : (
-                  <span className="text-muted-foreground">(tùy chọn)</span>
+                  <span className="text-muted-foreground">{POS_VI.optionalHint}</span>
                 )}
               </FieldLabel>
               <Input
@@ -145,16 +146,16 @@ export function InvoiceFormSection({
                 onChange={(e) =>
                   onChange({ ...state, buyerName: e.target.value })
                 }
-                placeholder="Tên khách / công ty"
+                placeholder={POS_VI.buyerNamePlaceholder}
                 aria-invalid={nameMissing || undefined}
               />
             </Field>
 
             <Field data-invalid={mstInvalid || undefined}>
               <FieldLabel htmlFor={mstId} className="text-xs">
-                Mã số thuế{""}
+                {POS_VI.taxCodeLabel}{""}
                 <span className="text-muted-foreground">
-                  (tùy chọn, 10 hoặc 13 số)
+                  {POS_VI.taxCodeOptionalHint}
                 </span>
               </FieldLabel>
               <Input
@@ -170,15 +171,15 @@ export function InvoiceFormSection({
               />
               {mstInvalid ? (
                 <FieldError>
-                  MST phải có dạng 10 số hoặc 10-3 số (vd 0123456789-001).
+                  {POS_VI.taxCodeError}
                 </FieldError>
               ) : null}
             </Field>
 
             <Field>
               <FieldLabel htmlFor={addrId} className="text-xs">
-                Địa chỉ{""}
-                <span className="text-muted-foreground">(tùy chọn)</span>
+                {POS_VI.addressLabel}{""}
+                <span className="text-muted-foreground">{POS_VI.optionalHint}</span>
               </FieldLabel>
               <Input
                 id={addrId}

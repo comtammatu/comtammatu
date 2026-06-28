@@ -3,6 +3,7 @@ import {
   Monitor as IconDeviceDesktop,
   TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
+import { POS_VI } from "@comtammatu/shared/messages";
 import {
   fetchMenuForPos,
   fetchTablesForBranch,
@@ -62,10 +63,10 @@ export default async function PosPage({
     return (
       <PosStatusShell
         icon={<IconDeviceDesktop />}
-        title="Không mở được POS"
-        description={sessionResult.error ?? "Chưa lấy được ca làm hiện tại."}
+        title={POS_VI.shellSessionErrorTitle}
+        description={sessionResult.error ?? POS_VI.shellSessionErrorFallback}
         badge={{
-          label: "Sự cố tải ca làm",
+          label: POS_VI.shellSessionErrorBadge,
           icon: <IconAlertTriangle className="size-3.5" />,
           variant: "destructive",
         }}
@@ -83,10 +84,10 @@ export default async function PosPage({
       return (
         <PosStatusShell
           icon={<IconDeviceDesktop />}
-          title="Chưa có ca mở"
-          description="Bạn không có quyền mở ca. Liên hệ thu ngân hoặc quản lý chi nhánh để mở ca trước khi nhận đơn."
+          title={POS_VI.shellNoShiftTitle}
+          description={POS_VI.shellNoShiftDescription}
           badge={{
-            label: "Chờ mở ca",
+            label: POS_VI.shellNoShiftBadge,
             icon: <IconAlertTriangle className="size-3.5" />,
             variant: "warning",
           }}
@@ -100,12 +101,12 @@ export default async function PosPage({
       return (
         <PosStatusShell
           icon={<IconDeviceDesktop />}
-          title="Không thể tải máy POS"
+          title={POS_VI.shellTerminalsErrorTitle}
           description={
-            terminalsResult.error ?? "Chưa tải được danh sách máy POS."
+            terminalsResult.error ?? POS_VI.shellTerminalsErrorFallback
           }
           badge={{
-            label: "Lỗi tải máy POS",
+            label: POS_VI.shellTerminalsErrorBadge,
             icon: <IconAlertTriangle className="size-3.5" />,
             variant: "warning",
           }}
@@ -172,10 +173,10 @@ export default async function PosPage({
     return (
       <PosStatusShell
         icon={<IconDeviceDesktop />}
-        title="Không thể tải menu bán hàng"
-        description={menuResult.error ?? "Ca đã mở nhưng chưa tải được menu."}
+        title={POS_VI.shellMenuErrorTitle}
+        description={menuResult.error ?? POS_VI.shellMenuErrorFallback}
         badge={{
-          label: "Gián đoạn dữ liệu bán hàng",
+          label: POS_VI.shellMenuErrorBadge,
           icon: <IconAlertTriangle className="size-3.5" />,
           variant: "warning",
         }}

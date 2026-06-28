@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { formatVND } from "@comtammatu/shared/format";
-import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, POS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Field,
@@ -96,25 +96,24 @@ export function ServiceChargeSheet({
         className="data-[side=right]:w-full data-[side=right]:sm:max-w-md"
       >
         <SheetHeader>
-          <SheetTitle>Phụ phí</SheetTitle>
+          <SheetTitle>{POS_VI.serviceChargeTitle}</SheetTitle>
         </SheetHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 sm:px-4">
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="service-charge-amount">
-                Số tiền phụ phí
+                {POS_VI.serviceChargeAmountLabel}
               </FieldLabel>
               <FormattedNumberInput
                 id="service-charge-amount"
                 maxFractionDigits={0}
                 value={amountText}
                 onValueChange={setAmountText}
-                placeholder="Vd: 10000"
+                placeholder={POS_VI.serviceChargeAmountPlaceholder}
               />
               <FieldDescription>
-                Dùng cho phí ship, đóng gói hoặc phụ phí khác trước khi thanh
-                toán.
+                {POS_VI.serviceChargeHint}
               </FieldDescription>
             </Field>
 
@@ -124,7 +123,7 @@ export function ServiceChargeSheet({
                 id="service-charge-note"
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
-                placeholder="Vd: phí ship nội bộ, hộp mang về..."
+                placeholder={POS_VI.serviceChargeNotePlaceholder}
                 aria-invalid={!noteValid && noteTrimLen > 0}
                 rows={2}
               />
@@ -146,7 +145,7 @@ export function ServiceChargeSheet({
               </div>
             )}
             <div className="flex justify-between text-muted-foreground">
-              <span>Phụ phí</span>
+              <span>{POS_VI.serviceChargeTitle}</span>
               <span className="tabular-nums">{formatVND(numericAmount)}</span>
             </div>
             {discountAmount > 0 && (
@@ -158,7 +157,7 @@ export function ServiceChargeSheet({
               </div>
             )}
             <div className="mt-1 flex justify-between border-t border-border/60 pt-1 font-semibold">
-              <span>Tổng mới</span>
+              <span>{POS_VI.newTotal}</span>
               <span className="tabular-nums">{formatVND(previewTotal)}</span>
             </div>
           </div>
@@ -173,12 +172,12 @@ export function ServiceChargeSheet({
               onClick={handleClear}
               title={
                 !noteValid
-                  ? "Nhập lý do bỏ phụ phí (tối thiểu 3 ký tự)."
+                  ? POS_VI.clearServiceChargeReasonTitle
                   : undefined
               }
               className="sm:order-first"
             >
-              Bỏ phụ phí
+              {POS_VI.clearServiceCharge}
             </Button>
           ) : (
             <span className="hidden sm:block" aria-hidden />
@@ -193,7 +192,7 @@ export function ServiceChargeSheet({
               {ACTIONS_VI.cancel}
             </Button>
             <Button type="button" disabled={!canApply} onClick={handleApply}>
-              Áp dụng
+              {POS_VI.apply}
             </Button>
           </div>
         </SheetFooter>
