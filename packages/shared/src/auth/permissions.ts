@@ -132,7 +132,12 @@ export const PERMISSION_KEYS = {
 export type PermissionKey =
   (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
 
-/** Total count (static assertion — update when adding keys) */
+/**
+ * Total keys in the DB `permission_keys` catalog — intentionally NOT
+ * Object.keys(PERMISSION_KEYS).length, which is a smaller TS-mirrored subset
+ * (some keys, e.g. crm:*, live only in the DB catalog). Static assertion guarded
+ * by a string-match test; bump when a migration adds/removes a catalog key.
+ */
 export const PERMISSION_KEY_COUNT = 91;
 
 /**

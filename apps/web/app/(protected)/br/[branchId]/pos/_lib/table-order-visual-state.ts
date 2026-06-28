@@ -59,16 +59,20 @@ export function deriveTableOrderVisualStates(
 export type PosTableTileTone = "default" | "success" | "warning" | "muted";
 
 /**
- * Tile tone derives from the SAME canonical status -> variant map the
- * order-list badge uses (`getPosOrderStateVariant`), so one order renders one
- * color across the table tile and the list. `empty`/`muted` are tile-only
- * presentation states with no order workflow color.
+ * Tile tone. `ready`/`served` derive from the SAME canonical status -> variant
+ * map the order-list badge uses (`getPosOrderStateVariant`), so a served
+ * (= awaiting-payment) or ready order is one color across tile and list.
+ * `active` intentionally diverges: an occupied table stays amber as an
+ * at-a-glance table-occupancy signal (a different axis from the order-status
+ * badge, which is neutral for an in-progress order). `empty`/`muted` are
+ * tile-only presentation states.
  */
 export function getPosTableTileTone(
   state: PosTableTileVisualState,
 ): PosTableTileTone {
   switch (state) {
     case "active":
+      return "warning";
     case "ready":
     case "served":
       return getPosOrderStateVariant(state);
