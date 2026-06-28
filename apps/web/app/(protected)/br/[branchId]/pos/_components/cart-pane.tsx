@@ -436,13 +436,19 @@ function CartPaneComponent({
                 htmlFor="pos-order-note"
                 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground"
               >
-                {messages.pos.pendingDraft.noteLabel}
+                {cart.orderType === "takeaway"
+                  ? messages.pos.pendingDraft.takeawayNoteLabel
+                  : messages.pos.pendingDraft.noteLabel}
               </label>
               <Textarea
                 id="pos-order-note"
                 value={cart.note}
                 onChange={(e) => cart.setNote(e.target.value)}
-                placeholder={messages.pos.pendingDraft.notePlaceholder}
+                placeholder={
+                  cart.orderType === "takeaway"
+                    ? messages.pos.pendingDraft.takeawayNotePlaceholder
+                    : messages.pos.pendingDraft.notePlaceholder
+                }
                 maxLength={500}
                 rows={1}
                 className="resize-none text-base"
@@ -452,7 +458,9 @@ function CartPaneComponent({
                 id="pos-order-note-hint"
                 className="hidden text-xs leading-5 text-muted-foreground sm:block"
               >
-                {messages.pos.pendingDraft.noteHint}
+                {cart.orderType === "takeaway"
+                  ? messages.pos.pendingDraft.takeawayNoteHint
+                  : messages.pos.pendingDraft.noteHint}
               </p>
             </div>
 

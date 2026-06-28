@@ -62,6 +62,7 @@ function TakeawayOrderTile({
 }) {
   const statusInfo = getPosOrderStatusInfo(order);
   const displayNumber = formatTakeawayTileNumber(order.order_number);
+  const customerName = order.note?.trim() ? order.note.trim() : null;
 
   return (
     <OperationalTile
@@ -69,11 +70,19 @@ function TakeawayOrderTile({
       tone={getTakeawayTileTone(order)}
       size="tile"
       data-testid={`pos-takeaway-order-tile-${order.id}`}
-      aria-label={messages.pos.takeawayGate.orderAria(
-        displayNumber,
-        statusInfo.label,
-        formatVND(order.total_amount),
-      )}
+      aria-label={
+        customerName
+          ? `${messages.pos.takeawayGate.orderAria(
+              displayNumber,
+              statusInfo.label,
+              formatVND(order.total_amount),
+            )}, ${messages.pos.takeawayGate.customerName(customerName)}`
+          : messages.pos.takeawayGate.orderAria(
+              displayNumber,
+              statusInfo.label,
+              formatVND(order.total_amount),
+            )
+      }
       className="w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-sm sm:gap-3 lg:p-4"
       onClick={() => onViewDetail(order.id, order.order_number, order)}
     >
@@ -94,6 +103,11 @@ function TakeawayOrderTile({
           <p className="text-2xl font-semibold leading-none tabular-nums">
             {displayNumber}
           </p>
+          {customerName ? (
+            <p className="mt-1 truncate text-sm font-medium text-foreground">
+              {customerName}
+            </p>
+          ) : null}
           <p className="mt-1 text-xs text-muted-foreground tabular-nums">
             {formatVNTime(order.created_at)}
           </p>

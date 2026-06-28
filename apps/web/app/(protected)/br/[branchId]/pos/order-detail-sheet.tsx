@@ -308,6 +308,12 @@ export interface OrderDetailSheetProps {
    * in the transfer-table dropdown so the cashier sees that the target
    * bàn already has guests before confirming a multi-order ghép. */
   orderCountByTable?: Map<number, number>;
+  /**
+   * Tenant `pos_split_merge_enabled` flag. When false, the split/merge
+   * entries hide so the cashier never taps an action the RPC would reject
+   * with `split_merge_disabled`. Defaults to true when omitted.
+   */
+  canSplitMerge?: boolean;
   onOrderUpdated?: () => void | Promise<void>;
   /**
    * Start a SECOND order on this order's table. Replaces the picker's
@@ -332,6 +338,7 @@ export function OrderDetailSheet({
   onReorderToCart,
   tables,
   orderCountByTable,
+  canSplitMerge = true,
   onOrderUpdated,
   onCreateOrderOnTable,
 }: OrderDetailSheetProps) {
@@ -1071,12 +1078,14 @@ export function OrderDetailSheet({
   const canShowDiscount = canMutateUnpaidOrder;
   const canShowServiceCharge = canMutateUnpaidOrder;
   const canShowSplit =
+    canSplitMerge &&
     canMutateUnpaidOrder &&
     data?.order_type === "dine_in" &&
     activeUnitCount >= 2;
   const tableSiblingCount =
     data?.table_id != null ? (orderCountByTable?.get(data.table_id) ?? 0) : 0;
   const canShowMerge =
+    canSplitMerge &&
     canMutateUnpaidOrder &&
     data?.order_type === "dine_in" &&
     data?.table_id != null &&
