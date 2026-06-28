@@ -528,6 +528,14 @@ GIỮ NGUYÊN cho mọi correction khác; chỉ mở đúng nhánh full-void-aft
    (`issued_at < date_trunc('month', now())` → `cross_period_invoice`); **kế toán
    phải xác nhận đúng mốc kê khai**, hard-block period-close thật là việc defer
    riêng.
+
+   **[Kế toán xác nhận 2026-06-29]** Má Tư khai HĐĐT **theo QUÝ**; chốt **GIỮ proxy
+   theo tháng dương lịch (ICT)**. Mốc-tháng bảo thủ hơn mức quý yêu cầu (chặn cả
+   hoá đơn cùng-quý-tháng-trước dù quý chưa kê khai xong) — chấp nhận được vì
+   **không bao giờ để lọt** hoá đơn đã kê khai (hoá đơn trong-tháng-hiện-tại luôn
+   thuộc quý chưa kê khai), phần "chặn dư" chỉ thêm việc route sang kế toán, không
+   sai thuế. → **KHÔNG đổi code**, mốc cross-period hiện tại đúng. Căn cứ huỷ HĐĐT
+   issued: biên bản huỷ theo NĐ 123/2020 (sửa NĐ 70/2025) + TT 32/2025.
 4. **HĐĐT actor (Q4):** `branch_manager` ĐƯỢC huỷ HĐĐT issued dưới cổng
    `pos:void_paid_order` — RPC **inline flip** `tax_invoices.status='cancelled'` +
    ghi `tax_invoice_events`, KHÔNG gọi `transition_tax_invoice_state` (vốn đòi
