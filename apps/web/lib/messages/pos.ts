@@ -61,6 +61,9 @@ export const pos = {
     noteLabel: "Ghi chú đơn",
     notePlaceholder: "Ví dụ: ít đường, không hành...",
     noteHint: "Tối đa 500 ký tự.",
+    takeawayNoteLabel: "Tên khách (tùy chọn)",
+    takeawayNotePlaceholder: "Ví dụ: Chị Lan, anh áo xanh...",
+    takeawayNoteHint: "Hiện trên thẻ đơn để gọi đúng khách. Không bắt buộc.",
     subtotal: "Tổng tạm tính",
     submitKitchen: (quantity: number) => `Gửi bếp (${quantity})`,
     priority: "Ưu tiên",
@@ -202,6 +205,7 @@ export const pos = {
     orderLabel: "Đơn",
     orderAria: (orderNumber: string, status: string, total: string) =>
       `Đơn mang về ${orderNumber}, ${status}, ${total}`,
+    customerName: (name: string) => `Khách: ${name}`,
     priority: "Ưu tiên",
   },
   sessionGate: {

@@ -212,6 +212,7 @@ export function PosDesktopInner({
   canCloseShift,
   canConfirmCash,
   canManageMenuLimits,
+  canSplitMerge,
   initialPaymentMethods,
   initialVietQrConfig,
   initialOpenOrderId,
@@ -220,6 +221,7 @@ export function PosDesktopInner({
   canCloseShift: boolean;
   canConfirmCash: boolean;
   canManageMenuLimits: boolean;
+  canSplitMerge: boolean;
   initialPaymentMethods: readonly PaymentMethod[];
   initialVietQrConfig: VietQrConfig | null;
   initialOpenOrderId?: number;
@@ -2019,6 +2021,7 @@ export function PosDesktopInner({
         }}
         tables={tables}
         orderCountByTable={orderCountByTable}
+        canSplitMerge={canSplitMerge}
         onOrderUpdated={() => void refreshOperational()}
       />
 

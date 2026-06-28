@@ -4,6 +4,7 @@ import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database";
+import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   getAuthContext,
@@ -238,6 +239,9 @@ export async function fetchActiveSession(
  * - `canCloseShift` (`pos:close_shift`): gates the close-shift button.
  * - `canConfirmCash` (`pos:confirm_payment`): gates the cash method on the
  *   bill — cash touches the physical drawer; e-wallets stay available.
+ * - `canSplitMerge` (tenant `pos_split_merge_enabled` setting): hides the
+ *   split/merge entries when the feature is off, mirroring the split/merge RPC
+ *   gate so the cashier never taps into a server reject.
  * Defense in depth: server-side RPCs still reject any UI bypass.
  */
 export async function fetchPosPermissionFlags(branchId: number): Promise<{
@@ -245,12 +249,14 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
   canCloseShift: boolean;
   canConfirmCash: boolean;
   canManageMenuLimits: boolean;
+  canSplitMerge: boolean;
 }> {
   const deny = {
     canOpenShift: false,
     canCloseShift: false,
     canConfirmCash: false,
     canManageMenuLimits: false,
+    canSplitMerge: false,
   };
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) return deny;
@@ -259,7 +265,7 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
   if (!ctx) return deny;
   if (ctx.claims.branch_id !== parsedBranchId.data) return deny;
 
-  const [openRes, closeRes, cashRes] = await Promise.all([
+  const [openRes, closeRes, cashRes, splitMergeRes] = await Promise.all([
     ctx.supabase.rpc("has_permission", {
       p_branch_id: parsedBranchId.data,
       p_key: PERMISSION_KEYS.POS_OPEN_CASHBOX,
@@ -272,6 +278,12 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
       p_branch_id: parsedBranchId.data,
       p_key: PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
     }),
+    ctx.supabase
+      .from("system_settings")
+      .select("value")
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("key", SYSTEM_SETTING_KEYS.POS_SPLIT_MERGE_ENABLED)
+      .maybeSingle(),
   ]);
 
   return {
@@ -279,6 +291,9 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
     canCloseShift: !closeRes.error && closeRes.data === true,
     canConfirmCash: !cashRes.error && cashRes.data === true,
     canManageMenuLimits: MENU_LIMIT_ROLES.includes(ctx.claims.user_role),
+    // Default ON when no row exists, matching the RPC's COALESCE(...,'true').
+    canSplitMerge:
+      splitMergeRes.error != null || splitMergeRes.data?.value !== "false",
   };
 }
 
