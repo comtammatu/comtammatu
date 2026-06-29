@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       accounting_periods: {
@@ -1764,6 +1789,7 @@ export type Database = {
           baseline_source: string | null
           baseline_variance_pct: number | null
           batch_number: string | null
+          entry_unit_id: number | null
           expiry_date: string | null
           grn_id: number
           id: number
@@ -1793,6 +1819,7 @@ export type Database = {
           baseline_source?: string | null
           baseline_variance_pct?: number | null
           batch_number?: string | null
+          entry_unit_id?: number | null
           expiry_date?: string | null
           grn_id: number
           id?: never
@@ -1822,6 +1849,7 @@ export type Database = {
           baseline_source?: string | null
           baseline_variance_pct?: number | null
           batch_number?: string | null
+          entry_unit_id?: number | null
           expiry_date?: string | null
           grn_id?: number
           id?: never
@@ -1847,6 +1875,13 @@ export type Database = {
           variance_tier?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "grn_items_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "grn_items_grn_id_fkey"
             columns: ["grn_id"]
@@ -4286,6 +4321,69 @@ export type Database = {
           },
         ]
       }
+      position_shift_tasks: {
+        Row: {
+          applicability: string
+          created_at: string
+          done_definition: string
+          id: number
+          is_active: boolean
+          is_required: boolean
+          kind: string
+          phase: string
+          position_id: number
+          sort_order: number
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          applicability?: string
+          created_at?: string
+          done_definition?: string
+          id?: never
+          is_active?: boolean
+          is_required?: boolean
+          kind?: string
+          phase?: string
+          position_id: number
+          sort_order: number
+          tenant_id: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          applicability?: string
+          created_at?: string
+          done_definition?: string
+          id?: never
+          is_active?: boolean
+          is_required?: boolean
+          kind?: string
+          phase?: string
+          position_id?: number
+          sort_order?: number
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "position_shift_tasks_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "position_shift_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       positions: {
         Row: {
           code: string
@@ -5097,6 +5195,7 @@ export type Database = {
       }
       purchase_order_items: {
         Row: {
+          entry_unit_id: number | null
           id: number
           ingredient_id: number
           line_total: number | null
@@ -5107,6 +5206,7 @@ export type Database = {
           unit_price_est: number | null
         }
         Insert: {
+          entry_unit_id?: number | null
           id?: never
           ingredient_id: number
           line_total?: number | null
@@ -5117,6 +5217,7 @@ export type Database = {
           unit_price_est?: number | null
         }
         Update: {
+          entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
           line_total?: number | null
@@ -5127,6 +5228,13 @@ export type Database = {
           unit_price_est?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchase_order_items_ingredient_id_fkey"
             columns: ["ingredient_id"]
@@ -5515,6 +5623,7 @@ export type Database = {
           ingredient_id: number
           is_active: boolean
           note: string | null
+          position_task_id: number | null
           sort_order: number
           template_item_id: number
           tenant_id: number
@@ -5526,6 +5635,7 @@ export type Database = {
           ingredient_id: number
           is_active?: boolean
           note?: string | null
+          position_task_id?: number | null
           sort_order?: number
           template_item_id: number
           tenant_id: number
@@ -5537,6 +5647,7 @@ export type Database = {
           ingredient_id?: number
           is_active?: boolean
           note?: string | null
+          position_task_id?: number | null
           sort_order?: number
           template_item_id?: number
           tenant_id?: number
@@ -5548,6 +5659,13 @@ export type Database = {
             columns: ["ingredient_id"]
             isOneToOne: false
             referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_checklist_consumption_default_items_position_task_id_fkey"
+            columns: ["position_task_id"]
+            isOneToOne: false
+            referencedRelation: "position_shift_tasks"
             referencedColumns: ["id"]
           },
           {
@@ -5688,6 +5806,8 @@ export type Database = {
           end_time: string
           id: number
           is_active: boolean
+          is_closing: boolean
+          is_opening: boolean
           name: string
           start_time: string
           tenant_id: number
@@ -5699,6 +5819,8 @@ export type Database = {
           end_time: string
           id?: never
           is_active?: boolean
+          is_closing?: boolean
+          is_opening?: boolean
           name: string
           start_time: string
           tenant_id: number
@@ -5710,6 +5832,8 @@ export type Database = {
           end_time?: string
           id?: never
           is_active?: boolean
+          is_closing?: boolean
+          is_opening?: boolean
           name?: string
           start_time?: string
           tenant_id?: number
@@ -6072,6 +6196,8 @@ export type Database = {
           branch_id: number
           created_at: string
           created_by: string
+          entry_quantity: number | null
+          entry_unit_id: number | null
           grn_id: number | null
           id: number
           ingredient_id: number
@@ -6091,6 +6217,8 @@ export type Database = {
           branch_id: number
           created_at?: string
           created_by: string
+          entry_quantity?: number | null
+          entry_unit_id?: number | null
           grn_id?: number | null
           id?: never
           ingredient_id: number
@@ -6110,6 +6238,8 @@ export type Database = {
           branch_id?: number
           created_at?: string
           created_by?: string
+          entry_quantity?: number | null
+          entry_unit_id?: number | null
           grn_id?: number | null
           id?: never
           ingredient_id?: number
@@ -6145,6 +6275,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
           {
@@ -9354,6 +9491,10 @@ export type Database = {
         }
         Returns: string
       }
+      inv_to_base: {
+        Args: { p_ingredient_id: number; p_qty: number; p_unit_id: number }
+        Returns: number
+      }
       inventory_requires_manual_review: {
         Args: { p_ingredient_id: number }
         Returns: boolean
@@ -9997,6 +10138,10 @@ export type Database = {
         Args: { p_entries: Json; p_period_id: number }
         Returns: Json
       }
+      upsert_position_shift_tasks: {
+        Args: { p_position_id: number; p_tasks: Json }
+        Returns: number
+      }
       upsert_printer_with_routes: {
         Args: {
           p_branch_id?: number
@@ -10180,8 +10325,10 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
 } as const
-
