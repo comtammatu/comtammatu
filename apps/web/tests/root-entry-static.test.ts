@@ -6,11 +6,11 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("root route delegates to the shared role default instead of rendering another hub", () => {
+test("root route delegates to Branch Hub instead of rendering another hub", () => {
   const rootPage = read("apps/web/app/page.tsx");
 
-  assert.match(rootPage, /getDefaultRedirect/);
-  assert.match(rootPage, /redirect\(getDefaultRedirect\(claims\)\)/);
+  assert.match(rootPage, /resolvePostLoginRedirect/);
+  assert.match(rootPage, /resolveBranchHubContextFromHeaders/);
   assert.doesNotMatch(rootPage, /resolveDiscoveredAppGroups/);
   assert.doesNotMatch(rootPage, /AppLinkCard/);
   assert.doesNotMatch(rootPage, /messages\.appEntry/);

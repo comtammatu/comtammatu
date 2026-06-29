@@ -18,11 +18,13 @@ export type ModuleKey =
   | "hr_payroll"
   | "finance"
   | "branches"
+  | "branch_picker"
   | "reports"
   | "settings"
   | "pos"
   | "kds"
   | "runner"
+  | "operator_home"
   | "branch_dashboard"
   | "branch_settings"
   | "branch_menu_limits"
@@ -111,6 +113,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     allowedRoles: ["owner"],
     label: getModuleLabelVi("branches"),
   },
+  branch_picker: {
+    path: "/br",
+    allowedRoles: ["owner"],
+    label: getModuleLabelVi("branch_picker"),
+  },
   reports: {
     path: "/admin/reports",
     allowedRoles: ["owner"],
@@ -135,6 +142,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/br/*/runner",
     allowedRoles: ["owner", "cashier", "chef", "branch_manager"],
     label: getModuleLabelVi("runner"),
+  },
+  operator_home: {
+    path: "/br/*",
+    allowedRoles: ["owner", "branch_manager", "cashier", "chef"],
+    label: getModuleLabelVi("operator_home"),
   },
   branch_dashboard: {
     path: "/br/*/dashboard",

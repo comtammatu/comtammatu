@@ -23,6 +23,8 @@ export {
 } from "./types";
 export type { ModuleKey } from "./module-acl";
 export { MODULE_ACL, canAccess } from "./module-acl";
+export type { BranchHubContext, StationKind } from "./branch-hub";
+export { resolveBranchHubDestination } from "./branch-hub";
 export type { PermissionKey } from "./permissions";
 export {
   PERMISSION_KEYS,
@@ -53,13 +55,23 @@ export type {
   BranchScopedNavItemConfig,
   BranchManagementNavItemConfig,
   BranchOperationNavItemConfig,
+  OperatorTileConfig,
+  OperatorTileGroupId,
 } from "./nav-config";
 export {
   ADMIN_NAV_GROUPS,
   BRANCH_MANAGEMENT_ITEMS,
   DOMAIN_WORKSPACE_ITEMS,
   BRANCH_OPERATION_ITEMS,
+  OPERATOR_TILE_GROUP_ORDER,
+  OPERATOR_TILE_GROUP_TITLES,
+  OPERATOR_TILE_ITEMS,
 } from "./nav-config";
+export type {
+  ResolvedOperatorTile,
+  ResolvedOperatorTileGroup,
+} from "./operator-capabilities";
+export { resolveOperatorTiles } from "./operator-capabilities";
 export type {
   QuickLaunchGroup,
   ResolvedNavGroup,

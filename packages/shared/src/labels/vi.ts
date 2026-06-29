@@ -12,11 +12,13 @@ export type ModuleLabelKey =
   | "hr_payroll"
   | "finance"
   | "branches"
+  | "branch_picker"
   | "reports"
   | "settings"
   | "pos"
   | "kds"
   | "runner"
+  | "operator_home"
   | "branch_dashboard"
   | "branch_settings"
   | "branch_menu_limits"
@@ -40,11 +42,13 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   hr_payroll: "Lương",
   finance: "Tài chính",
   branches: "Chi nhánh",
+  branch_picker: "Chọn chi nhánh",
   reports: "Báo cáo",
   settings: "Cài đặt",
   pos: "POS",
   kds: "KDS",
   runner: "Màn gọi số",
+  operator_home: "Vận hành chi nhánh",
   branch_dashboard: "Điều hành chi nhánh",
   branch_settings: "Cài đặt chi nhánh",
   branch_menu_limits: "Hạn mức bán hàng ngày",
@@ -77,6 +81,9 @@ export const APP_COPY_VI = {
   branchOperationsKds: "Bếp (KDS)",
   branchOperationsRunner: "Màn gọi số",
   branchCommand: "Điều hành chi nhánh",
+  operatorHome: "Trang chủ",
+  operatorShift: "Ca",
+  operatorAriaLabel: "Điều hướng vận hành chi nhánh",
   loading: "Đang tải…",
   refresh: "Làm mới",
   noAreaData: "Không có dữ liệu khu vực",

@@ -473,6 +473,6 @@ git commit -m "chore(operator): foundation #1 gate green"
 ## Self-Review (đã chạy)
 
 - **Spec coverage:** 3 deliverable của blueprint #1 (branch-context · capability registry · Branch Hub) = Task 1/2/3. ✓
-- **Placeholder scan:** không có placeholder chưa quyết; mọi step có code/lệnh thật. ✓
+- **Placeholder scan:** không có placeholder/"handle edge cases"; mọi step có code/lệnh thật. ✓
 - **Type consistency:** `OperatorBranchOption`/`BranchScopeSelection`/`BranchContext` (Task 1), `Resolved*Tile*` (Task 2), `BranchHubContext`/`StationKind` (Task 3) định nghĩa 1 lần, dùng nhất quán; `JwtClaims`/`StaffRole`/`MODULE_ACL`/`canAccess`/`getDefaultRedirect`/`isAdminRole` khớp chữ ký đã verify trong code. ✓
 - **Additive:** không sửa proxy/redirect/layout; barrel export hoãn → không đổi hành vi. ✓

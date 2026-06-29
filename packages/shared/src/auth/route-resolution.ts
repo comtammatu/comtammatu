@@ -136,6 +136,10 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (pathname.startsWith("/hr/staff")) return "staff";
   if (pathname.startsWith("/hr/payroll")) return "hr_payroll";
   if (pathname.startsWith("/hr")) return "hr";
+  if (pathname === "/br" || pathname === "/br/") return "branch_picker";
+  if (/^\/br\/\d+\/?$/.test(pathname)) return "operator_home";
+  if (/^\/br\/\d+\/shift/.test(pathname)) return "employee";
+  if (/^\/br\/\d+\/stock/.test(pathname)) return "inventory";
   if (/^\/br\/\d+\/dashboard/.test(pathname)) return "branch_dashboard";
   // menu-limits lives UNDER /settings — check it BEFORE branch_settings so the
   // broader /settings prefix does not swallow the menu-limits sub-route.
