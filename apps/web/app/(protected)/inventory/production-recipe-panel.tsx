@@ -512,7 +512,7 @@ export function ProductionRecipePanel({
   ];
 
   return (
-    <section id="production-recipes" className="flex flex-col gap-3">
+    <section className="flex flex-col gap-3">
       <AppSection
         title="Công thức sản xuất"
         icon={<IconClipboardList />}

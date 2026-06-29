@@ -41,6 +41,7 @@ interface ProductionStatsProps {
   recipeLineCount: number;
   canManageCatalog: boolean;
   canManageRecipes: boolean;
+  onOpenRecipes: () => void;
 }
 
 export function ProductionStats({
@@ -54,6 +55,7 @@ export function ProductionStats({
   recipeLineCount,
   canManageCatalog,
   canManageRecipes,
+  onOpenRecipes,
 }: ProductionStatsProps) {
   const router = useRouter();
   const [quickFinishedGoodDialogOpen, setQuickFinishedGoodDialogOpen] =
@@ -211,8 +213,13 @@ export function ProductionStats({
               </Button>
             ) : null}
             {readinessState === "missing-recipe" && canManageRecipes ? (
-              <Button type="button" size="sm" variant="outline" asChild>
-                <Link href="#production-recipes">Mở BOM sản xuất</Link>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onOpenRecipes}
+              >
+                Mở BOM sản xuất
               </Button>
             ) : readinessState !== "missing-recipe" && canManageCatalog ? (
               <Button type="button" size="sm" variant="outline" asChild>
