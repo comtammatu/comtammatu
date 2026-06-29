@@ -2,6 +2,7 @@ import { getEmployeeContext } from "./employee-context";
 import { resolveDefaultShiftId } from "./default-shift";
 import { getTodayVN } from "./vn-business-date";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { messages } from "@lib/messages";
 
 export type TodayWorkStatus =
   | "missing_profile"
@@ -12,14 +13,18 @@ export type TodayWorkStatus =
   | "checkout_pending"
   | "done";
 
-export type TodayChecklistTaskKind = "standard" | "consumption_report";
+export type TodayChecklistTaskKind =
+  | "standard"
+  | "consumption_report"
+  | "inventory_count";
+export type TodayChecklistPhase = "start_of_shift" | "end_of_shift";
 
 export interface TodayChecklistItem {
   id: number;
   templateItemId: number | null;
   title: string;
   taskKind: TodayChecklistTaskKind;
-  phase: "start_of_shift" | "during_shift" | "end_of_shift";
+  phase: TodayChecklistPhase;
   doneDefinition: string;
   isRequired: boolean;
   sortOrder: number;
@@ -123,7 +128,21 @@ function normalizeShift(shift: unknown): {
 }
 
 function normalizeTaskKind(value: unknown): TodayChecklistTaskKind {
-  return value === "consumption_report" ? "consumption_report" : "standard";
+  if (value === "consumption_report" || value === "inventory_count") {
+    return value;
+  }
+  return "standard";
+}
+
+function normalizeChecklistPhase(value: unknown): TodayChecklistPhase {
+  return value === "start_of_shift" ? "start_of_shift" : "end_of_shift";
+}
+
+export function groupChecklistByPhase(items: readonly TodayChecklistItem[]) {
+  return {
+    start_of_shift: items.filter((item) => item.phase === "start_of_shift"),
+    end_of_shift: items.filter((item) => item.phase === "end_of_shift"),
+  } satisfies Record<TodayChecklistPhase, TodayChecklistItem[]>;
 }
 
 export async function getTodayWorkState(): Promise<TodayWorkState> {
@@ -246,23 +265,79 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
         .order("sort_order")
     : { data: null };
 
-  const checklistItems: TodayChecklistItem[] = (checklistRows ?? []).map(
-    (item) => ({
+  let checklistItems: TodayChecklistItem[] = (checklistRows ?? []).map((item) => {
+    const taskKind = normalizeTaskKind(
+      (item as { task_kind?: unknown }).task_kind,
+    );
+    return {
       id: item.id,
       templateItemId: item.template_item_id ?? null,
       title: item.title,
-      taskKind: normalizeTaskKind((item as { task_kind?: unknown }).task_kind),
-      phase:
-        item.phase === "start_of_shift" || item.phase === "end_of_shift"
-          ? item.phase
-          : "during_shift",
+      taskKind,
+      phase: normalizeChecklistPhase(item.phase),
       doneDefinition: item.done_definition,
-      isRequired: item.is_required,
+      isRequired: taskKind === "inventory_count" ? false : item.is_required,
       sortOrder: item.sort_order,
       done: item.is_done,
       completedAt: item.completed_at,
-    }),
-  );
+    };
+  });
+
+  const countBranchId = attendance?.branchId ?? ctx.branchId;
+  if (attendance && countBranchId !== null) {
+    const { data: countAssignments } = await supabase
+      .from("inventory_count_assignments")
+      .select("location_id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("employee_id", employeeId)
+      .eq("branch_id", countBranchId)
+      .eq("is_active", true);
+    const countLocationIds = [
+      ...new Set((countAssignments ?? []).map((row) => row.location_id)),
+    ];
+
+    if (countLocationIds.length > 0) {
+      const { data: countSlips } = await supabase
+        .from("inventory_count_slips")
+        .select("location_id, status")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("employee_id", employeeId)
+        .eq("branch_id", countBranchId)
+        .eq("count_date", today)
+        .in("location_id", countLocationIds);
+      const doneCountLocationIds = new Set(
+        (countSlips ?? [])
+          .filter(
+            (row) => row.status === "submitted" || row.status === "approved",
+          )
+          .map((row) => row.location_id),
+      );
+      const countTaskDone = countLocationIds.every((locationId) =>
+        doneCountLocationIds.has(locationId),
+      );
+
+      checklistItems = checklistItems.map((item) =>
+        item.taskKind === "inventory_count"
+          ? { ...item, done: countTaskDone }
+          : item,
+      );
+
+      if (!checklistItems.some((item) => item.taskKind === "inventory_count")) {
+        checklistItems.push({
+          id: -1,
+          templateItemId: null,
+          title: messages.employee.home.countTitle,
+          taskKind: "inventory_count",
+          phase: "end_of_shift",
+          doneDefinition: messages.employee.home.countDescription,
+          isRequired: false,
+          sortOrder: Number.MAX_SAFE_INTEGER,
+          done: countTaskDone,
+          completedAt: null,
+        });
+      }
+    }
+  }
 
   const done = checklistItems.filter((item) => item.done).length;
   const total = checklistItems.length;

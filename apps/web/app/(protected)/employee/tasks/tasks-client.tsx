@@ -3,9 +3,11 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: employee consumption report form keeps operational copy close to the workflow controls */
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CircleSlash as IconNoConsumption,
+  ClipboardList as IconCount,
   Plus as IconPlus,
   Send as IconSend,
   Trash2 as IconTrash,
@@ -45,11 +47,8 @@ import type { TodayChecklistItem } from "../_lib/today-work-state";
 import { toggleChecklistItem } from "../clock/actions";
 
 const taskCopy = messages.employee.tasks;
-const CHECKLIST_PHASES = [
-  "start_of_shift",
-  "during_shift",
-  "end_of_shift",
-] as const;
+const homeCopy = messages.employee.home;
+const CHECKLIST_PHASES = ["start_of_shift", "end_of_shift"] as const;
 
 interface TasksClientProps {
   items: TodayChecklistItem[];
@@ -200,6 +199,7 @@ export function TasksClient({
             <ItemGroup className="gap-2">
               {sortedPhaseItems.map((item) => {
                 const checkboxId = `shift-task-${item.id}`;
+                const isCountTask = item.taskKind === "inventory_count";
                 return (
                   <Item
                     key={item.id}
@@ -219,12 +219,16 @@ export function TasksClient({
                           item.done && "text-muted-foreground",
                         )}
                       >
-                        <label
-                          className="w-full cursor-pointer"
-                          htmlFor={checkboxId}
-                        >
-                          {item.title}
-                        </label>
+                        {isCountTask ? (
+                          <span>{item.title}</span>
+                        ) : (
+                          <label
+                            className="w-full cursor-pointer"
+                            htmlFor={checkboxId}
+                          >
+                            {item.title}
+                          </label>
+                        )}
                       </ItemTitle>
                       {item.doneDefinition ? (
                         <ItemDescription className="line-clamp-none text-xs leading-5">
@@ -239,17 +243,30 @@ export function TasksClient({
                       <Badge variant={item.done ? "success" : "secondary"}>
                         {item.done ? taskCopy.done : taskCopy.todo}
                       </Badge>
-                      <Checkbox
-                        id={checkboxId}
-                        checked={item.done}
-                        disabled={disabled || isPending}
-                        onCheckedChange={(checked) => {
-                          handleToggle(item.id, checked === true);
-                        }}
-                        aria-label={
-                          item.done ? taskCopy.markTodo : taskCopy.markDone
-                        }
-                      />
+                      {isCountTask ? (
+                        <Button
+                          asChild
+                          size="sm"
+                          variant={item.done ? "outline" : "default"}
+                        >
+                          <Link href="/employee/count">
+                            <IconCount data-icon="inline-start" />
+                            {homeCopy.countCta}
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Checkbox
+                          id={checkboxId}
+                          checked={item.done}
+                          disabled={disabled || isPending}
+                          onCheckedChange={(checked) => {
+                            handleToggle(item.id, checked === true);
+                          }}
+                          aria-label={
+                            item.done ? taskCopy.markTodo : taskCopy.markDone
+                          }
+                        />
+                      )}
                     </ItemActions>
                   </Item>
                 );
