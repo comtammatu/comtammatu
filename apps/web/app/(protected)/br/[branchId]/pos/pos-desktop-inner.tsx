@@ -84,14 +84,10 @@ const ArchivedOrdersSheet = dynamic(
     })),
   { ssr: false },
 );
-import {
-  fetchActiveOrderForTable,
-  editPendingOrderItem,
-  reserveDailyLimitHolds,
-  releaseDailyLimitHolds,
-} from "./actions";
+import { fetchActiveOrderForTable, editPendingOrderItem } from "./actions";
 import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
 import { usePosAppend } from "./_hooks/use-pos-append";
+import { useDailyLimitHolds } from "./_hooks/use-daily-limit-holds";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
@@ -143,17 +139,10 @@ import {
 } from "./_utils/ingredient-cap-draft";
 import { messages } from "@lib/messages";
 
-type DailyLimitHoldSource = "pos_cart" | "pos_append";
-
 type OrderTarget =
   | { kind: "new-dine-in"; label: string }
   | { kind: "new-takeaway"; label: string }
   | { kind: "existing-order"; label: string };
-
-interface DailyLimitHoldSyncState {
-  inFlight: boolean;
-  queuedItems: CartItem[] | null;
-}
 
 function isOrderAwaitingPayment(order: {
   status: string;
@@ -432,122 +421,6 @@ export function PosDesktopInner({
   >(null);
   const isMobile = useIsMobile();
   const lgUp = useIsLargeUp();
-  const cartHoldTokenRef = useRef<string | null>(null);
-  const appendHoldTokenRef = useRef<string | null>(null);
-  const cartHoldSyncRef = useRef<DailyLimitHoldSyncState>({
-    inFlight: false,
-    queuedItems: null,
-  });
-  const appendHoldSyncRef = useRef<DailyLimitHoldSyncState>({
-    inFlight: false,
-    queuedItems: null,
-  });
-
-  const getDailyLimitHoldToken = useCallback(
-    (source: DailyLimitHoldSource): string => {
-      const ref = source === "pos_cart" ? cartHoldTokenRef : appendHoldTokenRef;
-      ref.current ??= crypto.randomUUID();
-      return ref.current;
-    },
-    [],
-  );
-
-  const resetDailyLimitHoldToken = useCallback(
-    (source: DailyLimitHoldSource): void => {
-      const ref = source === "pos_cart" ? cartHoldTokenRef : appendHoldTokenRef;
-      ref.current = crypto.randomUUID();
-    },
-    [],
-  );
-
-  const reserveDailyLimitSnapshot = useCallback(
-    async (
-      items: CartItem[],
-      source: DailyLimitHoldSource,
-      options: { showError?: boolean } = {},
-    ): Promise<boolean> => {
-      const result = await reserveDailyLimitHolds(
-        branchId,
-        getDailyLimitHoldToken(source),
-        items,
-        source,
-      );
-
-      if (!result.success) {
-        if (options.showError !== false && items.length > 0) {
-          toast.error(result.error ?? "Không thể giữ suất món.");
-        }
-        return false;
-      }
-
-      return true;
-    },
-    [branchId, getDailyLimitHoldToken],
-  );
-
-  const flushDailyLimitHoldSync = useCallback(
-    (source: DailyLimitHoldSource): void => {
-      const sync =
-        source === "pos_cart"
-          ? cartHoldSyncRef.current
-          : appendHoldSyncRef.current;
-      if (sync.inFlight || sync.queuedItems === null) return;
-
-      sync.inFlight = true;
-
-      void (async () => {
-        try {
-          while (sync.queuedItems !== null) {
-            const items = sync.queuedItems;
-            sync.queuedItems = null;
-            const holdToken = getDailyLimitHoldToken(source);
-            const result = await reserveDailyLimitHolds(
-              branchId,
-              holdToken,
-              items,
-              source,
-            );
-
-            if (!result.success && items.length > 0) {
-              toast.error(result.error ?? "Không thể giữ suất món.");
-            }
-
-            const currentToken =
-              source === "pos_cart"
-                ? cartHoldTokenRef.current
-                : appendHoldTokenRef.current;
-            if (currentToken !== null && currentToken !== holdToken) {
-              void releaseDailyLimitHolds(branchId, holdToken);
-            }
-          }
-        } finally {
-          sync.inFlight = false;
-        }
-      })();
-    },
-    [branchId, getDailyLimitHoldToken],
-  );
-
-  const queueDailyLimitHoldSync = useCallback(
-    (source: DailyLimitHoldSource, items: CartItem[]): void => {
-      const sync =
-        source === "pos_cart"
-          ? cartHoldSyncRef.current
-          : appendHoldSyncRef.current;
-      sync.queuedItems = items;
-      flushDailyLimitHoldSync(source);
-    },
-    [flushDailyLimitHoldSync],
-  );
-
-  const releaseDailyLimitHoldToken = useCallback(
-    (source: DailyLimitHoldSource): void => {
-      const token = getDailyLimitHoldToken(source);
-      resetDailyLimitHoldToken(source);
-      void releaseDailyLimitHolds(branchId, token);
-    },
-    [branchId, getDailyLimitHoldToken, resetDailyLimitHoldToken],
-  );
 
   const menuItemById = useMemo(() => {
     const map = new Map<number, MenuItem>();
@@ -765,24 +638,17 @@ export function PosDesktopInner({
     [activeDraftLines, dailyLimitStore, menuItemById],
   );
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      queueDailyLimitHoldSync("pos_cart", cartSnapshot.items);
-    }, 120);
-
-    return () => window.clearTimeout(timeout);
-  }, [cartSnapshot.items, queueDailyLimitHoldSync]);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      queueDailyLimitHoldSync(
-        "pos_append",
-        appendTarget == null ? [] : appendDraftItems,
-      );
-    }, 120);
-
-    return () => window.clearTimeout(timeout);
-  }, [appendDraftItems, appendTarget, queueDailyLimitHoldSync]);
+  const {
+    getDailyLimitHoldToken,
+    resetDailyLimitHoldToken,
+    reserveDailyLimitSnapshot,
+    releaseDailyLimitHoldToken,
+  } = useDailyLimitHolds({
+    branchId,
+    cartItems: cartSnapshot.items,
+    appendDraftItems,
+    appendTarget,
+  });
 
   const focusOrderWorkflow = useCallback(
     (orderId: number, orderNumber?: string | null) => {
