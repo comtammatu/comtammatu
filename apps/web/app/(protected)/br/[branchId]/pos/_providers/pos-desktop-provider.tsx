@@ -289,16 +289,20 @@ export function PosDesktopProvider({
     const result = await fetchDailyLimitsForPos(branchId);
     if (!result.success || !Array.isArray(result.data)) return;
     const next = new Map<number, MenuItemDailyLimit>();
+    // `stock_capacity` is a new RPC column absent from the generated types —
+    // read it via the same untyped row cast as the rest of the limit slice.
     for (const row of result.data as Array<{
       menu_item_id: number;
       limit_quantity: number | null;
       is_disabled: boolean;
       sold_today: number;
+      stock_capacity: number | null;
     }>) {
       next.set(row.menu_item_id, {
         limit_quantity: row.limit_quantity,
         is_disabled: row.is_disabled,
         sold_today: row.sold_today,
+        stock_capacity: row.stock_capacity,
       });
     }
     dailyLimitStore.setAll(next);

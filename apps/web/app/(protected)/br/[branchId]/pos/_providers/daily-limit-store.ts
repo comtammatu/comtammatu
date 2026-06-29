@@ -18,7 +18,8 @@ function areLimitsEqual(
   return (
     a.limit_quantity === b.limit_quantity &&
     a.is_disabled === b.is_disabled &&
-    a.sold_today === b.sold_today
+    a.sold_today === b.sold_today &&
+    (a.stock_capacity ?? null) === (b.stock_capacity ?? null)
   );
 }
 
