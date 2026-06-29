@@ -9,8 +9,10 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
+  ItemActions,
   ItemContent,
   ItemDescription,
+  ItemFooter,
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
@@ -18,12 +20,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import {
-  AppPage,
-  AppPageHeader,
-  AppEmptyState,
-  AppSection,
-} from "@/components/surface";
+import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
 import { formatVND } from "../_lib/format";
 import { RecipeLineDialog } from "./recipe-line-dialog";
 import type {
@@ -32,7 +29,6 @@ import type {
   RecipeLineDraft,
 } from "./recipe-line-dialog";
 
-import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 export type RecipeItem = {
   ingredientId: number;
   ingredientName: string;
@@ -52,13 +48,6 @@ export type RecipeRow = {
   estimatedCost: number;
   items: RecipeItem[];
 };
-
-function YieldBadge({ value }: { value: number }) {
-  // yield_factor is stored as a multiplier (0.85 = 15% loss, 1.0 = no loss)
-  const pct = Math.round(value * 100);
-  const variant = pct >= 95 ? "success" : pct >= 80 ? "warning" : "destructive";
-  return <Badge variant={variant}>{pct}%</Badge>;
-}
 
 export function RecipesClient({
   recipes,
@@ -105,47 +94,56 @@ export function RecipesClient({
     router.refresh();
   }
 
-  const recipeItemColumns: DataTableColumn<RecipeItem>[] = [
+  const columns: DataTableColumn<RecipeRow>[] = [
     {
-      key: "ingredient",
-      header: PRODUCT_VI.rawIngredient,
-      render: (item) => (
-        <div className="flex items-center gap-2">
-          <div className="size-2 rounded-full bg-primary/40" />
-          <span className="font-semibold">{item.ingredientName}</span>
-        </div>
-      ),
+      key: "name",
+      header: "Món bán",
+      render: (recipe) => <span className="font-semibold">{recipe.name}</span>,
     },
     {
-      key: "quantity",
-      header: FORM_VI.quantity,
+      key: "category",
+      header: "Nhóm",
+      render: (recipe) =>
+        recipe.category ? (
+          <Badge variant="success">{recipe.category}</Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: "ingredientCount",
+      header: "Số nguyên liệu",
       className: "font-mono",
-      render: (item) => item.qty,
+      render: (recipe) => recipe.items.length,
     },
     {
-      key: "unit",
-      header: FORM_VI.unit,
-      className: "text-muted-foreground",
-      render: (item) => item.unit,
+      key: "cost",
+      header: "Giá vốn/phần",
+      className: "font-mono",
+      render: (recipe) => `${formatVND(recipe.estimatedCost)} đ`,
     },
     {
-      key: "yield",
-      header: "Yield",
-      className: "text-center",
-      render: (item) => <YieldBadge value={item.yieldFactor} />,
-    },
-    {
-      key: "note",
-      header: FORM_VI.notes,
-      className: "max-w-xs text-xs italic text-muted-foreground",
-      render: (item) => (
-        <span className="line-clamp-2 break-words">{item.note ?? "—"}</span>
+      key: "actions",
+      header: "",
+      className: "w-32",
+      render: (recipe) => (
+        <div className="flex items-center justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => openEdit(recipe)}
+          >
+            <IconPencil className="size-4" />
+            Sửa định mức
+          </Button>
+        </div>
       ),
     },
   ];
 
   return (
-    <AppPage scroll>
+    <AppPage>
       <AppPageHeader
         title="Định mức món bán"
         actions={
@@ -155,45 +153,22 @@ export function RecipesClient({
           </Button>
         }
       />
-      {recipes.length === 0 && (
+      {recipes.length === 0 ? (
         <AppEmptyState
           mode="no-data"
           title="Chưa có định mức món bán nào"
           description='Định mức món bán là lượng nguyên liệu tiêu hao khi bán 1 phần menu item. Nhấn "Tạo định mức" để bắt đầu.'
         />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={recipes}
+          getRowKey={(recipe) => recipe.id}
+          mobileCardRender={(recipe) => (
+            <RecipeCard recipe={recipe} onEdit={openEdit} />
+          )}
+        />
       )}
-
-      {recipes.map((recipe) => (
-          <AppSection
-            key={recipe.id}
-            title={recipe.name}
-            badge={
-              recipe.category
-                ? { children: recipe.category, variant: "success" }
-                : undefined
-            }
-            headerHint={`${recipe.items.length} nguyên liệu · ${formatVND(recipe.estimatedCost)} đ/phần`}
-            action={
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => openEdit(recipe)}
-              >
-                <IconPencil className="size-4" />
-                Sửa định mức
-              </Button>
-            }
-            contentFlush
-          >
-            <DataTable
-              columns={recipeItemColumns}
-              data={recipe.items}
-              getRowKey={(item) => item.ingredientId}
-              mobileCardRender={(item) => <RecipeItemCard item={item} />}
-            />
-          </AppSection>
-        ))}
 
       <RecipeLineDialog
         open={dialogOpen}
@@ -209,18 +184,39 @@ export function RecipesClient({
   );
 }
 
-function RecipeItemCard({ item }: { item: RecipeItem }) {
+function RecipeCard({
+  recipe,
+  onEdit,
+}: {
+  recipe: RecipeRow;
+  onEdit: (recipe: RecipeRow) => void;
+}) {
   return (
     <Item variant="outline">
       <ItemHeader>
-        <ItemTitle>{item.ingredientName}</ItemTitle>
-        <YieldBadge value={item.yieldFactor} />
+        <ItemTitle>{recipe.name}</ItemTitle>
+        {recipe.category ? (
+          <Badge variant="success">{recipe.category}</Badge>
+        ) : null}
       </ItemHeader>
       <ItemContent>
         <ItemDescription>
-          {item.qty} {item.unit} · {item.note ?? "Không ghi chú"}
+          {recipe.items.length} nguyên liệu · {formatVND(recipe.estimatedCost)} đ/phần
         </ItemDescription>
       </ItemContent>
+      <ItemFooter>
+        <ItemActions>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onEdit(recipe)}
+          >
+            <IconPencil className="size-4" />
+            Sửa định mức
+          </Button>
+        </ItemActions>
+      </ItemFooter>
     </Item>
   );
 }

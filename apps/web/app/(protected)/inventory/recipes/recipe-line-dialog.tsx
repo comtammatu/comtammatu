@@ -1,22 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
-import {
-  Controller,
-  useFieldArray,
-  useForm,
-  type Control,
-  type FieldErrors,
-} from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
-import { Combobox, MultiSelectCombobox } from "@/components/form";
 import {
   Dialog,
   DialogContent,
@@ -33,15 +24,12 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FormattedNumberInput } from "../_components/formatted-number-input";
+import { RecipeLinesEditor } from "../_components/recipe-lines-editor";
 import { upsertRecipeLines } from "../procurement-actions";
 import {
   ACTIONS_VI,
   ERRORS_VI,
-  FORM_VI,
   INVENTORY_VI,
-  PRODUCT_VI,
-  STATES_VI,
 } from "@comtammatu/shared/messages";
 
 export interface MenuItemOption {
@@ -104,148 +92,6 @@ const EMPTY_ROW: RecipeLineRow = {
   note: "",
 };
 
-/* ─── Row ─── */
-
-function LineRowCells({
-  control,
-  index,
-  ingredients,
-  errors,
-  onRemove,
-  canRemove,
-  onIngredientChange,
-}: {
-  control: Control<RecipeFormValues>;
-  index: number;
-  ingredients: IngredientOption[];
-  errors: FieldErrors<RecipeFormValues>;
-  onRemove: () => void;
-  canRemove: boolean;
-  onIngredientChange: (ingredientId: string) => void;
-}) {
-  const rowError = errors.lines?.[index];
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_auto] items-center gap-2 px-3 py-2">
-        <Controller
-          control={control}
-          name={`lines.${index}.ingredient_id`}
-          render={({ field }) => (
-            <Combobox
-              value={field.value}
-              onValueChange={(v) => {
-                field.onChange(v);
-                onIngredientChange(v);
-              }}
-              options={ingredients.map((ing) => ({
-                value: String(ing.id),
-                label: ing.name,
-                hint: ing.unit,
-              }))}
-              placeholder={INVENTORY_VI.selectIngredientPlaceholder}
-              searchPlaceholder={INVENTORY_VI.searchByName}
-              aria-invalid={!!rowError?.ingredient_id}
-              triggerClassName={cn(
-                "h-9",
-                rowError?.ingredient_id && "border-destructive",
-              )}
-            />
-          )}
-        />
-
-        <Controller
-          control={control}
-          name={`lines.${index}.quantity`}
-          render={({ field }) => (
-            <FormattedNumberInput
-              placeholder="VD: 0.5"
-              value={field.value ?? ""}
-              onValueChange={field.onChange}
-              onBlur={field.onBlur}
-              ref={field.ref}
-              name={field.name}
-              maxFractionDigits={3}
-              aria-invalid={!!rowError?.quantity}
-              className={cn("h-9", rowError?.quantity && "border-destructive")}
-            />
-          )}
-        />
-
-        <Controller
-          control={control}
-          name={`lines.${index}.unit`}
-          render={({ field }) => (
-            <Input
-              placeholder="kg, lít..."
-              {...field}
-              value={field.value ?? ""}
-              readOnly
-              aria-invalid={!!rowError?.unit}
-              className={cn(
-                "h-9 bg-muted/40",
-                rowError?.unit && "border-destructive",
-              )}
-            />
-          )}
-        />
-
-        <Controller
-          control={control}
-          name={`lines.${index}.yield_factor`}
-          render={({ field }) => (
-            <FormattedNumberInput
-              value={field.value ?? ""}
-              onValueChange={field.onChange}
-              onBlur={field.onBlur}
-              ref={field.ref}
-              name={field.name}
-              maxFractionDigits={2}
-              aria-invalid={!!rowError?.yield_factor}
-              className={cn(
-                "h-9",
-                rowError?.yield_factor && "border-destructive",
-              )}
-            />
-          )}
-        />
-
-        <Controller
-          control={control}
-          name={`lines.${index}.note`}
-          render={({ field }) => (
-            <Input
-              placeholder={STATES_VI.optional}
-              {...field}
-              value={field.value ?? ""}
-              className="h-9"
-            />
-          )}
-        />
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={onRemove}
-          disabled={!canRemove}
-          aria-label={INVENTORY_VI.removeRow}
-        >
-          <IconTrash className="size-4 text-muted-foreground" />
-        </Button>
-      </div>
-      {rowError && (
-        <p className="px-3 text-xs text-destructive" role="alert">
-          {rowError.ingredient_id?.message ??
-            rowError.quantity?.message ??
-            rowError.unit?.message ??
-            rowError.yield_factor?.message}
-        </p>
-      )}
-    </div>
-  );
-}
-
 /* ─── Dialog ─── */
 
 interface RecipeDialogProps {
@@ -295,39 +141,6 @@ export function RecipeLineDialog({
     defaultValues: initialValues,
   });
 
-  const { fields, append, remove, replace } = useFieldArray({
-    control: form.control,
-    name: "lines",
-  });
-
-  const watchedLines = form.watch("lines");
-  const alreadySelectedIngredientIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const line of watchedLines ?? []) {
-      if (line?.ingredient_id) ids.add(line.ingredient_id);
-    }
-    return ids;
-  }, [watchedLines]);
-
-  function handleBulkAddIngredients(ingredientIds: string[]) {
-    const newRows: RecipeLineRow[] = ingredientIds.map((id) => {
-      const ing = ingredientMap.get(Number(id));
-      return {
-        ingredient_id: id,
-        quantity: "",
-        unit: ing?.unit ?? "",
-        yield_factor: "1",
-        note: "",
-      };
-    });
-    // Drop any leftover empty rows (e.g. the seed EMPTY_ROW) so bulk-add
-    // doesn't leave a half-filled placeholder above the new rows.
-    const kept = (form.getValues("lines") ?? []).filter(
-      (row) => row.ingredient_id !== "",
-    );
-    replace([...kept, ...newRows]);
-  }
-
   useEffect(() => {
     if (open) {
       form.reset(initialValues);
@@ -340,24 +153,6 @@ export function RecipeLineDialog({
     const blocked = new Set(existingMenuItemIds);
     return menuItems.filter((mi) => !blocked.has(mi.id));
   }, [menuItems, existingMenuItemIds, isEdit]);
-
-  const ingredientMap = useMemo(() => {
-    const m = new Map<number, IngredientOption>();
-    for (const i of ingredients) m.set(i.id, i);
-    return m;
-  }, [ingredients]);
-
-  function handleIngredientChangeFactory(rowIndex: number) {
-    return (value: string) => {
-      const currentUnit = form.getValues(`lines.${rowIndex}.unit`);
-      if (!currentUnit) {
-        const ing = ingredientMap.get(Number(value));
-        if (ing) {
-          form.setValue(`lines.${rowIndex}.unit`, ing.unit);
-        }
-      }
-    };
-  }
 
   function onValid(values: RecipeFormValues) {
     const menuItemId = Number(values.menu_item_id);
@@ -455,64 +250,18 @@ export function RecipeLineDialog({
           </div>
 
           <div className="flex flex-col gap-2">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <Label className="text-sm font-medium">
-                {INVENTORY_VI.ingredientListLabel}
-              </Label>
-              <div className="flex items-center gap-2">
-                <MultiSelectCombobox
-                  options={ingredients.map((ing) => ({
-                    value: String(ing.id),
-                    label: ing.name,
-                    hint: ing.unit,
-                    alreadySelected: alreadySelectedIngredientIds.has(
-                      String(ing.id),
-                    ),
-                  }))}
-                  onConfirm={handleBulkAddIngredients}
-                  triggerLabel={INVENTORY_VI.selectMultipleIngredients}
-                  confirmLabel={(n) =>
-                    n > 0 ? `Thêm ${n} nguyên liệu` : "Thêm nguyên liệu"
-                  }
-                  searchPlaceholder={INVENTORY_VI.searchByName}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => append(EMPTY_ROW)}
-                >
-                  <IconPlus className="size-4" />
-                  {INVENTORY_VI.addOneRow}
-                </Button>
-              </div>
-            </div>
+            <Label className="text-sm font-medium">
+              {INVENTORY_VI.ingredientListLabel}
+            </Label>
 
-            <div className="overflow-hidden rounded-lg border">
-              <div className="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_auto] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <div>{PRODUCT_VI.rawIngredient}</div>
-                <div>{FORM_VI.quantity}</div>
-                <div>{FORM_VI.unit}</div>
-                <div>{INVENTORY_VI.yield}</div>
-                <div>{FORM_VI.notes}</div>
-                <div className="w-8" />
-              </div>
-
-              <div className="divide-y">
-                {fields.map((row, index) => (
-                  <LineRowCells
-                    key={row.id}
-                    control={form.control}
-                    index={index}
-                    ingredients={ingredients}
-                    errors={errors}
-                    onRemove={() => remove(index)}
-                    canRemove={fields.length > 1}
-                    onIngredientChange={handleIngredientChangeFactory(index)}
-                  />
-                ))}
-              </div>
-            </div>
+            <RecipeLinesEditor
+              control={form.control}
+              setValue={form.setValue}
+              getValues={form.getValues}
+              errors={errors}
+              ingredients={ingredients}
+              bulkAdd
+            />
 
             {linesRootError && (
               <p className="text-sm text-destructive" role="alert">

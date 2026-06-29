@@ -150,6 +150,7 @@ export const INVENTORY_VI = {
   atLeastOneFinishedGoodPeriod: "Cần ít nhất một thành phẩm hợp lệ.",
   createProductionOrderFailed: "Không thể tạo lệnh sản xuất",
   enterQuantityPlaceholder: "Nhập số lượng...",
+  unitPlaceholder: "kg, lít...",
 } as const;
 
 export type InventoryKey = keyof typeof INVENTORY_VI;

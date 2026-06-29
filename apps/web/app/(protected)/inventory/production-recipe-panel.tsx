@@ -4,12 +4,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Controller,
-  useFieldArray,
-  useForm,
-  type UseFormReturn,
-} from "react-hook-form";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -49,8 +44,9 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { Combobox, NumberField, TextField } from "@/components/form";
+import { Combobox } from "@/components/form";
 import { AppEmptyState, AppSection } from "@/components/surface";
+import { RecipeLinesEditor } from "./_components/recipe-lines-editor";
 import {
   deleteProductionRecipeGroup,
   deleteProductionRecipe,
@@ -164,68 +160,6 @@ function toRecipeFormValues(
   };
 }
 
-function RecipeIngredientField({
-  form,
-  index,
-  ingredientOptions,
-  rawIngredientsOptions,
-  selectedIngredientIds,
-}: {
-  form: UseFormReturn<RecipeFormValues, unknown, RecipeFormValues>;
-  index: number;
-  ingredientOptions: Array<{ value: string; label: string }>;
-  rawIngredientsOptions: RawIngredientOption[];
-  selectedIngredientIds: Set<string>;
-}) {
-  const fieldName = `lines.${index}.ingredient_id` as const;
-
-  return (
-    <Controller
-      control={form.control}
-      name={fieldName}
-      render={({ field, fieldState }) => {
-        const value = field.value ?? "";
-        const options = ingredientOptions.map((option) => ({
-          ...option,
-          disabled:
-            selectedIngredientIds.has(option.value) && option.value !== value,
-        }));
-
-        return (
-          <Field data-invalid={!!fieldState.error}>
-            <FieldLabel htmlFor={`recipe-line-${index}-ingredient`}>
-              Nguyên liệu *
-            </FieldLabel>
-            <Combobox
-              id={`recipe-line-${index}-ingredient`}
-              value={value}
-              options={options}
-              placeholder="Chọn nguyên liệu"
-              searchPlaceholder="Tìm nguyên liệu..."
-              aria-invalid={!!fieldState.error}
-              onValueChange={(nextValue) => {
-                field.onChange(nextValue);
-                const ingredient = rawIngredientsOptions.find(
-                  (item) => item.id === Number(nextValue),
-                );
-                if (ingredient) {
-                  form.setValue(`lines.${index}.unit`, ingredient.unit, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  });
-                }
-              }}
-            />
-            {fieldState.error ? (
-              <FieldError errors={[fieldState.error]} />
-            ) : null}
-          </Field>
-        );
-      }}
-    />
-  );
-}
-
 /* ─── Main recipe panel ─── */
 
 interface ProductionRecipePanelProps {
@@ -285,7 +219,6 @@ export function ProductionRecipePanel({
   const {
     fields: recipeLineFields,
     append: appendRecipeLine,
-    remove: removeRecipeLine,
     replace: replaceRecipeLines,
   } = useFieldArray({
     control: form.control,
@@ -338,21 +271,16 @@ export function ProductionRecipePanel({
     label: good.name,
   }));
 
-  const ingredientOptions = rawIngredientsOptions.map((item) => ({
-    value: String(item.id),
-    label: item.name,
-  }));
-
-  const watchedLines = form.watch("lines") ?? [];
-  const selectedIngredientIds = useMemo(
+  const recipeLinesEditorIngredients = useMemo(
     () =>
-      new Set(
-        watchedLines
-          .map((line) => line.ingredient_id)
-          .filter((value): value is string => value.length > 0),
-      ),
-    [watchedLines],
+      rawIngredientsOptions.map((item) => ({
+        id: item.id,
+        name: item.name,
+        unit: item.unit,
+      })),
+    [rawIngredientsOptions],
   );
+
   const finishedGoodLocked = pendingFinishedGoodId != null;
 
   useEffect(() => {
@@ -690,28 +618,17 @@ export function ProductionRecipePanel({
                         {recipeLineFields.length} nguyên liệu
                       </span>
                     </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      {canManageCatalog ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setQuickRawIngredientDialogOpen(true)}
-                        >
-                          <IconPlus data-icon="inline-start" />
-                          Tạo nguyên liệu
-                        </Button>
-                      ) : null}
+                    {canManageCatalog ? (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => appendRecipeLine(emptyRecipeLine())}
+                        onClick={() => setQuickRawIngredientDialogOpen(true)}
                       >
                         <IconPlus data-icon="inline-start" />
-                        Thêm dòng
+                        Tạo nguyên liệu
                       </Button>
-                    </div>
+                    ) : null}
                   </div>
                   {!canManageCatalog && rawIngredientsOptions.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
@@ -721,71 +638,14 @@ export function ProductionRecipePanel({
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3">
-                {recipeLineFields.map((lineField, index) => (
-                  <div
-                    key={lineField.id}
-                    className="grid gap-3 rounded-md border border-border p-3 md:grid-cols-2 xl:grid-cols-12"
-                  >
-                    <div className="xl:col-span-3">
-                      <RecipeIngredientField
-                        form={form}
-                        index={index}
-                        ingredientOptions={ingredientOptions}
-                        rawIngredientsOptions={rawIngredientsOptions}
-                        selectedIngredientIds={selectedIngredientIds}
-                      />
-                    </div>
-                    <div className="xl:col-span-2">
-                      <NumberField
-                        control={form.control}
-                        name={`lines.${index}.quantity` as const}
-                        label="Số lượng"
-                        maxFractionDigits={3}
-                        required
-                      />
-                    </div>
-                    <div className="xl:col-span-2">
-                      <TextField
-                        control={form.control}
-                        name={`lines.${index}.unit` as const}
-                        label="Đơn vị"
-                        required
-                      />
-                    </div>
-                    <div className="xl:col-span-2">
-                      <NumberField
-                        control={form.control}
-                        name={`lines.${index}.yield_factor` as const}
-                        label="Yield"
-                        maxFractionDigits={3}
-                        required
-                      />
-                    </div>
-                    <div className="xl:col-span-2">
-                      <TextField
-                        control={form.control}
-                        name={`lines.${index}.note` as const}
-                        label="Ghi chú"
-                        placeholder="Hao hụt..."
-                      />
-                    </div>
-                    <div className="flex items-end justify-end xl:col-span-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeRecipeLine(index)}
-                        disabled={recipeLineFields.length <= 1}
-                        aria-label={`Xóa dòng BOM ${index + 1}`}
-                        title="Xóa dòng BOM"
-                      >
-                        <IconTrash />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <RecipeLinesEditor
+                control={form.control}
+                setValue={form.setValue}
+                getValues={form.getValues}
+                errors={form.formState.errors}
+                ingredients={recipeLinesEditorIngredients}
+                unitEditable
+              />
 
               {serverError && (
                 <p className="text-sm text-destructive" role="alert">
