@@ -91,6 +91,7 @@ import {
   formatAddToCartBlockMessage,
   useAddToCartGate,
 } from "./_hooks/use-add-to-cart-gate";
+import { useBillSurface } from "./_hooks/use-bill-surface";
 import { useIsLargeUp } from "./_hooks/use-is-large-up";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
@@ -104,10 +105,6 @@ import {
   compareOrdersByNextAction,
   type SessionOrder,
 } from "./order-history";
-import type {
-  BillReceiptIntent,
-  OrderData,
-} from "./_components/bill/bill-receipt-types";
 import type { OrderDetailData } from "./order-detail-sheet";
 import {
   usePosOperationalDispatch,
@@ -136,16 +133,6 @@ type OrderTarget =
   | { kind: "new-dine-in"; label: string }
   | { kind: "new-takeaway"; label: string }
   | { kind: "existing-order"; label: string };
-
-function isOrderAwaitingPayment(order: {
-  status: string;
-  payment_status: string | null;
-}) {
-  return (
-    ACTIVE_POS_STATUSES.includes(order.status) &&
-    order.payment_status !== "paid"
-  );
-}
 
 /* ─── Inner (consumes hooks) ─── */
 
@@ -287,29 +274,6 @@ export function PosDesktopInner({
   } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showCloseSession, setShowCloseSession] = useState(false);
-  const [billOrderId, setBillOrderId] = useState<number | null>(null);
-  const [billIntent, setBillIntent] = useState<BillReceiptIntent>("payment");
-  const [postSubmitPaymentOrderId, setPostSubmitPaymentOrderId] = useState<
-    number | null
-  >(null);
-  // Seed passed to BillReceipt when we just came from OrderDetailSheet
-  // on the same order — lets BillReceipt skip its own fetch. Null for
-  // bill opens from any other path (toast action, order-list direct
-  // open) so BillReceipt falls back to fetchOrderForBill(orderId).
-  const [billInitialOrder, setBillInitialOrder] = useState<OrderData | null>(
-    null,
-  );
-  // Header-only seed for non-detail bill paths (F9 / list / picker /
-  // post-submit toast). `usePosOrders()` already holds a `SessionOrder`
-  // snapshot — derive instead of adding state. BillReceipt paints the dialog
-  // title (order number + total) immediately; the full bill fetch runs behind.
-  const billHeaderSeed = useMemo<SessionOrder | null>(
-    () =>
-      billOrderId !== null
-        ? (orders.find((order) => order.id === billOrderId) ?? null)
-        : null,
-    [billOrderId, orders],
-  );
   const [orderDetailId, setOrderDetailId] = useState<number | null>(null);
   const [orderDetailNumber, setOrderDetailNumber] = useState<string | null>(
     null,
@@ -334,6 +298,20 @@ export function PosDesktopInner({
   const [showOrders, setShowOrders] = useState(false);
   const [archivedSheetOpen, setArchivedSheetOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const closeCartDrawer = useCallback(() => setCartDrawerOpen(false), []);
+  const {
+    billOrderId,
+    billIntent,
+    billInitialOrder,
+    billHeaderSeed,
+    latestAwaitingPaymentOrderId,
+    openBill,
+    closeBill,
+    setBillOrderId,
+    setBillIntent,
+    setBillInitialOrder,
+    setPostSubmitPaymentOrderId,
+  } = useBillSurface({ orders, closeCartDrawer });
   const [takeawayDraftActive, setTakeawayDraftActive] = useState(false);
   const [appendDraftItems, setAppendDraftItems] = useState<CartItem[]>([]);
   const [appendSubmitting, setAppendSubmitting] = useState(false);
@@ -1270,23 +1248,6 @@ export function PosDesktopInner({
     ],
   );
 
-  const openBill = useCallback(
-    (id: number, intent: BillReceiptIntent = "payment", seed?: OrderData) => {
-      setCartDrawerOpen(false);
-      setPostSubmitPaymentOrderId(null);
-      setBillIntent(intent);
-      setBillInitialOrder(seed ?? null);
-      setBillOrderId(id);
-    },
-    [],
-  );
-
-  const closeBill = useCallback(() => {
-    setBillOrderId(null);
-    setBillIntent("payment");
-    setBillInitialOrder(null);
-  }, []);
-
   const openDetail = useCallback(
     (id: number, orderNumber?: string | null, summary?: SessionOrder) => {
       setCartDrawerOpen(false);
@@ -1342,29 +1303,6 @@ export function PosDesktopInner({
       setOrderDetailNumber(pending.orderNumber);
     }
   }, []);
-
-  // Single source for F9 hotkey + mobile pay-quick-tap. Memoized so the
-  // boolean prop fed to PosMobileActionBar doesn't flip identity on every
-  // realtime tick where orders changed but the awaiting slice did not.
-  const latestAwaitingPaymentOrderId = useMemo<number | null>(() => {
-    if (postSubmitPaymentOrderId !== null) return postSubmitPaymentOrderId;
-
-    const awaiting = orders
-      .filter(isOrderAwaitingPayment)
-      .sort(compareOrdersByNextAction)[0];
-    return awaiting?.id ?? null;
-  }, [orders, postSubmitPaymentOrderId]);
-
-  useEffect(() => {
-    if (postSubmitPaymentOrderId === null) return;
-
-    const promptOrder = orders.find(
-      (order) => order.id === postSubmitPaymentOrderId,
-    );
-    if (promptOrder && !isOrderAwaitingPayment(promptOrder)) {
-      setPostSubmitPaymentOrderId(null);
-    }
-  }, [orders, postSubmitPaymentOrderId]);
 
   // Gate operational shortcuts (F9/F10/F2/F4) while any sheet/modal is open so
   // they can't fire under or stack on top of an open surface. `?` is special:
