@@ -65,7 +65,7 @@ Two parallel ACL mechanisms exist; pick the right one:
 
 - `refunds_update` uses `has_permission(branch_id,'orders:refund_approve')`; destructive refund approval must not depend on cached `auth_role()`.
 - `admin_update_profile` and `toggle_profile_active` derive actor role and branch live from `profiles + positions`; `set_branch_kind` gates on `settings:tenant`.
-- `can_access_branch()` is a separate RLS-policy batch because it is a shared branch-scope predicate.
+- Branch-scope RPCs keep the branch predicate at the write boundary unless a shared helper is active in both policy and RPC surfaces.
 - `hr_payroll` policy scope is handled with the HRM payroll/base-salary work; do not add payroll permission keys outside that task.
 
 ## Invariants (post H3a, 2026-05-07)

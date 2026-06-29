@@ -73,6 +73,9 @@ const branchScopePaymentPrintMigration = readRepoFile(
 const permissionScopeGrantsMigration = readRepoFile(
   "supabase/migrations/20260625131000_permission_scope_grants.sql",
 );
+const permissionScopeCleanupMigration = readRepoFile(
+  "supabase/migrations/20260629190445_auth_rls_permission_scope_cleanup.sql",
+);
 const hddtTaxInvoiceRpcScopeMigration = readRepoFile(
   "supabase/migrations/20260625132000_hddt_tax_invoice_rpc_scope.sql",
 );
@@ -534,8 +537,12 @@ test("printer agent write policies are branch scoped", () => {
 test("staff permission grants enforce permission key scope", () => {
   const grant = extractSqlFunction(permissionScopeGrantsMigration, "grant_permission");
   const template = extractSqlFunction(
-    permissionScopeGrantsMigration,
+    permissionScopeCleanupMigration,
     "apply_template_to_user",
+  );
+  const sync = extractSqlFunction(
+    permissionScopeCleanupMigration,
+    "sync_missing_permissions_from_template",
   );
 
   assert.match(grant, /SELECT scope INTO v_scope[\s\S]*FROM public\.permission_keys/);
@@ -544,11 +551,25 @@ test("staff permission grants enforce permission key scope", () => {
   assert.match(grant, /v_scope = 'tenant' AND p_branch_id IS NOT NULL/);
   assert.match(grant, /permission_scope_requires_tenant/);
 
-  assert.match(template, /LEFT JOIN public\.permission_keys pk/);
+  assert.match(template, /SELECT scope INTO v_perm_scope[\s\S]*FROM public\.permission_keys/);
   assert.match(template, /unknown_permission_key_in_template/);
-  assert.match(template, /p_branch_id IS NULL AND pk\.scope = 'branch'/);
-  assert.match(template, /p_branch_id IS NOT NULL AND pk\.scope = 'tenant'/);
-  assert.match(template, /permission_scope_mismatch/);
+  assert.match(template, /WHEN v_perm_scope = 'tenant' THEN NULL/);
+  assert.match(template, /WHEN v_perm_scope = 'branch' THEN p_branch_id/);
+  assert.match(template, /permission_scope_requires_branch/);
+
+  assert.match(sync, /SELECT scope INTO v_perm_scope[\s\S]*FROM public\.permission_keys/);
+  assert.match(sync, /WHEN v_perm_scope = 'tenant' THEN NULL/);
+  assert.match(sync, /WHEN v_perm_scope = 'branch' THEN v_branch/);
+  assert.match(sync, /v_perm_scope = 'branch' AND v_grant_branch IS NULL/);
+
+  assert.match(
+    permissionScopeCleanupMigration,
+    /pk\.scope = 'branch'[\s\S]*sp\.branch_id IS NULL/,
+  );
+  assert.match(
+    permissionScopeCleanupMigration,
+    /pk\.scope = 'tenant'[\s\S]*sp\.branch_id IS NOT NULL/,
+  );
 });
 
 test("HDDT tax invoice RPCs enforce branch and tenant scoped permissions", () => {

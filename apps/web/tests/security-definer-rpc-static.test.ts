@@ -20,8 +20,17 @@ const AUTH_BOUNDARY_TOKENS = [
   "auth_is_owner(",
 ] as const;
 
+const BROAD_GRANT_ALLOWLIST = new Set([
+  "generate_order_payment_code",
+  "inv_to_base",
+]);
+
 // REVOKE EXECUTE ON FUNCTION ... FROM PUBLIC | anon | authenticated
 const REVOKE_BROWSER_ROLE = /REVOKE\s[\s\S]*?\bFROM\s+(PUBLIC|anon|authenticated)/i;
+const BROWSER_EXECUTE_GRANT =
+  /GRANT\s+(?:EXECUTE|ALL)\s+ON\s+FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([^;]*?\)\s+TO\s+[^;]*\b(?:PUBLIC|anon|authenticated)\b[^;]*;/gi;
+const FUNCTION_BODY =
+  /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)[\s\S]*?\bAS\s+(\$[A-Za-z0-9_]*\$)([\s\S]*?)\2\s*;/gi;
 
 function forwardMigrationFiles(): string[] {
   return readdirSync(migrationsDir)
@@ -61,5 +70,46 @@ test("forward SECURITY DEFINER migrations carry an auth boundary or a browser-ro
     `Migrations define a SECURITY DEFINER function without an auth boundary ` +
       `(${AUTH_BOUNDARY_TOKENS.join(", ")}) or a REVOKE from PUBLIC/anon/authenticated:\n` +
       violations.join("\n"),
+  );
+});
+
+test("browser-executable RPC grants have an auth boundary or an explicit allowlist entry", () => {
+  const files = forwardMigrationFiles();
+  assert.ok(files.length > 0, "expected at least one forward migration");
+
+  const violations: string[] = [];
+
+  for (const name of files) {
+    const sql = readFileSync(resolve(migrationsDir, name), "utf8");
+    const functionBodies = new Map<string, string[]>();
+    for (const match of sql.matchAll(FUNCTION_BODY)) {
+      const functionName = match[1];
+      const body = match[3] ?? "";
+      functionBodies.set(functionName, [
+        ...(functionBodies.get(functionName) ?? []),
+        body,
+      ]);
+    }
+
+    for (const match of sql.matchAll(BROWSER_EXECUTE_GRANT)) {
+      const functionName = match[1];
+      if (BROAD_GRANT_ALLOWLIST.has(functionName)) continue;
+
+      const bodies = functionBodies.get(functionName) ?? [];
+      const hasAuthBoundary = bodies.some((body) =>
+        AUTH_BOUNDARY_TOKENS.some((token) => body.includes(token)),
+      );
+
+      if (!hasAuthBoundary) {
+        violations.push(`${name}: ${functionName}`);
+      }
+    }
+  }
+
+  assert.deepEqual(
+    violations,
+    [],
+    `Browser-executable RPC grants must define an auth boundary in the same migration ` +
+      `or be listed in BROAD_GRANT_ALLOWLIST:\n${violations.join("\n")}`,
   );
 });
