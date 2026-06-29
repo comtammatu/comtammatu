@@ -13,7 +13,7 @@ import { ResponsiveToaster } from "./_components/responsive-toaster";
 import { DevServiceWorkerReset } from "./dev-service-worker-reset";
 import { SerwistProvider } from "./serwist-provider";
 import "@comtammatu/ui/globals.css";
-import { cn } from "@/lib/utils";
+import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 
 export const metadata: Metadata = {
