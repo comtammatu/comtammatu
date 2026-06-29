@@ -250,6 +250,24 @@ export const hr = {
         empty: 'Chưa có dữ liệu. Nhấn "Tính lương" để bắt đầu.',
         total: (count: number) => `Tổng (${count} NV)`,
       },
+      csv: {
+        export: "Xuất CSV",
+        filename: (month: number, year: number) =>
+          `bang-luong-${year}-${String(month).padStart(2, "0")}.csv`,
+        columns: {
+          employeeCode: "Mã nhân viên",
+          employeeName: "Họ tên",
+          period: "Kỳ lương",
+          gross: "Lương gộp",
+          insuranceBase: "Lương đóng BH",
+          bhxh: "BHXH (8%)",
+          bhyt: "BHYT (1,5%)",
+          bhtn: "BHTN (1%)",
+          taxableIncome: "Thu nhập tính thuế",
+          pit: "Thuế TNCN",
+          net: "Thực lĩnh",
+        },
+      },
     },
     statusLabels: {
       draft: "Nháp",
