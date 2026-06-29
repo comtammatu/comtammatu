@@ -45,6 +45,9 @@ export const ACTIONS_VI = {
   deselectAll: "Bỏ chọn",
   signIn: "Đăng nhập",
   signOut: "Đăng xuất",
+  prevPage: "Trang trước",
+  nextPage: "Trang sau",
+  clearFilters: "Xóa bộ lọc",
 } as const;
 
 export type ActionKey = keyof typeof ACTIONS_VI;

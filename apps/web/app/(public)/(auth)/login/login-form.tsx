@@ -20,6 +20,7 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { ACTIONS_VI, AUTH_VI } from "@comtammatu/shared/messages";
 import { login } from "./actions";
 
 interface LoginFormProps {
@@ -117,7 +118,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
         </Field>
 
         <Field data-invalid={passwordInvalid || undefined}>
-          <FieldLabel htmlFor="password">Mật khẩu</FieldLabel>
+          <FieldLabel htmlFor="password">{AUTH_VI.passwordLabel}</FieldLabel>
           <InputGroup className="h-10">
             <InputGroupAddon>
               <IconLockKeyhole aria-hidden="true" />
@@ -155,10 +156,10 @@ export function LoginForm({ returnTo }: LoginFormProps) {
         {isPending ? (
           <>
             <Spinner className="motion-reduce:animate-none" />
-            Đang kiểm tra...
+            {AUTH_VI.checking}
           </>
         ) : (
-          "Đăng nhập"
+          ACTIONS_VI.signIn
         )}
       </Button>
     </form>

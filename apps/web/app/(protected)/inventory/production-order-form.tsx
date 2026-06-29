@@ -138,7 +138,7 @@ function LineRowCells({
               ref={field.ref}
               name={field.name}
               maxFractionDigits={3}
-              placeholder="Số lượng"
+              placeholder={FORM_VI.quantity}
               aria-invalid={!!rowError?.quantity}
               className={cn(rowError?.quantity && "border-destructive")}
             />

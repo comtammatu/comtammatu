@@ -11,7 +11,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { X as IconX } from "lucide-react";
 import { ORDER_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
-import { KDS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, KDS_VI } from "@comtammatu/shared/messages";
 import type { FilterOption, OrderTypeFilter } from "../types";
 
 const ORDER_TYPE_OPTIONS: FilterOption<OrderTypeFilter>[] = [
@@ -69,7 +69,7 @@ export function FilterBar({
             variant="ghost"
             size="icon-sm"
             className="shrink-0"
-            aria-label="Xóa lọc"
+            aria-label={ACTIONS_VI.clearFilter}
             onClick={onClearAll}
           >
             <IconX aria-hidden />

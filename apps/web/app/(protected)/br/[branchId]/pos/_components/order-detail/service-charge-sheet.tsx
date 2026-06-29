@@ -118,7 +118,7 @@ export function ServiceChargeSheet({
             </Field>
 
             <Field data-invalid={!noteValid && noteTrimLen > 0}>
-              <FieldLabel htmlFor="service-charge-note">Ghi chú</FieldLabel>
+              <FieldLabel htmlFor="service-charge-note">{FORM_VI.notes}</FieldLabel>
               <Textarea
                 id="service-charge-note"
                 value={note}
@@ -140,7 +140,7 @@ export function ServiceChargeSheet({
             </div>
             {taxAmount > 0 && (
               <div className="flex justify-between text-muted-foreground">
-                <span>Thuế</span>
+                <span>{FORM_VI.tax}</span>
                 <span className="tabular-nums">{formatVND(taxAmount)}</span>
               </div>
             )}

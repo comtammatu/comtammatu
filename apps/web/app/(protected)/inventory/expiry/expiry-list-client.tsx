@@ -7,7 +7,7 @@ import {
   Trash as IconTrash,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import { ACTIONS_VI, BRANCH_VI, INVENTORY_VI, PRODUCT_VI, TOAST_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI, FORM_VI, INVENTORY_VI, PRODUCT_VI, TOAST_VI } from "@comtammatu/shared/messages";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -307,7 +307,7 @@ export function ExpiryListClient({
     },
     {
       key: "actions",
-      header: "Hành động",
+      header: FORM_VI.actionColumn,
       render: (alert) => (
         <Button
           variant="destructive"
@@ -451,7 +451,7 @@ export function ExpiryListClient({
             onClick={() => setUrgencyFilter(null)}
             className="h-auto px-0 text-muted-foreground hover:text-foreground"
           >
-            Xóa bộ lọc
+            {ACTIONS_VI.clearFilters}
           </Button>
         )}
       </div>
@@ -518,7 +518,7 @@ export function ExpiryListClient({
             <Label htmlFor="writeoff-qty">{INVENTORY_VI.writeOffQty}</Label>
             <FormattedNumberInput
               id="writeoff-qty"
-              placeholder="Nhập số lượng..."
+              placeholder={INVENTORY_VI.enterQuantityPlaceholder}
               value={writeOff?.quantity ?? ""}
               onValueChange={(value) =>
                 setWriteOff((prev) =>

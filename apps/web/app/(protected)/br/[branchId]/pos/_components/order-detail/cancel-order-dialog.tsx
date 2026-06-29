@@ -81,7 +81,7 @@ export function CancelOrderDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => onReasonChange("")}>
-            Giữ đơn
+            {POS_VI.keepOrder}
           </AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
@@ -92,7 +92,7 @@ export function CancelOrderDialog({
               onConfirm();
             }}
           >
-            Hủy đơn
+            {POS_VI.cancelOrder}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { cn } from "@comtammatu/ui";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 
 interface DataTablePaginationProps {
   pageSize: number;
@@ -44,7 +45,7 @@ export function DataTablePagination({
           size="icon-sm"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
-          aria-label="Trang trước"
+          aria-label={ACTIONS_VI.prevPage}
         >
           <IconChevronLeft className="size-4" />
         </Button>
@@ -56,7 +57,7 @@ export function DataTablePagination({
           size="icon-sm"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
-          aria-label="Trang sau"
+          aria-label={ACTIONS_VI.nextPage}
         >
           <IconChevronRight className="size-4" />
         </Button>

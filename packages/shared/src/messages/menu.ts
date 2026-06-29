@@ -59,6 +59,7 @@ export const MENU_VI = {
   imageAlt: "Ảnh món",
   changeImage: "Đổi ảnh",
   uploadImage: "Tải ảnh món (≤ 5 MB)",
+  sidesSaved: "Đã lưu món ăn kèm",
 } as const;
 
 export type MenuKey = keyof typeof MENU_VI;

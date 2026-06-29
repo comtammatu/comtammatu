@@ -201,7 +201,7 @@ export function PosLineItemCompact({
           </p>
           {isPriority ? (
             <Badge variant="warning" className="shrink-0 text-xs font-semibold">
-              Ưu tiên
+              {POS_VI.priorityBadge}
             </Badge>
           ) : null}
           {afterTitle ? <span className="shrink-0">{afterTitle}</span> : null}
@@ -245,7 +245,7 @@ export function PosLineItemCompact({
               )}
             >
               <span className="font-semibold not-italic text-foreground">
-                Ghi chú:{" "}
+                {POS_VI.notePrefix}
               </span>
               {note}
             </p>

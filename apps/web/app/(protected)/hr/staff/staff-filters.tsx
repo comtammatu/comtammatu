@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
-import { BRANCH_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, HR_VI } from "@comtammatu/shared/messages";
 import type { BranchOption, PositionOption } from "./staff-table";
 
 interface StaffFiltersProps {
@@ -41,10 +41,10 @@ export function StaffFilters({
         onValueChange={(v) => updateFilter("role", v)}
       >
         <SelectTrigger className="w-45">
-          <SelectValue placeholder="Tất cả chức vụ" />
+          <SelectValue placeholder={HR_VI.allRoles} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Tất cả chức vụ</SelectItem>
+          <SelectItem value="all">{HR_VI.allRoles}</SelectItem>
           {positionOptions.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}
@@ -75,10 +75,10 @@ export function StaffFilters({
         onValueChange={(v) => updateFilter("status", v)}
       >
         <SelectTrigger className="w-40">
-          <SelectValue placeholder="Tất cả trạng thái" />
+          <SelectValue placeholder={HR_VI.allStatuses} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Tất cả trạng thái</SelectItem>
+          <SelectItem value="all">{HR_VI.allStatuses}</SelectItem>
           <SelectItem value="active">
             {ACTIVE_STATE_LABELS_VI.active}
           </SelectItem>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { LogIn as IconDoorEnter } from "lucide-react";
+import { HR_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 
@@ -23,11 +24,11 @@ export function EmployeePortalBackControl({
     >
       <Link
         href="/employee"
-        title="Quay lại Trang nhân viên"
-        aria-label="Quay lại Trang nhân viên"
+        title={HR_VI.backToEmployeePortal}
+        aria-label={HR_VI.backToEmployeePortal}
       >
         <IconDoorEnter className="size-4 shrink-0" />
-        <span>Thoát</span>
+        <span>{HR_VI.exit}</span>
       </Link>
     </Button>
   );

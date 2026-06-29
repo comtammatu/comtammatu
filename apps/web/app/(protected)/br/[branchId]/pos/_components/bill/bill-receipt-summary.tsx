@@ -232,7 +232,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
         )}
         {itemDiscountAmount > 0 && (
           <div className="flex justify-between">
-            <span>Chiết khấu món</span>
+            <span>{POS_VI.itemDiscountLabel}</span>
             <span className="font-mono tabular-nums">
               -{formatVND(itemDiscountAmount)}
             </span>

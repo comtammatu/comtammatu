@@ -34,7 +34,7 @@ import {
   type ImportMenuSummary,
 } from "./actions";
 
-import { ACTIONS_VI, MENU_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, INVENTORY_VI, MENU_VI, TOAST_VI } from "@comtammatu/shared/messages";
 export function MenuImportExportMenu() {
   const [isExporting, startExport] = useTransition();
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -51,7 +51,7 @@ export function MenuImportExportMenu() {
       } else {
         downloadXlsx(res.data.base64, res.data.filename);
       }
-      toast.success("Đã xuất file");
+      toast.success(TOAST_VI.exported);
     });
   }
 
@@ -59,7 +59,7 @@ export function MenuImportExportMenu() {
     startExport(async () => {
       const res = await downloadMenuTemplate();
       if (!res.success || !res.data) {
-        toast.error(res.error ?? "Không tạo được template");
+        toast.error(res.error ?? INVENTORY_VI.templateCreateFailed);
         return;
       }
       const data = res.data as { base64: string; filename: string };
@@ -87,7 +87,7 @@ export function MenuImportExportMenu() {
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleTemplate}>
             <IconFileSpreadsheet className="mr-2 size-4" />
-            Tải template (.xlsx)
+            {INVENTORY_VI.downloadTemplate}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => handleExport("xlsx")}>
@@ -140,7 +140,7 @@ function MenuImportDialog({
     e.preventDefault();
     const file = fileRef.current?.files?.[0];
     if (!file) {
-      setError("Vui lòng chọn file");
+      setError(INVENTORY_VI.selectFile);
       return;
     }
     const fd = new FormData();
@@ -182,7 +182,7 @@ function MenuImportDialog({
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <label htmlFor="menu-import-file" className="text-sm font-medium">
-              Chọn file (.xlsx, .csv)
+              {INVENTORY_VI.chooseFileLabel}
             </label>
             <input
               id="menu-import-file"
@@ -233,7 +233,7 @@ function MenuImportDialog({
 
           {summary ? (
             <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
-              <p className="font-medium">Kết quả</p>
+              <p className="font-medium">{INVENTORY_VI.importResultHeading}</p>
               <ul className="mt-1 flex flex-col gap-1 text-muted-foreground">
                 <li>
                   Danh mục: +{summary.categoriesInserted} tạo mới,{" "}

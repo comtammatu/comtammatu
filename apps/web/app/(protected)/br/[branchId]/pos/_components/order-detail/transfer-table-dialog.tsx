@@ -137,7 +137,7 @@ export function TransferTableDialog({
               onConfirm();
             }}
           >
-            Chuyển bàn
+            {POS_VI.transferTable}
           </Button>
         </DialogFooter>
       </DialogContent>

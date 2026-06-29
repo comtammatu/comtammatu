@@ -253,7 +253,7 @@ export function ItemDetailDialog({
         })),
       });
       if (result.success) {
-        toast.success("Đã lưu món ăn kèm");
+        toast.success(MENU_VI.sidesSaved);
       } else {
         toast.error(result.error);
       }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { INVENTORY_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -218,7 +218,7 @@ export function ZoneLockIndicator({
             onClick={() => void acquire()}
             className="ml-auto h-7 gap-1"
           >
-            <IconRefresh className="size-3.5" /> Thử lại
+            <IconRefresh className="size-3.5" /> {ACTIONS_VI.retry}
           </Button>
         </>
       ) : state.kind === "lost" ? (

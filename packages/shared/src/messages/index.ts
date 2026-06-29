@@ -39,3 +39,7 @@ export { MENU_VI } from "./menu";
 export type { MenuKey } from "./menu";
 export { ORDERS_VI } from "./orders";
 export type { OrdersKey } from "./orders";
+export { AUTH_VI } from "./auth";
+export type { AuthKey } from "./auth";
+export { HR_VI } from "./hr";
+export type { HrKey } from "./hr";
