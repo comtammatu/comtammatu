@@ -5941,6 +5941,7 @@ export type Database = {
       stock_issue_items: {
         Row: {
           approval_required: boolean
+          entry_unit_id: number | null
           id: number
           ingredient_id: number
           issue_id: number
@@ -5959,6 +5960,7 @@ export type Database = {
         }
         Insert: {
           approval_required?: boolean
+          entry_unit_id?: number | null
           id?: never
           ingredient_id: number
           issue_id: number
@@ -5977,6 +5979,7 @@ export type Database = {
         }
         Update: {
           approval_required?: boolean
+          entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
           issue_id?: number
@@ -5994,6 +5997,13 @@ export type Database = {
           waste_tier?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stock_issue_items_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stock_issue_items_ingredient_id_fkey"
             columns: ["ingredient_id"]
@@ -6344,6 +6354,7 @@ export type Database = {
       }
       stock_transfer_items: {
         Row: {
+          entry_unit_id: number | null
           id: number
           ingredient_id: number
           quantity: number
@@ -6355,6 +6366,7 @@ export type Database = {
           unit_cost_at_ship: number | null
         }
         Insert: {
+          entry_unit_id?: number | null
           id?: never
           ingredient_id: number
           quantity: number
@@ -6366,6 +6378,7 @@ export type Database = {
           unit_cost_at_ship?: number | null
         }
         Update: {
+          entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
           quantity?: number
@@ -6377,6 +6390,13 @@ export type Database = {
           unit_cost_at_ship?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stock_transfer_items_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stock_transfer_items_ingredient_id_fkey"
             columns: ["ingredient_id"]
