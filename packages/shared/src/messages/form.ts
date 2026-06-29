@@ -25,5 +25,6 @@ export const FORM_VI = {
   unitPrice: "Đơn giá",
   required: "Bắt buộc",
   optional: "Tùy chọn",
+  actionColumn: "Hành động",
 } as const;
 export type FormKey = keyof typeof FORM_VI;

@@ -83,7 +83,7 @@ export function OrderTotalsSummary({
 
       {visibleItemDiscount > 0 && (
         <div className={cn(lineClass, "text-success")}>
-          <span>Chiết khấu món</span>
+          <span>{POS_VI.itemDiscountLabel}</span>
           <span className="font-mono tabular-nums">
             -{formatVND(visibleItemDiscount)}
           </span>
@@ -114,7 +114,7 @@ export function OrderTotalsSummary({
       <Separator className="my-1" />
 
       <div className={totalClass}>
-        <span>Tổng cộng</span>
+        <span>{FORM_VI.totalAmount}</span>
         <span className="font-mono">{formatVND(totalAmount)}</span>
       </div>
     </div>

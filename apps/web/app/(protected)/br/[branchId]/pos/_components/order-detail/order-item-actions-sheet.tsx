@@ -144,7 +144,7 @@ export function OrderItemActionsSheet({
               noteClassName={cancelled ? "line-through opacity-60" : undefined}
             />
             <p className="mt-2 text-xs text-muted-foreground">
-              Trạng thái:{" "}
+              {POS_VI.statusPrefix}
               <span className="font-medium text-foreground">{statusLabel}</span>
             </p>
           </div>

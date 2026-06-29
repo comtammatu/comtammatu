@@ -41,6 +41,7 @@ import {
   FORM_VI,
   INVENTORY_VI,
   PRODUCT_VI,
+  STATES_VI,
 } from "@comtammatu/shared/messages";
 
 export interface MenuItemOption {
@@ -214,7 +215,7 @@ function LineRowCells({
           name={`lines.${index}.note`}
           render={({ field }) => (
             <Input
-              placeholder="Tùy chọn"
+              placeholder={STATES_VI.optional}
               {...field}
               value={field.value ?? ""}
               className="h-9"

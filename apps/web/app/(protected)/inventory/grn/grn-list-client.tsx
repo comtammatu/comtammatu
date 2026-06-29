@@ -35,7 +35,7 @@ import { StatusBadge } from "../_components/status-badge";
 import { formatVND } from "../_lib/format";
 import { tNav } from "../_lib/dictionary";
 
-import { FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, INVENTORY_VI, KDS_VI, STATES_VI } from "@comtammatu/shared/messages";
 export type GrnRow = {
   id: number;
   code: string;
@@ -47,10 +47,10 @@ export type GrnRow = {
 };
 
 const statusFilterOptions = [
-  { value: "all", label: "Tất cả" },
+  { value: "all", label: KDS_VI.filterAll },
   { value: "draft", label: INVENTORY_VI.draft },
   { value: "confirmed", label: "Đã xác nhận" },
-  { value: "cancelled", label: "Đã hủy" },
+  { value: "cancelled", label: STATES_VI.cancelled },
 ];
 
 const GRN_COLUMNS: DataTableColumn<GrnRow>[] = [
@@ -159,7 +159,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="min-w-40">
-            <SelectValue placeholder="Trạng thái" />
+            <SelectValue placeholder={FORM_VI.status} />
           </SelectTrigger>
           <SelectContent>
             {statusFilterOptions.map((opt) => (

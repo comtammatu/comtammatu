@@ -54,7 +54,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { formatVNDateTime, getVNDateString } from "@/_lib/format-datetime";
 
-import { FINANCE_VI, FORM_VI, ORDER_VI } from "@comtammatu/shared/messages";
+import { FINANCE_VI, FORM_VI, ORDER_VI, POS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 import { StatusBadge } from "@/components/status-badge";
 
@@ -968,7 +968,7 @@ export function InvoiceList({
                 ) : null}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="replace-buyer-address">Địa chỉ</Label>
+                <Label htmlFor="replace-buyer-address">{POS_VI.addressLabel}</Label>
                 <Input
                   id="replace-buyer-address"
                   value={replaceBuyerAddress}

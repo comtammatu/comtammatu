@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { UserPlus as IconUserPlus } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { HR_VI } from "@comtammatu/shared/messages";
 import { StaffFormDialog } from "./staff-form-dialog";
 import type { BranchOption, PositionOption } from "./staff-table";
 
@@ -21,7 +22,7 @@ export function AddStaffButton({
     <>
       <Button onClick={() => setOpen(true)}>
         <IconUserPlus className="mr-2 size-4" />
-        Thêm nhân viên
+        {HR_VI.addStaff}
       </Button>
       <StaffFormDialog
         open={open}

@@ -24,7 +24,7 @@ import {
 
 /* ─── Helpers ─── */
 
-import { BRANCH_VI, FORM_VI, ORDERS_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, FORM_VI, ORDERS_VI, POS_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import { StatusBadge } from "@/components/status-badge";
 
@@ -337,7 +337,7 @@ export function OrderDetailSheet({
                               )}
                             >
                               <dt className="shrink-0 text-muted-foreground">
-                                Tuỳ chọn
+                                {POS_VI.options}
                               </dt>
                               <dd className="text-foreground">
                                 {item.modifiers.map(formatModifier).join(", ")}
@@ -367,7 +367,7 @@ export function OrderDetailSheet({
                               )}
                             >
                               <dt className="shrink-0 text-muted-foreground">
-                                Ghi chú
+                                {FORM_VI.notes}
                               </dt>
                               <dd className="text-foreground">{item.note}</dd>
                             </div>
@@ -431,7 +431,7 @@ export function OrderDetailSheet({
               {ORDERS_VI.auditHistoryTitle}
             </p>
             {auditPending && (
-              <p className="text-sm text-muted-foreground">Đang tải…</p>
+              <p className="text-sm text-muted-foreground">{STATES_VI.loading}</p>
             )}
             {auditError && (
               <p className="text-sm text-destructive">{auditError}</p>

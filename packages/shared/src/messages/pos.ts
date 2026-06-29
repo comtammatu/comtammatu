@@ -101,6 +101,13 @@ export const POS_VI = {
   hotkeyGroupHelp: "Trợ giúp",
   hotkeyToggleOverlay: "Mở / đóng bảng phím tắt",
   hotkeyOverlayTitle: "Phím tắt",
+  keepOrder: "Giữ đơn",
+  cancelOrder: "Hủy đơn",
+  transferTable: "Chuyển bàn",
+  priorityBadge: "Ưu tiên",
+  notePrefix: "Ghi chú: ",
+  statusPrefix: "Trạng thái: ",
+  itemDiscountLabel: "Chiết khấu món",
 } as const;
 
 export type PosKey = keyof typeof POS_VI;
