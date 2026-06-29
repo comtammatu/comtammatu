@@ -24,7 +24,7 @@ import {
 
 /* ─── Helpers ─── */
 
-import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, FORM_VI, ORDERS_VI } from "@comtammatu/shared/messages";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import { StatusBadge } from "@/components/status-badge";
 
@@ -89,7 +89,7 @@ export function OrderDetailSheet({
         setAudit(result.data);
         setAuditError(null);
       } else {
-        setAuditError(result.error ?? "Không thể tải lịch sử");
+        setAuditError(result.error ?? ORDERS_VI.loadHistoryFailed);
       }
     });
   }, []);
@@ -104,7 +104,7 @@ export function OrderDetailSheet({
         setItems(result.data);
         setItemsError(null);
       } else {
-        setItemsError(result.error ?? "Không thể tải món");
+        setItemsError(result.error ?? ORDERS_VI.loadItemsFailed);
       }
     });
   }, []);
@@ -182,13 +182,13 @@ export function OrderDetailSheet({
             <span className="text-muted-foreground">{BRANCH_VI.long}</span>
             <span>{order.branch_name}</span>
 
-            <span className="text-muted-foreground">Người order</span>
+            <span className="text-muted-foreground">{ORDERS_VI.orderedBy}</span>
             <span>{order.created_by_name}</span>
 
-            <span className="text-muted-foreground">Thời gian</span>
+            <span className="text-muted-foreground">{ORDERS_VI.time}</span>
             <span>{formatVNDateTime(order.created_at)}</span>
 
-            <span className="text-muted-foreground">Loại đơn</span>
+            <span className="text-muted-foreground">{ORDERS_VI.orderType}</span>
             <span className="capitalize">{order.order_type}</span>
           </div>
 
@@ -196,7 +196,7 @@ export function OrderDetailSheet({
           {order.payment && (
             <div className="rounded-md border p-3 flex flex-col gap-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Thanh toán
+                {ORDERS_VI.payment}
               </p>
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
@@ -215,7 +215,7 @@ export function OrderDetailSheet({
           {!order.payment && order.payment_method && (
             <div className="rounded-md border p-3 flex flex-col gap-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Thanh toán
+                {ORDERS_VI.payment}
               </p>
               <div className="flex items-center gap-2 text-sm">
                 <Badge variant="outline">
@@ -249,12 +249,12 @@ export function OrderDetailSheet({
             )}
             {!itemsError && items === null && itemsPending && (
               <div className="rounded-md border px-4 py-6 text-center text-sm text-muted-foreground">
-                Đang tải món…
+                {ORDERS_VI.loadingItems}
               </div>
             )}
             {!itemsError && items !== null && items.length === 0 && (
               <div className="rounded-md border px-4 py-6 text-center text-sm text-muted-foreground">
-                Không có món nào
+                {ORDERS_VI.noItems}
               </div>
             )}
             {!itemsError && items !== null && items.length > 0 && (
@@ -352,7 +352,7 @@ export function OrderDetailSheet({
                               )}
                             >
                               <dt className="shrink-0 text-muted-foreground">
-                                Kèm
+                                {ORDERS_VI.sidesLabel}
                               </dt>
                               <dd className="text-foreground">
                                 {item.sides.map(formatSide).join(", ")}
@@ -375,7 +375,7 @@ export function OrderDetailSheet({
                           {isCancelled && item.cancel_reason && (
                             <div className="flex gap-2">
                               <dt className="shrink-0 text-destructive">
-                                Lý do hủy
+                                {ORDERS_VI.cancelReasonLabel}
                               </dt>
                               <dd className="text-foreground">
                                 {item.cancel_reason}
@@ -399,7 +399,7 @@ export function OrderDetailSheet({
             </div>
             {hasDiscount && (
               <div className="text-success flex justify-between">
-                <span>Giảm giá</span>
+                <span>{ORDERS_VI.discountLabel}</span>
                 <span className="font-mono">
                   -{formatVND(order.discount_amount)}
                 </span>
@@ -413,7 +413,7 @@ export function OrderDetailSheet({
             )}
             {hasServiceCharge && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Phụ phí</span>
+                <span className="text-muted-foreground">{ORDERS_VI.surchargeLabel}</span>
                 <span className="font-mono">
                   {formatVND(order.service_charge)}
                 </span>
@@ -428,7 +428,7 @@ export function OrderDetailSheet({
           {/* ─── Audit timeline ─── */}
           <div>
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Lịch sử thao tác
+              {ORDERS_VI.auditHistoryTitle}
             </p>
             {auditPending && (
               <p className="text-sm text-muted-foreground">Đang tải…</p>
@@ -438,7 +438,7 @@ export function OrderDetailSheet({
             )}
             {!auditPending && !auditError && audit && audit.length === 0 && (
               <p className="text-sm text-muted-foreground">
-                Chưa có thao tác nào được ghi nhận.
+                {ORDERS_VI.noAuditHistory}
               </p>
             )}
             {!auditPending && !auditError && audit && audit.length > 0 && (

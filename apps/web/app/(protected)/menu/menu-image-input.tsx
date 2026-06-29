@@ -8,7 +8,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, MENU_VI } from "@comtammatu/shared/messages";
 const BUCKET = "menu-images";
 const MAX_SIZE = 5 * 1024 * 1024;
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
@@ -68,11 +68,11 @@ export function MenuImageInput({
 
   async function handleFile(file: File) {
     if (!ACCEPTED.includes(file.type)) {
-      toast.error("Chỉ chấp nhận JPG, PNG hoặc WebP.");
+      toast.error(MENU_VI.imageTypeError);
       return;
     }
     if (file.size > MAX_SIZE) {
-      toast.error("Ảnh vượt quá 5 MB.");
+      toast.error(MENU_VI.imageTooLarge);
       return;
     }
     setUploading(true);
@@ -120,7 +120,7 @@ export function MenuImageInput({
         <div className="flex items-center gap-3 rounded-md border bg-muted/30 p-3">
           <Image
             src={value}
-            alt="Ảnh món"
+            alt={MENU_VI.imageAlt}
             width={64}
             height={64}
             className="size-16 rounded-md object-cover"
@@ -134,7 +134,7 @@ export function MenuImageInput({
               onClick={() => inputRef.current?.click()}
             >
               {uploading ? <Spinner /> : <IconUpload className="size-4" />}
-              {uploading ? "Đang tải…" : "Đổi ảnh"}
+              {uploading ? "Đang tải…" : MENU_VI.changeImage}
             </Button>
             <Button
               type="button"
@@ -158,7 +158,7 @@ export function MenuImageInput({
           onClick={() => inputRef.current?.click()}
         >
           {uploading ? <Spinner /> : <IconUpload className="size-4" />}
-          {uploading ? "Đang tải…" : "Tải ảnh món (≤ 5 MB)"}
+          {uploading ? "Đang tải…" : MENU_VI.uploadImage}
         </Button>
       )}
     </div>

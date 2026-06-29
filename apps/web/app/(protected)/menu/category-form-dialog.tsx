@@ -7,7 +7,7 @@ import {
   TextField,
   valuesToFormData,
 } from "@/components/form";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, MENU_VI } from "@comtammatu/shared/messages";
 import { createCategory, updateCategory } from "./actions";
 import { CATEGORY_TYPE_LABELS } from "./category-labels";
 import type { CategoryRow } from "./category-table";
@@ -18,8 +18,8 @@ const categoryTypeValues = Object.keys(CATEGORY_TYPE_LABELS) as [
 ];
 
 const categorySchema = z.object({
-  name: z.string().trim().min(1, { error: "Tên danh mục không được trống" }),
-  type: z.enum(categoryTypeValues, { error: "Loại danh mục không hợp lệ" }),
+  name: z.string().trim().min(1, { error: MENU_VI.categoryNameRequired }),
+  type: z.enum(categoryTypeValues, { error: MENU_VI.categoryTypeInvalid }),
   sort_order: z.string().optional(),
 });
 
@@ -62,8 +62,8 @@ export function CategoryFormDialog({
       schema={categorySchema}
       defaultValues={toFormValues(category)}
       entityKey={category?.id ?? "new"}
-      title={isEdit ? "Chỉnh sửa danh mục" : "Thêm danh mục mới"}
-      successMessage={isEdit ? "Đã cập nhật danh mục" : "Đã tạo danh mục mới"}
+      title={isEdit ? MENU_VI.editCategoryTitle : MENU_VI.addCategoryTitle}
+      successMessage={isEdit ? MENU_VI.categoryUpdated : MENU_VI.categoryCreated}
       submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
       onSubmit={async (values) => {
         const fd = valuesToFormData(values);
@@ -79,8 +79,8 @@ export function CategoryFormDialog({
           <TextField
             control={form.control}
             name="name"
-            label="Tên danh mục"
-            placeholder="VD: Cơm tấm, Nước uống"
+            label={MENU_VI.categoryNameLabel}
+            placeholder={MENU_VI.categoryNamePlaceholder}
             required
           />
           <SelectField
@@ -88,13 +88,13 @@ export function CategoryFormDialog({
             name="type"
             label="Loại"
             options={CATEGORY_TYPE_OPTIONS}
-            placeholder="Chọn loại"
+            placeholder={MENU_VI.selectTypePlaceholder}
             required
           />
           <TextField
             control={form.control}
             name="sort_order"
-            label="Thứ tự hiển thị"
+            label={MENU_VI.sortOrderLabel}
             type="number"
             min={0}
           />

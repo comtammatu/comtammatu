@@ -54,7 +54,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { formatVNDateTime, getVNDateString } from "@/_lib/format-datetime";
 
-import { FORM_VI, ORDER_VI } from "@comtammatu/shared/messages";
+import { FINANCE_VI, FORM_VI, ORDER_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 import { StatusBadge } from "@/components/status-badge";
 
@@ -177,7 +177,7 @@ export function InvoiceList({
         buyerAddress: replaceBuyerAddress.trim() || undefined,
       });
       if (!result.success) {
-        toast.error(result.error ?? "Không thể thay thế hóa đơn");
+        toast.error(result.error ?? FINANCE_VI.replaceFailed);
         return;
       }
       const data = result.data as {
@@ -216,10 +216,10 @@ export function InvoiceList({
     startTransition(async () => {
       const result = await cancelTaxInvoice(id, reason);
       if (!result.success) {
-        toast.error(result.error ?? "Không thể hủy hóa đơn");
+        toast.error(result.error ?? FINANCE_VI.cancelFailed);
         return;
       }
-      toast.success("Đã hủy hóa đơn");
+      toast.success(FINANCE_VI.cancelled);
       setInvoices((prev) =>
         prev.map((inv) =>
           inv.id === id ? { ...inv, status: "cancelled" } : inv,
@@ -306,7 +306,7 @@ export function InvoiceList({
       }
       const url = (result.data as { url?: string } | null)?.url;
       if (!url) {
-        toast.error("Link tải không hợp lệ");
+        toast.error(FINANCE_VI.invalidDownloadLink);
         return;
       }
       // Open signed URL in a new tab — TTL 5 min, browser handles
@@ -321,19 +321,19 @@ export function InvoiceList({
       try {
         const result = await forceResyncTaxInvoice(inv.id);
         if (!result.success) {
-          toast.error(result.error ?? "Không thể đồng bộ hóa đơn");
+          toast.error(result.error ?? FINANCE_VI.syncFailed);
           return;
         }
         const outcome =
           (result.data as { outcome?: string } | null)?.outcome ?? "no_change";
         if (outcome === "transition") {
-          toast.success("Đã đồng bộ — trạng thái cập nhật");
+          toast.success(FINANCE_VI.syncedStatusUpdated);
         } else if (outcome === "no_change") {
-          toast.info("Provider chưa có cập nhật — thử lại sau");
+          toast.info(FINANCE_VI.syncNoUpdate);
         } else if (outcome === "race_lost") {
-          toast.warning("Hóa đơn đã thay đổi trạng thái — tải lại trang");
+          toast.warning(FINANCE_VI.syncStatusChangedReload);
         } else if (outcome === "giveup_24h") {
-          toast.warning("Hóa đơn quá hạn — đã chuyển sang 'đã hủy'");
+          toast.warning(FINANCE_VI.syncExpiredCancelled);
         } else {
           toast.error(`Đồng bộ thất bại: ${outcome}`);
         }
@@ -468,20 +468,20 @@ export function InvoiceList({
               size={size}
               onClick={() => handleDownload(inv, "pdf")}
               disabled={isPending}
-              title="Tải PDF"
+              title={FINANCE_VI.downloadPdf}
             >
               <IconDownload className="size-4" />
-              {dense ? <span className="sr-only">Tải PDF</span> : "PDF"}
+              {dense ? <span className="sr-only">{FINANCE_VI.downloadPdf}</span> : "PDF"}
             </Button>
             <Button
               variant="ghost"
               size={size}
               onClick={() => handleDownload(inv, "xml")}
               disabled={isPending}
-              title="Tải XML"
+              title={FINANCE_VI.downloadXml}
             >
               <IconDownload className="size-4" />
-              {dense ? <span className="sr-only">Tải XML</span> : "XML"}
+              {dense ? <span className="sr-only">{FINANCE_VI.downloadXml}</span> : "XML"}
             </Button>
           </>
         ) : null}
@@ -509,14 +509,14 @@ export function InvoiceList({
             size={size}
             onClick={() => handleResync(inv)}
             disabled={isPending && resyncingId === inv.id}
-            title="Đồng bộ lại với provider"
+            title={FINANCE_VI.resyncWithProvider}
           >
             {isPending && resyncingId === inv.id ? (
               <Spinner className="size-4" />
             ) : (
               <IconRefreshCw className="size-4" />
             )}
-            {dense ? <span className="sr-only">Đồng bộ lại</span> : "Đồng bộ"}
+            {dense ? <span className="sr-only">{FINANCE_VI.resync}</span> : FINANCE_VI.sync}
           </Button>
         ) : null}
         {inv.status === "issued" ? (
@@ -525,13 +525,13 @@ export function InvoiceList({
               variant="ghost"
               size={size}
               onClick={() => openReplaceDialog(inv)}
-              title="Thay thế hóa đơn"
+              title={FINANCE_VI.replaceInvoice}
             >
               <IconFileEdit className="size-4" />
               {dense ? (
-                <span className="sr-only">Thay thế hóa đơn</span>
+                <span className="sr-only">{FINANCE_VI.replaceInvoice}</span>
               ) : (
-                "Thay thế"
+                FINANCE_VI.replace
               )}
             </Button>
             <Button
@@ -569,13 +569,13 @@ export function InvoiceList({
               size={size}
               className="text-destructive hover:text-destructive"
               onClick={() => setCancelTarget(inv)}
-              title="Hủy hóa đơn"
+              title={FINANCE_VI.cancelInvoice}
             >
               <IconFileX className="size-4" />
               {dense ? (
-                <span className="sr-only">Hủy hóa đơn</span>
+                <span className="sr-only">{FINANCE_VI.cancelInvoice}</span>
               ) : (
-                "Hủy hóa đơn"
+                FINANCE_VI.cancelInvoice
               )}
             </Button>
           </>
@@ -587,7 +587,7 @@ export function InvoiceList({
   const columns: DataTableColumn<InvoiceRow>[] = [
     {
       key: "invoice_number",
-      header: "Số HĐ",
+      header: FINANCE_VI.invoiceNumberCol,
       className: "font-mono text-sm",
       render: (inv) => inv.invoice_number ?? "—",
     },
@@ -599,7 +599,7 @@ export function InvoiceList({
     },
     {
       key: "buyer",
-      header: "Người mua",
+      header: FINANCE_VI.buyer,
       render: (inv) =>
         inv.buyer_name ? (
           <div>
@@ -631,7 +631,7 @@ export function InvoiceList({
     },
     {
       key: "time",
-      header: "Thời gian",
+      header: FINANCE_VI.timeCol,
       className: "text-sm text-muted-foreground",
       render: (inv) => formatDate(inv.issued_at ?? inv.created_at),
     },
@@ -663,7 +663,7 @@ export function InvoiceList({
           columns={columns}
           data={invoices}
           getRowKey={(inv) => inv.id}
-          emptyTitle="Chưa có hóa đơn nào"
+          emptyTitle={FINANCE_VI.emptyNoInvoices}
           emptyIcon={<IconReceipt />}
           mobileCardRender={(inv) => (
             <Item variant="outline" className="flex-col items-stretch">
@@ -680,7 +680,7 @@ export function InvoiceList({
               </ItemHeader>
               <ItemContent className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                 <div>
-                  <p className="text-muted-foreground">Người mua</p>
+                  <p className="text-muted-foreground">{FINANCE_VI.buyer}</p>
                   <p className="mt-1">{inv.buyer_name ?? "—"}</p>
                   {inv.buyer_tax_code ? (
                     <p className="text-xs text-muted-foreground">
@@ -728,14 +728,13 @@ export function InvoiceList({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận hủy hóa đơn</AlertDialogTitle>
+            <AlertDialogTitle>{FINANCE_VI.cancelConfirmTitle}</AlertDialogTitle>
             <AlertDialogDescription>
               Hủy hóa đơn{" "}
               <strong>
                 {cancelTarget?.invoice_number ?? `#${cancelTarget?.id}`}
               </strong>
-              ? Hành động này không thể hoàn tác. Lý do hủy được lưu vào hồ sơ
-              HĐĐT theo yêu cầu của Nghị định 70/2025.
+              ? {FINANCE_VI.cancelIrreversibleHint}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="grid gap-2">
@@ -746,7 +745,7 @@ export function InvoiceList({
               id="invoice-cancel-reason"
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Ví dụ: Khách hàng yêu cầu xuất lại HĐĐT vì sai mã số thuế."
+              placeholder={FINANCE_VI.cancelReasonPlaceholder}
               rows={3}
               maxLength={CANCEL_REASON_MAX}
               disabled={isPending}
@@ -762,7 +761,7 @@ export function InvoiceList({
               disabled={isPending || !reasonValid}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Hủy hóa đơn
+              {FINANCE_VI.cancelInvoice}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -888,7 +887,7 @@ export function InvoiceList({
       >
         <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle>Thay thế hóa đơn</AlertDialogTitle>
+            <AlertDialogTitle>{FINANCE_VI.replaceConfirmTitle}</AlertDialogTitle>
             <AlertDialogDescription>
               Tạo HĐ thay thế cho{" "}
               <strong>
@@ -907,7 +906,7 @@ export function InvoiceList({
                 id="replace-reason"
                 value={replaceReason}
                 onChange={(e) => setReplaceReason(e.target.value)}
-                placeholder="Ví dụ: Sửa sai MST người mua từ 0100109106 thành 0312891234."
+                placeholder={FINANCE_VI.replaceReasonPlaceholder}
                 rows={3}
                 maxLength={REPLACE_REASON_MAX}
                 disabled={isPending}
@@ -919,19 +918,19 @@ export function InvoiceList({
             <div className="grid gap-2 md:grid-cols-2">
               <div className="grid gap-2">
                 <Label htmlFor="replace-agreement-ref">
-                  Văn bản thỏa thuận
+                  {FINANCE_VI.agreementDocLabel}
                 </Label>
                 <Input
                   id="replace-agreement-ref"
                   value={replaceAgreementRef}
                   onChange={(e) => setReplaceAgreementRef(e.target.value)}
-                  placeholder="Số biên bản / mô tả"
+                  placeholder={FINANCE_VI.agreementDocPlaceholder}
                   maxLength={REPLACE_AGREEMENT_MAX}
                   disabled={isPending}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="replace-agreement-date">Ngày văn bản</Label>
+                <Label htmlFor="replace-agreement-date">{FINANCE_VI.agreementDateLabel}</Label>
                 <Input
                   id="replace-agreement-date"
                   type="date"
@@ -943,7 +942,7 @@ export function InvoiceList({
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="replace-buyer-name">Tên người mua</Label>
+              <Label htmlFor="replace-buyer-name">{FINANCE_VI.buyerNameLabel}</Label>
               <Input
                 id="replace-buyer-name"
                 value={replaceBuyerName}
@@ -954,17 +953,17 @@ export function InvoiceList({
             </div>
             <div className="grid gap-2 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="replace-buyer-mst">MST người mua</Label>
+                <Label htmlFor="replace-buyer-mst">{FINANCE_VI.buyerTaxCodeLabel}</Label>
                 <Input
                   id="replace-buyer-mst"
                   value={replaceBuyerTaxCode}
                   onChange={(e) => setReplaceBuyerTaxCode(e.target.value)}
-                  placeholder="0312891234 hoặc 0312891234-001"
+                  placeholder={FINANCE_VI.buyerTaxCodePlaceholder}
                   disabled={isPending}
                 />
                 {replaceBuyerTaxCode.trim() && !replaceMstValid ? (
                   <p className="text-xs text-destructive">
-                    MST phải có dạng 10 số hoặc 10-3 số
+                    {FINANCE_VI.taxCodeFormatError}
                   </p>
                 ) : null}
               </div>
@@ -986,7 +985,7 @@ export function InvoiceList({
               onClick={handleReplace}
               disabled={isPending || !replaceFormValid}
             >
-              Tạo HĐ thay thế
+              {FINANCE_VI.createReplacementInvoice}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

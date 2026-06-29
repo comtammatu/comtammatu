@@ -29,7 +29,7 @@ import { FormattedNumberInput } from "@/components/form";
 
 /* ─── Local Types ─── */
 
-import { FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, MENU_VI } from "@comtammatu/shared/messages";
 interface VariantEntry {
   id?: number;
   name: string;
@@ -104,7 +104,7 @@ export function ItemDetailDialog({
     if (token !== loadTokenRef.current) return;
 
     if (varRes.error || modRes.error || sideRes.error) {
-      setLoadError("Không thể tải dữ liệu. Vui lòng thử lại.");
+      setLoadError(MENU_VI.loadDataFailedRetry);
       setIsLoading(false);
       return;
     }
@@ -167,7 +167,7 @@ export function ItemDetailDialog({
     startTransition(async () => {
       const result = await saveVariants({ itemId: item.id, variants: valid });
       if (result.success) {
-        toast.success("Đã lưu biến thể");
+        toast.success(MENU_VI.variantsSaved);
       } else {
         toast.error(result.error);
       }
@@ -208,7 +208,7 @@ export function ItemDetailDialog({
     startTransition(async () => {
       const result = await saveModifiers({ itemId: item.id, modifiers: valid });
       if (result.success) {
-        toast.success("Đã lưu tùy chọn");
+        toast.success(MENU_VI.modifiersSaved);
       } else {
         toast.error(result.error);
       }
@@ -281,13 +281,13 @@ export function ItemDetailDialog({
           <Tabs defaultValue="variants" className="w-full">
             <TabsList className="w-full">
               <TabsTrigger value="variants" className="flex-1">
-                Biến thể ({variants.length})
+                {MENU_VI.variantsTab} ({variants.length})
               </TabsTrigger>
               <TabsTrigger value="modifiers" className="flex-1">
-                Tùy chọn ({modifiers.length})
+                {MENU_VI.modifiersTab} ({modifiers.length})
               </TabsTrigger>
               <TabsTrigger value="sides" className="flex-1">
-                Món kèm ({sides.length})
+                {MENU_VI.sidesTab} ({sides.length})
               </TabsTrigger>
             </TabsList>
 
@@ -305,11 +305,11 @@ export function ItemDetailDialog({
                       onChange={(e) =>
                         updateVariant(idx, "name", e.target.value)
                       }
-                      placeholder="VD: Phần lớn"
+                      placeholder={MENU_VI.variantNamePlaceholder}
                     />
                   </div>
                   <div className="w-28 flex flex-col gap-1">
-                    <Label className="text-xs">+/- Giá</Label>
+                    <Label className="text-xs">{MENU_VI.priceDeltaLabel}</Label>
                     <FormattedNumberInput
                       defaultValue={String(v.price_adjustment)}
                       allowNegative
@@ -331,7 +331,7 @@ export function ItemDetailDialog({
                     onClick={() => removeVariant(idx)}
                   >
                     <IconTrash className="size-4" />
-                    <span className="sr-only">Xóa biến thể</span>
+                    <span className="sr-only">{MENU_VI.removeVariant}</span>
                   </Button>
                 </div>
               ))}
@@ -343,7 +343,7 @@ export function ItemDetailDialog({
                   onClick={addVariant}
                 >
                   <IconPlus className="mr-1 size-3" />
-                  Thêm biến thể
+                  {MENU_VI.addVariant}
                 </Button>
                 <Button
                   type="button"
@@ -352,7 +352,7 @@ export function ItemDetailDialog({
                   disabled={isPending}
                 >
                   {isPending && <Spinner className="mr-1 size-3" />}
-                  Lưu biến thể
+                  {MENU_VI.saveVariants}
                 </Button>
               </div>
             </TabsContent>
@@ -371,7 +371,7 @@ export function ItemDetailDialog({
                       onChange={(e) =>
                         updateModifier(idx, "name", e.target.value)
                       }
-                      placeholder="VD: Thêm trứng"
+                      placeholder={MENU_VI.modifierNamePlaceholder}
                     />
                   </div>
                   <div className="w-28 flex flex-col gap-1">
@@ -396,7 +396,7 @@ export function ItemDetailDialog({
                     onClick={() => removeModifier(idx)}
                   >
                     <IconTrash className="size-4" />
-                    <span className="sr-only">Xóa tùy chọn</span>
+                    <span className="sr-only">{MENU_VI.removeModifier}</span>
                   </Button>
                 </div>
               ))}
@@ -408,7 +408,7 @@ export function ItemDetailDialog({
                   onClick={addModifier}
                 >
                   <IconPlus className="mr-1 size-3" />
-                  Thêm tùy chọn
+                  {MENU_VI.addModifier}
                 </Button>
                 <Button
                   type="button"
@@ -417,7 +417,7 @@ export function ItemDetailDialog({
                   disabled={isPending}
                 >
                   {isPending && <Spinner className="mr-1 size-3" />}
-                  Lưu tùy chọn
+                  {MENU_VI.saveModifiers}
                 </Button>
               </div>
             </TabsContent>
@@ -428,13 +428,13 @@ export function ItemDetailDialog({
                 <AppEmptyState
                   compact
                   className="bg-transparent"
-                  title="Chưa có món phụ nào"
-                  description='Tạo danh mục loại "Món phụ" và thêm món trước.'
+                  title={MENU_VI.sidesEmptyTitle}
+                  description={MENU_VI.sidesEmptyDescription}
                 />
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground">
-                    Chọn các món phụ có thể đi kèm:
+                    {MENU_VI.sidesSelectHint}
                   </p>
                   {sideItems.map((si) => {
                     const selected = sides.find(
@@ -458,7 +458,7 @@ export function ItemDetailDialog({
                               checked={selected.is_default}
                               onCheckedChange={() => toggleSideDefault(si.id)}
                             />
-                            Mặc định
+                            {MENU_VI.sideDefault}
                           </label>
                         )}
                       </div>
@@ -474,7 +474,7 @@ export function ItemDetailDialog({
                   disabled={isPending}
                 >
                   {isPending && <Spinner className="mr-1 size-3" />}
-                  Lưu món kèm
+                  {MENU_VI.saveSides}
                 </Button>
               </div>
             </TabsContent>

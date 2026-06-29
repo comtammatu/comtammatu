@@ -34,7 +34,7 @@ import {
   type ImportMenuSummary,
 } from "./actions";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, MENU_VI } from "@comtammatu/shared/messages";
 export function MenuImportExportMenu() {
   const [isExporting, startExport] = useTransition();
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -83,7 +83,7 @@ export function MenuImportExportMenu() {
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
             <IconUpload className="mr-2 size-4" />
-            Import từ file
+            {MENU_VI.importMenuItem}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleTemplate}>
             <IconFileSpreadsheet className="mr-2 size-4" />
@@ -92,11 +92,11 @@ export function MenuImportExportMenu() {
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => handleExport("xlsx")}>
             <IconDownload className="mr-2 size-4" />
-            Export .xlsx (đầy đủ)
+            {MENU_VI.exportXlsxFull}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleExport("csv")}>
             <IconDownload className="mr-2 size-4" />
-            Export .csv (món ăn)
+            {MENU_VI.exportCsvItems}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -157,7 +157,7 @@ function MenuImportDialog({
         return;
       }
       setSummary(res.data.summary);
-      toast.success("Import thành công");
+      toast.success(MENU_VI.importSuccess);
       window.location.reload();
     });
   }
@@ -172,7 +172,7 @@ function MenuImportDialog({
     >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Import Menu từ file</DialogTitle>
+          <DialogTitle>{MENU_VI.importDialogTitle}</DialogTitle>
           <DialogDescription>
             Hỗ trợ file .xlsx với 2 sheet: <strong>Danh muc</strong> và{" "}
             <strong>Mon an</strong>. Tên trùng sẽ được cập nhật.
