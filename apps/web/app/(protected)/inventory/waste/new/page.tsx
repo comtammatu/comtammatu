@@ -70,7 +70,9 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
       .order("sort_order", { ascending: true }),
     supabase
       .from("ingredients")
-      .select("id, name, unit, purchase_unit, unit_cost")
+      .select(
+        "id, name, unit, purchase_unit, unit_cost, ingredient_units(unit_id, is_base, allow_issue, sort_order, units(code))",
+      )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
       .order("name", { ascending: true }),
@@ -93,12 +95,26 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
       name: l.name,
       kind: l.location_kind ?? "warehouse",
     })),
-    ingredients: (ingredientsRes.data ?? []).map((i) => ({
-      id: i.id,
-      name: i.name,
-      unit: i.purchase_unit ?? i.unit ?? "kg",
-      unitCost: i.unit_cost === null ? null : Number(i.unit_cost),
-    })),
+    ingredients: (ingredientsRes.data ?? []).map((i) => {
+      const issueUnits = (i.ingredient_units ?? [])
+        .filter((u) => u.allow_issue && (u.units?.code ?? "") !== "")
+        .sort((a, b) => {
+          if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
+          return a.sort_order - b.sort_order;
+        })
+        .map((u) => ({
+          unitId: u.unit_id,
+          code: u.units?.code ?? "",
+          isBase: u.is_base,
+        }));
+      return {
+        id: i.id,
+        name: i.name,
+        unit: i.purchase_unit ?? i.unit ?? "kg",
+        unitCost: i.unit_cost === null ? null : Number(i.unit_cost),
+        issueUnits,
+      };
+    }),
     capStatus:
       capRes.success && capRes.data
         ? capRes.data

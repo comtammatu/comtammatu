@@ -638,6 +638,7 @@ export const inventory = {
     notReceived: "Chưa nhận",
     wacCost: "Giá WAC",
     unit: "Đơn vị",
+    selectUnit: "Chọn ĐV",
     lineAmount: "Thành tiền",
     emptyTransferItemsTitle: "Chưa có nguyên liệu điều chuyển",
     emptyTransferItemsDescription:

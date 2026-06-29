@@ -29,6 +29,9 @@ const issueLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
   unit: z.string().min(1),
+  // Issue-role unit the qty was entered in. NULL = already base (back-compat);
+  // confirm_stock_issue converts to the ingredient base via inv_to_base().
+  entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   reason: z.string().trim().optional().nullable(),
 });
 
@@ -204,6 +207,7 @@ export const upsertStockIssueLine = withAction(
         ingredient_id: d.ingredientId,
         quantity: d.quantity,
         unit: d.unit,
+        entry_unit_id: d.entryUnitId ?? null,
         reason: d.reason ?? null,
       },
       { onConflict: "issue_id,ingredient_id,tenant_id" },

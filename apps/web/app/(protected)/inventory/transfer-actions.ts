@@ -271,6 +271,9 @@ const transferLineInputSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
   unit: z.string().min(1),
+  // Issue-role unit the qty was entered in. NULL = already base (back-compat);
+  // stock_transfer_confirm_ship converts to base via inv_to_base().
+  entryUnitId: z.coerce.number().int().positive().nullable().optional(),
 });
 
 const transferCreateSchema = z.object({
@@ -405,6 +408,7 @@ export async function createStockTransfer(
     ingredientId: line.ingredientId,
     quantity: line.quantity,
     unit: line.unit,
+    entryUnitId: line.entryUnitId ?? null,
   }));
 
   const { data, error } = await supabase.rpc("create_stock_transfer_draft", {
@@ -437,6 +441,28 @@ export async function createStockTransfer(
   const result = data as unknown as { id?: number } | null;
   if (!result?.id) {
     return { success: false, error: "Không thể tạo phiếu chuyển." };
+  }
+
+  // create_stock_transfer_draft persists ingredient/quantity/unit only. Persist
+  // the entry-unit per line on the freshly created draft so
+  // stock_transfer_confirm_ship can convert the entered qty to base via
+  // inv_to_base(). NULL entry units are already base (back-compat) and skipped.
+  const entryUnitByIngredient = new Map<number, number>();
+  for (const line of parsed.data.lines ?? []) {
+    if (line.entryUnitId != null) {
+      entryUnitByIngredient.set(line.ingredientId, line.entryUnitId);
+    }
+  }
+  for (const [ingredientId, entryUnitId] of entryUnitByIngredient) {
+    const { error: unitError } = await supabase
+      .from("stock_transfer_items")
+      .update({ entry_unit_id: entryUnitId })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("transfer_id", result.id)
+      .eq("ingredient_id", ingredientId);
+    if (unitError) {
+      return { success: false, error: "Không thể lưu đơn vị xuất của dòng." };
+    }
   }
 
   return { success: true, data: { id: result.id } };

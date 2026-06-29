@@ -17,6 +17,13 @@ import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
+import {
   Item,
   ItemActions,
   ItemContent,
@@ -62,6 +69,10 @@ import {
   fetchStockIssueDetail,
   upsertStockIssueLine,
 } from "../../issue-actions";
+import {
+  getDefaultIssueUnit,
+  getIssueUnitOptions,
+} from "../../_lib/issue-units";
 import type { IngredientRow } from "../../page";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
@@ -106,6 +117,8 @@ const addIssueLineSchema = z.object({
       error: "Số lượng xuất phải lớn hơn 0.",
     }),
   unit: z.string().trim().min(1, { error: "Đơn vị không được để trống." }),
+  // Issue-role unit id (as string) the qty was entered in; "" => free-text unit.
+  entryUnitId: z.string().optional(),
   reason: z.string().trim().min(1, {
     error: "Lý do xuất là bắt buộc để lưu vết.",
   }),
@@ -598,6 +611,7 @@ function AddIssueLineDialog({
       ingredientId: "",
       quantity: "",
       unit: "",
+      entryUnitId: "",
       reason: "",
     }),
     [],
@@ -609,6 +623,7 @@ function AddIssueLineDialog({
       ingredientId: Number(values.ingredientId),
       quantity: Number(values.quantity),
       unit: values.unit.trim(),
+      entryUnitId: values.entryUnitId ? Number(values.entryUnitId) : null,
       reason: values.reason.trim(),
     });
 
@@ -638,6 +653,11 @@ function AddIssueLineDialog({
     >
       {(form) => {
         const ingredientError = form.formState.errors.ingredientId;
+        const selectedIngredient = ingredients.find(
+          (item) => item.id === Number(form.watch("ingredientId")),
+        );
+        const issueUnitOptions = getIssueUnitOptions(selectedIngredient);
+        const entryUnitId = form.watch("entryUnitId");
         return (
           <>
             <Field data-invalid={!!ingredientError}>
@@ -651,10 +671,16 @@ function AddIssueLineDialog({
                   const ingredient = ingredients.find(
                     (item) => item.id === Number(value),
                   );
+                  const defaultUnit = getDefaultIssueUnit(ingredient);
                   form.setValue(
                     "unit",
-                    ingredient ? getWarehouseUnit(ingredient) : "",
+                    defaultUnit?.code ??
+                      (ingredient ? getWarehouseUnit(ingredient) : ""),
                     { shouldValidate: true },
+                  );
+                  form.setValue(
+                    "entryUnitId",
+                    defaultUnit ? String(defaultUnit.unitId) : "",
                   );
                 }}
                 options={ingredients
@@ -683,15 +709,49 @@ function AddIssueLineDialog({
                 required
               />
 
-              <TextField
-                control={form.control}
-                name="unit"
-                label="Đơn vị"
-                readOnly
-                aria-readonly="true"
-                placeholder="kg"
-                required
-              />
+              {issueUnitOptions.length > 0 ? (
+                <Field>
+                  <FieldLabel htmlFor="issue-line-unit">Đơn vị *</FieldLabel>
+                  <Select
+                    value={entryUnitId ?? ""}
+                    onValueChange={(value) => {
+                      form.setValue("entryUnitId", value);
+                      const opt = issueUnitOptions.find(
+                        (o) => String(o.unitId) === value,
+                      );
+                      if (opt) {
+                        form.setValue("unit", opt.code, {
+                          shouldValidate: true,
+                        });
+                      }
+                    }}
+                  >
+                    <SelectTrigger
+                      id="issue-line-unit"
+                      aria-label={form.watch("unit")}
+                    >
+                      <SelectValue placeholder="Chọn đơn vị" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {issueUnitOptions.map((o) => (
+                        <SelectItem key={o.unitId} value={String(o.unitId)}>
+                          {o.code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              ) : (
+                <TextField
+                  control={form.control}
+                  name="unit"
+                  label="Đơn vị"
+                  readOnly
+                  aria-readonly="true"
+                  placeholder="kg"
+                  required
+                />
+              )}
             </div>
 
             <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
