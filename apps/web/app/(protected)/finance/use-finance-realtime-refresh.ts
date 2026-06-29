@@ -13,6 +13,25 @@ const REFRESH_DEBOUNCE_MS = 2500;
 const MIN_REFRESH_INTERVAL_MS = 15000;
 const AUTO_REFRESH_MS = 60000;
 
+/**
+ * Pure function: compute how long to wait before firing router.refresh().
+ *
+ * Trailing debounce: each payment event resets the timer. The wait is at least
+ * REFRESH_DEBOUNCE_MS so a burst of events collapses into one refresh fired
+ * REFRESH_DEBOUNCE_MS after the LAST event (must-not-miss: trailing edge).
+ * In addition, MIN_REFRESH_INTERVAL_MS is enforced between actual refreshes to
+ * prevent rapid re-fetches when reconnects re-fire SUBSCRIBED.
+ *
+ * Exported for unit testing; not part of the public hook API.
+ */
+export function computeRefreshWaitMs(
+  lastRefreshAt: number,
+  now: number,
+): number {
+  const elapsed = now - lastRefreshAt;
+  return Math.max(REFRESH_DEBOUNCE_MS, MIN_REFRESH_INTERVAL_MS - elapsed);
+}
+
 export function useFinanceRealtimeRefresh({
   branchId,
   enabled = true,
@@ -26,11 +45,7 @@ export function useFinanceRealtimeRefresh({
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current);
     }
-    const elapsed = Date.now() - lastRefreshAtRef.current;
-    const waitMs = Math.max(
-      REFRESH_DEBOUNCE_MS,
-      MIN_REFRESH_INTERVAL_MS - elapsed,
-    );
+    const waitMs = computeRefreshWaitMs(lastRefreshAtRef.current, Date.now());
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
       lastRefreshAtRef.current = Date.now();
