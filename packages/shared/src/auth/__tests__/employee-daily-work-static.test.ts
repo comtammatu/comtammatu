@@ -109,13 +109,10 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
     "supabase/migrations/_archive/20260610170000_hr_checklist_template_library.sql",
   );
   const actionSrc = read("apps/web/app/(protected)/employee/clock/actions.ts");
-  const checklistActionSrc = read(
-    "apps/web/app/(protected)/hr/checklist-actions.ts",
+  const positionTasksActionSrc = read(
+    "apps/web/app/(protected)/hr/position-tasks-actions.ts",
   );
   const hrClientSrc = read("apps/web/app/(protected)/hr/hr-client.tsx");
-  const employeeTableSrc = read(
-    "apps/web/app/(protected)/hr/employee-table.tsx",
-  );
   const branchSettingsPageSrc = read(
     "apps/web/app/(protected)/br/[branchId]/settings/page.tsx",
   );
@@ -159,19 +156,17 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
     "checklist selection must not depend on system role_code",
   );
   assert.ok(
-    checklistActionSrc.includes("saveChecklistTemplate") &&
-      checklistActionSrc.includes("setEmployeeDefaultChecklist") &&
-      checklistActionSrc.includes('"upsert_shift_checklist_template"') &&
-      checklistActionSrc.includes("doneDefinition") &&
-      checklistActionSrc.includes("isRequired"),
-    "HR checklist actions must save templates through the JSON RPC and set employee defaults",
+    positionTasksActionSrc.includes("savePositionTasks") &&
+      positionTasksActionSrc.includes('"upsert_position_shift_tasks"') &&
+      positionTasksActionSrc.includes("doneDefinition") &&
+      positionTasksActionSrc.includes("isRequired"),
+    "HR position-task actions must save tasks through the JSON RPC",
   );
   assert.ok(
     /value:\s*"setup",\s*label:\s*copy\.tabs\.setup/.test(hrClientSrc) &&
       hrClientSrc.includes('<TabsContent value="setup"') &&
-      hrClientSrc.includes("ChecklistTemplatesTable") &&
-      employeeTableSrc.includes("Checklist mặc định"),
-    "HR UI must expose template library and employee defaults",
+      hrClientSrc.includes("PositionTasksClient"),
+    "HR UI must expose the per-position task editor",
   );
   assert.ok(
     branchSettingsPageSrc.includes("AttendanceSettingsCard") &&
@@ -255,13 +250,12 @@ test("HRM consumption report applies Inventory only after manager approval", () 
   const documentCorrectionSrc = read(
     "apps/web/app/(protected)/inventory/document-correction-actions.ts",
   );
-  const hrPageSrc = read("apps/web/app/(protected)/hr/page.tsx");
   const hrClientSrc = read("apps/web/app/(protected)/hr/hr-client.tsx");
-  const checklistActionsSrc = read(
-    "apps/web/app/(protected)/hr/checklist-actions.ts",
+  const positionTasksActionsSrc = read(
+    "apps/web/app/(protected)/hr/position-tasks-actions.ts",
   );
-  const consumptionDefaultsSrc = read(
-    "apps/web/app/(protected)/hr/consumption-default-items-table.tsx",
+  const positionTasksClientSrc = read(
+    "apps/web/app/(protected)/hr/position-tasks-client.tsx",
   );
 
   for (const expected of [
@@ -369,11 +363,13 @@ test("HRM consumption report applies Inventory only after manager approval", () 
     "Inventory issue detail and correction flow must preserve HRM consumption trace",
   );
   assert.ok(
-    hrPageSrc.includes("shift_checklist_consumption_default_items") &&
-      hrClientSrc.includes("ConsumptionDefaultItemsTable") &&
-      checklistActionsSrc.includes("setConsumptionDefaultIngredients") &&
-      consumptionDefaultsSrc.includes("Nguyên liệu mặc định cho tiêu hao bếp"),
-    "HR setup must expose default ingredients for the consumption checklist",
+    positionTasksActionsSrc.includes(
+      "shift_checklist_consumption_default_items",
+    ) &&
+      positionTasksActionsSrc.includes("position_task_id") &&
+      hrClientSrc.includes("PositionTasksClient") &&
+      positionTasksClientSrc.includes("IngredientPicker"),
+    "HR setup must expose default ingredients for consumption position tasks",
   );
 });
 

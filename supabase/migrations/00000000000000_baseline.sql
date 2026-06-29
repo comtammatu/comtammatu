@@ -8208,32 +8208,19 @@ CREATE FUNCTION public.employee_clock_in_with_checklist(p_tenant_id bigint, p_em
 DECLARE
   v_attendance_id bigint;
   v_shift_id bigint;
-  v_shift_start time;
   v_is_open boolean;
   v_is_close boolean;
-  v_template_id bigint;
+  v_position_id bigint;
 BEGIN
   IF p_photo_path IS NULL OR btrim(p_photo_path) = '' THEN
     RAISE EXCEPTION 'photo_required' USING ERRCODE = '23514';
   END IF;
 
-  SELECT COALESCE(e.default_checklist_template_id, po.default_checklist_template_id)
-  INTO v_template_id
+  SELECT p.position_id INTO v_position_id
   FROM public.employees e
-  JOIN public.profiles p
-    ON p.id = e.profile_id
-   AND p.tenant_id = e.tenant_id
-  LEFT JOIN public.positions po
-    ON po.id = p.position_id
-   AND po.tenant_id = p.tenant_id
-  WHERE e.id = p_employee_id
-    AND e.tenant_id = p_tenant_id
-    AND e.is_active = true
-    AND p.branch_id = p_branch_id;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'employee_not_found' USING ERRCODE = 'P0002';
-  END IF;
+  JOIN public.profiles p ON p.id = e.profile_id AND p.tenant_id = e.tenant_id
+  WHERE e.id = p_employee_id AND e.tenant_id = p_tenant_id AND e.is_active AND p.branch_id = p_branch_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'employee_not_found' USING ERRCODE='P0002'; END IF;
 
   IF NOT EXISTS (
     SELECT 1
@@ -8249,36 +8236,12 @@ BEGIN
     RAISE EXCEPTION 'shift_not_found' USING ERRCODE = 'P0002';
   END IF;
 
-  SELECT s.id, s.start_time
-  INTO v_shift_id, v_shift_start
+  SELECT s.id, s.is_opening, s.is_closing
+  INTO v_shift_id, v_is_open, v_is_close
   FROM public.shifts s
-  WHERE s.id = p_shift_id
-    AND s.tenant_id = p_tenant_id
-    AND (s.branch_id IS NULL OR s.branch_id = p_branch_id)
-    AND COALESCE(s.is_active, true) = true;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'shift_not_found' USING ERRCODE = 'P0002';
-  END IF;
-
-  SELECT v_shift_start = min(s.start_time), v_shift_start = max(s.start_time)
-  INTO v_is_open, v_is_close
-  FROM public.shifts s
-  WHERE s.tenant_id = p_tenant_id
-    AND (s.branch_id IS NULL OR s.branch_id = p_branch_id)
-    AND COALESCE(s.is_active, true) = true;
-
-  IF v_template_id IS NOT NULL
-    AND NOT EXISTS (
-      SELECT 1
-      FROM public.shift_checklist_templates t
-      WHERE t.id = v_template_id
-        AND t.tenant_id = p_tenant_id
-        AND t.is_active = true
-        AND (t.branch_id IS NULL OR t.branch_id = p_branch_id)
-    ) THEN
-    v_template_id := NULL;
-  END IF;
+  WHERE s.id = p_shift_id AND s.tenant_id = p_tenant_id
+    AND (s.branch_id IS NULL OR s.branch_id = p_branch_id) AND COALESCE(s.is_active, true);
+  IF NOT FOUND THEN RAISE EXCEPTION 'shift_not_found' USING ERRCODE='P0002'; END IF;
 
   IF EXISTS (
     SELECT 1
@@ -8315,43 +8278,31 @@ BEGIN
     'pwa',
     false,
     p_photo_path,
-    v_template_id
+    NULL
   )
   RETURNING id INTO v_attendance_id;
 
-  INSERT INTO public.attendance_checklist_items (
-    tenant_id,
-    attendance_record_id,
-    template_item_id,
-    title,
-    phase,
-    done_definition,
-    is_required,
-    scope,
-    task_kind,
-    sort_order
-  )
-  SELECT
-    p_tenant_id,
-    v_attendance_id,
-    i.id,
-    i.title,
-    i.phase,
-    i.done_definition,
-    i.is_required,
-    i.scope,
-    i.task_kind,
-    row_number() OVER (ORDER BY i.sort_order, i.id)::integer
-  FROM public.shift_checklist_template_items i
-  WHERE i.tenant_id = p_tenant_id
-    AND i.template_id = v_template_id
-    AND i.is_active = true
-    AND (
-      i.scope = 'every_shift'
-      OR (i.scope = 'opening' AND v_is_open)
-      OR (i.scope = 'closing' AND v_is_close)
-    )
-  ORDER BY i.sort_order, i.id;
+  INSERT INTO public.attendance_checklist_items
+    (tenant_id, attendance_record_id, template_item_id, title, phase, done_definition, is_required, scope, task_kind, sort_order)
+  SELECT p_tenant_id, v_attendance_id, NULL, t.title, t.phase, t.done_definition, t.is_required,
+         t.applicability, t.kind, row_number() OVER (ORDER BY t.sort_order, t.id)::integer
+  FROM public.position_shift_tasks t
+  WHERE t.tenant_id = p_tenant_id AND t.position_id = v_position_id AND t.is_active
+    AND ( t.applicability = 'every_shift'
+          OR (t.applicability = 'opening' AND v_is_open)
+          OR (t.applicability = 'closing' AND v_is_close) );
+
+  IF EXISTS (
+    SELECT 1 FROM public.inventory_count_assignments a
+    WHERE a.tenant_id = p_tenant_id AND a.branch_id = p_branch_id
+      AND a.employee_id = p_employee_id AND a.is_active
+  ) THEN
+    INSERT INTO public.attendance_checklist_items
+      (tenant_id, attendance_record_id, template_item_id, title, phase, done_definition, is_required, scope, task_kind, sort_order)
+    VALUES (p_tenant_id, v_attendance_id, NULL, 'Kiểm kê tồn', 'end_of_shift',
+            'Nộp phiếu đếm tại màn Kiểm kê tồn.', false, 'every_shift', 'inventory_count',
+            COALESCE((SELECT max(sort_order) FROM public.attendance_checklist_items WHERE attendance_record_id = v_attendance_id), 0) + 1);
+  END IF;
 
   RETURN v_attendance_id;
 END;
@@ -8362,7 +8313,7 @@ $$;
 -- Name: FUNCTION employee_clock_in_with_checklist(p_tenant_id bigint, p_employee_id bigint, p_branch_id bigint, p_shift_id bigint, p_business_date date, p_photo_path text); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.employee_clock_in_with_checklist(p_tenant_id bigint, p_employee_id bigint, p_branch_id bigint, p_shift_id bigint, p_business_date date, p_photo_path text) IS 'Per-shift employee clock-in: validates a global-or-branch shift, dedupes per (employee, date, shift), snapshots the employee default checklist filtered by item scope for this shift (opening shift gets every_shift+opening, closing gets every_shift+closing; weekly excluded).';
+COMMENT ON FUNCTION public.employee_clock_in_with_checklist(p_tenant_id bigint, p_employee_id bigint, p_branch_id bigint, p_shift_id bigint, p_business_date date, p_photo_path text) IS 'Per-shift employee clock-in: validates a global-or-branch shift, dedupes per (employee, date, shift), snapshots the employee position tasks filtered by applicability for this shift (opening shift gets every_shift+opening, closing gets every_shift+closing) using the shift is_opening/is_closing flags, and auto-surfaces one inventory_count task when the employee has active count assignments in this branch.';
 
 
 --
@@ -22232,6 +22183,54 @@ COMMENT ON FUNCTION public.upsert_printer_with_routes(p_printer_id bigint, p_bra
 
 
 --
+-- Name: upsert_position_shift_tasks(bigint, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.upsert_position_shift_tasks(p_position_id bigint, p_tasks jsonb) RETURNS bigint
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_tenant_id bigint := public.auth_tenant_id();
+  v_tasks jsonb := COALESCE(p_tasks, '[]'::jsonb);
+  v_item jsonb; v_title text; v_kind text; v_appl text; v_phase text;
+  v_done text; v_req boolean; v_sort integer := 0;
+BEGIN
+  IF NOT (SELECT public.has_permission_any('staff:manage')) THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.positions WHERE id = p_position_id AND tenant_id = v_tenant_id) THEN
+    RAISE EXCEPTION 'position_not_found' USING ERRCODE = 'P0002';
+  END IF;
+  IF jsonb_typeof(v_tasks) <> 'array' THEN RAISE EXCEPTION 'tasks_invalid' USING ERRCODE='23514'; END IF;
+  IF jsonb_array_length(v_tasks) > 40 THEN RAISE EXCEPTION 'too_many_tasks' USING ERRCODE='23514'; END IF;
+
+  DELETE FROM public.position_shift_tasks WHERE tenant_id = v_tenant_id AND position_id = p_position_id;
+
+  FOR v_item IN SELECT value FROM jsonb_array_elements(v_tasks) LOOP
+    v_title := btrim(COALESCE(v_item->>'title',''));
+    v_kind  := COALESCE(NULLIF(v_item->>'kind',''),'standard');
+    v_appl  := COALESCE(NULLIF(v_item->>'applicability',''),'every_shift');
+    v_phase := COALESCE(NULLIF(v_item->>'phase',''),'start_of_shift');
+    v_done  := btrim(COALESCE(v_item->>'doneDefinition',''));
+    v_req   := COALESCE(NULLIF(v_item->>'isRequired','')::boolean, true);
+    IF v_title = '' THEN CONTINUE; END IF;
+    IF char_length(v_title) > 120 THEN RAISE EXCEPTION 'task_title_too_long' USING ERRCODE='23514'; END IF;
+    IF v_kind  <> ALL (ARRAY['standard','consumption_report']::text[]) THEN RAISE EXCEPTION 'task_kind_invalid' USING ERRCODE='23514'; END IF;
+    IF v_appl  <> ALL (ARRAY['every_shift','opening','closing']::text[]) THEN RAISE EXCEPTION 'task_applicability_invalid' USING ERRCODE='23514'; END IF;
+    IF v_phase <> ALL (ARRAY['start_of_shift','end_of_shift']::text[]) THEN RAISE EXCEPTION 'task_phase_invalid' USING ERRCODE='23514'; END IF;
+    IF char_length(v_done) > 240 THEN RAISE EXCEPTION 'done_definition_too_long' USING ERRCODE='23514'; END IF;
+    v_sort := v_sort + 1;
+    INSERT INTO public.position_shift_tasks
+      (tenant_id, position_id, title, kind, applicability, phase, is_required, done_definition, sort_order)
+    VALUES (v_tenant_id, p_position_id, v_title, v_kind, v_appl, v_phase, v_req, v_done, v_sort);
+  END LOOP;
+
+  RETURN p_position_id;
+END; $$;
+
+
+--
 -- Name: upsert_production_recipe_lines(bigint, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -23003,7 +23002,7 @@ CREATE TABLE public.attendance_checklist_items (
     CONSTRAINT attendance_checklist_items_phase_valid CHECK ((phase = ANY (ARRAY['start_of_shift'::text, 'during_shift'::text, 'end_of_shift'::text]))),
     CONSTRAINT attendance_checklist_items_scope_valid CHECK ((scope = ANY (ARRAY['every_shift'::text, 'opening'::text, 'closing'::text, 'weekly'::text]))),
     CONSTRAINT attendance_checklist_items_sort_positive CHECK ((sort_order > 0)),
-    CONSTRAINT attendance_checklist_items_task_kind_valid CHECK ((task_kind = ANY (ARRAY['standard'::text, 'consumption_report'::text]))),
+    CONSTRAINT attendance_checklist_items_task_kind_valid CHECK ((task_kind = ANY (ARRAY['standard'::text, 'consumption_report'::text, 'inventory_count'::text]))),
     CONSTRAINT attendance_checklist_items_title_length CHECK ((char_length(title) <= 120)),
     CONSTRAINT attendance_checklist_items_title_not_blank CHECK ((btrim(title) <> ''::text))
 );
@@ -25553,6 +25552,48 @@ ALTER TABLE public.pos_terminals ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTIT
 
 
 --
+-- Name: position_shift_tasks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.position_shift_tasks (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    position_id bigint NOT NULL,
+    title text NOT NULL,
+    kind text DEFAULT 'standard'::text NOT NULL,
+    applicability text DEFAULT 'every_shift'::text NOT NULL,
+    phase text DEFAULT 'start_of_shift'::text NOT NULL,
+    is_required boolean DEFAULT true NOT NULL,
+    done_definition text DEFAULT ''::text NOT NULL,
+    sort_order integer NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT position_shift_tasks_applicability_valid CHECK ((applicability = ANY (ARRAY['every_shift'::text, 'opening'::text, 'closing'::text]))),
+    CONSTRAINT position_shift_tasks_done_definition_length CHECK ((char_length(done_definition) <= 240)),
+    CONSTRAINT position_shift_tasks_kind_valid CHECK ((kind = ANY (ARRAY['standard'::text, 'consumption_report'::text]))),
+    CONSTRAINT position_shift_tasks_phase_valid CHECK ((phase = ANY (ARRAY['start_of_shift'::text, 'end_of_shift'::text]))),
+    CONSTRAINT position_shift_tasks_sort_positive CHECK ((sort_order > 0)),
+    CONSTRAINT position_shift_tasks_title_length CHECK ((char_length(title) <= 120)),
+    CONSTRAINT position_shift_tasks_title_not_blank CHECK ((btrim(title) <> ''::text))
+);
+
+
+--
+-- Name: position_shift_tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.position_shift_tasks ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.position_shift_tasks_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: positions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -26231,14 +26272,16 @@ ALTER TABLE public.role_templates ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTI
 CREATE TABLE public.shift_checklist_consumption_default_items (
     id bigint NOT NULL,
     tenant_id bigint NOT NULL,
-    template_item_id bigint NOT NULL,
+    template_item_id bigint,
     ingredient_id bigint NOT NULL,
     sort_order integer DEFAULT 1 NOT NULL,
     is_active boolean DEFAULT true NOT NULL,
     note text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    position_task_id bigint,
     CONSTRAINT shift_checklist_consumption_default_items_note_length CHECK (((note IS NULL) OR (char_length(note) <= 500))),
+    CONSTRAINT shift_checklist_consumption_default_items_parent_present CHECK (((template_item_id IS NOT NULL) OR (position_task_id IS NOT NULL))),
     CONSTRAINT shift_checklist_consumption_default_items_sort_positive CHECK ((sort_order > 0))
 );
 
@@ -26377,7 +26420,9 @@ CREATE TABLE public.shifts (
     end_time time without time zone NOT NULL,
     is_active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    is_opening boolean DEFAULT false NOT NULL,
+    is_closing boolean DEFAULT false NOT NULL
 );
 
 
@@ -28462,6 +28507,14 @@ ALTER TABLE ONLY public.pos_terminals
 
 
 --
+-- Name: position_shift_tasks position_shift_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.position_shift_tasks
+    ADD CONSTRAINT position_shift_tasks_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: positions positions_code_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -30259,6 +30312,13 @@ CREATE INDEX idx_pos_terminals_tenant ON public.pos_terminals USING btree (tenan
 
 
 --
+-- Name: idx_position_shift_tasks_tenant_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_position_shift_tasks_tenant_position ON public.position_shift_tasks USING btree (tenant_id, position_id, sort_order);
+
+
+--
 -- Name: idx_pp_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -31274,6 +31334,13 @@ CREATE UNIQUE INDEX uq_attendance_consumption_reports_attendance ON public.atten
 
 
 --
+-- Name: uq_consumption_default_items_position_task_active; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_consumption_default_items_position_task_active ON public.shift_checklist_consumption_default_items USING btree (tenant_id, position_task_id, ingredient_id) WHERE (is_active AND (position_task_id IS NOT NULL));
+
+
+--
 -- Name: uq_grn_active_draft_per_user_supplier; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -31306,6 +31373,13 @@ CREATE UNIQUE INDEX uq_mv_inv_stock_current ON public.mv_inventory_stock_current
 --
 
 CREATE UNIQUE INDEX uq_mv_inv_value_ranking ON public.mv_inventory_value_ranking USING btree (tenant_id, branch_id, ingredient_id);
+
+
+--
+-- Name: uq_position_shift_tasks_order; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_position_shift_tasks_order ON public.position_shift_tasks USING btree (position_id, sort_order);
 
 
 --
@@ -31761,6 +31835,13 @@ CREATE TRIGGER trg_pos_sessions_updated_at BEFORE UPDATE ON public.pos_sessions 
 --
 
 CREATE TRIGGER trg_pos_terminals_updated_at BEFORE UPDATE ON public.pos_terminals FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+
+--
+-- Name: position_shift_tasks trg_position_shift_tasks_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_position_shift_tasks_updated_at BEFORE UPDATE ON public.position_shift_tasks FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 
 --
@@ -33347,6 +33428,22 @@ ALTER TABLE ONLY public.pos_terminals
 
 
 --
+-- Name: position_shift_tasks position_shift_tasks_position_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.position_shift_tasks
+    ADD CONSTRAINT position_shift_tasks_position_id_fkey FOREIGN KEY (position_id) REFERENCES public.positions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: position_shift_tasks position_shift_tasks_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.position_shift_tasks
+    ADD CONSTRAINT position_shift_tasks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: positions positions_default_checklist_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -33832,6 +33929,14 @@ ALTER TABLE ONLY public.role_templates
 
 ALTER TABLE ONLY public.shift_checklist_consumption_default_items
     ADD CONSTRAINT shift_checklist_consumption_default_items_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: shift_checklist_consumption_default_items shift_checklist_consumption_default_items_position_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shift_checklist_consumption_default_items
+    ADD CONSTRAINT shift_checklist_consumption_default_items_position_task_id_fkey FOREIGN KEY (position_task_id) REFERENCES public.position_shift_tasks(id) ON DELETE CASCADE;
 
 
 --
@@ -36152,6 +36257,19 @@ CREATE POLICY pos_terminals_insert ON public.pos_terminals FOR INSERT TO authent
 --
 
 CREATE POLICY pos_terminals_update ON public.pos_terminals FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(branch_id, 'settings:branch'::text))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(branch_id, 'settings:branch'::text)));
+
+
+--
+-- Name: position_shift_tasks; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.position_shift_tasks ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: position_shift_tasks position_shift_tasks_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY position_shift_tasks_select ON public.position_shift_tasks FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (( SELECT public.has_permission_any('settings:tenant'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('staff:manage'::text) AS has_permission_any) OR ( SELECT public.has_permission_any('hr:view_employee'::text) AS has_permission_any))));
 
 
 --
@@ -39823,6 +39941,14 @@ GRANT ALL ON FUNCTION public.upsert_printer_with_routes(p_printer_id bigint, p_b
 
 
 --
+-- Name: FUNCTION upsert_position_shift_tasks(p_position_id bigint, p_tasks jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.upsert_position_shift_tasks(p_position_id bigint, p_tasks jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.upsert_position_shift_tasks(p_position_id bigint, p_tasks jsonb) TO authenticated;
+
+
+--
 -- Name: FUNCTION upsert_production_recipe_lines(p_finished_good_id bigint, p_lines jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -40880,6 +41006,21 @@ GRANT ALL ON TABLE public.pos_terminals TO service_role;
 GRANT ALL ON SEQUENCE public.pos_terminals_id_seq TO anon;
 GRANT ALL ON SEQUENCE public.pos_terminals_id_seq TO authenticated;
 GRANT ALL ON SEQUENCE public.pos_terminals_id_seq TO service_role;
+
+
+--
+-- Name: TABLE position_shift_tasks; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.position_shift_tasks TO authenticated;
+GRANT ALL ON TABLE public.position_shift_tasks TO service_role;
+
+
+--
+-- Name: SEQUENCE position_shift_tasks_id_seq; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON SEQUENCE public.position_shift_tasks_id_seq TO service_role;
 
 
 --

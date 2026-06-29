@@ -59,6 +59,8 @@ export function ShiftFormDialog({
       start_time: saved?.start_time ?? values.start_time,
       end_time: saved?.end_time ?? values.end_time,
       is_active: saved?.is_active ?? shift?.is_active ?? true,
+      is_opening: saved?.is_opening ?? shift?.is_opening ?? false,
+      is_closing: saved?.is_closing ?? shift?.is_closing ?? false,
     });
     return result;
   }

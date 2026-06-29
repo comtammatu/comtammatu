@@ -574,7 +574,7 @@ test) chỉ build sau khi types regen.
 **Scope boundaries:**
 - Office-side People/Branch IA do `docs/plan/task3-mgmt-ia-consolidation.md` + **D048** sở hữu — blueprint này KHÔNG redesign phần đó; menu-limits/branch-switcher khớp D048.
 - My-shift migration (sub-project #3) xếp SAU khi HR redesign (D026/D027, branch `codex/hrm-payroll-annual-leave`) settle; KHÔNG động file HR bây giờ.
-- Shift-tasks/checklist config là workstream in-flight riêng; tile "Việc cần làm" chỉ tiêu thụ output, không thiết kế lại config.
+- Cấu hình "Việc trong ca" do **D052** sở hữu; tile "Việc cần làm" chỉ tiêu thụ output, không thiết kế lại config.
 
 **Lộ trình:** 7 sub-project trong blueprint §11; `#1` (foundation: branch-context + capability registry + Branch Hub) làm trước, additive (ship được mà chưa gỡ UI cũ). Mỗi lát đụng route đồng bộ 5 chỗ (`module-acl.ts`, `route-resolution.ts`, `route-map.ts`, nav config, `protected-route-module-coverage.test.ts`).
 
@@ -599,3 +599,24 @@ qua bucket `warehouse_manager`. Bếp Trung Tâm là
 mapper TS/SQL, không chọn trực tiếp bucket thay cho chức danh.
 
 Đảo quyết định này phải sửa bản ghi này trước và đi qua T3 vì chạm Auth/RLS/ACL.
+
+## D052: "Việc trong ca" — gom & cấu hình theo vị trí (2026-06-29)
+
+**Decision:** Thiết kế lại flow cấu hình shift-tasks ("Checklist") cho gọn & bài bản.
+Chi tiết design: `docs/plan/viec-trong-ca-redesign-2026-06-29.md`. Các chốt nền:
+
+1. **Một khái niệm "Việc trong ca"** (bỏ tên "Checklist"/"Mẫu checklist"/"Việc"). Mỗi
+   việc có LOẠI rõ: `Việc thường` / `Tiêu hao` / `Kiểm kê`. Tái dùng engine Tiêu hao &
+   Kiểm kê sẵn có — KHÔNG xây lại lõi inventory.
+2. **Cấu hình trực tiếp theo vị trí** — bỏ "Mẫu" rời + bước "gán mẫu". 6 surface config
+   → còn 2 (Ca làm + Vị trí→Việc trong ca).
+3. **Lưới = vị trí × ca mở/đóng**, dùng **cờ ca tường minh** (`shifts.is_opening/is_closing`,
+   thay MIN/MAX `start_time`). 2 chi nhánh dùng chung 1 danh sách (positions tenant-level).
+4. **Kiểm kê**: giao đếm GIỮ ở Inventory (người × kho × nguyên liệu, đếm mù RLS); trong
+   danh sách nhân viên, trạng thái Kiểm kê đọc từ phiếu đếm hôm nay đã `submitted` hoặc
+   `approved`.
+5. **Bỏ override checklist theo từng nhân viên** (cấu hình thuần theo vị trí — hết trạng
+   thái nhiễu "Checklist riêng").
+6. **Giai đoạn còn 2**: `Đầu ca` / `Cuối ca` (bỏ `Trong ca`). Bỏ scope `weekly` (dead).
+
+Đảo quyết định này phải sửa bản ghi này + design doc trước.

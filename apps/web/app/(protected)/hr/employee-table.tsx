@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Pencil as IconPencil, Users as IconUsers } from "lucide-react";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -13,25 +13,12 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
-import { toast } from "@comtammatu/ui/components/sonner";
 import type { BranchOption, EmployeeRow } from "./_types";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { EmployeeFormDialog } from "./employee-form-dialog";
-import { setEmployeeDefaultChecklist } from "./checklist-actions";
-import {
-  checklistTemplateOptionsForBranch,
-  type ChecklistTemplateRow,
-} from "./checklist-types";
 
 import {
   ACTIONS_VI,
@@ -42,7 +29,6 @@ import {
 
 interface EmployeeTableProps {
   employees: EmployeeRow[];
-  checklistTemplates: ChecklistTemplateRow[];
   branches: BranchOption[];
   positionOptions: { value: string; label: string }[];
   canManage: boolean;
@@ -50,79 +36,12 @@ interface EmployeeTableProps {
 
 export function EmployeeTable({
   employees,
-  checklistTemplates,
   branches,
   positionOptions,
   canManage,
 }: EmployeeTableProps) {
-  const [rows, setRows] = useState(employees);
+  const [rows] = useState(employees);
   const [editEmployee, setEditEmployee] = useState<EmployeeRow | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function updateDefaultChecklist(employeeId: number, value: string) {
-    const templateId = value === "none" ? null : Number(value);
-    setRows((current) =>
-      current.map((employee) =>
-        employee.id === employeeId
-          ? { ...employee, default_checklist_template_id: templateId }
-          : employee,
-      ),
-    );
-
-    startTransition(async () => {
-      const result = await setEmployeeDefaultChecklist({
-        employeeId,
-        templateId,
-      });
-      if (!result.success) {
-        setRows(employees);
-        toast.error(result.error ?? "Không thể cập nhật checklist mặc định.");
-        return;
-      }
-      toast.success("Đã cập nhật checklist mặc định.");
-    });
-  }
-
-  function getPositionDefaultName(employee: EmployeeRow) {
-    const positionDefaultId =
-      employee.profiles?.positions?.default_checklist_template_id ?? null;
-    if (!positionDefaultId) return null;
-    return (
-      checklistTemplates.find((template) => template.id === positionDefaultId)
-        ?.name ?? null
-    );
-  }
-
-  function renderChecklistSelect(employee: EmployeeRow) {
-    const options = checklistTemplateOptionsForBranch(
-      checklistTemplates,
-      employee.profiles?.branch_id ?? null,
-    );
-    const positionDefaultName = getPositionDefaultName(employee);
-    const inheritedLabel = positionDefaultName
-      ? `Theo vị trí: ${positionDefaultName}`
-      : "Chưa gán";
-
-    return (
-      <Select
-        value={employee.default_checklist_template_id?.toString() ?? "none"}
-        disabled={isPending}
-        onValueChange={(value) => updateDefaultChecklist(employee.id, value)}
-      >
-        <SelectTrigger className="w-full min-w-48">
-          <SelectValue placeholder={inheritedLabel} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="none">{inheritedLabel}</SelectItem>
-          {options.map((option) => (
-            <SelectItem key={option.id} value={option.id.toString()}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
-  }
 
   function renderStatus(employee: EmployeeRow) {
     return (
@@ -219,11 +138,6 @@ export function EmployeeTable({
         ]
       : []),
     {
-      key: "checklist",
-      header: "Checklist mặc định",
-      render: renderChecklistSelect,
-    },
-    {
       key: "status",
       header: FORM_VI.status,
       render: renderStatus,
@@ -264,7 +178,6 @@ export function EmployeeTable({
                     {employee.profiles.positions.label_vi}
                   </Badge>
                 ) : null}
-                {renderChecklistSelect(employee)}
                 {canManage ? renderPayrollProfile(employee) : null}
               </div>
             </ItemContent>
@@ -283,7 +196,6 @@ export function EmployeeTable({
           employee={editEmployee}
           branches={branches}
           positionOptions={positionOptions}
-          checklistTemplates={checklistTemplates}
         />
       ) : null}
     </>

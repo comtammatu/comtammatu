@@ -1,18 +1,15 @@
 import { fetchEmployees } from "./actions";
-import {
-  fetchChecklistTemplates,
-  fetchPositionDefaults,
-} from "./checklist-actions";
-import type {
-  ConsumptionChecklistItemRow,
-  ConsumptionDefaultIngredientRow,
-  ConsumptionDefaultItemRow,
-  PositionDefaultRow,
-} from "./checklist-types";
+import { fetchPositionTasksData } from "./position-tasks-actions";
+import type { PositionTasksData } from "./position-tasks-actions";
 import { HrClient } from "./hr-client";
 import type { BranchOption, EmployeeRow } from "./_types";
 import { loadAuthState } from "@/_lib/auth";
-import { createServiceClient } from "@comtammatu/database/supabase/service";
+
+const EMPTY_POSITION_TASKS_DATA: PositionTasksData = {
+  positions: [],
+  ingredients: [],
+  tasksByPosition: {},
+};
 
 export default async function HrPage() {
   const { supabase, claims } = await loadAuthState();
@@ -38,86 +35,28 @@ export default async function HrPage() {
           return query;
         })();
 
-  const [
-    employeesResult,
-    checklistResult,
-    positionDefaultsResult,
-    { data: branches },
-  ] = await Promise.all([
-    canViewEmployees
-      ? fetchEmployees()
-      : Promise.resolve({ success: true, data: [] }),
-    fetchChecklistTemplates(),
-    canManageEmployees
-      ? fetchPositionDefaults()
-      : Promise.resolve({ success: true, data: [] }),
-    branchesPromise,
-  ]);
+  const [employeesResult, positionTasksResult, { data: branches }] =
+    await Promise.all([
+      canViewEmployees
+        ? fetchEmployees()
+        : Promise.resolve({ success: true, data: [] }),
+      canManageEmployees
+        ? fetchPositionTasksData()
+        : Promise.resolve({
+            success: true as const,
+            data: EMPTY_POSITION_TASKS_DATA,
+          }),
+      branchesPromise,
+    ]);
 
   const employees = employeesResult.success
     ? ((employeesResult.data as EmployeeRow[]) ?? [])
     : [];
 
   const branchOptions = (branches ?? []) as BranchOption[];
-  const checklistTemplates = checklistResult.success
-    ? (checklistResult.data ?? [])
-    : [];
-  const positionDefaults = positionDefaultsResult.success
-    ? ((positionDefaultsResult.data as PositionDefaultRow[]) ?? [])
-    : [];
-  const consumptionChecklistItems: ConsumptionChecklistItemRow[] =
-    checklistTemplates.flatMap((template) =>
-      template.items.flatMap((item) =>
-        item.id != null && item.taskKind === "consumption_report"
-          ? [
-              {
-                templateItemId: item.id,
-                templateName: template.name,
-                branchName: template.branchName,
-              },
-            ]
-          : [],
-      ),
-    );
-  const consumptionTemplateItemIds = consumptionChecklistItems.map(
-    (item) => item.templateItemId,
-  );
-  const service = createServiceClient();
-  const [ingredientsResult, defaultsResult] =
-    canManageEmployees && consumptionTemplateItemIds.length > 0
-      ? await Promise.all([
-          service
-            .from("ingredients")
-            .select("id, name, unit, purchase_unit, category")
-            .eq("tenant_id", claims.tenant_id)
-            .eq("is_active", true)
-            .order("name"),
-          service
-            .from("shift_checklist_consumption_default_items")
-            .select("template_item_id, ingredient_id")
-            .eq("tenant_id", claims.tenant_id)
-            .eq("is_active", true)
-            .in("template_item_id", consumptionTemplateItemIds),
-        ])
-      : [{ data: [] }, { data: [] }];
-  const consumptionIngredients = (
-    ingredientsResult.data ?? []
-  ).map<ConsumptionDefaultIngredientRow>((ingredient) => ({
-    id: ingredient.id,
-    name: ingredient.name,
-    unit: ingredient.purchase_unit || ingredient.unit,
-    category: ingredient.category ?? null,
-  }));
-  const consumptionDefaults = (defaultsResult.data ?? []).flatMap((item) =>
-    item.template_item_id == null
-      ? []
-      : [
-          {
-            templateItemId: item.template_item_id,
-            ingredientId: item.ingredient_id,
-          } satisfies ConsumptionDefaultItemRow,
-        ],
-  );
+  const positionTasksData =
+    (positionTasksResult.success ? positionTasksResult.data : null) ??
+    EMPTY_POSITION_TASKS_DATA;
 
   return (
     <HrClient
@@ -126,12 +65,7 @@ export default async function HrPage() {
       isBranchManager={isBranchManager}
       canManageEmployees={canManageEmployees}
       canViewEmployees={canViewEmployees}
-      checklistTemplates={checklistTemplates}
-      consumptionChecklistItems={consumptionChecklistItems}
-      consumptionIngredients={consumptionIngredients}
-      consumptionDefaults={consumptionDefaults}
-      canManageGlobalChecklist={canManageEmployees}
-      positionDefaults={positionDefaults}
+      positionTasksData={positionTasksData}
     />
   );
 }

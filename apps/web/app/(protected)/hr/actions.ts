@@ -649,6 +649,15 @@ const deactivateShiftSchema = z.object({
   shiftId: z.coerce.number().int().positive(),
 });
 
+const setShiftBoundariesSchema = z.object({
+  shiftId: z.coerce.number().int().positive(),
+  isOpening: z.boolean(),
+  isClosing: z.boolean(),
+});
+
+const SHIFT_SELECT =
+  "id, name, start_time, end_time, is_active, is_opening, is_closing";
+
 function revalidateHrPaths() {
   revalidatePath("/hr");
   revalidatePath("/employee");
@@ -664,7 +673,7 @@ export async function fetchShifts(): Promise<ActionResult> {
 
   const { data, error } = await createServiceClient()
     .from("shifts")
-    .select("id, name, start_time, end_time, is_active")
+    .select(SHIFT_SELECT)
     .is("branch_id", null)
     .eq("tenant_id", ctx.claims.tenant_id)
     .order("start_time");
@@ -688,7 +697,7 @@ export const createShift = withAction(
         start_time: data.startTime,
         end_time: data.endTime,
       })
-      .select("id, name, start_time, end_time, is_active")
+      .select(SHIFT_SELECT)
       .single();
 
     if (error) {
@@ -718,7 +727,7 @@ export const updateShift = withAction(
       .eq("id", data.shiftId)
       .eq("tenant_id", claims.tenant_id)
       .is("branch_id", null)
-      .select("id, name, start_time, end_time, is_active")
+      .select(SHIFT_SELECT)
       .maybeSingle();
 
     if (error || !result) {
@@ -742,11 +751,38 @@ export const deactivateShift = withAction(
       .eq("id", data.shiftId)
       .eq("tenant_id", claims.tenant_id)
       .is("branch_id", null)
-      .select("id, name, start_time, end_time, is_active")
+      .select(SHIFT_SELECT)
       .maybeSingle();
 
     if (error || !result) {
       return { success: false, error: "Không thể ngưng dùng ca." };
+    }
+
+    revalidateHrPaths();
+    return { success: true, data: result };
+  },
+);
+
+// Explicit open/close flags (D050): the clock-in RPC reads these to decide
+// which opening/closing position tasks to snapshot. Owner-only, global shift.
+export const setShiftBoundaries = withAction(
+  { roles: HR_ROLES, schema: setShiftBoundariesSchema },
+  async (data, { claims }) => {
+    const { data: result, error } = await createServiceClient()
+      .from("shifts")
+      .update({
+        is_opening: data.isOpening,
+        is_closing: data.isClosing,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.shiftId)
+      .eq("tenant_id", claims.tenant_id)
+      .is("branch_id", null)
+      .select(SHIFT_SELECT)
+      .maybeSingle();
+
+    if (error || !result) {
+      return { success: false, error: "Không thể cập nhật ca mở/đóng." };
     }
 
     revalidateHrPaths();

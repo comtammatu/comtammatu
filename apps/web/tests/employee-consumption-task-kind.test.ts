@@ -29,13 +29,6 @@ const checkoutApprovalsPageSource = readWeb(
 const checkoutApprovalsClientSource = readWeb(
   "app/(protected)/employee/checkout-approvals/checkout-approvals-client.tsx",
 );
-const hrPageSource = readWeb("app/(protected)/hr/page.tsx");
-const hrChecklistActionsSource = readWeb(
-  "app/(protected)/hr/checklist-actions.ts",
-);
-const hrChecklistTemplatesSource = readWeb(
-  "app/(protected)/hr/checklist-templates-table.tsx",
-);
 
 test("consumption checklist workflow uses task_kind instead of the display title", () => {
   for (const expected of [
@@ -76,51 +69,28 @@ test("consumption checklist workflow uses task_kind instead of the display title
   );
 });
 
-test("HR setup exposes task_kind while preserving it through template saves", () => {
+test("HR per-position editor exposes the consumption task kind", () => {
+  const positionTasksClientSource = readWeb(
+    "app/(protected)/hr/position-tasks-client.tsx",
+  );
+  const positionTasksActionsSource = readWeb(
+    "app/(protected)/hr/position-tasks-actions.ts",
+  );
+
   assert.match(
-    hrPageSource,
-    /item\.taskKind === "consumption_report"/,
-    "HR page should find consumption checklist items by taskKind",
+    positionTasksActionsSource,
+    /kind: z\.enum\(POSITION_TASK_KINDS\)/,
+    "HR position-task actions should validate the task kind via Zod",
   );
   assert.match(
-    hrChecklistActionsSource,
-    /taskKind: z\.enum\(CHECKLIST_TASK_KINDS\)\.default\("standard"\)/,
-    "HR actions should accept the hidden taskKind marker in template payloads",
+    positionTasksActionsSource,
+    /upsert_position_shift_tasks/,
+    "HR position-task save should call the upsert RPC",
   );
   assert.match(
-    hrChecklistActionsSource,
-    /select\([\s\S]*task_kind/,
-    "HR actions should fetch task_kind from checklist template items",
-  );
-  assert.match(
-    hrChecklistActionsSource,
-    /checklistItem\.task_kind !== "consumption_report"/,
-    "HR consumption default validation should use task_kind",
-  );
-  assert.match(
-    hrChecklistTemplatesSource,
-    /taskKind: item\.taskKind/,
-    "HR template drafts should preserve taskKind",
-  );
-  assert.match(
-    hrChecklistTemplatesSource,
-    /CHECKLIST_TASK_KIND_LABELS/,
-    "HR template builder should show human labels for task kinds",
-  );
-  assert.match(
-    hrChecklistTemplatesSource,
-    /<Label>Loại việc<\/Label>[\s\S]*value=\{item\.taskKind\}[\s\S]*CHECKLIST_TASK_KINDS\.map/,
-    "HR template builder should let managers choose the consumption report task kind",
-  );
-  assert.match(
-    hrChecklistTemplatesSource,
-    /Có tiêu hao bếp/,
-    "HR template list should mark templates that include the consumption report workflow",
-  );
-  assert.doesNotMatch(
-    hrChecklistActionsSource,
-    /item\.title !== "Tiêu hao bếp trong ngày"/,
-    "HR consumption validation must not branch on the display title",
+    positionTasksClientSource,
+    /watchedKind === "consumption_report"/,
+    "HR position-task editor should reveal ingredients for consumption rows",
   );
 });
 

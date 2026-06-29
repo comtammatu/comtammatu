@@ -20,8 +20,9 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { Switch } from "@comtammatu/ui/components/switch";
 import { ShiftFormDialog } from "./shift-form-dialog";
-import { deactivateShift } from "./actions";
+import { deactivateShift, setShiftBoundaries } from "./actions";
 import type { ShiftRow } from "./_types";
 import {
   DataTable,
@@ -30,6 +31,9 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
+
+const boundaryCopy = messages.hr.client.shiftBoundaries;
 
 interface ShiftsTableProps {
   shifts: ShiftRow[];
@@ -73,6 +77,55 @@ export function ShiftsTable({
       ...(saved ?? {}),
       is_active: false,
     });
+  }
+
+  async function handleBoundaryChange(
+    shift: ShiftRow,
+    patch: { isOpening?: boolean; isClosing?: boolean },
+  ) {
+    const next: ShiftRow = {
+      ...shift,
+      is_opening: patch.isOpening ?? shift.is_opening,
+      is_closing: patch.isClosing ?? shift.is_closing,
+    };
+    onShiftSaved(next);
+    const result = await setShiftBoundaries({
+      shiftId: shift.id,
+      isOpening: next.is_opening,
+      isClosing: next.is_closing,
+    });
+    if (!result.success) {
+      onShiftSaved(shift);
+      toast.error(result.error ?? boundaryCopy.saveFailed);
+      return;
+    }
+    toast.success(boundaryCopy.saved);
+  }
+
+  function renderBoundaryToggle(
+    shift: ShiftRow,
+    field: "opening" | "closing",
+  ) {
+    const checked = field === "opening" ? shift.is_opening : shift.is_closing;
+    return (
+      <Switch
+        checked={checked}
+        disabled={!canManage || isDeactivating}
+        aria-label={
+          field === "opening"
+            ? boundaryCopy.openingAria
+            : boundaryCopy.closingAria
+        }
+        onCheckedChange={(value) =>
+          void handleBoundaryChange(
+            shift,
+            field === "opening"
+              ? { isOpening: value === true }
+              : { isClosing: value === true },
+          )
+        }
+      />
+    );
   }
 
   function renderShiftActions(shift: ShiftRow) {
@@ -121,6 +174,16 @@ export function ShiftsTable({
       header: "Giờ kết thúc",
       className: "text-muted-foreground",
       render: (shift) => shift.end_time,
+    },
+    {
+      key: "is_opening",
+      header: boundaryCopy.opening,
+      render: (shift) => renderBoundaryToggle(shift, "opening"),
+    },
+    {
+      key: "is_closing",
+      header: boundaryCopy.closing,
+      render: (shift) => renderBoundaryToggle(shift, "closing"),
     },
     {
       key: "status",
@@ -184,6 +247,16 @@ export function ShiftsTable({
                   ? ACTIVE_STATE_LABELS_VI.active
                   : ACTIVE_STATE_LABELS_VI.inactive}
               </Badge>
+              <div className="mt-2 flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  {renderBoundaryToggle(shift, "opening")}
+                  {boundaryCopy.opening}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  {renderBoundaryToggle(shift, "closing")}
+                  {boundaryCopy.closing}
+                </label>
+              </div>
             </ItemContent>
             {canManage ? (
               <ItemActions>{renderShiftActions(shift)}</ItemActions>
