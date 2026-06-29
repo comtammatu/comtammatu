@@ -5,7 +5,7 @@ import { cn } from "@comtammatu/ui";
 import {
   formatKdsTicketSequenceDisplay,
   getOrderTypeLabel,
-} from "../lib/status-config";
+} from "../_lib/status-config";
 
 interface OrderTitleLineProps {
   kitchenTicketNumber: string;

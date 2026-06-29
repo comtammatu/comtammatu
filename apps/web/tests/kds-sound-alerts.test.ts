@@ -8,7 +8,7 @@ import {
   getKdsNewTicketToastTitle,
   hasKdsNewTicketSignalMetadata,
   pickHigherPriorityKdsSignalTone,
-} from "../app/(protected)/br/[branchId]/kds/lib/sound-alerts";
+} from "../app/(protected)/br/[branchId]/kds/_lib/sound-alerts";
 import type {
   KdsKitchenSendBatch,
   KdsOrderItem,

@@ -17,26 +17,26 @@ import {
   ChevronRight as IconChevronRight,
   RotateCcw as IconRotate,
 } from "lucide-react";
-import { useBoardTick } from "../hooks/use-board-tick";
-import { getAgeStyle, getCardLeftAccent } from "../lib/age-style";
+import { useBoardTick } from "../_hooks/use-board-tick";
+import { getAgeStyle, getCardLeftAccent } from "../_lib/age-style";
 import {
   getItemRowStatusClass,
   getQuantityStatusClass,
-} from "../lib/item-status-style";
+} from "../_lib/item-status-style";
 import {
   getKdsRowEffectClass,
   useKdsRowEffectsValue,
-} from "../hooks/use-kds-row-effects";
-import { getKdsOrderLabelOverride } from "../lib/order-columns";
+} from "../_hooks/use-kds-row-effects";
+import { getKdsOrderLabelOverride } from "../_lib/order-columns";
 import {
   getStatusLabel,
   getStatusVariant,
   shouldShowTicketStatusBadge,
-} from "../lib/status-config";
+} from "../_lib/status-config";
 import {
   getKdsOrderDisplayStatus,
   isKdsActiveTicketStatus,
-} from "../lib/order-status";
+} from "../_lib/order-status";
 import { AgeBadge } from "./age-badge";
 import { CancelledOverlay } from "./cancelled-overlay";
 import { OrderNote } from "./order-note";

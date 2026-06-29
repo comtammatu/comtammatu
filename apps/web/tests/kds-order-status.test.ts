@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getKdsOrderDisplayStatus } from "../app/(protected)/br/[branchId]/kds/lib/order-status";
+import { getKdsOrderDisplayStatus } from "../app/(protected)/br/[branchId]/kds/_lib/order-status";
 import {
   getKdsTicketSequenceSortKey,
   getStatusLabel,
-} from "../app/(protected)/br/[branchId]/kds/lib/status-config";
+} from "../app/(protected)/br/[branchId]/kds/_lib/status-config";
 import type { KdsOrder } from "../app/(protected)/br/[branchId]/kds/types";
 
 function makeOrder(statuses: string[]): Pick<KdsOrder, "tickets"> {

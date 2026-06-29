@@ -254,17 +254,17 @@ const checks = [
     allowlist: {
       // SSoT registry + exceptions documented in design-system.md
       // "Status vocabulary": status-badge.tsx is the registry itself;
-      // kds/lib/status-config.ts is the hot path; inventory/_lib/ui.ts is the
+      // kds/_lib/status-config.ts is the hot path; inventory/_lib/ui.ts is the
       // per-entity re-model deferred to a later wave.
       "apps/web/app/components/status-badge.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/lib/status-config.ts": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/_lib/status-config.ts": 1,
       "apps/web/app/(protected)/inventory/_lib/ui.ts": 1,
       // Page-local STATUS* maps frozen at baseline (W1 status-registry
       // burn-down); the un-blinded regex now also blocks new STATUS-first names.
       "apps/web/app/(protected)/admin/settings/printers/jobs/page.tsx": 1,
       "apps/web/app/(protected)/branch-settings/_shared/tables/constants.ts": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/actions.ts": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/hooks/use-kds-realtime.ts": 2,
+      "apps/web/app/(protected)/br/[branchId]/kds/_hooks/use-kds-realtime.ts": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/order-history.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
@@ -460,7 +460,7 @@ const checks = [
       "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/kds-board.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/components/focus-view.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/_components/focus-view.tsx": 1,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
     },
   },
@@ -812,7 +812,7 @@ const perFileCountBudgets = [
       "apps/web/app/_components/notification-list.tsx": 1,
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
       "apps/web/app/(protected)/branches/network-config-dialog.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/kds/components/focus-view.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/_components/focus-view.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/settings/menu-limits/menu-limits-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
@@ -843,8 +843,8 @@ const perFileCountBudgets = [
     pattern: /\bgap-(?:0|0\.5|2\.5)\b/g,
     allowlist: {
       "apps/web/app/(protected)/admin/dashboard/page.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/components/focus-view.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/components/order-grid.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/_components/focus-view.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/_components/order-grid.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-summary.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-actions-sheet.tsx": 1,
@@ -869,7 +869,7 @@ const perFileCountBudgets = [
     allowlist: {
       "apps/web/app/_components/notification-list.tsx": 1,
       "apps/web/app/(protected)/hr/staff/[id]/permissions/permissions-client.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/kds/components/completion-history-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/_components/completion-history-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-page-skeleton.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx": 1,

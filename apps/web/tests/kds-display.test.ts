@@ -8,11 +8,11 @@ import {
   getKdsOrderLabelOverride,
   getKdsScopedGroupKey,
   groupKdsOrdersByColumn,
-} from "../app/(protected)/br/[branchId]/kds/lib/order-columns";
+} from "../app/(protected)/br/[branchId]/kds/_lib/order-columns";
 import {
   formatKdsTicketSequenceDisplay,
   getStatusLabel,
-} from "../app/(protected)/br/[branchId]/kds/lib/status-config";
+} from "../app/(protected)/br/[branchId]/kds/_lib/status-config";
 import type {
   KdsOrder,
   KdsOrderItem,
@@ -26,7 +26,7 @@ const kdsPageSource = readFileSync(
 const kdsRealtimeSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/hooks/use-kds-realtime.ts",
+    "app/(protected)/br/[branchId]/kds/_hooks/use-kds-realtime.ts",
   ),
   "utf8",
 );
@@ -39,7 +39,7 @@ const kdsBoardSource = readFileSync(
 const orderGridSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/components/order-grid.tsx",
+    "app/(protected)/br/[branchId]/kds/_components/order-grid.tsx",
   ),
   "utf8",
 );
@@ -47,7 +47,7 @@ const orderGridSource = readFileSync(
 const orderTitleLineSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/components/order-title-line.tsx",
+    "app/(protected)/br/[branchId]/kds/_components/order-title-line.tsx",
   ),
   "utf8",
 );
@@ -55,7 +55,7 @@ const orderTitleLineSource = readFileSync(
 const focusViewSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/components/focus-view.tsx",
+    "app/(protected)/br/[branchId]/kds/_components/focus-view.tsx",
   ),
   "utf8",
 );
@@ -63,7 +63,7 @@ const focusViewSource = readFileSync(
 const orderNoteSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/components/order-note.tsx",
+    "app/(protected)/br/[branchId]/kds/_components/order-note.tsx",
   ),
   "utf8",
 );

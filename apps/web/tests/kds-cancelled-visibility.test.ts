@@ -11,7 +11,7 @@ const kdsPageSource = readFileSync(
 const kdsRealtimeSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/hooks/use-kds-realtime.ts",
+    "app/(protected)/br/[branchId]/kds/_hooks/use-kds-realtime.ts",
   ),
   "utf8",
 );
@@ -19,7 +19,7 @@ const kdsRealtimeSource = readFileSync(
 const kdsMutationsSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/hooks/use-kds-mutations.ts",
+    "app/(protected)/br/[branchId]/kds/_hooks/use-kds-mutations.ts",
   ),
   "utf8",
 );

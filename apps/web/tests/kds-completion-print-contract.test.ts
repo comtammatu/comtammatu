@@ -6,7 +6,7 @@ import { test } from "node:test";
 const useKdsMutationsSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/hooks/use-kds-mutations.ts",
+    "app/(protected)/br/[branchId]/kds/_hooks/use-kds-mutations.ts",
   ),
   "utf8",
 );
@@ -14,7 +14,7 @@ const useKdsMutationsSource = readFileSync(
 const batchActionsSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/components/batch-actions.tsx",
+    "app/(protected)/br/[branchId]/kds/_components/batch-actions.tsx",
   ),
   "utf8",
 );

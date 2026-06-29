@@ -14,7 +14,7 @@ import {
   fetchPagedRows,
   sortKdsTicketsNewestFirst,
   uniqueNumbers,
-} from "../lib/query-helpers";
+} from "../_lib/query-helpers";
 import type {
   KdsKitchenSendBatch,
   KdsOrderInfo,

@@ -6,7 +6,7 @@ import { test } from "node:test";
 const orderGridSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/components/order-grid.tsx",
+    "app/(protected)/br/[branchId]/kds/_components/order-grid.tsx",
   ),
   "utf8",
 );
@@ -14,7 +14,7 @@ const orderGridSource = readFileSync(
 const batchActionsSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/components/batch-actions.tsx",
+    "app/(protected)/br/[branchId]/kds/_components/batch-actions.tsx",
   ),
   "utf8",
 );

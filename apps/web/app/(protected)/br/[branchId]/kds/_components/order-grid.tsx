@@ -14,36 +14,36 @@ import {
   ChefHat as IconChefHat,
   RotateCcw as IconRotate,
 } from "lucide-react";
-import { useBoardTick } from "../hooks/use-board-tick";
+import { useBoardTick } from "../_hooks/use-board-tick";
 import { AgeBadge } from "./age-badge";
-import { getAgeStyle, getCardLeftAccent } from "../lib/age-style";
+import { getAgeStyle, getCardLeftAccent } from "../_lib/age-style";
 import {
   getItemRowStatusClass,
   getQuantityStatusClass,
-} from "../lib/item-status-style";
+} from "../_lib/item-status-style";
 import {
   getKdsRowEffectClass,
   useKdsRowEffect,
-} from "../hooks/use-kds-row-effects";
+} from "../_hooks/use-kds-row-effects";
 import {
   getKdsOrderLabelOverride,
   groupKdsOrdersByColumn,
-} from "../lib/order-columns";
+} from "../_lib/order-columns";
 import {
   getKdsOrderDisplayStatus,
   isKdsActiveTicketStatus,
-} from "../lib/order-status";
+} from "../_lib/order-status";
 import {
   getStatusLabel,
   getStatusVariant,
   shouldShowTicketStatusBadge,
-} from "../lib/status-config";
+} from "../_lib/status-config";
 import { BatchActions } from "./batch-actions";
 import { OrderNote } from "./order-note";
 import { OrderTitleLine } from "./order-title-line";
 import { TicketRowMeta } from "./ticket-row-meta";
 import type { KdsOrder, KdsOrderItem, KdsTicket } from "../types";
-import type { KdsOrderColumn } from "../lib/order-columns";
+import type { KdsOrderColumn } from "../_lib/order-columns";
 
 const KDS_HEATMAP_LABELS = {
   completeItem: "Hoàn tất món",

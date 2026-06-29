@@ -5,7 +5,7 @@
   "generatedAt": "2026-06-29",
   "count": 91,
   "entries": [
-    "app/(protected)/br/[branchId]/kds/components/filter-bar.tsx:81:27",
+    "app/(protected)/br/[branchId]/kds/_components/filter-bar.tsx:81:27",
     "app/(protected)/br/[branchId]/pos/_components/bill/invoice-form-section.tsx:124:31",
     "app/(protected)/br/[branchId]/pos/_components/order-detail/cancel-order-dialog.tsx:57:29",
     "app/(protected)/br/[branchId]/pos/_components/order-detail/discount-sheet.tsx:203:33",

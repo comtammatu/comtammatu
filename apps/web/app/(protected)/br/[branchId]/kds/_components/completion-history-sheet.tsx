@@ -20,7 +20,7 @@ import {
   RefreshCcw as IconRefresh,
 } from "lucide-react";
 import { fetchKdsCompletionHistory } from "../actions";
-import type { KdsCompletionHistoryEntry } from "../lib/completion-history";
+import type { KdsCompletionHistoryEntry } from "../_lib/completion-history";
 
 const KDS_COMPLETION_HISTORY_LIMIT = 50;
 const KDS_COMPLETION_HISTORY_COPY = {

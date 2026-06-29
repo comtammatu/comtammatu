@@ -12,8 +12,8 @@ import {
   type KdsCompletionHistoryOrderInfo,
   type KdsCompletionHistoryOrderItem,
   type KdsCompletionHistoryTicket,
-} from "./lib/completion-history";
-import { fetchChunkedRows, uniqueNumbers } from "./lib/query-helpers";
+} from "./_lib/completion-history";
+import { fetchChunkedRows, uniqueNumbers } from "./_lib/query-helpers";
 
 const ticketIdSchema = z.coerce
   .number()

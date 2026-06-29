@@ -18,7 +18,7 @@ import {
   fetchChunkedRows,
   fetchPagedRows,
   uniqueNumbers,
-} from "../kds/lib/query-helpers";
+} from "../kds/_lib/query-helpers";
 import { RunnerIdleVisual, type RunnerIdleState } from "./runner-idle-visual";
 import { RunnerRealtimeRefresh } from "./runner-realtime-refresh";
 import { RunnerWaitTime } from "./runner-wait-time";

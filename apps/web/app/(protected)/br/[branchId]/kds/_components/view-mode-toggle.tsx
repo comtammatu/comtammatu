@@ -11,7 +11,7 @@ import {
 } from "@comtammatu/ui/components/tooltip";
 import { Focus as IconFocus, LayoutGrid as IconLayoutGrid } from "lucide-react";
 import { KDS_VI } from "@comtammatu/shared/messages";
-import type { KdsViewMode } from "../hooks/use-kds-view-mode";
+import type { KdsViewMode } from "../_hooks/use-kds-view-mode";
 
 interface ViewModeToggleProps {
   mode: KdsViewMode;

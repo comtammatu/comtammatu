@@ -7,7 +7,7 @@ import {
   createKdsRowSnapshot,
   deriveKdsRowEffects,
   getKdsRowEffectClass,
-} from "../app/(protected)/br/[branchId]/kds/hooks/use-kds-row-effects";
+} from "../app/(protected)/br/[branchId]/kds/_hooks/use-kds-row-effects";
 import type {
   KdsOrderItem,
   KdsTicket,
@@ -21,7 +21,7 @@ const kdsBoardSource = readFileSync(
 const orderGridSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/components/order-grid.tsx",
+    "app/(protected)/br/[branchId]/kds/_components/order-grid.tsx",
   ),
   "utf8",
 );
@@ -29,7 +29,7 @@ const orderGridSource = readFileSync(
 const focusViewSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/components/focus-view.tsx",
+    "app/(protected)/br/[branchId]/kds/_components/focus-view.tsx",
   ),
   "utf8",
 );
