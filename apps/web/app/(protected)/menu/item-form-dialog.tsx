@@ -16,22 +16,22 @@ import { MenuImageInput } from "./menu-image-input";
 import type { CategoryRow } from "./category-table";
 import type { ItemRow } from "./item-table";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, MENU_VI } from "@comtammatu/shared/messages";
 const itemSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, { error: "Tên món không được trống" })
-    .max(100, { error: "Tên món tối đa 100 ký tự" }),
-  category_id: z.string().min(1, { error: "Vui lòng chọn danh mục" }),
+    .min(1, { error: MENU_VI.itemNameRequired })
+    .max(100, { error: MENU_VI.itemNameMax }),
+  category_id: z.string().min(1, { error: MENU_VI.categoryRequired }),
   base_price: z
     .string()
     .trim()
-    .min(1, { error: "Giá không được trống" })
-    .refine((v) => Number(v) >= 0, { error: "Giá không hợp lệ" }),
+    .min(1, { error: MENU_VI.priceRequired })
+    .refine((v) => Number(v) >= 0, { error: MENU_VI.priceInvalid }),
   description: z
     .string()
-    .max(500, { error: "Mô tả tối đa 500 ký tự" })
+    .max(500, { error: MENU_VI.descriptionMax })
     .optional(),
   image_url: z.string().nullable().optional(),
 });
@@ -80,8 +80,8 @@ export function ItemFormDialog({
       schema={itemSchema}
       defaultValues={toFormValues(item)}
       entityKey={item?.id ?? "new"}
-      title={isEdit ? "Chỉnh sửa món" : "Thêm món mới"}
-      successMessage={isEdit ? "Đã cập nhật món" : "Đã tạo món mới"}
+      title={isEdit ? MENU_VI.editItemTitle : MENU_VI.addItemTitle}
+      successMessage={isEdit ? MENU_VI.itemUpdated : MENU_VI.itemCreated}
       submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
       onSubmit={async (values) => {
         const fd = valuesToFormData(values);
@@ -99,8 +99,8 @@ export function ItemFormDialog({
           <TextField
             control={form.control}
             name="name"
-            label="Tên món"
-            placeholder="VD: Cơm sườn cốt lết"
+            label={MENU_VI.itemNameLabel}
+            placeholder={MENU_VI.itemNamePlaceholder}
             required
           />
           <SelectField
@@ -108,13 +108,13 @@ export function ItemFormDialog({
             name="category_id"
             label="Danh mục"
             options={categoryOptions}
-            placeholder="Chọn danh mục"
+            placeholder={MENU_VI.selectCategoryPlaceholder}
             required
           />
           <NumberField
             control={form.control}
             name="base_price"
-            label="Giá gốc (VND)"
+            label={MENU_VI.basePriceLabel}
             maxFractionDigits={0}
             placeholder="35.000"
             required
@@ -122,16 +122,16 @@ export function ItemFormDialog({
           <TextareaField
             control={form.control}
             name="description"
-            label="Mô tả"
+            label={MENU_VI.descriptionLabel}
             rows={2}
-            placeholder="Mô tả ngắn về món ăn"
+            placeholder={MENU_VI.descriptionPlaceholder}
           />
           <Controller
             control={form.control}
             name="image_url"
             render={({ field }) => (
               <Field>
-                <FieldLabel>Ảnh món</FieldLabel>
+                <FieldLabel>{MENU_VI.itemImageLabel}</FieldLabel>
                 <MenuImageInput
                   tenantId={tenantId}
                   value={field.value ?? null}
