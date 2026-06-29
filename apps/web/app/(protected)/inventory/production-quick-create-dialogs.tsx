@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { FormDialog, SelectField, TextField } from "@/components/form";
-import { createIngredient } from "./ingredient-actions";
+import { quickCreateIngredient } from "./ingredient-actions";
 import type {
   FinishedGoodOption,
   RawIngredientOption,
@@ -58,15 +58,12 @@ function QuickCreateDialog<TCreated>({
   };
 
   async function handleSubmit(values: QuickCreateFormValues) {
-    const result = await createIngredient({
+    const result = await quickCreateIngredient({
       name: values.name,
-      purchase_unit: values.unit,
-      measure_unit: values.unit,
-      purchase_to_measure_factor: 1,
+      unit: values.unit,
       category: values.category || undefined,
       item_kind: config.itemKind,
       storage_type: values.storage_type as StorageType,
-      min_stock_level: 0,
     });
 
     if (!result.success) {

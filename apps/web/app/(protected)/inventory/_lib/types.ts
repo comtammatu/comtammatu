@@ -2,6 +2,18 @@ import type { Database, SupabaseClient } from "@comtammatu/database";
 
 export type TenantSupabase = SupabaseClient<Database>;
 
+export interface IngredientUnitRow {
+  id: number;
+  unit_id: number;
+  unit_code: string;
+  to_base_factor: number;
+  is_base: boolean;
+  allow_purchase: boolean;
+  allow_issue: boolean;
+  allow_production: boolean;
+  sort_order: number;
+}
+
 export interface IngredientRow {
   id: number;
   name: string;
@@ -11,6 +23,8 @@ export interface IngredientRow {
   measure_unit: string;
   purchase_to_measure_factor: number;
   category: string | null;
+  category_id: number | null;
+  category_name?: string | null;
   item_kind: string;
   unit_cost: number | null;
   min_stock_level: number | null;
@@ -20,6 +34,19 @@ export interface IngredientRow {
   shelf_life_days: number | null;
   is_active: boolean;
   updated_at: string | null;
+  units?: IngredientUnitRow[];
+}
+
+export interface UnitOption {
+  id: number;
+  code: string;
+  name: string;
+}
+
+export interface CategoryOption {
+  id: number;
+  name: string;
+  tone_class: string | null;
 }
 
 export interface BranchOption {

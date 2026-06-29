@@ -46,10 +46,17 @@ import { formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { fetchIngredients, toggleIngredientActive } from "../ingredient-actions";
 import { IngredientDialog } from "./ingredient-dialog";
-import type { IngredientRow } from "../_lib/types";
+import type {
+  CategoryOption,
+  IngredientRow,
+  UnitOption,
+} from "../_lib/types";
 import { IngredientImportExportMenu } from "./import-export-menu";
 
 import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
+
+const ingredientFormCopy = messages.inventoryMaster.ingredientForm;
 const preservationOptions = [
   { value: "all", label: "Mọi bảo quản" },
   { value: "refrigerated", label: "Mát" },
@@ -72,14 +79,40 @@ const conversionNumberFormatter = new Intl.NumberFormat("vi-VN", {
   maximumFractionDigits: 6,
 });
 
-function conversionLabel(item: IngredientRow): string {
-  return `1 ${item.purchase_unit} = ${conversionNumberFormatter.format(item.purchase_to_measure_factor ?? 1)} ${item.measure_unit}`;
+function categoryLabel(item: IngredientRow): string | null {
+  return item.category_name ?? item.category ?? null;
 }
 
-function categoryToneClass(category: string | null): string {
+function categoryToneClass(
+  category: string | null,
+  toneMap: Map<string, string>,
+): string {
+  if (!category) return "bg-muted text-muted-foreground";
   return (
-    CATEGORY_TONE_CLASS[category ?? ""] ?? "bg-muted text-muted-foreground"
+    toneMap.get(category) ??
+    CATEGORY_TONE_CLASS[category] ??
+    "bg-muted text-muted-foreground"
   );
+}
+
+function unitsSummary(item: IngredientRow): string {
+  const units = item.units ?? [];
+  if (units.length === 0) {
+    // Fall back to legacy columns when no multi-unit rows are present yet.
+    if (item.purchase_unit) {
+      return `${item.purchase_unit} (${ingredientFormCopy.units.baseTag})`;
+    }
+    return "—";
+  }
+  return units
+    .slice()
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((u) =>
+      u.is_base
+        ? `${u.unit_code} (${ingredientFormCopy.units.baseTag})`
+        : `${u.unit_code} ×${conversionNumberFormatter.format(u.to_base_factor)}`,
+    )
+    .join(" · ");
 }
 
 function ThresholdBadges({ item }: { item: IngredientRow }) {
@@ -95,23 +128,28 @@ function ThresholdBadges({ item }: { item: IngredientRow }) {
 function IngredientMobileCard({
   item,
   isPending,
+  toneMap,
   onToggleActive,
   onEdit,
 }: {
   item: IngredientRow;
   isPending: boolean;
+  toneMap: Map<string, string>;
   onToggleActive: (item: IngredientRow) => void;
   onEdit: (item: IngredientRow) => void;
 }) {
+  const category = categoryLabel(item);
   return (
     <InteractiveCard minHeight="tap" className="flex-col items-stretch gap-0 p-0">
       <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-1">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate font-semibold">{item.name}</p>
-            {item.category ? (
-              <Badge className={cn("text-xs", categoryToneClass(item.category))}>
-                {item.category}
+            {category ? (
+              <Badge
+                className={cn("text-xs", categoryToneClass(category, toneMap))}
+              >
+                {category}
               </Badge>
             ) : null}
             <StatusBadge
@@ -120,7 +158,7 @@ function IngredientMobileCard({
             />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            {item.sku ?? "—"} &middot; {conversionLabel(item)}
+            {item.sku ?? "—"} &middot; {unitsSummary(item)}
           </p>
         </div>
       </div>
@@ -167,7 +205,15 @@ function IngredientMobileCard({
   );
 }
 
-export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
+export function IngredientsClient({
+  initial,
+  unitOptions,
+  categoryOptions,
+}: {
+  initial: IngredientRow[];
+  unitOptions: UnitOption[];
+  categoryOptions: CategoryOption[];
+}) {
   const isMobile = useIsMobile();
   const [rows, setRows] = useState(initial);
   const [searchQuery, setSearchQuery] = useState("");
@@ -179,13 +225,21 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
     useState<IngredientRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const categoryOptions = useMemo(() => {
-    const unique = [...new Set(rows.map((r) => r.category).filter(Boolean))];
-    return [
-      { value: "all", label: "Tất cả loại" },
-      ...unique.map((c) => ({ value: c!, label: c! })),
-    ];
-  }, [rows]);
+  const toneMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of categoryOptions) {
+      if (c.tone_class) m.set(c.name, c.tone_class);
+    }
+    return m;
+  }, [categoryOptions]);
+
+  const categoryFilterOptions = useMemo(
+    () => [
+      { value: "all", label: ingredientFormCopy.category.all },
+      ...categoryOptions.map((c) => ({ value: c.name, label: c.name })),
+    ],
+    [categoryOptions],
+  );
 
   const filtered = useMemo(() => {
     let result = rows;
@@ -193,7 +247,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
       result = result.filter((item) => item.is_active);
     }
     if (category !== "all") {
-      result = result.filter((item) => item.category === category);
+      result = result.filter((item) => categoryLabel(item) === category);
     }
     if (preservation !== "all") {
       result = result.filter(
@@ -266,10 +320,10 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
 
       <Select value={category} onValueChange={setCategory}>
         <SelectTrigger className="w-40">
-          <SelectValue placeholder="Tất cả loại" />
+          <SelectValue placeholder={ingredientFormCopy.category.all} />
         </SelectTrigger>
         <SelectContent>
-          {categoryOptions.map((option) => (
+          {categoryFilterOptions.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}
             </SelectItem>
@@ -317,18 +371,21 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
       key: "name",
       header: PRODUCT_VI.rawIngredient,
       className: "min-w-52",
-      render: (item) => (
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <p className="font-semibold">{item.name}</p>
-            {item.category ? (
-              <Badge className={categoryToneClass(item.category)}>
-                {item.category}
-              </Badge>
-            ) : null}
+      render: (item) => {
+        const category = categoryLabel(item);
+        return (
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold">{item.name}</p>
+              {category ? (
+                <Badge className={categoryToneClass(category, toneMap)}>
+                  {category}
+                </Badge>
+              ) : null}
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: "sku",
@@ -343,13 +400,11 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
     {
       key: "unit",
       header: FORM_VI.unit,
-      className: "min-w-40",
+      className: "min-w-48",
       render: (item) => (
-        <div className="space-y-1 text-sm">
-          <p>Nhập: {item.purchase_unit}</p>
-          <p className="text-muted-foreground">Tính: {item.measure_unit}</p>
-          <p className="text-muted-foreground">{conversionLabel(item)}</p>
-        </div>
+        <span className="text-sm text-muted-foreground">
+          {unitsSummary(item)}
+        </span>
       ),
     },
     {
@@ -458,6 +513,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
           <IngredientMobileCard
             item={item}
             isPending={isPending}
+            toneMap={toneMap}
             onToggleActive={handleToggleActive}
             onEdit={openEdit}
           />
@@ -468,6 +524,8 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         ingredient={editingIngredient}
+        unitOptions={unitOptions}
+        categoryOptions={categoryOptions}
         onSaved={reload}
       />
     </AppPage>

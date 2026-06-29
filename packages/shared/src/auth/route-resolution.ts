@@ -37,6 +37,8 @@ export const INVENTORY_ROUTE_PREFIXES = [
   "/inventory/recipes",
   "/inventory/reports",
   "/inventory/settings",
+  "/inventory/settings/categories",
+  "/inventory/settings/units",
   "/inventory/stock",
   "/inventory/stocktake",
   "/inventory/supplier-invoices",

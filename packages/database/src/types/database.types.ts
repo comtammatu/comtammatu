@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       accounting_periods: {
@@ -908,6 +883,7 @@ export type Database = {
           limit_quantity: number | null
           menu_item_id: number
           sold_today: number
+          stock_capacity: number | null
           tenant_id: number
           updated_at: string
         }
@@ -920,6 +896,7 @@ export type Database = {
           limit_quantity?: number | null
           menu_item_id: number
           sold_today?: number
+          stock_capacity?: number | null
           tenant_id: number
           updated_at?: string
         }
@@ -932,6 +909,7 @@ export type Database = {
           limit_quantity?: number | null
           menu_item_id?: number
           sold_today?: number
+          stock_capacity?: number | null
           tenant_id?: number
           updated_at?: string
         }
@@ -1951,6 +1929,47 @@ export type Database = {
           },
         ]
       }
+      ingredient_categories: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          name: string
+          sort_order: number
+          tenant_id: number
+          tone_class: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          tenant_id: number
+          tone_class?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          tenant_id?: number
+          tone_class?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_categories_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredient_category_review_policy: {
         Row: {
           category: string
@@ -1983,9 +2002,80 @@ export type Database = {
           },
         ]
       }
+      ingredient_units: {
+        Row: {
+          allow_issue: boolean
+          allow_production: boolean
+          allow_purchase: boolean
+          created_at: string
+          id: number
+          ingredient_id: number
+          is_active: boolean
+          is_base: boolean
+          sort_order: number
+          tenant_id: number
+          to_base_factor: number
+          unit_id: number
+          updated_at: string
+        }
+        Insert: {
+          allow_issue?: boolean
+          allow_production?: boolean
+          allow_purchase?: boolean
+          created_at?: string
+          id?: never
+          ingredient_id: number
+          is_active?: boolean
+          is_base?: boolean
+          sort_order?: number
+          tenant_id: number
+          to_base_factor?: number
+          unit_id: number
+          updated_at?: string
+        }
+        Update: {
+          allow_issue?: boolean
+          allow_production?: boolean
+          allow_purchase?: boolean
+          created_at?: string
+          id?: never
+          ingredient_id?: number
+          is_active?: boolean
+          is_base?: boolean
+          sort_order?: number
+          tenant_id?: number
+          to_base_factor?: number
+          unit_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_units_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_units_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_units_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredients: {
         Row: {
           category: string | null
+          category_id: number | null
           created_at: string
           id: number
           is_active: boolean
@@ -2008,6 +2098,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          category_id?: number | null
           created_at?: string
           id?: never
           is_active?: boolean
@@ -2030,6 +2121,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          category_id?: number | null
           created_at?: string
           id?: never
           is_active?: boolean
@@ -2051,6 +2143,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ingredients_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "ingredient_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ingredients_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -7821,6 +7920,44 @@ export type Database = {
         }
         Relationships: []
       }
+      units: {
+        Row: {
+          code: string
+          created_at: string
+          id: number
+          is_active: boolean
+          name: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "units_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_trust_score: {
         Row: {
           branch_id: number
@@ -8542,6 +8679,14 @@ export type Database = {
         Args: { p_subtotal: number; p_type: string; p_value: number }
         Returns: number
       }
+      compute_menu_item_stock_capacity: {
+        Args: {
+          p_branch_id: number
+          p_menu_item_id: number
+          p_tenant_id: number
+        }
+        Returns: number
+      }
       compute_user_trust_score: {
         Args: { p_branch_id: number; p_user_id: string }
         Returns: number
@@ -8911,6 +9056,7 @@ export type Database = {
           limit_quantity: number
           menu_item_id: number
           sold_today: number
+          stock_capacity: number
         }[]
       }
       get_branch_menu_ingredient_caps_for_pos: {
@@ -8918,6 +9064,13 @@ export type Database = {
         Returns: {
           max_sellable: number
           menu_item_id: number
+        }[]
+      }
+      get_branch_menu_stock_capacity: {
+        Args: { p_branch_id: number }
+        Returns: {
+          menu_item_id: number
+          stock_capacity: number
         }[]
       }
       get_cash_variance_summary: {
@@ -9456,6 +9609,15 @@ export type Database = {
         Returns: Json
       }
       refresh_abc_classification: { Args: never; Returns: number }
+      refresh_branch_menu_stock_capacity: {
+        Args: {
+          p_branch_id: number
+          p_ingredient_id?: number
+          p_menu_item_id?: number
+          p_tenant_id: number
+        }
+        Returns: undefined
+      }
       refresh_finance_views: { Args: never; Returns: undefined }
       refresh_inventory_dashboard: { Args: never; Returns: string }
       refund_paid_order: {
@@ -9814,6 +9976,23 @@ export type Database = {
         }
         Returns: undefined
       }
+      upsert_ingredient_catalog: {
+        Args: {
+          p_category_id: number
+          p_ingredient_id: number
+          p_item_kind: string
+          p_max_stock_level: number
+          p_min_stock_level: number
+          p_name: string
+          p_reorder_point: number
+          p_shelf_life_days: number
+          p_sku: string
+          p_storage_type: string
+          p_unit_cost: number
+          p_units: Json
+        }
+        Returns: number
+      }
       upsert_payroll_calculation: {
         Args: { p_entries: Json; p_period_id: number }
         Returns: Json
@@ -10001,10 +10180,8 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
 } as const
+

@@ -1,0 +1,150 @@
+"use server";
+
+import { z } from "zod";
+import { revalidatePath } from "next/cache";
+import type { ActionResult } from "@comtammatu/shared/types";
+import { VALIDATION_VI } from "@comtammatu/shared/messages";
+import { INVENTORY_CATALOG_ROLES } from "@comtammatu/shared/auth";
+import { withAction } from "@/_lib/with-action";
+import { getAuthContextWithAnyPermission } from "../../_lib/auth";
+import { CATALOG_MANAGE_PERMISSIONS } from "../../_lib/catalog-permissions";
+import { PG_ERR } from "../../_lib/constants";
+
+const UNITS_PATH = "/inventory/settings/units";
+
+export interface UnitRow {
+  id: number;
+  code: string;
+  name: string;
+  is_active: boolean;
+}
+
+const unitCreateSchema = z.object({
+  code: z.string().trim().min(1, { error: VALIDATION_VI.required("Mã đơn vị") }),
+  name: z
+    .string()
+    .trim()
+    .min(1, { error: VALIDATION_VI.required("Tên đơn vị") }),
+  is_active: z.boolean().default(true),
+});
+
+const unitUpdateSchema = z.object({
+  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+  code: z.string().trim().min(1, { error: VALIDATION_VI.required("Mã đơn vị") }),
+  name: z
+    .string()
+    .trim()
+    .min(1, { error: VALIDATION_VI.required("Tên đơn vị") }),
+  is_active: z.boolean().default(true),
+});
+
+const unitDeleteSchema = z.object({
+  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+});
+
+export async function fetchUnits(): Promise<ActionResult<UnitRow[]>> {
+  const ctx = await getAuthContextWithAnyPermission(
+    INVENTORY_CATALOG_ROLES,
+    CATALOG_MANAGE_PERMISSIONS,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  const { data, error } = await supabase
+    .from("units")
+    .select("id, code, name, is_active")
+    .eq("tenant_id", claims.tenant_id)
+    .order("code");
+
+  if (error) {
+    return { success: false, error: "Không thể tải danh sách đơn vị." };
+  }
+
+  return { success: true, data: data ?? [] };
+}
+
+export const createUnit = withAction(
+  {
+    roles: INVENTORY_CATALOG_ROLES,
+    schema: unitCreateSchema,
+    anyPermission: CATALOG_MANAGE_PERMISSIONS,
+  },
+  async (data, { supabase, claims }) => {
+    const { error } = await supabase.from("units").insert({
+      tenant_id: claims.tenant_id,
+      code: data.code,
+      name: data.name,
+      is_active: data.is_active,
+    });
+
+    if (error) {
+      if (error.code === PG_ERR.UNIQUE_VIOLATION) {
+        return { success: false, error: "Mã đơn vị này đã tồn tại." };
+      }
+      return { success: false, error: "Không thể tạo đơn vị." };
+    }
+
+    revalidatePath(UNITS_PATH);
+    return { success: true };
+  },
+);
+
+export const updateUnit = withAction(
+  {
+    roles: INVENTORY_CATALOG_ROLES,
+    schema: unitUpdateSchema,
+    anyPermission: CATALOG_MANAGE_PERMISSIONS,
+  },
+  async (data, { supabase, claims }) => {
+    const { error } = await supabase
+      .from("units")
+      .update({
+        code: data.code,
+        name: data.name,
+        is_active: data.is_active,
+      })
+      .eq("id", data.id)
+      .eq("tenant_id", claims.tenant_id);
+
+    if (error) {
+      if (error.code === PG_ERR.UNIQUE_VIOLATION) {
+        return { success: false, error: "Mã đơn vị này đã tồn tại." };
+      }
+      return { success: false, error: "Không thể cập nhật đơn vị." };
+    }
+
+    revalidatePath(UNITS_PATH);
+    return { success: true };
+  },
+);
+
+export const deleteUnit = withAction(
+  {
+    roles: INVENTORY_CATALOG_ROLES,
+    schema: unitDeleteSchema,
+    anyPermission: CATALOG_MANAGE_PERMISSIONS,
+  },
+  async (data, { supabase, claims }) => {
+    const { error } = await supabase
+      .from("units")
+      .delete()
+      .eq("id", data.id)
+      .eq("tenant_id", claims.tenant_id);
+
+    if (error) {
+      // ingredient_units.unit_id is ON DELETE RESTRICT: a unit still
+      // referenced by an ingredient mapping cannot be removed.
+      if (error.code === PG_ERR.FK_VIOLATION) {
+        return {
+          success: false,
+          error: "Đơn vị đang được dùng, không thể xoá",
+        };
+      }
+      return { success: false, error: "Không thể xoá đơn vị." };
+    }
+
+    revalidatePath(UNITS_PATH);
+    return { success: true };
+  },
+);
