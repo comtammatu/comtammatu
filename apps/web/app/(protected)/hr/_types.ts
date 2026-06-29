@@ -47,4 +47,6 @@ export interface ShiftRow {
   start_time: string;
   end_time: string;
   is_active: boolean;
+  is_opening: boolean;
+  is_closing: boolean;
 }

@@ -28,9 +28,9 @@ export const hr = {
     attendanceTitle: "Chấm công và ngày công theo ca",
     attendanceDescription:
       "Theo dõi vào/ra ca, checklist bắt buộc, mục tiêu hao bếp khi được giao, ca treo và nghỉ phép trong cùng một nơi.",
-    setupTitle: "Thiết lập ca, checklist và vị trí",
+    setupTitle: "Thiết lập ca làm và việc trong ca",
     setupDescription:
-      "Ca làm là xương sống chấm công; nhân viên dùng checklist riêng hoặc mặc định theo vị trí khi vào ca.",
+      "Ca làm là xương sống chấm công; mỗi vị trí có việc trong ca riêng để nhân viên nhận đúng danh sách khi vào ca.",
     setupSteps: {
       shifts: {
         title: "Bước 1: Ca làm",
@@ -38,64 +38,71 @@ export const hr = {
           "Tạo các khung ca để checklist và bảng công bám đúng thời điểm vào ca, trong ca, kết ca.",
         hint: "Nền vận hành",
       },
-      checklist: {
-        title: "Bước 2: Mẫu checklist",
-        description:
-          "Tạo danh sách việc theo chi nhánh hoặc global. Checklist đã snapshot theo ca cũ sẽ không đổi.",
-        hint: "Danh sách công việc",
-      },
-      consumption: {
-        title: "Bước 3: Nguyên liệu tiêu hao",
-        description:
-          "Chỉ cấu hình nguyên liệu mặc định cho checklist có việc Tiêu hao bếp trong ngày.",
-        hint: "Optional",
-      },
-      positions: {
-        title: "Bước 4: Mặc định theo vị trí",
-        description:
-          "Gán checklist mặc định cho từng vị trí để nhân viên nhận đúng danh sách việc khi chấm công vào.",
-        hint: "Điều phối nhân sự",
-      },
     },
-    coverage: {
-      title: "Tình trạng áp checklist",
+    shiftBoundaries: {
+      opening: "Ca mở",
+      closing: "Ca đóng",
+      openingAria: "Đánh dấu ca mở",
+      closingAria: "Đánh dấu ca đóng",
+      saved: "Đã cập nhật ca mở/đóng",
+      saveFailed: "Không thể cập nhật ca mở/đóng",
+    },
+    positionTasks: {
+      title: "Vị trí → Việc trong ca",
       description:
-        "Đối chiếu vị trí, nhân viên, checklist tiêu hao và nguyên liệu mặc định trước khi nhân viên vào ca.",
-      hint: "Điều phối",
-      issueCount: (count: number) => `${count} cần kiểm tra`,
-      none: "Không gán",
-      noEmployee: "Nhân viên",
-      noPosition: "Chưa có vị trí",
-      noBranch: "Chưa có chi nhánh",
-      hasConsumption: "Có tiêu hao",
-      noConsumption: "Không tiêu hao",
-      employeeCount: (count: number) => `${count} NV`,
-      positionTitle: "Theo vị trí",
-      positionDescription:
-        "Kiểm tra checklist mặc định của từng vị trí và nguyên liệu tiêu hao đi kèm.",
-      employeeTitle: "Nhân viên cần kiểm tra",
-      employeeDescription:
-        "Chỉ hiện nhân viên đang thiếu checklist, thiếu nguyên liệu tiêu hao, hoặc dùng checklist riêng khác mặc định vị trí.",
-      emptyPositions: "Chưa có vị trí để kiểm tra",
-      emptyEmployees: "Không có nhân viên cần kiểm tra",
-      status: {
-        missing_checklist: "Thiếu checklist",
-        missing_consumption_defaults: "Thiếu nguyên liệu",
-        custom_checklist: "Checklist riêng",
-        ok: "Ổn",
+        "Gán danh sách việc trực tiếp cho từng vị trí. Nhân viên nhận đúng việc khi chấm công vào theo vị trí của mình.",
+      hint: "Theo vị trí",
+      positionLabel: "Vị trí",
+      positionPlaceholder: "Chọn vị trí",
+      emptyPosition: "Chọn một vị trí để cấu hình việc trong ca.",
+      taskListLabel: "Danh sách việc",
+      addTask: "Thêm việc",
+      removeTask: "Xóa việc",
+      titleLabel: "Việc",
+      titlePlaceholder: "Tên việc cần làm",
+      kindLabel: "Loại việc",
+      applicabilityLabel: "Áp dụng",
+      phaseLabel: "Thời điểm",
+      requiredLabel: "Bắt buộc",
+      doneDefinitionLabel: "Tiêu chí xong",
+      doneDefinitionPlaceholder:
+        "Dấu hiệu để quản lý và nhân viên biết việc đã xong",
+      ingredientsLabel: "Nguyên liệu tiêu hao mặc định",
+      ingredientsHint:
+        "Nhân viên vẫn có thể thêm dòng ngoài danh sách khi báo cáo ca.",
+      addIngredients: "Chọn nguyên liệu",
+      addIngredientsConfirm: (count: number) =>
+        count > 0 ? `Thêm ${count} nguyên liệu` : "Thêm nguyên liệu",
+      ingredientSearch: "Tìm nguyên liệu...",
+      removeIngredient: "Bỏ nguyên liệu",
+      empty: "Chưa có việc nào cho vị trí này.",
+      save: "Lưu việc trong ca",
+      saved: "Đã lưu việc trong ca",
+      saveFailed: "Không thể lưu việc trong ca",
+      ingredientsSaveFailed: "Không thể lưu nguyên liệu tiêu hao",
+      needTitle: "Nhập tên cho mọi việc trước khi lưu.",
+      loadFailed: "Không thể tải việc trong ca",
+      kindLabels: {
+        standard: "Việc thường",
+        consumption_report: "Tiêu hao bếp trong ngày",
       },
-      positionTable: {
-        position: "Vị trí",
-        checklist: "Checklist mặc định",
-        consumption: "Tiêu hao",
-        employees: "Nhân viên",
-        status: "Trạng thái",
+      applicabilityLabels: {
+        every_shift: "Mỗi ca",
+        opening: "Ca mở",
+        closing: "Ca đóng",
       },
-      employeeTable: {
-        employee: "Nhân viên",
-        scope: "Chi nhánh / vị trí",
-        checklist: "Checklist đang áp",
-        status: "Cần kiểm tra",
+      phaseLabels: {
+        start_of_shift: "Đầu ca",
+        end_of_shift: "Cuối ca",
+      },
+      errors: {
+        position_not_found: "Không tìm thấy vị trí.",
+        too_many_tasks: "Vượt quá số việc cho phép (tối đa 40).",
+        task_title_too_long: "Tên việc quá dài.",
+        task_kind_invalid: "Loại việc không hợp lệ.",
+        task_applicability_invalid: "Phạm vi áp dụng không hợp lệ.",
+        task_phase_invalid: "Thời điểm không hợp lệ.",
+        done_definition_too_long: "Tiêu chí xong quá dài.",
       },
     },
     payrollTitle: "Đối soát lương",
@@ -116,8 +123,8 @@ export const hr = {
       contractMissingHint: "Cần bổ sung trước khi chốt payroll đầy đủ",
       branches: "Chi nhánh",
       branchScope: "Phạm vi quản lý hiện tại",
-      templates: "Mẫu checklist",
-      templateHint: "Dùng cho việc trong ca",
+      shifts: "Ca làm",
+      shiftHint: "Khung ca dùng chung mọi chi nhánh",
     },
   },
   leave: {
