@@ -87,6 +87,10 @@ import { fetchActiveOrderForTable, editPendingOrderItem } from "./actions";
 import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
 import { usePosAppend } from "./_hooks/use-pos-append";
 import { useDailyLimitHolds } from "./_hooks/use-daily-limit-holds";
+import {
+  formatAddToCartBlockMessage,
+  useAddToCartGate,
+} from "./_hooks/use-add-to-cart-gate";
 import { useIsLargeUp } from "./_hooks/use-is-large-up";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
@@ -106,7 +110,6 @@ import type {
 } from "./_components/bill/bill-receipt-types";
 import type { OrderDetailData } from "./order-detail-sheet";
 import {
-  usePosDailyLimitStore,
   usePosOperationalDispatch,
   usePosOrders,
   usePosTables,
@@ -127,16 +130,6 @@ import {
   isActiveUnpaidPosOrder,
 } from "./_lib/table-order-visual-state";
 import { makeCartKey, makeNotedCartKey } from "./_utils/cart-key";
-import {
-  buildDailyLimitDemand,
-  findDailyLimitBlockForProposal,
-  type DailyLimitBlock,
-  type ProposedDailyLimitLine,
-} from "./_utils/daily-limit-draft";
-import {
-  findIngredientCapBlockForProposal,
-  type IngredientCapBlock,
-} from "./_utils/ingredient-cap-draft";
 import { messages } from "@lib/messages";
 
 type OrderTarget =
@@ -152,32 +145,6 @@ function isOrderAwaitingPayment(order: {
     ACTIVE_POS_STATUSES.includes(order.status) &&
     order.payment_status !== "paid"
   );
-}
-
-/**
- * Unified add-to-cart block message for both gates. Daily-limit (per-item
- * quota) and ingredient-cap (shared-stock snapshot) are separate models but
- * share the same toast surface — whichever blocks first wins.
- */
-function formatAddToCartBlockMessage(
-  block: DailyLimitBlock | IngredientCapBlock,
-): string {
-  if (block.reason === "ingredient_stock") {
-    if (block.available <= 0) {
-      return `${block.itemName} đã hết nguyên liệu trong kho.`;
-    }
-    return `${block.itemName} chỉ còn đủ nguyên liệu cho ${block.available} phần.`;
-  }
-
-  if (block.reason === "disabled") {
-    return `${block.itemName} đang tắt hôm nay.`;
-  }
-
-  if (block.available <= 0) {
-    return `${block.itemName} đã hết suất hôm nay.`;
-  }
-
-  return `${block.itemName} chỉ còn ${block.available} suất.`;
 }
 
 /* ─── Inner (consumes hooks) ─── */
@@ -567,44 +534,11 @@ export function PosDesktopInner({
   const canSubmit =
     cartItemCount > 0 && (takeawayDraftReady || selectedTableUsable);
   const cartSnapshot = useCartSnapshot();
-  const dailyLimitStore = usePosDailyLimitStore();
-  const activeDraftLines = useMemo(
-    () => [...cartSnapshot.items, ...appendDraftItems],
-    [appendDraftItems, cartSnapshot.items],
-  );
-  const dailyLimitDemandByMenuItem = useMemo(
-    () => buildDailyLimitDemand(activeDraftLines),
-    [activeDraftLines],
-  );
-  // Composes BOTH add-to-cart gates: the daily-limit quota (reactive store)
-  // and the ingredient-cap snapshot (static `menuItemById`). Returns whichever
-  // blocks first — daily-limit checked first to keep parity with prior copy.
-  // Both gates are optimistic client snapshots; the server triggers are
-  // authoritative (coupled dishes sharing an ingredient may still fail at
-  // submit even when the cap gate passes here).
-  const getAddToCartBlock = useCallback(
-    (
-      proposed: ProposedDailyLimitLine,
-      excludeKeys?: ReadonlySet<string>,
-    ): DailyLimitBlock | IngredientCapBlock | null => {
-      const dailyBlock = findDailyLimitBlockForProposal({
-        activeDraftLines,
-        excludeKeys,
-        proposed,
-        getLimit: (menuItemId) => dailyLimitStore.get(menuItemId),
-      });
-      if (dailyBlock) return dailyBlock;
-
-      return findIngredientCapBlockForProposal({
-        activeDraftLines,
-        excludeKeys,
-        proposed,
-        getCap: (menuItemId) =>
-          menuItemById.get(menuItemId)?.ingredient_cap ?? null,
-      });
-    },
-    [activeDraftLines, dailyLimitStore, menuItemById],
-  );
+  const { getAddToCartBlock, dailyLimitDemandByMenuItem } = useAddToCartGate({
+    cartItems: cartSnapshot.items,
+    appendDraftItems,
+    menuItemById,
+  });
 
   const {
     getDailyLimitHoldToken,
