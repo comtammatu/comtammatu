@@ -8,6 +8,9 @@ export interface PayrollEntryRow {
   standard_days: number;
   base_salary: number;
   gross_total: number;
+  bhxh_employee: number;
+  bhyt_employee: number;
+  bhtn_employee: number;
   total_insurance_employee: number;
   total_insurance_employer: number;
   insurance_base: number;

@@ -26,8 +26,10 @@ import {
   updatePayrollPeriodStandardDays,
 } from "../../payroll-actions";
 import type { PayrollEntryRow, PayrollPeriodDetail } from "./_types";
+import { ExportPayrollCsvButton } from "./export-payroll-csv-button";
 import { ERRORS_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
+import { getVNMonthYear } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { AppSection } from "@/components/surface";
@@ -166,6 +168,8 @@ export function PayrollDetailClient({
   );
   const totalPit = entries.reduce((s, e) => s + Number(e.pit_tax), 0);
   const totalNet = entries.reduce((s, e) => s + Number(e.net_salary), 0);
+  // CSV filename fallback when the period row failed to load.
+  const { month: fallbackMonth, year: fallbackYear } = getVNMonthYear();
   const columns: DataTableColumn<PayrollEntryRow>[] = [
     {
       key: "employee",
@@ -384,6 +388,12 @@ export function PayrollDetailClient({
               <IconCreditCard data-icon="inline-start" />
               {copy.actions.pay}
             </Button>
+            <ExportPayrollCsvButton
+              entries={entries}
+              period={period}
+              fallbackMonth={fallbackMonth}
+              fallbackYear={fallbackYear}
+            />
           </div>
         </div>
       </AppSection>
