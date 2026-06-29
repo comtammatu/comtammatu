@@ -556,3 +556,26 @@ KHÔNG tự cấp cho user đã có). Agent KHÔNG apply prod. Phase 2 (Server A
 test) chỉ build sau khi types regen.
 
 Đảo quyết định này phải sửa bản ghi này trước.
+
+## D050: Operator Workspace — hợp nhất Employee Portal + Branch Management thành 1 plane mobile-first (2026-06-29)
+
+**Context:** Họ chrome "Vận hành" (D019.1) chưa chín: `/employee/*` + POS/KDS/Runner không chia khung; branch command/setup lại render trong họ "Quản trị" (`AppShell` desktop); 3 cơ chế branch-scope rời nhau (`claims.branch_id` / `?branchId=` / segment `[branchId]`); route operator rải `/employee` + `/inventory` + `/br/[branchId]`. Thiết kế đích: `docs/plan/operator-workspace-blueprint-2026-06-29.md`; plan sub-project #1: `docs/plan/operator-foundation-impl-plan-2026-06-29.md`.
+
+**Decision (owner):**
+
+1. **Hai mặt phẳng = 2 họ chrome D019, không thêm họ thứ 3.** Operator plane = họ "Vận hành" làm chín (mobile/tablet, gốc `/br/[branchId]/*`); Office plane = họ "Quản trị" (`AppShell` desktop: `/admin` owner-only + domain workspaces độc lập + `/branches`).
+2. **Dồn route operator-facing về `/br/[branchId]/*`** (D009). Move thật: `/employee/*` → `/br/[id]/shift/*`; slice sàn Kho → `/br/[id]/stock/*`. branchId trên URL = SSoT; staff pin thì Branch Hub tự điền (không picker). Giữ URL cũ sống qua redirect (`resolveLegacyRouteRedirectPath`).
+3. **Amendment D019.1 + D017.3:** branch dashboard + control + **setup** (tables/pos/kds/printers/pos-sessions) chuyển TỪ họ "Quản trị" SANG Operator plane (full mobile — owner chốt "chuyển hết"). Office plane còn `/admin` + domain workspaces + `/branches` list.
+4. **Branch-context = 1 provider** `resolveBranchContext()` (cache, tổng quát hóa `resolveInventoryBranchScope`) thay 3 cơ chế. Proxy + RLS + `MODULE_ACL` + `has_permission` GIỮ NGUYÊN làm cổng gác; context chỉ là lớp đọc.
+5. **Branch Hub = entry device-aware** (nâng cấp `resolvePostLoginRedirect`): station PWA → vào thẳng station; desktop + owner/office → Office; còn lại → Operator (picker nếu >1 CN). Owner landing theo thiết bị (desktop→Office, phone→Operator Overview). Không phá route-home matrix.
+6. **Phone nav = 4 anchor cố định** (`Trang chủ · Ca · Thông báo · Hồ sơ`) + smart card theo `today-work-state`; bỏ hack `MAX_VISIBLE_ITEMS=5`. Việc theo-CN qua **capability tiles** = mở rộng `nav-config.ts`/`MODULE_ACL` (D019.4), gate server-side; route-home canonical vẫn `role-route-matrix.md` (D019.2).
+7. **Không viết lại POS/KDS/Runner** — chỉ re-root lên context + Hub (giữ orchestrator `pos-desktop-inner.tsx`). Kho/Menu tách: việc sàn → Operator, back-office → Office; catalog món = tenant/Office, giới hạn ngày = per-branch/Operator.
+
+**Scope boundaries:**
+- Office-side People/Branch IA do `docs/plan/task3-mgmt-ia-consolidation.md` + **D048** sở hữu — blueprint này KHÔNG redesign phần đó; menu-limits/branch-switcher khớp D048.
+- My-shift migration (sub-project #3) xếp SAU khi HR redesign (D026/D027, branch `codex/hrm-payroll-annual-leave`) settle; KHÔNG động file HR bây giờ.
+- Shift-tasks/checklist config là workstream in-flight riêng; tile "Việc cần làm" chỉ tiêu thụ output, không thiết kế lại config.
+
+**Lộ trình:** 7 sub-project trong blueprint §11; `#1` (foundation: branch-context + capability registry + Branch Hub) làm trước, additive (ship được mà chưa gỡ UI cũ). Mỗi lát đụng route đồng bộ 5 chỗ (`module-acl.ts`, `route-resolution.ts`, `route-map.ts`, nav config, `protected-route-module-coverage.test.ts`).
+
+**Consequences:** Mở rộng/sửa D019 (§1) + D017 (§3). Đảo bất kỳ điểm nào (gộp lại các chrome, trả branch command/setup về desktop, đổi entry/route-home, đổi nav model) phải sửa bản ghi này + D019 trước.
