@@ -34,11 +34,11 @@ import {
 import {
   fetchBranchMovementSummary,
   fetchStockMovementReport,
-} from "@/_actions/inventory";
+} from "@/(protected)/inventory/report-actions";
 import type {
   BranchMovementSummaryRow,
   MovementReportRow,
-} from "@/_actions/inventory";
+} from "@/(protected)/inventory/report-actions";
 import { messages } from "@lib/messages";
 
 const stockMovementCopy = messages.admin.reports.stockMovement;

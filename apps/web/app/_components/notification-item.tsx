@@ -11,7 +11,7 @@ import {
   ShoppingBag as IconShoppingBag,
   Truck as IconTruck,
 } from "lucide-react";
-import type { NotificationItem as NotificationItemModel } from "@/_actions/notifications";
+import type { NotificationItem as NotificationItemModel } from "@/(protected)/notifications/actions";
 import { messages } from "@lib/messages";
 import { formatVNDate } from "@comtammatu/shared/time";
 

@@ -8,7 +8,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   type NotificationItem,
-} from "@/_actions/notifications";
+} from "@/(protected)/notifications/actions";
 
 interface UseNotificationsArgs {
   tenantId: number;

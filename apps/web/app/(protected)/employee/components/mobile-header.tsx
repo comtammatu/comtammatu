@@ -3,7 +3,7 @@ import { Bell as IconBell, User as IconUser } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
-import { getUnreadCount } from "@/_actions/notifications";
+import { getUnreadCount } from "@/(protected)/notifications/actions";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
