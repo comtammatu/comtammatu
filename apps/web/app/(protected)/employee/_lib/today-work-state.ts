@@ -276,7 +276,7 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
       taskKind,
       phase: normalizeChecklistPhase(item.phase),
       doneDefinition: item.done_definition,
-      isRequired: taskKind === "inventory_count" ? false : item.is_required,
+      isRequired: item.is_required,
       sortOrder: item.sort_order,
       done: item.is_done,
       completedAt: item.completed_at,
@@ -318,7 +318,7 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
 
       checklistItems = checklistItems.map((item) =>
         item.taskKind === "inventory_count"
-          ? { ...item, done: countTaskDone }
+          ? { ...item, done: countTaskDone, isRequired: true }
           : item,
       );
 
@@ -330,12 +330,18 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
           taskKind: "inventory_count",
           phase: "end_of_shift",
           doneDefinition: messages.employee.home.countDescription,
-          isRequired: false,
+          isRequired: true,
           sortOrder: Number.MAX_SAFE_INTEGER,
           done: countTaskDone,
           completedAt: null,
         });
       }
+    } else {
+      checklistItems = checklistItems.map((item) =>
+        item.taskKind === "inventory_count"
+          ? { ...item, done: true, isRequired: false }
+          : item,
+      );
     }
   }
 

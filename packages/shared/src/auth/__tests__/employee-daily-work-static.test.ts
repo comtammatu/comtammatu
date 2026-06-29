@@ -384,6 +384,10 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
   const workStateSrc = read(
     "apps/web/app/(protected)/employee/_lib/today-work-state.ts",
   );
+  const baselineSrc = read("supabase/migrations/00000000000000_baseline.sql");
+  const countGateMigrationSrc = read(
+    "supabase/migrations/20260629183853_require_inventory_count_checkout_gate.sql",
+  );
   const approvalsPageSrc = read(
     "apps/web/app/(protected)/employee/checkout-approvals/page.tsx",
   );
@@ -438,6 +442,14 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
       workStateSrc.includes("approvalTargetLabel"),
     "expected work state to expose floor-staff checkout pending, required-only checklist progress, plus branch-manager attendance-only status",
   );
+  for (const src of [baselineSrc, countGateMigrationSrc]) {
+    assert.ok(
+      src.includes("AND i.task_kind <> 'inventory_count'") &&
+        src.includes("inventory_count_slips") &&
+        src.includes("s.status IN ('submitted', 'approved')"),
+      "employee_request_clock_out must gate inventory_count from count slips, not the checklist checkbox",
+    );
+  }
   assert.ok(
     approvalsPageSrc.includes("CHECKOUT_APPROVER_ROLES") &&
       approvalsPageSrc.includes("checkout_approval_target_roles") &&

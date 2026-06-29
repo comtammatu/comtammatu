@@ -66,8 +66,8 @@ test("inventory count task status comes from today's submitted or approved slips
   );
   assert.match(
     todayWorkStateSource,
-    /id: -1[\s\S]*taskKind: "inventory_count"[\s\S]*phase: "end_of_shift"[\s\S]*isRequired: false/,
-    "the fallback count task should land at end of shift and stay non-required",
+    /id: -1[\s\S]*taskKind: "inventory_count"[\s\S]*phase: "end_of_shift"[\s\S]*isRequired: true/,
+    "the fallback count task should land at end of shift and block checkout until submitted",
   );
 });
 

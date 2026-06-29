@@ -8300,7 +8300,7 @@ BEGIN
     INSERT INTO public.attendance_checklist_items
       (tenant_id, attendance_record_id, template_item_id, title, phase, done_definition, is_required, scope, task_kind, sort_order)
     VALUES (p_tenant_id, v_attendance_id, NULL, 'Kiểm kê tồn', 'end_of_shift',
-            'Nộp phiếu đếm tại màn Kiểm kê tồn.', false, 'every_shift', 'inventory_count',
+            'Nộp phiếu đếm tại màn Kiểm kê tồn.', true, 'every_shift', 'inventory_count',
             COALESCE((SELECT max(sort_order) FROM public.attendance_checklist_items WHERE attendance_record_id = v_attendance_id), 0) + 1);
   END IF;
 
@@ -8345,6 +8345,7 @@ CREATE FUNCTION public.employee_request_clock_out(p_tenant_id bigint, p_employee
 DECLARE
   v_record public.attendance_records%ROWTYPE;
   v_remaining integer;
+  v_count_remaining integer;
   v_requested_at timestamptz;
   v_employee_name text;
   v_requester_role text;
@@ -8369,9 +8370,36 @@ BEGIN
   WHERE i.tenant_id = p_tenant_id
     AND i.attendance_record_id = p_attendance_id
     AND i.is_required = true
+    AND i.task_kind <> 'inventory_count'
     AND i.is_done = false;
 
   IF v_remaining > 0 THEN
+    RAISE EXCEPTION 'checklist_incomplete' USING ERRCODE = '23514';
+  END IF;
+
+  SELECT count(*)::integer
+  INTO v_count_remaining
+  FROM (
+    SELECT a.location_id
+    FROM public.inventory_count_assignments a
+    WHERE a.tenant_id = p_tenant_id
+      AND a.branch_id = v_record.branch_id
+      AND a.employee_id = p_employee_id
+      AND a.is_active
+    GROUP BY a.location_id
+  ) assigned
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.inventory_count_slips s
+    WHERE s.tenant_id = p_tenant_id
+      AND s.branch_id = v_record.branch_id
+      AND s.employee_id = p_employee_id
+      AND s.location_id = assigned.location_id
+      AND s.count_date = v_record.date
+      AND s.status IN ('submitted', 'approved')
+  );
+
+  IF v_count_remaining > 0 THEN
     RAISE EXCEPTION 'checklist_incomplete' USING ERRCODE = '23514';
   END IF;
 
