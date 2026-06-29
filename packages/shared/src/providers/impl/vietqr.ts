@@ -126,19 +126,24 @@ const BANK_BINS: Record<string, string> = {
   WVN: "970457",
 };
 
-const PAYMENT_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const MB_SPEAKER_PAYMENT_PREFIX = "VQRLOAMB";
+const VIETNAM_TIME_OFFSET_MS = 7 * 60 * 60 * 1000;
 
-function randomPaymentChars(length: number): string {
+function randomPaymentDigits(length: number): string {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
   return Array.from(
     bytes,
-    (byte) => PAYMENT_CODE_ALPHABET[byte % PAYMENT_CODE_ALPHABET.length],
+    (byte) => String(byte % 10),
   ).join("");
 }
 
 function generateVietQrPaymentCode(): string {
-  return `DH${randomPaymentChars(10)}`;
+  const vietnamIso = new Date(
+    Date.now() + VIETNAM_TIME_OFFSET_MS,
+  ).toISOString();
+  const timestamp = vietnamIso.replace(/\D/g, "").slice(0, 14);
+  return `${MB_SPEAKER_PAYMENT_PREFIX}${timestamp}${randomPaymentDigits(3)}`;
 }
 
 export class VietQRProvider implements PaymentProvider {

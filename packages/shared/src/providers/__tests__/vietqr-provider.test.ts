@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { resolveBankBin, VietQRProvider } from "../impl/vietqr";
 
-test("VietQRProvider uses generated payment code as transfer memo", async () => {
+test("VietQRProvider uses MB speaker payment code as transfer memo", async () => {
   const provider = new VietQRProvider({
     apiKey: "",
     bankAccount: "19035551234567",
@@ -18,7 +18,7 @@ test("VietQRProvider uses generated payment code as transfer memo", async () => 
   });
 
   assert.equal(result.status, "pending");
-  assert.match(result.providerRef ?? "", /^DH[A-Z0-9]{10}$/);
+  assert.match(result.providerRef ?? "", /^VQRLOAMB\d{17}$/);
   assert.equal(result.providerData?.description, result.providerRef);
   assert.equal(result.providerData?.bankBin, "970407");
 
@@ -26,7 +26,7 @@ test("VietQRProvider uses generated payment code as transfer memo", async () => 
   assert.doesNotMatch(result.qrData ?? "", /^https?:\/\//);
   assert.match(result.qrData ?? "", /970407/);
   assert.match(result.qrData ?? "", /125000/);
-  assert.match(result.qrData ?? "", /DH[A-Z0-9]{10}/);
+  assert.match(result.qrData ?? "", /VQRLOAMB\d{17}/);
 });
 
 test("resolveBankBin covers current VietQR transfer bank codes used by POS", () => {
