@@ -1,7 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { ProductionStats } from "./production-stats";
 import { ProductionOrderList } from "./production-order-list";
@@ -15,6 +21,9 @@ import type {
   ProductionOrderRow,
   ProductionRecipeRow,
 } from "./production-types";
+
+const PRODUCTION_ORDERS_TAB = "orders";
+const PRODUCTION_RECIPES_TAB = "recipes";
 
 interface ProductionHubClientProps {
   canManageCatalog: boolean;
@@ -68,6 +77,11 @@ export function ProductionHubClient({
     [recipes],
   );
 
+  const [activeTab, setActiveTab] = useState<string>(PRODUCTION_ORDERS_TAB);
+  const handleOpenRecipesTab = useCallback(() => {
+    setActiveTab(PRODUCTION_RECIPES_TAB);
+  }, []);
+
   return (
     <AppPage>
       <AppPageHeader
@@ -93,21 +107,37 @@ export function ProductionHubClient({
         recipeLineCount={recipes.length}
         canManageCatalog={canManageCatalog}
         canManageRecipes={canManageRecipes}
+        onOpenRecipes={handleOpenRecipesTab}
       />
 
-      <ProductionOrderList
-        orders={orders}
-        canConfirmProduction={canConfirmProduction}
-        canAdjustStock={canAdjustStock}
-      />
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value={PRODUCTION_ORDERS_TAB}>
+            {INVENTORY_VI.productionOrdersTab}
+          </TabsTrigger>
+          <TabsTrigger value={PRODUCTION_RECIPES_TAB}>
+            {INVENTORY_VI.productionRecipesTab}
+          </TabsTrigger>
+        </TabsList>
 
-      <ProductionRecipePanel
-        canManageCatalog={canManageCatalog}
-        canManageRecipes={canManageRecipes}
-        finishedGoods={finishedGoods}
-        ingredients={ingredients}
-        recipes={recipes}
-      />
+        <TabsContent value={PRODUCTION_ORDERS_TAB}>
+          <ProductionOrderList
+            orders={orders}
+            canConfirmProduction={canConfirmProduction}
+            canAdjustStock={canAdjustStock}
+          />
+        </TabsContent>
+
+        <TabsContent value={PRODUCTION_RECIPES_TAB}>
+          <ProductionRecipePanel
+            canManageCatalog={canManageCatalog}
+            canManageRecipes={canManageRecipes}
+            finishedGoods={finishedGoods}
+            ingredients={ingredients}
+            recipes={recipes}
+          />
+        </TabsContent>
+      </Tabs>
     </AppPage>
   );
 }
