@@ -95,10 +95,7 @@ const brandHeader: TemplateBlock = {
   tagline: "Thịt tươi 100%",
 };
 
-const receiptHeader: TemplateBlock[] = [
-  { type: "row", left: "MÁ TƯ", right: "{{branch_address}}", bold: true },
-  { type: "row", left: "Thịt tươi 100%", right: "" },
-];
+const receiptHeader: TemplateBlock[] = [brandHeader, { type: "branchInfo" }];
 
 export const DEFAULT_TEMPLATE_CONTENT: Record<PrintKind, TemplateContent> = {
   receipt: {
@@ -151,8 +148,8 @@ export const DEFAULT_TEMPLATE_CONTENT: Record<PrintKind, TemplateContent> = {
       },
       { type: "divider", char: "=" },
       { type: "billMeta" },
-      { type: "itemsTable" },
-      { type: "totals" },
+      { type: "itemsTable", group_by_category: true },
+      { type: "totals", always_show_adjustments: true },
       { type: "note", prefix: "Ghi chú: " },
       { type: "paymentQr", heading: "QUÉT QR THANH TOÁN" },
       { type: "footer", lines: ["Thịt tươi 100%"] },

@@ -151,7 +151,18 @@ test("order display helpers", () => {
 
 test("receipt fallback materializes default layout", () => {
   const blocks = blocksOf(SAMPLE_PAYLOADS.receipt);
-  assertRow(blocks, "MÁ TƯ", "123 Nguyễn Huệ, P. Bến Nghé, Q.1");
+  assert.ok(
+    blocks.some((b) => b.type === "brandHeader" && b.name === "MÁ TƯ"),
+    "missing Má Tư brand header",
+  );
+  assert.ok(
+    blocks.some(
+      (b) =>
+        b.type === "branchInfo" &&
+        b.branch_address === "123 Nguyễn Huệ, P. Bến Nghé, Q.1",
+    ),
+    "missing branch info",
+  );
   assertText(blocks, "HÓA ĐƠN THANH TOÁN", { bold: true, double: true });
   assertText(blocks, "Bàn 5 #087", { bold: true, double: true });
   assert.ok(
@@ -206,6 +217,28 @@ test("receipt render groups food and drink with unit price and always-on totals"
   );
 });
 
+test("receipt render wraps long branch address", () => {
+  const branchAddress =
+    "123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, Thành phố Hồ Chí Minh";
+  const ops = renderDocumentToOps(
+    buildFallbackDocument({
+      ...SAMPLE_PAYLOADS.receipt,
+      branch_address: branchAddress,
+    } as PrintPayload),
+  );
+  const lines = ops.flatMap((op) => (op.kind === "line" ? [op.text] : []));
+
+  assert.ok(!lines.includes(branchAddress), "address must not stay one line");
+  assert.ok(
+    lines.some((line) => line.includes("123 Nguyễn Huệ")),
+    "missing first address line",
+  );
+  assert.ok(
+    lines.some((line) => line === "Minh"),
+    "missing final address line",
+  );
+});
+
 test("receipt without QR skips paymentQr block", () => {
   const blocks = blocksOf({
     ...SAMPLE_PAYLOADS.receipt,
@@ -224,7 +257,32 @@ test("provisional bill fallback", () => {
   const blocks = blocksOf(payload);
   assertText(blocks, "PHIẾU TẠM TÍNH", { bold: true, double: true });
   assertText(blocks, "Mang về #088", { bold: true, double: true });
+  assert.ok(
+    blocks.some(
+      (b) => b.type === "itemsTable" && b.group_by_category === true,
+    ),
+    "provisional bill must group food and drink",
+  );
+  assert.ok(
+    blocks.some(
+      (b) => b.type === "totals" && b.always_show_adjustments === true,
+    ),
+    "provisional bill must always show adjustments",
+  );
   assert.ok(blocks.some((b) => b.type === "paymentQr"));
+
+  const ops = renderDocumentToOps(buildFallbackDocument(payload));
+  const lines = ops.flatMap((op) => (op.kind === "line" ? [op.text] : []));
+  assert.ok(lines.includes("Đồ ăn"), "missing food section");
+  assert.ok(lines.includes("Nước uống"), "missing drink section");
+  assert.ok(
+    lines.some((line) => line.includes("Phí dịch vụ") && line.includes("0đ")),
+    "service fee must stay visible when zero",
+  );
+  assert.ok(
+    lines.some((line) => line.includes("Chiết khấu") && line.includes("0đ")),
+    "discount must stay visible when zero",
+  );
 });
 
 test("kitchen ticket fallback", () => {
