@@ -65,6 +65,9 @@ supabase/.branches/
 .agents/cache/
 .agents/logs/
 .agents/tmp/
+AGENTS.local.md
+CLAUDE.local.md
+.headroom/
 .cursor/.cache/
 .cursor/cache/
 .cursor/logs/

@@ -108,6 +108,28 @@ adds `oh-my-claudecode`. The only git-tracked repo skill is `tax-vn`
   `playwright`, `superpowers:systematic-debugging`, `security-review` / OMC
   `security-reviewer`, `gh` + `vercel:*`). Nothing is load-bearing on gstack.
 
+### Headroom Context Compression
+
+Headroom is a per-user workflow accelerator for long agent sessions. It is not a
+repo dependency, not a source of truth, and not a replacement for CodeGraph,
+repo rules, production verification, or the hard gates in `workflow.md`.
+
+- Use it for log-heavy and tool-output-heavy work: `pnpm verify`, build/test
+  failures, large Supabase SELECT results, long review sessions, or multi-agent
+  handoffs.
+- Skip it for short chat, small code-only edits, and source lookup where
+  CodeGraph already returns the needed source directly.
+- Keep setup local/user-level (`headroom wrap codex` / `headroom wrap claude`);
+  do not add `headroom-ai` to `package.json`, vendor its skills, or commit
+  generated Headroom caches/session state.
+- `headroom learn` is dry-run only for this repo unless the owner explicitly
+  asks to apply a learning. Do not let it write tracked `AGENTS.md` or
+  `CLAUDE.md`; promote durable corrections manually to `tasks/regressions.md`,
+  `tasks/lessons.md`, or the owning rule doc per `references.md`.
+- Prefer `HEADROOM_TELEMETRY=off` while working with operational data.
+
+Operational checklist: `docs/runbooks/agent-headroom.md`.
+
 ## Required Routing Matrix
 
 The Layer Skill Map above is the layer-indexed companion to this table; rows below
