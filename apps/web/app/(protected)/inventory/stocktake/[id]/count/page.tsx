@@ -6,6 +6,7 @@ import {
 } from "../../../_lib/feature-flags";
 import { resolveRequestedBranchId } from "../../../_lib/inventory-scope";
 import { getStocktakeLinesBlind } from "../../../stocktake-actions";
+import type { CountUnitOption } from "../../../_lib/count-units";
 import { StocktakeCountClient } from "./count-client";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function StocktakeCountPage({
   const supabase = await createClient();
   const { data: sessionRow } = await supabase
     .from("stocktake_sessions")
-    .select("id, branch_id, status, started_at, completed_at")
+    .select("id, tenant_id, branch_id, status, started_at, completed_at")
     .eq("id", sessionId)
     .maybeSingle();
 
@@ -57,6 +58,37 @@ export default async function StocktakeCountPage({
     linesRes.data.reduce((max, l) => (l.roundNo > max ? l.roundNo : max), 1) ||
     1;
 
+  // The blind line RPC returns only a unit string, so fetch the active units
+  // per ingredient separately to build the counting-unit dropdowns.
+  const ingredientIds = [
+    ...new Set(linesRes.data.map((line) => line.ingredientId)),
+  ];
+  const unitOptionsByIngredient: Record<number, CountUnitOption[]> = {};
+  if (ingredientIds.length > 0) {
+    const { data: unitRows } = await supabase
+      .from("ingredients")
+      .select(
+        "id, ingredient_units(unit_id, is_base, sort_order, units(code))",
+      )
+      .eq("tenant_id", sessionRow.tenant_id)
+      .in("id", ingredientIds);
+
+    // Counting can use any of the ingredient's units (no role filter), base first.
+    for (const row of unitRows ?? []) {
+      unitOptionsByIngredient[row.id] = (row.ingredient_units ?? [])
+        .filter((u) => (u.units?.code ?? "") !== "")
+        .sort((a, b) => {
+          if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
+          return a.sort_order - b.sort_order;
+        })
+        .map((u) => ({
+          unitId: u.unit_id,
+          code: u.units?.code ?? "",
+          isBase: u.is_base,
+        }));
+    }
+  }
+
   return (
     <StocktakeCountClient
       sessionId={sessionId}
@@ -64,6 +96,7 @@ export default async function StocktakeCountPage({
       status={sessionRow.status as string}
       currentRound={Math.min(4, currentRound) as 1 | 2 | 3 | 4}
       initialLines={linesRes.data}
+      unitOptionsByIngredient={unitOptionsByIngredient}
     />
   );
 }

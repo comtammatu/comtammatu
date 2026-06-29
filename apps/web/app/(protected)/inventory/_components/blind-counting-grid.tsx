@@ -15,6 +15,13 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { matchesSearch } from "@lib/search";
 import {
   Search as IconSearch,
@@ -28,6 +35,7 @@ import {
 import { FormattedNumberInput } from "./formatted-number-input";
 import { AbcClassChip } from "./abc-class-chip";
 import type { StocktakeLineBlind } from "../stocktake-actions";
+import type { CountUnitOption } from "../_lib/count-units";
 import type { DraftCounts } from "./stocktake-draft-saver";
 
 import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
@@ -35,6 +43,11 @@ interface BlindCountingGridProps {
   lines: StocktakeLineBlind[];
   counts: DraftCounts;
   onCountChange: (ingredientId: number, qty: number | null) => void;
+  /** Counting-unit options per ingredient (all active units, base first). */
+  unitOptionsByIngredient: Record<number, CountUnitOption[]>;
+  /** Selected counting unit (entry_unit_id) per ingredient. */
+  unitByIngredient: Record<number, number>;
+  onUnitChange: (ingredientId: number, unitId: number) => void;
   /**
    * When true, the counter has no idea what system expected. Default for
    * daily/weekly/monthly/quarterly modes per spec §Q2.
@@ -64,6 +77,9 @@ export function BlindCountingGrid({
   lines,
   counts,
   onCountChange,
+  unitOptionsByIngredient,
+  unitByIngredient,
+  onUnitChange,
   blindMode,
   readOnly,
   onlyNeedsRecount,
@@ -111,7 +127,15 @@ export function BlindCountingGrid({
       key: "unit",
       header: FORM_VI.unit,
       className: "text-muted-foreground",
-      render: (line) => line.unit,
+      render: (line) => (
+        <CountUnitSelect
+          line={line}
+          options={unitOptionsByIngredient[line.ingredientId] ?? []}
+          value={unitByIngredient[line.ingredientId] ?? null}
+          disabled={readOnly || line.isFinal}
+          onChange={(unitId) => onUnitChange(line.ingredientId, unitId)}
+        />
+      ),
     },
     {
       key: "count",
@@ -196,6 +220,9 @@ export function BlindCountingGrid({
             value={counts[line.ingredientId]?.qty ?? null}
             readOnly={readOnly || line.isFinal}
             onChange={(raw) => handleQtyChange(line.ingredientId, raw)}
+            unitOptions={unitOptionsByIngredient[line.ingredientId] ?? []}
+            unitValue={unitByIngredient[line.ingredientId] ?? null}
+            onUnitChange={(unitId) => onUnitChange(line.ingredientId, unitId)}
           />
         )}
       />
@@ -208,11 +235,17 @@ function CountLineItem({
   value,
   readOnly,
   onChange,
+  unitOptions,
+  unitValue,
+  onUnitChange,
 }: {
   line: StocktakeLineBlind;
   value: number | null;
   readOnly: boolean;
   onChange: (raw: string) => void;
+  unitOptions: CountUnitOption[];
+  unitValue: number | null;
+  onUnitChange: (unitId: number) => void;
 }) {
   return (
     <Item
@@ -232,10 +265,17 @@ function CountLineItem({
       <ItemContent>
         <ItemDescription className="flex items-center gap-2">
           <AbcClassChip class_={line.abcClass} compact withTooltip />
-          <span>{line.unit}</span>
         </ItemDescription>
       </ItemContent>
-      <ItemFooter>
+      <ItemFooter className="gap-2">
+        <CountUnitSelect
+          line={line}
+          options={unitOptions}
+          value={unitValue}
+          disabled={readOnly}
+          onChange={onUnitChange}
+          className="h-9 w-28"
+        />
         <FormattedNumberInput
           value={value === null ? "" : String(value)}
           disabled={readOnly}
@@ -247,6 +287,54 @@ function CountLineItem({
         />
       </ItemFooter>
     </Item>
+  );
+}
+
+/**
+ * Counting-unit picker for a line. Shows a Select of all the ingredient's
+ * active units (base first) when options exist; otherwise falls back to the
+ * static unit string from the line so legacy ingredients still render.
+ */
+function CountUnitSelect({
+  line,
+  options,
+  value,
+  disabled,
+  onChange,
+  className,
+}: {
+  line: StocktakeLineBlind;
+  options: CountUnitOption[];
+  value: number | null;
+  disabled?: boolean;
+  onChange: (unitId: number) => void;
+  className?: string;
+}) {
+  if (options.length === 0) {
+    return <span className="text-muted-foreground">{line.unit}</span>;
+  }
+  return (
+    <Select
+      value={value != null ? String(value) : ""}
+      onValueChange={(raw) => onChange(Number(raw))}
+      disabled={disabled}
+    >
+      <SelectTrigger
+        className={cn("h-9 w-24", className)}
+        aria-label={FORM_VI.unit}
+        data-slot="blind-counting-grid-unit"
+        data-ingredient-id={line.ingredientId}
+      >
+        <SelectValue placeholder={FORM_VI.unit} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.unitId} value={String(option.unitId)}>
+            {option.code}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

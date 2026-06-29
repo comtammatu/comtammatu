@@ -168,6 +168,9 @@ const submitCountSchema = z.object({
       z.object({
         ingredient_id: z.coerce.number().int().positive(),
         counted_quantity: z.coerce.number().min(0),
+        // Unit the physical count was entered in. submit_count_round converts
+        // it to the ingredient base via inv_to_base(). null => already base.
+        entry_unit_id: z.coerce.number().int().positive().nullable().optional(),
         client_op_id: z.string().uuid().optional(),
         offline_created_at: z.string().optional(),
       }),
