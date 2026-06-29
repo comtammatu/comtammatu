@@ -32,7 +32,6 @@
     "@vercel/speed-insights": "^2.0.0",
     "boneyard-js": "^1.8.1",
     "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
     "exceljs": "^4.4.0",
     "geist": "^1.7.2",
     "lucide-react": "^1.16.0",
@@ -43,7 +42,6 @@
     "react-dom": "^19.2.6",
     "react-hook-form": "^7.76.1",
     "server-only": "^0.0.1",
-    "tailwind-merge": "^3.6.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
