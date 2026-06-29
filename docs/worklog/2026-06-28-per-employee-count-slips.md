@@ -1,5 +1,7 @@
 # Per-employee inventory count slips (Task 1) — T3 contract
 
+> Reconciled-through 49112fa17fec
+
 Owner asked for three features; this worklog covers **Task 1** only. Decisions
 locked with the owner: count semantics = **count on-hand + reconcile variance**
 (not consumption reporting); sequencing 1 → 2 → 3.

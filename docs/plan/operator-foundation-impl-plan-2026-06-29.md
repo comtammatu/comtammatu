@@ -1,5 +1,7 @@
 # Operator Workspace — Sub-project #1 (Foundation) Implementation Plan
 
+> Reconciled-through 49112fa17fec
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Execute on a dedicated branch/worktree (superpowers:using-git-worktrees), KHÔNG commit thẳng `main`.
 
 **Goal:** Dựng 3 unit nền (pure/additive, KHÔNG đổi hành vi đang chạy) cho Operator Workspace: branch-context resolver, capability-tile registry, Branch Hub destination resolver.

@@ -1,5 +1,7 @@
 # Admin UI Layout Audit — "lệch / bể layout"
 
+> Reconciled-through 49112fa17fec
+
 **Date:** 2026-06-28
 **Scope:** Admin module (`apps/web/app/(protected)/admin/**`) + the shared chrome that builds it (`app-shell.tsx`, `surface.tsx`) + the token root (`packages/ui/src/styles/globals.css`).
 **Authority:** `docs/spec/design-system.md` (locked "Com Tam Ma Tu Custom Theme" contract). Actual tokens: `packages/ui/src/styles/globals.css`. Enforcement: `scripts/check-ui-contract.mjs` (`pnpm lint:ui-contract`), `pnpm audit:ui-components`.

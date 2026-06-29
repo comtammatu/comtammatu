@@ -1,5 +1,7 @@
 # Operator Workspace Blueprint — Hợp nhất Cổng nhân viên + Branch Management (2026-06-29)
 
+> Reconciled-through 49112fa17fec
+>
 > **North-star (vision + architecture of record), mobile-first.** Verify-through code @ working tree 2026-06-29 (HEAD `406d7c52`). Quyết định owner bền: `docs/plan/decisions.md` → **D050**. Doc này là thiết kế đích + lộ trình tách việc; không lặp lý lẽ đã ghi ở D050.
 >
 > Khớp với khung sẵn có: 2 họ chrome (D019.1), `/admin` owner-only + domain workspaces độc lập (D017), path-based routing `/br/[branchId]/*` (D009), role-route-matrix là SSoT route-home (D019.2), nav-là-data (D019.4). Office-side People/Branch IA do `task3-mgmt-ia-consolidation.md` sở hữu; HR đang rebuild ở D026/D027.

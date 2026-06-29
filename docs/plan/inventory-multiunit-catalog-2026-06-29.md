@@ -1,5 +1,7 @@
 # Kế hoạch: Danh mục nguyên liệu đa đơn vị + danh mục chuẩn (2026-06-29)
 
+> Reconciled-through 49112fa17fec
+
 Trạng thái: **DRAFT — chờ owner duyệt**. Người soạn: agent. Ngôn ngữ code/identifier/SQL giữ tiếng Anh.
 
 ## 1. Mục tiêu

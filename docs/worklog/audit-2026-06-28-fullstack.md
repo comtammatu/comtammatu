@@ -1,5 +1,7 @@
 # Full-Stack Technical Audit — Cơm Tấm Má Tư
 
+> Reconciled-through 49112fa17fec
+
 **Date:** 2026-06-28
 **Scope:** Repo-wide, 12 parallel audit lanes (Architecture, Module/Screen Inventory ×3, Database & Query Optimization, Security, Auth & Authorization, RPC Surface, Realtime/Broadcast, UI/UX & Design System, Frontend Perf & Vercel, Supabase Platform). All DB/RPC/advisor findings verified against live PROD (SELECT-only); `_verifyNote` fields are verifier annotations and refuted items were already dropped.
 

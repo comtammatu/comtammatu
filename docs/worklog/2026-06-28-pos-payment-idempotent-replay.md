@@ -1,5 +1,7 @@
 # POS payment idempotent-replay invoice fix (T3)
 
+> Reconciled-through 49112fa17fec
+
 Date: 2026-06-28
 Branch: `fix/pos-payment-recovery`
 Tier: T3 (money / HĐĐT). Four-perspective debate run before coding.
