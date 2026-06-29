@@ -26272,7 +26272,7 @@ ALTER TABLE public.role_templates ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTI
 CREATE TABLE public.shift_checklist_consumption_default_items (
     id bigint NOT NULL,
     tenant_id bigint NOT NULL,
-    template_item_id bigint NOT NULL,
+    template_item_id bigint,
     ingredient_id bigint NOT NULL,
     sort_order integer DEFAULT 1 NOT NULL,
     is_active boolean DEFAULT true NOT NULL,
@@ -26281,6 +26281,7 @@ CREATE TABLE public.shift_checklist_consumption_default_items (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     position_task_id bigint,
     CONSTRAINT shift_checklist_consumption_default_items_note_length CHECK (((note IS NULL) OR (char_length(note) <= 500))),
+    CONSTRAINT shift_checklist_consumption_default_items_parent_present CHECK (((template_item_id IS NOT NULL) OR (position_task_id IS NOT NULL))),
     CONSTRAINT shift_checklist_consumption_default_items_sort_positive CHECK ((sort_order > 0))
 );
 

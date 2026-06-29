@@ -8,18 +8,9 @@ import { EmployeeFormDialog } from "./employee-form-dialog";
 import { ShiftsTable } from "./shifts-table";
 import { AttendanceTable } from "./attendance-table";
 import { LeaveRequestsTable } from "./leave-requests-table";
-import { ChecklistTemplatesTable } from "./checklist-templates-table";
-import { ChecklistCoveragePanel } from "./checklist-coverage-panel";
-import { ConsumptionDefaultItemsTable } from "./consumption-default-items-table";
-import { PositionDefaultsTable } from "./position-defaults-table";
+import { PositionTasksClient } from "./position-tasks-client";
+import type { PositionTasksData } from "./position-tasks-actions";
 import type { BranchOption, EmployeeRow, ShiftRow } from "./_types";
-import type {
-  ChecklistTemplateRow,
-  ConsumptionChecklistItemRow,
-  ConsumptionDefaultIngredientRow,
-  ConsumptionDefaultItemRow,
-  PositionDefaultRow,
-} from "./checklist-types";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
@@ -48,12 +39,7 @@ interface HrClientProps {
   isBranchManager: boolean;
   canManageEmployees: boolean;
   canViewEmployees: boolean;
-  checklistTemplates: ChecklistTemplateRow[];
-  consumptionChecklistItems: ConsumptionChecklistItemRow[];
-  consumptionIngredients: ConsumptionDefaultIngredientRow[];
-  consumptionDefaults: ConsumptionDefaultItemRow[];
-  canManageGlobalChecklist: boolean;
-  positionDefaults: PositionDefaultRow[];
+  positionTasksData: PositionTasksData;
 }
 
 export function HrClient({
@@ -62,12 +48,7 @@ export function HrClient({
   isBranchManager,
   canManageEmployees,
   canViewEmployees,
-  checklistTemplates,
-  consumptionChecklistItems,
-  consumptionIngredients,
-  consumptionDefaults,
-  canManageGlobalChecklist,
-  positionDefaults,
+  positionTasksData,
 }: HrClientProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
@@ -93,7 +74,7 @@ export function HrClient({
   );
 
   // Owner/unassigned are not creatable here.
-  const positionOptions = positionDefaults.flatMap((position) => {
+  const positionOptions = positionTasksData.positions.flatMap((position) => {
     const bucket = staffRoleFromPositionCode(position.code);
     if (
       bucket === "unassigned" ||
@@ -102,7 +83,7 @@ export function HrClient({
     ) {
       return [];
     }
-    return [{ value: position.code, label: position.label_vi ?? position.code }];
+    return [{ value: position.code, label: position.label }];
   });
 
   // Shifts back the setup tab; UrlTabs owns tab state so the lazy fetch is
@@ -187,9 +168,9 @@ export function HrClient({
                 />
               ) : (
                 <KpiCard
-                  label={copy.readiness.templates}
-                  value={checklistTemplates.length}
-                  hint={copy.readiness.templateHint}
+                  label={copy.readiness.shifts}
+                  value={shifts.length}
+                  hint={copy.readiness.shiftHint}
                   icon={<IconFileSignature aria-hidden />}
                 />
               )}
@@ -219,7 +200,6 @@ export function HrClient({
                   </div>
                   <EmployeeTable
                     employees={employees}
-                    checklistTemplates={checklistTemplates}
                     branches={branches}
                     positionOptions={positionOptions}
                     canManage={canManageEmployees}
@@ -230,7 +210,6 @@ export function HrClient({
                       onOpenChange={setAddOpen}
                       branches={branches}
                       positionOptions={positionOptions}
-                      checklistTemplates={checklistTemplates}
                     />
                   ) : null}
                 </TabsContent>
@@ -301,46 +280,15 @@ export function HrClient({
                     }
                   />
                 </AppSection>
-                <AppSection
-                  title={copy.setupSteps.checklist.title}
-                  description={copy.setupSteps.checklist.description}
-                  headerHint={copy.setupSteps.checklist.hint}
-                >
-                  <ChecklistTemplatesTable
-                    branches={branches}
-                    initialTemplates={checklistTemplates}
-                    canManageGlobalChecklist={canManageGlobalChecklist}
-                  />
-                </AppSection>
-                <AppSection
-                  title={copy.setupSteps.consumption.title}
-                  description={copy.setupSteps.consumption.description}
-                  headerHint={copy.setupSteps.consumption.hint}
-                >
-                  <ConsumptionDefaultItemsTable
-                    items={consumptionChecklistItems}
-                    ingredients={consumptionIngredients}
-                    defaults={consumptionDefaults}
-                  />
-                </AppSection>
-                {canManageGlobalChecklist ? (
+                {canManageEmployees ? (
                   <AppSection
-                    title={copy.setupSteps.positions.title}
-                    description={copy.setupSteps.positions.description}
-                    headerHint={copy.setupSteps.positions.hint}
+                    title={copy.positionTasks.title}
+                    description={copy.positionTasks.description}
+                    headerHint={copy.positionTasks.hint}
                   >
-                    <PositionDefaultsTable
-                      positions={positionDefaults}
-                      templates={checklistTemplates}
-                    />
+                    <PositionTasksClient initialData={positionTasksData} />
                   </AppSection>
                 ) : null}
-                <ChecklistCoveragePanel
-                  employees={employees}
-                  positions={positionDefaults}
-                  templates={checklistTemplates}
-                  consumptionDefaults={consumptionDefaults}
-                />
               </TabsContent>
             </AppPageTabs>
           </div>
