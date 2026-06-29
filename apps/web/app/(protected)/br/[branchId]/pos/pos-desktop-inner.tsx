@@ -8,8 +8,6 @@ import {
   useState,
   useTransition,
 } from "react";
-import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Drawer,
@@ -41,6 +39,10 @@ import {
 } from "./_components/pos-sidebar-variants";
 import { PosSidebarContent } from "./pos-sidebar-panel";
 import { formatOrderTargetLabel } from "./_utils/order-display";
+import {
+  PosOrderTargetRow,
+  type OrderTarget,
+} from "./_components/pos-order-target-row";
 
 // Lazy-load 3 modals OFF the cash path. Trims first-paint JS by ~14KB
 // minified (Sheet/Drawer/Card deps) without affecting payment latency.
@@ -129,11 +131,6 @@ import {
 } from "./_lib/table-order-visual-state";
 import { makeCartKey, makeNotedCartKey } from "./_utils/cart-key";
 import { messages } from "@lib/messages";
-
-type OrderTarget =
-  | { kind: "new-dine-in"; label: string }
-  | { kind: "new-takeaway"; label: string }
-  | { kind: "existing-order"; label: string };
 
 /* ─── Inner (consumes hooks) ─── */
 
@@ -1449,50 +1446,13 @@ export function PosDesktopInner({
 
   const orderTargetLabel = currentOrderTarget?.label ?? null;
   const orderTargetRow =
-    menuContextReady && orderTargetLabel != null ? (
-      <div className="hidden shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-background px-3 py-2 md:flex lg:px-4">
-        <div className="flex min-w-0 items-center gap-2">
-          <p className="font-heading min-w-0 truncate text-base font-semibold tracking-tight text-foreground">
-            {orderTargetLabel}
-          </p>
-          <Badge
-            variant={
-              currentOrderTarget?.kind === "existing-order"
-                ? "warning"
-                : "outline"
-            }
-            className="shrink-0 text-xs font-semibold"
-          >
-            {currentOrderTarget?.kind === "existing-order"
-              ? messages.pos.desktop.pendingAppendTitle
-              : messages.pos.desktop.pendingNewTitle}
-          </Badge>
-          {currentOrderTarget?.kind === "existing-order" &&
-          appendDraftQuantity > 0 ? (
-            <Badge
-              variant="secondary"
-              className="shrink-0 text-xs font-semibold"
-            >
-              {messages.pos.appendDraft.itemCount(appendDraftQuantity)}
-            </Badge>
-          ) : null}
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="touch"
-          className="min-w-12 shrink-0 px-3 text-sm text-muted-foreground"
-          onClick={
-            currentOrderTarget?.kind === "existing-order"
-              ? cancelAppendWorkflow
-              : handleSwitchTableMode
-          }
-        >
-          {currentOrderTarget?.kind === "existing-order"
-            ? messages.pos.desktop.cancelTarget
-            : messages.pos.desktop.changeTarget}
-        </Button>
-      </div>
+    menuContextReady && orderTargetLabel != null && currentOrderTarget != null ? (
+      <PosOrderTargetRow
+        target={currentOrderTarget}
+        appendDraftQuantity={appendDraftQuantity}
+        onCancel={cancelAppendWorkflow}
+        onSwitch={handleSwitchTableMode}
+      />
     ) : null;
 
   const mobileHeaderContextLabel = menuContextReady
