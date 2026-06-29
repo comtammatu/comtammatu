@@ -58,8 +58,27 @@
         "public/workbox-*.js"
       ]
     },
-    "lint": {},
-    "typecheck": {},
+    "lint": {
+      "inputs": [
+        "**/*.ts",
+        "**/*.tsx",
+        "**/*.js",
+        "**/*.cjs",
+        "**/*.mjs",
+        ".eslintrc*",
+        "eslint.config.*",
+        "tsconfig*.json",
+        "package.json"
+      ]
+    },
+    "typecheck": {
+      "inputs": [
+        "**/*.ts",
+        "**/*.tsx",
+        "tsconfig*.json",
+        "package.json"
+      ]
+    },
     "test": {
       "outputs": []
     },
