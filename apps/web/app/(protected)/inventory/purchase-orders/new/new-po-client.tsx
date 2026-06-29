@@ -44,6 +44,11 @@ import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { formatVND } from "../../_lib/format";
+import {
+  getDefaultPurchaseUnit,
+  getPurchaseUnitOptions,
+  type PurchaseUnitOption,
+} from "../../_lib/purchase-units";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import {
   createPurchaseOrderWithLines,
@@ -69,6 +74,8 @@ interface LocalLine {
   ingredientName: string;
   quantity: number;
   unit: string;
+  // Purchase-role unit id the qty was entered in. NULL = legacy free-text unit.
+  entryUnitId: number | null;
   unitPriceEst: number | null;
 }
 
@@ -218,13 +225,15 @@ export function NewPoClient({
       return;
     }
     const ing = ingredients.find((x) => x.id === s.ingredient_id);
+    const defaultUnit = getDefaultPurchaseUnit(ing);
     setLines((prev) => [
       ...prev,
       {
         ingredientId: s.ingredient_id,
         ingredientName: s.ingredient_name,
         quantity: s.suggested_qty,
-        unit: s.unit,
+        unit: defaultUnit?.code ?? s.unit,
+        entryUnitId: defaultUnit?.unitId ?? null,
         unitPriceEst: ing?.unit_cost ?? null,
       },
     ]);
@@ -243,11 +252,13 @@ export function NewPoClient({
       ...prev,
       ...toAdd.map((s) => {
         const ing = ingredients.find((x) => x.id === s.ingredient_id);
+        const defaultUnit = getDefaultPurchaseUnit(ing);
         return {
           ingredientId: s.ingredient_id,
           ingredientName: s.ingredient_name,
           quantity: s.suggested_qty,
-          unit: s.unit,
+          unit: defaultUnit?.code ?? s.unit,
+          entryUnitId: defaultUnit?.unitId ?? null,
           unitPriceEst: ing?.unit_cost ?? null,
         };
       }),
@@ -291,6 +302,7 @@ export function NewPoClient({
           ingredientId: l.ingredientId,
           quantity: l.quantity,
           unit: l.unit,
+          entryUnitId: l.entryUnitId,
           unitPriceEst: l.unitPriceEst,
         })),
       });
@@ -800,6 +812,7 @@ function LineItemsSection({
 }) {
   const [ingredientId, setIngredientId] = useState("");
   const [unit, setUnit] = useState("");
+  const [entryUnitId, setEntryUnitId] = useState<number | null>(null);
   const [qtyInput, setQtyInput] = useState("");
   const [unitPriceInput, setUnitPriceInput] = useState("");
   const [addRowDeviation, setAddRowDeviation] =
@@ -807,12 +820,27 @@ function LineItemsSection({
   const qtyRef = useRef<HTMLInputElement>(null);
   const priceRef = useRef<HTMLInputElement>(null);
 
+  const selectedIngredient = ingredients.find(
+    (x) => String(x.id) === ingredientId,
+  );
+  const purchaseUnitOptions = getPurchaseUnitOptions(selectedIngredient);
+
   function handleIngredientChange(val: string) {
     setIngredientId(val);
     setAddRowDeviation(null);
     const ing = ingredients.find((x) => String(x.id) === val);
-    if (ing) setUnit(ing.purchase_unit ?? ing.unit);
+    const defaultUnit = getDefaultPurchaseUnit(ing);
+    setUnit(defaultUnit?.code ?? ing?.purchase_unit ?? ing?.unit ?? "");
+    setEntryUnitId(defaultUnit?.unitId ?? null);
     setTimeout(() => qtyRef.current?.focus(), 0);
+  }
+
+  function handleUnitChange(unitIdValue: string) {
+    setEntryUnitId(Number(unitIdValue));
+    const opt = purchaseUnitOptions.find(
+      (o) => String(o.unitId) === unitIdValue,
+    );
+    if (opt) setUnit(opt.code);
   }
 
   function handleAddLine(e: React.FormEvent<HTMLFormElement>) {
@@ -836,10 +864,12 @@ function LineItemsSection({
       ingredientName: ing?.name ?? `#${iid}`,
       quantity: qty,
       unit: resolvedUnit,
+      entryUnitId,
       unitPriceEst,
     });
     setIngredientId("");
     setUnit("");
+    setEntryUnitId(null);
     setQtyInput("");
     setUnitPriceInput("");
     setAddRowDeviation(null);
@@ -970,14 +1000,12 @@ function LineItemsSection({
                   maxFractionDigits={3}
                   required
                 />
-                <Input
-                  name="unit"
-                  placeholder={messages.inventory.po.unitShort}
-                  value={unit}
-                  readOnly
-                  aria-readonly="true"
-                  required
-                  className="h-8 text-sm"
+                <UnitField
+                  options={purchaseUnitOptions}
+                  entryUnitId={entryUnitId}
+                  unit={unit}
+                  onUnitChange={handleUnitChange}
+                  onFreeTextChange={setUnit}
                 />
                 <FormattedNumberInput
                   ref={priceRef}
@@ -1145,14 +1173,12 @@ function LineItemsSection({
               />
             </div>
             <div className="pl-2">
-              <Input
-                name="unit"
-                placeholder={messages.inventory.po.unitShort}
-                value={unit}
-                readOnly
-                aria-readonly="true"
-                required
-                className="h-8 text-sm"
+              <UnitField
+                options={purchaseUnitOptions}
+                entryUnitId={entryUnitId}
+                unit={unit}
+                onUnitChange={handleUnitChange}
+                onFreeTextChange={setUnit}
               />
             </div>
             <div className="pl-2">
@@ -1188,6 +1214,54 @@ function LineItemsSection({
           )}
         </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// UnitField — purchase-role unit dropdown; falls back to free-text when the
+// selected ingredient carries no purchase units.
+// ---------------------------------------------------------------------------
+function UnitField({
+  options,
+  entryUnitId,
+  unit,
+  onUnitChange,
+  onFreeTextChange,
+}: {
+  options: PurchaseUnitOption[];
+  entryUnitId: number | null;
+  unit: string;
+  onUnitChange: (unitId: string) => void;
+  onFreeTextChange: (value: string) => void;
+}) {
+  if (options.length === 0) {
+    return (
+      <Input
+        name="unit"
+        placeholder={messages.inventory.po.unitShort}
+        value={unit}
+        onChange={(e) => onFreeTextChange(e.target.value)}
+        required
+        className="h-8 text-sm"
+      />
+    );
+  }
+  return (
+    <Select
+      value={entryUnitId != null ? String(entryUnitId) : ""}
+      onValueChange={onUnitChange}
+    >
+      <SelectTrigger className="h-8 w-full text-sm" aria-label={unit}>
+        <SelectValue placeholder={messages.inventory.po.selectUnit} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o.unitId} value={String(o.unitId)}>
+            {o.code}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

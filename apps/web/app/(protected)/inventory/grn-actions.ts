@@ -413,6 +413,8 @@ const grnLineSchema = z
     // "Số đã giao" (gross delivered). Stock impact = receivedQuantity − rejectedQuantity.
     receivedQuantity: z.coerce.number().min(0),
     unit: z.string().min(1),
+    // Purchase-role unit the qty was entered in. NULL = already base (back-compat).
+    entryUnitId: z.coerce.number().int().positive().nullable().optional(),
     unitCost: z.coerce.number().min(0),
     qualityStatus: z
       .enum(["accepted", "rejected", "partial"])
@@ -490,6 +492,7 @@ export const upsertGrnLine = withAction(
           ingredient_id: data.ingredientId,
           received_quantity: data.receivedQuantity,
           unit: data.unit,
+          entry_unit_id: data.entryUnitId ?? null,
           unit_cost: data.unitCost,
           total_cost: totalCost,
           quality_status: data.qualityStatus,

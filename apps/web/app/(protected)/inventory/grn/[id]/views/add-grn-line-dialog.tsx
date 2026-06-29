@@ -12,11 +12,22 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { Plus as IconPlus } from "lucide-react";
 import { notify } from "@comtammatu/ui/lib/notify";
 import { Combobox } from "@/components/form";
 import { FormattedNumberInput } from "../../../_components/formatted-number-input";
 import { upsertGrnLine } from "../../../grn-actions";
+import {
+  getDefaultPurchaseUnit,
+  getPurchaseUnitOptions,
+} from "../../../_lib/purchase-units";
 import type { IngredientRow } from "../../../page";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
@@ -46,14 +57,21 @@ export function AddGrnLineDialog({
   const [ingredientId, setIngredientId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
+  const [entryUnitId, setEntryUnitId] = useState<number | null>(null);
   const [unitCost, setUnitCost] = useState("");
   const [batchNumber, setBatchNumber] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
+
+  const selectedIngredient = ingredients.find(
+    (item) => item.id === Number(ingredientId),
+  );
+  const purchaseUnitOptions = getPurchaseUnitOptions(selectedIngredient);
 
   function resetForm() {
     setIngredientId("");
     setQuantity("");
     setUnit("");
+    setEntryUnitId(null);
     setUnitCost("");
     setBatchNumber("");
     setExpiryDate("");
@@ -62,10 +80,22 @@ export function AddGrnLineDialog({
   function handleIngredientChange(value: string) {
     setIngredientId(value);
     const ingredient = ingredients.find((item) => item.id === Number(value));
-    setUnit(ingredient?.purchase_unit ?? ingredient?.unit ?? "");
+    const defaultUnit = getDefaultPurchaseUnit(ingredient);
+    setUnit(
+      defaultUnit?.code ?? ingredient?.purchase_unit ?? ingredient?.unit ?? "",
+    );
+    setEntryUnitId(defaultUnit?.unitId ?? null);
     setUnitCost(
       ingredient?.unit_cost != null ? String(Number(ingredient.unit_cost)) : "",
     );
+  }
+
+  function handleUnitChange(unitIdValue: string) {
+    setEntryUnitId(Number(unitIdValue));
+    const opt = purchaseUnitOptions.find(
+      (o) => String(o.unitId) === unitIdValue,
+    );
+    if (opt) setUnit(opt.code);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -100,6 +130,7 @@ export function AddGrnLineDialog({
         ingredientId: parsedIngredientId,
         receivedQuantity: parsedQuantity,
         unit: unit.trim(),
+        entryUnitId,
         unitCost: parsedUnitCost,
         qualityStatus: "accepted",
         rejectedQuantity: 0,
@@ -199,13 +230,32 @@ export function AddGrnLineDialog({
               <Label htmlFor="grn-line-unit">
                 {grnCopy.addDialog.unitLabel}
               </Label>
-              <Input
-                id="grn-line-unit"
-                value={unit}
-                readOnly
-                aria-readonly="true"
-                placeholder="kg"
-              />
+              {purchaseUnitOptions.length > 0 ? (
+                <Select
+                  value={entryUnitId != null ? String(entryUnitId) : ""}
+                  onValueChange={handleUnitChange}
+                >
+                  <SelectTrigger id="grn-line-unit" aria-label={unit}>
+                    <SelectValue
+                      placeholder={grnCopy.addDialog.selectUnit}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {purchaseUnitOptions.map((o) => (
+                      <SelectItem key={o.unitId} value={String(o.unitId)}>
+                        {o.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="grn-line-unit"
+                  value={unit}
+                  onChange={(event) => setUnit(event.target.value)}
+                  placeholder="kg"
+                />
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="grn-line-cost">

@@ -168,6 +168,7 @@ export const inventory = {
       ingredientSearchPlaceholder: "Tìm tên, SKU, danh mục...",
       quantityLabel: "Số lượng nhận *",
       unitLabel: "Đơn vị *",
+      selectUnit: "Chọn đơn vị",
       unitCostLabel: "Đơn giá *",
       batchLabel: "Số lô",
       expiryLabel: "HSD",
@@ -277,6 +278,7 @@ export const inventory = {
     consumptionPerDay: "Tiêu hao/ngày",
     suggestedQty: "Gợi ý SL",
     unitShort: "ĐV",
+    selectUnit: "Chọn ĐV",
     emptyIngredientsTitle: "Chưa có nguyên liệu",
     emptyIngredientsDescription:
       "Thêm dòng bên dưới hoặc chọn nhanh từ gợi ý đặt hàng để bắt đầu tạo đơn mua.",
