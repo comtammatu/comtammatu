@@ -2279,6 +2279,7 @@ export type Database = {
       inventory_count_slip_lines: {
         Row: {
           counted_quantity: number
+          entry_unit_id: number | null
           id: number
           ingredient_id: number
           note: string | null
@@ -2289,6 +2290,7 @@ export type Database = {
         }
         Insert: {
           counted_quantity: number
+          entry_unit_id?: number | null
           id?: never
           ingredient_id: number
           note?: string | null
@@ -2299,6 +2301,7 @@ export type Database = {
         }
         Update: {
           counted_quantity?: number
+          entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
           note?: string | null
@@ -2308,6 +2311,13 @@ export type Database = {
           variance?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_count_slip_lines_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inventory_count_slip_lines_ingredient_id_fkey"
             columns: ["ingredient_id"]
@@ -4944,6 +4954,7 @@ export type Database = {
       production_order_items: {
         Row: {
           created_at: string
+          entry_unit_id: number | null
           finished_good_id: number
           id: number
           production_order_id: number
@@ -4954,6 +4965,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          entry_unit_id?: number | null
           finished_good_id: number
           id?: never
           production_order_id: number
@@ -4964,6 +4976,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          entry_unit_id?: number | null
           finished_good_id?: number
           id?: never
           production_order_id?: number
@@ -4973,6 +4986,13 @@ export type Database = {
           unit_cost_at_production?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "production_order_items_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "production_order_items_finished_good_id_fkey"
             columns: ["finished_good_id"]
@@ -5067,6 +5087,7 @@ export type Database = {
       production_recipes: {
         Row: {
           created_at: string
+          entry_unit_id: number | null
           finished_good_id: number
           id: number
           ingredient_id: number
@@ -5079,6 +5100,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          entry_unit_id?: number | null
           finished_good_id: number
           id?: never
           ingredient_id: number
@@ -5091,6 +5113,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          entry_unit_id?: number | null
           finished_good_id?: number
           id?: never
           ingredient_id?: number
@@ -5102,6 +5125,13 @@ export type Database = {
           yield_factor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "production_recipes_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "production_recipes_finished_good_id_fkey"
             columns: ["finished_good_id"]
@@ -5342,6 +5372,7 @@ export type Database = {
       recipes: {
         Row: {
           created_at: string
+          entry_unit_id: number | null
           id: number
           ingredient_id: number
           menu_item_id: number
@@ -5353,6 +5384,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          entry_unit_id?: number | null
           id?: never
           ingredient_id: number
           menu_item_id: number
@@ -5364,6 +5396,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
           menu_item_id?: number
@@ -5374,6 +5407,13 @@ export type Database = {
           yield_factor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "recipes_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "recipes_ingredient_id_fkey"
             columns: ["ingredient_id"]
@@ -6647,6 +6687,7 @@ export type Database = {
           counted_by: string | null
           counted_quantity: number | null
           created_at: string
+          entry_unit_id: number | null
           id: number
           ingredient_id: number
           is_final: boolean
@@ -6666,6 +6707,7 @@ export type Database = {
           counted_by?: string | null
           counted_quantity?: number | null
           created_at?: string
+          entry_unit_id?: number | null
           id?: never
           ingredient_id: number
           is_final?: boolean
@@ -6685,6 +6727,7 @@ export type Database = {
           counted_by?: string | null
           counted_quantity?: number | null
           created_at?: string
+          entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
           is_final?: boolean
@@ -6698,6 +6741,13 @@ export type Database = {
           variance_reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stocktake_lines_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stocktake_lines_ingredient_id_fkey"
             columns: ["ingredient_id"]
