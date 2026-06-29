@@ -108,12 +108,16 @@ export default async function HrPage() {
     unit: ingredient.purchase_unit || ingredient.unit,
     category: ingredient.category ?? null,
   }));
-  const consumptionDefaults = (
-    defaultsResult.data ?? []
-  ).map<ConsumptionDefaultItemRow>((item) => ({
-    templateItemId: item.template_item_id,
-    ingredientId: item.ingredient_id,
-  }));
+  const consumptionDefaults = (defaultsResult.data ?? []).flatMap((item) =>
+    item.template_item_id == null
+      ? []
+      : [
+          {
+            templateItemId: item.template_item_id,
+            ingredientId: item.ingredient_id,
+          } satisfies ConsumptionDefaultItemRow,
+        ],
+  );
 
   return (
     <HrClient

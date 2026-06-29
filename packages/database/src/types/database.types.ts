@@ -5665,7 +5665,7 @@ export type Database = {
           note: string | null
           position_task_id: number | null
           sort_order: number
-          template_item_id: number
+          template_item_id: number | null
           tenant_id: number
           updated_at: string
         }
@@ -5677,7 +5677,7 @@ export type Database = {
           note?: string | null
           position_task_id?: number | null
           sort_order?: number
-          template_item_id: number
+          template_item_id?: number | null
           tenant_id: number
           updated_at?: string
         }
@@ -5689,7 +5689,7 @@ export type Database = {
           note?: string | null
           position_task_id?: number | null
           sort_order?: number
-          template_item_id?: number
+          template_item_id?: number | null
           tenant_id?: number
           updated_at?: string
         }
