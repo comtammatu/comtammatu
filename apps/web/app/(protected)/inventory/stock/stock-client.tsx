@@ -721,69 +721,6 @@ export function StockClient({
           </div>
         }
       />
-      <InventoryFilterBar className="gap-2">
-        {permissions.canReceiveGrn ? (
-          <QuickActionButton
-            href={branchHref(branchId, "/inventory/grn")}
-            icon={IconReceipt}
-            label={stockCopy.actions.receiveGrn}
-            primary
-          />
-        ) : null}
-        {permissions.canCreateTransfer ? (
-          <QuickActionButton
-            href={branchHref(branchId, "/inventory/transfers")}
-            icon={IconTruck}
-            label={stockCopy.actions.transfer}
-          />
-        ) : null}
-        {permissions.canCreateStocktake ? (
-          <QuickActionButton
-            href={branchHref(branchId, "/inventory/stocktake")}
-            icon={IconClipboardList}
-            label={stockCopy.actions.stocktake}
-          />
-        ) : null}
-        {permissions.canWriteoff ? (
-          <QuickActionButton
-            href={branchHref(branchId, "/inventory/waste/new")}
-            icon={IconTrash}
-            label={stockCopy.actions.waste}
-          />
-        ) : null}
-        {permissions.canCreatePurchaseOrder ? (
-          <QuickActionButton
-            href={branchHref(branchId, "/inventory/purchase-orders/new")}
-            icon={IconShoppingCart}
-            label={stockCopy.actions.purchaseSuggestion}
-          />
-        ) : null}
-
-        <InputGroup
-          className={cn("min-w-56 flex-1", isCompactLayout ? "h-12" : "h-10")}
-        >
-          <InputGroupAddon>
-            <IconSearch />
-          </InputGroupAddon>
-          <InputGroupInput
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder={stockCopy.filters.searchPlaceholder}
-            inputMode="search"
-          />
-          {searchQuery.trim() ? (
-            <InputGroupAddon align="inline-end">
-              <span
-                className="font-mono text-xs tabular-nums text-muted-foreground"
-                aria-live="polite"
-              >
-                {filtered.length}/{ingredients.length}
-              </span>
-            </InputGroupAddon>
-          ) : null}
-        </InputGroup>
-      </InventoryFilterBar>
-
       <AppSection className="overflow-hidden" contentFlush>
         <div className="flex flex-wrap items-center divide-x">
           <SummaryMetric
@@ -824,77 +761,139 @@ export function StockClient({
         </div>
       </AppSection>
 
-      <InventoryFilterBar className="gap-2">
-        <Select value={activeCategory} onValueChange={setActiveCategory}>
-          <SelectTrigger className="min-w-40">
-            <SelectValue placeholder={stockCopy.filters.categoryPlaceholder} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">
-              {stockCopy.filters.allCategories}
-            </SelectItem>
-            {categories.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <InventoryFilterBar
+        search={
+          <InputGroup
+            className={cn("min-w-56 flex-1", isCompactLayout ? "h-12" : "h-10")}
+          >
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder={stockCopy.filters.searchPlaceholder}
+              inputMode="search"
+            />
+          </InputGroup>
+        }
+        filters={
+          <>
+            <Select value={activeCategory} onValueChange={setActiveCategory}>
+              <SelectTrigger className="min-w-40">
+                <SelectValue
+                  placeholder={stockCopy.filters.categoryPlaceholder}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {stockCopy.filters.allCategories}
+                </SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-        <Select
-          value={stockFilter}
-          onValueChange={(v) => setStockFilter(v as StockFilter)}
-        >
-          <SelectTrigger className="min-w-36">
-            <SelectValue placeholder={stockCopy.filters.statusPlaceholder} />
-          </SelectTrigger>
-          <SelectContent>
-            {stockFilterOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <Select
+              value={stockFilter}
+              onValueChange={(v) => setStockFilter(v as StockFilter)}
+            >
+              <SelectTrigger className="min-w-36">
+                <SelectValue placeholder={stockCopy.filters.statusPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {stockFilterOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-        <Select
-          value={riskFilter}
-          onValueChange={(v) => setRiskFilter(v as RiskFilter)}
-        >
-          <SelectTrigger className="min-w-40">
-            <SelectValue placeholder={stockCopy.filters.riskPlaceholder} />
-          </SelectTrigger>
-          <SelectContent>
-            {riskFilterOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <Select
+              value={riskFilter}
+              onValueChange={(v) => setRiskFilter(v as RiskFilter)}
+            >
+              <SelectTrigger className="min-w-40">
+                <SelectValue placeholder={stockCopy.filters.riskPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {riskFilterOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-        <Select
-          value={sortMode}
-          onValueChange={(v) => setSortMode(v as SortMode)}
-        >
-          <SelectTrigger className="min-w-56">
-            <SelectValue placeholder={stockCopy.filters.sortPlaceholder} />
-          </SelectTrigger>
-          <SelectContent>
-            {sortOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {!isFirstLoadEmpty ? (
-          <Badge variant="outline" className="ml-auto">
-            {filtered.length}/{ingredients.length}
-          </Badge>
-        ) : null}
-      </InventoryFilterBar>
+            <Select
+              value={sortMode}
+              onValueChange={(v) => setSortMode(v as SortMode)}
+            >
+              <SelectTrigger className="min-w-56">
+                <SelectValue placeholder={stockCopy.filters.sortPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {sortOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+        actions={
+          <>
+            {permissions.canReceiveGrn ? (
+              <QuickActionButton
+                href={branchHref(branchId, "/inventory/grn")}
+                icon={IconReceipt}
+                label={stockCopy.actions.receiveGrn}
+                primary
+              />
+            ) : null}
+            {permissions.canCreateTransfer ? (
+              <QuickActionButton
+                href={branchHref(branchId, "/inventory/transfers")}
+                icon={IconTruck}
+                label={stockCopy.actions.transfer}
+              />
+            ) : null}
+            {permissions.canCreateStocktake ? (
+              <QuickActionButton
+                href={branchHref(branchId, "/inventory/stocktake")}
+                icon={IconClipboardList}
+                label={stockCopy.actions.stocktake}
+              />
+            ) : null}
+            {permissions.canWriteoff ? (
+              <QuickActionButton
+                href={branchHref(branchId, "/inventory/waste/new")}
+                icon={IconTrash}
+                label={stockCopy.actions.waste}
+              />
+            ) : null}
+            {permissions.canCreatePurchaseOrder ? (
+              <QuickActionButton
+                href={branchHref(branchId, "/inventory/purchase-orders/new")}
+                icon={IconShoppingCart}
+                label={stockCopy.actions.purchaseSuggestion}
+              />
+            ) : null}
+          </>
+        }
+        reset={
+          !isFirstLoadEmpty ? (
+            <Badge variant="outline" aria-live="polite">
+              {filtered.length}/{ingredients.length}
+            </Badge>
+          ) : null
+        }
+      />
 
       {isFirstLoadEmpty ? (
         <AppEmptyState
@@ -956,7 +955,14 @@ export function StockClient({
                       </span>
                     </div>
                   </div>
-                  <StatusBadge status={item.status} size="sm" />
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <StatusBadge status={item.status} size="sm" />
+                    {item.qty <= item.reorder ? (
+                      <Badge variant="warning">
+                        {stockCopy.filters.reorder}
+                      </Badge>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-sm">
@@ -979,9 +985,11 @@ export function StockClient({
                       {FORM_VI.value}
                     </p>
                     <p className="font-semibold tabular-nums">
-                      {inventoryCommon.currencyCompact(
-                        formatVND(stockValue(item)),
-                      )}
+                      {stockValue(item) > 0
+                        ? inventoryCommon.currencyCompact(
+                            formatVND(stockValue(item)),
+                          )
+                        : inventoryCommon.noValue}
                     </p>
                   </div>
                   <div>
