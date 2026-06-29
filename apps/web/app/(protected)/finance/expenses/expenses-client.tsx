@@ -19,7 +19,7 @@ import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { KpiCard } from "@/components/kpi/kpi-card";
-import { AppSection } from "@/components/surface";
+import { AppSection, KpiRow } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -35,7 +35,9 @@ import {
 import { messages } from "@lib/messages";
 import { FilterBar } from "../components/filter-bar";
 import {
-  EXPENSE_CATEGORY_VALUES,
+  EXPENSE_CATEGORIES_BY_GROUP,
+  EXPENSE_CATEGORY_GROUP,
+  EXPENSE_CATEGORY_GROUPS,
   EXPENSE_PAYMENT_METHODS,
   type ExpenseCategory,
   type ExpensePaymentMethod,
@@ -60,6 +62,7 @@ interface Props {
   branches: Branch[];
   rows: ExpenseRow[];
   totalAmount: number;
+  actualFoodCost: number;
   resolvedStart: string;
   resolvedEnd: string;
   todayBusinessDate: string;
@@ -80,9 +83,12 @@ const expenseFormSchema = z.object({
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
-const CATEGORY_OPTIONS = EXPENSE_CATEGORY_VALUES.map((value) => ({
-  value,
-  label: copy.categoryLabels[value],
+const CATEGORY_GROUPS = EXPENSE_CATEGORY_GROUPS.map((group) => ({
+  label: copy.categoryGroupLabels[group],
+  options: EXPENSE_CATEGORIES_BY_GROUP[group].map((value) => ({
+    value,
+    label: copy.categoryLabels[value],
+  })),
 }));
 
 const METHOD_OPTIONS = EXPENSE_PAYMENT_METHODS.map((value) => ({
@@ -99,6 +105,7 @@ export function ExpensesClient({
   branches,
   rows,
   totalAmount,
+  actualFoodCost,
   resolvedStart,
   resolvedEnd,
   todayBusinessDate,
@@ -117,6 +124,27 @@ export function ExpensesClient({
     { value: TENANT_LEVEL_BRANCH_VALUE, label: copy.form.branchTenantLevel },
     ...branches.map((b) => ({ value: String(b.id), label: b.name })),
   ];
+
+  // "Giá vốn món" (materials group) is read-only from actual consumption, not
+  // manual expense rows — it mirrors the finance cockpit and stays out of the
+  // expense total / operating expense to avoid double-counting against gross profit.
+  const materialsGroup = EXPENSE_CATEGORY_GROUP.cogs_manual;
+  const groupSummary = EXPENSE_CATEGORY_GROUPS.map((group) => {
+    const fromConsumption = group === materialsGroup;
+    const groupRows = rows.filter(
+      (r) => EXPENSE_CATEGORY_GROUP[r.category as ExpenseCategory] === group,
+    );
+    return {
+      group,
+      label: copy.categoryGroupLabels[group],
+      total: fromConsumption
+        ? actualFoodCost
+        : groupRows.reduce((sum, r) => sum + r.amount, 0),
+      hint: fromConsumption
+        ? copy.foodCostReadonlyHint
+        : copy.totalHint(String(groupRows.length)),
+    };
+  });
 
   const defaultValues: ExpenseFormValues = {
     expenseDate: todayBusinessDate,
@@ -235,18 +263,29 @@ export function ExpensesClient({
         hide={["compare", "payment", "granularity"]}
       />
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex items-center justify-end">
+        <Button onClick={() => setDialogOpen(true)}>
+          <IconPlus data-icon="inline-start" />
+          {copy.add}
+        </Button>
+      </div>
+
+      <KpiRow density="compact" className="sm:grid-cols-3">
         <KpiCard
           label={copy.totalLabel}
           value={formatVND(totalAmount)}
           hint={`${copy.totalHint(String(rows.length))} · ${resolvedStart} → ${resolvedEnd}`}
           tone="primary"
         />
-        <Button onClick={() => setDialogOpen(true)}>
-          <IconPlus data-icon="inline-start" />
-          {copy.add}
-        </Button>
-      </div>
+        {groupSummary.map((g) => (
+          <KpiCard
+            key={g.group}
+            label={g.label}
+            value={formatVND(g.total)}
+            hint={g.hint}
+          />
+        ))}
+      </KpiRow>
 
       <AppSection contentFlush contentScroll>
         <DataTable
@@ -323,7 +362,7 @@ export function ExpensesClient({
               control={form.control}
               name="category"
               label={copy.form.category}
-              options={CATEGORY_OPTIONS}
+              groups={CATEGORY_GROUPS}
               placeholder={copy.form.categoryPlaceholder}
               required
             />

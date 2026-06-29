@@ -45,10 +45,9 @@ payroll is direct-support only, for reconciling/finalizing pay when needed.
 ```
 owner                          ← governance + tenant-wide oversight, vận hành + catalog NL, procurement
 ├── branch_manager             ← single branch command + operations
-├── warehouse_manager          ← branch procurement workflow
-├── production_manager         ← branch production workflow
+├── warehouse_manager          ← Kho Tổng procurement + stock workflow
+├── production_manager         ← Bếp Trung Tâm production workflow
 ├── cashier                    ← POS (/br/[branchId]/pos)
-├── waiter                     ← POS (/br/[branchId]/pos)
 ├── chef                       ← KDS (/br/[branchId]/kds)
 └── office                     ← back-office staff, explicit grants only
 ```
@@ -113,27 +112,27 @@ Owner is protected: RPCs refuse to touch a user whose position code is `owner` (
 
 Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — proxy.ts, admin shell, and layouts all read from here.
 
-| Module                                                     | owner | branch_mgr | wh_mgr | prod_mgr | cashier | waiter | chef | office |
-| ---------------------------------------------------------- | ----- | ---------- | ------ | -------- | ------- | ------ | ---- | ------ |
-| dashboard                                                  | ✓     |            |        |          |         |        |      |        |
-| menu                                                       | ✓     | ✓          |        |          |         |        |      |        |
-| inventory                                                  | ✓     | ✓          | ✓      | ✓        |         |        |      |        |
-| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức)    | ✓     |            | ✓      | ✓        |         |        |      |        |
-| inventory_admin (blocked; empty allowed_roles)             |       |            |        |          |         |        |      |        |
-| orders                                                     | ✓     | ✓          |        |          | ✓       |        |      |        |
-| staff                                                      | ✓     |            |        |          |         |        |      |        |
-| hr                                                         | ✓     | ✓          |        |          |         |        |      |        |
-| finance                                                    | ✓     |            |        |          |         |        |      |        |
-| reports                                                    | ✓     |            |        |          |         |        |      |        |
-| settings                                                   | ✓     |            |        |          |         |        |      |        |
-| pos                                                        | ✓     | ✓          |        |          | ✓       | ✓      |      |        |
-| kds                                                        | ✓     | ✓          |        |          |         |        | ✓    |        |
-| runner (public display route)                              | ✓     | ✓          |        |          | ✓       | ✓      | ✓    |        |
-| branch_dashboard                                           | ✓     | ✓          |        |          |         |        |      |        |
-| branch_settings                                            | ✓     | ✓          |        |          |         |        |      |        |
-| branch_menu_limits                                         | ✓     | ✓          |        |          | ✓       |        | ✓    |        |
-| employee                                                   |       | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
-| notifications                                              | ✓     | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
+| Module                                                     | owner | branch_mgr | wh_mgr | prod_mgr | cashier | chef | office |
+| ---------------------------------------------------------- | ----- | ---------- | ------ | -------- | ------- | ---- | ------ |
+| dashboard                                                  | ✓     |            |        |          |         |      |        |
+| menu                                                       | ✓     | ✓          |        |          |         |      |        |
+| inventory                                                  | ✓     | ✓          | ✓      | ✓        |         |      |        |
+| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức)    | ✓     |            | ✓      | ✓        |         |      |        |
+| inventory_admin (blocked; empty allowed_roles)             |       |            |        |          |         |      |        |
+| orders                                                     | ✓     | ✓          |        |          | ✓       |      |        |
+| staff                                                      | ✓     |            |        |          |         |      |        |
+| hr                                                         | ✓     | ✓          |        |          |         |      |        |
+| finance                                                    | ✓     |            |        |          |         |      |        |
+| reports                                                    | ✓     |            |        |          |         |      |        |
+| settings                                                   | ✓     |            |        |          |         |      |        |
+| pos                                                        | ✓     | ✓          |        |          | ✓       |      |        |
+| kds                                                        | ✓     | ✓          |        |          |         | ✓    |        |
+| runner (public display route)                              | ✓     | ✓          |        |          | ✓       | ✓    |        |
+| branch_dashboard                                           | ✓     | ✓          |        |          |         |      |        |
+| branch_settings                                            | ✓     | ✓          |        |          |         |      |        |
+| branch_menu_limits                                         | ✓     | ✓          |        |          |         |      |        |
+| employee                                                   |       | ✓          | ✓      | ✓        | ✓       | ✓    | ✓      |
+| notifications                                              | ✓     | ✓          | ✓      | ✓        | ✓       | ✓    | ✓      |
 
 > `wh_mgr` = `warehouse_manager`, `prod_mgr` = `production_manager`. Route-level ACL reads `user_role` from the JWT, derived from `positions.code`. Row-level authz still goes through `has_permission(branch_id, key)` — this matrix is only a fast gate.
 >

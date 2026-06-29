@@ -112,15 +112,15 @@ Mật khẩu tất cả: `Test1234!`. Bao phủ toàn bộ `STAFF_ROLES`:
 | -------------------------------- | -------------------- | ------------------------------- |
 | `owner@comtammatu.vn`            | `owner`              | Tenant (pin dev branch)             |
 | `keeper@comtammatu.vn`           | `owner`              | Tenant (pin dev branch); mốc neo FK-reassignment, không bị xoá khi rerun |
-| `warehouse@comtammatu.vn`        | `warehouse_manager`  | Chi nhánh        |
-| `production@comtammatu.vn`       | `production_manager` | Chi nhánh (branch production) |
+| `warehouse@comtammatu.vn`        | `warehouse_manager`  | Kho Tổng                       |
+| `production@comtammatu.vn`       | `production_manager` | Bếp Trung Tâm                  |
 | `manager.datdo@comtammatu.vn`    | `branch_manager`     | Chi nhánh Đất Đỏ                |
 | `cashier.datdo@comtammatu.vn`    | `cashier`            | Chi nhánh Đất Đỏ                |
-| `waiter.datdo@comtammatu.vn`     | `waiter`             | Chi nhánh Đất Đỏ                |
+| `cashier.service.datdo@comtammatu.vn` | `cashier`       | Chi nhánh Đất Đỏ                |
 | `chef.datdo@comtammatu.vn`       | `chef`               | Chi nhánh Đất Đỏ                |
 | `manager.phuochai@comtammatu.vn` | `branch_manager`     | Chi nhánh Phước Hải             |
 | `cashier.phuochai@comtammatu.vn` | `cashier`            | Chi nhánh Phước Hải             |
-| `waiter.phuochai@comtammatu.vn`  | `waiter`             | Chi nhánh Phước Hải             |
+| `cashier.service.phuochai@comtammatu.vn` | `cashier`  | Chi nhánh Phước Hải             |
 | `chef.phuochai@comtammatu.vn`    | `chef`               | Chi nhánh Phước Hải             |
 | `office@comtammatu.vn`           | `office`             | Tenant (branch NULL)            |
 

@@ -176,6 +176,7 @@ export function PosDesktopInner({
           limit_quantity: item.daily_limit?.limit_quantity ?? null,
           is_disabled: item.daily_limit?.is_disabled ?? false,
           sold_today: item.daily_limit?.sold_today ?? 0,
+          stock_capacity: item.daily_limit?.stock_capacity ?? null,
         })),
       ),
     [categories],

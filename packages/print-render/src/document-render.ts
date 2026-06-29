@@ -398,9 +398,10 @@ function renderDocumentBrandHeader(
 function renderDocumentBranchInfo(
   block: Extract<PrintDocumentBlock, { type: "branchInfo" }>,
 ): RenderOp[] {
+  const address = clampText(block.branch_address);
   const rows = [
     clampText(block.branch_name),
-    clampText(block.branch_address),
+    ...(address ? wrapText(address, 32) : []),
     block.branch_phone ? `ĐT: ${clampText(block.branch_phone)}` : "",
     block.branch_tax_code ? `MST: ${clampText(block.branch_tax_code)}` : "",
   ].filter(Boolean);

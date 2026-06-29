@@ -59,10 +59,9 @@ reference framing.
 | -------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | `owner`              | `/admin/dashboard`                            | Tenant governance, branch network, permission grants, finance/reports, emergency oversight in domains | Daily floor operator by default                   |
 | `branch_manager`     | `/employee` plus Branch Command direct link   | One branch: POS/KDS/floor settings, branch day flow, branch inventory tasks, branch staff approvals   | Partial Admin user                                |
-| `warehouse_manager`  | `/employee` plus Inventory direct link        | Branch warehouse (Kho CN) receiving, stock, transfers, procurement tasks according to grants          | Tenant admin                                      |
-| `production_manager` | `/employee` plus Inventory direct link        | Branch production (Bếp CN) and related stock movement according to grants                             | Tenant admin                                      |
+| `warehouse_manager`  | `/employee` plus Inventory direct link        | Kho Tổng receiving, stock, transfers, procurement tasks according to grants                            | Tenant admin                                      |
+| `production_manager` | `/employee` plus Inventory direct link        | Bếp Trung Tâm production and related stock movement according to grants                                | Tenant admin                                      |
 | `cashier`            | `/employee` plus POS direct link              | POS orders, payments, receipts according to grants                                                    | Branch settings owner                             |
-| `waiter`             | `/employee` plus POS direct link              | Service/POS actions according to grants                                                               | Separate business workflow from cashier long-term |
 | `chef`               | `/employee` plus KDS direct link              | KDS ready/recall and kitchen status according to grants                                               | Inventory production manager                      |
 | `office`             | `/employee` or assigned workspace direct link | Back-office tasks explicitly granted                                                                  | Tenant admin by label alone                       |
 
@@ -77,7 +76,7 @@ Route access and action authorization must stay separate:
 | Staff access grants        | `/admin/staff/*`                | owner                              | `staff:manage`, `staff:assign_position`, `staff:assign_permission`             |
 | Permission audit log       | `/admin/staff/audit`            | owner                              | `staff:assign_permission`, `settings:tenant` (RLS-gated read)                  |
 | Branch floor setup         | `/br/[branchId]/settings/*`     | owner/branch_manager               | `settings:branch`, `printer:manage`, POS/KDS config-specific grants when added |
-| POS service                | `/br/[branchId]/pos`            | owner/branch_manager/cashier/waiter | `pos:use`, `pos:confirm_payment`, `pos:print`, `pos:void_order`                |
+| POS service                | `/br/[branchId]/pos`            | owner/branch_manager/cashier | `pos:use`, `pos:confirm_payment`, `pos:print`, `pos:void_order`                |
 | KDS service                | `/br/[branchId]/kds`            | owner/branch_manager/chef           | `kds:use`, `kds:mark_ready`, `kds:recall`                                      |
 | Branch staff day approvals | `/hr/*` or branch command links | owner/branch_manager               | `hr:view_employee`, `hr:approve_checkout`, `hr:approve_leave_request`          |
 | Tenant finance             | `/finance/*`                    | owner                              | `finance:view`, `finance:expense_approve`, `finance:ap_pay`                    |
@@ -136,7 +135,7 @@ Implemented in the IA remediation slice (D031 Track E):
   role gets its Role-Boundaries "Home target" direct link automatically:
   `branch_manager` → Branch Command (`/br/[branchId]/dashboard`),
   `warehouse_manager`/`production_manager` → Inventory (`/inventory`),
-  `cashier` → Orders + POS, `waiter` → POS, `chef` → KDS. Branch-scoped links
+  `cashier` → Orders + POS, `chef` → KDS. Branch-scoped links
   resolve only when a branch is in scope; all links gate through `MODULE_ACL`.
 - The KDS unassigned-stations banner deep-links to the live branch KDS setup
   (`/br/[branchId]/settings/kds`).

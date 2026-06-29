@@ -38,6 +38,9 @@ const wasteItemSchema = z.object({
   ingredient_id: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
   unit: z.string().min(1),
+  // Issue-role unit the qty was entered in. NULL = already base;
+  // the writeoff decrement converts to base via inv_to_base().
+  entry_unit_id: z.coerce.number().int().positive().nullable().optional(),
   unit_cost: z.coerce.number().positive().optional(),
   reason_code: z.enum(WASTE_REASON_CODES),
   note: z.string().max(500).optional(),
@@ -87,6 +90,9 @@ export async function createWasteEntry(
   if (!ctx) return { success: false, error: "Không có quyền tạo phiếu hủy" };
   const { supabase } = ctx;
 
+  // Each item carries entry_unit_id (the issue-role unit the qty was entered in);
+  // create_waste_entry stores it on stock_issue_items so the writeoff decrement
+  // and waste-tier gate convert to the ingredient base via inv_to_base().
   const { data, error } = await supabase.rpc("create_waste_entry", {
     p_branch_id: parsed.data.branchId,
     p_location_id: parsed.data.locationId,

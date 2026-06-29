@@ -63,7 +63,11 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
   // Running audit + branches in parallel saves one RTT off TTFB.
   const [auditResult, branchesResult] = await Promise.all([
     query,
-    supabase.from("branches").select("id, name").order("name"),
+    supabase
+      .from("branches")
+      .select("id, name")
+      .eq("branch_kind", "branch")
+      .order("name"),
   ]);
   const auditRows = auditResult.data ?? [];
 

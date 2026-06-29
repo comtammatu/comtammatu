@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AppPage, AppToolbar } from "@/components/surface";
+import { AppPage, AppToolbar, type AppToolbarProps } from "@/components/surface";
 
 interface InventoryPageContentProps {
   children: ReactNode;
@@ -28,14 +28,8 @@ export function InventoryPageContent({
   );
 }
 
-interface InventoryFilterBarProps {
-  children: ReactNode;
-  className?: string;
-}
+type InventoryFilterBarProps = AppToolbarProps;
 
-export function InventoryFilterBar({
-  children,
-  className,
-}: InventoryFilterBarProps) {
-  return <AppToolbar className={className}>{children}</AppToolbar>;
+export function InventoryFilterBar(props: InventoryFilterBarProps) {
+  return <AppToolbar {...props} />;
 }

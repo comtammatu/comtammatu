@@ -8,6 +8,9 @@ import { withAction } from "@/_lib/with-action";
 const lineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   countedQuantity: z.coerce.number().min(0).max(9_999_999),
+  // Unit the physical count was entered in. submit_inventory_count_slip
+  // converts it to the ingredient base via inv_to_base(). null => already base.
+  entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   note: z.string().trim().max(500).optional(),
 });
 
@@ -49,6 +52,7 @@ export const submitCountSlip = withAction(
     const pLines = data.lines.map((line) => ({
       ingredient_id: line.ingredientId,
       counted_quantity: line.countedQuantity,
+      entry_unit_id: line.entryUnitId ?? null,
       ...(line.note ? { note: line.note } : {}),
     }));
 

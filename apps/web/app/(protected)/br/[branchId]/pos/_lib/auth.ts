@@ -99,7 +99,7 @@ export async function posUseAuth(
 
 /**
  * `customAuth` resolver for the cash confirm step. POS_CONFIRM_PAYMENT is
- * a tighter gate than POS_USE — waiters with POS_USE + POS_PRINT can print
+ * a tighter gate than POS_USE — staff with POS_USE + POS_PRINT but without POS_CONFIRM_PAYMENT can print
  * provisional bills but MUST NOT touch the cash drawer. Cashier and
  * branch_manager+ hold POS_CONFIRM_PAYMENT.
  *

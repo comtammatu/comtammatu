@@ -2,8 +2,14 @@ import {
   fetchRecipes,
   fetchMenuItemsForRecipes,
   fetchBranchWacMap,
+  fetchBranchMenuStockCapacity,
 } from "../procurement-actions";
 import { fetchIngredients } from "../ingredient-actions";
+import { loadAuthState } from "@/_lib/auth";
+import {
+  resolveInventoryBranchScope,
+  resolveRequestedBranchId,
+} from "../_lib/inventory-scope";
 import { formatDate } from "../_lib/format";
 import { RecipesClient } from "./recipes-client";
 import type { RecipeRow, RecipeItem } from "./recipes-client";
@@ -18,6 +24,7 @@ type MenuItemRow = {
     ingredient_id: number | null;
     quantity: number | string | null;
     unit: string | null;
+    entry_unit_id: number | string | null;
     note: string | null;
     yield_factor: number | string | null;
     ingredients: {
@@ -30,16 +37,33 @@ type MenuItemRow = {
   }> | null;
 };
 
-export default async function RecipesPage() {
-  const [recipesRes, menuItemsRes, ingredientsRes, wacRes] = await Promise.all([
-    fetchRecipes(),
-    fetchMenuItemsForRecipes(),
-    fetchIngredients(),
-    fetchBranchWacMap(),
-  ]);
+export default async function RecipesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  const { supabase, claims } = await loadAuthState();
+  const params = await searchParams;
+  const requested = await resolveRequestedBranchId(params.branchId);
+  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
+  const branchId = scope.selectedBranchId;
+
+  const [recipesRes, menuItemsRes, ingredientsRes, wacRes, stockCapacityRes] =
+    await Promise.all([
+      fetchRecipes(),
+      fetchMenuItemsForRecipes(),
+      fetchIngredients(),
+      fetchBranchWacMap(),
+      branchId != null
+        ? fetchBranchMenuStockCapacity(branchId)
+        : Promise.resolve({ success: true as const, data: {} }),
+    ]);
 
   const dbRows = recipesRes.success ? (recipesRes.data as MenuItemRow[]) : [];
   const wacMap = (wacRes.success ? wacRes.data : {}) as Record<string, number>;
+  const stockCapacityByMenuItemId = (
+    stockCapacityRes.success ? stockCapacityRes.data : {}
+  ) as Record<string, number>;
 
   const recipes: RecipeRow[] = dbRows
     .filter((row) => (row.recipes ?? []).length > 0)
@@ -60,6 +84,8 @@ export default async function RecipesPage() {
             line.ingredients?.purchase_unit ??
             line.ingredients?.unit ??
             "",
+          entryUnitId:
+            line.entry_unit_id == null ? null : Number(line.entry_unit_id),
           yieldFactor: Number(line.yield_factor ?? 1),
           note: line.note ?? null,
           lineCost: qty * unitCost,
@@ -106,6 +132,7 @@ export default async function RecipesPage() {
       recipes={recipes}
       menuItems={menuItems}
       ingredients={ingredients}
+      stockCapacityByMenuItemId={stockCapacityByMenuItemId}
     />
   );
 }

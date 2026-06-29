@@ -301,6 +301,7 @@ export async function fetchOrders(
       .from("branches")
       .select("id, name")
       .eq("is_active", true)
+      .eq("branch_kind", "branch")
       .order("name");
 
     branchesData = branchesRes.data ?? [];

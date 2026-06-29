@@ -7,7 +7,7 @@
  *
  * Cashier rule of thumb: chỉ show 5 labels.
  *   - active (new/confirmed/preparing) → relative age "X phút" / "X tiếng"
- *   - ready                            → "Sẵn sàng" (waiter pickup signal)
+ *   - ready                            → "Sẵn sàng" (floor pickup signal)
  *   - served                           → "Chờ thanh toán"
  *   - paid (any status)                → "Đã thanh toán"
  *   - cancelled                        → "Đã hủy"

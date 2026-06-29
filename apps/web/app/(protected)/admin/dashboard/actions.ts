@@ -71,6 +71,7 @@ export async function fetchBranchOperatingStatus(input?: {
         .select("id, name")
         .eq("tenant_id", claims.tenant_id)
         .eq("is_active", true)
+        .eq("branch_kind", "branch")
         .order("id"),
       supabase
         .from("payments")

@@ -2,7 +2,7 @@ import { getVNDateString } from "@comtammatu/shared/time";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchAccessibleBranches } from "../actions";
-import { fetchExpenses } from "../expense-actions";
+import { fetchActualFoodCostTotal, fetchExpenses } from "../expense-actions";
 import {
   parseFinanceParams,
   resolveFinanceRange,
@@ -20,9 +20,14 @@ export default async function ExpensesPage({
   const params = parseFinanceParams(sp);
   const resolved = resolveFinanceRange(params);
 
-  const [branchesRes, expensesRes] = await Promise.all([
+  const [branchesRes, expensesRes, foodCostRes] = await Promise.all([
     fetchAccessibleBranches(),
     fetchExpenses({
+      startDate: resolved.start,
+      endDate: resolved.end,
+      ...(params.branch != null ? { branchId: params.branch } : {}),
+    }),
+    fetchActualFoodCostTotal({
       startDate: resolved.start,
       endDate: resolved.end,
       ...(params.branch != null ? { branchId: params.branch } : {}),
@@ -35,6 +40,7 @@ export default async function ExpensesPage({
   }[];
   const rows = expensesRes.success ? (expensesRes.data ?? []) : [];
   const totalAmount = rows.reduce((sum, row) => sum + row.amount, 0);
+  const actualFoodCost = foodCostRes.success ? (foodCostRes.data ?? 0) : 0;
   const todayBusinessDate = getVNDateString();
 
   return (
@@ -50,6 +56,7 @@ export default async function ExpensesPage({
         branches={branches}
         rows={rows}
         totalAmount={totalAmount}
+        actualFoodCost={actualFoodCost}
         resolvedStart={resolved.start}
         resolvedEnd={resolved.end}
         todayBusinessDate={todayBusinessDate}

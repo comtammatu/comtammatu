@@ -28,7 +28,7 @@ interface PosDesktopShellProps {
   initialOrdersSeeded: boolean;
   /** Optional deep link from durable notifications: /pos?order=<id>. */
   initialOpenOrderId?: number;
-  /** User hiện tại có `pos:close_shift` không (ẩn nút"Chốt ca" với waiter). */
+  /** User hiện tại có `pos:close_shift` không. */
   canCloseShift: boolean;
   /** `pos:confirm_payment` — gate phương thức"Tiền mặt" trên bill (cashier+). */
   canConfirmCash: boolean;

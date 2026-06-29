@@ -1,6 +1,7 @@
 export interface BranchOption {
   id: number;
   name: string;
+  branch_kind?: string | null;
 }
 
 export interface EmployeeRow {

@@ -1,5 +1,7 @@
 # POS sell-limit by recipe định mức (Task 2) — T3 contract
 
+> Reconciled-through 49112fa17fec
+
 Owner decision: HARD block (cannot place an order that drives a kitchen ingredient
 negative) + per-branch on/off toggle + POS shows "còn N phần". Sequencing 1→2→3.
 

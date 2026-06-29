@@ -176,7 +176,7 @@ export async function fetchPosTerminals(
  * `session.opened_by` keeps the cash-responsibility audit.
  *
  * Regression guard (POS-SESSION-SCOPE-PER-BRANCH): do NOT filter by
- * `opened_by = user.id` — it locks waiters out of the cashier's session.
+ * `opened_by = user.id` — it locks the wrong operator out of the cashier's session.
  */
 export async function fetchActiveSession(
   branchId: number,
@@ -312,7 +312,7 @@ const openPosSessionSchema = z.object({
 });
 
 // Opening a shift writes opening cash → requires cashbox permission,
-// symmetric with close (POS_CLOSE_SHIFT) so waiters are blocked on both.
+// symmetric with close (POS_CLOSE_SHIFT) so operators without the grant are blocked on both.
 export const openPosSession = withActionPositional(
   {
     argsToInput: (

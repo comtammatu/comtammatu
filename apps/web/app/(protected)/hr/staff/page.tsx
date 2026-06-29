@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { STAFF_ROLES, staffRoleFromPositionCode } from "@comtammatu/shared/auth";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { StaffTable } from "./staff-table";
 import { StaffFilters } from "./staff-filters";
@@ -31,6 +30,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     supabase
       .from("positions")
       .select("id, code, label_vi")
+      .eq("is_active", true)
       .order("label_vi"),
   ]);
 
@@ -56,46 +56,48 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   type PositionJoin = { code: string | null; label_vi: string | null } | null;
   type BranchJoin = { name: string } | null;
 
-  const allStaff: StaffRow[] = (profiles ?? []).map((p) => ({
-    id: p.id,
-    full_name: p.full_name,
-    phone: p.phone,
-    role: staffRoleFromPositionCode((p.positions as PositionJoin)?.code),
-    position_label: (p.positions as PositionJoin)?.label_vi ?? null,
-    branch_id: p.branch_id,
-    branch_name: (p.branches as BranchJoin)?.name ?? null,
-    is_active: p.is_active,
-  }));
-
-  const staff: StaffRow[] = allStaff.filter((s) => {
-    if (s.role === "owner") return false;
-    if (
-      params.role &&
-      (STAFF_ROLES as readonly string[]).includes(params.role)
-    ) {
-      return s.role === (params.role as StaffRole);
-    }
-    return true;
+  const allStaff: StaffRow[] = (profiles ?? []).map((p) => {
+    const positionCode = (p.positions as PositionJoin)?.code ?? null;
+    return {
+      id: p.id,
+      full_name: p.full_name,
+      phone: p.phone,
+      role: staffRoleFromPositionCode(positionCode),
+      position_code: positionCode,
+      position_label: (p.positions as PositionJoin)?.label_vi ?? null,
+      branch_id: p.branch_id,
+      branch_name: (p.branches as BranchJoin)?.name ?? null,
+      is_active: p.is_active,
+    };
   });
 
   const branchOptions = branches ?? [];
-  const seenBuckets = new Set<string>();
   const positionOptions = (positions ?? []).flatMap((position) => {
     const bucket = staffRoleFromPositionCode(position.code);
     if (
       bucket === "unassigned" ||
       bucket === "owner" ||
-      seenBuckets.has(bucket)
+      position.code === "waiter"
     ) {
       return [];
     }
-    seenBuckets.add(bucket);
     return [
       {
-        value: bucket,
+        value: position.code,
         label: position.label_vi ?? position.code,
       },
     ];
+  });
+
+  const staff: StaffRow[] = allStaff.filter((s) => {
+    if (s.role === "owner") return false;
+    if (
+      params.role &&
+      positionOptions.some((option) => option.value === params.role)
+    ) {
+      return s.position_code === params.role;
+    }
+    return true;
   });
 
   return (

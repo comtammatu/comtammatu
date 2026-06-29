@@ -202,3 +202,51 @@ export async function fetchExpenses(params: {
     })),
   };
 }
+
+function nextDate(date: string): string {
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  parsed.setUTCDate(parsed.getUTCDate() + 1);
+  return parsed.toISOString().slice(0, 10);
+}
+
+// Read-only actual food cost (giá vốn món) from approved consumption, mirroring
+// the finance cockpit's ingredientCost so the expenses page shows the same
+// figure. NOT an expense-ledger row: keeps it out of operating expense / net
+// profit (which already nets consumption via gross profit), so no double count.
+export async function fetchActualFoodCostTotal(params: {
+  branchId?: number | null;
+  startDate: string;
+  endDate: string;
+}): Promise<ActionResult<number>> {
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền xem giá vốn." };
+
+  const { supabase, claims } = ctx;
+
+  let query = supabase
+    .from("stock_movements")
+    .select("quantity_change, unit_cost")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("type", "consumption")
+    .eq("movement_subtype", "sale_consumption")
+    .gte("created_at", params.startDate)
+    .lt("created_at", nextDate(params.endDate));
+
+  if (params.branchId != null) {
+    query = query.eq("branch_id", params.branchId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    return { success: false, error: "Không tải được giá vốn món." };
+  }
+
+  const total = (data ?? []).reduce(
+    (sum, r) => sum + Math.abs(Number(r.quantity_change)) * Number(r.unit_cost),
+    0,
+  );
+  return { success: true, data: total };
+}

@@ -1,5 +1,7 @@
 # Task 3 — Hợp nhất IA Quản lý Người + Chi nhánh (đề xuất chờ duyệt)
 
+> Reconciled-through 49112fa17fec
+
 Quyết định owner đã chốt: "Gộp IA + dựng lại luồng". Đây là đề xuất IA đích +
 kế hoạch chia lát để owner duyệt trước khi dựng (đổi điều hướng hằng ngày).
 Nguồn: T3 design workflow, verify ngược code thật.

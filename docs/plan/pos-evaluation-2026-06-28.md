@@ -1,5 +1,7 @@
 # Đánh giá hệ thống POS — Má Tư
 
+> Reconciled-through 49112fa17fec
+
 Ngày: 2026-06-28
 Phạm vi: toàn bộ luồng thu ngân POS (order → bếp → thanh toán → chốt ca), trên 3 thiết bị Desktop / Tablet / Mobile.
 

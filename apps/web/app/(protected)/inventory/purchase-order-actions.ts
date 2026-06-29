@@ -125,6 +125,9 @@ const poWithLinesSchema = z.object({
           .number()
           .positive({ error: "Số lượng phải lớn hơn 0" }),
         unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
+        // Purchase-role unit the qty was entered in. NULL = already base unit;
+        // the RPC converts to the ingredient base via inv_to_base().
+        entryUnitId: z.coerce.number().int().positive().nullable().optional(),
         unitPriceEst: z.union([z.number().min(0), z.null()]).optional(),
       }),
     )
@@ -152,6 +155,7 @@ export const createPurchaseOrderWithLines = withAction(
           ingredient_id: l.ingredientId,
           quantity: l.quantity,
           unit: l.unit,
+          entry_unit_id: l.entryUnitId ?? null,
           unit_price_est: l.unitPriceEst ?? null,
         })),
       },
@@ -219,6 +223,8 @@ const poLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive({ error: "Số lượng phải lớn hơn 0" }),
   unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
+  // Purchase-role unit the qty was entered in. NULL = already base.
+  entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   unitPriceEst: z.union([z.number().min(0), z.null()]).optional(),
 });
 
@@ -272,6 +278,7 @@ export const upsertPurchaseOrderLine = withAction(
           ingredient_id: data.ingredientId,
           quantity: data.quantity,
           unit: data.unit,
+          entry_unit_id: data.entryUnitId ?? null,
           unit_price_est: unitPrice,
           line_total: lineTotal,
         },

@@ -91,7 +91,7 @@ apps/web/app/
 │
 ├── br/[branchId]/
 │   ├── dashboard/          # Branch Command landing for branch_manager
-│   ├── pos/                # POS (cashier, waiter, branch_manager)
+│   ├── pos/                # POS (cashier, branch_manager)
 │   │   ├── layout.tsx      # Auth + ACL + branch validation
 │   │   ├── page.tsx        # POS terminal UI
 │   │   └── actions.ts      # Order CRUD, session management

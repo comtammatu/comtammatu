@@ -1,5 +1,7 @@
 # Audit: Context Hardcode & i18n Externalization
 
+> Reconciled-through 49112fa17fec
+
 Date: 2026-06-28
 Scope: single-tenant multi-branch F&B suite (Next.js 16.2 App Router, supabase-js)
 Method: 5 read-only lanes (2 context-hardcode, 3 i18n), synthesized here. Every finding cites `file:line`.

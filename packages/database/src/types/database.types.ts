@@ -908,6 +908,7 @@ export type Database = {
           limit_quantity: number | null
           menu_item_id: number
           sold_today: number
+          stock_capacity: number | null
           tenant_id: number
           updated_at: string
         }
@@ -920,6 +921,7 @@ export type Database = {
           limit_quantity?: number | null
           menu_item_id: number
           sold_today?: number
+          stock_capacity?: number | null
           tenant_id: number
           updated_at?: string
         }
@@ -932,6 +934,7 @@ export type Database = {
           limit_quantity?: number | null
           menu_item_id?: number
           sold_today?: number
+          stock_capacity?: number | null
           tenant_id?: number
           updated_at?: string
         }
@@ -1786,6 +1789,7 @@ export type Database = {
           baseline_source: string | null
           baseline_variance_pct: number | null
           batch_number: string | null
+          entry_unit_id: number | null
           expiry_date: string | null
           grn_id: number
           id: number
@@ -1815,6 +1819,7 @@ export type Database = {
           baseline_source?: string | null
           baseline_variance_pct?: number | null
           batch_number?: string | null
+          entry_unit_id?: number | null
           expiry_date?: string | null
           grn_id: number
           id?: never
@@ -1844,6 +1849,7 @@ export type Database = {
           baseline_source?: string | null
           baseline_variance_pct?: number | null
           batch_number?: string | null
+          entry_unit_id?: number | null
           expiry_date?: string | null
           grn_id?: number
           id?: never
@@ -1869,6 +1875,13 @@ export type Database = {
           variance_tier?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "grn_items_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "grn_items_grn_id_fkey"
             columns: ["grn_id"]
@@ -1951,6 +1964,47 @@ export type Database = {
           },
         ]
       }
+      ingredient_categories: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          name: string
+          sort_order: number
+          tenant_id: number
+          tone_class: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          tenant_id: number
+          tone_class?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          tenant_id?: number
+          tone_class?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_categories_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredient_category_review_policy: {
         Row: {
           category: string
@@ -1983,9 +2037,80 @@ export type Database = {
           },
         ]
       }
+      ingredient_units: {
+        Row: {
+          allow_issue: boolean
+          allow_production: boolean
+          allow_purchase: boolean
+          created_at: string
+          id: number
+          ingredient_id: number
+          is_active: boolean
+          is_base: boolean
+          sort_order: number
+          tenant_id: number
+          to_base_factor: number
+          unit_id: number
+          updated_at: string
+        }
+        Insert: {
+          allow_issue?: boolean
+          allow_production?: boolean
+          allow_purchase?: boolean
+          created_at?: string
+          id?: never
+          ingredient_id: number
+          is_active?: boolean
+          is_base?: boolean
+          sort_order?: number
+          tenant_id: number
+          to_base_factor?: number
+          unit_id: number
+          updated_at?: string
+        }
+        Update: {
+          allow_issue?: boolean
+          allow_production?: boolean
+          allow_purchase?: boolean
+          created_at?: string
+          id?: never
+          ingredient_id?: number
+          is_active?: boolean
+          is_base?: boolean
+          sort_order?: number
+          tenant_id?: number
+          to_base_factor?: number
+          unit_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_units_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_units_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_units_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredients: {
         Row: {
           category: string | null
+          category_id: number | null
           created_at: string
           id: number
           is_active: boolean
@@ -2008,6 +2133,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          category_id?: number | null
           created_at?: string
           id?: never
           is_active?: boolean
@@ -2030,6 +2156,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          category_id?: number | null
           created_at?: string
           id?: never
           is_active?: boolean
@@ -2051,6 +2178,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ingredients_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "ingredient_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ingredients_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -2145,6 +2279,7 @@ export type Database = {
       inventory_count_slip_lines: {
         Row: {
           counted_quantity: number
+          entry_unit_id: number | null
           id: number
           ingredient_id: number
           note: string | null
@@ -2155,6 +2290,7 @@ export type Database = {
         }
         Insert: {
           counted_quantity: number
+          entry_unit_id?: number | null
           id?: never
           ingredient_id: number
           note?: string | null
@@ -2165,6 +2301,7 @@ export type Database = {
         }
         Update: {
           counted_quantity?: number
+          entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
           note?: string | null
@@ -2174,6 +2311,13 @@ export type Database = {
           variance?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_count_slip_lines_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inventory_count_slip_lines_ingredient_id_fkey"
             columns: ["ingredient_id"]
@@ -4187,6 +4331,69 @@ export type Database = {
           },
         ]
       }
+      position_shift_tasks: {
+        Row: {
+          applicability: string
+          created_at: string
+          done_definition: string
+          id: number
+          is_active: boolean
+          is_required: boolean
+          kind: string
+          phase: string
+          position_id: number
+          sort_order: number
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          applicability?: string
+          created_at?: string
+          done_definition?: string
+          id?: never
+          is_active?: boolean
+          is_required?: boolean
+          kind?: string
+          phase?: string
+          position_id: number
+          sort_order: number
+          tenant_id: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          applicability?: string
+          created_at?: string
+          done_definition?: string
+          id?: never
+          is_active?: boolean
+          is_required?: boolean
+          kind?: string
+          phase?: string
+          position_id?: number
+          sort_order?: number
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "position_shift_tasks_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "position_shift_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       positions: {
         Row: {
           code: string
@@ -4747,6 +4954,7 @@ export type Database = {
       production_order_items: {
         Row: {
           created_at: string
+          entry_unit_id: number | null
           finished_good_id: number
           id: number
           production_order_id: number
@@ -4757,6 +4965,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          entry_unit_id?: number | null
           finished_good_id: number
           id?: never
           production_order_id: number
@@ -4767,6 +4976,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          entry_unit_id?: number | null
           finished_good_id?: number
           id?: never
           production_order_id?: number
@@ -4776,6 +4986,13 @@ export type Database = {
           unit_cost_at_production?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "production_order_items_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "production_order_items_finished_good_id_fkey"
             columns: ["finished_good_id"]
@@ -4870,6 +5087,7 @@ export type Database = {
       production_recipes: {
         Row: {
           created_at: string
+          entry_unit_id: number | null
           finished_good_id: number
           id: number
           ingredient_id: number
@@ -4882,6 +5100,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          entry_unit_id?: number | null
           finished_good_id: number
           id?: never
           ingredient_id: number
@@ -4894,6 +5113,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          entry_unit_id?: number | null
           finished_good_id?: number
           id?: never
           ingredient_id?: number
@@ -4905,6 +5125,13 @@ export type Database = {
           yield_factor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "production_recipes_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "production_recipes_finished_good_id_fkey"
             columns: ["finished_good_id"]
@@ -4998,6 +5225,7 @@ export type Database = {
       }
       purchase_order_items: {
         Row: {
+          entry_unit_id: number | null
           id: number
           ingredient_id: number
           line_total: number | null
@@ -5008,6 +5236,7 @@ export type Database = {
           unit_price_est: number | null
         }
         Insert: {
+          entry_unit_id?: number | null
           id?: never
           ingredient_id: number
           line_total?: number | null
@@ -5018,6 +5247,7 @@ export type Database = {
           unit_price_est?: number | null
         }
         Update: {
+          entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
           line_total?: number | null
@@ -5028,6 +5258,13 @@ export type Database = {
           unit_price_est?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchase_order_items_ingredient_id_fkey"
             columns: ["ingredient_id"]
@@ -5135,6 +5372,7 @@ export type Database = {
       recipes: {
         Row: {
           created_at: string
+          entry_unit_id: number | null
           id: number
           ingredient_id: number
           menu_item_id: number
@@ -5146,6 +5384,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          entry_unit_id?: number | null
           id?: never
           ingredient_id: number
           menu_item_id: number
@@ -5157,6 +5396,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
           menu_item_id?: number
@@ -5167,6 +5407,13 @@ export type Database = {
           yield_factor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "recipes_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "recipes_ingredient_id_fkey"
             columns: ["ingredient_id"]
@@ -5416,8 +5663,9 @@ export type Database = {
           ingredient_id: number
           is_active: boolean
           note: string | null
+          position_task_id: number | null
           sort_order: number
-          template_item_id: number
+          template_item_id: number | null
           tenant_id: number
           updated_at: string
         }
@@ -5427,8 +5675,9 @@ export type Database = {
           ingredient_id: number
           is_active?: boolean
           note?: string | null
+          position_task_id?: number | null
           sort_order?: number
-          template_item_id: number
+          template_item_id?: number | null
           tenant_id: number
           updated_at?: string
         }
@@ -5438,8 +5687,9 @@ export type Database = {
           ingredient_id?: number
           is_active?: boolean
           note?: string | null
+          position_task_id?: number | null
           sort_order?: number
-          template_item_id?: number
+          template_item_id?: number | null
           tenant_id?: number
           updated_at?: string
         }
@@ -5449,6 +5699,13 @@ export type Database = {
             columns: ["ingredient_id"]
             isOneToOne: false
             referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_checklist_consumption_default_items_position_task_id_fkey"
+            columns: ["position_task_id"]
+            isOneToOne: false
+            referencedRelation: "position_shift_tasks"
             referencedColumns: ["id"]
           },
           {
@@ -5589,6 +5846,8 @@ export type Database = {
           end_time: string
           id: number
           is_active: boolean
+          is_closing: boolean
+          is_opening: boolean
           name: string
           start_time: string
           tenant_id: number
@@ -5600,6 +5859,8 @@ export type Database = {
           end_time: string
           id?: never
           is_active?: boolean
+          is_closing?: boolean
+          is_opening?: boolean
           name: string
           start_time: string
           tenant_id: number
@@ -5611,6 +5872,8 @@ export type Database = {
           end_time?: string
           id?: never
           is_active?: boolean
+          is_closing?: boolean
+          is_opening?: boolean
           name?: string
           start_time?: string
           tenant_id?: number
@@ -5718,6 +5981,7 @@ export type Database = {
       stock_issue_items: {
         Row: {
           approval_required: boolean
+          entry_unit_id: number | null
           id: number
           ingredient_id: number
           issue_id: number
@@ -5736,6 +6000,7 @@ export type Database = {
         }
         Insert: {
           approval_required?: boolean
+          entry_unit_id?: number | null
           id?: never
           ingredient_id: number
           issue_id: number
@@ -5754,6 +6019,7 @@ export type Database = {
         }
         Update: {
           approval_required?: boolean
+          entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
           issue_id?: number
@@ -5771,6 +6037,13 @@ export type Database = {
           waste_tier?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stock_issue_items_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stock_issue_items_ingredient_id_fkey"
             columns: ["ingredient_id"]
@@ -5973,6 +6246,8 @@ export type Database = {
           branch_id: number
           created_at: string
           created_by: string
+          entry_quantity: number | null
+          entry_unit_id: number | null
           grn_id: number | null
           id: number
           ingredient_id: number
@@ -5992,6 +6267,8 @@ export type Database = {
           branch_id: number
           created_at?: string
           created_by: string
+          entry_quantity?: number | null
+          entry_unit_id?: number | null
           grn_id?: number | null
           id?: never
           ingredient_id: number
@@ -6011,6 +6288,8 @@ export type Database = {
           branch_id?: number
           created_at?: string
           created_by?: string
+          entry_quantity?: number | null
+          entry_unit_id?: number | null
           grn_id?: number | null
           id?: never
           ingredient_id?: number
@@ -6046,6 +6325,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
           {
@@ -6108,6 +6394,7 @@ export type Database = {
       }
       stock_transfer_items: {
         Row: {
+          entry_unit_id: number | null
           id: number
           ingredient_id: number
           quantity: number
@@ -6119,6 +6406,7 @@ export type Database = {
           unit_cost_at_ship: number | null
         }
         Insert: {
+          entry_unit_id?: number | null
           id?: never
           ingredient_id: number
           quantity: number
@@ -6130,6 +6418,7 @@ export type Database = {
           unit_cost_at_ship?: number | null
         }
         Update: {
+          entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
           quantity?: number
@@ -6141,6 +6430,13 @@ export type Database = {
           unit_cost_at_ship?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stock_transfer_items_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stock_transfer_items_ingredient_id_fkey"
             columns: ["ingredient_id"]
@@ -6391,6 +6687,7 @@ export type Database = {
           counted_by: string | null
           counted_quantity: number | null
           created_at: string
+          entry_unit_id: number | null
           id: number
           ingredient_id: number
           is_final: boolean
@@ -6410,6 +6707,7 @@ export type Database = {
           counted_by?: string | null
           counted_quantity?: number | null
           created_at?: string
+          entry_unit_id?: number | null
           id?: never
           ingredient_id: number
           is_final?: boolean
@@ -6429,6 +6727,7 @@ export type Database = {
           counted_by?: string | null
           counted_quantity?: number | null
           created_at?: string
+          entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
           is_final?: boolean
@@ -6442,6 +6741,13 @@ export type Database = {
           variance_reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stocktake_lines_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stocktake_lines_ingredient_id_fkey"
             columns: ["ingredient_id"]
@@ -7821,6 +8127,44 @@ export type Database = {
         }
         Relationships: []
       }
+      units: {
+        Row: {
+          code: string
+          created_at: string
+          id: number
+          is_active: boolean
+          name: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "units_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_trust_score: {
         Row: {
           branch_id: number
@@ -8542,6 +8886,14 @@ export type Database = {
         Args: { p_subtotal: number; p_type: string; p_value: number }
         Returns: number
       }
+      compute_menu_item_stock_capacity: {
+        Args: {
+          p_branch_id: number
+          p_menu_item_id: number
+          p_tenant_id: number
+        }
+        Returns: number
+      }
       compute_user_trust_score: {
         Args: { p_branch_id: number; p_user_id: string }
         Returns: number
@@ -8911,6 +9263,7 @@ export type Database = {
           limit_quantity: number
           menu_item_id: number
           sold_today: number
+          stock_capacity: number
         }[]
       }
       get_branch_menu_ingredient_caps_for_pos: {
@@ -8918,6 +9271,13 @@ export type Database = {
         Returns: {
           max_sellable: number
           menu_item_id: number
+        }[]
+      }
+      get_branch_menu_stock_capacity: {
+        Args: { p_branch_id: number }
+        Returns: {
+          menu_item_id: number
+          stock_capacity: number
         }[]
       }
       get_cash_variance_summary: {
@@ -9201,6 +9561,10 @@ export type Database = {
         }
         Returns: string
       }
+      inv_to_base: {
+        Args: { p_ingredient_id: number; p_qty: number; p_unit_id: number }
+        Returns: number
+      }
       inventory_requires_manual_review: {
         Args: { p_ingredient_id: number }
         Returns: boolean
@@ -9456,6 +9820,15 @@ export type Database = {
         Returns: Json
       }
       refresh_abc_classification: { Args: never; Returns: number }
+      refresh_branch_menu_stock_capacity: {
+        Args: {
+          p_branch_id: number
+          p_ingredient_id?: number
+          p_menu_item_id?: number
+          p_tenant_id: number
+        }
+        Returns: undefined
+      }
       refresh_finance_views: { Args: never; Returns: undefined }
       refresh_inventory_dashboard: { Args: never; Returns: string }
       refund_paid_order: {
@@ -9814,9 +10187,30 @@ export type Database = {
         }
         Returns: undefined
       }
+      upsert_ingredient_catalog: {
+        Args: {
+          p_category_id: number
+          p_ingredient_id: number
+          p_item_kind: string
+          p_max_stock_level: number
+          p_min_stock_level: number
+          p_name: string
+          p_reorder_point: number
+          p_shelf_life_days: number
+          p_sku: string
+          p_storage_type: string
+          p_unit_cost: number
+          p_units: Json
+        }
+        Returns: number
+      }
       upsert_payroll_calculation: {
         Args: { p_entries: Json; p_period_id: number }
         Returns: Json
+      }
+      upsert_position_shift_tasks: {
+        Args: { p_position_id: number; p_tasks: Json }
+        Returns: number
       }
       upsert_printer_with_routes: {
         Args: {

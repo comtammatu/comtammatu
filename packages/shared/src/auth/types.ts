@@ -8,7 +8,6 @@ export const ACCESS_BUCKETS = [
   "warehouse_manager",
   "production_manager",
   "cashier",
-  "waiter",
   "chef",
   "office",
 ] as const;
@@ -25,7 +24,6 @@ export const ADMIN_ROLES: readonly StaffRole[] = ["owner"] as const;
 /** Roles that operate at branch level (POS/KDS) */
 export const BRANCH_ROLES: readonly StaffRole[] = [
   "cashier",
-  "waiter",
   "chef",
 ] as const;
 
@@ -41,7 +39,6 @@ export const MANAGEABLE_STAFF_ROLES: readonly StaffRole[] = [
   "warehouse_manager",
   "production_manager",
   "cashier",
-  "waiter",
   "chef",
   "office",
 ] as const;
@@ -49,7 +46,6 @@ export const MANAGEABLE_STAFF_ROLES: readonly StaffRole[] = [
 /** Operational roles that must belong to a branch. */
 export const BRANCH_REQUIRED_OPERATIONAL_ROLES: readonly StaffRole[] = [
   "cashier",
-  "waiter",
   "chef",
   "branch_manager",
 ] as const;
@@ -88,10 +84,9 @@ export function canManageTenantStrategySettings(role: StaffRole): boolean {
 export const ROLE_LABEL_VI: Record<StaffRole, string> = {
   owner: "Chủ sở hữu",
   branch_manager: "Quản lý chi nhánh",
-  warehouse_manager: "Quản lý kho chi nhánh",
-  production_manager: "Quản lý sản xuất",
+  warehouse_manager: "Quản lý Kho Tổng",
+  production_manager: "Quản lý Bếp Trung Tâm",
   cashier: "Thu ngân",
-  waiter: "Phục vụ",
   chef: "Bếp",
   office: "Văn phòng",
 };
@@ -99,27 +94,71 @@ export const ROLE_LABEL_VI: Record<StaffRole, string> = {
 /**
  * Canonical HR position code → StaffRole bucket. TS mirror of the SQL
  * `private.staff_role_from_position_code()` — change both in the same PR
- * (the SQL twin is the latest position-mapper migration). Only the 10
- * canonical English codes below; unknown codes return "unassigned" (fail-safe).
+ * (the SQL twin is the latest position-mapper migration). Unknown codes return
+ * "unassigned" (fail-safe).
  */
 const POSITION_CODE_TO_STAFF_ROLE: Record<string, StaffRole> = {
   owner: "owner",
   branch_manager: "branch_manager",
   office: "office",
+  accountant: "office",
+  marketing: "office",
+  technician: "office",
+  design_construction: "office",
+  cleaner: "office",
   warehouse_manager: "warehouse_manager",
+  central_supply_manager: "warehouse_manager",
   production_manager: "production_manager",
+  central_kitchen_manager: "production_manager",
   head_chef: "production_manager",
+  kitchen_counter: "chef",
   kitchen_helper: "chef",
+  grill_counter: "chef",
   chef: "chef",
   cashier: "cashier",
-  waiter: "waiter",
+  cashier_server: "cashier",
+  waiter: "cashier",
 };
+
+export type BranchKind = "branch" | "central_supply" | "central_kitchen";
+
+const POSITION_CODE_TO_REQUIRED_BRANCH_KIND: Record<string, BranchKind | null> =
+  {
+    owner: null,
+    office: null,
+    accountant: null,
+    marketing: null,
+    technician: null,
+    design_construction: null,
+    branch_manager: "branch",
+    cashier: "branch",
+    cashier_server: "branch",
+    chef: "branch",
+    kitchen_counter: "branch",
+    kitchen_helper: "branch",
+    grill_counter: "branch",
+    cleaner: "branch",
+    warehouse_manager: "central_supply",
+    central_supply_manager: "central_supply",
+    production_manager: "central_kitchen",
+    central_kitchen_manager: "central_kitchen",
+    head_chef: "central_kitchen",
+    waiter: "branch",
+  };
 
 export function staffRoleFromPositionCode(
   code: string | null | undefined,
 ): StaffRole | "unassigned" {
   if (!code) return "unassigned";
   return POSITION_CODE_TO_STAFF_ROLE[code] ?? "unassigned";
+}
+
+export function requiredBranchKindForPositionCode(
+  code: string | null | undefined,
+): BranchKind | null | "unassigned" {
+  if (!code) return "unassigned";
+  if (!(code in POSITION_CODE_TO_REQUIRED_BRANCH_KIND)) return "unassigned";
+  return POSITION_CODE_TO_REQUIRED_BRANCH_KIND[code] ?? null;
 }
 
 /** JWT custom claims injected by Supabase auth hook */

@@ -87,9 +87,7 @@ function HddtComplianceBand({
 }: {
   summary: FinanceCockpitData["dashboardSummary"];
 }) {
-  const needsWork =
-    (summary?.invoice_attention_count ?? 0) > 0 ||
-    (summary?.failed_webhook_count ?? 0) > 0;
+  const needsWork = (summary?.invoice_attention_count ?? 0) > 0;
 
   return (
     <AppSection
@@ -111,7 +109,7 @@ function HddtComplianceBand({
       }
     >
       {summary ? (
-        <KpiRow density="compact" className="lg:grid-cols-4">
+        <KpiRow density="compact" className="lg:grid-cols-3">
           <MetricInline
             label={powerLiteCopy.hddtIssued}
             value={formatCount(summary.invoice_issued_count)}
@@ -125,11 +123,6 @@ function HddtComplianceBand({
             label={powerLiteCopy.hddtNotRequired}
             value={formatCount(summary.invoice_not_required_count)}
             muted={summary.invoice_not_required_count === 0}
-          />
-          <MetricInline
-            label={powerLiteCopy.hddtWebhookFailures}
-            value={formatCount(summary.failed_webhook_count)}
-            muted={summary.failed_webhook_count === 0}
           />
         </KpiRow>
       ) : (

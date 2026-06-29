@@ -58,7 +58,6 @@ test("getDefaultRedirect → other non-admin roles land on /employee", () => {
     "warehouse_manager",
     "production_manager",
     "cashier",
-    "waiter",
     "chef",
     "office",
   ] as const) {
@@ -84,7 +83,6 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     "warehouse_manager",
     "production_manager",
     "cashier",
-    "waiter",
     "chef",
     "office",
   ] as const) {
@@ -371,7 +369,7 @@ test("resolvePostLoginRedirect → public Runner display bypasses branch auth re
     "/br/5/runner",
   );
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("waiter", 5), "/br/7/runner"),
+    resolvePostLoginRedirect(makeClaims("cashier", 5), "/br/7/runner"),
     "/br/7/runner",
   );
 });
@@ -523,7 +521,6 @@ test("canAccess → only owner can access tenant admin modules", () => {
       "warehouse_manager",
       "production_manager",
       "cashier",
-      "waiter",
       "chef",
       "office",
     ] as const) {
@@ -541,7 +538,6 @@ test("canAccess → branch command and branch settings include branch manager", 
     "warehouse_manager",
     "production_manager",
     "cashier",
-    "waiter",
     "chef",
     "office",
   ] as const) {
@@ -559,7 +555,6 @@ test("canAccess → tenant settings excludes branch floor roles", () => {
     "warehouse_manager",
     "production_manager",
     "cashier",
-    "waiter",
     "chef",
     "office",
   ] as const) {
@@ -588,7 +583,6 @@ test("canAccess → checkout approvals are manager-tier, not whole employee port
     "warehouse_manager",
     "production_manager",
     "cashier",
-    "waiter",
     "chef",
     "office",
   ] as const) {
@@ -600,8 +594,8 @@ test("canAccess → owner can cover-ca POS/KDS/Runner; floor roles unchanged", (
   for (const moduleKey of ["pos", "kds", "runner"] as const) {
     assert.equal(canAccess("owner", moduleKey), true);
   }
-  // POS floor roles unchanged.
-  for (const role of ["cashier", "waiter", "branch_manager"] as const) {
+  // POS floor roles follow the current cashier + manager service model.
+  for (const role of ["cashier", "branch_manager"] as const) {
     assert.equal(canAccess(role, "pos"), true);
   }
   assert.equal(canAccess("chef", "pos"), false);
@@ -609,7 +603,7 @@ test("canAccess → owner can cover-ca POS/KDS/Runner; floor roles unchanged", (
   for (const role of ["chef", "branch_manager"] as const) {
     assert.equal(canAccess(role, "kds"), true);
   }
-  for (const role of ["cashier", "waiter"] as const) {
+  for (const role of ["cashier"] as const) {
     assert.equal(canAccess(role, "kds"), false);
   }
   // No back-office role gained POS/KDS access.

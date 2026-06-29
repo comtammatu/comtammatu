@@ -84,7 +84,7 @@ Thuế = 675,000 × 5% = 33,750 VND
 ```
 
 > Với mức giảm trừ 15,5 triệu từ kỳ 2026, đa số vị trí vận hành của quán
-> (waiter/cashier/chef 6–12 triệu) không phát sinh thuế TNCN phải khấu trừ.
+> (cashier/chef/kitchen_helper 6–12 triệu) không phát sinh thuế TNCN phải khấu trừ.
 
 ---
 

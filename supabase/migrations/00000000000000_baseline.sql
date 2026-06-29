@@ -9734,6 +9734,7 @@ BEGIN
     jsonb_build_object(
       'item_name',    oi.item_name,
       'variant_name', oi.variant_name,
+      'category_type', mc.type,
       'quantity',     oi.quantity,
       'unit_price',   oi.unit_price,
       'modifiers',    oi.modifiers,
@@ -9745,6 +9746,12 @@ BEGIN
   )
   INTO v_items
   FROM public.order_items oi
+  LEFT JOIN public.menu_items mi
+    ON mi.id = oi.menu_item_id
+   AND mi.tenant_id = oi.tenant_id
+  LEFT JOIN public.menu_categories mc
+    ON mc.id = mi.category_id
+   AND mc.tenant_id = oi.tenant_id
   WHERE oi.order_id = p_order_id
     AND oi.status <> 'cancelled';
 
@@ -14749,8 +14756,8 @@ BEGIN
     WHEN 'receipt' THEN
       RETURN jsonb_build_object(
         'blocks', jsonb_build_array(
-          jsonb_build_object('type', 'row', 'left', 'MÁ TƯ', 'right', '{{branch_address}}', 'bold', true),
-          jsonb_build_object('type', 'row', 'left', 'Thịt tươi 100%', 'right', ''),
+          jsonb_build_object('type', 'brandHeader', 'eyebrow', 'TIỆM CƠM TẤM', 'name', 'MÁ TƯ', 'tagline', 'Thịt tươi 100%'),
+          jsonb_build_object('type', 'branchInfo'),
           jsonb_build_object('type', 'divider', 'char', '='),
           jsonb_build_object('type', 'text', 'text', 'HÓA ĐƠN THANH TOÁN', 'align', 'center', 'bold', true, 'double', true),
           jsonb_build_object('type', 'text', 'text', '{{order_header}}', 'align', 'center', 'bold', true, 'double', true),
@@ -14775,8 +14782,8 @@ BEGIN
           jsonb_build_object('type', 'text', 'text', '{{order_header}}', 'align', 'center', 'bold', true, 'double', true),
           jsonb_build_object('type', 'divider', 'char', '='),
           jsonb_build_object('type', 'billMeta'),
-          jsonb_build_object('type', 'itemsTable'),
-          jsonb_build_object('type', 'totals'),
+          jsonb_build_object('type', 'itemsTable', 'group_by_category', true),
+          jsonb_build_object('type', 'totals', 'always_show_adjustments', true),
           jsonb_build_object('type', 'note', 'prefix', 'Ghi chú: '),
           jsonb_build_object('type', 'paymentQr', 'heading', 'QUÉT QR THANH TOÁN'),
           jsonb_build_object('type', 'footer', 'lines', jsonb_build_array('Thịt tươi 100%'))

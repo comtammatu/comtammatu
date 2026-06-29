@@ -53,6 +53,7 @@ export interface StaffRow {
   full_name: string;
   phone: string | null;
   role: string;
+  position_code: string | null;
   position_label: string | null;
   branch_id: number | null;
   branch_name: string | null;

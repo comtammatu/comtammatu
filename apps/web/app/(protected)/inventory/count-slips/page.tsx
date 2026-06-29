@@ -81,7 +81,8 @@ export default async function CountSlipsPage() {
         counted_quantity,
         variance,
         note,
-        ingredients ( name, unit )
+        ingredients ( name, unit ),
+        units ( code )
       )
     `,
     )
@@ -110,10 +111,25 @@ export default async function CountSlipsPage() {
         const unitSource = Array.isArray(line.ingredients)
           ? line.ingredients[0]
           : line.ingredients;
-        const unit =
+        const ingredientUnit =
           unitSource && typeof unitSource === "object"
             ? ((unitSource as { unit?: unknown }).unit ?? null)
             : null;
+        // Prefer the entry unit the line was counted in; fall back to the
+        // ingredient's default unit for lines without entry_unit_id.
+        const entryUnitSource = Array.isArray(line.units)
+          ? line.units[0]
+          : line.units;
+        const entryUnitCode =
+          entryUnitSource && typeof entryUnitSource === "object"
+            ? ((entryUnitSource as { code?: unknown }).code ?? null)
+            : null;
+        const unit =
+          typeof entryUnitCode === "string" && entryUnitCode !== ""
+            ? entryUnitCode
+            : typeof ingredientUnit === "string"
+              ? ingredientUnit
+              : null;
         return {
           id: line.id,
           ingredientName: ingredient ?? `#${line.ingredient_id}`,

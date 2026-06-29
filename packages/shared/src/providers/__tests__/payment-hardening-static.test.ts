@@ -53,7 +53,7 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
   );
   assert.ok(
     source.includes(
-      "const SEPAY_PAYMENT_CODE_RE = /\\bDH[A-Z0-9]{3,12}\\b/gi;",
+      "const SEPAY_PAYMENT_CODE_RE = /\\b(?:VQRLOAMB\\d{17}|DH[A-Z0-9]{3,12})\\b/gi;",
     ),
   );
   assert.ok(
@@ -133,12 +133,21 @@ test("SePay can correct a cash-confirmed QR payment to VietQR", () => {
   assert.match(orderCodeMigration, /cash_change = NULL/);
 });
 
-test("Each order owns one immutable DH payment code", () => {
+test("Each order owns one immutable MB speaker payment code", () => {
   const migration = readRepoFile(
-    "supabase/migrations/20260625221432_order_payment_code_fixed.sql",
+    "supabase/migrations/20260629160000_mb_speaker_payment_code.sql",
+  );
+  const grantMigration = readRepoFile(
+    "supabase/migrations/20260629161000_restrict_order_payment_code_generator.sql",
+  );
+  const sequenceGrantMigration = readRepoFile(
+    "supabase/migrations/20260629162000_restrict_order_payment_code_sequence.sql",
   );
 
-  assert.match(migration, /ADD COLUMN IF NOT EXISTS payment_code text/);
+  assert.match(
+    migration,
+    /CREATE SEQUENCE IF NOT EXISTS public\.order_payment_code_sequence/,
+  );
   assert.match(migration, /public\.generate_order_payment_code\(\)/);
   assert.match(migration, /orders_payment_code_format_check/);
   assert.match(migration, /idx_orders_payment_code_unique/);
@@ -146,14 +155,30 @@ test("Each order owns one immutable DH payment code", () => {
     migration,
     /CREATE OR REPLACE FUNCTION public\.ensure_order_payment_code/,
   );
-  assert.match(migration, /UPDATE public\.orders o[\s\S]*ranked_payment_codes/);
-  assert.match(migration, /ALTER COLUMN payment_code SET NOT NULL/);
+  assert.match(migration, /VQRLOAMB/);
+  assert.match(migration, /DH\[A-Z0-9\]\{3,12\}/);
   assert.match(
     migration,
     /CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_payment_code_unique[\s\S]*lower\(payment_code\)/,
   );
   assert.match(migration, /FOR v_try IN 1\.\.20 LOOP/);
   assert.match(migration, /EXCEPTION WHEN unique_violation THEN/);
+  assert.match(
+    grantMigration,
+    /REVOKE ALL ON FUNCTION public\.generate_order_payment_code\(\) FROM anon;/,
+  );
+  assert.match(
+    grantMigration,
+    /GRANT EXECUTE ON FUNCTION public\.generate_order_payment_code\(\) TO authenticated;/,
+  );
+  assert.match(
+    sequenceGrantMigration,
+    /REVOKE ALL ON SEQUENCE public\.order_payment_code_sequence FROM anon;/,
+  );
+  assert.match(
+    sequenceGrantMigration,
+    /GRANT USAGE, SELECT ON SEQUENCE public\.order_payment_code_sequence TO authenticated;/,
+  );
 });
 
 test("SePay migration extends webhook provider check and keeps RPC service-only", () => {
@@ -351,7 +376,10 @@ test("POS VietQR uses locally generated EMVCo payloads, not VietQR image URLs", 
   );
 
   assert.match(provider, /const qrData = buildVietQrEmvco\(/);
-  assert.match(provider, /return `DH\$\{randomPaymentChars\(10\)\}`/);
+  assert.match(
+    provider,
+    /return `\$\{MB_SPEAKER_PAYMENT_PREFIX\}\$\{timestamp\}\$\{randomPaymentDigits\(3\)\}`/,
+  );
   assert.match(bill, /<PaymentQrCode[\s\S]*value=\{remoteQrValue\}/);
   assert.doesNotMatch(bill, /preferImage=\{selectedMethod === "vietqr"\}/);
   assert.doesNotMatch(provider, /img\.vietqr\.io/);

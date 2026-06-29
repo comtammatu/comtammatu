@@ -8,10 +8,19 @@ import {
 } from "../components/employee-page";
 import { CountSlipClient } from "./count-client";
 
+export interface CountUnitChoice {
+  unitId: number;
+  code: string;
+  isBase: boolean;
+}
+
 export interface CountAssignment {
   ingredientId: number;
   ingredientName: string;
   measureUnit: string;
+  // All active counting units for this ingredient, base first. Empty when the
+  // ingredient has no configured units (caller falls back to the measure unit).
+  countUnits: CountUnitChoice[];
 }
 
 export interface CountLocationGroup {
@@ -29,10 +38,21 @@ export interface CountSlipHeader {
   reviewNote: string | null;
 }
 
+interface AssignmentUnitRow {
+  unit_id: number;
+  is_base: boolean;
+  sort_order: number;
+  units: { code: string } | null;
+}
+
 interface AssignmentRow {
   ingredient_id: number;
   location_id: number;
-  ingredients: { name: string; measure_unit: string } | null;
+  ingredients: {
+    name: string;
+    measure_unit: string;
+    ingredient_units: AssignmentUnitRow[] | null;
+  } | null;
 }
 
 interface LocationRow {
@@ -79,7 +99,9 @@ export default async function EmployeeCountPage(props: {
 
   const { data: assignmentData } = await supabase
     .from("inventory_count_assignments")
-    .select("ingredient_id, location_id, ingredients ( name, measure_unit )")
+    .select(
+      "ingredient_id, location_id, ingredients ( name, measure_unit, ingredient_units ( unit_id, is_base, sort_order, units ( code ) ) )",
+    )
     .eq("tenant_id", claims.tenant_id)
     .eq("employee_id", employeeId)
     .eq("branch_id", branchId)
@@ -126,6 +148,18 @@ export default async function EmployeeCountPage(props: {
           ingredientId: row.ingredient_id,
           ingredientName: row.ingredients?.name ?? "Nguyên liệu",
           measureUnit: row.ingredients?.measure_unit ?? "",
+          // Counting can use any of the ingredient's units (no role filter), base first.
+          countUnits: (row.ingredients?.ingredient_units ?? [])
+            .filter((u) => (u.units?.code ?? "") !== "")
+            .sort((a, b) => {
+              if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
+              return a.sort_order - b.sort_order;
+            })
+            .map((u) => ({
+              unitId: u.unit_id,
+              code: u.units?.code ?? "",
+              isBase: u.is_base,
+            })),
         }))
         .sort((a, b) => a.ingredientName.localeCompare(b.ingredientName, "vi")),
     }))

@@ -465,7 +465,7 @@ export function ChecklistTemplatesTable({
                     onChange={(event) =>
                       updateDraft({ name: event.target.value })
                     }
-                    placeholder="Quầy, Phục vụ, Nướng"
+                    placeholder="Quầy, Thu ngân, Nướng"
                   />
                 </div>
 

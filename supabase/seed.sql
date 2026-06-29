@@ -17,11 +17,11 @@
 --   • production@comtammatu.vn        – production_manager
 --   • manager.datdo@comtammatu.vn      – branch_manager Đất Đỏ
 --   • cashier.datdo@comtammatu.vn      – cashier Đất Đỏ
---   • waiter.datdo@comtammatu.vn       – waiter Đất Đỏ
+--   • cashier.service.datdo@comtammatu.vn – cashier service Đất Đỏ
 --   • chef.datdo@comtammatu.vn         – chef Đất Đỏ
 --   • manager.phuochai@comtammatu.vn   – branch_manager Phước Hải
 --   • cashier.phuochai@comtammatu.vn   – cashier Phước Hải
---   • waiter.phuochai@comtammatu.vn    – waiter Phước Hải
+--   • cashier.service.phuochai@comtammatu.vn – cashier service Phước Hải
 --   • chef.phuochai@comtammatu.vn      – chef Phước Hải
 --   • office@comtammatu.vn             – office (tenant-level, branch NULL)
 --
@@ -50,6 +50,15 @@ BEGIN
   WHERE tenant_id = v_tenant
     AND name IN ('Chi nhánh Đất Đỏ', 'Chi nhánh Phước Hải')
     AND branch_kind IS DISTINCT FROM 'branch';
+
+  INSERT INTO public.branches (tenant_id, name, branch_kind, is_active)
+  VALUES
+    (v_tenant, 'Kho Tổng', 'central_supply', true),
+    (v_tenant, 'Bếp Trung Tâm', 'central_kitchen', true)
+  ON CONFLICT (name, tenant_id) DO UPDATE
+  SET branch_kind = EXCLUDED.branch_kind,
+      is_active = true,
+      updated_at = now();
 END;
 $$;
 
@@ -64,14 +73,14 @@ DECLARE
     'a0000001-0000-4000-8000-000000000001'::uuid, -- owner
     'a0000003-0000-4000-8000-000000000003'::uuid, -- manager.datdo
     'a0000004-0000-4000-8000-000000000004'::uuid, -- cashier.datdo
-    'a0000005-0000-4000-8000-000000000005'::uuid, -- waiter.datdo
+    'a0000005-0000-4000-8000-000000000005'::uuid, -- cashier.service.datdo
     'a0000006-0000-4000-8000-000000000006'::uuid, -- chef.datdo
     'a0000007-0000-4000-8000-000000000007'::uuid, -- cashier.phuochai
     'a0000008-0000-4000-8000-000000000008'::uuid, -- office
     'a000000a-0000-4000-8000-00000000000a'::uuid, -- warehouse
     'a000000b-0000-4000-8000-00000000000b'::uuid, -- production
     'a000000c-0000-4000-8000-00000000000c'::uuid, -- manager.phuochai
-    'a000000d-0000-4000-8000-00000000000d'::uuid, -- waiter.phuochai
+    'a000000d-0000-4000-8000-00000000000d'::uuid, -- cashier.service.phuochai
     'a000000e-0000-4000-8000-00000000000e'::uuid  -- chef.phuochai
   ];
 BEGIN
@@ -136,14 +145,14 @@ WHERE email IN (
   'owner@comtammatu.vn',
   'manager.datdo@comtammatu.vn',
   'cashier.datdo@comtammatu.vn',
-  'waiter.datdo@comtammatu.vn',
+  'cashier.service.datdo@comtammatu.vn',
   'chef.datdo@comtammatu.vn',
   'cashier.phuochai@comtammatu.vn',
   'office@comtammatu.vn',
   'warehouse@comtammatu.vn',
   'production@comtammatu.vn',
   'manager.phuochai@comtammatu.vn',
-  'waiter.phuochai@comtammatu.vn',
+  'cashier.service.phuochai@comtammatu.vn',
   'chef.phuochai@comtammatu.vn'
 );
 
@@ -153,7 +162,8 @@ DECLARE
   v_datdo    BIGINT;
   v_phuochai BIGINT;
   v_dev_branch BIGINT;
-  v_production_branch BIGINT;
+  v_central_supply BIGINT;
+  v_central_kitchen BIGINT;
   v_pw       TEXT := 'Test1234!';
   v_crypt    TEXT;
 
@@ -178,7 +188,21 @@ BEGIN
     RAISE EXCEPTION 'Thiếu chi nhánh active — chạy seed tenant trước.';
   END IF;
 
-  v_production_branch := v_dev_branch;
+  SELECT id INTO v_central_supply
+  FROM public.branches
+  WHERE tenant_id = v_tenant AND branch_kind = 'central_supply' AND is_active = true
+  ORDER BY (name = 'Kho Tổng') DESC, id
+  LIMIT 1;
+
+  SELECT id INTO v_central_kitchen
+  FROM public.branches
+  WHERE tenant_id = v_tenant AND branch_kind = 'central_kitchen' AND is_active = true
+  ORDER BY (name = 'Bếp Trung Tâm') DESC, id
+  LIMIT 1;
+
+  IF v_central_supply IS NULL OR v_central_kitchen IS NULL THEN
+    RAISE EXCEPTION 'Thiếu Kho Tổng hoặc Bếp Trung Tâm active.';
+  END IF;
 
   FOR r IN
     SELECT *
@@ -193,7 +217,7 @@ BEGIN
       UNION ALL
       SELECT 'a0000004-0000-4000-8000-000000000004'::uuid, 'cashier.datdo@comtammatu.vn'::text, 'cashier'::text, v_datdo, 'Thu ngân Đất Đỏ'::text, 'EMP-CASH-DD'::text
       UNION ALL
-      SELECT 'a0000005-0000-4000-8000-000000000005'::uuid, 'waiter.datdo@comtammatu.vn'::text, 'waiter'::text, v_datdo, 'Phục vụ Đất Đỏ'::text, 'EMP-WAIT-DD'::text
+      SELECT 'a0000005-0000-4000-8000-000000000005'::uuid, 'cashier.service.datdo@comtammatu.vn'::text, 'cashier'::text, v_datdo, 'Thu ngân phục vụ Đất Đỏ'::text, 'EMP-CASH-SVC-DD'::text
       UNION ALL
       SELECT 'a0000006-0000-4000-8000-000000000006'::uuid, 'chef.datdo@comtammatu.vn'::text, 'chef'::text, v_datdo, 'Bếp Đất Đỏ'::text, 'EMP-CHEF-DD'::text
       UNION ALL
@@ -201,15 +225,15 @@ BEGIN
       UNION ALL
       SELECT 'a0000008-0000-4000-8000-000000000008'::uuid, 'office@comtammatu.vn'::text, 'office'::text, NULL::bigint, 'Văn phòng'::text, 'EMP-OFF'::text
       UNION ALL
-      -- Warehouse manager: must be assigned to a branch.
-      SELECT 'a000000a-0000-4000-8000-00000000000a'::uuid, 'warehouse@comtammatu.vn'::text, 'warehouse_manager'::text, v_dev_branch::bigint, 'QL Kho chi nhánh'::text, 'EMP-WH'::text
+      -- Warehouse manager: must be assigned to Kho Tổng.
+      SELECT 'a000000a-0000-4000-8000-00000000000a'::uuid, 'warehouse@comtammatu.vn'::text, 'warehouse_manager'::text, v_central_supply::bigint, 'QL Kho Tổng'::text, 'EMP-WH'::text
       UNION ALL
-      -- Production manager: must be assigned to a branch.
-      SELECT 'a000000b-0000-4000-8000-00000000000b'::uuid, 'production@comtammatu.vn'::text, 'production_manager'::text, v_production_branch::bigint, 'QL Sản xuất'::text, 'EMP-PROD'::text
+      -- Production manager: must be assigned to Bếp Trung Tâm.
+      SELECT 'a000000b-0000-4000-8000-00000000000b'::uuid, 'production@comtammatu.vn'::text, 'production_manager'::text, v_central_kitchen::bigint, 'QL Bếp Trung Tâm'::text, 'EMP-PROD'::text
       UNION ALL
       SELECT 'a000000c-0000-4000-8000-00000000000c'::uuid, 'manager.phuochai@comtammatu.vn'::text, 'branch_manager'::text, v_phuochai, 'QL Chi nhánh Phước Hải'::text, 'EMP-MGR-PH'::text
       UNION ALL
-      SELECT 'a000000d-0000-4000-8000-00000000000d'::uuid, 'waiter.phuochai@comtammatu.vn'::text, 'waiter'::text, v_phuochai, 'Phục vụ Phước Hải'::text, 'EMP-WAIT-PH'::text
+      SELECT 'a000000d-0000-4000-8000-00000000000d'::uuid, 'cashier.service.phuochai@comtammatu.vn'::text, 'cashier'::text, v_phuochai, 'Thu ngân phục vụ Phước Hải'::text, 'EMP-CASH-SVC-PH'::text
       UNION ALL
       SELECT 'a000000e-0000-4000-8000-00000000000e'::uuid, 'chef.phuochai@comtammatu.vn'::text, 'chef'::text, v_phuochai, 'Bếp Phước Hải'::text, 'EMP-CHEF-PH'::text
     ) q

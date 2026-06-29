@@ -28,6 +28,7 @@ const productionLineSchema = z.object({
   finishedGoodId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
   unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
+  entryUnitId: z.coerce.number().int().positive().nullable().optional(),
 });
 
 const createProductionOrderSchema = z.object({
@@ -305,6 +306,7 @@ export const createProductionOrder = withAction(
         finishedGoodId: item.finishedGoodId,
         quantity: item.quantity,
         unit: item.unit,
+        entryUnitId: item.entryUnitId ?? null,
       })),
     });
 

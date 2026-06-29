@@ -50,6 +50,7 @@ interface LimitRow {
   limit_quantity?: unknown;
   is_disabled?: unknown;
   sold_today?: unknown;
+  stock_capacity?: unknown;
 }
 
 function projectLimit(row: LimitRow): {
@@ -74,6 +75,13 @@ function projectLimit(row: LimitRow): {
       ? row.sold_today
       : Number(row.sold_today ?? 0);
 
+  const stockCap =
+    row.stock_capacity === null || row.stock_capacity === undefined
+      ? null
+      : typeof row.stock_capacity === "number"
+        ? row.stock_capacity
+        : Number(row.stock_capacity);
+
   return {
     menu_item_id: itemId,
     limit: {
@@ -81,6 +89,8 @@ function projectLimit(row: LimitRow): {
         limitQty !== null && Number.isFinite(limitQty) ? limitQty : null,
       is_disabled: row.is_disabled === true,
       sold_today: Number.isFinite(sold) ? sold : 0,
+      stock_capacity:
+        stockCap !== null && Number.isFinite(stockCap) ? stockCap : null,
     },
   };
 }

@@ -19,6 +19,7 @@ import {
   type ProductionOrderRow,
   type ProductionRecipeRow,
 } from "./production-actions";
+import type { IngredientUnitRow } from "./_lib/types";
 import type {
   BranchOption,
   FinishedGoodOption,
@@ -41,6 +42,7 @@ type InventoryIngredientRow = {
   unit: string;
   item_kind: string;
   is_active: boolean | null;
+  units?: IngredientUnitRow[];
 };
 
 type BranchPreviewRow = {
@@ -196,6 +198,7 @@ export async function loadProductionSurfaceData({
       name: ingredient.name,
       unit: ingredient.unit,
       item_kind: ingredient.item_kind,
+      units: ingredient.units,
     }));
 
   const finishedGoods: FinishedGoodOption[] = ingredients
@@ -204,6 +207,7 @@ export async function loadProductionSurfaceData({
       id: ingredient.id,
       name: ingredient.name,
       unit: ingredient.unit,
+      units: ingredient.units,
     }));
 
   return {

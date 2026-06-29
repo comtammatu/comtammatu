@@ -23,6 +23,7 @@ import {
   submitCountRound,
   type StocktakeLineBlind,
 } from "../../../stocktake-actions";
+import type { CountUnitOption } from "../../../_lib/count-units";
 
 interface Props {
   sessionId: number;
@@ -30,6 +31,7 @@ interface Props {
   status: string;
   currentRound: 1 | 2 | 3 | 4;
   initialLines: StocktakeLineBlind[];
+  unitOptionsByIngredient: Record<number, CountUnitOption[]>;
 }
 
 export function StocktakeCountClient({
@@ -38,10 +40,24 @@ export function StocktakeCountClient({
   status,
   currentRound,
   initialLines,
+  unitOptionsByIngredient,
 }: Props) {
   const router = useRouter();
   const [lines] = useState<StocktakeLineBlind[]>(initialLines);
   const [counts, setCounts] = useState<DraftCounts>({});
+  // Per-ingredient counting unit (entry_unit_id), defaulting to the base unit.
+  const [unitByIngredient, setUnitByIngredient] = useState<
+    Record<number, number>
+  >(() => {
+    const next: Record<number, number> = {};
+    for (const [ingredientId, options] of Object.entries(
+      unitOptionsByIngredient,
+    )) {
+      const base = options.find((o) => o.isBase) ?? options[0];
+      if (base) next[Number(ingredientId)] = base.unitId;
+    }
+    return next;
+  });
   const [lockState, setLockState] = useState<
     "idle" | "acquiring" | "held" | "blocked" | "lost" | "error"
   >("idle");
@@ -86,12 +102,17 @@ export function StocktakeCountClient({
     });
   }
 
+  function onUnitChange(ingredientId: number, unitId: number) {
+    setUnitByIngredient((prev) => ({ ...prev, [ingredientId]: unitId }));
+  }
+
   function submit() {
     const payload = Object.entries(counts)
       .filter(([, v]) => typeof v?.qty === "number")
       .map(([ingredientId, v]) => ({
         ingredient_id: Number(ingredientId),
         counted_quantity: v.qty,
+        entry_unit_id: unitByIngredient[Number(ingredientId)] ?? null,
       }));
 
     if (payload.length === 0) {
@@ -152,6 +173,9 @@ export function StocktakeCountClient({
           lines={currentRoundLines}
           counts={counts}
           onCountChange={onCountChange}
+          unitOptionsByIngredient={unitOptionsByIngredient}
+          unitByIngredient={unitByIngredient}
+          onUnitChange={onUnitChange}
           blindMode={blindMode}
           readOnly={!editable}
           onlyNeedsRecount={currentRound > 1 ? true : undefined}

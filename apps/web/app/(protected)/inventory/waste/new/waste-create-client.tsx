@@ -46,6 +46,7 @@ export interface WasteFormContext {
     name: string;
     unit: string;
     unitCost: number | null;
+    issueUnits: Array<{ unitId: number; code: string; isBase: boolean }>;
   }>;
   capStatus: {
     shiftKey: string;
@@ -86,6 +87,8 @@ type LineState = {
   uid: string;
   ingredientId: number | null;
   unit: string;
+  // Issue-role unit id (as string) the qty is entered in; "" => free-text unit.
+  entryUnitId: string;
   unitCost: string; // input string
   quantity: string; // input string
   reasonCode: string;
@@ -98,6 +101,7 @@ function newLine(): LineState {
     uid: Math.random().toString(36).slice(2, 10),
     ingredientId: null,
     unit: "kg",
+    entryUnitId: "",
     unitCost: "",
     quantity: "",
     reasonCode: "",
@@ -159,9 +163,12 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
     const id = Number(value);
     const ing = ingredientById.get(id);
     if (!ing) return;
+    const defaultUnit =
+      ing.issueUnits.find((u) => u.isBase) ?? ing.issueUnits[0] ?? null;
     updateLine(uid, {
       ingredientId: id,
-      unit: ing.unit,
+      unit: defaultUnit?.code ?? ing.unit,
+      entryUnitId: defaultUnit ? String(defaultUnit.unitId) : "",
       unitCost: ing.unitCost !== null ? String(ing.unitCost) : "",
     });
   }
@@ -216,6 +223,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
           ingredient_id: l.ingredientId!,
           quantity: Number(l.quantity),
           unit: l.unit,
+          entry_unit_id: l.entryUnitId ? Number(l.entryUnitId) : null,
           unit_cost: Number(l.unitCost),
           reason_code: l.reasonCode as never,
           note: l.note || undefined,
@@ -310,6 +318,10 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
           const qty = Number(line.quantity) || 0;
           const cost = Number(line.unitCost) || 0;
           const value = qty * cost;
+          const lineIssueUnits =
+            line.ingredientId !== null
+              ? (ingredientById.get(line.ingredientId)?.issueUnits ?? [])
+              : [];
           const preview = previewTier({
             value,
             reasonCode: line.reasonCode,
@@ -361,6 +373,38 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                       placeholder={messages.inventory.waste.chooseIngredient}
                     />
                   </div>
+
+                  {lineIssueUnits.length > 0 ? (
+                    <div>
+                      <Label htmlFor={`unit-${line.uid}`}>{FORM_VI.unit}</Label>
+                      <Select
+                        value={line.entryUnitId}
+                        onValueChange={(v) => {
+                          const opt = lineIssueUnits.find(
+                            (u) => String(u.unitId) === v,
+                          );
+                          updateLine(line.uid, {
+                            entryUnitId: v,
+                            unit: opt?.code ?? line.unit,
+                          });
+                        }}
+                        disabled={isSubmitting}
+                      >
+                        <SelectTrigger id={`unit-${line.uid}`}>
+                          <SelectValue
+                            placeholder={messages.inventory.transfer.selectUnit}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {lineIssueUnits.map((u) => (
+                            <SelectItem key={u.unitId} value={String(u.unitId)}>
+                              {u.code}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
 
                   <AntiSplitRollingMeter
                     branchId={context.branch.id}

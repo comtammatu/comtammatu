@@ -435,7 +435,7 @@ export const settings = {
     attendanceChecklistMetric: "việc",
     menuLimitsTitle: "Hạn mức bán hàng ngày",
     menuLimitsIntroBefore:
-      "Đặt số phần tối đa mỗi món bán trong ngày — ví dụ 30 suất Sườn cốt lết. Khi POS đã đặt đủ số phần, món sẽ không chọn được đến hết ngày. Bật",
+      "Đặt trần thủ công cho từng món trong ngày; phần bán được từ kho/định mức hiển thị riêng và POS lấy mức thấp hơn. Bật",
     menuLimitsDisabledAction: "Tắt món",
     menuLimitsIntroAfter: "để ẩn món khỏi POS bất kể số lượng.",
     menuLimitsResetNote:

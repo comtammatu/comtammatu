@@ -1,5 +1,7 @@
 # Lộ trình khắc phục hợp nhất — 2026-06-28
 
+> Reconciled-through 49112fa17fec
+
 > Tài liệu này gộp **5 báo cáo audit** ngày 2026-06-28 thành **một chương trình
 > khắc phục duy nhất** cho chủ Cơm Tấm Má Tư. Văn xuôi tiếng Việt; mọi định danh
 > code, đường dẫn, tên bảng/hàm/cột, mã severity (P0/P1/P2/P3), finding id

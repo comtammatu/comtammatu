@@ -24,6 +24,10 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
+import {
+  getDefaultIssueUnit,
+  getIssueUnitOptions,
+} from "../_lib/issue-units";
 import { createStockTransfer } from "../transfer-actions";
 import type { IngredientRow } from "../page";
 import { messages } from "@lib/messages";
@@ -43,6 +47,8 @@ type DraftLine = {
   name: string;
   quantity: string;
   unit: string;
+  // Issue-role unit id (as string) the qty is entered in; "" => free-text unit.
+  entryUnitId: string;
 };
 
 function getWarehouseUnit(ingredient: IngredientRow) {
@@ -122,6 +128,7 @@ export function CreateTransferForm({
       toast.error("Nguyên liệu đã có trong danh sách");
       return;
     }
+    const defaultUnit = getDefaultIssueUnit(ingredient);
     setDraftLines((current) => [
       ...current,
       {
@@ -131,7 +138,8 @@ export function CreateTransferForm({
         ingredientId: ingredient.id,
         name: ingredient.name,
         quantity: "",
-        unit: getWarehouseUnit(ingredient),
+        unit: defaultUnit?.code ?? getWarehouseUnit(ingredient),
+        entryUnitId: defaultUnit ? String(defaultUnit.unitId) : "",
       },
     ]);
     setPickerIngredientId("");
@@ -143,7 +151,7 @@ export function CreateTransferForm({
 
   function updateLine(
     key: string,
-    patch: Partial<Pick<DraftLine, "quantity" | "unit">>,
+    patch: Partial<Pick<DraftLine, "quantity" | "unit" | "entryUnitId">>,
   ) {
     setDraftLines((current) =>
       current.map((line) => (line.key === key ? { ...line, ...patch } : line)),
@@ -152,8 +160,20 @@ export function CreateTransferForm({
 
   function buildLinesPayload(
     lines: DraftLine[],
-  ): { ingredientId: number; quantity: number; unit: string }[] | undefined {
-    const out: { ingredientId: number; quantity: number; unit: string }[] = [];
+  ):
+    | {
+        ingredientId: number;
+        quantity: number;
+        unit: string;
+        entryUnitId: number | null;
+      }[]
+    | undefined {
+    const out: {
+      ingredientId: number;
+      quantity: number;
+      unit: string;
+      entryUnitId: number | null;
+    }[] = [];
     for (const line of lines) {
       const quantity = Number(line.quantity);
       const unit = line.unit.trim();
@@ -161,7 +181,12 @@ export function CreateTransferForm({
         toast.error("Kiểm tra số lượng và đơn vị cho từng dòng");
         return undefined;
       }
-      out.push({ ingredientId: line.ingredientId, quantity, unit });
+      out.push({
+        ingredientId: line.ingredientId,
+        quantity,
+        unit,
+        entryUnitId: line.entryUnitId ? Number(line.entryUnitId) : null,
+      });
     }
     return out.length > 0 ? out : undefined;
   }
@@ -308,7 +333,12 @@ export function CreateTransferForm({
           />
         ) : (
           <div className="flex flex-col gap-2">
-            {draftLines.map((line) => (
+            {draftLines.map((line) => {
+              const lineIngredient = ingredients.find(
+                (item) => item.id === line.ingredientId,
+              );
+              const lineUnitOptions = getIssueUnitOptions(lineIngredient);
+              return (
               <div
                 key={line.key}
                 className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2"
@@ -326,13 +356,47 @@ export function CreateTransferForm({
                   maxFractionDigits={3}
                   required
                 />
-                <Input
-                  className="h-8 w-16"
-                  value={line.unit}
-                  readOnly
-                  aria-readonly="true"
-                  required
-                />
+                {lineUnitOptions.length > 0 ? (
+                  <Select
+                    value={line.entryUnitId}
+                    onValueChange={(value) => {
+                      const opt = lineUnitOptions.find(
+                        (o) => String(o.unitId) === value,
+                      );
+                      updateLine(line.key, {
+                        entryUnitId: value,
+                        unit: opt?.code ?? line.unit,
+                      });
+                    }}
+                  >
+                    <SelectTrigger
+                      className="h-8 w-20"
+                      aria-label={messages.inventory.transfer.unit}
+                    >
+                      <SelectValue
+                        placeholder={messages.inventory.transfer.selectUnit}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {lineUnitOptions.map((o) => (
+                          <SelectItem key={o.unitId} value={String(o.unitId)}>
+                            {o.code}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    className="h-8 w-16"
+                    value={line.unit}
+                    onChange={(event) =>
+                      updateLine(line.key, { unit: event.target.value })
+                    }
+                    required
+                  />
+                )}
                 <Button
                   type="button"
                   variant="ghost"
@@ -344,7 +408,8 @@ export function CreateTransferForm({
                   <IconTrash />
                 </Button>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </AppSection>

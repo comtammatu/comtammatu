@@ -45,6 +45,7 @@ interface CountSlipClientProps {
 interface DraftLine {
   quantity: string;
   note: string;
+  entryUnitId: number | null;
 }
 
 export function CountSlipClient({
@@ -80,9 +81,14 @@ export function CountSlipClient({
     const next: Record<number, DraftLine> = {};
     for (const assignment of activeGroup.assignments) {
       const prior = prefill[assignment.ingredientId];
+      const baseUnit =
+        assignment.countUnits.find((u) => u.isBase) ??
+        assignment.countUnits[0] ??
+        null;
       next[assignment.ingredientId] = {
         quantity: prior?.quantity ?? "",
         note: prior?.note ?? "",
+        entryUnitId: baseUnit?.unitId ?? null,
       };
     }
     setDraft(next);
@@ -100,6 +106,7 @@ export function CountSlipClient({
       [ingredientId]: {
         quantity: current[ingredientId]?.quantity ?? "",
         note: current[ingredientId]?.note ?? "",
+        entryUnitId: current[ingredientId]?.entryUnitId ?? null,
         ...patch,
       },
     }));
@@ -114,6 +121,7 @@ export function CountSlipClient({
       return {
         ingredientId: assignment.ingredientId,
         countedQuantity: Number(raw),
+        entryUnitId: entry?.entryUnitId ?? null,
         rawEmpty: raw.length === 0,
         note: entry?.note.trim() || undefined,
       };
@@ -137,6 +145,7 @@ export function CountSlipClient({
         lines: lines.map((line) => ({
           ingredientId: line.ingredientId,
           countedQuantity: line.countedQuantity,
+          entryUnitId: line.entryUnitId,
           note: line.note,
         })),
       });
@@ -262,19 +271,54 @@ export function CountSlipClient({
                     <div className="grid gap-2 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
                       <div className="flex flex-col gap-1.5">
                         <Label htmlFor={inputId}>Số đếm được</Label>
-                        <Input
-                          id={inputId}
-                          inputMode="decimal"
-                          autoComplete="off"
-                          value={entry?.quantity ?? ""}
-                          disabled={locked || isPending}
-                          onChange={(event) =>
-                            updateLine(assignment.ingredientId, {
-                              quantity: event.target.value,
-                            })
-                          }
-                          placeholder={assignment.measureUnit || "Số lượng"}
-                        />
+                        <div className="flex gap-2">
+                          <Input
+                            id={inputId}
+                            inputMode="decimal"
+                            autoComplete="off"
+                            value={entry?.quantity ?? ""}
+                            disabled={locked || isPending}
+                            onChange={(event) =>
+                              updateLine(assignment.ingredientId, {
+                                quantity: event.target.value,
+                              })
+                            }
+                            placeholder={assignment.measureUnit || "Số lượng"}
+                            className="flex-1"
+                          />
+                          {assignment.countUnits.length > 0 ? (
+                            <Select
+                              value={
+                                entry?.entryUnitId != null
+                                  ? String(entry.entryUnitId)
+                                  : ""
+                              }
+                              onValueChange={(value) =>
+                                updateLine(assignment.ingredientId, {
+                                  entryUnitId: Number(value),
+                                })
+                              }
+                              disabled={locked || isPending}
+                            >
+                              <SelectTrigger
+                                className="w-24 shrink-0"
+                                aria-label="Đơn vị"
+                              >
+                                <SelectValue placeholder="Đơn vị" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {assignment.countUnits.map((unit) => (
+                                  <SelectItem
+                                    key={unit.unitId}
+                                    value={String(unit.unitId)}
+                                  >
+                                    {unit.code}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : null}
+                        </div>
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <Label htmlFor={`${inputId}-note`}>Ghi chú</Label>

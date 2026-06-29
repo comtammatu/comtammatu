@@ -84,7 +84,7 @@ export default async function PosPage({
   const session = (sessionResult.data ?? null) as ActiveSession | null;
 
   // No open session → only cashbox-permission roles (cashier/branch_manager)
-  // may open one. A waiter only has pos:use → block here and point them to
+  // may open one. Staff without pos:open_cashbox only has pos:use → block here and point them to
   // the cashier, instead of dead-ending in the open-shift form.
   if (session === null) {
     if (!permFlags.canOpenShift) {

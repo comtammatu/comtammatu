@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import type { Database } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { VALIDATION_VI } from "@comtammatu/shared/messages";
 import { getVNDateString } from "@comtammatu/shared/time";
@@ -21,6 +22,13 @@ import {
   ITEM_KIND_LABELS,
   PG_ERR,
 } from "./_lib/constants";
+import type {
+  CategoryOption,
+  IngredientUnitRow,
+  UnitOption,
+} from "./_lib/types";
+import { fetchUnits } from "./settings/units/units-actions";
+import { fetchCategories } from "./settings/categories/categories-actions";
 import {
   buildCsv,
   buildXlsx,
@@ -31,29 +39,24 @@ import {
   type SheetDef,
 } from "@/_lib/spreadsheet";
 
-/* ─── Ingredient catalog (CRUD + CSV import/export) ─── */
+/* ─── Ingredient catalog (CRUD via upsert_ingredient_catalog RPC) ─── */
+
+const unitRowSchema = z.object({
+  unit_id: z.coerce.number().int().positive({ error: "Đơn vị không hợp lệ" }),
+  to_base_factor: z.coerce
+    .number()
+    .positive({ error: "Hệ số quy đổi phải lớn hơn 0" }),
+  is_base: z.boolean(),
+  allow_purchase: z.boolean(),
+  allow_issue: z.boolean(),
+  allow_production: z.boolean(),
+});
 
 const ingredientBaseSchema = z.object({
-  name: z.string().min(1, { error: VALIDATION_VI.required("Tên nguyên liệu") }),
-  purchase_unit: z
-    .string()
-    .trim()
-    .min(1, { error: VALIDATION_VI.required("Đơn vị nhập") })
-    .optional(),
-  measure_unit: z
-    .string()
-    .trim()
-    .min(1, { error: VALIDATION_VI.required("Đơn vị tính") })
-    .optional(),
-  purchase_to_measure_factor: z.coerce.number().positive().default(1),
-  unit: z
-    .string()
-    .trim()
-    .min(1, { error: VALIDATION_VI.required("Đơn vị") })
-    .optional(),
-  sku: z.string().optional(),
+  name: z.string().trim().min(1, { error: VALIDATION_VI.required("Tên nguyên liệu") }),
+  sku: z.string().trim().optional(),
+  category_id: z.coerce.number().int().positive().nullable().optional(),
   unit_cost: z.coerce.number().min(0).optional(),
-  category: z.string().optional(),
   item_kind: z.enum(["raw_material", "finished_good"]).default("raw_material"),
   min_stock_level: z.coerce.number().min(0).default(0),
   max_stock_level: z.coerce.number().min(0).optional(),
@@ -62,40 +65,100 @@ const ingredientBaseSchema = z.object({
     .enum(["ambient", "refrigerated", "frozen"])
     .default("ambient"),
   shelf_life_days: z.coerce.number().int().positive().optional(),
+  units: z.array(unitRowSchema).min(1, { error: "Cần ít nhất 1 đơn vị" }),
 });
 
-const ingredientSchema = ingredientBaseSchema.superRefine((data, ctx) => {
-  const legacyUnit = data.unit?.trim();
-  const purchaseUnit = data.purchase_unit?.trim() ?? legacyUnit;
-  const measureUnit = data.measure_unit?.trim() ?? legacyUnit;
-
-  if (!purchaseUnit) {
+function refineUnits(
+  units: z.infer<typeof unitRowSchema>[],
+  ctx: z.RefinementCtx,
+) {
+  const baseRows = units.filter((u) => u.is_base);
+  if (baseRows.length !== 1) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      path: ["purchase_unit"],
-      message: VALIDATION_VI.required("Đơn vị nhập"),
+      path: ["units"],
+      message: "Phải có đúng 1 đơn vị gốc",
     });
   }
-
-  if (!measureUnit) {
+  const baseRow = baseRows[0];
+  if (baseRow && baseRow.to_base_factor !== 1) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      path: ["measure_unit"],
-      message: VALIDATION_VI.required("Đơn vị tính"),
+      path: ["units"],
+      message: "Đơn vị gốc phải có hệ số = 1",
     });
   }
+  const unitIds = units.map((u) => u.unit_id);
+  if (new Set(unitIds).size !== unitIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["units"],
+      message: "Đơn vị không được trùng nhau",
+    });
+  }
+}
+
+const ingredientCreateSchema = ingredientBaseSchema.superRefine((data, ctx) => {
+  refineUnits(data.units, ctx);
 });
 
-const ingredientUpdateSchema = ingredientBaseSchema.partial();
+const ingredientUpdateSchema = ingredientBaseSchema.superRefine((data, ctx) => {
+  refineUnits(data.units, ctx);
+});
 
 type IngredientInput = z.infer<typeof ingredientBaseSchema>;
 
-function resolveMeasureUnit(input: Partial<IngredientInput>) {
-  return input.measure_unit?.trim() || input.unit?.trim() || null;
+function mapCatalogRpcError(code: string | undefined): string {
+  switch (code) {
+    case PG_ERR.INSUFFICIENT_PRIVILEGE:
+      return "Không có quyền";
+    case PG_ERR.CHECK_VIOLATION:
+      return "Dữ liệu đơn vị không hợp lệ";
+    case PG_ERR.FK_VIOLATION:
+      return "Đơn vị gốc không hợp lệ";
+    case PG_ERR.UNIQUE_VIOLATION:
+      return "Tên/đơn vị bị trùng";
+    default:
+      return "Không thể lưu nguyên liệu.";
+  }
 }
 
-function resolvePurchaseUnit(input: Partial<IngredientInput>) {
-  return input.purchase_unit?.trim() || input.unit?.trim() || null;
+function buildRpcUnits(units: IngredientInput["units"]) {
+  return units.map((u, index) => ({
+    unit_id: u.unit_id,
+    to_base_factor: u.is_base ? 1 : u.to_base_factor,
+    is_base: u.is_base,
+    allow_purchase: u.allow_purchase,
+    allow_issue: u.allow_issue,
+    allow_production: u.allow_production,
+    sort_order: index,
+  }));
+}
+
+type UpsertCatalogArgs =
+  Database["public"]["Functions"]["upsert_ingredient_catalog"]["Args"];
+
+// The RPC accepts NULL for the nullable params (p_ingredient_id, p_category_id,
+// thresholds, …) but the generated Args type marks them non-nullable. Cast the
+// nullable scalars through `never` to satisfy the call signature.
+function rpcCatalogArgs(
+  ingredientId: number | null,
+  data: IngredientInput,
+): UpsertCatalogArgs {
+  return {
+    p_ingredient_id: ingredientId as never,
+    p_name: data.name,
+    p_sku: (data.sku?.trim() ? data.sku.trim() : null) as never,
+    p_category_id: (data.category_id ?? null) as never,
+    p_unit_cost: (data.unit_cost ?? null) as never,
+    p_item_kind: data.item_kind,
+    p_storage_type: data.storage_type,
+    p_min_stock_level: data.min_stock_level,
+    p_max_stock_level: (data.max_stock_level ?? null) as never,
+    p_reorder_point: (data.reorder_point ?? null) as never,
+    p_shelf_life_days: (data.shelf_life_days ?? null) as never,
+    p_units: buildRpcUnits(data.units) as never,
+  };
 }
 
 /* ─── fetchIngredients (full catalog — SM manages it; ops view by workflow) ─── */
@@ -109,7 +172,9 @@ export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
 
   const { data, error } = await supabase
     .from("ingredients")
-    .select("*")
+    .select(
+      "*, ingredient_categories(name), ingredient_units(id, unit_id, to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units(code))",
+    )
     .eq("tenant_id", claims.tenant_id)
     .order("name")
     .limit(safeLimit);
@@ -118,45 +183,172 @@ export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
     return { success: false, error: "Không thể tải danh sách nguyên liệu." };
   }
 
-  return { success: true, data: data ?? [] };
+  const rows = (data ?? []).map((row) => {
+    const { ingredient_categories, ingredient_units, ...rest } = row;
+    const units: IngredientUnitRow[] = (ingredient_units ?? [])
+      .map((u) => ({
+        id: u.id,
+        unit_id: u.unit_id,
+        unit_code: u.units?.code ?? "",
+        to_base_factor: Number(u.to_base_factor ?? 1),
+        is_base: u.is_base,
+        allow_purchase: u.allow_purchase,
+        allow_issue: u.allow_issue,
+        allow_production: u.allow_production,
+        sort_order: u.sort_order,
+      }))
+      .sort((a, b) => a.sort_order - b.sort_order);
+
+    return {
+      ...rest,
+      category_name: ingredient_categories?.name ?? null,
+      units,
+    };
+  });
+
+  return { success: true, data: rows };
+}
+
+/* ─── Option fetchers for the dialog dropdowns ─── */
+
+export async function fetchUnitOptions(): Promise<ActionResult<UnitOption[]>> {
+  const result = await fetchUnits();
+  if (!result.success) return result;
+  const options = (result.data ?? [])
+    .filter((u) => u.is_active)
+    .map((u) => ({ id: u.id, code: u.code, name: u.name }));
+  return { success: true, data: options };
+}
+
+export async function fetchCategoryOptions(): Promise<
+  ActionResult<CategoryOption[]>
+> {
+  const result = await fetchCategories();
+  if (!result.success) return result;
+  const options = (result.data ?? [])
+    .filter((c) => c.is_active)
+    .map((c) => ({ id: c.id, name: c.name, tone_class: c.tone_class }));
+  return { success: true, data: options };
 }
 
 /* ─── createIngredient ─── */
 
-export const createIngredient = withAction(
+export const createIngredient = withAction<typeof ingredientCreateSchema, { id: number }>(
   {
     roles: INVENTORY_CATALOG_ROLES,
-    schema: ingredientSchema,
+    schema: ingredientCreateSchema,
+    anyPermission: CATALOG_MANAGE_PERMISSIONS,
+  },
+  async (data, { supabase }) => {
+    const { data: id, error } = await supabase.rpc(
+      "upsert_ingredient_catalog",
+      rpcCatalogArgs(null, data),
+    );
+
+    if (error) {
+      return { success: false, error: mapCatalogRpcError(error.code) };
+    }
+
+    return { success: true, data: { id: Number(id) } };
+  },
+);
+
+/* ─── quickCreateIngredient (free-text unit/category from production BOM) ─── */
+
+const quickCreateSchema = z.object({
+  name: z.string().trim().min(1, { error: VALIDATION_VI.required("Tên") }),
+  unit: z.string().trim().min(1, { error: VALIDATION_VI.required("Đơn vị") }),
+  category: z.string().trim().optional(),
+  item_kind: z.enum(["raw_material", "finished_good"]),
+  storage_type: z.enum(["ambient", "refrigerated", "frozen"]),
+});
+
+export const quickCreateIngredient = withAction<
+  typeof quickCreateSchema,
+  { id: number }
+>(
+  {
+    roles: INVENTORY_CATALOG_ROLES,
+    schema: quickCreateSchema,
     anyPermission: CATALOG_MANAGE_PERMISSIONS,
   },
   async (data, { supabase, claims }) => {
-    const measureUnit = resolveMeasureUnit(data);
-    const purchaseUnit = resolvePurchaseUnit(data) ?? measureUnit;
+    const unitCode = data.unit.trim();
 
-    if (!measureUnit || !purchaseUnit) {
-      return { success: false, error: "Thiếu đơn vị nguyên liệu." };
+    const { data: existingUnit } = await supabase
+      .from("units")
+      .select("id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("code", unitCode)
+      .maybeSingle();
+
+    let unitId: number;
+    if (existingUnit) {
+      unitId = existingUnit.id;
+    } else {
+      const { data: insertedUnit, error: unitErr } = await supabase
+        .from("units")
+        .insert({
+          tenant_id: claims.tenant_id,
+          code: unitCode,
+          name: unitCode,
+          is_active: true,
+        })
+        .select("id")
+        .single();
+      if (unitErr || !insertedUnit) {
+        return { success: false, error: "Không thể tạo đơn vị mới." };
+      }
+      unitId = insertedUnit.id;
     }
 
-    const { data: result, error } = await supabase
-      .from("ingredients")
-      .insert({
-        tenant_id: claims.tenant_id,
-        ...data,
-        purchase_unit: purchaseUnit,
-        measure_unit: measureUnit,
-        unit: measureUnit,
-      })
-      .select("id")
-      .single();
+    let categoryId: number | null = null;
+    const categoryName = data.category?.trim();
+    if (categoryName) {
+      const { data: existingCat } = await supabase
+        .from("ingredient_categories")
+        .select("id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("name", categoryName)
+        .maybeSingle();
+      if (existingCat) {
+        categoryId = existingCat.id;
+      } else {
+        const { data: insertedCat } = await supabase
+          .from("ingredient_categories")
+          .insert({ tenant_id: claims.tenant_id, name: categoryName })
+          .select("id")
+          .single();
+        categoryId = insertedCat?.id ?? null;
+      }
+    }
+
+    const { data: id, error } = await supabase.rpc(
+      "upsert_ingredient_catalog",
+      rpcCatalogArgs(null, {
+        name: data.name,
+        category_id: categoryId,
+        item_kind: data.item_kind,
+        storage_type: data.storage_type,
+        min_stock_level: 0,
+        units: [
+          {
+            unit_id: unitId,
+            to_base_factor: 1,
+            is_base: true,
+            allow_purchase: true,
+            allow_issue: true,
+            allow_production: true,
+          },
+        ],
+      }),
+    );
 
     if (error) {
-      if (error.code === PG_ERR.UNIQUE_VIOLATION) {
-        return { success: false, error: "Nguyên liệu này đã tồn tại." };
-      }
-      return { success: false, error: "Không thể tạo nguyên liệu." };
+      return { success: false, error: mapCatalogRpcError(error.code) };
     }
 
-    return { success: true, data: result };
+    return { success: true, data: { id: Number(id) } };
   },
 );
 
@@ -174,7 +366,10 @@ export async function updateIngredient(
 
   const parsedInput = ingredientUpdateSchema.safeParse(input);
   if (!parsedInput.success) {
-    return { success: false, error: "Dữ liệu không hợp lệ" };
+    return {
+      success: false,
+      error: parsedInput.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
   }
 
   const ctx = await getAuthContextWithAnyPermission(
@@ -183,42 +378,15 @@ export async function updateIngredient(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  const normalizedInput: Partial<IngredientInput> = {
-    ...parsedInput.data,
-  };
-  const measureUnit = resolveMeasureUnit(parsedInput.data);
-  const purchaseUnit = resolvePurchaseUnit(parsedInput.data);
-
-  if (measureUnit) {
-    normalizedInput.measure_unit = measureUnit;
-    normalizedInput.unit = measureUnit;
-  } else {
-    delete normalizedInput.measure_unit;
-    delete normalizedInput.unit;
-  }
-
-  if (purchaseUnit) {
-    normalizedInput.purchase_unit = purchaseUnit;
-  } else {
-    delete normalizedInput.purchase_unit;
-  }
-
-  const { error } = await supabase
-    .from("ingredients")
-    .update(normalizedInput)
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id);
+  const { error } = await supabase.rpc(
+    "upsert_ingredient_catalog",
+    rpcCatalogArgs(parsedId.data, parsedInput.data),
+  );
 
   if (error) {
-    if (error.code === PG_ERR.UNIQUE_VIOLATION) {
-      return {
-        success: false,
-        error: "Tên hoặc mã nguyên liệu đã tồn tại.",
-      };
-    }
-    return { success: false, error: "Không thể cập nhật nguyên liệu." };
+    return { success: false, error: mapCatalogRpcError(error.code) };
   }
 
   return { success: true };
@@ -250,27 +418,34 @@ export const toggleIngredientActive = withAction(
   },
 );
 
-/* ─── fetchStockLevels ─── */
+/* ─── Export ─── */
 
+interface ExportIngredientRow {
+  name: string;
+  sku: string | null;
+  purchase_unit: string;
+  measure_unit: string;
+  purchase_to_measure_factor: number;
+  category: string | null;
+  item_kind: string;
+  unit_cost: number | null;
+  min_stock_level: number;
+  max_stock_level: number | null;
+  reorder_point: number | null;
+  storage_type: string;
+  shelf_life_days: number | null;
+  is_active: boolean;
+  units: {
+    unit_code: string;
+    to_base_factor: number;
+    is_base: boolean;
+    allow_purchase: boolean;
+    allow_issue: boolean;
+    allow_production: boolean;
+  }[];
+}
 
-function buildIngredientSheets(
-  rows: {
-    name: string;
-    sku: string | null;
-    purchase_unit: string;
-    measure_unit: string;
-    purchase_to_measure_factor: number;
-    category: string | null;
-    item_kind: string;
-    unit_cost: number | null;
-    min_stock_level: number;
-    max_stock_level: number | null;
-    reorder_point: number | null;
-    storage_type: string;
-    shelf_life_days: number | null;
-    is_active: boolean;
-  }[],
-): SheetDef[] {
+function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
   return [
     {
       name: "Nguyen lieu",
@@ -311,6 +486,29 @@ function buildIngredientSheets(
         is_active: r.is_active ? "Có" : "Không",
       })),
     },
+    {
+      name: "Don vi",
+      columns: [
+        { header: "Tên nguyên liệu", key: "ingredient_name", width: 32 },
+        { header: "Mã đơn vị", key: "unit_code", width: 14 },
+        { header: "Hệ số quy đổi", key: "to_base_factor", width: 16 },
+        { header: "Đơn vị gốc", key: "is_base", width: 12 },
+        { header: "Nhập", key: "allow_purchase", width: 10 },
+        { header: "Xuất", key: "allow_issue", width: 10 },
+        { header: "Sản xuất", key: "allow_production", width: 12 },
+      ],
+      rows: rows.flatMap((r) =>
+        r.units.map((u) => ({
+          ingredient_name: r.name,
+          unit_code: u.unit_code,
+          to_base_factor: u.to_base_factor,
+          is_base: u.is_base ? "Có" : "Không",
+          allow_purchase: u.allow_purchase ? "Có" : "Không",
+          allow_issue: u.allow_issue ? "Có" : "Không",
+          allow_production: u.allow_production ? "Có" : "Không",
+        })),
+      ),
+    },
   ];
 }
 
@@ -335,7 +533,7 @@ export async function exportIngredients(
   const { data, error } = await supabase
     .from("ingredients")
     .select(
-      "name, sku, purchase_unit, measure_unit, purchase_to_measure_factor, category, item_kind, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active",
+      "name, sku, purchase_unit, measure_unit, purchase_to_measure_factor, category, item_kind, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, ingredient_units(to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units(code))",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("name");
@@ -344,7 +542,7 @@ export async function exportIngredients(
     return { success: false, error: "Không thể tải nguyên liệu." };
   }
 
-  const rows = (data ?? []).map((r) => ({
+  const rows: ExportIngredientRow[] = (data ?? []).map((r) => ({
     name: r.name,
     sku: r.sku,
     purchase_unit: r.purchase_unit ?? "",
@@ -360,6 +558,17 @@ export async function exportIngredients(
     storage_type: r.storage_type ?? "ambient",
     shelf_life_days: r.shelf_life_days,
     is_active: r.is_active ?? true,
+    units: (r.ingredient_units ?? [])
+      .slice()
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((u) => ({
+        unit_code: u.units?.code ?? "",
+        to_base_factor: Number(u.to_base_factor ?? 1),
+        is_base: u.is_base,
+        allow_purchase: u.allow_purchase,
+        allow_issue: u.allow_issue,
+        allow_production: u.allow_production,
+      })),
   }));
 
   const sheets = buildIngredientSheets(rows);
@@ -388,6 +597,8 @@ export async function exportIngredients(
   };
 }
 
+/* ─── Import ─── */
+
 const importIngredientRowSchema = z.object({
   name: z.string().trim().min(1, { error: "Thiếu tên" }),
   sku: z.string().trim().optional(),
@@ -409,6 +620,8 @@ const importIngredientRowSchema = z.object({
   shelf_life_days: z.coerce.number().int().positive().optional(),
   is_active: z.boolean().default(true),
 });
+
+type ImportRow = z.infer<typeof importIngredientRowSchema>;
 
 function parseBool(raw: string | undefined): boolean {
   if (!raw) return true;
@@ -478,24 +691,7 @@ export async function importIngredients(
   const { supabase, claims } = ctx;
 
   const issues: ImportIngredientIssue[] = [];
-  const toUpsert: {
-    tenant_id: number;
-    name: string;
-    sku: string | null;
-    purchase_unit: string;
-    measure_unit: string;
-    purchase_to_measure_factor: number;
-    unit: string;
-    category: string | null;
-    item_kind: "raw_material" | "finished_good";
-    unit_cost: number | null;
-    min_stock_level: number;
-    max_stock_level: number | null;
-    reorder_point: number | null;
-    storage_type: "ambient" | "refrigerated" | "frozen";
-    shelf_life_days: number | null;
-    is_active: boolean;
-  }[] = [];
+  const valid: ImportRow[] = [];
 
   sheet.rows.forEach((raw, idx) => {
     const rowNumber = idx + 2;
@@ -566,25 +762,7 @@ export async function importIngredients(
       return;
     }
 
-    const d = parsedRow.data;
-    toUpsert.push({
-      tenant_id: claims.tenant_id,
-      name: d.name,
-      sku: d.sku ?? null,
-      purchase_unit: d.purchase_unit,
-      measure_unit: d.measure_unit,
-      purchase_to_measure_factor: d.purchase_to_measure_factor,
-      unit: d.measure_unit,
-      category: d.category ?? null,
-      item_kind: d.item_kind,
-      unit_cost: d.unit_cost ?? null,
-      min_stock_level: d.min_stock_level,
-      max_stock_level: d.max_stock_level ?? null,
-      reorder_point: d.reorder_point ?? null,
-      storage_type: d.storage_type,
-      shelf_life_days: d.shelf_life_days ?? null,
-      is_active: d.is_active,
-    });
+    valid.push(parsedRow.data);
   });
 
   if (issues.length > 0) {
@@ -595,88 +773,206 @@ export async function importIngredients(
     };
   }
 
-  if (toUpsert.length === 0) {
+  if (valid.length === 0) {
     return { success: false, error: "Không có dòng hợp lệ nào để import" };
   }
 
-  const { data: existing } = await supabase
-    .from("ingredients")
-    .select("name, sku")
-    .eq("tenant_id", claims.tenant_id);
-  const existingNames = new Set((existing ?? []).map((r) => r.name));
-  const skuToExistingName = new Map<string, string>();
-  for (const r of existing ?? []) {
-    if (r.sku) skuToExistingName.set(r.sku, r.name);
+  // Resolve / create the unit codes and category names referenced by the
+  // import so the RPC can map them to ids.
+  const unitCodes = new Set<string>();
+  const categoryNames = new Set<string>();
+  for (const row of valid) {
+    unitCodes.add(row.purchase_unit);
+    unitCodes.add(row.measure_unit);
+    if (row.category) categoryNames.add(row.category);
   }
 
-  // Detect row-level SKU conflicts: incoming row's SKU matches an existing
-  // ingredient with a DIFFERENT name (a rename + SKU collision would silently
-  // fail at the DB level otherwise because our upsert matches on name).
-  const seenSkuInBatch = new Map<string, number>();
-  toUpsert.forEach((row, idx) => {
-    const rowNumber = idx + 2;
-    if (!row.sku) return;
-    const dupIdx = seenSkuInBatch.get(row.sku);
-    if (dupIdx != null) {
+  const unitIdByCode = new Map<string, number>();
+  {
+    const { data: existingUnits, error: unitsErr } = await supabase
+      .from("units")
+      .select("id, code")
+      .eq("tenant_id", claims.tenant_id);
+    if (unitsErr) {
+      return { success: false, error: "Không thể đọc danh mục đơn vị." };
+    }
+    for (const u of existingUnits ?? []) unitIdByCode.set(u.code, u.id);
+
+    const missingUnits = [...unitCodes].filter(
+      (code) => !unitIdByCode.has(code),
+    );
+    if (missingUnits.length > 0) {
+      const { data: insertedUnits, error: insertUnitsErr } = await supabase
+        .from("units")
+        .insert(
+          missingUnits.map((code) => ({
+            tenant_id: claims.tenant_id,
+            code,
+            name: code,
+            is_active: true,
+          })),
+        )
+        .select("id, code");
+      if (insertUnitsErr) {
+        if (insertUnitsErr.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
+          return {
+            success: false,
+            error: "Không có quyền tạo đơn vị mới khi import.",
+          };
+        }
+        return { success: false, error: "Không thể tạo đơn vị mới khi import." };
+      }
+      for (const u of insertedUnits ?? []) unitIdByCode.set(u.code, u.id);
+    }
+  }
+
+  const categoryIdByName = new Map<string, number>();
+  if (categoryNames.size > 0) {
+    const { data: existingCats, error: catsErr } = await supabase
+      .from("ingredient_categories")
+      .select("id, name")
+      .eq("tenant_id", claims.tenant_id);
+    if (catsErr) {
+      return { success: false, error: "Không thể đọc danh mục nhóm." };
+    }
+    for (const c of existingCats ?? []) categoryIdByName.set(c.name, c.id);
+
+    const missingCats = [...categoryNames].filter(
+      (name) => !categoryIdByName.has(name),
+    );
+    if (missingCats.length > 0) {
+      const { data: insertedCats, error: insertCatsErr } = await supabase
+        .from("ingredient_categories")
+        .insert(
+          missingCats.map((name) => ({
+            tenant_id: claims.tenant_id,
+            name,
+          })),
+        )
+        .select("id, name");
+      if (insertCatsErr) {
+        if (insertCatsErr.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
+          return {
+            success: false,
+            error: "Không có quyền tạo nhóm mới khi import.",
+          };
+        }
+        return { success: false, error: "Không thể tạo nhóm mới khi import." };
+      }
+      for (const c of insertedCats ?? []) categoryIdByName.set(c.name, c.id);
+    }
+  }
+
+  // Names already present → counted as updates (the RPC upserts on name).
+  const { data: existing } = await supabase
+    .from("ingredients")
+    .select("name")
+    .eq("tenant_id", claims.tenant_id);
+  const existingNames = new Set((existing ?? []).map((r) => r.name));
+
+  const summary: ImportIngredientSummary = { inserted: 0, updated: 0 };
+
+  for (let i = 0; i < valid.length; i++) {
+    const row = valid[i]!;
+    const rowNumber = i + 2;
+    const baseUnitId = unitIdByCode.get(row.purchase_unit);
+    if (baseUnitId == null) {
       issues.push({
         row: rowNumber,
-        field: "SKU",
-        message: `SKU "${row.sku}" trùng với dòng ${dupIdx} trong file.`,
+        field: "Đơn vị nhập",
+        message: `Không tìm thấy đơn vị "${row.purchase_unit}".`,
       });
-      return;
+      continue;
     }
-    seenSkuInBatch.set(row.sku, rowNumber);
-    const existingName = skuToExistingName.get(row.sku);
-    if (existingName && existingName !== row.name) {
+
+    const units: {
+      unit_id: number;
+      to_base_factor: number;
+      is_base: boolean;
+      allow_purchase: boolean;
+      allow_issue: boolean;
+      allow_production: boolean;
+      sort_order: number;
+    }[] = [
+      {
+        unit_id: baseUnitId,
+        to_base_factor: 1,
+        is_base: true,
+        allow_purchase: true,
+        allow_issue: true,
+        allow_production: false,
+        sort_order: 0,
+      },
+    ];
+
+    if (row.measure_unit !== row.purchase_unit) {
+      const measureUnitId = unitIdByCode.get(row.measure_unit);
+      if (measureUnitId == null) {
+        issues.push({
+          row: rowNumber,
+          field: "Đơn vị tính",
+          message: `Không tìm thấy đơn vị "${row.measure_unit}".`,
+        });
+        continue;
+      }
+      units.push({
+        unit_id: measureUnitId,
+        to_base_factor: 1 / row.purchase_to_measure_factor,
+        is_base: false,
+        allow_purchase: false,
+        allow_issue: false,
+        allow_production: true,
+        sort_order: 1,
+      });
+    }
+
+    const { error: rpcErr } = await supabase.rpc(
+      "upsert_ingredient_catalog",
+      rpcCatalogArgs(null, {
+        name: row.name,
+        sku: row.sku,
+        category_id: row.category
+          ? (categoryIdByName.get(row.category) ?? null)
+          : null,
+        unit_cost: row.unit_cost,
+        item_kind: row.item_kind,
+        storage_type: row.storage_type,
+        min_stock_level: row.min_stock_level,
+        max_stock_level: row.max_stock_level,
+        reorder_point: row.reorder_point,
+        shelf_life_days: row.shelf_life_days,
+        units: units.map((u) => ({
+          unit_id: u.unit_id,
+          to_base_factor: u.to_base_factor,
+          is_base: u.is_base,
+          allow_purchase: u.allow_purchase,
+          allow_issue: u.allow_issue,
+          allow_production: u.allow_production,
+        })),
+      }),
+    );
+
+    if (rpcErr) {
       issues.push({
         row: rowNumber,
-        field: "SKU",
-        message: `SKU "${row.sku}" đã thuộc về nguyên liệu "${existingName}". Đổi SKU hoặc dùng đúng tên.`,
+        message: mapCatalogRpcError(rpcErr.code),
       });
+      continue;
     }
-  });
+
+    if (existingNames.has(row.name)) summary.updated += 1;
+    else {
+      summary.inserted += 1;
+      existingNames.add(row.name);
+    }
+  }
 
   if (issues.length > 0) {
     return {
       success: false,
-      error: `Có ${issues.length} dòng SKU trùng. Vui lòng sửa và thử lại.`,
+      error: `Có ${issues.length} dòng lỗi khi ghi. Vui lòng kiểm tra và thử lại.`,
       issues,
     };
-  }
-
-  const { error } = await supabase
-    .from("ingredients")
-    .upsert(toUpsert, { onConflict: "name,tenant_id" });
-
-  if (error) {
-    if (error.code === PG_ERR.UNIQUE_VIOLATION) {
-      return {
-        success: false,
-        error:
-          "Trùng dữ liệu với nguyên liệu đang có. Vui lòng kiểm tra tên và SKU.",
-      };
-    }
-    if (error.code === "PGRST204" || error.code === "42703") {
-      return {
-        success: false,
-        error:
-          "Database chưa cập nhật schema nguyên liệu. Vui lòng apply migration đơn vị nhập/đơn vị tính/tỉ lệ quy đổi rồi import lại.",
-      };
-    }
-    if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
-      return {
-        success: false,
-        error:
-          "Tài khoản chưa có quyền ghi danh mục nguyên liệu. Vui lòng cấp quyền inventory:write hoặc đăng nhập lại.",
-      };
-    }
-    return { success: false, error: "Không thể ghi dữ liệu nguyên liệu." };
-  }
-
-  const summary: ImportIngredientSummary = { inserted: 0, updated: 0 };
-  for (const row of toUpsert) {
-    if (existingNames.has(row.name)) summary.updated += 1;
-    else summary.inserted += 1;
   }
 
   return { success: true, data: { summary } };
@@ -705,6 +1001,24 @@ export async function downloadIngredientTemplate(): Promise<ActionResult> {
       storage_type: "ambient",
       shelf_life_days: 365,
       is_active: true,
+      units: [
+        {
+          unit_code: "chai",
+          to_base_factor: 1,
+          is_base: true,
+          allow_purchase: true,
+          allow_issue: true,
+          allow_production: false,
+        },
+        {
+          unit_code: "ml",
+          to_base_factor: 1 / 250,
+          is_base: false,
+          allow_purchase: false,
+          allow_issue: false,
+          allow_production: true,
+        },
+      ],
     },
   ]);
 

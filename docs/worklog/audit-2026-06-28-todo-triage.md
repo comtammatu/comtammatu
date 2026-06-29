@@ -1,5 +1,7 @@
 # Audit 2026-06-28 — `tasks/todo.md` Outstanding-Item Triage
 
+> Reconciled-through 49112fa17fec
+
 **Date:** 2026-06-28
 **Lane:** Synthesis (read-only). No code/migrations/prod were mutated.
 **Method:** Every open item ([ ] / [~]) across three todo.md sections was verified against the **actual current code, git history, `supabase/migrations/` (+ `_archive/`), the PROD migration ledger (`list_migrations`), live PROD `pg_proc`/`pg_settings`/`pg_stat` (SELECT-only), and `docs/plan/decisions.md`** — never against the todo's own prose, which is known to drift.

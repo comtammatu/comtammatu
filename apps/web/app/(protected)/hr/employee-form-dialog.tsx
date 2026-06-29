@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { z } from "zod";
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { FormDialog, SelectField, TextField } from "@/components/form";
+import { requiredBranchKindForPositionCode } from "@comtammatu/shared/auth";
 import { createEmployeeAccount, updateEmployee } from "./actions";
 import {
   checklistTemplateLabel,
@@ -58,7 +59,7 @@ const employeeSchema = z.object({
   email: z.string().email({ error: "Email không hợp lệ" }),
   password: z.string().min(8, { error: "Mật khẩu phải có ít nhất 8 ký tự" }),
   phone: z.string().trim().optional(),
-  role: z.string().min(1, { error: "Chọn vai trò" }),
+  position_code: z.string().min(1, { error: "Chọn chức vụ" }),
   branch_id: z.string().optional(),
   employee_code: z.string().trim().optional(),
   start_date: z.string().optional(),
@@ -102,7 +103,7 @@ const DEFAULT_VALUES: EmployeeFormValues = {
   email: "",
   password: "",
   phone: "",
-  role: "",
+  position_code: "",
   branch_id: NO_BRANCH,
   employee_code: "",
   start_date: "",
@@ -393,7 +394,7 @@ export function EmployeeFormDialog({
       email: values.email,
       password: values.password,
       phone: values.phone || undefined,
-      role: values.role,
+      positionCode: values.position_code,
       branchId,
       employeeCode: values.employee_code || undefined,
       startDate: values.start_date || undefined,
@@ -427,8 +428,22 @@ export function EmployeeFormDialog({
       contentClassName="sm:max-w-2xl"
       onSubmit={handleSubmit}
     >
-      {(form) => (
-        <>
+      {(form) => {
+        const selectedPosition = form.watch("position_code");
+        const requiredBranchKind = requiredBranchKindForPositionCode(
+          selectedPosition,
+        );
+        const isSiteOptional = requiredBranchKind === null;
+        const branchChoices =
+          requiredBranchKind && requiredBranchKind !== "unassigned"
+            ? branches.filter(
+                (branch) =>
+                  (branch.branch_kind ?? "branch") === requiredBranchKind,
+              )
+            : branches;
+
+        return (
+          <>
           <TextField
             control={form.control}
             name="full_name"
@@ -466,10 +481,10 @@ export function EmployeeFormDialog({
             />
             <SelectField
               control={form.control}
-              name="role"
-              label="Vai trò"
+              name="position_code"
+              label="Chức vụ"
               options={positionOptions}
-              placeholder="Chọn vai trò"
+              placeholder="Chọn chức vụ"
             />
           </FormSection>
 
@@ -480,15 +495,16 @@ export function EmployeeFormDialog({
             <SelectField
               control={form.control}
               name="branch_id"
-              label="Chi nhánh"
+              label="Chi nhánh / địa điểm"
               options={[
-                { value: NO_BRANCH, label: "Không thuộc chi nhánh" },
-                ...branches.map((branch) => ({
+                { value: NO_BRANCH, label: "Không thuộc địa điểm" },
+                ...branchChoices.map((branch) => ({
                   value: branch.id.toString(),
                   label: branch.name,
                 })),
               ]}
-              placeholder="Không thuộc chi nhánh"
+              placeholder="Không thuộc địa điểm"
+              disabled={isSiteOptional}
             />
             <TextField
               control={form.control}
@@ -582,8 +598,9 @@ export function EmployeeFormDialog({
               label="Số tài khoản"
             />
           </FormSection>
-        </>
-      )}
+          </>
+        );
+      }}
     </FormDialog>
   );
 }

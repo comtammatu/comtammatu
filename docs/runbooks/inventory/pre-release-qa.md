@@ -59,7 +59,7 @@ Các route phải mở đúng theo ACL và nav:
 | `production_manager` | Vào Inventory + production tại Bếp Trung Tâm |
 | `branch_manager` | Vào stock, transfers inbound, consumption, stocktake, expiry, reports; không vào procurement/production |
 | `owner` | Xem oversight tenant-wide; không bị UX dẫn như operator hằng ngày |
-| `office`, `cashier`, `waiter`, `chef` | Không vào Inventory route nếu ACL hiện tại chưa cho |
+| `office`, `cashier`, `chef` | Không vào Inventory route nếu ACL hiện tại chưa cho |
 
 Đặc biệt kiểm:
 

@@ -49,10 +49,10 @@ const employees = [
     is_active: true,
     default_checklist_template_id: null,
     profiles: {
-      full_name: "Phục vụ thiếu",
+      full_name: "Thu ngân thiếu",
       positions: {
-        code: "waiter",
-        label_vi: "Phục vụ",
+        code: "cashier",
+        label_vi: "Thu ngân",
         default_checklist_template_id: null,
       },
       branches: { name: "CN1" },
@@ -104,8 +104,8 @@ test("HR checklist coverage ranks missing checklist and consumption defaults fir
       },
       {
         id: 2,
-        code: "waiter",
-        label_vi: "Phục vụ",
+        code: "cashier",
+        label_vi: "Thu ngân",
         default_checklist_template_id: null,
       },
       {

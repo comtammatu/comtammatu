@@ -44,6 +44,8 @@ export const INVENTORY_VI = {
     "Ghi chú lô sản xuất, ca làm việc, yêu cầu đóng gói...",
   productionTitle: "Sản xuất Bếp Trung Tâm",
   productionDescription: "Lệnh sản xuất và BOM thành phẩm",
+  productionOrdersTab: "Lệnh sản xuất",
+  productionRecipesTab: "Công thức sản xuất",
   selectIngredient: "Chọn nguyên liệu",
   selectIngredientPlaceholder: "Chọn nguyên liệu...",
   searchByName: "Tìm theo tên...",
@@ -150,6 +152,8 @@ export const INVENTORY_VI = {
   atLeastOneFinishedGoodPeriod: "Cần ít nhất một thành phẩm hợp lệ.",
   createProductionOrderFailed: "Không thể tạo lệnh sản xuất",
   enterQuantityPlaceholder: "Nhập số lượng...",
+  unitPlaceholder: "kg, lít...",
+  selectUnit: "Chọn ĐV",
 } as const;
 
 export type InventoryKey = keyof typeof INVENTORY_VI;
