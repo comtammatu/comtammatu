@@ -124,6 +124,26 @@ test("buildPayrollCsv quotes and escapes commas and quotes in names", () => {
   assert.match(rows[1]!, /"Lê, Văn ""Bin"" C"/);
 });
 
+test("buildPayrollCsv quotes a field containing a newline without splitting the record", () => {
+  const csv = buildPayrollCsv(
+    [
+      makeEntry({
+        employees: {
+          id: 11,
+          employee_code: "NV002",
+          // Name with an embedded newline: RFC 4180 requires quoting, and the
+          // in-field LF must NOT be treated as a record break.
+          profiles: { full_name: "Lê\nVăn B" },
+        },
+      }),
+    ],
+    options,
+  );
+  assert.ok(csv.includes('"Lê\nVăn B"'), "newline field must be wrapped in quotes");
+  // Still exactly one data record (the period label appears once).
+  assert.equal(csv.split(options.periodLabel).length, 2);
+});
+
 test("buildPayrollCsv tolerates missing employee join data", () => {
   const csv = buildPayrollCsv([makeEntry({ employees: null })], options);
   const rows = lines(csv);
