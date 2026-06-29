@@ -9,6 +9,10 @@ function read(path: string): string {
   return readFileSync(`${root}${path}`, "utf8");
 }
 
+function escaped(pattern: string): RegExp {
+  return new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+}
+
 test("inventory entry units are persisted inside atomic RPCs", () => {
   const sql = read(
     "supabase/migrations/20260629125621_persist_entry_unit_in_atomic_rpcs.sql",
@@ -27,6 +31,14 @@ test("inventory entry units are persisted inside atomic RPCs", () => {
     (sql.match(/entry_unit_id = EXCLUDED\.entry_unit_id/g) ?? []).length,
     4,
   );
+
+  for (const key of [
+    "line->>'entryUnitId'",
+    "line.value->>'entryUnitId'",
+    "v_line->>'entry_unit_id'",
+  ]) {
+    assert.match(sql, escaped(key), key);
+  }
 });
 
 test("server actions do not patch entry units after RPC success", () => {
@@ -38,5 +50,31 @@ test("server actions do not patch entry units after RPC success", () => {
   ]) {
     const source = read(path);
     assert.doesNotMatch(source, /\.update\(\{\s*entry_unit_id/s, path);
+    assert.doesNotMatch(source, /error:\s*(?:error|rpcError)\.message/, path);
+  }
+});
+
+test("server action payload keys match the RPC contract", () => {
+  const actionPayloads = new Map([
+    [
+      "apps/web/app/(protected)/inventory/production-order-actions.ts",
+      "entryUnitId: item.entryUnitId ?? null",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/transfer-actions.ts",
+      "entryUnitId: line.entryUnitId ?? null",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/recipe-actions.ts",
+      "entry_unit_id: l.entryUnitId ?? null",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
+      "entry_unit_id: line.entryUnitId ?? null",
+    ],
+  ]);
+
+  for (const [path, payloadLine] of actionPayloads) {
+    assert.match(read(path), escaped(payloadLine));
   }
 });

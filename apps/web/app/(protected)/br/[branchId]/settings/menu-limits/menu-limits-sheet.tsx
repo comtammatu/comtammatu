@@ -31,6 +31,12 @@ import {
   setBranchMenuDailyLimit,
   type MenuLimitRow,
 } from "./actions";
+import {
+  getMenuLimitCapSource,
+  getMenuLimitEffectiveCap,
+  getMenuLimitRemaining,
+  hasManualMenuLimit,
+} from "./menu-limit-cap";
 
 interface MenuLimitsSheetProps {
   branchId: number;
@@ -56,9 +62,7 @@ function buildDraft(row: MenuLimitRow): RowDraft {
 }
 
 function isConfigured(row: MenuLimitRow): boolean {
-  return (
-    row.limit_id !== null || row.limit_quantity !== null || row.is_disabled
-  );
+  return hasManualMenuLimit(row);
 }
 
 function isDirty(row: MenuLimitRow, draft: RowDraft): boolean {
@@ -70,9 +74,21 @@ function isDirty(row: MenuLimitRow, draft: RowDraft): boolean {
   );
 }
 
-function getRemaining(row: MenuLimitRow): number | null {
-  if (row.limit_quantity == null) return null;
-  return Math.max(0, row.limit_quantity - row.sold_today);
+function getCapSourceLabel(row: MenuLimitRow): string {
+  switch (getMenuLimitCapSource(row)) {
+    case "manual":
+      return messages.pos.menu.capSourceManual;
+    case "stock":
+      return messages.pos.menu.capSourceStock;
+    case "manual_lower":
+      return messages.pos.menu.capSourceManualLower;
+    case "stock_lower":
+      return messages.pos.menu.capSourceStockLower;
+    case "equal":
+      return messages.pos.menu.capSourceEqual;
+    case "none":
+      return messages.pos.menu.unlimited;
+  }
 }
 
 export function MenuLimitsSheet({
@@ -133,7 +149,10 @@ export function MenuLimitsSheet({
       localRows.filter(
         (row) =>
           row.is_disabled ||
-          (row.limit_quantity !== null && row.sold_today >= row.limit_quantity),
+          (() => {
+            const remaining = getMenuLimitRemaining(row);
+            return remaining !== null && remaining <= 0;
+          })(),
       ).length,
     [localRows],
   );
@@ -199,12 +218,13 @@ export function MenuLimitsSheet({
         }
 
         updateDraft(row.menu_item_id, { qtyText: "", isDisabled: false });
+        const keepStockRow = row.stock_capacity !== null;
         replaceRow(row.menu_item_id, {
-          limit_id: null,
-          limit_date: null,
+          limit_id: keepStockRow ? row.limit_id : null,
+          limit_date: keepStockRow ? row.limit_date : null,
           limit_quantity: null,
           is_disabled: false,
-          sold_today: 0,
+          sold_today: keepStockRow ? row.sold_today : 0,
         });
         toast.success(`Đã cập nhật: ${row.item_name}`);
         router.refresh();
@@ -298,7 +318,8 @@ export function MenuLimitsSheet({
             {filteredRows.map((row) => {
               const draft = drafts[row.menu_item_id] ?? buildDraft(row);
               const dirty = isDirty(row, draft);
-              const remaining = getRemaining(row);
+              const remaining = getMenuLimitRemaining(row);
+              const effectiveCap = getMenuLimitEffectiveCap(row);
               const exhausted = remaining !== null && remaining === 0;
               const rowPending = isSaving && pendingId === row.menu_item_id;
 
@@ -342,9 +363,16 @@ export function MenuLimitsSheet({
                       )}
                       <span className="font-mono text-xs tabular-nums text-muted-foreground">
                         {messages.pos.menu.soldCount(row.sold_today)}
-                        {row.limit_quantity !== null
-                          ? ` / ${row.limit_quantity}`
-                          : ""}
+                        {effectiveCap !== null ? ` / ${effectiveCap}` : ""}
+                      </span>
+                      <span className="text-right text-xs text-muted-foreground">
+                        {messages.pos.menu.stockCapacityLabel}:{" "}
+                        <span className="font-mono tabular-nums">
+                          {row.stock_capacity ?? messages.pos.menu.stockCapacityEmpty}
+                        </span>
+                      </span>
+                      <span className="text-right text-xs text-muted-foreground">
+                        {getCapSourceLabel(row)}
                       </span>
                     </div>
                   </div>
@@ -356,7 +384,7 @@ export function MenuLimitsSheet({
                         min={1}
                         max={9999}
                         inputMode="numeric"
-                        placeholder={messages.pos.menu.unlimited}
+                        placeholder={messages.pos.menu.manualLimitLabel}
                         value={draft.qtyText}
                         disabled={rowPending}
                         onChange={(event) =>

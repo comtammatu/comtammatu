@@ -87,6 +87,7 @@ export interface KdsMenuLimitRow {
   limit_quantity: number | null;
   is_disabled: boolean;
   sold_today: number;
+  stock_capacity: number | null;
 }
 
 /** Grouped order with its tickets and items for display */

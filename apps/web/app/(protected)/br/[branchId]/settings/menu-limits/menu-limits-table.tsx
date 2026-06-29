@@ -40,6 +40,12 @@ import {
   setBranchMenuDailyLimit,
   clearBranchMenuDailyLimit,
 } from "./actions";
+import {
+  getMenuLimitCapSource,
+  getMenuLimitEffectiveCap,
+  getMenuLimitRemaining,
+  hasManualMenuLimit,
+} from "./menu-limit-cap";
 import { messages } from "@lib/messages";
 
 interface Props {
@@ -68,14 +74,7 @@ function isDirty(row: MenuLimitRow, draft: RowDraft): boolean {
 }
 
 function isConfigured(row: MenuLimitRow): boolean {
-  return (
-    row.limit_id !== null || row.limit_quantity !== null || row.is_disabled
-  );
-}
-
-function getRemaining(row: MenuLimitRow): number | null {
-  if (row.limit_quantity == null) return null;
-  return Math.max(0, row.limit_quantity - row.sold_today);
+  return hasManualMenuLimit(row);
 }
 
 function getProgress(row: MenuLimitRow): {
@@ -83,26 +82,27 @@ function getProgress(row: MenuLimitRow): {
   tone: ProgressTone;
   limit: number;
 } | null {
-  if (row.limit_quantity == null) return null;
+  const effectiveCap = getMenuLimitEffectiveCap(row);
+  if (effectiveCap == null) return null;
 
-  const value = Math.min(
-    100,
-    Math.round((row.sold_today / row.limit_quantity) * 100),
-  );
+  const value =
+    effectiveCap <= 0
+      ? 100
+      : Math.min(100, Math.round((row.sold_today / effectiveCap) * 100));
   if (row.is_disabled) {
-    return { value, tone: "destructive", limit: row.limit_quantity };
+    return { value, tone: "destructive", limit: effectiveCap };
   }
-  if (row.sold_today >= row.limit_quantity) {
-    return { value, tone: "warning", limit: row.limit_quantity };
+  if (row.sold_today >= effectiveCap) {
+    return { value, tone: "warning", limit: effectiveCap };
   }
-  return { value, tone: "success", limit: row.limit_quantity };
+  return { value, tone: "success", limit: effectiveCap };
 }
 
 function getStatusBadge(row: MenuLimitRow): {
   label: string;
   variant: BadgeProps["variant"];
 } {
-  const remaining = getRemaining(row);
+  const remaining = getMenuLimitRemaining(row);
 
   if (row.is_disabled) {
     return { label: messages.pos.menu.disabled, variant: "destructive" };
@@ -162,9 +162,10 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     () => ({
       total: rows.length,
       limited: rows.filter((row) => row.limit_quantity !== null).length,
+      stockLimited: rows.filter((row) => row.stock_capacity !== null).length,
       disabled: rows.filter((row) => row.is_disabled).length,
       exhausted: rows.filter((row) => {
-        const remaining = getRemaining(row);
+        const remaining = getMenuLimitRemaining(row);
         return remaining !== null && remaining <= 0 && !row.is_disabled;
       }).length,
     }),
@@ -266,6 +267,50 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     );
   }
 
+  function renderStockCapacity(row: MenuLimitRow) {
+    return row.stock_capacity == null ? (
+      <span className="text-muted-foreground">
+        {messages.pos.menu.stockCapacityEmpty}
+      </span>
+    ) : (
+      <span className="font-mono text-sm tabular-nums">
+        {row.stock_capacity}
+      </span>
+    );
+  }
+
+  function getCapSourceLabel(row: MenuLimitRow): string {
+    switch (getMenuLimitCapSource(row)) {
+      case "manual":
+        return messages.pos.menu.capSourceManual;
+      case "stock":
+        return messages.pos.menu.capSourceStock;
+      case "manual_lower":
+        return messages.pos.menu.capSourceManualLower;
+      case "stock_lower":
+        return messages.pos.menu.capSourceStockLower;
+      case "equal":
+        return messages.pos.menu.capSourceEqual;
+      case "none":
+        return messages.pos.menu.unlimited;
+    }
+  }
+
+  function renderSoldCount(row: MenuLimitRow) {
+    const effectiveCap = getMenuLimitEffectiveCap(row);
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="font-mono text-sm tabular-nums">
+          {row.sold_today}
+          {effectiveCap != null ? ` / ${effectiveCap}` : ""}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {getCapSourceLabel(row)}
+        </span>
+      </div>
+    );
+  }
+
   function renderLimitInput(row: MenuLimitRow) {
     const draft = drafts[row.menu_item_id] ?? buildDraft(row);
     const rowPending = isPending && pendingId === row.menu_item_id;
@@ -283,7 +328,7 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
             qtyText: event.target.value,
           })
         }
-        aria-label={messages.pos.menu.totalLimitInputAria(row.item_name)}
+        aria-label={messages.pos.menu.manualLimitInputAria(row.item_name)}
       />
     );
   }
@@ -329,16 +374,17 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
       key: "sold",
       header: messages.pos.menu.soldLabel,
       className: "w-36",
-      render: (row) => (
-        <span className="font-mono text-sm tabular-nums">
-          {row.sold_today}
-          {row.limit_quantity != null ? ` / ${row.limit_quantity}` : ""}
-        </span>
-      ),
+      render: (row) => renderSoldCount(row),
+    },
+    {
+      key: "stockCapacity",
+      header: messages.pos.menu.stockCapacityLabel,
+      className: "w-36",
+      render: (row) => renderStockCapacity(row),
     },
     {
       key: "limit",
-      header: messages.pos.menu.totalLimitLabel,
+      header: messages.pos.menu.manualLimitLabel,
       className: "w-40",
       render: (row) => renderLimitInput(row),
     },
@@ -393,6 +439,9 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
             <Badge variant="success">
               {messages.pos.menu.limitedCount(summary.limited)}
             </Badge>
+            <Badge variant="outline">
+              {messages.pos.menu.stockCapacityCount(summary.stockLimited)}
+            </Badge>
             <Badge variant="warning">
               {messages.pos.menu.exhaustedCount(summary.exhausted)}
             </Badge>
@@ -428,15 +477,16 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
                   <ItemContent>
                     <ItemTitle>{row.item_name}</ItemTitle>
                     <ItemDescription>{formatVND(row.base_price)}</ItemDescription>
+                    <ItemDescription>
+                      {messages.pos.menu.stockCapacityLabel}:{" "}
+                      {renderStockCapacity(row)}
+                    </ItemDescription>
                   </ItemContent>
                   <ItemActions>{renderDisabledSwitch(row)}</ItemActions>
                 </ItemHeader>
                 {renderStatus(row)}
                 <ItemFooter>
-                  <span className="font-mono text-sm tabular-nums">
-                    {row.sold_today}
-                    {row.limit_quantity != null ? ` / ${row.limit_quantity}` : ""}
-                  </span>
+                  {renderSoldCount(row)}
                   <div className="w-32">{renderLimitInput(row)}</div>
                 </ItemFooter>
                 <ItemFooter className="justify-end">

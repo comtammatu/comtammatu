@@ -29,6 +29,7 @@ export interface MenuLimitRow {
   limit_quantity: number | null;
   is_disabled: boolean;
   sold_today: number;
+  stock_capacity: number | null;
 }
 
 export async function fetchBranchMenuDailyLimits(
@@ -167,7 +168,7 @@ const clearLimitSchema = z.object({
 
 export async function clearBranchMenuDailyLimit(
   input: z.input<typeof clearLimitSchema>,
-): Promise<ActionResult<{ deleted: number }>> {
+): Promise<ActionResult<{ deleted: number; cleared?: number }>> {
   const parsed = clearLimitSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -203,6 +204,6 @@ export async function clearBranchMenuDailyLimit(
   revalidatePath(`/br/${parsed.data.branchId}/pos`);
   revalidatePath(`/br/${parsed.data.branchId}/kds`);
 
-  const row = (data ?? { deleted: 0 }) as { deleted: number };
+  const row = (data ?? { deleted: 0 }) as { deleted: number; cleared?: number };
   return { success: true, data: row };
 }
