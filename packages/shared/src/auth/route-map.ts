@@ -20,6 +20,7 @@ export type RoutePrimaryNav =
   | "workspace-sidebar"
   | "management-sidebar"
   | "employee-bottom-nav"
+  | "operator-bottom-nav"
   | "operational-chrome"
   | "none";
 
@@ -172,6 +173,54 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: false,
   },
   {
+    id: "branch-picker",
+    label: MODULE_ACL.branch_picker.label,
+    surface: "branch_operation",
+    entryPath: MODULE_ACL.branch_picker.path,
+    matchPrefixes: ["/br"],
+    moduleKeys: ["branch_picker"],
+    primaryNav: "none",
+    backBehavior: "role-home",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: false,
+  },
+  {
+    id: "operator-home",
+    label: MODULE_ACL.operator_home.label,
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]",
+    matchPrefixes: ["/br/[branchId]"],
+    moduleKeys: ["operator_home"],
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
+    id: "operator-shift",
+    label: MODULE_ACL.employee.label,
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]/shift",
+    matchPrefixes: ["/br/[branchId]/shift"],
+    moduleKeys: ["employee"],
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
+    id: "operator-stock",
+    label: MODULE_ACL.inventory.label,
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]/stock",
+    matchPrefixes: ["/br/[branchId]/stock"],
+    moduleKeys: ["inventory"],
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
     // First-match: menu-limits is nested under /settings, so it MUST precede
     // the broader branch-settings family or that less-specific prefix wins.
     id: "branch-menu-limits",
@@ -258,8 +307,15 @@ function escapeRegex(input: string): string {
 }
 
 function matchesRoutePrefix(pathname: string, prefix: string): boolean {
+  if (prefix === "/br") {
+    return pathname === "/br" || pathname === "/br/";
+  }
+
   if (prefix.includes("[branchId]")) {
     const expression = escapeRegex(prefix).replace("\\[branchId\\]", "\\d+");
+    if (prefix === "/br/[branchId]") {
+      return new RegExp(`^${expression}/?$`).test(pathname);
+    }
     return new RegExp(`^${expression}(?:/|$)`).test(pathname);
   }
 

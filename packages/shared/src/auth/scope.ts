@@ -1,5 +1,9 @@
 import { canAccess } from "./module-acl";
 import {
+  resolveBranchHubDestination,
+  type BranchHubContext,
+} from "./branch-hub";
+import {
   isRunnerPublicDisplayPath,
   resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
@@ -135,8 +139,11 @@ export function getSafeInternalReturnTo(
 export function resolvePostLoginRedirect(
   claims: JwtClaims,
   returnTo: string | null | undefined,
+  branchHubContext?: BranchHubContext,
 ): string {
-  const fallback = getDefaultRedirect(claims);
+  const fallback = branchHubContext
+    ? resolveBranchHubDestination(claims, branchHubContext)
+    : getDefaultRedirect(claims);
   const safeReturnTo = getSafeInternalReturnTo(returnTo);
 
   if (!safeReturnTo) {
@@ -169,24 +176,13 @@ export function resolvePostLoginRedirect(
     return fallback;
   }
 
-  if (
-    moduleKey === "pos" ||
-    moduleKey === "kds" ||
-    moduleKey === "runner" ||
-    moduleKey === "branch_dashboard" ||
-    moduleKey === "branch_settings" ||
-    moduleKey === "branch_menu_limits"
-  ) {
-    const branchMatch = targetUrl.pathname.match(/^\/br\/(\d+)\//);
-    const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
+  const branchMatch = targetUrl.pathname.match(/^\/br\/(\d+)(?:\/|$)/);
+  const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
 
-    // Owner has branch_id null and may resolve a returnTo into any branch
-    // surface (branch command/settings/menu-limits plus pos/kds/runner for
-    // cover-ca). The proxy still enforces the branch-active check at runtime.
+  if (routeBranchId != null) {
     const allowCrossBranchBranchSurface = claims.user_role === "owner";
 
     if (
-      routeBranchId === null ||
       (!allowCrossBranchBranchSurface && claims.branch_id !== routeBranchId)
     ) {
       return fallback;

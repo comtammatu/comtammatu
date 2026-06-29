@@ -23,6 +23,7 @@ const EXPECTED_MATRIX: Record<
   owner: [
     "branch_dashboard",
     "branch_menu_limits",
+    "branch_picker",
     "branch_settings",
     "branches",
     "dashboard",
@@ -35,6 +36,7 @@ const EXPECTED_MATRIX: Record<
     "kds",
     "menu",
     "notifications",
+    "operator_home",
     "orders",
     "pos",
     "reports",
@@ -53,6 +55,7 @@ const EXPECTED_MATRIX: Record<
     "kds",
     "menu",
     "notifications",
+    "operator_home",
     "orders",
     "pos",
     "runner",
@@ -60,6 +63,7 @@ const EXPECTED_MATRIX: Record<
   cashier: [
     "employee",
     "notifications",
+    "operator_home",
     "orders",
     "pos",
     "runner",

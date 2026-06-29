@@ -30,6 +30,16 @@ export interface BranchScopedNavItemConfig extends NavItemConfig {
 
 export type BranchManagementNavItemConfig = BranchScopedNavItemConfig;
 export type BranchOperationNavItemConfig = BranchScopedNavItemConfig;
+export type OperatorTileGroupId =
+  | "my_shift"
+  | "floor"
+  | "kitchen"
+  | "stock"
+  | "branch_control";
+
+export interface OperatorTileConfig extends BranchScopedNavItemConfig {
+  group: OperatorTileGroupId;
+}
 
 /** Admin sidebar nav groups — only admin-scoped modules */
 export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
@@ -110,3 +120,74 @@ export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
     label: APP_COPY_VI.branchOperationsRunner,
   },
 ];
+
+export const OPERATOR_TILE_GROUP_TITLES: Record<OperatorTileGroupId, string> = {
+  my_shift: "Ca của tôi",
+  floor: "Sàn",
+  kitchen: "Bếp",
+  stock: "Kho",
+  branch_control: "Điều hành",
+};
+
+export const OPERATOR_TILE_GROUP_ORDER: readonly OperatorTileGroupId[] = [
+  "my_shift",
+  "floor",
+  "kitchen",
+  "stock",
+  "branch_control",
+] as const;
+
+export const OPERATOR_TILE_ITEMS = [
+  {
+    moduleKey: "employee",
+    icon: "ListChecks",
+    group: "my_shift",
+    hrefTemplate: "/br/{branchId}/shift",
+    label: "Ca của tôi",
+  },
+  {
+    moduleKey: "pos",
+    icon: "Monitor",
+    group: "floor",
+    hrefTemplate: "/br/{branchId}/pos",
+  },
+  {
+    moduleKey: "runner",
+    icon: "MonitorUp",
+    group: "floor",
+    hrefTemplate: "/br/{branchId}/runner",
+    label: APP_COPY_VI.branchOperationsRunner,
+  },
+  {
+    moduleKey: "kds",
+    icon: "ChefHat",
+    group: "kitchen",
+    hrefTemplate: "/br/{branchId}/kds",
+    label: APP_COPY_VI.branchOperationsKds,
+  },
+  {
+    moduleKey: "inventory",
+    icon: "Package",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock",
+  },
+  {
+    moduleKey: "branch_dashboard",
+    icon: "LayoutDashboard",
+    group: "branch_control",
+    hrefTemplate: "/br/{branchId}/dashboard",
+    label: APP_COPY_VI.branchCommand,
+  },
+  {
+    moduleKey: "branch_settings",
+    icon: "Settings",
+    group: "branch_control",
+    hrefTemplate: "/br/{branchId}/settings",
+  },
+  {
+    moduleKey: "branch_menu_limits",
+    icon: "Utensils",
+    group: "branch_control",
+    hrefTemplate: "/br/{branchId}/settings/menu-limits",
+  },
+] satisfies readonly OperatorTileConfig[];

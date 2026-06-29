@@ -15,6 +15,7 @@ import {
   type JwtClaims,
   type ModuleKey,
 } from "@comtammatu/shared/auth";
+import { resolveBranchHubContextFromHeaders } from "@/_lib/branch-hub-device";
 import { getClientIp } from "@lib/network/client-ip";
 
 // Module-level flag — emit one warning per warm Edge instance when the POS
@@ -63,8 +64,9 @@ function redirectToDefaultLanding(
   sessionResponse: NextResponse,
   claims: JwtClaims,
 ): NextResponse {
+  const branchHubContext = resolveBranchHubContextFromHeaders(request.headers);
   const url = new URL(
-    resolvePostLoginRedirect(claims, null),
+    resolvePostLoginRedirect(claims, null, branchHubContext),
     request.nextUrl.origin,
   );
   return redirectWithCookies(url, sessionResponse);
@@ -121,8 +123,11 @@ export async function proxy(request: NextRequest) {
     // Authenticated → bounce to role's post-login destination.
     if (claims) {
       const returnTo = request.nextUrl.searchParams.get("returnTo");
+      const branchHubContext = resolveBranchHubContextFromHeaders(
+        request.headers,
+      );
       const url = new URL(
-        resolvePostLoginRedirect(claims, returnTo),
+        resolvePostLoginRedirect(claims, returnTo, branchHubContext),
         request.nextUrl.origin,
       );
       return redirectWithCookies(url, response);
@@ -153,6 +158,13 @@ export async function proxy(request: NextRequest) {
   // `user_role` or `position`.
   if (!claims) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
+  }
+
+  if (
+    (pathname === "/br" || pathname === "/br/") &&
+    claims.user_role !== "owner"
+  ) {
+    return redirectToDefaultLanding(request, response, claims);
   }
 
   // Module ACL: each route resolves to a ModuleKey, and the user's role
@@ -190,139 +202,121 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    // Branch-scoped protected routes enforce
-    // URL branchId matches the user's assigned branch_id. Tenant-level roles
-    // (owner) may traverse any branch's settings and pos/kds/runner (cover-ca).
-    // POS/KDS also require the branch record to be active and usable.
-    // The exact Runner customer board path is public and bypasses proxy auth;
-    // keep runner here only for any future non-public runner child route.
-    if (
-      moduleKey === "pos" ||
-      moduleKey === "kds" ||
-      moduleKey === "runner" ||
-      moduleKey === "branch_dashboard" ||
-      moduleKey === "branch_settings" ||
-      moduleKey === "branch_menu_limits"
-    ) {
-      const pathMatch = pathname.match(/^\/br\/(\d+)\//);
-      if (pathMatch) {
-        const routeBranchId = Number(pathMatch[1]);
+    const pathMatch = pathname.match(/^\/br\/(\d+)(?:\/|$)/);
+    if (pathMatch) {
+      const routeBranchId = Number(pathMatch[1]);
+      const allowCrossBranch = claims.user_role === "owner";
 
-        // Owner has branch_id null and may traverse any branch surface in
-        // this gate. The branch-active check below still constrains owner to
-        // a real active branch for pos/kds/runner.
-        const allowCrossBranch = claims.user_role === "owner";
+      if (
+        !allowCrossBranch &&
+        (claims.branch_id === null || claims.branch_id !== routeBranchId)
+      ) {
+        return redirectToAccessDenied(
+          request,
+          response,
+          "branch-scope-mismatch",
+        );
+      }
 
+      const isStationRoute =
+        moduleKey === "pos" || moduleKey === "kds" || moduleKey === "runner";
+      const needsBranchSurface =
+        isStationRoute || pathname.startsWith(`/br/${routeBranchId}/stock`);
+
+      if (needsBranchSurface) {
+        const branchSurfaceKey = `${String(claims.tenant_id)}:${String(routeBranchId)}`;
+        let branchSurface = BRANCH_SURFACE_CACHE.get(branchSurfaceKey);
+        if (branchSurface === undefined) {
+          const { data: branchRow } = await supabase
+            .from("branches")
+            .select("branch_kind, is_active")
+            .eq("id", routeBranchId)
+            .eq("tenant_id", claims.tenant_id)
+            .maybeSingle();
+          branchSurface = branchRow
+            ? {
+                branchKind:
+                  (branchRow.branch_kind as string | undefined) ?? null,
+                isActive:
+                  typeof branchRow.is_active === "boolean"
+                    ? branchRow.is_active
+                    : null,
+              }
+            : null;
+          BRANCH_SURFACE_CACHE.set(branchSurfaceKey, branchSurface);
+        }
         if (
-          !allowCrossBranch &&
-          (claims.branch_id === null || claims.branch_id !== routeBranchId)
+          branchSurface === null ||
+          branchSurface.branchKind !== "branch" ||
+          branchSurface.isActive !== true
         ) {
           return redirectToAccessDenied(
             request,
             response,
-            "branch-scope-mismatch",
+            "branch-surface-restricted",
           );
         }
+      }
 
+      if (isStationRoute) {
+        // Network gate: only devices sharing NAT egress IP with the branch's
+        // print-agent (registered via /api/branch-presence) may load protected
+        // POS/KDS branch surfaces. The exact Runner customer board path is public.
+        // Defense-in-depth ONLY — RLS + JWT remain the source of truth for
+        // data access (PostgREST direct calls bypass this gate). Kill-switch
+        // via POS_NETWORK_GATE=off for incident response.
+        //
+        // Auto-bypassed in non-production NODE_ENV (dev / test) — localhost
+        // requests resolve to 127.0.0.1 which getClientIp() correctly rejects
+        // as a private range, so without this skip every dev request would
+        // 307 to /access-denied. Vercel preview deploys run as production;
+        // set POS_NETWORK_GATE=off on those if you don't want the gate there.
+        //
+        // Owner reaches this point via allowCrossBranch (cover-ca) and is
+        // intentionally subject to the same network gate: covering a shift
+        // means being on the branch network. No owner bypass here.
+        const networkGateEnabled =
+          process.env.NODE_ENV === "production" &&
+          process.env.POS_NETWORK_GATE !== "off";
+
+        // Loud kill-switch: emit one warning per warm Edge instance when
+        // POS_NETWORK_GATE=off in production. SIEM/log-drain ingests this
+        // for alerting. Implements regressions.md
+        // POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING.
         if (
-          moduleKey === "pos" ||
-          moduleKey === "kds" ||
-          moduleKey === "runner"
+          !networkGateEnabled &&
+          process.env.NODE_ENV === "production" &&
+          process.env.POS_NETWORK_GATE === "off" &&
+          !NETWORK_GATE_OFF_WARNED
         ) {
-          const branchSurfaceKey = `${String(claims.tenant_id)}:${String(routeBranchId)}`;
-          let branchSurface = BRANCH_SURFACE_CACHE.get(branchSurfaceKey);
-          if (branchSurface === undefined) {
-            const { data: branchRow } = await supabase
-              .from("branches")
-              .select("branch_kind, is_active")
-              .eq("id", routeBranchId)
+          console.warn(
+            "[network-gate] disabled via POS_NETWORK_GATE=off — POS/KDS perimeter open. See regressions.md POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING.",
+          );
+          NETWORK_GATE_OFF_WARNED = true;
+        }
+
+        if (networkGateEnabled) {
+          const clientIp = getClientIp(request.headers);
+          const graceCutoff = new Date(Date.now() - 30 * 60_000).toISOString();
+          let trusted = false;
+          if (clientIp) {
+            const { data: trustRow } = await supabase
+              .from("branch_trusted_egress_ips")
+              .select("id")
+              .eq("branch_id", routeBranchId)
               .eq("tenant_id", claims.tenant_id)
+              .eq("ip_address", clientIp)
+              .is("revoked_at", null)
+              .gte("last_seen_at", graceCutoff)
               .maybeSingle();
-            branchSurface = branchRow
-              ? {
-                  branchKind:
-                    (branchRow.branch_kind as string | undefined) ?? null,
-                  isActive:
-                    typeof branchRow.is_active === "boolean"
-                      ? branchRow.is_active
-                      : null,
-                }
-              : null;
-            BRANCH_SURFACE_CACHE.set(branchSurfaceKey, branchSurface);
+            trusted = trustRow !== null;
           }
-          if (
-            branchSurface === null ||
-            branchSurface.branchKind !== "branch" ||
-            branchSurface.isActive !== true
-          ) {
+          if (!trusted) {
             return redirectToAccessDenied(
               request,
               response,
-              "branch-surface-restricted",
+              "untrusted-network",
             );
-          }
-
-          // Network gate: only devices sharing NAT egress IP with the branch's
-          // print-agent (registered via /api/branch-presence) may load protected
-          // POS/KDS branch surfaces. The exact Runner customer board path is public.
-          // Defense-in-depth ONLY — RLS + JWT remain the source of truth for
-          // data access (PostgREST direct calls bypass this gate). Kill-switch
-          // via POS_NETWORK_GATE=off for incident response.
-          //
-          // Auto-bypassed in non-production NODE_ENV (dev / test) — localhost
-          // requests resolve to 127.0.0.1 which getClientIp() correctly rejects
-          // as a private range, so without this skip every dev request would
-          // 307 to /access-denied. Vercel preview deploys run as production;
-          // set POS_NETWORK_GATE=off on those if you don't want the gate there.
-          //
-          // Owner reaches this point via allowCrossBranch (cover-ca) and is
-          // intentionally subject to the same network gate: covering a shift
-          // means being on the branch network. No owner bypass here.
-          const networkGateEnabled =
-            process.env.NODE_ENV === "production" &&
-            process.env.POS_NETWORK_GATE !== "off";
-
-          // Loud kill-switch: emit one warning per warm Edge instance when
-          // POS_NETWORK_GATE=off in production. SIEM/log-drain ingests this
-          // for alerting. Implements regressions.md
-          // POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING.
-          if (
-            !networkGateEnabled &&
-            process.env.NODE_ENV === "production" &&
-            process.env.POS_NETWORK_GATE === "off" &&
-            !NETWORK_GATE_OFF_WARNED
-          ) {
-            console.warn(
-              "[network-gate] disabled via POS_NETWORK_GATE=off — POS/KDS perimeter open. See regressions.md POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING.",
-            );
-            NETWORK_GATE_OFF_WARNED = true;
-          }
-
-          if (networkGateEnabled) {
-            const clientIp = getClientIp(request.headers);
-            const graceCutoff = new Date(
-              Date.now() - 30 * 60_000,
-            ).toISOString();
-            let trusted = false;
-            if (clientIp) {
-              const { data: trustRow } = await supabase
-                .from("branch_trusted_egress_ips")
-                .select("id")
-                .eq("branch_id", routeBranchId)
-                .eq("tenant_id", claims.tenant_id)
-                .eq("ip_address", clientIp)
-                .is("revoked_at", null)
-                .gte("last_seen_at", graceCutoff)
-                .maybeSingle();
-              trusted = trustRow !== null;
-            }
-            if (!trusted) {
-              return redirectToAccessDenied(
-                request,
-                response,
-                "untrusted-network",
-              );
-            }
           }
         }
       }
