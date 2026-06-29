@@ -9,7 +9,10 @@ import type { PaymentMethod } from "@comtammatu/shared/providers";
 import type { VietQrConfig } from "./payment-actions";
 import type { SessionOrder } from "./order-history";
 import { PosDesktopProvider } from "./_providers/pos-desktop-provider";
-import type { DailyLimitsMap } from "./_providers/pos-desktop-provider";
+import type {
+  DailyLimitsMap,
+  IngredientCapsMap,
+} from "./_providers/pos-desktop-provider";
 
 interface PosDesktopShellProps {
   branchId: number;
@@ -59,6 +62,18 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
     return map;
   }, [props.categories]);
 
+  const initialIngredientCaps = useMemo<IngredientCapsMap>(() => {
+    const map = new Map<number, number | null>();
+    for (const category of props.categories) {
+      for (const item of category.menu_items) {
+        if (item.ingredient_cap != null) {
+          map.set(item.id, item.ingredient_cap);
+        }
+      }
+    }
+    return map;
+  }, [props.categories]);
+
   return (
     <PosDesktopProvider
       branchId={props.branchId}
@@ -68,6 +83,7 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
       initialOrders={props.initialOrders}
       initialOrdersSeeded={props.initialOrdersSeeded}
       initialDailyLimits={initialDailyLimits}
+      initialIngredientCaps={initialIngredientCaps}
     >
       <PosDesktopInner
         categories={props.categories}

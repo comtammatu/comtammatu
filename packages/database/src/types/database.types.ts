@@ -9372,6 +9372,7 @@ export type Database = {
         Args: { p_slip_id: number }
         Returns: {
           counted_quantity: number
+          entry_unit_id: number | null
           ingredient_id: number
           note: string
         }[]

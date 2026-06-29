@@ -25,7 +25,6 @@ const categoryCreateSchema = z.object({
     .string()
     .trim()
     .min(1, { error: VALIDATION_VI.required("Tên nhóm") }),
-  tone_class: z.string().trim().optional(),
   sort_order: z.coerce.number().int().min(0).default(0),
   is_active: z.boolean().default(true),
 });
@@ -36,7 +35,6 @@ const categoryUpdateSchema = z.object({
     .string()
     .trim()
     .min(1, { error: VALIDATION_VI.required("Tên nhóm") }),
-  tone_class: z.string().trim().optional(),
   sort_order: z.coerce.number().int().min(0).default(0),
   is_active: z.boolean().default(true),
 });
@@ -78,7 +76,7 @@ export const createCategory = withAction(
     const { error } = await supabase.from("ingredient_categories").insert({
       tenant_id: claims.tenant_id,
       name: data.name,
-      tone_class: data.tone_class ?? null,
+      tone_class: null,
       sort_order: data.sort_order,
       is_active: data.is_active,
     });
@@ -106,7 +104,7 @@ export const updateCategory = withAction(
       .from("ingredient_categories")
       .update({
         name: data.name,
-        tone_class: data.tone_class ?? null,
+        tone_class: null,
         sort_order: data.sort_order,
         is_active: data.is_active,
       })

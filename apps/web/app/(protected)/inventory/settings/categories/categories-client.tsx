@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
 import {
   Pencil as IconPencil,
@@ -38,7 +39,6 @@ const copy = messages.inventoryMaster.categories;
 
 const categoryFormSchema = z.object({
   name: z.string().trim().min(1),
-  tone_class: z.string().trim().optional(),
   sort_order: z.coerce.number().int().min(0),
   is_active: z.boolean(),
 });
@@ -47,12 +47,12 @@ type CategoryFormValues = z.infer<typeof categoryFormSchema>;
 
 const NEW_CATEGORY_DEFAULTS: CategoryFormValues = {
   name: "",
-  tone_class: "",
   sort_order: 0,
   is_active: true,
 };
 
 export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
+  const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRow, setEditRow] = useState<CategoryRow | null>(null);
   const [, startDelete] = useTransition();
@@ -68,10 +68,11 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
   }
 
   async function handleSubmit(values: CategoryFormValues) {
-    if (editRow) {
-      return updateCategory({ id: editRow.id, ...values });
-    }
-    return createCategory(values);
+    const result = editRow
+      ? await updateCategory({ id: editRow.id, ...values })
+      : await createCategory(values);
+    if (result.success) router.refresh();
+    return result;
   }
 
   async function handleDelete(row: CategoryRow) {
@@ -90,13 +91,13 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
         return;
       }
       toast.success(copy.delete.success);
+      router.refresh();
     });
   }
 
   const defaultValues: CategoryFormValues = editRow
     ? {
         name: editRow.name,
-        tone_class: editRow.tone_class ?? "",
         sort_order: editRow.sort_order,
         is_active: editRow.is_active,
       }
@@ -109,11 +110,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
           <IconPencil className="size-4" />
           <span className="sr-only">{copy.edit}</span>
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => handleDelete(row)}
-        >
+        <Button variant="ghost" size="icon" onClick={() => handleDelete(row)}>
           <IconTrash className="size-4 text-destructive" />
           <span className="sr-only">{copy.delete.action}</span>
         </Button>
@@ -126,14 +123,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
       key: "name",
       header: copy.cols.name,
       className: "font-medium",
-      render: (row) =>
-        row.tone_class ? (
-          <Badge className={row.tone_class} variant="secondary">
-            {row.name}
-          </Badge>
-        ) : (
-          row.name
-        ),
+      render: (row) => row.name,
     },
     {
       key: "sort_order",
@@ -181,13 +171,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
           <Item variant="outline">
             <ItemContent className="min-w-0">
               <ItemTitle className="text-sm font-semibold">
-                {row.tone_class ? (
-                  <Badge className={row.tone_class} variant="secondary">
-                    {row.name}
-                  </Badge>
-                ) : (
-                  row.name
-                )}
+                {row.name}
               </ItemTitle>
               <ItemDescription className="text-sm leading-6">
                 {copy.cols.sortOrder}: {row.sort_order}
@@ -226,12 +210,6 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
               label={copy.form.name}
               placeholder={copy.form.namePlaceholder}
               required
-            />
-            <TextField
-              control={form.control}
-              name="tone_class"
-              label={copy.form.toneClass}
-              placeholder={copy.form.toneClassPlaceholder}
             />
             <NumberField
               control={form.control}

@@ -502,7 +502,6 @@ export function PosDesktopInner({
   const { getAddToCartBlock, dailyLimitDemandByMenuItem } = useAddToCartGate({
     cartItems: cartSnapshot.items,
     appendDraftItems,
-    menuItemById,
   });
 
   const {

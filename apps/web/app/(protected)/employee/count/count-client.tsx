@@ -39,7 +39,10 @@ interface CountSlipClientProps {
   groups: CountLocationGroup[];
   selectedLocationId: number | null;
   slipByLocation: Record<number, CountSlipHeader>;
-  prefill: Record<number, { quantity: string; note: string }>;
+  prefill: Record<
+    number,
+    { quantity: string; entryUnitId: number | null; note: string }
+  >;
 }
 
 interface DraftLine {
@@ -60,13 +63,15 @@ export function CountSlipClient({
   const [isPending, startTransition] = useTransition();
 
   const activeGroup = useMemo(
-    () => groups.find((group) => group.locationId === selectedLocationId) ?? null,
+    () =>
+      groups.find((group) => group.locationId === selectedLocationId) ?? null,
     [groups, selectedLocationId],
   );
 
-  const slip = selectedLocationId !== null
-    ? (slipByLocation[selectedLocationId] ?? null)
-    : null;
+  const slip =
+    selectedLocationId !== null
+      ? (slipByLocation[selectedLocationId] ?? null)
+      : null;
   const slipMeta = slip ? getStatusBadgeMeta("count-slip", slip.status) : null;
   const locked = slip?.status === "submitted" || slip?.status === "approved";
 
@@ -88,7 +93,7 @@ export function CountSlipClient({
       next[assignment.ingredientId] = {
         quantity: prior?.quantity ?? "",
         note: prior?.note ?? "",
-        entryUnitId: baseUnit?.unitId ?? null,
+        entryUnitId: prior?.entryUnitId ?? baseUnit?.unitId ?? null,
       };
     }
     setDraft(next);
@@ -174,7 +179,9 @@ export function CountSlipClient({
           description="Chọn kho bạn đang đếm."
         >
           <Select
-            value={selectedLocationId !== null ? String(selectedLocationId) : ""}
+            value={
+              selectedLocationId !== null ? String(selectedLocationId) : ""
+            }
             onValueChange={changeLocation}
           >
             <SelectTrigger className="w-full">
