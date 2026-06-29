@@ -297,7 +297,7 @@ export interface OrderDetailSheetProps {
   /**
    * Start "Sửa món pending" flow — only fires for items where status='pending'.
    * Parent owns the menu lookup (menuItemById) + customizer state, so this
-   * sheet just hands off the snapshot. Optional: not all hosts (mobile waiter
+   * sheet just hands off the snapshot. Optional: not all POS hosts
    * portal) need edit yet. */
   onStartEditSent?: (snapshot: OrderItemRowData) => void;
   onReorderToCart: (

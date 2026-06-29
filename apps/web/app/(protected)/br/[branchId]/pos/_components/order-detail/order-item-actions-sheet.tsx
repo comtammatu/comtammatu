@@ -34,7 +34,7 @@ interface OrderItemActionsSheetProps {
   onVoidRequest: (itemId: number) => void;
   onReduceRequest: (itemId: number) => void;
   /** Mở "Sửa món" flow — chỉ available khi status='pending' (chef chưa làm)
-   * và parent supply menu lookup. Optional vì caller cũ (employee waiter
+   * và parent supply menu lookup. Optional vì caller cũ (employee POS
    * portal) chưa cần đến. */
   onEditRequest?: (itemId: number) => void;
   onDiscountRequest?: (itemId: number) => void;

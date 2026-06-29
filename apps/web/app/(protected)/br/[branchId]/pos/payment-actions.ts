@@ -1005,7 +1005,7 @@ export interface CashPaymentResult {
  * Blocks under-payment hard (use order discount for employee meals).
  */
 /**
- * Auth requires POS_CONFIRM_PAYMENT (cashier / branch_manager+); a waiter
+ * Auth requires POS_CONFIRM_PAYMENT (cashier / branch_manager+); staff without POS_CONFIRM_PAYMENT
  * with only POS_USE + POS_PRINT can print a provisional bill but MUST NOT
  * touch the cash drawer. VietQR / MoMo keep POS_USE at createPayment /
  * confirmVietQrPayment (e-wallet is the webhook source of truth, no cash

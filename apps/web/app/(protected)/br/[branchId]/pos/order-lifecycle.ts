@@ -500,7 +500,7 @@ export const appendOrderItems = withActionPositional(
 );
 
 
-/* ─── markOrderItemServed (POS waiter per-item) ─── */
+/* ─── markOrderItemServed (POS per-item) ─── */
 
 /**
  * Waiter confirmation that a single order item reached the table. RPC

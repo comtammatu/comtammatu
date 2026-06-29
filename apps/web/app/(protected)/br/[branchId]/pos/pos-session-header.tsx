@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 
 interface PosSessionHeaderProps {
-  /** Ẩn nút "Chốt ca" cho role không có `pos:close_shift` (waiter). */
+  /** Ẩn nút "Chốt ca" cho role không có `pos:close_shift`. */
   canCloseShift: boolean;
   canManageMenuLimits?: boolean;
   menuLimitRows?: MenuLimitRow[];

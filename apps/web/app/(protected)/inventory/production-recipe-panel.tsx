@@ -83,6 +83,7 @@ const recipeLineItemSchema = z.object({
     .min(1, { error: "Nhập số lượng" })
     .refine((v) => Number(v) > 0, { error: "Số lượng phải > 0" }),
   unit: z.string().trim().min(1, { error: "Đơn vị không được trống" }),
+  entry_unit_id: z.string().optional(),
   yield_factor: z
     .string()
     .min(1, { error: "Nhập yield" })
@@ -123,6 +124,7 @@ function emptyRecipeLine(): RecipeLineItemFormValues {
     ingredient_id: "",
     quantity: "1",
     unit: "",
+    entry_unit_id: "",
     yield_factor: "1",
     note: "",
   };
@@ -135,6 +137,7 @@ function recipeToLineFormValue(
     ingredient_id: String(recipe.ingredient_id),
     quantity: String(recipe.quantity),
     unit: recipe.unit,
+    entry_unit_id: recipe.entry_unit_id != null ? String(recipe.entry_unit_id) : "",
     yield_factor: String(recipe.yield_factor),
     note: recipe.note ?? "",
   };
@@ -192,6 +195,7 @@ export function ProductionRecipePanel({
           id: ingredient.id,
           name: ingredient.name,
           unit: ingredient.unit,
+          units: ingredient.units,
         })),
     ),
   );
@@ -238,6 +242,7 @@ export function ProductionRecipePanel({
             id: ingredient.id,
             name: ingredient.name,
             unit: ingredient.unit,
+            units: ingredient.units,
           })),
       ),
     );
@@ -277,6 +282,7 @@ export function ProductionRecipePanel({
         id: item.id,
         name: item.name,
         unit: item.unit,
+        units: item.units,
       })),
     [rawIngredientsOptions],
   );
@@ -391,6 +397,7 @@ export function ProductionRecipePanel({
           ingredientId: Number(line.ingredient_id),
           quantity: Number(line.quantity),
           unit: line.unit.trim(),
+          entryUnitId: line.entry_unit_id ? Number(line.entry_unit_id) : null,
           yieldFactor: Number(line.yield_factor),
           note: line.note?.trim() || undefined,
         })),

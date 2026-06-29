@@ -2,6 +2,7 @@ import type {
   ProductionOrderRow,
   ProductionRecipeRow,
 } from "./production-actions";
+import type { IngredientUnitRow } from "./_lib/types";
 
 export type BranchOption = {
   id: number;
@@ -13,18 +14,21 @@ export type IngredientOption = {
   name: string;
   unit: string;
   item_kind: string;
+  units?: IngredientUnitRow[];
 };
 
 export type FinishedGoodOption = {
   id: number;
   name: string;
   unit: string;
+  units?: IngredientUnitRow[];
 };
 
 export type RawIngredientOption = {
   id: number;
   name: string;
   unit: string;
+  units?: IngredientUnitRow[];
 };
 
 export type ProductionRecipeGroup = {

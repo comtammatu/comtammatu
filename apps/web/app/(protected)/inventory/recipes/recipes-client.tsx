@@ -34,6 +34,7 @@ export type RecipeItem = {
   ingredientName: string;
   qty: number;
   unit: string;
+  entryUnitId: number | null;
   yieldFactor: number;
   note: string | null;
   lineCost: number;
@@ -85,6 +86,7 @@ export function RecipesClient({
         ingredientId: item.ingredientId,
         quantity: item.qty,
         unit: item.unit,
+        entryUnitId: item.entryUnitId,
         yieldFactor: item.yieldFactor,
         note: item.note,
       })),

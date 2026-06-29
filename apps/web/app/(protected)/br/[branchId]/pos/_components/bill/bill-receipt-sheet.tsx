@@ -825,7 +825,7 @@ export function BillReceipt({
   }, [isOnline, pendingOfflineMethod, handleSelectMethod]);
 
   // Auto-create the QR payment when the bill dialog opens with a non-cash
-  // method pre-selected (waiter case — no `pos:confirm_payment`). Without
+  // method pre-selected (staff-without-cash-confirm case — no `pos:confirm_payment`). Without
   // this, "Chuyển khoản" is highlighted but the QR area sits at "Đang tạo"
   // until the user re-taps the already-selected button. Bypasses for
   // offline (handleSelectMethod offline-restore takes over later), already-

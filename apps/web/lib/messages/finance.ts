@@ -123,7 +123,6 @@ export const finance = {
     hddtIssued: "Đã phát hành",
     hddtAttention: "Cần xử lý",
     hddtNotRequired: "Không cần xuất",
-    hddtWebhookFailures: "Lỗi đồng bộ",
     hddtNoDataTitle: "Chưa có dữ liệu HĐĐT",
     hddtNoDataDescription:
       "Khi có đơn đã thanh toán và hóa đơn phát sinh, trạng thái HĐĐT sẽ hiện tại đây.",
@@ -218,6 +217,7 @@ export const finance = {
     add: "Thêm khoản chi",
     totalLabel: "Tổng chi trong kỳ",
     totalHint: (count: string) => `${count} khoản đã ghi`,
+    foodCostReadonlyHint: "Tiêu hao thực tế từ kho · không tính vào chi vận hành",
     tenantLevel: "Toàn quán",
     empty: {
       title: "Chưa có khoản chi trong kỳ",
@@ -268,6 +268,10 @@ export const finance = {
       marketing: "Marketing / khuyến mãi",
       fees_tax: "Phí ngân hàng / thuế",
       other: "Khác",
+    },
+    categoryGroupLabels: {
+      operating: "Chi vận hành",
+      materials: "Giá vốn món",
     },
     paymentMethodLabels: {
       cash: "Tiền mặt",

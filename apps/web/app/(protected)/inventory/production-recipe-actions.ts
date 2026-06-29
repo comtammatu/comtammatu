@@ -37,6 +37,7 @@ const productionRecipeLineUpsertSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
   unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
+  entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   yieldFactor: z.coerce.number().positive().default(1),
   note: z.string().optional(),
 });
@@ -128,6 +129,7 @@ export interface ProductionRecipeRow {
   ingredient_name: string;
   quantity: number;
   unit: string;
+  entry_unit_id: number | null;
   yield_factor: number;
   note: string | null;
 }
@@ -138,6 +140,7 @@ type ProductionRecipeQueryRow = {
   ingredient_id: number;
   quantity: number | string;
   unit: string;
+  entry_unit_id: number | null;
   yield_factor: number | string | null;
   note: string | null;
   finished_good: { id: number; name: string } | null;
@@ -204,6 +207,7 @@ export async function fetchProductionRecipes(): Promise<
       ingredient_id,
       quantity,
       unit,
+      entry_unit_id,
       yield_factor,
       note,
       finished_good:ingredients!production_recipes_finished_good_id_fkey ( id, name ),
@@ -238,6 +242,7 @@ export async function fetchProductionRecipes(): Promise<
           ingredient_name: ingredient?.name ?? "Nguyên liệu",
           quantity: Number(row.quantity),
           unit: row.unit,
+          entry_unit_id: row.entry_unit_id ?? null,
           yield_factor: Number(row.yield_factor ?? 1),
           note: row.note ?? null,
         };
@@ -717,6 +722,7 @@ export const upsertProductionRecipeLines = withAction(
         ingredient_id: line.ingredientId,
         quantity: line.quantity,
         unit: line.unit.trim(),
+        entry_unit_id: line.entryUnitId ?? null,
         note: line.note?.trim() ? line.note.trim() : null,
         yield_factor: line.yieldFactor,
       })),
@@ -743,6 +749,23 @@ export const upsertProductionRecipeLines = withAction(
         return { success: false, error: "Có nguyên liệu không còn hợp lệ." };
       }
       return { success: false, error: "Không thể lưu BOM sản xuất." };
+    }
+
+    // upsert_production_recipe_lines persists ingredient/quantity/unit only.
+    // Persist the entry-unit per line so confirm_production_order can convert the
+    // authored qty to base via inv_to_base(). NULL entry units are already base
+    // (legacy purchase_to_measure_factor path) and skipped.
+    for (const line of data.lines) {
+      if (line.entryUnitId == null) continue;
+      const { error: unitError } = await supabase
+        .from("production_recipes")
+        .update({ entry_unit_id: line.entryUnitId })
+        .eq("tenant_id", claims.tenant_id)
+        .eq("finished_good_id", data.finishedGoodId)
+        .eq("ingredient_id", line.ingredientId);
+      if (unitError) {
+        return { success: false, error: "Không thể lưu đơn vị của dòng BOM." };
+      }
     }
 
     revalidatePath("/inventory/production");

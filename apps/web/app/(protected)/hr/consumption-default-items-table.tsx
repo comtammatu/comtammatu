@@ -2,10 +2,13 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: HR consumption default setup copy */
 
-import { useState, useTransition } from "react";
-import { ClipboardList as IconClipboardList } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
+import {
+  ClipboardList as IconClipboardList,
+  X as IconX,
+} from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
   Item,
   ItemActions,
@@ -14,7 +17,8 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { DataTable, type DataTableColumn } from "@/components/data-table/data-table";
+import { MultiSelectCombobox } from "@/components/form";
+import { AppEmptyState } from "@/components/surface";
 import { setConsumptionDefaultIngredients } from "./checklist-actions";
 import type {
   ConsumptionChecklistItemRow,
@@ -39,23 +43,44 @@ function initialSelected(defaults: ConsumptionDefaultItemRow[]) {
   return selected;
 }
 
+function sameSet(a: number[], b: number[]) {
+  if (a.length !== b.length) return false;
+  const setB = new Set(b);
+  return a.every((id) => setB.has(id));
+}
+
 export function ConsumptionDefaultItemsTable({
   items,
   ingredients,
   defaults,
 }: ConsumptionDefaultItemsTableProps) {
   const [selected, setSelected] = useState(() => initialSelected(defaults));
+  const [baseline, setBaseline] = useState(() => initialSelected(defaults));
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function toggle(templateItemId: number, ingredientId: number, checked: boolean) {
+  const ingredientById = useMemo(
+    () => new Map(ingredients.map((ing) => [ing.id, ing])),
+    [ingredients],
+  );
+
+  function add(templateItemId: number, ingredientIds: string[]) {
     setSelected((current) => {
       const existing = current[templateItemId] ?? [];
-      const next = checked
-        ? Array.from(new Set([...existing, ingredientId]))
-        : existing.filter((id) => id !== ingredientId);
+      const next = Array.from(
+        new Set([...existing, ...ingredientIds.map(Number)]),
+      );
       return { ...current, [templateItemId]: next };
     });
+  }
+
+  function remove(templateItemId: number, ingredientId: number) {
+    setSelected((current) => ({
+      ...current,
+      [templateItemId]: (current[templateItemId] ?? []).filter(
+        (id) => id !== ingredientId,
+      ),
+    }));
   }
 
   function save(templateItemId: number) {
@@ -70,72 +95,13 @@ export function ConsumptionDefaultItemsTable({
         toast.error(result.error ?? "Không thể lưu nguyên liệu mặc định.");
         return;
       }
+      setBaseline((b) => ({
+        ...b,
+        [templateItemId]: selected[templateItemId] ?? [],
+      }));
       toast.success("Đã lưu nguyên liệu mặc định.");
     });
   }
-
-  function renderIngredients(item: ConsumptionChecklistItemRow) {
-    const checked = new Set(selected[item.templateItemId] ?? []);
-    return (
-      <div className="grid max-h-56 gap-2 overflow-y-auto rounded-md border p-2 sm:grid-cols-2">
-        {ingredients.map((ingredient) => (
-          <label
-            key={ingredient.id}
-            className="flex min-h-10 items-center gap-2 rounded-md px-2 text-sm hover:bg-muted/50"
-          >
-            <Checkbox
-              checked={checked.has(ingredient.id)}
-              disabled={isPending}
-              onCheckedChange={(value) =>
-                toggle(item.templateItemId, ingredient.id, value === true)
-              }
-            />
-            <span className="min-w-0">
-              <span className="block truncate font-medium">{ingredient.name}</span>
-              <span className="block text-xs text-muted-foreground">
-                {ingredient.unit}
-              </span>
-            </span>
-          </label>
-        ))}
-      </div>
-    );
-  }
-
-  const columns: DataTableColumn<ConsumptionChecklistItemRow>[] = [
-    {
-      key: "template",
-      header: "Checklist",
-      render: (item) => (
-        <div>
-          <p className="font-medium">{item.templateName}</p>
-          <p className="text-xs text-muted-foreground">
-            {item.branchName ?? "Global"}
-          </p>
-        </div>
-      ),
-    },
-    {
-      key: "ingredients",
-      header: "Nguyên liệu mặc định",
-      render: renderIngredients,
-    },
-    {
-      key: "actions",
-      header: "Lưu",
-      className: "w-24 text-right",
-      render: (item) => (
-        <Button
-          type="button"
-          size="sm"
-          disabled={isPending && pendingId === item.templateItemId}
-          onClick={() => save(item.templateItemId)}
-        >
-          Lưu
-        </Button>
-      ),
-    },
-  ];
 
   return (
     <div className="flex flex-col gap-3">
@@ -144,39 +110,98 @@ export function ConsumptionDefaultItemsTable({
           Nguyên liệu mặc định cho tiêu hao bếp
         </h3>
         <p className="text-sm text-muted-foreground">
-          Nhân viên vẫn có thể thêm dòng ngoài danh sách khi báo cáo ca.
+          Mỗi checklist chọn sẵn các nguyên liệu cần báo tiêu hao. Nhân viên vẫn
+          có thể thêm dòng ngoài danh sách khi báo cáo ca.
         </p>
       </div>
-      <DataTable
-        columns={columns}
-        data={items}
-        getRowKey={(item) => item.templateItemId}
-        emptyTitle="Chưa có checklist tiêu hao bếp"
-        emptyIcon={<IconClipboardList />}
-        mobileCardRender={(item) => (
-          <Item variant="outline">
-            <ItemContent>
-              <ItemTitle className="line-clamp-none text-sm font-semibold">
-                {item.templateName}
-              </ItemTitle>
-              <ItemDescription className="line-clamp-none">
-                {item.branchName ?? "Global"}
-              </ItemDescription>
-              <div>{renderIngredients(item)}</div>
-            </ItemContent>
-            <ItemActions>
-              <Button
-                type="button"
-                size="sm"
-                disabled={isPending && pendingId === item.templateItemId}
-                onClick={() => save(item.templateItemId)}
-              >
-                Lưu
-              </Button>
-            </ItemActions>
-          </Item>
-        )}
-      />
+
+      {items.length === 0 ? (
+        <AppEmptyState
+          compact
+          icon={<IconClipboardList />}
+          title="Chưa có checklist tiêu hao bếp"
+        />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {items.map((item) => {
+            const current = selected[item.templateItemId] ?? [];
+            const currentSet = new Set(current);
+            const dirty = !sameSet(current, baseline[item.templateItemId] ?? []);
+            const saving = isPending && pendingId === item.templateItemId;
+            const options = ingredients.map((ing) => ({
+              value: String(ing.id),
+              label: ing.name,
+              hint: ing.unit,
+              alreadySelected: currentSet.has(ing.id),
+              keywords: [ing.name, ing.category ?? ""],
+            }));
+
+            return (
+              <Item key={item.templateItemId} variant="outline">
+                <ItemContent className="gap-3">
+                  <div>
+                    <ItemTitle className="text-sm font-semibold">
+                      {item.templateName}
+                    </ItemTitle>
+                    <ItemDescription>
+                      {item.branchName ?? "Global"} · {current.length} nguyên
+                      liệu
+                    </ItemDescription>
+                  </div>
+
+                  {current.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {current.map((id) => {
+                        const ing = ingredientById.get(id);
+                        return (
+                          <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                            {ing?.name ?? `#${id}`}
+                            <button
+                              type="button"
+                              aria-label={`Bỏ ${ing?.name ?? id}`}
+                              disabled={isPending}
+                              onClick={() => remove(item.templateItemId, id)}
+                              className="rounded-full p-0.5 hover:bg-muted-foreground/20 disabled:opacity-50"
+                            >
+                              <IconX className="size-3" />
+                            </button>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Chưa chọn nguyên liệu.
+                    </p>
+                  )}
+
+                  <MultiSelectCombobox
+                    options={options}
+                    onConfirm={(ids) => add(item.templateItemId, ids)}
+                    triggerLabel="Thêm nguyên liệu"
+                    confirmLabel={(n) => `Thêm ${n}`}
+                    searchPlaceholder="Tìm nguyên liệu..."
+                    emptyMessage="Không tìm thấy nguyên liệu."
+                    alreadyAppliedHint="Đã chọn"
+                    disabled={isPending}
+                    triggerClassName="w-full sm:w-72"
+                  />
+                </ItemContent>
+                <ItemActions>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!dirty || saving}
+                    onClick={() => save(item.templateItemId)}
+                  >
+                    Lưu
+                  </Button>
+                </ItemActions>
+              </Item>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

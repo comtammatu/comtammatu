@@ -5,6 +5,7 @@ import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import {
   Controller,
   useFieldArray,
+  useWatch,
   type ArrayPath,
   type Control,
   type FieldErrors,
@@ -16,8 +17,20 @@ import {
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { Combobox, MultiSelectCombobox } from "@/components/form";
 import { FormattedNumberInput } from "./formatted-number-input";
+import {
+  getDefaultProductionUnit,
+  getProductionUnitOptions,
+} from "../_lib/production-units";
+import type { IngredientUnitRow } from "../_lib/types";
 import {
   FORM_VI,
   INVENTORY_VI,
@@ -29,12 +42,14 @@ export interface RecipeLineIngredient {
   id: number;
   name: string;
   unit: string;
+  units?: IngredientUnitRow[];
 }
 
 export interface RecipeLineRowValue {
   ingredient_id: string;
   quantity: string;
   unit: string;
+  entry_unit_id?: string;
   yield_factor: string;
   note?: string;
 }
@@ -46,6 +61,7 @@ const EMPTY_ROW: RecipeLineRowValue = {
   ingredient_id: "",
   quantity: "",
   unit: "",
+  entry_unit_id: "",
   yield_factor: "1",
   note: "",
 };
@@ -99,19 +115,25 @@ export function RecipeLinesEditor<T extends FieldValues>({
   }, [rows]);
 
   function handleBulkAdd(ingredientIds: string[]) {
-    const newRows: RecipeLineRowValue[] = ingredientIds.map((id) => ({
-      ingredient_id: id,
-      quantity: "",
-      unit: ingredientMap.get(Number(id))?.unit ?? "",
-      yield_factor: "1",
-      note: "",
-    }));
+    const newRows: RecipeLineRowValue[] = ingredientIds.map((id) => {
+      const ing = ingredientMap.get(Number(id));
+      const defaultUnit = getDefaultProductionUnit(ing);
+      return {
+        ingredient_id: id,
+        quantity: "",
+        unit: defaultUnit?.code ?? ing?.unit ?? "",
+        entry_unit_id: defaultUnit ? String(defaultUnit.unitId) : "",
+        yield_factor: "1",
+        note: "",
+      };
+    });
     const kept = rows
       .filter((row) => row.ingredient_id !== "")
       .map((row) => ({
         ingredient_id: row.ingredient_id,
         quantity: row.quantity,
         unit: row.unit,
+        entry_unit_id: row.entry_unit_id ?? "",
         yield_factor: row.yield_factor,
         note: row.note ?? "",
       }));
@@ -122,14 +144,27 @@ export function RecipeLinesEditor<T extends FieldValues>({
     const ing = ingredientMap.get(Number(value));
     if (!ing) return;
     const unitPath = `${name}.${index}.unit` as Path<T>;
+    const entryUnitPath = `${name}.${index}.entry_unit_id` as Path<T>;
+    const defaultUnit = getDefaultProductionUnit(ing);
     if (unitEditable) {
-      setValue(unitPath, ing.unit as never, {
+      setValue(unitPath, (defaultUnit?.code ?? ing.unit) as never, {
         shouldDirty: true,
         shouldValidate: true,
       });
+      setValue(
+        entryUnitPath,
+        (defaultUnit ? String(defaultUnit.unitId) : "") as never,
+        { shouldDirty: true },
+      );
     } else {
       const currentUnit = getValues(unitPath);
-      if (!currentUnit) setValue(unitPath, ing.unit as never);
+      if (!currentUnit) {
+        setValue(unitPath, (defaultUnit?.code ?? ing.unit) as never);
+        setValue(
+          entryUnitPath,
+          (defaultUnit ? String(defaultUnit.unitId) : "") as never,
+        );
+      }
     }
   }
 
@@ -183,9 +218,11 @@ export function RecipeLinesEditor<T extends FieldValues>({
             <RecipeLineRow<T>
               key={row.id}
               control={control}
+              setValue={setValue}
               name={name}
               index={index}
               ingredients={ingredients}
+              ingredientMap={ingredientMap}
               rowError={lineErrors?.[index]}
               unitEditable={unitEditable}
               canRemove={rows.length > 1}
@@ -201,9 +238,11 @@ export function RecipeLinesEditor<T extends FieldValues>({
 
 function RecipeLineRow<T extends FieldValues>({
   control,
+  setValue,
   name,
   index,
   ingredients,
+  ingredientMap,
   rowError,
   unitEditable,
   canRemove,
@@ -211,9 +250,11 @@ function RecipeLineRow<T extends FieldValues>({
   onIngredientChange,
 }: {
   control: Control<T>;
+  setValue: UseFormSetValue<T>;
   name: Path<T>;
   index: number;
   ingredients: RecipeLineIngredient[];
+  ingredientMap: Map<number, RecipeLineIngredient>;
   rowError: FieldErrors<RecipeLineRowValue> | undefined;
   unitEditable: boolean;
   canRemove: boolean;
@@ -223,8 +264,17 @@ function RecipeLineRow<T extends FieldValues>({
   const ingredientName = `${name}.${index}.ingredient_id` as Path<T>;
   const quantityName = `${name}.${index}.quantity` as Path<T>;
   const unitName = `${name}.${index}.unit` as Path<T>;
+  const entryUnitName = `${name}.${index}.entry_unit_id` as Path<T>;
   const yieldName = `${name}.${index}.yield_factor` as Path<T>;
   const noteName = `${name}.${index}.note` as Path<T>;
+
+  const selectedIngredientId = useWatch({ control, name: ingredientName }) as
+    | string
+    | undefined;
+  const selectedIngredient = selectedIngredientId
+    ? ingredientMap.get(Number(selectedIngredientId))
+    : undefined;
+  const unitOptions = getProductionUnitOptions(selectedIngredient);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -273,24 +323,66 @@ function RecipeLineRow<T extends FieldValues>({
           )}
         />
 
-        <Controller
-          control={control}
-          name={unitName}
-          render={({ field }) => (
-            <Input
-              placeholder={INVENTORY_VI.unitPlaceholder}
-              {...field}
-              value={field.value ?? ""}
-              readOnly={!unitEditable}
-              aria-invalid={!!rowError?.unit}
-              className={cn(
-                "h-9",
-                !unitEditable && "bg-muted/40",
-                rowError?.unit && "border-destructive",
-              )}
-            />
-          )}
-        />
+        {unitOptions.length > 0 ? (
+          <Controller
+            control={control}
+            name={entryUnitName}
+            render={({ field }) => (
+              <Select
+                value={field.value ?? ""}
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  const opt = unitOptions.find(
+                    (o) => String(o.unitId) === value,
+                  );
+                  if (opt) {
+                    setValue(unitName, opt.code as never, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                  }
+                }}
+              >
+                <SelectTrigger
+                  className={cn(
+                    "h-9",
+                    rowError?.unit && "border-destructive",
+                  )}
+                  aria-invalid={!!rowError?.unit}
+                  aria-label={FORM_VI.unit}
+                >
+                  <SelectValue placeholder={INVENTORY_VI.selectUnit} />
+                </SelectTrigger>
+                <SelectContent>
+                  {unitOptions.map((opt) => (
+                    <SelectItem key={opt.unitId} value={String(opt.unitId)}>
+                      {opt.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        ) : (
+          <Controller
+            control={control}
+            name={unitName}
+            render={({ field }) => (
+              <Input
+                placeholder={INVENTORY_VI.unitPlaceholder}
+                {...field}
+                value={field.value ?? ""}
+                readOnly={!unitEditable}
+                aria-invalid={!!rowError?.unit}
+                className={cn(
+                  "h-9",
+                  !unitEditable && "bg-muted/40",
+                  rowError?.unit && "border-destructive",
+                )}
+              />
+            )}
+          />
+        )}
 
         <Controller
           control={control}

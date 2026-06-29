@@ -25,6 +25,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { RecipeLinesEditor } from "../_components/recipe-lines-editor";
+import type { IngredientUnitRow } from "../_lib/types";
 import { upsertRecipeLines } from "../procurement-actions";
 import {
   ACTIONS_VI,
@@ -41,12 +42,14 @@ export interface IngredientOption {
   id: number;
   name: string;
   unit: string;
+  units?: IngredientUnitRow[];
 }
 
 export interface RecipeLineDraft {
   ingredientId: number;
   quantity: number;
   unit: string;
+  entryUnitId: number | null;
   yieldFactor: number;
   note: string | null;
 }
@@ -60,6 +63,7 @@ const recipeLineRowSchema = z.object({
     .min(1, { error: INVENTORY_VI.enterQuantity })
     .refine((v) => Number(v) > 0, { error: INVENTORY_VI.quantityPositive }),
   unit: z.string().trim().min(1, { error: INVENTORY_VI.unitRequired }),
+  entry_unit_id: z.string().optional(),
   yield_factor: z
     .string()
     .min(1, { error: INVENTORY_VI.enterYield })
@@ -88,6 +92,7 @@ const EMPTY_ROW: RecipeLineRow = {
   ingredient_id: "",
   quantity: "",
   unit: "",
+  entry_unit_id: "",
   yield_factor: "1",
   note: "",
 };
@@ -128,6 +133,7 @@ export function RecipeLineDialog({
               ingredient_id: String(l.ingredientId),
               quantity: String(l.quantity),
               unit: l.unit,
+              entry_unit_id: l.entryUnitId ? String(l.entryUnitId) : "",
               yield_factor: String(l.yieldFactor),
               note: l.note ?? "",
             }))
@@ -160,6 +166,7 @@ export function RecipeLineDialog({
       ingredientId: Number(row.ingredient_id),
       quantity: Number(row.quantity),
       unit: row.unit.trim(),
+      entryUnitId: row.entry_unit_id ? Number(row.entry_unit_id) : null,
       yieldFactor: Number(row.yield_factor || "1"),
       note: row.note?.trim() ? row.note.trim() : null,
     }));

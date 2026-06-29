@@ -74,7 +74,11 @@ export default async function StaffPermissionsPage({ params }: Props) {
       .eq("target_user_id", id)
       .order("at", { ascending: false })
       .limit(50),
-    supabase.from("branches").select("id, name").order("name"),
+    supabase
+      .from("branches")
+      .select("id, name")
+      .eq("branch_kind", "branch")
+      .order("name"),
   ]);
 
   const branchList = branches ?? [];

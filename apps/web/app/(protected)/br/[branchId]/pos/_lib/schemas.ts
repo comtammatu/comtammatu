@@ -123,7 +123,7 @@ export const transferTableSchema = z.object({
 });
 
 /**
- * Schema for `markOrderItemServed(branchId, itemId)`. POS waiter per-item serve
+ * Schema for `markOrderItemServed(branchId, itemId)`. POS per-item serve
  * confirmation. RPC enforces "preparing|ready → served" transition.
  */
 export const markOrderItemServedSchema = z.object({

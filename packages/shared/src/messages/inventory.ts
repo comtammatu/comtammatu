@@ -153,6 +153,7 @@ export const INVENTORY_VI = {
   createProductionOrderFailed: "Không thể tạo lệnh sản xuất",
   enterQuantityPlaceholder: "Nhập số lượng...",
   unitPlaceholder: "kg, lít...",
+  selectUnit: "Chọn ĐV",
 } as const;
 
 export type InventoryKey = keyof typeof INVENTORY_VI;

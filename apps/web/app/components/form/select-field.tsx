@@ -12,7 +12,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
@@ -23,11 +25,19 @@ interface SelectFieldOption {
   disabled?: boolean;
 }
 
+interface SelectFieldOptionGroup {
+  label: string;
+  options: readonly SelectFieldOption[];
+}
+
 export interface SelectFieldProps<TFieldValues extends FieldValues> {
   control: Control<TFieldValues>;
   name: FieldPath<TFieldValues>;
   label: string;
-  options: readonly SelectFieldOption[];
+  /** Flat option list. Provide this OR `groups`, not both. */
+  options?: readonly SelectFieldOption[];
+  /** Grouped options rendered under section labels. */
+  groups?: readonly SelectFieldOptionGroup[];
   description?: string;
   placeholder?: string;
   disabled?: boolean;
@@ -41,6 +51,7 @@ export function SelectField<TFieldValues extends FieldValues>({
   name,
   label,
   options,
+  groups,
   description,
   placeholder,
   disabled,
@@ -51,6 +62,12 @@ export function SelectField<TFieldValues extends FieldValues>({
   const { field, fieldState } = useController({ control, name });
   const fieldId = id ?? `field-${String(name)}`;
   const hasError = !!fieldState.error;
+
+  const renderItem = (opt: SelectFieldOption) => (
+    <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+      {opt.label}
+    </SelectItem>
+  );
 
   return (
     <Field data-invalid={hasError}>
@@ -73,15 +90,14 @@ export function SelectField<TFieldValues extends FieldValues>({
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {options.map((opt) => (
-            <SelectItem
-              key={opt.value}
-              value={opt.value}
-              disabled={opt.disabled}
-            >
-              {opt.label}
-            </SelectItem>
-          ))}
+          {groups
+            ? groups.map((group) => (
+                <SelectGroup key={group.label}>
+                  <SelectLabel>{group.label}</SelectLabel>
+                  {group.options.map(renderItem)}
+                </SelectGroup>
+              ))
+            : options?.map(renderItem)}
         </SelectContent>
       </Select>
       {description ? <FieldDescription>{description}</FieldDescription> : null}

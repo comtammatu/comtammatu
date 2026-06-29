@@ -24,6 +24,7 @@ type MenuItemRow = {
     ingredient_id: number | null;
     quantity: number | string | null;
     unit: string | null;
+    entry_unit_id: number | string | null;
     note: string | null;
     yield_factor: number | string | null;
     ingredients: {
@@ -83,6 +84,8 @@ export default async function RecipesPage({
             line.ingredients?.purchase_unit ??
             line.ingredients?.unit ??
             "",
+          entryUnitId:
+            line.entry_unit_id == null ? null : Number(line.entry_unit_id),
           yieldFactor: Number(line.yield_factor ?? 1),
           note: line.note ?? null,
           lineCost: qty * unitCost,
