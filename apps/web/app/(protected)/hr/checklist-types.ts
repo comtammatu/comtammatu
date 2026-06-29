@@ -1,6 +1,6 @@
 // Phase vocabulary for rendering historical attendance checklist snapshots.
-// Snapshots predating the position-task redesign may still carry the legacy
-// `during_shift` phase, so the label map keeps all three values.
+// Snapshots predating the position-task redesign may still carry
+// `during_shift`, so the label map keeps all three values.
 export const CHECKLIST_PHASES = [
   "start_of_shift",
   "during_shift",
