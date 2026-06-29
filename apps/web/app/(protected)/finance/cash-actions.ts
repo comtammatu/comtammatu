@@ -3,15 +3,15 @@
 /**
  * Cash-book opening anchor (D028 deliverable 3).
  *
- * Owner counts physical cash on a chosen date and stores it as the running-quỹ
- * anchor in system_settings. `fetchCashSummary` adds cash collected and
- * subtracts cash spent from this date to derive tiền mặt hiện hữu.
+ * Owner counts physical cash and bank-account balance on a chosen date and
+ * stores them as running-balance anchors in system_settings (both share one
+ * anchor date). `fetchCashSummary` adds collected money and subtracts paid
+ * expenses from this date to derive on-hand cash and bank balance.
  */
 
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
@@ -23,6 +23,10 @@ const setCashOpeningSchema = z.object({
   balance: z.coerce
     .number()
     .min(0, "Số dư không hợp lệ")
+    .max(100_000_000_000, "Số dư quá lớn"),
+  bankBalance: z.coerce
+    .number()
+    .min(0, "Số dư ngân hàng không hợp lệ")
     .max(100_000_000_000, "Số dư quá lớn"),
   date: z.string().regex(BUSINESS_DATE, "Ngày không hợp lệ"),
 });
@@ -48,22 +52,15 @@ export async function setCashOpening(
     PERMISSION_KEYS.SETTINGS_TENANT,
   );
   if (!ctx) return { success: false, error: "Không có quyền." };
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  const entries: Array<[string, string]> = [
-    [SYSTEM_SETTING_KEYS.CASH_OPENING_BALANCE, String(parsed.data.balance)],
-    [SYSTEM_SETTING_KEYS.CASH_OPENING_DATE, parsed.data.date],
-  ];
-  for (const [key, value] of entries) {
-    const { error } = await supabase
-      .from("system_settings")
-      .upsert(
-        { tenant_id: claims.tenant_id, key, value },
-        { onConflict: "key,tenant_id" },
-      );
-    if (error) {
-      return { success: false, error: "Không thể lưu tồn quỹ." };
-    }
+  const { error } = await supabase.rpc("set_finance_cash_opening", {
+    p_bank_balance: parsed.data.bankBalance,
+    p_cash_balance: parsed.data.balance,
+    p_opening_date: parsed.data.date,
+  });
+  if (error) {
+    return { success: false, error: "Không thể lưu tồn quỹ." };
   }
 
   revalidateSurfacePath("/finance");

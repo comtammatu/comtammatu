@@ -300,6 +300,11 @@ export default async function FinancePage({
         openingDate={cash.openingDate}
         cashInSince={cash.cashInSince}
         cashOutSince={cash.cashOutSince}
+        hasBankOpening={cash.hasBankOpening}
+        bankOnHand={cash.bankOnHand}
+        bankOpeningBalance={cash.bankOpeningBalance}
+        bankInSince={cash.bankInSince}
+        bankOutSince={cash.bankOutSince}
         cashDeltaAfterPaidExpenses={cashDeltaAfterPaidExpenses}
         todayBusinessDate={todayBusinessDate}
       />
