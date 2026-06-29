@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
-import { listNotifications } from "@/_actions/notifications";
+import { listNotifications } from "@/(protected)/notifications/actions";
 import { areNotificationPopupsEnabled } from "@lib/notifications/popup-preference";
 
 const SCAN_LIMIT = 10;

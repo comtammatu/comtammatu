@@ -23,7 +23,7 @@ import { withActionPositional } from "@/_lib/with-action";
 import {
   createTaxInvoice,
   resolveExistingInvoiceForOrder,
-} from "@/_actions/finance";
+} from "@/(protected)/finance/actions";
 import {
   existingIssuedInvoiceOutcome,
   mapTaxInvoiceOutcome,

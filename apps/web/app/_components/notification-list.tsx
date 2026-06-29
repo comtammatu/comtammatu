@@ -9,7 +9,7 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import { Inbox as IconInbox } from "lucide-react";
-import type { NotificationItem as NotificationItemModel } from "@/_actions/notifications";
+import type { NotificationItem as NotificationItemModel } from "@/(protected)/notifications/actions";
 import { messages, m } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
 import { AppBoneyardSkeleton } from "./boneyard-skeleton";

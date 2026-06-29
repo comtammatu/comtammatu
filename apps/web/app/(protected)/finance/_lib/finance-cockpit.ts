@@ -1,6 +1,6 @@
 import { formatVND } from "@comtammatu/shared/format";
 import { loadAuthState } from "@/_lib/auth";
-import { fetchInventoryValueByBranch } from "@/_actions/inventory";
+import { fetchInventoryValueByBranch } from "@/(protected)/inventory/inventory-value-actions";
 import { messages } from "@lib/messages";
 import {
   fetchAccessibleBranches,
