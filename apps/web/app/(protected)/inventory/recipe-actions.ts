@@ -10,6 +10,8 @@ const ROLES = PROCUREMENT_ROLES;
 
 /* ─── Recipes (branch WAC + menu-item recipes) ─── */
 
+const branchIdSchema = z.coerce.number().int().positive();
+
 const recipeLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
@@ -96,6 +98,54 @@ export async function fetchBranchWacMap(): Promise<
   const map: Record<string, number> = {};
   for (const [id, e] of accum) {
     map[String(id)] = e.sum / e.count;
+  }
+  return { success: true, data: map };
+}
+
+// Live recipe × warehouse-stock sellable portions per dish for one branch.
+export async function fetchBranchMenuStockCapacity(
+  branchId: number,
+): Promise<ActionResult<Record<string, number>>> {
+  const parsedBranchId = branchIdSchema.safeParse(branchId);
+  if (!parsedBranchId.success) {
+    return { success: false, error: "Chi nhánh không hợp lệ." };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.MENU_READ,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase } = ctx;
+
+  // `get_branch_menu_stock_capacity` is not yet in generated types — call it
+  // via the same cast escape hatch as the POS ingredient-cap RPC.
+  const { data, error } = await (
+    supabase as unknown as {
+      rpc: (
+        name: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: unknown }>;
+    }
+  ).rpc("get_branch_menu_stock_capacity", {
+    p_branch_id: parsedBranchId.data,
+  });
+
+  if (error) {
+    console.error("inventory.recipe.fetch_branch_menu_stock_capacity_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { success: false, error: "Không thể tải phần bán được." };
+  }
+
+  const map: Record<string, number> = {};
+  if (Array.isArray(data)) {
+    for (const row of data as Array<{
+      menu_item_id: number;
+      stock_capacity: number;
+    }>) {
+      map[String(row.menu_item_id)] = Number(row.stock_capacity);
+    }
   }
   return { success: true, data: map };
 }

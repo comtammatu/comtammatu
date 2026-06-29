@@ -53,10 +53,12 @@ export function RecipesClient({
   recipes,
   menuItems,
   ingredients,
+  stockCapacityByMenuItemId = {},
 }: {
   recipes: RecipeRow[];
   menuItems: MenuItemOption[];
   ingredients: IngredientOption[];
+  stockCapacityByMenuItemId?: Record<string, number>;
 }) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -123,6 +125,19 @@ export function RecipesClient({
       render: (recipe) => `${formatVND(recipe.estimatedCost)} đ`,
     },
     {
+      key: "stockCapacity",
+      header: "Phần bán được",
+      className: "font-mono",
+      render: (recipe) => {
+        const capacity = stockCapacityByMenuItemId[String(recipe.menuItemId)];
+        return capacity == null ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          capacity
+        );
+      },
+    },
+    {
       key: "actions",
       header: "",
       className: "w-32",
@@ -165,7 +180,11 @@ export function RecipesClient({
           data={recipes}
           getRowKey={(recipe) => recipe.id}
           mobileCardRender={(recipe) => (
-            <RecipeCard recipe={recipe} onEdit={openEdit} />
+            <RecipeCard
+              recipe={recipe}
+              stockCapacity={stockCapacityByMenuItemId[String(recipe.menuItemId)]}
+              onEdit={openEdit}
+            />
           )}
         />
       )}
@@ -186,9 +205,11 @@ export function RecipesClient({
 
 function RecipeCard({
   recipe,
+  stockCapacity,
   onEdit,
 }: {
   recipe: RecipeRow;
+  stockCapacity: number | undefined;
   onEdit: (recipe: RecipeRow) => void;
 }) {
   return (
@@ -202,6 +223,14 @@ function RecipeCard({
       <ItemContent>
         <ItemDescription>
           {recipe.items.length} nguyên liệu · {formatVND(recipe.estimatedCost)} đ/phần
+        </ItemDescription>
+        <ItemDescription>
+          Phần bán được:{" "}
+          {stockCapacity == null ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <span className="font-mono">{stockCapacity}</span>
+          )}
         </ItemDescription>
       </ItemContent>
       <ItemFooter>
