@@ -212,7 +212,7 @@ export const finance = {
       eyebrow: "Tài chính",
       title: "Chi vận hành",
       description:
-        "Sổ chi vận hành: thuê mặt bằng, điện nước, gas, lương, sửa chữa. Không gồm giá vốn món hoặc công nợ mua nguyên liệu.",
+        "Sổ chi gom 2 nhóm: Chi vận hành (thuê mặt bằng, điện nước, gas, lương, sửa chữa) và Chi nguyên liệu (giá vốn món, công nợ mua nguyên liệu).",
     },
     add: "Thêm khoản chi",
     totalLabel: "Tổng chi trong kỳ",
@@ -257,6 +257,10 @@ export const finance = {
       deleteSuccess: "Đã xóa khoản chi",
       deleteFailed: "Không thể xóa khoản chi",
     },
+    categoryGroupLabels: {
+      operating: "Chi vận hành",
+      materials: "Chi nguyên liệu",
+    },
     categoryLabels: {
       rent: "Thuê mặt bằng",
       utilities: "Điện / nước",
@@ -269,10 +273,6 @@ export const finance = {
       fees_tax: "Phí ngân hàng / thuế",
       other: "Khác",
     },
-    categoryGroupLabels: {
-      operating: "Chi vận hành",
-      materials: "Giá vốn món",
-    },
     paymentMethodLabels: {
       cash: "Tiền mặt",
       transfer: "Chuyển khoản",
@@ -284,21 +284,31 @@ export const finance = {
     setOpening: "Đặt tồn quỹ",
     editOpening: "Cập nhật tồn quỹ",
     noOpening:
-      "Đặt tồn quỹ đầu kỳ (đếm tiền mặt thực tế tại một ngày) để theo dõi tiền mặt trong quỹ.",
+      "Đặt tồn quỹ đầu kỳ (đếm tiền mặt và số dư tài khoản ngân hàng tại một ngày) để theo dõi tiền trong quỹ.",
     onHandBreakdown: (
       opening: string,
       date: string,
       cashIn: string,
       cashOut: string,
     ) => `Tồn ${date}: ${opening} + thu ${cashIn} − chi ${cashOut}`,
+    bankTitle: "Tài khoản ngân hàng",
+    bankNoOpening:
+      "Chưa đặt số dư tài khoản ngân hàng. Cập nhật lại tồn quỹ và đếm cả tiền mặt lẫn ngân hàng cùng ngày.",
+    bankBreakdown: (
+      opening: string,
+      date: string,
+      bankIn: string,
+      bankOut: string,
+    ) => `Tồn ${date}: ${opening} + thu CK ${bankIn} − chi CK ${bankOut}`,
     cashDeltaTitle: "Dòng tiền sau chi đã trả",
     cashDeltaHint:
       "Tiền đã thu trừ chi đã trả trong kỳ; dùng để đối soát quỹ.",
-    openingTitle: "Tồn quỹ tiền mặt đầu kỳ",
+    openingTitle: "Tồn quỹ đầu kỳ",
     openingDescription:
-      "Đếm tiền mặt thực tế tại một ngày làm mốc. Hệ cộng tiền mặt thu và trừ chi tiền mặt từ ngày này để ra tiền mặt trong quỹ.",
+      "Đếm tiền mặt thực tế và số dư tài khoản ngân hàng cùng một ngày làm mốc. Hệ cộng tiền thu và trừ tiền chi từ ngày này để ra số dư hiện tại.",
     openingBalanceLabel: "Số tiền mặt đếm được",
-    openingDateLabel: "Tính từ ngày",
+    openingBankLabel: "Số dư tài khoản ngân hàng",
+    openingDateLabel: "Ngày đếm đủ hai số dư",
     openingSubmit: "Lưu tồn quỹ",
     openingSuccess: "Đã lưu tồn quỹ đầu kỳ",
   },

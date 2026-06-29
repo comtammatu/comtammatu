@@ -10012,6 +10012,14 @@ export type Database = {
         }
         Returns: Json
       }
+      set_finance_cash_opening: {
+        Args: {
+          p_bank_balance: number
+          p_cash_balance: number
+          p_opening_date: string
+        }
+        Returns: undefined
+      }
       set_inventory_count_assignments: {
         Args: {
           p_branch_id: number

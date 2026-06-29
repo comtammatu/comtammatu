@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
-import { Settings2 as IconSettings, Wallet as IconWallet } from "lucide-react";
+import {
+  Landmark as IconBank,
+  Settings2 as IconSettings,
+  Wallet as IconWallet,
+} from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { cn } from "@comtammatu/ui/lib/utils";
@@ -21,6 +25,11 @@ interface Props {
   openingDate: string | null;
   cashInSince: number;
   cashOutSince: number;
+  hasBankOpening: boolean;
+  bankOnHand: number;
+  bankOpeningBalance: number;
+  bankInSince: number;
+  bankOutSince: number;
   cashDeltaAfterPaidExpenses: number;
   todayBusinessDate: string;
 }
@@ -29,6 +38,10 @@ const cashOpeningSchema = z.object({
   balance: z
     .string()
     .min(1, { error: "Nhập số dư" })
+    .refine((v) => Number(v) >= 0, { error: "Số dư không hợp lệ" }),
+  bankBalance: z
+    .string()
+    .min(1, { error: "Nhập số dư ngân hàng" })
     .refine((v) => Number(v) >= 0, { error: "Số dư không hợp lệ" }),
   date: z.string().min(1, { error: "Chọn ngày" }),
 });
@@ -41,20 +54,30 @@ export function CashPanel({
   openingDate,
   cashInSince,
   cashOutSince,
+  hasBankOpening,
+  bankOnHand,
+  bankOpeningBalance,
+  bankInSince,
+  bankOutSince,
   cashDeltaAfterPaidExpenses,
   todayBusinessDate,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const needsFullOpeningRefresh = openingDate != null && !hasBankOpening;
 
   const defaultValues: CashOpeningValues = {
-    balance: openingDate ? String(openingBalance) : "",
-    date: openingDate ?? todayBusinessDate,
+    balance:
+      openingDate && !needsFullOpeningRefresh ? String(openingBalance) : "",
+    bankBalance: hasBankOpening ? String(bankOpeningBalance) : "",
+    date:
+      openingDate && !needsFullOpeningRefresh ? openingDate : todayBusinessDate,
   };
 
   async function onSubmit(values: CashOpeningValues): Promise<ActionResult> {
     const result = await setCashOpening({
       balance: Number(values.balance),
+      bankBalance: Number(values.bankBalance),
       date: values.date,
     });
     if (result.success) {
@@ -99,6 +122,31 @@ export function CashPanel({
       <AppSection
         size="sm"
         className="min-w-0"
+        title={copy.bankTitle}
+        icon={<IconBank />}
+      >
+        {hasBankOpening ? (
+          <>
+            <p className="truncate font-mono text-2xl font-semibold tabular-nums text-primary">
+              {formatVND(bankOnHand)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {copy.bankBreakdown(
+                formatVND(bankOpeningBalance),
+                openingDate ?? "",
+                formatVND(bankInSince),
+                formatVND(bankOutSince),
+              )}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">{copy.bankNoOpening}</p>
+        )}
+      </AppSection>
+
+      <AppSection
+        size="sm"
+        className="min-w-0"
         title={copy.cashDeltaTitle}
         icon={<IconWallet />}
       >
@@ -130,6 +178,12 @@ export function CashPanel({
               control={form.control}
               name="balance"
               label={copy.openingBalanceLabel}
+              required
+            />
+            <MoneyVndField
+              control={form.control}
+              name="bankBalance"
+              label={copy.openingBankLabel}
               required
             />
             <BusinessDateField

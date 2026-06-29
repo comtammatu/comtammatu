@@ -8,10 +8,10 @@ import type { FinanceParams, ResolvedFinanceRange } from "./finance-params";
  * Cash-basis view (D028 deliverable 3): the cash book the HKD owner thinks in.
  *
  * Two truths, deliberately distinct:
- *  - Running quỹ (tiền mặt hiện hữu): tenant-level, "now". Anchored by an
- *    owner-counted opening balance + date in system_settings; from there we add
- *    cash collected and subtract cash spent. Only meaningful once anchored —
- *    without an opening, summing all-time cash would assume zero withdrawals.
+ *  - Running cash fund: tenant-level, "now". Anchored by an owner-counted
+ *    opening balance + date in system_settings; from there we add cash collected
+ *    and subtract cash spent. Only meaningful once anchored — without an
+ *    opening, summing all-time cash would assume zero withdrawals.
  *  - Period cash figures: respect the cockpit branch/date filter; feed the
  *    cash-basis profit (tiền thực thu − chi đã trả) computed in the page.
  */
@@ -30,6 +30,14 @@ export interface CashSummary {
   cashInSince: number;
   cashOutSince: number;
   cashOnHand: number;
+  /** Whether the owner has set a bank-account opening balance (shares openingDate). */
+  hasBankOpening: boolean;
+  bankOpeningBalance: number;
+  /** VietQR collected since openingDate (bank transfers into the account). */
+  bankInSince: number;
+  /** Transfer expenses paid since openingDate. */
+  bankOutSince: number;
+  bankOnHand: number;
   /** Period expenses actually paid out (cash + transfer, excludes 'unpaid'). */
   expensesPaidPeriod: number;
   /** Period cash-only expenses. */
@@ -43,20 +51,32 @@ const EMPTY_OPENING = {
   cashInSince: 0,
   cashOutSince: 0,
   cashOnHand: 0,
+  hasBankOpening: false,
+  bankOpeningBalance: 0,
+  bankInSince: 0,
+  bankOutSince: 0,
+  bankOnHand: 0,
 } as const;
 
-async function sumCashExpensesSince(
+async function sumExpensesSinceByMethod(
   supabase: SupabaseClient,
   tenantId: number,
   sinceDate: string,
-): Promise<number> {
+): Promise<{ cash: number; transfer: number }> {
   const { data } = await supabase
     .from("expenses")
-    .select("amount")
+    .select("amount, payment_method")
     .eq("tenant_id", tenantId)
-    .eq("payment_method", "cash")
+    .in("payment_method", ["cash", "transfer"])
     .gte("expense_date", sinceDate);
-  return (data ?? []).reduce((sum, row) => sum + toNumber(row.amount), 0);
+  let cash = 0;
+  let transfer = 0;
+  for (const row of data ?? []) {
+    const amount = toNumber(row.amount);
+    if (row.payment_method === "cash") cash += amount;
+    else if (row.payment_method === "transfer") transfer += amount;
+  }
+  return { cash, transfer };
 }
 
 export async function fetchCashSummary(
@@ -93,6 +113,7 @@ export async function fetchCashSummary(
     .in("key", [
       SYSTEM_SETTING_KEYS.CASH_OPENING_BALANCE,
       SYSTEM_SETTING_KEYS.CASH_OPENING_DATE,
+      SYSTEM_SETTING_KEYS.BANK_OPENING_BALANCE,
     ]);
   const settingMap = new Map(
     (settingRows ?? []).map((row) => [row.key, row.value]),
@@ -107,18 +128,27 @@ export async function fetchCashSummary(
     return { ...EMPTY_OPENING, expensesPaidPeriod, cashExpensePeriod };
   }
 
-  // Running quỹ: cash collected (DB-side via revenue RPC) − cash spent, since
-  // the anchor date, tenant-wide.
+  // Running balances are tenant-wide from the anchor date: cash uses
+  // cash_revenue minus cash expenses; bank uses VietQR revenue minus transfer
+  // expenses.
   const today = getVNDateString();
   const revRes = await fetchRevenueKpis(null, openingDate, today);
-  const cashInSince = revRes.success
-    ? toNumber((revRes.data as { cash_revenue?: number } | null)?.cash_revenue)
-    : 0;
-  const cashOutSince = await sumCashExpensesSince(
-    supabase,
-    tenantId,
-    openingDate,
+  const revData = revRes.success
+    ? (revRes.data as {
+        cash_revenue?: number;
+        vietqr_revenue?: number;
+      } | null)
+    : null;
+  const cashInSince = toNumber(revData?.cash_revenue);
+  const bankInSince = toNumber(revData?.vietqr_revenue);
+  const { cash: cashOutSince, transfer: bankOutSince } =
+    await sumExpensesSinceByMethod(supabase, tenantId, openingDate);
+
+  const bankSettingRaw = settingMap.get(
+    SYSTEM_SETTING_KEYS.BANK_OPENING_BALANCE,
   );
+  const hasBankOpening = bankSettingRaw != null && bankSettingRaw !== "";
+  const bankOpeningBalance = toNumber(bankSettingRaw);
 
   return {
     hasOpening: true,
@@ -127,6 +157,11 @@ export async function fetchCashSummary(
     cashInSince,
     cashOutSince,
     cashOnHand: openingBalance + cashInSince - cashOutSince,
+    hasBankOpening,
+    bankOpeningBalance,
+    bankInSince,
+    bankOutSince,
+    bankOnHand: bankOpeningBalance + bankInSince - bankOutSince,
     expensesPaidPeriod,
     cashExpensePeriod,
   };
