@@ -5,7 +5,13 @@ import { useNotifications } from "@/_hooks/use-notifications";
 import { NotificationList } from "@/_components/notification-list";
 import { NotificationPopupControl } from "@/_components/notification-popup-control";
 
-export function NotificationsClient({ tenantId }: { tenantId: number }) {
+export function NotificationsClient({
+  tenantId,
+  branchId,
+}: {
+  tenantId: number;
+  branchId: number | null;
+}) {
   const {
     items,
     unreadCount,
@@ -17,7 +23,7 @@ export function NotificationsClient({ tenantId }: { tenantId: number }) {
     markAll,
     loadMore,
     setUnreadOnly,
-  } = useNotifications({ tenantId });
+  } = useNotifications({ tenantId, branchId });
 
   return (
     <div className="flex flex-col gap-3">

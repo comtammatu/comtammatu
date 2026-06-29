@@ -12,6 +12,22 @@ import {
 
 interface UseNotificationsArgs {
   tenantId: number;
+  /**
+   * JWT `branch_id` claim for the current user. When non-null (branch-scoped
+   * staff), the realtime INSERT callback skips the refetch if the incoming
+   * notification targets a different branch.
+   *
+   * Why not a server-side filter `target_branch_id=eq.<id>`? Because
+   * tenant-wide notifications use `target_branch_id IS NULL`, and Supabase
+   * Realtime `eq` filters exclude NULL rows — branch users would silently
+   * miss those broadcasts. The subscription therefore stays broad
+   * (tenant_id only); branch scoping is applied client-side on the payload
+   * so correctness is preserved while unnecessary refetches are reduced.
+   *
+   * Owner/all-branch users pass `null` → every INSERT triggers a refetch
+   * (unchanged behaviour).
+   */
+  branchId?: number | null;
   initialItems?: NotificationItem[];
   initialUnread?: number;
 }
@@ -40,6 +56,7 @@ const PAGE_SIZE = 20;
  */
 export function useNotifications({
   tenantId,
+  branchId,
   initialItems = [],
   initialUnread = 0,
 }: UseNotificationsArgs): UseNotificationsResult {
@@ -54,6 +71,10 @@ export function useNotifications({
   const unreadOnlyRef = useRef(unreadOnly);
   const refreshRef = useRef<() => Promise<void>>(() => Promise.resolve());
   const initialSubscribeSeenRef = useRef(false);
+  // Stable ref so the channel callback always sees the latest branchId
+  // without needing to be listed in the dep array (would tear down + rebuild
+  // the subscription on every render where branchId changes identity).
+  const branchIdRef = useRef(branchId);
 
   const refresh = useCallback(async () => {
     if (inflightRef.current) return;
@@ -152,6 +173,10 @@ export function useNotifications({
   }, [refresh]);
 
   useEffect(() => {
+    branchIdRef.current = branchId;
+  }, [branchId]);
+
+  useEffect(() => {
     void refreshRef.current();
   }, []);
 
@@ -167,7 +192,19 @@ export function useNotifications({
             table: "notifications",
             filter: `tenant_id=eq.${String(tenantId)}`,
           },
-          () => {
+          (payload: { new: { target_branch_id?: number | null } }) => {
+            const scopedBranchId = branchIdRef.current;
+            // Branch-scoped users: skip refetch when the notification targets
+            // a different branch. target_branch_id=null means tenant-wide and
+            // must always pass through (cannot use server-side eq filter for
+            // this — it would exclude NULL rows and silently drop broadcasts).
+            if (
+              scopedBranchId != null &&
+              payload.new.target_branch_id != null &&
+              payload.new.target_branch_id !== scopedBranchId
+            ) {
+              return;
+            }
             void refreshRef.current();
           },
         )

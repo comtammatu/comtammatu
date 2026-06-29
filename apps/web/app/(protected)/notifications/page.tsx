@@ -18,7 +18,7 @@ export default async function NotificationsPage() {
         description={messages.notifications.pageDescription}
       />
       <Suspense>
-        <NotificationsClient tenantId={claims.tenant_id} />
+        <NotificationsClient tenantId={claims.tenant_id} branchId={claims.branch_id} />
       </Suspense>
     </AppPage>
   );
