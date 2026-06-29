@@ -6,7 +6,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   useTransition,
 } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -88,6 +87,7 @@ import { fetchActiveOrderForTable, editPendingOrderItem } from "./actions";
 import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
 import { usePosAppend } from "./_hooks/use-pos-append";
 import { useDailyLimitHolds } from "./_hooks/use-daily-limit-holds";
+import { useIsLargeUp } from "./_hooks/use-is-large-up";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
@@ -178,38 +178,6 @@ function formatAddToCartBlockMessage(
   }
 
   return `${block.itemName} chỉ còn ${block.available} suất.`;
-}
-
-// lg breakpoint (1024px) gate. Must match the Tailwind `lg:` breakpoints the
-// sidebar variants use: TabbedSidebar is `md:flex lg:hidden`, SplitSidebar is
-// `lg:flex`. SSR returns false so first paint renders the TabbedSidebar tree
-// (correct for the md–lg tablet range); client reads the store synchronously,
-// matching the `useIsMobile` SSR behavior.
-const LG_BREAKPOINT = 1024;
-
-let lgMql: MediaQueryList | null = null;
-
-function getLgMediaQueryList(): MediaQueryList {
-  lgMql ??= window.matchMedia(`(min-width: ${LG_BREAKPOINT}px)`);
-  return lgMql;
-}
-
-function subscribeLg(onStoreChange: () => void): () => void {
-  const list = getLgMediaQueryList();
-  list.addEventListener("change", onStoreChange);
-  return () => list.removeEventListener("change", onStoreChange);
-}
-
-function getLgSnapshot(): boolean {
-  return getLgMediaQueryList().matches;
-}
-
-function getLgServerSnapshot(): boolean {
-  return false;
-}
-
-function useIsLargeUp(): boolean {
-  return useSyncExternalStore(subscribeLg, getLgSnapshot, getLgServerSnapshot);
 }
 
 /* ─── Inner (consumes hooks) ─── */
