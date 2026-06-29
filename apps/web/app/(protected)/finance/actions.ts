@@ -28,7 +28,6 @@ const INVOICE_CREATE_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",
   "cashier",
-  "waiter",
 ];
 const REPORT_ROLES: readonly StaffRole[] = [
   "owner",

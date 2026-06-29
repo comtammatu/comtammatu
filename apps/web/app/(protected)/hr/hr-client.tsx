@@ -92,20 +92,17 @@ export function HrClient({
     activeEmployees.length - activeContractCount,
   );
 
-  // One role option per access bucket (label = its Vietnamese position label),
-  // mirroring /hr/staff. Owner/unassigned are not creatable here.
-  const seenBuckets = new Set<string>();
+  // Owner/unassigned are not creatable here.
   const positionOptions = positionDefaults.flatMap((position) => {
     const bucket = staffRoleFromPositionCode(position.code);
     if (
       bucket === "unassigned" ||
       bucket === "owner" ||
-      seenBuckets.has(bucket)
+      position.code === "waiter"
     ) {
       return [];
     }
-    seenBuckets.add(bucket);
-    return [{ value: bucket, label: position.label_vi ?? position.code }];
+    return [{ value: position.code, label: position.label_vi ?? position.code }];
   });
 
   // Shifts back the setup tab; UrlTabs owns tab state so the lazy fetch is

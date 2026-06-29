@@ -557,7 +557,7 @@ test) chỉ build sau khi types regen.
 
 Đảo quyết định này phải sửa bản ghi này trước.
 
-## D050: Operator Workspace — hợp nhất Employee Portal + Branch Management thành 1 plane mobile-first (2026-06-29)
+## D050: Operator Workspace — hợp nhất Cổng nhân viên + Branch Management thành 1 plane mobile-first (2026-06-29)
 
 **Context:** Họ chrome "Vận hành" (D019.1) chưa chín: `/employee/*` + POS/KDS/Runner không chia khung; branch command/setup lại render trong họ "Quản trị" (`AppShell` desktop); 3 cơ chế branch-scope rời nhau (`claims.branch_id` / `?branchId=` / segment `[branchId]`); route operator rải `/employee` + `/inventory` + `/br/[branchId]`. Thiết kế đích: `docs/plan/operator-workspace-blueprint-2026-06-29.md`; plan sub-project #1: `docs/plan/operator-foundation-impl-plan-2026-06-29.md`.
 
@@ -579,3 +579,23 @@ test) chỉ build sau khi types regen.
 **Lộ trình:** 7 sub-project trong blueprint §11; `#1` (foundation: branch-context + capability registry + Branch Hub) làm trước, additive (ship được mà chưa gỡ UI cũ). Mỗi lát đụng route đồng bộ 5 chỗ (`module-acl.ts`, `route-resolution.ts`, `route-map.ts`, nav config, `protected-route-module-coverage.test.ts`).
 
 **Consequences:** Mở rộng/sửa D019 (§1) + D017 (§3). Đảo bất kỳ điểm nào (gộp lại các chrome, trả branch command/setup về desktop, đổi entry/route-home, đổi nav model) phải sửa bản ghi này + D019 trước.
+
+## D051: Không còn `waiter` active role; Cashier kiêm phục vụ (2026-06-29)
+
+**Decision (owner — supersedes D012.2 và phần access-bucket của D018):**
+Má Tư không vận hành role Phục vụ tách riêng nữa. Nhân sự sàn bán hàng dùng
+chức vụ `cashier` / `cashier_server` với label vận hành **Thu ngân (kiêm phục
+vụ)** và access bucket `cashier`.
+
+**Access buckets active:** `owner`, `branch_manager`, `warehouse_manager`,
+`production_manager`, `cashier`, `chef`, `office`. `waiter` chỉ là legacy input
+để migration/backfill map sang `cashier`; không xuất hiện trong UI, route ACL,
+template mới, seed mới, hoặc test matrix active.
+
+**Central sites:** Kho Tổng là `branches.branch_kind='central_supply'`, vận hành
+qua bucket `warehouse_manager`. Bếp Trung Tâm là
+`branches.branch_kind='central_kitchen'`, vận hành qua bucket
+`production_manager`. HR form chọn `position_code`; access bucket được derive từ
+mapper TS/SQL, không chọn trực tiếp bucket thay cho chức danh.
+
+Đảo quyết định này phải sửa bản ghi này trước và đi qua T3 vì chạm Auth/RLS/ACL.

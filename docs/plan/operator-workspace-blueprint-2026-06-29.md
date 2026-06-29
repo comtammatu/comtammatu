@@ -1,4 +1,4 @@
-# Operator Workspace Blueprint — Hợp nhất Employee Portal + Branch Management (2026-06-29)
+# Operator Workspace Blueprint — Hợp nhất Cổng nhân viên + Branch Management (2026-06-29)
 
 > **North-star (vision + architecture of record), mobile-first.** Verify-through code @ working tree 2026-06-29 (HEAD `406d7c52`). Quyết định owner bền: `docs/plan/decisions.md` → **D050**. Doc này là thiết kế đích + lộ trình tách việc; không lặp lý lẽ đã ghi ở D050.
 >
@@ -6,7 +6,7 @@
 
 ## 1. Một câu
 
-Gộp "Employee Portal" và "Branch Management" thành **một Operator Workspace mobile-first per-chi-nhánh**: nhân viên vào → chọn/được-gán 1 chi nhánh → một branch-context dùng chung → mọi việc làm được hiện ra dưới dạng **capability tiles gate theo role**, trên một họ chrome duy nhất (họ "Vận hành" của D019, làm chín).
+Gộp "Cổng nhân viên" và "Branch Management" thành **một Operator Workspace mobile-first per-chi-nhánh**: nhân viên vào → chọn/được-gán 1 chi nhánh → một branch-context dùng chung → mọi việc làm được hiện ra dưới dạng **capability tiles gate theo role**, trên một họ chrome duy nhất (họ "Vận hành" của D019, làm chín).
 
 ## 2. Hiện trạng đã xác minh (3 nỗi đau)
 

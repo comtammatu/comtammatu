@@ -110,14 +110,14 @@ PO (intent) → GRN (actual received) → Supplier Invoice / chứng từ NCC
 ### Luồng bán hàng
 
 ```
-Waiter (POS) → KDS (realtime) → Chef bumps → Cashier pays → completed
+Cashier (POS/service) → KDS (realtime) → Chef bumps → Cashier pays → completed
 ```
 
-### Vai trò nhân sự (8 access bucket)
+### Vai trò nhân sự (7 access bucket active)
 
 ```
 owner, branch_manager, warehouse_manager, production_manager,
-cashier, waiter, chef, office
+cashier, chef, office
 ```
 
 Nguồn chuẩn: `ACCESS_BUCKETS` trong `packages/shared/src/auth/types.ts`.

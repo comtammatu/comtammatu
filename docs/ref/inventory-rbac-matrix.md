@@ -21,7 +21,7 @@
 | **Position**       | Chức vụ HR (vd `bep_truong` = Bếp trưởng). **Không** gate authz trực tiếp.                                                                    | `positions` (per tenant), `profiles.position_id`   |
 | **Template**       | Bundle permission preset gắn với 1 position. Snapshot — edit template không propagate.                                                        | `role_templates(position_code, permission_keys[])` |
 | **Grant**          | Quyền thật của user tại branch cụ thể, dạng (user, branch, key). `branch_id IS NULL` = tenant-wide.                                           | `staff_permissions`                                |
-| **Access bucket**  | Compatibility claim derived từ `positions.code` mapper. Phục vụ route-level ACL và một số scope guard còn chủ ý trong RPC.              | `module-acl.ts`, `auth_role()` helper              |
+| **Access bucket**  | Compatibility claim derived từ `positions.code` mapper. Dùng cho route-level ACL và một số scope guard còn chủ ý trong RPC.             | `module-acl.ts`, `auth_role()` helper              |
 
 **Authz path cho mỗi Inventory request:**
 
@@ -40,12 +40,12 @@
 | ------------------- | ------------------ | -------------------- | ---------------------------------------------------------- |
 | `owner`             | Chủ sở hữu         | `owner`              | Tenant-wide bypass (owner bypass trong `has_permission()`) + tenant-wide operations + procurement |
 | `branch_manager`    | Quản lý chi nhánh  | `branch_manager`     | Branch của mình                                            |
-| `warehouse_manager` | Kho trưởng         | `warehouse_manager`  | chi nhánh (procurement + outbound transfer)            |
-| `head_chef`         | Bếp trưởng         | `production_manager` | chi nhánh (sản xuất + KDS)                             |
+| `warehouse_manager` | Quản lý Kho Tổng   | `warehouse_manager`  | Kho Tổng (`central_supply`)                            |
+| `head_chef`         | Bếp trưởng         | `production_manager` | Bếp Trung Tâm (`central_kitchen`)                      |
 
 > Position code dùng English `lower_snake_case` theo bộ canonical hiện hành. Tên hiển thị tiếng Việt đi qua `label_vi`.
 >
-> Các position POS/KDS (`cashier`, `waiter`, `chef`, `kitchen_helper`) không có Inventory grant mặc định; chỉ tác động tồn kho gián tiếp qua consumption flow.
+> Các position POS/KDS (`cashier`, `chef`, `kitchen_helper`) không có Inventory grant mặc định; chỉ tác động tồn kho gián tiếp qua consumption flow.
 
 ---
 

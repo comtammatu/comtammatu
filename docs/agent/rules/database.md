@@ -147,14 +147,13 @@ blocked (merging a branch into prod is a prod write). See
 
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
 - Do not create a second auth policy layer in UI helpers.
-- Position codes are canonical English ONLY (10 codes) since
-  `20260610230000_canonical_position_codes_lean`: owner,
-  branch_manager, warehouse_manager, production_manager, head_chef,
-  kitchen_helper, chef, cashier, waiter, office. NEVER add aliases or new codes
-  without updating BOTH `POSITION_CODE_TO_STAFF_ROLE`
+- Position codes are canonical English `lower_snake_case` only. NEVER add
+  aliases or new codes without updating BOTH `POSITION_CODE_TO_STAFF_ROLE`
   (`packages/shared/src/auth/types.ts`) and its SQL twin
   `private.staff_role_from_position_code` in the same PR — the mapper is
   fail-closed (unknown code ⇒ NULL bucket ⇒ auth hook RAISEs ⇒ login blocked).
+  `waiter` is legacy-only and maps to `cashier`; do not add it to active UI,
+  route ACL, templates, or new seed data.
 - `notifications.target_roles` carries access BUCKETS (RLS compares
   `auth_role()`), never position codes.
 

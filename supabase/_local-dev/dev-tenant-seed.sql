@@ -96,13 +96,23 @@ FROM public.tenants t
 CROSS JOIN (VALUES
   ('owner',             'Chủ sở hữu',            'Owner'),
   ('branch_manager',    'Quản lý chi nhánh',     'Branch Manager'),
-  ('office',            'Nhân sự / Hành chính',  'HR / Admin'),
-  ('warehouse_manager', 'Kho trưởng',            'Warehouse Head'),
+  ('office',            'Văn phòng',             'Office'),
+  ('accountant',        'Kế toán',               'Accountant'),
+  ('marketing',         'Truyền thông',          'Marketing'),
+  ('technician',        'Kỹ thuật',              'Technician'),
+  ('design_construction','Thiết kế & Xây dựng',  'Design & Construction'),
+  ('warehouse_manager', 'Quản lý Kho Tổng',      'Central Supply Manager'),
+  ('central_supply_manager', 'Quản lý Kho Tổng', 'Central Supply Manager'),
+  ('production_manager','Quản lý Bếp Trung Tâm', 'Central Kitchen Manager'),
+  ('central_kitchen_manager','Quản lý Bếp Trung Tâm','Central Kitchen Manager'),
   ('head_chef',         'Bếp trưởng',            'Head Chef'),
+  ('kitchen_counter',   'Quầy bếp',              'Kitchen Counter'),
   ('chef',              'Bếp',                   'Chef'),
   ('kitchen_helper',    'Phụ bếp',               'Kitchen Helper'),
-  ('cashier',           'Thu ngân',              'Cashier'),
-  ('waiter',            'Phục vụ',               'Waiter')
+  ('grill_counter',     'Quầy nướng',            'Grill Counter'),
+  ('cleaner',           'Tạp vụ',                'Cleaner'),
+  ('cashier',           'Thu ngân (kiêm phục vụ)','Cashier / Service'),
+  ('cashier_server',    'Thu ngân (kiêm phục vụ)','Cashier / Service')
 ) AS v(code, label_vi, label_en)
 WHERE t.slug = 'comtammatu'
 ON CONFLICT (code, tenant_id) DO NOTHING;
@@ -204,7 +214,6 @@ INSERT INTO public.role_templates (tenant_id, name, position_code, permission_ke
 SELECT t.id, v.name, v.position_code, v.permission_keys::text[], true
 FROM public.tenants t
 CROSS JOIN (VALUES
-  ('waiter', 'waiter', ARRAY['hr:request_leave','orders:read','orders:void','orders:write','pos:print','pos:send_kitchen','pos:use','pos:void_order']),
   ('cashier', 'cashier', ARRAY['hr:request_leave','orders:read','orders:void','orders:write','pos:close_shift','pos:confirm_payment','pos:open_cashbox','pos:print','pos:reprint_receipt','pos:send_kitchen','pos:use','pos:void_order']),
   ('chef', 'chef', ARRAY['hr:request_leave','kds:mark_ready','kds:use']),
   ('phu_bep', 'kitchen_helper', ARRAY['hr:request_leave','kds:use']),

@@ -23,7 +23,7 @@
 | ------------------------------------------- | ------------------------- |
 | Quản lý (branch_manager trở lên)            | 60 ngày                   |
 | Nhân viên kỹ thuật / chuyên môn             | 60 ngày                   |
-| Nhân viên phổ thông (waiter, chef, cashier) | 30 ngày                   |
+| Nhân viên phổ thông (cashier, chef, kitchen_helper) | 30 ngày          |
 
 - Lương thử việc ≥ **85%** lương chính thức của vị trí đó
 - Không đóng BHXH trong thời gian thử việc (nếu HĐ thử việc riêng)

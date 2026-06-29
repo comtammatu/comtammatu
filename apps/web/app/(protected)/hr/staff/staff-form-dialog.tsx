@@ -3,8 +3,7 @@
 import { useMemo } from "react";
 import { z } from "zod";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { BRANCH_REQUIRED_OPERATIONAL_ROLES } from "@comtammatu/shared/auth";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { requiredBranchKindForPositionCode } from "@comtammatu/shared/auth";
 import {
   FormDialog,
   SelectField,
@@ -22,13 +21,11 @@ const staffSchema = z.object({
   password: z.string().optional(),
   full_name: z.string().trim().min(1, { error: "Họ tên không được trống" }),
   phone: z.string().trim().optional(),
-  role: z.string().min(1, { error: "Vui lòng chọn chức vụ" }),
+  position_code: z.string().min(1, { error: "Vui lòng chọn chức vụ" }),
   branch_id: z.string().optional(),
 });
 
 type StaffFormValues = z.infer<typeof staffSchema>;
-
-const TENANT_LEVEL_ROLES: readonly StaffRole[] = ["office"];
 
 function staffSchemaForMode(isEdit: boolean) {
   return staffSchema.superRefine((values, ctx) => {
@@ -56,7 +53,7 @@ function toFormValues(staff: StaffRow | null | undefined): StaffFormValues {
     password: "",
     full_name: staff?.full_name ?? "",
     phone: staff?.phone ?? "",
-    role: staff?.role ?? "waiter",
+    position_code: staff?.position_code ?? "cashier",
     branch_id: staff?.branch_id != null ? String(staff.branch_id) : NO_BRANCH,
   };
 }
@@ -81,16 +78,20 @@ export function StaffFormDialog({
   const defaultValues = useMemo(() => toFormValues(staff), [staff]);
 
   async function handleSubmit(values: StaffFormValues) {
-    const isTenantLevel = TENANT_LEVEL_ROLES.includes(
-      values.role as (typeof TENANT_LEVEL_ROLES)[number],
+    const requiredBranchKind = requiredBranchKindForPositionCode(
+      values.position_code,
     );
 
     const payload: Record<string, unknown> = {
       full_name: values.full_name,
       phone: values.phone,
-      role: values.role,
+      position_code: values.position_code,
     };
-    if (!isTenantLevel && values.branch_id && values.branch_id !== NO_BRANCH) {
+    if (
+      requiredBranchKind !== null &&
+      values.branch_id &&
+      values.branch_id !== NO_BRANCH
+    ) {
       payload.branch_id = values.branch_id;
     }
     if (!isEdit) {
@@ -118,16 +119,17 @@ export function StaffFormDialog({
       contentClassName="sm:max-w-md"
     >
       {(form) => {
-        const selectedRole = form.watch("role");
-        const isTenantLevel = TENANT_LEVEL_ROLES.includes(
-          selectedRole as (typeof TENANT_LEVEL_ROLES)[number],
+        const selectedPosition = form.watch("position_code");
+        const requiredBranchKind = requiredBranchKindForPositionCode(
+          selectedPosition,
         );
         const branchChoices =
-          selectedRole === "warehouse_manager" ||
-          selectedRole === "production_manager" ||
-          BRANCH_REQUIRED_OPERATIONAL_ROLES.includes(selectedRole as StaffRole)
-            ? branches.filter((b) => (b.branch_kind ?? "branch") === "branch")
+          requiredBranchKind && requiredBranchKind !== "unassigned"
+            ? branches.filter(
+                (b) => (b.branch_kind ?? "branch") === requiredBranchKind,
+              )
             : branches;
+        const isSiteOptional = requiredBranchKind === null;
         const branchOptions = branchChoices.map((b) => ({
           value: b.id.toString(),
           label: b.name,
@@ -174,7 +176,7 @@ export function StaffFormDialog({
 
             <SelectField
               control={form.control}
-              name="role"
+              name="position_code"
               label="Chức vụ"
               options={positionOptions}
               placeholder={messages.admin.staffForm.rolePlaceholder}
@@ -184,16 +186,16 @@ export function StaffFormDialog({
             <SelectField
               control={form.control}
               name="branch_id"
-              label="Chi nhánh"
+              label="Chi nhánh / địa điểm"
               options={branchOptions}
               placeholder={
-                isTenantLevel
+                isSiteOptional
                   ? messages.admin.staffForm.branchNotApplicable
                   : messages.admin.staffForm.branchPlaceholder
               }
-              disabled={isTenantLevel}
+              disabled={isSiteOptional}
               description={
-                !isTenantLevel
+                !isSiteOptional
                   ? messages.admin.staffForm.branchDescription
                   : undefined
               }

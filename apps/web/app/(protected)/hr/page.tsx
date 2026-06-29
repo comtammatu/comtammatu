@@ -26,7 +26,7 @@ export default async function HrPage() {
       : (() => {
           let query = supabase
             .from("branches")
-            .select("id, name")
+            .select("id, name, branch_kind")
             .eq("tenant_id", claims.tenant_id)
             .eq("is_active", true)
             .order("name");

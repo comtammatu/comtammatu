@@ -396,7 +396,7 @@ Tóm tắt quyền hiện tại:
 - `warehouse_manager`: role chính cho procurement, Kho Tổng/Kho CN, và outbound transfer.
 - `production_manager`: role chính cho Bếp Trung Tâm và production.
 - `branch_manager`: vận hành tồn Kho CN, nhận transfer, stocktake, và duyệt tiêu hao trong ngày; không vào procurement.
-- `office`, `cashier`, `waiter`, `chef`: không có Inventory route theo ACL hiện tại.
+- `office`, `cashier`, `chef`: không có Inventory route theo ACL hiện tại.
 
 Chi tiết enforcement: RLS + `packages/shared/src/auth/module-acl.ts`.
 

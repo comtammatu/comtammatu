@@ -79,7 +79,6 @@ export interface TodayWorkState {
 
 const DEFAULT_ATTENDANCE_ROLES: readonly StaffRole[] = [
   "cashier",
-  "waiter",
   "chef",
 ];
 

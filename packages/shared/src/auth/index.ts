@@ -1,4 +1,10 @@
-export type { AccessBucket, StaffRole, JwtClaims, ScopeIds } from "./types";
+export type {
+  AccessBucket,
+  BranchKind,
+  StaffRole,
+  JwtClaims,
+  ScopeIds,
+} from "./types";
 export {
   ACCESS_BUCKETS,
   STAFF_ROLES,
@@ -12,6 +18,7 @@ export {
   canManageBranchFloorSettings,
   canManageTenantStrategySettings,
   ROLE_LABEL_VI,
+  requiredBranchKindForPositionCode,
   staffRoleFromPositionCode,
 } from "./types";
 export type { ModuleKey } from "./module-acl";

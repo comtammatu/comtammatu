@@ -5,6 +5,8 @@ import { z } from "zod";
 import {
   PERMISSION_KEYS,
   STAFF_ROLES,
+  requiredBranchKindForPositionCode,
+  staffRoleFromPositionCode,
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -29,21 +31,12 @@ const CONTRACT_TYPES = ["probation", "fixed_term", "indefinite"] as const;
 
 /* ─── Employees ─── */
 
-// Operational roles must be attached to a real branch site (mirror of
-// admin/staff createStaff — keep the two in sync).
-const OPS_ROLES: readonly string[] = [
-  "cashier",
-  "waiter",
-  "chef",
-  "branch_manager",
-];
-
 const createEmployeeAccountSchema = z.object({
   fullName: z.string().trim().min(1, { error: "Họ tên không được để trống" }),
   email: z.string().email({ error: "Email không hợp lệ" }),
   password: z.string().min(8, { error: "Mật khẩu phải có ít nhất 8 ký tự" }),
   phone: z.string().trim().optional(),
-  role: z.string().min(1, { error: "Chọn vai trò" }),
+  positionCode: z.string().min(1, { error: "Chọn chức vụ" }),
   branchId: z.coerce.number().int().positive().optional(),
   employeeCode: z.string().trim().optional(),
   startDate: z.string().optional(),
@@ -285,19 +278,27 @@ export async function fetchEmployees(): Promise<ActionResult> {
 export const createEmployeeAccount = withAction(
   { roles: HR_ROLES, schema: createEmployeeAccountSchema },
   async (data, { claims, supabase }) => {
-    if (!(STAFF_ROLES as readonly string[]).includes(data.role)) {
-      return { success: false, error: "Vai trò không hợp lệ." };
-    }
-    if (data.role === "owner") {
+    const role = staffRoleFromPositionCode(data.positionCode);
+    if (role === "unassigned" || role === "owner") {
       return {
         success: false,
-        error: "Không thể tạo tài khoản chủ sở hữu ở đây.",
+        error: "Chức vụ không hợp lệ.",
       };
     }
-    if (OPS_ROLES.includes(data.role) && !data.branchId) {
+    if (!(STAFF_ROLES as readonly string[]).includes(role)) {
+      return { success: false, error: "Vai trò không hợp lệ." };
+    }
+
+    const requiredBranchKind = requiredBranchKindForPositionCode(
+      data.positionCode,
+    );
+    if (requiredBranchKind === "unassigned") {
+      return { success: false, error: "Chức vụ không hợp lệ." };
+    }
+    if (requiredBranchKind !== null && !data.branchId) {
       return {
         success: false,
-        error: "Vai trò vận hành phải thuộc một chi nhánh.",
+        error: "Chức vụ vận hành phải thuộc một địa điểm.",
       };
     }
 
@@ -314,10 +315,13 @@ export const createEmployeeAccount = withAction(
       if (!branch) {
         return { success: false, error: "Chi nhánh không hợp lệ." };
       }
-      if (OPS_ROLES.includes(data.role) && branch.branch_kind !== "branch") {
+      if (
+        requiredBranchKind !== null &&
+        branch.branch_kind !== requiredBranchKind
+      ) {
         return {
           success: false,
-          error: "Vai trò vận hành cần gắn với chi nhánh.",
+          error: "Chức vụ này không thuộc loại địa điểm đã chọn.",
         };
       }
       branchName = branch.name ?? null;
@@ -353,7 +357,11 @@ export const createEmployeeAccount = withAction(
         app_metadata: {
           tenant_id: claims.tenant_id,
           branch_id: data.branchId ?? null,
-          role: data.role,
+          role,
+          user_role: role,
+          access_bucket: role,
+          position: data.positionCode,
+          position_code: data.positionCode,
           full_name: data.fullName,
         },
         user_metadata: { full_name: data.fullName },
@@ -423,7 +431,7 @@ export const createEmployeeAccount = withAction(
       endDate: data.contractEndDate ?? null,
       grossSalary: data.baseSalary ?? null,
       insuranceBaseSalary: data.insuranceBaseSalary,
-      position: data.role,
+      position: data.positionCode,
       workLocation: branchName,
     });
     if (!contractResult.success) {
