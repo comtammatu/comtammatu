@@ -92,6 +92,7 @@ import {
   useAddToCartGate,
 } from "./_hooks/use-add-to-cart-gate";
 import { useBillSurface } from "./_hooks/use-bill-surface";
+import { useOrderDetailSurface } from "./_hooks/use-order-detail-surface";
 import { useIsLargeUp } from "./_hooks/use-is-large-up";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
@@ -274,27 +275,6 @@ export function PosDesktopInner({
   } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showCloseSession, setShowCloseSession] = useState(false);
-  const [orderDetailId, setOrderDetailId] = useState<number | null>(null);
-  const [orderDetailNumber, setOrderDetailNumber] = useState<string | null>(
-    null,
-  );
-  // Lightweight summary handed to OrderDetailSheet so its header (order
-  // number, table/takeaway) renders immediately on a list-row tap. Fresh fetch always
-  // wins for items + totals; this only fills the gap during the items
-  // skeleton phase. Cleared on sheet close + on table-tap (which provides
-  // full data via orderDetailSeed instead).
-  const [orderDetailSummary, setOrderDetailSummary] =
-    useState<SessionOrder | null>(null);
-  // Seed for OrderDetailSheet's first render. Populated when the cashier
-  // taps an occupied table (`fetchActiveOrderForTable` already returns the
-  // full detail + canManage hint) so the sheet can paint items/total
-  // without its own fetchOrderDetail round-trip. Null for code paths
-  // that only know the orderId (e.g. post-submit `focusOrderWorkflow`,
-  // OrderListPane detail open) → sheet falls back to its normal fetch.
-  const [orderDetailSeed, setOrderDetailSeed] = useState<{
-    order: OrderDetailData;
-    canManage: boolean;
-  } | null>(null);
   const [showOrders, setShowOrders] = useState(false);
   const [archivedSheetOpen, setArchivedSheetOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
@@ -312,10 +292,23 @@ export function PosDesktopInner({
     setBillInitialOrder,
     setPostSubmitPaymentOrderId,
   } = useBillSurface({ orders, closeCartDrawer });
+  const {
+    orderDetailId,
+    orderDetailNumber,
+    orderDetailSummary,
+    orderDetailSeed,
+    detailRefreshTick,
+    openDetail,
+    closeOrderDetail,
+    bumpDetailRefresh,
+    setOrderDetailId,
+    setOrderDetailNumber,
+    setOrderDetailSummary,
+    setOrderDetailSeed,
+  } = useOrderDetailSurface({ closeCartDrawer });
   const [takeawayDraftActive, setTakeawayDraftActive] = useState(false);
   const [appendDraftItems, setAppendDraftItems] = useState<CartItem[]>([]);
   const [appendSubmitting, setAppendSubmitting] = useState(false);
-  const [detailRefreshTick, setDetailRefreshTick] = useState(0);
   const [hotkeyOpen, setHotkeyOpen] = useState(false);
   // Multi-order-per-table: when the user taps an occupied table, show a
   // picker listing active orders + a "Tạo đơn mới" button. The picker is the
@@ -347,10 +340,6 @@ export function PosDesktopInner({
 
   const openCloseSession = useCallback(() => {
     setShowCloseSession(true);
-  }, []);
-
-  const bumpDetailRefresh = useCallback(() => {
-    setDetailRefreshTick((t) => t + 1);
   }, []);
 
   const refreshOperational = useCallback(async () => {
@@ -1247,29 +1236,6 @@ export function PosDesktopInner({
       replaceCartItems,
     ],
   );
-
-  const openDetail = useCallback(
-    (id: number, orderNumber?: string | null, summary?: SessionOrder) => {
-      setCartDrawerOpen(false);
-      // Clear any table-tap seed: this path (OrderListPane row tap) does
-      // NOT have the full detail with items, so OrderDetailSheet falls
-      // back to its own fetch. The summary, when available, lets the
-      // sheet header (order number, table/takeaway) render instantly while items
-      // load — saves the 500-1000ms blank-modal flash on slow networks.
-      setOrderDetailSeed(null);
-      setOrderDetailSummary(summary ?? null);
-      setOrderDetailId(id);
-      setOrderDetailNumber(orderNumber ?? null);
-    },
-    [],
-  );
-
-  const closeOrderDetail = useCallback(() => {
-    setOrderDetailId(null);
-    setOrderDetailNumber(null);
-    setOrderDetailSeed(null);
-    setOrderDetailSummary(null);
-  }, []);
 
   // POS-DETAIL-REOPEN-AFTER-CUSTOMIZER: when cashier taps "Sửa món" inside
   // the order detail sheet, the detail closes (avoid mobile sheet stacking
