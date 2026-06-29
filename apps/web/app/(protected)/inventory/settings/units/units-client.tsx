@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
 import {
   Pencil as IconPencil,
@@ -51,6 +52,7 @@ const NEW_UNIT_DEFAULTS: UnitFormValues = {
 };
 
 export function UnitsClient({ rows }: { rows: UnitRow[] }) {
+  const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRow, setEditRow] = useState<UnitRow | null>(null);
   const [, startDelete] = useTransition();
@@ -66,10 +68,11 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
   }
 
   async function handleSubmit(values: UnitFormValues) {
-    if (editRow) {
-      return updateUnit({ id: editRow.id, ...values });
-    }
-    return createUnit(values);
+    const result = editRow
+      ? await updateUnit({ id: editRow.id, ...values })
+      : await createUnit(values);
+    if (result.success) router.refresh();
+    return result;
   }
 
   async function handleDelete(row: UnitRow) {
@@ -88,6 +91,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
         return;
       }
       toast.success(copy.delete.success);
+      router.refresh();
     });
   }
 
@@ -106,11 +110,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
           <IconPencil className="size-4" />
           <span className="sr-only">{copy.edit}</span>
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => handleDelete(row)}
-        >
+        <Button variant="ghost" size="icon" onClick={() => handleDelete(row)}>
           <IconTrash className="size-4 text-destructive" />
           <span className="sr-only">{copy.delete.action}</span>
         </Button>

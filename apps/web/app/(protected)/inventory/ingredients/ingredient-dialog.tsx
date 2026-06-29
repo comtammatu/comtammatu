@@ -34,11 +34,7 @@ import {
   TextField,
 } from "@/components/form";
 import { createIngredient, updateIngredient } from "../ingredient-actions";
-import type {
-  CategoryOption,
-  IngredientRow,
-  UnitOption,
-} from "../_lib/types";
+import type { CategoryOption, IngredientRow, UnitOption } from "../_lib/types";
 import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "../_lib/constants";
 import { parseOptionalNumber } from "../_lib/format";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -231,7 +227,7 @@ function UnitsField({
       </div>
 
       <div className="overflow-hidden rounded-lg border">
-        <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_auto_auto_auto_auto_auto] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="hidden grid-cols-7 items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid">
           <div>{copy.units.colUnit}</div>
           <div>{copy.units.colFactor}</div>
           <div className="text-center">{copy.units.colBase}</div>
@@ -285,7 +281,7 @@ function UnitRowCells({
   const canRemove = rowCount > 1 && !isBase;
 
   return (
-    <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_auto_auto_auto_auto_auto] items-center gap-2 px-3 py-2">
+    <div className="grid grid-cols-1 items-center gap-2 px-3 py-2 md:grid-cols-7">
       <Controller
         control={control}
         name={`units.${index}.unit_id`}

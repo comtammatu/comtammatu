@@ -119,16 +119,7 @@ export async function fetchBranchMenuStockCapacity(
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase } = ctx;
 
-  // `get_branch_menu_stock_capacity` is not yet in generated types — call it
-  // via the same cast escape hatch as the POS ingredient-cap RPC.
-  const { data, error } = await (
-    supabase as unknown as {
-      rpc: (
-        name: string,
-        args: Record<string, unknown>,
-      ) => Promise<{ data: unknown; error: unknown }>;
-    }
-  ).rpc("get_branch_menu_stock_capacity", {
+  const { data, error } = await supabase.rpc("get_branch_menu_stock_capacity", {
     p_branch_id: parsedBranchId.data,
   });
 

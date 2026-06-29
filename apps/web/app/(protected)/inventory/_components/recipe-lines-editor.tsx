@@ -54,8 +54,7 @@ export interface RecipeLineRowValue {
   note?: string;
 }
 
-const GRID_TEMPLATE =
-  "grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_auto]";
+const GRID_TEMPLATE = "grid-cols-1 md:grid-cols-6";
 
 const EMPTY_ROW: RecipeLineRowValue = {
   ingredient_id: "",
@@ -127,7 +126,9 @@ export function RecipeLinesEditor<T extends FieldValues>({
         note: "",
       };
     });
-    const kept = rows
+    const currentRows =
+      (getValues(name) as unknown as RecipeLineRowValue[]) ?? [];
+    const kept = currentRows
       .filter((row) => row.ingredient_id !== "")
       .map((row) => ({
         ingredient_id: row.ingredient_id,
@@ -201,7 +202,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
       <div className="overflow-hidden rounded-lg border">
         <div
           className={cn(
-            "grid items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+            "hidden items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid",
             GRID_TEMPLATE,
           )}
         >
@@ -227,7 +228,9 @@ export function RecipeLinesEditor<T extends FieldValues>({
               unitEditable={unitEditable}
               canRemove={rows.length > 1}
               onRemove={() => remove(index)}
-              onIngredientChange={(value) => handleIngredientChange(index, value)}
+              onIngredientChange={(value) =>
+                handleIngredientChange(index, value)
+              }
             />
           ))}
         </div>
@@ -344,10 +347,7 @@ function RecipeLineRow<T extends FieldValues>({
                 }}
               >
                 <SelectTrigger
-                  className={cn(
-                    "h-9",
-                    rowError?.unit && "border-destructive",
-                  )}
+                  className={cn("h-9", rowError?.unit && "border-destructive")}
                   aria-invalid={!!rowError?.unit}
                   aria-label={FORM_VI.unit}
                 >

@@ -78,3 +78,19 @@ test("server action payload keys match the RPC contract", () => {
     assert.match(read(path), escaped(payloadLine));
   }
 });
+
+test("employee count slip prefill preserves the submitted entry unit", () => {
+  const sql = read(
+    "supabase/migrations/20260629144912_employee_count_slip_entry_unit_prefill.sql",
+  );
+
+  assert.match(sql, /entry_unit_id\s+BIGINT/);
+  assert.match(
+    sql,
+    /SELECT\s+l\.ingredient_id,\s+l\.counted_quantity,\s+l\.entry_unit_id,\s+l\.note/s,
+  );
+  assert.match(
+    sql,
+    /REVOKE ALL ON FUNCTION public\.get_my_count_slip\(BIGINT\) FROM PUBLIC, anon/,
+  );
+});

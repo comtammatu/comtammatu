@@ -38,7 +38,10 @@ import {
   type MenuItem,
   type MenuItemDailyLimit,
 } from "./pos-menu-types";
-import { useDailyLimit } from "./_providers/pos-desktop-provider";
+import {
+  useDailyLimit,
+  useIngredientCap,
+} from "./_providers/pos-desktop-provider";
 import {
   isDailyLimitBlockedAfterDemand,
   remainingDailyQuotaAfterDemand,
@@ -76,23 +79,21 @@ const MenuItemButton = memo(function MenuItemButton({
   dailyLimitDemandByMenuItem,
   onItemTap,
 }: MenuItemButtonProps) {
-  // Per-item subscription via the external store — only this card re-renders
-  // when this id's sold_today/is_disabled/limit_quantity changes. The
-  // ingredient cap rides the static `item` snapshot (refreshed on the menu
-  // refetch cadence — no stock realtime channel), so the two gates compose:
-  // the card is blocked when EITHER hits 0 and the badge shows whichever
-  // remaining is smaller.
   const dailyLimit: MenuItemDailyLimit | null = useDailyLimit(item.id);
+  const ingredientCap = useIngredientCap(item.id);
   const draftDemand = dailyLimitDemandByMenuItem?.get(item.id) ?? 0;
   const dailyBlocked = isDailyLimitBlockedAfterDemand(dailyLimit, draftDemand);
   const ingredientBlocked = isIngredientCapBlockedAfterDemand(
-    item.ingredient_cap,
+    ingredientCap,
     draftDemand,
   );
   const blocked = dailyBlocked || ingredientBlocked;
-  const dailyRemaining = remainingDailyQuotaAfterDemand(dailyLimit, draftDemand);
+  const dailyRemaining = remainingDailyQuotaAfterDemand(
+    dailyLimit,
+    draftDemand,
+  );
   const ingredientRemaining = remainingIngredientCapAfterDemand(
-    item.ingredient_cap,
+    ingredientCap,
     draftDemand,
   );
   // min of the two caps; null means that gate imposes no limit.

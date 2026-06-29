@@ -69,6 +69,7 @@ interface SlipRow {
 interface SlipLineRow {
   ingredient_id: number;
   counted_quantity: number;
+  entry_unit_id: number | null;
   note: string | null;
 }
 
@@ -111,10 +112,7 @@ export default async function EmployeeCountPage(props: {
 
   if (assignmentRows.length === 0) {
     return (
-      <EmployeePage
-        title="Kiểm kê tồn"
-        description={branchName ?? undefined}
-      >
+      <EmployeePage title="Kiểm kê tồn" description={branchName ?? undefined}>
         <EmployeeMissingProfileEmpty
           title="Chưa được giao đếm"
           description="Bạn chưa được giao nguyên liệu nào để kiểm kê. Liên hệ quản lý chi nhánh."
@@ -140,8 +138,7 @@ export default async function EmployeeCountPage(props: {
   const groups: CountLocationGroup[] = locationIds
     .map((locationId) => ({
       locationId,
-      locationName:
-        locationNameById.get(locationId) ?? `Kho #${locationId}`,
+      locationName: locationNameById.get(locationId) ?? `Kho #${locationId}`,
       assignments: assignmentRows
         .filter((row) => row.location_id === locationId)
         .map((row) => ({
@@ -211,9 +208,9 @@ export default async function EmployeeCountPage(props: {
       .eq("branch_id", branchId)
       .eq("count_date", today);
     const reviewById = new Map(
-      ((reviewData ?? []) as Array<{ id: number; review_note: string | null }>).map(
-        (row) => [row.id, row.review_note],
-      ),
+      (
+        (reviewData ?? []) as Array<{ id: number; review_note: string | null }>
+      ).map((row) => [row.id, row.review_note]),
     );
     for (const header of slipByLocation.values()) {
       header.reviewNote = reviewById.get(header.id) ?? null;
@@ -222,7 +219,10 @@ export default async function EmployeeCountPage(props: {
 
   // Blind prefill: only when the selected location's slip needs changes, fetch
   // the employee's previously counted values via the blind RPC (no system qty).
-  let prefill: Record<number, { quantity: string; note: string }> = {};
+  let prefill: Record<
+    number,
+    { quantity: string; entryUnitId: number | null; note: string }
+  > = {};
   const selectedSlip =
     selectedLocationId !== null
       ? (slipByLocation.get(selectedLocationId) ?? null)
@@ -237,6 +237,7 @@ export default async function EmployeeCountPage(props: {
         line.ingredient_id,
         {
           quantity: String(line.counted_quantity),
+          entryUnitId: line.entry_unit_id,
           note: line.note ?? "",
         },
       ]),

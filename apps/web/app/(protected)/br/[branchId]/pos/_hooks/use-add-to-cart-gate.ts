@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { usePosDailyLimitStore } from "../_providers/pos-desktop-provider";
+import {
+  usePosDailyLimitStore,
+  usePosIngredientCapStore,
+} from "../_providers/pos-desktop-provider";
 import {
   buildDailyLimitDemand,
   findDailyLimitBlockForProposal,
@@ -13,7 +16,6 @@ import {
   type IngredientCapBlock,
 } from "../_utils/ingredient-cap-draft";
 import type { CartItem } from "../types";
-import type { MenuItem } from "../pos-menu-types";
 
 /**
  * Unified add-to-cart block message for both gates. Daily-limit (per-item
@@ -46,17 +48,12 @@ export interface UseAddToCartGateArgs {
   cartItems: CartItem[];
   /** Live append-draft lines. */
   appendDraftItems: CartItem[];
-  /**
-   * Shared menu-item lookup, owned by the orchestrator. Passed by reference so
-   * its identity in `getAddToCartBlock`'s deps is unchanged across renders.
-   */
-  menuItemById: Map<number, MenuItem>;
 }
 
 export interface UseAddToCartGateReturn {
   /**
-   * Composes BOTH add-to-cart gates: the daily-limit quota (reactive store)
-   * and the ingredient-cap snapshot (static `menuItemById`). Returns whichever
+   * Composes BOTH add-to-cart gates: the daily-limit quota and the ingredient
+   * cap. Returns whichever
    * blocks first — daily-limit checked first to keep parity with prior copy.
    * Both gates are optimistic client snapshots; the server triggers are
    * authoritative (coupled dishes sharing an ingredient may still fail at
@@ -79,9 +76,10 @@ export interface UseAddToCartGateReturn {
 export function useAddToCartGate(
   args: UseAddToCartGateArgs,
 ): UseAddToCartGateReturn {
-  const { cartItems, appendDraftItems, menuItemById } = args;
+  const { cartItems, appendDraftItems } = args;
 
   const dailyLimitStore = usePosDailyLimitStore();
+  const ingredientCapStore = usePosIngredientCapStore();
   const activeDraftLines = useMemo(
     () => [...cartItems, ...appendDraftItems],
     [appendDraftItems, cartItems],
@@ -90,12 +88,6 @@ export function useAddToCartGate(
     () => buildDailyLimitDemand(activeDraftLines),
     [activeDraftLines],
   );
-  // Composes BOTH add-to-cart gates: the daily-limit quota (reactive store)
-  // and the ingredient-cap snapshot (static `menuItemById`). Returns whichever
-  // blocks first — daily-limit checked first to keep parity with prior copy.
-  // Both gates are optimistic client snapshots; the server triggers are
-  // authoritative (coupled dishes sharing an ingredient may still fail at
-  // submit even when the cap gate passes here).
   const getAddToCartBlock = useCallback(
     (
       proposed: ProposedDailyLimitLine,
@@ -113,11 +105,10 @@ export function useAddToCartGate(
         activeDraftLines,
         excludeKeys,
         proposed,
-        getCap: (menuItemId) =>
-          menuItemById.get(menuItemId)?.ingredient_cap ?? null,
+        getCap: (menuItemId) => ingredientCapStore.get(menuItemId),
       });
     },
-    [activeDraftLines, dailyLimitStore, menuItemById],
+    [activeDraftLines, dailyLimitStore, ingredientCapStore],
   );
 
   return { getAddToCartBlock, dailyLimitDemandByMenuItem };
