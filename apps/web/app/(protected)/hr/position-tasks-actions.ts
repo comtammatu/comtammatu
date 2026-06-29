@@ -275,17 +275,16 @@ export const savePositionTasks = withAction(
       }
     }
 
-    // template_item_id is nullable for position-keyed rows (migration
-    // 20260629123000); regenerated types still type it required until the
-    // owner applies, so set it null explicitly and cast the insert payload.
-    const inserts: {
-      tenant_id: number;
-      template_item_id: null;
-      position_task_id: number;
-      ingredient_id: number;
-      sort_order: number;
-    }[] = [];
-    (savedTasks ?? []).forEach((saved, index) => {
+    const reloadedTasks = savedTasks ?? [];
+    if (reloadedTasks.length !== data.tasks.length) {
+      return {
+        success: false,
+        error: messages.hr.client.positionTasks.saveFailed,
+      };
+    }
+
+    const inserts: ConsumptionDefaultInsert[] = [];
+    reloadedTasks.forEach((saved, index) => {
       const input = data.tasks[index];
       if (!input || saved.kind !== "consumption_report") return;
       input.ingredientIds.forEach((ingredientId, ingredientIndex) => {
@@ -302,7 +301,7 @@ export const savePositionTasks = withAction(
     if (inserts.length > 0) {
       const { error: insertError } = await service
         .from("shift_checklist_consumption_default_items")
-        .insert(inserts as unknown as ConsumptionDefaultInsert[]);
+        .insert(inserts);
       if (insertError) {
         return {
           success: false,
