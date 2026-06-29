@@ -8,8 +8,8 @@ import {
   NotebookText as IconNote,
   Plus as IconPlus,
 } from "lucide-react";
-import { classifyModifier } from "../lib/modifier-format";
-import { formatSideLabel, getSideBadgeToneClass } from "../lib/side-format";
+import { classifyModifier } from "../_lib/modifier-format";
+import { formatSideLabel, getSideBadgeToneClass } from "../_lib/side-format";
 import type { OrderItemModifier, OrderItemSide } from "../types";
 
 interface TicketRowMetaProps {

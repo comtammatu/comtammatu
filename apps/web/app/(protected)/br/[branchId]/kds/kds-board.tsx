@@ -5,35 +5,35 @@ import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import { playAppSignal } from "@lib/audio-signal";
 import { readDevicePref, writeDevicePref } from "@lib/device-prefs";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { TickProvider } from "./hooks/use-board-tick";
-import { useKdsRealtime } from "./hooks/use-kds-realtime";
-import { useKdsFilters } from "./hooks/use-kds-filters";
-import { useKdsMutations } from "./hooks/use-kds-mutations";
-import { useKdsViewMode } from "./hooks/use-kds-view-mode";
+import { TickProvider } from "./_hooks/use-board-tick";
+import { useKdsRealtime } from "./_hooks/use-kds-realtime";
+import { useKdsFilters } from "./_hooks/use-kds-filters";
+import { useKdsMutations } from "./_hooks/use-kds-mutations";
+import { useKdsViewMode } from "./_hooks/use-kds-view-mode";
 import {
   KdsRowEffectsProvider,
   useKdsRowEffects,
-} from "./hooks/use-kds-row-effects";
+} from "./_hooks/use-kds-row-effects";
 import {
   getKdsOrderItemColumnId,
   getKdsScopedGroupKey,
-} from "./lib/order-columns";
-import { getKdsTicketSequenceSortKey } from "./lib/status-config";
+} from "./_lib/order-columns";
+import { getKdsTicketSequenceSortKey } from "./_lib/status-config";
 import {
   collectReadyKdsNewTicketAlertGroups,
   getKdsNewTicketAlertGroupKey,
   getKdsNewTicketToastTitle,
   pickHigherPriorityKdsSignalTone,
   type KdsNewTicketSignalTone,
-} from "./lib/sound-alerts";
-import { isKdsActiveTicketStatus } from "./lib/order-status";
-import { BoardHeader } from "./components/board-header";
-import { StationToggleBar } from "./components/station-toggle-bar";
-import { FilterBar } from "./components/filter-bar";
-import { FocusView } from "./components/focus-view";
-import { OrderGrid } from "./components/order-grid";
-import { KdsCompletionHistorySheet } from "./components/completion-history-sheet";
-import { UnassignedBanner } from "./components/unassigned-banner";
+} from "./_lib/sound-alerts";
+import { isKdsActiveTicketStatus } from "./_lib/order-status";
+import { BoardHeader } from "./_components/board-header";
+import { StationToggleBar } from "./_components/station-toggle-bar";
+import { FilterBar } from "./_components/filter-bar";
+import { FocusView } from "./_components/focus-view";
+import { OrderGrid } from "./_components/order-grid";
+import { KdsCompletionHistorySheet } from "./_components/completion-history-sheet";
+import { UnassignedBanner } from "./_components/unassigned-banner";
 import type {
   KdsBoardProps,
   KdsMenuLimitRow,

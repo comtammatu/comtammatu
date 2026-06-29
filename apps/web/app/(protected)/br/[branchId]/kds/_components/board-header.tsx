@@ -18,7 +18,7 @@ import type { ReactNode } from "react";
 import { EmployeePortalBackControl } from "../../employee-portal-back-control";
 import { KdsMenuLimitsSheet } from "./menu-limits-sheet";
 import { ViewModeToggle } from "./view-mode-toggle";
-import type { KdsViewMode } from "../hooks/use-kds-view-mode";
+import type { KdsViewMode } from "../_hooks/use-kds-view-mode";
 import type { KdsMenuLimitRow } from "../types";
 
 interface BoardHeaderProps {

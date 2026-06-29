@@ -4,7 +4,7 @@ import {
   formatSideLabel,
   getSideBadgeToneClass,
   sidePortionQuantity,
-} from "../app/(protected)/br/[branchId]/kds/lib/side-format";
+} from "../app/(protected)/br/[branchId]/kds/_lib/side-format";
 
 test("formatSideLabel shows default side quantity per main item portion", () => {
   assert.equal(

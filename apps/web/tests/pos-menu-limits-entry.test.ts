@@ -29,7 +29,7 @@ const menuLimitsSheetSource = readFileSync(
 const kdsMenuLimitsSheetSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/kds/components/menu-limits-sheet.tsx",
+    "app/(protected)/br/[branchId]/kds/_components/menu-limits-sheet.tsx",
   ),
   "utf8",
 );

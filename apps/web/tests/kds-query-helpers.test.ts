@@ -6,7 +6,7 @@ import {
   fetchChunkedRows,
   fetchPagedRows,
   sortKdsTicketsNewestFirst,
-} from "../app/(protected)/br/[branchId]/kds/lib/query-helpers";
+} from "../app/(protected)/br/[branchId]/kds/_lib/query-helpers";
 import type { KdsTicket } from "../app/(protected)/br/[branchId]/kds/types";
 
 test("KDS query helpers chunk long ID lists without dropping IDs", () => {

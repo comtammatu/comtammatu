@@ -6,7 +6,7 @@ import {
   type KdsCompletionHistoryOrderInfo,
   type KdsCompletionHistoryOrderItem,
   type KdsCompletionHistoryTicket,
-} from "../app/(protected)/br/[branchId]/kds/lib/completion-history";
+} from "../app/(protected)/br/[branchId]/kds/_lib/completion-history";
 
 const orders: KdsCompletionHistoryOrderInfo[] = [
   {

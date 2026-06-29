@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { TicketRowMeta } from "../app/(protected)/br/[branchId]/kds/components/ticket-row-meta";
+import { TicketRowMeta } from "../app/(protected)/br/[branchId]/kds/_components/ticket-row-meta";
 
 test("TicketRowMeta renders side badges with distinct semantic chart tones", () => {
   const html = renderToStaticMarkup(
