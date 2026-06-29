@@ -42,7 +42,7 @@ TS twin (Task 11, `checklist-types.ts` successor): `POSITION_TASK_KINDS`, `POSIT
 ### Task 1: Additive migration — shifts flags, `position_shift_tasks`, attendance kind extension, consumption re-key, backfill
 
 **Files:**
-- Create: `supabase/migrations/20260629120000_position_shift_tasks.sql`
+- Create: `supabase/migrations/20260629120500_position_shift_tasks.sql`
 - Modify: `supabase/migrations/00000000000000_baseline.sql` (reflect new objects so baseline replay stays authoritative)
 
 **Interfaces:**
@@ -51,7 +51,7 @@ TS twin (Task 11, `checklist-types.ts` successor): `POSITION_TASK_KINDS`, `POSIT
 - [ ] **Step 1: Write the migration SQL**
 
 ```sql
--- 20260629120000_position_shift_tasks.sql
+-- 20260629120500_position_shift_tasks.sql
 -- Direct per-position shift tasks (replaces template+assignment indirection).
 -- Additive only; legacy template tables dropped in a later migration after cutover.
 
@@ -175,7 +175,7 @@ Expected: PASS (baseline replays clean from empty).
 - [ ] **Step 3: Commit**
 
 ```bash
-git add supabase/migrations/20260629120000_position_shift_tasks.sql supabase/migrations/00000000000000_baseline.sql
+git add supabase/migrations/20260629120500_position_shift_tasks.sql supabase/migrations/00000000000000_baseline.sql
 git commit -m "feat(db): add position_shift_tasks + shift open/close flags (D050 phase 1)"
 ```
 

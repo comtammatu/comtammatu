@@ -1,4 +1,4 @@
--- 20260629120000_position_shift_tasks.sql
+-- 20260629120500_position_shift_tasks.sql
 -- Direct per-position shift tasks (replaces template+assignment indirection).
 -- Additive only; legacy template tables dropped in a later migration after cutover.
 
