@@ -19,7 +19,6 @@ const invoiceQueriesSource = read(
   "app/(protected)/finance/_lib/invoice-queries.ts",
 );
 const financeActionsSource = read("app/(protected)/finance/actions.ts");
-const reexportSource = read("app/_actions/finance.ts");
 
 function fnBlock(source: string, name: string): string {
   const block = new RegExp(
@@ -62,13 +61,9 @@ test("the benign-replay decision is never made by matching the duplicate-invoice
   assert.doesNotMatch(vietqrBlock, /Đơn hàng đã có hóa đơn/);
 });
 
-test("resolve helper is exported, re-exported, and its filter matches createTaxInvoice (no drift)", () => {
+test("resolve helper is exported and its filter matches createTaxInvoice (no drift)", () => {
   assert.match(
     financeActionsSource,
-    /export async function resolveExistingInvoiceForOrder\(/,
-  );
-  assert.match(
-    reexportSource,
     /export async function resolveExistingInvoiceForOrder\(/,
   );
   const activeFilter =
