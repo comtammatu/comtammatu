@@ -47,6 +47,7 @@ export type { SupplierInvoiceCursor } from "./supplier-invoice-actions";
 export {
   fetchRecipes,
   fetchBranchWacMap,
+  fetchBranchMenuStockCapacity,
   upsertRecipeLines,
   fetchMenuItemsForRecipes,
 } from "./recipe-actions";
