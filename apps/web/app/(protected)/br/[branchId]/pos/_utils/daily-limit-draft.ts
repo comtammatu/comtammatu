@@ -52,15 +52,27 @@ export function buildDailyLimitDemand(
   return demand;
 }
 
+/**
+ * Effective daily cap = min over the NON-null values of
+ * {limit_quantity, stock_capacity}. `null` when BOTH are null (unbounded).
+ * `stock_capacity` is an advisory warehouse-derived cap sharing the same row
+ * and the same `sold_today` counter as the manual `limit_quantity`.
+ */
+function effectiveDailyCap(limit: MenuItemDailyLimit): number | null {
+  const stockCap = limit.stock_capacity ?? null;
+  if (limit.limit_quantity == null) return stockCap;
+  if (stockCap == null) return limit.limit_quantity;
+  return Math.min(limit.limit_quantity, stockCap);
+}
+
 export function remainingDailyQuotaAfterDemand(
   limit: MenuItemDailyLimit | null,
   currentDraftDemand: number,
 ): number | null {
-  if (!limit || limit.limit_quantity == null) return null;
-  return Math.max(
-    0,
-    limit.limit_quantity - limit.sold_today - currentDraftDemand,
-  );
+  if (!limit) return null;
+  const cap = effectiveDailyCap(limit);
+  if (cap == null) return null;
+  return Math.max(0, cap - limit.sold_today - currentDraftDemand);
 }
 
 export function isDailyLimitBlockedAfterDemand(
@@ -121,12 +133,11 @@ export function findDailyLimitBlockForProposal({
       return { reason: "disabled", itemName: request.itemName };
     }
 
-    if (limit.limit_quantity == null) continue;
+    const cap = effectiveDailyCap(limit);
+    if (cap == null) continue;
 
     const available =
-      limit.limit_quantity -
-      limit.sold_today -
-      (existingDemand.get(menuItemId) ?? 0);
+      cap - limit.sold_today - (existingDemand.get(menuItemId) ?? 0);
 
     if (request.quantity > available) {
       return {

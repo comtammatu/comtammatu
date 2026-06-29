@@ -31,6 +31,8 @@ export interface MenuItemDailyLimit {
   is_disabled: boolean;
   /** Portions already taken by accepted orders today. */
   sold_today: number;
+  /** Advisory cap from warehouse stock; composed with limit_quantity via min. */
+  stock_capacity?: number | null;
 }
 
 export interface MenuItem {
