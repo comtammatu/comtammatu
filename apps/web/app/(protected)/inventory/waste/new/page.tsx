@@ -71,7 +71,7 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
     supabase
       .from("ingredients")
       .select(
-        "id, name, unit, purchase_unit, unit_cost, ingredient_units(unit_id, is_base, allow_issue, sort_order, units(code))",
+        "id, name, unit, purchase_unit, unit_cost, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, allow_issue, sort_order, units!ingredient_units_unit_tenant_fkey(code))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)

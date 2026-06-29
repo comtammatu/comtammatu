@@ -2092,6 +2092,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ingredient_units_ingredient_tenant_fkey"
+            columns: ["ingredient_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
             foreignKeyName: "ingredient_units_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -2104,6 +2111,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "units"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_units_unit_tenant_fkey"
+            columns: ["unit_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id", "tenant_id"]
           },
         ]
       }
@@ -2184,6 +2198,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ingredient_categories"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredients_category_tenant_fkey"
+            columns: ["category_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "ingredient_categories"
+            referencedColumns: ["id", "tenant_id"]
           },
           {
             foreignKeyName: "ingredients_tenant_id_fkey"
@@ -9372,7 +9393,7 @@ export type Database = {
         Args: { p_slip_id: number }
         Returns: {
           counted_quantity: number
-          entry_unit_id: number | null
+          entry_unit_id: number
           ingredient_id: number
           note: string
         }[]
@@ -9592,6 +9613,7 @@ export type Database = {
           limit_quantity: number
           menu_item_id: number
           sold_today: number
+          stock_capacity: number
         }[]
       }
       list_notifications: {

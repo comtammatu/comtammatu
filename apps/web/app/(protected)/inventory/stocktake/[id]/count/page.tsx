@@ -68,7 +68,7 @@ export default async function StocktakeCountPage({
     const { data: unitRows } = await supabase
       .from("ingredients")
       .select(
-        "id, ingredient_units(unit_id, is_base, sort_order, units(code))",
+        "id, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code))",
       )
       .eq("tenant_id", sessionRow.tenant_id)
       .in("id", ingredientIds);

@@ -173,7 +173,7 @@ export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
   const { data, error } = await supabase
     .from("ingredients")
     .select(
-      "*, ingredient_categories(name), ingredient_units(id, unit_id, to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units(code))",
+      "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code))",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("name")
@@ -533,7 +533,7 @@ export async function exportIngredients(
   const { data, error } = await supabase
     .from("ingredients")
     .select(
-      "name, sku, purchase_unit, measure_unit, purchase_to_measure_factor, category, item_kind, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, ingredient_units(to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units(code))",
+      "name, sku, purchase_unit, measure_unit, purchase_to_measure_factor, category, item_kind, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code))",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("name");
