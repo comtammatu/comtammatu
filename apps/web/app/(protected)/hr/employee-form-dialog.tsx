@@ -8,14 +8,9 @@ import { FieldGroup } from "@comtammatu/ui/components/field";
 import { FormDialog, SelectField, TextField } from "@/components/form";
 import { requiredBranchKindForPositionCode } from "@comtammatu/shared/auth";
 import { createEmployeeAccount, updateEmployee } from "./actions";
-import {
-  checklistTemplateLabel,
-  type ChecklistTemplateRow,
-} from "./checklist-types";
 import type { BranchOption, EmployeeRow } from "./_types";
 
 const NO_BRANCH = "none";
-const NO_TEMPLATE = "none";
 const NO_CONTRACT = "none";
 const STATUS_ACTIVE = "active";
 const STATUS_INACTIVE = "inactive";
@@ -67,7 +62,6 @@ const employeeSchema = z.object({
   contract_number: z.string().trim().optional(),
   contract_signed_date: z.string().optional(),
   contract_end_date: z.string().optional(),
-  default_checklist_template_id: z.string().optional(),
   base_salary: baseSalaryField,
   insurance_base_salary: insuranceBaseSalaryField,
   dependents_count: dependentsField,
@@ -86,7 +80,6 @@ const editEmployeeSchema = z.object({
   contract_number: z.string().trim().optional(),
   contract_signed_date: z.string().optional(),
   contract_end_date: z.string().optional(),
-  default_checklist_template_id: z.string().optional(),
   base_salary: baseSalaryField,
   insurance_base_salary: insuranceBaseSalaryField,
   dependents_count: dependentsField,
@@ -111,7 +104,6 @@ const DEFAULT_VALUES: EmployeeFormValues = {
   contract_number: "",
   contract_signed_date: "",
   contract_end_date: "",
-  default_checklist_template_id: NO_TEMPLATE,
   base_salary: "",
   insurance_base_salary: "",
   dependents_count: "0",
@@ -156,8 +148,6 @@ function editDefaults(employee: EmployeeRow): EditEmployeeFormValues {
     contract_number: contract?.contract_number ?? "",
     contract_signed_date: contract?.signed_date ?? "",
     contract_end_date: contract?.end_date ?? "",
-    default_checklist_template_id:
-      employee.default_checklist_template_id?.toString() ?? NO_TEMPLATE,
     base_salary: employee.base_salary?.toString() ?? "",
     insurance_base_salary: (
       contract?.insurance_base_salary ??
@@ -176,7 +166,6 @@ interface EmployeeFormDialogProps {
   onOpenChange: (open: boolean) => void;
   branches: BranchOption[];
   positionOptions: { value: string; label: string }[];
-  checklistTemplates?: ChecklistTemplateRow[];
   mode?: "create" | "edit";
   employee?: EmployeeRow | null;
 }
@@ -186,35 +175,17 @@ export function EmployeeFormDialog({
   onOpenChange,
   branches,
   positionOptions,
-  checklistTemplates,
   mode = "create",
   employee,
 }: EmployeeFormDialogProps) {
-  const availableTemplates = checklistTemplates ?? [];
-
   function contractType(value: string | undefined) {
     return value && value !== NO_CONTRACT
       ? (value as "probation" | "fixed_term" | "indefinite")
       : null;
   }
 
-  function templateOptions() {
-    return [
-      { value: NO_TEMPLATE, label: "Không gán mặc định" },
-      ...availableTemplates.map((template) => ({
-        value: template.id.toString(),
-        label: checklistTemplateLabel(template),
-      })),
-    ];
-  }
-
   if (mode === "edit" && employee) {
     async function handleEditSubmit(values: EditEmployeeFormValues) {
-      const defaultTemplateId =
-        values.default_checklist_template_id &&
-        values.default_checklist_template_id !== NO_TEMPLATE
-          ? Number(values.default_checklist_template_id)
-          : null;
       return updateEmployee({
         employeeId: employee!.id,
         fullName: values.full_name,
@@ -225,7 +196,6 @@ export function EmployeeFormDialog({
         contractNumber: values.contract_number || undefined,
         contractSignedDate: values.contract_signed_date || undefined,
         contractEndDate: values.contract_end_date || undefined,
-        defaultChecklistTemplateId: defaultTemplateId,
         baseSalary: values.base_salary ? Number(values.base_salary) : 0,
         insuranceBaseSalary: values.insurance_base_salary
           ? Number(values.insurance_base_salary)
@@ -284,14 +254,6 @@ export function EmployeeFormDialog({
                 label="Ngày bắt đầu"
                 type="date"
               />
-              <SelectField
-                control={form.control}
-                name="default_checklist_template_id"
-                label="Checklist mặc định"
-                options={templateOptions()}
-                placeholder="Không gán mặc định"
-              />
-
               <SelectField
                 control={form.control}
                 name="status"
@@ -380,11 +342,6 @@ export function EmployeeFormDialog({
   }
 
   async function handleSubmit(values: EmployeeFormValues) {
-    const defaultTemplateId =
-      values.default_checklist_template_id &&
-      values.default_checklist_template_id !== NO_TEMPLATE
-        ? Number(values.default_checklist_template_id)
-        : null;
     const branchId =
       values.branch_id && values.branch_id !== NO_BRANCH
         ? Number(values.branch_id)
@@ -402,7 +359,6 @@ export function EmployeeFormDialog({
       contractNumber: values.contract_number || undefined,
       contractSignedDate: values.contract_signed_date || undefined,
       contractEndDate: values.contract_end_date || undefined,
-      defaultChecklistTemplateId: defaultTemplateId,
       baseSalary: values.base_salary ? Number(values.base_salary) : undefined,
       insuranceBaseSalary: values.insurance_base_salary
         ? Number(values.insurance_base_salary)
@@ -518,13 +474,6 @@ export function EmployeeFormDialog({
               name="start_date"
               label="Ngày bắt đầu"
               type="date"
-            />
-            <SelectField
-              control={form.control}
-              name="default_checklist_template_id"
-              label="Checklist mặc định"
-              options={templateOptions()}
-              placeholder="Không gán mặc định"
             />
           </FormSection>
 

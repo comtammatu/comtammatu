@@ -25,9 +25,7 @@ const STAFF_AUDIT_TABLE =
 const HR_DATA_TABLE_FILES = [
   "apps/web/app/(protected)/hr/attendance-table.tsx",
   "apps/web/app/(protected)/hr/leave-requests-table.tsx",
-  "apps/web/app/(protected)/hr/checklist-templates-table.tsx",
   "apps/web/app/(protected)/hr/employee-table.tsx",
-  "apps/web/app/(protected)/hr/position-defaults-table.tsx",
   "apps/web/app/(protected)/hr/shifts-table.tsx",
   "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx",
   "apps/web/app/(protected)/hr/payroll/[periodId]/payroll-detail-client.tsx",
