@@ -59,6 +59,7 @@ GRANT ALL ON TABLE public.position_shift_tasks TO service_role;
 ALTER TABLE public.position_shift_tasks ENABLE ROW LEVEL SECURITY;
 
 -- SELECT policy mirrors template read scope (tenant + staff:manage / hr:view_employee / settings:tenant).
+DROP POLICY IF EXISTS position_shift_tasks_select ON public.position_shift_tasks;
 CREATE POLICY position_shift_tasks_select ON public.position_shift_tasks
   FOR SELECT TO authenticated USING (
     tenant_id = public.auth_tenant_id()
