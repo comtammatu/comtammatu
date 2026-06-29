@@ -116,7 +116,7 @@ export default async function CountSlipsPage() {
             ? ((unitSource as { unit?: unknown }).unit ?? null)
             : null;
         // Prefer the entry unit the line was counted in; fall back to the
-        // ingredient's default unit for legacy lines without entry_unit_id.
+        // ingredient's default unit for lines without entry_unit_id.
         const entryUnitSource = Array.isArray(line.units)
           ? line.units[0]
           : line.units;

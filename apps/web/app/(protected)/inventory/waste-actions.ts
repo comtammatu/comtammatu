@@ -38,7 +38,7 @@ const wasteItemSchema = z.object({
   ingredient_id: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
   unit: z.string().min(1),
-  // Issue-role unit the qty was entered in. NULL = already base (back-compat);
+  // Issue-role unit the qty was entered in. NULL = already base;
   // the writeoff decrement converts to base via inv_to_base().
   entry_unit_id: z.coerce.number().int().positive().nullable().optional(),
   unit_cost: z.coerce.number().positive().optional(),

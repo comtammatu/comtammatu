@@ -9,8 +9,7 @@ export interface IssueUnitOption {
 /**
  * Selectable issue-role units for an ingredient: its ingredient_units rows
  * where allow_issue is true, base unit first. Returns [] when the ingredient
- * carries no units[] (leaner query / legacy data) so callers can fall back to a
- * free-text unit input.
+ * carries no units[] so callers can fall back to a free-text unit input.
  */
 export function getIssueUnitOptions(
   ingredient: IngredientRow | undefined,

@@ -29,7 +29,7 @@ const issueLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
   unit: z.string().min(1),
-  // Issue-role unit the qty was entered in. NULL = already base (back-compat);
+  // Issue-role unit the qty was entered in. NULL = already base;
   // confirm_stock_issue converts to the ingredient base via inv_to_base().
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   reason: z.string().trim().optional().nullable(),

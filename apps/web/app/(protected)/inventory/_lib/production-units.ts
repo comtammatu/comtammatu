@@ -12,8 +12,8 @@ type HasUnits = { units?: IngredientUnitRow[] };
 /**
  * Selectable production-role units for an ingredient: its ingredient_units rows
  * where allow_production is true, base unit first. Returns [] when the
- * ingredient carries no units[] (leaner query / legacy data) so callers can
- * fall back to a free-text unit input.
+ * ingredient carries no units[] so callers can fall back to a free-text unit
+ * input.
  */
 export function getProductionUnitOptions(
   ingredient: HasUnits | undefined,

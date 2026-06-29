@@ -98,7 +98,7 @@ function categoryToneClass(
 function unitsSummary(item: IngredientRow): string {
   const units = item.units ?? [];
   if (units.length === 0) {
-    // Fall back to legacy columns when no multi-unit rows are present yet.
+    // Fall back to ingredient columns when no multi-unit rows are present yet.
     if (item.purchase_unit) {
       return `${item.purchase_unit} (${ingredientFormCopy.units.baseTag})`;
     }

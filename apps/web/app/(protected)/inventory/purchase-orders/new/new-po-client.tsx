@@ -74,7 +74,7 @@ interface LocalLine {
   ingredientName: string;
   quantity: number;
   unit: string;
-  // Purchase-role unit id the qty was entered in. NULL = legacy free-text unit.
+  // Purchase-role unit id the qty was entered in. NULL = free-text unit.
   entryUnitId: number | null;
   unitPriceEst: number | null;
 }

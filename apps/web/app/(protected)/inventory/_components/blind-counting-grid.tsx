@@ -293,7 +293,7 @@ function CountLineItem({
 /**
  * Counting-unit picker for a line. Shows a Select of all the ingredient's
  * active units (base first) when options exist; otherwise falls back to the
- * static unit string from the line so legacy ingredients still render.
+ * static unit string from the line.
  */
 function CountUnitSelect({
   line,

@@ -105,8 +105,7 @@ export async function voidPaidOrder(
           "Đơn đã huỷ trong hệ thống — chưa huỷ được HĐĐT (nhà cung cấp chưa sẵn sàng). Báo Kế toán.";
       }
     } else {
-      // Legacy non-Viettel issued invoice (e.g. 'misa'): runtime cannot
-      // auto-cancel — route to accountant for manual cancellation.
+      // Non-Viettel issued invoice: runtime cannot auto-cancel.
       providerWarning =
         "Đơn đã huỷ trong hệ thống — HĐĐT thuộc nhà cung cấp khác, cần Kế toán huỷ thủ công.";
     }

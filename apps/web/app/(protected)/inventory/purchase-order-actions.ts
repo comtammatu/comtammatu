@@ -125,8 +125,8 @@ const poWithLinesSchema = z.object({
           .number()
           .positive({ error: "Số lượng phải lớn hơn 0" }),
         unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
-        // Purchase-role unit the qty was entered in. NULL = already base unit
-        // (back-compat); the RPC converts to the ingredient base via inv_to_base().
+        // Purchase-role unit the qty was entered in. NULL = already base unit;
+        // the RPC converts to the ingredient base via inv_to_base().
         entryUnitId: z.coerce.number().int().positive().nullable().optional(),
         unitPriceEst: z.union([z.number().min(0), z.null()]).optional(),
       }),
@@ -223,7 +223,7 @@ const poLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive({ error: "Số lượng phải lớn hơn 0" }),
   unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
-  // Purchase-role unit the qty was entered in. NULL = already base (back-compat).
+  // Purchase-role unit the qty was entered in. NULL = already base.
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   unitPriceEst: z.union([z.number().min(0), z.null()]).optional(),
 });
