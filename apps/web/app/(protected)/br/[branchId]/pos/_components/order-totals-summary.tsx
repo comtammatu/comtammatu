@@ -1,7 +1,7 @@
 "use client";
 
 import { formatVND } from "@comtammatu/shared/format";
-import { FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, POS_VI } from "@comtammatu/shared/messages";
 import { Separator } from "@comtammatu/ui/components/separator";
 import { cn } from "@comtammatu/ui";
 
@@ -76,7 +76,7 @@ export function OrderTotalsSummary({
 
       {serviceCharge > 0 && (
         <div className={cn(lineClass, "text-muted-foreground")}>
-          <span>Phụ phí</span>
+          <span>{POS_VI.serviceChargeTitle}</span>
           <span className="font-mono tabular-nums">{formatVND(serviceCharge)}</span>
         </div>
       )}

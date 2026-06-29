@@ -16,7 +16,7 @@ import { Minus as IconMinus, Plus as IconPlus } from "lucide-react";
 import { getPosLineItemDisplayName } from "../../types";
 import type { OrderItemRowData } from "./order-item-row";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, POS_VI } from "@comtammatu/shared/messages";
 
 export interface SplitOrderItemPartial {
   itemId: number;
@@ -237,7 +237,7 @@ export function SplitOrderSheet({
           </div>
           {wouldEmptySource && !noneSelected && (
             <p className="text-xs text-destructive">
-              Không thể tách: phải giữ lại ít nhất 1 món trên đơn gốc.
+              {POS_VI.splitCannotKeepOne}
             </p>
           )}
           {noActiveItems && (
@@ -262,7 +262,7 @@ export function SplitOrderSheet({
               disabled={!canSubmit}
               onClick={handleSubmit}
             >
-              Tách thành đơn mới
+              {POS_VI.splitConfirm}
             </Button>
           </div>
         </SheetFooter>

@@ -10,6 +10,7 @@ import {
   BRAND_LOCKUP_TAGLINE,
 } from "@/components/brand";
 import { getPosLineItemDisplayName } from "../../types";
+import { POS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 import { METHOD_LABELS } from "./bill-receipt-types";
 import type { OrderData } from "./bill-receipt-types";
@@ -241,7 +242,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
           <div className="flex justify-between">
             <span>
               {itemDiscountAmount > 0
-                ? "Chiết khấu đơn"
+                ? POS_VI.orderDiscountLabel
                 : messages.pos.receipt.discount}
               {order.discount_type === "pct" && order.discount_value != null
                 ? ` (${order.discount_value}%)`

@@ -20,7 +20,7 @@ import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { fetchSiblingOrdersForTable } from "../../actions";
 import type { SiblingOrderRow } from "../../discount-actions";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, POS_VI } from "@comtammatu/shared/messages";
 interface MergeOrdersSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -83,7 +83,7 @@ export function MergeOrdersSheet({
         setError(null);
       } else {
         setSiblings([]);
-        setError(r.error ?? "Không thể tải danh sách đơn cùng bàn.");
+        setError(r.error ?? POS_VI.mergeLoadFailed);
       }
       setIsLoading(false);
     });
@@ -142,8 +142,7 @@ export function MergeOrdersSheet({
           <div className="flex flex-col gap-2 px-3 py-3 sm:px-4">
             {sourceHasPctDiscount && (
               <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
-                Đơn hiện tại đang giảm theo %. Vui lòng bỏ chiết khấu trước khi
-                gộp (% không cộng dồn được).
+                {POS_VI.mergePctBlock}
               </p>
             )}
 
@@ -171,7 +170,7 @@ export function MergeOrdersSheet({
 
             {!isLoading && !error && siblings && siblings.length === 0 && (
               <p className="text-sm text-muted-foreground">
-                Không có đơn nào khác cùng bàn để gộp.
+                {POS_VI.mergeEmpty}
               </p>
             )}
 
@@ -242,7 +241,7 @@ export function MergeOrdersSheet({
               disabled={!canSubmit}
               onClick={handleSubmit}
             >
-              Gộp vào đơn này
+              {POS_VI.mergeConfirm}
             </Button>
           </div>
         </SheetFooter>

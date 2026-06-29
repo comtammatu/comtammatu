@@ -15,7 +15,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { QuickReasonChips } from "../quick-reason-chips";
 import { VOID_ITEM_PRESETS } from "../quick-reason-presets";
 
-import { FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, POS_VI } from "@comtammatu/shared/messages";
 interface VoidItemDialogProps {
   open: boolean;
   reason: string;
@@ -51,10 +51,10 @@ export function VoidItemDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {itemLabel ? `Hủy món: ${itemLabel}` : "Hủy món?"}
+            {itemLabel ? `Hủy món: ${itemLabel}` : POS_VI.voidItemTitleFallback}
           </AlertDialogTitle>
           <AlertDialogDescription className="sr-only">
-            Hủy dòng món này, đơn vẫn tiếp tục.
+            {POS_VI.voidItemSrDescription}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -67,20 +67,20 @@ export function VoidItemDialog({
               presets={VOID_ITEM_PRESETS}
               value={reason}
               onChange={onReasonChange}
-              ariaLabel="Gợi ý lý do hủy món"
+              ariaLabel={POS_VI.voidItemReasonSuggestAria}
             />
             <Textarea
               id="void-reason"
               value={reason}
               onChange={(event) => onReasonChange(event.target.value)}
-              placeholder="Lý do (≥ 5 ký tự)"
+              placeholder={POS_VI.reasonMin5Placeholder}
               aria-invalid={!reasonReady && trimmedLen > 0}
             />
           </Field>
         </FieldGroup>
 
         <AlertDialogFooter>
-          <AlertDialogCancel>Giữ món</AlertDialogCancel>
+          <AlertDialogCancel>{POS_VI.keepItem}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             disabled={!reasonReady || isPending}
@@ -90,7 +90,7 @@ export function VoidItemDialog({
               onConfirm();
             }}
           >
-            Hủy món
+            {POS_VI.voidItem}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

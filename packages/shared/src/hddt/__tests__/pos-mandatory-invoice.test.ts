@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { POS_VI } from "../../messages";
 
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
@@ -24,7 +25,8 @@ test("POS invoice form defaults to buyer-not-get-invoice instead of opting out",
     "missing buyerNotGetInvoice flag for buyer-not-get-invoice sales",
   );
   assert.ok(
-    src.includes("Người mua không lấy hóa đơn"),
+    src.includes("POS_VI.buyerNoInvoice") &&
+      POS_VI.buyerNoInvoice === "Người mua không lấy hóa đơn",
     "checkbox copy must match Viettel S-Invoice buyer-not-get-invoice mode",
   );
 });

@@ -17,7 +17,7 @@ import { Minus as IconMinus, Plus as IconPlus } from "lucide-react";
 import { QuickReasonChips } from "../quick-reason-chips";
 import { REDUCE_ITEM_PRESETS } from "../quick-reason-presets";
 
-import { FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, POS_VI } from "@comtammatu/shared/messages";
 interface ReduceQuantityDialogProps {
   open: boolean;
   /** Current quantity on the order_item row — drives stepper bounds. */
@@ -81,7 +81,7 @@ export function ReduceQuantityDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {itemLabel ? `Giảm SL: ${itemLabel}` : "Giảm số lượng?"}
+            {itemLabel ? `Giảm SL: ${itemLabel}` : POS_VI.reduceQtyTitleFallback}
           </AlertDialogTitle>
           <AlertDialogDescription>
             Hiện tại {currentQuantity}. Mới: {minQty}–{maxQty}.
@@ -91,18 +91,18 @@ export function ReduceQuantityDialog({
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="reduce-qty" className="sr-only">
-              Số lượng mới
+              {POS_VI.reduceQtyNewLabel}
             </FieldLabel>
             <div
               role="group"
-              aria-label="Chọn số lượng mới"
+              aria-label={POS_VI.reduceQtyNewAria}
               className="flex items-center justify-center gap-2"
             >
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
-                aria-label="Giảm"
+                aria-label={POS_VI.decreaseAria}
                 disabled={newQuantity <= minQty || isPending}
                 onClick={decrement}
               >
@@ -119,7 +119,7 @@ export function ReduceQuantityDialog({
                 type="button"
                 variant="outline"
                 size="icon"
-                aria-label="Tăng"
+                aria-label={POS_VI.increaseAria}
                 disabled={newQuantity >= maxQty || isPending}
                 onClick={increment}
               >
@@ -139,20 +139,20 @@ export function ReduceQuantityDialog({
               presets={REDUCE_ITEM_PRESETS}
               value={reason}
               onChange={onReasonChange}
-              ariaLabel="Gợi ý lý do giảm SL"
+              ariaLabel={POS_VI.reduceReasonSuggestAria}
             />
             <Textarea
               id="reduce-reason"
               value={reason}
               onChange={(event) => onReasonChange(event.target.value)}
-              placeholder="Lý do (≥ 5 ký tự)"
+              placeholder={POS_VI.reasonMin5Placeholder}
               aria-invalid={!reasonReady && trimmedLen > 0}
             />
           </Field>
         </FieldGroup>
 
         <AlertDialogFooter>
-          <AlertDialogCancel>Giữ nguyên</AlertDialogCancel>
+          <AlertDialogCancel>{POS_VI.keepUnchanged}</AlertDialogCancel>
           <AlertDialogAction
             disabled={!canSubmit}
             onClick={(event) => {
@@ -161,7 +161,7 @@ export function ReduceQuantityDialog({
               onConfirm();
             }}
           >
-            Xác nhận giảm
+            {POS_VI.confirmReduce}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

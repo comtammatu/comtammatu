@@ -15,7 +15,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { QuickReasonChips } from "../quick-reason-chips";
 import { CANCEL_ORDER_PRESETS } from "../quick-reason-presets";
 
-import { FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, POS_VI } from "@comtammatu/shared/messages";
 interface CancelOrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -46,7 +46,7 @@ export function CancelOrderDialog({
   const reasonReady = trimmedLen >= 5;
   const orderLabel = orderNumber ? ` ${orderNumber}` : "";
   const contextLabel =
-    orderType === "dine_in" ? `Bàn ${tableNumber ?? "?"}` : "Mang về";
+    orderType === "dine_in" ? `Bàn ${tableNumber ?? "?"}` : POS_VI.takeawayContext;
   const summary =
     itemCount > 0 ? `${itemCount} món · ${contextLabel}` : contextLabel;
 
@@ -67,13 +67,13 @@ export function CancelOrderDialog({
               presets={CANCEL_ORDER_PRESETS}
               value={reason}
               onChange={onReasonChange}
-              ariaLabel="Gợi ý lý do hủy đơn"
+              ariaLabel={POS_VI.cancelOrderReasonSuggestAria}
             />
             <Textarea
               id="cancel-reason"
               value={reason}
               onChange={(event) => onReasonChange(event.target.value)}
-              placeholder="Lý do (≥ 5 ký tự)"
+              placeholder={POS_VI.reasonMin5Placeholder}
               aria-invalid={!reasonReady && trimmedLen > 0}
             />
           </Field>
