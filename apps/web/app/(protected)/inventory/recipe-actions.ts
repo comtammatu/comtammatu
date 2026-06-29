@@ -157,7 +157,7 @@ export const upsertRecipeLines = withAction(
     schema: recipeBatchSchema,
     permission: PERMISSION_KEYS.MENU_WRITE,
   },
-  async (data, { supabase, claims }) => {
+  async (data, { supabase }) => {
     const { error } = await supabase.rpc("upsert_recipe_lines", {
       p_menu_item_id: data.menuItemId,
       p_lines: data.lines.map((l) => ({
@@ -176,25 +176,6 @@ export const upsertRecipeLines = withAction(
       return { success: false, error: "Không thể lưu định mức món bán." };
     }
 
-    // upsert_recipe_lines persists ingredient/quantity/unit only. Persist the
-    // entry-unit per line so consume_stock_for_order can convert the authored
-    // qty to base via inv_to_base(). NULL entry units are already base (legacy
-    // purchase_to_measure_factor path) and skipped.
-    for (const line of data.lines) {
-      if (line.entryUnitId == null) continue;
-      const { error: unitError } = await supabase
-        .from("recipes")
-        .update({ entry_unit_id: line.entryUnitId })
-        .eq("tenant_id", claims.tenant_id)
-        .eq("menu_item_id", data.menuItemId)
-        .eq("ingredient_id", line.ingredientId);
-      if (unitError) {
-        return {
-          success: false,
-          error: "Không thể lưu đơn vị của dòng định mức.",
-        };
-      }
-    }
     return { success: true };
   },
 );

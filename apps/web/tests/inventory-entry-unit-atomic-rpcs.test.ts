@@ -1,0 +1,42 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { test } from "node:test";
+
+const root = fileURLToPath(new URL("../../../", import.meta.url));
+
+function read(path: string): string {
+  return readFileSync(`${root}${path}`, "utf8");
+}
+
+test("inventory entry units are persisted inside atomic RPCs", () => {
+  const sql = read(
+    "supabase/migrations/20260629125621_persist_entry_unit_in_atomic_rpcs.sql",
+  );
+
+  for (const table of [
+    "public.production_order_items",
+    "public.stock_transfer_items",
+    "public.production_recipes",
+    "public.recipes",
+  ]) {
+    assert.match(sql, new RegExp(`INSERT INTO ${table}[\\s\\S]*entry_unit_id`));
+  }
+
+  assert.equal(
+    (sql.match(/entry_unit_id = EXCLUDED\.entry_unit_id/g) ?? []).length,
+    4,
+  );
+});
+
+test("server actions do not patch entry units after RPC success", () => {
+  for (const path of [
+    "apps/web/app/(protected)/inventory/production-order-actions.ts",
+    "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
+    "apps/web/app/(protected)/inventory/recipe-actions.ts",
+    "apps/web/app/(protected)/inventory/transfer-actions.ts",
+  ]) {
+    const source = read(path);
+    assert.doesNotMatch(source, /\.update\(\{\s*entry_unit_id/s, path);
+  }
+});

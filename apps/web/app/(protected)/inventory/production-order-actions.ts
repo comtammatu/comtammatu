@@ -296,9 +296,9 @@ export const createProductionOrder = withAction(
     permission: PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
     permissionBranchId: (data) => data.branchId,
   },
-  async (data, { supabase, claims }) => {
+  async (data, { supabase }) => {
     const sb = supabase as unknown as RpcClient;
-    const { data: rpcData, error } = await sb.rpc("create_production_order", {
+    const { error } = await sb.rpc("create_production_order", {
       p_branch_id: data.branchId,
       p_production_number: data.productionNumber,
       p_notes: data.notes ?? null,
@@ -327,34 +327,6 @@ export const createProductionOrder = withAction(
         return { success: false, error: "Không có quyền tạo lệnh sản xuất." };
       }
       return { success: false, error: "Không thể tạo lệnh sản xuất." };
-    }
-
-    // create_production_order persists finished_good/quantity/unit only. Persist
-    // the entry-unit per output line so confirm_production_order can convert the
-    // finished-good output to base via inv_to_base(). NULL entry units are
-    // already base (back-compat) and skipped.
-    const orderId = (rpcData as { id?: number } | null)?.id;
-    if (orderId != null) {
-      const entryUnitByFinishedGood = new Map<number, number>();
-      for (const item of data.items) {
-        if (item.entryUnitId != null) {
-          entryUnitByFinishedGood.set(item.finishedGoodId, item.entryUnitId);
-        }
-      }
-      for (const [finishedGoodId, entryUnitId] of entryUnitByFinishedGood) {
-        const { error: unitError } = await supabase
-          .from("production_order_items")
-          .update({ entry_unit_id: entryUnitId })
-          .eq("tenant_id", claims.tenant_id)
-          .eq("production_order_id", orderId)
-          .eq("finished_good_id", finishedGoodId);
-        if (unitError) {
-          return {
-            success: false,
-            error: "Không thể lưu đơn vị thành phẩm của dòng lệnh.",
-          };
-        }
-      }
     }
 
     return { success: true };

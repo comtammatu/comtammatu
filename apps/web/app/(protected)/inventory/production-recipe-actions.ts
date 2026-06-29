@@ -751,23 +751,6 @@ export const upsertProductionRecipeLines = withAction(
       return { success: false, error: "Không thể lưu BOM sản xuất." };
     }
 
-    // upsert_production_recipe_lines persists ingredient/quantity/unit only.
-    // Persist the entry-unit per line so confirm_production_order can convert the
-    // authored qty to base via inv_to_base(). NULL entry units are already base
-    // (legacy purchase_to_measure_factor path) and skipped.
-    for (const line of data.lines) {
-      if (line.entryUnitId == null) continue;
-      const { error: unitError } = await supabase
-        .from("production_recipes")
-        .update({ entry_unit_id: line.entryUnitId })
-        .eq("tenant_id", claims.tenant_id)
-        .eq("finished_good_id", data.finishedGoodId)
-        .eq("ingredient_id", line.ingredientId);
-      if (unitError) {
-        return { success: false, error: "Không thể lưu đơn vị của dòng BOM." };
-      }
-    }
-
     revalidatePath("/inventory/production");
     return { success: true };
   },
