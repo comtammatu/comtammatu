@@ -54,6 +54,13 @@ export default async function PosPage({
 
   // Per-branch model (D7): a branch has 0 or 1 open session
   // (DB UNIQUE(branch_id) WHERE status='open').
+  //
+  // Session + permission flags are awaited here because they are the access
+  // guard: they decide *which* surface renders (error shell, no-shift shell,
+  // SessionGate, or the desktop). They must resolve before render and cannot
+  // be streamed. The heavier menu/tables/payment fetches feeding the desktop
+  // are deferred into <PosDesktopData> behind the Suspense boundary so the
+  // shell streams first.
   const [sessionResult, permFlags] = await Promise.all([
     fetchActiveSession(branchIdNum),
     fetchPosPermissionFlags(branchIdNum),
@@ -129,15 +136,47 @@ export default async function PosPage({
     );
   }
 
+  // Guard passed: an open session exists. The static POS shell (skeleton) can
+  // paint immediately while the heavier desktop data streams in below.
+  return (
+    <Suspense fallback={<PosPageSkeleton />}>
+      <PosDesktopData
+        branchId={branchIdNum}
+        session={session}
+        permFlags={permFlags}
+        initialTableId={initialTableId}
+        initialOpenOrderId={initialOpenOrderId}
+      />
+    </Suspense>
+  );
+}
+
+/** Streamed inside the page's Suspense boundary: runs the menu/tables/payment
+ * fetches that feed the heavy desktop surface, so the shell renders without
+ * blocking on the slowest of them. Identical queries/props to before — only
+ * the timing (streamed) changed. */
+async function PosDesktopData({
+  branchId,
+  session,
+  permFlags,
+  initialTableId,
+  initialOpenOrderId,
+}: {
+  branchId: number;
+  session: ActiveSession;
+  permFlags: Awaited<ReturnType<typeof fetchPosPermissionFlags>>;
+  initialTableId: number | undefined;
+  initialOpenOrderId: number | undefined;
+}) {
   const [menuResult, tablesResult, paymentMethodsResult, vietQrConfigResult] =
     await Promise.all([
-      fetchMenuForPos(branchIdNum),
-      fetchTablesForBranch(branchIdNum),
+      fetchMenuForPos(branchId),
+      fetchTablesForBranch(branchId),
       // Tenant-stable settings seeded in RSC. The admin payment-settings save
       // must call `revalidatePath('/br/[branchId]/pos', 'page')` +
       // `revalidateTag('payment-config')` to bust this cache.
-      fetchPaymentMethodsForPos(branchIdNum),
-      fetchVietQrConfig(branchIdNum),
+      fetchPaymentMethodsForPos(branchId),
+      fetchVietQrConfig(branchId),
     ]);
 
   // Active orders are NOT seeded from RSC — every Server Action triggers a
@@ -185,24 +224,22 @@ export default async function PosPage({
   }
 
   return (
-    <Suspense fallback={<PosPageSkeleton />}>
-      <PosDesktopShell
-        branchId={branchIdNum}
-        categories={menuResult.data as MenuCategory[]}
-        tables={tablesList}
-        session={session}
-        initialOrderType={initialOrderType}
-        initialOrders={initialOrders}
-        initialOrdersSeeded={initialOrdersSeeded}
-        initialOpenOrderId={initialOpenOrderId}
-        canCloseShift={permFlags.canCloseShift}
-        canConfirmCash={permFlags.canConfirmCash}
-        canManageMenuLimits={permFlags.canManageMenuLimits}
-        canSplitMerge={permFlags.canSplitMerge}
-        initialPaymentMethods={initialPaymentMethods}
-        initialVietQrConfig={initialVietQrConfig}
-      />
-    </Suspense>
+    <PosDesktopShell
+      branchId={branchId}
+      categories={menuResult.data as MenuCategory[]}
+      tables={tablesList}
+      session={session}
+      initialOrderType={initialOrderType}
+      initialOrders={initialOrders}
+      initialOrdersSeeded={initialOrdersSeeded}
+      initialOpenOrderId={initialOpenOrderId}
+      canCloseShift={permFlags.canCloseShift}
+      canConfirmCash={permFlags.canConfirmCash}
+      canManageMenuLimits={permFlags.canManageMenuLimits}
+      canSplitMerge={permFlags.canSplitMerge}
+      initialPaymentMethods={initialPaymentMethods}
+      initialVietQrConfig={initialVietQrConfig}
+    />
   );
 }
 
