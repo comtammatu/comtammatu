@@ -7,6 +7,7 @@ import {
   TriangleAlert as IconAlertTriangle,
   ArrowLeftRight as IconArrowLeftRight,
   ArrowRight as IconArrowRight,
+  ClipboardCheck as IconClipboardCheck,
   SquareCheck as IconSquareCheck,
   ClipboardList as IconClipboardList,
   Clock as IconClock,
@@ -51,6 +52,7 @@ export type DashboardProps = {
   pendingPO: number;
   activeTransfers: number;
   activeStocktakes: number;
+  pendingCountSlips: number;
   priceReviewCount: number;
   reorderAlerts: Array<{
     ingredientId: number;
@@ -335,6 +337,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     siteName,
     showProcurement,
     activeTransfers,
+    pendingCountSlips,
     reorderAlerts,
     expiryAlerts,
     transfers,
@@ -386,6 +389,15 @@ function buildTasks(props: DashboardProps): TaskItem[] {
   }
 
   if (siteKind === "branch") {
+    if (pendingCountSlips > 0)
+      items.push({
+        key: "count-slips",
+        title: `${pendingCountSlips} phiếu đếm tồn chờ duyệt`,
+        description: "Đối chiếu số đếm với tồn hệ thống.",
+        href: paths.countSlips,
+        icon: <IconClipboardCheck className="size-4" />,
+        severity: "primary",
+      });
     if (inbound.length > 0)
       items.push({
         key: "recv",

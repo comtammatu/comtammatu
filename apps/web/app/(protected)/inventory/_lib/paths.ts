@@ -11,6 +11,7 @@ export type InventoryPaths = {
   transferDetail: (id: number) => string;
   stocktake: string;
   stocktakeDetail: (id: number) => string;
+  countSlips: string;
   expiry: string;
   reports: string;
   production: string;
@@ -38,6 +39,7 @@ export function getInventoryPaths(base: InventoryRouteBase): InventoryPaths {
     stocktake: joinInventoryPath(base, "/stocktake"),
     stocktakeDetail: (id: number) =>
       joinInventoryPath(base, `/stocktake/${id}`),
+    countSlips: joinInventoryPath(base, "/count-slips"),
     expiry: joinInventoryPath(base, "/expiry"),
     reports: joinInventoryPath(base, "/reports"),
     production: joinInventoryPath(base, "/production"),

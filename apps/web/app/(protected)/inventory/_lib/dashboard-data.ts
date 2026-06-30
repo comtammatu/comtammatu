@@ -66,6 +66,7 @@ export type InventoryDashboardData = {
   pendingPO: number;
   activeTransfers: number;
   activeStocktakes: number;
+  pendingCountSlips: number;
   priceReviewCount: number;
   reorderAlerts: Array<{
     ingredientId: number;
@@ -120,6 +121,7 @@ export async function loadInventoryDashboardData(
     procurementAsync,
     productionPermissionAsync,
     productionBranchAsync,
+    countApprovalAsync,
     scope,
   ] = await Promise.all([
     procurementSyncOk
@@ -131,6 +133,7 @@ export async function loadInventoryDashboardData(
     productionSyncOk
       ? hasCurrentProductionBranchAccess(supabase, claims)
       : Promise.resolve(false),
+    currentUserHasPermissionAny(PERMISSION_KEYS.INVENTORY_COUNT_APPROVE),
     resolveInventoryBranchScope(supabase, claims, requestedBranchId),
   ]);
 
@@ -178,6 +181,15 @@ export async function loadInventoryDashboardData(
     );
   }
 
+  let pendingCountSlipQuery = supabase
+    .from("inventory_count_slips")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", claims.tenant_id)
+    .eq("status", "submitted");
+  if (branchFilter !== undefined) {
+    pendingCountSlipQuery = pendingCountSlipQuery.eq("branch_id", branchFilter);
+  }
+
   const [
     dashboardRes,
     pendingPO,
@@ -186,6 +198,7 @@ export async function loadInventoryDashboardData(
     reorderRes,
     expiryRes,
     priceReviewRes,
+    pendingCountSlipRes,
   ] = await Promise.all([
     scope.selectedBranchId != null
       ? getInventoryDashboard(scope.selectedBranchId)
@@ -198,11 +211,17 @@ export async function loadInventoryDashboardData(
     showProcurement
       ? priceReviewQuery
       : Promise.resolve({ count: 0, error: null }),
+    countApprovalAsync
+      ? pendingCountSlipQuery
+      : Promise.resolve({ count: 0, error: null }),
   ]);
 
   const priceReviewCount = priceReviewRes.error
     ? 0
     : (priceReviewRes.count ?? 0);
+  const pendingCountSlips = pendingCountSlipRes.error
+    ? 0
+    : (pendingCountSlipRes.count ?? 0);
 
   // totalStockValue: prefer MV-backed RPC value (cost-gated NULL preserved).
   // Falls back to 0 if branch scope is unresolved or user lacks cost permission.
@@ -286,6 +305,7 @@ export async function loadInventoryDashboardData(
     pendingPO,
     activeTransfers,
     activeStocktakes,
+    pendingCountSlips,
     priceReviewCount,
     reorderAlerts,
     expiryAlerts,
