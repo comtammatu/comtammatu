@@ -128,7 +128,7 @@ export const employee = {
     runnerDescription: "Gọi khách nhận món",
     managerRunnerDescription: "Gọi khách nhận món",
     managerMenuLimitsTitle: "Giới hạn bán",
-    managerMenuLimitsDescription: "Tồn, sẵn bán và số còn",
+    managerMenuLimitsDescription: "Tồn kho, giới hạn bán và còn lại",
     managerBranchSettingsTitle: "Hub chi nhánh",
     managerBranchSettingsDescription: "Bàn, trạm bếp, máy in",
     managerInventoryTitle: "Kho chi nhánh",

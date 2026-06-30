@@ -78,7 +78,7 @@ export async function fetchBranchMenuDailyLimits(
 const setLimitSchema = z.object({
   branchId: branchIdSchema,
   menuItemId: menuItemIdSchema,
-  // null/undefined → backend defaults Sẵn bán to the computed stock capacity.
+  // null/undefined lets the backend default the sale limit to stock capacity.
   limitQuantity: z
     .union([
       z.coerce
@@ -142,16 +142,22 @@ export async function setBranchMenuDailyLimit(
       return { success: false, error: "Không tìm thấy món hoặc chi nhánh." };
     }
     if (msg.includes("exceeds stock capacity")) {
-      return { success: false, error: "Sẵn bán không được vượt Tồn." };
+      return {
+        success: false,
+        error: "Giới hạn bán không được vượt Tồn kho.",
+      };
     }
     if (msg.includes("nonnegative")) {
       return {
         success: false,
-        error: "Sẵn bán phải là số nguyên từ 0 đến 9999.",
+        error: "Giới hạn bán phải là số nguyên từ 0 đến 9999.",
       };
     }
     if (msg.includes("stock capacity required")) {
-      return { success: false, error: "Chưa tính được Tồn để đặt Sẵn bán." };
+      return {
+        success: false,
+        error: "Chưa tính được Tồn kho để đặt Giới hạn bán.",
+      };
     }
     return {
       success: false,

@@ -106,7 +106,7 @@ test("Menu-Limits effective cap composes manual and stock caps", () => {
   assert.equal(getMenuLimitRemaining(row({ stock_capacity: 0 })), 0);
 });
 
-test("stock-backed Menu-Limits rows default Sẵn bán to Tồn", () => {
+test("stock-backed Menu-Limits rows default Giới hạn bán to Tồn kho", () => {
   assert.equal(hasManualMenuLimit(row({ stock_capacity: 4 })), true);
   assert.equal(hasManualMenuLimit(row({ limit_quantity: 4 })), true);
   assert.equal(hasManualMenuLimit(row({ is_disabled: true })), true);
@@ -130,15 +130,15 @@ test("Menu-Limits admin RPC and UI expose stock_capacity", () => {
   assert.match(actionsSource, /stock_capacity: number \| null/);
   assert.match(tableSource, /stockCapacityLabel/);
   assert.match(tableSource, /getDraftLimitQuantity/);
-  assert.match(tableSource, /getMenuLimitEffectiveCap/);
-  assert.match(tableSource, /getMenuLimitRemaining/);
+  assert.match(tableSource, /getSoldProgress/);
+  assert.match(tableSource, /renderRemainingBar/);
   assert.match(
     stockCapacityMigration,
     /limit_quantity\s+=\s+COALESCE\([\s\S]*branch_menu_item_daily_limits\.limit_quantity[\s\S]*EXCLUDED\.limit_quantity/,
   );
 });
 
-test("Menu-Limits manager must set Sẵn bán between 0 and Tồn", () => {
+test("Menu-Limits manager must set Giới hạn bán between 0 and Tồn kho", () => {
   const limitQuantitySchemaSource =
     actionsSource.match(/limitQuantity:[\s\S]*?isDisabled:/)?.[0] ?? "";
 
@@ -155,11 +155,11 @@ test("Menu-Limits manager must set Sẵn bán between 0 and Tồn", () => {
   assert.doesNotMatch(limitQuantitySchemaSource, /\.positive\(/);
   assert.match(
     actionsSource,
-    /msg\.includes\("exceeds stock capacity"\)[\s\S]*Sẵn bán không được vượt Tồn/,
+    /msg\.includes\("exceeds stock capacity"\)[\s\S]*Giới hạn bán không được vượt Tồn kho/,
   );
   assert.match(
     actionsSource,
-    /msg\.includes\("stock capacity required"\)[\s\S]*Chưa tính được Tồn/,
+    /msg\.includes\("stock capacity required"\)[\s\S]*Chưa tính được Tồn kho/,
   );
   assert.match(
     readFileSync(
@@ -228,19 +228,46 @@ test("Menu-Limits RPC exposes availability components", () => {
 });
 
 test("Menu-Limits manager copy uses stock availability vocabulary", () => {
-  assert.match(posMessagesSource, /stockCapacityLabel: "Tồn"/);
-  assert.match(posMessagesSource, /manualLimitLabel: "Sẵn bán"/);
+  assert.match(posMessagesSource, /stockCapacityLabel: "Tồn kho"/);
+  assert.match(posMessagesSource, /manualLimitLabel: "Giới hạn bán"/);
   assert.match(posMessagesSource, /manualLimitPlaceholder: "Nhập số"/);
   assert.match(
     posMessagesSource,
-    /manualLimitRequired: "Sẵn bán là bắt buộc\."/,
+    /manualLimitRequired: "Giới hạn bán là bắt buộc\."/,
   );
   assert.match(
     posMessagesSource,
-    /manualLimitRange: "Sẵn bán phải là số nguyên từ 0 đến 9999\."/,
+    /manualLimitRange: "Giới hạn bán phải là số nguyên từ 0 đến 9999\."/,
   );
-  assert.match(posMessagesSource, /stockCapacityRequired: "Chưa tính được Tồn/);
-  assert.match(posMessagesSource, /soldLabel: "Còn"/);
+  assert.match(
+    posMessagesSource,
+    /stockCapacityRequired: "Chưa tính được Tồn kho/,
+  );
+  assert.match(posMessagesSource, /soldLabel: "Còn lại"/);
+  assert.match(
+    posMessagesSource,
+    /soldCount: \(quantity: number\) => `\$\{quantity\} đã bán`/,
+  );
+  assert.match(
+    posMessagesSource,
+    /remainingCount: \(quantity: number\) => `\$\{quantity\} còn lại`/,
+  );
   assert.match(settingsMessagesSource, /menuLimitsTitle: "Giới hạn bán"/);
   assert.doesNotMatch(posMessagesSource, /Trần thủ công|Phần bán được/);
+});
+
+test("Menu-Limits manager table uses four requested columns and sold bar", () => {
+  assert.match(
+    tableSource,
+    /key: "item"[\s\S]*key: "stockCapacity"[\s\S]*key: "limit"[\s\S]*key: "remaining"/,
+  );
+  assert.doesNotMatch(tableSource, /key: "status"/);
+  assert.doesNotMatch(tableSource, /key: "disabled"/);
+  assert.doesNotMatch(tableSource, /key: "actions"/);
+  assert.match(tableSource, /messages\.pos\.menu\.soldCount\(progress\.sold\)/);
+  assert.match(
+    tableSource,
+    /messages\.pos\.menu\.remainingCount\(progress\.remaining\)/,
+  );
+  assert.match(tableSource, /tone="destructive"/);
 });
