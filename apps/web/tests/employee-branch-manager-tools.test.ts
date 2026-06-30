@@ -112,8 +112,8 @@ test("Branch Manager self-attendance is only clock in and clock out", () => {
   );
   assert.match(
     employeeClockPageSource,
-    /state\.managerAttendanceOnly \? "\/hr" : "\/employee\/tasks"/,
-    "Branch Manager clock page should link back to HR management instead of tasks",
+    /managerHr: "\/hr"[\s\S]*state\.managerAttendanceOnly \? routes\.managerHr : routes\.tasks/,
+    "Branch Manager clock page should link back to HR management by default instead of tasks",
   );
   assert.match(
     employeeTasksPageSource,
@@ -124,7 +124,7 @@ test("Branch Manager self-attendance is only clock in and clock out", () => {
 
 test("Staff checkout request stays single tap while manager direct checkout confirms", () => {
   const submitCheckoutBlock = employeeClockClientSource.match(
-    /const submitCheckout = useCallback\(async \(\) => \{[\s\S]*?\n\s*\}, \[managerAttendanceOnly/,
+    /const submitCheckout = useCallback\(async \(\) => \{[\s\S]*?\n\s*\]\);/,
   )?.[0];
   assert.ok(submitCheckoutBlock, "Clock client should define submitCheckout");
   assert.match(

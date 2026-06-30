@@ -31,6 +31,7 @@ import {
   EmployeePanel,
 } from "../components/employee-page";
 import type { TodayWorkState } from "../_lib/today-work-state";
+import type { EmployeeClockRoutes } from "./page";
 import {
   cancelCheckoutRequest,
   clockInWithPhoto,
@@ -40,6 +41,7 @@ import {
 
 interface ClockClientProps {
   state: TodayWorkState;
+  routes: EmployeeClockRoutes;
 }
 
 type PhotoState = "idle" | "ready" | "submitting" | "success" | "error";
@@ -105,7 +107,7 @@ async function capturePhotoFromVideo(
     : null;
 }
 
-export function ClockClient({ state }: ClockClientProps) {
+export function ClockClient({ state, routes }: ClockClientProps) {
   const router = useRouter();
   const [photoState, setPhotoState] = useState<PhotoState>("idle");
   const [cameraState, setCameraState] = useState<CameraState>("idle");
@@ -233,14 +235,16 @@ export function ClockClient({ state }: ClockClientProps) {
         stopCamera();
         setPhotoState("success");
         if (navigator.vibrate) navigator.vibrate(150);
-        router.push(result.data?.nextPath ?? "/employee/tasks");
+        router.push(
+          result.data?.nextPath === "/employee" ? routes.home : routes.tasks,
+        );
         router.refresh();
       } else {
         setPhotoState("error");
         setError(result.error ?? "Chấm công vào thất bại.");
       }
     });
-  }, [photo, router, stopCamera]);
+  }, [photo, router, routes.home, routes.tasks, stopCamera]);
 
   const submitCheckout = useCallback(async () => {
     const checkInValue = formatTime(state.attendance?.checkIn ?? null);
@@ -271,14 +275,20 @@ export function ClockClient({ state }: ClockClientProps) {
       if (result.success) {
         setCheckoutState("success");
         if (navigator.vibrate) navigator.vibrate(150);
-        router.push("/employee");
+        router.push(routes.home);
         router.refresh();
       } else {
         setCheckoutState("error");
         setError(result.error ?? "Kết ca thất bại.");
       }
     });
-  }, [managerAttendanceOnly, router, state.attendance?.checkIn, state.attendance?.id]);
+  }, [
+    managerAttendanceOnly,
+    router,
+    routes.home,
+    state.attendance?.checkIn,
+    state.attendance?.id,
+  ]);
 
   const cancelCheckout = useCallback(() => {
     const attendanceId = state.attendance?.id;
@@ -294,14 +304,14 @@ export function ClockClient({ state }: ClockClientProps) {
       const result = await cancelCheckoutRequest({ attendanceId });
       if (result.success) {
         if (navigator.vibrate) navigator.vibrate(80);
-        router.push("/employee");
+        router.push(routes.home);
         router.refresh();
       } else {
         setCheckoutState("error");
         setError(result.error ?? "Không thể rút yêu cầu kết ca.");
       }
     });
-  }, [router, state.attendance?.id]);
+  }, [router, routes.home, state.attendance?.id]);
 
   const cameraActive =
     cameraState === "starting" ||
@@ -346,7 +356,7 @@ export function ClockClient({ state }: ClockClientProps) {
           size="touch"
           className="w-full sm:w-fit"
         >
-          <Link href="/employee/schedule">{clockCopy.viewSchedule}</Link>
+          <Link href={routes.schedule}>{clockCopy.viewSchedule}</Link>
         </Button>
       </EmployeePanel>
     );
@@ -454,7 +464,7 @@ export function ClockClient({ state }: ClockClientProps) {
           ]}
         />
         <Button asChild size="touch" className="w-full sm:w-fit">
-          <Link href="/employee/tasks">
+          <Link href={routes.tasks}>
             <IconListChecks data-icon="inline-start" />
             {clockCopy.tasksButton}
           </Link>

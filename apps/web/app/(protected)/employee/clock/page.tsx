@@ -14,7 +14,25 @@ import { ClockClient } from "./clock-client";
 
 const copy = messages.employee.home;
 
-export default async function ClockPage() {
+export type EmployeeClockRoutes = {
+  home: string;
+  tasks: string;
+  schedule: string;
+  managerHr: string;
+};
+
+const DEFAULT_CLOCK_ROUTES: EmployeeClockRoutes = {
+  home: "/employee",
+  tasks: "/employee/tasks",
+  schedule: "/employee/schedule",
+  managerHr: "/hr",
+};
+
+export async function ClockPageContent({
+  routes = DEFAULT_CLOCK_ROUTES,
+}: {
+  routes?: EmployeeClockRoutes;
+} = {}) {
   const state = await getTodayWorkState();
 
   if (state.status === "missing_profile") {
@@ -36,7 +54,9 @@ export default async function ClockPage() {
           size="touch"
           className="w-full sm:w-fit"
         >
-          <Link href={state.managerAttendanceOnly ? "/hr" : "/employee/tasks"}>
+          <Link
+            href={state.managerAttendanceOnly ? routes.managerHr : routes.tasks}
+          >
             {state.managerAttendanceOnly ? (
               <IconCalendarDays data-icon="inline-start" />
             ) : (
@@ -47,7 +67,11 @@ export default async function ClockPage() {
         </Button>
       }
     >
-      <ClockClient state={state} />
+      <ClockClient state={state} routes={routes} />
     </EmployeePage>
   );
+}
+
+export default async function ClockPage() {
+  return <ClockPageContent />;
 }
