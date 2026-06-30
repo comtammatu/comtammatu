@@ -37,7 +37,7 @@ Owner and branch managers can decide what is sellable per branch using real stoc
 ### Non-Goals
 
 - No second holds table in this slice. Reuse the existing `branch_menu_item_daily_holds` flow; do not add another reservation system.
-- No side-dish recipe consumption change in the first slice.
+- Side-dish recipe consumption is covered by the follow-up migration `20260630142401_pos_stock_outcome_side_dish_consumption.sql`.
 - No FIFO/FEFO costing engine.
 - No new POS/KDS IA.
 - No production DB apply by agent unless owner delegates explicitly in that session.
@@ -520,17 +520,16 @@ Exit: first branch enabled with smoke evidence and rollback path.
 - Cancelled-after-ready is retried after network failure.
 - Multi-unit factor is missing or inactive.
 - Count slip is pending at checkout.
-- Side dish has a recipe, but the first slice intentionally does not consume side recipes.
+- Side dish has a recipe and is present in `order_items.sides`: outcome helpers consume its recipe together with the main line.
 
 ## Backlog After First Slice
 
-1. Side dish/topping recipe consumption parity.
-2. Manager resolution queue for paid stock-tracked orders that never receive `first_ready_at`.
-3. KDS ready rollback with manager reason.
-4. Branch-level stock anomaly alerts when `Còn` becomes negative from manual adjustments.
-5. Better food-cost variance report: sale consumption vs cancelled-after-ready waste.
-6. Replace stored `stock_capacity` trigger with live availability only if the trigger becomes a maintenance burden.
-7. Add runbook for first branch enablement and rollback.
+1. Manager resolution queue for paid stock-tracked orders that never receive `first_ready_at`.
+2. KDS ready rollback with manager reason.
+3. Branch-level stock anomaly alerts when `Còn` becomes negative from manual adjustments.
+4. Better food-cost variance report: sale consumption vs cancelled-after-ready waste.
+5. Replace stored `stock_capacity` trigger with live availability only if the trigger becomes a maintenance burden.
+6. Add runbook for first branch enablement and rollback.
 
 ## Stop Conditions
 

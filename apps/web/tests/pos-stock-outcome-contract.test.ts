@@ -10,6 +10,20 @@ const migration = readFileSync(
   ),
   "utf8",
 );
+const sideDishConsumptionMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260630142401_pos_stock_outcome_side_dish_consumption.sql",
+  ),
+  "utf8",
+);
+const sideDishBackfillMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260630144333_pos_stock_outcome_side_dish_backfill.sql",
+  ),
+  "utf8",
+);
 
 function sqlFunction(name: string): string {
   return (
@@ -98,4 +112,36 @@ test("stock movements distinguish sale consumption and ready-cancel waste", () =
   assert.match(waste, /kt\.first_ready_at IS NOT NULL/);
   assert.match(waste, /public\.inv_to_base_for_tenant\(/);
   assert.match(waste, /'cancelled_after_kds_ready'/);
+});
+
+test("stock outcome helpers consume side dish recipes", () => {
+  assert.match(sideDishConsumptionMigration, /jsonb_array_elements\(COALESCE\(oi\.sides, '\[\]'::jsonb\)\)/);
+  assert.match(sideDishConsumptionMigration, /s\.elem ->> 'side_item_id'/);
+  assert.match(sideDishConsumptionMigration, /oi\.quantity::numeric \*/);
+  assert.match(sideDishConsumptionMigration, /JOIN public\.recipes r[\s\S]*r\.menu_item_id = cl\.menu_item_id/);
+
+  const sale = sideDishConsumptionMigration.match(
+    /CREATE OR REPLACE FUNCTION public\.post_pos_sale_consumption_if_ready\([\s\S]*?END;\n\$\$;/,
+  )?.[0] ?? "";
+  const waste = sideDishConsumptionMigration.match(
+    /CREATE OR REPLACE FUNCTION public\.post_pos_cancelled_ready_waste\([\s\S]*?END;\n\$\$;/,
+  )?.[0] ?? "";
+
+  assert.match(sale, /side_item_id/);
+  assert.match(sale, /line_quantity \* r\.quantity \/ r\.yield_factor/);
+  assert.match(waste, /side_item_id/);
+  assert.match(waste, /line_quantity \* r\.quantity \/ r\.yield_factor/);
+});
+
+test("side dish backfill is scoped to stock-outcome pilot movements", () => {
+  assert.match(sideDishBackfillMigration, /flag_key = 'pos_stock_outcome_posting'/);
+  assert.match(sideDishBackfillMigration, /sm\.created_at >= eb\.enabled_at/);
+  assert.match(sideDishBackfillMigration, /movement_subtype = 'sale_consumption'/);
+  assert.match(sideDishBackfillMigration, /JOIN public\.ingredient_units iu/);
+  assert.match(sideDishBackfillMigration, /expected_needs AS/);
+  assert.match(sideDishBackfillMigration, /quantity_change = sm\.quantity_change - um\.missing_qty/);
+  assert.match(sideDishBackfillMigration, /current_quantity = sl\.current_quantity - um\.missing_qty/);
+  assert.match(sideDishBackfillMigration, /-mm\.expected_need_qty/);
+  assert.match(sideDishBackfillMigration, /side dish backfill/);
+  assert.doesNotMatch(sideDishBackfillMigration, /inv_to_base_for_tenant/);
 });

@@ -26,9 +26,11 @@ DECLARE
   v_category bigint;
   v_station bigint;
   v_ingredient bigint;
+  v_side_ingredient bigint;
   v_part_unit bigint;
   v_pack_unit bigint;
   v_limit_menu bigint;
+  v_side_menu bigint;
   v_empty_menu bigint;
   v_location bigint;
   v_today date := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
@@ -97,23 +99,49 @@ BEGIN
   )
   RETURNING id INTO v_ingredient;
 
+  INSERT INTO public.ingredients (
+    tenant_id, name, sku, unit, purchase_unit, measure_unit,
+    purchase_to_measure_factor, unit_cost, item_kind
+  )
+  VALUES (
+    v_tenant,
+    '__g5_trung_finished_good_' || gen_random_uuid()::text,
+    '__G5-EGG-' || floor(random() * 1000000)::text,
+    'Phan',
+    'Phan',
+    'Phan',
+    1,
+    3000,
+    'finished_good'
+  )
+  RETURNING id INTO v_side_ingredient;
+
   INSERT INTO public.ingredient_units
     (tenant_id, ingredient_id, unit_id, to_base_factor, is_base, allow_issue, allow_production)
   VALUES
     (v_tenant, v_ingredient, v_part_unit, 1, true, true, true),
-    (v_tenant, v_ingredient, v_pack_unit, 20, false, true, true);
+    (v_tenant, v_ingredient, v_pack_unit, 20, false, true, true),
+    (v_tenant, v_side_ingredient, v_part_unit, 1, true, true, true);
 
   INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order)
   VALUES (v_tenant, v_category, '__g5_stock_limit_item_' || gen_random_uuid()::text, 45000, 1)
   RETURNING id INTO v_limit_menu;
 
   INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order)
-  VALUES (v_tenant, v_category, '__g5_missing_config_item_' || gen_random_uuid()::text, 45000, 2)
+  VALUES (v_tenant, v_category, '__g5_side_item_' || gen_random_uuid()::text, 7000, 2)
+  RETURNING id INTO v_side_menu;
+
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order)
+  VALUES (v_tenant, v_category, '__g5_missing_config_item_' || gen_random_uuid()::text, 45000, 3)
   RETURNING id INTO v_empty_menu;
 
   INSERT INTO public.recipes
     (tenant_id, menu_item_id, ingredient_id, quantity, unit, entry_unit_id, yield_factor)
   VALUES (v_tenant, v_limit_menu, v_ingredient, 1, 'Bich', v_pack_unit, 1);
+
+  INSERT INTO public.recipes
+    (tenant_id, menu_item_id, ingredient_id, quantity, unit, entry_unit_id, yield_factor)
+  VALUES (v_tenant, v_side_menu, v_side_ingredient, 1, 'Phan', v_part_unit, 1);
 
   INSERT INTO public.inventory_locations (
     tenant_id, branch_id, code, name, location_kind,
@@ -135,7 +163,9 @@ BEGIN
   INSERT INTO public.stock_levels (
     tenant_id, branch_id, ingredient_id, location_id, current_quantity, avg_unit_cost
   )
-  VALUES (v_tenant, v_branch, v_ingredient, v_location, 40, 10000);
+  VALUES
+    (v_tenant, v_branch, v_ingredient, v_location, 40, 10000),
+    (v_tenant, v_branch, v_side_ingredient, v_location, 10, 3000);
 
   v_capacity := public.compute_menu_item_stock_capacity(v_tenant, v_branch, v_limit_menu);
   IF v_capacity <> 2 THEN
@@ -184,21 +214,36 @@ BEGIN
   WHERE tenant_id = v_tenant AND branch_id = v_branch
     AND ingredient_id = v_ingredient AND location_id = v_location;
 
+  UPDATE public.stock_levels
+  SET current_quantity = 10
+  WHERE tenant_id = v_tenant AND branch_id = v_branch
+    AND ingredient_id = v_side_ingredient AND location_id = v_location;
+
   INSERT INTO public.orders (
     tenant_id, branch_id, order_number, status, payment_status,
     subtotal, total_amount, created_by
   )
   VALUES (
     v_tenant, v_branch, '__g5_sale_' || gen_random_uuid()::text,
-    'completed', 'paid', 90000, 90000, v_profile
+    'completed', 'paid', 104000, 104000, v_profile
   )
   RETURNING id INTO v_order;
 
   INSERT INTO public.order_items (
     tenant_id, order_id, menu_item_id, item_name,
-    quantity, unit_price, subtotal, vat_rate
+    quantity, unit_price, sides, subtotal, vat_rate
   )
-  VALUES (v_tenant, v_order, v_limit_menu, 'G5 sale item', 2, 45000, 90000, 8)
+  VALUES (
+    v_tenant,
+    v_order,
+    v_limit_menu,
+    'G5 sale item',
+    2,
+    52000,
+    jsonb_build_array(jsonb_build_object('side_item_id', v_side_menu, 'name', 'G5 side', 'price', 7000, 'quantity', 1)),
+    104000,
+    8
+  )
   RETURNING id INTO v_item;
 
   INSERT INTO public.kds_tickets (
@@ -215,10 +260,21 @@ BEGIN
   SELECT quantity_change INTO v_qty
   FROM public.stock_movements
   WHERE tenant_id = v_tenant AND order_id = v_order
+    AND ingredient_id = v_ingredient
     AND movement_subtype = 'sale_consumption';
 
   IF v_qty <> -40 THEN
     RAISE EXCEPTION 'TEST 4 FAILED: expected sale quantity_change=-40, got %', v_qty;
+  END IF;
+
+  SELECT quantity_change INTO v_qty
+  FROM public.stock_movements
+  WHERE tenant_id = v_tenant AND order_id = v_order
+    AND ingredient_id = v_side_ingredient
+    AND movement_subtype = 'sale_consumption';
+
+  IF v_qty <> -2 THEN
+    RAISE EXCEPTION 'TEST 4 FAILED: expected side sale quantity_change=-2, got %', v_qty;
   END IF;
 
   SELECT current_quantity INTO v_qty
@@ -228,6 +284,15 @@ BEGIN
 
   IF v_qty <> 20 THEN
     RAISE EXCEPTION 'TEST 4 FAILED: expected stock after sale=20, got %', v_qty;
+  END IF;
+
+  SELECT current_quantity INTO v_qty
+  FROM public.stock_levels
+  WHERE tenant_id = v_tenant AND branch_id = v_branch
+    AND ingredient_id = v_side_ingredient AND location_id = v_location;
+
+  IF v_qty <> 8 THEN
+    RAISE EXCEPTION 'TEST 4 FAILED: expected side stock after sale=8, got %', v_qty;
   END IF;
 
   v_result := public.post_pos_sale_consumption_if_ready(v_order, v_profile);
@@ -245,6 +310,11 @@ BEGIN
   SET current_quantity = 60
   WHERE tenant_id = v_tenant AND branch_id = v_branch
     AND ingredient_id = v_ingredient AND location_id = v_location;
+
+  UPDATE public.stock_levels
+  SET current_quantity = 10
+  WHERE tenant_id = v_tenant AND branch_id = v_branch
+    AND ingredient_id = v_side_ingredient AND location_id = v_location;
 
   INSERT INTO public.orders (
     tenant_id, branch_id, order_number, status, payment_status,
@@ -284,21 +354,36 @@ BEGIN
   WHERE tenant_id = v_tenant AND branch_id = v_branch
     AND ingredient_id = v_ingredient AND location_id = v_location;
 
+  UPDATE public.stock_levels
+  SET current_quantity = 10
+  WHERE tenant_id = v_tenant AND branch_id = v_branch
+    AND ingredient_id = v_side_ingredient AND location_id = v_location;
+
   INSERT INTO public.orders (
     tenant_id, branch_id, order_number, status, payment_status,
     subtotal, total_amount, created_by
   )
   VALUES (
     v_tenant, v_branch, '__g5_cancel_after_ready_' || gen_random_uuid()::text,
-    'confirmed', 'unpaid', 45000, 45000, v_profile
+    'confirmed', 'unpaid', 52000, 52000, v_profile
   )
   RETURNING id INTO v_order;
 
   INSERT INTO public.order_items (
     tenant_id, order_id, menu_item_id, item_name,
-    quantity, unit_price, subtotal, vat_rate
+    quantity, unit_price, sides, subtotal, vat_rate
   )
-  VALUES (v_tenant, v_order, v_limit_menu, 'G5 ready cancelled item', 1, 45000, 45000, 8)
+  VALUES (
+    v_tenant,
+    v_order,
+    v_limit_menu,
+    'G5 ready cancelled item',
+    1,
+    52000,
+    jsonb_build_array(jsonb_build_object('side_item_id', v_side_menu, 'name', 'G5 side', 'price', 7000, 'quantity', 1)),
+    52000,
+    8
+  )
   RETURNING id INTO v_item;
 
   INSERT INTO public.kds_tickets (
@@ -315,10 +400,21 @@ BEGIN
   SELECT quantity_change INTO v_qty
   FROM public.stock_movements
   WHERE tenant_id = v_tenant AND order_id = v_order
+    AND ingredient_id = v_ingredient
     AND movement_subtype = 'cancelled_after_kds_ready';
 
   IF v_qty <> -20 THEN
     RAISE EXCEPTION 'TEST 7 FAILED: expected ready-cancel waste=-20, got %', v_qty;
+  END IF;
+
+  SELECT quantity_change INTO v_qty
+  FROM public.stock_movements
+  WHERE tenant_id = v_tenant AND order_id = v_order
+    AND ingredient_id = v_side_ingredient
+    AND movement_subtype = 'cancelled_after_kds_ready';
+
+  IF v_qty <> -1 THEN
+    RAISE EXCEPTION 'TEST 7 FAILED: expected ready-cancel side waste=-1, got %', v_qty;
   END IF;
 
   SELECT current_quantity INTO v_qty
@@ -328,6 +424,15 @@ BEGIN
 
   IF v_qty <> 40 THEN
     RAISE EXCEPTION 'TEST 7 FAILED: expected stock after ready-cancel=40, got %', v_qty;
+  END IF;
+
+  SELECT current_quantity INTO v_qty
+  FROM public.stock_levels
+  WHERE tenant_id = v_tenant AND branch_id = v_branch
+    AND ingredient_id = v_side_ingredient AND location_id = v_location;
+
+  IF v_qty <> 9 THEN
+    RAISE EXCEPTION 'TEST 7 FAILED: expected side stock after ready-cancel=9, got %', v_qty;
   END IF;
 
   RAISE NOTICE 'G5 POS/KDS stock outcome multi-unit acceptance passed';
