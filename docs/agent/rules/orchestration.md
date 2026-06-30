@@ -14,7 +14,7 @@ team loop ([team.md](team.md)), review tiers and verification gates
 | --- | --- | --- |
 | Single fact, one command, an edit you can place from context, a read of ≤3 files | Inline (main thread) | No delegation overhead. |
 | Orientation read across >3 files you will NOT edit | One read-only Explore sub-agent | Context economy — owned by [skills.md](skills.md) "Subagents, Debate, And Read Delegation". Return conclusions, not file dumps. |
-| One isolated, well-scoped implementation chunk | One `executor` sub-agent (`model=opus` for complex logic) | Keeps the chunk's working context out of the main thread. |
+| One isolated, well-scoped implementation chunk | One `executor` sub-agent | Keeps the chunk's working context out of the main thread; model tier is chosen by [skills.md](skills.md) → Subagents, Debate, And Read Delegation. |
 | Independent work that fans out — audit sweep, multi-file migration, multi-dimension review, N candidate designs | Dynamic multi-agent Workflow | A transient set of sub-agents spawned for one fan-out task, then torn down — not the standing team. Pipeline by default; barrier only when a stage needs all prior results. |
 | Recurring standing mission, cross-runtime review, arbitration | Standing team + Codex pass | Defined in [team.md](team.md). |
 
@@ -34,7 +34,7 @@ The main context window is the scarce resource — protect it.
 - Cap what returns: ask sub-agents for structured, terse output; no raw file dumps into the main thread.
 - One thread, one job. When a thread is doing two unrelated things, branch or hand off rather than letting both contexts bloat each other.
 
-## Anti-Repeat Loop
+## Anti-Repeat And Loop Engineering
 
 Before solving, check whether it is already solved; after solving something that
 will recur, capture it once so no future session re-derives it. This is the
@@ -53,6 +53,16 @@ context; prose is re-read every session):
 - Insight not yet enforceable → `tasks/lessons.md`.
 - Stable architecture or contract → the owning rule / module / spec doc, then delete the staged copy.
 - Reusable task recipe or prompt shape → a skill, or a row in the Routing Matrix above.
+
+Optimize the next loop only from evidence:
+
+- If a step wasted time, first try deletion, reuse, or a narrower lane before
+  adding process.
+- If a check catches a recurring class, prefer a guard/test/hook over prose.
+- If a model or sub-agent tier was overkill, downgrade the next comparable
+  task; if it missed a high-risk issue, route that lens to a stronger reviewer.
+- For T2/T3 work, record one closing line in the PR/worklog: `Learning: none` or
+  the promoted rule, plus `Next loop: <one concrete optimization>`.
 
 The ladder and its cleanup policy are owned by `tasks/lessons.md`,
 `tasks/regressions.md`, and [references.md](references.md) → Memory Maintenance

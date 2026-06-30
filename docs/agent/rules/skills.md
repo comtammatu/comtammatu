@@ -409,11 +409,14 @@ here in the shared rules, not in a single runtime's private memory.
   full T3 debate and the runtime supports spawning them.
 - If subagents are unavailable, write the four-perspective debate yourself and
   call out that subagents were unavailable.
-- Model tier is chosen per call by task complexity, not fixed: cheap/deterministic
-  routing and read-only delegation may use a lighter model; reserve the strongest
-  model for genuinely hard reasoning. Any borrowed orchestrator/harness template
-  that hardcodes a single tier (e.g. `model: "opus"` on every call) must have that
-  mandate stripped before adoption.
+- Model tier is chosen per call by task complexity, not fixed. Use the strongest
+  available reviewer (for example GPT-5.5 or equivalent) for T3 challenge,
+  architecture forks, auth/RLS/security, money, migrations, and ambiguous BA/PM
+  calls. Use a mid-tier coding model for bounded implementation slices. Use fast
+  coding models (for example GPT-5.3-Codex-Spark or equivalent) for read-only
+  sweeps, caller/evidence collection, test-log triage, small mechanical patches,
+  and QA sidecars. Any borrowed orchestrator/harness template that hardcodes one
+  model tier on every call must have that mandate stripped before adoption.
 - Agent Teams (`TeamCreate` / `SendMessage` / `TaskCreate`) is enabled for the
   Claude runtime (`.claude/settings.json` → `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`)
   and MAY be used for live multi-agent coordination. It is an OPTIONAL capability:

@@ -103,6 +103,13 @@ Standing commitments the team holds beyond any single request. The board [`tasks
 
 One task moves through nine stages. Each stage is a connector to the doc that owns its rules — the arrow is the only thing this file contributes. The loop is identical regardless of runtime or how many agents run it.
 
+For substantial Codex-led work, start with a short goal frame before stage 1:
+`Goal` (measurable outcome), `Done` (gate / artifact / runtime proof),
+`Non-goals` (scope cuts), and `Safety` (prod / DB / money / auth guard). Skip
+this frame for T1 and small T2 work where the owner request already fits in one
+sentence. This goal frame is not a second board — [`tasks/todo.md`](../../../tasks/todo.md)
+remains the live tracker.
+
 ```text
   ┌──────────┐   ┌────────────┐   ┌────────────┐   ┌──────────────┐
   │ 1 INTAKE │──▶│ 2 TRIAGE & │──▶│ 3 SKILL    │──▶│ 4 ROLE       │
@@ -113,6 +120,7 @@ One task moves through nine stages. Each stage is a connector to the doc that ow
                                                             │
   ┌──────────┐   ┌────────────┐   ┌────────────┐   ┌───────▼──────┐
   │ 9 LEARN  │◀──│ 8 LAND     │◀──│ 7 VERIFY   │◀──│ 5 IMPLEMENT  │
+  │ & OPTIM. │   │            │   │            │   │              │
   │          │   │            │   │            │   │              │
   └──────────┘   └─────┬──────┘   └─────┬──────┘   └───────┬──────┘
    regressions.md/      engineering.md   workflow.md        engineering.md
@@ -135,9 +143,22 @@ One task moves through nine stages. Each stage is a connector to the doc that ow
 6. **Cross-runtime review** — *This file's stage; see Codex Orchestration Protocol.* The Reviewer runs an independent pass on the diff. *Skill routing owned by* [`skills.md`](skills.md); *review depth owned by* [`workflow.md`](workflow.md).
 7. **Verify** — Run the gates. *Owns:* [`workflow.md`](workflow.md) → Verification (hard gate, `corepack pnpm verify` for release slices, cross-boundary coherence, self-attestation, tier floor, CI). Do not mark complete until they pass and CI is green. This file restates no gate.
 8. **Land** — Stage atomically, commit, land. *Owns:* [`engineering.md`](engineering.md) → Git And Commit Conventions. Prod and migration steps are **owner-gated**: by default agents do not apply prod migrations — file → PR → merge → owner applies; the only exception is the owner-delegated apply in [`database.md`](database.md) → Owner-Delegated Production Apply. *Owns:* [`database.md`](database.md) → Environment Registry, Migration Policy.
-9. **Learn** — One learning-loop pass before closing. *Owns:* [`workflow.md`](workflow.md) (learning-loop hygiene) routing to `tasks/regressions.md` and `tasks/lessons.md`; promotion-and-delete in [`references.md`](references.md) → Memory Maintenance Rules. State the learning (or "none") in the commit/PR body.
+9. **Learn & optimize** — One learning-loop pass before closing. *Owns:* [`workflow.md`](workflow.md) (learning-loop hygiene) routing to `tasks/regressions.md` and `tasks/lessons.md`; promotion-and-delete in [`references.md`](references.md) → Memory Maintenance Rules; next-loop optimization in [`orchestration.md`](orchestration.md) → Anti-Repeat And Loop Engineering. State the learning (or "none") in the commit/PR body.
 
 A single agent walks all nine stages itself; a team distributes them across roles; a Claude↔Codex split typically puts Implement on one runtime and stage 6 on the other. Owner-facing synthesis is Vietnamese; agent-to-agent transcripts are English ([`AGENTS.md`](../../../AGENTS.md) → Communication Protocol).
+
+For substantial owner-facing closeout, use this report shape unless the task asks
+for a different artifact:
+
+```text
+Result:
+Files changed:
+Agent split:
+Verification:
+Risk/deferred:
+Loop learning:
+Next optimization:
+```
 
 ## Codex Orchestration Protocol (Stage 6)
 
