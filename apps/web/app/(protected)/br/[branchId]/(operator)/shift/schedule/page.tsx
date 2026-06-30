@@ -1,5 +1,11 @@
-import { redirect } from "next/navigation";
+import { SchedulePageContent } from "@/(protected)/employee/schedule/page";
 
-export default function OperatorShiftScheduleRedirectPage() {
-  redirect("/employee/schedule");
+export default async function OperatorShiftSchedulePage({
+  params,
+}: {
+  params: Promise<{ branchId: string }>;
+}) {
+  const { branchId } = await params;
+
+  return <SchedulePageContent leaveHref={`/br/${branchId}/shift/leave`} />;
 }

@@ -57,6 +57,7 @@ interface CalendarCell {
 interface ScheduleClientProps {
   initialData: ScheduleMonthData;
   initialMonthStart: string;
+  leaveHref?: string;
 }
 
 function formatDate(dateStr: string): string {
@@ -453,10 +454,12 @@ function SelectedDayDetail({
   attendances,
   dateStr,
   leave,
+  leaveHref,
 }: {
   attendances: ScheduleAttendance[];
   dateStr: string;
   leave: LeaveDayStatus | undefined;
+  leaveHref: string;
 }) {
   return (
     <EmployeeFrame pad="sm" className="flex flex-col gap-3 bg-background">
@@ -517,7 +520,7 @@ function SelectedDayDetail({
         size="touch"
         className="w-full sm:w-fit"
       >
-        <Link href="/employee/leave">
+        <Link href={leaveHref}>
           <IconCalendarX data-icon="inline-start" />
           {copy.requestLeaveCta}
         </Link>
@@ -529,6 +532,7 @@ function SelectedDayDetail({
 export function ScheduleClient({
   initialData,
   initialMonthStart,
+  leaveHref = "/employee/leave",
 }: ScheduleClientProps) {
   const [monthStart, setMonthStart] = useState(initialMonthStart);
   const [monthData, setMonthData] = useState<ScheduleMonthData>(initialData);
@@ -703,6 +707,7 @@ export function ScheduleClient({
             attendances={selectedAttendance}
             dateStr={selectedDate}
             leave={selectedLeave}
+            leaveHref={leaveHref}
           />
         </AppBoneyardSkeleton>
       )}

@@ -14,7 +14,11 @@ import { messages } from "@lib/messages";
 
 const copy = messages.employee.home;
 
-export default async function SchedulePage() {
+export async function SchedulePageContent({
+  leaveHref = "/employee/leave",
+}: {
+  leaveHref?: string;
+} = {}) {
   const ctx = await getEmployeeContext();
 
   if (!ctx) {
@@ -96,7 +100,12 @@ export default async function SchedulePage() {
           leaves: initialLeaves,
         }}
         initialMonthStart={monthStart}
+        leaveHref={leaveHref}
       />
     </EmployeePage>
   );
+}
+
+export default async function SchedulePage() {
+  return <SchedulePageContent />;
 }
