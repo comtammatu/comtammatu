@@ -12,12 +12,6 @@ export interface UseKdsMutationsArgs {
   tickets: KdsTicket[];
   setTickets: React.Dispatch<React.SetStateAction<KdsTicket[]>>;
   refreshBoardSnapshot: () => Promise<void>;
-  onMenuLimitChanged?: (patch: {
-    menuItemId: number;
-    limitQuantity: number | null;
-    isDisabled: boolean;
-    soldToday: number;
-  }) => void;
 }
 
 export interface KdsMutations {
@@ -38,7 +32,6 @@ export function useKdsMutations({
   tickets,
   setTickets,
   refreshBoardSnapshot,
-  onMenuLimitChanged,
 }: UseKdsMutationsArgs): KdsMutations {
   const supabaseRef = useRef(createClient());
   const ticketsRef = useRef(tickets);
@@ -154,14 +147,6 @@ export function useKdsMutations({
         }
 
         toast.warning(`Đã báo hết món: ${result.data?.itemName ?? "món"}`);
-        if (result.data) {
-          onMenuLimitChanged?.({
-            menuItemId: result.data.menuItemId,
-            limitQuantity: result.data.limitQuantity,
-            isDisabled: result.data.isDisabled,
-            soldToday: result.data.soldToday,
-          });
-        }
       } finally {
         endTicketMutation(ticketId);
       }
@@ -170,7 +155,6 @@ export function useKdsMutations({
       beginTicketMutation,
       branchId,
       endTicketMutation,
-      onMenuLimitChanged,
       refreshBoardSnapshot,
       setTickets,
     ],

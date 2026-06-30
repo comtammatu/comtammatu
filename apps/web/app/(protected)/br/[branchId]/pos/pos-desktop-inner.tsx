@@ -99,7 +99,6 @@ import { useIsLargeUp } from "./_hooks/use-is-large-up";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
-import type { MenuLimitRow } from "../settings/menu-limits/actions";
 import type { BranchTable } from "./page";
 import type { PaymentMethod } from "@comtammatu/shared/providers";
 import type { VietQrConfig } from "./payment-actions";
@@ -138,7 +137,6 @@ export function PosDesktopInner({
   categories: initialCategories,
   canCloseShift,
   canConfirmCash,
-  canManageMenuLimits,
   canSplitMerge,
   initialPaymentMethods,
   initialVietQrConfig,
@@ -147,7 +145,6 @@ export function PosDesktopInner({
   categories: MenuCategory[];
   canCloseShift: boolean;
   canConfirmCash: boolean;
-  canManageMenuLimits: boolean;
   canSplitMerge: boolean;
   initialPaymentMethods: readonly PaymentMethod[];
   initialVietQrConfig: VietQrConfig | null;
@@ -162,25 +159,6 @@ export function PosDesktopInner({
   // MenuItemButton subscribes to the daily-limit slice via
   // `useDailyLimit(item.id)`, so only cards whose limit changed re-render.
   const categories: MenuCategory[] = initialCategories;
-  const menuLimitRows = useMemo<MenuLimitRow[]>(
-    () =>
-      categories.flatMap((category) =>
-        category.menu_items.map((item) => ({
-          menu_item_id: item.id,
-          item_name: item.name,
-          category_id: category.id,
-          category_name: category.name,
-          base_price: item.base_price,
-          limit_id: null,
-          limit_date: null,
-          limit_quantity: item.daily_limit?.limit_quantity ?? null,
-          is_disabled: item.daily_limit?.is_disabled ?? false,
-          sold_today: item.daily_limit?.sold_today ?? 0,
-          stock_capacity: item.daily_limit?.stock_capacity ?? null,
-        })),
-      ),
-    [categories],
-  );
   const cartStore = usePosCartStore();
   const cartOrderType = useCartOrderType();
   const cartItemCount = useCartItemCount();
@@ -1500,8 +1478,6 @@ export function PosDesktopInner({
       {!lgUp ? (
         <TabbedSidebar
           canCloseShift={canCloseShift}
-          canManageMenuLimits={canManageMenuLimits}
-          menuLimitRows={menuLimitRows}
           onShowCloseSession={openCloseSession}
           isContextGate={!menuContextReady}
           showOrders={showOrders}
@@ -1511,8 +1487,6 @@ export function PosDesktopInner({
       ) : (
         <SplitSidebar
           canCloseShift={canCloseShift}
-          canManageMenuLimits={canManageMenuLimits}
-          menuLimitRows={menuLimitRows}
           onShowCloseSession={openCloseSession}
           isContextGate={!menuContextReady}
           sidebarContentProps={sidebarContentProps}
@@ -1526,8 +1500,6 @@ export function PosDesktopInner({
       <div className="md:hidden">
         <PosSessionHeader
           canCloseShift={canCloseShift}
-          canManageMenuLimits={canManageMenuLimits}
-          menuLimitRows={menuLimitRows}
           onShowCloseSession={openCloseSession}
           contextLabel={mobileHeaderContextLabel}
           onBack={

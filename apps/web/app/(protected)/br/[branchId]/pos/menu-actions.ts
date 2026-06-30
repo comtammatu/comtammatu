@@ -6,6 +6,7 @@ import { createServiceClient } from "@comtammatu/database";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
+import type { MenuItemDailyLimit } from "./pos-menu-types";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 
@@ -13,6 +14,27 @@ const branchIdSchema = z.coerce
   .number()
   .int()
   .positive({ error: "Branch ID không hợp lệ" });
+
+type DailyLimitRow = MenuItemDailyLimit & {
+  menu_item_id: number;
+};
+
+function dailyLimitRemaining(limit: MenuItemDailyLimit): number | null {
+  if (
+    typeof limit.available_to_sell === "number" &&
+    Number.isFinite(limit.available_to_sell)
+  ) {
+    return Math.max(0, limit.available_to_sell);
+  }
+  const stockCap = limit.stock_capacity ?? null;
+  const cap =
+    limit.limit_quantity == null
+      ? stockCap
+      : stockCap == null
+        ? limit.limit_quantity
+        : Math.min(limit.limit_quantity, stockCap);
+  return cap == null ? null : Math.max(0, cap - limit.sold_today);
+}
 
 /**
  * Cached menu structure (categories + items + variants + modifiers + sides).
@@ -163,30 +185,22 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
       });
     }
   }
-  const limitsByItemId = new Map<
-    number,
-    {
-      limit_quantity: number | null;
-      is_disabled: boolean;
-      sold_today: number;
-      stock_capacity: number | null;
-    }
-  >();
+  const limitsByItemId = new Map<number, MenuItemDailyLimit>();
   if (Array.isArray(limitRows)) {
-    // `stock_capacity` is a new RPC column absent from the generated types —
-    // read it via the same untyped row cast as the rest of the limit slice.
-    for (const row of limitRows as Array<{
-      menu_item_id: number;
-      limit_quantity: number | null;
-      is_disabled: boolean;
-      sold_today: number;
-      stock_capacity: number | null;
-    }>) {
+    // Availability fields are absent from generated types until the migration
+    // is applied to the type-source schema.
+    for (const row of limitRows as DailyLimitRow[]) {
       limitsByItemId.set(row.menu_item_id, {
         limit_quantity: row.limit_quantity,
         is_disabled: row.is_disabled,
         sold_today: row.sold_today,
         stock_capacity: row.stock_capacity,
+        stock_capacity_live: row.stock_capacity_live,
+        manual_limit_quantity: row.manual_limit_quantity,
+        accepted_today: row.accepted_today,
+        pending_unfinalized_demand: row.pending_unfinalized_demand,
+        active_hold_demand: row.active_hold_demand,
+        available_to_sell: row.available_to_sell,
       });
     }
   }
@@ -221,10 +235,9 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
           if (!sideItem) return null;
           const sideLimit = limitsByItemId.get(s.side_item_id);
           if (sideLimit?.is_disabled) return null;
-          if (
-            sideLimit?.limit_quantity != null &&
-            sideLimit.sold_today >= sideLimit.limit_quantity
-          ) {
+          const sideRemaining =
+            sideLimit == null ? null : dailyLimitRemaining(sideLimit);
+          if (sideRemaining !== null && sideRemaining <= 0) {
             return null;
           }
           return { id: s.id, is_default: s.is_default, side_item: sideItem };

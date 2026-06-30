@@ -14,7 +14,6 @@ import {
 import { withActionPositional } from "@/_lib/with-action";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
-const MENU_LIMIT_ROLES = MODULE_ACL.branch_menu_limits.allowedRoles;
 // Opening/closing a shift is an owner-capable operation: the DB already
 // authorizes owner (owner short-circuit in `has_permission` + owner holds
 // `pos:open_cashbox`/`pos:close_shift` tenant-wide), but `MODULE_ACL.pos`
@@ -248,14 +247,12 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
   canOpenShift: boolean;
   canCloseShift: boolean;
   canConfirmCash: boolean;
-  canManageMenuLimits: boolean;
   canSplitMerge: boolean;
 }> {
   const deny = {
     canOpenShift: false,
     canCloseShift: false,
     canConfirmCash: false,
-    canManageMenuLimits: false,
     canSplitMerge: false,
   };
   const parsedBranchId = branchIdSchema.safeParse(branchId);
@@ -290,7 +287,6 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
     canOpenShift: !openRes.error && openRes.data === true,
     canCloseShift: !closeRes.error && closeRes.data === true,
     canConfirmCash: !cashRes.error && cashRes.data === true,
-    canManageMenuLimits: MENU_LIMIT_ROLES.includes(ctx.claims.user_role),
     // Default ON when no row exists (matches the RPC COALESCE(...,'true')) but
     // fail CLOSED on a read error, like the sibling flags — the RPC stays the hard gate.
     canSplitMerge:

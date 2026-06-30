@@ -12,8 +12,6 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
-import { MenuLimitsSheet } from "../settings/menu-limits/menu-limits-sheet";
-import type { MenuLimitRow } from "../settings/menu-limits/actions";
 import { PrinterStatusBadge } from "./printer-status-badge";
 import { usePosSession, usePosSound } from "./_providers/pos-desktop-provider";
 import {
@@ -28,8 +26,6 @@ import {
 interface PosSessionHeaderProps {
   /** Ẩn nút "Chốt ca" cho role không có `pos:close_shift`. */
   canCloseShift: boolean;
-  canManageMenuLimits?: boolean;
-  menuLimitRows?: MenuLimitRow[];
   onShowCloseSession: () => void;
   /**
    * Mobile: thay tên POS terminal bằng context cụ thể (vd. "Bàn 5", "Mang về",
@@ -46,8 +42,6 @@ interface PosSessionHeaderProps {
 
 function PosSessionHeaderComponent({
   canCloseShift,
-  canManageMenuLimits = false,
-  menuLimitRows = [],
   onShowCloseSession,
   contextLabel,
   onBack,
@@ -87,14 +81,6 @@ function PosSessionHeaderComponent({
             opens close-shift quickly on desktop. */}
         <div className="flex shrink-0 items-center gap-1">
           <PrinterStatusBadge branchId={branchId} />
-          {canManageMenuLimits ? (
-            <MenuLimitsSheet
-              branchId={branchId}
-              rows={menuLimitRows}
-              compact
-              triggerTitle="Khóa món / hạn mức"
-            />
-          ) : null}
           <PosMoreMenu
             canCloseShift={canCloseShift}
             onShowCloseSession={onShowCloseSession}

@@ -433,14 +433,14 @@ export const settings = {
       "Checklist template và phân công công việc được quản lý trong HR.",
     attendanceChecklistAction: "Mở HR",
     attendanceChecklistMetric: "việc",
-    menuLimitsTitle: "Hạn mức bán hàng ngày",
+    menuLimitsTitle: "Giới hạn bán",
     menuLimitsIntroBefore:
-      "Đặt trần thủ công cho từng món trong ngày; phần bán được từ kho/định mức hiển thị riêng và POS lấy mức thấp hơn. Bật",
+      "Điều chỉnh số phần sẵn bán theo tồn kho và định mức của chi nhánh. Bật",
     menuLimitsDisabledAction: "Tắt món",
     menuLimitsIntroAfter: "để ẩn món khỏi POS bất kể số lượng.",
     menuLimitsResetNote:
-      "Hạn mức tự reset lúc 00:00 (giờ VN). Khi hủy món, hạn mức được trả lại.",
-    menuLimitsLoadFailed: "Không tải được dữ liệu hạn mức.",
+      "Giới hạn áp dụng theo ngày vận hành; khi hủy món trước khi bếp làm, số còn được trả lại.",
+    menuLimitsLoadFailed: "Không tải được dữ liệu giới hạn bán.",
     printersDescription: (branchName: string) =>
       `Cấu hình 3 máy in của ${branchName}: hóa đơn, bếp 1, bếp 2`,
   },

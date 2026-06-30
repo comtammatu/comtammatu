@@ -28,6 +28,22 @@ const migration = readFileSync(
   "utf8",
 );
 
+const stockCapacityMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260629100001_menu_stock_capacity_daily_limit.sql",
+  ),
+  "utf8",
+);
+
+const stockCapacityMultiUnitMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260630083000_menu_stock_capacity_multiunit.sql",
+  ),
+  "utf8",
+);
+
 const actionsSource = readFileSync(
   join(
     process.cwd(),
@@ -44,10 +60,25 @@ const tableSource = readFileSync(
   "utf8",
 );
 
-const sheetSource = readFileSync(
+const recipesPageSource = readFileSync(
+  join(process.cwd(), "app/(protected)/inventory/recipes/page.tsx"),
+  "utf8",
+);
+
+const posMessagesSource = readFileSync(
+  join(process.cwd(), "lib/messages/pos.ts"),
+  "utf8",
+);
+
+const settingsMessagesSource = readFileSync(
+  join(process.cwd(), "lib/messages/settings.ts"),
+  "utf8",
+);
+
+const stockOutcomeAvailabilityMigration = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/settings/menu-limits/menu-limits-sheet.tsx",
+    "../../supabase/migrations/20260630071000_pos_kds_inventory_truth_g2_availability.sql",
   ),
   "utf8",
 );
@@ -66,13 +97,20 @@ test("Menu-Limits effective cap composes manual and stock caps", () => {
     getMenuLimitRemaining(row({ stock_capacity: 4, sold_today: 1 })),
     3,
   );
+  assert.equal(
+    getMenuLimitRemaining(
+      row({ stock_capacity: 10, sold_today: 8, available_to_sell: 5 }),
+    ),
+    5,
+  );
   assert.equal(getMenuLimitRemaining(row({ stock_capacity: 0 })), 0);
 });
 
-test("stock-only Menu-Limits rows are not treated as manual configuration", () => {
-  assert.equal(hasManualMenuLimit(row({ stock_capacity: 4 })), false);
+test("stock-backed Menu-Limits rows default Sẵn bán to Tồn", () => {
+  assert.equal(hasManualMenuLimit(row({ stock_capacity: 4 })), true);
   assert.equal(hasManualMenuLimit(row({ limit_quantity: 4 })), true);
   assert.equal(hasManualMenuLimit(row({ is_disabled: true })), true);
+  assert.equal(getMenuLimitCapSource(row({ stock_capacity: 4 })), "equal");
   assert.equal(
     getMenuLimitCapSource(row({ limit_quantity: 10, stock_capacity: 4 })),
     "stock_lower",
@@ -91,7 +129,118 @@ test("Menu-Limits admin RPC and UI expose stock_capacity", () => {
   );
   assert.match(actionsSource, /stock_capacity: number \| null/);
   assert.match(tableSource, /stockCapacityLabel/);
+  assert.match(tableSource, /getDraftLimitQuantity/);
   assert.match(tableSource, /getMenuLimitEffectiveCap/);
-  assert.match(sheetSource, /stockCapacityLabel/);
-  assert.match(sheetSource, /getMenuLimitEffectiveCap/);
+  assert.match(tableSource, /getMenuLimitRemaining/);
+  assert.match(
+    stockCapacityMigration,
+    /limit_quantity\s+=\s+COALESCE\([\s\S]*branch_menu_item_daily_limits\.limit_quantity[\s\S]*EXCLUDED\.limit_quantity/,
+  );
+});
+
+test("Menu-Limits manager must set Sẵn bán between 0 and Tồn", () => {
+  const limitQuantitySchemaSource =
+    actionsSource.match(/limitQuantity:[\s\S]*?isDisabled:/)?.[0] ?? "";
+
+  assert.match(tableSource, /parsed > row\.stock_capacity/);
+  assert.match(tableSource, /manualLimitExceedsStock/);
+  assert.match(tableSource, /manualLimitRequired/);
+  assert.match(tableSource, /manualLimitRange/);
+  assert.match(tableSource, /stockCapacityRequired/);
+  assert.match(tableSource, /max=\{row\.stock_capacity \?\? 9999\}/);
+  assert.match(tableSource, /min=\{0\}/);
+  assert.match(tableSource, /required/);
+  assert.match(tableSource, /manualLimitPlaceholder/);
+  assert.match(limitQuantitySchemaSource, /\.min\(0/);
+  assert.doesNotMatch(limitQuantitySchemaSource, /\.positive\(/);
+  assert.match(
+    actionsSource,
+    /msg\.includes\("exceeds stock capacity"\)[\s\S]*Sẵn bán không được vượt Tồn/,
+  );
+  assert.match(
+    actionsSource,
+    /msg\.includes\("stock capacity required"\)[\s\S]*Chưa tính được Tồn/,
+  );
+  assert.match(
+    readFileSync(
+      join(
+        process.cwd(),
+        "../../supabase/migrations/20260630062650_pos_kds_inventory_truth_g1_access.sql",
+      ),
+      "utf8",
+    ),
+    /CHECK \(limit_quantity IS NULL OR limit_quantity >= 0\)[\s\S]*compute_menu_item_stock_capacity[\s\S]*stock capacity required[\s\S]*COALESCE\(p_limit_quantity, v_stock_capacity\)[\s\S]*v_limit_quantity > v_stock_capacity[\s\S]*limit quantity exceeds stock capacity/,
+  );
+  assert.match(
+    stockOutcomeAvailabilityMigration,
+    /COALESCE\(bl\.limit_quantity, bl\.stock_capacity\) AS limit_quantity/,
+  );
+});
+
+test("stock capacity compute converts recipe entry units to base", () => {
+  assert.match(
+    stockCapacityMultiUnitMigration,
+    /LEFT JOIN public\.ingredient_units iu[\s\S]*iu\.unit_id = r\.entry_unit_id/,
+  );
+  assert.match(
+    stockCapacityMultiUnitMigration,
+    /ELSE \(r\.quantity \/ r\.yield_factor\) \* iu\.to_base_factor/,
+  );
+  assert.match(
+    stockCapacityMultiUnitMigration,
+    /BOOL_OR\([\s\S]*line_missing_config[\s\S]*per_portion_qty <= 0[\s\S]*\) THEN NULL::integer/,
+  );
+});
+
+test("Recipes page passes ingredient unit options to recipe editor", () => {
+  assert.match(recipesPageSource, /units\?: IngredientUnitRow\[\]/);
+  assert.match(recipesPageSource, /units: i\.units/);
+});
+
+test("POS stock-control blocks items without computed stock capacity", () => {
+  assert.match(
+    stockCapacityMultiUnitMigration,
+    /WHEN r\.stock_capacity_live IS NULL AND p_stock_outcome_enabled THEN 0/,
+  );
+  assert.match(
+    stockCapacityMultiUnitMigration,
+    /a\.limit_id IS NOT NULL\s+OR ctx\.stock_outcome_enabled/,
+  );
+});
+
+test("Menu-Limits RPC exposes availability components", () => {
+  assert.match(
+    stockOutcomeAvailabilityMigration,
+    /stock_capacity_live integer/,
+  );
+  assert.match(
+    stockOutcomeAvailabilityMigration,
+    /manual_limit_quantity integer/,
+  );
+  assert.match(stockOutcomeAvailabilityMigration, /accepted_today integer/);
+  assert.match(
+    stockOutcomeAvailabilityMigration,
+    /pending_unfinalized_demand integer/,
+  );
+  assert.match(stockOutcomeAvailabilityMigration, /active_hold_demand integer/);
+  assert.match(stockOutcomeAvailabilityMigration, /available_to_sell integer/);
+  assert.match(actionsSource, /available_to_sell: number \| null/);
+});
+
+test("Menu-Limits manager copy uses stock availability vocabulary", () => {
+  assert.match(posMessagesSource, /stockCapacityLabel: "Tồn"/);
+  assert.match(posMessagesSource, /manualLimitLabel: "Sẵn bán"/);
+  assert.match(posMessagesSource, /manualLimitPlaceholder: "Nhập số"/);
+  assert.match(
+    posMessagesSource,
+    /manualLimitRequired: "Sẵn bán là bắt buộc\."/,
+  );
+  assert.match(
+    posMessagesSource,
+    /manualLimitRange: "Sẵn bán phải là số nguyên từ 0 đến 9999\."/,
+  );
+  assert.match(posMessagesSource, /stockCapacityRequired: "Chưa tính được Tồn/);
+  assert.match(posMessagesSource, /soldLabel: "Còn"/);
+  assert.match(settingsMessagesSource, /menuLimitsTitle: "Giới hạn bán"/);
+  assert.doesNotMatch(posMessagesSource, /Trần thủ công|Phần bán được/);
 });
