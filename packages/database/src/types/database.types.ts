@@ -2677,6 +2677,7 @@ export type Database = {
           bumped_at: string | null
           bumped_by: string | null
           created_at: string
+          first_ready_at: string | null
           id: number
           kitchen_send_batch_id: number | null
           order_id: number
@@ -2691,6 +2692,7 @@ export type Database = {
           bumped_at?: string | null
           bumped_by?: string | null
           created_at?: string
+          first_ready_at?: string | null
           id?: never
           kitchen_send_batch_id?: number | null
           order_id: number
@@ -2705,6 +2707,7 @@ export type Database = {
           bumped_at?: string | null
           bumped_by?: string | null
           created_at?: string
+          first_ready_at?: string | null
           id?: never
           kitchen_send_batch_id?: number | null
           order_id?: number
@@ -8809,8 +8812,34 @@ export type Database = {
         }
         Returns: number
       }
+      branch_menu_limit_availability: {
+        Args: {
+          p_branch_id: number
+          p_limit_date: string
+          p_stock_outcome_enabled?: boolean
+          p_tenant_id: number
+        }
+        Returns: {
+          accepted_today: number
+          active_hold_demand: number
+          available_to_sell: number
+          base_price: number
+          category_id: number
+          category_name: string
+          is_disabled: boolean
+          item_name: string
+          limit_date: string
+          limit_id: number
+          limit_quantity: number
+          manual_limit_quantity: number
+          menu_item_id: number
+          pending_unfinalized_demand: number
+          sold_today: number
+          stock_capacity: number
+          stock_capacity_live: number
+        }[]
+      }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
-      can_access_branch: { Args: { p_branch_id: number }; Returns: boolean }
       cancel_leave_request: {
         Args: { p_request_id: number }
         Returns: undefined
@@ -9280,11 +9309,17 @@ export type Database = {
       get_branch_menu_daily_limits_for_pos: {
         Args: { p_branch_id: number }
         Returns: {
+          accepted_today: number
+          active_hold_demand: number
+          available_to_sell: number
           is_disabled: boolean
           limit_quantity: number
+          manual_limit_quantity: number
           menu_item_id: number
+          pending_unfinalized_demand: number
           sold_today: number
           stock_capacity: number
+          stock_capacity_live: number
         }[]
       }
       get_branch_menu_ingredient_caps_for_pos: {
@@ -9587,6 +9622,15 @@ export type Database = {
         Args: { p_ingredient_id: number; p_qty: number; p_unit_id: number }
         Returns: number
       }
+      inv_to_base_for_tenant: {
+        Args: {
+          p_ingredient_id: number
+          p_qty: number
+          p_tenant_id: number
+          p_unit_id: number
+        }
+        Returns: number
+      }
       inventory_requires_manual_review: {
         Args: { p_ingredient_id: number }
         Returns: boolean
@@ -9603,6 +9647,9 @@ export type Database = {
       list_branch_menu_daily_limits: {
         Args: { p_branch_id: number; p_limit_date?: string }
         Returns: {
+          accepted_today: number
+          active_hold_demand: number
+          available_to_sell: number
           base_price: number
           category_id: number
           category_name: string
@@ -9611,9 +9658,12 @@ export type Database = {
           limit_date: string
           limit_id: number
           limit_quantity: number
+          manual_limit_quantity: number
           menu_item_id: number
+          pending_unfinalized_demand: number
           sold_today: number
           stock_capacity: number
+          stock_capacity_live: number
         }[]
       }
       list_notifications: {
@@ -9720,6 +9770,14 @@ export type Database = {
       position_id_from_access_bucket: {
         Args: { p_access_bucket: string; p_tenant: number }
         Returns: number
+      }
+      post_pos_cancelled_ready_waste: {
+        Args: { p_actor_id?: string; p_order_id: number; p_reason?: string }
+        Returns: Json
+      }
+      post_pos_sale_consumption_if_ready: {
+        Args: { p_actor_id?: string; p_order_id: number }
+        Returns: Json
       }
       print_template_block_visible: {
         Args: { p_block: Json; p_payload: Json }
