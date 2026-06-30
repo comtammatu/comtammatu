@@ -14,14 +14,20 @@ const copy = messages.employee.leave;
 export async function EmployeeLeavePageContent({
   profileHref = "/employee/profile",
   routeBranchId,
+  hideHeaderOnMobile,
 }: {
   profileHref?: string;
   routeBranchId?: number;
+  hideHeaderOnMobile?: boolean;
 } = {}) {
   const ctx = await getEmployeeContext();
   if (!ctx) {
     return (
-      <EmployeePage title={copy.title} description={copy.description}>
+      <EmployeePage
+        title={copy.title}
+        description={copy.description}
+        hideHeaderOnMobile={hideHeaderOnMobile}
+      >
         <EmployeeMissingProfileEmpty />
       </EmployeePage>
     );
@@ -35,7 +41,11 @@ export async function EmployeeLeavePageContent({
 
   if (!branchId) {
     return (
-      <EmployeePage title={copy.unavailableTitle} description={copy.description}>
+      <EmployeePage
+        title={copy.unavailableTitle}
+        description={copy.description}
+        hideHeaderOnMobile={hideHeaderOnMobile}
+      >
         <EmployeeMissingProfileEmpty
           title={copy.unavailableTitle}
           description={copy.missingBranchDescription}
@@ -65,6 +75,7 @@ export async function EmployeeLeavePageContent({
     <EmployeePage
       title={copy.title}
       description={copy.description}
+      hideHeaderOnMobile={hideHeaderOnMobile}
       action={
         <Button
           asChild

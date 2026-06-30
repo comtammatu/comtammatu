@@ -18,6 +18,7 @@ export default async function OperatorStockCountPage({
     <EmployeeCountPageContent
       searchParams={searchParams}
       routeBranchId={branchId}
+      hideHeaderOnMobile
     />
   );
 }

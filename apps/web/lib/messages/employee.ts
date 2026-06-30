@@ -307,6 +307,17 @@ export const employee = {
     },
     updateError: "Không thể cập nhật việc trong ca.",
   },
+  count: {
+    title: "Kiểm kê tồn",
+    unavailableTitle: "Chưa thể kiểm kê",
+    missingBranchDescription:
+      "Tài khoản chưa được gắn chi nhánh. Liên hệ quản lý để cập nhật hồ sơ.",
+    noAssignmentsTitle: "Chưa được giao đếm",
+    noAssignmentsDescription:
+      "Bạn chưa được giao nguyên liệu nào để kiểm kê. Liên hệ quản lý chi nhánh.",
+    locationFallback: (locationId: number) => `Kho #${locationId}`,
+    ingredientFallback: "Nguyên liệu",
+  },
   profile: {
     title: "Hồ sơ",
     description: "Hồ sơ tối thiểu dùng cho chấm công và lịch ca.",

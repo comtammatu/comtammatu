@@ -5,5 +5,10 @@ export default function OperatorShiftPayslipPage({
 }: {
   searchParams: Promise<{ year?: string }>;
 }) {
-  return <PayslipPageContent searchParams={searchParams} />;
+  return (
+    <PayslipPageContent
+      searchParams={searchParams}
+      hideHeaderOnMobile
+    />
+  );
 }

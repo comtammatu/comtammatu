@@ -14,6 +14,7 @@ export default async function OperatorShiftLeavePage({
     <EmployeeLeavePageContent
       profileHref={`/br/${branchId}/shift/profile`}
       routeBranchId={branchId}
+      hideHeaderOnMobile
     />
   );
 }

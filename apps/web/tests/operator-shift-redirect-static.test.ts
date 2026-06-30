@@ -60,6 +60,7 @@ test("operator shift leave renders inside the branch operator shell", () => {
   );
   assert.ok(source.includes('profileHref={`/br/${branchId}/shift/profile`}'));
   assert.ok(source.includes("routeBranchId={branchId}"), path);
+  assert.ok(source.includes("hideHeaderOnMobile"), path);
   assert.doesNotMatch(source, /redirect\("\/employee\/leave"\)/);
 });
 
@@ -74,7 +75,7 @@ test("operator shift payslip renders inside the branch operator shell", () => {
     source.includes('import { PayslipPageContent } from "@/(protected)/employee/payslip/page"'),
     path,
   );
-  assert.ok(source.includes("<PayslipPageContent searchParams={searchParams} />"));
+  assert.ok(source.includes("hideHeaderOnMobile"), path);
   assert.doesNotMatch(source, /redirect\("\/employee\/payslip"\)/);
 });
 
@@ -90,6 +91,7 @@ test("operator stock count renders employee count inside the branch operator she
     path,
   );
   assert.ok(source.includes("routeBranchId={branchId}"), path);
+  assert.ok(source.includes("hideHeaderOnMobile"), path);
   assert.doesNotMatch(source, /redirect\(`\/inventory\/stocktake/);
 });
 
@@ -100,6 +102,22 @@ test("employee count client keeps location changes on the current route", () => 
 
   assert.ok(source.includes('baseHref = "/employee/count"'));
   assert.ok(source.includes("router.replace(`${baseHref}?${params.toString()}`)"));
+});
+
+test("employee count page takes visible copy from employee messages", () => {
+  const source = read(
+    "apps/web/app/(protected)/employee/count/page.tsx",
+  );
+
+  assert.ok(source.includes("const copy = messages.employee.count"), source);
+  for (const hardcoded of [
+    "Kiểm kê tồn",
+    "Chưa thể kiểm kê",
+    "Chưa được giao đếm",
+    "Nguyên liệu",
+  ]) {
+    assert.doesNotMatch(source, new RegExp(`"${hardcoded}"`), hardcoded);
+  }
 });
 
 test("operator shift clock renders inside the branch operator shell", () => {
@@ -144,10 +162,29 @@ test("operator shift landing routes through branch-scoped detail routes", () => 
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx",
   );
 
+  assert.ok(source.includes("EmployeePage"), "shift hub uses shared page shell");
+  assert.ok(
+    source.includes("EmployeeActionSection"),
+    "shift hub uses shared action rows",
+  );
+  assert.doesNotMatch(source, /AppLinkCard|LinkCardGrid/);
   for (const segment of ["clock", "tasks", "schedule", "profile"] as const) {
     assert.ok(
-      source.includes(`href={\`/br/${"${branchId}"}/shift/${segment}\`}`),
+      source.includes(`href: \`/br/${"${branchId}"}/shift/${segment}\``),
       segment,
     );
   }
+});
+
+test("operator home uses the shared employee action layout", () => {
+  const source = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
+  );
+
+  assert.ok(source.includes("EmployeePage"), "operator home uses shared page shell");
+  assert.ok(
+    source.includes("EmployeeActionSection"),
+    "operator home uses shared action rows",
+  );
+  assert.doesNotMatch(source, /AppLinkCard|LinkCardGrid/);
 });

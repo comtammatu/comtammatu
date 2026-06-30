@@ -12,6 +12,7 @@ const copy = messages.employee.payslip;
 
 export async function PayslipPageContent(props: {
   searchParams: Promise<{ year?: string }>;
+  hideHeaderOnMobile?: boolean;
 }) {
   const ctx = await getEmployeeContext();
   const { year: yearParam } = await props.searchParams;
@@ -20,7 +21,11 @@ export async function PayslipPageContent(props: {
 
   if (!ctx) {
     return (
-      <EmployeePage title={copy.title} description={copy.description}>
+      <EmployeePage
+        title={copy.title}
+        description={copy.description}
+        hideHeaderOnMobile={props.hideHeaderOnMobile}
+      >
         <EmployeeMissingProfileEmpty
           title={copy.missingProfileTitle}
           description={copy.missingProfileDescription}
@@ -51,7 +56,11 @@ export async function PayslipPageContent(props: {
     .limit(12);
 
   return (
-    <EmployeePage title={copy.title} description={copy.description}>
+    <EmployeePage
+      title={copy.title}
+      description={copy.description}
+      hideHeaderOnMobile={props.hideHeaderOnMobile}
+    >
       <YearPicker selectedYear={year} currentYear={currentYear} />
       <PayslipClient entries={(entries ?? []) as unknown as PayslipEntry[]} />
     </EmployeePage>

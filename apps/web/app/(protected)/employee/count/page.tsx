@@ -1,13 +1,14 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: employee inventory count slip keeps operational copy close to the workflow controls */
-
 import { getVNDateString } from "@comtammatu/shared/time";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { messages } from "@lib/messages";
 import { getEmployeeContext } from "../_lib/employee-context";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/employee-page";
 import { CountSlipClient } from "./count-client";
+
+const copy = messages.employee.count;
 
 export interface CountUnitChoice {
   unitId: number;
@@ -77,16 +78,18 @@ interface SlipLineRow {
 interface EmployeeCountPageContentProps {
   searchParams: Promise<{ location?: string }>;
   routeBranchId?: number;
+  hideHeaderOnMobile?: boolean;
 }
 
 export async function EmployeeCountPageContent({
   searchParams,
   routeBranchId,
+  hideHeaderOnMobile,
 }: EmployeeCountPageContentProps) {
   const ctx = await getEmployeeContext();
   if (!ctx) {
     return (
-      <EmployeePage title="Kiểm kê tồn">
+      <EmployeePage title={copy.title} hideHeaderOnMobile={hideHeaderOnMobile}>
         <EmployeeMissingProfileEmpty />
       </EmployeePage>
     );
@@ -101,10 +104,10 @@ export async function EmployeeCountPageContent({
 
   if (!branchId) {
     return (
-      <EmployeePage title="Kiểm kê tồn">
+      <EmployeePage title={copy.title} hideHeaderOnMobile={hideHeaderOnMobile}>
         <EmployeeMissingProfileEmpty
-          title="Chưa thể kiểm kê"
-          description="Tài khoản chưa được gắn chi nhánh. Liên hệ quản lý để cập nhật hồ sơ."
+          title={copy.unavailableTitle}
+          description={copy.missingBranchDescription}
         />
       </EmployeePage>
     );
@@ -124,10 +127,14 @@ export async function EmployeeCountPageContent({
 
   if (assignmentRows.length === 0) {
     return (
-      <EmployeePage title="Kiểm kê tồn" description={branchName ?? undefined}>
+      <EmployeePage
+        title={copy.title}
+        description={branchName ?? undefined}
+        hideHeaderOnMobile={hideHeaderOnMobile}
+      >
         <EmployeeMissingProfileEmpty
-          title="Chưa được giao đếm"
-          description="Bạn chưa được giao nguyên liệu nào để kiểm kê. Liên hệ quản lý chi nhánh."
+          title={copy.noAssignmentsTitle}
+          description={copy.noAssignmentsDescription}
         />
       </EmployeePage>
     );
@@ -150,12 +157,12 @@ export async function EmployeeCountPageContent({
   const groups: CountLocationGroup[] = locationIds
     .map((locationId) => ({
       locationId,
-      locationName: locationNameById.get(locationId) ?? `Kho #${locationId}`,
+      locationName: locationNameById.get(locationId) ?? copy.locationFallback(locationId),
       assignments: assignmentRows
         .filter((row) => row.location_id === locationId)
         .map((row) => ({
           ingredientId: row.ingredient_id,
-          ingredientName: row.ingredients?.name ?? "Nguyên liệu",
+          ingredientName: row.ingredients?.name ?? copy.ingredientFallback,
           measureUnit: row.ingredients?.measure_unit ?? "",
           // Counting can use any of the ingredient's units (no role filter), base first.
           countUnits: (row.ingredients?.ingredient_units ?? [])
@@ -257,7 +264,11 @@ export async function EmployeeCountPageContent({
   }
 
   return (
-    <EmployeePage title="Kiểm kê tồn" description={branchName ?? undefined}>
+    <EmployeePage
+      title={copy.title}
+      description={branchName ?? undefined}
+      hideHeaderOnMobile={hideHeaderOnMobile}
+    >
       <CountSlipClient
         branchId={branchId}
         baseHref={routeBranchId ? `/br/${branchId}/stock/count` : "/employee/count"}
