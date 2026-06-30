@@ -283,6 +283,9 @@ test("Order money mutations are locked after VietQR code exposure", () => {
   const migration = readRepoFile(
     "supabase/migrations/20260626072000_lock_order_amount_after_payment_code_exposed.sql",
   );
+  const cancelFixMigration = readRepoFile(
+    "supabase/migrations/20260630134012_allow_cancel_after_pending_payment_cancel.sql",
+  );
   const messages = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/_lib/messages.ts",
   );
@@ -301,6 +304,15 @@ test("Order money mutations are locked after VietQR code exposure", () => {
     migration,
     /FROM public\.payments p[\s\S]*p\.method = 'vietqr'[\s\S]*p\.status IN \('pending', 'failed'\)[\s\S]*lower\(p\.provider_ref\) = lower\(p_payment_code\)/,
   );
+  assert.match(
+    cancelFixMigration,
+    /CREATE OR REPLACE FUNCTION public\.order_payment_code_is_exposed/,
+  );
+  assert.match(
+    cancelFixMigration,
+    /FROM public\.payments p[\s\S]*p\.method = 'vietqr'[\s\S]*p\.status = 'pending'[\s\S]*lower\(p\.provider_ref\) = lower\(p_payment_code\)/,
+  );
+  assert.doesNotMatch(cancelFixMigration, /p\.status IN \('pending', 'failed'\)/);
   assert.doesNotMatch(migration, /FROM public\.print_jobs/);
   assert.match(migration, /CREATE TRIGGER trg_orders_zz_payment_code_lock/);
   assert.match(migration, /BEFORE UPDATE OF[\s\S]*updated_at[\s\S]*ON public\.orders/);
