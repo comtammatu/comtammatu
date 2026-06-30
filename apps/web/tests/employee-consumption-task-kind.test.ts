@@ -30,7 +30,7 @@ const checkoutApprovalsClientSource = readWeb(
   "app/(protected)/employee/checkout-approvals/checkout-approvals-client.tsx",
 );
 
-test("consumption checklist workflow uses task_kind instead of the display title", () => {
+test("consumption task kind remains stable but no longer drives Employee tasks", () => {
   for (const expected of [
     "ADD COLUMN IF NOT EXISTS task_kind text NOT NULL DEFAULT 'standard'",
     "CHECK (task_kind IN ('standard', 'consumption_report'))",
@@ -57,10 +57,10 @@ test("consumption checklist workflow uses task_kind instead of the display title
     /select\([\s\S]*task_kind/,
     "Today work state should select task_kind from attendance checklist rows",
   );
-  assert.match(
+  assert.doesNotMatch(
     employeeTasksPageSource,
-    /item\.taskKind === "consumption_report"/,
-    "Employee tasks should detect the consumption report workflow by taskKind",
+    /item\.taskKind === "consumption_report"|fetchConsumptionReportForAttendance|fetchConsumptionIngredients/,
+    "Employee tasks should not load or branch into the consumption report workflow",
   );
   assert.doesNotMatch(
     employeeTasksPageSource,
@@ -94,50 +94,20 @@ test("HR per-position editor exposes the consumption task kind", () => {
   );
 });
 
-test("checkout approval requires approved or applied consumption report when assigned", () => {
-  assert.match(
+test("checkout approval no longer requires a consumption report", () => {
+  assert.doesNotMatch(
     checkoutApprovalsPageSource,
-    /loadConsumptionRequiredAttendanceIds/,
-    "checkout approvals page should load which attendance rows require consumption review",
+    /loadConsumptionRequiredAttendanceIds|\.eq\("task_kind", "consumption_report"\)|requiresConsumptionReport/,
+    "checkout approvals page should not load consumption review gates",
   );
-  assert.match(
-    checkoutApprovalsPageSource,
-    /\.eq\("task_kind", "consumption_report"\)/,
-    "checkout approvals page should detect required consumption reports by task_kind",
-  );
-  assert.match(
-    checkoutApprovalsPageSource,
-    /requiresConsumptionReport: consumptionRequiredAttendanceIds\.has\([\s\S]*record\.id[\s\S]*\)/,
-    "checkout approval items should carry whether consumption review is required",
-  );
-  assert.match(
+  assert.doesNotMatch(
     checkoutApprovalsClientSource,
-    /requiresConsumptionReport: boolean/,
-    "checkout approval client item type should include requiresConsumptionReport",
-  );
-  assert.match(
-    checkoutApprovalsClientSource,
-    /status === "approved" \|\| status === "applied"/,
-    "checkout approval client should allow checkout only for approved/applied reports",
-  );
-  assert.match(
-    checkoutApprovalsClientSource,
-    /item\.requiresConsumptionReport \? \(/,
-    "checkout approval client should only render consumption review for required attendance rows",
-  );
-  assert.match(
-    checkoutActionSource,
-    /\.from\("attendance_checklist_items"\)[\s\S]*\.eq\("task_kind", "consumption_report"\)/,
-    "server approval action should check the attendance checklist marker",
-  );
-  assert.match(
-    checkoutActionSource,
-    /consumptionReport\?\.status !== "approved"[\s\S]*consumptionReport\?\.status !== "applied"/,
-    "server approval action should block missing/draft/submitted/needs_changes/cancelled reports",
+    /requiresConsumptionReport|status === "approved" \|\| status === "applied"|item\.requiresConsumptionReport|approveConsumptionReport|requestConsumptionAdjustment/,
+    "checkout approval client should not render or block on consumption review",
   );
   assert.doesNotMatch(
     checkoutActionSource,
-    /consumptionReport\?\.status === "submitted"/,
-    "server approval action should not use a partial pending-status denylist",
+    /\.from\("attendance_checklist_items"\)[\s\S]*\.eq\("task_kind", "consumption_report"\)|consumptionReport\?\.status !== "approved"|consumptionReport\?\.status !== "applied"/,
+    "server approval action should not block checkout approval on consumption reports",
   );
 });

@@ -222,7 +222,7 @@ test("HRM consumption checklist is optional for each canonical template", () => 
   );
 });
 
-test("HRM consumption report applies Inventory only after manager approval", () => {
+test("HRM consumption history stays available but no longer gates Employee checkout", () => {
   const migration = read(
     "supabase/migrations/_archive/20260618070000_hrm_consumption_report_approval.sql",
   );
@@ -328,31 +328,27 @@ test("HRM consumption report applies Inventory only after manager approval", () 
     "server actions must route report submit/review through safe RPC wrappers",
   );
   assert.ok(
-    clockActionsSrc.includes("attendance_consumption_reports") &&
-      clockActionsSrc.includes("attendance_checklist_items") &&
-      clockActionsSrc.includes('eq("task_kind", "consumption_report")') &&
-      clockActionsSrc.includes('status !== "approved"') &&
-      clockActionsSrc.includes('status !== "applied"'),
-    "checkout approval action must block missing/non-approved consumption reports when a consumption checklist is assigned",
+    !clockActionsSrc.includes("attendance_consumption_reports") &&
+      !clockActionsSrc.includes('eq("task_kind", "consumption_report")') &&
+      !clockActionsSrc.includes('status !== "approved"') &&
+      !clockActionsSrc.includes('status !== "applied"'),
+    "checkout approval action must not gate checkout approval on consumption reports",
   );
   assert.ok(
-    tasksClientSrc.includes("submitConsumptionReport") &&
-      tasksClientSrc.includes("Báo cáo tiêu hao bếp") &&
-      tasksClientSrc.includes("Không phát sinh") &&
-      tasksClientSrc.includes("defaultIngredientsToDraft") &&
-      tasksClientSrc.includes("defaultSortOrder") &&
-      tasksClientSrc.includes('domain="consumption-report"'),
-    "Employee tasks UI must expose the consumption report workflow (status labels via StatusBadge)",
+    !tasksClientSrc.includes("submitConsumptionReport") &&
+      !tasksClientSrc.includes("Báo cáo tiêu hao bếp") &&
+      !tasksClientSrc.includes("Không phát sinh") &&
+      !tasksClientSrc.includes("defaultIngredientsToDraft") &&
+      tasksClientSrc.includes('item.taskKind === "inventory_count"'),
+    "Employee tasks UI must remove the consumption report panel and keep inventory count as the special workflow",
   );
   assert.ok(
-    approvalsClientSrc.includes("approveConsumptionReport") &&
-      approvalsClientSrc.includes("requestConsumptionAdjustment") &&
-      approvalsClientSrc.includes("Duyệt & áp Inventory") &&
-      approvalsClientSrc.includes("Duyệt không phát sinh") &&
-      approvalsClientSrc.includes("Yêu cầu chỉnh sửa") &&
-      approvalsClientSrc.includes("requiresConsumptionReport") &&
-      approvalsClientSrc.includes("blocksCheckout"),
-    "checkout approval UI must review consumption before checkout approval",
+    !approvalsClientSrc.includes("approveConsumptionReport") &&
+      !approvalsClientSrc.includes("requestConsumptionAdjustment") &&
+      !approvalsClientSrc.includes("Duyệt & áp Inventory") &&
+      !approvalsClientSrc.includes("requiresConsumptionReport") &&
+      !approvalsClientSrc.includes("blocksCheckout"),
+    "checkout approval UI must not review consumption before checkout approval",
   );
   assert.ok(
     issueActionsSrc.includes("source_type, source_ref") &&

@@ -2,7 +2,7 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: count-assignment manager workflow copy stays inline */
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { X as IconX } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -18,7 +18,12 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { MultiSelectCombobox } from "@/components/form";
-import { AppPage, AppPageHeader, AppSection, AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
 import { setCountAssignments } from "./actions";
 
 export interface BranchOption {
@@ -53,6 +58,17 @@ interface Props {
   assignmentsByEmployee: Record<string, number[]>;
 }
 
+function seedSelections(
+  employees: readonly EmployeeRow[],
+  assignmentsByEmployee: Record<string, number[]>,
+) {
+  const seed: Record<string, number[]> = {};
+  for (const emp of employees) {
+    seed[String(emp.id)] = assignmentsByEmployee[String(emp.id)] ?? [];
+  }
+  return seed;
+}
+
 export function CountAssignmentsClient({
   branches,
   selectedBranchId,
@@ -75,13 +91,11 @@ export function CountAssignmentsClient({
   // assignments returned by the server for the current branch+location.
   const [selectionByEmployee, setSelectionByEmployee] = useState<
     Record<string, number[]>
-  >(() => {
-    const seed: Record<string, number[]> = {};
-    for (const emp of employees) {
-      seed[String(emp.id)] = assignmentsByEmployee[String(emp.id)] ?? [];
-    }
-    return seed;
-  });
+  >(() => seedSelections(employees, assignmentsByEmployee));
+
+  useEffect(() => {
+    setSelectionByEmployee(seedSelections(employees, assignmentsByEmployee));
+  }, [employees, assignmentsByEmployee]);
 
   const updateScope = useCallback(
     (next: { branchId?: number | null; locationId?: number | null }) => {
@@ -211,6 +225,7 @@ function EmployeeAssignmentCard({
   selectedIds: number[];
   onSelectionChange: (ids: number[]) => void;
 }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -240,6 +255,7 @@ function EmployeeAssignmentCard({
       toast.success(
         `Đã lưu phân công cho ${employee.name} (${selectedIds.length} nguyên liệu)`,
       );
+      router.refresh();
     });
   }
 

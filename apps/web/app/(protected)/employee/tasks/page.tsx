@@ -19,10 +19,6 @@ import {
 import { getTodayWorkState } from "../_lib/today-work-state";
 import { formatTimeVN } from "../_lib/vn-business-date";
 import { TasksClient } from "./tasks-client";
-import {
-  fetchConsumptionIngredients,
-  fetchConsumptionReportForAttendance,
-} from "../consumption-actions";
 
 const copy = messages.employee.home;
 const taskCopy = messages.employee.tasks;
@@ -142,27 +138,6 @@ export async function EmployeeTasksPageContent({
   const allRequiredDone = state.checklist.requiredRemaining === 0;
   const checkoutPending = state.status === "checkout_pending";
   const checkoutDone = state.status === "done";
-  const consumptionChecklistItem = state.checklist.items.find(
-    (item) => item.taskKind === "consumption_report",
-  );
-  const hasConsumptionChecklist = Boolean(consumptionChecklistItem);
-  const [ingredientsResult, consumptionReportResult] =
-    hasConsumptionChecklist && state.attendance
-      ? await Promise.all([
-          fetchConsumptionIngredients(
-            consumptionChecklistItem?.templateItemId ?? null,
-          ),
-          fetchConsumptionReportForAttendance(state.attendance.id),
-        ])
-      : [null, null];
-  const consumptionIngredients =
-    ingredientsResult?.success && ingredientsResult.data
-      ? ingredientsResult.data
-      : [];
-  const consumptionReport =
-    consumptionReportResult?.success && consumptionReportResult.data
-      ? consumptionReportResult.data
-      : null;
   const progressValue =
     state.checklist.total > 0
       ? Math.round((state.checklist.done / state.checklist.total) * 100)
@@ -217,10 +192,6 @@ export async function EmployeeTasksPageContent({
           <TasksClient
             items={state.checklist.items}
             disabled={checkoutPending || checkoutDone}
-            attendanceId={state.attendance?.id ?? null}
-            consumptionIngredients={consumptionIngredients}
-            consumptionReport={consumptionReport}
-            showConsumptionReport={hasConsumptionChecklist}
             countHref={countHref}
           />
         ) : (

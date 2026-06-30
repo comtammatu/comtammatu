@@ -147,9 +147,9 @@ test("Staff checkout request stays single tap while manager direct checkout conf
     /const attendanceActionSchema = z\.object\(\{[\s\S]*attendanceId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)/,
     "Checkout actions should validate the attendance id at the trust boundary",
   );
-  assert.match(
+  assert.doesNotMatch(
     employeeClockActionSource,
-    /\.from\("attendance_checklist_items"\)[\s\S]*\.eq\("task_kind", "consumption_report"\)[\s\S]*consumptionReport\?\.status !== "approved"[\s\S]*consumptionReport\?\.status !== "applied"/,
-    "Checkout approval should require approved/applied consumption reports when the shift has a consumption checklist",
+    /\.from\("attendance_checklist_items"\)[\s\S]*\.eq\("task_kind", "consumption_report"\)|consumptionReport\?\.status !== "approved"|consumptionReport\?\.status !== "applied"/,
+    "Checkout approval should not require a consumption report before approving checkout",
   );
 });

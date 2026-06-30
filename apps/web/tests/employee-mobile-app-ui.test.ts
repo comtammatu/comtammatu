@@ -283,11 +283,33 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
     /<EmployeePage title=\{copy\.shiftTasks\} hideHeaderOnMobile>/,
     "Tasks should avoid repeating the tab title in a mobile page header",
   );
-  assert.match(
+  assert.doesNotMatch(
     employeeTasksPageSource,
-    /item\.taskKind === "consumption_report"/,
-    "Tasks should detect the consumption report workflow by taskKind, not display title",
+    /fetchConsumptionReportForAttendance|fetchConsumptionIngredients/,
+    "Tasks page should not load the consumption report form data",
   );
+  assert.doesNotMatch(
+    employeeTasksSource,
+    /submitConsumptionReport|consumptionCopy|ConsumptionReportPanel/,
+    "Tasks client should not render the consumption report panel",
+  );
+  assert.doesNotMatch(
+    employeeTasksSource,
+    /eslint-disable i18n\/no-inline-vietnamese/,
+    "Tasks client should not carry a local i18n hardcode exemption",
+  );
+  for (const hardcoded of [
+    "Báo cáo tiêu hao bếp",
+    "Nhập ít nhất một dòng tiêu hao.",
+    "Không phát sinh tiêu hao trong ca này.",
+    "Gửi báo cáo tiêu hao",
+  ]) {
+    assert.doesNotMatch(
+      employeeTasksSource,
+      new RegExp(`"${hardcoded}"`),
+      hardcoded,
+    );
+  }
   assert.doesNotMatch(
     employeeTasksPageSource,
     /<EmployeePage[\s\S]*action=\{/,
@@ -512,20 +534,10 @@ test("Employee route family uses shared surface primitives instead of raw UI fra
   const checkoutApprovalsSource = readWebSource(
     "app/(protected)/employee/checkout-approvals/checkout-approvals-client.tsx",
   );
-  assert.match(
+  assert.doesNotMatch(
     checkoutApprovalsSource,
-    /async function approveConsumption[\s\S]*await confirm\([\s\S]*Duyệt và áp Inventory\?/,
-    "Consumption approval must confirm before applying Inventory",
-  );
-  assert.match(
-    checkoutApprovalsSource,
-    /requiresConsumptionReport[\s\S]*status === "approved" \|\| status === "applied"/,
-    "Checkout approval UI should block only when a required consumption report is not approved/applied",
-  );
-  assert.match(
-    checkoutApprovalsSource,
-    /function getCheckoutBlockLabel[\s\S]*Chưa gửi tiêu hao[\s\S]*Cần duyệt tiêu hao[\s\S]*Chờ nhân viên chỉnh sửa/,
-    "Checkout approval cards should explain why checkout approval is blocked by consumption review",
+    /approveConsumption|requiresConsumptionReport|getCheckoutBlockLabel|Duyệt và áp Inventory/,
+    "Checkout approval UI should not block kết ca behind consumption review",
   );
   assert.match(
     checkoutApprovalsSource,

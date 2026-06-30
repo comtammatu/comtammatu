@@ -610,26 +610,6 @@ const approveCheckoutSchema = z.object({
   attendanceId: z.coerce.number().int().positive(),
   note: z.string().trim().max(500).optional(),
 });
-type ConsumptionStatusQuery = PromiseLike<{
-  data: { status: string | null } | null;
-  error: unknown;
-}> & {
-  select: (columns: string) => ConsumptionStatusQuery;
-  eq: (column: string, value: unknown) => ConsumptionStatusQuery;
-  maybeSingle: () => Promise<{
-    data: { status: string | null } | null;
-    error: unknown;
-  }>;
-};
-
-type ConsumptionChecklistQuery = PromiseLike<{
-  data: { id: number }[] | null;
-  error: unknown;
-}> & {
-  select: (columns: string) => ConsumptionChecklistQuery;
-  eq: (column: string, value: unknown) => ConsumptionChecklistQuery;
-};
-
 export async function approveCheckoutRequest(input: {
   attendanceId: number;
   note?: string;
@@ -683,63 +663,6 @@ export async function approveCheckoutRequest(input: {
       success: false,
       error: "Không có quyền duyệt kết ca tại chi nhánh này.",
     };
-  }
-
-  const consumptionChecklistQuery = service as unknown as {
-    from: (table: string) => ConsumptionChecklistQuery;
-  };
-  const { data: consumptionChecklistItems, error: consumptionChecklistError } =
-    await consumptionChecklistQuery
-      .from("attendance_checklist_items")
-      .select("id")
-      .eq("tenant_id", ctx.claims.tenant_id)
-      .eq("attendance_record_id", parsed.data.attendanceId)
-      .eq("task_kind", "consumption_report");
-
-  if (consumptionChecklistError) {
-    console.error("[employee/clock] consumption checklist lookup failed", {
-      code: (consumptionChecklistError as { code?: unknown }).code,
-    });
-    return {
-      success: false,
-      error: "Không thể kiểm tra báo cáo tiêu hao trước khi duyệt kết ca.",
-    };
-  }
-
-  const requiresConsumptionReport =
-    (consumptionChecklistItems ?? []).length > 0;
-
-  const consumptionReportQuery = service as unknown as {
-    from: (table: string) => ConsumptionStatusQuery;
-  };
-  if (requiresConsumptionReport) {
-    const { data: consumptionReport, error: consumptionReportError } =
-      await consumptionReportQuery
-        .from("attendance_consumption_reports")
-        .select("status")
-        .eq("tenant_id", ctx.claims.tenant_id)
-        .eq("attendance_record_id", parsed.data.attendanceId)
-        .maybeSingle();
-
-    if (consumptionReportError) {
-      console.error("[employee/clock] consumption report lookup failed", {
-        code: (consumptionReportError as { code?: unknown }).code,
-      });
-      return {
-        success: false,
-        error: "Không thể kiểm tra báo cáo tiêu hao trước khi duyệt kết ca.",
-      };
-    }
-
-    if (
-      consumptionReport?.status !== "approved" &&
-      consumptionReport?.status !== "applied"
-    ) {
-      return {
-        success: false,
-        error: "Cần duyệt báo cáo tiêu hao trước khi duyệt kết ca.",
-      };
-    }
   }
 
   const { data: checkOutTime, error } = await service.rpc(

@@ -124,6 +124,23 @@ Không dùng local `className="p-0"` hoặc `className="overflow-x-auto"` trên
 
 Domain wrappers như Inventory/Employee/Admin có thể giữ API riêng để tránh sửa hàng loạt call site, nhưng phải delegate về các adapter này thay vì tự style lại `Card`, `Empty`, hoặc page container.
 
+## Branch Operator Hub
+
+Branch Hub là surface mobile-first cho nhân viên và quản lý chi nhánh ở
+`/br/[branchId]`. Nó dùng lại contract Employee thay vì tạo style riêng:
+
+- hub và màn chi tiết dùng `EmployeePage`, `EmployeePanel`,
+  `EmployeeActionSection`, `EmployeeFrame`, `EmployeeStatusStrip`,
+  `EmployeeActionBar`, và `EmployeeControlBar` trước khi nghĩ tới wrapper mới.
+- mobile ẩn page header trùng bằng `hideHeaderOnMobile`; app chrome đã giữ tên
+  app, chi nhánh, và bottom nav.
+- hub là nhóm action rows theo việc cần mở; màn chi tiết giữ một primary action
+  trong panel chính, không đặt CTA vận hành vào page header.
+- branch wrapper chỉ đổi href/scope sang `/br/[branchId]/*`; không redirect vòng
+  qua `/employee/*` và không fork lại layout.
+- copy hiển thị sống trong `messages.employee.*`, `APP_COPY_VI`, hoặc registry
+  domain tương ứng; route/component không hardcode copy vận hành mới.
+
 ## Management Shell Structure
 
 Management chrome (`apps/web/app/components/app-shell.tsx`) render một sidebar

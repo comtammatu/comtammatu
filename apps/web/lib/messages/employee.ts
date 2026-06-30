@@ -185,7 +185,7 @@ export const employee = {
     cancelCheckoutPending: "Đang rút...",
     tasksTitle: "Việc trong ca",
     tasksDescription:
-      "Hoàn thành việc bắt buộc trong ca; Tiêu hao bếp chỉ tick khi được giao.",
+      "Hoàn thành việc bắt buộc trong ca; Kiểm kê tồn mở khi được giao đếm.",
     tasksButton: "Việc trong ca",
     managerCheckoutTitle: "Chấm công ra",
     staffCheckoutTitle: "Gửi kết ca",
@@ -286,7 +286,7 @@ export const employee = {
     today: "Hôm nay",
   },
   tasks: {
-    description: "Checklist ca làm hôm nay, gồm mục Tiêu hao bếp nếu được giao",
+    description: "Checklist ca làm hôm nay, gồm Kiểm kê tồn nếu được giao",
     notStartedTitle: "Chưa vào ca",
     notStartedDescription: "Chấm công vào trước khi mở việc trong ca.",
     checklistTitle: "Checklist",
