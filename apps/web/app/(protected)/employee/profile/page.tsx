@@ -62,7 +62,7 @@ const WORKSPACE_ICON_MAP: Record<string, LucideIcon> = {
   ChefHat: IconChefHat,
 };
 
-const PERSONAL_LINKS: ProfileLink[] = [
+export const PERSONAL_LINKS: ProfileLink[] = [
   {
     key: "leave",
     href: "/employee/leave",
@@ -92,7 +92,11 @@ function mapWorkspaceLink(item: ResolvedNavLink): ProfileLink {
   };
 }
 
-export default async function ProfilePage() {
+export async function ProfilePageContent({
+  personalLinks = PERSONAL_LINKS,
+}: {
+  personalLinks?: ProfileLink[];
+} = {}) {
   const { session, claims, supabase } = await loadAuthState();
   const ctx = await getEmployeeContext();
   const positionCode = claims.position ?? claims.position_code ?? null;
@@ -173,7 +177,7 @@ export default async function ProfilePage() {
 
       <EmployeeActionSection
         title={copy.personalToolsTitle}
-        links={PERSONAL_LINKS}
+        links={personalLinks}
         columns={1}
       />
 
@@ -192,4 +196,8 @@ export default async function ProfilePage() {
       </EmployeeActionBar>
     </EmployeePage>
   );
+}
+
+export default async function ProfilePage() {
+  return <ProfilePageContent />;
 }

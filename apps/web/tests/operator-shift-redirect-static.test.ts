@@ -130,10 +130,12 @@ test("operator shift profile renders inside the branch operator shell", () => {
   assert.equal(exists(path), true, path);
 
   const source = read(path);
-  assert.ok(
-    source.includes('export { default } from "@/(protected)/employee/profile/page"'),
-    path,
-  );
+  assert.ok(source.includes('from "@/(protected)/employee/profile/page"'), path);
+  assert.ok(source.includes("PERSONAL_LINKS"), path);
+  assert.ok(source.includes("ProfilePageContent"), path);
+  assert.ok(source.includes("href: `/br/${branchId}/shift/leave`"), path);
+  assert.ok(source.includes("href: `/br/${branchId}/shift/payslip`"), path);
+  assert.doesNotMatch(source, /export \{ default \}/);
   assert.doesNotMatch(source, /redirect\("\/employee\/profile"\)/);
 });
 
