@@ -1,7 +1,7 @@
 # POS-03 — Tạo đơn mới + gửi bếp
 
 > Hướng dẫn chọn món, thêm vào giỏ, ghi chú và gửi bếp.
-> Dành cho **phục vụ (waiter)** và **thu ngân (cashier)**.
+> Dành cho **phục vụ/thu ngân** dùng POS theo cashier bucket.
 
 ## Tóm tắt
 

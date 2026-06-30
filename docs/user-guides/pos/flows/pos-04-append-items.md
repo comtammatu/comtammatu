@@ -1,7 +1,7 @@
 # POS-04 — Thêm món vào đơn đang mở
 
 > Hướng dẫn thêm món vào đơn đã gửi bếp (khách gọi thêm).
-> Dành cho **phục vụ (waiter)** và **thu ngân (cashier)**.
+> Dành cho **phục vụ/thu ngân** dùng POS theo cashier bucket.
 
 ## Tóm tắt
 

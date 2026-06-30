@@ -18,7 +18,7 @@
 | Khái niệm          | Ý nghĩa                                                                                                                                       | Nằm ở                                              |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
 | **Permission key** | Chuỗi hành động canonical (vd `inventory:production_create`). Là đơn vị authz nhỏ nhất.                                                       | `permission_keys` catalog + `permissions.ts`       |
-| **Position**       | Chức vụ HR (vd `bep_truong` = Bếp trưởng). **Không** gate authz trực tiếp.                                                                    | `positions` (per tenant), `profiles.position_id`   |
+| **Position**       | Chức vụ HR (vd `head_chef` = Bếp trưởng). **Không** gate authz trực tiếp.                                                                    | `positions` (per tenant), `profiles.position_id`   |
 | **Template**       | Bundle permission preset gắn với 1 position. Snapshot — edit template không propagate.                                                        | `role_templates(position_code, permission_keys[])` |
 | **Grant**          | Quyền thật của user tại branch cụ thể, dạng (user, branch, key). `branch_id IS NULL` = tenant-wide.                                           | `staff_permissions`                                |
 | **Access bucket**  | Compatibility claim derived từ `positions.code` mapper. Dùng cho route-level ACL và một số scope guard còn chủ ý trong RPC.             | `module-acl.ts`, `auth_role()` helper              |
@@ -200,9 +200,9 @@ Một số RPC vẫn dùng `auth_role()` như guard phụ:
 
 ## 7. Open Questions / Known Drift
 
-1. **Template drift** — closed by `20260505094000_inventory_rbac_template_contract_v2.sql`: add missing chi nhánh transfer grants for `bep_truong`, remove procurement keys from `quan_ly_CN`, and keep manual overrides reviewable.
+1. **Template drift** — closed by `20260505094000_inventory_rbac_template_contract_v2.sql`: add missing chi nhánh transfer grants for `head_chef`, remove procurement keys from `branch_manager`, and keep manual overrides reviewable.
 2. **Intermediate scope** — Multi-branch access is explicit branch grants or tenant-level permission only.
-3. **Held permissions của kho_truong** (`po_approve`, `invoice_*`) — cố ý để owner / accounting. Document không ghi là thiếu quyền.
+3. **Held permissions của warehouse_manager** (`po_approve`, `invoice_*`) — cố ý để owner / accounting. Document không ghi là thiếu quyền.
 4. **Manual permission overrides** — migration contract chỉ expire grant có `source_template` trỏ tới template hệ thống hiện tại. Grant thủ công phải review bằng admin/audit flow nếu muốn thu hồi.
 
 ---

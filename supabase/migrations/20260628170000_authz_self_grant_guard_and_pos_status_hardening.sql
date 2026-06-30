@@ -15,7 +15,7 @@
 -- RPC-1: Harden update_pos_order_status. (a) Make the branch-scope comparison
 -- NULL-safe (IS DISTINCT FROM) so a non-owner profile with a NULL branch_id can
 -- no longer bypass the branch check. (b) Add a POS-operating role allow-list
--- (owner + branch_manager + cashier + waiter, matching the sibling POS RPC
+-- (owner + branch_manager + cashier, matching the sibling POS RPC
 -- apply_order_discount) so non-POS roles (e.g. 'office', kitchen, warehouse)
 -- can no longer transition order status. Every other safeguard (owner bypass,
 -- advisory lock, FOR UPDATE, terminal-state checks, item-status invariants) is
@@ -320,7 +320,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'branch_manager', 'cashier')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;

@@ -160,13 +160,13 @@ URL: `/br/{branchId}/pos` → bàn occupied → đơn
 
 > 💡 Per-item void giữ đơn alive, khác với "Hủy đơn" (Bước 2) đóng toàn bộ.
 
-### Phục vụ (waiter) muốn hủy đơn
+### Nhân viên phục vụ muốn hủy đơn
 
 **Bạn thấy:** Menu Khác… không có option "Hủy đơn".
 
 **Lý do:** Waiter không có quyền `pos:void_order` — chỉ thu ngân/quản lý mới hủy được.
 
-**Cách xử lý:** Báo thu ngân ra hủy. Hoặc waiter tự hủy từng món rồi gọi cashier confirm tổng (nếu thực sự cần).
+**Cách xử lý:** Báo thu ngân ra hủy. Hoặc nhân viên phục vụ tự hủy từng món rồi gọi cashier confirm tổng (nếu thực sự cần).
 
 ### Chuyển bàn nhưng không có bàn trống
 

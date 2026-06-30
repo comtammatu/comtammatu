@@ -402,12 +402,22 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
     "CREATE OR REPLACE FUNCTION public.branch_manager_approve_employee_clock_out",
     "check_out = v_requested_at",
     "'attendance.checkout_requested'",
-    "ARRAY['owner', 'super_manager']::text[]",
     "cannot_approve_own_checkout",
     "branch_manager_can_only_approve_branch_staff",
   ]) {
     assert.ok(migration.includes(expected), `expected ${expected}`);
   }
+  assert.ok(
+    countGateMigrationSrc.includes(
+      "WHEN v_requester_role = 'branch_manager' THEN ARRAY['owner']::text[]",
+    ) &&
+      countGateMigrationSrc.includes(
+        "WHEN v_requester_role IN ('cashier', 'chef') THEN ARRAY['branch_manager']::text[]",
+      ) &&
+      !countGateMigrationSrc.includes(["super", "manager"].join("_")) &&
+      !countGateMigrationSrc.includes(`'${["wait", "er"].join("")}'`),
+    "current checkout approval gate must use canonical access buckets only",
+  );
 
   assert.ok(
     !migration.includes("checkout_requested_code_verified"),

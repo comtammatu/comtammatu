@@ -3,7 +3,7 @@
 > Hướng dẫn mở ca bán hàng đầu giờ trên màn hình POS.
 > Dành cho **thu ngân (cashier)** và **quản lý chi nhánh (branch manager)**.
 
-> 📌 **Per-branch model (D7, 2026-04-27):** Chi nhánh chỉ có **1 ca POS hoạt động cùng lúc**. Cashier mở ca → tất cả nhân viên cùng chi nhánh ride chung ca đó (waiter, chef đều thấy đơn). Không cần chọn máy POS cụ thể.
+> 📌 **Per-branch model (D7, 2026-04-27):** Chi nhánh chỉ có **1 ca POS hoạt động cùng lúc**. Cashier mở ca → nhân viên cùng chi nhánh ride chung ca đó theo quyền được cấp. Không cần chọn máy POS cụ thể.
 
 ## Tóm tắt
 
@@ -75,9 +75,9 @@ Ví dụ: `/br/1/pos`
 
 ### Không có quyền mở ca
 
-> _Mockup chưa có (cần waiter test account để capture — sẽ bổ sung sau)_
+> _Mockup chưa có (cần service-staff test account để capture — sẽ bổ sung sau)_
 
-**Khi nào gặp:** Vai trò phục vụ (waiter), bếp (chef) — không có quyền `pos:open_cashbox`.
+**Khi nào gặp:** Nhân viên phục vụ hoặc bếp không có quyền `pos:open_cashbox`.
 
 **Bạn thấy:** Màn "Chờ mở ca" với hướng dẫn:
 
@@ -127,7 +127,7 @@ Ví dụ: `/br/1/pos`
 
 - Key: `pos:open_cashbox` (catalog: [packages/shared/src/auth/permissions.ts](../../../../packages/shared/src/auth/permissions.ts)).
 - Server-side check: `getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_OPEN_CASHBOX, branchId)`.
-- Page-level gate: `permFlags.canOpenShift` → render `PosStatusShell` thay vì `SessionGate` khi waiter vào.
+- Page-level gate: `permFlags.canOpenShift` → render `PosStatusShell` thay vì `SessionGate` khi staff không có quyền mở ca vào.
 
 ### Tham chiếu thiết kế
 

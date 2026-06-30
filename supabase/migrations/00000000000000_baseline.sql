@@ -639,7 +639,7 @@ CREATE FUNCTION private.staff_role_from_position_code(p_code text) RETURNS text
   SELECT CASE p_code
     WHEN 'owner' THEN 'owner' WHEN 'branch_manager' THEN 'branch_manager' WHEN 'warehouse_manager' THEN 'warehouse_manager'
     WHEN 'production_manager' THEN 'production_manager' WHEN 'head_chef' THEN 'production_manager' WHEN 'kitchen_helper' THEN 'chef'
-    WHEN 'chef' THEN 'chef' WHEN 'cashier' THEN 'cashier' WHEN 'waiter' THEN 'waiter' WHEN 'office' THEN 'office' ELSE NULL END
+    WHEN 'chef' THEN 'chef' WHEN 'cashier' THEN 'cashier' WHEN 'office' THEN 'office' ELSE NULL END
 $$;
 
 
@@ -647,7 +647,7 @@ $$;
 -- Name: FUNCTION staff_role_from_position_code(p_code text); Type: COMMENT; Schema: private; Owner: -
 --
 
-COMMENT ON FUNCTION private.staff_role_from_position_code(p_code text) IS 'SQL twin of POSITION_CODE_TO_STAFF_ROLE (packages/shared/src/auth/types.ts). Canonical English codes only (10) — no aliases, no super_manager. ELSE NULL is fail-closed: auth hook RAISEs on unknown codes.';
+COMMENT ON FUNCTION private.staff_role_from_position_code(p_code text) IS 'SQL twin of POSITION_CODE_TO_STAFF_ROLE (packages/shared/src/auth/types.ts). Canonical English codes only. ELSE NULL is fail-closed: auth hook RAISEs on unknown codes.';
 
 
 --
@@ -964,7 +964,7 @@ BEGIN
   IF (p_role IS NOT NULL OR p_branch_id IS NOT NULL) AND NOT public.has_permission_any('staff:assign_position') THEN
     RAISE EXCEPTION 'forbidden: missing staff:assign_position' USING ERRCODE = '42501';
   END IF;
-  IF p_role IS NOT NULL AND p_role NOT IN ('owner','branch_manager','warehouse_manager','production_manager','cashier','waiter','chef','office') THEN
+  IF p_role IS NOT NULL AND p_role NOT IN ('owner','branch_manager','warehouse_manager','production_manager','cashier','chef','office') THEN
     RAISE EXCEPTION 'invalid_access_bucket: %', p_role USING ERRCODE = '22023';
   END IF;
   SELECT p.id, p.branch_id, p.full_name, p.phone, p.tenant_id, p.position_id, private.staff_role_from_position_code(po.code) AS role_text
@@ -977,7 +977,7 @@ BEGIN
   v_target_role := v_target.role_text;
   v_final_role := COALESCE(p_role, v_target_role);
   v_final_branch := COALESCE(p_branch_id, v_target.branch_id);
-  IF v_final_role IN ('cashier','waiter','chef','branch_manager','warehouse_manager','production_manager') AND v_final_branch IS NULL THEN
+  IF v_final_role IN ('cashier','chef','branch_manager','warehouse_manager','production_manager') AND v_final_branch IS NULL THEN
     RAISE EXCEPTION 'branch_required_for_operational_position' USING ERRCODE = 'P0001';
   END IF;
   IF v_final_branch IS NOT NULL THEN
@@ -985,7 +985,7 @@ BEGIN
     IF NOT FOUND THEN
       RAISE EXCEPTION 'branch_not_found_in_tenant' USING ERRCODE = 'P0002';
     END IF;
-    IF v_final_role IN ('cashier','waiter','chef','branch_manager','warehouse_manager','production_manager') AND v_branch_kind <> 'branch' THEN
+    IF v_final_role IN ('cashier','chef','branch_manager','warehouse_manager','production_manager') AND v_branch_kind <> 'branch' THEN
       RAISE EXCEPTION 'operational positions must be assigned to branch site' USING ERRCODE = 'P0001';
     END IF;
   END IF;
@@ -998,7 +998,7 @@ BEGIN
     IF v_target_role = 'branch_manager' THEN
       RAISE EXCEPTION 'branch_manager_cannot_modify_peer' USING ERRCODE = '42501';
     END IF;
-    IF v_final_role NOT IN ('cashier','waiter','chef') THEN
+    IF v_final_role NOT IN ('cashier','chef') THEN
       RAISE EXCEPTION 'branch_manager_can_only_assign_branch_staff' USING ERRCODE = '42501';
     END IF;
     IF v_final_branch IS DISTINCT FROM v_actor_branch THEN
@@ -1978,7 +1978,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'branch_manager', 'cashier')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -2140,7 +2140,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'branch_manager', 'cashier')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -2580,7 +2580,7 @@ CREATE FUNCTION public.auth_role_to_position(p_role text) RETURNS text
   SELECT CASE p_role
     WHEN 'owner' THEN 'owner' WHEN 'branch_manager' THEN 'branch_manager' WHEN 'warehouse_manager' THEN 'warehouse_manager'
     WHEN 'production_manager' THEN 'head_chef' WHEN 'head_chef' THEN 'head_chef' WHEN 'kitchen_helper' THEN 'kitchen_helper'
-    WHEN 'chef' THEN 'chef' WHEN 'cashier' THEN 'cashier' WHEN 'waiter' THEN 'waiter' WHEN 'office' THEN 'office' ELSE NULL END
+    WHEN 'chef' THEN 'chef' WHEN 'cashier' THEN 'cashier' WHEN 'office' THEN 'office' ELSE NULL END
 $$;
 
 
@@ -2983,7 +2983,7 @@ BEGIN
       RAISE EXCEPTION 'checkout_approver_wrong_branch' USING ERRCODE = '42501';
     END IF;
 
-    IF v_requester_role NOT IN ('cashier', 'waiter', 'chef') THEN
+    IF v_requester_role NOT IN ('cashier', 'chef') THEN
       RAISE EXCEPTION 'branch_manager_can_only_approve_branch_staff' USING ERRCODE = '42501';
     END IF;
   ELSIF v_approver_role NOT IN ('owner') THEN
@@ -3273,7 +3273,7 @@ BEGIN
     RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
   END IF;
 
-  IF v_prof_role IS NULL OR v_prof_role NOT IN ('branch_manager', 'cashier', 'waiter') THEN
+  IF v_prof_role IS NULL OR v_prof_role NOT IN ('branch_manager', 'cashier') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
@@ -3494,7 +3494,6 @@ BEGIN
 
   IF v_access_bucket IN (
     'cashier',
-    'waiter',
     'chef',
     'branch_manager',
     'warehouse_manager',
@@ -3905,7 +3904,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'branch_manager', 'cashier')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -4019,7 +4018,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'branch_manager', 'cashier')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -8032,7 +8031,7 @@ BEGIN
     RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
   END IF;
 
-  IF v_prof_role IS NULL OR v_prof_role NOT IN ('branch_manager', 'cashier', 'waiter') THEN
+  IF v_prof_role IS NULL OR v_prof_role NOT IN ('branch_manager', 'cashier') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
@@ -8426,7 +8425,7 @@ BEGIN
   v_requester_role := COALESCE(v_requester_role, 'office');
   v_target_roles := CASE
     WHEN v_requester_role = 'branch_manager' THEN ARRAY['owner']::text[]
-    WHEN v_requester_role IN ('cashier', 'waiter', 'chef') THEN ARRAY['branch_manager']::text[]
+    WHEN v_requester_role IN ('cashier', 'chef') THEN ARRAY['branch_manager']::text[]
     ELSE ARRAY['owner']::text[]
   END;
 
@@ -13356,7 +13355,7 @@ BEGIN
   VALUES (
     v_row.tenant_id,
     v_row.branch_id,
-    ARRAY['cashier', 'waiter', 'branch_manager']::TEXT[],
+    ARRAY['cashier', 'branch_manager']::TEXT[],
     'pos.kds_out_of_stock',
     'warning',
     format('Bếp báo hết món #%s', v_row.order_number),
@@ -13516,7 +13515,7 @@ $$;
 -- Name: FUNCTION mark_order_item_served(p_item_id bigint); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.mark_order_item_served(p_item_id bigint) IS 'POS waiter per-item served action. Sets one order_items row + matching kds_tickets to served. Order-level state machine is untouched; cashier still drives ''served''/''completed'' via update_pos_order_status / payment close. Permission: pos role with branch scope (cashier/waiter/manager).';
+COMMENT ON FUNCTION public.mark_order_item_served(p_item_id bigint) IS 'POS per-item served action. Sets one order_items row + matching kds_tickets to served. Order-level state machine is untouched; cashier still drives ''served''/''completed'' via update_pos_order_status / payment close. Permission: pos role with branch scope (cashier/manager).';
 
 
 --
@@ -13774,7 +13773,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'branch_manager', 'cashier')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -14559,7 +14558,7 @@ CREATE FUNCTION public.position_id_from_access_bucket(p_access_bucket text, p_te
   WHERE po.tenant_id = p_tenant AND COALESCE(po.is_active, true) = true
     AND private.staff_role_from_position_code(po.code) = r.access_bucket
   ORDER BY CASE WHEN po.code = r.preferred_position_code THEN -1 ELSE 0 END,
-    CASE po.code WHEN 'owner' THEN 0 WHEN 'branch_manager' THEN 0 WHEN 'warehouse_manager' THEN 0 WHEN 'head_chef' THEN 0 WHEN 'chef' THEN 0 WHEN 'cashier' THEN 0 WHEN 'waiter' THEN 0 WHEN 'office' THEN 0 WHEN 'kitchen_helper' THEN 1 WHEN 'production_manager' THEN 1 ELSE 9 END,
+    CASE po.code WHEN 'owner' THEN 0 WHEN 'branch_manager' THEN 0 WHEN 'warehouse_manager' THEN 0 WHEN 'head_chef' THEN 0 WHEN 'chef' THEN 0 WHEN 'cashier' THEN 0 WHEN 'office' THEN 0 WHEN 'kitchen_helper' THEN 1 WHEN 'production_manager' THEN 1 ELSE 9 END,
     po.id LIMIT 1;
 $$;
 
@@ -15970,7 +15969,7 @@ BEGIN
     RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
   END IF;
 
-  IF v_prof_role IS NULL OR v_prof_role NOT IN ('branch_manager', 'cashier', 'waiter') THEN
+  IF v_prof_role IS NULL OR v_prof_role NOT IN ('branch_manager', 'cashier') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
@@ -16413,7 +16412,7 @@ BEGIN
     RAISE EXCEPTION 'hold_token required' USING ERRCODE = '22023';
   END IF;
 
-  IF v_role NOT IN ('owner', 'branch_manager', 'cashier', 'waiter') THEN
+  IF v_role NOT IN ('owner', 'branch_manager', 'cashier') THEN
     RAISE EXCEPTION 'permission denied: pos daily-limit hold' USING ERRCODE = '42501';
   END IF;
 
@@ -16705,7 +16704,7 @@ BEGIN
     RAISE EXCEPTION 'p_items must be a JSON array' USING ERRCODE = '22023';
   END IF;
 
-  IF v_role NOT IN ('owner', 'branch_manager', 'cashier', 'waiter') THEN
+  IF v_role NOT IN ('owner', 'branch_manager', 'cashier') THEN
     RAISE EXCEPTION 'permission denied: pos daily-limit hold' USING ERRCODE = '42501';
   END IF;
 
@@ -18383,7 +18382,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'branch_manager', 'cashier')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -18810,7 +18809,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'branch_manager', 'cashier')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -18855,7 +18854,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner') THEN
     SELECT b.code INTO v_branch_code
       FROM public.branches b
      WHERE b.id = v_source.branch_id AND b.tenant_id = v_prof_tenant;
@@ -21042,7 +21041,7 @@ BEGIN
   VALUES (
     NEW.tenant_id,
     NEW.branch_id,
-    ARRAY['cashier', 'waiter', 'branch_manager']::TEXT[],
+    ARRAY['cashier', 'branch_manager']::TEXT[],
     'pos.order_new',
     'info',
     format('Đơn mới #%s', NEW.order_number),
@@ -22745,7 +22744,7 @@ BEGIN
     RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
   END IF;
 
-  IF v_prof_role IS NULL OR v_prof_role NOT IN ('branch_manager', 'cashier', 'waiter') THEN
+  IF v_prof_role IS NULL OR v_prof_role NOT IN ('branch_manager', 'cashier') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
@@ -22876,7 +22875,7 @@ BEGIN
     GROUP BY ho.tenant_id, ho.branch_id HAVING COUNT(*) >= 1
   LOOP
     INSERT INTO public.notifications (tenant_id, target_branch_id, target_roles, kind, severity, title, body, meta, dedup_key)
-    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','quan_ly_vung']::TEXT[],
+    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','branch_manager']::TEXT[],
             'inventory.grn.weekly_override_report',
             CASE WHEN v_row.override_count >= 5 THEN 'warning' ELSE 'info' END,
             'GRN hardblock override — weekly report',
@@ -22911,7 +22910,7 @@ BEGIN
     GROUP BY si.tenant_id, si.branch_id
   LOOP
     INSERT INTO public.notifications (tenant_id, target_branch_id, target_roles, kind, severity, title, body, meta, dedup_key)
-    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','quan_ly_vung','quan_ly_CN']::TEXT[],
+    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','branch_manager']::TEXT[],
       'inventory.waste.weekly_report',
       CASE WHEN v_row.pending_count >= 5 THEN 'warning' ELSE 'info' END,
       'Báo cáo waste — tuần vừa qua',
@@ -23231,7 +23230,7 @@ COMMENT ON COLUMN public.attendance_records.checkout_requested_by_role IS 'Staff
 -- Name: COLUMN attendance_records.checkout_approval_target_roles; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.attendance_records.checkout_approval_target_roles IS 'Access buckets that should approve this checkout request. Branch staff target branch_manager; manager and non-branch staff target owner/super_manager.';
+COMMENT ON COLUMN public.attendance_records.checkout_approval_target_roles IS 'Access buckets that should approve this checkout request. Branch staff target branch_manager; manager and non-branch staff target owner.';
 
 
 --
@@ -24843,7 +24842,7 @@ COMMENT ON COLUMN public.order_items.sides IS 'Snapshot: [{"side_item_id": bigin
 -- Name: COLUMN order_items.cancel_reason; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.order_items.cancel_reason IS 'Lý do huỷ món (do waiter/cashier nhập khi void). Null nếu chưa huỷ.';
+COMMENT ON COLUMN public.order_items.cancel_reason IS 'Lý do huỷ món (do cashier nhập khi void). Null nếu chưa huỷ.';
 
 
 --
@@ -27821,7 +27820,7 @@ CREATE TABLE public.webhook_events (
 -- Name: TABLE webhook_events; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.webhook_events IS 'M4 P1-A (2026-04-29): payment provider webhook idempotency log. UNIQUE(provider, request_id) blocks duplicate processing. Webhook routes MUST insert this row before calling complete_payment_and_consume_stock or any payment-state RPC. RLS allows owner+super_manager SELECT (debugging/reconciliation); INSERT only via service_role webhook handlers (RLS bypassed).';
+COMMENT ON TABLE public.webhook_events IS 'M4 P1-A (2026-04-29): payment provider webhook idempotency log. UNIQUE(provider, request_id) blocks duplicate processing. Webhook routes MUST insert this row before calling complete_payment_and_consume_stock or any payment-state RPC. RLS allows owner SELECT for debugging/reconciliation; INSERT only via service_role webhook handlers (RLS bypassed).';
 
 
 --

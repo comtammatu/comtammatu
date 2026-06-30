@@ -76,7 +76,7 @@ scripts/            # SQL seeds, lint helpers
 | `/orders`                   | Manager+         | Cross-branch order browser                    |
 | `/notifications`            | All staff        | Notification center                           |
 | `/employee/*`               | All staff        | Self-service: clock, schedule, payslip        |
-| `/br/[branchId]/pos`        | Cashier / waiter | Point of Sale (PWA installable)               |
+| `/br/[branchId]/pos`        | Cashier / service | Point of Sale (PWA installable)              |
 | `/br/[branchId]/kds`        | Chef             | Kitchen Display                               |
 | `/br/[branchId]/settings/*` | Branch manager+  | Per-branch POS, tables, printers              |
 

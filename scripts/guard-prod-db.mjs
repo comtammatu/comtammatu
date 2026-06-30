@@ -16,7 +16,9 @@ import { readFileSync } from "node:fs";
 // host, stored pooler URL), pg_restore toward a protected target (restore is
 // a write by definition), HTTP clients sending write methods/bodies to a
 // protected target, and write-capable Supabase MCP tools (any server name)
-// targeting a protected ref. Read paths stay open.
+// targeting a protected ref. Preview branch create/delete is explicitly allowed
+// because it does not mutate the protected parent; branch merge/reset/rebase is
+// still blocked. Read paths stay open.
 //
 // Known residual gaps (text matching cannot close them; the real fix is
 // keeping prod credentials out of the local agent env): SDK writes via
@@ -55,7 +57,7 @@ const HTTP_WRITE =
 // `mcp__codex_apps__supabase._execute_sql` are caught, not only the direct
 // `mcp__supabase__execute_sql` shape. The action stays anchored to `$`.
 const MCP_WRITE_TOOL =
-  /^mcp__.+?[._](apply_migration|execute_sql|deploy_edge_function|pause_project|restore_project|merge_branch|reset_branch|rebase_branch)$/;
+  /^mcp__.+?[._](apply_migration|execute_sql|deploy_edge_function|pause_project|restore_project|create_branch|delete_branch|merge_branch|reset_branch|rebase_branch)$/;
 
 function block(reason) {
   console.error(
@@ -132,6 +134,10 @@ if (mcpMatch) {
   const target = projectId === "" ? "iexwsuaqqenyjiskawoj" : projectId;
   const label = PROTECTED_REFS[target];
   if (!label) process.exit(0); // unknown ref (e.g. a future dev project) — allowed
+
+  if (action === "create_branch" || action === "delete_branch") {
+    process.exit(0);
+  }
 
   if (action === "execute_sql") {
     const query = String(toolInput.query ?? toolInput.sql ?? "");

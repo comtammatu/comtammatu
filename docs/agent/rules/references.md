@@ -31,7 +31,7 @@ adding an adapter, not duplicating rules.
 | Codex       | `AGENTS.md` (native)             | `.codex/config.toml` | `.codex/hooks.json` → `scripts/guard-prod-db.mjs`     |
 
 `scripts/guard-prod-db.mjs` is the single guard; the adapter configs only wire it
-per runtime. `pnpm lint:guard-sync` enforces that every adapter in `ADAPTER_PATHS`
+per runtime. `corepack pnpm lint:guard-sync` enforces that every adapter in `ADAPTER_PATHS`
 (`scripts/check-guard-sync.mjs`) wires the canonical hook with matching matchers.
 A new IDE without a registered adapter runs **UNGUARDED against the production
 DB** — add the adapter and register it in `check-guard-sync.mjs` before using it.
@@ -47,10 +47,10 @@ Two duplications are deliberate and machine-enforced — do NOT "de-duplicate" t
 
 - `MIRROR:constraints` / `MIRROR:architecture` / `MIRROR:commands` blocks are
   copied byte-for-byte between `AGENTS.md` and `docs/agent/rules/engineering.md`
-  (each runtime auto-loads only its entrypoint). `pnpm lint:rules-mirror`
+  (each runtime auto-loads only its entrypoint). `corepack pnpm lint:rules-mirror`
   enforces equality — edit BOTH identically.
 - The prod-DB guard triad (`scripts/guard-prod-db.mjs`, `.claude/settings.json`,
-  and `.codex/hooks.json`) is kept in sync by `pnpm lint:guard-sync`.
+  and `.codex/hooks.json`) is kept in sync by `corepack pnpm lint:guard-sync`.
 
 ## Planning And Specs
 
@@ -112,7 +112,7 @@ that list.
 `docs/plan/*` dated audit/remediation files and `docs/worklog/*` are **point-in-time snapshots, not source of truth**. Their findings get fixed by later PRs; an unreconciled snapshot reads as if every finding is still open and misleads the next agent (and any model reading the repo cold).
 
 - **Verify before acting.** Treat a finding in a snapshot doc as a claim to re-verify against current code + git history, never a live fact. Durable truth lives in the `docs/agent/rules/`, `docs/ref/`, `docs/spec/`, `docs/modules/` zones above.
-- **Required banner.** Every snapshot doc MUST carry, in its first 15 lines, a status line naming the commit it was last reconciled against: `Reconciled-through <git-sha>`. `pnpm lint:doc-staleness` flags snapshot docs missing it (advisory; `DOC_STALENESS_STRICT=1` fails closed). `docs/plan/decisions.md`, `docs/plan/adr/`, and `README.md` are durable and exempt.
+- **Required banner.** Every snapshot doc MUST carry, in its first 15 lines, a status line naming the commit it was last reconciled against: `Reconciled-through <git-sha>`. `corepack pnpm lint:doc-staleness` flags snapshot docs missing it (advisory; `DOC_STALENESS_STRICT=1` fails closed). `docs/plan/decisions.md`, `docs/plan/adr/`, and `README.md` are durable and exempt.
 - **Reconcile-on-merge.** When a PR lands a finding tracked in a snapshot doc, tag that finding `✅ #<PR>` in place and bump the doc's `Reconciled-through` sha. Never leave a landed finding presented as open.
 - **Retire when empty.** When all findings have landed, delete the doc (git is the archive) or promote any durable rule to its canonical doc above. Do not keep a fully-resolved audit as a tombstone.
 
@@ -120,7 +120,7 @@ that list.
 
 - OKF is an exchange/export format for agent-readable project knowledge, not a
   project authority. The source-of-truth docs above always win.
-- Run `pnpm docs:okf` to generate a disposable OKF v0.1 bundle under
+- Run `corepack pnpm docs:okf` to generate a disposable OKF v0.1 bundle under
   `.tmp/okf/` from the current Markdown authority files.
 - Generated OKF bundles must stay out of version control unless the owner
   explicitly approves a publishable artifact path.

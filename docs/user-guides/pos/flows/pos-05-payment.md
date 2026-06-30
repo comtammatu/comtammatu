@@ -114,7 +114,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 
 > 💡 Tờ tạm tính có ghi "TẠM TÍNH" và KHÔNG hợp lệ làm chứng từ thuế. HĐĐT chỉ xuất sau khi xác nhận thanh toán.
 
-### Phục vụ (waiter) mở bill này
+### Nhân viên phục vụ mở bill này
 
 **Bạn thấy:** Sheet vẫn mở, NHƯNG nút "Tiền mặt" bị mờ / không bấm được.
 

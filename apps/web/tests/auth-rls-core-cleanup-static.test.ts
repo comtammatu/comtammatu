@@ -15,6 +15,17 @@ const scopeMigration = readFileSync(
   ),
   "utf8",
 );
+const canonicalTemplateMigration = readFileSync(
+  resolve(
+    repoRoot,
+    "supabase/migrations/20260630031456_canonicalize_branch_manager_template.sql",
+  ),
+  "utf8",
+);
+const authTypes = readFileSync(
+  resolve(repoRoot, "packages/shared/src/auth/types.ts"),
+  "utf8",
+);
 
 function extractSqlFunction(source: string, name: string): string {
   const pattern = new RegExp(
@@ -50,4 +61,61 @@ test("permission-scope cleanup normalizes existing rows and keeps template grant
   assert.match(scopeMigration, /WHEN v_perm_scope = 'branch' THEN v_branch/);
   assert.match(scopeMigration, /pk\.scope = 'branch'[\s\S]*sp\.branch_id IS NULL/);
   assert.match(scopeMigration, /pk\.scope = 'tenant'[\s\S]*sp\.branch_id IS NOT NULL/);
+});
+
+test("active auth templates and target-role lists use canonical access names", () => {
+  const retiredNames = [
+    ["super", "manager"].join("_"),
+    ["area", "manager"].join("_"),
+    ["quan", "ly", "vung"].join("_"),
+    ["quan", "ly", "CN"].join("_"),
+    ["cashier", "floor"].join("_"),
+    ["phu", "bep"].join("_"),
+    ["kho", "truong"].join("_"),
+    ["bep", "truong"].join("_"),
+  ];
+  const checkedSources = [
+    "supabase/_local-dev/dev-tenant-seed.sql",
+    "supabase/tests/branch_manager_kds_permissions_test.sql",
+    "supabase/migrations/00000000000000_baseline.sql",
+  ];
+
+  for (const file of checkedSources) {
+    const source = readFileSync(resolve(repoRoot, file), "utf8");
+    for (const retired of retiredNames) {
+      assert.doesNotMatch(source, new RegExp(`\\b${retired}\\b`), `${file}: ${retired}`);
+    }
+  }
+
+  for (const canonicalName of [
+    "cashier",
+    "kitchen_helper",
+    "warehouse_manager",
+    "head_chef",
+    "branch_manager",
+  ]) {
+    assert.match(
+      canonicalTemplateMigration,
+      new RegExp(`'${canonicalName}'`),
+      `migration should canonicalize ${canonicalName}`,
+    );
+  }
+  assert.match(canonicalTemplateMigration, /public\.split_order\(bigint,jsonb,uuid\)/);
+  assert.match(canonicalTemplateMigration, /weekly_grn_override_report/);
+  assert.match(canonicalTemplateMigration, /ARRAY\['owner','branch_manager'\]::TEXT\[\]/);
+});
+
+test("compatibility service position remains an alias, not an access bucket", () => {
+  const compatibilityServicePosition = ["wait", "er"].join("");
+  const accessBuckets = authTypes.match(
+    /export const ACCESS_BUCKETS = \[[\s\S]*?\] as const;/,
+  )?.[0];
+
+  assert.ok(accessBuckets, "missing ACCESS_BUCKETS block");
+  assert.doesNotMatch(accessBuckets, new RegExp(`"${compatibilityServicePosition}"`));
+  assert.match(
+    authTypes,
+    new RegExp(`${compatibilityServicePosition}:\\s*"cashier"`),
+    "compatibility service position must map to cashier for prior tokens/data",
+  );
 });

@@ -37,7 +37,7 @@ Trạng thái: **Phase 1 ĐÃ VÀO REPO** — Q0–Q9 chốt (D049); migration t
 - Idempotency: `pg_advisory_xact_lock(order_id)` + `FOR UPDATE` orders + payment; replay → lỗi sạch (`order_already_cancelled`/`already_refunded`), không double-reversal, không 500.
 
 ### ACL
-- Thêm **key mới** `pos:void_paid_order` (KHÔNG tái dùng `pos:void_order` — key đó cashier/waiter đang có; không được cho cashier tự đảo tiền).
+- Thêm **key mới** `pos:void_paid_order` (KHÔNG tái dùng `pos:void_order` — key đó cashier/service workflow đang có; không được cho cashier tự đảo tiền).
 - `permissions.ts`: `POS_VOID_PAID_ORDER` + bump `PERMISSION_KEY_COUNT` (+1 → 91 sau hợp nhất với key mới của main).
 - `posVoidPaidAuth` resolver: role = `['owner','branch_manager']`, grant `pos:void_paid_order`.
 - ⚠️ **Backfill:** thêm key vào role_templates KHÔNG tự cấp cho manager đã tồn tại (grant per-user). Owner phải chạy `apply_template_to_user` backfill, nếu không manager bị `forbidden` (bài học sự cố `orders:refund_approve`).

@@ -7,32 +7,32 @@ Use this file for repo-wide engineering constraints, commands, architecture, imp
 <!-- MIRROR:commands:begin — synced copy; edit BOTH AGENTS.md and docs/agent/rules/engineering.md. -->
 
 ```bash
-pnpm dev          # Start dev server (Turbopack)
-pnpm build        # Production build
-pnpm typecheck    # Type checking across all packages
-pnpm lint         # Repo guard checks (copy, ui-contract, client-storage, rules-mirror, guard-sync, regression-guards, review-tier) + ESLint
-pnpm test         # Test suites (turbo test)
-pnpm verify       # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
-pnpm db:types     # Regenerate Supabase types after migration is applied to the type source schema
+corepack pnpm dev          # Start dev server (Turbopack)
+corepack pnpm build        # Production build
+corepack pnpm typecheck    # Type checking across all packages
+corepack pnpm lint         # Repo guard checks (copy, ui-contract, client-storage, rules-mirror, guard-sync, regression-guards, review-tier) + ESLint
+corepack pnpm test         # Test suites (turbo test)
+corepack pnpm verify       # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
+corepack pnpm db:types     # Regenerate Supabase types after migration is applied to the type source schema
 ```
 
 <!-- MIRROR:commands:end -->
 
 ## Core Constraints
 
-<!-- MIRROR:constraints:begin — intentional synced copy in AGENTS.md and docs/agent/rules/engineering.md (other agents auto-load only their entrypoint). Edit BOTH identically; `pnpm lint:rules-mirror` enforces. -->
+<!-- MIRROR:constraints:begin — intentional synced copy in AGENTS.md and docs/agent/rules/engineering.md (other agents auto-load only their entrypoint). Edit BOTH identically; `corepack pnpm lint:rules-mirror` enforces. -->
 
 - MUST use TypeScript strict mode. `noUncheckedIndexedAccess: true`
 - MUST use `supabase-js` for all queries. NEVER Prisma.
 - MUST validate all Server Action inputs with Zod schemas.
-- MUST run `pnpm typecheck && pnpm lint && pnpm build` before marking implementation tasks complete.
+- MUST run `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` before marking implementation tasks complete.
 - NEVER return raw Supabase/Postgres `error.message` to clients.
 - NEVER import `@comtammatu/database` barrel in `"use client"` components.
 - NEVER store scope in `localStorage` or React Context. Scope belongs in URL params only.
 - Multi-item atomic writes MUST use a Postgres RPC function.
 - Agents MAY apply migrations directly on approved dev/test Supabase servers only, after verifying the target ref against the Environment Registry in `docs/agent/rules/database.md`.
 - NEVER apply migrations directly to production. Production flow: write migration file → PR → merge → owner applies manually.
-- After SQL migration is applied to the schema used for generated types, run `pnpm db:types`.
+- After SQL migration is applied to the schema used for generated types, run `corepack pnpm db:types`.
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
 - NEVER add agent notes, dev commit notes, implementation explanations, or internal commentary to project UI.
 - NEVER leave tombstone or provenance notes about deleted code, files, flows, or projects — in code comments, docs, or SQL. Delete cleanly; git history is the record.
@@ -66,7 +66,7 @@ Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.
 
 ```text
 /admin/*              → Tenant-level management (manager+ roles)
-/br/[branchId]/pos    → POS (cashier/waiter)
+/br/[branchId]/pos    → POS (cashier / service workflow)
 /br/[branchId]/kds    → KDS (chef)
 /employee             → Employee task surface (all staff)
 /login                → Auth

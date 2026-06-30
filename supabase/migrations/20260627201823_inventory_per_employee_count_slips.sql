@@ -38,7 +38,7 @@ BEGIN
     WHERE tenant_id = t.id
       AND position_code IN (
         'owner', 'branch_manager', 'warehouse_manager', 'production_manager',
-        'head_chef', 'kitchen_helper', 'chef', 'cashier', 'waiter'
+        'head_chef', 'kitchen_helper', 'chef', 'cashier'
       );
 
     UPDATE public.role_templates

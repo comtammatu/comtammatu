@@ -45,12 +45,12 @@
 
 ## D012: Tier-2 trim + gộp role POS — định hướng phần mềm hỗ trợ Hộ Kinh Doanh (2026-06-10)
 
-**Context:** Đây là phần mềm HỖ TRỢ vận hành HKD, không phải nền tảng F&B đa năng. Prod xác nhận: cashier ≫ waiter (cùng người làm cả hai), `shift_assignments` = 0 dòng (chia ca chưa bao giờ là workflow thật).
+**Context:** Đây là phần mềm HỖ TRỢ vận hành HKD, không phải nền tảng F&B đa năng. Prod xác nhận: cashier kiêm phục vụ là luồng thật, `shift_assignments` = 0 dòng (chia ca chưa bao giờ là workflow thật).
 
 **Decision:**
 
 1. LOẠI khỏi backlog (không đề xuất lại): Local-First/offline POS (D008), VNPay (VietQR+MoMo đủ), native POS Flutter/Capacitor (PWA chạy ổn).
-2. Role POS: KHÔNG gộp `cashier` + `waiter` — D018 (2026-06-13) chốt 8 access bucket canonical, giữ hai role tách (đổi quyền POS là thay đổi tier T3, không phải task tracked).
+2. Role POS: D051 supersedes phần này; sàn bán hàng dùng access bucket `cashier`, phục vụ là công việc trong ca chứ không phải role auth riêng.
 3. Mọi tính năng mới qua **phễu "phần mềm hỗ trợ HKD"**: giảm thao tác chủ + nhân viên hiện có; không thêm nghi thức quản trị (phân ca, duyệt nhiều tầng, kế toán doanh nghiệp) HKD không dùng.
 
 ## D014: Chương trình hợp nhất tầng molecule UI — W0–W6 (2026-06-11)
@@ -87,9 +87,9 @@
 
 **Canonical:** `docs/spec/role-route-matrix.md`. Không thêm workflow branch-scoped mới vào `/admin/*`.
 
-## D018: Bỏ role `super_manager` — gộp vào `owner` (2026-06-13)
+## D018: Bỏ tenant-admin phụ — gộp vào `owner` (2026-06-13)
 
-**Decision (supersedes phần `super_manager` của D017):** Bỏ access bucket `super_manager` (HKD đơn không cần tầng tenant-admin thứ 2; prod chỉ 1 user). `ACCESS_BUCKETS` còn **8**: `owner`, `branch_manager`, `warehouse_manager`, `production_manager`, `cashier`, `waiter`, `chef`, `office`. `/admin/*` giờ chỉ `owner`. Mọi list/RLS có `super_manager` cạnh `owner` → xoá `super_manager`, `owner` giữ quyền. Cấu hình sàn/bếp gộp vào `owner` + `branch_manager`.
+**Decision (supersedes phần tenant-admin phụ của D017):** `ACCESS_BUCKETS` canonical gồm **7** bucket: `owner`, `branch_manager`, `warehouse_manager`, `production_manager`, `cashier`, `chef`, `office`. `/admin/*` chỉ `owner`. Mọi tenant-admin fallback cạnh `owner` thuộc diện retired; `owner` giữ quyền. Cấu hình sàn/bếp gộp vào `owner` + `branch_manager`.
 
 **Canonical:** `docs/spec/role-route-matrix.md`.
 
@@ -386,7 +386,7 @@ authenticated user spoof tham số tạo/chốt thanh toán" (audit PR2). PR #85
 
 **Defer (owner quyết 2026-06-21):** _Hoàn tất_ thanh toán (đánh dấu đơn `paid`) hiện
 chỉ cần `pos:use` qua `createPayment` — trong khi `confirm_cash_payment` lại đòi
-`pos:confirm_payment`. Bất nhất này (waiter chỉ-`pos:use` vẫn chốt được đơn) GIỮ
+`pos:confirm_payment`. Bất nhất này (service staff chỉ có `pos:use` vẫn chốt được đơn) GIỮ
 NGUYÊN; siết completion về `pos:confirm_payment` là PR riêng (phải đổi cả action
 `createPayment` + route UI bill tiền mặt qua đường confirm). Codex flag P1 nhưng đây
 là hành vi sẵn có, không phải regression do PR2.

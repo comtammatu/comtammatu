@@ -1,7 +1,7 @@
 # POS-02 — Chọn bối cảnh bán hàng
 
 > Hướng dẫn chọn **Tại bàn** hay **Mang về**, chọn bàn, và xử lý bàn đang có đơn.
-> Dành cho **phục vụ (waiter)** và **thu ngân (cashier)**.
+> Dành cho **phục vụ/thu ngân** dùng POS theo cashier bucket.
 
 ## Tóm tắt
 

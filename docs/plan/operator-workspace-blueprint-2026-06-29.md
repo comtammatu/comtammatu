@@ -58,14 +58,14 @@ Owner landing theo thiết bị: desktop → Office; phone → Operator "Overvie
 
 **Capability matrix** (role → nhóm tile; mỗi ô vẫn gate server-side):
 
-| Nhóm tile | owner | branch_manager | warehouse_mgr | production_mgr | cashier | waiter | chef |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| Ca của tôi (chấm công · việc · lịch · phép · lương) | – | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Bán hàng (POS · bàn · đơn) | ✓ | ✓ | – | – | ✓ | ✓ | – |
-| Bếp (KDS · runner) | ✓ | ✓ | – | – | – | – | ✓ |
-| Kho (đếm · nhận · điều chuyển · hao hụt) | ✓ | ✓ | ✓ | ✓ | – | – | – |
-| Sản xuất (production) | ✓ | ✓ | – | ✓ | – | – | – |
-| Điều hành CN (giới hạn món · duyệt · cài đặt · ca kíp) | ✓ | ✓ | – | – | – | – | – |
+| Nhóm tile | owner | branch_manager | warehouse_mgr | production_mgr | cashier | chef |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|
+| Ca của tôi (chấm công · việc · lịch · phép · lương) | – | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Bán hàng (POS · bàn · đơn) | ✓ | ✓ | – | – | ✓ | – |
+| Bếp (KDS · runner) | ✓ | ✓ | – | – | – | ✓ |
+| Kho (đếm · nhận · điều chuyển · hao hụt) | ✓ | ✓ | ✓ | ✓ | – | – |
+| Sản xuất (production) | ✓ | ✓ | – | ✓ | – | – |
+| Điều hành CN (giới hạn món · duyệt · cài đặt · ca kíp) | ✓ | ✓ | – | – | – | – |
 | Tổng quan (doanh thu · cảnh báo) | ✓ | ✓ | – | – | – | – | – |
 
 ## 6. Branch-context — 1 provider thay 3 cơ chế

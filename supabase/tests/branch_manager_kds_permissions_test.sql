@@ -10,6 +10,8 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
+SELECT plan(1);
+
 DO $$
 DECLARE
   v_template_missing INTEGER;
@@ -26,13 +28,14 @@ BEGIN
       ('kds:mark_ready'),
       ('kds:recall')
   ) AS k(permission_key)
-  WHERE rt.position_code = 'quan_ly_CN'
+  WHERE rt.name = 'branch_manager'
+    AND rt.position_code = 'branch_manager'
     AND rt.is_system = TRUE
     AND NOT (k.permission_key = ANY(rt.permission_keys));
 
   IF v_template_missing <> 0 THEN
     RAISE EXCEPTION
-      'TEST FAILED: quan_ly_CN template missing % KDS permission grant(s)',
+      'TEST FAILED: branch_manager template missing % KDS permission grant(s)',
       v_template_missing;
   END IF;
 
@@ -42,7 +45,7 @@ BEGIN
   JOIN public.positions pos
     ON pos.id = pr.position_id
   WHERE pr.is_active = TRUE
-    AND pos.code = 'quan_ly_CN'
+    AND pos.code = 'branch_manager'
     AND pr.branch_id IS NOT NULL;
 
   IF v_branch_managers = 0 THEN
@@ -65,7 +68,7 @@ BEGIN
         ('kds:recall')
     ) AS k(permission_key)
     WHERE pr.is_active = TRUE
-      AND pos.code = 'quan_ly_CN'
+      AND pos.code = 'branch_manager'
       AND pr.branch_id IS NOT NULL
   )
   SELECT COUNT(*)
@@ -94,7 +97,7 @@ BEGIN
     ON pr.id = sp.user_id
   JOIN public.positions pos
     ON pos.id = pr.position_id
-  WHERE pos.code = 'quan_ly_CN'
+  WHERE pos.code = 'branch_manager'
     AND sp.branch_id IS NULL
     AND sp.permission_key IN ('kds:use', 'kds:mark_ready', 'kds:recall');
 
@@ -104,9 +107,10 @@ BEGIN
       v_tenant_wide_grants;
   END IF;
 
-  RAISE NOTICE
-    'TEST PASSED: branch_manager KDS permissions are branch-scoped and active';
 END;
 $$;
+
+SELECT ok(TRUE, 'branch_manager KDS permissions are branch-scoped and active');
+SELECT * FROM finish();
 
 ROLLBACK;

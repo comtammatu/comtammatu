@@ -20,7 +20,7 @@ Hướng dẫn cho **thu ngân**, **phục vụ**, và **quản lý chi nhánh**
 ## Đọc theo vai trò
 
 - **Thu ngân (cashier) mới vào ca:** đọc tuần tự `POS-01 → POS-02 → POS-03 → POS-05 → POS-09`.
-- **Phục vụ (waiter):** chỉ đọc `POS-02 → POS-03 → POS-04`. Không đọc POS-01 (mở ca) và POS-05 (thanh toán).
+- **Nhân viên phục vụ:** đọc `POS-02 → POS-03 → POS-04`; auth bucket vẫn là `cashier` nếu được cấp POS.
 - **Quản lý chi nhánh:** đọc tất cả + thêm `POS-08` (xử lý ngoại lệ) để training nhân viên.
 
 ## Phạm vi (đã hoàn thành)

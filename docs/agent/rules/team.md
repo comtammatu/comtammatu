@@ -18,9 +18,9 @@ This file does NOT own — point here, never restate:
 | --- | --- |
 | Review tiers (T3 / T2 / T1), their triggers, and how each tier runs the lenses | [`workflow.md`](workflow.md) → Review Depth — Tier By Risk |
 | The four-perspective definitions and lead questions; flex-the-lens; Cross-Boundary Coherence | [`workflow.md`](workflow.md) → The Four Perspectives |
-| T3 trigger surfaces (auth/RLS, money, multi-row writes, `SECURITY DEFINER`, schema migration, backfill) | [`workflow.md`](workflow.md) → Review Depth; deterministic floor `pnpm lint:review-tier` |
+| T3 trigger surfaces (auth/RLS, money, multi-row writes, `SECURITY DEFINER`, schema migration, backfill) | [`workflow.md`](workflow.md) → Review Depth; deterministic floor `corepack pnpm lint:review-tier` |
 | Skill Plan Gate; Required Routing Matrix; per-domain skill rules; the `codex` / `cso` / `review` skill behavior; Subagents-Debate-Read-Delegation; the Agent Teams note | [`skills.md`](skills.md) |
-| Verification gates and the exact gate command; `pnpm verify`; self-attestation; tier floor; CI; the learning-loop hygiene | [`workflow.md`](workflow.md) → Verification |
+| Verification gates and the exact gate command; `corepack pnpm verify`; self-attestation; tier floor; CI; the learning-loop hygiene | [`workflow.md`](workflow.md) → Verification |
 | Promote-and-delete; memory store boundaries | [`references.md`](references.md) → Memory Maintenance Rules |
 | Core Constraints (`MIRROR:constraints`), Import Boundaries, URL/proxy/JWT, Git & Commit Conventions | [`engineering.md`](engineering.md) and the `MIRROR:*` blocks in [`AGENTS.md`](../../../AGENTS.md) |
 | Environment Registry; prod ref SELECT-only; migration file → PR → owner-applies flow and its owner-delegated exception; RLS / ACL / RPC rules | [`database.md`](database.md) |
@@ -128,12 +128,12 @@ One task moves through nine stages. Each stage is a connector to the doc that ow
 ```
 
 1. **Intake** — A task enters from the owner or from [`tasks/todo.md`](../../../tasks/todo.md). The Orchestrator restates the request and the surfaces it touches.
-2. **Triage & tier** — Classify blast radius and pick the lenses. *Owns:* [`workflow.md`](workflow.md) → Review Depth (tier table, flex-the-lens rule). The floor `pnpm lint:review-tier` catches under-classification. This file never restates a tier.
+2. **Triage & tier** — Classify blast radius and pick the lenses. *Owns:* [`workflow.md`](workflow.md) → Review Depth (tier table, flex-the-lens rule). The floor `corepack pnpm lint:review-tier` catches under-classification. This file never restates a tier.
 3. **Skill plan** — Write the skill-plan line (repo rules + external skills + runtime tools). *Owns:* [`skills.md`](skills.md) → Skill Plan Gate, Required Routing Matrix. Mandatory for T3, expected for T2.
 4. **Role assignment** — *This file's stage.* Assign the standing roles and pick the four lenses, flexing to the specialist rows above when the trigger surface calls for it. For T3, spawn the four perspectives (parallel subagents / Agent Teams if available). If neither subagents nor Agent Teams are available (e.g. a Codex session), the Orchestrator writes the four perspectives inline as a transcript — this is the canonical form, not a degraded one.
 5. **Implement** — Write the code under the `MIRROR:constraints`. *Owns:* [`engineering.md`](engineering.md) (Core Constraints, Import Boundaries, URL Structure). Database work additionally obeys [`database.md`](database.md); UI additionally obeys [`ui.md`](ui.md).
 6. **Cross-runtime review** — *This file's stage; see Codex Orchestration Protocol.* The Reviewer runs an independent pass on the diff. *Skill routing owned by* [`skills.md`](skills.md); *review depth owned by* [`workflow.md`](workflow.md).
-7. **Verify** — Run the gates. *Owns:* [`workflow.md`](workflow.md) → Verification (hard gate, `pnpm verify` for release slices, cross-boundary coherence, self-attestation, tier floor, CI). Do not mark complete until they pass and CI is green. This file restates no gate.
+7. **Verify** — Run the gates. *Owns:* [`workflow.md`](workflow.md) → Verification (hard gate, `corepack pnpm verify` for release slices, cross-boundary coherence, self-attestation, tier floor, CI). Do not mark complete until they pass and CI is green. This file restates no gate.
 8. **Land** — Stage atomically, commit, land. *Owns:* [`engineering.md`](engineering.md) → Git And Commit Conventions. Prod and migration steps are **owner-gated**: by default agents do not apply prod migrations — file → PR → merge → owner applies; the only exception is the owner-delegated apply in [`database.md`](database.md) → Owner-Delegated Production Apply. *Owns:* [`database.md`](database.md) → Environment Registry, Migration Policy.
 9. **Learn** — One learning-loop pass before closing. *Owns:* [`workflow.md`](workflow.md) (learning-loop hygiene) routing to `tasks/regressions.md` and `tasks/lessons.md`; promotion-and-delete in [`references.md`](references.md) → Memory Maintenance Rules. State the learning (or "none") in the commit/PR body.
 
@@ -148,7 +148,7 @@ The cross-runtime review pass is the one genuinely new mechanism this file owns:
 Invoke a second-runtime pass when it materially de-risks the change:
 
 - **Every T3 gets one independent second-runtime pass** before landing, in ADDITION to the four perspectives. T3 and its trigger surfaces are defined in [`workflow.md`](workflow.md) → Review Depth.
-- **Any diff on a T3 trigger surface that self-classified below T3** — a second runtime is the cheapest catch for an under-classified diff, complementing the `pnpm lint:review-tier` floor ([`workflow.md`](workflow.md)).
+- **Any diff on a T3 trigger surface that self-classified below T3** — a second runtime is the cheapest catch for an under-classified diff, complementing the `corepack pnpm lint:review-tier` floor ([`workflow.md`](workflow.md)).
 - **Large or ambiguous diffs** — wide blast radius, cross-boundary changes (the Cross-Boundary Coherence classes in [`workflow.md`](workflow.md)), or a diff where the Orchestrator's own confidence is low.
 - **Architecture forks** — a decision with two defensible paths that would land in `docs/plan/decisions.md` (a D0xx). Use `consult` before committing to one.
 - **Discretionary** — any time a second independently-reasoning runtime would catch a class of error the first is blind to. The disagreement is the product.

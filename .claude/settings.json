@@ -21,14 +21,18 @@
       "Bash(git show:*)",
       "Bash(git branch:*)",
       "Bash(git remote -v)",
-      "Bash(pnpm typecheck:*)",
-      "Bash(pnpm lint)",
-      "Bash(pnpm lint:*)",
-      "Bash(pnpm test:*)",
-      "Bash(pnpm build)",
-      "Bash(pnpm verify)",
-      "Bash(pnpm deps:audit)",
-      "Bash(pnpm db:types)"
+      "Bash(corepack pnpm dev)",
+      "Bash(corepack pnpm dev:*)",
+      "Bash(corepack pnpm typecheck)",
+      "Bash(corepack pnpm typecheck:*)",
+      "Bash(corepack pnpm lint)",
+      "Bash(corepack pnpm lint:*)",
+      "Bash(corepack pnpm test)",
+      "Bash(corepack pnpm test:*)",
+      "Bash(corepack pnpm build)",
+      "Bash(corepack pnpm verify)",
+      "Bash(corepack pnpm deps:audit)",
+      "Bash(corepack pnpm db:types)"
     ],
     "deny": [
       "Bash(supabase db push:*)",
@@ -43,8 +47,6 @@
       "mcp__supabase__deploy_edge_function",
       "mcp__supabase__pause_project",
       "mcp__supabase__restore_project",
-      "mcp__supabase__create_branch",
-      "mcp__supabase__delete_branch",
       "mcp__supabase__confirm_cost"
     ]
   },
@@ -60,7 +62,7 @@
         ]
       },
       {
-        "matcher": "^mcp__.+?[._](apply_migration|execute_sql|deploy_edge_function|pause_project|restore_project|merge_branch|reset_branch|rebase_branch)$",
+        "matcher": "^mcp__.+?[._](apply_migration|execute_sql|deploy_edge_function|pause_project|restore_project|create_branch|delete_branch|merge_branch|reset_branch|rebase_branch)$",
         "hooks": [
           {
             "type": "command",

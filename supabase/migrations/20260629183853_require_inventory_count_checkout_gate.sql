@@ -212,7 +212,7 @@ BEGIN
   v_requester_role := COALESCE(v_requester_role, 'office');
   v_target_roles := CASE
     WHEN v_requester_role = 'branch_manager' THEN ARRAY['owner']::text[]
-    WHEN v_requester_role IN ('cashier', 'waiter', 'chef') THEN ARRAY['branch_manager']::text[]
+    WHEN v_requester_role IN ('cashier', 'chef') THEN ARRAY['branch_manager']::text[]
     ELSE ARRAY['owner']::text[]
   END;
 

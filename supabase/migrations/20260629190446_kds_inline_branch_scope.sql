@@ -373,7 +373,7 @@ BEGIN
   VALUES (
     v_row.tenant_id,
     v_row.branch_id,
-    ARRAY['cashier', 'waiter', 'branch_manager']::TEXT[],
+    ARRAY['cashier', 'branch_manager']::TEXT[],
     'pos.kds_out_of_stock',
     'warning',
     format('Bếp báo hết món #%s', v_row.order_number),

@@ -26,7 +26,7 @@ not a second authority:
   runtime implementation and adapter evidence, not competing design systems.
 
 Non-current visual-layer strings and non-current design-folder paths are blocked
-by `scripts/check-ui-contract.mjs` / `pnpm lint:ui-contract`. Any new visual
+by `scripts/check-ui-contract.mjs` / `corepack pnpm lint:ui-contract`. Any new visual
 token layer requires a design-system contract change first.
 
 External references:
@@ -35,7 +35,7 @@ External references:
 - Installation: https://ui.shadcn.com/docs/installation/
 - Preset: https://ui.shadcn.com/create?preset=buFywKm
 - Components: https://ui.shadcn.com/docs/components/
-- Preset command: `pnpm dlx shadcn@latest init --preset buFywKm --template next --monorepo --base radix`
+- Preset command: `corepack pnpm dlx shadcn@latest init --preset buFywKm --template next --monorepo --base radix`
 
 ## Guardrails
 
@@ -90,7 +90,7 @@ rg -n "DESIGN-SYSTEM|UI-|PRESET-FIRST|NO-PRIMITIVE|NO-FAKE|NO-ARBITRARY|NO-SURFA
 
 Separate the enforcement lane before acting: `DESIGN-SYSTEM-ONE-SOURCE-ONLY`
 is a lint-anchor, many runtime/rhythm rules are covered by
-`pnpm lint:ui-contract`, and review-checklist rules still need route-family
+`corepack pnpm lint:ui-contract`, and review-checklist rules still need route-family
 inspection.
 
 - `DESIGN-SYSTEM-CONTRACT-FIRST`

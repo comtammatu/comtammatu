@@ -66,7 +66,7 @@ Không migrate nội dung `/employee/*` hay Kho sàn đầy đủ trong lát nà
 6. **Route map / ACL / proxy coverage**
    - Thêm `operator_home` vào `MODULE_ACL`, allowed roles:
      `owner`, `branch_manager`, `warehouse_manager`, `production_manager`,
-     `cashier`, `waiter`, `chef`; loại `office`.
+     `cashier`, `chef`; loại `office`.
    - `resolveModuleFromPath`:
      `/br` → `branch_picker` (owner-only picker),
      `/br/\d+` → `operator_home`,

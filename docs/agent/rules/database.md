@@ -34,9 +34,9 @@ or agent memory.
   `.claude/settings.json` (Claude Code, plus its permission deny list) and
   `.codex/hooks.json` (Codex; project-local hooks load only after the project
   is trusted in that Codex session). The hook's ref list and every adapter's
-  matchers must stay in sync with this table; `pnpm lint:guard-sync` (part of
-  `pnpm lint`) enforces all of them. A runtime without hook support still
-  follows this table manually; it remains the single source of truth.
+  matchers must stay in sync with this table; `corepack pnpm lint:guard-sync`
+  (part of `corepack pnpm lint`) enforces all of them. A runtime without hook
+  support still follows this table manually; it remains the single source of truth.
 
 ## Query Boundary
 
@@ -60,7 +60,7 @@ or agent memory.
 - Before applying to dev/test, verify the target ref against the Environment Registry above and confirm it is not production. As of 2026-06-11 no dev/test server exists, so there is nowhere an agent may apply.
 - NEVER apply migrations directly to production.
 - Production flow: open a PR, merge the PR, then the owner applies the migration manually.
-- After the migration is applied to the schema used for generated types, run `pnpm db:types`.
+- After the migration is applied to the schema used for generated types, run `corepack pnpm db:types`.
 - Clean up data that would violate a new CHECK constraint BEFORE adding it: `ALTER TABLE ADD CONSTRAINT` fails on dirty data and aborts every later statement in the same migration.
 
 ### Owner-Delegated Production Apply
@@ -82,7 +82,7 @@ session; never as a default. The mechanics that work in practice:
   checks first (object/column/constraint existence, function dependencies,
   dirty-data counts), apply files in timestamp order, then verify the ledger and
   row counts after each apply.
-- Finish with `pnpm db:types`, run `get_advisors` (security) to confirm no new
+- Finish with `corepack pnpm db:types`, run `get_advisors` (security) to confirm no new
   RLS/search_path findings, and commit the migration files plus regenerated types.
 - DEPLOY COUPLING — sequence by migration type. A **destructive** migration
   (DROP COLUMN, narrowing a RETURNS, rename) breaks the *currently-deployed* app

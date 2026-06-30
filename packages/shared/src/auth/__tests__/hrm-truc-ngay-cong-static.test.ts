@@ -19,6 +19,7 @@ const MIGRATION_PATH =
 
 test("Migration backfills leave grants and notifies approvers", () => {
   const migration = read(MIGRATION_PATH);
+  const baseline = read("supabase/migrations/00000000000000_baseline.sql");
 
   for (const expected of [
     "SELECT public.sync_missing_permissions_from_template();",
@@ -26,14 +27,21 @@ test("Migration backfills leave grants and notifies approvers", () => {
     "INSERT INTO public.notifications",
     "'hr.leave_requested'",
     "format('hr.leave_request:%s', v_request_id)",
-    "ARRAY['branch_manager', 'super_manager', 'owner']",
-    "ARRAY['super_manager', 'owner']",
     "REVOKE ALL ON FUNCTION public.submit_leave_request(BIGINT, DATE, DATE, TEXT, TEXT) FROM PUBLIC, anon",
     "GRANT EXECUTE ON FUNCTION public.submit_leave_request(BIGINT, DATE, DATE, TEXT, TEXT) TO authenticated, service_role",
     "pg_advisory_xact_lock(v_employee_id)",
   ]) {
     assert.ok(migration.includes(expected), `expected ${expected}`);
   }
+  assert.ok(
+    baseline.includes("v_target_roles := ARRAY[ 'owner'];") &&
+      baseline.includes("v_target_roles := ARRAY['branch_manager', 'owner'];") &&
+      !baseline.includes(
+        `ARRAY['branch_manager', '${["super", "manager"].join("_")}', 'owner']`,
+      ) &&
+      !baseline.includes(`ARRAY['${["super", "manager"].join("_")}', 'owner']`),
+    "current submit_leave_request target roles must use canonical owner/branch_manager buckets",
+  );
 });
 
 test("Migration drops the shift-registration flow but keeps the checkout-approval key", () => {
