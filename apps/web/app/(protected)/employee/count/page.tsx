@@ -1,6 +1,7 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: employee inventory count slip keeps operational copy close to the workflow controls */
 
 import { getVNDateString } from "@comtammatu/shared/time";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getEmployeeContext } from "../_lib/employee-context";
 import {
   EmployeeMissingProfileEmpty,
@@ -73,9 +74,15 @@ interface SlipLineRow {
   note: string | null;
 }
 
-export default async function EmployeeCountPage(props: {
+interface EmployeeCountPageContentProps {
   searchParams: Promise<{ location?: string }>;
-}) {
+  routeBranchId?: number;
+}
+
+export async function EmployeeCountPageContent({
+  searchParams,
+  routeBranchId,
+}: EmployeeCountPageContentProps) {
   const ctx = await getEmployeeContext();
   if (!ctx) {
     return (
@@ -85,7 +92,14 @@ export default async function EmployeeCountPage(props: {
     );
   }
 
-  if (!ctx.branchId) {
+  const { supabase, claims, employeeId } = ctx;
+  const branchId = routeBranchId ?? ctx.branchId;
+  const branchName =
+    routeBranchId == null || routeBranchId === ctx.branchId
+      ? ctx.branchName
+      : await resolveBranchName(supabase, claims.tenant_id, routeBranchId);
+
+  if (!branchId) {
     return (
       <EmployeePage title="Kiểm kê tồn">
         <EmployeeMissingProfileEmpty
@@ -95,8 +109,6 @@ export default async function EmployeeCountPage(props: {
       </EmployeePage>
     );
   }
-
-  const { supabase, claims, employeeId, branchId, branchName } = ctx;
 
   const { data: assignmentData } = await supabase
     .from("inventory_count_assignments")
@@ -162,7 +174,7 @@ export default async function EmployeeCountPage(props: {
     }))
     .sort((a, b) => a.locationName.localeCompare(b.locationName, "vi"));
 
-  const { location: locationParam } = await props.searchParams;
+  const { location: locationParam } = await searchParams;
   const parsedLocation = Number(locationParam);
   const selectedLocationId =
     groups.find((group) => group.locationId === parsedLocation)?.locationId ??
@@ -248,6 +260,7 @@ export default async function EmployeeCountPage(props: {
     <EmployeePage title="Kiểm kê tồn" description={branchName ?? undefined}>
       <CountSlipClient
         branchId={branchId}
+        baseHref={routeBranchId ? `/br/${branchId}/stock/count` : "/employee/count"}
         groups={groups}
         selectedLocationId={selectedLocationId}
         slipByLocation={Object.fromEntries(slipByLocation)}
@@ -255,4 +268,24 @@ export default async function EmployeeCountPage(props: {
       />
     </EmployeePage>
   );
+}
+
+async function resolveBranchName(
+  supabase: SupabaseClient,
+  tenantId: number,
+  branchId: number,
+) {
+  const { data } = await supabase
+    .from("branches")
+    .select("name")
+    .eq("tenant_id", tenantId)
+    .eq("id", branchId)
+    .maybeSingle();
+  return data?.name ?? null;
+}
+
+export default async function EmployeeCountPage(props: {
+  searchParams: Promise<{ location?: string }>;
+}) {
+  return <EmployeeCountPageContent searchParams={props.searchParams} />;
 }

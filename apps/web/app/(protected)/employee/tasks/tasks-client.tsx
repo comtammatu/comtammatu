@@ -57,6 +57,7 @@ interface TasksClientProps {
   consumptionIngredients?: ConsumptionIngredientOption[];
   consumptionReport?: ConsumptionReportView | null;
   showConsumptionReport?: boolean;
+  countHref?: string;
 }
 
 interface DraftConsumptionLine {
@@ -131,6 +132,7 @@ export function TasksClient({
   consumptionIngredients = [],
   consumptionReport = null,
   showConsumptionReport = false,
+  countHref = "/employee/count",
 }: TasksClientProps) {
   const router = useRouter();
   const [localItems, setLocalItems] = useState(items);
@@ -249,7 +251,7 @@ export function TasksClient({
                           size="sm"
                           variant={item.done ? "outline" : "default"}
                         >
-                          <Link href="/employee/count">
+                          <Link href={countHref}>
                             <IconCount data-icon="inline-start" />
                             {homeCopy.countCta}
                           </Link>

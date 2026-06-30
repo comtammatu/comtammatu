@@ -10,6 +10,7 @@ export default async function OperatorShiftTasksPage({
   return (
     <EmployeeTasksPageContent
       clockHref={`/br/${branchId}/shift/clock`}
+      countHref={`/br/${branchId}/stock/count`}
     />
   );
 }

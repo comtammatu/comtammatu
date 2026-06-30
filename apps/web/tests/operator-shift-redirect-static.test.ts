@@ -40,7 +40,35 @@ test("operator shift tasks renders inside the branch operator shell", () => {
     source.includes("clockHref={`/br/${branchId}/shift/clock`}"),
     path,
   );
+  assert.ok(
+    source.includes("countHref={`/br/${branchId}/stock/count`}"),
+    path,
+  );
   assert.doesNotMatch(source, /redirect\("\/employee\/tasks"\)/);
+});
+
+test("operator stock count renders employee count inside the branch operator shell", () => {
+  const path =
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx";
+
+  assert.equal(exists(path), true, path);
+
+  const source = read(path);
+  assert.ok(
+    source.includes('import { EmployeeCountPageContent } from "@/(protected)/employee/count/page"'),
+    path,
+  );
+  assert.ok(source.includes("routeBranchId={branchId}"), path);
+  assert.doesNotMatch(source, /redirect\(`\/inventory\/stocktake/);
+});
+
+test("employee count client keeps location changes on the current route", () => {
+  const source = read(
+    "apps/web/app/(protected)/employee/count/count-client.tsx",
+  );
+
+  assert.ok(source.includes('baseHref = "/employee/count"'));
+  assert.ok(source.includes("router.replace(`${baseHref}?${params.toString()}`)"));
 });
 
 test("operator shift clock renders inside the branch operator shell", () => {

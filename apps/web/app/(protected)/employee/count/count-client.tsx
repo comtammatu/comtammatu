@@ -36,6 +36,7 @@ import type { CountLocationGroup, CountSlipHeader } from "./page";
 
 interface CountSlipClientProps {
   branchId: number;
+  baseHref?: string;
   groups: CountLocationGroup[];
   selectedLocationId: number | null;
   slipByLocation: Record<number, CountSlipHeader>;
@@ -53,6 +54,7 @@ interface DraftLine {
 
 export function CountSlipClient({
   branchId,
+  baseHref = "/employee/count",
   groups,
   selectedLocationId,
   slipByLocation,
@@ -102,7 +104,7 @@ export function CountSlipClient({
   function changeLocation(value: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("location", value);
-    router.replace(`/employee/count?${params.toString()}`);
+    router.replace(`${baseHref}?${params.toString()}`);
   }
 
   function updateLine(ingredientId: number, patch: Partial<DraftLine>) {

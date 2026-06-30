@@ -70,6 +70,7 @@ export const submitCountSlip = withAction(
     }
 
     revalidatePath("/employee/count");
+    revalidatePath(`/br/${data.branchId}/stock/count`);
     return { success: true, data: { slipId } };
   },
 );

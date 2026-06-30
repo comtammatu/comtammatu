@@ -94,13 +94,18 @@ test("employee task UI renders inventory count as a count link, not a checkbox",
   );
   assert.match(
     employeeTasksClientSource,
-    /<Link href="\/employee\/count">[\s\S]*homeCopy\.countCta/,
-    "Inventory count task should link to the blind count route",
+    /countHref = "\/employee\/count"/,
+    "Inventory count task should default to the blind count route",
+  );
+  assert.match(
+    employeeTasksClientSource,
+    /<Link href=\{countHref\}>[\s\S]*homeCopy\.countCta/,
+    "Inventory count task should link through countHref",
   );
 
   assert.match(
     employeeTasksClientSource,
-    /\{isCountTask \? \(\s*<Button[\s\S]*?<Link href="\/employee\/count">[\s\S]*?\) : \(\s*<Checkbox/,
+    /\{isCountTask \? \(\s*<Button[\s\S]*?<Link href=\{countHref\}>[\s\S]*?\) : \(\s*<Checkbox/,
     "Count task should render the link CTA in the true branch and leave Checkbox in the normal-task branch",
   );
 });

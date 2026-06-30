@@ -30,8 +30,10 @@ const managerTaskCopy = messages.employee.managerTasks;
 
 export async function EmployeeTasksPageContent({
   clockHref = "/employee/clock",
+  countHref = "/employee/count",
 }: {
   clockHref?: string;
+  countHref?: string;
 } = {}) {
   const state = await getTodayWorkState();
 
@@ -219,6 +221,7 @@ export async function EmployeeTasksPageContent({
             consumptionIngredients={consumptionIngredients}
             consumptionReport={consumptionReport}
             showConsumptionReport={hasConsumptionChecklist}
+            countHref={countHref}
           />
         ) : (
           <AppEmptyState
