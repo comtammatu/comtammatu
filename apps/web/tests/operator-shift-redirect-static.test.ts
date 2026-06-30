@@ -8,7 +8,6 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 const exists = (path: string) => existsSync(resolve(repoRoot, path));
 
 const shiftRedirects = [
-  ["tasks", "/employee/tasks"],
   ["schedule", "/employee/schedule"],
   ["leave", "/employee/leave"],
   ["payslip", "/employee/payslip"],
@@ -24,6 +23,24 @@ test("operator shift detail routes temporarily redirect to employee workflow pag
     assert.match(source, /from "next\/navigation"/, path);
     assert.ok(source.includes(`redirect("${target}")`), `${path} -> ${target}`);
   }
+});
+
+test("operator shift tasks renders inside the branch operator shell", () => {
+  const path =
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/tasks/page.tsx";
+
+  assert.equal(exists(path), true, path);
+
+  const source = read(path);
+  assert.ok(
+    source.includes('import { EmployeeTasksPageContent } from "@/(protected)/employee/tasks/page"'),
+    path,
+  );
+  assert.ok(
+    source.includes("clockHref={`/br/${branchId}/shift/clock`}"),
+    path,
+  );
+  assert.doesNotMatch(source, /redirect\("\/employee\/tasks"\)/);
 });
 
 test("operator shift clock renders inside the branch operator shell", () => {

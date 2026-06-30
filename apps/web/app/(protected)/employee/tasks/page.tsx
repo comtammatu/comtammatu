@@ -28,7 +28,11 @@ const copy = messages.employee.home;
 const taskCopy = messages.employee.tasks;
 const managerTaskCopy = messages.employee.managerTasks;
 
-export default async function EmployeeTasksPage() {
+export async function EmployeeTasksPageContent({
+  clockHref = "/employee/clock",
+}: {
+  clockHref?: string;
+} = {}) {
   const state = await getTodayWorkState();
 
   if (state.status === "missing_profile") {
@@ -82,7 +86,7 @@ export default async function EmployeeTasksPage() {
               className="w-full sm:w-fit"
               variant={state.status === "done" ? "outline" : "default"}
             >
-              <Link href="/employee/clock">
+              <Link href={clockHref}>
                 <IconClock data-icon="inline-start" />
                 {actionLabel}
               </Link>
@@ -121,7 +125,7 @@ export default async function EmployeeTasksPage() {
           state.status === "not_required" ? null : (
             <EmployeeActionBar>
               <Button asChild size="touch-lg" className="w-full sm:w-fit">
-                <Link href="/employee/clock">
+                <Link href={clockHref}>
                   <IconCamera data-icon="inline-start" />
                   {copy.clockIn}
                 </Link>
@@ -226,7 +230,7 @@ export default async function EmployeeTasksPage() {
 
         {allRequiredDone && !checkoutPending && !checkoutDone ? (
           <Button asChild size="touch-lg" className="w-full sm:w-fit">
-            <Link href="/employee/clock">
+            <Link href={clockHref}>
               <IconClock data-icon="inline-start" />
               {copy.clockOut}
             </Link>
@@ -245,4 +249,8 @@ export default async function EmployeeTasksPage() {
       </EmployeePanel>
     </EmployeePage>
   );
+}
+
+export default async function EmployeeTasksPage() {
+  return <EmployeeTasksPageContent />;
 }
