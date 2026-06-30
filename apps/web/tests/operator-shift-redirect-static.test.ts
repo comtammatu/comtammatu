@@ -13,10 +13,9 @@ const shiftRedirects = [
   ["schedule", "/employee/schedule"],
   ["leave", "/employee/leave"],
   ["payslip", "/employee/payslip"],
-  ["profile", "/employee/profile"],
 ] as const;
 
-test("operator shift detail routes temporarily redirect to employee pages", () => {
+test("operator shift detail routes temporarily redirect to employee workflow pages", () => {
   for (const [segment, target] of shiftRedirects) {
     const path = `apps/web/app/(protected)/br/[branchId]/(operator)/shift/${segment}/page.tsx`;
 
@@ -26,6 +25,20 @@ test("operator shift detail routes temporarily redirect to employee pages", () =
     assert.match(source, /from "next\/navigation"/, path);
     assert.ok(source.includes(`redirect("${target}")`), `${path} -> ${target}`);
   }
+});
+
+test("operator shift profile renders inside the branch operator shell", () => {
+  const path =
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/profile/page.tsx";
+
+  assert.equal(exists(path), true, path);
+
+  const source = read(path);
+  assert.ok(
+    source.includes('export { default } from "@/(protected)/employee/profile/page"'),
+    path,
+  );
+  assert.doesNotMatch(source, /redirect\("\/employee\/profile"\)/);
 });
 
 test("operator shift landing routes through branch-scoped detail routes", () => {

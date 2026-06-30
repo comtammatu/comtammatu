@@ -41,7 +41,7 @@ export function OperatorBottomNav({
     ...(showEmployeeLinks
       ? [
           {
-            href: "/employee/profile",
+            href: `/br/${branchId}/shift/profile`,
             label: messages.employee.nav.profileShort,
             icon: UserCircle,
             exact: false,

@@ -84,7 +84,7 @@ export default async function OperatorLayout({
                   aria-label={messages.employee.header.profileAria}
                   className="min-w-12 px-0"
                 >
-                  <Link href="/employee/profile">
+                  <Link href={`/br/${context.branchId}/shift/profile`}>
                     <IconUser data-icon="inline-start" />
                   </Link>
                 </Button>

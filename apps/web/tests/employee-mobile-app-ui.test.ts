@@ -178,7 +178,7 @@ test("Employee PWA shell explains install and offline state without persisted wo
   );
   assert.match(
     employeeMessagesSource,
-    /pwa:\s*\{[\s\S]*installHint: "Cài Trang nhân viên để mở nhanh mỗi ca\."/,
+    /pwa:\s*\{[\s\S]*installHint: "Cài app nhân viên để mở nhanh mỗi ca\."/,
     "Employee copy should name the staff app and explain the install job directly",
   );
 });

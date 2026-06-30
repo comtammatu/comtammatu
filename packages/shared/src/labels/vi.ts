@@ -52,7 +52,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   branch_dashboard: "Điều hành chi nhánh",
   branch_settings: "Cài đặt chi nhánh",
   branch_menu_limits: "Giới hạn bán",
-  employee: "Trang nhân viên",
+  employee: "Ca của tôi",
   employee_checkout_approvals: "Duyệt kết ca",
   notifications: "Thông báo",
 };
@@ -75,7 +75,7 @@ export const APP_COPY_VI = {
   settingsLabel: "Thiết lập hệ thống",
   quickAccess: "Mục nhanh",
   quickAccessAria: "Truy cập nhanh chức năng",
-  employeePortal: "Trang nhân viên",
+  employeePortal: "Ca của tôi",
   hrWorkspace: "Nhân sự",
   hrWorkspaceSubtitle: "Nhân viên, ca làm, ngày công",
   branchOperationsKds: "Bếp (KDS)",

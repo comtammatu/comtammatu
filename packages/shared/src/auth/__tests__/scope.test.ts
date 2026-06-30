@@ -71,11 +71,11 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     href: "/admin/dashboard",
   });
   assert.deepEqual(resolveRoleHomeLink("branch_manager", 3), {
-    label: "Trang nhân viên",
+    label: "Ca của tôi",
     href: "/employee",
   });
   assert.deepEqual(resolveRoleHomeLink("branch_manager"), {
-    label: "Trang nhân viên",
+    label: "Ca của tôi",
     href: "/employee",
   });
 
@@ -87,7 +87,7 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     "office",
   ] as const) {
     assert.deepEqual(resolveRoleHomeLink(role), {
-      label: "Trang nhân viên",
+      label: "Ca của tôi",
       href: "/employee",
     });
   }

@@ -203,7 +203,7 @@ export const pos = {
     closeShiftAria: "Chốt ca POS",
     closeShift: "Chốt ca",
     moreMenuAria: "Mở menu POS",
-    employeePortal: "Trang nhân viên",
+    employeePortal: "Ca của tôi",
   },
   tableGate: {
     selected: "Đang chọn",

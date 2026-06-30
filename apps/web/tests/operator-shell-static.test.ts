@@ -32,7 +32,7 @@ test("operator bottom nav has four fixed anchors and no top-five cap", () => {
     "`/br/${branchId}`",
     "`/br/${branchId}/shift`",
     '"/notifications"',
-    '"/employee/profile"',
+    "`/br/${branchId}/shift/profile`",
   ]) {
     assert.ok(bottomNav.includes(expected), expected);
   }
