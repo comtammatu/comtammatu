@@ -7,22 +7,6 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 const exists = (path: string) => existsSync(resolve(repoRoot, path));
 
-const shiftRedirects = [
-  ["payslip", "/employee/payslip"],
-] as const;
-
-test("operator shift detail routes temporarily redirect to employee workflow pages", () => {
-  for (const [segment, target] of shiftRedirects) {
-    const path = `apps/web/app/(protected)/br/[branchId]/(operator)/shift/${segment}/page.tsx`;
-
-    assert.equal(exists(path), true, path);
-
-    const source = read(path);
-    assert.match(source, /from "next\/navigation"/, path);
-    assert.ok(source.includes(`redirect("${target}")`), `${path} -> ${target}`);
-  }
-});
-
 test("operator shift tasks renders inside the branch operator shell", () => {
   const path =
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/tasks/page.tsx";
@@ -77,6 +61,21 @@ test("operator shift leave renders inside the branch operator shell", () => {
   assert.ok(source.includes('profileHref={`/br/${branchId}/shift/profile`}'));
   assert.ok(source.includes("routeBranchId={branchId}"), path);
   assert.doesNotMatch(source, /redirect\("\/employee\/leave"\)/);
+});
+
+test("operator shift payslip renders inside the branch operator shell", () => {
+  const path =
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/payslip/page.tsx";
+
+  assert.equal(exists(path), true, path);
+
+  const source = read(path);
+  assert.ok(
+    source.includes('import { PayslipPageContent } from "@/(protected)/employee/payslip/page"'),
+    path,
+  );
+  assert.ok(source.includes("<PayslipPageContent searchParams={searchParams} />"));
+  assert.doesNotMatch(source, /redirect\("\/employee\/payslip"\)/);
 });
 
 test("operator stock count renders employee count inside the branch operator shell", () => {

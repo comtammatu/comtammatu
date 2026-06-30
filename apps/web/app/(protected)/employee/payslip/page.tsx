@@ -10,7 +10,7 @@ import { messages } from "@lib/messages";
 
 const copy = messages.employee.payslip;
 
-export default async function PayslipPage(props: {
+export async function PayslipPageContent(props: {
   searchParams: Promise<{ year?: string }>;
 }) {
   const ctx = await getEmployeeContext();
@@ -56,6 +56,12 @@ export default async function PayslipPage(props: {
       <PayslipClient entries={(entries ?? []) as unknown as PayslipEntry[]} />
     </EmployeePage>
   );
+}
+
+export default async function PayslipPage(props: {
+  searchParams: Promise<{ year?: string }>;
+}) {
+  return <PayslipPageContent searchParams={props.searchParams} />;
 }
 
 function isValidYear(s: string | undefined): boolean {

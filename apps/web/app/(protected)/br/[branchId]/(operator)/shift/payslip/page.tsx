@@ -1,5 +1,9 @@
-import { redirect } from "next/navigation";
+import { PayslipPageContent } from "@/(protected)/employee/payslip/page";
 
-export default function OperatorShiftPayslipRedirectPage() {
-  redirect("/employee/payslip");
+export default function OperatorShiftPayslipPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string }>;
+}) {
+  return <PayslipPageContent searchParams={searchParams} />;
 }
