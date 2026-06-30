@@ -11,7 +11,13 @@ import { messages } from "@lib/messages";
 
 const copy = messages.employee.leave;
 
-export default async function EmployeeLeavePage() {
+export async function EmployeeLeavePageContent({
+  profileHref = "/employee/profile",
+  routeBranchId,
+}: {
+  profileHref?: string;
+  routeBranchId?: number;
+} = {}) {
   const ctx = await getEmployeeContext();
   if (!ctx) {
     return (
@@ -21,7 +27,13 @@ export default async function EmployeeLeavePage() {
     );
   }
 
-  if (!ctx.branchId) {
+  const branchId = routeBranchId ?? ctx.branchId;
+  const branchName =
+    routeBranchId == null || routeBranchId === ctx.branchId
+      ? ctx.branchName
+      : null;
+
+  if (!branchId) {
     return (
       <EmployeePage title={copy.unavailableTitle} description={copy.description}>
         <EmployeeMissingProfileEmpty
@@ -42,6 +54,7 @@ export default async function EmployeeLeavePage() {
     )
     .eq("tenant_id", ctx.claims.tenant_id)
     .eq("employee_id", ctx.employeeId)
+    .eq("branch_id", branchId)
     .order("start_date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(30);
@@ -59,7 +72,7 @@ export default async function EmployeeLeavePage() {
           size="touch"
           className="w-full sm:w-fit"
         >
-          <Link href="/employee/profile">
+          <Link href={profileHref}>
             <IconUser data-icon="inline-start" />
             {copy.backToProfile}
           </Link>
@@ -67,12 +80,16 @@ export default async function EmployeeLeavePage() {
       }
     >
       <LeaveRequestClient
-        branchId={ctx.branchId}
-        branchName={ctx.branchName}
+        branchId={branchId}
+        branchName={branchName}
         initialRequests={initialRequests}
       />
     </EmployeePage>
   );
+}
+
+export default async function EmployeeLeavePage() {
+  return <EmployeeLeavePageContent />;
 }
 
 export type LeaveRequestStatus =
