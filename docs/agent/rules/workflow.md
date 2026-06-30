@@ -101,15 +101,16 @@ This is for the next reader (future you, the owner, a reviewer) — make it stan
 
 Before marking implementation work complete:
 
-1. **Hard gate.** `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` MUST pass. For release-grade slices, prefer `corepack pnpm verify` (adds deps audit, baseline hygiene, and tests). This and green CI (step 5) are the only machine-enforced gates here.
-2. **Cross-boundary coherence.** When the change spans more than one module/shell or crosses an API ↔ hook ↔ nav boundary (e.g. the finance/hr/inventory/menu/orders shells), cross-compare response shape ↔ consumer type and route ↔ link at each pair's completion rather than batching the whole slice — generic casts and `any` compile clean. N/A for T1 or single-component changes.
-3. **Self-attestation (advisory, not CI-gated).** Contract-vs-diff is irreducibly semantic; a reviewer subagent judging "are the business rules implemented?" is itself a non-deterministic call, not a gate. The four-perspective debate is a thinking tool — its only enforcement is that the artifact below is present for owner review:
+1. **Hard gate.** `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` MUST pass. For release-grade slices, prefer `corepack pnpm verify` (adds deps audit, baseline hygiene, and tests). This and green CI (step 6) are the only machine-enforced gates here.
+2. **CodeGraph freshness.** If `.codegraph/` exists and the task touched source code, SQL migrations, or generated database types, run `codegraph index .` after the final file changes and before final review/closeout. For database changes, run it after `corepack pnpm db:types` when generated types were refreshed. Do not rely on `codegraph status .` alone after active code/DB churn; `status` is a post-refresh check, not the refresh. N/A for doc-only T1 changes that CodeGraph does not index.
+3. **Cross-boundary coherence.** When the change spans more than one module/shell or crosses an API ↔ hook ↔ nav boundary (e.g. the finance/hr/inventory/menu/orders shells), cross-compare response shape ↔ consumer type and route ↔ link at each pair's completion rather than batching the whole slice — generic casts and `any` compile clean. N/A for T1 or single-component changes.
+4. **Self-attestation (advisory, not CI-gated).** Contract-vs-diff is irreducibly semantic; a reviewer subagent judging "are the business rules implemented?" is itself a non-deterministic call, not a gate. The four-perspective debate is a thinking tool — its only enforcement is that the artifact below is present for owner review:
    - T3: paste a 3-line attestation into the PR / worklog contract — test-plan items covered vs deferred-with-reason; each BA rule mapped to the implementing file/line; known out-of-scope gaps.
    - T2: a 1-line attestation that the diff matches the self-review block.
    - T1: state why the debate was skipped in the commit body.
-4. **Tier floor (advisory until strict mode).** `corepack pnpm lint:review-tier` flags a declared tier below the computed blast-radius floor. Treat a flag as a prompt to re-justify the tier, not an automatic block, until `REVIEW_TIER_STRICT=1` promotes it to fail-closed.
-5. CI (`.github/workflows/ci.yml`) runs typecheck, lint, test, and build on every PR and on push to `main` — a push to a working branch alone triggers nothing. Landed work is complete only with green CI.
-6. Learning-loop hygiene (T2/T3) — one pass before closing, so the loop stays bounded:
+5. **Tier floor (advisory until strict mode).** `corepack pnpm lint:review-tier` flags a declared tier below the computed blast-radius floor. Treat a flag as a prompt to re-justify the tier, not an automatic block, until `REVIEW_TIER_STRICT=1` promotes it to fail-closed.
+6. CI (`.github/workflows/ci.yml`) runs typecheck, lint, test, and build on every PR and on push to `main` — a push to a working branch alone triggers nothing. Landed work is complete only with green CI.
+7. Learning-loop hygiene (T2/T3) — one pass before closing, so the loop stays bounded:
    - A recurring failure surfaced → add a `tasks/regressions.md` rule. If its detection is a deterministic code pattern, add a guard row to `scripts/check-regression-guards.mjs` instead of relying on prose — an enforced rule costs zero context.
    - The task's worklog has landed → promote any durable rule to its canonical doc (`docs/agent/rules/`, a module/ref doc) and delete the worklog; git history is the archive.
    - State the learning (or "none") in the commit/PR body.

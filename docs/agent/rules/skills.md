@@ -298,15 +298,23 @@ Use this workflow for UI/UX design tasks in this repo:
 
 ### Repo Understanding, Search, And Context Economy
 
+- In indexed repos, start each implementation session/task with
+  `codegraph index .` before trusting graph output. `codegraph status .` is only
+  a post-refresh check; do not treat it as sufficient after active code or DB
+  churn.
+- After editing source files, SQL migrations, or generated database type files,
+  run `codegraph index .` again before final review/verification. For database
+  work, do this after `corepack pnpm db:types` when generated types were
+  refreshed, so the graph reflects the final code/type surface.
 - For broad repo orientation, "where/how/which" questions, naming-convention
   sweeps, large-refactor mapping, domain extraction, onboarding, and large diff
   explanation: if `.codegraph/` exists, call `codegraph_explore` first. One
   capped call returns verbatim, line-numbered source grouped by file plus the
   blast radius (callers/dependents) — cheaper and more accurate than a Read/grep
   loop or a search subagent, and it serves both the Claude and Codex runtimes.
-  Run `codegraph init` if the index is missing. With no index, delegate to a
-  read-only Explore/search subagent (see Subagents, Debate, And Read Delegation)
-  rather than reading many files on the main thread.
+  If the index is missing, do not initialize it silently; delegate to a read-only
+  Explore/search subagent (see Subagents, Debate, And Read Delegation) rather
+  than reading many files on the main thread. Indexing is an owner decision.
 - Treat `codegraph_explore` / `codegraph_node` source output as already Read —
   do not re-open those files. `understand-anything` is an optional alternative;
   its output dir is gitignored (`.understand-anything/`, alongside `.codegraph/`).

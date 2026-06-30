@@ -10,6 +10,22 @@ Hierarchy: `Tenant (L0) → Branch (L1)`.
 
 This file is the agent entrypoint. Keep it short and stable. Detailed, topic-specific rules live under `docs/agent/rules/`.
 
+## CodeGraph
+
+In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the
+repo root), keep the graph fresh instead of trusting a previous session:
+
+- Start each implementation session/task with `codegraph index .` before relying
+  on graph output. `codegraph status .` is a post-refresh check, not a substitute
+  after active code or DB churn.
+- Use CodeGraph before grep/find/manual file reads for source lookup:
+  `codegraph explore "..."` / MCP `codegraph_explore`, and `codegraph node ...`
+  for a specific file or symbol.
+- After changing source files, SQL migrations, or generated database types, run
+  `codegraph index .` again before final review or closeout.
+- If `.codegraph/` is missing, skip CodeGraph entirely; indexing is an owner
+  decision.
+
 ## Rule Loading
 
 Before implementation, read the applicable rule files:

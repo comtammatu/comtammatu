@@ -61,6 +61,8 @@ or agent memory.
 - NEVER apply migrations directly to production.
 - Production flow: open a PR, merge the PR, then the owner applies the migration manually.
 - After the migration is applied to the schema used for generated types, run `corepack pnpm db:types`.
+- In indexed repos, after SQL migrations and generated types are final, run
+  `codegraph index .` before relying on graph output or closing the DB task.
 - Clean up data that would violate a new CHECK constraint BEFORE adding it: `ALTER TABLE ADD CONSTRAINT` fails on dirty data and aborts every later statement in the same migration.
 
 ### Owner-Delegated Production Apply
