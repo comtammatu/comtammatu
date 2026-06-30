@@ -36,20 +36,10 @@ import {
 import {
   type MenuCategory,
   type MenuItem,
-  type MenuItemDailyLimit,
 } from "./pos-menu-types";
-import {
-  useDailyLimit,
-  useIngredientCap,
-} from "./_providers/pos-desktop-provider";
-import {
-  isDailyLimitBlockedAfterDemand,
-  remainingDailyQuotaAfterDemand,
-} from "./_utils/daily-limit-draft";
-import {
-  isIngredientCapBlockedAfterDemand,
-  remainingIngredientCapAfterDemand,
-} from "./_utils/ingredient-cap-draft";
+import { useDailyLimit, useIngredientCap } from "./_providers/pos-desktop-provider";
+import { isDailyLimitBlockedAfterDemand } from "./_utils/daily-limit-draft";
+import { isIngredientCapBlockedAfterDemand } from "./_utils/ingredient-cap-draft";
 
 interface PosMenuGridProps {
   categories: MenuCategory[];
@@ -79,7 +69,7 @@ const MenuItemButton = memo(function MenuItemButton({
   dailyLimitDemandByMenuItem,
   onItemTap,
 }: MenuItemButtonProps) {
-  const dailyLimit: MenuItemDailyLimit | null = useDailyLimit(item.id);
+  const dailyLimit = useDailyLimit(item.id);
   const ingredientCap = useIngredientCap(item.id);
   const draftDemand = dailyLimitDemandByMenuItem?.get(item.id) ?? 0;
   const dailyBlocked = isDailyLimitBlockedAfterDemand(dailyLimit, draftDemand);
@@ -88,39 +78,10 @@ const MenuItemButton = memo(function MenuItemButton({
     draftDemand,
   );
   const blocked = dailyBlocked || ingredientBlocked;
-  const dailyRemaining = remainingDailyQuotaAfterDemand(
-    dailyLimit,
-    draftDemand,
-  );
-  const ingredientRemaining = remainingIngredientCapAfterDemand(
-    ingredientCap,
-    draftDemand,
-  );
-  // min of the two caps; null means that gate imposes no limit.
-  const remaining =
-    dailyRemaining === null
-      ? ingredientRemaining
-      : ingredientRemaining === null
-        ? dailyRemaining
-        : Math.min(dailyRemaining, ingredientRemaining);
   const handleClick = useCallback(() => {
     if (blocked) return;
     onItemTap(item);
   }, [blocked, item, onItemTap]);
-
-  const limitBadgeLabel = dailyLimit?.is_disabled
-    ? messages.pos.menu.disabled
-    : blocked
-      ? messages.pos.menu.soldOut
-      : remaining !== null && remaining <= 5
-        ? messages.pos.menu.remaining(remaining)
-        : null;
-  const limitBadgeVariant: "destructive" | "warning" | undefined =
-    dailyLimit?.is_disabled || blocked
-      ? "destructive"
-      : remaining !== null && remaining <= 5
-        ? "warning"
-        : undefined;
 
   return (
     <Button
@@ -172,16 +133,6 @@ const MenuItemButton = memo(function MenuItemButton({
       >
         {formatVND(item.base_price)}
       </span>
-
-      {/* Daily-limit badge — top left, never covers the price. */}
-      {limitBadgeLabel ? (
-        <Badge
-          variant={limitBadgeVariant}
-          className="absolute left-2 top-2 z-10 text-xs shadow-md md:left-3 md:top-3"
-        >
-          {limitBadgeLabel}
-        </Badge>
-      ) : null}
 
       {/* Item name — overlaid at the photo bottom; white text + drop shadow for contrast. */}
       <span

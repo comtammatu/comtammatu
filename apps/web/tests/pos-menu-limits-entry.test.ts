@@ -20,6 +20,12 @@ const kdsPageSource = readSource("app/(protected)/br/[branchId]/kds/page.tsx");
 const kdsBoardSource = readSource(
   "app/(protected)/br/[branchId]/kds/kds-board.tsx",
 );
+const kdsOrderGridSource = readSource(
+  "app/(protected)/br/[branchId]/kds/_components/order-grid.tsx",
+);
+const kdsFocusViewSource = readSource(
+  "app/(protected)/br/[branchId]/kds/_components/focus-view.tsx",
+);
 const kdsHeaderSource = readSource(
   "app/(protected)/br/[branchId]/kds/_components/board-header.tsx",
 );
@@ -42,14 +48,19 @@ test("POS no longer exposes branch menu-limit management", () => {
   assert.doesNotMatch(posDesktopInnerSource, /MenuLimitRow/);
 });
 
-test("KDS keeps operational out-of-stock but no menu-limit management sheet", () => {
+test("KDS no longer exposes menu-limit or out-of-stock controls", () => {
   assert.doesNotMatch(kdsPageSource, /fetchBranchMenuDailyLimits/);
   assert.doesNotMatch(kdsPageSource, /initialMenuLimits/);
   assert.doesNotMatch(kdsBoardSource, /menuLimits/);
+  assert.doesNotMatch(kdsBoardSource, /onOutOfStock/);
+  assert.doesNotMatch(kdsOrderGridSource, /onOutOfStock/);
+  assert.doesNotMatch(kdsOrderGridSource, /kds-out-of-stock/);
+  assert.doesNotMatch(kdsFocusViewSource, /onOutOfStock/);
+  assert.doesNotMatch(kdsFocusViewSource, /kds-out-of-stock/);
   assert.doesNotMatch(kdsHeaderSource, /KdsMenuLimitsSheet/);
   assert.doesNotMatch(kdsHeaderSource, /menuLimits/);
   assert.doesNotMatch(kdsMutationSource, /onMenuLimitChanged/);
-  assert.match(kdsMutationSource, /markKdsItemOutOfStock/);
+  assert.doesNotMatch(kdsMutationSource, /markKdsItemOutOfStock/);
   assert.equal(
     existsSync(
       join(

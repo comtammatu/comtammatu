@@ -67,10 +67,11 @@ test("KDS batch completion action moves into the compact card title area", () =>
   assert.doesNotMatch(batchActionsSource, /confirm\(/);
 });
 
-test("KDS compact cards preserve item recall and out-of-stock actions", () => {
+test("KDS compact cards preserve item recall and ready actions only", () => {
   assert.match(orderGridSource, /canRecall=\{canRecall\}/);
   assert.match(orderGridSource, /onRecall=\{onRecall\}/);
-  assert.match(orderGridSource, /onOutOfStock=\{onOutOfStock\}/);
   assert.match(orderGridSource, /data-testid=\{`kds-recall-/);
-  assert.match(orderGridSource, /data-testid=\{`kds-out-of-stock-/);
+  assert.match(orderGridSource, /data-testid=\{`kds-heatmap-complete-ticket-/);
+  assert.doesNotMatch(orderGridSource, /onOutOfStock/);
+  assert.doesNotMatch(orderGridSource, /data-testid=\{`kds-out-of-stock-/);
 });

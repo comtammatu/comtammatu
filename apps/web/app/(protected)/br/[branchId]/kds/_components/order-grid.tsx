@@ -6,10 +6,8 @@ import { cn } from "@comtammatu/ui";
 import { AppEmptyState, OperationalBoardCard } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
-  Ban as IconBan,
   Check as IconCheck,
   ChefHat as IconChefHat,
   RotateCcw as IconRotate,
@@ -48,8 +46,6 @@ import type { KdsOrderColumn } from "../_lib/order-columns";
 const KDS_HEATMAP_LABELS = {
   completeItem: "Hoàn tất món",
   completeNamedItem: (itemName: string) => `Hoàn tất ${itemName}`,
-  outOfStock: "Báo hết món",
-  outOfStockNamedItem: (itemName: string) => `Báo hết món ${itemName}`,
   priority: "Ưu tiên",
   quantitySuffix: "×",
   recallItem: "Thu hồi món",
@@ -63,7 +59,6 @@ interface OrderGridProps {
   canMarkReady: boolean;
   canRecall: boolean;
   onRecall: (ticketId: number) => Promise<void>;
-  onOutOfStock: (ticketId: number) => Promise<void>;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
 }
 
@@ -82,7 +77,6 @@ function CompactItemRow({
   canRecall,
   onCompleteTickets,
   onRecall,
-  onOutOfStock,
 }: {
   item: KdsOrderItem;
   ticket: KdsTicket | undefined;
@@ -91,7 +85,6 @@ function CompactItemRow({
   canRecall: boolean;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
   onRecall: (ticketId: number) => Promise<void>;
-  onOutOfStock: (ticketId: number) => Promise<void>;
 }) {
   const status = ticket?.status ?? item.status;
   const isMutating = ticket ? pendingTicketIds.has(ticket.id) : false;
@@ -99,23 +92,8 @@ function CompactItemRow({
   const canCompleteByStatus = !isCancelled && isKdsActiveTicketStatus(status);
   const canRecallByStatus = !isCancelled && status === "ready";
   const canComplete = canCompleteByStatus && canMarkReady && ticket != null;
-  const canOutOfStock = canCompleteByStatus && canMarkReady && ticket != null;
   const allowRecall = canRecallByStatus && canRecall && ticket != null;
   const rowEffect = useKdsRowEffect(ticket?.id);
-
-  async function handleOutOfStock() {
-    if (!ticket) return;
-    const ok = await confirm({
-      title: "Báo hết món?",
-      description: `${item.item_name} sẽ được hủy khỏi đơn và POS sẽ thấy thông báo để đổi món cho khách.`,
-      confirmText: "Báo hết món",
-      cancelText: "Giữ lại",
-      variant: "destructive",
-    });
-    if (ok) {
-      await onOutOfStock(ticket.id);
-    }
-  }
 
   return (
     <div
@@ -171,24 +149,6 @@ function CompactItemRow({
             {getStatusLabel(status)}
           </Badge>
         )}
-        {ticket && canOutOfStock && (
-          <Button
-            data-testid={`kds-out-of-stock-${String(ticket.id)}`}
-            type="button"
-            variant="destructive"
-            size="touch"
-            className="w-12 px-0"
-            disabled={isMutating}
-            onClick={() => void handleOutOfStock()}
-            aria-label={KDS_HEATMAP_LABELS.outOfStockNamedItem(item.item_name)}
-          >
-            {isMutating ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <IconBan data-icon="inline-start" aria-hidden />
-            )}
-          </Button>
-        )}
         {ticket && allowRecall && (
           <Button
             data-testid={`kds-recall-${String(ticket.id)}`}
@@ -237,7 +197,6 @@ function CompactOrphanRow({
   canRecall,
   onCompleteTickets,
   onRecall,
-  onOutOfStock,
 }: {
   ticket: KdsTicket;
   pendingTicketIds: Set<number>;
@@ -245,7 +204,6 @@ function CompactOrphanRow({
   canRecall: boolean;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
   onRecall: (ticketId: number) => Promise<void>;
-  onOutOfStock: (ticketId: number) => Promise<void>;
 }) {
   const isMutating = pendingTicketIds.has(ticket.id);
   const isCancelled = ticket.status === "cancelled";
@@ -253,22 +211,8 @@ function CompactOrphanRow({
     !isCancelled && isKdsActiveTicketStatus(ticket.status);
   const canRecallByStatus = !isCancelled && ticket.status === "ready";
   const canComplete = canCompleteByStatus && canMarkReady;
-  const canOutOfStock = canCompleteByStatus && canMarkReady;
   const allowRecall = canRecallByStatus && canRecall;
   const rowEffect = useKdsRowEffect(ticket.id);
-
-  async function handleOutOfStock() {
-    const ok = await confirm({
-      title: "Báo hết món?",
-      description: `Món #${String(ticket.order_item_id)} sẽ được hủy khỏi đơn và POS sẽ thấy thông báo để đổi món cho khách.`,
-      confirmText: "Báo hết món",
-      cancelText: "Giữ lại",
-      variant: "destructive",
-    });
-    if (ok) {
-      await onOutOfStock(ticket.id);
-    }
-  }
 
   return (
     <div
@@ -290,24 +234,6 @@ function CompactOrphanRow({
           >
             {getStatusLabel(ticket.status)}
           </Badge>
-        )}
-        {canOutOfStock && (
-          <Button
-            data-testid={`kds-out-of-stock-${String(ticket.id)}`}
-            type="button"
-            variant="destructive"
-            size="touch"
-            className="w-12 px-0"
-            disabled={isMutating}
-            onClick={() => void handleOutOfStock()}
-            aria-label={KDS_HEATMAP_LABELS.outOfStock}
-          >
-            {isMutating ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <IconBan data-icon="inline-start" aria-hidden />
-            )}
-          </Button>
         )}
         {allowRecall && (
           <Button
@@ -356,7 +282,6 @@ function HeatmapCard({
   canMarkReady,
   canRecall,
   onRecall,
-  onOutOfStock,
   onCompleteTickets,
   isCurrent,
 }: {
@@ -365,7 +290,6 @@ function HeatmapCard({
   canMarkReady: boolean;
   canRecall: boolean;
   onRecall: (ticketId: number) => Promise<void>;
-  onOutOfStock: (ticketId: number) => Promise<void>;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
   isCurrent: boolean;
 }) {
@@ -478,7 +402,6 @@ function HeatmapCard({
             canRecall={canRecall}
             onCompleteTickets={onCompleteTickets}
             onRecall={onRecall}
-            onOutOfStock={onOutOfStock}
           />
         ))}
         {orphanTickets.map((ticket) => (
@@ -490,7 +413,6 @@ function HeatmapCard({
             canRecall={canRecall}
             onCompleteTickets={onCompleteTickets}
             onRecall={onRecall}
-            onOutOfStock={onOutOfStock}
           />
         ))}
       </div>
@@ -504,7 +426,6 @@ function OrderColumn({
   canMarkReady,
   canRecall,
   onRecall,
-  onOutOfStock,
   onCompleteTickets,
   currentGroupKey,
 }: {
@@ -513,7 +434,6 @@ function OrderColumn({
   canMarkReady: boolean;
   canRecall: boolean;
   onRecall: (ticketId: number) => Promise<void>;
-  onOutOfStock: (ticketId: number) => Promise<void>;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
   currentGroupKey: string | null;
 }) {
@@ -546,7 +466,6 @@ function OrderColumn({
               canMarkReady={canMarkReady}
               canRecall={canRecall}
               onRecall={onRecall}
-              onOutOfStock={onOutOfStock}
               onCompleteTickets={onCompleteTickets}
               isCurrent={order.groupKey === currentGroupKey}
             />
@@ -565,7 +484,6 @@ export function OrderGrid({
   canMarkReady,
   canRecall,
   onRecall,
-  onOutOfStock,
   onCompleteTickets,
 }: OrderGridProps) {
   const columns = useMemo(
@@ -603,7 +521,6 @@ export function OrderGrid({
               canMarkReady={canMarkReady}
               canRecall={canRecall}
               onRecall={onRecall}
-              onOutOfStock={onOutOfStock}
               onCompleteTickets={onCompleteTickets}
               currentGroupKey={currentGroupKey}
             />

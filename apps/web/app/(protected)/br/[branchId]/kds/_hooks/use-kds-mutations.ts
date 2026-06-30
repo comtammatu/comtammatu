@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { markKdsItemOutOfStock } from "../actions";
 import { isKdsActiveTicketStatus } from "../_lib/order-status";
 import type { KdsTicket } from "../types";
 
@@ -16,7 +15,6 @@ export interface UseKdsMutationsArgs {
 
 export interface KdsMutations {
   handleRecall: (ticketId: number) => Promise<void>;
-  handleOutOfStock: (ticketId: number) => Promise<void>;
   handleCompleteTickets: (ticketIds: number[]) => Promise<void>;
   pendingTicketIds: Set<number>;
 }
@@ -120,46 +118,6 @@ export function useKdsMutations({
     [beginTicketMutation, endTicketMutation, refreshBoardSnapshot, setTickets],
   );
 
-  const handleOutOfStock = useCallback(
-    async (ticketId: number) => {
-      if (!beginTicketMutation(ticketId)) return;
-
-      setTickets((prev) => prev.filter((t) => t.id !== ticketId));
-
-      try {
-        const ticket = ticketsRef.current.find((t) => t.id === ticketId);
-        if (!ticket) {
-          toast.error("Không tìm thấy phiếu bếp. Vui lòng tải lại.");
-          await refreshBoardSnapshot();
-          return;
-        }
-
-        const result = await markKdsItemOutOfStock({
-          ticketId,
-          branchId,
-          disableForDay: true,
-        });
-
-        if (!result.success) {
-          toast.error(result.error ?? "Không thể báo hết món.");
-          await refreshBoardSnapshot();
-          return;
-        }
-
-        toast.warning(`Đã báo hết món: ${result.data?.itemName ?? "món"}`);
-      } finally {
-        endTicketMutation(ticketId);
-      }
-    },
-    [
-      beginTicketMutation,
-      branchId,
-      endTicketMutation,
-      refreshBoardSnapshot,
-      setTickets,
-    ],
-  );
-
   const handleCompleteTickets = useCallback(
     async (ticketIds: number[]) => {
       const activeIds = [
@@ -223,7 +181,6 @@ export function useKdsMutations({
 
   return {
     handleRecall,
-    handleOutOfStock,
     handleCompleteTickets,
     pendingTicketIds,
   };

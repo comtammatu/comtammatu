@@ -5,11 +5,9 @@ import { cn } from "@comtammatu/ui";
 import { AppEmptyState, OperationalBoardCard } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
-  Ban as IconBan,
   Check as IconCheck,
   CheckCheck as IconCheckCheck,
   ChefHat as IconChefHat,
@@ -51,7 +49,6 @@ interface FocusViewProps {
   canMarkReady: boolean;
   canRecall: boolean;
   onRecall: (ticketId: number) => Promise<void>;
-  onOutOfStock: (ticketId: number) => Promise<void>;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
 }
 
@@ -63,8 +60,6 @@ const KDS_FOCUS_COPY = {
   completeItem: "Hoàn tất món",
   completeNamedItem: (itemName: string) => `Hoàn tất ${itemName}`,
   nextOrder: "Đơn kế tiếp",
-  outOfStock: "Báo hết món",
-  outOfStockNamedItem: (itemName: string) => `Báo hết món ${itemName}`,
   previousOrder: "Đơn trước",
   priority: "Ưu tiên",
   quantitySuffix: "×",
@@ -96,7 +91,6 @@ export function FocusView({
   canMarkReady,
   canRecall,
   onRecall,
-  onOutOfStock,
   onCompleteTickets,
 }: FocusViewProps) {
   const [focusKey, setFocusKey] = useState<string | null>(null);
@@ -199,7 +193,6 @@ export function FocusView({
       canRecall={canRecall}
       isCelebrating={allReady}
       onRecall={onRecall}
-      onOutOfStock={onOutOfStock}
       onCompleteTickets={onCompleteTickets}
       onPrev={goPrev}
       onNext={goNext}
@@ -216,7 +209,6 @@ interface FocusOrderPanelProps {
   canRecall: boolean;
   isCelebrating: boolean;
   onRecall: (ticketId: number) => Promise<void>;
-  onOutOfStock: (ticketId: number) => Promise<void>;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
   onPrev: () => void;
   onNext: () => void;
@@ -231,7 +223,6 @@ function FocusOrderPanel({
   canRecall,
   isCelebrating,
   onRecall,
-  onOutOfStock,
   onCompleteTickets,
   onPrev,
   onNext,
@@ -255,22 +246,6 @@ function FocusOrderPanel({
   const overallStatus = useMemo(() => {
     return getKdsOrderDisplayStatus({ tickets: order.tickets });
   }, [order.tickets]);
-
-  const handleOutOfStock = useCallback(
-    async (ticketId: number, itemName: string) => {
-      const ok = await confirm({
-        title: "Báo hết món?",
-        description: `${itemName} sẽ được hủy khỏi đơn và POS sẽ thấy thông báo để đổi món cho khách.`,
-        confirmText: "Báo hết món",
-        cancelText: "Giữ lại",
-        variant: "destructive",
-      });
-      if (ok) {
-        await onOutOfStock(ticketId);
-      }
-    },
-    [onOutOfStock],
-  );
 
   const isComplete = overallStatus === "ready";
   const elapsedMinutes = useMemo(
@@ -391,7 +366,6 @@ function FocusOrderPanel({
                   !isCancelled && isKdsActiveTicketStatus(status);
                 const canRecallByStatus = !isCancelled && status === "ready";
                 const allowComplete = canCompleteByStatus && canMarkReady;
-                const allowOutOfStock = canCompleteByStatus && canMarkReady;
                 const allowRecall = canRecallByStatus && canRecall;
                 const rowEffect = ticket ? rowEffects.get(ticket.id) : null;
 
@@ -452,37 +426,8 @@ function FocusOrderPanel({
                         </Badge>
                       )}
 
-                      {ticket &&
-                        (allowComplete || allowRecall || allowOutOfStock) && (
+                      {ticket && (allowComplete || allowRecall) && (
                           <>
-                            {allowOutOfStock && (
-                              <Button
-                                data-testid={`kds-out-of-stock-${String(ticket.id)}`}
-                                type="button"
-                                variant="destructive"
-                                size="touch"
-                                className="w-12 px-0"
-                                disabled={isMutating}
-                                onClick={() =>
-                                  void handleOutOfStock(
-                                    ticket.id,
-                                    item.item_name,
-                                  )
-                                }
-                                aria-label={KDS_FOCUS_COPY.outOfStockNamedItem(
-                                  item.item_name,
-                                )}
-                              >
-                                {isMutating ? (
-                                  <Spinner data-icon="inline-start" />
-                                ) : (
-                                  <IconBan
-                                    data-icon="inline-start"
-                                    aria-hidden
-                                  />
-                                )}
-                              </Button>
-                            )}
                             {allowRecall && (
                               <Button
                                 data-testid={`kds-recall-${String(ticket.id)}`}
@@ -546,7 +491,6 @@ function FocusOrderPanel({
                   !isCancelled && isKdsActiveTicketStatus(status);
                 const canRecallByStatus = !isCancelled && status === "ready";
                 const allowComplete = canCompleteByStatus && canMarkReady;
-                const allowOutOfStock = canCompleteByStatus && canMarkReady;
                 const allowRecall = canRecallByStatus && canRecall;
                 const itemLabel = `Món #${String(ticket.order_item_id)}`;
                 const rowEffect = rowEffects.get(ticket.id) ?? null;
@@ -573,28 +517,8 @@ function FocusOrderPanel({
                           {getStatusLabel(status)}
                         </Badge>
                       )}
-                      {(allowComplete || allowRecall || allowOutOfStock) && (
+                      {(allowComplete || allowRecall) && (
                         <>
-                          {allowOutOfStock && (
-                            <Button
-                              data-testid={`kds-out-of-stock-${String(ticket.id)}`}
-                              type="button"
-                              variant="destructive"
-                              size="touch"
-                              className="w-12 px-0"
-                              disabled={isMutating}
-                              onClick={() =>
-                                void handleOutOfStock(ticket.id, itemLabel)
-                              }
-                              aria-label={KDS_FOCUS_COPY.outOfStock}
-                            >
-                              {isMutating ? (
-                                <Spinner data-icon="inline-start" />
-                              ) : (
-                                <IconBan data-icon="inline-start" aria-hidden />
-                              )}
-                            </Button>
-                          )}
                           {allowRecall && (
                             <Button
                               data-testid={`kds-recall-${String(ticket.id)}`}

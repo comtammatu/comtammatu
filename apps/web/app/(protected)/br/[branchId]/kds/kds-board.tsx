@@ -168,7 +168,6 @@ export function KdsBoard({
 
   const {
     handleRecall,
-    handleOutOfStock,
     handleCompleteTickets,
     pendingTicketIds,
   } = useKdsMutations({
@@ -531,7 +530,6 @@ export function KdsBoard({
               canMarkReady={canMarkReady}
               canRecall={canRecall}
               onRecall={handleRecall}
-              onOutOfStock={handleOutOfStock}
               onCompleteTickets={handleCompleteTickets}
             />
           ) : (
@@ -542,7 +540,6 @@ export function KdsBoard({
               canMarkReady={canMarkReady}
               canRecall={canRecall}
               onRecall={handleRecall}
-              onOutOfStock={handleOutOfStock}
               onCompleteTickets={handleCompleteTickets}
             />
           )}
