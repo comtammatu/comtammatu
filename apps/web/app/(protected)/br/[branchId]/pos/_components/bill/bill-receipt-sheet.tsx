@@ -1074,6 +1074,8 @@ export function BillReceipt({
     (paymentCreateError !== null || pendingExtras !== null);
   const remotePaymentError =
     paymentCreateError ?? REMOTE_PAYMENT_COPY.qrUnavailableDescription;
+  const showInvoiceForm =
+    selectedMethod === "cash" || selectedMethod === "vietqr";
 
   return (
     <Dialog open={orderId !== null} onOpenChange={handleOpenChange}>
@@ -1244,12 +1246,6 @@ export function BillReceipt({
                       </span>
                     </div>
 
-                    <InvoiceFormSection
-                      state={invoiceForm}
-                      totalAmount={totalAmount}
-                      disabled={actionPending}
-                      onChange={setInvoiceForm}
-                    />
                   </>
                 </AppSection>
               ) : (
@@ -1340,6 +1336,14 @@ export function BillReceipt({
                   </>
                 </AppSection>
               )}
+              {showInvoiceForm ? (
+                <InvoiceFormSection
+                  state={invoiceForm}
+                  totalAmount={totalAmount}
+                  disabled={actionPending}
+                  onChange={setInvoiceForm}
+                />
+              ) : null}
             </div>
 
             <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col gap-2 border-t bg-popover px-4 py-3">

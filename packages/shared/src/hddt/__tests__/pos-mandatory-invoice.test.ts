@@ -50,6 +50,28 @@ test("payment confirm actions always attempt HĐĐT after successful payment", (
   );
 });
 
+test("POS invoice buyer form is available for cash and VietQR confirmation", () => {
+  const src = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
+  );
+
+  assert.match(
+    src,
+    /const showInvoiceForm =\s*selectedMethod === "cash" \|\| selectedMethod === "vietqr";/,
+    "buyer invoice form must be available for both cashier-confirmed payment paths",
+  );
+  assert.equal(
+    src.match(/<InvoiceFormSection/g)?.length,
+    1,
+    "buyer invoice form should be rendered once, outside method-specific panels",
+  );
+  assert.match(
+    src,
+    /\{showInvoiceForm \? \(\s*<InvoiceFormSection/,
+    "buyer invoice form must not live only inside the cash payment panel",
+  );
+});
+
 test("createTaxInvoice does not create new not_required/skipped rows", () => {
   const src = read("apps/web/app/(protected)/finance/actions.ts");
 
