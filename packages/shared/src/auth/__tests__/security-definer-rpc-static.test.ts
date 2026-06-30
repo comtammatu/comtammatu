@@ -106,6 +106,18 @@ const inventoryRefreshRpcGrantMigration = readRepoFile(
 const branchMenuLimitGrantMigration = readRepoFile(
   "supabase/migrations/20260625172456_restrict_branch_menu_limit_table_grants.sql",
 );
+const branchMenuLimitG1AccessMigration = readRepoFile(
+  "supabase/migrations/20260630062650_pos_kds_inventory_truth_g1_access.sql",
+);
+const branchMenuLimitG2AvailabilityMigration = readRepoFile(
+  "supabase/migrations/20260630071000_pos_kds_inventory_truth_g2_availability.sql",
+);
+const posKdsInventoryTruthG3OutcomesMigration = readRepoFile(
+  "supabase/migrations/20260630082000_pos_kds_inventory_truth_g3_outcomes.sql",
+);
+const posRefundVoidAfterPaidMigration = readRepoFile(
+  "supabase/migrations/20260628120000_pos_refund_void_after_paid.sql",
+);
 const orderDailyCounterGrantMigration = readRepoFile(
   "supabase/migrations/20260625174605_restrict_order_daily_counter_grants.sql",
 );
@@ -117,10 +129,24 @@ function extractSqlFunction(source: string, functionName: string): string {
   return (
     source.match(
       new RegExp(
-        `CREATE OR REPLACE FUNCTION public\\.${functionName}\\([\\s\\S]*?\\n\\$\\$;`,
+        `CREATE (?:OR REPLACE )?FUNCTION public\\.${functionName}\\([\\s\\S]*?\\n\\$\\$;`,
       ),
     )?.[0] ?? ""
   );
+}
+
+function assertSqlOrder(
+  source: string,
+  first: string,
+  second: string,
+  message: string,
+): void {
+  const firstIndex = source.indexOf(first);
+  const secondIndex = source.indexOf(second);
+
+  assert.ok(firstIndex >= 0, `${message}: missing ${first}`);
+  assert.ok(secondIndex >= 0, `${message}: missing ${second}`);
+  assert.ok(firstIndex < secondIndex, message);
 }
 
 test("forward SECURITY DEFINER migrations include an auth boundary or browser-role revoke", () => {
@@ -317,6 +343,195 @@ test("Branch menu daily limits keep realtime read access but block browser write
     branchMenuLimitGrantMigration,
     /REVOKE ALL ON SEQUENCE public\.branch_menu_item_daily_limits_id_seq\s+FROM PUBLIC, anon, authenticated/,
   );
+});
+
+test("Branch menu daily limit management RPCs are manager-only", () => {
+  for (const functionName of [
+    "list_branch_menu_daily_limits",
+    "set_branch_menu_daily_limit",
+    "clear_branch_menu_daily_limit",
+  ]) {
+    const functionSource = extractSqlFunction(
+      branchMenuLimitG1AccessMigration,
+      functionName,
+    );
+    assert.match(
+      functionSource,
+      /v_role NOT IN \('owner', 'branch_manager'\)/,
+    );
+    assert.match(
+      functionSource,
+      /v_role = 'branch_manager'[\s\S]*v_branch <> p_branch_id/,
+    );
+    assert.doesNotMatch(functionSource, /\b(?:cashier|chef)\b/);
+  }
+
+  const writePolicy =
+    branchMenuLimitG1AccessMigration.match(
+      /CREATE POLICY bmidl_write[\s\S]*?;/,
+    )?.[0] ?? "";
+  assert.match(writePolicy, /'owner'/);
+  assert.match(writePolicy, /'branch_manager'/);
+  assert.doesNotMatch(writePolicy, /\b(?:cashier|chef)\b/);
+  assert.match(
+    branchMenuLimitG1AccessMigration,
+    /REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN\s+ON TABLE public\.branch_menu_item_daily_limits\s+FROM authenticated/,
+  );
+  assert.match(
+    branchMenuLimitG1AccessMigration,
+    /GRANT SELECT ON TABLE public\.branch_menu_item_daily_limits\s+TO authenticated/,
+  );
+});
+
+test("Branch menu availability rebuild keeps helper private and admin list manager-only", () => {
+  assert.match(
+    branchMenuLimitG2AvailabilityMigration,
+    /REVOKE ALL ON FUNCTION public\.branch_menu_limit_availability\(bigint, bigint, date, boolean\)\s+FROM PUBLIC, anon, authenticated/,
+  );
+  assert.match(
+    branchMenuLimitG2AvailabilityMigration,
+    /GRANT EXECUTE ON FUNCTION public\.branch_menu_limit_availability\(bigint, bigint, date, boolean\)\s+TO service_role/,
+  );
+
+  const listFunction = extractSqlFunction(
+    branchMenuLimitG2AvailabilityMigration,
+    "list_branch_menu_daily_limits",
+  );
+  assert.match(listFunction, /v_role NOT IN \('owner', 'branch_manager'\)/);
+  assert.match(
+    listFunction,
+    /v_role = 'branch_manager'[\s\S]*v_branch <> p_branch_id/,
+  );
+  assert.doesNotMatch(listFunction, /\b(?:cashier|chef)\b/);
+});
+
+test("POS stock outcome helpers are private and service-role callable only", () => {
+  for (const signature of [
+    "public.inv_to_base_for_tenant(bigint, bigint, bigint, numeric)",
+    "public.post_pos_sale_consumption_if_ready(bigint, uuid)",
+    "public.post_pos_cancelled_ready_waste(bigint, uuid, text)",
+  ]) {
+    assert.match(
+      posKdsInventoryTruthG3OutcomesMigration,
+      new RegExp(
+        `REVOKE ALL ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+FROM PUBLIC, anon, authenticated`,
+      ),
+    );
+    assert.match(
+      posKdsInventoryTruthG3OutcomesMigration,
+      new RegExp(
+        `GRANT EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+TO service_role`,
+      ),
+    );
+  }
+
+  assert.doesNotMatch(
+    posKdsInventoryTruthG3OutcomesMigration,
+    /GRANT\s+EXECUTE\s+ON\s+FUNCTION public\.post_pos_(?:sale_consumption_if_ready|cancelled_ready_waste)[\s\S]*TO\s+(?:anon|authenticated)/,
+  );
+});
+
+test("POS stock outcome helpers keep tenant, branch, and issue-location boundaries", () => {
+  for (const functionName of [
+    "post_pos_sale_consumption_if_ready",
+    "post_pos_cancelled_ready_waste",
+  ]) {
+    const body = extractSqlFunction(
+      posKdsInventoryTruthG3OutcomesMigration,
+      functionName,
+    );
+
+    assert.match(body, /pg_advisory_xact_lock\(p_order_id\)/);
+    assert.match(body, /FROM public\.branch_feature_flags bff/);
+    assert.match(body, /bff\.flag_key = 'pos_stock_outcome_posting'/);
+    assert.match(body, /il\.location_kind = 'warehouse'/);
+    assert.match(body, /ORDER BY il\.is_default_issue DESC/);
+    assert.match(body, /public\.inv_to_base_for_tenant\(/);
+    assert.match(body, /o\.created_by/);
+    assert.match(body, /v_actor := COALESCE\(v_actor, v_order\.created_by\)/);
+    assert.doesNotMatch(body, /public\.inv_to_base\(/);
+    assert.doesNotMatch(body, /00000000-0000-0000-0000-000000000000/);
+  }
+
+  const conversion = extractSqlFunction(
+    posKdsInventoryTruthG3OutcomesMigration,
+    "inv_to_base_for_tenant",
+  );
+  assert.match(conversion, /auth\.role\(\) IS DISTINCT FROM 'service_role'/);
+  assert.match(
+    conversion,
+    /p_tenant_id IS DISTINCT FROM public\.auth_tenant_id\(\)/,
+  );
+  assert.match(conversion, /FROM public\.ingredient_units iu/);
+  assert.match(conversion, /iu\.tenant_id = p_tenant_id/);
+  assert.match(conversion, /iu\.is_active = TRUE/);
+  assert.match(conversion, /recipe_unit_conversion_missing:%/);
+
+  assertSqlOrder(
+    extractSqlFunction(posKdsInventoryTruthG3OutcomesMigration, "finalize_paid_order"),
+    "PERFORM pg_advisory_xact_lock(p_order_id);",
+    "FOR UPDATE;",
+    "finalize_paid_order must take the order advisory lock before row locks",
+  );
+  assertSqlOrder(
+    extractSqlFunction(
+      posKdsInventoryTruthG3OutcomesMigration,
+      "complete_payment_and_consume_stock",
+    ),
+    "PERFORM pg_advisory_xact_lock(v_order_id);",
+    "FOR UPDATE;",
+    "complete_payment_and_consume_stock must take the order advisory lock before row locks",
+  );
+  assertSqlOrder(
+    extractSqlFunction(posKdsInventoryTruthG3OutcomesMigration, "cancel_order"),
+    "PERFORM pg_advisory_xact_lock(p_order_id);",
+    "FOR UPDATE;",
+    "cancel_order must take the order advisory lock before row locks",
+  );
+  assertSqlOrder(
+    extractSqlFunction(posKdsInventoryTruthG3OutcomesMigration, "bump_kds_ticket"),
+    "PERFORM pg_advisory_xact_lock(v_order_id);",
+    "FOR UPDATE;",
+    "bump_kds_ticket must take the order advisory lock before ticket row locks",
+  );
+  assertSqlOrder(
+    extractSqlFunction(posKdsInventoryTruthG3OutcomesMigration, "complete_kds_tickets"),
+    "FOREACH v_order_id IN ARRAY v_order_ids LOOP",
+    "WITH locked AS",
+    "complete_kds_tickets must take order advisory locks before ticket row locks",
+  );
+  assert.match(
+    extractSqlFunction(posKdsInventoryTruthG3OutcomesMigration, "complete_kds_tickets"),
+    /array_agg\(DISTINCT kt\.order_id ORDER BY kt\.order_id\)/,
+  );
+  assertSqlOrder(
+    extractSqlFunction(posKdsInventoryTruthG3OutcomesMigration, "mark_order_item_served"),
+    "PERFORM pg_advisory_xact_lock(v_order_id);",
+    "FOR UPDATE OF oi;",
+    "mark_order_item_served must take the order advisory lock before item row locks",
+  );
+
+  assert.match(
+    posKdsInventoryTruthG3OutcomesMigration,
+    /CREATE UNIQUE INDEX IF NOT EXISTS idx_stock_movements_pos_outcome_idempotency/,
+  );
+  assert.match(
+    posKdsInventoryTruthG3OutcomesMigration,
+    /movement_subtype IN \(\s*'sale_consumption',\s*'cancelled_after_kds_ready'\s*\)/,
+  );
+});
+
+test("Paid refund RPC does not post POS stock outcomes again", () => {
+  const body = extractSqlFunction(
+    posRefundVoidAfterPaidMigration,
+    "refund_paid_order",
+  );
+
+  assert.doesNotMatch(
+    body,
+    /public\.post_pos_(?:sale_consumption_if_ready|cancelled_ready_waste)\(/,
+  );
+  assert.doesNotMatch(body, /public\.stock_movements/);
 });
 
 test("Order daily counters are RPC-only implementation state", () => {

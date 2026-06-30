@@ -19,7 +19,14 @@ function areLimitsEqual(
     a.limit_quantity === b.limit_quantity &&
     a.is_disabled === b.is_disabled &&
     a.sold_today === b.sold_today &&
-    (a.stock_capacity ?? null) === (b.stock_capacity ?? null)
+    (a.stock_capacity ?? null) === (b.stock_capacity ?? null) &&
+    (a.stock_capacity_live ?? null) === (b.stock_capacity_live ?? null) &&
+    (a.manual_limit_quantity ?? null) === (b.manual_limit_quantity ?? null) &&
+    (a.accepted_today ?? null) === (b.accepted_today ?? null) &&
+    (a.pending_unfinalized_demand ?? null) ===
+      (b.pending_unfinalized_demand ?? null) &&
+    (a.active_hold_demand ?? null) === (b.active_hold_demand ?? null) &&
+    (a.available_to_sell ?? null) === (b.available_to_sell ?? null)
   );
 }
 

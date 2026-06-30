@@ -73,7 +73,7 @@
 
 **Decision:** Thanh toán POS KHÔNG trừ kho (kho prod 0 dòng → trừ kho chỉ sinh số sai). Action-layer đã gỡ; webhook stock leg disable qua `20260611001000_disable_payment_stock_leg.sql` (applied prod). Amount-recompute + `finalize_paid_order` GIỮ NGUYÊN — chỉ tắt nhánh stock consumption.
 
-**Consequences:** Smoke chain = POS → payment → KDS/print → HĐĐT. Đuôi: remove `consume_stock_for_order` + RPC liên quan (owner-gated, `tasks/todo.md`). Đảo policy (kho seed + owner duyệt) phải sửa quyết định này trước; khi re-enable, caller `complete_payment_and_consume_stock` check `stock_consumed_status != ok` → webhook 500 + notification `high`.
+**Consequences:** Smoke chain = POS → payment → KDS/print → HĐĐT. Đuôi: remove `consume_stock_for_order` + RPC liên quan (owner-gated, `tasks/todo.md`). Đảo policy (kho seed + owner duyệt) phải sửa quyết định này trước; khi re-enable, caller `complete_payment_and_consume_stock` check `stock_consumed_status != ok` → webhook 500 + notification `high`. D053 supersedes this only for branches that explicitly enable `pos_stock_outcome_posting`.
 
 ## D017: Admin là L0 Tenant Command; Branch Manager dùng L1 Branch Command (2026-06-13)
 
@@ -620,3 +620,20 @@ Chi tiết design: `docs/plan/viec-trong-ca-redesign-2026-06-29.md`. Các chốt
 6. **Giai đoạn còn 2**: `Đầu ca` / `Cuối ca` (bỏ `Trong ca`). Bỏ scope `weekly` (dead).
 
 Đảo quyết định này phải sửa bản ghi này + design doc trước.
+
+## D053: POS/KDS inventory truth by final order outcome (2026-06-30)
+
+**Decision:** Owner chốt triển khai lại trừ kho theo outcome thật, không theo thao tác POS/KDS trung gian. Chi tiết execution plan: `docs/plan/pos-kds-inventory-truth-plan-2026-06-30.md`.
+
+1. **Rollout flag:** stock-outcome posting dùng branch flag `pos_stock_outcome_posting`, default OFF. Rollback đầu tiên là disable flag theo chi nhánh.
+2. **D016 supersede có điều kiện:** D016 vẫn giữ cho mọi chi nhánh chưa bật flag hoặc chưa đủ recipe/unit/location contract. Khi flag bật và guard pass, paid/completed order được phép post stock outcome.
+3. **UI ownership:** POS/KDS không còn giao diện quản lý giới hạn món. Owner/branch_manager quản lý sell state ở branch manager surface với `Tồn | Sẵn bán | Còn`; cashier/chef chỉ thấy trạng thái bán được/khóa món cần cho thao tác.
+4. **Pending demand:** POS create/append chỉ tạo demand/reservation, chưa trừ kho. Reuse `branch_menu_item_daily_holds`; không tạo reservation table thứ hai.
+5. **Payment-before-ready:** Chọn Option B. Thanh toán có thể xảy ra trước KDS ready để không phá flow hiện tại; stock outcome chỉ post khi đủ cả hai điều kiện: order paid/completed và stock-tracked KDS ticket đã từng ready. Nếu paid trước ready, outcome nằm chờ đến khi ready.
+6. **Ready boundary:** `ready` nghĩa là KDS ticket từng đạt `ready`, không phải status hiện tại. Implementation thêm `kds_tickets.first_ready_at` bất biến, set lần đầu khi ticket chuyển `ready`; recall không reset. `bumped_at` không đủ vì hiện có đường set về `NULL`.
+7. **Outcome mapping:** paid/completed + first-ready → `stock_movements.type = 'consumption'`, `movement_subtype = 'sale_consumption'`. Cancel before first-ready → no movement. Cancel after first-ready → waste `movement_subtype = 'cancelled_after_kds_ready'`, chỉ cho line/ticket đã ready/served; line pending chỉ release demand.
+8. **Idempotency:** Không thêm bảng outcome riêng ở first slice. Dùng partial unique index trên `stock_movements` grain `(tenant_id, order_id, movement_subtype, ingredient_id, location_id)` cho `sale_consumption` và `cancelled_after_kds_ready`.
+9. **Stock location:** Kho CN/default issue location là nơi giữ stock branch. KDS/Bếp không là stock owner; KDS chỉ xác nhận trạng thái làm món.
+10. **Multi-unit:** Mọi stock movement mới phải convert về base unit bằng tenant-aware conversion helper trước khi ghi ledger.
+
+**Execution mode:** subagent-driven, sequential T3 lanes with review barriers: G1 access/UI ownership → G2 availability/holds → G3 order outcome ledger → G4 multi-unit guardrail → G5 count-regression guard → G6 QA/rollout. Đảo bất kỳ điểm 1-10 phải sửa D053 trước.

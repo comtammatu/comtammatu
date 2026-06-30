@@ -5,7 +5,6 @@ import { loadAuthState } from "@/_lib/auth";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { KdsBoard } from "./kds-board";
-import { fetchBranchMenuDailyLimits } from "../settings/menu-limits/actions";
 import {
   dedupeRowsById,
   fetchChunkedRows,
@@ -19,7 +18,6 @@ import type {
   KdsOrderInfo,
   KdsOrderItem,
   KdsKitchenSendBatch,
-  KdsMenuLimitRow,
 } from "./types";
 
 const KDS_ORDER_SELECT_WITH_PRIORITY =
@@ -401,12 +399,6 @@ export default async function KdsPage({
     kitchenBatches = batchRes.data ?? [];
   }
 
-  const limitResult = await fetchBranchMenuDailyLimits(branchIdNum);
-  const menuLimits: KdsMenuLimitRow[] =
-    limitResult.success && limitResult.data
-      ? (limitResult.data as KdsMenuLimitRow[])
-      : [];
-
   return (
     <KdsBoard
       branchId={branchIdNum}
@@ -419,7 +411,6 @@ export default async function KdsPage({
       initialOrders={orders}
       initialOrderItems={orderItems}
       initialKitchenBatches={kitchenBatches}
-      initialMenuLimits={menuLimits}
     />
   );
 }

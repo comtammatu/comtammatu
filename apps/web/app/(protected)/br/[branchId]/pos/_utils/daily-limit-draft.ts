@@ -53,10 +53,9 @@ export function buildDailyLimitDemand(
 }
 
 /**
- * Effective daily cap = min over the NON-null values of
- * {limit_quantity, stock_capacity}. `null` when BOTH are null (unbounded).
- * `stock_capacity` is an advisory warehouse-derived cap sharing the same row
- * and the same `sold_today` counter as the manual `limit_quantity`.
+ * Effective daily cap = min over the non-null values of limit_quantity and
+ * stock_capacity. Current RPCs return limit_quantity as the effective Sẵn bán
+ * cap; stock_capacity stays as the compatibility fallback for older payloads.
  */
 function effectiveDailyCap(limit: MenuItemDailyLimit): number | null {
   const stockCap = limit.stock_capacity ?? null;
@@ -65,11 +64,22 @@ function effectiveDailyCap(limit: MenuItemDailyLimit): number | null {
   return Math.min(limit.limit_quantity, stockCap);
 }
 
+function serverAvailableToSell(limit: MenuItemDailyLimit): number | null {
+  const value = limit.available_to_sell;
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.max(0, value)
+    : null;
+}
+
 export function remainingDailyQuotaAfterDemand(
   limit: MenuItemDailyLimit | null,
   currentDraftDemand: number,
 ): number | null {
   if (!limit) return null;
+  const serverRemaining = serverAvailableToSell(limit);
+  if (serverRemaining !== null) {
+    return Math.max(0, serverRemaining - currentDraftDemand);
+  }
   const cap = effectiveDailyCap(limit);
   if (cap == null) return null;
   return Math.max(0, cap - limit.sold_today - currentDraftDemand);
@@ -133,17 +143,17 @@ export function findDailyLimitBlockForProposal({
       return { reason: "disabled", itemName: request.itemName };
     }
 
-    const cap = effectiveDailyCap(limit);
-    if (cap == null) continue;
-
-    const available =
-      cap - limit.sold_today - (existingDemand.get(menuItemId) ?? 0);
+    const available = remainingDailyQuotaAfterDemand(
+      limit,
+      existingDemand.get(menuItemId) ?? 0,
+    );
+    if (available == null) continue;
 
     if (request.quantity > available) {
       return {
         reason: "exceeded",
         itemName: request.itemName,
-        available: Math.max(0, available),
+        available,
         requested: request.quantity,
       };
     }

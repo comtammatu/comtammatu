@@ -39,6 +39,10 @@ import type { OrderType } from "../types";
 export type DailyLimitsMap = ReadonlyMap<number, MenuItemDailyLimit>;
 export type IngredientCapsMap = ReadonlyMap<number, number | null>;
 
+type DailyLimitRow = MenuItemDailyLimit & {
+  menu_item_id: number;
+};
+
 /* ─── Session context (stable) ─── */
 
 type SessionContextValue = {
@@ -332,20 +336,20 @@ export function PosDesktopProvider({
     const result = await fetchDailyLimitsForPos(branchId);
     if (!result.success || !Array.isArray(result.data)) return;
     const next = new Map<number, MenuItemDailyLimit>();
-    // `stock_capacity` is a new RPC column absent from the generated types —
-    // read it via the same untyped row cast as the rest of the limit slice.
-    for (const row of result.data as Array<{
-      menu_item_id: number;
-      limit_quantity: number | null;
-      is_disabled: boolean;
-      sold_today: number;
-      stock_capacity: number | null;
-    }>) {
+    // Availability fields are absent from generated types until the migration
+    // is applied to the type-source schema.
+    for (const row of result.data as DailyLimitRow[]) {
       next.set(row.menu_item_id, {
         limit_quantity: row.limit_quantity,
         is_disabled: row.is_disabled,
         sold_today: row.sold_today,
         stock_capacity: row.stock_capacity,
+        stock_capacity_live: row.stock_capacity_live,
+        manual_limit_quantity: row.manual_limit_quantity,
+        accepted_today: row.accepted_today,
+        pending_unfinalized_demand: row.pending_unfinalized_demand,
+        active_hold_demand: row.active_hold_demand,
+        available_to_sell: row.available_to_sell,
       });
     }
     dailyLimitStore.setAll(next);

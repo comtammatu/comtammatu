@@ -51,6 +51,26 @@ interface LimitRow {
   is_disabled?: unknown;
   sold_today?: unknown;
   stock_capacity?: unknown;
+  stock_capacity_live?: unknown;
+  manual_limit_quantity?: unknown;
+  accepted_today?: unknown;
+  pending_unfinalized_demand?: unknown;
+  active_hold_demand?: unknown;
+  available_to_sell?: unknown;
+}
+
+function hasField(row: LimitRow, field: keyof LimitRow): boolean {
+  return Object.prototype.hasOwnProperty.call(row, field);
+}
+
+function numberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function numberOrZero(value: unknown): number {
+  return numberOrNull(value) ?? 0;
 }
 
 function projectLimit(row: LimitRow): {
@@ -63,35 +83,56 @@ function projectLimit(row: LimitRow): {
       : Number(row.menu_item_id);
   if (!Number.isFinite(itemId)) return null;
 
-  const limitQty =
-    row.limit_quantity === null || row.limit_quantity === undefined
-      ? null
-      : typeof row.limit_quantity === "number"
-        ? row.limit_quantity
-        : Number(row.limit_quantity);
-
-  const sold =
-    typeof row.sold_today === "number"
-      ? row.sold_today
-      : Number(row.sold_today ?? 0);
-
-  const stockCap =
-    row.stock_capacity === null || row.stock_capacity === undefined
-      ? null
-      : typeof row.stock_capacity === "number"
-        ? row.stock_capacity
-        : Number(row.stock_capacity);
+  const limitQty = numberOrNull(row.limit_quantity);
+  const stockCap = numberOrNull(row.stock_capacity);
 
   return {
     menu_item_id: itemId,
     limit: {
-      limit_quantity:
-        limitQty !== null && Number.isFinite(limitQty) ? limitQty : null,
+      limit_quantity: limitQty,
       is_disabled: row.is_disabled === true,
-      sold_today: Number.isFinite(sold) ? sold : 0,
-      stock_capacity:
-        stockCap !== null && Number.isFinite(stockCap) ? stockCap : null,
+      sold_today: numberOrZero(row.sold_today),
+      stock_capacity: stockCap,
+      stock_capacity_live: hasField(row, "stock_capacity_live")
+        ? numberOrNull(row.stock_capacity_live)
+        : stockCap,
+      manual_limit_quantity: hasField(row, "manual_limit_quantity")
+        ? numberOrNull(row.manual_limit_quantity)
+        : limitQty,
+      accepted_today: hasField(row, "accepted_today")
+        ? numberOrNull(row.accepted_today)
+        : numberOrZero(row.sold_today),
+      pending_unfinalized_demand: hasField(row, "pending_unfinalized_demand")
+        ? numberOrZero(row.pending_unfinalized_demand)
+        : undefined,
+      active_hold_demand: hasField(row, "active_hold_demand")
+        ? numberOrZero(row.active_hold_demand)
+        : undefined,
+      available_to_sell: hasField(row, "available_to_sell")
+        ? numberOrNull(row.available_to_sell)
+        : undefined,
     },
+  };
+}
+
+function mergeRealtimeLimit(
+  previous: MenuItemDailyLimit | null,
+  next: MenuItemDailyLimit,
+): MenuItemDailyLimit {
+  return {
+    ...next,
+    pending_unfinalized_demand:
+      next.pending_unfinalized_demand !== undefined
+        ? next.pending_unfinalized_demand
+        : previous?.pending_unfinalized_demand,
+    active_hold_demand:
+      next.active_hold_demand !== undefined
+        ? next.active_hold_demand
+        : previous?.active_hold_demand,
+    available_to_sell:
+      next.available_to_sell !== undefined
+        ? next.available_to_sell
+        : previous?.available_to_sell,
   };
 }
 
@@ -179,7 +220,12 @@ export function useDailyLimitSync({
               refreshLimitsRef.current();
               return;
             }
-            storeRef.current.set(projected.menu_item_id, projected.limit);
+            const previous = storeRef.current.get(projected.menu_item_id);
+            storeRef.current.set(
+              projected.menu_item_id,
+              mergeRealtimeLimit(previous, projected.limit),
+            );
+            refreshLimitsRef.current();
           },
         )
         .subscribe((status) => {

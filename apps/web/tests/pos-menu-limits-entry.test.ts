@@ -1,91 +1,73 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
-const sessionActionsSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pos/session-actions.ts"),
-  "utf8",
+function readSource(path: string): string {
+  return readFileSync(join(process.cwd(), path), "utf8");
+}
+
+const sessionActionsSource = readSource(
+  "app/(protected)/br/[branchId]/pos/session-actions.ts",
+);
+const posHeaderSource = readSource(
+  "app/(protected)/br/[branchId]/pos/pos-session-header.tsx",
+);
+const posDesktopInnerSource = readSource(
+  "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
+);
+const kdsPageSource = readSource("app/(protected)/br/[branchId]/kds/page.tsx");
+const kdsBoardSource = readSource(
+  "app/(protected)/br/[branchId]/kds/kds-board.tsx",
+);
+const kdsHeaderSource = readSource(
+  "app/(protected)/br/[branchId]/kds/_components/board-header.tsx",
+);
+const kdsMutationSource = readSource(
+  "app/(protected)/br/[branchId]/kds/_hooks/use-kds-mutations.ts",
+);
+const managerActionsSource = readSource(
+  "app/(protected)/br/[branchId]/settings/menu-limits/actions.ts",
+);
+const managerPageSource = readSource(
+  "app/(protected)/br/[branchId]/settings/menu-limits/page.tsx",
 );
 
-const posHeaderSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-session-header.tsx"),
-  "utf8",
-);
+test("POS no longer exposes branch menu-limit management", () => {
+  assert.doesNotMatch(sessionActionsSource, /canManageMenuLimits/);
+  assert.doesNotMatch(sessionActionsSource, /branch_menu_limits/);
+  assert.doesNotMatch(posHeaderSource, /MenuLimitsSheet/);
+  assert.doesNotMatch(posHeaderSource, /canManageMenuLimits/);
+  assert.doesNotMatch(posDesktopInnerSource, /menuLimitRows/);
+  assert.doesNotMatch(posDesktopInnerSource, /MenuLimitRow/);
+});
 
-const posDesktopInnerSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx"),
-  "utf8",
-);
-
-const menuLimitsSheetSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/settings/menu-limits/menu-limits-sheet.tsx",
-  ),
-  "utf8",
-);
-
-const kdsMenuLimitsSheetSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/kds/_components/menu-limits-sheet.tsx",
-  ),
-  "utf8",
-);
-
-test("POS exposes menu lock and daily limit only through branch menu-limit ACL", () => {
-  assert.match(
-    sessionActionsSource,
-    /const MENU_LIMIT_ROLES = MODULE_ACL\.branch_menu_limits\.allowedRoles;/,
-    "POS permission flags must reuse the branch_menu_limits ACL source",
-  );
-  assert.match(
-    sessionActionsSource,
-    /canManageMenuLimits: MENU_LIMIT_ROLES\.includes\(ctx\.claims\.user_role\)/,
-    "POS should not invent a separate role or permission gate",
-  );
-  assert.match(
-    posHeaderSource,
-    /canManageMenuLimits \? \([\s\S]*<MenuLimitsSheet/,
-    "POS header must render the management entrypoint behind the ACL flag",
-  );
-  assert.match(
-    posHeaderSource,
-    /triggerTitle="Khóa món \/ hạn mức"/,
-    "POS operator wording should expose both lock and cap jobs",
+test("KDS keeps operational out-of-stock but no menu-limit management sheet", () => {
+  assert.doesNotMatch(kdsPageSource, /fetchBranchMenuDailyLimits/);
+  assert.doesNotMatch(kdsPageSource, /initialMenuLimits/);
+  assert.doesNotMatch(kdsBoardSource, /menuLimits/);
+  assert.doesNotMatch(kdsHeaderSource, /KdsMenuLimitsSheet/);
+  assert.doesNotMatch(kdsHeaderSource, /menuLimits/);
+  assert.doesNotMatch(kdsMutationSource, /onMenuLimitChanged/);
+  assert.match(kdsMutationSource, /markKdsItemOutOfStock/);
+  assert.equal(
+    existsSync(
+      join(
+        process.cwd(),
+        "app/(protected)/br/[branchId]/kds/_components/menu-limits-sheet.tsx",
+      ),
+    ),
+    false,
   );
 });
 
-test("POS menu-limit sheet is fed from POS menu data and shares canonical actions", () => {
+test("branch menu-limit management remains on the manager settings surface", () => {
   assert.match(
-    posDesktopInnerSource,
-    /const menuLimitRows = useMemo<MenuLimitRow\[\]>/,
-    "POS shell should derive initial sheet rows from the already-loaded menu",
+    managerActionsSource,
+    /const LIMITS_ROLES = MODULE_ACL\.branch_menu_limits\.allowedRoles;/,
   );
-  assert.match(
-    posDesktopInnerSource,
-    /menuLimitRows=\{menuLimitRows\}/,
-    "POS mobile and desktop headers must receive the same menu-limit rows",
-  );
-  assert.match(
-    menuLimitsSheetSource,
-    /fetchBranchMenuDailyLimits/,
-    "Sheet should refresh live branch rows when opened",
-  );
-  assert.match(
-    menuLimitsSheetSource,
-    /setBranchMenuDailyLimit/,
-    "Sheet saves must go through the canonical branch menu-limit action",
-  );
-  assert.match(
-    menuLimitsSheetSource,
-    /clearBranchMenuDailyLimit/,
-    "Sheet clears must go through the canonical branch menu-limit action",
-  );
-  assert.match(
-    kdsMenuLimitsSheetSource,
-    /import \{ MenuLimitsSheet \} from "\.\.\/\.\.\/settings\/menu-limits\/menu-limits-sheet";/,
-    "KDS should reuse the same sheet implementation as POS",
-  );
+  assert.match(managerActionsSource, /list_branch_menu_daily_limits/);
+  assert.match(managerActionsSource, /set_branch_menu_daily_limit/);
+  assert.match(managerActionsSource, /clear_branch_menu_daily_limit/);
+  assert.match(managerPageSource, /MenuLimitsTable/);
 });

@@ -35,8 +35,6 @@ interface PosDesktopShellProps {
   canCloseShift: boolean;
   /** `pos:confirm_payment` — gate phương thức"Tiền mặt" trên bill (cashier+). */
   canConfirmCash: boolean;
-  /** ACL flag for daily menu lock/quota management inside POS chrome. */
-  canManageMenuLimits: boolean;
   /** Tenant `pos_split_merge_enabled` — hides split/merge entries when off. */
   canSplitMerge: boolean;
   /** Tenant payment methods seeded từ RSC — bill render không phải đợi fetch. */
@@ -89,7 +87,6 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
         categories={props.categories}
         canCloseShift={props.canCloseShift}
         canConfirmCash={props.canConfirmCash}
-        canManageMenuLimits={props.canManageMenuLimits}
         canSplitMerge={props.canSplitMerge}
         initialPaymentMethods={props.initialPaymentMethods}
         initialVietQrConfig={props.initialVietQrConfig}

@@ -12,19 +12,24 @@
 -- mature daily-limit machinery reuses for free: sold_today counting (the
 -- enforce trigger increments any existing row even when limit_quantity IS NULL
 -- and never RAISEs on a NULL limit), giveback on cancel, and the POS realtime
--- channel (REPLICA IDENTITY FULL). limit_quantity (manual cap) is left
--- untouched; POS composes min(limit_quantity, stock_capacity) − sold_today.
+-- channel (REPLICA IDENTITY FULL). limit_quantity defaults to stock_capacity
+-- when no manager cap exists.
 -- =========================================================================
 
--- ─── 1. Stored stock-derived cap (separate from manual limit_quantity) ─────
--- Own column because limit_quantity CHECK forbids 0 (0 = hết nguyên liệu is a
--- valid computed state) and to avoid clobbering manager-set caps.
+-- ─── 1. Stored stock-derived cap (separate from manager cap intent) ────────
 ALTER TABLE public.branch_menu_item_daily_limits
   ADD COLUMN stock_capacity integer;
 
 ALTER TABLE public.branch_menu_item_daily_limits
   ADD CONSTRAINT branch_menu_item_daily_limits_stock_capacity_check
   CHECK (stock_capacity IS NULL OR stock_capacity >= 0);
+
+ALTER TABLE public.branch_menu_item_daily_limits
+  DROP CONSTRAINT IF EXISTS branch_menu_item_daily_limits_limit_quantity_check;
+
+ALTER TABLE public.branch_menu_item_daily_limits
+  ADD CONSTRAINT branch_menu_item_daily_limits_limit_quantity_check
+  CHECK (limit_quantity IS NULL OR limit_quantity >= 0);
 
 COMMENT ON COLUMN public.branch_menu_item_daily_limits.stock_capacity IS
   'Recipe-derived sellable portions from warehouse stock: floor(min over recipe ingredients of warehouse on_hand/(quantity/yield_factor)). NULL = no recipe / no cap. Maintained by triggers on stock_levels + recipes. Advisory; composed with limit_quantity at POS, never a DB hard-gate.';
@@ -64,10 +69,10 @@ COMMENT ON FUNCTION public.compute_menu_item_stock_capacity(bigint, bigint, bigi
 REVOKE ALL ON FUNCTION public.compute_menu_item_stock_capacity(bigint, bigint, bigint) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.compute_menu_item_stock_capacity(bigint, bigint, bigint) TO service_role;
 
--- ─── 3. Refresh: UPSERT today's stock_capacity, preserving manual fields ───
+-- ─── 3. Refresh: UPSERT today's stock_capacity, preserving manager fields ──
 -- p_menu_item_id / p_ingredient_id narrow the recompute (recipe vs stock
--- trigger). ON CONFLICT updates only stock_capacity → limit_quantity,
--- is_disabled, sold_today are never touched.
+-- trigger). ON CONFLICT updates stock_capacity and fills limit_quantity only
+-- while it is still NULL; is_disabled and sold_today are never touched.
 CREATE FUNCTION public.refresh_branch_menu_stock_capacity(
   p_tenant_id bigint,
   p_branch_id bigint,
@@ -89,24 +94,50 @@ BEGIN
     RAISE EXCEPTION 'branch_tenant_mismatch' USING ERRCODE = '42501';
   END IF;
 
+  WITH computed AS (
+    SELECT mi.menu_item_id,
+           public.compute_menu_item_stock_capacity(
+             p_tenant_id,
+             p_branch_id,
+             mi.menu_item_id
+           ) AS stock_capacity
+    FROM (
+      SELECT DISTINCT r.menu_item_id
+      FROM public.recipes r
+      WHERE r.tenant_id = p_tenant_id
+        AND (p_menu_item_id IS NULL OR r.menu_item_id = p_menu_item_id)
+        AND (p_ingredient_id IS NULL OR r.ingredient_id = p_ingredient_id)
+    ) mi
+  )
   INSERT INTO public.branch_menu_item_daily_limits
-    (tenant_id, branch_id, menu_item_id, limit_date, stock_capacity)
-  SELECT p_tenant_id, p_branch_id, mi.menu_item_id, v_today,
-         public.compute_menu_item_stock_capacity(p_tenant_id, p_branch_id, mi.menu_item_id)
-  FROM (
-    SELECT DISTINCT r.menu_item_id
-    FROM public.recipes r
-    WHERE r.tenant_id = p_tenant_id
-      AND (p_menu_item_id IS NULL OR r.menu_item_id = p_menu_item_id)
-      AND (p_ingredient_id IS NULL OR r.ingredient_id = p_ingredient_id)
-  ) mi
+    (
+      tenant_id,
+      branch_id,
+      menu_item_id,
+      limit_date,
+      stock_capacity,
+      limit_quantity
+    )
+  SELECT p_tenant_id,
+         p_branch_id,
+         c.menu_item_id,
+         v_today,
+         c.stock_capacity,
+         c.stock_capacity
+  FROM computed c
   ON CONFLICT (branch_id, menu_item_id, limit_date)
-  DO UPDATE SET stock_capacity = EXCLUDED.stock_capacity, updated_at = now();
+  DO UPDATE SET
+    stock_capacity = EXCLUDED.stock_capacity,
+    limit_quantity = COALESCE(
+      public.branch_menu_item_daily_limits.limit_quantity,
+      EXCLUDED.limit_quantity
+    ),
+    updated_at = now();
 END;
 $$;
 
 COMMENT ON FUNCTION public.refresh_branch_menu_stock_capacity(bigint, bigint, bigint, bigint) IS
-  'Recompute + UPSERT today''s stock_capacity for menu items with a recipe (optionally narrowed by menu item or ingredient), preserving limit_quantity/is_disabled/sold_today.';
+  'Recompute + UPSERT today''s stock_capacity for menu items with a recipe (optionally narrowed by menu item or ingredient), defaulting limit_quantity only when absent while preserving is_disabled/sold_today.';
 
 REVOKE ALL ON FUNCTION public.refresh_branch_menu_stock_capacity(bigint, bigint, bigint, bigint) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.refresh_branch_menu_stock_capacity(bigint, bigint, bigint, bigint) TO service_role;

@@ -51,7 +51,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   operator_home: "Vận hành chi nhánh",
   branch_dashboard: "Điều hành chi nhánh",
   branch_settings: "Cài đặt chi nhánh",
-  branch_menu_limits: "Hạn mức bán hàng ngày",
+  branch_menu_limits: "Giới hạn bán",
   employee: "Trang nhân viên",
   employee_checkout_approvals: "Duyệt kết ca",
   notifications: "Thông báo",

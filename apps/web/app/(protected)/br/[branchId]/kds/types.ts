@@ -75,21 +75,6 @@ export interface KdsOrderItem {
   sides: OrderItemSide[] | null;
 }
 
-/** Branch menu daily limit row reused by KDS dispatch controls. */
-export interface KdsMenuLimitRow {
-  menu_item_id: number;
-  item_name: string;
-  category_id: number;
-  category_name: string;
-  base_price: number;
-  limit_id: number | null;
-  limit_date: string | null;
-  limit_quantity: number | null;
-  is_disabled: boolean;
-  sold_today: number;
-  stock_capacity: number | null;
-}
-
 /** Grouped order with its tickets and items for display */
 export interface KdsOrder {
   groupKey: string;
@@ -123,7 +108,6 @@ export interface KdsBoardProps {
   initialOrders: KdsOrderInfo[];
   initialOrderItems: KdsOrderItem[];
   initialKitchenBatches: KdsKitchenSendBatch[];
-  initialMenuLimits: KdsMenuLimitRow[];
 }
 
 /** URL query: order type filter */

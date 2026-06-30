@@ -14,6 +14,7 @@ import { formatDate } from "../_lib/format";
 import { RecipesClient } from "./recipes-client";
 import type { RecipeRow, RecipeItem } from "./recipes-client";
 import type { MenuItemOption, IngredientOption } from "./recipe-line-dialog";
+import type { IngredientUnitRow } from "../_lib/types";
 
 type MenuItemRow = {
   id: number;
@@ -119,11 +120,13 @@ export default async function RecipesPage({
           name: string;
           unit: string;
           purchase_unit?: string | null;
+          units?: IngredientUnitRow[];
         }>
       ).map((i) => ({
         id: i.id,
         name: i.name,
         unit: i.purchase_unit ?? i.unit,
+        units: i.units,
       }))
     : [];
 

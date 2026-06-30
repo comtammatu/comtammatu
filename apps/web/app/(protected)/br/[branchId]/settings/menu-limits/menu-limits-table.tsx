@@ -35,16 +35,11 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { normalizeSearch } from "@lib/search";
-import {
-  type MenuLimitRow,
-  setBranchMenuDailyLimit,
-  clearBranchMenuDailyLimit,
-} from "./actions";
+import { type MenuLimitRow, setBranchMenuDailyLimit } from "./actions";
 import {
   getMenuLimitCapSource,
   getMenuLimitEffectiveCap,
   getMenuLimitRemaining,
-  hasManualMenuLimit,
 } from "./menu-limit-cap";
 import { messages } from "@lib/messages";
 
@@ -58,23 +53,23 @@ interface RowDraft {
   isDisabled: boolean;
 }
 
+function getDraftLimitQuantity(row: MenuLimitRow): number | null {
+  return row.limit_quantity ?? row.stock_capacity;
+}
+
 function buildDraft(row: MenuLimitRow): RowDraft {
+  const limitQuantity = getDraftLimitQuantity(row);
   return {
-    qtyText: row.limit_quantity == null ? "" : String(row.limit_quantity),
+    qtyText: limitQuantity == null ? "" : String(limitQuantity),
     isDisabled: row.is_disabled,
   };
 }
 
 function isDirty(row: MenuLimitRow, draft: RowDraft): boolean {
-  const persisted =
-    row.limit_quantity == null ? "" : String(row.limit_quantity);
+  const persisted = String(getDraftLimitQuantity(row) ?? "");
   return (
     draft.qtyText.trim() !== persisted || draft.isDisabled !== row.is_disabled
   );
-}
-
-function isConfigured(row: MenuLimitRow): boolean {
-  return hasManualMenuLimit(row);
 }
 
 function getProgress(row: MenuLimitRow): {
@@ -161,7 +156,7 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
   const summary = useMemo(
     () => ({
       total: rows.length,
-      limited: rows.filter((row) => row.limit_quantity !== null).length,
+      limited: rows.filter((row) => getDraftLimitQuantity(row) !== null).length,
       stockLimited: rows.filter((row) => row.stock_capacity !== null).length,
       disabled: rows.filter((row) => row.is_disabled).length,
       exhausted: rows.filter((row) => {
@@ -182,38 +177,40 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
   function handleSave(row: MenuLimitRow) {
     const draft = drafts[row.menu_item_id] ?? buildDraft(row);
     const trimmed = draft.qtyText.trim();
-    let qty: number | null = null;
 
-    if (trimmed !== "") {
-      const parsed = Number(trimmed);
-      if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 9999) {
-        toast.error("Hạn mức phải là số nguyên từ 1 đến 9999.");
-        return;
-      }
-      qty = parsed;
+    if (trimmed === "") {
+      toast.error(messages.pos.menu.manualLimitRequired);
+      return;
     }
 
-    const shouldClear = qty === null && !draft.isDisabled;
-    const configured = isConfigured(row);
+    const parsed = Number(trimmed);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 9999) {
+      toast.error(messages.pos.menu.manualLimitRange);
+      return;
+    }
+    if (row.stock_capacity === null) {
+      toast.error(messages.pos.menu.stockCapacityRequired);
+      return;
+    }
+    if (parsed > row.stock_capacity) {
+      toast.error(
+        messages.pos.menu.manualLimitExceedsStock(row.stock_capacity),
+      );
+      return;
+    }
 
     setPendingId(row.menu_item_id);
     startTransition(async () => {
       try {
-        const result =
-          shouldClear && configured
-            ? await clearBranchMenuDailyLimit({
-                branchId,
-                menuItemId: row.menu_item_id,
-              })
-            : await setBranchMenuDailyLimit({
-                branchId,
-                menuItemId: row.menu_item_id,
-                limitQuantity: qty,
-                isDisabled: draft.isDisabled,
-              });
+        const result = await setBranchMenuDailyLimit({
+          branchId,
+          menuItemId: row.menu_item_id,
+          limitQuantity: parsed,
+          isDisabled: draft.isDisabled,
+        });
 
         if (!result.success) {
-          toast.error(result.error ?? "Không lưu được hạn mức.");
+          toast.error(result.error ?? "Không lưu được giới hạn bán.");
           return;
         }
 
@@ -296,13 +293,12 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     }
   }
 
-  function renderSoldCount(row: MenuLimitRow) {
-    const effectiveCap = getMenuLimitEffectiveCap(row);
+  function renderRemainingCount(row: MenuLimitRow) {
+    const remaining = getMenuLimitRemaining(row);
     return (
       <div className="flex flex-col gap-1">
         <span className="font-mono text-sm tabular-nums">
-          {row.sold_today}
-          {effectiveCap != null ? ` / ${effectiveCap}` : ""}
+          {remaining == null ? messages.pos.menu.unlimited : remaining}
         </span>
         <span className="text-xs text-muted-foreground">
           {getCapSourceLabel(row)}
@@ -311,16 +307,22 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     );
   }
 
+  function getRemainingLabel(row: MenuLimitRow): string {
+    const remaining = getMenuLimitRemaining(row);
+    return remaining == null ? messages.pos.menu.unlimited : String(remaining);
+  }
+
   function renderLimitInput(row: MenuLimitRow) {
     const draft = drafts[row.menu_item_id] ?? buildDraft(row);
     const rowPending = isPending && pendingId === row.menu_item_id;
     return (
       <Input
         type="number"
-        min={1}
-        max={9999}
+        min={0}
+        max={row.stock_capacity ?? 9999}
         inputMode="numeric"
-        placeholder={messages.pos.menu.unlimited}
+        placeholder={messages.pos.menu.manualLimitPlaceholder}
+        required
         value={draft.qtyText}
         disabled={rowPending}
         onChange={(event) =>
@@ -371,12 +373,6 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
       render: (row) => renderStatus(row),
     },
     {
-      key: "sold",
-      header: messages.pos.menu.soldLabel,
-      className: "w-36",
-      render: (row) => renderSoldCount(row),
-    },
-    {
       key: "stockCapacity",
       header: messages.pos.menu.stockCapacityLabel,
       className: "w-36",
@@ -387,6 +383,12 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
       header: messages.pos.menu.manualLimitLabel,
       className: "w-40",
       render: (row) => renderLimitInput(row),
+    },
+    {
+      key: "remaining",
+      header: messages.pos.menu.soldLabel,
+      className: "w-36",
+      render: (row) => renderRemainingCount(row),
     },
     {
       key: "disabled",
@@ -476,17 +478,24 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
                 <ItemHeader>
                   <ItemContent>
                     <ItemTitle>{row.item_name}</ItemTitle>
-                    <ItemDescription>{formatVND(row.base_price)}</ItemDescription>
+                    <ItemDescription>
+                      {formatVND(row.base_price)}
+                    </ItemDescription>
                     <ItemDescription>
                       {messages.pos.menu.stockCapacityLabel}:{" "}
                       {renderStockCapacity(row)}
+                    </ItemDescription>
+                    <ItemDescription>
+                      {messages.pos.menu.soldLabel}: {getRemainingLabel(row)}
                     </ItemDescription>
                   </ItemContent>
                   <ItemActions>{renderDisabledSwitch(row)}</ItemActions>
                 </ItemHeader>
                 {renderStatus(row)}
                 <ItemFooter>
-                  {renderSoldCount(row)}
+                  <span className="text-sm text-muted-foreground">
+                    {messages.pos.menu.manualLimitLabel}
+                  </span>
                   <div className="w-32">{renderLimitInput(row)}</div>
                 </ItemFooter>
                 <ItemFooter className="justify-end">

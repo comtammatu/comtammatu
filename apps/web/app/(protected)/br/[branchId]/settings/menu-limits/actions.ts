@@ -30,6 +30,12 @@ export interface MenuLimitRow {
   is_disabled: boolean;
   sold_today: number;
   stock_capacity: number | null;
+  stock_capacity_live: number | null;
+  manual_limit_quantity: number | null;
+  accepted_today: number;
+  pending_unfinalized_demand: number;
+  active_hold_demand: number;
+  available_to_sell: number | null;
 }
 
 export async function fetchBranchMenuDailyLimits(
@@ -72,13 +78,13 @@ export async function fetchBranchMenuDailyLimits(
 const setLimitSchema = z.object({
   branchId: branchIdSchema,
   menuItemId: menuItemIdSchema,
-  // null/undefined → no quantity cap (item still sells uncapped, unless disabled)
+  // null/undefined → backend defaults Sẵn bán to the computed stock capacity.
   limitQuantity: z
     .union([
       z.coerce
         .number()
         .int()
-        .positive({ error: "Số lượng tối thiểu là 1" })
+        .min(0, { error: "Số lượng tối thiểu là 0" })
         .max(9999, { error: "Số lượng tối đa 9999" }),
       z.null(),
       z.undefined(),
@@ -120,8 +126,8 @@ export async function setBranchMenuDailyLimit(
     {
       p_branch_id: parsed.data.branchId,
       p_menu_item_id: parsed.data.menuItemId,
-      // null = "no quantity cap"; plpgsql accepts NULL but typegen types the
-      // INT param non-null (no SQL default), so assert here.
+      // null = default to stock capacity; typegen still types the INT param
+      // non-null because there is no SQL default, so assert here.
       p_limit_quantity: limitQty as number,
       p_is_disabled: parsed.data.isDisabled,
     },
@@ -134,6 +140,18 @@ export async function setBranchMenuDailyLimit(
     }
     if (msg.includes("not found")) {
       return { success: false, error: "Không tìm thấy món hoặc chi nhánh." };
+    }
+    if (msg.includes("exceeds stock capacity")) {
+      return { success: false, error: "Sẵn bán không được vượt Tồn." };
+    }
+    if (msg.includes("nonnegative")) {
+      return {
+        success: false,
+        error: "Sẵn bán phải là số nguyên từ 0 đến 9999.",
+      };
+    }
+    if (msg.includes("stock capacity required")) {
+      return { success: false, error: "Chưa tính được Tồn để đặt Sẵn bán." };
     }
     return {
       success: false,

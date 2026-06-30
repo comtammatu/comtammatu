@@ -36,7 +36,6 @@ import { KdsCompletionHistorySheet } from "./_components/completion-history-shee
 import { UnassignedBanner } from "./_components/unassigned-banner";
 import type {
   KdsBoardProps,
-  KdsMenuLimitRow,
   KdsOrder,
   KdsOrderItem,
   KdsTicket,
@@ -137,7 +136,6 @@ export function KdsBoard({
   initialOrders,
   initialOrderItems,
   initialKitchenBatches,
-  initialMenuLimits,
 }: KdsBoardProps) {
   const {
     tickets,
@@ -156,7 +154,6 @@ export function KdsBoard({
 
   const filters = useKdsFilters(stations);
   const { mode, setMode } = useKdsViewMode();
-  const [menuLimits, setMenuLimits] = useState(initialMenuLimits);
   // Default OFF; device preference loads after mount (hydration-safe).
   // Without persistence the new-ticket bell resets to muted every reload.
   const [soundEnabled, setSoundEnabled] = useState(false);
@@ -169,38 +166,6 @@ export function KdsBoard({
   const boardRootRef = useRef<HTMLDivElement | null>(null);
   const lastMissingItemRefreshRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    setMenuLimits(initialMenuLimits);
-  }, [initialMenuLimits]);
-
-  const applyMenuLimitPatch = useCallback(
-    (patch: {
-      menuItemId: number;
-      limitQuantity: number | null;
-      isDisabled: boolean;
-      soldToday: number;
-    }) => {
-      setMenuLimits((prev) =>
-        prev.map((row) =>
-          row.menu_item_id === patch.menuItemId
-            ? {
-                ...row,
-                limit_id: row.limit_id ?? row.menu_item_id,
-                limit_quantity: patch.limitQuantity,
-                is_disabled: patch.isDisabled,
-                sold_today: patch.soldToday,
-              }
-            : row,
-        ),
-      );
-    },
-    [],
-  );
-
-  const setMenuLimitRows = useCallback((rows: KdsMenuLimitRow[]) => {
-    setMenuLimits(rows);
-  }, []);
-
   const {
     handleRecall,
     handleOutOfStock,
@@ -211,7 +176,6 @@ export function KdsBoard({
     tickets,
     setTickets,
     refreshBoardSnapshot,
-    onMenuLimitChanged: applyMenuLimitPatch,
   });
 
   const fallbackStationSet = useMemo(
@@ -531,8 +495,6 @@ export function KdsBoard({
             onCompletionHistoryOpen={() => setCompletionHistoryOpen(true)}
             onSoundToggle={toggleSound}
             onFullscreenToggle={toggleFullscreen}
-            menuLimits={menuLimits}
-            onMenuLimitsChange={setMenuLimitRows}
             stationControls={
               <StationToggleBar
                 stations={stations}

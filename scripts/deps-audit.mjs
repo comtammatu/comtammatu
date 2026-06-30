@@ -1,6 +1,15 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+} from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { basename, dirname, join, relative } from "node:path";
 
 const ROOT = process.cwd();
@@ -151,6 +160,29 @@ function scriptsUseCommand(scripts, command) {
   return Object.values(scripts).some((script) => pattern.test(script));
 }
 
+function copyDedupeCheckWorkspace(tempRoot) {
+  for (const file of ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"]) {
+    const absFile = join(ROOT, file);
+    if (existsSync(absFile)) cpSync(absFile, join(tempRoot, file));
+  }
+
+  for (const dir of ["apps", "packages"]) {
+    const absDir = join(ROOT, dir);
+    if (!existsSync(absDir)) continue;
+
+    for (const entry of readdirSync(absDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+
+      const packageJson = join(absDir, entry.name, "package.json");
+      if (!existsSync(packageJson)) continue;
+
+      const tempPackageDir = join(tempRoot, dir, entry.name);
+      mkdirSync(tempPackageDir, { recursive: true });
+      cpSync(packageJson, join(tempPackageDir, "package.json"));
+    }
+  }
+}
+
 function candidateCommandNames(packageDir, depName) {
   const names = new Set();
   names.add(depName);
@@ -218,11 +250,22 @@ async function dependencyIsUsed({ depName, allDirectDepNames, files, manifest, p
 }
 
 function runDedupeCheck() {
-  const result = spawnSync("pnpm", ["dedupe", "--check"], {
-    cwd: ROOT,
-    encoding: "utf8",
-    stdio: "pipe",
-  });
+  const tempRoot = mkdtempSync(join(tmpdir(), "comtammatu-deps-audit-"));
+  let result;
+  try {
+    copyDedupeCheckWorkspace(tempRoot);
+    result = spawnSync("pnpm", [
+      "dedupe",
+      "--check",
+      "--config.confirmModulesPurge=false",
+    ], {
+      cwd: tempRoot,
+      encoding: "utf8",
+      stdio: "pipe",
+    });
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
 
   if (result.status === 0) {
     process.stdout.write(result.stdout);

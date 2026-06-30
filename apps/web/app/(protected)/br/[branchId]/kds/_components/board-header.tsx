@@ -16,10 +16,8 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { EmployeePortalBackControl } from "../../employee-portal-back-control";
-import { KdsMenuLimitsSheet } from "./menu-limits-sheet";
 import { ViewModeToggle } from "./view-mode-toggle";
 import type { KdsViewMode } from "../_hooks/use-kds-view-mode";
-import type { KdsMenuLimitRow } from "../types";
 
 interface BoardHeaderProps {
   branchId: number;
@@ -31,8 +29,6 @@ interface BoardHeaderProps {
   onCompletionHistoryOpen: () => void;
   onSoundToggle: () => void;
   onFullscreenToggle: () => void;
-  menuLimits: KdsMenuLimitRow[];
-  onMenuLimitsChange: (rows: KdsMenuLimitRow[]) => void;
   stationControls: ReactNode;
   filterControls: ReactNode;
 }
@@ -51,8 +47,6 @@ export function BoardHeader({
   onCompletionHistoryOpen,
   onSoundToggle,
   onFullscreenToggle,
-  menuLimits,
-  onMenuLimitsChange,
   stationControls,
   filterControls,
 }: BoardHeaderProps) {
@@ -136,12 +130,6 @@ export function BoardHeader({
             {isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"}
           </TooltipContent>
         </Tooltip>
-        <KdsMenuLimitsSheet
-          branchId={branchId}
-          rows={menuLimits}
-          onRowsChange={onMenuLimitsChange}
-          compact
-        />
         <ViewModeToggle mode={mode} onChange={onModeChange} />
       </div>
     </div>
