@@ -49,7 +49,7 @@
 - `ref/`: canonical rules, boundary, business semantics, glossary chuẩn
 - `modules/` và `spec/`: technical structure và schema
 - `agent/rules/`: agent entry rules, workflow gates, skill routing, database/UI/engineering constraints
-- `spec/design-system.md`: single source of truth cho UI design-system; active shadcn preset, runtime configs, primitives, adapters, runbooks, worklogs, and regression rules only implement, verify, or enforce it
+- `spec/design-system.md`: single source of truth cho UI design-system; runtime tokens, primitives, adapters, runbooks, worklogs, and regression rules only implement, verify, or enforce it
 - `plan/`: active decisions and ADRs
 - `runbooks/`: operational verification
 - `worklog/`: temporary staging for implementation contracts before promotion or removal

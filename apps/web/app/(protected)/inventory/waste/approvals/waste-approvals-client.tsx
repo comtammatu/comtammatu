@@ -9,6 +9,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { Check as IconCheck, X as IconX } from "lucide-react";
+import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { WasteTierBadge } from "@/(protected)/inventory/_components/waste-tier-badge";
 import { approveWaste } from "@/(protected)/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";
@@ -69,7 +70,7 @@ export function WasteApprovalsClient({ initial, branchFilter }: Props) {
       {rows.length === 0 ? (
         <AppEmptyState compact title={copy.empty} />
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ItemGroup className="flex flex-col gap-3 p-0 rounded-none border-0">
           {rows.map((row) => (
             <WasteApprovalCard
               key={row.issueId}
@@ -79,7 +80,7 @@ export function WasteApprovalsClient({ initial, branchFilter }: Props) {
               }
             />
           ))}
-        </ul>
+        </ItemGroup>
       )}
     </AppPage>
   );
@@ -126,13 +127,13 @@ function WasteApprovalCard({
   }
 
   return (
-    <li>
-      <div
-        className={cn(
-          "rounded-lg border bg-card",
-          row.isSelfCreated && "border-warning/40 bg-warning/10",
-        )}
-      >
+    <Item
+      variant="outline"
+      className={cn(
+        "rounded-lg border bg-card p-0 flex flex-col items-stretch",
+        row.isSelfCreated && "border-warning/40 bg-warning/10",
+      )}
+    >
         <div className="p-4 pb-3">
           <div className="flex items-start justify-between gap-2">
             <div>
@@ -172,11 +173,12 @@ function WasteApprovalCard({
           </div>
         </div>
         <div className="flex flex-col gap-3 p-4 pt-0">
-          <ul className="flex flex-col gap-2">
+          <ItemGroup className="flex flex-col gap-2 p-0 rounded-none border-0">
             {row.items.map((it) => (
-              <li
+              <Item
                 key={it.itemId}
-                className="rounded-md border bg-muted/20 p-3 text-sm"
+                variant="muted"
+                className="rounded-md border bg-muted/20 p-3 text-sm flex flex-col items-stretch"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
@@ -222,9 +224,9 @@ function WasteApprovalCard({
                     ))}
                   </div>
                 ) : null}
-              </li>
+              </Item>
             ))}
-          </ul>
+          </ItemGroup>
 
           {row.notes ? (
             <p className="line-clamp-2 break-words text-xs italic text-muted-foreground">
@@ -269,7 +271,6 @@ function WasteApprovalCard({
             </Button>
           </div>
         </div>
-      </div>
-    </li>
+      </Item>
   );
 }

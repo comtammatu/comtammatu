@@ -1,9 +1,12 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: legacy inline Vietnamese copy in order merge sibling dialog */
+
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
+import { Label } from "@comtammatu/ui/components/label";
 import {
   RadioGroup,
   RadioGroupItem,
@@ -189,9 +192,9 @@ export function MergeOrdersSheet({
                         data-disabled={hasPct || undefined}
                       >
                         <li>
-                          <label
+                          <Label
                             htmlFor={optionId}
-                            className="flex w-full cursor-pointer items-center gap-3"
+                            className="flex w-full cursor-pointer items-center gap-3 font-normal"
                           >
                             <RadioGroupItem
                               id={optionId}
@@ -213,7 +216,7 @@ export function MergeOrdersSheet({
                             <span className="shrink-0 whitespace-nowrap text-right text-sm font-semibold tabular-nums">
                               {formatVND(s.total_amount)}
                             </span>
-                          </label>
+                          </Label>
                         </li>
                       </Item>
                     );

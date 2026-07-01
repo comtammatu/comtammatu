@@ -14,6 +14,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Switch } from "@comtammatu/ui/components/switch";
+import { Label } from "@comtammatu/ui/components/label";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Field,
@@ -300,13 +301,16 @@ function TaskRow({
           control={control}
           name={`tasks.${index}.isRequired`}
           render={({ field }) => (
-            <label className="flex items-center gap-2 pb-2 text-sm">
+            <div className="flex items-center gap-2 pb-2">
               <Switch
+                id={`task-required-${index}`}
                 checked={field.value}
                 onCheckedChange={(value) => field.onChange(value === true)}
               />
-              {copy.requiredLabel}
-            </label>
+              <Label htmlFor={`task-required-${index}`} className="text-sm font-normal">
+                {copy.requiredLabel}
+              </Label>
+            </div>
           )}
         />
       </div>

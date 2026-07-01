@@ -115,6 +115,16 @@ export default async function BranchCommandPage({
       }
     >
       <AppPage width="wide">
+        <AppSection
+          title={copy.liveOperationsTitle}
+          description={copy.liveOperationsDescription}
+        >
+          <BranchCommandTileGrid
+            tiles={tileGroups.liveOperations}
+            ctaLabel={copy.openAction}
+          />
+        </AppSection>
+
         <KpiRow className="xl:grid-cols-4">
           <KpiCard
             label={copy.dayRevenueLabel}
@@ -147,16 +157,6 @@ export default async function BranchCommandPage({
           description={copy.readinessDescription}
         >
           <BranchReadinessList items={readinessItems} />
-        </AppSection>
-
-        <AppSection
-          title={copy.liveOperationsTitle}
-          description={copy.liveOperationsDescription}
-        >
-          <BranchCommandTileGrid
-            tiles={tileGroups.liveOperations}
-            ctaLabel={copy.openAction}
-          />
         </AppSection>
 
         {tileGroups.endDay.length > 0 ? (

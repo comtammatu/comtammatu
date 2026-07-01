@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import {
   BarChart3 as IconBarChart3,
   Briefcase as IconBriefcase,
@@ -34,6 +35,7 @@ import {
   EmployeePanel,
   EmployeeStatusStrip,
 } from "../components/employee-page";
+import { resolveEmployeeBranchRuntimePath } from "../_lib/branch-runtime-redirect";
 import { getEmployeeContext } from "../_lib/employee-context";
 
 const employeeCopy = messages.employee;
@@ -199,5 +201,12 @@ export async function ProfilePageContent({
 }
 
 export default async function ProfilePage() {
+  const { claims } = await loadAuthState();
+  const branchRuntimePath = resolveEmployeeBranchRuntimePath(
+    claims,
+    "shiftProfile",
+  );
+  if (branchRuntimePath) redirect(branchRuntimePath);
+
   return <ProfilePageContent />;
 }

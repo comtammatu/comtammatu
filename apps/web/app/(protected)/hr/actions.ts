@@ -148,6 +148,7 @@ async function upsertActiveContract(
 
   const { error } = await query;
   if (error) {
+    console.error("[hr/actions:upsertActiveContract] Upsert contract error:", error);
     if (error.code === "23505") {
       return { success: false, error: "Số hợp đồng đã tồn tại." };
     }
@@ -264,6 +265,7 @@ export async function fetchEmployees(): Promise<ActionResult> {
   const { data, error } = await query;
 
   if (error) {
+    console.error("[hr/actions:fetchEmployees] Fetch employees error:", error);
     return { success: false, error: "Không thể tải danh sách nhân viên." };
   }
 
@@ -368,6 +370,9 @@ export const createEmployeeAccount = withAction(
       });
 
     if (authError || !created?.user) {
+      if (authError) {
+        console.error("[hr/actions:createEmployeeAccount] Auth createUser error:", authError);
+      }
       if (
         authError?.message?.includes("already been registered") ||
         authError?.message?.includes("already exists")
@@ -389,6 +394,7 @@ export const createEmployeeAccount = withAction(
         .eq("id", userId)
         .eq("tenant_id", claims.tenant_id);
       if (phoneError) {
+        console.error("[hr/actions:createEmployeeAccount] Save phone error (cleanup user):", phoneError);
         await service.auth.admin.deleteUser(userId);
         return { success: false, error: "Không thể lưu số điện thoại." };
       }
@@ -414,6 +420,9 @@ export const createEmployeeAccount = withAction(
       .single();
 
     if (error || !result) {
+      if (error) {
+        console.error("[hr/actions:createEmployeeAccount] Insert employee error (cleanup user):", error);
+      }
       await service.auth.admin.deleteUser(userId);
       if (error?.code === "23505") {
         return { success: false, error: "Mã nhân viên đã tồn tại." };
@@ -484,6 +493,9 @@ export const updateEmployee = withAction(
       .maybeSingle();
 
     if (loadError || !employee) {
+      if (loadError) {
+        console.error("[hr/actions:updateEmployee] Load employee error:", loadError);
+      }
       return { success: false, error: "Không tìm thấy hồ sơ nhân viên." };
     }
 
@@ -519,6 +531,7 @@ export const updateEmployee = withAction(
         .eq("id", employee.profile_id)
         .eq("tenant_id", claims.tenant_id);
       if (profileError) {
+        console.error("[hr/actions:updateEmployee] Update profile error:", profileError);
         return { success: false, error: "Không thể cập nhật hồ sơ nhân viên." };
       }
     }
@@ -574,6 +587,7 @@ export const updateEmployee = withAction(
         .eq("id", data.employeeId)
         .eq("tenant_id", claims.tenant_id);
       if (employeeError) {
+        console.error("[hr/actions:updateEmployee] Update employee error:", employeeError);
         if (employeeError.code === "23505") {
           return { success: false, error: "Mã nhân viên đã tồn tại." };
         }
@@ -679,6 +693,7 @@ export async function fetchShifts(): Promise<ActionResult> {
     .order("start_time");
 
   if (error) {
+    console.error("[hr/actions:fetchShifts] Fetch shifts error:", error);
     return { success: false, error: "Không thể tải danh sách ca." };
   }
 
@@ -701,6 +716,7 @@ export const createShift = withAction(
       .single();
 
     if (error) {
+      console.error("[hr/actions:createShift] Insert shift error:", error);
       if (error.code === "23505") {
         return { success: false, error: "Ca này đã tồn tại." };
       }
@@ -731,6 +747,9 @@ export const updateShift = withAction(
       .maybeSingle();
 
     if (error || !result) {
+      if (error) {
+        console.error("[hr/actions:updateShift] Update shift error:", error);
+      }
       return { success: false, error: "Không thể cập nhật ca." };
     }
 
@@ -755,6 +774,9 @@ export const deactivateShift = withAction(
       .maybeSingle();
 
     if (error || !result) {
+      if (error) {
+        console.error("[hr/actions:deactivateShift] Deactivate shift error:", error);
+      }
       return { success: false, error: "Không thể ngưng dùng ca." };
     }
 
@@ -782,6 +804,9 @@ export const setShiftBoundaries = withAction(
       .maybeSingle();
 
     if (error || !result) {
+      if (error) {
+        console.error("[hr/actions:setShiftBoundaries] Update shift boundaries error:", error);
+      }
       return { success: false, error: "Không thể cập nhật ca mở/đóng." };
     }
 
@@ -841,6 +866,7 @@ export const fetchAttendance = withAction(
       .order("employee_id");
 
     if (error) {
+      console.error("[hr/actions:fetchAttendance] Fetch attendance records error:", error);
       return { success: false, error: "Không thể tải bảng chấm công." };
     }
 
@@ -867,6 +893,9 @@ export const getAttendancePhotoUrl = withAction(
     const { data: record, error } = await query.maybeSingle();
 
     if (error || !record) {
+      if (error) {
+        console.error("[hr/actions:getAttendancePhotoUrl] Fetch attendance record error:", error);
+      }
       return { success: false, error: "Không tìm thấy dòng chấm công." };
     }
     if (!record.check_in_photo_path) {
@@ -881,6 +910,9 @@ export const getAttendancePhotoUrl = withAction(
       );
 
     if (signError || !signed) {
+      if (signError) {
+        console.error("[hr/actions:getAttendancePhotoUrl] Create signed storage URL error:", signError);
+      }
       return { success: false, error: "Không thể tạo link xem ảnh." };
     }
 
@@ -932,6 +964,7 @@ export const fetchAttendanceSummary = withAction(
       .lte("date", endDate!);
 
     if (error) {
+      console.error("[hr/actions:fetchAttendanceSummary] Fetch attendance summary error:", error);
       return { success: false, error: "Không thể tải tổng hợp chấm công." };
     }
 

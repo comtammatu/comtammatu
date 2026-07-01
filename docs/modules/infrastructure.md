@@ -17,7 +17,7 @@ comtammatu/
 ├── packages/
 │   ├── database/           # Supabase clients + generated types
 │   ├── shared/             # Auth types, ACL, utilities
-│   ├── ui/                 # shadcn/Radix primitives + token runtime
+│   ├── ui/                 # Má Tư DS primitives + token runtime
 │   ├── print-render/       # Receipt/template renderer SSoT (agent + web preview)
 │   └── security/           # Rate limiting
 ├── supabase/

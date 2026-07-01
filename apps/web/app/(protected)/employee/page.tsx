@@ -1,24 +1,15 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   Camera as IconCamera,
-  ChefHat as IconChefHat,
   CheckCircle2 as IconDone,
   ClipboardCheck as IconClipboardCheck,
   Clock as IconClock,
-  LayoutDashboard as IconLayoutDashboard,
   ListChecks as IconListChecks,
   LogOut as IconLogout,
-  Monitor as IconDeviceDesktop,
-  MonitorUp as IconMonitorUp,
   UserCircle as IconUserCircle,
 } from "lucide-react";
-import {
-  canAccess,
-  PERMISSION_KEYS,
-  type ModuleKey,
-  type StaffRole,
-} from "@comtammatu/shared/auth";
-import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -27,7 +18,6 @@ import { loadAuthState } from "@/_lib/auth";
 import { NotificationPopupControl } from "@/_components/notification-popup-control";
 import { messages } from "@lib/messages";
 import {
-  EmployeeActionSection,
   EmployeeInlineState,
   EmployeePanel,
   EmployeePage as EmployeePageShell,
@@ -39,6 +29,7 @@ import {
   type TodayWorkState,
   type TodayWorkStatus,
 } from "./_lib/today-work-state";
+import { resolveEmployeeBranchRuntimePath } from "./_lib/branch-runtime-redirect";
 import { formatDateVN, formatTimeVN } from "./_lib/vn-business-date";
 
 const copy = messages.employee.home;
@@ -48,36 +39,6 @@ const copy = messages.employee.home;
 const CHECKOUT_APPROVER_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",
-];
-
-const OPERATION_HANDOFFS: Array<{
-  moduleKey: ModuleKey;
-  href: (branchId: number) => string;
-  icon: typeof IconDeviceDesktop;
-  title: string;
-  description: string;
-}> = [
-  {
-    moduleKey: "pos",
-    href: (branchId: number) => `/br/${branchId}/pos`,
-    icon: IconDeviceDesktop,
-    title: copy.posTitle,
-    description: copy.posDescription,
-  },
-  {
-    moduleKey: "kds",
-    href: (branchId: number) => `/br/${branchId}/kds`,
-    icon: IconChefHat,
-    title: copy.kdsTitle,
-    description: copy.kdsDescription,
-  },
-  {
-    moduleKey: "runner",
-    href: (branchId: number) => `/br/${branchId}/runner`,
-    icon: IconMonitorUp,
-    title: copy.runnerTitle,
-    description: copy.runnerDescription,
-  },
 ];
 
 function getShiftStateBadge(shift: TodayShiftEntry): {
@@ -122,45 +83,13 @@ function getWorkTitle(state: TodayWorkState): string {
   return copy.statusDone;
 }
 
-function getWorkDescription(state: TodayWorkState): string {
-  const status = state.status;
-  if (state.managerAttendanceOnly) {
-    if (status === "working") {
-      return copy.managerAttendanceDescription;
-    }
-    if (status === "done") return copy.descriptionDone;
-    if (status === "not_started") return copy.descriptionNotStarted;
-  }
-
-  if (status === "missing_profile") return copy.descriptionNoProfile;
-  if (status === "missing_branch") return copy.descriptionNoBranch;
-  if (status === "not_required") return copy.descriptionNotRequired;
-  if (status === "not_started") return copy.descriptionNotStarted;
-  if (status === "working") {
-    return state.checklist.total > 0 && state.checklist.requiredRemaining === 0
-      ? copy.descriptionReadyToCheckout
-      : copy.descriptionWorking;
-  }
-  if (status === "checkout_pending") return copy.descriptionCheckoutPending;
-  return copy.descriptionDone;
-}
-
 export default async function EmployeePage() {
   const { supabase, claims, session } = await loadAuthState();
-  const state = await getTodayWorkState();
-  const branchId = state.branchId;
-
-  let branchIsOperational = false;
-  if (branchId) {
-    const { data } = await supabase
-      .from("branches")
-      .select("branch_kind, is_active")
-      .eq("id", branchId)
-      .eq("tenant_id", claims.tenant_id)
-      .maybeSingle();
-    branchIsOperational =
-      data?.branch_kind === "branch" && data.is_active === true;
+  const branchRuntimePath = resolveEmployeeBranchRuntimePath(claims, "home");
+  if (branchRuntimePath) {
+    redirect(branchRuntimePath);
   }
+  const state = await getTodayWorkState();
 
   // Checkout requests BLOCK the requesting employee until a manager
   // approves — the count surfaces the queue on the screen managers
@@ -210,49 +139,8 @@ export default async function EmployeePage() {
     countAssignmentCount = count ?? 0;
   }
 
-  const isBranchManager = claims.user_role === "branch_manager";
-
-  // POS/KDS/Runner entry points render directly for frontline roles. Branch
-  // Managers enter those tools through Branch Command so Employee stays the
-  // personal daily-work surface.
-  const operationHandoffs =
-    branchId && branchIsOperational && !isBranchManager
-      ? OPERATION_HANDOFFS.filter((item) =>
-          canAccess(claims.user_role, item.moduleKey),
-        ).map((item) => ({
-          ...item,
-          href: item.href(branchId),
-        }))
-      : [];
-  const branchCommandHandoffs =
-    isBranchManager &&
-    branchId &&
-    branchIsOperational &&
-    canAccess(claims.user_role, "branch_dashboard")
-      ? [
-          {
-            key: "branch_dashboard",
-            href: `/br/${branchId}/dashboard`,
-            icon: IconLayoutDashboard,
-            title: APP_COPY_VI.branchCommand,
-            description: copy.operationToolsDescription,
-          },
-        ]
-      : [];
-  const operationLinks =
-    branchCommandHandoffs.length > 0
-      ? branchCommandHandoffs
-      : operationHandoffs.map((link) => ({
-          key: link.moduleKey,
-          href: link.href,
-          icon: link.icon,
-          title: link.title,
-          description: link.description,
-        }));
-
   const tone = getWorkTone(state.status);
   const title = getWorkTitle(state);
-  const description = getWorkDescription(state);
   const currentShiftName = state.attendance?.shiftName ?? null;
   const currentShiftRange = state.attendance?.shiftStartTime
     ? `${state.attendance.shiftStartTime.slice(0, 5)} - ${state.attendance.shiftEndTime?.slice(0, 5) ?? "—"}`
@@ -288,8 +176,7 @@ export default async function EmployeePage() {
     tone === "success" ? "success" : tone === "warning" ? "warning" : "default";
   const progressBadgeVariant =
     tone === "success" ? "success" : tone === "warning" ? "warning" : "info";
-  const primaryActionClassName =
-    "w-full sm:w-fit sm:min-w-44";
+  const primaryActionClassName = "w-full sm:w-fit sm:min-w-44";
   const todayMeta = currentShiftName
     ? `${formatDateVN(state.today)} · ${currentShiftName} ${currentShiftRange}`
     : formatDateVN(state.today);
@@ -434,12 +321,6 @@ export default async function EmployeePage() {
                 <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
                   {todayMeta}
                 </p>
-                <p className="mt-2 text-xs font-semibold uppercase text-muted-foreground">
-                  {copy.nextActionTitle}
-                </p>
-                <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-                  {description}
-                </p>
               </div>
               <Badge variant={progressBadgeVariant} className="shrink-0">
                 {progressValue}%
@@ -548,14 +429,6 @@ export default async function EmployeePage() {
               </Button>
             </div>
           </EmployeePanel>
-        ) : null}
-
-        {operationLinks.length > 0 ? (
-          <EmployeeActionSection
-            title={copy.operationToolsTitle}
-            links={operationLinks}
-            columns={branchCommandHandoffs.length > 0 ? 1 : 2}
-          />
         ) : null}
 
         <EmployeePanel tone="info" size="sm">

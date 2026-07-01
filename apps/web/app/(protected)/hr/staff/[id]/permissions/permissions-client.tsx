@@ -11,6 +11,8 @@ import {
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Input } from "@comtammatu/ui/components/input";
+import { Label } from "@comtammatu/ui/components/label";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import {
   Select,
@@ -229,15 +231,18 @@ export function PermissionsClient({
             </Select>
           </div>
           <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
-            <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-              Hạn kết thúc (tuỳ chọn)
-              <input
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="grant-valid-until" className="text-xs text-muted-foreground font-normal">
+                Hạn kết thúc (tuỳ chọn)
+              </Label>
+              <Input
+                id="grant-valid-until"
                 type="datetime-local"
                 value={grantValidUntil}
                 onChange={(e) => setGrantValidUntil(e.target.value)}
-                className="rounded-md border border-input bg-background px-2 py-1 text-sm"
+                className="w-full sm:w-auto"
               />
-            </label>
+            </div>
             <p className="self-end text-xs text-muted-foreground">
               Để trống = vĩnh viễn. Dùng cho luân chuyển tạm hoặc uỷ quyền có
               hạn.
@@ -280,15 +285,18 @@ export function PermissionsClient({
               </SelectContent>
             </Select>
           </div>
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            Hạn kết thúc (tuỳ chọn)
-            <input
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="template-valid-until" className="text-xs text-muted-foreground font-normal">
+              Hạn kết thúc (tuỳ chọn)
+            </Label>
+            <Input
+              id="template-valid-until"
               type="datetime-local"
               value={templateValidUntil}
               onChange={(e) => setTemplateValidUntil(e.target.value)}
-              className="max-w-xs rounded-md border border-input bg-background px-2 py-1 text-sm"
+              className="max-w-xs w-full"
             />
-          </label>
+          </div>
           <p className="text-xs text-muted-foreground">
             Template cộng dồn với quyền hiện có — chỉ thêm, không xóa. Nếu đặt
             hạn, tất cả quyền mới cùng hạn.

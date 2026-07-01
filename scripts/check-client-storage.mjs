@@ -6,14 +6,6 @@ const STORAGE_PATTERN =
   /\b(?:window\.)?(?:localStorage|sessionStorage)\.(?:getItem|setItem|removeItem|clear)\b/g;
 
 const ALLOWLIST = {
-  "packages/ui/src/components/theme-provider.tsx": {
-    count: 2,
-    reason: "theme preference only",
-  },
-  "packages/ui/src/components/theme-script.tsx": {
-    count: 1,
-    reason: "pre-hydration theme preference only",
-  },
   "apps/web/app/(protected)/br/[branchId]/_components/operational-pwa/toolbar.tsx":
     {
       count: 2,

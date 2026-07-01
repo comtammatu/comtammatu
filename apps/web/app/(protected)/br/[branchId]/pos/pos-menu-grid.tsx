@@ -33,11 +33,11 @@ import {
   Utensils as IconUtensils,
   X as IconX,
 } from "lucide-react";
+import { type MenuCategory, type MenuItem } from "./pos-menu-types";
 import {
-  type MenuCategory,
-  type MenuItem,
-} from "./pos-menu-types";
-import { useDailyLimit, useIngredientCap } from "./_providers/pos-desktop-provider";
+  useDailyLimit,
+  useIngredientCap,
+} from "./_providers/pos-desktop-provider";
 import { isDailyLimitBlockedAfterDemand } from "./_utils/daily-limit-draft";
 import { isIngredientCapBlockedAfterDemand } from "./_utils/ingredient-cap-draft";
 
@@ -315,7 +315,7 @@ function PosMenuGridComponent({
   // Unified tabs for mobile + desktop: no muted TabsList container; each tab
   // is a standalone bg-muted/50 chip that flips to primary when active. The
   // count badge (sm+ only) inverts its colors on the active tab.
-  // IMPORTANT: shadcn TabsTrigger defaults to `flex-1` (stretches across the
+  // IMPORTANT: TabsTrigger defaults to `flex-1` (stretches across the
   // TabsList width) — `!flex-none` is required so chips keep content width
   // and overflow scrolls horizontally.
   const tabPillClassName =

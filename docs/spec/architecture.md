@@ -87,7 +87,7 @@ USING (branch_id = auth_branch_id()
 @comtammatu/web
   ├── @comtammatu/shared    (auth types, ACL, scope helpers)
   ├── @comtammatu/database  (Supabase clients)
-  ├── @comtammatu/ui        (shadcn/Radix primitives + token runtime)
+  ├── @comtammatu/ui        (Má Tư DS primitives + token runtime)
   └── @comtammatu/security  (Upstash rate limiting)
 ```
 
@@ -127,7 +127,7 @@ Change ownership:
 | Execution   | Route behavior, Server Actions, realtime UI flows          | `apps/web/app/**`, route-local `actions.ts`, `apps/web/app/_lib/*`                                                                                 |
 | Domain      | Business rules shared across routes/providers              | `packages/shared/src/**`                                                                                                                           |
 | Data        | Schema, RLS, RPCs, generated types, Supabase clients       | `supabase/migrations/**`, `packages/database/src/**`                                                                                               |
-| UI          | Custom Theme contract, reusable primitives, surface rhythm | `DESIGN.md` (root, design foundation), `docs/spec/design-system.md`, `packages/ui/src/components/**`, `apps/web/app/components/surface.tsx`                                               |
+| UI          | Custom Theme contract, reusable primitives, surface rhythm | `docs/spec/design-system.md`, `packages/ui/src/components/**`, `apps/web/app/components/surface.tsx`                                               |
 | Branch Edge | Local print daemon and branch print/QR behavior            | `apps/print-agent/src/**`, branch settings surfaces                                                                                                |
 | Docs/Ops    | Current source-of-truth, runbooks, active work state       | `docs/CODEBASE_MAP.md`, `docs/modules/**`, `docs/runbooks/**`, `tasks/**`                                                                          |
 
@@ -145,22 +145,22 @@ Change ownership:
 
 Top-level surfaces (see `module-acl.ts` for canonical role lists):
 
-| Surface            | Route                        | Allowed roles (summary)                                       |
-| ------------------ | ---------------------------- | ------------------------------------------------------------- |
-| Admin              | `/admin/*`                   | owner                                                         |
-| Inventory          | `/inventory/*`               | owner, branch_manager, warehouse_manager, production_manager  |
-| Finance            | `/finance/*`                 | owner                                                         |
-| HR                 | `/hr/*`                      | owner, branch_manager                                         |
+| Surface            | Route                        | Allowed roles (summary)                                      |
+| ------------------ | ---------------------------- | ------------------------------------------------------------ |
+| Admin              | `/admin/*`                   | owner                                                        |
+| Inventory          | `/inventory/*`               | owner, branch_manager, warehouse_manager, production_manager |
+| Finance            | `/finance/*`                 | owner                                                        |
+| HR                 | `/hr/*`                      | owner, branch_manager                                        |
 | Orders             | `/orders`                    | owner, branch_manager, cashier                               |
-| Notifications      | `/notifications`             | all staff                                                     |
-| POS                | `/br/[branchId]/pos`         | owner, cashier, branch_manager                                |
-| KDS                | `/br/[branchId]/kds`         | owner, chef, branch_manager                                   |
-| Branch dashboard   | `/br/[branchId]/dashboard`   | owner, branch_manager                                         |
-| Branch settings    | `/br/[branchId]/settings/*`  | owner, branch_manager                                         |
+| Notifications      | `/notifications`             | all staff                                                    |
+| POS                | `/br/[branchId]/pos`         | owner, cashier, branch_manager                               |
+| KDS                | `/br/[branchId]/kds`         | owner, chef, branch_manager                                  |
+| Branch dashboard   | `/br/[branchId]/dashboard`   | owner, branch_manager                                        |
+| Branch settings    | `/br/[branchId]/settings/*`  | owner, branch_manager                                        |
 | Branch menu limits | `/br/[branchId]/menu-limits` | owner, branch_manager, cashier, chef                         |
-| Employee           | `/employee/*`                | all staff                                                     |
-| Access denied      | `/access-denied`             | public (rendered with reason copy from `blocked-state.ts`)                  |
-| Payment return     | `/payment/momo/return`       | public (Momo redirect target)                                               |
+| Employee           | `/employee/*`                | all staff                                                    |
+| Access denied      | `/access-denied`             | public (rendered with reason copy from `blocked-state.ts`)   |
+| Payment return     | `/payment/momo/return`       | public (Momo redirect target)                                |
 
 Role/scope/route boundary is canonical in `docs/spec/role-route-matrix.md`.
 Branch Manager branch setup belongs under `/br/[branchId]/*`, not new

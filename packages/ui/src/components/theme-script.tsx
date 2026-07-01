@@ -6,29 +6,13 @@ type ThemeScriptOptions = {
   storageKey?: string;
 };
 
-export function getThemeScriptHtml({
-  defaultTheme = "system",
-  forcedTheme,
-  storageKey = "theme",
-}: ThemeScriptOptions = {}) {
-  if (forcedTheme) {
-    return (
-      `(function(){try{` +
-      `var d=document.documentElement;` +
-      `var t=${JSON.stringify(forcedTheme)};` +
-      `d.classList.remove("light","dark");` +
-      `d.classList.add(t);` +
-      `d.style.colorScheme=t;` +
-      `}catch(e){}})();`
-    );
-  }
+export function getThemeScriptHtml(_options: ThemeScriptOptions = {}) {
+  const theme = "light";
 
   return (
     `(function(){try{` +
     `var d=document.documentElement;` +
-    `var s=localStorage.getItem(${JSON.stringify(storageKey)});` +
-    `var t=(s==="light"||s==="dark"||s==="system")?s:${JSON.stringify(defaultTheme)};` +
-    `if(t==="system"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}` +
+    `var t=${JSON.stringify(theme)};` +
     `d.classList.remove("light","dark");` +
     `d.classList.add(t);` +
     `d.style.colorScheme=t;` +

@@ -26,11 +26,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import {
-  Item,
-  ItemContent,
-  ItemHeader,
-} from "@comtammatu/ui/components/item";
+import { Item, ItemContent, ItemHeader } from "@comtammatu/ui/components/item";
 import {
   fetchBranchMovementSummary,
   fetchStockMovementReport,
@@ -106,7 +102,9 @@ export function StockMovementClient({
       key: "ingredient",
       header: PRODUCT_VI.rawIngredient,
       className: "min-w-44",
-      render: (row) => <span className="font-medium">{row.ingredient_name}</span>,
+      render: (row) => (
+        <span className="font-medium">{row.ingredient_name}</span>
+      ),
     },
     {
       key: "unit",
@@ -348,93 +346,97 @@ export function StockMovementClient({
               ]}
             >
               <TabsContent value="detail">
-                <AppSection contentFlush>
+                <AppSection contentFlush contentScroll>
                   <DataTable
                     columns={detailColumns}
                     data={movementRows}
                     getRowKey={(row) => row.ingredient_id}
                     emptyTitle={stockMovementCopy.emptyTitle}
                     emptyDescription={stockMovementCopy.detailEmptyDescription}
-                    className="md:overflow-x-auto"
                     mobileCardRender={(row) => (
-                <Item variant="outline" className="flex-col items-stretch">
-                  <ItemHeader className="items-start">
-                    <div>
-                      <p className="font-medium">{row.ingredient_name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {row.unit}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">
-                        {stockMovementCopy.closing}
-                      </p>
-                      <p className="font-mono font-semibold">
-                        {fmt(row.closing)}
-                      </p>
-                    </div>
-                  </ItemHeader>
-                  <ItemContent className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.opening}
-                      </p>
-                      <p className="mt-1 font-mono">{fmt(row.opening)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.grnReceipt}
-                      </p>
-                      <p className="mt-1 font-mono text-success">
-                        {fmt(row.grn_receipt)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.productionConsumption}
-                      </p>
-                      <p className="mt-1 font-mono text-destructive">
-                        {fmt(row.production_consumption)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.productionOutput}
-                      </p>
-                      <p className="mt-1 font-mono text-success">
-                        {fmt(row.production_output)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.transferIn}
-                      </p>
-                      <p className="mt-1 font-mono text-success">
-                        {fmt(row.transfer_in)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.transferOut}
-                      </p>
-                      <p className="mt-1 font-mono text-destructive">
-                        {fmt(row.transfer_out)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.consumption}
-                      </p>
-                      <p className="mt-1 font-mono text-destructive">
-                        {fmt(row.consumption)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.adjustment}
-                      </p>
-                      <p className="mt-1 font-mono">{fmt(row.adjustment)}</p>
-                    </div>
+                      <Item
+                        variant="outline"
+                        className="flex-col items-stretch"
+                      >
+                        <ItemHeader className="items-start">
+                          <div>
+                            <p className="font-medium">{row.ingredient_name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {row.unit}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">
+                              {stockMovementCopy.closing}
+                            </p>
+                            <p className="font-mono font-semibold">
+                              {fmt(row.closing)}
+                            </p>
+                          </div>
+                        </ItemHeader>
+                        <ItemContent className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.opening}
+                            </p>
+                            <p className="mt-1 font-mono">{fmt(row.opening)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.grnReceipt}
+                            </p>
+                            <p className="mt-1 font-mono text-success">
+                              {fmt(row.grn_receipt)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.productionConsumption}
+                            </p>
+                            <p className="mt-1 font-mono text-destructive">
+                              {fmt(row.production_consumption)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.productionOutput}
+                            </p>
+                            <p className="mt-1 font-mono text-success">
+                              {fmt(row.production_output)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.transferIn}
+                            </p>
+                            <p className="mt-1 font-mono text-success">
+                              {fmt(row.transfer_in)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.transferOut}
+                            </p>
+                            <p className="mt-1 font-mono text-destructive">
+                              {fmt(row.transfer_out)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.consumption}
+                            </p>
+                            <p className="mt-1 font-mono text-destructive">
+                              {fmt(row.consumption)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.adjustment}
+                            </p>
+                            <p className="mt-1 font-mono">
+                              {fmt(row.adjustment)}
+                            </p>
+                          </div>
                         </ItemContent>
                       </Item>
                     )}
@@ -443,72 +445,76 @@ export function StockMovementClient({
               </TabsContent>
 
               <TabsContent value="branch">
-                <AppSection contentFlush>
+                <AppSection contentFlush contentScroll>
                   <DataTable
                     columns={branchColumns}
                     data={branchRows}
                     getRowKey={(row) => row.branch_id}
                     emptyTitle={stockMovementCopy.emptyTitle}
                     emptyDescription={stockMovementCopy.branchEmptyDescription}
-                    className="md:overflow-x-auto"
                     mobileCardRender={(row) => (
-                <Item variant="outline" className="flex-col items-stretch">
-                  <p className="font-medium">{row.branch_name}</p>
-                  <ItemContent className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.grnReceipt}
-                      </p>
-                      <p className="mt-1 font-mono text-success">
-                        {fmt(row.grn_receipt)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.productionConsumption}
-                      </p>
-                      <p className="mt-1 font-mono text-destructive">
-                        {fmt(row.production_consumption)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.productionOutput}
-                      </p>
-                      <p className="mt-1 font-mono text-success">
-                        {fmt(row.production_output)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.transferIn}
-                      </p>
-                      <p className="mt-1 font-mono text-success">
-                        {fmt(row.transfer_in)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.transferOut}
-                      </p>
-                      <p className="mt-1 font-mono text-destructive">
-                        {fmt(row.transfer_out)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.consumption}
-                      </p>
-                      <p className="mt-1 font-mono text-destructive">
-                        {fmt(row.consumption)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">
-                        {stockMovementCopy.adjustment}
-                      </p>
-                      <p className="mt-1 font-mono">{fmt(row.adjustment)}</p>
-                    </div>
+                      <Item
+                        variant="outline"
+                        className="flex-col items-stretch"
+                      >
+                        <p className="font-medium">{row.branch_name}</p>
+                        <ItemContent className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.grnReceipt}
+                            </p>
+                            <p className="mt-1 font-mono text-success">
+                              {fmt(row.grn_receipt)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.productionConsumption}
+                            </p>
+                            <p className="mt-1 font-mono text-destructive">
+                              {fmt(row.production_consumption)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.productionOutput}
+                            </p>
+                            <p className="mt-1 font-mono text-success">
+                              {fmt(row.production_output)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.transferIn}
+                            </p>
+                            <p className="mt-1 font-mono text-success">
+                              {fmt(row.transfer_in)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.transferOut}
+                            </p>
+                            <p className="mt-1 font-mono text-destructive">
+                              {fmt(row.transfer_out)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.consumption}
+                            </p>
+                            <p className="mt-1 font-mono text-destructive">
+                              {fmt(row.consumption)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">
+                              {stockMovementCopy.adjustment}
+                            </p>
+                            <p className="mt-1 font-mono">
+                              {fmt(row.adjustment)}
+                            </p>
+                          </div>
                         </ItemContent>
                       </Item>
                     )}

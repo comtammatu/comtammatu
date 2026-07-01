@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
+import { Label } from "@comtammatu/ui/components/label";
 import {
   Item,
   ItemActions,
@@ -168,9 +169,12 @@ export function PayrollListClient({
         headerHint={copy.createCurrentMonth}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <label className="flex max-w-xs flex-col gap-1.5 text-sm text-muted-foreground">
-            <span>{copy.standardDays}</span>
+          <div className="flex max-w-xs flex-col gap-1.5">
+            <Label htmlFor="standard-days-list" className="text-xs text-muted-foreground font-normal">
+              {copy.standardDays}
+            </Label>
             <Input
+              id="standard-days-list"
               aria-label={copy.standardDays}
               className="h-9 w-24 text-right font-mono tabular-nums"
               inputMode="decimal"
@@ -181,7 +185,7 @@ export function PayrollListClient({
               value={standardDays}
               onChange={(event) => setStandardDays(event.target.value)}
             />
-          </label>
+          </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Button onClick={handleCreate} disabled={isPending}>
               {isPending ? (

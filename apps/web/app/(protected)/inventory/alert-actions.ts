@@ -52,6 +52,7 @@ export async function fetchExpiryAlerts(
   const { data, error } = await query;
 
   if (error) {
+    console.error("[inventory/alert-actions:fetchExpiryAlerts] Fetch expiry alerts error:", error);
     return { success: false, error: "Không thể tải cảnh báo hạn sử dụng." };
   }
 
@@ -171,6 +172,7 @@ export async function fetchReorderAlerts(
   const { data, error } = await query;
 
   if (error) {
+    console.error("[inventory/alert-actions:fetchReorderAlerts] Fetch reorder alerts error:", error);
     return { success: false, error: "Không thể tải cảnh báo đặt hàng." };
   }
 

@@ -19,7 +19,8 @@
     "test:e2e:ui": "dotenv -e .env.test.local -- playwright test --ui",
     "guides:capture": "dotenv -e .env.test.local -- playwright test --project=guides",
     "guides:capture:list": "dotenv -e .env.test.local -- playwright test --project=guides --list",
-    "ui:add": "shadcn add"
+    "hddt:export": "dotenv -e ../../.env.local -e .env.local -- tsx scripts/export-hddt-legal-archive.ts",
+    "inventory:cleanup:dry-run": "dotenv -e ../../.env.local -e .env.local -- tsx scripts/inventory-prod-cleanup-plan.ts"
   },
   "dependencies": {
     "@comtammatu/database": "workspace:*",
@@ -37,7 +38,6 @@
     "lucide-react": "^1.16.0",
     "next": "^16.2.9",
     "qrcode": "^1.5.4",
-    "radix-ui": "^1.4.3",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-hook-form": "^7.76.1",
@@ -58,7 +58,6 @@
     "dotenv-cli": "^11.0.0",
     "eslint": "^10.6.0",
     "serwist": "^9.5.11",
-    "shadcn": "^4.12.0",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3"
   }

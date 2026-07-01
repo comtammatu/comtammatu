@@ -3,8 +3,9 @@
 ## Overview
 
 UI của repo là Com Tam Ma Tu Custom Theme (Ma Tu Concept 01) chạy trên
-`shadcn/ui` primitive baseline hiện hành. `shadcn` preset là baseline để compose
-primitive và đối chiếu runtime, không phải source of truth cao hơn contract.
+Má Tư Design System primitives trong `@comtammatu/ui`. Radix, lucide, Tailwind,
+và CVA là implementation dependencies, không phải source of truth cao hơn
+contract.
 Không còn helper layer hay theme system riêng theo route/surface.
 
 Single source of truth for agent decisions:
@@ -20,8 +21,6 @@ Runtime config, primitives, adapters, runbooks, worklogs, and regression rules
 are evidence/enforcement for that contract. They do not authorize a second
 design system:
 
-- `apps/web/components.json`
-- `packages/ui/components.json`
 - `packages/ui/src/styles/globals.css`
 - `apps/web/app/layout.tsx`
 - `packages/ui/src/components/*`
@@ -48,13 +47,14 @@ runtime. Role split:
 - `docs/worklog/*`: temporary staging only; promote stable decisions back to
   spec/modules/tasks, then remove stale worklog claims.
 
-Không được coi `shadcn` preset là authority cao hơn Custom Theme contract.
-Không được coi Custom Theme là một layer/fork mới tách riêng khỏi shadcn
-primitives. Nếu cần pattern mới, update `docs/spec/design-system.md` trước, rồi
-mới rollout vào code.
+Không được coi external UI scaffold CLI/preset là authority cao hơn Custom Theme
+contract. Không được coi Custom Theme là một layer/fork mới tách riêng khỏi
+`@comtammatu/ui` primitives. Nếu cần pattern mới, update
+`docs/spec/design-system.md` trước, rồi mới rollout vào code.
 
-Code mới phải dùng `apps/web/app/components/surface.tsx`, semantic shadcn
-tokens, và font utilities hiện hành cho app UI. Nếu cần visual layer mới, update
+Code mới phải dùng `apps/web/app/components/surface.tsx`, `BrandMark` /
+`BrandLockup` / `BrandSymbol` / `BrandMascot`, semantic token classes, và font
+utilities hiện hành cho app UI. Nếu cần visual layer mới, update
 `docs/spec/design-system.md` trước khi rollout vào runtime.
 
 Read order cho agent khi làm UI:
@@ -68,24 +68,26 @@ Read order cho agent khi làm UI:
 
 ## Primitive Baseline Contract
 
-Baseline hiện tại: `radix-lyra`, resolved preset `buFywKm`, `neutral`, `lucide`
-cho monorepo `apps/web` + `packages/ui`. Đây là primitive implementation
-baseline; semantic token values và rhythm phải theo `docs/spec/design-system.md`.
+Baseline hiện tại: Má Tư DS primitives trong `packages/ui/src/components/*` cho
+monorepo `apps/web` + `packages/ui`. Đây là primitive implementation baseline;
+semantic token values và rhythm phải theo `docs/spec/design-system.md`.
 
 Điều này có nghĩa:
 
-- primitive structure phải theo file do `shadcn` bootstrap sinh ra
+- primitive structure phải theo file trong `packages/ui/src/components/*`
 - semantic token values phải theo `docs/spec/design-system.md`
 - brand color/typography phải đi qua semantic token và font variables chung
 - page/shell chỉ được compose từ primitives có sẵn và app surface adapters
-- logo/brand lockup trong web runtime phải đi qua `BrandMark` / `BrandLockup`
+- logo/brand lockup, symbol, mascot trong web runtime phải đi qua `BrandMark` /
+  `BrandLockup` / `BrandSymbol` / `BrandMascot`
 - không được giữ `app-*` helper classes hoặc custom background/theme chrome ở root
 
 ## Primitive Layer
 
-Primitive source vẫn sống tại `packages/ui/src/components/*`, nhưng phải tiếp tục theo cấu trúc shadcn:
+Primitive source vẫn sống tại `packages/ui/src/components/*`, và app code dùng các primitive này qua `@comtammatu/ui`:
 
 - `button`
+- `accordion`
 - `card`
 - `sidebar`
 - `badge`
@@ -95,9 +97,17 @@ Primitive source vẫn sống tại `packages/ui/src/components/*`, nhưng phả
 - `tabs`
 - `input`
 - `select`
+- `combobox`
+- `date-picker`
+- `slider`
+- `tag-input`
+- `pagination`
+- `resizable`
+- `toolbar`
 - `empty` — tất cả empty-state UI (no-data, no-results, error, inline)
 - `field` + `field-group` — form field composition (label, control, error, description)
 - `item` + `item-group` — list rows with media/title/description/actions
+- `stat` — primitive-level DS parity; app dashboard metrics vẫn đi qua `KpiCard`
 - `spinner` — loading indicator (thay cho `Loader2 + animate-spin`)
 
 Không fork primitive theo surface.
@@ -293,7 +303,7 @@ Cho phép:
 - wrapper nhỏ để tập hợp dữ liệu, nav, và structure
 - wrapper domain delegate về `apps/web/app/components/surface.tsx`
 - dùng `className` để sắp xếp layout cơ bản
-- compose truc tiep tu shadcn primitives
+- compose trực tiếp từ Má Tư DS primitives
 
 Không cho phép:
 
@@ -304,7 +314,7 @@ Không cho phép:
 - module tự tạo lại page/header/section/toolbar/empty/link-card thay vì delegate về `apps/web/app/components/surface.tsx`
 - dùng `div` / `span` / `p` thường để giả lập `Card`, `Badge`, `Button`, `Table`, `Tabs`, `Input`, `Select`
 - per-surface `theme.css`
-- shell chrome tự chế để thay cho stock shadcn structure
+- shell chrome tự chế để thay cho shared primitive/surface structure
 
 Quy tắc review:
 

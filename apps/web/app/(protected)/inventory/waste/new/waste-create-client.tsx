@@ -17,6 +17,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Trash as IconTrash } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { SearchableSelect } from "@/(protected)/inventory/_components/searchable-select";
 import {
   WasteReasonDropdown,
@@ -313,7 +314,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
           </div>
       </AppSection>
 
-      <ul className="flex flex-col gap-3">
+      <ItemGroup className="flex flex-col gap-3 p-0 rounded-none border-0">
         {lines.map((line, idx) => {
           const qty = Number(line.quantity) || 0;
           const cost = Number(line.unitCost) || 0;
@@ -330,8 +331,11 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
             branchCap: context.capStatus.branchCap,
           });
           return (
-            <li key={line.uid}>
-              <div className="rounded-lg border bg-card">
+            <Item
+              key={line.uid}
+              variant="outline"
+              className="rounded-lg border bg-card p-0 flex flex-col items-stretch"
+            >
                 <div className="p-4 pb-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-heading text-sm font-semibold">
@@ -499,11 +503,10 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                     />
                   </div>
                 </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+              </Item>
+            );
+          })}
+      </ItemGroup>
 
       <div className="flex items-center justify-between gap-3">
         <Button

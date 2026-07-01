@@ -131,6 +131,9 @@ export async function createTaxInvoice(
     .single();
 
   if (orderErr || !order) {
+    if (orderErr) {
+      console.error("[finance/actions:createTaxInvoice] Fetch order error:", orderErr);
+    }
     return { success: false, error: "Đơn hàng không tồn tại." };
   }
 
@@ -378,6 +381,7 @@ export async function createTaxInvoice(
     .single();
 
   if (insertErr) {
+    console.error("[finance/actions:createTaxInvoice] Insert/update invoice error:", insertErr);
     if (insertErr.code === "23505") {
       // UNIQUE partial idx uq_tax_invoices_active_per_order — concurrent
       // double-click slipped past the maybeSingle() pre-check above.
@@ -429,7 +433,10 @@ export async function reissueAllDraftInvoices(): Promise<ActionResult> {
     .order("created_at", { ascending: true })
     .limit(REISSUE_ALL_CAP);
 
-  if (error) return { success: false, errorCode: "load_failed" };
+  if (error) {
+    console.error("[finance/actions:reissueAllDraftInvoices] Fetch drafts error:", error);
+    return { success: false, errorCode: "load_failed" };
+  }
 
   let issued = 0;
   let failed = 0;
@@ -503,6 +510,9 @@ export async function cancelTaxInvoice(
     .single();
 
   if (fetchErr || !invoice) {
+    if (fetchErr) {
+      console.error("[finance/actions:cancelTaxInvoice] Fetch invoice error:", fetchErr);
+    }
     return { success: false, error: "Hóa đơn không tồn tại." };
   }
 
@@ -525,6 +535,7 @@ export async function cancelTaxInvoice(
   });
 
   if (rpcErr) {
+    console.error("[finance/actions:cancelTaxInvoice] Transition invoice state error:", rpcErr);
     if (rpcErr.code === "22023") {
       return {
         success: false,
@@ -670,6 +681,7 @@ export async function fetchTaxInvoicesPage(
     .limit(pageSize + 1);
 
   if (error) {
+    console.error("[finance/actions:fetchTaxInvoicesPage] Fetch tax invoices error:", error);
     return { success: false, error: "Không thể tải danh sách hóa đơn." };
   }
 
@@ -780,6 +792,7 @@ export async function fetchRevenueRollup(
   });
 
   if (error) {
+    console.error("[finance/actions:fetchRevenueRollup] RPC get_revenue_rollup error:", error);
     return { success: false, error: "Không thể tải dữ liệu doanh thu." };
   }
 
@@ -823,6 +836,7 @@ export async function fetchRevenueKpis(
   });
 
   if (error) {
+    console.error("[finance/actions:fetchRevenueKpis] RPC get_revenue_kpis error:", error);
     return { success: false, error: "Không thể tải chỉ số KPI." };
   }
 
@@ -875,6 +889,7 @@ export async function fetchFinanceDashboardSummary(
   );
 
   if (error) {
+    console.error("[finance/actions:fetchFinanceDashboardSummary] RPC get_finance_dashboard_summary error:", error);
     return { success: false, error: "Không thể tải chỉ số dashboard." };
   }
 
@@ -909,6 +924,7 @@ export async function fetchOrdersForDay(
   });
 
   if (error) {
+    console.error("[finance/actions:fetchOrdersForDay] RPC get_orders_for_day error:", error);
     return { success: false, error: "Không thể tải danh sách đơn." };
   }
 
@@ -952,6 +968,7 @@ export async function fetchCashVarianceSummary(
   });
 
   if (error) {
+    console.error("[finance/actions:fetchCashVarianceSummary] RPC get_cash_variance_summary error:", error);
     return { success: false, error: "Không thể tải dữ liệu lệch tiền." };
   }
 
@@ -996,6 +1013,7 @@ export async function fetchRevenueByHour(
   });
 
   if (error) {
+    console.error("[finance/actions:fetchRevenueByHour] RPC get_revenue_by_hour error:", error);
     return {
       success: false,
       error: "Không thể tải dữ liệu doanh thu theo giờ.",
@@ -1040,6 +1058,7 @@ export async function fetchRevenueByCashier(
   });
 
   if (error) {
+    console.error("[finance/actions:fetchRevenueByCashier] RPC get_revenue_by_cashier error:", error);
     return { success: false, error: "Không thể tải dữ liệu thu ngân." };
   }
 
@@ -1069,6 +1088,7 @@ export async function fetchAccessibleBranches(): Promise<ActionResult> {
       .eq("is_active", true)
       .order("name");
     if (error) {
+      console.error("[finance/actions:fetchAccessibleBranches] Fetch branches error (owner):", error);
       return { success: false, error: "Không thể tải danh sách chi nhánh." };
     }
     return { success: true, data: data ?? [] };
@@ -1084,6 +1104,9 @@ export async function fetchAccessibleBranches(): Promise<ActionResult> {
       .eq("is_active", true)
       .maybeSingle();
     if (error || !data) {
+      if (error) {
+        console.error("[finance/actions:fetchAccessibleBranches] Fetch branch error (branch_user):", error);
+      }
       return { success: true, data: [] };
     }
     return { success: true, data: [data] };
@@ -1136,6 +1159,7 @@ export async function fetchTopItems(
   });
 
   if (error) {
+    console.error("[finance/actions:fetchTopItems] RPC get_top_items error:", error);
     return { success: false, error: "Không thể tải dữ liệu top món." };
   }
 
@@ -1156,6 +1180,7 @@ export async function refreshMaterializedViews(): Promise<ActionResult> {
   const { error: rpcErr } = await supabase.rpc("refresh_finance_views");
 
   if (rpcErr) {
+    console.error("[finance/actions:refreshMaterializedViews] RPC refresh_finance_views error:", rpcErr);
     return { success: false, error: "Không thể làm mới dữ liệu báo cáo." };
   }
 

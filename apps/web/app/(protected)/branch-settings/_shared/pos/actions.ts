@@ -90,6 +90,7 @@ export const createTerminal = withFormAction(
       .select("id");
 
     if (error) {
+      console.error("[branch-settings/pos:createTerminal] Insert POS terminal error:", error);
       return { success: false, error: mapTerminalDbError(error.code) };
     }
 
@@ -148,6 +149,7 @@ export const updateTerminal = withFormAction(
     const { data: result, error } = await query.select("id, branch_id");
 
     if (error) {
+      console.error("[branch-settings/pos:updateTerminal] Update POS terminal error:", error);
       return { success: false, error: mapTerminalDbError(error.code) };
     }
 
@@ -208,6 +210,7 @@ export const setBranchIngredientStockBlock = withActionPositional(
     );
 
     if (error) {
+      console.error("[branch-settings/pos:setBranchIngredientStockBlock] Upsert ingredient stock block flag error:", error);
       return { success: false, error: "Không thể lưu cấu hình. Vui lòng thử lại." };
     }
 

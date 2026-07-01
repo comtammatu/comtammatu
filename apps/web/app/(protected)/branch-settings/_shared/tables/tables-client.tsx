@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Button } from "@comtammatu/ui/components/button";
+import { Label } from "@comtammatu/ui/components/label";
 import { Plus as IconPlus } from "lucide-react";
 import { ZoneTable } from "./zone-table";
 import { ZoneFormDialog } from "./zone-form-dialog";
@@ -65,14 +66,14 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
       <AppToolbar
         filters={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <label className="text-sm font-medium">
+            <Label htmlFor="branch-select" className="text-sm font-medium">
               {commonCopy.branchLabel}
-            </label>
+            </Label>
             <Select
               value={selectedBranchId?.toString() ?? ""}
               onValueChange={(v) => setSelectedBranchId(Number(v))}
             >
-              <SelectTrigger className="w-full sm:w-60">
+              <SelectTrigger id="branch-select" className="w-full sm:w-60">
                 <SelectValue placeholder={BRANCH_VI.select} />
               </SelectTrigger>
               <SelectContent>

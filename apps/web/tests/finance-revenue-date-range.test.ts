@@ -97,6 +97,23 @@ test("Finance top-items decomposes side-items without double-counting revenue", 
   );
 });
 
+test("Finance top-items side-item fanout avoids PL/pgSQL output-column ambiguity", () => {
+  const migration = read(
+    "supabase/migrations/20260701000214_fix_top_items_branch_ambiguity.sql",
+  );
+
+  assert.match(
+    migration,
+    /FROM side_lines sl[\s\S]*GROUP BY sl\.branch_id,\s*sl\.tenant_id,\s*sl\.menu_item_id/,
+    "side_components must qualify branch/tenant/menu columns",
+  );
+  assert.match(
+    migration,
+    /mc\.branch_id[\s\S]*FROM main_components mc[\s\S]*sc\.branch_id[\s\S]*FROM side_components sc/,
+    "component_rows must qualify both component sources",
+  );
+});
+
 test("Finance live copy stays HKD operating-first without two-mode labels", () => {
   const financeMessages = read("apps/web/lib/messages/finance.ts");
   const financeTypes = read(

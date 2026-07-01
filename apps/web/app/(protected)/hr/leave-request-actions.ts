@@ -55,6 +55,7 @@ export const fetchApprovedLeaveMonth = withAction(
       .order("start_date");
 
     if (error) {
+      console.error("[hr/leave-request-actions:fetchApprovedLeaveMonth] Fetch approved leaves error:", error);
       return { success: false, error: "Không thể tải nghỉ phép trong tháng." };
     }
 
@@ -89,6 +90,7 @@ export const fetchLeaveRequests = withAction(
       .limit(100);
 
     if (error) {
+      console.error("[hr/leave-request-actions:fetchLeaveRequests] Fetch leave requests error:", error);
       return { success: false, error: "Không thể tải danh sách nghỉ phép." };
     }
 
@@ -148,6 +150,10 @@ export const fetchLeaveRequests = withAction(
     ]);
 
     if (entitlementError || approvedAnnualError) {
+      console.error("[hr/leave-request-actions:fetchLeaveRequests] Fetch entitlements/approved leaves details error:", {
+        entitlementError,
+        approvedAnnualError,
+      });
       return { success: false, error: "Không thể tải hạn mức phép năm." };
     }
 
@@ -225,6 +231,7 @@ export const approveLeaveRequest = withAction(
     });
 
     if (error) {
+      console.error("[hr/leave-request-actions:approveLeaveRequest] RPC approve_leave_request error:", error);
       if (error.message.includes("cannot review own request")) {
         return {
           success: false,
@@ -278,6 +285,7 @@ export const rejectLeaveRequest = withAction(
     });
 
     if (error) {
+      console.error("[hr/leave-request-actions:rejectLeaveRequest] RPC reject_leave_request error:", error);
       if (error.message.includes("cannot review own request")) {
         return {
           success: false,

@@ -141,7 +141,7 @@ test("HRM exposes branch-scoped leave approval tab", () => {
   for (const expected of ["LeaveRequestsTable", "copy.tabs.attendance"]) {
     assert.ok(hrClient.includes(expected), `expected HR client ${expected}`);
   }
-  // HR tabs migrated from raw shadcn TabsTrigger to AppPageTabs items; the
+  // HR tabs migrated from raw TabsTrigger to AppPageTabs items; the
   // attendance tab is declared as an items entry with its content body.
   assert.match(
     hrClient,

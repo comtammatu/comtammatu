@@ -70,6 +70,7 @@ export async function createStocktakeSession(
   });
 
   if (error) {
+    console.error("[inventory/actions:createStocktakeSession] RPC create_stocktake_session error:", error);
     if (error.code === PG_ERR.UNIQUE_VIOLATION) {
       return {
         success: false,
@@ -116,6 +117,7 @@ export async function fetchStocktakeSessions(
   const { data, error } = await query;
 
   if (error) {
+    console.error("[inventory/actions:fetchStocktakeSessions] Fetch stocktake sessions error:", error);
     return { success: false, error: "Không thể tải danh sách kiểm kê." };
   }
 
@@ -132,6 +134,7 @@ export async function fetchStocktakeSessions(
     .in("session_id", sessionIds);
 
   if (linesError) {
+    console.error("[inventory/actions:fetchStocktakeSessions] Fetch stocktake lines aggregate error:", linesError);
     return { success: false, error: "Không thể tải danh sách kiểm kê." };
   }
 
@@ -193,6 +196,9 @@ export async function fetchStocktakeDetail(
     .single();
 
   if (sessionError || !session) {
+    if (sessionError) {
+      console.error("[inventory/actions:fetchStocktakeDetail] Fetch stocktake session detail error:", sessionError);
+    }
     return { success: false, error: "Không thể tải chi tiết kiểm kê." };
   }
 
@@ -211,6 +217,7 @@ export async function fetchStocktakeDetail(
     .order("ingredients(name)");
 
   if (linesError) {
+    console.error("[inventory/actions:fetchStocktakeDetail] Fetch stocktake lines error:", linesError);
     return { success: false, error: "Không thể tải chi tiết kiểm kê." };
   }
 
@@ -235,6 +242,9 @@ export const updateStocktakeLine = withAction(
       .single();
 
     if (lineError || !line) {
+      if (lineError) {
+        console.error("[inventory/actions:updateStocktakeLine] Fetch line error:", lineError);
+      }
       return { success: false, error: "Không thể cập nhật dòng kiểm kê." };
     }
 
@@ -247,6 +257,9 @@ export const updateStocktakeLine = withAction(
       .single();
 
     if (sessionError || !session) {
+      if (sessionError) {
+        console.error("[inventory/actions:updateStocktakeLine] Fetch session error:", sessionError);
+      }
       return { success: false, error: "Không thể cập nhật dòng kiểm kê." };
     }
 
@@ -274,6 +287,7 @@ export const updateStocktakeLine = withAction(
       .eq("tenant_id", claims.tenant_id);
 
     if (updateError) {
+      console.error("[inventory/actions:updateStocktakeLine] Update stocktake line error:", updateError);
       return { success: false, error: "Không thể cập nhật dòng kiểm kê." };
     }
 
@@ -315,6 +329,7 @@ export async function completeStocktake(
   });
 
   if (error) {
+    console.error("[inventory/actions:completeStocktake] RPC complete_stocktake error:", error);
     const msg = error.message;
     if (msg.includes("uncounted_lines_exist")) {
       return { success: false, error: "Còn nguyên liệu chưa được đếm." };
@@ -358,6 +373,9 @@ export async function cancelStocktake(
     .single();
 
   if (sessionError || !session) {
+    if (sessionError) {
+      console.error("[inventory/actions:cancelStocktake] Fetch session error:", sessionError);
+    }
     return { success: false, error: "Không thể hủy phiên kiểm kê." };
   }
 
@@ -382,6 +400,7 @@ export async function cancelStocktake(
     .eq("tenant_id", claims.tenant_id);
 
   if (updateError) {
+    console.error("[inventory/actions:cancelStocktake] Update session to cancelled error:", updateError);
     return { success: false, error: "Không thể hủy phiên kiểm kê." };
   }
 

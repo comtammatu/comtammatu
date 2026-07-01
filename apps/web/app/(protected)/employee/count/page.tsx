@@ -1,11 +1,17 @@
+import { redirect } from "next/navigation";
 import { getVNDateString } from "@comtammatu/shared/time";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { getEmployeeContext } from "../_lib/employee-context";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/employee-page";
+import {
+  appendSearchParams,
+  resolveEmployeeBranchRuntimePath,
+} from "../_lib/branch-runtime-redirect";
 import { CountSlipClient } from "./count-client";
 
 const copy = messages.employee.count;
@@ -157,7 +163,8 @@ export async function EmployeeCountPageContent({
   const groups: CountLocationGroup[] = locationIds
     .map((locationId) => ({
       locationId,
-      locationName: locationNameById.get(locationId) ?? copy.locationFallback(locationId),
+      locationName:
+        locationNameById.get(locationId) ?? copy.locationFallback(locationId),
       assignments: assignmentRows
         .filter((row) => row.location_id === locationId)
         .map((row) => ({
@@ -271,7 +278,9 @@ export async function EmployeeCountPageContent({
     >
       <CountSlipClient
         branchId={branchId}
-        baseHref={routeBranchId ? `/br/${branchId}/stock/count` : "/employee/count"}
+        baseHref={
+          routeBranchId ? `/br/${branchId}/stock/count` : "/employee/count"
+        }
         groups={groups}
         selectedLocationId={selectedLocationId}
         slipByLocation={Object.fromEntries(slipByLocation)}
@@ -298,5 +307,15 @@ async function resolveBranchName(
 export default async function EmployeeCountPage(props: {
   searchParams: Promise<{ location?: string }>;
 }) {
+  const { claims } = await loadAuthState();
+  const branchRuntimePath = resolveEmployeeBranchRuntimePath(
+    claims,
+    "stockCount",
+  );
+  if (branchRuntimePath) {
+    const { location } = await props.searchParams;
+    redirect(appendSearchParams(branchRuntimePath, { location }));
+  }
+
   return <EmployeeCountPageContent searchParams={props.searchParams} />;
 }

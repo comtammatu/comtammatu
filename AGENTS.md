@@ -100,8 +100,8 @@ it elsewhere — point here.
 - NEVER invent or redesign the UI outside the project's established design system.
 - NEVER exceed authority when editing UI; only make UI changes explicitly requested or clearly required by the task.
 - UI design-system SSOT is `docs/spec/design-system.md`; it defines the Com Tam Ma Tu Custom Theme.
-- USE `shadcn/ui` components and the project's active preset as the primitive implementation baseline after the design-system contract selects the pattern.
-- NEVER treat `components.json`, `globals.css`, app wrappers, regression notes, or worklogs as competing UI authorities.
+- USE Má Tư Design System primitives from `@comtammatu/ui` and the app surface adapters after the design-system contract selects the pattern.
+- NEVER treat `globals.css`, app wrappers, regression notes, external skill files, or worklogs as competing UI authorities.
 - BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked Custom Theme contract.
 - UI/UX rebuild PRs MUST state the surface, primary user job, route family, change type, and primitives used before implementation.
 

@@ -51,6 +51,7 @@ export const createBranch = withFormAction(
     });
 
     if (error) {
+      console.error("[branches/actions:createBranch] Insert branch error:", error);
       if (error.code === "23505") {
         return { success: false, error: "Tên điểm vận hành đã tồn tại" };
       }
@@ -96,6 +97,7 @@ export const updateBranch = withFormAction(
       .eq("tenant_id", claims.tenant_id);
 
     if (error) {
+      console.error("[branches/actions:updateBranch] Update branch error:", error);
       if (error.code === "23505") {
         return { success: false, error: "Tên điểm vận hành đã tồn tại" };
       }
@@ -139,6 +141,7 @@ export const toggleBranchActive = withAction(
       .eq("tenant_id", claims.tenant_id);
 
     if (error) {
+      console.error("[branches/actions:toggleBranchActive] Update branch is_active status error:", error);
       return { success: false, error: "Không thể cập nhật. Vui lòng thử lại." };
     }
 

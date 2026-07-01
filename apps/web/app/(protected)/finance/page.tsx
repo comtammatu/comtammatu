@@ -17,6 +17,7 @@ import {
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
 import { cn } from "@comtammatu/ui/lib/utils";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   AppEmptyState,
   AppPage,
@@ -27,7 +28,6 @@ import {
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { buildCompareDelta } from "@/components/kpi/compare-chip";
-import { KpiCard } from "@/components/kpi/kpi-card";
 import { FilterBar } from "./components/filter-bar";
 import {
   parseFinanceParams,
@@ -58,29 +58,6 @@ function formatPercent(value: number): string {
   }).format(value)}%`;
 }
 
-function MetricInline({
-  label,
-  value,
-  muted,
-}: {
-  label: string;
-  value: string;
-  muted?: boolean;
-}) {
-  return (
-    <div className="min-w-0">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p
-        className={cn(
-          "truncate font-mono text-sm font-semibold tabular-nums",
-          muted && "text-muted-foreground",
-        )}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
 
 function HddtComplianceBand({
   summary,
@@ -110,19 +87,21 @@ function HddtComplianceBand({
     >
       {summary ? (
         <KpiRow density="compact" className="lg:grid-cols-3">
-          <MetricInline
+          <KpiCard
             label={powerLiteCopy.hddtIssued}
             value={formatCount(summary.invoice_issued_count)}
+            density="compact"
           />
-          <MetricInline
+          <KpiCard
             label={powerLiteCopy.hddtAttention}
             value={formatCount(summary.invoice_attention_count)}
-            muted={summary.invoice_attention_count === 0}
+            tone={summary.invoice_attention_count > 0 ? "warning" : "neutral"}
+            density="compact"
           />
-          <MetricInline
+          <KpiCard
             label={powerLiteCopy.hddtNotRequired}
             value={formatCount(summary.invoice_not_required_count)}
-            muted={summary.invoice_not_required_count === 0}
+            density="compact"
           />
         </KpiRow>
       ) : (

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: legacy inline Vietnamese copy in order detail sheet */
+
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { cn } from "@comtammatu/ui";
@@ -27,6 +29,7 @@ import {
 import { BRANCH_VI, FORM_VI, ORDERS_VI, POS_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import { StatusBadge } from "@/components/status-badge";
+import { DescriptionList } from "@/components/surface";
 
 function itemStatusToneClass(status: string): string {
   switch (status) {
@@ -173,24 +176,31 @@ export function OrderDetailSheet({
 
         {/* ─── Order info ─── */}
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <span className="text-muted-foreground">{FORM_VI.status}</span>
-            <div>
-              <StatusBadge domain="order" value={order.status} />
-            </div>
-
-            <span className="text-muted-foreground">{BRANCH_VI.long}</span>
-            <span>{order.branch_name}</span>
-
-            <span className="text-muted-foreground">{ORDERS_VI.orderedBy}</span>
-            <span>{order.created_by_name}</span>
-
-            <span className="text-muted-foreground">{ORDERS_VI.time}</span>
-            <span>{formatVNDateTime(order.created_at)}</span>
-
-            <span className="text-muted-foreground">{ORDERS_VI.orderType}</span>
-            <span className="capitalize">{order.order_type}</span>
-          </div>
+          <DescriptionList
+            className="text-sm flex flex-col gap-2 [&>div]:flex [&>div]:flex-row [&>div]:justify-between [&>div]:items-center sm:grid sm:grid-cols-2 sm:gap-x-4 sm:gap-y-2 sm:[&>div]:flex-col sm:[&>div]:items-start"
+            items={[
+              {
+                term: FORM_VI.status,
+                description: <StatusBadge domain="order" value={order.status} />,
+              },
+              {
+                term: BRANCH_VI.long,
+                description: order.branch_name,
+              },
+              {
+                term: ORDERS_VI.orderedBy,
+                description: order.created_by_name,
+              },
+              {
+                term: ORDERS_VI.time,
+                description: formatVNDateTime(order.created_at),
+              },
+              {
+                term: ORDERS_VI.orderType,
+                description: <span className="capitalize">{order.order_type}</span>,
+              },
+            ]}
+          />
 
           {/* ─── Payment info ─── */}
           {order.payment && (
@@ -328,61 +338,71 @@ export function OrderDetailSheet({
                         sideLine ||
                         item.note ||
                         (isCancelled && item.cancel_reason)) && (
-                        <dl className="mt-2 flex flex-col gap-1 border-t pt-2 text-xs">
-                          {modifierLine && (
-                            <div
-                              className={cn(
-                                "flex gap-2",
-                                isCancelled && "line-through opacity-70",
-                              )}
-                            >
-                              <dt className="shrink-0 text-muted-foreground">
-                                {POS_VI.options}
-                              </dt>
-                              <dd className="text-foreground">
-                                {item.modifiers.map(formatModifier).join(", ")}
-                              </dd>
-                            </div>
-                          )}
-                          {sideLine && (
-                            <div
-                              className={cn(
-                                "flex gap-2",
-                                isCancelled && "line-through opacity-70",
-                              )}
-                            >
-                              <dt className="shrink-0 text-muted-foreground">
-                                {ORDERS_VI.sidesLabel}
-                              </dt>
-                              <dd className="text-foreground">
-                                {item.sides.map(formatSide).join(", ")}
-                              </dd>
-                            </div>
-                          )}
-                          {item.note && (
-                            <div
-                              className={cn(
-                                "flex gap-2",
-                                isCancelled && "line-through opacity-70",
-                              )}
-                            >
-                              <dt className="shrink-0 text-muted-foreground">
-                                {FORM_VI.notes}
-                              </dt>
-                              <dd className="text-foreground">{item.note}</dd>
-                            </div>
-                          )}
-                          {isCancelled && item.cancel_reason && (
-                            <div className="flex gap-2">
-                              <dt className="shrink-0 text-destructive">
-                                {ORDERS_VI.cancelReasonLabel}
-                              </dt>
-                              <dd className="text-foreground">
-                                {item.cancel_reason}
-                              </dd>
-                            </div>
-                          )}
-                        </dl>
+                        <DescriptionList
+                          className="mt-2 border-t pt-2 text-xs flex flex-col gap-1 [&>div]:flex [&>div]:flex-row [&>div]:justify-between [&>div]:items-center sm:[&>div]:justify-start sm:[&>div]:gap-2"
+                          items={[
+                            ...(modifierLine
+                              ? [
+                                  {
+                                    term: (
+                                      <span className={cn(isCancelled && "line-through opacity-70")}>
+                                        {POS_VI.options}
+                                      </span>
+                                    ),
+                                    description: (
+                                      <span className={cn(isCancelled && "line-through opacity-70")}>
+                                        {item.modifiers.map(formatModifier).join(", ")}
+                                      </span>
+                                    ),
+                                  },
+                                ]
+                              : []),
+                            ...(sideLine
+                              ? [
+                                  {
+                                    term: (
+                                      <span className={cn(isCancelled && "line-through opacity-70")}>
+                                        {ORDERS_VI.sidesLabel}
+                                      </span>
+                                    ),
+                                    description: (
+                                      <span className={cn(isCancelled && "line-through opacity-70")}>
+                                        {item.sides.map(formatSide).join(", ")}
+                                      </span>
+                                    ),
+                                  },
+                                ]
+                              : []),
+                            ...(item.note
+                              ? [
+                                  {
+                                    term: (
+                                      <span className={cn(isCancelled && "line-through opacity-70")}>
+                                        {FORM_VI.notes}
+                                      </span>
+                                    ),
+                                    description: (
+                                      <span className={cn(isCancelled && "line-through opacity-70")}>
+                                        {item.note}
+                                      </span>
+                                    ),
+                                  },
+                                ]
+                              : []),
+                            ...(isCancelled && item.cancel_reason
+                              ? [
+                                  {
+                                    term: (
+                                      <span className="text-destructive">
+                                        {ORDERS_VI.cancelReasonLabel}
+                                      </span>
+                                    ),
+                                    description: item.cancel_reason,
+                                  },
+                                ]
+                              : []),
+                          ]}
+                        />
                       )}
                     </li>
                   );

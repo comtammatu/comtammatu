@@ -18,6 +18,58 @@ test("proxy passes device context into post-login redirect", () => {
   const proxy = read("apps/web/proxy.ts");
 
   assert.match(proxy, /resolveBranchHubContextFromHeaders/);
-  assert.match(proxy, /resolvePostLoginRedirect\(claims, returnTo, branchHubContext\)/);
-  assert.match(proxy, /resolvePostLoginRedirect\(claims, null, branchHubContext\)/);
+  assert.match(
+    proxy,
+    /resolvePostLoginRedirect\(claims, returnTo, branchHubContext\)/,
+  );
+  assert.match(
+    proxy,
+    /resolvePostLoginRedirect\(claims, null, branchHubContext\)/,
+  );
+});
+
+test("employee portal home delegates branch-runtime roles to Branch Hub", () => {
+  const employeeHome = read("apps/web/app/(protected)/employee/page.tsx");
+
+  assert.match(
+    employeeHome,
+    /resolveEmployeeBranchRuntimePath\(claims, "home"\)/,
+  );
+  assert.match(employeeHome, /redirect\(branchRuntimePath\)/);
+  assert.doesNotMatch(employeeHome, /OPERATION_HANDOFFS/);
+});
+
+test("employee legacy entrypoints redirect to branch runtime equivalents", () => {
+  const cases = [
+    ["clock/page.tsx", "shiftClock"],
+    ["tasks/page.tsx", "shiftTasks"],
+    ["schedule/page.tsx", "shiftSchedule"],
+    ["profile/page.tsx", "shiftProfile"],
+    ["leave/page.tsx", "shiftLeave"],
+    ["payslip/page.tsx", "shiftPayslip"],
+    ["count/page.tsx", "stockCount"],
+  ] as const;
+
+  for (const [path, route] of cases) {
+    const source = read(`apps/web/app/(protected)/employee/${path}`);
+    assert.match(
+      source,
+      new RegExp(
+        `resolveEmployeeBranchRuntimePath\\(\\s*claims,\\s*"${route}"`,
+      ),
+      path,
+    );
+    assert.match(source, /redirect\(/, path);
+  }
+});
+
+test("employee branch-runtime redirects preserve query state where needed", () => {
+  const payslip = read("apps/web/app/(protected)/employee/payslip/page.tsx");
+  const count = read("apps/web/app/(protected)/employee/count/page.tsx");
+
+  assert.match(payslip, /appendSearchParams\(branchRuntimePath, \{ year \}\)/);
+  assert.match(
+    count,
+    /appendSearchParams\(branchRuntimePath, \{ location \}\)/,
+  );
 });

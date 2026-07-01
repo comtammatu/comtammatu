@@ -52,7 +52,7 @@ export function MultiOrderTablePicker({
   return (
     <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
       <DrawerContent
-        className="mx-auto w-full max-w-md overflow-hidden sm:max-w-lg"
+        className="mx-auto flex max-h-dvh-80 w-full max-w-md flex-col overflow-hidden sm:max-w-lg"
         data-testid="pos-multi-order-picker"
       >
         <DrawerHeader className="shrink-0">
@@ -68,7 +68,7 @@ export function MultiOrderTablePicker({
         </DrawerHeader>
 
         <ScrollArea
-          className="flex min-h-0 flex-1 max-h-dvh-80 overflow-hidden px-4"
+          className="min-h-0 flex-1 px-4"
           data-testid="pos-multi-order-list"
         >
           <div className="flex flex-col gap-3 pr-2 pb-2" data-vaul-no-drag>

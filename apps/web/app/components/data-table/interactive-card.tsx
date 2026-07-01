@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { Slot } from "radix-ui";
+import { Slot } from "@comtammatu/ui/components/slot";
 import { cn } from "@comtammatu/ui";
 
 const interactiveCardVariants = cva(
@@ -39,7 +39,7 @@ export function InteractiveCard({
   padding,
   ...props
 }: InteractiveCardProps) {
-  const Comp = asChild ? Slot.Root : "div";
+  const Comp = asChild ? Slot : "div";
   return (
     <Comp
       data-slot="interactive-card"

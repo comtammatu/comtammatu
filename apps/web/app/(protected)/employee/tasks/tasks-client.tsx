@@ -8,6 +8,7 @@ import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
+import { Label } from "@comtammatu/ui/components/label";
 import {
   Item,
   ItemActions,
@@ -134,12 +135,12 @@ export function TasksClient({
                         {isCountTask ? (
                           <span>{item.title}</span>
                         ) : (
-                          <label
-                            className="w-full cursor-pointer"
+                          <Label
+                            className="w-full cursor-pointer font-normal text-sm"
                             htmlFor={checkboxId}
                           >
                             {item.title}
-                          </label>
+                          </Label>
                         )}
                       </ItemTitle>
                       {item.doneDefinition ? (

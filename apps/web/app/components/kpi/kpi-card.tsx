@@ -6,12 +6,7 @@ import { cn } from "@comtammatu/ui/lib/utils";
 import { CompareChip, type CompareDelta } from "./compare-chip";
 import { TrendSparkline, type TrendPoint } from "./trend-sparkline";
 
-type KpiTone =
-  | "neutral"
-  | "primary"
-  | "success"
-  | "warning"
-  | "destructive";
+type KpiTone = "neutral" | "primary" | "success" | "warning" | "destructive";
 
 const VALUE_TONE: Record<KpiTone, string> = {
   neutral: "text-foreground",
@@ -48,6 +43,7 @@ interface KpiCardProps {
   sparklineLabel?: string;
   /** Optional glyph shown top-right in a muted box (replaces the tone dot) */
   icon?: ReactNode;
+  density?: "comfortable" | "compact";
   className?: string;
 }
 
@@ -62,16 +58,25 @@ export function KpiCard({
   sparkline,
   sparklineLabel,
   icon,
+  density = "comfortable",
   className,
 }: KpiCardProps) {
+  const isCompact = density === "compact";
+  const hasSparkline = sparkline && sparkline.length > 0;
   const Body = (
     <CardContent
       className={cn(
-        "relative flex h-full min-h-32 flex-col gap-3",
+        "relative flex h-full flex-col",
+        isCompact ? "min-h-24 gap-2" : "min-h-32 gap-3",
         href ? "transition-colors hover:bg-muted/40" : undefined,
       )}
     >
-      <div className="flex min-h-8 items-start justify-between gap-2">
+      <div
+        className={cn(
+          "flex items-start justify-between gap-2",
+          !isCompact && "min-h-8",
+        )}
+      >
         <p className="line-clamp-2 min-w-0 break-words text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {label}
         </p>
@@ -99,25 +104,22 @@ export function KpiCard({
       </div>
       <p
         className={cn(
-          "min-w-0 break-words text-2xl leading-tight font-bold tabular-nums",
+          "min-w-0 break-words leading-tight font-semibold tabular-nums",
+          isCompact ? "text-xl" : "text-2xl",
           VALUE_TONE[tone],
         )}
       >
         {value}
       </p>
-      <div className="min-h-5">
-        {delta ? (
-          <CompareChip
-            label={delta.label}
-            tone={delta.tone}
-            hint={compareHint}
-          />
-        ) : null}
-      </div>
-      <div className="min-h-8 line-clamp-2 break-words text-xs text-muted-foreground">
-        {hint}
-      </div>
-      {sparkline && sparkline.length > 0 ? (
+      {delta ? (
+        <CompareChip label={delta.label} tone={delta.tone} hint={compareHint} />
+      ) : null}
+      {hint ? (
+        <div className="line-clamp-2 break-words text-xs text-muted-foreground">
+          {hint}
+        </div>
+      ) : null}
+      {hasSparkline ? (
         <div className="-mx-1 -mb-1 mt-auto h-8">
           <TrendSparkline
             data={sparkline}
@@ -138,7 +140,14 @@ export function KpiCard({
   );
 
   if (!href) {
-    return <Card className={cn("h-full", className)}>{Body}</Card>;
+    return (
+      <Card
+        size={isCompact ? "sm" : "default"}
+        className={cn("h-full", className)}
+      >
+        {Body}
+      </Card>
+    );
   }
   return (
     <Link
@@ -149,7 +158,9 @@ export function KpiCard({
       )}
       aria-label={typeof value === "string" ? `${label}: ${value}` : label}
     >
-      <Card className="h-full">{Body}</Card>
+      <Card size={isCompact ? "sm" : "default"} className="h-full">
+        {Body}
+      </Card>
     </Link>
   );
 }

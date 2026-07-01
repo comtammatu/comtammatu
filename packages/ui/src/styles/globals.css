@@ -4,7 +4,7 @@
 /* ============================================================
  * THEME — packages/ui/src/styles/globals.css
  * Runtime implementation: Com Tam Ma Tu Custom Theme token values on top of
- * the shadcn radix-lyra primitive baseline.
+ * the Má Tư Design System primitive runtime.
  *
  * Override governance:
  *   1. Change global semantic tokens here only; never add route theme files.
@@ -24,7 +24,7 @@
 
 /* ============================================================
  * ZONE A — PRESET TOKEN SURFACE + MA TU CONCEPT 01 SEMANTIC TOKENS
- * Keep the shadcn token surface stable; the Custom Theme owns semantic values.
+ * Keep the primitive token surface stable; the Custom Theme owns semantic values.
  * ============================================================ */
 
 @theme inline {
@@ -103,6 +103,26 @@
   --sidebar-accent-foreground: oklch(0.218 0.036 251.3);
   --sidebar-border: oklch(0.903 0.021 72.1);
   --sidebar-ring: oklch(0.77 0.164 73.2);
+
+  /* ---- ELEVATED ADDITIVE TOKENS (Concept 01 - Elevated) ---- */
+  --surface-inset: oklch(0.962 0.016 66);
+  --border-inset: oklch(0.915 0.02 70);
+  --border-raised: oklch(0.872 0.026 70);
+  --border-strong: oklch(0.84 0.026 71);
+  --navy-900: oklch(0.16 0.03 252);
+  --info-accent: oklch(0.55 0.13 248);
+
+  /* Semantic Soft-Ink Pairs (Tương phản chuẩn WCAG AA) */
+  --primary-soft: oklch(0.94 0.03 36);
+  --primary-ink: oklch(0.43 0.15 32);
+  --success-soft: oklch(0.945 0.045 140);
+  --success-ink: oklch(0.43 0.075 138);
+  --warning-soft: oklch(0.962 0.04 78);
+  --warning-ink: oklch(0.52 0.11 70);
+  --info-soft: oklch(0.945 0.035 245);
+  --info-ink: oklch(0.4 0.09 250);
+  --destructive-soft: oklch(0.945 0.04 32);
+  --destructive-ink: oklch(0.466 0.147 33.3);
 }
 
 .dark {
@@ -137,6 +157,26 @@
   --sidebar-accent-foreground: oklch(0.978 0.014 64.3);
   --sidebar-border: oklch(0.978 0.014 64.3 / 14%);
   --sidebar-ring: oklch(0.77 0.164 73.2);
+
+  /* ---- ELEVATED ADDITIVE TOKENS (Concept 01 - Elevated) ---- */
+  --surface-inset: oklch(0.262 0.044 255);
+  --border-inset: oklch(0.978 0.014 64.3 / 10%);
+  --border-raised: oklch(0.978 0.014 64.3 / 22%);
+  --border-strong: oklch(0.978 0.014 64.3 / 30%);
+  --navy-900: oklch(0.978 0.014 64.3);
+  --info-accent: oklch(0.7 0.12 248);
+
+  /* Semantic Soft-Ink Pairs (Tương phản chuẩn WCAG AA) */
+  --primary-soft: oklch(0.94 0.03 36);
+  --primary-ink: oklch(0.43 0.15 32);
+  --success-soft: oklch(0.945 0.045 140);
+  --success-ink: oklch(0.43 0.075 138);
+  --warning-soft: oklch(0.962 0.04 78);
+  --warning-ink: oklch(0.52 0.11 70);
+  --info-soft: oklch(0.945 0.035 245);
+  --info-ink: oklch(0.4 0.09 250);
+  --destructive-soft: oklch(0.945 0.04 32);
+  --destructive-ink: oklch(0.466 0.147 33.3);
 }
 
 @layer base {
@@ -177,6 +217,24 @@
   --color-tier-elite-foreground: var(--tier-elite-foreground);
   --color-tier-note: var(--tier-note);
   --color-tier-note-foreground: var(--tier-note-foreground);
+
+  --color-surface-inset: var(--surface-inset);
+  --color-border-inset: var(--border-inset);
+  --color-border-raised: var(--border-raised);
+  --color-border-strong: var(--border-strong);
+  --color-navy-900: var(--navy-900);
+  --color-info-accent: var(--info-accent);
+
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-ink: var(--primary-ink);
+  --color-success-soft: var(--success-soft);
+  --color-success-ink: var(--success-ink);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-ink: var(--warning-ink);
+  --color-info-soft: var(--info-soft);
+  --color-info-ink: var(--info-ink);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-ink: var(--destructive-ink);
 }
 
 :root {
@@ -235,11 +293,13 @@
   --effect-ring-destructive: inset 0 0 0 1px rgba(168, 49, 28, 0.45);
   --effect-focus-ring: 0 0 0 2px var(--ring), 0 0 0 4px var(--foreground);
   --effect-invalid-ring: 0 0 0 1px rgba(168, 49, 28, 0.2);
-  --effect-card-hover: var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.1);
+  --effect-card-hover:
+    var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.1);
   --effect-inline-shadow: 0 1px 0 rgba(13, 27, 42, 0.1);
   --effect-control-thumb: 0 1px 2px rgba(13, 27, 42, 0.3);
   --effect-avatar-ring: 0 0 0 2px var(--background);
-  --effect-popover: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.16);
+  --effect-popover:
+    var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.16);
   --effect-toast: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.18);
   --effect-dialog: 0 16px 48px rgba(13, 27, 42, 0.3);
   --effect-drawer: 0 0 48px rgba(13, 27, 42, 0.3);
@@ -261,11 +321,13 @@
   --effect-ring-destructive: inset 0 0 0 1px rgba(168, 49, 28, 0.45);
   --effect-focus-ring: 0 0 0 2px var(--ring), 0 0 0 4px var(--foreground);
   --effect-invalid-ring: 0 0 0 1px rgba(168, 49, 28, 0.2);
-  --effect-card-hover: var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.1);
+  --effect-card-hover:
+    var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.1);
   --effect-inline-shadow: 0 1px 0 rgba(13, 27, 42, 0.1);
   --effect-control-thumb: 0 1px 2px rgba(13, 27, 42, 0.3);
   --effect-avatar-ring: 0 0 0 2px var(--background);
-  --effect-popover: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.16);
+  --effect-popover:
+    var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.16);
   --effect-toast: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.18);
   --effect-dialog: 0 16px 48px rgba(13, 27, 42, 0.3);
   --effect-drawer: 0 0 48px rgba(13, 27, 42, 0.3);
@@ -297,9 +359,9 @@
 
 /* ============================================================
  * ZONE C — APP UTILITIES (variants, font, base)
- * Inlined byte-equivalent of `shadcn/tailwind.css` (shadcn 4.8.0)
+ * Má Tư DS utility layer for Tailwind data variants and shared keyframes.
  * to avoid adding the CLI as a runtime dep just for one CSS file.
- * Re-sync: diff against node_modules/shadcn/dist/tailwind.css when bumping shadcn.
+ * Update here only through the design-system contract.
  * ============================================================ */
 
 /* Override: Geist for headings + body, Geist Mono for data (D037 reverses

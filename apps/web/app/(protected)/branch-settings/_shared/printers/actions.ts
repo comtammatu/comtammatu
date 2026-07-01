@@ -76,6 +76,9 @@ export async function upsertPrinter(
   });
 
   if (error || data == null) {
+    if (error) {
+      console.error("[branch-settings/printers:upsertPrinter] RPC upsert_printer_with_routes error:", error);
+    }
     const msg = String(error?.message ?? "").toLowerCase();
     if (msg.includes("duplicate") || msg.includes("unique")) {
       return {
@@ -132,6 +135,7 @@ export async function deletePrinter(id: number): Promise<ActionResult> {
     .eq("id", parsed.data)
     .eq("tenant_id", claims.tenant_id);
   if (error) {
+    console.error("[branch-settings/printers:deletePrinter] Delete printer error:", error);
     return { success: false, error: "Không thể xóa máy in" };
   }
   revalidatePrinterPaths(existing.branch_id);

@@ -5,6 +5,8 @@ import { cn } from "@comtammatu/ui";
 import { AppEmptyState, OperationalBoardCard } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Item } from "@comtammatu/ui/components/item";
+import { StatusBadge } from "@/components/status-badge";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -27,8 +29,6 @@ import {
 } from "../_hooks/use-kds-row-effects";
 import { getKdsOrderLabelOverride } from "../_lib/order-columns";
 import {
-  getStatusLabel,
-  getStatusVariant,
   shouldShowTicketStatusBadge,
 } from "../_lib/status-config";
 import {
@@ -370,12 +370,12 @@ function FocusOrderPanel({
                 const rowEffect = ticket ? rowEffects.get(ticket.id) : null;
 
                 return (
-                  <div
+                  <Item
                     key={ticket?.id ?? item.id}
                     data-testid={`kds-focus-item-${String(item.id)}`}
                     data-kds-effect={rowEffect ?? undefined}
                     className={cn(
-                      "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2 transition-colors duration-150 md:px-4",
+                      "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2 transition-colors duration-150 md:px-4 p-0 rounded-none border-x-0 border-b-0",
                       getItemRowStatusClass(status),
                       getKdsRowEffectClass(rowEffect ?? null),
                       isCancelled && "opacity-100",
@@ -418,12 +418,11 @@ function FocusOrderPanel({
 
                     <div className="flex shrink-0 items-center justify-end gap-1">
                       {shouldShowTicketStatusBadge(status) && (
-                        <Badge
-                          variant={getStatusVariant(status)}
-                          className="h-6 rounded-md px-2 py-0 text-sm font-semibold leading-none"
-                        >
-                          {getStatusLabel(status)}
-                        </Badge>
+                        <StatusBadge
+                          domain="order-item"
+                          value={status}
+                          className="h-6 px-2 py-0 text-sm font-semibold leading-none"
+                        />
                       )}
 
                       {ticket && (allowComplete || allowRecall) && (
@@ -479,7 +478,7 @@ function FocusOrderPanel({
                           </>
                         )}
                     </div>
-                  </div>
+                  </Item>
                 );
               })}
 
@@ -496,11 +495,11 @@ function FocusOrderPanel({
                 const rowEffect = rowEffects.get(ticket.id) ?? null;
 
                 return (
-                  <div
+                  <Item
                     key={ticket.id}
                     data-kds-effect={rowEffect ?? undefined}
                     className={cn(
-                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2 transition-colors duration-150",
+                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2 transition-colors duration-150 p-0 rounded-none border-x-0 border-b-0",
                       getItemRowStatusClass(status),
                       getKdsRowEffectClass(rowEffect),
                     )}
@@ -510,12 +509,11 @@ function FocusOrderPanel({
                     </span>
                     <div className="flex shrink-0 items-center justify-end gap-1">
                       {shouldShowTicketStatusBadge(status) && (
-                        <Badge
-                          variant={getStatusVariant(status)}
-                          className="h-5 rounded-md px-2 py-0 text-xs font-semibold leading-none"
-                        >
-                          {getStatusLabel(status)}
-                        </Badge>
+                        <StatusBadge
+                          domain="order-item"
+                          value={status}
+                          className="h-5 px-2 py-0 text-xs font-semibold leading-none"
+                        />
                       )}
                       {(allowComplete || allowRecall) && (
                         <>
@@ -566,7 +564,7 @@ function FocusOrderPanel({
                         </>
                       )}
                     </div>
-                  </div>
+                  </Item>
                 );
               })}
             </div>

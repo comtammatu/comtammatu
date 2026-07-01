@@ -33,9 +33,9 @@
 
 **Decision:** Path-based (`/admin/*`, `/br/[branchId]/pos`, `/br/[branchId]/kds`) — 1 domain, auth "just works", ACL tập trung ở `proxy.ts`. Sub-domain không nằm trong backlog (kéo theo cross-origin cookie/CORS/wildcard cert/DNS/deploy surface) → muốn tách phải có quyết định mới.
 
-## D010: RHF + zod + shadcn Field cho mọi form (2026-04-17)
+## D010: RHF + zod + Má Tư DS Field cho mọi form (2026-04-17)
 
-**Decision:** Form CRUD dùng `react-hook-form + zod 4 + @hookform/resolvers + shadcn Field`. App-local helpers ở `apps/web/app/components/form/` (`TextField`/`NumberField`/`SelectField`/`TextareaField`/`FormDialog`/`valuesToFormData`) — bind RHF + field components project-specific (FormattedNumberInput VND), không ở `packages/ui`.
+**Decision:** Form CRUD dùng `react-hook-form + zod 4 + @hookform/resolvers + Má Tư DS Field`. App-local helpers ở `apps/web/app/components/form/` (`TextField`/`NumberField`/`SelectField`/`TextareaField`/`FormDialog`/`valuesToFormData`) — bind RHF + field components project-specific (FormattedNumberInput VND), không ở `packages/ui`.
 
 **Status:** Baseline cho dialog CRUD mới + form đã migrate. Import/export one-field upload và GRN mobile wizard có shape riêng, không dùng helper chung.
 
@@ -391,44 +391,14 @@ NGUYÊN; siết completion về `pos:confirm_payment` là PR riêng (phải đ�
 `createPayment` + route UI bill tiền mặt qua đường confirm). Codex flag P1 nhưng đây
 là hành vi sẵn có, không phải regression do PR2.
 
-## D044: DESIGN.md-as-foundation — nâng `DESIGN.md` (Google Labs format) thành nền tảng design agent-facing, hạ `design-system.md` thành lớp enforcement (2026-06-21)
+## D044: Má Tư Design System là UI contract duy nhất (2026-06-21)
 
-**Decision (owner chốt trong session cải cách Design System):** Áp dụng convention
-`DESIGN.md` của Google Labs Code (YAML token front-matter oklch + markdown
-rationale, thứ tự section cố định: Overview → Colors → Typography → Layout →
-Elevation & Depth → Shapes → Components → Do's and Don'ts) làm **nền tảng design
-agent-facing** đặt ở **root** repo. Hướng cải cách: **nâng cấp bản sắc Má Tư**
-(terracotta / kem gạo / navy + Geist — sâu & nhất quán hơn), KHÔNG làm lại từ đầu;
-phạm vi **toàn bộ surfaces** (POS / KDS-Runner / Admin / Inventory / Employee).
-
-**Phân lớp sau cải cách (đây là điểm thay đổi contract đang khoá):**
-
-| Lớp                                  | Vai trò                                                                                                                                                                                          |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `DESIGN.md` (root)                   | **Foundation agent-facing**: YAML token (oklch) + rationale 8 section. Agent / Claude Design / tool ngoài đọc TRƯỚC. Owner đọc được.                                                             |
-| `packages/ui/src/styles/globals.css` | **Token source-of-record lúc runtime** (build ăn file này).                                                                                                                                      |
-| `docs/spec/design-system.md`         | Hạ xuống **lớp ENFORCEMENT**: authority order, ratchets, allowlist, surface contracts, lint — _trỏ về_ `DESIGN.md` cho token + thẩm mỹ, không còn tự xưng "single source".                       |
-| Drift-guard                          | `DESIGN.md` YAML ↔ `globals.css` khoá bằng 1 lint check — đúng pattern `AGENTS.md ↔ engineering.md` (`pnpm lint:rules-mirror`). 1 nguồn giá trị, mirror có chủ đích, có guard → SSoT còn nguyên. |
-
-**Chốt:**
-
-1. **Sửa rule SSoT:** `docs/agent/rules/ui.md` "exactly one UI design-system source
-   of truth = design-system.md" → "one source of token VALUES = globals.css,
-   mirrored vào DESIGN.md; DESIGN.md = foundation, design-system.md = enforcement".
-   Lint anchor `DESIGN-SYSTEM-ONE-SOURCE-ONLY` + `scripts/check-ui-contract.mjs`
-   phải bless path `DESIGN.md` (không coi là "non-current design-folder path").
-2. **AGENTS.md:** thêm pointer root "design foundation = `DESIGN.md`" + 1 dòng vào
-   Rule Loading.
-3. **Phasing (quan trọng):** `DESIGN.md` bản đầu chứa token **TARGET (đã elevate)**;
-   tới code phase mới migrate `globals.css` cho khớp. **Drift-guard chỉ bật SAU khi
-   owner duyệt mockup + globals.css đã migrate** — trước đó `DESIGN.md` là spec mục
-   tiêu, drift với runtime là CHỦ ĐÍCH, không phải lỗi.
-4. **Master prompt cho Claude Design** trỏ vào `DESIGN.md`, chạy phân giai đoạn
-   mockup → owner duyệt → code theo contract.
-
-**Defer (chưa làm tới khi owner duyệt mockup):** migrate `globals.css` sang token
-elevated; hạ cấp `design-system.md`; viết lint drift-guard DESIGN.md↔globals.css;
-sửa `ui.md` + `AGENTS.md`. Tới lúc đó vẫn giữ enforcement hiện hành.
+**Decision:** UI design-system authority nằm ở `docs/spec/design-system.md`.
+Runtime tokens trong `packages/ui/src/styles/globals.css`, primitive code trong
+`packages/ui/src/components/*`, và app adapters trong
+`apps/web/app/components/surface.tsx` chỉ implement và kiểm chứng contract này.
+Tooling/skill bên ngoài phải map context về các file trên; không tạo thêm root
+context file hoặc preset config để làm authority song song.
 
 ## D045 — Shell điều hướng một sidebar (tab + sub-tab) — 2026-06-22
 
@@ -497,6 +467,7 @@ Runbook: `docs/runbooks/db/preview-branch-setup.md`.
 ## D048: Hợp nhất IA quản lý Người + Chi nhánh (Task 3) (2026-06-28)
 
 **Decision:** Gộp IA theo `docs/plan/task3-mgmt-ia-consolidation.md`, chia 5 lát (S0 additive → S4):
+
 - **Người:** gộp `/admin/staff/*` vào `/hr` (đổi nhãn "Nhân sự"), giữ URL cũ qua redirect (`resolveLegacyRouteRedirectPath`). **Giữ `staff` ACL key tách biệt** (account/role/permission owner-only, lồng trong `/hr` = owner+branch_manager) — ranh giới quyền là rule thật.
 - **Chi nhánh:** list `/admin/settings/(tenant)/branches` → `/branches` (module key mới `branches`, owner-only); `menu-limits` → `/br/[branchId]/settings/menu-limits` trong hub, **siết quyền về owner/branch_manager** (cashier/chef KHÔNG còn vào trang quản lý giới hạn — vẫn 86 món qua KDS `mark_kds_item_out_of_stock`, đường riêng không đổi).
 - **Branch switcher** mới trong `AppShell`: hiện cho mọi role đa-chi-nhánh, **ẩn khi ≤1 CN**.
@@ -536,6 +507,7 @@ GIỮ NGUYÊN cho mọi correction khác; chỉ mở đúng nhánh full-void-aft
    thuộc quý chưa kê khai), phần "chặn dư" chỉ thêm việc route sang kế toán, không
    sai thuế. → **KHÔNG đổi code**, mốc cross-period hiện tại đúng. Căn cứ huỷ HĐĐT
    issued: biên bản huỷ theo NĐ 123/2020 (sửa NĐ 70/2025) + TT 32/2025.
+
 4. **HĐĐT actor (Q4):** `branch_manager` ĐƯỢC huỷ HĐĐT issued dưới cổng
    `pos:void_paid_order` — RPC **inline flip** `tax_invoices.status='cancelled'` +
    ghi `tax_invoice_events`, KHÔNG gọi `transition_tax_invoice_state` (vốn đòi
@@ -572,6 +544,7 @@ test) chỉ build sau khi types regen.
 7. **Không viết lại POS/KDS/Runner** — chỉ re-root lên context + Hub (giữ orchestrator `pos-desktop-inner.tsx`). Kho/Menu tách: việc sàn → Operator, back-office → Office; catalog món = tenant/Office, giới hạn ngày = per-branch/Operator.
 
 **Scope boundaries:**
+
 - Office-side People/Branch IA do `docs/plan/task3-mgmt-ia-consolidation.md` + **D048** sở hữu — blueprint này KHÔNG redesign phần đó; menu-limits/branch-switcher khớp D048.
 - My-shift migration (sub-project #3) xếp SAU khi HR redesign (D026/D027, branch `codex/hrm-payroll-annual-leave`) settle; KHÔNG động file HR bây giờ.
 - Cấu hình "Việc trong ca" do **D052** sở hữu; tile "Việc cần làm" chỉ tiêu thụ output, không thiết kế lại config.

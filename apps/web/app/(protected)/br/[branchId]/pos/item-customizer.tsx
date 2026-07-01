@@ -420,8 +420,12 @@ export function ItemCustomizer({
                           variant="outline"
                           className="cursor-pointer hover:bg-accent"
                         >
-                          <label>
+                          <Label
+                            htmlFor={`modifier-${m.id}`}
+                            className="flex items-center gap-3 w-full font-normal cursor-pointer"
+                          >
                             <Checkbox
+                              id={`modifier-${m.id}`}
                               checked={selectedModifierIds.has(m.id)}
                               onCheckedChange={() => toggleModifier(m.id)}
                             />
@@ -435,7 +439,7 @@ export function ItemCustomizer({
                                 +{formatVND(m.price)}
                               </span>
                             </ItemActions>
-                          </label>
+                          </Label>
                         </Item>
                       ))}
                     </div>

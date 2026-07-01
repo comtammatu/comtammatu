@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * Visual baseline — light-mode regression guard for shadcn preset buFywKm.
+ * Visual baseline — light-mode regression guard for Má Tư Design System runtime.
  *
  * What this catches:
  *   - Theme drift in `packages/ui/src/styles/globals.css` (Zone A, B, or C)

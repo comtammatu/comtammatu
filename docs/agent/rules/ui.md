@@ -1,10 +1,9 @@
 # UI Rules
 
-Use this file before changing UI, UX, route surfaces, styling, frontend copy, shadcn components, or operational POS/KDS flows.
+Use this file before changing UI, UX, route surfaces, styling, frontend copy, Má Tư DS components, or operational POS/KDS flows.
 
-Also read `docs/agent/rules/skills.md` and route UI work through the shadcn/UI
-skill family when available. External design skills never override the Custom
-Theme contract below.
+Also read `docs/agent/rules/skills.md`. External design skills never override
+the Custom Theme contract below.
 
 ## Source Of Truth
 
@@ -12,30 +11,20 @@ There is exactly one UI design-system source of truth:
 
 - `docs/spec/design-system.md`
 
-That source defines the Com Tam Ma Tu Custom Theme. The active shadcn preset is
-the primitive baseline and runtime evidence, not a higher design authority.
+That source defines the Com Tam Ma Tu Custom Theme. Má Tư DS primitives in
+`@comtammatu/ui` are runtime evidence, not a higher design authority.
 
 Everything else is evidence, implementation, or enforcement for that contract,
 not a second authority:
 
 - `docs/modules/ui.md` explains how to apply the contract.
 - `tasks/regressions.md` records negative rules from past failures.
-- `apps/web/components.json` and `packages/ui/components.json` are runtime
-  shadcn config evidence that must conform to the contract.
 - `packages/ui/src/components/*` and `apps/web/app/components/surface.tsx` are
   runtime implementation and adapter evidence, not competing design systems.
 
 Non-current visual-layer strings and non-current design-folder paths are blocked
 by `scripts/check-ui-contract.mjs` / `corepack pnpm lint:ui-contract`. Any new visual
 token layer requires a design-system contract change first.
-
-External references:
-
-- Shadcn UI Docs: https://ui.shadcn.com/docs/
-- Installation: https://ui.shadcn.com/docs/installation/
-- Preset: https://ui.shadcn.com/create?preset=buFywKm
-- Components: https://ui.shadcn.com/docs/components/
-- Preset command: `corepack pnpm dlx shadcn@latest init --preset buFywKm --template next --monorepo --base radix`
 
 ## Guardrails
 
@@ -47,14 +36,13 @@ External references:
   cards/titles/KPIs, read `docs/ref/operational-data-contract.md`. Every metric
   card must bind to a contract key or an existing workflow/entity contract; if
   no contract exists, update the contract before changing UI.
-- USE `shadcn/ui` components and the project's active preset as the default
-  primitive implementation path after `docs/spec/design-system.md` has selected
-  the pattern.
-- NEVER treat the shadcn preset as authority to override the Custom Theme
-  contract.
+- USE Má Tư DS primitives from `@comtammatu/ui` and the app surface adapters as
+  the default implementation path after `docs/spec/design-system.md` has
+  selected the pattern.
+- NEVER treat external UI scaffold CLI/preset output as authority to override the Custom Theme contract.
 - NEVER override the visual contract of core primitives through ad-hoc wrappers, custom themes, or parallel surface systems.
 - USE `apps/web/app/components/surface.tsx` for repeated app-level page/header/section/toolbar/empty/link-card patterns; domain wrappers must delegate to it instead of cloning layout/chrome.
-- NEVER use a separate visual-token layer or compatibility wrapper for app UI. Route reusable patterns through `apps/web/app/components/surface.tsx` and semantic shadcn tokens unless the design-system contract explicitly changes first.
+- NEVER use a separate visual-token layer or compatibility wrapper for app UI. Route reusable patterns through `apps/web/app/components/surface.tsx` and semantic token classes unless the design-system contract explicitly changes first.
 - BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked Custom Theme contract.
 - UI/UX rebuild PRs MUST state the surface, primary user job, route family, change type, and primitives used before implementation.
 
@@ -74,7 +62,7 @@ External references:
 - One workflow state should have one visual source of truth. Do not repeat the same state in header, rail, sidebar, gate, and board.
 - Cart is for creating a new order only. After submit, order mutations MUST happen from order detail or order history flows.
 - Desktop may add density, secondary insight, or faster scan surfaces, but MUST NOT create a different IA from mobile.
-- Prefer real shadcn primitives (`Tabs`, `Badge`, `Button`, `Card`, `Sheet`, `Select`, `Table`, `Dialog`) before styling raw `div` or `button` controls.
+- Prefer real Má Tư DS primitives (`Tabs`, `Badge`, `Button`, `Card`, `Sheet`, `Select`, `Table`, `Dialog`) before styling raw `div` or `button` controls.
 - Use a single vocabulary for the same workflow state across POS and KDS. Do not rename the same concept per surface.
 - Keep destructive actions visually separated from primary actions and always require confirmation or a safe recovery path.
 
@@ -85,7 +73,7 @@ Read `tasks/regressions.md` before UI work, especially:
 Use targeted lookup instead of loading the whole file:
 
 ```bash
-rg -n "DESIGN-SYSTEM|UI-|PRESET-FIRST|NO-PRIMITIVE|NO-FAKE|NO-ARBITRARY|NO-SURFACE|NO-STATIC|NO-LEGACY|APP-SURFACE|STATUS|DataTable|FORMDIALOG|EMPTY|LOADER|RAW-TABLE|PAGE-HEADER|RHYTHM|SHELL|NAV|PADDING" tasks/regressions.md
+rg -n "DESIGN-SYSTEM|UI-|PRIMITIVE-FIRST|NO-PRIMITIVE|NO-FAKE|NO-ARBITRARY|NO-SURFACE|NO-STATIC|NO-LEGACY|APP-SURFACE|STATUS|DataTable|FORMDIALOG|EMPTY|LOADER|RAW-TABLE|PAGE-HEADER|RHYTHM|SHELL|NAV|PADDING" tasks/regressions.md
 ```
 
 Separate the enforcement lane before acting: `DESIGN-SYSTEM-ONE-SOURCE-ONLY`
@@ -98,7 +86,7 @@ inspection.
 - `NO-SURFACE-THEME-IMPORTS`
 - `NO-STATIC-UI-INLINE-STYLES`
 - `TERMINOLOGY-SOURCE-OF-TRUTH`
-- `PRESET-FIRST-UI`
+- `PRIMITIVE-FIRST-UI`
 - `NO-PRIMITIVE-DESIGN-OVERRIDE`
 - `DOCS-MUST-MATCH-RUNTIME`
 - `NO-LEGACY-APP-HELPERS`

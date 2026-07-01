@@ -17,34 +17,31 @@ back to the contract.
 
 This is intentionally **one source of truth**, not a source-of-truth bundle.
 `docs/modules/ui.md`, `docs/agent/rules/ui.md`, `tasks/regressions.md`,
-`components.json`, `globals.css`, primitives, and app adapters are supporting
+`globals.css`, primitives, and app adapters are supporting
 evidence or enforcement. They must point back to this contract. If they conflict
 with it, the conflict is a bug to resolve, not permission to choose whichever
 file is convenient.
 
 ## Decision
 
-The design system is the Com Tam Ma Tu Custom Theme contract implemented on top
-of the current shadcn/Radix primitive baseline. The shadcn preset is the
-primitive baseline and runtime conformance evidence, not the design-system
-authority. It must never be used to overrule this file.
+The design system is the Com Tam Ma Tu Custom Theme contract implemented by
+Má Tư Design System primitives in `@comtammatu/ui`. Radix, lucide, Tailwind, and
+class-variance-authority are implementation dependencies, not design-system
+authorities. External UI scaffold CLI/preset files are not part of the runtime
+contract and must never be used to overrule this file.
 
 Custom Theme means the locked Ma Tu Concept 01 semantic tokens, typography,
 spacing rhythm, component roles, brand primitives, and app surface adapters
 documented here. It does not mean a route-local theme layer, a new component
-library, a fork of shadcn primitives, or a parallel visual language.
+library outside `@comtammatu/ui`, or a parallel visual language.
 
 Active runtime:
 
 - custom theme: Com Tam Ma Tu Custom Theme / Ma Tu Concept 01
 - token source: `packages/ui/src/styles/globals.css`
-- `style`: `radix-lyra`
-- resolved preset code: `buFywKm`
-- `baseColor`: `neutral`
-- `cssVariables`: `true`
-- `iconLibrary`: `lucide`
-- primitive baseline: Radix/shadcn
-- brand assets: `/brand/logo-matu.png`, `/brand/logo-matu-seal.png`, `/brand/logo-matu-vertical.png`, `/brand/mascot/be-suon-tuoi-runner.png`
+- primitive source: `packages/ui/src/components/*`
+- primitive dependencies: Radix (`radix-ui`), lucide, Tailwind CSS 4, CVA
+- brand assets: `/brand/logo-matu.png`, `/brand/logo-matu-seal.png`, `/brand/logo-matu-vertical.png`, `/brand/mascot/be-suon-tuoi-runner.png`, `/brand/mascot/cotlet.png`, `/brand/mascot/cotlet.spritesheet.webp`, `/brand/mascot/cotlet.pet.json`, `/brand/symbols/*.svg`
 - web brand primitive: `apps/web/app/components/brand.tsx`
 - web app surface adapters: `apps/web/app/components/surface.tsx`
 
@@ -55,17 +52,16 @@ Agents must preserve this decision unless the task explicitly asks to change the
 When deciding how to build UI, use this order:
 
 1. Custom Theme contract: `docs/spec/design-system.md`
-2. Runtime shadcn config and token evidence that must conform to it: `apps/web/components.json`, `packages/ui/components.json`, `packages/ui/src/styles/globals.css`, `apps/web/app/layout.tsx`
+2. Runtime token evidence that must conform to it: `packages/ui/src/styles/globals.css`, `apps/web/app/layout.tsx`
 3. Primitive implementation that must conform to it: `packages/ui/src/components/*`
 4. App adapter implementation that must conform to it: `apps/web/app/components/surface.tsx`
 5. Implementation guide: `docs/modules/ui.md`
 6. Negative rules: `tasks/regressions.md`
 7. Product copy and terminology: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
 
-The active shadcn preset is the first implementation baseline for primitives
-after this contract has selected a pattern. It is never a higher authority than
-this contract. Do not invent a local exception when the contract is unclear.
-Pause and update the contract first.
+The Má Tư DS primitive layer is the first implementation baseline after this
+contract has selected a pattern. Do not invent a local exception when the
+contract is unclear. Pause and update the contract first.
 
 ## Product UX Thesis
 
@@ -159,7 +155,7 @@ Required utility mapping:
 Rules:
 
 - The `geist` package exposes `--font-geist-sans` / `--font-geist-mono`; `globals.css` binds `--font-sans` + `--font-heading` to `--font-geist-sans` and `--font-mono` to `--font-geist-mono`. App code consumes only `font-sans` / `font-heading` / `font-mono`.
-- Route/page headings, card titles, dialog titles, sheet titles, section titles, and brand lockup text use `font-heading` unless a shadcn primitive already applies it.
+- Route/page headings, card titles, dialog titles, sheet titles, section titles, and brand lockup text use `font-heading` unless a Má Tư DS primitive already applies it.
 - Body text, controls, labels, descriptions, table text, and workflow copy inherit `font-sans`.
 - Use `font-mono` only for tabular operational data, IDs, codes, receipt/order numbers, prices, quantities, timestamps, and audit hashes.
 - Do not add route-specific `font-family`, custom font variables, or extra font families.
@@ -170,6 +166,7 @@ Rules:
 
 - Use semantic Tailwind token classes (`bg-background`, `text-muted-foreground`, `border-border`, `bg-success`, etc.).
 - Use `BrandMark` / `BrandLockup` for web runtime logo rendering; do not reference `/brand/logo-*` directly from route components.
+- Use `BrandSymbol` for Concept 01 symbol assets and `BrandMascot` for the Cốt Lết mascot; do not reference `/brand/symbols/*` or `/brand/mascot/cotlet*` directly from route components.
 - Purpose-specific mascot assets may be used as decorative public images in customer-facing empty or splash states; they must not replace core workflow content.
 - The three brand patterns (`ke-caro`, `hat-gao`, `vong-to`) ship as tileable SVG under `/brand/patterns` with the `brand-pattern-caro` / `brand-pattern-hat-gao` / `brand-pattern-vong-to` and `brand-strip` utilities in `globals.css`. Use them only as decorative footer strips, packaging trim, or section separators — never as a background behind body text.
 - Do not hardcode raw palette classes for status meaning (`amber`, `emerald`, `zinc`, etc.) when a semantic token exists.
@@ -253,20 +250,20 @@ Eyebrow tracking is locked per surface: `tracking-wide` for the single page-head
 
 `Button` is the single source of truth for button height. Variants:
 
-| Variant    | Min height | When                                                                                     |
-| ---------- | ---------- | ---------------------------------------------------------------------------------------- |
-| `xs`       | `h-6`      | Inline metadata actions, tag pickers                                                     |
-| `sm`       | `h-7`      | Compact toolbars, dialog footers                                                         |
-| `default`  | `h-8`      | Standard CTA, form submit                                                                |
-| `lg`       | `h-9`      | Primary CTA, page-header action                                                          |
-| `touch`    | `min-h-12` | Mobile touch button (POS, KDS, mobile inventory) — meets WCAG 2.5.5 enhanced target size |
-| `touch-lg` | `min-h-14` | Hero CTA / mobile action bar primary (POS bottom bar, KDS bump)                          |
-| `icon-xs`  | `size-6`   | Icon-only inline                                                                         |
-| `icon-sm`  | `size-7`   | Icon-only compact                                                                        |
-| `icon`     | `size-8`   | Icon-only default                                                                        |
-| `icon-lg`  | `size-9`   | Icon-only large                                                                          |
-| `icon-touch` | `size-12` | Icon-only touch target (POS header overflow) — 48px WCAG 2.5.5 enhanced |
-| `tile`     | `min-h-32`→`min-h-44` (responsive) | Oversized selectable tile (POS table-gate); `min-h-` so wrapped labels grow |
+| Variant      | Min height                         | When                                                                                     |
+| ------------ | ---------------------------------- | ---------------------------------------------------------------------------------------- |
+| `xs`         | `h-6`                              | Inline metadata actions, tag pickers                                                     |
+| `sm`         | `h-7`                              | Compact toolbars, dialog footers                                                         |
+| `default`    | `h-8`                              | Standard CTA, form submit                                                                |
+| `lg`         | `h-9`                              | Primary CTA, page-header action                                                          |
+| `touch`      | `min-h-12`                         | Mobile touch button (POS, KDS, mobile inventory) — meets WCAG 2.5.5 enhanced target size |
+| `touch-lg`   | `min-h-14`                         | Hero CTA / mobile action bar primary (POS bottom bar, KDS bump)                          |
+| `icon-xs`    | `size-6`                           | Icon-only inline                                                                         |
+| `icon-sm`    | `size-7`                           | Icon-only compact                                                                        |
+| `icon`       | `size-8`                           | Icon-only default                                                                        |
+| `icon-lg`    | `size-9`                           | Icon-only large                                                                          |
+| `icon-touch` | `size-12`                          | Icon-only touch target (POS header overflow) — 48px WCAG 2.5.5 enhanced                  |
+| `tile`       | `min-h-32`→`min-h-44` (responsive) | Oversized selectable tile (POS table-gate); `min-h-` so wrapped labels grow              |
 
 Fixed heights `h-10`, `h-11`, `h-12`, `h-14`, `h-16` MUST NOT be applied to `<button>`, `<Link>`, or `<Button>` acting as a button. Min-heights `min-h-12`, `min-h-14`, `min-h-16` MUST come from the `touch` / `touch-lg` variants — do not override on a different variant via `className`. Touch CTAs use `min-h-` rather than fixed `h-` so wrapped labels grow vertically without clipping.
 
@@ -286,14 +283,14 @@ If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove ta
 
 Radius is a tier, not a free choice. Pick the token from the element's role:
 
-| Tier               | Token          | Roles                                                                                  |
-| ------------------ | -------------- | -------------------------------------------------------------------------------------- |
-| Control            | `rounded-md`   | Input, button, badge, chip, icon-box (square icon container), inset block, callout/Alert |
-| Card / page-container | `rounded-lg` | Card, Sheet, Dialog, Drawer outer; page-container surfaces                              |
-| Pill               | `rounded-full` | Avatar, pill badge, circular (truly round) icon container                              |
-| Reset              | `rounded-none` | Explicit reset only (table cell internals, edge-bleed media)                           |
+| Tier                  | Token          | Roles                                                                                    |
+| --------------------- | -------------- | ---------------------------------------------------------------------------------------- |
+| Control               | `rounded-md`   | Input, button, badge, chip, icon-box (square icon container), inset block, callout/Alert |
+| Card / page-container | `rounded-lg`   | Card, Sheet, Dialog, Drawer outer; page-container surfaces                               |
+| Pill                  | `rounded-full` | Avatar, pill badge, circular (truly round) icon container                                |
+| Reset                 | `rounded-none` | Explicit reset only (table cell internals, edge-bleed media)                             |
 
-`rounded` (no suffix), `rounded-sm`, `rounded-xl`, `rounded-2xl`, `rounded-3xl`, `rounded-4xl` are NOT allowed in app code. The radius primitive token surface (`--radius-sm/md/lg/xl/2xl/3xl/4xl`) exists in `globals.css` for shadcn primitive compatibility — app surfaces consume them indirectly through Card/Sheet/etc., not directly.
+`rounded` (no suffix), `rounded-sm`, `rounded-xl`, `rounded-2xl`, `rounded-3xl`, `rounded-4xl` are NOT allowed in app code. The radius primitive token surface (`--radius-sm/md/lg/xl/2xl/3xl/4xl`) exists in `globals.css` for primitive compatibility — app surfaces consume them indirectly through Card/Sheet/etc., not directly.
 
 Tier misalignment is mostly a review concern, but two unambiguous cases are enforced by the `radius-tier-baseline` gate: a `rounded-full` on a sized icon-box (`size-8/10/12/14/16` — that is a square control, so it should be `rounded-md`), and `rounded-lg` on a small inset (`size-8/10/12` — control tier, so `rounded-md`). The gate is a detectable subset only; full tier-correctness comes from this table plus review.
 
@@ -307,12 +304,12 @@ Motion is functional only — it signals state change (loading, enter/exit, focu
 
 **Duration.** App surfaces author only two transition durations; everything else is owned by the Radix / `tw-animate-css` primitive layer and must not be hand-set per page.
 
-| Duration                      | Locked use                                                                            | Layer          |
-| ----------------------------- | ------------------------------------------------------------------------------------- | -------------- |
-| `duration-150`                | `transition-colors` / focus-ring / border feedback on interactive controls            | app + primitive |
-| `duration-300`                | Overlay / dialog / sheet enter–exit (Radix `animate-in` / `animate-out`)              | app + primitive |
-| `duration-100`/`200`/`240` (`--motion-*`) | Primitive-layer overlay/drawer enter–exit timings inside `packages/ui/*` only, sourced from the `--motion-*` tokens — do not introduce in app code | primitive only |
-| `duration-500`                | Full-screen idle/empty visuals only (Runner idle board); never on interactive controls | app (exception) |
+| Duration                                  | Locked use                                                                                                                                         | Layer           |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `duration-150`                            | `transition-colors` / focus-ring / border feedback on interactive controls                                                                         | app + primitive |
+| `duration-300`                            | Overlay / dialog / sheet enter–exit (Radix `animate-in` / `animate-out`)                                                                           | app + primitive |
+| `duration-100`/`200`/`240` (`--motion-*`) | Primitive-layer overlay/drawer enter–exit timings inside `packages/ui/*` only, sourced from the `--motion-*` tokens — do not introduce in app code | primitive only  |
+| `duration-500`                            | Full-screen idle/empty visuals only (Runner idle board); never on interactive controls                                                             | app (exception) |
 
 The primitive layer's finer timings are the **`--motion-*` / `--ease-*` token family** (Má Tư Design System; `globals.css`): `--motion-fast 120ms` / `base 150` / `overlay 200` / `drawer 240` / `progress 300`, the loop rungs `spinner 700` / `indeterminate 1100` / `skeleton 1300`, and `--ease-enter` / `--ease-move` / `--ease-linear`. `packages/ui` primitives consume them as `duration-[var(--motion-*)]` / `ease-[var(--ease-*)]` (Tailwind v4 has no `--duration-*` / `--ease-*` utility namespace); the global spinner is retimed to `--motion-spinner` (700ms) via the `--animate-spin` rebind. App surfaces still author only `duration-150` / `duration-300` (== `--motion-base` / `--motion-progress`).
 
@@ -336,18 +333,18 @@ Arbitrary `duration-[…]` is NOT allowed in app code.
 
 The system is **border-first**: resting surfaces are separated by `--border`, not by shadow. Shadow is reserved for surfaces that genuinely float above the page. Float elevation is the named **`--effect-*` depth token family** (Má Tư Design System; defined in `globals.css` ZONE B as rgba-by-design — an explicit exception to the OKLCH-only token rule — and consumed as `shadow-effect-*` utilities plus `bg-effect-scrim` / `drawer-scrim`). Sticky-CTA and POS/KDS ceiling surfaces still use the Tailwind `shadow-lg` / `shadow-xl` / `shadow-2xl` rungs. Each is locked per role below. Arbitrary `box-shadow`, legacy `--shadow-*` vars, and unnamed `--effect-*` values remain forbidden.
 
-| Rung          | Utility                    | Locked role                                                                                                                          |
-| ------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Rest          | _(none — border only)_     | Base `Card`, page sections, table rows, resting tiles. `card.tsx` carries no shadow by design.                                       |
-| Hover         | `shadow-effect-card-hover` | Interactive/clickable card adapters on hover only — data-table + inventory `interactive-card.tsx`, `AppLinkCard` + `OperationalBoardCard` (`surface.tsx`). Hairline ring + `0 1px 3px` drop. |
-| Overlay       | `shadow-effect-popover`    | Popover-family floating layers: `popover`, `dropdown-menu`, `select`. Bakes the `--effect-ring-border` hairline + soft drop (replaces the old `shadow-md ring-1 ring-foreground/10`). |
-| Modal         | `shadow-effect-dialog`     | `dialog` content.                                                                                                                    |
-| Sheet / Drawer| `shadow-effect-drawer`     | `sheet` content and `drawer` (vaul `before:`) panel.                                                                                 |
-| Tooltip       | `shadow-effect-tooltip`    | `tooltip` content.                                                                                                                   |
-| Toast         | `shadow-effect-toast`      | Sonner toasts (applied on `.cn-toast` in `globals.css`).                                                                             |
-| Sticky CTA    | `shadow-lg`                | CTAs **inside a genuinely sticky/fixed action bar** (e.g. GRN-create and transfer-receive `sticky chrome-safe-bottom` footers).      |
-| Ceiling       | `shadow-xl` / `shadow-2xl` | **Only** fixed surfaces floating over scrolling content: POS mobile action bar (`shadow-2xl`), KDS focus card / chart tooltip (`shadow-xl`). Nowhere else. |
-| Overlay scrim | `bg-effect-scrim` / `drawer-scrim` | Dialog/Sheet backdrop = `bg-effect-scrim`; Drawer backdrop = `drawer-scrim` (scrim + `--effect-drawer-blur`).               |
+| Rung           | Utility                            | Locked role                                                                                                                                                                                  |
+| -------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rest           | _(none — border only)_             | Base `Card`, page sections, table rows, resting tiles. `card.tsx` carries no shadow by design.                                                                                               |
+| Hover          | `shadow-effect-card-hover`         | Interactive/clickable card adapters on hover only — data-table + inventory `interactive-card.tsx`, `AppLinkCard` + `OperationalBoardCard` (`surface.tsx`). Hairline ring + `0 1px 3px` drop. |
+| Overlay        | `shadow-effect-popover`            | Popover-family floating layers: `popover`, `dropdown-menu`, `select`. Bakes the `--effect-ring-border` hairline + soft drop (replaces the old `shadow-md ring-1 ring-foreground/10`).        |
+| Modal          | `shadow-effect-dialog`             | `dialog` content.                                                                                                                                                                            |
+| Sheet / Drawer | `shadow-effect-drawer`             | `sheet` content and `drawer` (vaul `before:`) panel.                                                                                                                                         |
+| Tooltip        | `shadow-effect-tooltip`            | `tooltip` content.                                                                                                                                                                           |
+| Toast          | `shadow-effect-toast`              | Sonner toasts (applied on `.cn-toast` in `globals.css`).                                                                                                                                     |
+| Sticky CTA     | `shadow-lg`                        | CTAs **inside a genuinely sticky/fixed action bar** (e.g. GRN-create and transfer-receive `sticky chrome-safe-bottom` footers).                                                              |
+| Ceiling        | `shadow-xl` / `shadow-2xl`         | **Only** fixed surfaces floating over scrolling content: POS mobile action bar (`shadow-2xl`), KDS focus card / chart tooltip (`shadow-xl`). Nowhere else.                                   |
+| Overlay scrim  | `bg-effect-scrim` / `drawer-scrim` | Dialog/Sheet backdrop = `bg-effect-scrim`; Drawer backdrop = `drawer-scrim` (scrim + `--effect-drawer-blur`).                                                                                |
 
 **Non-elevation override.** `pos-text-overlay` (`globals.css`, `filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.6))`) and `drop-shadow-*` image filters (e.g. the runner mascot) are text/image legibility effects, **not** part of the elevation ladder, and must not be reused as surface shadows.
 
@@ -372,22 +369,27 @@ Shared layout primitives also exported from `surface.tsx`:
 
 Default primitive mapping:
 
-| Need                  | Use                                                                         |
-| --------------------- | --------------------------------------------------------------------------- |
-| command/action        | `Button`, `Toggle`, `ToggleGroup`                                           |
-| state label           | `Badge`                                                                     |
-| framed repeated item  | `Card`                                                                      |
-| dense data            | `Table`                                                                     |
-| segmented view        | `Tabs`                                                                      |
-| form input            | `Input`, `Textarea`, `Select`, `Checkbox`, `RadioGroup`, `Switch`           |
-| dialog flow           | `Dialog`, `AlertDialog`, `Sheet`, `Drawer`                                  |
-| empty/no result/error | `Empty` or approved wrappers around `Empty`                                 |
-| loading               | `Spinner`, `Skeleton`, `Progress`                                           |
-| list row              | `Item`, `ItemGroup`                                                         |
-| search/filter shell   | `InputGroup`, `Combobox` helpers where appropriate                          |
-| route context         | `Sidebar`, `Breadcrumb`, `Separator`                                        |
-| keyboard hint         | `Kbd`, `KbdGroup`                                                           |
-| transient feedback    | `Sonner`                                                                    |
+| Need                  | Use                                                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| command/action        | `Button`, `Toggle`, `ToggleGroup`                                                                                 |
+| state label           | `Badge`                                                                                                           |
+| framed repeated item  | `Card`                                                                                                            |
+| disclosure            | `Accordion`                                                                                                       |
+| dense data            | `Table`                                                                                                           |
+| segmented view        | `Tabs`                                                                                                            |
+| form input            | `Input`, `Textarea`, `Select`, `Checkbox`, `RadioGroup`, `Switch`, `Combobox`, `DatePicker`, `Slider`, `TagInput` |
+| dialog flow           | `Dialog`, `AlertDialog`, `Sheet`, `Drawer`                                                                        |
+| empty/no result/error | `Empty` or approved wrappers around `Empty`                                                                       |
+| loading               | `Spinner`, `Skeleton`, `Progress`                                                                                 |
+| list row              | `Item`, `ItemGroup`                                                                                               |
+| search/filter shell   | `InputGroup`, `Combobox` helpers where appropriate                                                                |
+| route context         | `Sidebar`, `Breadcrumb`, `Separator`                                                                              |
+| keyboard hint         | `Kbd`, `KbdGroup`                                                                                                 |
+| transient feedback    | `Sonner`                                                                                                          |
+| table navigation      | `Pagination`                                                                                                      |
+| split pane            | `Resizable`                                                                                                       |
+| filter/action row     | `Toolbar`                                                                                                         |
+| metric block          | `Stat` in primitive demos; app dashboards use `KpiCard`                                                           |
 
 Toast and durable notification behavior is specified in `docs/spec/toast-notification-system.md`.
 
@@ -462,7 +464,7 @@ Allowed app wrappers:
 - Data adapters that fetch, map, or validate domain data.
 - Layout wrappers that arrange primitives without changing the visual contract and delegate to `apps/web/app/components/surface.tsx` when they represent page, header, section, toolbar, empty-state, or navigation-card patterns.
 - Form wrappers in `apps/web/app/components/form/`.
-- Domain wrappers that remove repetition while still rendering shadcn primitives.
+- Domain wrappers that remove repetition while still rendering Má Tư DS primitives.
 
 Forbidden wrappers:
 
@@ -479,11 +481,11 @@ Forbidden wrappers:
 primitives. Existing direct app imports are a frozen per-file baseline, not a
 license to spread the pattern. New app code must pick the owning adapter first:
 
-| Primitive import | Default route for new app code |
-| ---------------- | ------------------------------ |
-| `@comtammatu/ui/components/card` | `AppSection`, `KpiCard`, `InteractiveCard`, or an approved operational adapter |
-| `@comtammatu/ui/components/table` | `DataTable`, `TableEmptyStateRow`, or a documented document/line-sheet adapter |
-| `@comtammatu/ui/components/dialog` | `FormDialog`, `Sheet`, Page flow, or an approved short contextual dialog |
+| Primitive import                         | Default route for new app code                                                      |
+| ---------------------------------------- | ----------------------------------------------------------------------------------- |
+| `@comtammatu/ui/components/card`         | `AppSection`, `KpiCard`, `InteractiveCard`, or an approved operational adapter      |
+| `@comtammatu/ui/components/table`        | `DataTable`, `TableEmptyStateRow`, or a documented document/line-sheet adapter      |
+| `@comtammatu/ui/components/dialog`       | `FormDialog`, `Sheet`, Page flow, or an approved short contextual dialog            |
 | `@comtammatu/ui/components/alert-dialog` | shared `confirm()`, `FormDialog` with reason input, or an approved destructive flow |
 
 `scripts/check-ui-contract.mjs` enforces this with the
@@ -733,7 +735,7 @@ Stage 0 gate status (each flips to **live** as its ratchet lands in
 A multi-agent audit (verified against code) classified every ratchet/count
 allowlist. **Most allowlists conflate two things the regex cannot tell apart:
 genuine SSoT debt and permanent false-positives** (legit patterns the regex
-happens to match). Treat an allowlist as a *floor of accepted false-positives*,
+happens to match). Treat an allowlist as a _floor of accepted false-positives_,
 not a backlog to drive to zero — chasing zero on a `reframe` gate is impossible
 by design. Reconcile a stale allowlist (allowlist > actual) for free; never
 lower an entry below its actual count; only the named real-debt is migratable,

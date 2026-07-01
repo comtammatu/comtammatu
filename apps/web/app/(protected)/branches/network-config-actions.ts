@@ -40,6 +40,10 @@ async function branchBelongsToTenant(
     .eq("tenant_id", tenantId)
     .maybeSingle();
 
+  if (error) {
+    console.error("[branches/network-config-actions:branchBelongsToTenant] Check branch owner error:", error);
+  }
+
   return !error && data !== null;
 }
 
@@ -68,6 +72,7 @@ export const listTrustedIps = withAction(
       .order("last_seen_at", { ascending: false });
 
     if (error) {
+      console.error("[branches/network-config-actions:listTrustedIps] Fetch trusted IPs error:", error);
       return { success: false, error: "Không tải được danh sách IP tin cậy." };
     }
     return {
@@ -123,6 +128,7 @@ export const trustCurrentIp = withAction(
     );
 
     if (error) {
+      console.error("[branches/network-config-actions:trustCurrentIp] Upsert trusted IP error:", error);
       return {
         success: false,
         error: "Không thể tin cậy IP này. Vui lòng thử lại.",
@@ -164,6 +170,7 @@ export const revokeTrustedIp = withAction(
       .is("revoked_at", null);
 
     if (error) {
+      console.error("[branches/network-config-actions:revokeTrustedIp] Update trusted IP to revoked error:", error);
       return { success: false, error: "Không thể thu hồi IP này." };
     }
 

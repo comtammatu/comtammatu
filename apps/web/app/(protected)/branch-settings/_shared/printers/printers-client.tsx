@@ -501,18 +501,22 @@ function PrinterForm({
         <Label>{PRINTER_COPY.printTypesLabel}</Label>
         <div className="grid gap-2 sm:grid-cols-2">
           {PRINT_TYPE_ORDER.map((type) => (
-            <label
+            <Item
               key={type}
-              className="flex items-center gap-2 rounded-md border border-border/70 p-3 text-sm"
+              variant="outline"
+              className="flex items-center gap-2 p-3 cursor-pointer"
             >
               <Checkbox
+                id={`print-type-${type}`}
                 checked={form.print_types.includes(type)}
                 onCheckedChange={(checked) =>
                   togglePrintType(type, checked === true)
                 }
               />
-              <span>{PRINT_TYPE_LABEL[type]}</span>
-            </label>
+              <Label htmlFor={`print-type-${type}`} className="text-sm font-normal cursor-pointer w-full">
+                {PRINT_TYPE_LABEL[type]}
+              </Label>
+            </Item>
           ))}
         </div>
       </div>
@@ -521,18 +525,22 @@ function PrinterForm({
         <Label>{PRINTER_COPY.categoriesLabel}</Label>
         <div className="grid gap-2 sm:grid-cols-2">
           {categories.map((category) => (
-            <label
+            <Item
               key={category.id}
-              className="flex items-center gap-2 rounded-md border border-border/70 p-3 text-sm"
+              variant="outline"
+              className="flex items-center gap-2 p-3 cursor-pointer"
             >
               <Checkbox
+                id={`print-category-${category.id}`}
                 checked={form.category_ids.includes(category.id)}
                 onCheckedChange={(checked) =>
                   toggleCategory(category.id, checked === true)
                 }
               />
-              <span>{category.name}</span>
-            </label>
+              <Label htmlFor={`print-category-${category.id}`} className="text-sm font-normal cursor-pointer w-full">
+                {category.name}
+              </Label>
+            </Item>
           ))}
         </div>
       </div>

@@ -9,7 +9,7 @@
 
 **Architecture:** POS creates reserved demand, KDS marks kitchen progress, and Inventory writes final ledger only after the order outcome is known. Manager UI computes `Tồn | Sẵn bán | Còn` from live stock, manual cap, and pending demand; POS/KDS only consume the resulting sellable state. Multi-row writes stay in Postgres RPCs/triggers with deterministic locks and idempotent stock movements.
 
-**Tech Stack:** Next.js App Router, supabase-js, Postgres SECURITY DEFINER RPCs, RLS/grants, Zod, shadcn/ui, `tsx --test`, `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build`.
+**Tech Stack:** Next.js App Router, supabase-js, Postgres SECURITY DEFINER RPCs, RLS/grants, Zod, Má Tư DS primitives, `tsx --test`, `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build`.
 
 ---
 

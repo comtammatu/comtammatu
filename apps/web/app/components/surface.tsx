@@ -33,6 +33,7 @@ import {
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
 import { Separator } from "@comtammatu/ui/components/separator";
+import { Toolbar, ToolbarGroup } from "@comtammatu/ui/components/toolbar";
 
 type SurfaceWidth = "narrow" | "default" | "wide" | "full";
 type SurfaceTone = "primary" | "success" | "warning" | "info" | "secondary";
@@ -299,8 +300,10 @@ export function AppSection({
     collapsible,
   );
   const chevronAction = collapsible ? (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="icon-sm"
       onClick={() => setOpen((v) => !v)}
       className="text-muted-foreground hover:text-foreground transition-colors"
       aria-expanded={open}
@@ -312,13 +315,13 @@ export function AppSection({
           open ? "rotate-0" : "-rotate-90",
         )}
       />
-    </button>
+    </Button>
   ) : null;
 
   return (
     <Card size={size} className={cn(SECTION_TONE_CLASSNAME[tone], className)}>
       {hasHeader ? (
-        <CardHeader>
+        <CardHeader className="has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
           <CardTitle
             className={cn(
               "flex min-w-0 items-center gap-2",
@@ -337,7 +340,7 @@ export function AppSection({
                   {icon}
                 </span>
               ) : null}
-              <span className="min-w-0 truncate">{title}</span>
+              <span className="min-w-0 break-words leading-snug">{title}</span>
             </span>
             {headerHint ? (
               <span className="shrink-0 text-xs font-medium text-muted-foreground sm:text-right">
@@ -349,7 +352,7 @@ export function AppSection({
             <CardDescription>{description}</CardDescription>
           ) : null}
           {badge || action || chevronAction ? (
-            <CardAction className="flex items-center gap-2">
+            <CardAction className="col-start-1 row-span-1 row-start-auto justify-self-start flex flex-wrap items-center justify-start gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-self-end sm:justify-end">
               {badge ? (
                 <Badge variant={badge.variant ?? "secondary"}>
                   {badge.children}
@@ -414,28 +417,24 @@ export function AppToolbar({
   const content = hasSlots ? (
     <>
       {search ? (
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          {search}
-        </div>
+        <ToolbarGroup className="min-w-0 flex-1 gap-2">{search}</ToolbarGroup>
       ) : null}
       {filters ? (
-        <div className="flex flex-wrap items-center gap-2">{filters}</div>
+        <ToolbarGroup className="gap-2">{filters}</ToolbarGroup>
       ) : null}
       {bulk ? (
         <>
           <Separator orientation="vertical" className="h-6" />
-          <div className="flex flex-wrap items-center gap-2">{bulk}</div>
+          <ToolbarGroup className="gap-2">{bulk}</ToolbarGroup>
         </>
       ) : null}
       {actions ? (
         <>
           <Separator orientation="vertical" className="h-6" />
-          <div className="flex flex-wrap items-center gap-2">{actions}</div>
+          <ToolbarGroup className="gap-2">{actions}</ToolbarGroup>
         </>
       ) : null}
-      {reset ? (
-        <div className="flex flex-wrap items-center gap-2">{reset}</div>
-      ) : null}
+      {reset ? <ToolbarGroup className="gap-2">{reset}</ToolbarGroup> : null}
     </>
   ) : (
     children
@@ -443,23 +442,16 @@ export function AppToolbar({
 
   if (variant === "inline") {
     return (
-      <div
-        className={cn(
-          "flex flex-wrap items-center gap-3 border-b bg-muted/25 p-3",
-          className,
-        )}
-      >
+      <Toolbar className={cn("gap-3 border-b bg-muted/25 p-3", className)}>
         {content}
-      </div>
+      </Toolbar>
     );
   }
 
   return (
-    <Card size="sm" className="py-0">
-      <CardContent
-        className={cn("flex flex-wrap items-center gap-3 p-3", className)}
-      >
-        {content}
+    <Card size="sm">
+      <CardContent>
+        <Toolbar className={cn("gap-3", className)}>{content}</Toolbar>
       </CardContent>
     </Card>
   );
@@ -749,9 +741,7 @@ export function AppLinkCard({
             </p>
           ) : null}
           {disabled && disabledReason ? (
-            <p className="text-xs text-muted-foreground">
-              {disabledReason}
-            </p>
+            <p className="text-xs text-muted-foreground">{disabledReason}</p>
           ) : null}
         </div>
       </div>
@@ -768,7 +758,9 @@ export function AppLinkCard({
     <Card
       className={cn(
         "h-full transition-[box-shadow,border-color]",
-        disabled ? "cursor-not-allowed opacity-60" : "hover:shadow-effect-card-hover",
+        disabled
+          ? "cursor-not-allowed opacity-60"
+          : "hover:shadow-effect-card-hover",
       )}
     >
       <CardContent flush className="h-full">
