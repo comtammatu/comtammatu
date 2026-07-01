@@ -19,6 +19,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Label } from "@comtammatu/ui/components/label";
 import {
   ExternalLink as IconExternalLink,
   Pencil as IconPencil,
@@ -126,14 +127,14 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
       <AppToolbar
         filters={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <label className="text-sm font-medium">
+            <Label htmlFor="branch-select" className="text-sm font-medium">
               {messages.settings.common.branchLabel}
-            </label>
+            </Label>
             <Select
               value={selectedBranchId?.toString() ?? ""}
               onValueChange={(v) => setSelectedBranchId(Number(v))}
             >
-              <SelectTrigger className="w-full sm:w-60">
+              <SelectTrigger id="branch-select" className="w-full sm:w-60">
                 <SelectValue placeholder={BRANCH_VI.select} />
               </SelectTrigger>
               <SelectContent>

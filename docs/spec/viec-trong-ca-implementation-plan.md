@@ -6,7 +6,7 @@
 
 **Architecture:** A new `position_shift_tasks` table holds tasks directly on a position (no templates, no per-employee override). Clock-in snapshots a position's tasks into the existing `attendance_checklist_items` (audit-frozen) using explicit `shifts.is_opening/is_closing` flags, and auto-inserts an `inventory_count` task when the employee has active Inventory count assignments. HR config collapses from 6 surfaces to 2 (Ca làm + Vị trí→Việc trong ca). The Inventory blind-count engine and the consumption approval/WAC engine are untouched.
 
-**Tech Stack:** Next.js App Router (RSC + Server Actions), supabase-js (PostgREST + SECURITY DEFINER RPCs), Postgres (text columns + CHECK constraints, no enums), Zod, RHF + shadcn Field (D010), `tsx --test` static tests.
+**Tech Stack:** Next.js App Router (RSC + Server Actions), supabase-js (PostgREST + SECURITY DEFINER RPCs), Postgres (text columns + CHECK constraints, no enums), Zod, RHF + Má Tư DS Field (D010), `tsx --test` static tests.
 
 **Source docs:** Design `docs/plan/viec-trong-ca-redesign-2026-06-29.md`; decision **D050** (`docs/plan/decisions.md`); current-state evidence in this plan's task bodies.
 
@@ -42,10 +42,12 @@ TS twin (Task 11, `checklist-types.ts` successor): `POSITION_TASK_KINDS`, `POSIT
 ### Task 1: Additive migration — shifts flags, `position_shift_tasks`, attendance kind extension, consumption re-key, backfill
 
 **Files:**
+
 - Create: `supabase/migrations/20260629120500_position_shift_tasks.sql`
 - Modify: `supabase/migrations/00000000000000_baseline.sql` (reflect new objects so baseline replay stays authoritative)
 
 **Interfaces:**
+
 - Produces: table `public.position_shift_tasks` (cols below); `shifts.is_opening`, `shifts.is_closing`; `attendance_checklist_items.task_kind` CHECK incl. `inventory_count`; `shift_checklist_consumption_default_items.position_task_id` (new nullable FK to re-key consumption defaults onto position tasks).
 
 - [ ] **Step 1: Write the migration SQL**
@@ -184,9 +186,11 @@ git commit -m "feat(db): add position_shift_tasks + shift open/close flags (D050
 ### Task 2: Writer RPC `upsert_position_shift_tasks`
 
 **Files:**
+
 - Create: `supabase/migrations/20260629121000_upsert_position_shift_tasks.sql` (+ reflect into baseline)
 
 **Interfaces:**
+
 - Produces: `public.upsert_position_shift_tasks(p_position_id bigint, p_tasks jsonb) RETURNS bigint` — SECURITY DEFINER, derives tenant via `public.auth_tenant_id()`, full delete-and-reinsert of that position's tasks, validates enums + lengths + max 40, returns `p_position_id`. Permission: requires `staff:manage` (owner / authorized manager).
 
 - [ ] **Step 1: Write the RPC** (mirror `upsert_shift_checklist_template` validation; new enums; keyed on position; accepts camelCase JSON `title/kind/applicability/phase/isRequired/doneDefinition`)
@@ -248,9 +252,11 @@ GRANT EXECUTE ON FUNCTION public.upsert_position_shift_tasks(bigint, jsonb) TO a
 ### Task 3: Rewrite `employee_clock_in_with_checklist` (resolve position, explicit flags, count auto-surface)
 
 **Files:**
+
 - Create: `supabase/migrations/20260629122000_clock_in_position_tasks.sql` (CREATE OR REPLACE; + reflect into baseline)
 
 **Interfaces:**
+
 - Consumes: `position_shift_tasks` (Task 1), `shifts.is_opening/is_closing` (Task 1), `inventory_count_assignments` (forward migration 20260627201823).
 - Produces: same signature `employee_clock_in_with_checklist(p_tenant_id, p_employee_id, p_branch_id, p_shift_id, p_business_date, p_photo_path) RETURNS bigint` — snapshots the employee's **position** tasks (filtered by the picked shift's `is_opening/is_closing`) into `attendance_checklist_items`, then inserts one `inventory_count` item if the employee has ≥1 active count assignment in this branch.
 
@@ -313,23 +319,27 @@ END IF;
 ### Task 4: Shifts open/close toggles
 
 **Files:**
+
 - Modify: `apps/web/app/(protected)/hr/shifts-table.tsx` (add two switches per row), the shifts Server Action file (add `setShiftShiftKind` or extend the existing update action with `isOpening`/`isClosing`).
 
 **Interfaces:**
+
 - Produces: Server Action `setShiftBoundaries({ shiftId, isOpening, isClosing })` (Zod-validated) → `UPDATE public.shifts SET is_opening, is_closing` via service client (tenant + `staff:manage` gate).
 
 - [ ] **Step 1:** Add Zod schema + Server Action (follow existing shift update action shape). Validate booleans; tenant + permission check; return `{ success }` discriminated union (repo pattern).
-- [ ] **Step 2:** Add two shadcn `Switch`/`Checkbox` columns ("Ca mở", "Ca đóng") to the shifts table; copy via `messages.hr`. No inline Vietnamese.
+- [ ] **Step 2:** Add two Má Tư DS `Switch`/`Checkbox` columns ("Ca mở", "Ca đóng") to the shifts table; copy via `messages.hr`. No inline Vietnamese.
 - [ ] **Step 3:** Commit `feat(hr): shift open/close flags UI (D050 phase 3)`.
 
 ### Task 5: "Vị trí → Việc trong ca" editor
 
 **Files:**
+
 - Create: `apps/web/app/(protected)/hr/position-tasks/position-tasks-client.tsx` (per-position task list editor)
 - Create: `apps/web/app/(protected)/hr/position-tasks-actions.ts` (`"use server"` leaf — see `reference_use_server_no_reexport`)
 - Modify: `apps/web/app/(protected)/hr/page.tsx` (render the new section; remove the 3 old config sections + employee override)
 
 **Interfaces:**
+
 - Consumes: `upsert_position_shift_tasks` RPC (Task 2); consumption defaults table (Task 1 col `position_task_id`).
 - Produces: Server Action `savePositionTasks({ positionId, tasks: PositionTaskInput[] })` where `PositionTaskInput = { title; kind: 'standard'|'consumption_report'; applicability: 'every_shift'|'opening'|'closing'; phase: 'start_of_shift'|'end_of_shift'; isRequired: boolean; doneDefinition: string }`; and `setPositionTaskConsumptionIngredients({ positionTaskId, ingredientIds, notes })`.
 
@@ -341,6 +351,7 @@ END IF;
 ### Task 6: Remove dead config Server Actions + template UI
 
 **Files:**
+
 - Delete: `apps/web/app/(protected)/hr/checklist-templates-table.tsx`, `consumption-default-items-table.tsx`, `position-defaults-table.tsx`.
 - Modify: `apps/web/app/(protected)/hr/checklist-actions.ts` — remove `saveChecklistTemplate`, `setConsumptionDefaultIngredients`, `setPositionDefaultChecklist`, `setEmployeeDefaultChecklist`, `archiveChecklistTemplate`. Keep nothing template-related (the file may be deleted if empty; repoint any remaining callers).
 
@@ -354,23 +365,25 @@ END IF;
 ### Task 7: `today-work-state.ts` — 2 phases + virtual count item
 
 **Files:**
+
 - Modify: `apps/web/app/(protected)/employee/_lib/today-work-state.ts`
 
 **Interfaces:**
+
 - Produces: `TodayChecklistTaskKind = 'standard' | 'consumption_report' | 'inventory_count'`; `TodayChecklistItem.phase: 'start_of_shift' | 'end_of_shift'`; the checklist now may include a synthesized `inventory_count` item (id negative sentinel, `templateItemId: null`) whose `done` = (all of today's assigned-location count slips for this employee are submitted/approved). Keep `requiredTotal/requiredRemaining` driven by real DB rows only (the virtual count item is non-required in v1).
 
 - [ ] **Step 1: Write the failing test** `apps/web/tests/employee-today-checklist-phases.test.ts` (static; feed a fake checklist-items array into a pure helper):
 
 ```ts
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
-import { groupChecklistByPhase } from '../app/(protected)/employee/_lib/today-work-state';
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { groupChecklistByPhase } from "../app/(protected)/employee/_lib/today-work-state";
 
-test('groups items into start/end only, count item lands in end', () => {
+test("groups items into start/end only, count item lands in end", () => {
   const items = [
-    { id: 1, phase: 'start_of_shift', taskKind: 'standard', done: false },
-    { id: 2, phase: 'end_of_shift', taskKind: 'standard', done: true },
-    { id: -1, phase: 'end_of_shift', taskKind: 'inventory_count', done: false },
+    { id: 1, phase: "start_of_shift", taskKind: "standard", done: false },
+    { id: 2, phase: "end_of_shift", taskKind: "standard", done: true },
+    { id: -1, phase: "end_of_shift", taskKind: "inventory_count", done: false },
   ] as any;
   const groups = groupChecklistByPhase(items);
   assert.equal(groups.start_of_shift.length, 1);
@@ -386,6 +399,7 @@ test('groups items into start/end only, count item lands in end', () => {
 ### Task 8: `tasks-client.tsx` + `tasks/page.tsx` — render 2 phases, count row
 
 **Files:**
+
 - Modify: `apps/web/app/(protected)/employee/tasks/tasks-client.tsx`, `tasks/page.tsx`
 
 - [ ] **Step 1:** Change `CHECKLIST_PHASES` to `['start_of_shift','end_of_shift']`; render the `inventory_count` item as a row that links to `/employee/count` (no checkbox; status from `done`); keep the consumption inline panel (gated on a `consumption_report` item being present, unchanged logic). Phase headings from `messages.employee.tasks.phaseLabels` (now 2 keys).
@@ -394,9 +408,11 @@ test('groups items into start/end only, count item lands in end', () => {
 ### Task 9: Coverage panel — position-based
 
 **Files:**
+
 - Modify: `apps/web/app/(protected)/hr/checklist-coverage.ts` + its panel component.
 
 **Interfaces:**
+
 - Produces: coverage status per **position** ∈ `{ ok, no_tasks, missing_consumption_defaults }` (drop `custom_checklist` — no more per-employee override) + a Kiểm kê line showing how many employees have active count assignments per branch (read-only, links to `/inventory/count-assignments`).
 
 - [ ] **Step 1: Update the failing test** `apps/web/tests/hr-checklist-coverage.test.ts` to the new status union (it currently asserts `missing_checklist`/`custom_checklist`). Write assertions for `no_tasks` (position with zero `position_shift_tasks`) and `missing_consumption_defaults` (a `consumption_report` task with no active `position_task_id` defaults).
@@ -410,6 +426,7 @@ test('groups items into start/end only, count item lands in end', () => {
 ### Task 10: Rename to "Việc trong ca" across copy + nav
 
 **Files:**
+
 - Modify: `apps/web/lib/messages/employee.ts`, `hr.ts`, `inventory.ts`; `packages/shared/src/labels/vi.ts`; employee `bottom-nav.tsx` (`copy.tasks`); `packages/shared/src/auth/nav-config.ts` / `app/lib/office-nav.ts` entries.
 
 - [ ] **Step 1:** Replace every "Checklist" / "Mẫu checklist" / standalone "Việc" label for this concept with **"Việc trong ca"**; phase labels → `{ start_of_shift: 'Đầu ca', end_of_shift: 'Cuối ca' }`; kind labels → `Việc thường` / `Tiêu hao` / `Kiểm kê tồn`. Keep one canonical key; delete duplicates. No string left in JSX.
@@ -419,6 +436,7 @@ test('groups items into start/end only, count item lands in end', () => {
 ### Task 11: TS vocabulary twin + types
 
 **Files:**
+
 - Modify/Create: the `checklist-types.ts` successor (e.g. `position-task-types.ts`) exporting `POSITION_TASK_KINDS`, `POSITION_TASK_PHASES`, `POSITION_TASK_APPLICABILITY` unions + label maps; update `employee-consumption-task-kind.test.ts` for the `inventory_count` addition.
 
 - [ ] **Step 1:** Define the literal unions to match the CHECKs (vocabulary block). Update the consumption-task-kind test. `pnpm --filter @comtammatu/web test` → PASS.
@@ -431,6 +449,7 @@ test('groups items into start/end only, count item lands in end', () => {
 ### Task 12: Removal migration
 
 **Files:**
+
 - Create: `supabase/migrations/20260629130000_drop_checklist_templates.sql` (+ reflect into baseline by deleting those objects there).
 
 - [ ] **Step 1:** Only after Phases 1–5 are merged and verified in prod: `DROP TABLE shift_checklist_template_items, shift_checklist_templates CASCADE;` drop `positions.default_checklist_template_id`, `employees.default_checklist_template_id`, `shift_checklist_templates.role_code`, `shift_checklist_consumption_default_items.template_item_id`; `DROP FUNCTION upsert_shift_checklist_template`; `apply_checklist_template_to_role` (legacy, unused). Verify no code references remain (`rg default_checklist_template_id`).

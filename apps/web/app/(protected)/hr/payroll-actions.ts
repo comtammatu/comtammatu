@@ -51,6 +51,7 @@ export async function fetchPayrollPeriods(): Promise<ActionResult> {
     .limit(60);
 
   if (error) {
+    console.error("[hr/payroll-actions:fetchPayrollPeriods] Fetch payroll periods error:", error);
     return { success: false, error: "Không thể tải kỳ lương." };
   }
 
@@ -84,6 +85,7 @@ export const createPayrollPeriod = withAction(
       .single();
 
     if (error) {
+      console.error("[hr/payroll-actions:createPayrollPeriod] Insert payroll period error:", error);
       if (error.code === "23505") {
         return {
           success: false,
@@ -120,6 +122,9 @@ export const fetchPayrollPeriod = withAction(
       .single();
 
     if (error || !period) {
+      if (error) {
+        console.error("[hr/payroll-actions:fetchPayrollPeriod] Fetch payroll period error:", error);
+      }
       return { success: false, error: "Kỳ lương không tồn tại." };
     }
 
@@ -148,6 +153,9 @@ export const updatePayrollPeriodStandardDays = withAction(
       .single();
 
     if (error || !updated) {
+      if (error) {
+        console.error("[hr/payroll-actions:updatePayrollPeriodStandardDays] Update standard days error:", error);
+      }
       return {
         success: false,
         error: "Chỉ có thể sửa ngày công chuẩn cho kỳ nháp hoặc đã tính.",
@@ -207,6 +215,9 @@ export const calculatePayroll = withAction(
       .single();
 
     if (periodErr || !period) {
+      if (periodErr) {
+        console.error("[hr/payroll-actions:calculatePayroll] Fetch payroll period error:", periodErr);
+      }
       return { success: false, error: "Kỳ lương không tồn tại." };
     }
 
@@ -236,6 +247,7 @@ export const calculatePayroll = withAction(
       .eq("tenant_id", claims.tenant_id);
 
     if (empErr) {
+      console.error("[hr/payroll-actions:calculatePayroll] Fetch employees error:", empErr);
       return { success: false, error: "Không thể tải danh sách nhân viên." };
     }
 
@@ -261,6 +273,7 @@ export const calculatePayroll = withAction(
       .or(`end_date.is.null,end_date.gte.${startDate}`);
 
     if (contractErr) {
+      console.error("[hr/payroll-actions:calculatePayroll] Fetch employment contracts error:", contractErr);
       return {
         success: false,
         error: "Không thể tải hợp đồng lao động. Tính lương bị hủy.",
@@ -304,6 +317,7 @@ export const calculatePayroll = withAction(
       .lte("date", endDate);
 
     if (attendanceErr) {
+      console.error("[hr/payroll-actions:calculatePayroll] Fetch attendance records error:", attendanceErr);
       return {
         success: false,
         error: "Không thể tải dữ liệu chấm công. Tính lương bị hủy.",
@@ -329,6 +343,7 @@ export const calculatePayroll = withAction(
       .gte("end_date", `${year}-01-01`);
 
     if (leaveErr) {
+      console.error("[hr/payroll-actions:calculatePayroll] Fetch leave requests error:", leaveErr);
       return {
         success: false,
         error: "Không thể tải dữ liệu nghỉ phép. Tính lương bị hủy.",
@@ -390,6 +405,7 @@ export const calculatePayroll = withAction(
       .in("employee_id", employeeIds);
 
     if (entitlementErr) {
+      console.error("[hr/payroll-actions:calculatePayroll] Fetch annual leave entitlements error:", entitlementErr);
       return {
         success: false,
         error: "Không thể tải hạn mức phép năm. Tính lương bị hủy.",
@@ -546,6 +562,7 @@ export const fetchPayrollEntries = withAction(
       .order("employee_id");
 
     if (error) {
+      console.error("[hr/payroll-actions:fetchPayrollEntries] Fetch payroll entries error:", error);
       return { success: false, error: "Không thể tải bảng lương." };
     }
 
@@ -580,6 +597,9 @@ export const approvePayroll = withAction(
       .single();
 
     if (error || !updated) {
+      if (error) {
+        console.error("[hr/payroll-actions:approvePayroll] Update payroll period to approved error:", error);
+      }
       return { success: false, error: "Không thể duyệt bảng lương." };
     }
 
@@ -620,6 +640,9 @@ export const markPayrollPaid = withAction(
       .single();
 
     if (error || !updated) {
+      if (error) {
+        console.error("[hr/payroll-actions:markPayrollPaid] Update payroll period to paid error:", error);
+      }
       return { success: false, error: "Không thể đánh dấu đã thanh toán." };
     }
 

@@ -15,25 +15,25 @@ navigation, and default-landing changes must keep the spec, `module-acl.ts`,
 
 ## Components
 
-| File                                                         | Purpose                                                                                        | Lines                     |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- | ------------------------- |
-| `packages/shared/src/auth/types.ts`                          | Role enum, JWT claims shape (`user_role` + optional `position`), scope types                   | Core types                |
-| `packages/shared/src/auth/module-acl.ts`                     | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | Route-level ACL (legacy)  |
-| `packages/shared/src/auth/permissions.ts`                    | `PERMISSION_KEYS` (83 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth authz**         | Permission catalog        |
-| `packages/shared/src/auth/scope.ts`                          | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction      |
-| `packages/shared/src/auth/route-resolution.ts`               | Public/legacy/beta route helpers + URL → `ModuleKey` mapping                                   | Proxy route mapping       |
-| `packages/shared/src/auth/route-map.ts`                      | Route family contract: surface, entry point, chrome, back behavior, breadcrumb root            | Navigation contract       |
-| `packages/shared/src/auth/nav-config.ts`                     | Admin sidebar navigation groups filtered by role                                               | UI navigation             |
-| `packages/shared/src/auth/app-discovery.ts`                  | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract  |
-| `packages/shared/src/auth/blocked-state.ts`                  | Canonical blocked-state reasons, user-facing copy, `buildAccessDeniedPath()`                   | Access-state contract     |
-| `apps/web/app/(public)/access-denied/page.tsx`               | Single presentation route for "authenticated but blocked" (renders copy from blocked-state)    | Access-state view         |
-| `apps/web/app/_lib/auth.ts`                                  | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper      |
-| `apps/web/proxy.ts`                                          | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway           |
-| `supabase/migrations/00000000000000_baseline.sql`           | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
-| `supabase/migrations/00000000000000_baseline.sql`           | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
-| `supabase/migrations/00000000000000_baseline.sql`           | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
-| `apps/web/app/(protected)/admin/staff/[id]/permissions/`     | Admin UI for grant/revoke + audit (page + client + actions)                                    | Permission admin UI       |
-| `apps/web/app/_lib/permissions.ts`                           | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
+| File                                                     | Purpose                                                                                        | Lines                     |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------- |
+| `packages/shared/src/auth/types.ts`                      | Role enum, JWT claims shape (`user_role` + optional `position`), scope types                   | Core types                |
+| `packages/shared/src/auth/module-acl.ts`                 | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | Route-level ACL (legacy)  |
+| `packages/shared/src/auth/permissions.ts`                | `PERMISSION_KEYS` (83 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth authz**         | Permission catalog        |
+| `packages/shared/src/auth/scope.ts`                      | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction      |
+| `packages/shared/src/auth/route-resolution.ts`           | Public/legacy/beta route helpers + URL → `ModuleKey` mapping                                   | Proxy route mapping       |
+| `packages/shared/src/auth/route-map.ts`                  | Route family contract: surface, entry point, chrome, back behavior, breadcrumb root            | Navigation contract       |
+| `packages/shared/src/auth/nav-config.ts`                 | Admin sidebar navigation groups filtered by role                                               | UI navigation             |
+| `packages/shared/src/auth/app-discovery.ts`              | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract  |
+| `packages/shared/src/auth/blocked-state.ts`              | Canonical blocked-state reasons, user-facing copy, `buildAccessDeniedPath()`                   | Access-state contract     |
+| `apps/web/app/(public)/access-denied/page.tsx`           | Single presentation route for "authenticated but blocked" (renders copy from blocked-state)    | Access-state view         |
+| `apps/web/app/_lib/auth.ts`                              | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper      |
+| `apps/web/proxy.ts`                                      | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway           |
+| `supabase/migrations/00000000000000_baseline.sql`        | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
+| `supabase/migrations/00000000000000_baseline.sql`        | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
+| `supabase/migrations/00000000000000_baseline.sql`        | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
+| `apps/web/app/(protected)/admin/staff/[id]/permissions/` | Admin UI for grant/revoke + audit (page + client + actions)                                    | Permission admin UI       |
+| `apps/web/app/_lib/permissions.ts`                       | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
 
 Discovery invariant: `MODULE_ACL.hr_payroll` still gates `/hr/payroll/*` for
 owner, but is not part of `DOMAIN_WORKSPACE_ITEMS` or default app
@@ -78,12 +78,12 @@ Two parallel ACL mechanisms exist; pick the right one:
 
 ## Auth — Position vs Permission
 
-| Concept        | Storage                                                                          | Purpose                                                                                                                                                                                                                                                                                                                                             |
-| -------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Concept        | Storage                                                                          | Purpose                                                                                                                                                                                                                        |
+| -------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Position**   | `positions` (per tenant) + `profiles.position_id`                                | HR chức vụ label. Codes are canonical English `lower_snake_case` ONLY — mapped by `POSITION_CODE_TO_STAFF_ROLE` (shared TS) / `private.staff_role_from_position_code` (SQL twin). Display via `label_vi`. Does not gate authz. |
-| **Permission** | `permission_keys` catalog (global)                                               | Canonical action strings: `inventory:read`, `pos:use`, 83 keys.                                                                                                                                                                                                                                                                                     |
-| **Grant**      | `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` | Source of truth for authz. `branch_id IS NULL` ⇒ tenant-wide. Temporal window.                                                                                                                                                                                                                                                                      |
-| **Template**   | `role_templates(permission_keys[])`                                              | Preset bundle applied when assigning a position (snapshot; edits don't propagate).                                                                                                                                                                                                                                                                  |
+| **Permission** | `permission_keys` catalog (global)                                               | Canonical action strings: `inventory:read`, `pos:use`, 83 keys.                                                                                                                                                                |
+| **Grant**      | `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` | Source of truth for authz. `branch_id IS NULL` ⇒ tenant-wide. Temporal window.                                                                                                                                                 |
+| **Template**   | `role_templates(permission_keys[])`                                              | Preset bundle applied when assigning a position (snapshot; edits don't propagate).                                                                                                                                             |
 
 **Authz path (every request):** `proxy.ts` still does route-level module ACL via `canAccess(user_role, module)` as the fast gate. Row-level authz delegates to `has_permission(branch_id, key)` in RLS — owner bypass built-in, temporal validity filtered, branch access explicit through grants or `profiles.branch_id`.
 
@@ -112,27 +112,27 @@ Owner is protected: RPCs refuse to touch a user whose position code is `owner` (
 
 Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — proxy.ts, admin shell, and layouts all read from here.
 
-| Module                                                     | owner | branch_mgr | wh_mgr | prod_mgr | cashier | chef | office |
-| ---------------------------------------------------------- | ----- | ---------- | ------ | -------- | ------- | ---- | ------ |
-| dashboard                                                  | ✓     |            |        |          |         |      |        |
-| menu                                                       | ✓     | ✓          |        |          |         |      |        |
-| inventory                                                  | ✓     | ✓          | ✓      | ✓        |         |      |        |
-| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức)    | ✓     |            | ✓      | ✓        |         |      |        |
-| inventory_admin (blocked; empty allowed_roles)             |       |            |        |          |         |      |        |
-| orders                                                     | ✓     | ✓          |        |          | ✓       |      |        |
-| staff                                                      | ✓     |            |        |          |         |      |        |
-| hr                                                         | ✓     | ✓          |        |          |         |      |        |
-| finance                                                    | ✓     |            |        |          |         |      |        |
-| reports                                                    | ✓     |            |        |          |         |      |        |
-| settings                                                   | ✓     |            |        |          |         |      |        |
-| pos                                                        | ✓     | ✓          |        |          | ✓       |      |        |
-| kds                                                        | ✓     | ✓          |        |          |         | ✓    |        |
-| runner (public display route)                              | ✓     | ✓          |        |          | ✓       | ✓    |        |
-| branch_dashboard                                           | ✓     | ✓          |        |          |         |      |        |
-| branch_settings                                            | ✓     | ✓          |        |          |         |      |        |
-| branch_menu_limits                                         | ✓     | ✓          |        |          |         |      |        |
-| employee                                                   |       | ✓          | ✓      | ✓        | ✓       | ✓    | ✓      |
-| notifications                                              | ✓     | ✓          | ✓      | ✓        | ✓       | ✓    | ✓      |
+| Module                                                  | owner | branch_mgr | wh_mgr | prod_mgr | cashier | chef | office |
+| ------------------------------------------------------- | ----- | ---------- | ------ | -------- | ------- | ---- | ------ |
+| dashboard                                               | ✓     |            |        |          |         |      |        |
+| menu                                                    | ✓     | ✓          |        |          |         |      |        |
+| inventory                                               | ✓     | ✓          | ✓      | ✓        |         |      |        |
+| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức) | ✓     |            | ✓      | ✓        |         |      |        |
+| inventory_admin (blocked; empty allowed_roles)          |       |            |        |          |         |      |        |
+| orders                                                  | ✓     | ✓          |        |          | ✓       |      |        |
+| staff                                                   | ✓     |            |        |          |         |      |        |
+| hr                                                      | ✓     | ✓          |        |          |         |      |        |
+| finance                                                 | ✓     |            |        |          |         |      |        |
+| reports                                                 | ✓     |            |        |          |         |      |        |
+| settings                                                | ✓     |            |        |          |         |      |        |
+| pos                                                     | ✓     | ✓          |        |          | ✓       |      |        |
+| kds                                                     | ✓     | ✓          |        |          |         | ✓    |        |
+| runner (public display route)                           | ✓     | ✓          |        |          | ✓       | ✓    |        |
+| branch_dashboard                                        | ✓     | ✓          |        |          |         |      |        |
+| branch_settings                                         | ✓     | ✓          |        |          |         |      |        |
+| branch_menu_limits                                      | ✓     | ✓          |        |          |         |      |        |
+| employee                                                |       | ✓          | ✓      | ✓        | ✓       | ✓    | ✓      |
+| notifications                                           | ✓     | ✓          | ✓      | ✓        | ✓       | ✓    | ✓      |
 
 > `wh_mgr` = `warehouse_manager`, `prod_mgr` = `production_manager`. Route-level ACL reads `user_role` from the JWT, derived from `positions.code`. Row-level authz still goes through `has_permission(branch_id, key)` — this matrix is only a fast gate.
 >
@@ -227,7 +227,7 @@ Single canonical helper for "send a blocked user somewhere they can read what ha
 - Public path (bypasses `updateSession`) — reachable by any user.
 - Only reads `searchParams.reason` + `searchParams.from` → renders copy via `resolveBlockedState()`.
 - Does not check auth or redirect on its own. Follows **BLOCKED-STATE-UI-IS-PRESENTATION-ONLY**.
-- Uses shadcn `Card` + `Button` primitives (follows **NO-FAKE-PRIMITIVES**).
+- Uses Má Tư DS `Card` + `Button` primitives (follows **NO-FAKE-PRIMITIVES**).
 - Two actions: "Về phân hệ mặc định" (link to `/`) and "Đăng nhập lại" (link to `/login`).
 
 ## Blast Radius

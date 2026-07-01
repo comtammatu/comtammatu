@@ -21,6 +21,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Switch } from "@comtammatu/ui/components/switch";
+import { Label } from "@comtammatu/ui/components/label";
 import { ShiftFormDialog } from "./shift-form-dialog";
 import { deactivateShift, setShiftBoundaries } from "./actions";
 import type { ShiftRow } from "./_types";
@@ -107,8 +108,10 @@ export function ShiftsTable({
     field: "opening" | "closing",
   ) {
     const checked = field === "opening" ? shift.is_opening : shift.is_closing;
+    const switchId = `boundary-${shift.id}-${field}`;
     return (
       <Switch
+        id={switchId}
         checked={checked}
         disabled={!canManage || isDeactivating}
         aria-label={
@@ -248,14 +251,18 @@ export function ShiftsTable({
                   : ACTIVE_STATE_LABELS_VI.inactive}
               </Badge>
               <div className="mt-2 flex flex-wrap gap-4">
-                <label className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2">
                   {renderBoundaryToggle(shift, "opening")}
-                  {boundaryCopy.opening}
-                </label>
-                <label className="flex items-center gap-2 text-sm">
+                  <Label htmlFor={`boundary-${shift.id}-opening`} className="text-sm font-normal">
+                    {boundaryCopy.opening}
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
                   {renderBoundaryToggle(shift, "closing")}
-                  {boundaryCopy.closing}
-                </label>
+                  <Label htmlFor={`boundary-${shift.id}-closing`} className="text-sm font-normal">
+                    {boundaryCopy.closing}
+                  </Label>
+                </div>
               </div>
             </ItemContent>
             {canManage ? (

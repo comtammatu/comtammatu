@@ -8,7 +8,7 @@
 - Primary user job: know whether the current action succeeded, failed, needs retry, or created follow-up work.
 - Route family: `/admin/*`, `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/employee`, `/inventory/*`, `/notifications`.
 - Change type: behavior and UX contract. Runtime code should follow this contract before adding new notification producers.
-- Primitives: `Sonner`, `Button`, `Popover`, `Card`, `ScrollArea`, `Badge`, `Empty`, `Item`, `Tooltip`, and route shells from the active shadcn preset.
+- Primitives: `Sonner`, `Button`, `Popover`, `Card`, `ScrollArea`, `Badge`, `Empty`, `Item`, `Tooltip`, and route shells from Má Tư DS primitives.
 
 ## Decision
 
@@ -76,7 +76,7 @@ Out of scope for the current contract:
 
 - Native-app-only APNs/FCM SDK delivery.
 - Native channel SDK delivery.
-- A second visual notification system outside shadcn/Sonner.
+- A second visual notification system outside Má Tư DS/Sonner.
 - Per-user notification rows. Targeting stays role/branch based; read state is per user.
 
 ## BA Rules
@@ -532,7 +532,7 @@ Before marking runtime implementation complete:
 
 Documentation-only verification:
 
-- Changed docs match `apps/web/components.json`, `packages/ui/components.json`, `packages/ui/src/components/sonner.tsx`, and existing notification actions.
+- Changed docs match `packages/ui/src/components/sonner.tsx` and existing notification actions.
 - No new runtime behavior is implied without an implementation path.
 
 ## Test Matrix

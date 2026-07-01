@@ -4,6 +4,7 @@ import { CircleAlert as IconAlertCircle } from "lucide-react";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import {
   buildRunnerQueue,
   formatRunnerOrderLabel,
@@ -567,9 +568,9 @@ function RunnerOrderBoard({
           {RUNNER_COPY.tableHeaders.wait}
         </RunnerColumnHeader>
       </div>
-      <div
+      <ItemGroup
         role="list"
-        className="grid min-h-0 flex-1 grid-rows-4 overflow-hidden xl:grid-rows-6"
+        className="grid min-h-0 flex-1 grid-rows-4 overflow-hidden xl:grid-rows-6 p-0 rounded-none border-0"
       >
         {visibleRows.map((row, index) => (
           <RunnerOrderListRow
@@ -580,7 +581,7 @@ function RunnerOrderBoard({
             nowMs={nowMs}
           />
         ))}
-      </div>
+      </ItemGroup>
       {overflowBase > 0 ? (
         <p
           className={cn(
@@ -687,12 +688,12 @@ function RunnerOrderListRow({
   const statusLabel = getRunnerStatusLabel(row.status);
 
   return (
-    <div
+    <Item
       role="listitem"
       aria-current={featured ? "true" : undefined}
       data-runner-featured={featured ? "true" : undefined}
       className={cn(
-        "grid h-full min-h-0 w-full grid-cols-12 items-stretch divide-x divide-border/70 border-b border-l-4",
+        "grid h-full min-h-0 w-full grid-cols-12 items-stretch divide-x divide-border/70 border-b border-l-4 p-0 rounded-none border-x-0",
         getRunnerRowClass(),
         featured && "border-l-primary",
         featured && "bg-warning/15 ring-1 ring-inset ring-warning/40",
@@ -711,7 +712,7 @@ function RunnerOrderListRow({
       <RunnerOrderCell span={RUNNER_COLUMN_SPAN.wait} align="right" mono>
         <RunnerWaitTime startIso={row.item.sortAt} initialNowMs={nowMs} />
       </RunnerOrderCell>
-    </div>
+    </Item>
   );
 }
 

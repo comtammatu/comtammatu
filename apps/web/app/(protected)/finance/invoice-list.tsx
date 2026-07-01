@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: legacy inline Vietnamese copy in finance invoice list */
+
 import { useState, useTransition } from "react";
 import {
   ArrowRightLeft as IconSwap,
@@ -52,6 +54,7 @@ import {
   ItemFooter,
   ItemHeader,
 } from "@comtammatu/ui/components/item";
+import { DescriptionList } from "@/components/surface";
 import { formatVNDateTime, getVNDateString } from "@/_lib/format-datetime";
 
 import { FINANCE_VI, FORM_VI, ORDER_VI, POS_VI } from "@comtammatu/shared/messages";
@@ -678,22 +681,32 @@ export function InvoiceList({
                 </div>
                 <StatusBadge domain="tax-invoice" value={inv.status} />
               </ItemHeader>
-              <ItemContent className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                <div>
-                  <p className="text-muted-foreground">{FINANCE_VI.buyer}</p>
-                  <p className="mt-1">{inv.buyer_name ?? "—"}</p>
-                  {inv.buyer_tax_code ? (
-                    <p className="text-xs text-muted-foreground">
-                      MST: {inv.buyer_tax_code}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="text-left sm:text-right">
-                  <p className="text-muted-foreground">{FORM_VI.value}</p>
-                  <p className="mt-1 font-mono font-semibold">
-                    {formatVND(inv.total_amount)}
-                  </p>
-                </div>
+              <ItemContent className="mt-4">
+                <DescriptionList
+                  items={[
+                    {
+                      term: FINANCE_VI.buyer,
+                      description: (
+                        <>
+                          <div>{inv.buyer_name ?? "—"}</div>
+                          {inv.buyer_tax_code ? (
+                            <div className="text-2xs text-muted-foreground font-mono mt-0.5">
+                              MST: {inv.buyer_tax_code}
+                            </div>
+                          ) : null}
+                        </>
+                      ),
+                    },
+                    {
+                      term: FORM_VI.value,
+                      description: (
+                        <span className="font-mono font-semibold">
+                          {formatVND(inv.total_amount)}
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
               </ItemContent>
               <ItemFooter className="mt-4">
                 <p className="text-xs text-muted-foreground">

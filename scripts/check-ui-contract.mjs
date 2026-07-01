@@ -172,10 +172,10 @@ const checks = [
       /<AppSection\b[^>]*contentClassName=["'][^"']*\b(?:p-0|overflow-x-auto)\b/g,
     allowlist: {},
   },
-	  {
-	    id: "admin-finance-branch-raw-table-import",
-	    description:
-	      "Admin, Finance, and Branch Settings list surfaces use DataTable; raw Table imports are frozen baseline debt.",
+  {
+    id: "admin-finance-branch-raw-table-import",
+    description:
+      "Admin, Finance, and Branch Settings list surfaces use DataTable; raw Table imports are frozen baseline debt.",
     roots: [
       { dir: "apps/web/app/(protected)/admin", extensions: [".tsx"] },
       { dir: "apps/web/app/(protected)/finance", extensions: [".tsx"] },
@@ -187,13 +187,13 @@ const checks = [
         dir: "apps/web/app/(protected)/br/[branchId]/settings",
         extensions: [".tsx"],
       },
-	    ],
-	    pattern: /from\s+["@']@comtammatu\/ui\/components\/table["@']/g,
-	    allowlist: {},
-	  },
-	  {
-	    id: "admin-finance-branch-raw-card-import",
-	    description:
+    ],
+    pattern: /from\s+["@']@comtammatu\/ui\/components\/table["@']/g,
+    allowlist: {},
+  },
+  {
+    id: "admin-finance-branch-raw-card-import",
+    description:
       "Admin, Finance, and Branch Settings page surfaces use AppSection/KpiCard/approved adapters; raw Card imports are frozen baseline debt.",
     roots: [
       { dir: "apps/web/app/(protected)/admin", extensions: [".tsx"] },
@@ -206,10 +206,10 @@ const checks = [
         dir: "apps/web/app/(protected)/br/[branchId]/settings",
         extensions: [".tsx"],
       },
-	    ],
-	    pattern: /from\s+["@']@comtammatu\/ui\/components\/card["@']/g,
-	    allowlist: {},
-	  },
+    ],
+    pattern: /from\s+["@']@comtammatu\/ui\/components\/card["@']/g,
+    allowlist: {},
+  },
   {
     id: "admin-finance-branch-toolbar-fixed-control",
     description:
@@ -494,6 +494,40 @@ if (fs.existsSync(path.join(REPO_ROOT, "docs/archive"))) {
   failures.push("legacy-docs: docs/archive must not exist");
 }
 
+for (const blockedRootContextFile of ["PRODUCT.md", "DESIGN.md"]) {
+  if (fs.existsSync(path.join(REPO_ROOT, blockedRootContextFile))) {
+    failures.push(
+      `external-design-context: root ${blockedRootContextFile} must not exist; use docs/spec/design-system.md and docs/ref/business-context.md`,
+    );
+  }
+}
+
+const webPackagePath = path.join(REPO_ROOT, "apps/web/package.json");
+if (fs.existsSync(webPackagePath)) {
+  const webPackageJson = JSON.parse(fs.readFileSync(webPackagePath, "utf8"));
+  for (const dependencyField of [
+    "dependencies",
+    "devDependencies",
+    "peerDependencies",
+  ]) {
+    if (webPackageJson[dependencyField]?.["radix-ui"]) {
+      failures.push(
+        `matu-ds-boundary: apps/web/package.json must not depend on radix-ui directly; route primitives through @comtammatu/ui`,
+      );
+    }
+  }
+}
+
+for (const file of walkFiles("apps/web", [".ts", ".tsx"])) {
+  const relativePath = toPosix(file);
+  const content = fs.readFileSync(file, "utf8");
+  if (/from\s+["']radix-ui["']/.test(content)) {
+    failures.push(
+      `matu-ds-boundary: ${relativePath} imports radix-ui directly; route primitives through @comtammatu/ui`,
+    );
+  }
+}
+
 const legacyDocReferencePattern =
   /docs\/archive(?:\/|$)|(?:^|[\s('"`])(?:\.{1,2}\/)*archive\/[^\s)\]'"`]*\.mdx?/g;
 
@@ -568,9 +602,9 @@ const textChecks = [
       "This is intentionally **one source of truth**, not a source-of-truth bundle.",
       "They must point back to this contract.",
       "the conflict is a bug to resolve",
-      "The design system is the Com Tam Ma Tu Custom Theme contract implemented on top",
-      "primitive baseline and runtime conformance evidence",
-      "It must never be used to overrule this file.",
+      "The design system is the Com Tam Ma Tu Custom Theme contract implemented by",
+      "Má Tư Design System primitives in `@comtammatu/ui`",
+      "External UI scaffold CLI/preset files are not part of the runtime",
     ],
   },
   {
@@ -581,7 +615,7 @@ const textChecks = [
       "`docs/spec/design-system.md`",
       "That source defines the Com Tam Ma Tu Custom Theme.",
       "Everything else is evidence, implementation, or enforcement for that contract",
-      "NEVER treat the shadcn preset as authority to override the Custom Theme",
+      "NEVER treat external UI scaffold CLI/preset output as authority to override the Custom Theme",
     ],
   },
   {
@@ -593,7 +627,7 @@ const textChecks = [
       "Runtime config, primitives, adapters, runbooks, worklogs, and regression rules",
       "are evidence/enforcement for that contract",
       "design system:",
-      "Không được coi `shadcn` preset là authority cao hơn Custom Theme contract.",
+      "Không được coi external UI scaffold CLI/preset là authority cao hơn Custom Theme",
     ],
   },
   {
@@ -677,27 +711,24 @@ const textChecks = [
     ],
   },
   {
-    id: "shadcn-resolved-preset-contract",
+    id: "matu-ds-runtime-contract",
     file: "docs/spec/design-system.md",
-    includes: ["resolved preset code: `buFywKm`"],
+    includes: ["primitive source: `packages/ui/src/components/*`"],
   },
   {
-    id: "shadcn-resolved-preset-agent-rule",
+    id: "matu-ds-agent-rule",
     file: "docs/agent/rules/ui.md",
-    includes: [
-      "https://ui.shadcn.com/create?preset=buFywKm",
-      "pnpm dlx shadcn@latest init --preset buFywKm",
-    ],
+    includes: ["USE Má Tư DS primitives from `@comtammatu/ui`"],
   },
   {
-    id: "shadcn-resolved-preset-module-doc",
+    id: "matu-ds-module-doc",
     file: "docs/modules/ui.md",
-    includes: ["resolved preset `buFywKm`"],
+    includes: ["Baseline hiện tại: Má Tư DS primitives"],
   },
   {
-    id: "readme-ui-preset-current",
+    id: "readme-ui-runtime-current",
     file: "README.md",
-    includes: ["shadcn/ui (`radix-lyra`, preset `buFywKm`)"],
+    includes: ["Má Tư Design System primitives (`@comtammatu/ui`)"],
   },
   {
     id: "readme-design-system-contract-pointer",
@@ -713,9 +744,9 @@ const textChecks = [
     ],
   },
   {
-    id: "theme-baseline-preset-current",
+    id: "theme-baseline-runtime-current",
     file: "apps/web/e2e/visual/theme-baseline.spec.ts",
-    includes: ["shadcn preset buFywKm"],
+    includes: ["Má Tư Design System runtime"],
   },
   {
     id: "data-table-mobile-empty-state-adapter",
@@ -730,57 +761,57 @@ const textChecks = [
 ];
 
 const countBudgets = [
-	  {
-	    id: "card-content-classname-baseline",
-	    description:
-	      "CardContent className overrides are composition debt and must not increase.",
-	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
-	    pattern: /<CardContent\b[^\n]*\bclassName=/g,
-	    maxCount: 1,
-	  },
-	  {
-	    id: "card-title-classname-baseline",
-	    description:
-	      "CardTitle className overrides are heading-scale debt and must not increase.",
-	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
-	    pattern: /<CardTitle\b[^\n]*\bclassName=/g,
-	    maxCount: 0,
-	  },
-	  {
-	    id: "resting-shadow-baseline",
-	    description:
-	      "Resting shadow debt only burns down; new app-surface shadows must route through an approved overlay/fixed-chrome adapter.",
-	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
-	    pattern:
-	      /(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
-		    maxCount: 20,
-	  },
-	  {
-	    id: "raw-card-import-baseline",
-	    description:
-	      "Raw Card imports are baseline debt; route-family waves should delegate to AppSection/KpiCard/operational adapters instead.",
-	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
-	    pattern: /from\s+["@']@comtammatu\/ui\/components\/card["@']/g,
-	    maxCount: 2,
-	  },
-	  {
-	    id: "raw-table-import-baseline",
-	    description:
-	      "Raw Table imports are baseline debt; list surfaces should move to DataTable or a route-specific adapter.",
-	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
-	    pattern: /from\s+["@']@comtammatu\/ui\/components\/table["@']/g,
-	    maxCount: 2,
-	  },
-	  {
-	    id: "raw-dialog-import-baseline",
-	    description:
-	      "Raw Dialog and AlertDialog imports are baseline debt; CRUD forms should use FormDialog/form helpers or page/sheet shells.",
-	    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
-	    pattern:
-	      /from\s+["@']@comtammatu\/ui\/components\/(?:dialog|alert-dialog)["']/g,
-	    maxCount: 23,
-	  },
-	];
+  {
+    id: "card-content-classname-baseline",
+    description:
+      "CardContent className overrides are composition debt and must not increase.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern: /<CardContent\b[^\n]*\bclassName=/g,
+    maxCount: 1,
+  },
+  {
+    id: "card-title-classname-baseline",
+    description:
+      "CardTitle className overrides are heading-scale debt and must not increase.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern: /<CardTitle\b[^\n]*\bclassName=/g,
+    maxCount: 0,
+  },
+  {
+    id: "resting-shadow-baseline",
+    description:
+      "Resting shadow debt only burns down; new app-surface shadows must route through an approved overlay/fixed-chrome adapter.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern:
+      /(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
+    maxCount: 20,
+  },
+  {
+    id: "raw-card-import-baseline",
+    description:
+      "Raw Card imports are baseline debt; route-family waves should delegate to AppSection/KpiCard/operational adapters instead.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern: /from\s+["@']@comtammatu\/ui\/components\/card["@']/g,
+    maxCount: 2,
+  },
+  {
+    id: "raw-table-import-baseline",
+    description:
+      "Raw Table imports are baseline debt; list surfaces should move to DataTable or a route-specific adapter.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern: /from\s+["@']@comtammatu\/ui\/components\/table["@']/g,
+    maxCount: 2,
+  },
+  {
+    id: "raw-dialog-import-baseline",
+    description:
+      "Raw Dialog and AlertDialog imports are baseline debt; CRUD forms should use FormDialog/form helpers or page/sheet shells.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern:
+      /from\s+["@']@comtammatu\/ui\/components\/(?:dialog|alert-dialog)["']/g,
+    maxCount: 23,
+  },
+];
 
 const perFileCountBudgets = [
   {
@@ -911,7 +942,8 @@ const perFileCountBudgets = [
       { dir: "apps/web/app", extensions: [".tsx"] },
       { dir: "packages/ui/src/components", extensions: [".tsx"] },
     ],
-    pattern: /\bshadow-\[[^\]]+\]|\bboxShadow\b|\bbox-shadow\b|--shadow-[\w-]+/g,
+    pattern:
+      /\bshadow-\[[^\]]+\]|\bboxShadow\b|\bbox-shadow\b|--shadow-[\w-]+/g,
     allowlist: {
       "apps/web/app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx": 1,
       "apps/web/app/(protected)/employee/components/employee-page.tsx": 2,
@@ -936,22 +968,23 @@ const frozenPrimitiveImportBaselines = [
   {
     id: "raw-card-import-file-baseline",
     component: "card",
-	    label: "Card",
-	    replacement: "AppSection, KpiCard, or an approved operational adapter",
-	    allowlist: {
-	      "apps/web/app/components/kpi/kpi-card.tsx": 1,
-	      "apps/web/app/components/surface.tsx": 1,
-	    },
+    label: "Card",
+    replacement: "AppSection, KpiCard, or an approved operational adapter",
+    allowlist: {
+      "apps/web/app/components/kpi/kpi-card.tsx": 1,
+      "apps/web/app/components/surface.tsx": 1,
+    },
   },
   {
     id: "raw-table-import-file-baseline",
     component: "table",
-	    label: "Table",
-	    replacement: "DataTable, TableEmptyStateRow, or a documented line-sheet adapter",
-	    allowlist: {
-	      "apps/web/app/components/data-table/data-table.tsx": 1,
-	      "apps/web/app/components/table-empty-state-row.tsx": 1,
-	    },
+    label: "Table",
+    replacement:
+      "DataTable, TableEmptyStateRow, or a documented line-sheet adapter",
+    allowlist: {
+      "apps/web/app/components/data-table/data-table.tsx": 1,
+      "apps/web/app/components/table-empty-state-row.tsx": 1,
+    },
   },
   {
     id: "raw-dialog-import-file-baseline",
@@ -982,7 +1015,8 @@ const frozenPrimitiveImportBaselines = [
     id: "raw-alert-dialog-import-file-baseline",
     component: "alert-dialog",
     label: "AlertDialog",
-    replacement: "confirm(), FormDialog with reason input, or an approved destructive flow",
+    replacement:
+      "confirm(), FormDialog with reason input, or an approved destructive flow",
     allowlist: {
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/cancel-order-dialog.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/reduce-quantity-dialog.tsx": 1,
@@ -1452,17 +1486,29 @@ if (WRITE_MODE) {
   ];
 
   for (const gate of allowlistGates) {
-    const oldTotal = Object.values(gate.oldAllowlist).reduce((a, b) => a + b, 0);
+    const oldTotal = Object.values(gate.oldAllowlist).reduce(
+      (a, b) => a + b,
+      0,
+    );
     const next = ratchetAllowlist(gate.oldAllowlist, gate.actuals);
     const newTotal = Object.values(next).reduce((a, b) => a + b, 0);
-    const span = locateGateValueSpan(source, gate.varName, gate.id, "allowlist");
+    const span = locateGateValueSpan(
+      source,
+      gate.varName,
+      gate.id,
+      "allowlist",
+    );
     if (!span) {
       console.error(`--write: could not locate allowlist for ${gate.id}`);
       process.exit(1);
     }
     const serialized = serializeAllowlist(next, span.indent);
     if (source.slice(span.valueStart, span.valueEnd) !== serialized) {
-      edits.push({ start: span.valueStart, end: span.valueEnd, text: serialized });
+      edits.push({
+        start: span.valueStart,
+        end: span.valueEnd,
+        text: serialized,
+      });
     }
     ratchetSummary.push({ id: gate.id, oldTotal, newTotal });
   }
@@ -1471,16 +1517,29 @@ if (WRITE_MODE) {
   for (const gate of countBudgets) {
     const actualTotal = computeTotalActual(gate.roots, gate.pattern);
     const newMax = Math.min(gate.maxCount, actualTotal);
-    const span = locateGateValueSpan(source, "countBudgets", gate.id, "maxCount");
+    const span = locateGateValueSpan(
+      source,
+      "countBudgets",
+      gate.id,
+      "maxCount",
+    );
     if (!span) {
       console.error(`--write: could not locate maxCount for ${gate.id}`);
       process.exit(1);
     }
     const serialized = String(newMax);
     if (source.slice(span.valueStart, span.valueEnd) !== serialized) {
-      edits.push({ start: span.valueStart, end: span.valueEnd, text: serialized });
+      edits.push({
+        start: span.valueStart,
+        end: span.valueEnd,
+        text: serialized,
+      });
     }
-    ratchetSummary.push({ id: gate.id, oldTotal: gate.maxCount, newTotal: newMax });
+    ratchetSummary.push({
+      id: gate.id,
+      oldTotal: gate.maxCount,
+      newTotal: newMax,
+    });
   }
 
   edits.sort((a, b) => b.start - a.start);

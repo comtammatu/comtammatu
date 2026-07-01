@@ -17,6 +17,13 @@ export const inventory = {
   },
   dashboard: {
     mainFlowsTitle: "3 luồng vận hành chính",
+    mainFlowsOversightTitle: "3 điểm giám sát chính",
+    mainFlowsOversightDescription:
+      "Theo dõi tồn, cảnh báo và luồng đang chạy theo đúng phạm vi.",
+    mainFlowsOperatorDescription: "Mở nhanh đúng luồng kho cần xử lý hôm nay.",
+    operationalMetricsTitle: "Số liệu vận hành",
+    operationalMetricsDescription:
+      "Theo dõi nhanh số lượng việc đang mở; xử lý qua phiếu ở các mục bên dưới.",
     shiftTasksTitle: "Việc cần làm ngay trong ca",
     pendingTasks: (count: number) => `${count} việc đang chờ xử lý`,
     noUrgentTasks: "Không có việc cần xử lý gấp.",

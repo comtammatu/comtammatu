@@ -14,6 +14,8 @@ import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Button } from "@comtammatu/ui/components/button";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { Label } from "@comtammatu/ui/components/label";
+import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { cn } from "@comtammatu/ui";
 import { AppSection } from "@/components/surface";
 import { MobilePage } from "../../../_components/mobile/mobile-page";
@@ -234,18 +236,19 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
         <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
           {TRANSFER_RECEIVE_COPY.lineCount(lines.length)}
         </p>
-        <ul className="flex flex-col gap-2">
+        <ItemGroup className="flex flex-col gap-2 p-0 rounded-none border-0">
           {lines.map((line) => {
             const got = values[line.ingredientId] ?? 0;
             const short = got < line.sentQty;
             return (
-              <li key={line.id}>
-                <div
-                  className={cn(
-                    "flex items-center gap-3 rounded-md border bg-card p-3 transition",
-                    short && "border-warning/40 bg-warning/5",
-                  )}
-                >
+              <Item
+                key={line.id}
+                variant="outline"
+                className={cn(
+                  "flex items-center gap-3 p-3 transition",
+                  short && "border-warning/40 bg-warning/5",
+                )}
+              >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">
                       {line.ingredientName}
@@ -299,19 +302,18 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
                       </Button>
                     ) : null}
                   </div>
-                </div>
-              </li>
+              </Item>
             );
           })}
-        </ul>
+        </ItemGroup>
       </section>
 
       {hasShort && !needsReceiveMode ? (
         <AppSection>
-          <label htmlFor="short-note" className="text-sm font-semibold">
+          <Label htmlFor="short-note" className="text-sm font-semibold">
             {TRANSFER_RECEIVE_COPY.shortNoteLabel}{" "}
             <span className="text-destructive">*</span>
-          </label>
+          </Label>
           <Textarea
             id="short-note"
             value={shortNote}
@@ -329,16 +331,17 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
       ) : null}
 
       {!needsReceiveMode ? (
-        <label className="flex items-start gap-2 rounded-md bg-muted/40 px-3 py-3 text-sm">
+        <div className="flex items-start gap-2 rounded-md bg-muted/40 px-3 py-3">
           <Checkbox
+            id="acknowledge-receive"
             checked={acknowledged}
             onCheckedChange={(next) => setAcknowledged(next === true)}
             className="mt-1"
           />
-          <span className="leading-snug">
+          <Label htmlFor="acknowledge-receive" className="text-sm leading-snug font-normal cursor-pointer">
             {TRANSFER_RECEIVE_COPY.acknowledgement}
-          </span>
-        </label>
+          </Label>
+        </div>
       ) : null}
 
       {error ? (

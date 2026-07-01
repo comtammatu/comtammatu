@@ -25,7 +25,45 @@ const BRAND_ASSETS = {
   },
 } as const;
 
+const BRAND_SYMBOL_ASSETS = {
+  chopsticks: {
+    src: "/brand/symbols/dua.svg",
+    width: 48,
+    height: 48,
+  },
+  riceBowl: {
+    src: "/brand/symbols/to-com.svg",
+    width: 48,
+    height: 48,
+  },
+  roundPlate: {
+    src: "/brand/symbols/dia-tron.svg",
+    width: 48,
+    height: 48,
+  },
+  roof: {
+    src: "/brand/symbols/mai-nha.svg",
+    width: 48,
+    height: 48,
+  },
+  riceGrain: {
+    src: "/brand/symbols/hat-gao.svg",
+    width: 48,
+    height: 48,
+  },
+} as const;
+
+const BRAND_MASCOT_ASSETS = {
+  cotlet: {
+    src: "/brand/mascot/cotlet.png",
+    width: 384,
+    height: 512,
+  },
+} as const;
+
 type BrandAssetVariant = keyof typeof BRAND_ASSETS;
+type BrandSymbolVariant = keyof typeof BRAND_SYMBOL_ASSETS;
+type BrandMascotVariant = keyof typeof BRAND_MASCOT_ASSETS;
 export type BrandMarkVariant = Extract<BrandAssetVariant, "seal">;
 export type BrandLockupVariant = Extract<
   BrandAssetVariant,
@@ -53,6 +91,19 @@ const lockupSizeClass = {
   md: "h-20 w-auto",
   lg: "h-24 w-auto",
   xl: "h-28 w-auto",
+} as const;
+
+const symbolSizeClass = {
+  sm: "size-5",
+  md: "size-6",
+  lg: "size-8",
+  xl: "size-10",
+} as const;
+
+const mascotSizeClass = {
+  sm: "h-24 w-auto",
+  md: "h-32 w-auto",
+  lg: "h-44 w-auto",
 } as const;
 
 export function BrandMark({
@@ -139,6 +190,74 @@ export function BrandLockup({
       alt={decorative ? "" : (alt ?? BRAND_NAME)}
       aria-hidden={decorative ? true : imageProps["aria-hidden"]}
       className={cn("object-contain", lockupSizeClass[size], className)}
+    />
+  );
+}
+
+export function BrandSymbol({
+  variant = "riceGrain",
+  size = "md",
+  alt,
+  decorative = true,
+  className,
+  ...imageProps
+}: SharedBrandImageProps & {
+  variant?: BrandSymbolVariant;
+  size?: keyof typeof symbolSizeClass;
+}) {
+  const asset = BRAND_SYMBOL_ASSETS[variant];
+
+  return (
+    <Image
+      {...imageProps}
+      src={asset.src}
+      width={asset.width}
+      height={asset.height}
+      alt={decorative ? "" : (alt ?? BRAND_NAME)}
+      aria-hidden={decorative ? true : imageProps["aria-hidden"]}
+      className={cn("object-contain", symbolSizeClass[size], className)}
+    />
+  );
+}
+
+export function BrandMascot({
+  variant = "cotlet",
+  size = "md",
+  animated = false,
+  alt,
+  decorative = true,
+  className,
+  ...imageProps
+}: SharedBrandImageProps & {
+  variant?: BrandMascotVariant;
+  size?: keyof typeof mascotSizeClass;
+  animated?: boolean;
+}) {
+  const asset = BRAND_MASCOT_ASSETS[variant];
+
+  if (animated && variant === "cotlet") {
+    return (
+      <span
+        aria-hidden={decorative ? true : imageProps["aria-hidden"]}
+        role={decorative ? undefined : "img"}
+        aria-label={decorative ? undefined : (alt ?? "Cốt Lết")}
+        className={cn(
+          "block mascot-cotlet motion-safe:animate-cotlet-idle",
+          className,
+        )}
+      />
+    );
+  }
+
+  return (
+    <Image
+      {...imageProps}
+      src={asset.src}
+      width={asset.width}
+      height={asset.height}
+      alt={decorative ? "" : (alt ?? "Cốt Lết")}
+      aria-hidden={decorative ? true : imageProps["aria-hidden"]}
+      className={cn("object-contain", mascotSizeClass[size], className)}
     />
   );
 }

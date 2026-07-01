@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { loadAuthState } from "@/_lib/auth";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { ScheduleClient } from "./schedule-client";
 import type { ScheduleAttendance, ScheduleLeave } from "./actions";
@@ -11,6 +13,7 @@ import {
   getVNMonthYear,
 } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
+import { resolveEmployeeBranchRuntimePath } from "../_lib/branch-runtime-redirect";
 
 const copy = messages.employee.home;
 
@@ -42,7 +45,9 @@ export async function SchedulePageContent({
   const [attendanceResult, leaveResult] = await Promise.all([
     supabase
       .from("attendance_records")
-      .select("date, check_in, check_out, status, shifts ( name, start_time, end_time )")
+      .select(
+        "date, check_in, check_out, status, shifts ( name, start_time, end_time )",
+      )
       .eq("employee_id", employeeId)
       .eq("tenant_id", claims.tenant_id)
       .gte("date", monthStart)
@@ -107,5 +112,12 @@ export async function SchedulePageContent({
 }
 
 export default async function SchedulePage() {
+  const { claims } = await loadAuthState();
+  const branchRuntimePath = resolveEmployeeBranchRuntimePath(
+    claims,
+    "shiftSchedule",
+  );
+  if (branchRuntimePath) redirect(branchRuntimePath);
+
   return <SchedulePageContent />;
 }

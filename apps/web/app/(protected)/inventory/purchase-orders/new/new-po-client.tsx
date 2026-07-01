@@ -453,7 +453,7 @@ function SupplierSection({
       description={messages.inventory.po.headerInfoDescription}
     >
       <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-        <div className="space-y-1.5">
+        <div className="flex flex-col gap-1.5">
           <Label>
             {messages.inventory.po.supplierRequired}{" "}
             <span className="text-destructive">*</span>
@@ -469,7 +469,7 @@ function SupplierSection({
             searchPlaceholder={messages.inventory.po.supplierSearchPlaceholder}
           />
         </div>
-        <div className="space-y-1.5">
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="notes">{FORM_VI.notes}</Label>
           <Textarea
             id="notes"
@@ -634,7 +634,7 @@ function SuggestionsPanel({
                   </div>
                 ) : isMobile ? (
                   /* Mobile: card layout for suggestions */
-                  <div className="space-y-1.5">
+                  <div className="flex flex-col gap-1.5">
                     {suggestions.map((s) => {
                       const alreadyAdded = lineIngredientIds.has(
                         s.ingredient_id,
@@ -699,7 +699,7 @@ function SuggestionsPanel({
                   </div>
                 ) : (
                   /* Desktop: grid layout */
-                  <div className="space-y-1">
+                  <div className="flex flex-col gap-1">
                     <div className="grid grid-cols-12 gap-2 px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       <span className="col-span-3">
                         {PRODUCT_VI.rawIngredient}
@@ -896,174 +896,18 @@ function LineItemsSection({
   if (isCompact) {
     return (
       <div className="overflow-hidden rounded-lg border bg-card">
-          <div className="-m-4">
-            <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2 md:px-4">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {PRODUCT_VI.rawIngredient}
-              </span>
-              {hasValue && (
-                <span className="text-sm font-semibold font-mono">
-                  {formatVND(totalValue)}
-                </span>
-              )}
-            </div>
-
-            {lines.length === 0 ? (
-              <div className="px-4 py-4 text-center">
-                <p className="text-base font-semibold">
-                  {messages.inventory.po.emptyIngredientsTitle}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {messages.inventory.po.emptyIngredientsDescription}
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {lines.map((l, idx) => {
-                  const dev = lineDeviations.get(l.ingredientId);
-                  return (
-                    <div
-                      key={idx}
-                      className="px-4 py-2 flex items-center justify-between gap-2"
-                    >
-                      <div className="min-w-0">
-                        <span className="text-sm font-medium">
-                          {l.ingredientName}
-                        </span>
-                        <p className="text-xs text-muted-foreground">
-                          {l.quantity.toLocaleString("vi-VN")} {l.unit}
-                          {l.unitPriceEst != null && (
-                            <>
-                              {messages.inventory.po.totalAmountSuffix(
-                                l.unitPriceEst.toLocaleString("vi-VN"),
-                              )}
-                            </>
-                          )}
-                        </p>
-                        {dev && Math.abs(dev.deviation_pct) > 5 && (
-                          <InlineDeviationHint deviation={dev} unit={l.unit} />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {l.unitPriceEst != null && (
-                          <span className="font-mono text-sm">
-                            {(l.quantity * l.unitPriceEst).toLocaleString(
-                              "vi-VN",
-                            )}{" "}
-                            ₫
-                          </span>
-                        )}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => onRemoveLine(idx)}
-                          className="rounded-md border-none bg-transparent text-muted-foreground shadow-none hover:bg-destructive/10 hover:text-destructive"
-                          aria-label={messages.inventory.po.removeLineAria}
-                        >
-                          <IconTrash className="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Mobile add-row form */}
-            <form
-              onSubmit={handleAddLine}
-              className="border-t bg-muted/5 p-3 space-y-2 md:px-4"
-            >
-              <Combobox
-                value={ingredientId}
-                onValueChange={handleIngredientChange}
-                options={ingredients.map((i) => ({
-                  value: String(i.id),
-                  label: i.name,
-                  hint: i.purchase_unit ?? i.unit,
-                  keywords: [i.sku ?? "", i.category ?? ""],
-                }))}
-                placeholder={messages.inventory.po.ingredientPlaceholder}
-                searchPlaceholder={
-                  messages.inventory.po.ingredientSearchPlaceholder
-                }
-                triggerClassName="h-8 border-dashed text-sm"
-              />
-              <div className="grid grid-cols-3 gap-2">
-                <FormattedNumberInput
-                  ref={qtyRef}
-                  placeholder={messages.inventory.po.quantityShort}
-                  className="h-8 text-sm"
-                  value={qtyInput}
-                  onValueChange={setQtyInput}
-                  maxFractionDigits={3}
-                  required
-                />
-                <UnitField
-                  options={purchaseUnitOptions}
-                  entryUnitId={entryUnitId}
-                  unit={unit}
-                  onUnitChange={handleUnitChange}
-                  onFreeTextChange={setUnit}
-                />
-                <FormattedNumberInput
-                  ref={priceRef}
-                  placeholder={messages.inventory.po.pricePlaceholder}
-                  className="h-8 text-sm"
-                  value={unitPriceInput}
-                  onValueChange={setUnitPriceInput}
-                  onBlur={checkAddRowDeviation}
-                  maxFractionDigits={0}
-                />
-              </div>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={!ingredientId}
-                className="w-full"
-              >
-                <IconPlus className="mr-1 size-3.5" />
-                {messages.inventory.po.addLine}
-              </Button>
-              {addRowDeviation &&
-                Math.abs(addRowDeviation.deviation_pct) > 5 && (
-                  <InlineDeviationHint
-                    deviation={addRowDeviation}
-                    unit={unit || messages.inventory.po.unitShort}
-                  />
-                )}
-            </form>
-          </div>
-      </div>
-    );
-  }
-
-  // Desktop layout
-  return (
-    <div className="overflow-hidden rounded-lg border bg-card">
         <div className="-m-4">
-          {/* Table header */}
-          <div className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 border-b bg-muted/30 px-3 py-2 md:px-4">
+          <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2 md:px-4">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {PRODUCT_VI.rawIngredient}
             </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
-              {FORM_VI.quantity}
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-2">
-              {messages.inventory.po.unitShort}
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
-              {messages.inventory.po.unitPrice}
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
-              {FORM_VI.amount}
-            </span>
-            <span />
+            {hasValue && (
+              <span className="text-sm font-semibold font-mono">
+                {formatVND(totalValue)}
+              </span>
+            )}
           </div>
 
-          {/* Existing lines */}
           {lines.length === 0 ? (
             <div className="px-4 py-4 text-center">
               <p className="text-base font-semibold">
@@ -1074,39 +918,41 @@ function LineItemsSection({
               </p>
             </div>
           ) : (
-            <div>
+            <div className="divide-y">
               {lines.map((l, idx) => {
                 const dev = lineDeviations.get(l.ingredientId);
                 return (
                   <div
                     key={idx}
-                    className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 items-center border-b px-3 py-2 hover:bg-muted/20 transition-colors"
+                    className="px-4 py-2 flex items-center justify-between gap-2"
                   >
-                    <span className="text-sm font-medium">
-                      {l.ingredientName}
-                    </span>
-                    <span className="text-sm font-mono text-right">
-                      {l.quantity.toLocaleString("vi-VN")}
-                    </span>
-                    <span className="text-sm pl-2 text-muted-foreground">
-                      {l.unit}
-                    </span>
-                    <div className="text-sm font-mono text-right text-muted-foreground">
-                      <span>
-                        {l.unitPriceEst != null
-                          ? l.unitPriceEst.toLocaleString("vi-VN")
-                          : "—"}
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium">
+                        {l.ingredientName}
                       </span>
+                      <p className="text-xs text-muted-foreground">
+                        {l.quantity.toLocaleString("vi-VN")} {l.unit}
+                        {l.unitPriceEst != null && (
+                          <>
+                            {messages.inventory.po.totalAmountSuffix(
+                              l.unitPriceEst.toLocaleString("vi-VN"),
+                            )}
+                          </>
+                        )}
+                      </p>
                       {dev && Math.abs(dev.deviation_pct) > 5 && (
                         <InlineDeviationHint deviation={dev} unit={l.unit} />
                       )}
                     </div>
-                    <span className="text-sm font-mono text-right">
-                      {l.unitPriceEst != null
-                        ? (l.quantity * l.unitPriceEst).toLocaleString("vi-VN")
-                        : "—"}
-                    </span>
-                    <div className="flex justify-end">
+                    <div className="flex items-center gap-2 shrink-0">
+                      {l.unitPriceEst != null && (
+                        <span className="font-mono text-sm">
+                          {(l.quantity * l.unitPriceEst).toLocaleString(
+                            "vi-VN",
+                          )}{" "}
+                          ₫
+                        </span>
+                      )}
                       <Button
                         type="button"
                         variant="ghost"
@@ -1121,58 +967,39 @@ function LineItemsSection({
                   </div>
                 );
               })}
-
-              {/* Total row */}
-              {hasValue && (
-                <div className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 items-center border-b px-3 py-2 bg-muted/10">
-                  <span className="col-span-4 text-xs font-semibold text-right text-muted-foreground uppercase tracking-wider">
-                    {messages.inventory.po.estimatedTotal}
-                  </span>
-                  <span className="text-sm font-semibold font-mono text-right">
-                    {messages.inventory.common.currency(
-                      totalValue.toLocaleString("vi-VN"),
-                    )}
-                  </span>
-                  <span />
-                </div>
-              )}
             </div>
           )}
 
-          {/* Add-row form */}
+          {/* Mobile add-row form */}
           <form
             onSubmit={handleAddLine}
-            className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] items-center gap-0 border-t bg-muted/5 px-3 py-2 md:px-4"
+            className="flex flex-col gap-2 border-t bg-muted/5 p-3 md:px-4"
           >
-            <div className="pr-2">
-              <Combobox
-                value={ingredientId}
-                onValueChange={handleIngredientChange}
-                options={ingredients.map((i) => ({
-                  value: String(i.id),
-                  label: i.name,
-                  hint: i.purchase_unit ?? i.unit,
-                  keywords: [i.sku ?? "", i.category ?? ""],
-                }))}
-                placeholder={messages.inventory.po.ingredientPlaceholder}
-                searchPlaceholder={
-                  messages.inventory.po.ingredientSearchPlaceholder
-                }
-                triggerClassName="h-8 border-dashed text-sm"
-              />
-            </div>
-            <div>
+            <Combobox
+              value={ingredientId}
+              onValueChange={handleIngredientChange}
+              options={ingredients.map((i) => ({
+                value: String(i.id),
+                label: i.name,
+                hint: i.purchase_unit ?? i.unit,
+                keywords: [i.sku ?? "", i.category ?? ""],
+              }))}
+              placeholder={messages.inventory.po.ingredientPlaceholder}
+              searchPlaceholder={
+                messages.inventory.po.ingredientSearchPlaceholder
+              }
+              triggerClassName="h-8 border-dashed text-sm"
+            />
+            <div className="grid grid-cols-3 gap-2">
               <FormattedNumberInput
                 ref={qtyRef}
                 placeholder={messages.inventory.po.quantityShort}
-                className="h-8 text-sm text-right"
+                className="h-8 text-sm"
                 value={qtyInput}
                 onValueChange={setQtyInput}
                 maxFractionDigits={3}
                 required
               />
-            </div>
-            <div className="pl-2">
               <UnitField
                 options={purchaseUnitOptions}
                 entryUnitId={entryUnitId}
@@ -1180,39 +1007,211 @@ function LineItemsSection({
                 onUnitChange={handleUnitChange}
                 onFreeTextChange={setUnit}
               />
-            </div>
-            <div className="pl-2">
               <FormattedNumberInput
                 ref={priceRef}
-                placeholder={messages.inventory.po.priceOptionalPlaceholder}
-                className="h-8 text-sm text-right"
+                placeholder={messages.inventory.po.pricePlaceholder}
+                className="h-8 text-sm"
                 value={unitPriceInput}
                 onValueChange={setUnitPriceInput}
                 onBlur={checkAddRowDeviation}
                 maxFractionDigits={0}
               />
             </div>
-            <div className="pl-2 flex justify-end">
-              <Button
-                type="submit"
-                disabled={!ingredientId}
-                size="icon-sm"
-                aria-label={messages.inventory.po.addLine}
-              >
-                <IconPlus className="size-3.5" />
-              </Button>
-            </div>
-            <span />
-          </form>
-          {addRowDeviation && Math.abs(addRowDeviation.deviation_pct) > 5 && (
-            <div className="px-3 pb-2">
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!ingredientId}
+              className="w-full"
+            >
+              <IconPlus className="mr-1 size-3.5" />
+              {messages.inventory.po.addLine}
+            </Button>
+            {addRowDeviation && Math.abs(addRowDeviation.deviation_pct) > 5 && (
               <InlineDeviationHint
                 deviation={addRowDeviation}
                 unit={unit || messages.inventory.po.unitShort}
               />
-            </div>
-          )}
+            )}
+          </form>
         </div>
+      </div>
+    );
+  }
+
+  // Desktop layout
+  return (
+    <div className="overflow-hidden rounded-lg border bg-card">
+      <div className="-m-4">
+        {/* Table header */}
+        <div className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 border-b bg-muted/30 px-3 py-2 md:px-4">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {PRODUCT_VI.rawIngredient}
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
+            {FORM_VI.quantity}
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-2">
+            {messages.inventory.po.unitShort}
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
+            {messages.inventory.po.unitPrice}
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
+            {FORM_VI.amount}
+          </span>
+          <span />
+        </div>
+
+        {/* Existing lines */}
+        {lines.length === 0 ? (
+          <div className="px-4 py-4 text-center">
+            <p className="text-base font-semibold">
+              {messages.inventory.po.emptyIngredientsTitle}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {messages.inventory.po.emptyIngredientsDescription}
+            </p>
+          </div>
+        ) : (
+          <div>
+            {lines.map((l, idx) => {
+              const dev = lineDeviations.get(l.ingredientId);
+              return (
+                <div
+                  key={idx}
+                  className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 items-center border-b px-3 py-2 hover:bg-muted/20 transition-colors"
+                >
+                  <span className="text-sm font-medium">
+                    {l.ingredientName}
+                  </span>
+                  <span className="text-sm font-mono text-right">
+                    {l.quantity.toLocaleString("vi-VN")}
+                  </span>
+                  <span className="text-sm pl-2 text-muted-foreground">
+                    {l.unit}
+                  </span>
+                  <div className="text-sm font-mono text-right text-muted-foreground">
+                    <span>
+                      {l.unitPriceEst != null
+                        ? l.unitPriceEst.toLocaleString("vi-VN")
+                        : "—"}
+                    </span>
+                    {dev && Math.abs(dev.deviation_pct) > 5 && (
+                      <InlineDeviationHint deviation={dev} unit={l.unit} />
+                    )}
+                  </div>
+                  <span className="text-sm font-mono text-right">
+                    {l.unitPriceEst != null
+                      ? (l.quantity * l.unitPriceEst).toLocaleString("vi-VN")
+                      : "—"}
+                  </span>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onRemoveLine(idx)}
+                      className="rounded-md border-none bg-transparent text-muted-foreground shadow-none hover:bg-destructive/10 hover:text-destructive"
+                      aria-label={messages.inventory.po.removeLineAria}
+                    >
+                      <IconTrash className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Total row */}
+            {hasValue && (
+              <div className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 items-center border-b px-3 py-2 bg-muted/10">
+                <span className="col-span-4 text-xs font-semibold text-right text-muted-foreground uppercase tracking-wider">
+                  {messages.inventory.po.estimatedTotal}
+                </span>
+                <span className="text-sm font-semibold font-mono text-right">
+                  {messages.inventory.common.currency(
+                    totalValue.toLocaleString("vi-VN"),
+                  )}
+                </span>
+                <span />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Add-row form */}
+        <form
+          onSubmit={handleAddLine}
+          className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] items-center gap-0 border-t bg-muted/5 px-3 py-2 md:px-4"
+        >
+          <div className="pr-2">
+            <Combobox
+              value={ingredientId}
+              onValueChange={handleIngredientChange}
+              options={ingredients.map((i) => ({
+                value: String(i.id),
+                label: i.name,
+                hint: i.purchase_unit ?? i.unit,
+                keywords: [i.sku ?? "", i.category ?? ""],
+              }))}
+              placeholder={messages.inventory.po.ingredientPlaceholder}
+              searchPlaceholder={
+                messages.inventory.po.ingredientSearchPlaceholder
+              }
+              triggerClassName="h-8 border-dashed text-sm"
+            />
+          </div>
+          <div>
+            <FormattedNumberInput
+              ref={qtyRef}
+              placeholder={messages.inventory.po.quantityShort}
+              className="h-8 text-sm text-right"
+              value={qtyInput}
+              onValueChange={setQtyInput}
+              maxFractionDigits={3}
+              required
+            />
+          </div>
+          <div className="pl-2">
+            <UnitField
+              options={purchaseUnitOptions}
+              entryUnitId={entryUnitId}
+              unit={unit}
+              onUnitChange={handleUnitChange}
+              onFreeTextChange={setUnit}
+            />
+          </div>
+          <div className="pl-2">
+            <FormattedNumberInput
+              ref={priceRef}
+              placeholder={messages.inventory.po.priceOptionalPlaceholder}
+              className="h-8 text-sm text-right"
+              value={unitPriceInput}
+              onValueChange={setUnitPriceInput}
+              onBlur={checkAddRowDeviation}
+              maxFractionDigits={0}
+            />
+          </div>
+          <div className="pl-2 flex justify-end">
+            <Button
+              type="submit"
+              disabled={!ingredientId}
+              size="icon-sm"
+              aria-label={messages.inventory.po.addLine}
+            >
+              <IconPlus className="size-3.5" />
+            </Button>
+          </div>
+          <span />
+        </form>
+        {addRowDeviation && Math.abs(addRowDeviation.deviation_pct) > 5 && (
+          <div className="px-3 pb-2">
+            <InlineDeviationHint
+              deviation={addRowDeviation}
+              unit={unit || messages.inventory.po.unitShort}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

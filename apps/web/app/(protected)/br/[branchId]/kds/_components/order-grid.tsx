@@ -7,6 +7,8 @@ import { AppEmptyState, OperationalBoardCard } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { Item } from "@comtammatu/ui/components/item";
+import { StatusBadge } from "@/components/status-badge";
 import {
   Check as IconCheck,
   ChefHat as IconChefHat,
@@ -32,8 +34,6 @@ import {
   isKdsActiveTicketStatus,
 } from "../_lib/order-status";
 import {
-  getStatusLabel,
-  getStatusVariant,
   shouldShowTicketStatusBadge,
 } from "../_lib/status-config";
 import { BatchActions } from "./batch-actions";
@@ -96,11 +96,11 @@ function CompactItemRow({
   const rowEffect = useKdsRowEffect(ticket?.id);
 
   return (
-    <div
+    <Item
       data-testid={`kds-heatmap-item-${String(item.id)}`}
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-1.5 gap-y-1 border-t border-border/40 py-1.5 transition-colors duration-150 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[3.5rem_minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
+        "grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-1.5 gap-y-1 border-t border-border/40 py-1.5 transition-colors duration-150 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[3.5rem_minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2 p-0 rounded-none border-x-0 border-b-0",
         getItemRowStatusClass(status),
         getKdsRowEffectClass(rowEffect),
       )}
@@ -142,12 +142,11 @@ function CompactItemRow({
       </div>
       <div className="col-span-2 flex min-w-0 flex-wrap items-center justify-end gap-1 xl:col-auto xl:shrink-0 xl:flex-nowrap">
         {shouldShowTicketStatusBadge(status) && (
-          <Badge
-            variant={getStatusVariant(status)}
-            className="h-5 rounded-md px-2 py-0 text-xs font-semibold leading-none xl:h-6 xl:px-2.5 xl:text-sm"
-          >
-            {getStatusLabel(status)}
-          </Badge>
+          <StatusBadge
+            domain="order-item"
+            value={status}
+            className="h-5 px-2 py-0 text-xs font-semibold leading-none xl:h-6 xl:px-2.5 xl:text-sm"
+          />
         )}
         {ticket && allowRecall && (
           <Button
@@ -186,7 +185,7 @@ function CompactItemRow({
           </Button>
         )}
       </div>
-    </div>
+    </Item>
   );
 }
 
@@ -215,10 +214,10 @@ function CompactOrphanRow({
   const rowEffect = useKdsRowEffect(ticket.id);
 
   return (
-    <div
+    <Item
       data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-1.5 border-t border-border/40 py-1.5 transition-colors duration-150 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
+        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-1.5 border-t border-border/40 py-1.5 transition-colors duration-150 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2 p-0 rounded-none border-x-0 border-b-0",
         getItemRowStatusClass(ticket.status),
         getKdsRowEffectClass(rowEffect),
       )}
@@ -228,12 +227,11 @@ function CompactOrphanRow({
       </span>
       <div className="flex min-w-0 flex-wrap items-center justify-end gap-1 xl:shrink-0 xl:flex-nowrap">
         {shouldShowTicketStatusBadge(ticket.status) && (
-          <Badge
-            variant={getStatusVariant(ticket.status)}
-            className="h-5 rounded-md px-2 py-0 text-xs font-semibold leading-none xl:h-6 xl:px-2.5 xl:text-sm"
-          >
-            {getStatusLabel(ticket.status)}
-          </Badge>
+          <StatusBadge
+            domain="order-item"
+            value={ticket.status}
+            className="h-5 px-2 py-0 text-xs font-semibold leading-none xl:h-6 xl:px-2.5 xl:text-sm"
+          />
         )}
         {allowRecall && (
           <Button
@@ -272,7 +270,7 @@ function CompactOrphanRow({
           </Button>
         )}
       </div>
-    </div>
+    </Item>
   );
 }
 
@@ -377,12 +375,11 @@ function HeatmapCard({
             />
           )}
           {showOrderStatusBadge && (
-            <Badge
-              variant={getStatusVariant(status)}
+            <StatusBadge
+              domain="order"
+              value={status}
               className="px-2 py-0.5 text-xs xl:px-2.5 xl:py-1 xl:text-sm"
-            >
-              {getStatusLabel(status)}
-            </Badge>
+            />
           )}
           <AgeBadge
             elapsedMinutes={elapsed}

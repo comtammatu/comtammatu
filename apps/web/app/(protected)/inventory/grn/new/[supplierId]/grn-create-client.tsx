@@ -18,6 +18,7 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Button } from "@comtammatu/ui/components/button";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { Label } from "@comtammatu/ui/components/label";
 import {
   Sheet,
   SheetContent,
@@ -688,12 +689,12 @@ function LineEditSheet({
               ) : null}
 
               <div>
-                <label
+                <Label
                   htmlFor="line-note"
                   className="text-2xs font-medium uppercase tracking-wider text-muted-foreground"
                 >
                   {GRN_CREATE_COPY.optionalNote}
-                </label>
+                </Label>
                 <Textarea
                   id="line-note"
                   value={edit.note}

@@ -40,6 +40,8 @@
     "inventory:matu-platform:operational": "node --env-file=.env.local scripts/inventory-matu-platform-operational-import.mjs",
     "inventory:matu-platform:delta-transfer": "node --env-file=.env.local scripts/inventory-matu-platform-delta-transfer.mjs",
     "inventory:matu-platform:reconcile": "node --env-file=.env.local scripts/inventory-matu-platform-reconcile.mjs",
+    "hddt:export": "corepack pnpm --filter @comtammatu/web hddt:export",
+    "inventory:cleanup:dry-run": "corepack pnpm --filter @comtammatu/web inventory:cleanup:dry-run",
     "clean:web": "node scripts/clean-web.mjs",
     "docs:okf": "node scripts/export-okf.mjs"
   },

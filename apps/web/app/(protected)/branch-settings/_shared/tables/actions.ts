@@ -103,6 +103,7 @@ export const createZone = withFormAction(
     });
 
     if (error) {
+      console.error("[branch-settings/tables:createZone] Insert zone error:", error);
       return { success: false, error: mapZoneDbError(error.code) };
     }
 
@@ -147,6 +148,7 @@ export const updateZone = withFormAction(
       .eq("tenant_id", claims.tenant_id);
 
     if (error) {
+      console.error("[branch-settings/tables:updateZone] Update zone error:", error);
       return { success: false, error: mapZoneDbError(error.code) };
     }
 
@@ -176,6 +178,7 @@ export const deleteZone = withAction(
     const { data: result, error } = await deleteQuery.select("id, branch_id");
 
     if (error) {
+      console.error("[branch-settings/tables:deleteZone] Delete zone error:", error);
       return { success: false, error: mapZoneDbError(error.code) };
     }
 
@@ -226,6 +229,7 @@ export const createTable = withFormAction(
     });
 
     if (error) {
+      console.error("[branch-settings/tables:createTable] Insert table error:", error);
       return { success: false, error: mapTableDbError(error.code) };
     }
 
@@ -275,6 +279,7 @@ export const updateTable = withFormAction(
         .in("status", ACTIVE_TABLE_ORDER_STATES);
 
       if (activeOrderError) {
+        console.error("[branch-settings/tables:updateTable] Check active orders on table error:", activeOrderError);
         return {
           success: false,
           error: "Không thể kiểm tra trạng thái đơn của bàn.",
@@ -302,6 +307,7 @@ export const updateTable = withFormAction(
       .eq("tenant_id", claims.tenant_id);
 
     if (error) {
+      console.error("[branch-settings/tables:updateTable] Update table error:", error);
       return { success: false, error: mapTableDbError(error.code) };
     }
 
@@ -332,6 +338,7 @@ export const deleteTable = withAction(
       await deleteTableQuery.select("id, branch_id");
 
     if (error) {
+      console.error("[branch-settings/tables:deleteTable] Delete table error:", error);
       return { success: false, error: mapTableDbError(error.code) };
     }
 

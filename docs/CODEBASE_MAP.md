@@ -20,7 +20,7 @@
 | Database       | [database.md](modules/database.md)             | Supabase clients, types, migrations, RLS policies       | **High** — data integrity   |
 | Finance        | [finance.md](modules/finance.md)               | Finance Basic boundary, daily money, HĐĐT, payables     | **High** — cash/legal data  |
 | Web App        | [web-app.md](modules/web-app.md)               | Next.js routes, layouts, server actions, surface shells | Medium                      |
-| UI             | [ui.md](modules/ui.md)                         | Custom Theme application, shadcn primitives, surfaces   | Low                         |
+| UI             | [ui.md](modules/ui.md)                         | Custom Theme application, Má Tư primitives, surfaces    | Low                         |
 | Security       | [security.md](modules/security.md)             | Rate limiting (Upstash Redis)                           | Medium                      |
 | Infrastructure | [infrastructure.md](modules/infrastructure.md) | Monorepo, build, deploy, environment                    | Medium                      |
 
@@ -55,7 +55,7 @@ source-of-truth inputs.
 | Data Platform       | Supabase migrations, generated types, RLS, RPCs, database clients                     |
 | Docs And Operations | Source-of-truth docs, runbooks, task tracker, agent rules, skill routing              |
 | Shared Domain       | Business rules, auth helpers, provider contracts, formatting, labels                  |
-| UI System           | Custom Theme contract, shadcn/Radix primitive baseline, app surface components        |
+| UI System           | Custom Theme contract, Má Tư Design System primitives, app surface components         |
 | Tooling And Config  | Turborepo, lint/build/test config, deployment config, scripts                         |
 | Print Agent         | ESC-POS print daemon, LAN bridge, receipt/QR rendering                                |
 | Auth And Routing    | `proxy.ts`, route resolution, ACL, branch scope, auth tests                           |
@@ -64,14 +64,14 @@ source-of-truth inputs.
 
 Generated checkout snapshot from 2026-06-27 (`node scripts/project-snapshot.mjs`):
 
-| Area                                                     |                                       Count |
-| -------------------------------------------------------- | ------------------------------------------: |
-| `apps/web/app/**/page.tsx` routes (committed)            |                                          94 |
-| API routes / route handlers                              |                                      10 / 13 |
-| Generated DB tables / views / functions / enums          |                          110 / 8 / 251 / 0 |
-| Active SQL migrations (baseline-first; +460 archived)    |                                           27 |
-| Test/spec files (`apps/web/e2e` + shared unit tests)     |                                          38 |
-| Playwright specs / shared unit tests                     |                                     10 / 28 |
+| Area                                                  |             Count |
+| ----------------------------------------------------- | ----------------: |
+| `apps/web/app/**/page.tsx` routes (committed)         |                94 |
+| API routes / route handlers                           |           10 / 13 |
+| Generated DB tables / views / functions / enums       | 110 / 8 / 251 / 0 |
+| Active SQL migrations (baseline-first; +460 archived) |                27 |
+| Test/spec files (`apps/web/e2e` + shared unit tests)  |                38 |
+| Playwright specs / shared unit tests                  |           10 / 28 |
 
 > Migrations are **baseline-first** since 2026-05-30: `supabase/migrations/00000000000000_baseline.sql` (canonical public+private schema install) + forward migrations, with the 460-file historical chain under `supabase/migrations/_archive/` and managed surfaces folded into the chain as `supabase/migrations/20260627140000_fold_managed_surfaces.sql`. See `docs/spec/database-schema.md`.
 
@@ -107,7 +107,7 @@ flowchart LR
     data -->|no| route["Route/server-action boundary"]
     rpc --> route
     route --> ui{"Touches UI?"}
-    ui -->|yes| design["Use Custom Theme contract<br/>docs/spec/design-system.md + shadcn primitive baseline"]
+    ui -->|yes| design["Use Custom Theme contract<br/>docs/spec/design-system.md + Má Tư primitives"]
     ui -->|no| verify
     design --> verify["Verify narrow path<br/>typecheck/lint/build or docs-only validation"]
     verify --> update["Update source-of-truth docs/tasks with real state"]
@@ -128,18 +128,18 @@ Decision rules:
 
 Use this matrix when adding or moving files. It is the practical replacement for "where should this live?"
 
-| Change type                                  | Primary location                                                    | Must check                                                                            | Avoid                                                  |
-| -------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| New protected route                          | `apps/web/app/(protected)/...`                                      | `proxy.ts`, `route-resolution.ts`, `module-acl.ts`, module doc                        | Duplicating ACL in layouts/pages                       |
-| New Server Action                            | Adjacent `actions.ts` under route family                            | Zod schema, `withAction`/auth helper, RLS/RPC contract                                | Returning raw Supabase error messages                  |
-| New shared business rule                     | `packages/shared/src/<domain>/...`                                  | Existing package exports and tests                                                    | Importing app-only code into shared package            |
-| New database mutation spanning multiple rows | `supabase/migrations/*.sql` RPC + typed caller                      | RLS, GRANTs, `pnpm db:types` after apply                                              | Multi-query partial writes in Server Actions           |
-| New Supabase client usage                    | `packages/database/src/supabase/*` or server-only barrel            | Import boundary table below                                                           | `@comtammatu/database` barrel in `"use client"`        |
-| New reusable UI primitive                    | `packages/ui/src/components/*`                                      | `docs/spec/design-system.md`, active shadcn baseline, `scripts/check-ui-contract.mjs` | Page-local one-off primitive clones                    |
-| New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | `docs/spec/design-system.md`, shadcn primitives, surface components                   | New visual language outside design system              |
-| New print behavior                           | `apps/print-agent/src/*` plus branch settings route if configurable | Branch-scoped config, no deploy-only layout changes                                   | Hardcoded receipt/format changes per branch            |
-| New skill/plugin/tool routing rule           | `docs/agent/rules/skills.md` plus relevant entrypoint docs          | `AGENTS.md`, `docs/agent/rules/references.md`, `docs/agent/rules/workflow.md`         | Divergent workspace-only rules, secrets, plugin caches |
-| New operational rule/runbook                 | `docs/modules/*`, `docs/runbooks/*`, `tasks/*`                      | `docs/agent/rules/references.md`                                                      | Separate agent-only doc trees                          |
+| Change type                                  | Primary location                                                    | Must check                                                                         | Avoid                                                  |
+| -------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| New protected route                          | `apps/web/app/(protected)/...`                                      | `proxy.ts`, `route-resolution.ts`, `module-acl.ts`, module doc                     | Duplicating ACL in layouts/pages                       |
+| New Server Action                            | Adjacent `actions.ts` under route family                            | Zod schema, `withAction`/auth helper, RLS/RPC contract                             | Returning raw Supabase error messages                  |
+| New shared business rule                     | `packages/shared/src/<domain>/...`                                  | Existing package exports and tests                                                 | Importing app-only code into shared package            |
+| New database mutation spanning multiple rows | `supabase/migrations/*.sql` RPC + typed caller                      | RLS, GRANTs, `pnpm db:types` after apply                                           | Multi-query partial writes in Server Actions           |
+| New Supabase client usage                    | `packages/database/src/supabase/*` or server-only barrel            | Import boundary table below                                                        | `@comtammatu/database` barrel in `"use client"`        |
+| New reusable UI primitive                    | `packages/ui/src/components/*`                                      | `docs/spec/design-system.md`, Má Tư DS primitives, `scripts/check-ui-contract.mjs` | Page-local one-off primitive clones                    |
+| New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | `docs/spec/design-system.md`, Má Tư DS primitives, surface components              | New visual language outside design system              |
+| New print behavior                           | `apps/print-agent/src/*` plus branch settings route if configurable | Branch-scoped config, no deploy-only layout changes                                | Hardcoded receipt/format changes per branch            |
+| New skill/plugin/tool routing rule           | `docs/agent/rules/skills.md` plus relevant entrypoint docs          | `AGENTS.md`, `docs/agent/rules/references.md`, `docs/agent/rules/workflow.md`      | Divergent workspace-only rules, secrets, plugin caches |
+| New operational rule/runbook                 | `docs/modules/*`, `docs/runbooks/*`, `tasks/*`                      | `docs/agent/rules/references.md`                                                   | Separate agent-only doc trees                          |
 
 ### Current Operating Model
 
@@ -223,10 +223,10 @@ Opening `/` after authentication follows the same shared default resolver.
 
 ## Critical Unknowns
 
-| #   | Unknown                                                                                                                                                                                                                                                        | Verification Step                                                             | Impact                                              |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------- |
-| 1   | Owner has tenant-wide access without an intermediate scope table.                                                                                                                                                                                              | ADR 0005 defines the owner identity source; any dual-source flip must be a new owner-gated task | May need migration later                            |
-| 2   | Test coverage exists but is still concentrated around static/unit coverage; the full POS→payment→KDS/print→HĐĐT smoke and live provider behavior still need a safe runtime.                                                                                   | Expand route smoke + end-to-end runbooks before scale                         | Refactor regressions possible on uncovered surfaces |
+| #   | Unknown                                                                                                                                                                     | Verification Step                                                                               | Impact                                              |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| 1   | Owner has tenant-wide access without an intermediate scope table.                                                                                                           | ADR 0005 defines the owner identity source; any dual-source flip must be a new owner-gated task | May need migration later                            |
+| 2   | Test coverage exists but is still concentrated around static/unit coverage; the full POS→payment→KDS/print→HĐĐT smoke and live provider behavior still need a safe runtime. | Expand route smoke + end-to-end runbooks before scale                                           | Refactor regressions possible on uncovered surfaces |
 
 ## Priority Recommendations
 

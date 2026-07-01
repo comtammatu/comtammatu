@@ -32,8 +32,7 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value:
-      "camera=(self), microphone=(), geolocation=(), interest-cohort=()",
+    value: "camera=(self), microphone=(), geolocation=(), interest-cohort=()",
   },
   // 2 years + includeSubDomains + preload makes app.comtammatu.com eligible
   // for the Chrome/Firefox HSTS preload list — first-visit downgrade attacks
@@ -88,9 +87,9 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "4mb",
     },
-    // Per-icon tree-shaking for lucide-react and radix-ui barrel. Without
-    // this, importing any icon/primitive pulls the full barrel into bundles.
-    optimizePackageImports: ["lucide-react", "radix-ui"],
+    // Per-icon tree-shaking for lucide-react. Without this, importing any icon
+    // pulls the full barrel into bundles.
+    optimizePackageImports: ["lucide-react"],
   },
 };
 

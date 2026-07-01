@@ -17,6 +17,7 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
+import { Label } from "@comtammatu/ui/components/label";
 import {
   InputGroup,
   InputGroupAddon,
@@ -470,24 +471,30 @@ export function IssuesClient({
             ))}
           </SelectContent>
         </Select>
-        <label className="flex min-w-40 flex-col gap-1 text-xs font-medium text-muted-foreground">
-          Từ ngày
+        <div className="flex min-w-40 flex-col gap-1">
+          <Label htmlFor="recorded-start-date" className="text-xs font-medium text-muted-foreground font-normal">
+            Từ ngày
+          </Label>
           <Input
+            id="recorded-start-date"
             type="date"
             value={recordedStartDate}
             onChange={(event) => setRecordedStartDate(event.target.value)}
             className="h-10 w-40 bg-background"
           />
-        </label>
-        <label className="flex min-w-40 flex-col gap-1 text-xs font-medium text-muted-foreground">
-          Đến ngày
+        </div>
+        <div className="flex min-w-40 flex-col gap-1">
+          <Label htmlFor="recorded-end-date" className="text-xs font-medium text-muted-foreground font-normal">
+            Đến ngày
+          </Label>
           <Input
+            id="recorded-end-date"
             type="date"
             value={recordedEndDate}
             onChange={(event) => setRecordedEndDate(event.target.value)}
             className="h-10 w-40 bg-background"
           />
-        </label>
+        </div>
         <Button
           type="button"
           variant="outline"

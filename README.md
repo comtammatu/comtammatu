@@ -29,7 +29,7 @@ Active tracker: [`tasks/todo.md`](tasks/todo.md).
 - **Runtime:** Node.js ≥ 24
 - **Framework:** Next.js 16.2 (App Router, Turbopack dev, Webpack production build)
 - **Language:** TypeScript 6.0 (strict + `noUncheckedIndexedAccess`)
-- **UI:** React 19.2 · Tailwind CSS 4.2 · Com Tam Ma Tu Custom Theme on shadcn/ui (`radix-lyra`, preset `buFywKm`) · Radix
+- **UI:** React 19.2 · Tailwind CSS 4.2 · Com Tam Ma Tu Custom Theme · Má Tư Design System primitives (`@comtammatu/ui`) · Radix
 - **Validation:** Zod 4
 - **Database:** Supabase (PostgREST + Auth + RLS), JWT custom claims hook
 - **Monorepo:** Turborepo 2.9 + pnpm 10.33
@@ -48,7 +48,7 @@ packages/
   database/         # Supabase clients (server / client / service / middleware) + types
   shared/           # Auth (module-acl, permissions, scope), labels, payroll calc, formatters
   security/         # Upstash Redis rate limiting
-  ui/               # shadcn/Radix primitives + Tailwind 4 token runtime
+  ui/               # Má Tư Design System primitives + Tailwind 4 token runtime
 supabase/
   migrations/       # SQL migrations (production: file → PR → merge → owner apply)
 docs/
@@ -65,20 +65,20 @@ scripts/            # SQL seeds, lint helpers
 
 ## URL Routes
 
-| Path                        | Audience         | Surface                                       |
-| --------------------------- | ---------------- | --------------------------------------------- |
-| `/login`                    | Public           | Authentication                                |
-| `/admin/*`                  | Manager+         | Dashboard, settings, staff, reports           |
-| `/menu`                     | Manager+         | Menu CRUD                                     |
-| `/inventory/*`              | Inventory roles  | Canonical inventory hub (PO, GRN, stocktake…) |
-| `/finance/*`                | Finance roles    | Finance Basic, doanh thu ròng, food-cost, chi phí, HĐĐT |
-| `/hr/*`                     | HR/payroll       | Payroll periods, payslips                     |
-| `/orders`                   | Manager+         | Cross-branch order browser                    |
-| `/notifications`            | All staff        | Notification center                           |
-| `/employee/*`               | All staff        | Self-service: clock, schedule, payslip        |
-| `/br/[branchId]/pos`        | Cashier / service | Point of Sale (PWA installable)              |
-| `/br/[branchId]/kds`        | Chef             | Kitchen Display                               |
-| `/br/[branchId]/settings/*` | Branch manager+  | Per-branch POS, tables, printers              |
+| Path                        | Audience          | Surface                                                 |
+| --------------------------- | ----------------- | ------------------------------------------------------- |
+| `/login`                    | Public            | Authentication                                          |
+| `/admin/*`                  | Manager+          | Dashboard, settings, staff, reports                     |
+| `/menu`                     | Manager+          | Menu CRUD                                               |
+| `/inventory/*`              | Inventory roles   | Canonical inventory hub (PO, GRN, stocktake…)           |
+| `/finance/*`                | Finance roles     | Finance Basic, doanh thu ròng, food-cost, chi phí, HĐĐT |
+| `/hr/*`                     | HR/payroll        | Payroll periods, payslips                               |
+| `/orders`                   | Manager+          | Cross-branch order browser                              |
+| `/notifications`            | All staff         | Notification center                                     |
+| `/employee/*`               | All staff         | Self-service: clock, schedule, payslip                  |
+| `/br/[branchId]/pos`        | Cashier / service | Point of Sale (PWA installable)                         |
+| `/br/[branchId]/kds`        | Chef              | Kitchen Display                                         |
+| `/br/[branchId]/settings/*` | Branch manager+   | Per-branch POS, tables, printers                        |
 
 Auth + ACL được enforce tại [`apps/web/proxy.ts`](apps/web/proxy.ts) qua Auth v2 (Position ⟂ Permission, RLS-first). Route catalog: [`packages/shared/src/auth/module-acl.ts`](packages/shared/src/auth/module-acl.ts).
 
@@ -120,7 +120,6 @@ pnpm --filter @comtammatu/web guides:capture     # Capture POS flow screenshots
 | Doc                                                            | Purpose                                        |
 | -------------------------------------------------------------- | ---------------------------------------------- |
 | [`AGENTS.md`](AGENTS.md)                                       | Canonical agent entrypoint + rule loading      |
-| [`DESIGN.md`](DESIGN.md)                                       | Design foundation — tokens, typography, motion |
 | [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)                 | Codebase map + hub files + module index        |
 | [`tasks/todo.md`](tasks/todo.md)                               | Active work tracker                            |
 | [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Architecture decisions log                     |

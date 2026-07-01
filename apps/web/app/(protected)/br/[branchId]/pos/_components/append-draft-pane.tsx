@@ -138,9 +138,9 @@ function AppendDraftPaneComponent({
                         "bg-destructive/10 opacity-0 motion-safe:scale-95",
                     )}
                   >
-                    <button
-                      type="button"
-                      className="w-full min-w-0 text-left disabled:pointer-events-none disabled:opacity-50"
+                    <Button
+                      variant="ghost"
+                      className="w-full min-w-0 text-left justify-start font-normal h-auto p-0 disabled:pointer-events-none disabled:opacity-50"
                       aria-label={messages.pos.appendDraft.editItemAria(
                         displayName,
                       )}
@@ -157,7 +157,7 @@ function AppendDraftPaneComponent({
                         note={summary.note}
                         isPriority={summary.isPriority}
                       />
-                    </button>
+                    </Button>
                   </Item>
                   <Button
                     type="button"

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
+import { Label } from "@comtammatu/ui/components/label";
 import {
   Item,
   ItemActions,
@@ -32,7 +33,7 @@ import { formatVND } from "@comtammatu/shared/format";
 import { getVNMonthYear } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import { KpiCard } from "@/components/kpi/kpi-card";
-import { AppSection } from "@/components/surface";
+import { AppSection, DescriptionList } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -328,9 +329,12 @@ export function PayrollDetailClient({
       >
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex flex-wrap items-end gap-2">
-            <label className="flex flex-col gap-1.5 text-sm text-muted-foreground">
-              <span>{copy.standardDays}</span>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="standard-days-input" className="text-xs text-muted-foreground font-normal">
+                {copy.standardDays}
+              </Label>
               <Input
+                id="standard-days-input"
                 aria-label={copy.standardDays}
                 className="h-9 w-24 text-right font-mono tabular-nums"
                 disabled={
@@ -347,7 +351,7 @@ export function PayrollDetailClient({
                 value={standardDaysInput}
                 onChange={(event) => setStandardDaysInput(event.target.value)}
               />
-            </label>
+            </div>
             <Button
               type="button"
               variant="outline"
@@ -469,36 +473,67 @@ export function PayrollDetailClient({
                   {Number(entry.payable_days)}/{Number(entry.standard_days)}{" "}
                   {copy.table.payableDays}
                 </ItemDescription>
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                  <span>{copy.table.workingDays}</span>
-                  <span className="text-right font-mono tabular-nums">
-                    {Number(entry.working_days)}
-                  </span>
-                  <span>{copy.table.paidLeaveDays}</span>
-                  <span className="text-right font-mono tabular-nums">
-                    {Number(entry.paid_leave_days)}
-                  </span>
-                  <span>{copy.table.unpaidLeaveDays}</span>
-                  <span className="text-right font-mono tabular-nums">
-                    {Number(entry.unpaid_leave_days)}
-                  </span>
-                  <span>{copy.table.gross}</span>
-                  <span className="text-right font-mono tabular-nums">
-                    {formatVND(Number(entry.gross_total))}
-                  </span>
-                  <span>{copy.table.insuranceBase}</span>
-                  <span className="text-right font-mono tabular-nums">
-                    {formatVND(Number(entry.insurance_base))}
-                  </span>
-                  <span>{copy.table.employeeInsurance}</span>
-                  <span className="text-right font-mono tabular-nums">
-                    {formatVND(Number(entry.total_insurance_employee))}
-                  </span>
-                  <span>{copy.table.pit}</span>
-                  <span className="text-right font-mono tabular-nums">
-                    {formatVND(Number(entry.pit_tax))}
-                  </span>
-                </div>
+                <DescriptionList
+                  className="mt-2 text-xs text-muted-foreground flex flex-col gap-2 [&>div]:flex [&>div]:flex-row [&>div]:justify-between [&>div]:items-center"
+                  items={[
+                    {
+                      term: copy.table.workingDays,
+                      description: (
+                        <span className="font-mono tabular-nums">
+                          {Number(entry.working_days)}
+                        </span>
+                      ),
+                    },
+                    {
+                      term: copy.table.paidLeaveDays,
+                      description: (
+                        <span className="font-mono tabular-nums">
+                          {Number(entry.paid_leave_days)}
+                        </span>
+                      ),
+                    },
+                    {
+                      term: copy.table.unpaidLeaveDays,
+                      description: (
+                        <span className="font-mono tabular-nums">
+                          {Number(entry.unpaid_leave_days)}
+                        </span>
+                      ),
+                    },
+                    {
+                      term: copy.table.gross,
+                      description: (
+                        <span className="font-mono tabular-nums">
+                          {formatVND(Number(entry.gross_total))}
+                        </span>
+                      ),
+                    },
+                    {
+                      term: copy.table.insuranceBase,
+                      description: (
+                        <span className="font-mono tabular-nums">
+                          {formatVND(Number(entry.insurance_base))}
+                        </span>
+                      ),
+                    },
+                    {
+                      term: copy.table.employeeInsurance,
+                      description: (
+                        <span className="font-mono tabular-nums">
+                          {formatVND(Number(entry.total_insurance_employee))}
+                        </span>
+                      ),
+                    },
+                    {
+                      term: copy.table.pit,
+                      description: (
+                        <span className="font-mono tabular-nums">
+                          {formatVND(Number(entry.pit_tax))}
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
               </ItemContent>
               <ItemActions>
                 <div className="text-right font-mono tabular-nums font-bold">

@@ -747,20 +747,26 @@ function StyleToggles({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-4">
-      <label className="flex items-center gap-1.5 text-sm">
+      <div className="flex items-center gap-1.5">
         <Checkbox
+          id="toggle-style-bold"
           checked={Boolean(block.bold)}
           onCheckedChange={(v) => onPatch({ bold: v === true })}
         />
-        {copy.styleBold}
-      </label>
-      <label className="flex items-center gap-1.5 text-sm">
+        <Label htmlFor="toggle-style-bold" className="text-sm font-normal cursor-pointer">
+          {copy.styleBold}
+        </Label>
+      </div>
+      <div className="flex items-center gap-1.5">
         <Checkbox
+          id="toggle-style-double"
           checked={Boolean(block.double)}
           onCheckedChange={(v) => onPatch({ double: v === true })}
         />
-        {copy.styleDouble}
-      </label>
+        <Label htmlFor="toggle-style-double" className="text-sm font-normal cursor-pointer">
+          {copy.styleDouble}
+        </Label>
+      </div>
     </div>
   );
 }

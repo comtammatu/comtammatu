@@ -48,7 +48,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   pos: "POS",
   kds: "KDS",
   runner: "Màn gọi số",
-  operator_home: "Vận hành chi nhánh",
+  operator_home: "Branch Hub",
   branch_dashboard: "Điều hành chi nhánh",
   branch_settings: "Cài đặt chi nhánh",
   branch_menu_limits: "Giới hạn bán",
@@ -81,9 +81,9 @@ export const APP_COPY_VI = {
   branchOperationsKds: "Bếp (KDS)",
   branchOperationsRunner: "Màn gọi số",
   branchCommand: "Điều hành chi nhánh",
-  operatorHome: "Trang chủ",
+  operatorHome: "Branch Hub",
   operatorShift: "Ca",
-  operatorAriaLabel: "Điều hướng vận hành chi nhánh",
+  operatorAriaLabel: "Điều hướng Branch Hub",
   loading: "Đang tải…",
   refresh: "Làm mới",
   noAreaData: "Không có dữ liệu khu vực",
@@ -159,7 +159,9 @@ export function resolveSiteKind(site: SiteLike): SiteKind {
 }
 
 export function getSiteKindLabelVi(siteKind: string): string {
-  return SITE_KIND_LABELS_VI[siteKind as SiteKind] ?? SITE_KIND_LABELS_VI.branch;
+  return (
+    SITE_KIND_LABELS_VI[siteKind as SiteKind] ?? SITE_KIND_LABELS_VI.branch
+  );
 }
 
 export function getInventorySiteKindLabelVi(siteKind: string): string {

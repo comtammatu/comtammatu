@@ -11,6 +11,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Label } from "@comtammatu/ui/components/label";
 import {
   Item,
   ItemActions,
@@ -165,14 +166,14 @@ export function StationsClient({
       <AppToolbar
         filters={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <label className="text-sm font-medium">
+            <Label htmlFor="branch-select" className="text-sm font-medium">
               {messages.settings.common.branchLabel}
-            </label>
+            </Label>
             <Select
               value={selectedBranchId?.toString() ?? ""}
               onValueChange={(v) => setSelectedBranchId(Number(v))}
             >
-              <SelectTrigger className="w-full sm:w-60">
+              <SelectTrigger id="branch-select" className="w-full sm:w-60">
                 <SelectValue placeholder={BRANCH_VI.select} />
               </SelectTrigger>
               <SelectContent>

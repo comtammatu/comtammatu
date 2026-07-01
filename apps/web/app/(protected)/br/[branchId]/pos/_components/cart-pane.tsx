@@ -9,6 +9,7 @@ import { Item } from "@comtammatu/ui/components/item";
 import { Kbd, KbdGroup } from "@comtammatu/ui/components/kbd";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { Label } from "@comtammatu/ui/components/label";
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -437,14 +438,14 @@ function CartPaneComponent({
 
           <div className="flex shrink-0 flex-col gap-3 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
             <div className="flex flex-col gap-1.5">
-              <label
+              <Label
                 htmlFor="pos-order-note"
-                className="text-sm font-semibold uppercase tracking-wider text-muted-foreground"
+                className="text-sm font-semibold uppercase tracking-wider text-muted-foreground font-normal"
               >
                 {cart.orderType === "takeaway"
                   ? messages.pos.pendingDraft.takeawayNoteLabel
                   : messages.pos.pendingDraft.noteLabel}
-              </label>
+              </Label>
               <Textarea
                 id="pos-order-note"
                 value={cart.note}

@@ -6,6 +6,7 @@ import { Save as IconSave } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { Label } from "@comtammatu/ui/components/label";
 import {
   Item,
   ItemContent,
@@ -406,9 +407,12 @@ function ThresholdItem({
       </ItemHeader>
       <ItemContent className="basis-full">
         <div className="grid grid-cols-3 gap-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium">{copy.cols.min}</span>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor={`min-stock-${row.id}`} className="text-xs font-medium font-normal">
+              {copy.cols.min}
+            </Label>
             <QuantityInput
+              id={`min-stock-${row.id}`}
               value={row.minStock}
               onValueChange={(value) => onPatch("minStock", value)}
               maxFractionDigits={3}
@@ -416,10 +420,13 @@ function ThresholdItem({
               className="h-8 text-right tabular-nums"
               aria-label={`${copy.cols.min} ${row.name}`}
             />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium">{copy.cols.reorder}</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor={`reorder-point-${row.id}`} className="text-xs font-medium font-normal">
+              {copy.cols.reorder}
+            </Label>
             <QuantityInput
+              id={`reorder-point-${row.id}`}
               value={row.reorderPoint}
               onValueChange={(value) => onPatch("reorderPoint", value)}
               maxFractionDigits={3}
@@ -427,10 +434,13 @@ function ThresholdItem({
               className="h-8 text-right tabular-nums"
               aria-label={`${copy.cols.reorder} ${row.name}`}
             />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium">{copy.cols.max}</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor={`max-stock-${row.id}`} className="text-xs font-medium font-normal">
+              {copy.cols.max}
+            </Label>
             <QuantityInput
+              id={`max-stock-${row.id}`}
               value={row.maxStock}
               onValueChange={(value) => onPatch("maxStock", value)}
               maxFractionDigits={3}
@@ -438,7 +448,7 @@ function ThresholdItem({
               className="h-8 text-right tabular-nums"
               aria-label={`${copy.cols.max} ${row.name}`}
             />
-          </label>
+          </div>
         </div>
       </ItemContent>
     </Item>

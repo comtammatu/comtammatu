@@ -19,6 +19,7 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Progress } from "@comtammatu/ui/components/progress";
+import { Label } from "@comtammatu/ui/components/label";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppSection } from "@/components/surface";
@@ -191,12 +192,12 @@ export function CloseSessionSheet({
                   disabled={isPending}
                 />
                 <div className="flex flex-col gap-2">
-                  <label
+                  <Label
                     htmlFor="close-note"
-                    className="text-sm font-semibold uppercase tracking-wide text-muted-foreground"
+                    className="text-sm font-semibold uppercase tracking-wide text-muted-foreground font-normal"
                   >
                     Ghi chú ca (tuỳ chọn)
-                  </label>
+                  </Label>
                   <Textarea
                     id="close-note"
                     value={note}

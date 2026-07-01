@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: legacy inline Vietnamese copy in ingredient import/export dialog */
+
 import { useRef, useState, useTransition } from "react";
 import {
   CircleAlert as IconAlertCircle,
@@ -9,6 +11,9 @@ import {
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { Input } from "@comtammatu/ui/components/input";
+import { Label } from "@comtammatu/ui/components/label";
+import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import {
   Dialog,
   DialogContent,
@@ -190,10 +195,10 @@ function IngredientImportDialog({
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <label htmlFor="ing-import-file" className="text-sm font-medium">
+            <Label htmlFor="ing-import-file" className="text-sm font-medium">
               {INVENTORY_VI.chooseFileLabel}
-            </label>
-            <input
+            </Label>
+            <Input
               id="ing-import-file"
               ref={fileRef}
               type="file"
@@ -204,7 +209,7 @@ function IngredientImportDialog({
                 setError(null);
                 setIssues([]);
               }}
-              className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-muted/70"
+              className="w-full file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-muted/70 h-auto"
             />
             {fileName ? (
               <p className="text-xs text-muted-foreground">
@@ -222,21 +227,21 @@ function IngredientImportDialog({
 
           {issues.length > 0 ? (
             <div className="max-h-52 overflow-auto rounded-md border bg-muted/30 p-2 text-sm">
-              <ul className="flex flex-col gap-1">
+              <ItemGroup className="flex flex-col gap-1 p-0 rounded-none border-0">
                 {issues.slice(0, 50).map((iss, idx) => (
-                  <li key={idx} className="flex gap-2">
+                  <Item key={idx} className="flex gap-2 p-0 rounded-none border-0 min-h-0">
                     <span className="font-mono text-xs text-muted-foreground">
                       [dòng {iss.row}]
                     </span>
                     <span>{iss.message}</span>
-                  </li>
+                  </Item>
                 ))}
                 {issues.length > 50 ? (
-                  <li className="text-xs text-muted-foreground">
+                  <Item className="text-xs text-muted-foreground p-0 rounded-none border-0 min-h-0">
                     …và {issues.length - 50} lỗi khác
-                  </li>
+                  </Item>
                 ) : null}
-              </ul>
+              </ItemGroup>
             </div>
           ) : null}
 

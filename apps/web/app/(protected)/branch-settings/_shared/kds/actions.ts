@@ -88,6 +88,7 @@ export const createStation = withFormAction(
       .select("id");
 
     if (error) {
+      console.error("[branch-settings/kds:createStation] Insert station error:", error);
       return { success: false, error: mapStationDbError(error.code) };
     }
 
@@ -142,6 +143,7 @@ export const updateStation = withFormAction(
     const { data: result, error } = await query.select("id, branch_id");
 
     if (error) {
+      console.error("[branch-settings/kds:updateStation] Update station error:", error);
       return { success: false, error: mapStationDbError(error.code) };
     }
 
@@ -189,6 +191,7 @@ export const saveStationCategories = withAction(
     });
 
     if (error) {
+      console.error("[branch-settings/kds:saveStationCategories] RPC save_station_categories error:", error);
       if (error.message?.includes("not found")) {
         return { success: false, error: "Trạm KDS không tồn tại" };
       }
@@ -240,6 +243,7 @@ export const upsertStationWithCategories = withAction(
     );
 
     if (error) {
+      console.error("[branch-settings/kds:upsertStationWithCategories] RPC upsert_station_with_categories error:", error);
       return { success: false, error: mapStationDbError(error.code) };
     }
 

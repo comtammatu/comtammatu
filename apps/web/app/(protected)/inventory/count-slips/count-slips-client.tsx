@@ -16,6 +16,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { cn } from "@comtammatu/ui";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
@@ -101,7 +102,7 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
           icon={<IconClipboardCheck />}
         />
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ItemGroup className="flex flex-col gap-3 p-0 rounded-none border-0">
           {pending.map((row) => (
             <CountSlipCard
               key={row.id}
@@ -110,7 +111,7 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
               onRecount={() => applyStatus(row.id, "needs_changes")}
             />
           ))}
-        </ul>
+        </ItemGroup>
       )}
 
       {history.length > 0 ? (
@@ -118,11 +119,11 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
           <h2 className="font-heading text-base font-semibold tracking-tight">
             Đã xử lý gần đây
           </h2>
-          <ul className="flex flex-col gap-3">
+          <ItemGroup className="flex flex-col gap-3 p-0 rounded-none border-0">
             {history.map((row) => (
               <CountSlipCard key={row.id} row={row} readOnly />
             ))}
-          </ul>
+          </ItemGroup>
         </section>
       ) : null}
     </AppPage>
@@ -238,11 +239,12 @@ function CountSlipCard({
         </div>
 
         <div className="flex flex-col gap-3 p-4 pt-0">
-          <ul className="flex flex-col gap-2">
+          <ItemGroup className="flex flex-col gap-2 p-0 rounded-none border-0">
             {row.lines.map((line) => (
-              <li
+              <Item
                 key={line.id}
-                className="rounded-md border bg-muted/20 p-3 text-sm"
+                variant="muted"
+                className="rounded-md border bg-muted/20 p-3 text-sm flex flex-col items-stretch"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -279,9 +281,9 @@ function CountSlipCard({
                     <div className="text-xs text-muted-foreground">Lệch</div>
                   </div>
                 </div>
-              </li>
+              </Item>
             ))}
-          </ul>
+          </ItemGroup>
 
           {row.note ? (
             <p className="text-xs italic text-muted-foreground">

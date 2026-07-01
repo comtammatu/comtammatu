@@ -6,7 +6,6 @@ import {
   type LucideIcon,
   TriangleAlert as IconAlertTriangle,
   ArrowLeftRight as IconArrowLeftRight,
-  ArrowRight as IconArrowRight,
   ClipboardCheck as IconClipboardCheck,
   SquareCheck as IconSquareCheck,
   ClipboardList as IconClipboardList,
@@ -17,15 +16,19 @@ import {
   Truck as IconTruck,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   AppEmptyState,
   AppLinkCard,
   AppPage,
   AppPageHeader,
   AppSection,
+  KpiRow,
+  LinkCardGrid,
   type AppLinkCardProps,
 } from "@/components/surface";
 import { formatVND } from "./_lib/format";
@@ -331,6 +334,28 @@ const taskBadge: Record<
   primary: { label: "Tiếp tục", variant: "default" },
 };
 
+const flowTone: Record<
+  FlowCard["tone"],
+  NonNullable<AppLinkCardProps["tone"]>
+> = {
+  default: "secondary",
+  destructive: "warning",
+  warning: "warning",
+  info: "info",
+  success: "success",
+};
+
+const flowBadgeVariant: Record<
+  FlowCard["tone"],
+  NonNullable<AppLinkCardProps["badgeVariant"]>
+> = {
+  default: "secondary",
+  destructive: "destructive",
+  warning: "warning",
+  info: "info",
+  success: "success",
+};
+
 function buildTasks(props: DashboardProps): TaskItem[] {
   const {
     siteKind,
@@ -482,6 +507,13 @@ export function DashboardClient(props: DashboardProps) {
   const tasks = buildTasks(props);
   const isOversight = isInventoryOversightRole(props.userRole);
 
+  const openTransfers = transfers.filter((t) => isTransferOpen(t.status));
+  const inboundTransferCount = openTransfers.filter(
+    (t) => t.toBranch === siteName,
+  ).length;
+  const outboundTransferCount = openTransfers.filter(
+    (t) => t.fromBranch === siteName,
+  ).length;
   const activeTransferList = transfers
     .filter((t) =>
       [
@@ -496,8 +528,57 @@ export function DashboardClient(props: DashboardProps) {
     (s) => s.status === "in_progress",
   );
 
-  const siteKindLabel = "Chi nhánh";
-  const stockValueLabel = "Giá trị tồn kho:";
+  const siteKindLabel = getInventorySiteKindLabelVi(props.siteKind);
+  const stockValueLabel = "Giá trị tồn kho";
+  const dashboardKpis = [
+    {
+      label: showProcurement
+        ? "PO đang chờ"
+        : isOversight
+          ? "Hồ sơ nhập đang chờ"
+          : "Phiếu đến cần nhận",
+      value: String(
+        showProcurement || isOversight ? pendingPO : inboundTransferCount,
+      ),
+      hint: showProcurement
+        ? "Nhập/Nhận/Đối soát"
+        : "Điều phối/Sản xuất",
+      tone: "neutral" as const,
+      href: showProcurement ? paths.purchaseOrders : paths.transfers,
+      icon: <IconShoppingCart className="size-4" />,
+    },
+    {
+      label: "Luồng đang xử lý",
+      value: String(activeTransfers),
+      hint: `${inboundTransferCount} đến / ${outboundTransferCount} đi`,
+      tone: activeTransfers > 0 ? ("primary" as const) : ("neutral" as const),
+      href: paths.transfers,
+      icon: <IconArrowLeftRight className="size-4" />,
+    },
+    {
+      label: "Cảnh báo hạn dùng",
+      value: String(expiryAlerts.length),
+      hint: "Kiểm soát tồn",
+      tone: expiryAlerts.length > 0 ? ("warning" as const) : ("neutral" as const),
+      href: paths.expiry,
+      icon: <IconHourglass className="size-4" />,
+    },
+    ...(showProcurement
+      ? [
+          {
+            label: "GRN cần kiểm tra giá",
+            value: String(props.priceReviewCount),
+            hint: "30 ngày gần nhất",
+            tone:
+              props.priceReviewCount > 0
+                ? ("destructive" as const)
+                : ("neutral" as const),
+            href: paths.grn,
+            icon: <IconReceipt className="size-4" />,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <AppPage width={isMobile ? "narrow" : "wide"}>
@@ -518,159 +599,69 @@ export function DashboardClient(props: DashboardProps) {
           </span>
         }
       />
-      <section className="flex flex-col gap-3">
-        <h2 className="font-heading text-base font-semibold">
-          {isOversight
-            ? "3 điểm giám sát chính"
-            : messages.inventory.dashboard.mainFlowsTitle}
-        </h2>
-        <div className="grid gap-3 lg:grid-cols-3">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="font-heading text-base font-semibold">
+            {isOversight
+              ? messages.inventory.dashboard.mainFlowsOversightTitle
+              : messages.inventory.dashboard.mainFlowsTitle}
+          </h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {isOversight
+              ? messages.inventory.dashboard.mainFlowsOversightDescription
+              : messages.inventory.dashboard.mainFlowsOperatorDescription}
+          </p>
+        </div>
+        <LinkCardGrid>
           {flowCards.map((flow) => {
             const Icon = flow.icon;
+            const primaryAction =
+              flow.actions.find((action) => action.primary) ?? flow.actions[0];
 
             return (
-              <div
+              <AppLinkCard
                 key={flow.key}
-                className={cn(
-                  "relative overflow-hidden rounded-lg border bg-card",
-                  flow.tone === "destructive" && "bg-destructive/5",
-                  flow.tone === "warning" && "bg-warning/10",
-                  flow.tone === "info" && "bg-info/10",
-                  flow.tone === "success" && "bg-success/10",
-                )}
-              >
-                <div className="flex flex-col gap-3 p-4 pb-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-background">
-                        <Icon className="size-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-heading text-base font-semibold leading-tight">
-                          {flow.title}
-                        </h3>
-                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                          {flow.description}
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      className={cn(
-                        "font-heading shrink-0 font-mono text-2xl font-bold tabular-nums",
-                        flow.metric === "0"
-                          ? "text-muted-foreground"
-                          : "text-primary",
-                      )}
-                    >
-                      {flow.metric}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 rounded-md border bg-background/80 px-3 py-2">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {flow.metricLabel}
-                      </p>
-                      <p className="text-sm font-medium">{flow.statusLabel}</p>
-                    </div>
-                    <Button variant="ghost" size="icon-sm" asChild>
-                      <Link
-                        href={withBranch(flow.href)}
-                        aria-label={flow.title}
-                      >
-                        <IconArrowRight />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-                <div className="p-4 pt-0">
-                  <div className="flex flex-wrap gap-2">
-                    {flow.actions.map((action) => (
-                      <Button
-                        key={`${flow.key}-${action.label}`}
-                        variant={action.primary ? "default" : "outline"}
-                        size="sm"
-                        asChild
-                      >
-                        <Link href={withBranch(action.href)}>
-                          {action.label}
-                        </Link>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                href={withBranch(primaryAction?.href ?? flow.href)}
+                title={flow.title}
+                description={flow.description}
+                icon={<Icon />}
+                tone={flowTone[flow.tone]}
+                badge={flow.statusLabel}
+                badgeVariant={flowBadgeVariant[flow.tone]}
+                metric={{ value: flow.metric, label: flow.metricLabel }}
+                ctaLabel={primaryAction?.label ?? "Mở xử lý"}
+              />
             );
           })}
-        </div>
-      </section>
+        </LinkCardGrid>
+      </div>
 
-      {/* KPI cards — "Giá trị tồn kho" lives in header meta to avoid duplication. */}
-      <div
-        className={cn(
-          "grid gap-3",
-          isMobile
-            ? "grid-cols-2"
-            : showProcurement
-              ? "sm:grid-cols-2 lg:grid-cols-4"
-              : "sm:grid-cols-3",
-        )}
-      >
-        {[
-          {
-            label: isOversight ? "Hồ sơ nhập đang chờ" : "PO đang chờ",
-            value: String(pendingPO),
-            tone: "default" as const,
-          },
-          {
-            label: isOversight ? "Luồng đang xử lý" : "Transfer đang xử lý",
-            value: String(activeTransfers),
-            tone: "default" as const,
-          },
-          {
-            label: "Cảnh báo hết hạn",
-            value: String(expiryAlerts.length),
-            tone:
-              expiryAlerts.length > 0
-                ? ("warning" as const)
-                : ("default" as const),
-          },
-          ...(showProcurement
-            ? [
-                {
-                  label: "GRN cần kiểm tra giá (30d)",
-                  value: String(props.priceReviewCount),
-                  tone:
-                    props.priceReviewCount > 0
-                      ? ("destructive" as const)
-                      : ("default" as const),
-                },
-              ]
-            : []),
-        ].map((kpi) => (
-          <div
-            key={kpi.label}
-            className={cn(
-              "rounded-lg border bg-card",
-              kpi.tone === "destructive" &&
-                "border-destructive/40 bg-destructive/5",
-              kpi.tone === "warning" && "border-warning/40 bg-warning/10",
-            )}
-          >
-            <div className="p-4">
-              <p className={cn("text-muted-foreground text-xs")}>{kpi.label}</p>
-              <p
-                className={cn(
-                  "font-bold tabular-nums",
-                  isMobile ? "mt-1 text-lg" : "mt-1 text-2xl",
-                  kpi.tone === "destructive" && "text-destructive",
-                  kpi.tone === "warning" && "text-warning",
-                )}
-              >
-                {kpi.value}
-              </p>
-            </div>
-          </div>
-        ))}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="font-heading text-base font-semibold">
+            {messages.inventory.dashboard.operationalMetricsTitle}
+          </h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {messages.inventory.dashboard.operationalMetricsDescription}
+          </p>
+        </div>
+        <KpiRow
+          density="compact"
+          className={showProcurement ? "lg:grid-cols-4" : undefined}
+        >
+          {dashboardKpis.map((kpi) => (
+            <KpiCard
+              key={kpi.label}
+              label={kpi.label}
+              value={kpi.value}
+              hint={kpi.hint}
+              tone={kpi.tone}
+              href={withBranch(kpi.href)}
+              icon={kpi.icon}
+              density="compact"
+            />
+          ))}
+        </KpiRow>
       </div>
 
       {/* All-clear hero replaces the four panels when nothing pending. */}
