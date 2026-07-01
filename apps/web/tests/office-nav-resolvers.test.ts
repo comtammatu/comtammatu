@@ -11,7 +11,6 @@ import {
 import {
   resolveOfficePrimaryTabs,
   resolveOfficeDeepNav,
-  resolveBranchDeepNav,
 } from "../app/lib/office-nav";
 import {
   findActivePrimaryNavItem,
@@ -23,7 +22,7 @@ import {
 // from MODULE_ACL membership so the primary sidebar tabs stay single-sourced.
 
 // Candidate modules the office sidebar can surface, in composition order:
-// one admin tab + cross-workspace modules + branch-management modules.
+// one admin tab + cross-workspace modules. Branch-scoped routes live in Branch Hub.
 const ADMIN_TAB_MODULE: ModuleKey = "dashboard";
 const WORKSPACE_TAB_MODULES: ModuleKey[] = [
   "menu",
@@ -80,7 +79,7 @@ function expectedTenantHrefs(role: StaffRole): string[] {
     .map((key) => MODULE_ACL[key].path);
 }
 
-test("owner sidebar tabs include admin + all workspaces + branch management", () => {
+test("owner sidebar tabs include admin + all tenant workspaces", () => {
   const items = resolveOfficePrimaryTabs("owner", BRANCH_ID);
   const hrefs = hrefSet(items);
 
@@ -108,14 +107,15 @@ test("owner sidebar tabs include admin + all workspaces + branch management", ()
     "staff must stay inside the HR sub-nav, not the primary tabs",
   );
 
-  const branchTabs = items.filter((item) =>
-    item.href.startsWith(`/br/${BRANCH_ID}`),
+  const branchTabs = items.filter((item) => item.href.startsWith("/br/"));
+  assert.deepEqual(
+    branchTabs,
+    [],
+    "branch-scoped tabs must stay in Branch Hub, not office sidebar",
   );
-  assert.equal(branchTabs.length, 1, "branch management must be one tab");
-  assert.equal(branchTabs[0]?.label, "Quản lý chi nhánh");
 });
 
-test("owner sidebar tabs omit branch-management entries without a branchId", () => {
+test("owner sidebar tabs omit branch-scoped entries without a branchId", () => {
   const items = resolveOfficePrimaryTabs("owner");
   const branchHrefs = items.filter((item) => item.href.startsWith("/br/"));
   assert.deepEqual(branchHrefs, []);
@@ -175,10 +175,6 @@ test("deep-nav hrefs and labels are deduplicated", () => {
   assertUniqueTabs(
     flattenGroups(resolveOfficeDeepNav("owner", "orders")),
     "orders sub-tabs",
-  );
-  assertUniqueTabs(
-    flattenGroups(resolveBranchDeepNav("owner", BRANCH_ID)),
-    "branch-management sub-tabs",
   );
 });
 
@@ -251,27 +247,4 @@ test("resolveOfficeDeepNav surfaces People + gated account groups for HR", () =>
     false,
     "branch_manager must not see the owner-only staff roster",
   );
-});
-
-test("resolveBranchDeepNav returns the branch group when branchId + role allow", () => {
-  const groups = resolveBranchDeepNav("owner", BRANCH_ID);
-  assert.ok(groups.length > 0, "owner with a branchId must get a branch group");
-  const everyHrefIsBranchScoped = groups.every((group) =>
-    group.items.every((item) => item.href.startsWith(`/br/${BRANCH_ID}`)),
-  );
-  assert.equal(
-    everyHrefIsBranchScoped,
-    true,
-    "branch deep nav hrefs must be scoped to the active branch",
-  );
-});
-
-test("resolveBranchDeepNav returns [] without a branchId", () => {
-  assert.deepEqual(resolveBranchDeepNav("owner", null), []);
-  assert.deepEqual(resolveBranchDeepNav("owner"), []);
-});
-
-test("resolveBranchDeepNav returns [] for a role with no branch access", () => {
-  // warehouse_manager has no branch_dashboard / branch_settings access.
-  assert.deepEqual(resolveBranchDeepNav("warehouse_manager", BRANCH_ID), []);
 });

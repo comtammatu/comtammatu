@@ -9,6 +9,7 @@ import {
 import { resolveRequestedBranchId } from "@/(protected)/inventory/_lib/inventory-scope";
 import { getWasteCapStatus } from "@/(protected)/inventory/waste-actions";
 import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
+import { EmployeePage } from "@/(protected)/employee/components/employee-page";
 import {
   WasteCreateClient,
   type WasteFormContext,
@@ -16,13 +17,24 @@ import {
 
 export const dynamic = "force-dynamic";
 
-interface PageProps {
-  searchParams: Promise<{ branchId?: string }>;
+interface WasteNewPageContentProps {
+  searchParams?: Promise<{ branchId?: string }>;
+  routeBranchId?: number;
+  successHref?: string;
+  cancelHref?: string;
+  embedded?: boolean;
 }
 
-export default async function WasteNewPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const branchId = await resolveRequestedBranchId(params.branchId);
+export async function WasteNewPageContent({
+  searchParams,
+  routeBranchId,
+  successHref,
+  cancelHref,
+  embedded = false,
+}: WasteNewPageContentProps) {
+  const params = searchParams ? await searchParams : {};
+  const branchId =
+    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
 
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
@@ -43,6 +55,10 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
       </AppPage>
     );
   }
+  const fallbackHref =
+    routeBranchId != null
+      ? `/br/${routeBranchId}/stock`
+      : `/inventory/issues?branchId=${branchId}`;
 
   // Feature flag gate: S11 waste redesign must be enabled per-branch before UI shows
   const flagEnabled = await isFeatureEnabledForBranch(
@@ -51,7 +67,30 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
     INVENTORY_FEATURE_FLAGS.S11_WASTE_TIER,
   );
   if (!flagEnabled) {
-    redirect(`/inventory/issues?branchId=${branchId}`);
+    if (routeBranchId != null) {
+      if (embedded) {
+        return (
+          <EmployeePage title={INVENTORY_VI.createWasteTitle}>
+            <AppEmptyState
+              mode="no-access"
+              title={INVENTORY_VI.wasteFeatureDisabledTitle}
+              description={INVENTORY_VI.wasteFeatureDisabledBranchHint}
+            />
+          </EmployeePage>
+        );
+      }
+      return (
+        <AppPage width="default">
+          <AppPageHeader title={INVENTORY_VI.createWasteTitle} />
+          <AppEmptyState
+            mode="no-access"
+            title={INVENTORY_VI.wasteFeatureDisabledTitle}
+            description={INVENTORY_VI.wasteFeatureDisabledBranchHint}
+          />
+        </AppPage>
+      );
+    }
+    redirect(fallbackHref);
   }
 
   // Fetch branch detail + locations at this branch + active ingredients
@@ -80,7 +119,7 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
   ]);
 
   if (!branchRes.data) {
-    redirect(`/inventory/issues?branchId=${branchId}`);
+    redirect(fallbackHref);
   }
 
   const context: WasteFormContext = {
@@ -127,5 +166,20 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
           },
   };
 
-  return <WasteCreateClient context={context} />;
+  return (
+    <WasteCreateClient
+      context={context}
+      successHref={successHref}
+      cancelHref={cancelHref ?? fallbackHref}
+      embedded={embedded}
+    />
+  );
+}
+
+export default async function WasteNewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string }>;
+}) {
+  return <WasteNewPageContent searchParams={searchParams} />;
 }

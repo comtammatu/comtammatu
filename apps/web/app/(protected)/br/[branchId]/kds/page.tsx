@@ -1,6 +1,7 @@
 import { CircleAlert as IconAlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { KDS_VI } from "@comtammatu/shared/messages";
+import { AppEmptyState } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 import { currentUserHasPermission } from "@/_lib/permissions";
@@ -32,6 +33,27 @@ const KDS_TICKET_SELECT =
   "id, station_id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at";
 const KDS_ACTIVE_STATUSES = ["pending", "preparing"] as const;
 const KDS_VISIBLE_STATUSES = ["pending", "preparing", "ready"] as const;
+
+function KdsStatusShell({ description }: { description: string }) {
+  return (
+    <div className="flex min-h-0 flex-1 items-center justify-center p-4">
+      <AppEmptyState
+        mode="error"
+        description={description}
+        descriptionClassName="max-w-md text-sm"
+        icon={<IconAlertCircle />}
+        iconClassName="size-12 border border-border/70 bg-background/80 text-destructive"
+        title={KDS_VI.statusErrorTitle}
+        titleClassName="text-xl font-semibold tracking-tight sm:text-2xl"
+      >
+        <Badge variant="destructive">
+          <IconAlertCircle className="size-3.5" />
+          <span>{KDS_VI.statusErrorBadge}</span>
+        </Badge>
+      </AppEmptyState>
+    </div>
+  );
+}
 
 type KdsSupabase = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
@@ -279,16 +301,7 @@ export default async function KdsPage({
     .order("position");
 
   if (stationsError) {
-    return (
-      <div className="flex h-dvh items-center justify-center p-4">
-        <Alert variant="destructive" className="max-w-md">
-          <IconAlertCircle />
-          <AlertDescription>
-            {KDS_VI.stationsLoadFailed}
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
+    return <KdsStatusShell description={KDS_VI.stationsLoadFailed} />;
   }
 
   const ticketResult = await fetchVisibleKdsTickets({
@@ -298,16 +311,7 @@ export default async function KdsPage({
   });
 
   if (ticketResult.error) {
-    return (
-      <div className="flex h-dvh items-center justify-center p-4">
-        <Alert variant="destructive" className="max-w-md">
-          <IconAlertCircle />
-          <AlertDescription>
-            {KDS_VI.queueLoadFailed}
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
+    return <KdsStatusShell description={KDS_VI.queueLoadFailed} />;
   }
 
   const stations = (rawStations ?? []) as KdsStation[];
@@ -357,16 +361,7 @@ export default async function KdsPage({
     ]);
 
     if (ordersRes.error || itemsRes.error) {
-      return (
-        <div className="flex h-dvh items-center justify-center p-4">
-          <Alert variant="destructive" className="max-w-md">
-            <IconAlertCircle />
-            <AlertDescription>
-              {KDS_VI.queueDetailLoadFailed}
-            </AlertDescription>
-          </Alert>
-        </div>
-      );
+      return <KdsStatusShell description={KDS_VI.queueDetailLoadFailed} />;
     }
 
     orders = ordersRes.data ?? [];
@@ -385,16 +380,7 @@ export default async function KdsPage({
       batchIds,
     });
     if (batchRes.error) {
-      return (
-        <div className="flex h-dvh items-center justify-center p-4">
-          <Alert variant="destructive" className="max-w-md">
-            <IconAlertCircle />
-            <AlertDescription>
-              {KDS_VI.ticketCountLoadFailed}
-            </AlertDescription>
-          </Alert>
-        </div>
-      );
+      return <KdsStatusShell description={KDS_VI.ticketCountLoadFailed} />;
     }
     kitchenBatches = batchRes.data ?? [];
   }

@@ -68,15 +68,25 @@ const ADAPTERS = [
   "SettingsFormSection",
 ];
 
+const ADAPTER_IMPLEMENTATIONS = new Set([
+  "apps/web/app/components/data-table/data-table.tsx",
+  "apps/web/app/components/form/form-dialog.tsx",
+  "apps/web/app/components/kpi/kpi-card.tsx",
+  "apps/web/app/components/pwa-install-help-dialog.tsx",
+  "apps/web/app/components/status-badge.tsx",
+  "apps/web/app/components/surface.tsx",
+  "apps/web/app/components/table-empty-state-row.tsx",
+]);
+
 const SIGNALS = {
   rawTableElement: /<table\b/g,
   hiddenMdBlock: /\bhidden\b[^"'\n]*\bmd:block\b/g,
-  useIsMobile: /\buseIsMobile\b/g,
+  useIsMobile: /\buseIsMobile\s*\(/g,
   nativeDialog: /window\.(?:confirm|alert)\(/g,
   loader2: /\bLoader2\b/g,
   animateSpin: /\banimate-spin\b/g,
   statusMap:
-    /\bconst\s+(?![A-Z0-9_]*STATUS[A-Z0-9_]*(?:RANK|PRIORITY)[A-Z0-9_]*\b)[A-Z0-9_]*STATUS[A-Z0-9_]*(?:\s*:[^=]*?)?\s*=\s*[{[]/g,
+    /\bconst\s+(?![A-Z0-9_]*STATUS[A-Z0-9_]*(?:RANK|PRIORITY)[A-Z0-9_]*\b)[A-Z0-9_]*STATUS[A-Z0-9_]*(?:\s*:[^=]*?)?\s*=\s*\{/g,
   statCardDef:
     /\b(?:function|const)\s+\w*(?:StatCard|SummaryCard|MetricCard|KpiCard)\b/g,
 };
@@ -204,6 +214,8 @@ function addCounts(target, source) {
 }
 
 function scoreFile(file) {
+  if (ADAPTER_IMPLEMENTATIONS.has(file.file)) return 0;
+
   return (
     (file.imports.card ?? 0) * 3 +
     (file.imports.table ?? 0) * 3 +

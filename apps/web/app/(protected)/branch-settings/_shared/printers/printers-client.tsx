@@ -184,7 +184,7 @@ export function PrintersClient(props: {
                         )}
                       </ItemHeader>
                       {printer ? (
-                        <div className="space-y-1 text-sm text-muted-foreground">
+                        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                           <p className="break-words leading-6">
                             {printer.name} · {printer.lan_host}
                             {printer.lan_port && printer.lan_port !== 9100
@@ -298,6 +298,7 @@ function PrinterForm({
         : defaultPrintTypesForRole(initialRole),
     category_ids: initial?.category_ids ?? [],
   });
+  const canSwitchBranch = branches.length > 1;
 
   const setRole = (role: PrinterRole) => {
     setForm({
@@ -388,38 +389,40 @@ function PrinterForm({
       contentClassName="gap-4"
     >
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label>{BRANCH_VI.long}</Label>
-          {branches.length > 1 && !initial ? (
-            <Select
-              value={form.branch_id ? String(form.branch_id) : undefined}
-              onValueChange={(value) =>
-                setForm({ ...form, branch_id: Number(value) })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={BRANCH_VI.select} />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={String(branch.id)}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Input
-              readOnly
-              value={
-                branches.find((branch) => branch.id === form.branch_id)?.name ??
-                `#${form.branch_id}`
-              }
-              className="bg-muted/40"
-            />
-          )}
-        </div>
-        <div className="space-y-2">
+        {canSwitchBranch ? (
+          <div className="flex flex-col gap-2">
+            <Label>{BRANCH_VI.long}</Label>
+            {initial ? (
+              <Input
+                readOnly
+                value={
+                  branches.find((branch) => branch.id === form.branch_id)?.name ??
+                  `#${form.branch_id}`
+                }
+                className="bg-muted/40"
+              />
+            ) : (
+              <Select
+                value={form.branch_id ? String(form.branch_id) : undefined}
+                onValueChange={(value) =>
+                  setForm({ ...form, branch_id: Number(value) })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={BRANCH_VI.select} />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={String(branch.id)}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        ) : null}
+        <div className="flex flex-col gap-2">
           <Label>{PRINTER_COPY.slotLabel}</Label>
           {initial ? (
             <Input
@@ -445,7 +448,7 @@ function PrinterForm({
             </Select>
           )}
         </div>
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <Label>{FORM_VI.name}</Label>
           <Input
             value={form.name}
@@ -453,7 +456,7 @@ function PrinterForm({
             placeholder={PRINTER_COPY.samplePrinterPlaceholder}
           />
         </div>
-        <div className="space-y-2 md:col-span-2">
+        <div className="flex flex-col gap-2 md:col-span-2">
           <Label>LAN host / IP</Label>
           <Input
             value={form.lan_host}
@@ -467,7 +470,7 @@ function PrinterForm({
           </p>
         </div>
 
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <Label>{PRINTER_COPY.paperWidthLabel}</Label>
           <Select
             value={String(form.paper_width_mm)}
@@ -485,7 +488,7 @@ function PrinterForm({
           </Select>
         </div>
 
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <Label>Code page</Label>
           <Input
             value={form.code_page}
@@ -497,14 +500,14 @@ function PrinterForm({
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <Label>{PRINTER_COPY.printTypesLabel}</Label>
         <div className="grid gap-2 sm:grid-cols-2">
           {PRINT_TYPE_ORDER.map((type) => (
             <Item
               key={type}
               variant="outline"
-              className="flex items-center gap-2 p-3 cursor-pointer"
+              className="flex cursor-pointer items-center gap-2 p-3"
             >
               <Checkbox
                 id={`print-type-${type}`}
@@ -513,7 +516,10 @@ function PrinterForm({
                   togglePrintType(type, checked === true)
                 }
               />
-              <Label htmlFor={`print-type-${type}`} className="text-sm font-normal cursor-pointer w-full">
+              <Label
+                htmlFor={`print-type-${type}`}
+                className="w-full cursor-pointer text-sm font-normal"
+              >
                 {PRINT_TYPE_LABEL[type]}
               </Label>
             </Item>
@@ -521,14 +527,14 @@ function PrinterForm({
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <Label>{PRINTER_COPY.categoriesLabel}</Label>
         <div className="grid gap-2 sm:grid-cols-2">
           {categories.map((category) => (
             <Item
               key={category.id}
               variant="outline"
-              className="flex items-center gap-2 p-3 cursor-pointer"
+              className="flex cursor-pointer items-center gap-2 p-3"
             >
               <Checkbox
                 id={`print-category-${category.id}`}
@@ -537,7 +543,10 @@ function PrinterForm({
                   toggleCategory(category.id, checked === true)
                 }
               />
-              <Label htmlFor={`print-category-${category.id}`} className="text-sm font-normal cursor-pointer w-full">
+              <Label
+                htmlFor={`print-category-${category.id}`}
+                className="w-full cursor-pointer text-sm font-normal"
+              >
                 {category.name}
               </Label>
             </Item>
@@ -547,16 +556,26 @@ function PrinterForm({
 
       {err ? <p className="text-sm text-destructive">{err}</p> : null}
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         {initial ? (
-          <Button variant="outline" onClick={remove} disabled={pending}>
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={remove}
+            disabled={pending}
+          >
             {ACTIONS_VI.delete}
           </Button>
         ) : null}
-        <Button variant="outline" onClick={onClose} disabled={pending}>
+        <Button
+          variant="outline"
+          className="w-full sm:w-auto"
+          onClick={onClose}
+          disabled={pending}
+        >
           {ACTIONS_VI.cancel}
         </Button>
-        <Button onClick={save} disabled={pending}>
+        <Button className="w-full sm:w-auto" onClick={save} disabled={pending}>
           {pending ? "Đang lưu..." : "Lưu"}
         </Button>
       </div>

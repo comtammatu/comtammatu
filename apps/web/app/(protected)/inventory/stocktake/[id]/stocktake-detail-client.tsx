@@ -19,15 +19,10 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { toast } from "@comtammatu/ui/components/sonner";
 
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
-import {
-  AppEmptyState,
-  AppPage,
-  AppPageHeader,
-  AppSection,
-} from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
   DataTable,
   type DataTableColumn,
@@ -37,7 +32,6 @@ import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { tRoute, tTerm } from "../../_lib/dictionary";
-import { getInventoryStatusBadgeVariant } from "../../_lib/ui";
 import {
   cancelStocktake,
   completeStocktake,
@@ -93,7 +87,6 @@ export function StocktakeDetailClient({
   inventoryBasePath?: string;
   auditLogs?: AuditLogRow[];
 }) {
-  const isMobile = useIsMobile();
   const [isPending, startTransition] = useTransition();
   const [session, setSession] = useState<StocktakeSession>(initialSession);
   const [lines, setLines] = useState<StocktakeLine[]>(initialLines);
@@ -103,6 +96,7 @@ export function StocktakeDetailClient({
     (STOCKTAKE_SESSION_STATUS_LABELS_VI as Record<string, string>)[
       session.status
     ] ?? session.status;
+  const statusBadge = getStatusBadgeMeta("inventory", session.status);
 
   const countedCount = useMemo(
     () => lines.filter((l) => l.counted_quantity != null).length,
@@ -232,12 +226,12 @@ export function StocktakeDetailClient({
         description={headerDescription}
         badge={{
           children: statusLabel,
-          variant: getInventoryStatusBadgeVariant(session.status),
+          variant: statusBadge.variant,
         }}
         breadcrumb={
           <Link
             href={`${routeBase}?branchId=${session.branch_id}`}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:underline"
           >
             <IconArrowLeft className="size-4" />{" "}
             {tRoute("/inventory/stocktake")}
@@ -254,10 +248,7 @@ export function StocktakeDetailClient({
                 <IconBan className="mr-2 size-4" />
                 {stocktakeDetailCopy.cancelAction}
               </Button>
-              <Button
-                onClick={handleComplete}
-                disabled={isPending}
-              >
+              <Button onClick={handleComplete} disabled={isPending}>
                 <IconCircleCheck className="mr-2 size-4" />
                 {stocktakeDetailCopy.completeAction}
               </Button>
@@ -293,10 +284,7 @@ export function StocktakeDetailClient({
                       value: String(varianceCount).padStart(2, "0"),
                     },
                   ].map((item) => (
-                    <AppSection
-                      key={item.label}
-                      size="sm"
-                    >
+                    <AppSection key={item.label} size="sm">
                       <Badge variant="secondary">{item.label}</Badge>
                       <p className="text-xl font-semibold">{item.value}</p>
                     </AppSection>
@@ -346,7 +334,6 @@ export function StocktakeDetailClient({
                     lines={lines}
                     savedLines={savedLines}
                     isPending={isPending}
-                    isMobile={isMobile}
                     onLineBlur={handleLineBlur}
                     onReasonBlur={handleReasonBlur}
                   />
@@ -354,7 +341,7 @@ export function StocktakeDetailClient({
 
                 {/* Results phase (completed) */}
                 {session.status === "completed" && (
-                  <ResultsPhase lines={lines} isMobile={isMobile} />
+                  <ResultsPhase lines={lines} />
                 )}
               </div>
             </TabsContent>
@@ -365,7 +352,6 @@ export function StocktakeDetailClient({
           </AppPageTabs>
         }
       />
-
     </AppPage>
   );
 }
@@ -376,14 +362,12 @@ function CountingPhase({
   lines,
   savedLines,
   isPending,
-  isMobile,
   onLineBlur,
   onReasonBlur,
 }: {
   lines: StocktakeLine[];
   savedLines: Set<number>;
   isPending: boolean;
-  isMobile: boolean;
   onLineBlur: (lineId: number, value: string) => void;
   onReasonBlur: (lineId: number, reason: string) => void;
 }) {
@@ -395,7 +379,7 @@ function CountingPhase({
         <div className="flex items-center gap-2 text-sm font-medium">
           {line.ingredients?.name ?? `#${line.ingredient_id}`}
           {savedLines.has(line.id) && (
-            <span className="inline-flex items-center gap-1 text-xs text-success">
+            <span className="inline-flex items-center gap-2 text-xs text-success">
               <IconCheck className="size-3" />
               {stocktakeDetailCopy.saved}
             </span>
@@ -447,69 +431,6 @@ function CountingPhase({
     },
   ];
 
-  if (isMobile) {
-    return (
-      <AppSection className="overflow-hidden" contentFlush>
-        {lines.length === 0 ? (
-          <AppEmptyState
-            compact
-            title={stocktakeDetailCopy.emptyCountTitle}
-            description={stocktakeDetailCopy.emptyCountDescription}
-          />
-        ) : (
-          <div className="-m-4 divide-y">
-            {lines.map((line) => (
-              <div
-                key={line.id}
-                className="flex flex-col gap-2 px-4 py-3"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-medium">
-                    {line.ingredients?.name ?? `#${line.ingredient_id}`}
-                  </span>
-                  {savedLines.has(line.id) && (
-                    <span className="inline-flex shrink-0 items-center gap-1 text-xs text-success">
-                      <IconCheck className="size-3" />
-                      {stocktakeDetailCopy.saved}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {line.ingredients?.purchase_unit ??
-                    line.ingredients?.unit ??
-                    inventoryCommon.noValue}
-                </p>
-                <div className="flex items-center gap-2">
-                  <FormattedNumberInput
-                    key={`stocktake-mobile-${line.id}-${line.counted_quantity ?? ""}`}
-                    defaultValue={
-                      line.counted_quantity != null
-                        ? String(line.counted_quantity)
-                        : ""
-                    }
-                    placeholder={stocktakeDetailCopy.countedQtyPlaceholder}
-                    className="h-8 flex-1 tabular-nums"
-                    onValueBlur={(value) => onLineBlur(line.id, value)}
-                    maxFractionDigits={3}
-                    disabled={isPending}
-                  />
-                  <Input
-                    type="text"
-                    defaultValue={line.variance_reason ?? ""}
-                    placeholder={stocktakeDetailCopy.reasonPlaceholder}
-                    className="h-8 flex-1 text-sm"
-                    onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
-                    disabled={isPending}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </AppSection>
-    );
-  }
-
   return (
     <AppSection className="overflow-hidden" contentFlush>
       <DataTable
@@ -519,16 +440,48 @@ function CountingPhase({
         emptyTitle={stocktakeDetailCopy.emptyCountTitle}
         emptyDescription={stocktakeDetailCopy.emptyCountDescription}
         emptyMode="no-data"
+        className="gap-2 max-md:divide-y"
         mobileCardRender={(line) => (
-          <div className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">
-              {line.ingredients?.name ?? `#${line.ingredient_id}`}
-            </span>
-            <span className="text-xs text-muted-foreground">
+          <div className="flex flex-col gap-2 px-4 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate text-sm font-medium">
+                {line.ingredients?.name ?? `#${line.ingredient_id}`}
+              </span>
+              {savedLines.has(line.id) && (
+                <span className="inline-flex shrink-0 items-center gap-2 text-xs text-success">
+                  <IconCheck className="size-3" />
+                  {stocktakeDetailCopy.saved}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
               {line.ingredients?.purchase_unit ??
                 line.ingredients?.unit ??
                 inventoryCommon.noValue}
-            </span>
+            </p>
+            <div className="flex items-center gap-2">
+              <FormattedNumberInput
+                key={`stocktake-mobile-${line.id}-${line.counted_quantity ?? ""}`}
+                defaultValue={
+                  line.counted_quantity != null
+                    ? String(line.counted_quantity)
+                    : ""
+                }
+                placeholder={stocktakeDetailCopy.countedQtyPlaceholder}
+                className="h-8 flex-1 tabular-nums"
+                onValueBlur={(value) => onLineBlur(line.id, value)}
+                maxFractionDigits={3}
+                disabled={isPending}
+              />
+              <Input
+                type="text"
+                defaultValue={line.variance_reason ?? ""}
+                placeholder={stocktakeDetailCopy.reasonPlaceholder}
+                className="h-8 flex-1 text-sm"
+                onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
+                disabled={isPending}
+              />
+            </div>
           </div>
         )}
       />
@@ -554,13 +507,7 @@ function getVarianceBg(line: StocktakeLine): string {
   return "bg-destructive/5";
 }
 
-function ResultsPhase({
-  lines,
-  isMobile,
-}: {
-  lines: StocktakeLine[];
-  isMobile: boolean;
-}) {
+function ResultsPhase({ lines }: { lines: StocktakeLine[] }) {
   const resultColumns: DataTableColumn<StocktakeLine>[] = [
     {
       key: "ingredient",
@@ -650,83 +597,56 @@ function ResultsPhase({
         </span>
       </div>
 
-      {isMobile ? (
-        <AppSection className="overflow-hidden" contentFlush>
-          {lines.length === 0 ? (
-            <AppEmptyState
-              compact
-              title={stocktakeDetailCopy.results.emptyTitle}
-              description={stocktakeDetailCopy.results.emptyDescription}
-            />
-          ) : (
-            <div className="-m-4 divide-y md:-m-5">
-              {lines.map((line) => {
-                const varianceColor = getVarianceColor(line);
-                const variance = line.variance ?? 0;
-                return (
-                  <div
-                    key={line.id}
+      <AppSection className="overflow-hidden" contentFlush>
+        <DataTable
+          columns={resultColumns}
+          data={lines}
+          getRowKey={(line) => line.id}
+          emptyTitle={stocktakeDetailCopy.results.emptyTitle}
+          emptyDescription={stocktakeDetailCopy.results.emptyDescription}
+          emptyMode="no-data"
+          rowClassName={(line) => getVarianceBg(line)}
+          className="gap-2 max-md:divide-y"
+          mobileCardRender={(line) => {
+            const varianceColor = getVarianceColor(line);
+            const variance = line.variance ?? 0;
+            return (
+              <div
+                className={cn(
+                  "flex flex-col gap-2 px-4 py-3",
+                  getVarianceBg(line),
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-sm font-medium">
+                    {line.ingredients?.name ?? `#${line.ingredient_id}`}
+                  </span>
+                  <span
                     className={cn(
-                      "flex flex-col gap-1 px-4 py-3 md:px-5",
-                      getVarianceBg(line),
+                      "shrink-0 font-mono text-sm font-medium tabular-nums",
+                      varianceColor,
                     )}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium">
-                        {line.ingredients?.name ?? `#${line.ingredient_id}`}
-                      </span>
-                      <span
-                        className={cn(
-                          "shrink-0 font-mono text-sm font-medium tabular-nums",
-                          varianceColor,
-                        )}
-                      >
-                        {variance > 0 && "+"}
-                        {variance}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                      <span>
-                        {stocktakeDetailCopy.results.systemShort}:{" "}
-                        {line.system_quantity} ·{" "}
-                        {stocktakeDetailCopy.results.countedShort}:{" "}
-                        {line.counted_quantity ?? inventoryCommon.noValue}
-                      </span>
-                      <span className="truncate text-right">
-                        {line.variance_reason ?? ""}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </AppSection>
-      ) : (
-        <AppSection className="overflow-hidden" contentFlush>
-          <DataTable
-            columns={resultColumns}
-            data={lines}
-            getRowKey={(line) => line.id}
-            emptyTitle={stocktakeDetailCopy.results.emptyTitle}
-            emptyDescription={stocktakeDetailCopy.results.emptyDescription}
-            emptyMode="no-data"
-            rowClassName={(line) => getVarianceBg(line)}
-            mobileCardRender={(line) => (
-              <div className="flex flex-col gap-1 text-sm">
-                <span className="font-medium">
-                  {line.ingredients?.name ?? `#${line.ingredient_id}`}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {line.ingredients?.purchase_unit ??
-                    line.ingredients?.unit ??
-                    inventoryCommon.noValue}
-                </span>
+                    {variance > 0 && "+"}
+                    {variance}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                  <span>
+                    {stocktakeDetailCopy.results.systemShort}:{" "}
+                    {line.system_quantity} ·{" "}
+                    {stocktakeDetailCopy.results.countedShort}:{" "}
+                    {line.counted_quantity ?? inventoryCommon.noValue}
+                  </span>
+                  <span className="truncate text-right">
+                    {line.variance_reason ?? ""}
+                  </span>
+                </div>
               </div>
-            )}
-          />
-        </AppSection>
-      )}
+            );
+          }}
+        />
+      </AppSection>
     </div>
   );
 }

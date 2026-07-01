@@ -132,12 +132,23 @@ test("UI component audit command stays wired for route-family drill-down", () =>
     "ROUTE_FAMILIES",
     "PRIMITIVES",
     "ADAPTERS",
+    "ADAPTER_IMPLEMENTATIONS",
     "parseOptions",
     "--family",
     "--all",
   ]) {
     assert.match(auditScript, new RegExp(marker));
   }
+  assert.match(auditScript, /ADAPTER_IMPLEMENTATIONS\.has\(file\.file\)/);
+  assert.match(
+    auditScript,
+    /apps\/web\/app\/components\/data-table\/data-table\.tsx/,
+  );
+  assert.match(auditScript, /statusMap:[\s\S]*\\s\*=\\s\*\\\{/);
+  assert.doesNotMatch(auditScript, /statusMap:[\s\S]*\[\{\[\]/);
+  assert.ok(
+    auditScript.includes("useIsMobile: /\\buseIsMobile\\s*\\(/g"),
+  );
 
   assert.match(uiModule, /pnpm audit:ui-components/);
   assert.match(uiModule, /route-family summary/);

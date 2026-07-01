@@ -9,20 +9,29 @@ import { PODetailClient } from "./po-detail-client";
 import type { PODetail } from "./po-detail-client";
 import type { IngredientRow } from "../../page";
 
-export default async function PODetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
+interface PODetailPageContentProps {
+  poId: number;
+  routeBranchId?: number;
+  purchaseOrdersBasePath?: string;
+  afterCreateGrnHref?: string;
+}
+
+export async function PODetailPageContent({
+  poId,
+  routeBranchId,
+  purchaseOrdersBasePath = "/inventory/purchase-orders",
+  afterCreateGrnHref,
+}: PODetailPageContentProps) {
+  if (!Number.isInteger(poId) || poId <= 0) notFound();
+
   const [res, ingredientsRes, ctx, auditLogs] = await Promise.all([
-    fetchPurchaseOrderDetail(Number(id)),
+    fetchPurchaseOrderDetail(poId),
     fetchIngredients(),
     getAuthContextWithPermission(
       PROCUREMENT_ROLES,
       PERMISSION_KEYS.PROCUREMENT_READ,
     ),
-    fetchEntityAuditLogs("purchase_order", Number(id), 50),
+    fetchEntityAuditLogs("purchase_order", poId, 50),
   ]);
   if (!res.success || !res.data) notFound();
   const isOwner = ctx?.claims.user_role === "owner";
@@ -34,6 +43,7 @@ export default async function PODetailPage({
       status: string;
       ordered_at: string;
       updated_at: string;
+      branch_id: number;
       suppliers: { id: number; name: string } | null;
     };
     lines: Array<{
@@ -51,6 +61,7 @@ export default async function PODetailPage({
       } | null;
     }>;
   };
+  if (routeBranchId != null && d.po.branch_id !== routeBranchId) notFound();
 
   const supplier = d.po.suppliers as { id: number; name: string } | null;
 
@@ -80,7 +91,7 @@ export default async function PODetailPage({
   const totalAmount = items.reduce((sum, i) => sum + i.total, 0);
 
   const po: PODetail = {
-    id: Number(id),
+    id: poId,
     code: d.po.display_id ?? d.po.po_number ?? "",
     status: d.po.status ?? "draft",
     supplier: supplier?.name ?? "—",
@@ -107,6 +118,17 @@ export default async function PODetailPage({
       ingredients={ingredients}
       isOwner={isOwner}
       auditLogs={auditLogs}
+      purchaseOrdersBasePath={purchaseOrdersBasePath}
+      afterCreateGrnHref={afterCreateGrnHref}
     />
   );
+}
+
+export default async function PODetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  return <PODetailPageContent poId={Number(id)} />;
 }

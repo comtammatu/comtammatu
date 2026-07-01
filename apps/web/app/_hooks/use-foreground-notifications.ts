@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
+import { isRunnerPublicDisplayPath } from "@comtammatu/shared/auth";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { listNotifications } from "@/(protected)/notifications/actions";
 import { areNotificationPopupsEnabled } from "@lib/notifications/popup-preference";
@@ -65,19 +67,26 @@ async function showPopupsForNewNotifications(
 export function useForegroundNotifications(): void {
   const highWaterRef = useRef<number | null>(null);
   const inFlightRef = useRef(false);
+  const pathname = usePathname();
+  const disabled = isRunnerPublicDisplayPath(pathname ?? "");
 
   // Seed the high-water mark from the newest visible notification so a fresh
   // mount does not popup notifications that arrived before the app opened.
   useEffect(() => {
+    if (disabled) {
+      highWaterRef.current = 0;
+      return;
+    }
     void listNotifications({ limit: 1 }).then((result) => {
       highWaterRef.current =
         result.success && result.data ? (result.data.items[0]?.id ?? 0) : 0;
     });
-  }, []);
+  }, [disabled]);
 
   useRealtimeChannel(
-    (supabase) =>
-      supabase
+    (supabase) => {
+      if (disabled) return null;
+      return supabase
         .channel("notification-popups")
         .on(
           "postgres_changes",
@@ -86,7 +95,8 @@ export function useForegroundNotifications(): void {
             void showPopupsForNewNotifications(highWaterRef, inFlightRef);
           },
         )
-        .subscribe(),
-    [],
+        .subscribe();
+    },
+    [disabled],
   );
 }

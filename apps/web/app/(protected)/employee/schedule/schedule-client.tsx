@@ -335,7 +335,7 @@ function CalendarCellContent({
         if (cell.dateStr) onSelectDate(cell.dateStr);
       }}
       className={cn(
-        "flex aspect-square w-full flex-col gap-1 rounded-md bg-background p-1 text-left transition-[background-color,box-shadow,transform] duration-150 sm:aspect-video sm:p-2",
+        "flex aspect-square w-full flex-col gap-1 rounded-md bg-background p-1.5 text-left transition-[background-color,box-shadow,transform] duration-150 sm:aspect-video sm:p-2",
         cell.isToday && "bg-primary/5 ring-1 ring-primary/30",
         selected && "bg-info/10 shadow-sm ring-2 ring-info/40",
       )}
@@ -426,7 +426,7 @@ function ScheduleMonthCalendarTable({
               <div
                 key={cell.dateStr ?? `${rowIndex}-${cellIndex}`}
                 role="gridcell"
-                className="border-l border-t p-1 align-top whitespace-normal first:border-l-0"
+                className="border-l border-t p-1.5 align-top whitespace-normal first:border-l-0 sm:p-2"
               >
                 <CalendarCellContent
                   attendances={
@@ -462,7 +462,7 @@ function SelectedDayDetail({
   leaveHref: string;
 }) {
   return (
-    <EmployeeFrame pad="sm" className="flex flex-col gap-3 bg-background">
+    <EmployeeFrame pad="sm" className="mt-3 flex flex-col gap-3 bg-background">
       <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-heading text-sm font-semibold">

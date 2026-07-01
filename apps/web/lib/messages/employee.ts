@@ -109,7 +109,7 @@ export const employee = {
     payslipLongDescription:
       "Chỉ hiển thị các kỳ lương đã phát hành cho nhân viên.",
     profileTitle: "Hồ sơ",
-    profileDescription: "Thông tin ca làm",
+    profileDescription: "Thông tin tài khoản và hồ sơ nhân viên",
     operationToolsTitle: "Công cụ vận hành",
     operationToolsDescription:
       "Mở đúng công cụ theo vai trò và chi nhánh hiện tại.",

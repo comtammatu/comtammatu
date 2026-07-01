@@ -19,6 +19,31 @@ Verify the live checkout with `git status` before acting on any in-flight notes;
 do not reopen plan rows that are already represented by code in the current
 checkout.
 
+## Now — Workflow Reset
+
+- [x] **Agent workflow frame cleanup** — Goal: one entrypoint, one active board,
+  runtime adapters allowed, no worklog/doc drift. Scope this lane to
+  `AGENTS.md`, `docs/agent/rules/{skills,workflow,references,team,orchestration}.md`,
+  `docs/worklog/README.md`, `docs/plan/decisions.md`, and this file. Done:
+  rule loading no longer forces `team.md`/`orchestration.md` for simple work;
+  `.claude/`, `.codex/`, `.cursor/`, and `.agents/` are explicit adapters, not
+  competing rule stores; every worklog file is linked, promoted, or deleted;
+  focused guards pass (`rules-mirror`, `doc-staleness`, `guard-sync`,
+  `review-tier`). T2 doc/process lane.
+- [x] **Split current dirty WIP before feature landing** — Landing boundary is
+  now explicit in `docs/plan/branch-operator-hub-full-cutover-2026-07-01.md`:
+  Branch Operator Hub, Branch stock floor, POS/KDS print routing, Finance/SePay,
+  and Shared UI/rules must land separately. Do not land POS/KDS print migrations
+  (`20260701010100_pos_drink_bill_only_no_kds.sql`,
+  `20260701065350_pos_kitchen_print_route_policy.sql`) with Branch Operator Hub.
+- [ ] **Branch Operator Hub first landable slice** — Goal:
+  `/br/[branchId]` owns branch-native shell/IA for Hub, Shift, Branch Control,
+  Settings, and Stock floor tasks without normal fallback to office/admin chrome.
+  First PR scope: shell ownership, bottom-nav contract, Hub/Shift first viewport,
+  stock fallback guards, and one mobile route smoke. Settings and remaining stock
+  detail screens follow as smaller slices unless a shared prop is required to keep
+  actions branch-native.
+
 ## Agent-Doable Now
 
 - [x] **Per-employee inventory count slips (Task 1 of owner's 3-feature request)** — contract in `docs/worklog/2026-06-28-per-employee-count-slips.md` (T3). **COMPLETE, full gate green** (typecheck+lint+build+test, web 245/0): migration `20260627201823_inventory_per_employee_count_slips.sql` (3 tables + 5 SECURITY DEFINER RPCs + RLS + perm seed) **APPLIED TO PROD** (owner-delegated; verified 3 tables/5 RPCs/3 keys/3 policies; advisors clean) + `pnpm db:types` regenerated. `permissions.ts` (+3 keys, count 91), notifications (`notifications.md`+`kindLabel`+icon), status SSOT (`COUNT_SLIP_STATUS_LABELS_VI` + `status-badge.tsx` `count-slip` domain). 3 UI surfaces via `withAction`: `/inventory/count-assignments` (manager) + `/inventory/count-slips` (manager review) gated by count_assign/approve in `INVENTORY_ROUTE_PREFIXES`+inventory-nav; `/employee/count` (blind) surfaced as a conditional home-page card (bottom-nav stays 4 items). **REMAINING (owner):** grant `inventory:count_*` to staff via `/admin/staff/[id]/permissions` (role_templates only seed future users; owner auto-bypasses); commit/PR/merge to deploy the UI (migration already on prod, additive → safe). **Optional:** regression guard mirroring STOCKTAKE-BLIND-STRIP-SERVER-SIDE.
@@ -37,7 +62,14 @@ checkout.
 - [~] **Residual broad grants** — các revoke (cosmetic grants + definer secdef) đã gộp vào `00000000000000_baseline.sql` qua #109 re-baseline (file gốc `20260616120000`/`20260616170000` nay ở `_archive/`). Không còn code task; chỉ verify prod ledger trước khi owner apply lại ở môi trường nào còn thiếu. Phần `bmidl_write` legacy `auth_role()` gộp vào `α4c`.
 - [~] **HRM Đợt 2** (D026) — đã land: `updateEmployee`, ngưng việc (`is_active` + contract `end_date`), pending nghỉ phép toàn chi nhánh, nhãn `/admin/staff` = "Tài khoản & phân quyền", và notification nghỉ phép **2 chiều** (`approve`/`reject_leave_request` → kind `hr.leave_approved`/`hr.leave_rejected`, merged `48781506`). Còn lại: owner apply migration `20260627121500` lên prod + runtime verify.
 - [~] **HRM payroll/base_salary** (D026/D031) — checkout đã có payroll HKD đơn giản: `calculatePayroll` đọc `employees.base_salary`, lọc `is_active && base_salary > 0`, tính công theo 2 ca/ngày, PIT theo legal-version, proration đã clamp qua `Math.min(workingDays, standardDays)`, calculate+status đã đi qua `upsert_payroll_calculation`, và `/hr` có tab/link vào `/hr/payroll`. `standard_days` owner nhập đã land (đọc `period.standard_days`, không còn tự đếm T2-T6). Còn thật: export CSV/Excel, màn đối chiếu trước duyệt, và runtime verify.
-- [ ] **UI ratchet real-debt bridge** — chỉ burn down debt thật đã nêu trong `docs/spec/design-system.md` khi nó đi cùng route-family work hiện tại. Dùng `pnpm audit:ui-components -- --family <family>` để chọn file theo route-family trước khi sửa. HR lane trong checkout đã đưa direct `Table` và route-local `STATUS` maps về 0; phần còn lại ở HR là dialog/confirm flow đã có chủ. Lanes tiếp theo: Inventory high-risk panels, Finance table/card remnants, rồi POS/KDS operational adapter exceptions. Không mở cleanup PR để chase `reframe` allowlists hoặc false-positive về 0.
+- [ ] **UI ratchet real-debt bridge** — Goal: close the component-system debt by route family, using `docs/spec/design-system.md` as the only UI authority and treating `pnpm audit:ui-components -- --family <family>` as orientation only. Do not chase audit totals to zero: shrink real debt, reconcile stale baselines for free, and keep documented exceptions when the workflow needs the primitive directly.
+  - **Definition of done per slice:** state the surface, primary user job, route family, change type, and primitives before implementation; run family audit before/after; reduce at least one real-debt signal or explicitly classify it as a contract-valid exception; add/update focused static tests when a guard/audit rule changes; pass `corepack pnpm lint:ui-contract` plus focused route tests; run `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` before marking an implementation slice complete.
+  - **W0 audit correctness / adapter floor:** keep adapter implementation files out of debt scoring, count `useIsMobile` call sites (not imports), count object `STATUS` maps only, and never add wrapper layers just to improve a score. Current checkout: PWA help Dialog consolidated into shared `PwaInstallHelpDialog`; branch/employee PWA Dialog debt burned down.
+  - **W1 Inventory:** first close structural drift that users feel: width/header/mobile chrome, panel/card clones, chart motion/color drift, form-field idiom splits, and DataTable/mobile-card twins. Current `inventory` audit has only two high-risk signals: `production-order-list.tsx` shortage Dialog is a valid short contextual result dialog, and `grn/[id]/grn-detail-client.tsx` uses device-derived mobile navigation for receiver flow; do not refactor either just for the score.
+  - **W2 Finance:** burn down table/card/dialog remnants only where they duplicate existing adapters (`DataTable`, `KpiCard`, `FormDialog`, `AppSection`) or expose mixed form idioms. Do not change finance metric definitions until the owner resolves the dashboard metric decision.
+  - **W3 HR:** finish the remaining real-debt surfaces: checklist-template builder to `FormDialog`/form helpers, payroll detail width parity, local status-badge replacement, and narrow wrapper cleanup. HR direct `Table` and route-local `STATUS` maps are already at zero in the current checkout.
+  - **W4 POS/KDS/Runner:** handle operational exceptions after runtime/Preview verification: WS-3 client splits by concern, first-viewport POS/KDS tails, duplicated order-target/status displays, disabled-reason discoverability, and destructive-action separation. Do not weaken POS/KDS workflow contracts to fit generic admin adapters.
+  - **W5 Branch/Employee/Management shells:** keep one chrome family per route owner, project nav from the shared config, and remove branch/mobile header duplication only when the branch-native route slice is active.
 
 ### Audit 2026-06-21 — Mechanism follow-ups (each = own PR; specs reconstructed, audit worklog gone)
 

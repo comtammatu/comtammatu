@@ -4,7 +4,6 @@
 
 import { useState, useTransition } from "react";
 import {
-  Ellipsis as IconDots,
   Pencil as IconPencil,
   ToggleLeft as IconToggleLeft,
   ToggleRight as IconToggleRight,
@@ -12,13 +11,6 @@ import {
 } from "lucide-react";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@comtammatu/ui/components/dropdown-menu";
 import {
   Item,
   ItemActions,
@@ -36,6 +28,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { RowActionsMenu } from "@/components/row-actions-menu";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 export interface CategoryRow {
@@ -78,33 +71,29 @@ export function CategoryTable({ categories }: CategoryTableProps) {
 
   function renderActions(cat: CategoryRow) {
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <IconDots className="size-4" />
-            <span className="sr-only">Menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setEditCategory(cat)}>
-            <IconPencil className="mr-2 size-4" />
-            Chỉnh sửa
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => void handleToggleActive(cat)}>
-            {cat.is_active ? (
-              <>
-                <IconToggleLeft className="mr-2 size-4" />
-                Vô hiệu hóa
-              </>
+      <RowActionsMenu
+        label="Menu"
+        triggerSize="icon"
+        triggerClassName="rounded-full"
+        items={[
+          {
+            key: "edit",
+            label: "Chỉnh sửa",
+            icon: <IconPencil data-icon="inline-start" />,
+            onSelect: () => setEditCategory(cat),
+          },
+          {
+            key: cat.is_active ? "deactivate" : "activate",
+            label: cat.is_active ? "Vô hiệu hóa" : "Kích hoạt",
+            icon: cat.is_active ? (
+              <IconToggleLeft data-icon="inline-start" />
             ) : (
-              <>
-                <IconToggleRight className="mr-2 size-4" />
-                Kích hoạt
-              </>
-            )}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+              <IconToggleRight data-icon="inline-start" />
+            ),
+            onSelect: () => void handleToggleActive(cat),
+          },
+        ]}
+      />
     );
   }
 

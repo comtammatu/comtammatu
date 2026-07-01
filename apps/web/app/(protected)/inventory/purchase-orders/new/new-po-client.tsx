@@ -39,7 +39,6 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
@@ -132,7 +131,6 @@ export function NewPoClient({
   poBasePath?: string;
 }) {
   const router = useRouter();
-  const isMobile = useIsMobile();
   const isCompactLineItems = useIsCompactLineItems();
 
   const [supplierId, setSupplierId] = useState("");
@@ -365,7 +363,6 @@ export function NewPoClient({
           lineIngredientIds={lineIngredientIds}
           onAddSuggestion={addSuggestionToLines}
           onAddAll={addAllSuggestions}
-          isMobile={isMobile}
           procurementBranches={procurementBranches}
           branchId={branchId}
           onBranchChange={handleBranchChange}
@@ -499,7 +496,6 @@ function SuggestionsPanel({
   lineIngredientIds,
   onAddSuggestion,
   onAddAll,
-  isMobile,
   procurementBranches,
   branchId,
   onBranchChange,
@@ -515,7 +511,6 @@ function SuggestionsPanel({
   lineIngredientIds: Set<number>;
   onAddSuggestion: (s: PoSuggestionRow) => void;
   onAddAll: () => void;
-  isMobile: boolean;
   procurementBranches: ProcurementBranchOption[];
   branchId: number | null;
   onBranchChange: (val: string) => void;
@@ -632,150 +627,156 @@ function SuggestionsPanel({
                       {messages.inventory.po.stableStockDescription}
                     </p>
                   </div>
-                ) : isMobile ? (
-                  /* Mobile: card layout for suggestions */
-                  <div className="flex flex-col gap-1.5">
-                    {suggestions.map((s) => {
-                      const alreadyAdded = lineIngredientIds.has(
-                        s.ingredient_id,
-                      );
-                      return (
-                        <Item
-                          key={s.ingredient_id}
-                          variant="outline"
-                          size="sm"
-                          className={cn(
-                            "justify-between transition-colors",
-                            alreadyAdded
-                              ? "bg-muted/30 opacity-60"
-                              : "bg-background/70 hover:bg-info/5",
-                          )}
-                        >
-                          <ItemContent>
-                            <ItemTitle className="text-sm font-medium">
-                              <span className="truncate">
+                ) : (
+                  <>
+                    <div className="flex flex-col gap-1.5 md:hidden">
+                      {suggestions.map((s) => {
+                        const alreadyAdded = lineIngredientIds.has(
+                          s.ingredient_id,
+                        );
+                        return (
+                          <Item
+                            key={s.ingredient_id}
+                            variant="outline"
+                            size="sm"
+                            className={cn(
+                              "justify-between transition-colors",
+                              alreadyAdded
+                                ? "bg-muted/30 opacity-60"
+                                : "bg-background/70 hover:bg-info/5",
+                            )}
+                          >
+                            <ItemContent>
+                              <ItemTitle className="text-sm font-medium">
+                                <span className="truncate">
+                                  {s.ingredient_name}
+                                </span>
+                                {s.below_reorder && (
+                                  <Badge
+                                    variant="destructive"
+                                    className="text-xs shrink-0"
+                                  >
+                                    {messages.inventory.po.low}
+                                  </Badge>
+                                )}
+                              </ItemTitle>
+                              <ItemDescription>
+                                {messages.inventory.po.suggestionDescription(
+                                  s.hq_current_qty.toLocaleString("vi-VN"),
+                                  s.avg_daily_consumption.toLocaleString(
+                                    "vi-VN",
+                                  ),
+                                )}
+                              </ItemDescription>
+                            </ItemContent>
+                            <ItemActions>
+                              <span className="font-mono text-sm font-semibold">
+                                {s.suggested_qty.toLocaleString("vi-VN")}{" "}
+                                <span className="text-xs font-normal text-muted-foreground">
+                                  {s.unit}
+                                </span>
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                disabled={alreadyAdded || s.suggested_qty <= 0}
+                                onClick={() => onAddSuggestion(s)}
+                              >
+                                {alreadyAdded ? (
+                                  messages.inventory.po.alreadyAdded
+                                ) : (
+                                  <IconPlus className="size-3.5" />
+                                )}
+                              </Button>
+                            </ItemActions>
+                          </Item>
+                        );
+                      })}
+                    </div>
+
+                    <div className="hidden flex-col gap-1 md:flex">
+                      <div className="grid grid-cols-12 gap-2 px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <span className="col-span-3">
+                          {PRODUCT_VI.rawIngredient}
+                        </span>
+                        <span className="col-span-2 text-right">
+                          {messages.inventory.po.hqStock}
+                        </span>
+                        <span className="col-span-2 text-right">
+                          {messages.inventory.po.consumptionPerDay}
+                        </span>
+                        <span className="col-span-2 text-right">
+                          {messages.inventory.po.suggestedQty}
+                        </span>
+                        <span className="col-span-1">
+                          {messages.inventory.po.unitShort}
+                        </span>
+                        <span className="col-span-2" />
+                      </div>
+
+                      {suggestions.map((s) => {
+                        const alreadyAdded = lineIngredientIds.has(
+                          s.ingredient_id,
+                        );
+                        return (
+                          <div
+                            key={s.ingredient_id}
+                            className={cn(
+                              "grid grid-cols-12 items-center gap-2 rounded-md border border-transparent px-3 py-2 text-sm transition-colors",
+                              alreadyAdded
+                                ? "bg-muted/30 opacity-60"
+                                : "bg-background/70 hover:border-info/20 hover:bg-info/5",
+                            )}
+                          >
+                            <div className="col-span-3 flex items-center gap-1.5">
+                              <span className="truncate font-medium">
                                 {s.ingredient_name}
                               </span>
                               {s.below_reorder && (
                                 <Badge
                                   variant="destructive"
-                                  className="text-xs shrink-0"
+                                  className="text-xs"
                                 >
                                   {messages.inventory.po.low}
                                 </Badge>
                               )}
-                            </ItemTitle>
-                            <ItemDescription>
-                              {messages.inventory.po.suggestionDescription(
-                                s.hq_current_qty.toLocaleString("vi-VN"),
-                                s.avg_daily_consumption.toLocaleString("vi-VN"),
-                              )}
-                            </ItemDescription>
-                          </ItemContent>
-                          <ItemActions>
-                            <span className="font-mono text-sm font-semibold">
-                              {s.suggested_qty.toLocaleString("vi-VN")}{" "}
-                              <span className="text-xs font-normal text-muted-foreground">
-                                {s.unit}
-                              </span>
+                            </div>
+                            <span className="col-span-2 text-right font-mono text-muted-foreground">
+                              {s.hq_current_qty.toLocaleString("vi-VN")}
                             </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs"
-                              disabled={alreadyAdded || s.suggested_qty <= 0}
-                              onClick={() => onAddSuggestion(s)}
-                            >
-                              {alreadyAdded ? (
-                                messages.inventory.po.alreadyAdded
-                              ) : (
-                                <IconPlus className="size-3.5" />
-                              )}
-                            </Button>
-                          </ItemActions>
-                        </Item>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  /* Desktop: grid layout */
-                  <div className="flex flex-col gap-1">
-                    <div className="grid grid-cols-12 gap-2 px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      <span className="col-span-3">
-                        {PRODUCT_VI.rawIngredient}
-                      </span>
-                      <span className="col-span-2 text-right">
-                        {messages.inventory.po.hqStock}
-                      </span>
-                      <span className="col-span-2 text-right">
-                        {messages.inventory.po.consumptionPerDay}
-                      </span>
-                      <span className="col-span-2 text-right">
-                        {messages.inventory.po.suggestedQty}
-                      </span>
-                      <span className="col-span-1">
-                        {messages.inventory.po.unitShort}
-                      </span>
-                      <span className="col-span-2" />
+                            <span className="col-span-2 text-right font-mono">
+                              ~{s.avg_daily_consumption.toLocaleString("vi-VN")}
+                            </span>
+                            <span className="col-span-2 text-right font-mono font-semibold">
+                              {s.suggested_qty.toLocaleString("vi-VN")}
+                            </span>
+                            <span className="col-span-1 text-xs text-muted-foreground">
+                              {s.unit}
+                            </span>
+                            <div className="col-span-2 flex justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                disabled={alreadyAdded || s.suggested_qty <= 0}
+                                onClick={() => onAddSuggestion(s)}
+                              >
+                                {alreadyAdded ? (
+                                  "Đã thêm"
+                                ) : (
+                                  <>
+                                    <IconPlus className="mr-1 size-3" />
+                                    {ACTIONS_VI.add}
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-
-                    {suggestions.map((s) => {
-                      const alreadyAdded = lineIngredientIds.has(
-                        s.ingredient_id,
-                      );
-                      return (
-                        <div
-                          key={s.ingredient_id}
-                          className={`grid grid-cols-12 items-center gap-2 rounded-md border border-transparent px-3 py-2 text-sm transition-colors ${
-                            alreadyAdded
-                              ? "bg-muted/30 opacity-60"
-                              : "bg-background/70 hover:border-info/20 hover:bg-info/5"
-                          }`}
-                        >
-                          <div className="col-span-3 flex items-center gap-1.5">
-                            <span className="truncate font-medium">
-                              {s.ingredient_name}
-                            </span>
-                            {s.below_reorder && (
-                              <Badge variant="destructive" className="text-xs">
-                                {messages.inventory.po.low}
-                              </Badge>
-                            )}
-                          </div>
-                          <span className="col-span-2 text-right font-mono text-muted-foreground">
-                            {s.hq_current_qty.toLocaleString("vi-VN")}
-                          </span>
-                          <span className="col-span-2 text-right font-mono">
-                            ~{s.avg_daily_consumption.toLocaleString("vi-VN")}
-                          </span>
-                          <span className="col-span-2 text-right font-mono font-semibold">
-                            {s.suggested_qty.toLocaleString("vi-VN")}
-                          </span>
-                          <span className="col-span-1 text-xs text-muted-foreground">
-                            {s.unit}
-                          </span>
-                          <div className="col-span-2 flex justify-end">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs"
-                              disabled={alreadyAdded || s.suggested_qty <= 0}
-                              onClick={() => onAddSuggestion(s)}
-                            >
-                              {alreadyAdded ? (
-                                "Đã thêm"
-                              ) : (
-                                <>
-                                  <IconPlus className="mr-1 size-3" />
-                                  {ACTIONS_VI.add}
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  </>
                 )}
               </div>
             </CollapsibleContent>

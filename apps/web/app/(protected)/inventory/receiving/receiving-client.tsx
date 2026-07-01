@@ -22,7 +22,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "../_components/interactive-card";
-import { StatusBadge } from "../_components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { tNav, tRoute } from "../_lib/dictionary";
 import { formatVND } from "../_lib/format";
 import type { RecentActivityItem } from "../procurement-actions";
@@ -129,7 +129,9 @@ export function ReceivingClient({
       key: "status",
       header: FORM_VI.status,
       className: "min-w-32",
-      render: (item) => <StatusBadge status={item.status} size="sm" />,
+      render: (item) => (
+        <StatusBadge domain="inventory" value={item.status} size="sm" />
+      ),
     },
     {
       key: "total",
@@ -153,7 +155,7 @@ export function ReceivingClient({
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <StatusBadge status={item.status} size="sm" />
+          <StatusBadge domain="inventory" value={item.status} size="sm" />
           <span className="text-xs text-muted-foreground">
             {formatActivityDate(item.date)}
           </span>

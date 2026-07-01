@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getKdsOrderDisplayStatus } from "../app/(protected)/br/[branchId]/kds/_lib/order-status";
+import {
+  getKdsOrderDisplayStatus,
+  getKdsTicketDisplayStatus,
+} from "../app/(protected)/br/[branchId]/kds/_lib/order-status";
 import {
   getKdsTicketSequenceSortKey,
-  getStatusLabel,
 } from "../app/(protected)/br/[branchId]/kds/_lib/status-config";
 import type { KdsOrder } from "../app/(protected)/br/[branchId]/kds/types";
 
@@ -26,8 +28,8 @@ function makeOrder(statuses: string[]): Pick<KdsOrder, "tickets"> {
 test("KDS active orders display as pending", () => {
   assert.equal(getKdsOrderDisplayStatus(makeOrder(["pending"])), "pending");
   assert.equal(getKdsOrderDisplayStatus(makeOrder(["preparing"])), "pending");
-  assert.equal(getStatusLabel("pending"), "Chờ");
-  assert.equal(getStatusLabel("preparing"), "Chờ");
+  assert.equal(getKdsTicketDisplayStatus("pending"), "pending");
+  assert.equal(getKdsTicketDisplayStatus("preparing"), "pending");
 });
 
 test("KDS terminal order statuses are not overridden by current display", () => {

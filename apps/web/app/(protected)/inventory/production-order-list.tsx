@@ -178,7 +178,7 @@ export function ProductionOrderList({
     },
     {
       key: "branch",
-      header: "Chi nhánh",
+      header: "Bếp sản xuất",
       render: (order) => order.branch_name,
     },
     {
@@ -234,7 +234,7 @@ export function ProductionOrderList({
           data={orders}
           getRowKey={(order) => order.id}
           emptyTitle="Chưa có lệnh sản xuất nào"
-          emptyDescription="Tạo lệnh mới khi BOM và nguyên liệu đã sẵn sàng tại chi nhánh."
+          emptyDescription="Tạo lệnh mới khi BOM và nguyên liệu đã sẵn sàng tại Bếp Trung Tâm."
           emptyIcon={<IconClipboardList />}
           emptyMode="no-data"
           mobileCardRender={(order) => (
@@ -374,7 +374,7 @@ function ProductionShortageDialog({
           <DialogTitle>Thiếu nguyên liệu để sản xuất</DialogTitle>
           <DialogDescription>
             {info
-              ? `Lệnh ${info.productionNumber} chưa đủ nguyên liệu trong kho mặc định của chi nhánh. Nhập kho các nguyên liệu dưới đây trước khi xác nhận lại.`
+              ? `Lệnh ${info.productionNumber} chưa đủ nguyên liệu tại Bếp Trung Tâm. Bổ sung tồn trong Bếp Trung Tâm trước khi xác nhận lại.`
             : ""}
         </DialogDescription>
       </DialogHeader>

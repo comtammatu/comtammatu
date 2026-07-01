@@ -14,25 +14,34 @@ import {
 import { TransferDetailClient } from "./transfer-detail-client";
 import type { TransferDetail } from "./transfer-detail-client";
 
-export default async function TransferDetailPage({
-  params,
+interface TransferDetailPageContentProps {
+  transferId: number;
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+  routeBranchId?: number;
+  basePath?: string;
+}
+
+export async function TransferDetailPageContent({
+  transferId,
   searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ branchId?: string | string[] }>;
-}) {
-  const { id } = await params;
+  routeBranchId,
+  basePath = "/inventory/transfers",
+}: TransferDetailPageContentProps) {
   const { supabase, claims } = await loadAuthState();
 
   // Sidebar-selected branch scopes action enablement for tenant-wide roles.
-  const sp = await searchParams;
-  const requested = await resolveRequestedBranchId(sp.branchId);
+  const sp = searchParams ? await searchParams : {};
+  const requested =
+    routeBranchId ?? (await resolveRequestedBranchId(sp.branchId));
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
   const scopedBranchId = scope?.selectedBranchId ?? null;
+  if (routeBranchId != null && scopedBranchId !== routeBranchId) {
+    notFound();
+  }
 
   const [res, auditLogs] = await Promise.all([
-    fetchStockTransferDetail(Number(id), scopedBranchId ?? undefined),
-    fetchEntityAuditLogs("stock_transfer", Number(id), 50),
+    fetchStockTransferDetail(transferId, scopedBranchId ?? undefined),
+    fetchEntityAuditLogs("stock_transfer", transferId, 50),
   ]);
   if (!res.success || !res.data) notFound();
 
@@ -91,7 +100,7 @@ export default async function TransferDetailPage({
   const subtotal = items.reduce((sum, i) => sum + i.total, 0);
 
   const transfer: TransferDetail = {
-    id: d.transfer.id ?? Number(id),
+    id: d.transfer.id ?? transferId,
     code: d.transfer.transfer_number ?? "",
     status: d.transfer.status ?? "draft",
     fromBranchId: d.transfer.from_branch_id,
@@ -148,6 +157,30 @@ export default async function TransferDetailPage({
       userBranchId={scopedBranchId}
       correctionBranches={correctionBranches}
       auditLogs={auditLogs}
+      embedded={routeBranchId != null}
+      listHref={
+        routeBranchId != null
+          ? basePath
+          : scopedBranchId != null
+            ? `${basePath}?branchId=${scopedBranchId}`
+            : basePath
+      }
+    />
+  );
+}
+
+export default async function TransferDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  const { id } = await params;
+  return (
+    <TransferDetailPageContent
+      transferId={Number(id)}
+      searchParams={searchParams}
     />
   );
 }

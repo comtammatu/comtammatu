@@ -114,10 +114,7 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
   );
   const hrClientSrc = read("apps/web/app/(protected)/hr/hr-client.tsx");
   const branchSettingsPageSrc = read(
-    "apps/web/app/(protected)/br/[branchId]/settings/page.tsx",
-  );
-  const branchSettingsCardSrc = read(
-    "apps/web/app/(protected)/br/[branchId]/settings/attendance-settings-card.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
   );
 
   for (const expected of [
@@ -169,11 +166,10 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
     "HR UI must expose the per-position task editor",
   );
   assert.ok(
-    branchSettingsPageSrc.includes("AttendanceSettingsCard") &&
-      branchSettingsCardSrc.includes('href="/hr"') &&
-      !branchSettingsPageSrc.includes("role_code") &&
-      !branchSettingsCardSrc.includes("AttendanceConfigDialog"),
-    "branch settings hub must route checklist configuration to HR instead of the old role editor",
+    !branchSettingsPageSrc.includes("AttendanceSettingsCard") &&
+      !branchSettingsPageSrc.includes('href="/hr"') &&
+      !branchSettingsPageSrc.includes("role_code"),
+    "branch settings hub must stay branch-setup only; checklist configuration belongs to HR workspace, not a branch setup shortcut",
   );
 });
 

@@ -11,13 +11,9 @@ import type { BranchSwitcherOption } from "@/_lib/branch-scope";
 import type { ShellNavGroup } from "@/lib/shell-primitives";
 import { resolveOfficePrimaryTabs } from "@/lib/office-nav";
 
-// Shared brand + pageHeader assembly for the Management chrome family (D045 —
-// one sidebar, one header). Both Management shells (OfficeModuleShell and
-// BranchManagementShell) own different brand descriptors and different tier2
-// sources, but the wiring around them is identical: resolve the cross-module
-// primary tabs from role/branch, then hand brand + tier1/tier2 + pageHeader to
-// the single AppShell. That assembly lives here once so the two shells stay
-// thin callers (D048 — dedup chrome, do NOT merge the shells).
+// Shared brand + pageHeader assembly for the office Management chrome (D045 —
+// one sidebar, one header). OfficeModuleShell owns the brand descriptor and
+// tier2 source, then hands brand + tier1/tier2 + pageHeader to AppShell.
 
 export interface ManagementShellProps {
   children: ReactNode;

@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
@@ -36,15 +36,27 @@ function storageTemp(type: string | null): string | null {
   return null;
 }
 
-export default async function StockPage({
+interface StockPageContentProps {
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+  routeBranchId?: number;
+  branchStockBasePath?: string;
+  embedded?: boolean;
+}
+
+export async function StockPageContent({
   searchParams,
-}: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
-}) {
+  routeBranchId,
+  branchStockBasePath,
+  embedded = false,
+}: StockPageContentProps) {
   const { supabase, claims } = await loadAuthState();
-  const params = await searchParams;
-  const requested = await resolveRequestedBranchId(params.branchId);
+  const params = searchParams ? await searchParams : {};
+  const requested =
+    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
+  if (routeBranchId != null && scope.selectedBranchId !== routeBranchId) {
+    notFound();
+  }
   const branchId = scope.selectedBranchId;
   if (!branchId) redirect("/inventory");
   const stockBearingLocationIds = await fetchStockBearingLocationIds({
@@ -290,6 +302,16 @@ export default async function StockPage({
       summary={summary}
       permissions={permissions}
       movementHistory={movementHistory}
+      branchStockBasePath={branchStockBasePath}
+      embedded={embedded}
     />
   );
+}
+
+export default async function StockPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  return <StockPageContent searchParams={searchParams} />;
 }

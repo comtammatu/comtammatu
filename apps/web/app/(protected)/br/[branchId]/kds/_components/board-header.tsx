@@ -51,7 +51,7 @@ export function BoardHeader({
   filterControls,
 }: BoardHeaderProps) {
   return (
-    <div className="flex min-w-0 items-center gap-2 px-2 py-2 md:px-3">
+    <div className="flex min-w-0 flex-wrap items-center gap-2 px-2 py-2 md:flex-nowrap md:px-3">
       <div className="flex shrink-0 items-center gap-1.5">
         <EmployeePortalBackControl className="h-8 px-2 text-sm" />
         <span className="font-heading text-base font-semibold text-foreground">
@@ -61,8 +61,10 @@ export function BoardHeader({
           #{branchId}
         </Badge>
       </div>
-      <div className="min-w-0 flex-1 overflow-x-auto">{stationControls}</div>
-      <div className="flex min-w-max shrink-0 items-center justify-end gap-1.5">
+      <div className="order-3 min-w-0 basis-full overflow-x-auto md:order-none md:basis-auto md:flex-1">
+        {stationControls}
+      </div>
+      <div className="order-2 flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5 md:order-none md:min-w-max md:shrink-0 md:flex-nowrap">
         {filterControls}
         <Badge
           role="status"

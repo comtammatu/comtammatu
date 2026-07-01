@@ -4,8 +4,17 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { formatVND } from "@comtammatu/shared/format";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+} from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
-import { Item } from "@comtammatu/ui/components/item";
+import {
+  Item,
+  ItemContent,
+  ItemGroup,
+} from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   RadioGroup,
@@ -144,9 +153,9 @@ export function MergeOrdersSheet({
         <ScrollArea className="min-h-0 flex-1">
           <div className="flex flex-col gap-2 px-3 py-3 sm:px-4">
             {sourceHasPctDiscount && (
-              <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
-                {POS_VI.mergePctBlock}
-              </p>
+              <Alert variant="destructive">
+                <AlertDescription>{POS_VI.mergePctBlock}</AlertDescription>
+              </Alert>
             )}
 
             {isLoading && siblings === null && (
@@ -158,17 +167,19 @@ export function MergeOrdersSheet({
             )}
 
             {error && (
-              <div className="flex flex-col gap-2 rounded-md border border-destructive/40 p-3 text-sm">
-                <p className="text-destructive">{error}</p>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={load}
-                >
-                  {ACTIONS_VI.retry}
-                </Button>
-              </div>
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+                <AlertAction>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={load}
+                  >
+                    {ACTIONS_VI.retry}
+                  </Button>
+                </AlertAction>
+              </Alert>
             )}
 
             {!isLoading && !error && siblings && siblings.length === 0 && (
@@ -179,49 +190,47 @@ export function MergeOrdersSheet({
 
             {siblings && siblings.length > 0 && (
               <RadioGroup value={selectedId} onValueChange={setSelectedId}>
-                <ul className="flex flex-col gap-2">
+                <ItemGroup className="gap-2">
                   {siblings.map((s) => {
                     const optionId = `merge-target-${s.id}`;
                     const hasPct = s.has_discount && s.discount_type === "pct";
                     return (
                       <Item
                         key={s.id}
-                        asChild
                         variant="outline"
                         className="px-3 py-2"
                         data-disabled={hasPct || undefined}
+                        role="listitem"
                       >
-                        <li>
-                          <Label
-                            htmlFor={optionId}
-                            className="flex w-full cursor-pointer items-center gap-3 font-normal"
-                          >
-                            <RadioGroupItem
-                              id={optionId}
-                              value={String(s.id)}
-                              disabled={hasPct || isPending}
-                            />
-                            <div className="flex min-w-0 flex-1 flex-col gap-1">
-                              <span className="font-medium">
-                                #{s.order_number}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {s.item_count} món
-                                {s.has_discount && s.discount_type === "vnd"
-                                  ? " · có giảm VNĐ (sẽ cộng dồn)"
-                                  : ""}
-                                {hasPct ? " · có giảm % (không gộp được)" : ""}
-                              </span>
-                            </div>
-                            <span className="shrink-0 whitespace-nowrap text-right text-sm font-semibold tabular-nums">
-                              {formatVND(s.total_amount)}
+                        <Label
+                          htmlFor={optionId}
+                          className="flex w-full cursor-pointer items-center gap-3 font-normal"
+                        >
+                          <RadioGroupItem
+                            id={optionId}
+                            value={String(s.id)}
+                            disabled={hasPct || isPending}
+                          />
+                          <ItemContent className="min-w-0">
+                            <span className="font-medium">
+                              #{s.order_number}
                             </span>
-                          </Label>
-                        </li>
+                            <span className="text-xs text-muted-foreground">
+                              {s.item_count} món
+                              {s.has_discount && s.discount_type === "vnd"
+                                ? " · có giảm VNĐ (sẽ cộng dồn)"
+                                : ""}
+                              {hasPct ? " · có giảm % (không gộp được)" : ""}
+                            </span>
+                          </ItemContent>
+                          <span className="shrink-0 whitespace-nowrap text-right text-sm font-semibold tabular-nums">
+                            {formatVND(s.total_amount)}
+                          </span>
+                        </Label>
                       </Item>
                     );
                   })}
-                </ul>
+                </ItemGroup>
               </RadioGroup>
             )}
           </div>

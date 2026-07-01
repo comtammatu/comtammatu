@@ -22,8 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import {
@@ -31,7 +29,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "../_components/interactive-card";
-import { StatusBadge } from "../_components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { formatVND } from "../_lib/format";
 import { tNav } from "../_lib/dictionary";
 
@@ -93,7 +91,9 @@ const GRN_COLUMNS: DataTableColumn<GrnRow>[] = [
   {
     key: "status",
     header: FORM_VI.status,
-    render: (g) => <StatusBadge status={g.status} size="sm" />,
+    render: (g) => (
+      <StatusBadge domain="inventory" value={g.status} size="sm" />
+    ),
   },
   {
     key: "actions",
@@ -110,7 +110,6 @@ const GRN_COLUMNS: DataTableColumn<GrnRow>[] = [
 ];
 
 export function GrnListClient({ grns }: { grns: GrnRow[] }) {
-  const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -131,7 +130,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
   const hasActiveFilters = search.trim() !== "" || statusFilter !== "all";
 
   return (
-    <AppPage width={isMobile ? "narrow" : "wide"}>
+    <AppPage width="wide" contentClassName="max-md:max-w-xl">
       <AppPageHeader
         eyebrow={INVENTORY_VI.warehouse}
         title={tNav("grn", "navigation")}
@@ -145,7 +144,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         }
       />
       <AppToolbar>
-        <InputGroup className={cn("flex-1", isMobile && "h-12 basis-full")}>
+        <InputGroup className="h-12 basis-full flex-1 md:h-7 md:basis-auto">
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -202,7 +201,7 @@ function GrnMobileCard({ grn }: { grn: GrnRow }) {
         <div className="min-w-0 flex-1 flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="font-mono text-sm font-semibold">{grn.code}</span>
-            <StatusBadge status={grn.status} size="sm" />
+            <StatusBadge domain="inventory" value={grn.status} size="sm" />
           </div>
           <p className="truncate text-xs text-muted-foreground">
             {grn.supplierName}

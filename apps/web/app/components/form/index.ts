@@ -12,4 +12,4 @@ export { SelectField } from "./select-field";
 export { TextareaField } from "./textarea-field";
 export { Combobox } from "./combobox";
 export { MultiSelectCombobox } from "./multi-select-combobox";
-export { FormDialog, valuesToFormData } from "./form-dialog";
+export { FileImportDialog, FormDialog, valuesToFormData } from "./form-dialog";

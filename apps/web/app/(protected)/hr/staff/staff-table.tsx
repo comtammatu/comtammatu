@@ -1,10 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import {
   Key as IconKey,
-  Ellipsis as IconDots,
   Pencil as IconPencil,
   Search as IconSearch,
   ToggleLeft as IconToggleLeft,
@@ -12,13 +10,6 @@ import {
   Users as IconUsers,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@comtammatu/ui/components/dropdown-menu";
 import {
   InputGroup,
   InputGroupAddon,
@@ -40,6 +31,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { RowActionsMenu } from "@/components/row-actions-menu";
 
 import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
 export interface BranchOption {
@@ -92,47 +84,43 @@ function StaffActionsMenu({
   onEdit: (member: StaffRow) => void;
   onToggle: (member: StaffRow) => void;
 }) {
+  const isActive = member.is_active !== false;
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        {variant === "card" ? (
-          <Button variant="ghost" size="sm" className="rounded-full">
-            <IconDots className="size-4" />
-            {messages.admin.staffPage.actions}
-          </Button>
-        ) : (
-          <Button variant="ghost" size="icon-lg">
-            <IconDots className="size-4" />
-            <span className="sr-only">Menu</span>
-          </Button>
-        )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => onEdit(member)}>
-          <IconPencil className="mr-2 size-4" />
-          {messages.admin.staffPage.actionEdit}
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href={`/hr/staff/${member.id}/permissions`}>
-            <IconKey className="mr-2 size-4" />
-            {messages.admin.staffPage.actionPermissions}
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onToggle(member)}>
-          {member.is_active !== false ? (
-            <>
-              <IconToggleLeft className="mr-2 size-4" />
-              {messages.admin.staffPage.actionDeactivate}
-            </>
+    <RowActionsMenu
+      label={messages.admin.staffPage.actions}
+      triggerSize={variant === "card" ? "sm" : "icon-lg"}
+      triggerClassName={variant === "card" ? "rounded-full" : undefined}
+      triggerLabel={
+        variant === "card" ? messages.admin.staffPage.actions : undefined
+      }
+      items={[
+        {
+          key: "edit",
+          label: messages.admin.staffPage.actionEdit,
+          icon: <IconPencil data-icon="inline-start" />,
+          onSelect: () => onEdit(member),
+        },
+        {
+          key: "permissions",
+          label: messages.admin.staffPage.actionPermissions,
+          icon: <IconKey data-icon="inline-start" />,
+          href: `/hr/staff/${member.id}/permissions`,
+        },
+        {
+          key: isActive ? "deactivate" : "activate",
+          label: isActive
+            ? messages.admin.staffPage.actionDeactivate
+            : messages.admin.staffPage.actionActivate,
+          icon: isActive ? (
+            <IconToggleLeft data-icon="inline-start" />
           ) : (
-            <>
-              <IconToggleRight className="mr-2 size-4" />
-              {messages.admin.staffPage.actionActivate}
-            </>
-          )}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+            <IconToggleRight data-icon="inline-start" />
+          ),
+          onSelect: () => onToggle(member),
+        },
+      ]}
+    />
   );
 }
 

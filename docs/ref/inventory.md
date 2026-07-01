@@ -204,13 +204,11 @@ Ngoài phạm vi v1:
 
 ### POS food-cost boundary
 
-Trạng thái hiện tại: POS payment/order completion không tự trừ kho. Giá vốn món
-và tiêu hao nguyên liệu phải đến từ chứng từ vận hành kho/bếp đã được xác nhận,
-không từ việc flip trạng thái đơn hàng.
-
-Nếu mở lại recipe-based POS consumption, thiết kế lại như một Postgres RPC
-atomic riêng, có owner decision và smoke test POS -> payment -> inventory trước
-khi đưa vào runtime.
+Mặc định giá vốn món và tiêu hao nguyên liệu vẫn đến từ chứng từ vận hành
+kho/bếp đã được xác nhận. Với chi nhánh bật `pos_stock_outcome_posting`, Sale
+Runtime được phép ghi `stock_movements.consumption/sale_consumption` bằng RPC
+atomic khi đơn đã `paid` + `completed`: line có KDS chờ `first_ready_at`, còn
+line không có KDS chỉ được trừ sau khi đã dispatch qua phiếu bếp in.
 
 ---
 

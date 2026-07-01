@@ -6,9 +6,8 @@ import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 
 /**
- * Shared mobile bottom-nav recipe consumed by both chrome families: the
- * Operations chrome (employee surface) and the Management chrome
- * (`WorkspaceBottomNav`). Per design-system.md § B the bottom nav is an exported
+ * Shared mobile bottom-nav recipe consumed by Management, Branch runtime, and
+ * Operations chrome. Per design-system.md § B the bottom nav is an exported
  * primitive, not a per-surface re-implementation. Callers pass pre-resolved
  * items (active computed by the surface's nav model) plus optional leading and
  * trailing actions.

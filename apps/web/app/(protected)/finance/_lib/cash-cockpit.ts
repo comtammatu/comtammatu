@@ -3,6 +3,7 @@ import { getVNDateString } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchRevenueKpis } from "../actions";
 import type { FinanceParams, ResolvedFinanceRange } from "./finance-params";
+import { fetchSepayBankMovementSince } from "./sepay-bank-transactions";
 
 /**
  * Cash-basis view (D028 deliverable 3): the cash book the HKD owner thinks in.
@@ -33,9 +34,9 @@ export interface CashSummary {
   /** Whether the owner has set a bank-account opening balance (shares openingDate). */
   hasBankOpening: boolean;
   bankOpeningBalance: number;
-  /** VietQR collected since openingDate (bank transfers into the account). */
+  /** SePay incoming transfers since openingDate. */
   bankInSince: number;
-  /** Transfer expenses paid since openingDate. */
+  /** SePay outgoing transfers since openingDate. */
   bankOutSince: number;
   bankOnHand: number;
   /** Period expenses actually paid out (cash + transfer, excludes 'unpaid'). */
@@ -62,21 +63,19 @@ async function sumExpensesSinceByMethod(
   supabase: SupabaseClient,
   tenantId: number,
   sinceDate: string,
-): Promise<{ cash: number; transfer: number }> {
+): Promise<{ cash: number }> {
   const { data } = await supabase
     .from("expenses")
     .select("amount, payment_method")
     .eq("tenant_id", tenantId)
-    .in("payment_method", ["cash", "transfer"])
+    .eq("payment_method", "cash")
     .gte("expense_date", sinceDate);
   let cash = 0;
-  let transfer = 0;
   for (const row of data ?? []) {
     const amount = toNumber(row.amount);
     if (row.payment_method === "cash") cash += amount;
-    else if (row.payment_method === "transfer") transfer += amount;
   }
-  return { cash, transfer };
+  return { cash };
 }
 
 export async function fetchCashSummary(
@@ -128,21 +127,23 @@ export async function fetchCashSummary(
     return { ...EMPTY_OPENING, expensesPaidPeriod, cashExpensePeriod };
   }
 
-  // Running balances are tenant-wide from the anchor date: cash uses
-  // cash_revenue minus cash expenses; bank uses VietQR revenue minus transfer
-  // expenses.
+  // Running balances are tenant-wide from the anchor date: cash uses POS cash,
+  // bank uses signed SePay account movement.
   const today = getVNDateString();
-  const revRes = await fetchRevenueKpis(null, openingDate, today);
+  const [revRes, expensesSince, bankMovement] = await Promise.all([
+    fetchRevenueKpis(null, openingDate, today),
+    sumExpensesSinceByMethod(supabase, tenantId, openingDate),
+    fetchSepayBankMovementSince(supabase, tenantId, openingDate),
+  ]);
   const revData = revRes.success
     ? (revRes.data as {
         cash_revenue?: number;
-        vietqr_revenue?: number;
       } | null)
     : null;
   const cashInSince = toNumber(revData?.cash_revenue);
-  const bankInSince = toNumber(revData?.vietqr_revenue);
-  const { cash: cashOutSince, transfer: bankOutSince } =
-    await sumExpensesSinceByMethod(supabase, tenantId, openingDate);
+  const cashOutSince = expensesSince.cash;
+  const bankInSince = bankMovement.inAmount;
+  const bankOutSince = bankMovement.outAmount;
 
   const bankSettingRaw = settingMap.get(
     SYSTEM_SETTING_KEYS.BANK_OPENING_BALANCE,

@@ -2,20 +2,11 @@
 
 import { useState, useTransition } from "react";
 import {
-  Ellipsis as IconDots,
   Pencil as IconPencil,
   Trash as IconTrash,
   MapPin as IconMapPin,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@comtammatu/ui/components/dropdown-menu";
 import {
   Item,
   ItemActions,
@@ -28,6 +19,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { RowActionsMenu } from "@/components/row-actions-menu";
 import { messages } from "@lib/messages";
 import { deleteZone } from "./actions";
 import { ZoneFormDialog } from "./zone-form-dialog";
@@ -71,28 +63,24 @@ export function ZoneTable({ zones }: ZoneTableProps) {
 
   function ZoneActions({ zone }: { zone: ZoneRow }) {
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-lg">
-            <IconDots className="size-4" />
-            <span className="sr-only">Menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setEditZone(zone)}>
-            <IconPencil data-icon="inline-start" />
-            {ACTIONS_VI.edit}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive"
-            onClick={() => void requestDelete(zone)}
-          >
-            <IconTrash data-icon="inline-start" />
-            {ACTIONS_VI.delete}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <RowActionsMenu
+        items={[
+          {
+            key: "edit",
+            label: ACTIONS_VI.edit,
+            icon: <IconPencil data-icon="inline-start" />,
+            onSelect: () => setEditZone(zone),
+          },
+          {
+            key: "delete",
+            label: ACTIONS_VI.delete,
+            icon: <IconTrash data-icon="inline-start" />,
+            destructive: true,
+            separatorBefore: true,
+            onSelect: () => void requestDelete(zone),
+          },
+        ]}
+      />
     );
   }
 

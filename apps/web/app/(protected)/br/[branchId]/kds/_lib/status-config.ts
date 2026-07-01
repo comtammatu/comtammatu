@@ -1,26 +1,5 @@
-import {
-  KDS_TICKET_STATUS_LABELS_VI,
-  ORDER_TYPE_LABELS_VI,
-} from "@comtammatu/shared/labels";
+import { ORDER_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
 import { getKdsTicketDisplayStatus } from "./order-status";
-
-const STATUS_CONFIG = {
-  pending: { label: KDS_TICKET_STATUS_LABELS_VI.pending, variant: "warning" as const },
-  ready: { label: KDS_TICKET_STATUS_LABELS_VI.ready, variant: "success" as const },
-  cancelled: { label: KDS_TICKET_STATUS_LABELS_VI.cancelled, variant: "destructive" as const },
-} as const;
-
-export type StatusVariant = "warning" | "success" | "destructive";
-
-export function getStatusLabel(status: string): string {
-  const displayStatus = getKdsTicketDisplayStatus(status);
-  return STATUS_CONFIG[displayStatus]?.label ?? status;
-}
-
-export function getStatusVariant(status: string): StatusVariant {
-  const displayStatus = getKdsTicketDisplayStatus(status);
-  return STATUS_CONFIG[displayStatus]?.variant ?? "warning";
-}
 
 export function shouldShowTicketStatusBadge(status: string): boolean {
   return getKdsTicketDisplayStatus(status) !== "pending";

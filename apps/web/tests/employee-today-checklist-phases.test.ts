@@ -13,6 +13,8 @@ const todayWorkStateSource = readWeb(
 const employeeTasksClientSource = readWeb(
   "app/(protected)/employee/tasks/tasks-client.tsx",
 );
+const employeeTasksPageSource = readWeb("app/(protected)/employee/tasks/page.tsx");
+const employeeCountPageSource = readWeb("app/(protected)/employee/count/page.tsx");
 const employeeMessagesSource = readWeb("lib/messages/employee.ts");
 
 test("today work state preserves inventory count and groups start/end phases", () => {
@@ -107,5 +109,35 @@ test("employee task UI renders inventory count as a count link, not a checkbox",
     employeeTasksClientSource,
     /\{isCountTask \? \(\s*<Button[\s\S]*?<Link href=\{countHref\}>[\s\S]*?\) : \(\s*<Checkbox/,
     "Count task should render the link CTA in the true branch and leave Checkbox in the normal-task branch",
+  );
+  assert.match(
+    employeeTasksPageSource,
+    /EmployeeCountPanelContent/,
+    "Employee tasks should reuse the blind count panel in the same screen",
+  );
+  assert.match(
+    employeeTasksPageSource,
+    /id=\{countPanelId\}/,
+    "Employee tasks should expose an anchor for the inline count panel",
+  );
+  assert.match(
+    employeeTasksPageSource,
+    /countHref=\{hasCountTask \? `#\$\{countPanelId\}` : countHref\}/,
+    "The count CTA should jump to the inline panel when the count task is present",
+  );
+  assert.match(
+    employeeCountPageSource,
+    /ingredient_units!ingredient_units_ingredient_tenant_fkey/,
+    "Employee count assignment query must disambiguate the ingredient_units relationship",
+  );
+  assert.match(
+    employeeCountPageSource,
+    /units!ingredient_units_unit_tenant_fkey/,
+    "Employee count assignment query must disambiguate the units relationship",
+  );
+  assert.match(
+    employeeCountPageSource,
+    /const countReadClient = createServiceClient\(\);[\s\S]*countReadClient\s*\.from\("inventory_count_assignments"\)[\s\S]*\.eq\("employee_id", employeeId\)/,
+    "Employee count assignment details should be read through the scoped service client so catalog RLS does not hide names",
   );
 });

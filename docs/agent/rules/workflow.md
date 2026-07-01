@@ -18,7 +18,7 @@ A deterministic floor backs this up: `scripts/check-review-tier.mjs` (`corepack 
 
 ## Skill Plan Gate
 
-T3 tasks MUST write a short skill plan before coding — it feeds the four-perspective debate and lands in the PR description or the `docs/worklog/` T3 note, a reviewer-inspectable home. T2 tasks SHOULD write one, but may omit it when routing is obvious (engineering + the single topic rule, no external skills). Use `docs/agent/rules/skills.md` to choose the minimum useful set:
+T3 tasks MUST write a short skill plan before coding — it feeds the four-perspective debate and lands in the PR description, task notes, or a `docs/worklog/` T3 note when the contract is too large for the PR. T2 tasks SHOULD write one, but may omit it when routing is obvious (engineering + the single topic rule, no external skills). Use `docs/agent/rules/skills.md` to choose the minimum useful set:
 
 ```text
 Skill plan: repo rules = engineering + <topic rules>; external skills = <names>;
@@ -27,7 +27,8 @@ runtime tools = <browser/db/cli>; skipped = <reason>.
 
 T1 work may skip this plan only when it is truly typo-only, doc-only, or a
 dependency version bump with no API change. State the T1 skip reason in the
-commit or PR body.
+commit or PR body. If a worklog was created for a T2/T3 task, promote durable
+facts to the owning doc and delete the worklog when the task lands.
 
 ## The Four Perspectives
 

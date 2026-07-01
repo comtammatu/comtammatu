@@ -45,11 +45,8 @@ export function resolveInventoryNav({
 }): ShellNavGroup[] {
   const isBranchSite = siteKind === "branch";
   const isBranchManager = userRole === "branch_manager";
-  const isOversight = userRole === "owner";
   const showBackOffice =
-    !isBranchManager &&
-    !isOversight &&
-    (showSettings || showProcurement || showCatalogManagement);
+    !isBranchManager && (showSettings || showProcurement || showCatalogManagement);
   const groups: ShellNavGroup[] = [
     {
       title: "Điểm vào",
@@ -63,34 +60,6 @@ export function resolveInventoryNav({
       ],
     },
   ];
-
-  if (isOversight) {
-    groups.push({
-      title: "Giám sát",
-      items: [
-        {
-          href: "/inventory/stock",
-          label: tNav("stock", "navigation"),
-          icon: IconPackage,
-        },
-        {
-          href: "/inventory/expiry",
-          label: tNav("expiry", "navigation"),
-          icon: IconHourglass,
-        },
-        {
-          href: "/inventory/reports",
-          label: tNav("reports", "navigation"),
-          icon: IconChartBar,
-        },
-      ],
-    });
-
-    return groups.map((group) => ({
-      ...group,
-      items: group.items.filter(Boolean),
-    }));
-  }
 
   groups.push({
     title: "1 · Kiểm soát tồn",

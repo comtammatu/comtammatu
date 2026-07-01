@@ -1,9 +1,19 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: legacy inline Vietnamese copy in order split sibling dialog */
+
 import { useEffect, useMemo, useState } from "react";
 import { formatVND } from "@comtammatu/shared/format";
+import {
+  Alert,
+  AlertDescription,
+} from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
-import { Item } from "@comtammatu/ui/components/item";
+import {
+  Item,
+  ItemContent,
+  ItemGroup,
+} from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
   Sheet,
@@ -155,7 +165,7 @@ export function SplitOrderSheet({
         </SheetHeader>
 
         <ScrollArea className="min-h-0 flex-1">
-          <ul className="flex flex-col gap-2 px-3 py-3 sm:px-4">
+          <ItemGroup className="gap-2 px-3 py-3 sm:px-4">
             {items.map((item) => {
               const isCancelled = item.status === "cancelled";
               const picked = picks.get(item.id) ?? 0;
@@ -165,62 +175,60 @@ export function SplitOrderSheet({
               return (
                 <Item
                   key={item.id}
-                  asChild
                   variant="outline"
-                  className="px-3 py-2"
+                  className="items-start gap-3 px-3 py-2"
                   data-disabled={isCancelled || undefined}
+                  role="listitem"
                 >
-                  <li className="flex w-full items-start gap-3">
-                    <div className="flex min-w-0 flex-1 flex-col gap-1">
-                      <span className="break-words font-medium leading-snug">
-                        {displayName}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {item.quantity} × {formatVND(item.unit_price)}
-                        {isCancelled
-                          ? " · đã hủy"
-                          : picked > 0
-                            ? ` · còn lại đơn gốc: ${remaining}`
-                            : ""}
-                      </span>
-                    </div>
-                    <div
-                      role="group"
-                      aria-label={`Số phần tách của ${displayName}`}
-                      className="flex shrink-0 items-center gap-1.5"
+                  <ItemContent className="min-w-0">
+                    <span className="break-words font-medium leading-snug">
+                      {displayName}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {item.quantity} × {formatVND(item.unit_price)}
+                      {isCancelled
+                        ? " · đã hủy"
+                        : picked > 0
+                          ? ` · còn lại đơn gốc: ${remaining}`
+                          : ""}
+                    </span>
+                  </ItemContent>
+                  <div
+                    role="group"
+                    aria-label={`Số phần tách của ${displayName}`}
+                    className="flex shrink-0 items-center gap-1.5"
+                  >
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label="Bớt 1 phần"
+                      disabled={isCancelled || isPending || picked <= 0}
+                      onClick={() => setPickQty(item.id, max, picked - 1)}
                     >
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label="Bớt 1 phần"
-                        disabled={isCancelled || isPending || picked <= 0}
-                        onClick={() => setPickQty(item.id, max, picked - 1)}
-                      >
-                        <IconMinus />
-                      </Button>
-                      <output
-                        aria-live="polite"
-                        className="min-w-8 text-center font-mono text-base font-semibold tabular-nums"
-                      >
-                        {picked}
-                      </output>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label="Thêm 1 phần"
-                        disabled={isCancelled || isPending || picked >= max}
-                        onClick={() => setPickQty(item.id, max, picked + 1)}
-                      >
-                        <IconPlus />
-                      </Button>
-                    </div>
-                  </li>
+                      <IconMinus />
+                    </Button>
+                    <output
+                      aria-live="polite"
+                      className="min-w-8 text-center font-mono text-base font-semibold tabular-nums"
+                    >
+                      {picked}
+                    </output>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label="Thêm 1 phần"
+                      disabled={isCancelled || isPending || picked >= max}
+                      onClick={() => setPickQty(item.id, max, picked + 1)}
+                    >
+                      <IconPlus />
+                    </Button>
+                  </div>
                 </Item>
               );
             })}
-          </ul>
+          </ItemGroup>
         </ScrollArea>
 
         <SheetFooter>
@@ -236,15 +244,17 @@ export function SplitOrderSheet({
             </span>
           </div>
           {wouldEmptySource && !noneSelected && (
-            <p className="text-xs text-destructive">
-              {POS_VI.splitCannotKeepOne}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{POS_VI.splitCannotKeepOne}</AlertDescription>
+            </Alert>
           )}
           {noActiveItems && (
-            <p className="text-xs text-destructive">
-              Đơn không còn món nào để tách (có thể đã được hủy). Vui lòng đóng
-              và tải lại.
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>
+                Đơn không còn món nào để tách (có thể đã được hủy). Vui lòng
+                đóng và tải lại.
+              </AlertDescription>
+            </Alert>
           )}
           <div className="flex gap-2">
             <Button

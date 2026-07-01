@@ -7,6 +7,14 @@ Không dùng thư mục này làm archive, backlog, hay source of truth thứ ha
 
 - `order-payment-code-2026-06-26.md` — POS payment-code model (mã `DH...`)
   follow-up; reconciled-through 682126b0.
+- `2026-06-28-per-employee-count-slips.md` — owner: `tasks/todo.md`
+  per-employee count-slip row.
+- `2026-06-28-pos-ingredient-stock-limit.md` — owner: `tasks/todo.md`
+  POS sell-limit row.
+- `audit-2026-06-28-*.md` — owner:
+  `docs/plan/remediation-roadmap-2026-06-28.md`.
+- `2026-07-01-pos-drink-kds-routing.md` — owner: `tasks/todo.md`
+  split-current-dirty-WIP row.
 
 ## Rules
 

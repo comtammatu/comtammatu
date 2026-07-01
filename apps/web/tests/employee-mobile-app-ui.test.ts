@@ -34,6 +34,9 @@ const employeeLayoutSource = readWebSource(
   "app/(protected)/employee/layout.tsx",
 );
 const pwaRuntimeSource = readWebSource("app/components/pwa-runtime.tsx");
+const pwaInstallHelpDialogSource = readWebSource(
+  "app/components/pwa-install-help-dialog.tsx",
+);
 const employeePwaToolbarSource = readWebSource(
   "app/(protected)/employee/components/employee-pwa-toolbar.tsx",
 );
@@ -168,8 +171,13 @@ test("Employee PWA shell explains install and offline state without persisted wo
   );
   assert.match(
     employeePwaToolbarSource,
-    /DialogTitle>\{helpCopy\.title\}/,
-    "Install instructions should use an accessible Dialog title",
+    /<PwaInstallHelpDialog[\s\S]*title=\{helpCopy\.title\}/,
+    "Install instructions should delegate title copy to the shared PWA help dialog",
+  );
+  assert.match(
+    pwaInstallHelpDialogSource,
+    /<DialogTitle>\{title\}<\/DialogTitle>/,
+    "Shared PWA help dialog should keep an accessible Dialog title",
   );
   assert.doesNotMatch(
     employeePwaToolbarSource,

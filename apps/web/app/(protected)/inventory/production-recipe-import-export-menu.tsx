@@ -1,27 +1,12 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import type { FormEvent } from "react";
+import { useState, useTransition } from "react";
 import {
-  CircleAlert as IconAlertCircle,
   Download as IconDownload,
   Sheet as IconFileSpreadsheet,
   Upload as IconUpload,
 } from "lucide-react";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,22 +15,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@comtammatu/ui/components/field";
-import { Input } from "@comtammatu/ui/components/input";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { FileImportDialog } from "@/components/form";
 import { downloadCsv, downloadXlsx } from "@/_lib/download-file";
 import {
   downloadProductionRecipeTemplate,
   exportProductionRecipes,
   importProductionRecipes,
-  type ImportProductionRecipeIssue,
-  type ImportProductionRecipeSummary,
 } from "./production-actions";
 
 import { ACTIONS_VI, INVENTORY_VI, TOAST_VI } from "@comtammatu/shared/messages";
@@ -141,153 +118,28 @@ function ProductionRecipeImportDialog({
   onOpenChange: (v: boolean) => void;
   onImported?: () => void;
 }) {
-  const [isPending, startTransition] = useTransition();
-  const [issues, setIssues] = useState<ImportProductionRecipeIssue[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<ImportProductionRecipeSummary | null>(
-    null,
-  );
-  const [fileName, setFileName] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  function reset() {
-    setIssues([]);
-    setError(null);
-    setSummary(null);
-    setFileName("");
-    if (fileRef.current) fileRef.current.value = "";
-  }
-
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const file = fileRef.current?.files?.[0];
-    if (!file) {
-      setError(INVENTORY_VI.selectFile);
-      return;
-    }
-
-    const fd = new FormData();
-    fd.append("file", file);
-
-    startTransition(async () => {
-      setError(null);
-      setIssues([]);
-      setSummary(null);
-
-      const res = await importProductionRecipes(fd);
-      if (!res.success) {
-        setError(res.error);
-        if (res.issues) setIssues(res.issues);
-        return;
-      }
-
-      setSummary(res.data.summary);
-      toast.success(
-        `Đã import ${res.data.summary.recipes} BOM / ${res.data.summary.lines} dòng`,
-      );
-      onImported?.();
-    });
-  }
-
   return (
-    <Dialog
+    <FileImportDialog
       open={open}
-      onOpenChange={(v) => {
-        if (!v) reset();
-        onOpenChange(v);
-      }}
-    >
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{INVENTORY_VI.importBomTitle}</DialogTitle>
-          <DialogDescription>
-            {INVENTORY_VI.importBomDescription}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form
-          onSubmit={handleSubmit}
-          noValidate
-          className="flex flex-col gap-4"
-        >
-          <FieldGroup>
-            <Field data-invalid={!!error && !fileName}>
-              <FieldLabel htmlFor="production-recipe-import-file">
-                {INVENTORY_VI.chooseFileLabel}
-              </FieldLabel>
-              <Input
-                id="production-recipe-import-file"
-                ref={fileRef}
-                type="file"
-                accept=".xlsx,.xlsm,.csv"
-                required
-                aria-invalid={!!error && !fileName}
-                onChange={(event) => {
-                  setFileName(event.currentTarget.files?.[0]?.name ?? "");
-                  setError(null);
-                  setIssues([]);
-                }}
-              />
-              {fileName ? (
-                <FieldDescription>Đã chọn: {fileName}</FieldDescription>
-              ) : null}
-            </Field>
-          </FieldGroup>
-
-          {error ? (
-            <Alert variant="destructive">
-              <IconAlertCircle />
-              <AlertTitle>{error}</AlertTitle>
-            </Alert>
-          ) : null}
-
-          {issues.length > 0 ? (
-            <Alert>
-              <AlertTitle>{INVENTORY_VI.importErrorDetailHeading}</AlertTitle>
-              <AlertDescription>
-                <ul className="flex max-h-52 flex-col gap-1 overflow-auto">
-                  {issues.slice(0, 50).map((issue, idx) => (
-                    <li key={idx}>
-                      [dòng {issue.row}] {issue.message}
-                    </li>
-                  ))}
-                  {issues.length > 50 ? (
-                    <li>...và {issues.length - 50} lỗi khác</li>
-                  ) : null}
-                </ul>
-              </AlertDescription>
-            </Alert>
-          ) : null}
-
-          {summary ? (
-            <Alert>
-              <AlertTitle>{INVENTORY_VI.importResultHeading}</AlertTitle>
-              <AlertDescription>
-                Đã cập nhật {summary.recipes} BOM sản xuất / {summary.lines}{" "}
-                dòng nguyên liệu.
-              </AlertDescription>
-            </Alert>
-          ) : null}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                reset();
-                onOpenChange(false);
-              }}
-              disabled={isPending}
-            >
-              {ACTIONS_VI.close}
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending && <Spinner data-icon="inline-start" />}
-              Import
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      onOpenChange={onOpenChange}
+      title={INVENTORY_VI.importBomTitle}
+      description={INVENTORY_VI.importBomDescription}
+      inputId="production-recipe-import-file"
+      chooseFileLabel={INVENTORY_VI.chooseFileLabel}
+      selectedFileLabel={(fileName) => `Đã chọn: ${fileName}`}
+      selectFileError={INVENTORY_VI.selectFile}
+      resultTitle={INVENTORY_VI.importResultHeading}
+      submitLabel="Import"
+      closeLabel={ACTIONS_VI.close}
+      importAction={importProductionRecipes}
+      successMessage={(summary) =>
+        `Đã import ${summary.recipes} BOM / ${summary.lines} dòng`
+      }
+      renderSummary={(summary) =>
+        `Đã cập nhật ${summary.recipes} BOM sản xuất / ${summary.lines} dòng nguyên liệu.`
+      }
+      renderIssue={(issue) => `[dòng ${issue.row}] ${issue.message}`}
+      onImported={onImported}
+    />
   );
 }

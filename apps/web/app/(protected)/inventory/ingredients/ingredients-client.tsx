@@ -33,7 +33,6 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { cn } from "@comtammatu/ui";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
 import { AppPageHeader, AppPage, AppToolbar } from "@/components/surface";
 import {
@@ -41,7 +40,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "../_components/interactive-card";
-import { StatusBadge } from "../_components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { fetchIngredients, toggleIngredientActive } from "../ingredient-actions";
@@ -153,7 +152,8 @@ function IngredientMobileCard({
               </Badge>
             ) : null}
             <StatusBadge
-              status={item.is_active ? "active" : "suspended"}
+              domain="inventory"
+              value={item.is_active ? "active" : "suspended"}
               size="sm"
             />
           </div>
@@ -214,7 +214,6 @@ export function IngredientsClient({
   unitOptions: UnitOption[];
   categoryOptions: CategoryOption[];
 }) {
-  const isMobile = useIsMobile();
   const [rows, setRows] = useState(initial);
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("all");
@@ -434,7 +433,10 @@ export function IngredientsClient({
       header: FORM_VI.status,
       className: "min-w-28",
       render: (item) => (
-        <StatusBadge status={item.is_active ? "active" : "suspended"} />
+        <StatusBadge
+          domain="inventory"
+          value={item.is_active ? "active" : "suspended"}
+        />
       ),
     },
     {
@@ -480,7 +482,7 @@ export function IngredientsClient({
   ];
 
   return (
-    <AppPage mobile={isMobile} scroll>
+    <AppPage scroll className="max-md:pb-28" contentClassName="max-md:max-w-2xl">
       <AppPageHeader
         title="Nguyên liệu"
         actions={

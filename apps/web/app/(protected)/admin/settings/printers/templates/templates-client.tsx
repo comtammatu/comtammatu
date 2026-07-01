@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppSection } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -12,15 +13,6 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@comtammatu/ui/components/dialog";
 import {
   Item,
   ItemActions,
@@ -37,6 +29,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import { FormDialog, SelectField, TextField } from "@/components/form";
 import {
   ChevronDown as IconChevronDown,
   ChevronUp as IconChevronUp,
@@ -50,6 +43,7 @@ import {
   type PrintKind,
   type TemplateBlock,
 } from "@comtammatu/print-render/templates";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 import {
   previewPrintTemplate,
@@ -59,6 +53,18 @@ import {
 } from "./actions";
 
 const copy = messages.settings.printTemplates;
+
+const saveTemplateSchema = z.object({
+  name: z.string().trim().min(1, { error: ERRORS_VI.validationFailed }),
+  paperWidth: z.enum(["58", "80"]),
+});
+
+type SaveTemplateValues = z.infer<typeof saveTemplateSchema>;
+
+const PAPER_WIDTH_OPTIONS = [
+  { value: "80", label: copy.paperWidth80 },
+  { value: "58", label: copy.paperWidth58 },
+];
 
 export type BranchOption = { id: number; name: string };
 
@@ -151,10 +157,6 @@ export function TemplatesClient({
   const [previewPending, startPreview] = useTransition();
   const [actionPending, startAction] = useTransition();
   const [saveOpen, setSaveOpen] = useState(false);
-  const [saveName, setSaveName] = useState("");
-  const [paperWidth, setPaperWidth] = useState<58 | 80>(
-    templates[0]?.paperWidth ?? 80,
-  );
   const [testBranch, setTestBranch] = useState<string>(
     branches[0] ? String(branches[0].id) : "",
   );
@@ -165,6 +167,15 @@ export function TemplatesClient({
     [templates, kind],
   );
   const blocks = blocksByKind[kind] ?? [];
+  const saveDefaultValues = useMemo<SaveTemplateValues>(
+    () => ({
+      name: "",
+      paperWidth: String(
+        current?.paperWidth ?? 80,
+      ) as SaveTemplateValues["paperWidth"],
+    }),
+    [current?.paperWidth],
+  );
 
   const setBlocks = (next: TemplateBlock[]) => {
     setBlocksByKind((prev) => ({ ...prev, [kind]: next }));
@@ -242,34 +253,13 @@ export function TemplatesClient({
     };
   }, [kind, blocksJson]);
 
-  const handleSave = () => {
-    startAction(async () => {
-      const result = await savePrintTemplate({
-        kind,
-        name: saveName,
-        paper_width_mm: paperWidth,
-        content: { blocks: JSON.parse(blocksJson) },
-      });
-      if (result.success) {
-        toast.success(
-          copy.savedToast(
-            KIND_LABEL[kind],
-            String(result.data?.version ?? "?"),
-          ),
-        );
-        setSaveOpen(false);
-        setSaveName("");
-        setDirtyKinds((prev) => {
-          const next = new Set(prev);
-          next.delete(kind);
-          return next;
-        });
-        router.refresh();
-      } else {
-        toast.error(result.error);
-      }
+  const handleSave = async (values: SaveTemplateValues) =>
+    savePrintTemplate({
+      kind,
+      name: values.name,
+      paper_width_mm: values.paperWidth === "58" ? 58 : 80,
+      content: { blocks: JSON.parse(blocksJson) },
     });
-  };
 
   const handleRestore = async () => {
     const ok = await confirm({
@@ -492,72 +482,61 @@ export function TemplatesClient({
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
-                  <DialogTrigger asChild>
-                    <Button type="button" className="gap-1">
-                      <IconSave className="size-4" />
-                      {copy.saveButton}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-sm">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {copy.saveTitle(KIND_LABEL[kind])}
-                      </DialogTitle>
-                      <DialogDescription>
-                        {copy.saveDescription}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col gap-3">
-                      <div className="flex flex-col gap-1.5">
-                        <Label htmlFor="template-name">
-                          {copy.saveNameLabel}
-                        </Label>
-                        <Input
-                          id="template-name"
-                          value={saveName}
-                          onChange={(e) => setSaveName(e.target.value)}
-                          placeholder={copy.saveNamePlaceholder(
-                            KIND_LABEL[kind],
-                          )}
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label htmlFor="paper-width">
-                          {copy.paperWidthLabel}
-                        </Label>
-                        <Select
-                          value={String(paperWidth)}
-                          onValueChange={(v) =>
-                            setPaperWidth(v === "58" ? 58 : 80)
-                          }
-                        >
-                          <SelectTrigger id="paper-width">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="80">
-                              {copy.paperWidth80}
-                            </SelectItem>
-                            <SelectItem value="58">
-                              {copy.paperWidth58}
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button
-                        type="button"
-                        disabled={actionPending || saveName.trim() === ""}
-                        onClick={handleSave}
-                      >
-                        {actionPending ? <Spinner className="size-4" /> : null}
-                        {copy.saveConfirm}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                <Button
+                  type="button"
+                  className="gap-1"
+                  onClick={() => setSaveOpen(true)}
+                >
+                  <IconSave className="size-4" />
+                  {copy.saveButton}
+                </Button>
+                <FormDialog
+                  open={saveOpen}
+                  onOpenChange={setSaveOpen}
+                  schema={saveTemplateSchema}
+                  defaultValues={saveDefaultValues}
+                  entityKey={kind}
+                  title={copy.saveTitle(KIND_LABEL[kind])}
+                  description={copy.saveDescription}
+                  submitLabel={copy.saveConfirm}
+                  onSubmit={handleSave}
+                  onSuccess={(result) => {
+                    const data = result.data as
+                      | { version?: number }
+                      | undefined;
+                    toast.success(
+                      copy.savedToast(
+                        KIND_LABEL[kind],
+                        String(data?.version ?? "?"),
+                      ),
+                    );
+                    setDirtyKinds((prev) => {
+                      const next = new Set(prev);
+                      next.delete(kind);
+                      return next;
+                    });
+                    router.refresh();
+                  }}
+                  contentClassName="sm:max-w-sm"
+                >
+                  {(form) => (
+                    <>
+                      <TextField
+                        control={form.control}
+                        name="name"
+                        label={copy.saveNameLabel}
+                        placeholder={copy.saveNamePlaceholder(KIND_LABEL[kind])}
+                        required
+                      />
+                      <SelectField
+                        control={form.control}
+                        name="paperWidth"
+                        label={copy.paperWidthLabel}
+                        options={PAPER_WIDTH_OPTIONS}
+                      />
+                    </>
+                  )}
+                </FormDialog>
 
                 <Button
                   type="button"
@@ -753,7 +732,10 @@ function StyleToggles({
           checked={Boolean(block.bold)}
           onCheckedChange={(v) => onPatch({ bold: v === true })}
         />
-        <Label htmlFor="toggle-style-bold" className="text-sm font-normal cursor-pointer">
+        <Label
+          htmlFor="toggle-style-bold"
+          className="text-sm font-normal cursor-pointer"
+        >
           {copy.styleBold}
         </Label>
       </div>
@@ -763,7 +745,10 @@ function StyleToggles({
           checked={Boolean(block.double)}
           onCheckedChange={(v) => onPatch({ double: v === true })}
         />
-        <Label htmlFor="toggle-style-double" className="text-sm font-normal cursor-pointer">
+        <Label
+          htmlFor="toggle-style-double"
+          className="text-sm font-normal cursor-pointer"
+        >
           {copy.styleDouble}
         </Label>
       </div>

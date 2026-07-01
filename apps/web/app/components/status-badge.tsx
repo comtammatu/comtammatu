@@ -2,6 +2,7 @@ import {
   ATTENDANCE_STATUS_LABELS_VI,
   CONSUMPTION_REPORT_STATUS_LABELS_VI,
   COUNT_SLIP_STATUS_LABELS_VI,
+  INVENTORY_STATUS_LABELS_VI,
   LEAVE_REQUEST_STATUS_LABELS_VI,
   ORDER_ITEM_STATUS_LABELS_VI,
   ORDER_PAYMENT_STATUS_LABELS_VI,
@@ -14,6 +15,7 @@ import {
   TABLE_STATUS_LABELS_VI,
   TAX_INVOICE_STATUS_LABELS_VI,
 } from "@comtammatu/shared/labels";
+import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 
 type BadgeVariant = NonNullable<BadgeProps["variant"]>;
@@ -21,6 +23,7 @@ type BadgeVariant = NonNullable<BadgeProps["variant"]>;
 type DomainConfig = {
   labels: Record<string, string>;
   variants: Record<string, BadgeVariant>;
+  fallbackVariant?: BadgeVariant;
   dots?: Record<string, string>;
 };
 
@@ -169,6 +172,44 @@ const STATUS_DOMAINS = {
       approved: "success",
     },
   },
+  inventory: {
+    labels: INVENTORY_STATUS_LABELS_VI,
+    fallbackVariant: "secondary",
+    variants: {
+      draft: "secondary",
+      confirmed: "success",
+      sent: "info",
+      credited: "success",
+      refunded: "success",
+      partially_received: "warning",
+      in_transit: "info",
+      received: "success",
+      completed: "success",
+      cancelled: "destructive",
+      pending: "warning",
+      in_progress: "info",
+      matched: "success",
+      discrepancy: "destructive",
+      approved: "success",
+      overdue: "destructive",
+      unpaid: "warning",
+      partial: "info",
+      paid: "success",
+      expired: "destructive",
+      critical: "warning",
+      warning: "warning",
+      write_off: "destructive",
+      consumption: "success",
+      storage_loss: "warning",
+      sale_consumption: "success",
+      normal: "success",
+      low: "destructive",
+      out: "destructive",
+      over: "warning",
+      active: "success",
+      suspended: "secondary",
+    },
+  },
 } satisfies Record<string, DomainConfig>;
 
 export type StatusDomain = keyof typeof STATUS_DOMAINS;
@@ -180,7 +221,7 @@ export function getStatusBadgeMeta(
   const config: DomainConfig = STATUS_DOMAINS[domain];
   return {
     label: config.labels[value] ?? value,
-    variant: config.variants[value] ?? "outline",
+    variant: config.variants[value] ?? config.fallbackVariant ?? "outline",
   };
 }
 
@@ -197,17 +238,19 @@ export function StatusBadge({
   value,
   label,
   className,
+  size = "default",
 }: {
   domain: StatusDomain;
   value: string;
   label?: string;
   className?: string;
+  size?: "sm" | "default";
 }) {
   const meta = getStatusBadgeMeta(domain, value);
   return (
     <Badge
       variant={meta.variant}
-      className={className}
+      className={cn(size === "sm" && "text-xs", className)}
       data-slot="status-badge"
       data-domain={domain}
       data-status={value}

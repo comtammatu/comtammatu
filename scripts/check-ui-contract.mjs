@@ -194,7 +194,7 @@ const checks = [
   {
     id: "admin-finance-branch-raw-card-import",
     description:
-      "Admin, Finance, and Branch Settings page surfaces use AppSection/KpiCard/approved adapters; raw Card imports are frozen baseline debt.",
+      "Admin, Finance, and Branch Settings page surfaces use app card roles; raw Card imports are frozen baseline debt.",
     roots: [
       { dir: "apps/web/app/(protected)/admin", extensions: [".tsx"] },
       { dir: "apps/web/app/(protected)/finance", extensions: [".tsx"] },
@@ -573,6 +573,18 @@ for (const file of legacyDocReferenceFiles) {
 
 const forbiddenTextChecks = [
   {
+    id: "ui-authority-no-retired-scaffold-names",
+    files: [
+      "docs/spec/design-system.md",
+      "docs/modules/ui.md",
+      "docs/agent/rules/ui.md",
+      "tasks/regressions.md",
+      "packages/ui/src/styles/globals.css",
+    ],
+    pattern:
+      /\bradix-(?:lyra|luma)\b|buFywKm|components\.json|shadcn\/ui|scaffold CLI\/preset|old preset names|preset-backed primitives|preset primitives|NO-LEGACY-APP-HELPERS|retired scaffold\/preset/g,
+  },
+  {
     id: "active-entrypoints-no-stale-ui-provider-terms",
     files: [
       "README.md",
@@ -604,7 +616,7 @@ const textChecks = [
       "the conflict is a bug to resolve",
       "The design system is the Com Tam Ma Tu Custom Theme contract implemented by",
       "Má Tư Design System primitives in `@comtammatu/ui`",
-      "External UI scaffold CLI/preset files are not part of the runtime",
+      "External scaffold output is not part of the runtime contract",
     ],
   },
   {
@@ -615,7 +627,8 @@ const textChecks = [
       "`docs/spec/design-system.md`",
       "That source defines the Com Tam Ma Tu Custom Theme.",
       "Everything else is evidence, implementation, or enforcement for that contract",
-      "NEVER treat external UI scaffold CLI/preset output as authority to override the Custom Theme",
+      "NEVER treat external UI scaffold output as authority to override the Custom Theme",
+      "REMOVE stale UI rules; keep only live hard rails, workflows, contracts, or guards.",
     ],
   },
   {
@@ -627,7 +640,7 @@ const textChecks = [
       "Runtime config, primitives, adapters, runbooks, worklogs, and regression rules",
       "are evidence/enforcement for that contract",
       "design system:",
-      "Không được coi external UI scaffold CLI/preset là authority cao hơn Custom Theme",
+      "Không được coi external UI scaffold output là authority cao hơn Custom Theme",
     ],
   },
   {
@@ -789,7 +802,7 @@ const countBudgets = [
   {
     id: "raw-card-import-baseline",
     description:
-      "Raw Card imports are baseline debt; route-family waves should delegate to AppSection/KpiCard/operational adapters instead.",
+      "Raw Card imports are baseline debt; route-family waves should delegate to app card roles instead.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern: /from\s+["@']@comtammatu\/ui\/components\/card["@']/g,
     maxCount: 2,
@@ -969,7 +982,8 @@ const frozenPrimitiveImportBaselines = [
     id: "raw-card-import-file-baseline",
     component: "card",
     label: "Card",
-    replacement: "AppSection, KpiCard, or an approved operational adapter",
+    replacement:
+      "an app card role: AppSection, AppLinkCard, KpiCard for metrics only, InteractiveCard, OperationalBoardCard, or a route-scoped adapter",
     allowlist: {
       "apps/web/app/components/kpi/kpi-card.tsx": 1,
       "apps/web/app/components/surface.tsx": 1,
@@ -994,10 +1008,8 @@ const frozenPrimitiveImportBaselines = [
     allowlist: {
       "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
       "apps/web/app/(protected)/branches/network-config-dialog.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/_components/operational-pwa/toolbar.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/transfer-table-dialog.tsx": 1,
-      "apps/web/app/(protected)/employee/components/employee-pwa-toolbar.tsx": 1,
       "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
       "apps/web/app/(protected)/hr/checklist-templates-table.tsx": 1,
       "apps/web/app/(protected)/inventory/ingredients/import-export-menu.tsx": 1,
@@ -1009,6 +1021,7 @@ const frozenPrimitiveImportBaselines = [
       "apps/web/app/(protected)/menu/import-export-menu.tsx": 1,
       "apps/web/app/(protected)/menu/item-detail-dialog.tsx": 1,
       "apps/web/app/components/form/form-dialog.tsx": 1,
+      "apps/web/app/components/pwa-install-help-dialog.tsx": 1,
     },
   },
   {

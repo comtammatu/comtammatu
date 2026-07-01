@@ -111,7 +111,17 @@ function newLine(): LineState {
   };
 }
 
-export function WasteCreateClient({ context }: { context: WasteFormContext }) {
+export function WasteCreateClient({
+  context,
+  successHref,
+  cancelHref,
+  embedded = false,
+}: {
+  context: WasteFormContext;
+  successHref?: string;
+  cancelHref?: string;
+  embedded?: boolean;
+}) {
   const router = useRouter();
   const [locationId, setLocationId] = useState<number | null>(
     context.locations[0]?.id ?? null,
@@ -240,14 +250,14 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
       toast.success(
         `Đã tạo phiếu ${res.data?.issueNumber} (${res.data?.itemsCreated} dòng)${res.data?.requiresApproval ? " • Chờ QLV duyệt" : ""}`,
       );
-      router.push(`/inventory/issues/${res.data?.issueId}`);
+      router.push(successHref ?? `/inventory/issues/${res.data?.issueId}`);
     });
   }
 
-  return (
-    <AppPage>
+  const content = (
+    <>
       <AppPageHeader
-        eyebrow="Kho hàng"
+        eyebrow={embedded ? undefined : "Kho hàng"}
         title={messages.inventory.waste.title}
         description={
           <>
@@ -508,12 +518,13 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
           })}
       </ItemGroup>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <Button
           type="button"
           variant="outline"
           onClick={addLine}
           disabled={isSubmitting}
+          className="w-full sm:w-auto"
         >
           {messages.inventory.waste.addLine}
         </Button>
@@ -527,18 +538,33 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
         </div>
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button
           variant="outline"
-          onClick={() => router.back()}
+          onClick={() => router.push(cancelHref ?? "/inventory/issues")}
           disabled={isSubmitting}
+          className="w-full sm:w-auto"
         >
           {ACTIONS_VI.cancel}
         </Button>
-        <Button onClick={handleSubmit} disabled={isSubmitting}>
+        <Button
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="w-full sm:w-auto"
+        >
           {isSubmitting ? <Spinner /> : messages.inventory.waste.createSlip}
         </Button>
       </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <AppPage>
+      {content}
     </AppPage>
   );
 }

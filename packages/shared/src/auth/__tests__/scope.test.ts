@@ -118,7 +118,7 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
   );
   assert.equal(
     resolveRouteFamilyContract("/br/3/dashboard")?.primaryNav,
-    "management-sidebar",
+    "operator-bottom-nav",
   );
   assert.equal(
     resolveRouteFamilyContract("/br/3/settings")?.surface,
@@ -126,7 +126,7 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
   );
   assert.equal(
     resolveRouteFamilyContract("/br/3/settings/printers")?.primaryNav,
-    "management-sidebar",
+    "operator-bottom-nav",
   );
   assert.equal(
     resolveRouteFamilyContract("/br/3/settings/menu-limits")?.surface,
@@ -134,7 +134,7 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
   );
   assert.equal(
     resolveRouteFamilyContract("/br/3/settings/menu-limits")?.primaryNav,
-    "management-sidebar",
+    "operator-bottom-nav",
   );
   // The old top-level path now legacy-redirects into the settings hub.
   assert.equal(

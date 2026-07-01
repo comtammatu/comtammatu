@@ -45,9 +45,8 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "../_components/interactive-card";
-import { StatusBadge } from "../_components/status-badge";
+import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { formatVND } from "../_lib/format";
-import { getInventoryStatusLabel } from "../_lib/ui";
 import { tNav } from "../_lib/dictionary";
 import { createStockIssueDraft } from "../issue-actions";
 
@@ -97,7 +96,7 @@ function issueTypeLabel(type: string, branchKind: string | null): string {
 const STATE_FILTER_OPTIONS = ["draft", "confirmed", "cancelled"].map(
   (value) => ({
     value,
-    label: getInventoryStatusLabel(value),
+    label: getStatusBadgeMeta("inventory", value).label,
   }),
 );
 
@@ -111,7 +110,6 @@ const TYPE_FILTER_OPTIONS = [
 
 const CREATE_ISSUE_DIALOG_DESCRIPTION =
   "Chọn điểm vận hành, loại xuất và ghi chú trước khi tạo phiếu nháp.";
-const CONSUMPTION_PATH = "/inventory/consumption";
 
 const createIssueSchema = z.object({
   branchId: z.string().min(1, { error: "Chọn chi nhánh để tạo phiếu xuất." }),
@@ -137,9 +135,12 @@ function toUtf8Base64(value: string): string {
   return btoa(binary);
 }
 
-function buildConsumptionHref(params: URLSearchParams): string {
+function buildConsumptionHref(
+  consumptionBasePath: string,
+  params: URLSearchParams,
+): string {
   const query = params.toString();
-  return query ? `${CONSUMPTION_PATH}?${query}` : CONSUMPTION_PATH;
+  return query ? `${consumptionBasePath}?${query}` : consumptionBasePath;
 }
 
 export function IssuesClient({
@@ -151,6 +152,7 @@ export function IssuesClient({
   recordedEndDate: initialRecordedEndDate,
   recordedIsLimited,
   recordedStartDate: initialRecordedStartDate,
+  consumptionBasePath = "/inventory/consumption",
 }: {
   issues: IssueRow[];
   recordedConsumptions: RecordedConsumptionRow[];
@@ -160,6 +162,7 @@ export function IssuesClient({
   recordedEndDate: string;
   recordedIsLimited: boolean;
   recordedStartDate: string;
+  consumptionBasePath?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -243,7 +246,7 @@ export function IssuesClient({
 
     if (res.success && res.data) {
       const newId = (res.data as { id: number }).id;
-      router.push(`/inventory/consumption/${newId}`);
+      router.push(`${consumptionBasePath}/${newId}`);
     }
 
     return res;
@@ -256,12 +259,7 @@ export function IssuesClient({
     if (!q) return recordedConsumptions;
     return recordedConsumptions.filter((row) =>
       matchesSearch(
-        [
-          row.ingredientName,
-          row.branchName,
-          row.locationName,
-          row.sourceLabel,
-        ],
+        [row.ingredientName, row.branchName, row.locationName, row.sourceLabel],
         q,
       ),
     );
@@ -370,7 +368,7 @@ export function IssuesClient({
       next.delete("branchId");
     }
 
-    router.push(buildConsumptionHref(next));
+    router.push(buildConsumptionHref(consumptionBasePath, next));
   }
 
   function clearRecordedDateFilter() {
@@ -381,7 +379,7 @@ export function IssuesClient({
     setRecordedStartDate("");
     setRecordedEndDate("");
     setRecordedBranchId("all");
-    router.push(buildConsumptionHref(next));
+    router.push(buildConsumptionHref(consumptionBasePath, next));
   }
 
   const filterBar = (
@@ -472,7 +470,10 @@ export function IssuesClient({
           </SelectContent>
         </Select>
         <div className="flex min-w-40 flex-col gap-1">
-          <Label htmlFor="recorded-start-date" className="text-xs font-medium text-muted-foreground font-normal">
+          <Label
+            htmlFor="recorded-start-date"
+            className="text-xs font-medium text-muted-foreground font-normal"
+          >
             Từ ngày
           </Label>
           <Input
@@ -484,7 +485,10 @@ export function IssuesClient({
           />
         </div>
         <div className="flex min-w-40 flex-col gap-1">
-          <Label htmlFor="recorded-end-date" className="text-xs font-medium text-muted-foreground font-normal">
+          <Label
+            htmlFor="recorded-end-date"
+            className="text-xs font-medium text-muted-foreground font-normal"
+          >
             Đến ngày
           </Label>
           <Input
@@ -535,7 +539,7 @@ export function IssuesClient({
       header: "Mã phiếu",
       render: (item) => (
         <Link
-          href={`/inventory/consumption/${item.id}`}
+          href={`${consumptionBasePath}/${item.id}`}
           className="text-sm font-semibold text-primary hover:underline"
         >
           {item.code}
@@ -568,7 +572,9 @@ export function IssuesClient({
     {
       key: "status",
       header: FORM_VI.status,
-      render: (item) => <StatusBadge status={item.status} size="sm" />,
+      render: (item) => (
+        <StatusBadge domain="inventory" value={item.status} size="sm" />
+      ),
     },
     {
       key: "actions",
@@ -576,7 +582,7 @@ export function IssuesClient({
       className: "w-10",
       render: (item) => (
         <Button variant="ghost" size="icon-sm" asChild>
-          <Link href={`/inventory/consumption/${item.id}`}>
+          <Link href={`${consumptionBasePath}/${item.id}`}>
             <IconDotsVertical className="size-4" />
           </Link>
         </Button>
@@ -658,11 +664,11 @@ export function IssuesClient({
 
   const renderIssueCard = (item: IssueRow) => (
     <InteractiveCard asChild minHeight="mobile" padding="default">
-      <Link href={`/inventory/consumption/${item.id}`} className="block">
+      <Link href={`${consumptionBasePath}/${item.id}`} className="block">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="font-mono text-sm font-semibold">{item.code}</span>
-            <StatusBadge status={item.status} size="sm" />
+            <StatusBadge domain="inventory" value={item.status} size="sm" />
           </div>
           <p className="truncate text-xs text-muted-foreground">
             {item.branchName}
@@ -748,7 +754,9 @@ export function IssuesClient({
             </span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">Tổng thành tiền</span>
+            <span className="text-xs text-muted-foreground">
+              Tổng thành tiền
+            </span>
             <span className="font-mono text-sm font-semibold">
               {formatVND(visibleRecordedConsumptionTotal)}
             </span>

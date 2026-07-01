@@ -6,18 +6,15 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-// The bank fund mirrors the cash fund, so the main risk is wiring the wrong
-// source into a balance: bank-in must be VietQR and bank-out must be transfer
-// expenses.
-test("bank fund pulls VietQR in and transfer out, with the right sign", () => {
-  const cockpit = read(
-    "apps/web/app/(protected)/finance/_lib/cash-cockpit.ts",
-  );
+// The bank fund follows the signed SePay account ledger; the cash fund still
+// follows POS cash and cash expenses only.
+test("bank fund pulls SePay in and out with the right sign", () => {
+  const cockpit = read("apps/web/app/(protected)/finance/_lib/cash-cockpit.ts");
 
   assert.match(
     cockpit,
-    /bankInSince\s*=\s*toNumber\(\s*revData\?\.vietqr_revenue\s*\)/,
-    "bank-in must come from vietqr_revenue",
+    /fetchSepayBankMovementSince\(supabase,\s*tenantId,\s*openingDate\)/,
+    "bank movement must come from signed SePay webhooks",
   );
   assert.match(
     cockpit,
@@ -26,13 +23,13 @@ test("bank fund pulls VietQR in and transfer out, with the right sign", () => {
   );
   assert.match(
     cockpit,
-    /===\s*"transfer"\)\s*transfer\s*\+=\s*amount/,
-    "transfer expenses must accumulate into the transfer bucket",
+    /bankInSince\s*=\s*bankMovement\.inAmount/,
+    "bank-in must use SePay incoming transfer amount",
   );
   assert.match(
     cockpit,
-    /transfer:\s*bankOutSince/,
-    "bank-out must read the transfer bucket",
+    /bankOutSince\s*=\s*bankMovement\.outAmount/,
+    "bank-out must use SePay outgoing transfer amount",
   );
   assert.match(
     cockpit,

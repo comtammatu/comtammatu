@@ -12,7 +12,7 @@ import {
 /** Route-level role gate for the production surface (RLS enforces fine authz). */
 export const PRODUCTION_ROLES = PRODUCTION_OPERATOR_ROLES;
 
-/** Roles whose scope is a single production branch. */
+/** Roles whose scope is a single production site. */
 export const isProductionSiteScopedRole = isProductionBranchScopedRole;
 
 export const idSchema = z.coerce.number().int().positive();
@@ -78,7 +78,7 @@ export async function requireProductionBranch(
   if (error) {
     return {
       ok: false,
-      error: "Không thể kiểm tra quyền truy cập chi nhánh sản xuất.",
+      error: "Không thể kiểm tra quyền truy cập Bếp Trung Tâm.",
     };
   }
 

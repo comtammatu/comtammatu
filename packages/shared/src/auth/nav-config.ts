@@ -32,10 +32,9 @@ export type BranchManagementNavItemConfig = BranchScopedNavItemConfig;
 export type BranchOperationNavItemConfig = BranchScopedNavItemConfig;
 export type OperatorTileGroupId =
   | "my_shift"
-  | "floor"
-  | "kitchen"
-  | "stock"
-  | "branch_control";
+  | "approvals"
+  | "sales_kitchen"
+  | "stock";
 
 export interface OperatorTileConfig extends BranchScopedNavItemConfig {
   group: OperatorTileGroupId;
@@ -122,72 +121,107 @@ export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
 ];
 
 export const OPERATOR_TILE_GROUP_TITLES: Record<OperatorTileGroupId, string> = {
-  my_shift: "Ca của tôi",
-  floor: "Sàn",
-  kitchen: "Bếp",
-  stock: "Kho",
-  branch_control: "Điều hành",
+  my_shift: "Ca hôm nay",
+  approvals: "Duyệt",
+  sales_kitchen: "Bán hàng & bếp",
+  stock: "Kho chi nhánh",
 };
 
 export const OPERATOR_TILE_GROUP_ORDER: readonly OperatorTileGroupId[] = [
   "my_shift",
-  "floor",
-  "kitchen",
+  "approvals",
+  "sales_kitchen",
   "stock",
-  "branch_control",
 ] as const;
 
 export const OPERATOR_TILE_ITEMS = [
   {
     moduleKey: "employee",
+    icon: "Clock",
+    group: "my_shift",
+    hrefTemplate: "/br/{branchId}/shift/clock",
+    label: "Chấm công",
+  },
+  {
+    moduleKey: "employee",
     icon: "ListChecks",
     group: "my_shift",
-    hrefTemplate: "/br/{branchId}/shift",
-    label: "Ca của tôi",
+    hrefTemplate: "/br/{branchId}/shift/tasks",
+    label: "Việc trong ca",
+  },
+  {
+    moduleKey: "employee_checkout_approvals",
+    icon: "ClipboardCheck",
+    group: "approvals",
+    hrefTemplate: "/br/{branchId}/shift/checkout-approvals",
+    label: "Duyệt kết ca",
+  },
+  {
+    moduleKey: "inventory",
+    icon: "ClipboardCheck",
+    group: "approvals",
+    hrefTemplate: "/br/{branchId}/stock/count-slips",
+    label: "Duyệt kiểm kê",
   },
   {
     moduleKey: "pos",
     icon: "Monitor",
-    group: "floor",
+    group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/pos",
   },
   {
     moduleKey: "runner",
     icon: "MonitorUp",
-    group: "floor",
+    group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/runner",
     label: APP_COPY_VI.branchOperationsRunner,
   },
   {
     moduleKey: "kds",
     icon: "ChefHat",
-    group: "kitchen",
+    group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/kds",
     label: APP_COPY_VI.branchOperationsKds,
+  },
+  {
+    moduleKey: "branch_menu_limits",
+    icon: "Utensils",
+    group: "sales_kitchen",
+    hrefTemplate: "/br/{branchId}/settings/menu-limits",
   },
   {
     moduleKey: "inventory",
     icon: "Package",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock",
+    label: "Tồn kho",
   },
   {
-    moduleKey: "branch_dashboard",
-    icon: "LayoutDashboard",
-    group: "branch_control",
-    hrefTemplate: "/br/{branchId}/dashboard",
-    label: APP_COPY_VI.branchCommand,
+    moduleKey: "inventory",
+    icon: "Truck",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/receive",
+    label: "Nhận hàng",
   },
   {
-    moduleKey: "branch_settings",
-    icon: "Settings",
-    group: "branch_control",
-    hrefTemplate: "/br/{branchId}/settings",
+    moduleKey: "inventory",
+    icon: "Package",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/transfer",
+    label: "Yêu cầu hàng",
   },
   {
-    moduleKey: "branch_menu_limits",
-    icon: "Utensils",
-    group: "branch_control",
-    hrefTemplate: "/br/{branchId}/settings/menu-limits",
+    moduleKey: "inventory",
+    icon: "ClipboardCheck",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/count",
+    label: "Kiểm kê tồn",
+  },
+  {
+    moduleKey: "inventory",
+    icon: "Package",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/waste",
+    label: "Báo hao hụt",
   },
 ] satisfies readonly OperatorTileConfig[];

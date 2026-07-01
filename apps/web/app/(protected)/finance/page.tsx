@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  AlertTriangle as IconAlertTriangle,
   Boxes as IconBoxes,
   ReceiptText as IconReceiptText,
   TrendingUp as IconTrendingUp,
@@ -10,13 +9,6 @@ import { getInventoryValueVisibility } from "@comtammatu/shared/auth";
 import { formatVND } from "@comtammatu/shared/format";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Alert,
-  AlertAction,
-  AlertDescription,
-  AlertTitle,
-} from "@comtammatu/ui/components/alert";
-import { cn } from "@comtammatu/ui/lib/utils";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   AppEmptyState,
@@ -37,7 +29,6 @@ import {
 import {
   fetchFinanceCockpit,
   type FinanceCockpitData,
-  type FinanceException,
 } from "./_lib/finance-cockpit";
 import { fetchCashSummary } from "./_lib/cash-cockpit";
 import type { FinanceOverviewSearchParams } from "./_lib/finance-overview-types";
@@ -57,7 +48,6 @@ function formatPercent(value: number): string {
     maximumFractionDigits: 1,
   }).format(value)}%`;
 }
-
 
 function HddtComplianceBand({
   summary,
@@ -115,47 +105,6 @@ function HddtComplianceBand({
   );
 }
 
-function ExceptionList({ items }: { items: FinanceException[] }) {
-  const visibleItems = items.filter((item) => item.tone !== "neutral");
-
-  if (visibleItems.length === 0) {
-    return (
-      <AppEmptyState compact title={powerLiteCopy.noOwnerNews} />
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      {visibleItems.slice(0, 4).map((item) => (
-        <Alert
-          key={item.label}
-          variant={item.tone === "destructive" ? "destructive" : "default"}
-        >
-          <IconAlertTriangle
-            className={cn(
-              item.tone === "destructive" ? "text-destructive" : "text-warning",
-            )}
-          />
-          <AlertTitle className="flex items-center justify-between gap-2">
-            <span className="truncate">{item.label}</span>
-            <span className="font-mono font-semibold tabular-nums">
-              {item.value}
-            </span>
-          </AlertTitle>
-          <AlertDescription>{item.hint}</AlertDescription>
-          {item.href ? (
-            <AlertAction>
-              <Button asChild variant="outline" size="sm">
-                <Link href={item.href}>{powerLiteCopy.openWorkItem}</Link>
-              </Button>
-            </AlertAction>
-          ) : null}
-        </Alert>
-      ))}
-    </div>
-  );
-}
-
 export default async function FinancePage({
   searchParams,
 }: {
@@ -195,6 +144,21 @@ export default async function FinancePage({
         basePath="/finance"
         ranges={HKD_RANGES}
         hide={["granularity", "compare", "payment"]}
+      />
+
+      <CashPanel
+        cashOnHand={cash.hasOpening ? cash.cashOnHand : null}
+        openingBalance={cash.openingBalance}
+        openingDate={cash.openingDate}
+        cashInSince={cash.cashInSince}
+        cashOutSince={cash.cashOutSince}
+        hasBankOpening={cash.hasBankOpening}
+        bankOnHand={cash.bankOnHand}
+        bankOpeningBalance={cash.bankOpeningBalance}
+        bankInSince={cash.bankInSince}
+        bankOutSince={cash.bankOutSince}
+        cashDeltaAfterPaidExpenses={cashDeltaAfterPaidExpenses}
+        todayBusinessDate={todayBusinessDate}
       />
 
       <KpiRow density="compact" className="xl:grid-cols-4">
@@ -273,30 +237,7 @@ export default async function FinancePage({
         />
       </KpiRow>
 
-      <CashPanel
-        cashOnHand={cash.hasOpening ? cash.cashOnHand : null}
-        openingBalance={cash.openingBalance}
-        openingDate={cash.openingDate}
-        cashInSince={cash.cashInSince}
-        cashOutSince={cash.cashOutSince}
-        hasBankOpening={cash.hasBankOpening}
-        bankOnHand={cash.bankOnHand}
-        bankOpeningBalance={cash.bankOpeningBalance}
-        bankInSince={cash.bankInSince}
-        bankOutSince={cash.bankOutSince}
-        cashDeltaAfterPaidExpenses={cashDeltaAfterPaidExpenses}
-        todayBusinessDate={todayBusinessDate}
-      />
-
       <HddtComplianceBand summary={cockpit.dashboardSummary} />
-
-      <AppSection
-        size="sm"
-        icon={<IconAlertTriangle className="size-4" />}
-        title={powerLiteCopy.ownerNewsTitle}
-      >
-        <ExceptionList items={cockpit.exceptions} />
-      </AppSection>
     </AppPage>
   );
 }

@@ -77,9 +77,18 @@ BEGIN
   IF v_route_def NOT ILIKE '%non-kds-dispatch%'
      OR v_route_def NOT ILIKE '%v_station_id IS NULL AND v_has_printer_route%'
      OR v_route_def NOT ILIKE '%printer_menu_categories%'
+     OR v_route_def NOT ILIKE '%pmc_any%'
      OR v_route_def NOT ILIKE '%kds_station_categories%' THEN
     RAISE EXCEPTION
       'TEST FAILED: printer-only categories are not dispatched separately from KDS completion';
+  END IF;
+
+  IF v_route_def ILIKE '%category_type = ''drink''%'
+     OR v_route_def ILIKE '%mc.type = ''drink''%'
+     OR v_route_def ILIKE '%mc.type <> ''drink''%'
+     OR v_route_def ILIKE '%v_fallback_station_id%' THEN
+    RAISE EXCEPTION
+      'TEST FAILED: route_order_to_kds still uses category-type hardcode or fallback station routing';
   END IF;
 
   RAISE NOTICE

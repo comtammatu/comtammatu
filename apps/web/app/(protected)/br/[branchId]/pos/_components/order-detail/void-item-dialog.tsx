@@ -1,19 +1,8 @@
 "use client";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@comtammatu/ui/components/alert-dialog";
-import { Field, FieldGroup, FieldLabel } from "@comtammatu/ui/components/field";
-import { Textarea } from "@comtammatu/ui/components/textarea";
-import { QuickReasonChips } from "../quick-reason-chips";
+import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import { VOID_ITEM_PRESETS } from "../quick-reason-presets";
+import { QuickReasonChips } from "../quick-reason-chips";
 
 import { FORM_VI, POS_VI } from "@comtammatu/shared/messages";
 interface VoidItemDialogProps {
@@ -35,65 +24,39 @@ export function VoidItemDialog({
   itemLabel,
   isPending = false,
 }: VoidItemDialogProps) {
-  const trimmedLen = reason.trim().length;
   // Mirror server-side voidItemSchema (order-actions.ts): min(5). Surface
   // the rule as a counter + invalid state so cashier sees it before submit
   // rather than getting a delayed action reject.
-  const reasonReady = trimmedLen >= 5;
+  const reasonMinLength = 5;
 
   return (
-    <AlertDialog
+    <ReasonConfirmDialog
       open={open}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) onCancel();
       }}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {itemLabel ? `Hủy món: ${itemLabel}` : POS_VI.voidItemTitleFallback}
-          </AlertDialogTitle>
-          <AlertDialogDescription className="sr-only">
-            {POS_VI.voidItemSrDescription}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <FieldGroup>
-          <Field data-invalid={!reasonReady && trimmedLen > 0}>
-            <FieldLabel htmlFor="void-reason" className="sr-only">
-              {FORM_VI.reason}
-            </FieldLabel>
-            <QuickReasonChips
-              presets={VOID_ITEM_PRESETS}
-              value={reason}
-              onChange={onReasonChange}
-              ariaLabel={POS_VI.voidItemReasonSuggestAria}
-            />
-            <Textarea
-              id="void-reason"
-              value={reason}
-              onChange={(event) => onReasonChange(event.target.value)}
-              placeholder={POS_VI.reasonMin5Placeholder}
-              aria-invalid={!reasonReady && trimmedLen > 0}
-            />
-          </Field>
-        </FieldGroup>
-
-        <AlertDialogFooter>
-          <AlertDialogCancel>{POS_VI.keepItem}</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            disabled={!reasonReady || isPending}
-            onClick={(event) => {
-              event.preventDefault();
-              if (!reasonReady || isPending) return;
-              onConfirm();
-            }}
-          >
-            {POS_VI.voidItem}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      title={itemLabel ? `Hủy món: ${itemLabel}` : POS_VI.voidItemTitleFallback}
+      description={POS_VI.voidItemSrDescription}
+      descriptionClassName="sr-only"
+      reasonId="void-reason"
+      reason={reason}
+      onReasonChange={onReasonChange}
+      reasonLabel={FORM_VI.reason}
+      reasonPlaceholder={POS_VI.reasonMin5Placeholder}
+      reasonMinLength={reasonMinLength}
+      reasonControls={
+        <QuickReasonChips
+          presets={VOID_ITEM_PRESETS}
+          value={reason}
+          onChange={onReasonChange}
+          ariaLabel={POS_VI.voidItemReasonSuggestAria}
+        />
+      }
+      cancelLabel={POS_VI.keepItem}
+      confirmLabel={POS_VI.voidItem}
+      confirmVariant="destructive"
+      isPending={isPending}
+      onConfirm={onConfirm}
+    />
   );
 }

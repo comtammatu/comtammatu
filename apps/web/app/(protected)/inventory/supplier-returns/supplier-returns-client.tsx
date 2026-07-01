@@ -20,7 +20,7 @@ import {
 import type { SupplierReturnRow } from "./page";
 
 import { formatVND as formatVndNumber } from "../_lib/format";
-import { StatusBadge } from "../_components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { messages as inventoryMessages } from "@lib/messages";
 
 const formatReturnValue = (v: number | null) =>
@@ -52,7 +52,9 @@ export function SupplierReturnsClient({
     {
       key: "status",
       header: "Trạng thái",
-      render: (row) => <StatusBadge status={row.status} size="sm" />,
+      render: (row) => (
+        <StatusBadge domain="inventory" value={row.status} size="sm" />
+      ),
     },
     {
       key: "value",
@@ -90,7 +92,7 @@ function SupplierReturnItem({ row }: { row: SupplierReturnRow }) {
     <Item variant="outline">
       <ItemHeader>
         <ItemTitle>{row.return_number}</ItemTitle>
-        <StatusBadge status={row.status} size="sm" />
+        <StatusBadge domain="inventory" value={row.status} size="sm" />
       </ItemHeader>
       <ItemContent>
         <ItemDescription>

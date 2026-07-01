@@ -16,6 +16,7 @@
     "realtime:load": "dotenv -e ../../.env.local -e .env.local -e .env.test.local -- tsx scripts/realtime-load-harness.ts",
     "test:e2e": "dotenv -e .env.test.local -- playwright test",
     "test:e2e:smoke": "dotenv -e .env.test.local -- playwright test --project=chromium --timeout=90000 payment-cash",
+    "test:e2e:branch-shell": "E2E_BASE_URL=http://localhost:3000 dotenv -e .env.test.local -- playwright test --project=chromium --timeout=120000 branch-shell-routes.spec.ts",
     "test:e2e:ui": "dotenv -e .env.test.local -- playwright test --ui",
     "guides:capture": "dotenv -e .env.test.local -- playwright test --project=guides",
     "guides:capture:list": "dotenv -e .env.test.local -- playwright test --project=guides --list",

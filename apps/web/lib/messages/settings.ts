@@ -307,12 +307,13 @@ export const settings = {
     endDayTitle: "Đối soát ca / cuối ngày",
     endDayDescription:
       "Xem lại ca POS, bill, doanh thu và chênh lệch sau khi vận hành.",
-    setupLaneTitle: "Thiết lập chi nhánh",
+    setupLaneTitle: "Cài đặt chi nhánh",
+    setupEssentialsTitle: "Thiết lập vận hành",
     setupLaneDescription:
       "Bàn, máy POS, trạm bếp, máy in và cấu hình chấm công của chi nhánh.",
     drilldownTitle: "Mở sâu",
     drilldownDescription:
-      "Tra cứu nghiệp vụ khi cần xem lịch sử, kho, nhân sự hoặc thực đơn toàn hệ thống.",
+      "Kiểm tra hạn mức bán và tồn kho trong phạm vi chi nhánh.",
     commandBranchSetup: "Thiết lập sàn",
     commandBranchSetupDescription:
       "Bàn, máy POS, trạm bếp, máy in và cấu hình chấm công của chi nhánh.",
@@ -409,7 +410,7 @@ export const settings = {
     posBack: "Về POS",
     employeeBack: "Về Cổng",
     branchSettingsBack: "Cài đặt chi nhánh",
-    hubTitle: "Thiết lập chi nhánh",
+    hubTitle: "Cài đặt chi nhánh",
     hubDescription: (branchName: string) => branchName,
     hubEmptyTitle: "Không có mục thiết lập khả dụng",
     hubEmptyDescription:

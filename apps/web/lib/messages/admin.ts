@@ -21,6 +21,9 @@ export const admin = {
     inventoryValueLabel: "Giá trị tồn kho",
     inventoryValueHelper: "Tồn kho hiện tại theo phạm vi quản trị.",
     compareHint: "so với cùng kỳ tháng trước",
+    financeSnapshotTitle: "Sức khoẻ tài chính tháng này",
+    financeSnapshotDescription:
+      "Ba số chính để chủ nhìn nhanh tiền đã thu, chi vận hành và tiền đang nằm trong kho.",
     workQueueTitle: "Việc cần xử lý trước",
     workQueueDescription:
       "Ưu tiên lỗi chặn vận hành, sau đó tới cảnh báo tiền, hóa đơn và dữ liệu giá vốn.",

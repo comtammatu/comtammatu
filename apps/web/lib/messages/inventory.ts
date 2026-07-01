@@ -16,11 +16,11 @@ export const inventory = {
     mobileMode: "Mobile",
   },
   dashboard: {
-    mainFlowsTitle: "3 luồng vận hành chính",
+    mainFlowsTitle: "4 điểm vào vận hành chính",
     mainFlowsOversightTitle: "3 điểm giám sát chính",
     mainFlowsOversightDescription:
       "Theo dõi tồn, cảnh báo và luồng đang chạy theo đúng phạm vi.",
-    mainFlowsOperatorDescription: "Mở nhanh đúng luồng kho cần xử lý hôm nay.",
+    mainFlowsOperatorDescription: "Mở nhanh đúng phần kho cần xử lý hôm nay.",
     operationalMetricsTitle: "Số liệu vận hành",
     operationalMetricsDescription:
       "Theo dõi nhanh số lượng việc đang mở; xử lý qua phiếu ở các mục bên dưới.",
@@ -37,7 +37,7 @@ export const inventory = {
     transferTrackingTitle: "Theo dõi điều chuyển",
     activeTransfers: (count: number) => `${count} phiếu đang xử lý`,
     noActiveTransfers: "Không có điều chuyển đang xử lý",
-    headerTagline: "3 luồng vận hành: tồn · nhập · điều phối.",
+    headerTagline: "4 điểm vào: tồn · nhập · danh mục · sản xuất.",
     allClearTitle: "Mọi thứ đang ổn",
     allClearHint:
       "Không có việc gấp, cảnh báo, điều chuyển hay kiểm kê đang chờ.",
@@ -236,8 +236,7 @@ export const inventory = {
     approved: "Đã duyệt đơn đặt hàng {code}",
     cancelled: "Đã hủy đơn đặt hàng {code}",
     noSuppliersTitle: "Chưa có nhà cung cấp",
-    noSuppliersDescription:
-      "Tạo nhà cung cấp trước khi lập đơn đặt hàng mới.",
+    noSuppliersDescription: "Tạo nhà cung cấp trước khi lập đơn đặt hàng mới.",
     goToSuppliers: "Đi tới danh sách nhà cung cấp",
     searchPlaceholder: "Tìm theo số đơn mua, nhà cung cấp hoặc ghi chú",
     statusPlaceholder: "Trạng thái",
@@ -432,6 +431,37 @@ export const inventory = {
       filteredSummary: (count: number, value: string) =>
         `Tổng theo bộ lọc: ${count} mặt hàng · ${value} đ`,
     },
+    detail: {
+      eyebrow: "Thẻ kho chi tiết",
+      backToStock: "Quay lại tồn kho",
+      summaryTitle: "Tóm tắt tồn",
+      locationTitle: "Tồn theo vị trí",
+      locationDescription:
+        "Chỉ tính các vị trí được phép giữ tồn vận hành của chi nhánh.",
+      noLocationStockTitle: "Chưa có tồn theo vị trí",
+      noLocationStockDescription:
+        "Nguyên liệu này chưa có stock level ở kho vận hành của chi nhánh.",
+      movementTitle: "Lịch sử biến động",
+      movementHint: (count: number) => `${count}/30 gần nhất`,
+      noMovementTitle: "Chưa có biến động",
+      noMovementDescription:
+        "Ledger sẽ xuất hiện sau nhập, điều chuyển, kiểm kê hoặc xuất dùng.",
+      expiryTitle: "HSD theo phiếu nhập",
+      expiryDescription:
+        "Dữ liệu này là dấu vết từ phiếu nhập, chưa phải tồn lô FIFO.",
+      noBatch: "Không ghi lô",
+      source: "Nguồn",
+      sourceHub: "Danh sách phiếu nhập",
+      operationTitle: "Nghiệp vụ nhanh",
+      thresholdTitle: "Ngưỡng vận hành",
+      branchScope: "Chi nhánh",
+      storage: "Bảo quản",
+      locationKind: "Loại vị trí",
+      batch: "Lô",
+      expiry: "HSD",
+      received: "Đã nhận",
+      reference: "Chứng từ",
+    },
     quickIssue: {
       options: {
         consumption: "Xuất / tiêu hao",
@@ -624,8 +654,7 @@ export const inventory = {
     removeLineAria: "Xóa dòng",
     vehicleInfo: "Xe / người giao",
     notesPlaceholder: "Ghi chú thêm cho phiếu luân chuyển",
-    branchManagerHint:
-      "Tài khoản điểm vận hành nhận phiếu đến ở tab Cần nhận.",
+    branchManagerHint: "Tài khoản điểm vận hành nhận phiếu đến ở tab Cần nhận.",
     creating: "Đang tạo…",
     createSlip: "Tạo phiếu",
     createKitchenShort: "Tiêu hao",
@@ -908,8 +937,7 @@ export const inventory = {
       selfCreatedBadge: "Bạn tạo — không thể tự duyệt",
       lineCount: (count: number) => `${count} dòng`,
       reason: (label: string) => `Lý do: ${label}`,
-      qtyRatio: (percent: number) =>
-        ` • tỷ lệ SL: ${percent}% tồn vị trí kho`,
+      qtyRatio: (percent: number) => ` • tỷ lệ SL: ${percent}% tồn vị trí kho`,
       rolling15m: (amount: string) => ` • 15 phút gần nhất: ${amount}`,
       viewPhoto: "Xem ảnh",
       notes: (value: string) => `Ghi chú: ${value}`,

@@ -24,8 +24,17 @@ function claims(
 test("operator routes resolve to ACL modules", () => {
   assert.equal(resolveModuleFromPath("/br"), "branch_picker");
   assert.equal(resolveModuleFromPath("/br/7"), "operator_home");
-  assert.equal(resolveModuleFromPath("/br/7/shift"), "employee");
+  assert.equal(resolveModuleFromPath("/br/7/shift"), "operator_home");
   assert.equal(resolveModuleFromPath("/br/7/stock"), "inventory");
+  assert.equal(resolveModuleFromPath("/br/7/stock/count"), "operator_home");
+  assert.equal(resolveModuleFromPath("/br/7/stock/count-slips"), "inventory");
+});
+
+test("operator stock count does not require full inventory access", () => {
+  assert.equal(canAccess("cashier", "operator_home"), true);
+  assert.equal(canAccess("chef", "operator_home"), true);
+  assert.equal(canAccess("cashier", "inventory"), false);
+  assert.equal(canAccess("chef", "inventory"), false);
 });
 
 test("operator route families use operator bottom nav", () => {
@@ -34,7 +43,15 @@ test("operator route families use operator bottom nav", () => {
   for (const [path, id] of [
     ["/br/7", "operator-home"],
     ["/br/7/shift", "operator-shift"],
+    ["/br/7/shift/checkout-approvals", "operator-shift"],
     ["/br/7/stock", "operator-stock"],
+    ["/br/7/stock/count", "operator-stock"],
+    ["/br/7/stock/count-slips", "operator-stock"],
+    ["/br/7/stock/receive", "operator-stock"],
+    ["/br/7/stock/transfer", "operator-stock"],
+    ["/br/7/stock/transfer/123", "operator-stock"],
+    ["/br/7/stock/transfer/new", "operator-stock"],
+    ["/br/7/stock/waste", "operator-stock"],
   ] as const) {
     const family = resolveRouteFamilyContract(path);
     assert.equal(family?.id, id);

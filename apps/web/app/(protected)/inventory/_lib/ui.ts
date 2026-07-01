@@ -1,6 +1,3 @@
-import type { BadgeProps } from "@comtammatu/ui/components/badge";
-import { tStatus } from "./dictionary";
-
 export type InventorySemanticColor =
   | "primary"
   | "success"
@@ -10,11 +7,11 @@ export type InventorySemanticColor =
   | "muted";
 
 const INVENTORY_COLOR_VALUE: Record<InventorySemanticColor, string> = {
-  primary: "var(--primary)",
-  success: "var(--success)",
-  warning: "var(--warning)",
-  danger: "var(--destructive)",
-  info: "var(--info)",
+  primary: "var(--chart-1)",
+  success: "var(--chart-2)",
+  warning: "var(--chart-3)",
+  danger: "var(--chart-4)",
+  info: "var(--chart-5)",
   muted: "var(--muted-foreground)",
 };
 
@@ -24,50 +21,4 @@ export function resolveInventoryColorValue(
   return color in INVENTORY_COLOR_VALUE
     ? INVENTORY_COLOR_VALUE[color as InventorySemanticColor]
     : color;
-}
-
-const STATUS_BADGE_VARIANTS: Record<string, BadgeProps["variant"]> = {
-  draft: "secondary",
-  confirmed: "success",
-  sent: "info",
-  credited: "success",
-  refunded: "success",
-  partially_received: "warning",
-  in_transit: "info",
-  received: "success",
-  completed: "success",
-  cancelled: "destructive",
-  pending: "warning",
-  in_progress: "info",
-  matched: "success",
-  discrepancy: "destructive",
-  approved: "success",
-  overdue: "destructive",
-  unpaid: "warning",
-  partial: "info",
-  paid: "success",
-  expired: "destructive",
-  critical: "warning",
-  warning: "warning",
-  // kitchen_use is not a valid stock-issue reason; sale usage posts as consumption.
-  write_off: "destructive",
-  consumption: "success",
-  storage_loss: "warning",
-  sale_consumption: "success",
-  normal: "success",
-  low: "destructive",
-  out: "destructive",
-  over: "warning",
-  active: "success",
-  suspended: "secondary",
-};
-
-export function getInventoryStatusLabel(status: string, label?: string) {
-  return label ?? tStatus(status, "badge");
-}
-
-export function getInventoryStatusBadgeVariant(
-  status: string,
-): BadgeProps["variant"] {
-  return STATUS_BADGE_VARIANTS[status] ?? "secondary";
 }

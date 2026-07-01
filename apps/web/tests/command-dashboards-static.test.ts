@@ -20,10 +20,10 @@ const PRINT_JOBS_PAGE =
   "apps/web/app/(protected)/admin/settings/printers/jobs/page.tsx";
 const PRINT_JOBS_CLIENT =
   "apps/web/app/(protected)/admin/settings/printers/jobs/print-jobs-client.tsx";
-const BRANCH_PAGE = "apps/web/app/(protected)/br/[branchId]/dashboard/page.tsx";
+const BRANCH_PAGE = "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx";
 const BRANCH_COMMAND_CONFIG =
-  "apps/web/app/(protected)/br/[branchId]/dashboard/_lib/command-config.tsx";
-const BRANCH_DATA = "apps/web/app/(protected)/br/[branchId]/dashboard/data.ts";
+  "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx";
+const BRANCH_DATA = "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/data.ts";
 const BACKTICK = "`";
 
 function literalWith(pattern: string, flags = "i"): RegExp {
@@ -225,7 +225,9 @@ test("branch command landing surfaces day metrics and readiness (D017 step 5)", 
   assert.match(surface, /readinessPosTitle/);
   assert.match(surface, /readinessPrinterTitle/);
   assert.match(surface, /readinessCheckoutTitle/);
-  assert.match(surface, /\/employee\/checkout-approvals/);
+  assert.match(surface, /checkoutApprovalsHref/);
+  assert.match(page, /\/br\/\$\{branchId\}\/shift\/checkout-approvals/);
+  assert.doesNotMatch(surface, /\/employee\/checkout-approvals/);
 });
 
 test("branch day status service-client reads carry explicit tenant+branch filters", () => {

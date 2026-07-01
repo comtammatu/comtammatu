@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  CalendarX as IconCalendarX,
   Camera as IconCamera,
   CheckCircle2 as IconDone,
   ClipboardCheck as IconClipboardCheck,
@@ -8,6 +9,7 @@ import {
   ListChecks as IconListChecks,
   LogOut as IconLogout,
   UserCircle as IconUserCircle,
+  WalletCards as IconPayslip,
 } from "lucide-react";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
@@ -18,6 +20,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { NotificationPopupControl } from "@/_components/notification-popup-control";
 import { messages } from "@lib/messages";
 import {
+  EmployeeActionSection,
   EmployeeInlineState,
   EmployeePanel,
   EmployeePage as EmployeePageShell,
@@ -40,6 +43,30 @@ const CHECKOUT_APPROVER_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",
 ];
+
+export type EmployeeHomeRoutes = {
+  clock: string;
+  tasks: string;
+  schedule: string;
+  profile: string;
+  leave: string;
+  payslip: string;
+  checkoutApprovals: string;
+  count: string;
+};
+
+const DEFAULT_HOME_ROUTES: EmployeeHomeRoutes = {
+  clock: "/employee/clock",
+  tasks: "/employee/tasks",
+  schedule: "/employee/schedule",
+  profile: "/employee/profile",
+  leave: "/employee/leave",
+  payslip: "/employee/payslip",
+  checkoutApprovals: "/employee/checkout-approvals",
+  count: "/employee/count",
+};
+
+type EmployeeHomeAuthState = Awaited<ReturnType<typeof loadAuthState>>;
 
 function getShiftStateBadge(shift: TodayShiftEntry): {
   label: string;
@@ -83,12 +110,20 @@ function getWorkTitle(state: TodayWorkState): string {
   return copy.statusDone;
 }
 
-export default async function EmployeePage() {
-  const { supabase, claims, session } = await loadAuthState();
-  const branchRuntimePath = resolveEmployeeBranchRuntimePath(claims, "home");
-  if (branchRuntimePath) {
-    redirect(branchRuntimePath);
-  }
+export async function EmployeeHomePageContent({
+  routes = DEFAULT_HOME_ROUTES,
+  authState,
+  showNotificationControl = true,
+  showPersonalActions = false,
+  mode = "full",
+}: {
+  routes?: EmployeeHomeRoutes;
+  authState?: EmployeeHomeAuthState;
+  showNotificationControl?: boolean;
+  showPersonalActions?: boolean;
+  mode?: "full" | "today-card";
+} = {}) {
+  const { supabase, claims, session } = authState ?? (await loadAuthState());
   const state = await getTodayWorkState();
 
   // Checkout requests BLOCK the requesting employee until a manager
@@ -230,7 +265,7 @@ export default async function EmployeePage() {
         size="touch-lg"
         className={primaryActionClassName}
       >
-        <Link href="/employee/profile">
+        <Link href={routes.profile}>
           <IconUserCircle data-icon="inline-start" />
           {copy.profileTitle}
         </Link>
@@ -242,7 +277,7 @@ export default async function EmployeePage() {
         size="touch-lg"
         className={primaryActionClassName}
       >
-        <Link href="/employee/profile">
+        <Link href={routes.profile}>
           <IconUserCircle data-icon="inline-start" />
           {copy.profileTitle}
         </Link>
@@ -254,14 +289,14 @@ export default async function EmployeePage() {
         size="touch-lg"
         className={primaryActionClassName}
       >
-        <Link href="/employee/schedule">
+        <Link href={routes.schedule}>
           <IconClock data-icon="inline-start" />
           {copy.viewSchedule}
         </Link>
       </Button>
     ) : state.status === "not_started" ? (
       <Button asChild size="touch-lg" className={primaryActionClassName}>
-        <Link href="/employee/clock">
+        <Link href={routes.clock}>
           <IconCamera data-icon="inline-start" />
           {copy.clockIn}
         </Link>
@@ -269,14 +304,14 @@ export default async function EmployeePage() {
     ) : state.status === "working" ? (
       canRequestCheckout(state) ? (
         <Button asChild size="touch-lg" className={primaryActionClassName}>
-          <Link href="/employee/clock">
+          <Link href={routes.clock}>
             <IconLogout data-icon="inline-start" />
             {state.managerAttendanceOnly ? copy.clockOutDirect : copy.clockOut}
           </Link>
         </Button>
       ) : (
         <Button asChild size="touch-lg" className={primaryActionClassName}>
-          <Link href="/employee/tasks">
+          <Link href={routes.tasks}>
             <IconListChecks data-icon="inline-start" />
             {copy.shiftTasks}
           </Link>
@@ -304,6 +339,41 @@ export default async function EmployeePage() {
       </Button>
     );
 
+  const todayCard = (
+    <EmployeePanel tone={tone} size="sm" contentClassName="gap-3">
+      <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="font-heading text-xl font-semibold tracking-tight">
+              {title}
+            </p>
+            <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
+              {todayMeta}
+            </p>
+          </div>
+          <Badge variant={progressBadgeVariant} className="shrink-0">
+            {progressValue}%
+          </Badge>
+        </div>
+        <div>{primaryAction}</div>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="font-medium text-muted-foreground">
+              {copy.workProgress}
+            </span>
+            <span className="font-mono font-medium tabular-nums">
+              {progressHint}
+            </span>
+          </div>
+          <Progress value={progressValue} tone={progressTone} className="h-2" />
+        </div>
+        <EmployeeStatusStrip items={todaySummaryItems} />
+      </div>
+    </EmployeePanel>
+  );
+
+  if (mode === "today-card") return todayCard;
+
   return (
     <EmployeePageShell
       title={copy.title}
@@ -311,40 +381,37 @@ export default async function EmployeePage() {
       hideHeaderOnMobile
     >
       <div className="flex flex-col gap-3">
-        <EmployeePanel tone={tone} size="sm" contentClassName="gap-3">
-          <div className="flex flex-col gap-3">
-            <div className="flex min-w-0 items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="font-heading text-xl font-semibold tracking-tight">
-                  {title}
-                </p>
-                <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
-                  {todayMeta}
-                </p>
-              </div>
-              <Badge variant={progressBadgeVariant} className="shrink-0">
-                {progressValue}%
-              </Badge>
-            </div>
-            <div>{primaryAction}</div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2 text-xs">
-                <span className="font-medium text-muted-foreground">
-                  {copy.workProgress}
-                </span>
-                <span className="font-mono font-medium tabular-nums">
-                  {progressHint}
-                </span>
-              </div>
-              <Progress
-                value={progressValue}
-                tone={progressTone}
-                className="h-2"
-              />
-            </div>
-            <EmployeeStatusStrip items={todaySummaryItems} />
-          </div>
-        </EmployeePanel>
+        {todayCard}
+
+        {showPersonalActions ? (
+          <EmployeeActionSection
+            title={messages.employee.profile.personalToolsTitle}
+            links={[
+              {
+                key: "profile",
+                href: routes.profile,
+                icon: IconUserCircle,
+                title: copy.profileTitle,
+                description: copy.profileDescription,
+              },
+              {
+                key: "payslip",
+                href: routes.payslip,
+                icon: IconPayslip,
+                title: messages.employee.payslip.title,
+                description: copy.payslipLongDescription,
+              },
+              {
+                key: "leave",
+                href: routes.leave,
+                icon: IconCalendarX,
+                title: messages.employee.leave.title,
+                description: messages.employee.leave.description,
+              },
+            ]}
+            columns={1}
+          />
+        ) : null}
 
         {state.todayShifts.length > 0 ? (
           <EmployeePanel
@@ -402,7 +469,7 @@ export default async function EmployeePage() {
             size="sm"
           >
             <Button asChild size="touch" className="w-full sm:w-fit">
-              <Link href="/employee/checkout-approvals">
+              <Link href={routes.checkoutApprovals}>
                 <IconClipboardCheck data-icon="inline-start" />
                 {copy.checkoutApprovalsTitle}
               </Link>
@@ -422,7 +489,7 @@ export default async function EmployeePage() {
                 {copy.countDescription}
               </p>
               <Button asChild size="touch" className="w-full sm:w-fit">
-                <Link href="/employee/count">
+                <Link href={routes.count}>
                   <IconClipboardCheck data-icon="inline-start" />
                   {copy.countCta}
                 </Link>
@@ -431,10 +498,23 @@ export default async function EmployeePage() {
           </EmployeePanel>
         ) : null}
 
-        <EmployeePanel tone="info" size="sm">
-          <NotificationPopupControl compact />
-        </EmployeePanel>
+        {showNotificationControl ? (
+          <EmployeePanel tone="info" size="sm">
+            <NotificationPopupControl compact />
+          </EmployeePanel>
+        ) : null}
       </div>
     </EmployeePageShell>
   );
+}
+
+export default async function EmployeePage() {
+  const authState = await loadAuthState();
+  const { claims } = authState;
+  const branchRuntimePath = resolveEmployeeBranchRuntimePath(claims, "home");
+  if (branchRuntimePath) {
+    redirect(branchRuntimePath);
+  }
+
+  return <EmployeeHomePageContent authState={authState} />;
 }

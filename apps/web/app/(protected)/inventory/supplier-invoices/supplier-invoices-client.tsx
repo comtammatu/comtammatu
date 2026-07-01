@@ -53,10 +53,9 @@ import {
   recomputeInvoiceMatching,
 } from "../procurement-actions";
 import type { SupplierInvoiceCursor } from "../procurement-actions";
-import { StatusBadge } from "../_components/status-badge";
+import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 
 import { formatVND } from "../_lib/format";
-import { getInventoryStatusLabel } from "../_lib/ui";
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
@@ -131,12 +130,12 @@ const MATCH_FILTER_OPTIONS = [
   "approved",
 ].map((value) => ({
   value,
-  label: getInventoryStatusLabel(value),
+  label: getStatusBadgeMeta("inventory", value).label,
 }));
 
 const PAYMENT_FILTER_OPTIONS = ["unpaid", "partial", "paid"].map((value) => ({
   value,
-  label: getInventoryStatusLabel(value),
+  label: getStatusBadgeMeta("inventory", value).label,
 }));
 
 const supplierInvoiceSchema = z.object({
@@ -559,12 +558,14 @@ export function SupplierInvoicesClient({
                 {invoice.supplierName}
               </p>
             </div>
-            {overdue ? <StatusBadge status="overdue" /> : null}
+            {overdue ? (
+              <StatusBadge domain="inventory" value="overdue" />
+            ) : null}
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <StatusBadge status={invoice.matchStatus} />
-            <StatusBadge status={invoice.paymentStatus} />
+            <StatusBadge domain="inventory" value={invoice.matchStatus} />
+            <StatusBadge domain="inventory" value={invoice.paymentStatus} />
           </div>
 
           <div className="mt-4 grid gap-2 text-sm">
@@ -642,7 +643,9 @@ export function SupplierInvoicesClient({
       key: "matchStatus",
       header: copy.matchingPlaceholder,
       className: "min-w-36",
-      render: (invoice) => <StatusBadge status={invoice.matchStatus} />,
+      render: (invoice) => (
+        <StatusBadge domain="inventory" value={invoice.matchStatus} />
+      ),
     },
     {
       key: "paymentStatus",
@@ -650,8 +653,10 @@ export function SupplierInvoicesClient({
       className: "min-w-36",
       render: (invoice) => (
         <div className="flex flex-wrap gap-2">
-          <StatusBadge status={invoice.paymentStatus} />
-          {isInvoiceOverdue(invoice) ? <StatusBadge status="overdue" /> : null}
+          <StatusBadge domain="inventory" value={invoice.paymentStatus} />
+          {isInvoiceOverdue(invoice) ? (
+            <StatusBadge domain="inventory" value="overdue" />
+          ) : null}
         </div>
       ),
     },
@@ -838,8 +843,14 @@ export function SupplierInvoicesClient({
                 >
                   {copy.recomputeMatching}
                 </Button>
-                <StatusBadge status={selectedInvoice.matchStatus} />
-                <StatusBadge status={selectedInvoice.paymentStatus} />
+                <StatusBadge
+                  domain="inventory"
+                  value={selectedInvoice.matchStatus}
+                />
+                <StatusBadge
+                  domain="inventory"
+                  value={selectedInvoice.paymentStatus}
+                />
               </div>
             ) : null
           }

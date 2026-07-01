@@ -553,6 +553,11 @@ test) chỉ build sau khi types regen.
 
 **Consequences:** Mở rộng/sửa D019 (§1) + D017 (§3). Đảo bất kỳ điểm nào (gộp lại các chrome, trả branch command/setup về desktop, đổi entry/route-home, đổi nav model) phải sửa bản ghi này + D019 trước.
 
+**Status 2026-07-01:** `docs/plan/branch-operator-hub-full-cutover-2026-07-01.md`
+là staging spec, chưa amend D050. Cho tới khi có D0xx/amend mới, D050 vẫn là
+authority cho phone bottom-nav (`Trang chủ · Ca · Thông báo · Hồ sơ`). Không
+land cutover dùng nav khác khi chưa cập nhật decision trước.
+
 ## D051: Không còn `waiter` active role; Cashier kiêm phục vụ (2026-06-29)
 
 **Decision (owner — supersedes D012.2 và phần access-bucket của D018):**
@@ -610,3 +615,33 @@ Chi tiết design: `docs/plan/viec-trong-ca-redesign-2026-06-29.md`. Các chốt
 10. **Multi-unit:** Mọi stock movement mới phải convert về base unit bằng tenant-aware conversion helper trước khi ghi ledger.
 
 **Execution mode:** subagent-driven, sequential T3 lanes with review barriers: G1 access/UI ownership → G2 availability/holds → G3 order outcome ledger → G4 multi-unit guardrail → G5 count-regression guard → G6 QA/rollout. Đảo bất kỳ điểm 1-10 phải sửa D053 trước.
+
+## D054: Agent workflow reset — one voice, thin adapters, transient worklogs (2026-07-01)
+
+**Decision:** Khung agent/workflow của repo phải gọn lại theo nguyên tắc một sự
+thật một chủ sở hữu. `AGENTS.md` là entrypoint; `docs/agent/rules/*` là luật
+nền; `tasks/todo.md` là bảng công việc hiện tại duy nhất; `docs/plan/decisions.md`
+là nơi chốt quyết định; `docs/worklog/*` chỉ là staging tạm.
+
+1. **Rule loading theo blast radius.** Agent luôn đọc `engineering.md`; đọc
+   rule theo bề mặt đang chạm. `team.md` và `orchestration.md` chỉ dùng cho T3,
+   cross-runtime review, subagent/multi-agent, hoặc context-budget thật; không
+   bắt agent đọc chúng cho task đơn giản.
+2. **IDE adapter được phép sống ở root.** `.claude/`, `.codex/`, `.cursor/`,
+   và `.agents/` là runtime adapters/tool wiring. Chúng được phép chứa hooks,
+   permissions, launchers, local prompts, và handoff helpers, nhưng không được
+   nhân bản rule hoặc trở thành source of truth thứ hai.
+3. **Guard logic sống một nơi.** Runtime adapters chỉ wire
+   `scripts/guard-prod-db.mjs`; IDE mới có write-capable DB/tool action phải
+   đăng ký adapter trong `scripts/check-guard-sync.mjs` trước khi dùng. Nếu chưa
+   đăng ký, prod-affecting tools phải read-only.
+4. **Worklog có hạn sử dụng.** T2/T3 có thể dùng `docs/worklog/` khi PR/todo
+   không đủ chứa contract, nhưng khi task land thì durable facts phải promote về
+   doc sở hữu hoặc task/regression, rồi xóa worklog. Worklog không phải backlog.
+5. **Plan không tạo cây agent-doc mới.** Implementation plan sống trong PR body,
+   `tasks/todo.md`, `docs/plan/decisions.md`, hoặc worklog tạm đúng loại; không
+   thêm cây docs agent-only mới.
+
+**Consequences:** Cleanup workflow hiện tại phải ưu tiên xóa/promote staging
+docs, tách lane dirty WIP, và chạy guard nhỏ (`rules-mirror`, `doc-staleness`,
+`guard-sync`, `review-tier`) trước khi quay lại feature code.

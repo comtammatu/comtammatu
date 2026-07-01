@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { AppSection } from "@/components/surface";
+import { SettingsFormSection } from "@/components/settings-form-section";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
@@ -104,7 +104,7 @@ export function PaymentsForm({
       noValidate
       className="flex flex-col gap-4"
     >
-      <AppSection title={messages.settings.payments.sectionTitle}>
+      <SettingsFormSection title={messages.settings.payments.sectionTitle}>
         <div className="flex flex-col gap-3 rounded-md border p-4">
           <Controller
             control={form.control}
@@ -256,7 +256,7 @@ export function PaymentsForm({
             </div>
           )}
         />
-      </AppSection>
+      </SettingsFormSection>
 
       {serverError && (
         <p className="text-sm text-destructive" role="alert">

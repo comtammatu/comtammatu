@@ -31,7 +31,6 @@ const printerSchema = z.object({
 type PrinterInput = z.infer<typeof printerSchema>;
 
 function revalidatePrinterPaths(branchId: number) {
-  revalidatePath("/admin/settings/printers");
   revalidatePath(`/br/${branchId}/settings/printers`);
 }
 

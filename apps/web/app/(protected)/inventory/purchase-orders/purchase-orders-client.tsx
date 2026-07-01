@@ -36,7 +36,7 @@ import {
   FilterToolbar,
 } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
-import { StatusBadge } from "../_components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { tRoute, tStatus } from "../_lib/dictionary";
 import type { SupplierRow } from "../suppliers/suppliers-client";
 import { messages } from "@lib/messages";
@@ -91,7 +91,7 @@ export function PurchaseOrdersClient({
   initial: PurchaseOrderRow[];
   suppliers: SupplierRow[];
   purchaseOrdersBasePath?: string;
-  suppliersPath?: string;
+  suppliersPath?: string | null;
 }) {
   const [rows] = useState(initial);
   const [search, setSearch] = useState("");
@@ -163,7 +163,9 @@ export function PurchaseOrdersClient({
       key: "status",
       header: FORM_VI.status,
       className: "min-w-36",
-      render: (row) => <StatusBadge status={row.status} size="sm" />,
+      render: (row) => (
+        <StatusBadge domain="inventory" value={row.status} size="sm" />
+      ),
     },
     {
       key: "ordered_at",
@@ -227,9 +229,11 @@ export function PurchaseOrdersClient({
           title={poCopy.noSuppliersTitle}
           description={poCopy.noSuppliersDescription}
           action={
-            <Button asChild variant="outline">
-              <Link href={suppliersPath}>{poCopy.goToSuppliers}</Link>
-            </Button>
+            suppliersPath ? (
+              <Button asChild variant="outline">
+                <Link href={suppliersPath}>{poCopy.goToSuppliers}</Link>
+              </Button>
+            ) : null
           }
         >
           <div />
@@ -347,7 +351,7 @@ function PurchaseOrderCard({
           ) : null}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <StatusBadge status={row.status} size="sm" />
+          <StatusBadge domain="inventory" value={row.status} size="sm" />
           <IconArrowRight className="size-4 text-muted-foreground" />
         </div>
       </Link>

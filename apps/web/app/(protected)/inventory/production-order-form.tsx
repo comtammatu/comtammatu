@@ -1,28 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CircleOff as IconCircleOff, Plus as IconPlus } from "lucide-react";
 import {
   Controller,
   useFieldArray,
-  useForm,
   type Control,
   type FieldErrors,
+  type UseFormReturn,
 } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@comtammatu/ui/components/dialog";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -33,16 +23,17 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { Combobox } from "@/components/form";
+import { Combobox, FormDialog } from "@/components/form";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormattedNumberInput } from "./_components/formatted-number-input";
 import { createProductionOrder } from "./production-actions";
 import { defaultProductionNumber } from "./production-types";
 import type { BranchOption, FinishedGoodOption } from "./production-types";
+import type { ActionResult } from "@comtammatu/shared/types";
 
 /* ─── Schema ─── */
 
-import { ACTIONS_VI, FORM_VI, INVENTORY_VI, PRODUCT_VI, TOAST_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI, FORM_VI, INVENTORY_VI, PRODUCT_VI, TOAST_VI } from "@comtammatu/shared/messages";
 const productionLineRowSchema = z.object({
   finished_good_id: z
     .string()
@@ -75,6 +66,18 @@ function buildEmptyRow(fallback?: FinishedGoodOption): ProductionLineRow {
     finished_good_id: fallback?.id ? String(fallback.id) : "",
     quantity: "1",
     unit: fallback?.unit ?? "",
+  };
+}
+
+function buildInitialValues(
+  defaultBranchId: string,
+  finishedGoodsOptions: FinishedGoodOption[],
+): ProductionOrderFormValues {
+  return {
+    branch_id: defaultBranchId,
+    production_number: defaultProductionNumber(),
+    notes: "",
+    lines: [buildEmptyRow(finishedGoodsOptions[0])],
   };
 }
 
@@ -190,61 +193,27 @@ interface ProductionOrderFormProps {
   actionsEnabled: boolean;
 }
 
-export function ProductionOrderForm({
+function ProductionOrderFields({
+  form,
   productionBranches,
   finishedGoodsOptions,
-  actionsEnabled,
-}: ProductionOrderFormProps) {
-  const router = useRouter();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const [serverError, setServerError] = useState<string | null>(null);
-
-  const defaultBranchId = productionBranches[0]?.id
-    ? String(productionBranches[0].id)
-    : "";
-
-  const initialValues = useMemo<ProductionOrderFormValues>(
-    () => ({
-      branch_id: defaultBranchId,
-      production_number: defaultProductionNumber(),
-      notes: "",
-      lines: [buildEmptyRow(finishedGoodsOptions[0])],
-    }),
-    [defaultBranchId, finishedGoodsOptions],
-  );
-
-  const form = useForm<
+  finishedGoodsMap,
+}: {
+  form: UseFormReturn<
     ProductionOrderFormValues,
     unknown,
     ProductionOrderFormValues
-  >({
-    resolver: zodResolver(productionOrderSchema),
-    defaultValues: initialValues,
-  });
-
+  >;
+  productionBranches: BranchOption[];
+  finishedGoodsOptions: FinishedGoodOption[];
+  finishedGoodsMap: Map<number, FinishedGoodOption>;
+}) {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "lines",
   });
-
-  useEffect(() => {
-    if (isDialogOpen) {
-      form.reset({
-        branch_id: defaultBranchId,
-        production_number: defaultProductionNumber(),
-        notes: "",
-        lines: [buildEmptyRow(finishedGoodsOptions[0])],
-      });
-      setServerError(null);
-    }
-  }, [isDialogOpen, defaultBranchId, finishedGoodsOptions, form]);
-
-  const finishedGoodsMap = useMemo(() => {
-    const m = new Map<number, FinishedGoodOption>();
-    for (const g of finishedGoodsOptions) m.set(g.id, g);
-    return m;
-  }, [finishedGoodsOptions]);
+  const errors = form.formState.errors;
+  const linesRootError = errors.lines?.root?.message ?? errors.lines?.message;
 
   function handleFinishedGoodChangeFactory(rowIndex: number) {
     return (value: string) => {
@@ -255,7 +224,149 @@ export function ProductionOrderForm({
     };
   }
 
-  function onValid(values: ProductionOrderFormValues) {
+  return (
+    <>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="productionNumber">{INVENTORY_VI.productionNumber}</Label>
+          <Controller
+            control={form.control}
+            name="production_number"
+            render={({ field }) => (
+              <Input
+                id="productionNumber"
+                {...field}
+                value={field.value ?? ""}
+                placeholder="PRD-20260414-001"
+                aria-invalid={!!errors.production_number}
+                className={cn(
+                  errors.production_number && "border-destructive",
+                )}
+              />
+            )}
+          />
+          {errors.production_number && (
+            <p className="text-xs text-destructive" role="alert">
+              {errors.production_number.message}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="branchId">{INVENTORY_VI.productionBranch}</Label>
+          <Controller
+            control={form.control}
+            name="branch_id"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger
+                  id="branchId"
+                  aria-invalid={!!errors.branch_id}
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                >
+                  <SelectValue placeholder={BRANCH_VI.select} />
+                </SelectTrigger>
+                <SelectContent>
+                  {productionBranches.map((branch) => (
+                    <SelectItem key={branch.id} value={String(branch.id)}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.branch_id && (
+            <p className="text-xs text-destructive" role="alert">
+              {errors.branch_id.message}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="notes">{FORM_VI.notes}</Label>
+        <Controller
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <Textarea
+              id="notes"
+              {...field}
+              value={field.value ?? ""}
+              placeholder={INVENTORY_VI.productionNoteePlaceholder}
+            />
+          )}
+        />
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <Label>{PRODUCT_VI.finishedGood}</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => append(buildEmptyRow(finishedGoodsOptions[0]))}
+          >
+            {INVENTORY_VI.addRow}
+          </Button>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {fields.map((row, index) => (
+            <LineRowCells
+              key={row.id}
+              control={form.control}
+              index={index}
+              finishedGoods={finishedGoodsOptions}
+              errors={errors}
+              onRemove={() => remove(index)}
+              canRemove={fields.length > 1}
+              onFinishedGoodChange={handleFinishedGoodChangeFactory(index)}
+            />
+          ))}
+        </div>
+
+        {linesRootError && (
+          <p className="text-sm text-destructive" role="alert">
+            {linesRootError}
+          </p>
+        )}
+      </div>
+    </>
+  );
+}
+
+export function ProductionOrderForm({
+  productionBranches,
+  finishedGoodsOptions,
+  actionsEnabled,
+}: ProductionOrderFormProps) {
+  const router = useRouter();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const defaultBranchId = productionBranches[0]?.id
+    ? String(productionBranches[0].id)
+    : "";
+  const [formDefaults, setFormDefaults] = useState<ProductionOrderFormValues>(
+    () => buildInitialValues(defaultBranchId, finishedGoodsOptions),
+  );
+
+  const finishedGoodsMap = useMemo(() => {
+    const m = new Map<number, FinishedGoodOption>();
+    for (const g of finishedGoodsOptions) m.set(g.id, g);
+    return m;
+  }, [finishedGoodsOptions]);
+
+  function openCreateDialog() {
+    setFormDefaults(buildInitialValues(defaultBranchId, finishedGoodsOptions));
+    setIsDialogOpen(true);
+  }
+
+  async function submitProductionOrder(
+    values: ProductionOrderFormValues,
+  ): Promise<ActionResult> {
     const payloadLines = values.lines
       .map((line) => ({
         finishedGoodId: Number(line.finished_good_id),
@@ -272,180 +383,62 @@ export function ProductionOrderForm({
       );
 
     if (payloadLines.length === 0) {
-      setServerError(INVENTORY_VI.atLeastOneFinishedGoodPeriod);
-      return;
+      return {
+        success: false,
+        error: INVENTORY_VI.atLeastOneFinishedGoodPeriod,
+      };
     }
 
-    startTransition(async () => {
-      setServerError(null);
-      const result = await createProductionOrder({
-        branchId: Number(values.branch_id),
-        productionNumber: values.production_number.trim(),
-        notes: values.notes?.trim() || undefined,
-        items: payloadLines,
-      });
-      if (!result.success) {
-        setServerError(result.error ?? INVENTORY_VI.createProductionOrderFailed);
-        return;
-      }
-      toast.success(TOAST_VI.productionOrderCreated);
-      setIsDialogOpen(false);
-      router.refresh();
+    const result = await createProductionOrder({
+      branchId: Number(values.branch_id),
+      productionNumber: values.production_number.trim(),
+      notes: values.notes?.trim() || undefined,
+      items: payloadLines,
     });
+
+    if (!result.success && !result.error) {
+      return {
+        success: false,
+        error: INVENTORY_VI.createProductionOrderFailed,
+      };
+    }
+
+    return result;
   }
 
-  const errors = form.formState.errors;
-  const linesRootError = errors.lines?.root?.message ?? errors.lines?.message;
+  function handleSuccess() {
+    toast.success(TOAST_VI.productionOrderCreated);
+    router.refresh();
+  }
 
   return (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogTrigger asChild>
-        <Button disabled={!actionsEnabled}>
-          <IconPlus className="mr-2 size-4" />
-          {INVENTORY_VI.createProductionOrder}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>{INVENTORY_VI.createProductionOrder}</DialogTitle>
-        </DialogHeader>
-
-        <form
-          onSubmit={form.handleSubmit(onValid)}
-          noValidate
-          className="flex flex-col gap-4"
-        >
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="productionNumber">{INVENTORY_VI.productionNumber}</Label>
-              <Controller
-                control={form.control}
-                name="production_number"
-                render={({ field }) => (
-                  <Input
-                    id="productionNumber"
-                    {...field}
-                    value={field.value ?? ""}
-                    placeholder="PRD-20260414-001"
-                    aria-invalid={!!errors.production_number}
-                    className={cn(
-                      errors.production_number && "border-destructive",
-                    )}
-                  />
-                )}
-              />
-              {errors.production_number && (
-                <p className="text-xs text-destructive" role="alert">
-                  {errors.production_number.message}
-                </p>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="branchId">{INVENTORY_VI.productionBranch}</Label>
-              <Controller
-                control={form.control}
-                name="branch_id"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger
-                      id="branchId"
-                      aria-invalid={!!errors.branch_id}
-                      onBlur={field.onBlur}
-                      ref={field.ref}
-                    >
-                      <SelectValue placeholder="Chọn chi nhánh" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {productionBranches.map((branch) => (
-                        <SelectItem key={branch.id} value={String(branch.id)}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.branch_id && (
-                <p className="text-xs text-destructive" role="alert">
-                  {errors.branch_id.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="notes">{FORM_VI.notes}</Label>
-            <Controller
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <Textarea
-                  id="notes"
-                  {...field}
-                  value={field.value ?? ""}
-                  placeholder={INVENTORY_VI.productionNoteePlaceholder}
-                />
-              )}
-            />
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <Label>{PRODUCT_VI.finishedGood}</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => append(buildEmptyRow(finishedGoodsOptions[0]))}
-              >
-                {INVENTORY_VI.addRow}
-              </Button>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              {fields.map((row, index) => (
-                <LineRowCells
-                  key={row.id}
-                  control={form.control}
-                  index={index}
-                  finishedGoods={finishedGoodsOptions}
-                  errors={errors}
-                  onRemove={() => remove(index)}
-                  canRemove={fields.length > 1}
-                  onFinishedGoodChange={handleFinishedGoodChangeFactory(index)}
-                />
-              ))}
-            </div>
-
-            {linesRootError && (
-              <p className="text-sm text-destructive" role="alert">
-                {linesRootError}
-              </p>
-            )}
-          </div>
-
-          {serverError && (
-            <p className="text-sm text-destructive" role="alert">
-              {serverError}
-            </p>
-          )}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsDialogOpen(false)}
-              disabled={isPending}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button type="submit" disabled={isPending || !actionsEnabled}>
-              {isPending && <Spinner className="mr-2" />}
-              {INVENTORY_VI.createOrderShort}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Button disabled={!actionsEnabled} onClick={openCreateDialog}>
+        <IconPlus className="mr-2 size-4" />
+        {INVENTORY_VI.createProductionOrder}
+      </Button>
+      <FormDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={INVENTORY_VI.createProductionOrder}
+        schema={productionOrderSchema}
+        defaultValues={formDefaults}
+        entityKey={formDefaults.production_number}
+        onSubmit={submitProductionOrder}
+        onSuccess={handleSuccess}
+        submitLabel={INVENTORY_VI.createOrderShort}
+        cancelLabel={ACTIONS_VI.cancel}
+        contentClassName="sm:max-w-3xl"
+      >
+        {(form) => (
+          <ProductionOrderFields
+            form={form}
+            productionBranches={productionBranches}
+            finishedGoodsOptions={finishedGoodsOptions}
+            finishedGoodsMap={finishedGoodsMap}
+          />
+        )}
+      </FormDialog>
+    </>
   );
 }

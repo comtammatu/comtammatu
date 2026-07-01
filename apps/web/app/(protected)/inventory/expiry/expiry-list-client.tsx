@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
+import { z } from "zod";
 import {
   CircleCheck as IconCircleCheck,
   Search as IconSearch,
@@ -11,16 +12,6 @@ import { ACTIONS_VI, BRANCH_VI, FORM_VI, INVENTORY_VI, PRODUCT_VI, TOAST_VI } fr
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@comtammatu/ui/components/alert-dialog";
 import {
   InputGroup,
   InputGroupAddon,
@@ -50,7 +41,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
-import { FormattedNumberInput } from "../_components/formatted-number-input";
+import { FormDialog, NumberField } from "@/components/form";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import {
   DataTable,
@@ -61,13 +52,25 @@ import { fetchExpiryAlerts } from "../alert-actions";
 import { PhotoUploadInput } from "../_components/photo-upload-input";
 import type { BranchOption, ExpiryAlertRow } from "../page";
 
-interface WriteOffTarget {
-  alert: ExpiryAlertRow;
-  quantity: string;
-  photoUrl: string | null;
-}
-
 type ExpiryDisplayRow = ExpiryAlertRow & { rowKey: string };
+
+const writeOffSchema = z.object({
+  quantity: z
+    .string()
+    .trim()
+    .min(1, { error: TOAST_VI.enterValidQuantity })
+    .refine((value) => Number(value) > 0, {
+      error: TOAST_VI.enterValidQuantity,
+    }),
+  photoUrl: z.string().optional(),
+});
+
+type WriteOffFormValues = z.infer<typeof writeOffSchema>;
+
+const WRITE_OFF_DEFAULT_VALUES: WriteOffFormValues = {
+  quantity: "",
+  photoUrl: "",
+};
 
 const URGENCY_META: Record<string, { label: string; className: string }> = {
   expired: {
@@ -105,11 +108,12 @@ function ExpiryAlertCard({
           <Badge className={cn("text-xs shrink-0", meta.className)}>
             {alert.urgency === "expired"
               ? INVENTORY_VI.expired
-              : `${alert.days_remaining} ngày`}
+              : `${alert.days_remaining} ${INVENTORY_VI.daySuffix}`}
           </Badge>
         </ItemTitle>
         <ItemDescription className="truncate">
-          Lô: {alert.batch_number ?? "—"} · GRN: {alert.grn_number} ·{" "}
+          {INVENTORY_VI.batchShort}: {alert.batch_number ?? "—"} · GRN:{" "}
+          {alert.grn_number} ·{" "}
           {alert.branch_name} · {formatVNDate(alert.expiry_date)}
         </ItemDescription>
       </ItemContent>
@@ -150,8 +154,7 @@ export function ExpiryListClient({
       : "all",
   );
   const [urgencyFilter, setUrgencyFilter] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [writeOff, setWriteOff] = useState<WriteOffTarget | null>(null);
+  const [writeOff, setWriteOff] = useState<ExpiryAlertRow | null>(null);
 
   const isBranchLocked = userRole === "branch_manager" && userBranchId != null;
 
@@ -204,53 +207,45 @@ export function ExpiryListClient({
   );
 
   function openWriteOff(alert: ExpiryAlertRow) {
-    setWriteOff({ alert, quantity: "", photoUrl: null });
+    setWriteOff(alert);
   }
 
-  function handleConfirmWriteOff() {
-    if (!writeOff) return;
-    const qty = Number(writeOff.quantity);
-    if (!qty || qty <= 0) {
-      toast.error(TOAST_VI.enterValidQuantity);
-      return;
-    }
-
-    const { alert, photoUrl } = writeOff;
+  async function handleConfirmWriteOff(values: WriteOffFormValues) {
+    if (!writeOff) return { success: false, error: TOAST_VI.writeOffFailed };
+    const qty = Number(values.quantity);
+    const alert = writeOff;
     const lotPart = alert.batch_number ? ` lô ${alert.batch_number}` : "";
     const grnPart = alert.grn_number ? ` (GRN ${alert.grn_number})` : "";
     const expiryPart = alert.expiry_date ? ` HSD ${alert.expiry_date}` : "";
-    startTransition(async () => {
-      const res = await createExpiryWriteoff({
-        branchId: alert.branch_id,
-        ingredientId: alert.ingredient_id,
-        quantity: qty,
-        unit: alert.unit,
-        grnItemId: alert.grn_item_id,
-        note: `Hết hạn sử dụng — ${alert.ingredient_name}${lotPart}${expiryPart}${grnPart}`,
-        photoUrls: photoUrl ? [photoUrl] : undefined,
-      });
 
-      if (!res.success) {
-        toast.error(res.error ?? TOAST_VI.writeOffFailed);
-        return;
-      }
-
-      if (res.data?.requiresApproval) {
-        toast.success(
-          `Đã gửi yêu cầu xóa sổ ${alert.ingredient_name} — chờ QLV duyệt`,
-        );
-      } else {
-        toast.success(`Đã xóa sổ ${qty} ${alert.unit} ${alert.ingredient_name}`);
-      }
-      setWriteOff(null);
-
-      const again = await fetchExpiryAlerts(
-        branchFilter !== "all" ? Number(branchFilter) : undefined,
-      );
-      if (again.success) {
-        setAlerts((again.data ?? []) as ExpiryAlertRow[]);
-      }
+    const res = await createExpiryWriteoff({
+      branchId: alert.branch_id,
+      ingredientId: alert.ingredient_id,
+      quantity: qty,
+      unit: alert.unit,
+      grnItemId: alert.grn_item_id,
+      note: `Hết hạn sử dụng — ${alert.ingredient_name}${lotPart}${expiryPart}${grnPart}`,
+      photoUrls: values.photoUrl ? [values.photoUrl] : undefined,
     });
+
+    if (!res.success) return res;
+
+    if (res.data?.requiresApproval) {
+      toast.success(
+        `Đã gửi yêu cầu xóa sổ ${alert.ingredient_name} — chờ QLV duyệt`,
+      );
+    } else {
+      toast.success(`Đã xóa sổ ${qty} ${alert.unit} ${alert.ingredient_name}`);
+    }
+
+    const again = await fetchExpiryAlerts(
+      branchFilter !== "all" ? Number(branchFilter) : undefined,
+    );
+    if (again.success) {
+      setAlerts((again.data ?? []) as ExpiryAlertRow[]);
+    }
+
+    return res;
   }
 
   const columns: DataTableColumn<ExpiryDisplayRow>[] = [
@@ -289,7 +284,7 @@ export function ExpiryListClient({
                 : "text-warning",
             )}
           >
-            {alert.days_remaining} ngày
+            {alert.days_remaining} {INVENTORY_VI.daySuffix}
           </span>
         ),
     },
@@ -314,7 +309,7 @@ export function ExpiryListClient({
           size="sm"
           className="h-7 gap-1.5 text-xs"
           onClick={() => openWriteOff(alert)}
-          disabled={isPending}
+          disabled={writeOff != null}
         >
           <IconTrash className="size-3.5" />
           {INVENTORY_VI.writeOff}
@@ -339,7 +334,7 @@ export function ExpiryListClient({
         mobileCardRender={(row) => (
           <ExpiryAlertCard
             alert={row}
-            disabled={isPending}
+            disabled={writeOff != null}
             onWriteOff={openWriteOff}
           />
         )}
@@ -365,7 +360,7 @@ export function ExpiryListClient({
         {!isBranchLocked && (
           <Select value={branchFilter} onValueChange={setBranchFilter}>
             <SelectTrigger className="w-48">
-              <SelectValue placeholder="Chi nhánh" />
+              <SelectValue placeholder={BRANCH_VI.long} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
@@ -378,7 +373,7 @@ export function ExpiryListClient({
           </Select>
         )}
         <Badge variant="outline" className="rounded-full">
-          {displayItems.length} mục
+          {displayItems.length} {INVENTORY_VI.itemSuffix}
         </Badge>
       </AppToolbar>
 
@@ -459,7 +454,9 @@ export function ExpiryListClient({
       {/* Tabs */}
       <Tabs defaultValue="all">
         <TabsList>
-          <TabsTrigger value="all">Tất cả ({displayItems.length})</TabsTrigger>
+          <TabsTrigger value="all">
+            {INVENTORY_VI.allTab} ({displayItems.length})
+          </TabsTrigger>
           <TabsTrigger value="expired">
             {INVENTORY_VI.expired} (
             {urgencyFilter
@@ -498,73 +495,55 @@ export function ExpiryListClient({
           )}
         </TabsContent>
       </Tabs>
-      {/* Write-off AlertDialog */}
-      <AlertDialog
+      <FormDialog
         open={writeOff != null}
         onOpenChange={(open) => {
           if (!open) setWriteOff(null);
         }}
+        schema={writeOffSchema}
+        defaultValues={WRITE_OFF_DEFAULT_VALUES}
+        entityKey={writeOff?.grn_item_id ?? "writeoff"}
+        title={INVENTORY_VI.writeOffConfirmTitle}
+        description={
+          writeOff
+            ? `Xóa sổ ${writeOff.ingredient_name} — lô ${writeOff.batch_number ?? "không có mã lô"}. Hành động này sẽ trừ tồn kho.`
+            : undefined
+        }
+        submitLabel={INVENTORY_VI.writeOff}
+        submitVariant="destructive"
+        cancelLabel={ACTIONS_VI.cancel}
+        onSubmit={handleConfirmWriteOff}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{INVENTORY_VI.writeOffConfirmTitle}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {writeOff
-                ? `Xóa sổ ${writeOff.alert.ingredient_name} — lô ${writeOff.alert.batch_number ?? "không có mã lô"}. Hành động này sẽ trừ tồn kho.`
-                : ""}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="writeoff-qty">{INVENTORY_VI.writeOffQty}</Label>
-            <FormattedNumberInput
+        {(form) => (
+          <>
+            <NumberField
+              control={form.control}
+              name="quantity"
               id="writeoff-qty"
+              label={INVENTORY_VI.writeOffQty}
               placeholder={INVENTORY_VI.enterQuantityPlaceholder}
-              value={writeOff?.quantity ?? ""}
-              onValueChange={(value) =>
-                setWriteOff((prev) =>
-                  prev ? { ...prev, quantity: value } : null,
-                )
-              }
               maxFractionDigits={3}
+              required
             />
             <div className="flex flex-col gap-1.5">
               <Label>{INVENTORY_VI.evidencePhoto}</Label>
               <PhotoUploadInput
                 tenantId={tenantId}
-                folder={`waste/expiry-${writeOff?.alert.grn_item_id ?? "new"}`}
-                value={writeOff?.photoUrl ?? null}
+                folder={`waste/expiry-${writeOff?.grn_item_id ?? "new"}`}
+                value={form.watch("photoUrl") || null}
                 onChange={(url) =>
-                  setWriteOff((prev) =>
-                    prev ? { ...prev, photoUrl: url } : null,
-                  )
+                  form.setValue("photoUrl", url ?? "", { shouldDirty: true })
                 }
                 acceptTypes="image"
                 allowPaste={false}
-                disabled={isPending}
               />
               <p className="text-xs text-muted-foreground">
                 {INVENTORY_VI.evidenceRequiredHint}
               </p>
             </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>
-              {ACTIONS_VI.cancel}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmWriteOff}
-              disabled={
-                isPending ||
-                !writeOff?.quantity ||
-                Number(writeOff.quantity) <= 0
-              }
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isPending ? "Đang xử lý..." : INVENTORY_VI.writeOff}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          </>
+        )}
+      </FormDialog>
     </AppPage>
   );
 }

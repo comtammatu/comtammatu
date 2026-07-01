@@ -24,6 +24,13 @@ const sideDishBackfillMigration = readFileSync(
   ),
   "utf8",
 );
+const routePolicyMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260701065350_pos_kitchen_print_route_policy.sql",
+  ),
+  "utf8",
+);
 
 function sqlFunction(name: string): string {
   return (
@@ -144,4 +151,34 @@ test("side dish backfill is scoped to stock-outcome pilot movements", () => {
   assert.match(sideDishBackfillMigration, /-mm\.expected_need_qty/);
   assert.match(sideDishBackfillMigration, /side dish backfill/);
   assert.doesNotMatch(sideDishBackfillMigration, /inv_to_base_for_tenant/);
+});
+
+test("KDS routing uses printer fallback without category-type hardcode", () => {
+  const route = routePolicyMigration.match(
+    /CREATE OR REPLACE FUNCTION public\.route_order_to_kds\([\s\S]*?\n\$function\$;/,
+  )?.[0] ?? "";
+
+  assert.match(route, /LEFT JOIN public\.printer_menu_categories pmc/);
+  assert.match(route, /FROM public\.printer_menu_categories pmc_any/);
+  assert.match(route, /:non-kds-dispatch:printer:/);
+  assert.doesNotMatch(route, /category_type = 'drink'/);
+  assert.doesNotMatch(route, /mc\.type\s*(?:=|<>)/);
+  assert.doesNotMatch(route, /v_fallback_station_id/);
+});
+
+test("printer-dispatched non-KDS items with recipes are sale-consumption eligible", () => {
+  const sale = routePolicyMigration.match(
+    /CREATE OR REPLACE FUNCTION public\.post_pos_sale_consumption_if_ready\([\s\S]*?END;\n\$\$;/,
+  )?.[0] ?? "";
+
+  assert.match(sale, /qualifying_order_items AS/);
+  assert.match(sale, /oi\.sent_to_kitchen_at IS NOT NULL/);
+  assert.match(sale, /NOT EXISTS \([\s\S]*FROM public\.kds_tickets kt[\s\S]*kt\.status <> 'cancelled'/);
+  assert.match(sale, /EXISTS \([\s\S]*kt\.first_ready_at IS NOT NULL/);
+  assert.match(sale, /JOIN public\.recipes r[\s\S]*r\.menu_item_id = cl\.menu_item_id/);
+  assert.doesNotMatch(sale, /mc\.type\s*=/);
+  assert.match(
+    routePolicyMigration,
+    /non-KDS lines consume after kitchen dispatch/,
+  );
 });

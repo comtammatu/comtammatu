@@ -12,6 +12,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   AppEmptyState,
+  AppLinkCard,
   AppPage,
   AppPageHeader,
   AppSection,
@@ -41,6 +42,7 @@ export type ReportsProps = {
   foodCostTrend: number[];
   foodCostTrendAvailable: boolean;
   foodCostTrendDeltaPct: number | null;
+  supplierInvoicesHref?: string | null;
 };
 
 export function ReportsClient({
@@ -50,6 +52,7 @@ export function ReportsClient({
   foodCostTrend,
   foodCostTrendAvailable,
   foodCostTrendDeltaPct,
+  supplierInvoicesHref = "/inventory/supplier-invoices",
 }: ReportsProps) {
   const maxAP = Math.max(...apAging.map((a) => a.amount), 1);
   const trendLabel =
@@ -80,119 +83,121 @@ export function ReportsClient({
           icon={<IconChartBar />}
           contentClassName="flex flex-1 flex-col gap-4"
         >
-            <div className="flex items-center justify-end">
-              <div className="flex items-center gap-3 text-xs font-medium">
-                <span className="flex items-center gap-1.5">
-                  <span className="size-3 rounded-full bg-primary" />
-                  <span className="text-muted-foreground">
-                    {messages.inventory.reports.inbound}
-                  </span>
+          <div className="flex items-center justify-end">
+            <div className="flex items-center gap-3 text-xs font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-chart-1" />
+                <span className="text-muted-foreground">
+                  {messages.inventory.reports.inbound}
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="size-3 rounded-full bg-success" />
-                  <span className="text-muted-foreground">
-                    {messages.inventory.reports.transferIn}
-                  </span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-chart-2" />
+                <span className="text-muted-foreground">
+                  {messages.inventory.reports.transferIn}
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="size-3 rounded-full bg-destructive" />
-                  <span className="text-muted-foreground">
-                    {messages.inventory.reports.outboundConsumption}
-                  </span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-chart-4" />
+                <span className="text-muted-foreground">
+                  {messages.inventory.reports.outboundConsumption}
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="size-3 rounded-full bg-info" />
-                  <span className="text-muted-foreground">
-                    {messages.inventory.reports.production}
-                  </span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-chart-5" />
+                <span className="text-muted-foreground">
+                  {messages.inventory.reports.production}
                 </span>
-              </div>
+              </span>
             </div>
-            <div className="flex-1">
-              <SimpleBarChart data={movementSummary} height={220} />
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">{trendLabel}</p>
-              <Badge variant="outline">
-                {messages.inventory.reports.currentMonthSnapshot}
-              </Badge>
-            </div>
+          </div>
+          <div className="flex-1">
+            <SimpleBarChart data={movementSummary} height={220} />
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">{trendLabel}</p>
+            <Badge variant="outline">
+              {messages.inventory.reports.currentMonthSnapshot}
+            </Badge>
+          </div>
         </AppSection>
 
         <AppSection
           className="col-span-12 lg:col-span-4"
           title={messages.inventory.reports.supplierPayables}
         >
-            <div className="flex flex-col gap-3">
-              {apAging.map((item, idx) => {
-                const isOverdue = idx === apAging.length - 1;
-                const barColor =
-                  idx === 0
-                    ? resolveInventoryColorValue("success")
-                    : idx === 1
-                      ? resolveInventoryColorValue("primary")
-                      : idx === 2
-                        ? resolveInventoryColorValue("warning")
-                        : resolveInventoryColorValue("danger");
-                return (
-                  <div
-                    key={item.range}
-                    className={cn(
-                      "rounded-md p-3",
-                      isOverdue
-                        ? "border border-destructive/20 bg-destructive/12"
-                        : "bg-muted/35",
-                    )}
-                  >
-                    <div className="mb-1 flex justify-between text-xs">
-                      <span
-                        className={cn(
-                          isOverdue
-                            ? "text-destructive"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {item.range}
-                      </span>
-                      <span
-                        className={cn(
-                          "font-bold",
-                          isOverdue ? "text-destructive" : "text-foreground",
-                        )}
-                      >
-                        {messages.inventory.reports.amountVnd(
-                          formatVND(item.amount),
-                        )}
-                      </span>
-                    </div>
-                    <div
+          <div className="flex flex-col gap-3">
+            {apAging.map((item, idx) => {
+              const isOverdue = idx === apAging.length - 1;
+              const barColor =
+                idx === 0
+                  ? resolveInventoryColorValue("success")
+                  : idx === 1
+                    ? resolveInventoryColorValue("primary")
+                    : idx === 2
+                      ? resolveInventoryColorValue("warning")
+                      : resolveInventoryColorValue("danger");
+              return (
+                <div
+                  key={item.range}
+                  className={cn(
+                    "rounded-md p-3",
+                    isOverdue
+                      ? "border border-destructive/20 bg-destructive/12"
+                      : "bg-muted/35",
+                  )}
+                >
+                  <div className="mb-1 flex justify-between text-xs">
+                    <span
                       className={cn(
-                        "h-2 w-full overflow-hidden rounded-full",
-                        isOverdue ? "bg-destructive/20" : "bg-muted",
+                        isOverdue
+                          ? "text-destructive"
+                          : "text-muted-foreground",
                       )}
                     >
-                      <div
-                        className="h-full rounded-full transition-[width,background-color]"
-                        style={{
-                          width: `${(item.amount / maxAP) * 100}%`,
-                          backgroundColor: barColor,
-                        }}
-                      />
-                    </div>
+                      {item.range}
+                    </span>
+                    <span
+                      className={cn(
+                        "font-bold",
+                        isOverdue ? "text-destructive" : "text-foreground",
+                      )}
+                    >
+                      {messages.inventory.reports.amountVnd(
+                        formatVND(item.amount),
+                      )}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                  <div
+                    className={cn(
+                      "h-2 w-full overflow-hidden rounded-full",
+                      isOverdue ? "bg-destructive/20" : "bg-muted",
+                    )}
+                  >
+                    <div
+                      className="h-full rounded-full transition-[width,background-color]"
+                      style={{
+                        width: `${(item.amount / maxAP) * 100}%`,
+                        backgroundColor: barColor,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {supplierInvoicesHref ? (
             <Button
               asChild
               type="button"
               variant="outline"
               className="w-full text-muted-foreground"
             >
-              <Link href="/inventory/supplier-invoices">
+              <Link href={supplierInvoicesHref}>
                 {messages.inventory.reports.openSupplierDebt}
               </Link>
             </Button>
+          ) : null}
         </AppSection>
 
         <AppSection
@@ -200,46 +205,46 @@ export function ReportsClient({
           title={messages.inventory.reports.consumptionVariance}
           description={messages.inventory.reports.recipeActualVsStandard}
         >
-            <div className="flex flex-col gap-3">
-              {consumptionVariance.map((item) => {
-                const isUp = item.trend === "up";
-                return (
-                  <div
-                    key={item.name}
-                    className="bg-muted/35 flex items-center justify-between rounded-md border p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-10 items-center justify-center rounded-md bg-card">
-                        <IconPackage className="size-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-foreground">
-                          {item.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {messages.inventory.reports.unitKg}
-                        </p>
-                      </div>
+          <div className="flex flex-col gap-3">
+            {consumptionVariance.map((item) => {
+              const isUp = item.trend === "up";
+              return (
+                <div
+                  key={item.name}
+                  className="bg-muted/35 flex items-center justify-between rounded-md border p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-10 items-center justify-center rounded-md bg-card">
+                      <IconPackage className="size-5 text-muted-foreground" />
                     </div>
-                    <div className="text-right">
-                      <p
-                        className={cn(
-                          "text-sm font-bold",
-                          isUp ? "text-destructive" : "text-success",
-                        )}
-                      >
-                        {item.actual}
+                    <div>
+                      <p className="text-sm font-bold text-foreground">
+                        {item.name}
                       </p>
-                      <Badge variant={isUp ? "destructive" : "success"}>
-                        {isUp
-                          ? messages.inventory.reports.overStandard
-                          : messages.inventory.reports.saving}
-                      </Badge>
+                      <p className="text-xs text-muted-foreground">
+                        {messages.inventory.reports.unitKg}
+                      </p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="text-right">
+                    <p
+                      className={cn(
+                        "text-sm font-bold",
+                        isUp ? "text-destructive" : "text-success",
+                      )}
+                    >
+                      {item.actual}
+                    </p>
+                    <Badge variant={isUp ? "destructive" : "success"}>
+                      {isUp
+                        ? messages.inventory.reports.overStandard
+                        : messages.inventory.reports.saving}
+                    </Badge>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </AppSection>
 
         <AppSection
@@ -247,27 +252,27 @@ export function ReportsClient({
           title={messages.inventory.reports.foodCostTrend}
           description={messages.inventory.reports.foodCostTarget}
         >
-            {foodCostTrendAvailable ? (
-              <>
-                <TrendSparkline
-                  data={foodCostTrend}
-                  width={400}
-                  height={120}
-                  color="primary"
-                  target={30}
-                />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {messages.inventory.reports.foodCostByMonth}
-                </p>
-              </>
-            ) : (
-              <AppEmptyState
-                compact
-                className="min-h-40"
-                title={messages.inventory.reports.foodCostEmptyTitle}
-                description={messages.inventory.reports.foodCostEmptyDescription}
+          {foodCostTrendAvailable ? (
+            <>
+              <TrendSparkline
+                data={foodCostTrend}
+                width={400}
+                height={120}
+                color="primary"
+                target={30}
               />
-            )}
+              <p className="mt-2 text-xs text-muted-foreground">
+                {messages.inventory.reports.foodCostByMonth}
+              </p>
+            </>
+          ) : (
+            <AppEmptyState
+              compact
+              className="min-h-40"
+              title={messages.inventory.reports.foodCostEmptyTitle}
+              description={messages.inventory.reports.foodCostEmptyDescription}
+            />
+          )}
         </AppSection>
       </div>
 
@@ -277,18 +282,16 @@ export function ReportsClient({
       </h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {reportCatalog.map((report) => (
-          <div key={report.title} className="rounded-lg border bg-card p-4">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div className="flex size-12 items-center justify-center rounded-md bg-muted transition-colors">
-                <report.icon className="size-5 text-muted-foreground" />
-              </div>
-              <Badge variant="outline">
-                {messages.inventory.reports.comingSoon}
-              </Badge>
-            </div>
-            <p className="font-bold text-foreground">{report.title}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{report.desc}</p>
-          </div>
+          <AppLinkCard
+            key={report.title}
+            href="#"
+            title={report.title}
+            description={report.desc}
+            icon={<report.icon />}
+            badge={messages.inventory.reports.comingSoon}
+            badgeVariant="outline"
+            disabled
+          />
         ))}
       </div>
     </AppPage>

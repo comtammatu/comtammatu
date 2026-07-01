@@ -32,7 +32,7 @@ import type {
 } from "./create-transfer-dialog";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
-import { StatusBadge } from "../_components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { messages } from "@lib/messages";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
@@ -54,11 +54,11 @@ export interface TransferListRow {
   to_branch_name: string;
 }
 
-type Tab = "receive" | "dispatch" | "history";
+export type TransferTab = "receive" | "dispatch" | "history";
 
 const copy = messages.inventory.transfer;
 
-const TAB_LABELS: Record<Tab, string> = {
+const TAB_LABELS: Record<TransferTab, string> = {
   receive: copy.list.tabs.receive,
   dispatch: copy.list.tabs.dispatch,
   history: copy.list.tabs.history,
@@ -70,7 +70,7 @@ function classifyTransfer(
   fromId: number,
   toId: number,
   userRole: StaffRole,
-): Tab {
+): TransferTab {
   const receiveStates = ["in_transit", "confirmed_ship", "confirmed_receive"];
   const dispatchStates = ["draft"];
   const terminal = ["received", "cancelled", "completed"];
@@ -96,12 +96,20 @@ export function TransfersListClient({
   userBranchId,
   userRole,
   basePath = "/inventory/transfers",
+  createEnabled = true,
+  initialTab = "receive",
+  pageTitle: pageTitleOverride,
+  embedded = false,
 }: {
   initial: TransferListRow[];
   branches: BranchForTransfer[];
   userBranchId: number | null;
   userRole: StaffRole;
   basePath?: string;
+  createEnabled?: boolean;
+  initialTab?: TransferTab;
+  pageTitle?: string;
+  embedded?: boolean;
 }) {
   const isBranchManager = userRole === "branch_manager";
   const userBranchKind =
@@ -116,21 +124,21 @@ export function TransfersListClient({
       userBranchKind === "central_supply" ||
       userBranchKind === "central_kitchen") &&
     branches.length >= 2;
-  const canCreate = canCreateOutbound;
+  const canCreate = createEnabled && canCreateOutbound;
   const rows = initial;
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<Tab>("receive");
+  const [activeTab, setActiveTab] = useState<TransferTab>(initialTab);
 
   const createLabel = copy.createSlip;
-  const pageTitle = copy.internalTransferTitle;
-  const tabLabels: Record<Tab, string> = TAB_LABELS;
+  const pageTitle = pageTitleOverride ?? copy.internalTransferTitle;
+  const tabLabels: Record<TransferTab, string> = TAB_LABELS;
   const createHref =
     userBranchId == null
       ? `${basePath}/new`
       : `${basePath}/new?branchId=${userBranchId}`;
 
   const tabGroups = useMemo(() => {
-    const groups: Record<Tab, TransferListRow[]> = {
+    const groups: Record<TransferTab, TransferListRow[]> = {
       receive: [],
       dispatch: [],
       history: [],
@@ -222,7 +230,9 @@ export function TransfersListClient({
     {
       key: "status",
       header: FORM_VI.status,
-      render: (r) => <StatusBadge status={r.status} size="sm" />,
+      render: (r) => (
+        <StatusBadge domain="inventory" value={r.status} size="sm" />
+      ),
     },
     {
       key: "created_at",
@@ -255,10 +265,10 @@ export function TransfersListClient({
     },
   ];
 
-  return (
-    <AppPage>
+  const content = (
+    <>
       <AppPageHeader
-        eyebrow="Kho hàng"
+        eyebrow={embedded ? undefined : "Kho hàng"}
         title={pageTitle}
         actions={
           canCreate ? (
@@ -272,7 +282,7 @@ export function TransfersListClient({
         }
       />
       <nav className="grid grid-cols-3 gap-1 rounded-md border bg-muted/30 p-1">
-        {(Object.keys(tabLabels) as Tab[]).map((tab) => {
+        {(Object.keys(tabLabels) as TransferTab[]).map((tab) => {
           const active = tab === activeTab;
           return (
             <button
@@ -334,6 +344,16 @@ export function TransfersListClient({
           <MobileTransferCard row={r} tab={activeTab} href={detailHref(r.id)} />
         )}
       />
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <AppPage>
+      {content}
     </AppPage>
   );
 }
@@ -346,7 +366,7 @@ function MobileTransferCard({
   href,
 }: {
   row: TransferListRow;
-  tab: Tab;
+  tab: TransferTab;
   href: string;
 }) {
   const Icon =
@@ -367,7 +387,7 @@ function MobileTransferCard({
             <p className="truncate font-mono text-sm font-semibold">
               {row.transfer_number}
             </p>
-            <StatusBadge status={row.status} size="sm" />
+            <StatusBadge domain="inventory" value={row.status} size="sm" />
           </div>
           <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
             <span className="truncate">{row.from_branch_name}</span>

@@ -47,14 +47,14 @@ runtime. Role split:
 - `docs/worklog/*`: temporary staging only; promote stable decisions back to
   spec/modules/tasks, then remove stale worklog claims.
 
-Không được coi external UI scaffold CLI/preset là authority cao hơn Custom Theme
-contract. Không được coi Custom Theme là một layer/fork mới tách riêng khỏi
-`@comtammatu/ui` primitives. Nếu cần pattern mới, update
-`docs/spec/design-system.md` trước, rồi mới rollout vào code.
+Không được coi external UI scaffold output là authority cao hơn Custom Theme
+contract. Pattern mới được route-scoped nếu vẫn giữ token, primitive, route
+family, và workflow; chỉ sửa spec khi đổi contract hoặc shared adapter.
 
 Code mới phải dùng `apps/web/app/components/surface.tsx`, `BrandMark` /
 `BrandLockup` / `BrandSymbol` / `BrandMascot`, semantic token classes, và font
-utilities hiện hành cho app UI. Nếu cần visual layer mới, update
+utilities hiện hành cho app UI. Nếu ý tưởng cần visual layer mới ở mức token,
+chrome, primitive behavior, hoặc shared adapter, update
 `docs/spec/design-system.md` trước khi rollout vào runtime.
 
 Read order cho agent khi làm UI:
@@ -128,11 +128,16 @@ Không dùng local `className="p-0"` hoặc `className="overflow-x-auto"` trên
 - `AppToolbar` cho filter/action toolbar.
 - `AppEmptyState` cho empty/no-result/no-access/error state.
 - `AppLinkCard` cho navigation/action card.
-- `KpiRow` cho grid responsive (1/2/3 cột) bọc các `KpiCard`.
+- `KpiRow` cho grid responsive (1/2/3 cột) bọc các `KpiCard` chỉ khi đó là
+  metric/stat-value.
 - `DescriptionList` cho cặp term/description (`<dl>`) ở trang chi tiết.
 - `LinkCardGrid` cho grid responsive (1/2/3 cột) bọc các `AppLinkCard`.
 
 Domain wrappers như Inventory/Employee/Admin có thể giữ API riêng để tránh sửa hàng loạt call site, nhưng phải delegate về các adapter này thay vì tự style lại `Card`, `Empty`, hoặc page container.
+
+Card không đồng nghĩa với `KpiCard`: `KpiCard` chỉ cho metric/stat-value; card
+khác dùng `AppSection`, `AppLinkCard`, `OperationalBoardCard`,
+`DataTable.mobileCardRender`, hoặc wrapper route-scoped có render `Card`.
 
 ## Branch Operator Hub
 
@@ -144,8 +149,13 @@ Branch Hub là surface mobile-first cho nhân viên và quản lý chi nhánh �
   `EmployeeActionBar`, và `EmployeeControlBar` trước khi nghĩ tới wrapper mới.
 - mobile ẩn page header trùng bằng `hideHeaderOnMobile`; app chrome đã giữ tên
   app, chi nhánh, và bottom nav.
-- hub là nhóm action rows theo việc cần mở; màn chi tiết giữ một primary action
-  trong panel chính, không đặt CTA vận hành vào page header.
+- hub là nhóm action rows theo việc cần mở trong ngày; không đặt
+  `Điều hành chi nhánh` hoặc `Cài đặt chi nhánh` như tile trong Hub.
+- màn quản lý chi nhánh (`/dashboard`, `/settings`) dùng cùng Branch runtime
+  chrome nhưng thuộc route family `branch_management`, mở qua bottom nav theo
+  quyền quản lý.
+- màn chi tiết giữ một primary action trong panel chính, không đặt CTA vận hành
+  vào page header.
 - branch wrapper chỉ đổi href/scope sang `/br/[branchId]/*`; không redirect vòng
   qua `/employee/*` và không fork lại layout.
 - copy hiển thị sống trong `messages.employee.*`, `APP_COPY_VI`, hoặc registry
@@ -173,7 +183,8 @@ Management dùng một sidebar cố định.
 Code app mới không được mặc định import trực tiếp các primitive này từ
 `@comtammatu/ui/components/*`; phải chọn adapter sở hữu workflow trước:
 
-- layout/card section → `AppSection`, `KpiCard`, `InteractiveCard`, hoặc adapter vận hành đã duyệt
+- layout/card section → `AppSection`, `AppLinkCard`, `KpiCard` cho metric,
+  `InteractiveCard`, `OperationalBoardCard`, hoặc wrapper route-scoped
 - table/list responsive → `DataTable` hoặc `TableEmptyStateRow`; document line-sheet cần adapter ghi rõ
 - CRUD form dialog → `FormDialog`; form dài hoặc nhiều line dùng Page/Sheet theo Overlay Decision
 - destructive confirm đơn giản → shared `confirm()`; confirm có input/reason dùng flow đã duyệt
@@ -318,7 +329,8 @@ Không cho phép:
 
 Quy tắc review:
 
-- nếu UI trông giống `card` thì phải dùng `Card`
+- nếu UI trông giống `card` thì phải dùng `Card` qua đúng role/adapter; không
+  ép card không phải số liệu vào `KpiCard`
 - nếu UI trông giống `badge/chip` thì phải dùng `Badge`
 - nếu UI trông giống `button` thì phải dùng `Button`
 - nếu UI trông giống bảng dữ liệu thì phải dùng `Table`
@@ -326,7 +338,8 @@ Quy tắc review:
 - nếu UI là loading spinner thì phải dùng `Spinner`, không tự style `Loader2 + animate-spin`
 - nếu UI là form field thì phải dùng helpers từ `@/components/form` (`TextField`, `NumberField`, `SelectField`, `TextareaField`)
 - nếu UI là form dialog CRUD thì phải dùng `FormDialog` wrapper
-- nếu không có primitive phù hợp, dừng lại và thống nhất trước khi thêm pattern mới
+- nếu không có primitive phù hợp, dùng wrapper route-scoped; chỉ update spec khi
+  đổi contract hoặc shared adapter
 
 ## UI Rebuild Gate
 

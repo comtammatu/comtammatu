@@ -33,10 +33,10 @@ const kdsMutationSource = readSource(
   "app/(protected)/br/[branchId]/kds/_hooks/use-kds-mutations.ts",
 );
 const managerActionsSource = readSource(
-  "app/(protected)/br/[branchId]/settings/menu-limits/actions.ts",
+  "app/(protected)/br/[branchId]/(operator)/settings/menu-limits/actions.ts",
 );
 const managerPageSource = readSource(
-  "app/(protected)/br/[branchId]/settings/menu-limits/page.tsx",
+  "app/(protected)/br/[branchId]/(operator)/settings/menu-limits/page.tsx",
 );
 
 test("POS no longer exposes branch menu-limit management", () => {

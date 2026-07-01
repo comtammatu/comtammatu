@@ -1,4 +1,8 @@
 import { Suspense } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { getSafeInternalReturnTo } from "@comtammatu/shared/auth";
+import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { NotificationsClient } from "./notifications-client";
 import { messages } from "@lib/messages";
@@ -8,17 +12,49 @@ export const metadata = {
   title: "Thông báo — Cơm Tấm Má Tư",
 };
 
-export default async function NotificationsPage() {
-  const { claims } = await loadAuthState();
+type NotificationsPageProps = {
+  searchParams?: Promise<{
+    returnTo?: string | string[];
+  }>;
+};
+
+export default async function NotificationsPage({
+  searchParams,
+}: NotificationsPageProps) {
+  const paramsPromise: Promise<{ returnTo?: string | string[] }> =
+    searchParams ?? Promise.resolve({});
+  const [{ claims }, params] = await Promise.all([
+    loadAuthState(),
+    paramsPromise,
+  ]);
+  const rawReturnTo = Array.isArray(params.returnTo)
+    ? params.returnTo[0]
+    : params.returnTo;
+  const backHref =
+    getSafeInternalReturnTo(rawReturnTo) ??
+    (typeof claims.branch_id === "number" ? `/br/${claims.branch_id}` : null);
 
   return (
     <AppPage width="narrow">
       <AppPageHeader
         title={messages.notifications.pageTitle}
         description={messages.notifications.pageDescription}
+        actions={
+          backHref ? (
+            <Button asChild variant="outline" size="touch">
+              <Link href={backHref}>
+                <ArrowLeft data-icon="inline-start" />
+                {messages.notifications.back}
+              </Link>
+            </Button>
+          ) : undefined
+        }
       />
       <Suspense>
-        <NotificationsClient tenantId={claims.tenant_id} branchId={claims.branch_id} />
+        <NotificationsClient
+          tenantId={claims.tenant_id}
+          branchId={claims.branch_id}
+        />
       </Suspense>
     </AppPage>
   );

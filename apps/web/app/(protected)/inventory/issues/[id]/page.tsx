@@ -7,13 +7,17 @@ import { fetchEntityAuditLogs } from "@/_lib/audit";
 import { IssueDetailClient } from "./issue-detail-client";
 import type { IngredientRow } from "../../page";
 
-export default async function IssueDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const issueId = Number(id);
+interface IssueDetailPageContentProps {
+  issueId: number;
+  routeBranchId?: number;
+  listBasePath?: string;
+}
+
+export async function IssueDetailPageContent({
+  issueId,
+  routeBranchId,
+  listBasePath = "/inventory/consumption",
+}: IssueDetailPageContentProps) {
   if (!Number.isFinite(issueId) || issueId <= 0) notFound();
 
   const [res, ingredientsRes, auditLogs] = await Promise.all([
@@ -52,6 +56,7 @@ export default async function IssueDetailPage({
       ingredients: { id: number; name: string; unit: string } | null;
     }>;
   };
+  if (routeBranchId != null && d.issue.branch_id !== routeBranchId) notFound();
   const ingredients: IngredientRow[] = ingredientsRes.success
     ? ((ingredientsRes.data ?? []) as IngredientRow[])
     : [];
@@ -68,6 +73,16 @@ export default async function IssueDetailPage({
       ingredients={ingredients}
       canAdjustStock={canAdjustStock}
       auditLogs={auditLogs}
+      listBasePath={listBasePath}
     />
   );
+}
+
+export default async function IssueDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  return <IssueDetailPageContent issueId={Number(id)} />;
 }

@@ -25,7 +25,7 @@ function createServiceClient() {
   });
 }
 
-interface TestStaffProfile {
+export interface TestStaffProfile {
   userId: string;
   email: string;
   tenantId: number;
@@ -148,6 +148,10 @@ async function resolveCashierProfile(
   }
 
   return resolveProfileByEmail(supabase, email);
+}
+
+export async function getCashierProfile(): Promise<TestStaffProfile> {
+  return resolveCashierProfile(createServiceClient());
 }
 
 export async function resolveChefCredentials() {

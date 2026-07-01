@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import {
+  ArrowRight as IconArrowRight,
   Landmark as IconBank,
   Settings2 as IconSettings,
   Wallet as IconWallet,
@@ -13,7 +15,11 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppSection } from "@/components/surface";
-import { BusinessDateField, FormDialog, MoneyVndField } from "@/components/form";
+import {
+  BusinessDateField,
+  FormDialog,
+  MoneyVndField,
+} from "@/components/form";
 import { messages } from "@lib/messages";
 import { setCashOpening } from "../cash-actions";
 
@@ -124,6 +130,14 @@ export function CashPanel({
         className="min-w-0"
         title={copy.bankTitle}
         icon={<IconBank />}
+        action={
+          <Button asChild variant="outline" size="sm">
+            <Link href="/finance/bank-transactions">
+              {copy.bankTransactionsAction}
+              <IconArrowRight data-icon="inline-end" aria-hidden />
+            </Link>
+          </Button>
+        }
       >
         {hasBankOpening ? (
           <>

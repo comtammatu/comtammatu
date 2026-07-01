@@ -1,21 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useMemo } from "react";
+import { Controller } from "react-hook-form";
 import { z } from "zod";
 import { cn } from "@comtammatu/ui";
-import { Button } from "@comtammatu/ui/components/button";
-import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Label } from "@comtammatu/ui/components/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
 import {
   Select,
   SelectContent,
@@ -24,14 +13,11 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { FormDialog } from "@/components/form";
 import { RecipeLinesEditor } from "../_components/recipe-lines-editor";
 import type { IngredientUnitRow } from "../_lib/types";
 import { upsertRecipeLines } from "../procurement-actions";
-import {
-  ACTIONS_VI,
-  ERRORS_VI,
-  INVENTORY_VI,
-} from "@comtammatu/shared/messages";
+import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 
 export interface MenuItemOption {
   id: number;
@@ -121,8 +107,6 @@ export function RecipeLineDialog({
   onSaved,
 }: RecipeDialogProps) {
   const isEdit = editingMenuItemId != null;
-  const [isPending, startTransition] = useTransition();
-  const [serverError, setServerError] = useState<string | null>(null);
 
   const initialValues = useMemo<RecipeFormValues>(
     () => ({
@@ -142,25 +126,13 @@ export function RecipeLineDialog({
     [editingMenuItemId, editingLines],
   );
 
-  const form = useForm<RecipeFormValues, unknown, RecipeFormValues>({
-    resolver: zodResolver(recipeSchema),
-    defaultValues: initialValues,
-  });
-
-  useEffect(() => {
-    if (open) {
-      form.reset(initialValues);
-      setServerError(null);
-    }
-  }, [open, initialValues, form]);
-
   const availableMenuItems = useMemo(() => {
     if (isEdit) return menuItems;
     const blocked = new Set(existingMenuItemIds);
     return menuItems.filter((mi) => !blocked.has(mi.id));
   }, [menuItems, existingMenuItemIds, isEdit]);
 
-  function onValid(values: RecipeFormValues) {
+  async function handleSubmit(values: RecipeFormValues) {
     const menuItemId = Number(values.menu_item_id);
     const parsedLines = values.lines.map((row) => ({
       ingredientId: Number(row.ingredient_id),
@@ -171,46 +143,41 @@ export function RecipeLineDialog({
       note: row.note?.trim() ? row.note.trim() : null,
     }));
 
-    startTransition(async () => {
-      setServerError(null);
-      const result = await upsertRecipeLines({
-        menuItemId,
-        lines: parsedLines,
-      });
-      if (!result.success) {
-        setServerError(result.error ?? ERRORS_VI.fallback);
-        return;
-      }
-      toast.success(
-        isEdit
-          ? `Đã cập nhật định mức món bán (${parsedLines.length} nguyên liệu)`
-          : `Đã tạo định mức món bán (${parsedLines.length} nguyên liệu)`,
-      );
-      onOpenChange(false);
-      onSaved();
+    return upsertRecipeLines({
+      menuItemId,
+      lines: parsedLines,
     });
   }
 
-  const errors = form.formState.errors;
-  const linesRootError = errors.lines?.root?.message ?? errors.lines?.message;
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>
-            {isEdit ? INVENTORY_VI.editRecipeTitle : INVENTORY_VI.createRecipeTitle}
-          </DialogTitle>
-          <DialogDescription>
-            {INVENTORY_VI.recipeDescription}
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? INVENTORY_VI.editRecipeTitle : INVENTORY_VI.createRecipeTitle}
+      description={INVENTORY_VI.recipeDescription}
+      schema={recipeSchema}
+      defaultValues={initialValues}
+      entityKey={editingMenuItemId ?? "new"}
+      onSubmit={handleSubmit}
+      onSuccess={(_, values) => {
+        toast.success(
+          isEdit
+            ? `Đã cập nhật định mức món bán (${values.lines.length} nguyên liệu)`
+            : `Đã tạo định mức món bán (${values.lines.length} nguyên liệu)`,
+        );
+        onSaved();
+      }}
+      submitLabel={isEdit ? INVENTORY_VI.updateRecipeBtn : INVENTORY_VI.saveRecipeBtn}
+      cancelLabel={ACTIONS_VI.cancel}
+      contentClassName="sm:max-w-3xl"
+    >
+      {(form) => {
+        const errors = form.formState.errors;
+        const linesRootError =
+          errors.lines?.root?.message ?? errors.lines?.message;
 
-        <form
-          onSubmit={form.handleSubmit(onValid)}
-          noValidate
-          className="flex flex-col gap-4"
-        >
+        return (
+          <>
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium">{INVENTORY_VI.recipeMenuItemLabel}</Label>
             <Controller
@@ -279,30 +246,9 @@ export function RecipeLineDialog({
               {INVENTORY_VI.yieldHint}
             </p>
           </div>
-
-          {serverError && (
-            <p className="text-sm text-destructive" role="alert">
-              {serverError}
-            </p>
-          )}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-              size="lg"
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button type="submit" disabled={isPending} size="lg">
-              {isPending && <Spinner className="mr-2" />}
-              {isEdit ? INVENTORY_VI.updateRecipeBtn : INVENTORY_VI.saveRecipeBtn}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </>
+        );
+      }}
+    </FormDialog>
   );
 }

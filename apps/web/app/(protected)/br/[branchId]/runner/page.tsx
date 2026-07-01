@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { CircleAlert as IconAlertCircle } from "lucide-react";
+import { AppEmptyState } from "@/components/surface";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { cn } from "@comtammatu/ui";
-import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import {
   buildRunnerQueue,
@@ -26,6 +27,8 @@ import { RunnerWaitTime } from "./runner-wait-time";
 
 const RUNNER_ERROR_MESSAGE =
   "Không tải được màn gọi số. Vui lòng tải lại trang.";
+const RUNNER_ERROR_TITLE = "Màn gọi số chưa sẵn sàng";
+const RUNNER_ERROR_BADGE = "Cần tải lại";
 const RUNNER_TICKET_SELECT =
   "id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at";
 const RUNNER_ORDER_SELECT_WITH_PRIORITY =
@@ -828,10 +831,20 @@ function formatItemQuantity(value: number): string {
 function RunnerErrorState() {
   return (
     <section className="flex h-dvh min-h-0 w-full items-center justify-center overflow-hidden bg-background">
-      <Alert variant="destructive" className="max-w-md">
-        <IconAlertCircle />
-        <AlertDescription>{RUNNER_ERROR_MESSAGE}</AlertDescription>
-      </Alert>
+      <AppEmptyState
+        mode="error"
+        description={RUNNER_ERROR_MESSAGE}
+        descriptionClassName="max-w-md text-sm"
+        icon={<IconAlertCircle />}
+        iconClassName="size-12 border border-border/70 bg-background/80 text-destructive"
+        title={RUNNER_ERROR_TITLE}
+        titleClassName="text-xl font-semibold tracking-tight sm:text-2xl"
+      >
+        <Badge variant="destructive">
+          <IconAlertCircle className="size-3.5" />
+          <span>{RUNNER_ERROR_BADGE}</span>
+        </Badge>
+      </AppEmptyState>
     </section>
   );
 }

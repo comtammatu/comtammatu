@@ -5,6 +5,7 @@ export const MENU_VI = {
   exportCsvItems: "Export .csv (món ăn)",
   importSuccess: "Import thành công",
   importDialogTitle: "Import Menu từ file",
+  itemDetailTitle: (name: string) => `${name} — Chi tiết`,
   loadDataFailedRetry: "Không thể tải dữ liệu. Vui lòng thử lại.",
   variantsSaved: "Đã lưu biến thể",
   modifiersSaved: "Đã lưu tùy chọn",

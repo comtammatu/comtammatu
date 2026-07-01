@@ -188,7 +188,10 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-    if (moduleKey === "inventory_procurement") {
+    if (
+      moduleKey === "inventory_procurement" &&
+      claims.user_role !== "owner"
+    ) {
       const { data: canReadProcurement, error } = await supabase.rpc(
         "has_permission_any",
         { p_key: PERMISSION_KEYS.PROCUREMENT_READ },

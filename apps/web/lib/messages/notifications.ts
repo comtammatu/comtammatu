@@ -10,6 +10,7 @@ export const notifications = {
   loadMore: "Tải thêm",
   pageTitle: "Thông báo",
   pageDescription: "Cập nhật mới về đơn hàng, kho, và quy trình duyệt",
+  back: "Quay lại",
   filters: {
     all: "Tất cả",
     unread: "Chưa đọc",

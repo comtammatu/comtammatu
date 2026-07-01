@@ -31,10 +31,10 @@ export function UnassignedBanner({
         <span>{messages.pos.kds.unassignedTitle(count)}</span>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
-        <Button type="button" variant="ghost" size="xs" onClick={onFilter}>
+        <Button type="button" variant="ghost" size="touch" onClick={onFilter}>
           {messages.pos.kds.viewUnassigned}
         </Button>
-        <Button asChild variant="outline" size="xs">
+        <Button asChild variant="outline" size="touch">
           <Link href={`/br/${branchId}/settings/kds`}>
             {messages.pos.kds.openStationConfig}
             <IconArrowRight data-icon="inline-end" aria-hidden />

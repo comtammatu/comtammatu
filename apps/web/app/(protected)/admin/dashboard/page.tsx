@@ -82,63 +82,73 @@ export default async function DashboardPage() {
         }}
       />
 
-      <KpiRow density="compact">
-        <KpiCard
-          label={ADMIN_DASHBOARD_COPY.revenueLabel}
-          value={formatVND(collectedMonth)}
-          delta={buildCompareDelta(
-            financeKpis.totalCollected,
-            compareFinanceKpis?.totalCollected ?? 0,
-            "higher_better",
-          )}
-          compareHint={ADMIN_DASHBOARD_COPY.compareHint}
-          hint={ADMIN_DASHBOARD_COPY.revenueHelper}
-          icon={<IconCurrencyDollar />}
-          href={revenueHref}
-        />
-        <KpiCard
-          label={ADMIN_DASHBOARD_COPY.operatingExpenseLabel}
-          value={formatVND(Math.round(financeKpis.operatingExpense))}
-          delta={buildCompareDelta(
-            financeKpis.operatingExpense,
-            compareFinanceKpis?.operatingExpense ?? 0,
-            "lower_better",
-          )}
-          compareHint={ADMIN_DASHBOARD_COPY.compareHint}
-          hint={ADMIN_DASHBOARD_COPY.operatingExpenseHelper}
-          icon={<IconWallet />}
-          href={financeHref}
-        />
-        <KpiCard
-          label={ADMIN_DASHBOARD_COPY.inventoryValueLabel}
-          value={formatVND(Math.round(financeKpis.inventoryValue))}
-          hint={ADMIN_DASHBOARD_COPY.inventoryValueHelper}
-          icon={<IconPackage />}
-          href={inventoryHref}
-        />
-      </KpiRow>
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* id anchor for the owner work-queue scroll target; AppSection has no id slot */}
+        <div id="owner-work-queue" className="lg:col-span-2">
+          <AppSection
+            title={ADMIN_DASHBOARD_COPY.workQueueTitle}
+            description={ADMIN_DASHBOARD_COPY.workQueueDescription}
+            badge={{
+              children: ADMIN_DASHBOARD_COPY.workQueueBadge(
+                ownerSummary.attentionTotal,
+              ),
+              variant: ownerSummary.attentionTotal > 0 ? "warning" : "success",
+            }}
+            tone={ownerSummary.attentionTotal > 0 ? "warning" : "default"}
+          >
+            <OwnerWorkQueueList items={workQueue} />
+          </AppSection>
+        </div>
 
-      {/* id anchor for the owner work-queue scroll target; AppSection has no id slot */}
-      <div id="owner-work-queue">
         <AppSection
-          title={ADMIN_DASHBOARD_COPY.workQueueTitle}
-          description={ADMIN_DASHBOARD_COPY.workQueueDescription}
-          badge={{
-            children: ADMIN_DASHBOARD_COPY.workQueueBadge(
-              ownerSummary.attentionTotal,
-            ),
-            variant: ownerSummary.attentionTotal > 0 ? "warning" : "success",
-          }}
+          size="sm"
+          title={ADMIN_DASHBOARD_COPY.branchStatusTitle}
+          description={ADMIN_DASHBOARD_COPY.branchStatusDescription}
         >
-          <OwnerWorkQueueList items={workQueue} />
+          <BranchOperatingList rows={branchStatus} />
         </AppSection>
       </div>
 
       <AppSection
-        title={ADMIN_DASHBOARD_COPY.branchStatusTitle}
-        description={ADMIN_DASHBOARD_COPY.branchStatusDescription}
+        size="sm"
+        title={ADMIN_DASHBOARD_COPY.financeSnapshotTitle}
+        description={ADMIN_DASHBOARD_COPY.financeSnapshotDescription}
       >
-        <BranchOperatingList rows={branchStatus} />
+        <KpiRow density="compact">
+          <KpiCard
+            label={ADMIN_DASHBOARD_COPY.revenueLabel}
+            value={formatVND(collectedMonth)}
+            delta={buildCompareDelta(
+              financeKpis.totalCollected,
+              compareFinanceKpis?.totalCollected ?? 0,
+              "higher_better",
+            )}
+            compareHint={ADMIN_DASHBOARD_COPY.compareHint}
+            hint={ADMIN_DASHBOARD_COPY.revenueHelper}
+            icon={<IconCurrencyDollar />}
+            href={revenueHref}
+          />
+          <KpiCard
+            label={ADMIN_DASHBOARD_COPY.operatingExpenseLabel}
+            value={formatVND(Math.round(financeKpis.operatingExpense))}
+            delta={buildCompareDelta(
+              financeKpis.operatingExpense,
+              compareFinanceKpis?.operatingExpense ?? 0,
+              "lower_better",
+            )}
+            compareHint={ADMIN_DASHBOARD_COPY.compareHint}
+            hint={ADMIN_DASHBOARD_COPY.operatingExpenseHelper}
+            icon={<IconWallet />}
+            href={financeHref}
+          />
+          <KpiCard
+            label={ADMIN_DASHBOARD_COPY.inventoryValueLabel}
+            value={formatVND(Math.round(financeKpis.inventoryValue))}
+            hint={ADMIN_DASHBOARD_COPY.inventoryValueHelper}
+            icon={<IconPackage />}
+            href={inventoryHref}
+          />
+        </KpiRow>
       </AppSection>
     </AppPage>
   );

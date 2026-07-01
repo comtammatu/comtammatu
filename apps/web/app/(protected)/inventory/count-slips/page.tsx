@@ -43,7 +43,15 @@ function employeeName(value: unknown): string | null {
   return typeof fullName === "string" ? fullName : null;
 }
 
-export default async function CountSlipsPage() {
+interface CountSlipsPageContentProps {
+  routeBranchId?: number;
+  embedded?: boolean;
+}
+
+export async function CountSlipsPageContent({
+  routeBranchId,
+  embedded = false,
+}: CountSlipsPageContentProps = {}) {
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
@@ -54,7 +62,7 @@ export default async function CountSlipsPage() {
   // RLS limits these rows to branches where the manager holds
   // `inventory:count_approve`, and exposes system_quantity + variance on the
   // lines (the employee-facing RLS hides those columns).
-  const { data: slips } = await supabase
+  let slipsQuery = supabase
     .from("inventory_count_slips")
     .select(
       `
@@ -87,8 +95,15 @@ export default async function CountSlipsPage() {
     `,
     )
     .eq("tenant_id", claims.tenant_id)
-    .in("status", REVIEW_STATES)
-    .order("submitted_at", { ascending: false });
+    .in("status", REVIEW_STATES);
+
+  if (routeBranchId !== undefined) {
+    slipsQuery = slipsQuery.eq("branch_id", routeBranchId);
+  }
+
+  const { data: slips } = await slipsQuery.order("submitted_at", {
+    ascending: false,
+  });
 
   const rows: CountSlipRow[] = (slips ?? []).map((slip) => {
     const lines = Array.isArray(slip.inventory_count_slip_lines)
@@ -143,5 +158,15 @@ export default async function CountSlipsPage() {
     };
   });
 
-  return <CountSlipsClient initial={rows} />;
+  return (
+    <CountSlipsClient
+      initial={rows}
+      branchScoped={routeBranchId != null}
+      embedded={embedded}
+    />
+  );
+}
+
+export default async function CountSlipsPage() {
+  return <CountSlipsPageContent />;
 }

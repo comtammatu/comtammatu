@@ -19,9 +19,11 @@ database policy, copy, or business rules.
 
 ## Repository Boundary
 
-- Project-owned Agent Workspace config may live in this repo for Claude or
-  Codex (the two supported runtimes). Treat it as an adapter to the repo rules,
-  not as a competing source of truth.
+- Project-owned Agent Workspace config may live in root runtime-adapter
+  directories such as `.claude/`, `.codex/`, `.cursor/`, and `.agents/`. Treat
+  these directories as adapters to the repo rules, not as competing sources of
+  truth. They may wire tools, permissions, hooks, launchers, local prompts, and
+  lightweight handoff helpers.
 - Adapter config MAY carry runtime enforcement for its own agent — permission
   allow/deny lists and hook wiring. Shared guard logic lives once in
   `scripts/` (e.g. `scripts/guard-prod-db.mjs` enforces the Environment
@@ -29,6 +31,10 @@ database policy, copy, or business rules.
   only wire it to their runtime). Adapters MUST NOT duplicate rule content or
   fork guard scripts: enforcement references the shared rules and shared
   scripts. Share facts and logic; wire per runtime.
+- New IDE adapters are allowed, but write-capable database/tool actions must be
+  wired to the canonical guard before use. Until an adapter is registered in
+  `scripts/check-guard-sync.mjs`, keep it read-only for production-affecting
+  tools.
 - Do not commit secrets, MCP tokens, plugin caches, generated sessions,
   worktrees, or per-user local state.
 - Do not vendor external skills into this repo unless the owner explicitly asks
@@ -42,10 +48,11 @@ database policy, copy, or business rules.
 ## Skill Plan Gate
 
 T3 tasks MUST state a short skill plan before coding — it feeds the
-four-perspective debate and has a reviewer-inspectable home in the PR body or a
-`docs/worklog/` note. T2 tasks SHOULD state one, but may omit it when routing is
-obvious (engineering + the single topic rule, no external skills). State it in
-the task notes, PR body, or worklog:
+four-perspective debate and has a reviewer-inspectable home in the PR body,
+task notes, or a `docs/worklog/` note when the contract is too large for the
+PR. T2 tasks SHOULD state one, but may omit it when routing is obvious
+(engineering + the single topic rule, no external skills). State it in the task
+notes, PR body, or worklog:
 
 ```text
 Skill plan: repo rules = engineering + <topic rules>; external skills = <names>;

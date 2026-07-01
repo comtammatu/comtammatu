@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.8.0 | Updated: 2026-06-28 | Status: locked single source for UI agents
+> Version: 14.12.0 | Updated: 2026-07-01 | Status: locked single source for UI agents
 
 ## Single Source Decision
 
@@ -27,8 +27,8 @@ file is convenient.
 The design system is the Com Tam Ma Tu Custom Theme contract implemented by
 Má Tư Design System primitives in `@comtammatu/ui`. Radix, lucide, Tailwind, and
 class-variance-authority are implementation dependencies, not design-system
-authorities. External UI scaffold CLI/preset files are not part of the runtime
-contract and must never be used to overrule this file.
+authorities. External scaffold output is not part of the runtime contract and
+must never be used to overrule this file.
 
 Custom Theme means the locked Ma Tu Concept 01 semantic tokens, typography,
 spacing rhythm, component roles, brand primitives, and app surface adapters
@@ -59,9 +59,8 @@ When deciding how to build UI, use this order:
 6. Negative rules: `tasks/regressions.md`
 7. Product copy and terminology: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
 
-The Má Tư DS primitive layer is the first implementation baseline after this
-contract has selected a pattern. Do not invent a local exception when the
-contract is unclear. Pause and update the contract first.
+After this contract selects a pattern, build from the current Má Tư DS
+primitive layer. Update this file only for a real contract change.
 
 ## Product UX Thesis
 
@@ -84,7 +83,7 @@ Allowed token families:
 - Tier: `tier-elite`, `tier-note` for trust/variance/waste tier badges only
 - Data: `chart-1` through `chart-5`
 - Navigation: `sidebar-*`
-- Radius: preset radius tokens only
+- Radius: documented radius token scale only
 - Typography: runtime font variables from `apps/web/app/layout.tsx` and `packages/ui/src/styles/globals.css`
 
 Theme runtime:
@@ -331,7 +330,7 @@ Arbitrary `duration-[…]` is NOT allowed in app code.
 
 ## Elevation / Shadow
 
-The system is **border-first**: resting surfaces are separated by `--border`, not by shadow. Shadow is reserved for surfaces that genuinely float above the page. Float elevation is the named **`--effect-*` depth token family** (Má Tư Design System; defined in `globals.css` ZONE B as rgba-by-design — an explicit exception to the OKLCH-only token rule — and consumed as `shadow-effect-*` utilities plus `bg-effect-scrim` / `drawer-scrim`). Sticky-CTA and POS/KDS ceiling surfaces still use the Tailwind `shadow-lg` / `shadow-xl` / `shadow-2xl` rungs. Each is locked per role below. Arbitrary `box-shadow`, legacy `--shadow-*` vars, and unnamed `--effect-*` values remain forbidden.
+The system is **border-first**: resting surfaces are separated by `--border`, not by shadow. Shadow is reserved for surfaces that genuinely float above the page. Float elevation is the named **`--effect-*` depth token family** (Má Tư Design System; defined in `globals.css` ZONE B as rgba-by-design — an explicit exception to the OKLCH-only token rule — and consumed as `shadow-effect-*` utilities plus `bg-effect-scrim` / `drawer-scrim`). Sticky-CTA and POS/KDS ceiling surfaces still use the Tailwind `shadow-lg` / `shadow-xl` / `shadow-2xl` rungs. Each is locked per role below. Arbitrary `box-shadow`, retired `--shadow-*` vars, and unnamed `--effect-*` values remain forbidden.
 
 | Rung           | Utility                            | Locked role                                                                                                                                                                                  |
 | -------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -351,7 +350,7 @@ The system is **border-first**: resting surfaces are separated by `--border`, no
 **Forbidden:**
 
 - No drop shadow on a resting `Card`, section, or table row — separate with `--border` instead.
-- No ad-hoc `box-shadow`, no legacy `--shadow-*` vars, and no unnamed `--effect-*` value — use the approved `shadow-effect-*` / `bg-effect-scrim` / `drawer-scrim` set, or the Tailwind sticky/ceiling rungs, only.
+- No ad-hoc `box-shadow`, no retired `--shadow-*` vars, and no unnamed `--effect-*` value — use the approved `shadow-effect-*` / `bg-effect-scrim` / `drawer-scrim` set, or the Tailwind sticky/ceiling rungs, only.
 - No `shadow-effect-dialog` / `shadow-effect-drawer` / `shadow-lg`+ on a non-floating surface (e.g. a CTA in a non-sticky resting footer) to "make it pop."
 - One rung per role: a popover is `shadow-effect-popover`, not `shadow-effect-dialog`.
 
@@ -366,6 +365,13 @@ Shared layout primitives also exported from `surface.tsx`:
 - `KpiRow` — responsive grid (1/2/3 columns) wrapping `KpiCard` metric tiles.
 - `DescriptionList` — `<dl>` term/description pairs for detail-page metadata.
 - `LinkCardGrid` — responsive grid (1/2/3 columns) wrapping `AppLinkCard` entries.
+
+### Card Roles
+
+`Card` is the frame primitive. `KpiCard` is only for numeric/stat values. Other
+card jobs use `AppSection`, `AppLinkCard`, `OperationalBoardCard`,
+`OperationalTile`, `InteractiveCard`, `DataTable.mobileCardRender`, or a
+route-scoped adapter that still renders `Card`.
 
 Default primitive mapping:
 
@@ -389,7 +395,7 @@ Default primitive mapping:
 | table navigation      | `Pagination`                                                                                                      |
 | split pane            | `Resizable`                                                                                                       |
 | filter/action row     | `Toolbar`                                                                                                         |
-| metric block          | `Stat` in primitive demos; app dashboards use `KpiCard`                                                           |
+| metric block          | `Stat` in primitive demos; app metric cards use `KpiCard` only for numeric/stat values                            |
 
 Toast and durable notification behavior is specified in `docs/spec/toast-notification-system.md`.
 
@@ -436,7 +442,7 @@ Business-state labels and badge colors are single-sourced:
 - Unknown values render as the raw key with `outline` — never throw on DB data.
 - Intentional exceptions: `pos/_lib/order-status-display.ts` (cashier 5-label collapse; variants must still match the registry), `kds/lib/status-config.ts` (hot path), `inventory/_lib/dictionary.ts` + `inventory/_lib/ui.ts` (per-entity re-model is a later wave).
 
-### KPI / stat-value role (lock to KpiCard)
+### Metric Card Role (lock KPI/stat values to KpiCard)
 
 Dashboard and report metric values render through `KpiCard`
 (`apps/web/app/components/kpi/kpi-card.tsx`): uppercase 2xs label, value
@@ -444,6 +450,10 @@ Dashboard and report metric values render through `KpiCard`
 and a drill-down `href` per the owner Q-spec. Page-local
 StatCard/SummaryCard/MetricCard definitions are ratcheted by `stat-card-ssot`;
 register a variant on `KpiCard` instead of cloning the card.
+
+This lock applies only to numeric/stat-value cards. Actions, exceptions,
+documents, people, menu items, setup tasks, or narrative states are not KPI
+surfaces and must not be forced into `KpiCard`.
 
 ### Numeric / money cells (lock to Table)
 
@@ -483,7 +493,7 @@ license to spread the pattern. New app code must pick the owning adapter first:
 
 | Primitive import                         | Default route for new app code                                                      |
 | ---------------------------------------- | ----------------------------------------------------------------------------------- |
-| `@comtammatu/ui/components/card`         | `AppSection`, `KpiCard`, `InteractiveCard`, or an approved operational adapter      |
+| `@comtammatu/ui/components/card`         | App card role: `AppSection`, `AppLinkCard`, `KpiCard` for metrics only, `InteractiveCard`, `OperationalBoardCard`, or a route-scoped adapter |
 | `@comtammatu/ui/components/table`        | `DataTable`, `TableEmptyStateRow`, or a documented document/line-sheet adapter      |
 | `@comtammatu/ui/components/dialog`       | `FormDialog`, `Sheet`, Page flow, or an approved short contextual dialog            |
 | `@comtammatu/ui/components/alert-dialog` | shared `confirm()`, `FormDialog` with reason input, or an approved destructive flow |
@@ -568,31 +578,37 @@ three in sync. The gates land incrementally in Stage 0; until a rule's gate
 ships it stays prose-only and held by review. Live vs prose-only status is
 tracked under Enforcement Status below.
 
-### A. Chrome Archetypes (two families)
+### A. Chrome Archetypes (approved families)
 
-Per D014 W5 every route mounts exactly one of two chrome families. There is no
-third.
+Every route mounts exactly one approved chrome family. A new chrome family is a
+contract change; route-local chrome outside this list is drift.
 
 1. Management chrome — the shared `AppShell`
    (`apps/web/app/components/app-shell.tsx`) with a role/scope-aware multi-group
    sidebar and one top header. Covers tenant Admin (`/admin/*`), the domain
-   workspaces (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`), and branch
-   command/setup (`/br/[branchId]/dashboard`, `/br/[branchId]/settings/*`). One
+   workspaces (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`). One
    shell, one sidebar, one header — sidebar groups differ by role/scope, the
    chrome does not. The single Management sidebar renders primary module tabs
    first and nests the active module's deep nav as sub-tabs under that active
    primary tab. Admin command pages collapse under one "Quản trị" primary tab;
-   branch management collapses under one "Quản lý chi nhánh" primary tab.
    Management bottom nav is mobile-only (`<md`); tablet and desktop use the
    fixed sidebar without a parallel bottom nav.
-2. Operations chrome — purpose-built, full-screen, single-job surfaces that
+2. Branch runtime chrome — the branch-scoped operator layout
+   (`apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx`). Covers the
+   branch hub, employee daily work under `/br/[branchId]/shift/*`, stock action
+   entry points under `/br/[branchId]/stock/*`, and branch management
+   (`/br/[branchId]/dashboard`, `/br/[branchId]/settings/*`) when reached from
+   the branch runtime. It uses the shared brand primitives, compact `AppPage`,
+   and `AppBottomNav`; `branch_management` is a route family inside this chrome,
+   not a reason to return to office Management chrome or add another shell.
+3. Operations chrome — purpose-built, full-screen, single-job surfaces that
    legitimately cannot wear the management sidebar: POS (`/br/[branchId]/pos`),
    KDS and Runner (`/br/[branchId]/{kds,runner}`), and the staff task surface
    (`/employee/*`). These keep bespoke layout, but consume the same tokens,
    typography, status vocabulary, header lockup, and bottom-nav primitives as
    Management — a different layout, never a second visual language.
 
-A surface that is neither is drift: a route may not invent a third chrome (a
+A surface that is neither is drift: a route may not invent another chrome (a
 hand-rolled `<main>` + back-button container, a per-page header lockup, or a
 second sidebar idiom).
 
@@ -609,12 +625,13 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
   only because they own shell-scoped client state `AppShell` cannot absorb
   (finance: a lifted realtime channel; inventory: branch-reactive nav plus the
   branch-filter / mobile-top-bar header chrome) — this is the end state, not a
-  transitional split; and the approved Operations chrome (the POS desktop
-  shell, the operational PWA toolbar, the employee header + bottom-nav). The
-  baseline only shrinks.
+  transitional split; the approved Branch runtime chrome under
+  `(protected)/br/[branchId]/(operator)/layout.tsx`; and the approved Operations
+  chrome (the POS desktop shell, the operational PWA toolbar, the employee
+  header + bottom-nav). The baseline only shrinks.
 - The canonical header lockup and bottom-nav MUST be exported primitives that
-  both families consume, not re-implemented per surface. (Stage 0 extracts
-  `AppHeader` / `AppBottomNav` from `AppShell`.)
+  approved chrome families consume, not re-implemented per surface. (Stage 0
+  extracts `AppHeader` / `AppBottomNav` from `AppShell`.)
 - Naming: reserve the `*-shell` suffix for components in the allowlist above. A
   component that only composes `AppPageHeader` / `AppEmptyState` inside an
   existing shell is a page section, not a shell, and must not carry the suffix.

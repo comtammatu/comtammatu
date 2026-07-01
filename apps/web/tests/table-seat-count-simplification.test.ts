@@ -15,8 +15,8 @@ const tableWorkflowSources = [
   "app/(protected)/branch-settings/_shared/tables/actions.ts",
   "app/(protected)/branch-settings/_shared/tables/table-form-dialog.tsx",
   "app/(protected)/branch-settings/_shared/tables/table-table.tsx",
-  "app/(protected)/br/[branchId]/settings/page.tsx",
-  "app/(protected)/br/[branchId]/settings/tables/page.tsx",
+  "app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
+  "app/(protected)/br/[branchId]/(operator)/settings/tables/page.tsx",
   "app/(protected)/br/[branchId]/pos/page.tsx",
   "app/(protected)/br/[branchId]/pos/session-actions.ts",
 ].map((path) => [path, readWebSource(path)] as const);

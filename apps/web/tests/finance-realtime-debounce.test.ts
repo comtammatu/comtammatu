@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { computeRefreshWaitMs } from "../app/(protected)/finance/use-finance-realtime-refresh";
 
@@ -18,9 +19,12 @@ test("burst coalescing: events arrive in quick succession → each call resets t
   for (let i = 0; i < 5; i++) {
     const wait = computeRefreshWaitMs(base - 500, base + i * 100);
     // elapsed ~500ms, MIN_INTERVAL - 500ms = 14500ms > DEBOUNCE_MS
-    assert.equal(wait, MIN_INTERVAL_MS - 500 - i * 100 >= DEBOUNCE_MS
-      ? MIN_INTERVAL_MS - (500 + i * 100)
-      : DEBOUNCE_MS);
+    assert.equal(
+      wait,
+      MIN_INTERVAL_MS - 500 - i * 100 >= DEBOUNCE_MS
+        ? MIN_INTERVAL_MS - (500 + i * 100)
+        : DEBOUNCE_MS,
+    );
   }
 });
 
@@ -56,4 +60,17 @@ test("must-not-miss: trailing edge fires after final event (wait > 0 always)", (
   const wait = computeRefreshWaitMs(now - 20000, now); // well past min interval
   assert.ok(wait > 0, "wait must be positive so setTimeout fires");
   assert.equal(wait, DEBOUNCE_MS);
+});
+
+test("finance realtime refresh listens for SePay bank webhooks", () => {
+  const source = readFileSync(
+    new URL(
+      "../app/(protected)/finance/use-finance-realtime-refresh.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(source, /table: "webhook_events"/);
+  assert.match(source, /filter: "provider=eq\.sepay"/);
 });

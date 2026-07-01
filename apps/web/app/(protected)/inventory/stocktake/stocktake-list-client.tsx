@@ -34,7 +34,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { StatusBadge } from "../_components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { InteractiveCard } from "../_components/interactive-card";
 import { createStocktakeSession } from "../actions";
 
@@ -86,7 +86,7 @@ function StocktakeSessionCard({
       >
         <div className="flex items-center justify-between gap-2">
           <span className="font-mono text-sm font-medium">KK-{row.id}</span>
-          <StatusBadge status={row.status} />
+          <StatusBadge domain="inventory" value={row.status} />
         </div>
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{row.branches?.name ?? "—"}</span>
@@ -200,7 +200,7 @@ export function StocktakeListClient({
     {
       key: "status",
       header: FORM_VI.status,
-      render: (r) => <StatusBadge status={r.status} />,
+      render: (r) => <StatusBadge domain="inventory" value={r.status} />,
     },
     {
       key: "details",

@@ -20,16 +20,13 @@ import {
   AppSection,
 } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { formatVND } from "../../_lib/format";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { tRoute } from "../../_lib/dictionary";
-import {
-  getInventoryStatusBadgeVariant,
-  getInventoryStatusLabel,
-} from "../../_lib/ui";
 import type { IngredientRow } from "../../page";
 import { useGrnLines } from "./_hooks/use-grn-lines";
 import { useGrnLineActions } from "./_hooks/use-grn-line-actions";
@@ -72,6 +69,7 @@ export function GRNDetailClient({
 
   const isDraft = grn.status === "draft";
   const isConfirmed = grn.status === "confirmed";
+  const statusBadge = getStatusBadgeMeta("inventory", grn.status);
   const showAmendAffordance = canAmendConfirmed && isConfirmed;
   const qc = grn.qcSettings;
 
@@ -99,8 +97,8 @@ export function GRNDetailClient({
         title={grn.code}
         description={`${grn.supplier} • ${grn.date}`}
         badge={{
-          children: getInventoryStatusLabel(grn.status),
-          variant: getInventoryStatusBadgeVariant(grn.status),
+          children: statusBadge.label,
+          variant: statusBadge.variant,
         }}
         breadcrumb={
           <Link

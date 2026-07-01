@@ -8,7 +8,7 @@ import {
   getMenuLimitRemaining,
   hasManualMenuLimit,
   type MenuLimitCapFields,
-} from "../app/(protected)/br/[branchId]/settings/menu-limits/menu-limit-cap";
+} from "../app/(protected)/br/[branchId]/(operator)/settings/menu-limits/menu-limit-cap";
 
 function row(patch: Partial<MenuLimitCapFields>): MenuLimitCapFields {
   return {
@@ -47,7 +47,7 @@ const stockCapacityMultiUnitMigration = readFileSync(
 const actionsSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/settings/menu-limits/actions.ts",
+    "app/(protected)/br/[branchId]/(operator)/settings/menu-limits/actions.ts",
   ),
   "utf8",
 );
@@ -55,7 +55,7 @@ const actionsSource = readFileSync(
 const tableSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/settings/menu-limits/menu-limits-table.tsx",
+    "app/(protected)/br/[branchId]/(operator)/settings/menu-limits/menu-limits-table.tsx",
   ),
   "utf8",
 );

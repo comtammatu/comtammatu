@@ -133,17 +133,18 @@ export function ArchivedOrdersSheet({
             if (value === "session" || value === "today") setScope(value);
           }}
           variant="outline"
-          className="grid h-10 w-full grid-cols-2 gap-0"
+          size="touch"
+          className="grid w-full grid-cols-2 gap-0"
         >
           <ToggleGroupItem
             value="session"
-            className="h-full justify-center text-sm font-semibold"
+            className="justify-center font-semibold"
           >
             {messages.pos.archivedOrders.currentSession}
           </ToggleGroupItem>
           <ToggleGroupItem
             value="today"
-            className="h-full justify-center text-sm font-semibold"
+            className="justify-center font-semibold"
           >
             {messages.pos.archivedOrders.branchToday}
           </ToggleGroupItem>
@@ -287,7 +288,6 @@ function ArchivedOrderRow({
           type="button"
           variant="outline"
           size="touch"
-          className="px-3 text-sm"
           aria-label={messages.pos.archivedOrders.openReceiptAria(
             order.order_number,
           )}

@@ -6,11 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { FieldGroup } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { TextField, valuesToFormData } from "@/components/form";
-import { AppSection } from "@/components/surface";
+import { SettingsFormSection } from "@/components/settings-form-section";
 import { messages } from "@lib/messages";
 import { updateTenantIdentity } from "./actions";
 
@@ -71,34 +70,33 @@ export function SettingsForm({ identity }: SettingsFormProps) {
       noValidate
       className="flex flex-col gap-4"
     >
-      <AppSection
+      <SettingsFormSection
         title={copy.identityTitle}
         description={copy.identityDescription}
+        groupClassName="grid gap-4 sm:grid-cols-2"
       >
-        <FieldGroup className="grid gap-4 sm:grid-cols-2">
-          <TextField
-            control={identityForm.control}
-            name="legal_name"
-            label={copy.legalNameLabel}
-          />
-          <TextField
-            control={identityForm.control}
-            name="tax_code"
-            label={copy.taxCodeLabel}
-            placeholder="077200004194"
-          />
-          <TextField
-            control={identityForm.control}
-            name="legal_address"
-            label={copy.legalAddressLabel}
-          />
-          <TextField
-            control={identityForm.control}
-            name="representative"
-            label={copy.representativeLabel}
-          />
-        </FieldGroup>
-      </AppSection>
+        <TextField
+          control={identityForm.control}
+          name="legal_name"
+          label={copy.legalNameLabel}
+        />
+        <TextField
+          control={identityForm.control}
+          name="tax_code"
+          label={copy.taxCodeLabel}
+          placeholder="077200004194"
+        />
+        <TextField
+          control={identityForm.control}
+          name="legal_address"
+          label={copy.legalAddressLabel}
+        />
+        <TextField
+          control={identityForm.control}
+          name="representative"
+          label={copy.representativeLabel}
+        />
+      </SettingsFormSection>
 
       {identityError && (
         <p className="text-sm text-destructive" role="alert">

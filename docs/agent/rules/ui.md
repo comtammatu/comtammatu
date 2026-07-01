@@ -39,10 +39,11 @@ token layer requires a design-system contract change first.
 - USE Má Tư DS primitives from `@comtammatu/ui` and the app surface adapters as
   the default implementation path after `docs/spec/design-system.md` has
   selected the pattern.
-- NEVER treat external UI scaffold CLI/preset output as authority to override the Custom Theme contract.
+- NEVER treat external UI scaffold output as authority to override the Custom Theme contract.
 - NEVER override the visual contract of core primitives through ad-hoc wrappers, custom themes, or parallel surface systems.
 - USE `apps/web/app/components/surface.tsx` for repeated app-level page/header/section/toolbar/empty/link-card patterns; domain wrappers must delegate to it instead of cloning layout/chrome.
 - NEVER use a separate visual-token layer or compatibility wrapper for app UI. Route reusable patterns through `apps/web/app/components/surface.tsx` and semantic token classes unless the design-system contract explicitly changes first.
+- REMOVE stale UI rules; keep only live hard rails, workflows, contracts, or guards.
 - BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked Custom Theme contract.
 - UI/UX rebuild PRs MUST state the surface, primary user job, route family, change type, and primitives used before implementation.
 
@@ -73,7 +74,7 @@ Read `tasks/regressions.md` before UI work, especially:
 Use targeted lookup instead of loading the whole file:
 
 ```bash
-rg -n "DESIGN-SYSTEM|UI-|PRIMITIVE-FIRST|NO-PRIMITIVE|NO-FAKE|NO-ARBITRARY|NO-SURFACE|NO-STATIC|NO-LEGACY|APP-SURFACE|STATUS|DataTable|FORMDIALOG|EMPTY|LOADER|RAW-TABLE|PAGE-HEADER|RHYTHM|SHELL|NAV|PADDING" tasks/regressions.md
+rg -n "DESIGN-SYSTEM|UI-|PRIMITIVE-FIRST|NO-PRIMITIVE|NO-FAKE|NO-ARBITRARY|NO-SURFACE|NO-STATIC|NO-RETIRED|APP-SURFACE|STATUS|DataTable|FORMDIALOG|EMPTY|LOADER|RAW-TABLE|PAGE-HEADER|RHYTHM|SHELL|NAV|PADDING" tasks/regressions.md
 ```
 
 Separate the enforcement lane before acting: `DESIGN-SYSTEM-ONE-SOURCE-ONLY`
@@ -89,7 +90,7 @@ inspection.
 - `PRIMITIVE-FIRST-UI`
 - `NO-PRIMITIVE-DESIGN-OVERRIDE`
 - `DOCS-MUST-MATCH-RUNTIME`
-- `NO-LEGACY-APP-HELPERS`
+- `NO-RETIRED-APP-HELPERS`
 - `NO-FAKE-PRIMITIVES`
 - `APP-SURFACE-ADAPTER-FIRST`
 - `NO-INLINE-CHROME-REIMPL`

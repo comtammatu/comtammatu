@@ -490,8 +490,8 @@ export function BillReceipt({
   const hydratedPaymentOrderRef = useRef<number | null>(null);
   // Tracks orderId we've already defaulted selectedMethod for. Without this,
   // any dep churn (router.refresh from realtime / visibilitychange / phone
-  // rotate flipping useIsMobile → RSC re-render → new initialPaymentMethods
-  // array ref) re-runs the bill-open effect and clobbers the cashier's
+  // rotate causing an RSC re-render with a new initialPaymentMethods array ref)
+  // re-runs the bill-open effect and clobbers the cashier's
   // VietQR pick back to cash. Reset on orderId=null in the close branch.
   const methodDefaultedOrderRef = useRef<number | null>(null);
 
@@ -1245,7 +1245,6 @@ export function BillReceipt({
                           : formatVND(cashChange)}
                       </span>
                     </div>
-
                   </>
                 </AppSection>
               ) : (
@@ -1377,7 +1376,9 @@ export function BillReceipt({
                 </Button>
               </div>
               {disabledReason ? (
-                <p className="text-sm text-muted-foreground">{disabledReason}</p>
+                <p className="text-sm text-muted-foreground">
+                  {disabledReason}
+                </p>
               ) : null}
               <Button
                 data-testid={

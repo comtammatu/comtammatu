@@ -79,6 +79,27 @@ test("operator shift payslip renders inside the branch operator shell", () => {
   assert.doesNotMatch(source, /redirect\("\/employee\/payslip"\)/);
 });
 
+test("operator checkout approvals render inside the branch operator shell", () => {
+  const path =
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx";
+
+  assert.equal(exists(path), true, path);
+
+  const source = read(path);
+  const employeeSource = read(
+    "apps/web/app/(protected)/employee/checkout-approvals/page.tsx",
+  );
+
+  assert.ok(
+    source.includes('import { CheckoutApprovalsPageContent } from "@/(protected)/employee/checkout-approvals/page"'),
+    path,
+  );
+  assert.ok(source.includes("routeBranchId={branchId}"), path);
+  assert.ok(source.includes("hideHeaderOnMobile"), path);
+  assert.doesNotMatch(source, /redirect\("\/employee\/checkout-approvals"\)/);
+  assert.match(employeeSource, /routeBranchId\?: number/);
+});
+
 test("operator stock count renders employee count inside the branch operator shell", () => {
   const path =
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx";
@@ -157,23 +178,52 @@ test("operator shift profile renders inside the branch operator shell", () => {
   assert.doesNotMatch(source, /redirect\("\/employee\/profile"\)/);
 });
 
-test("operator shift landing routes through branch-scoped detail routes", () => {
+test("operator shift landing renders the shared cockpit with branch-scoped routes", () => {
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx",
   );
 
-  assert.ok(source.includes("EmployeePage"), "shift hub uses shared page shell");
   assert.ok(
-    source.includes("EmployeeActionSection"),
-    "shift hub uses shared action rows",
+    source.includes("EmployeeHomePageContent"),
+    "shift route uses the shared daily cockpit",
   );
-  assert.doesNotMatch(source, /AppLinkCard|LinkCardGrid/);
-  for (const segment of ["clock", "tasks", "schedule", "profile"] as const) {
+  for (const segment of [
+    "clock",
+    "tasks",
+    "schedule",
+    "profile",
+    "leave",
+    "payslip",
+  ] as const) {
     assert.ok(
-      source.includes(`href: \`/br/${"${branchId}"}/shift/${segment}\``),
+      source.includes(`${segment}: \`/br/${"${branchId}"}/shift/${segment}\``),
       segment,
     );
   }
+  assert.ok(source.includes("count: `/br/${branchId}/stock/count`"));
+  assert.ok(
+    source.includes(
+      "checkoutApprovals: `/br/${branchId}/shift/checkout-approvals`",
+    ),
+  );
+  assert.ok(source.includes("showNotificationControl={false}"));
+  assert.ok(source.includes("showPersonalActions"));
+  assert.doesNotMatch(source, /EmployeeActionSection|AppLinkCard|LinkCardGrid/);
+});
+
+test("employee daily cockpit can expose personal self-service actions", () => {
+  const source = read("apps/web/app/(protected)/employee/page.tsx");
+
+  assert.match(source, /mode = "full"/);
+  assert.match(source, /mode\?: "full" \| "today-card"/);
+  assert.match(source, /if \(mode === "today-card"\) return todayCard/);
+  assert.match(source, /showPersonalActions = false/);
+  assert.match(source, /messages\.employee\.profile\.personalToolsTitle/);
+  assert.match(source, /href: routes\.profile/);
+  assert.match(source, /href: routes\.payslip/);
+  assert.match(source, /href: routes\.leave/);
+  assert.match(source, /messages\.employee\.payslip\.title/);
+  assert.match(source, /messages\.employee\.leave\.title/);
 });
 
 test("operator home uses the shared employee action layout", () => {

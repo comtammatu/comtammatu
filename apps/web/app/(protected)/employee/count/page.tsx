@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getVNDateString } from "@comtammatu/shared/time";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadAuthState } from "@/_lib/auth";
@@ -81,24 +83,27 @@ interface SlipLineRow {
   note: string | null;
 }
 
-interface EmployeeCountPageContentProps {
+interface EmployeeCountSurfaceProps {
   searchParams: Promise<{ location?: string }>;
   routeBranchId?: number;
+  baseHref?: string;
+}
+
+interface EmployeeCountPageContentProps extends EmployeeCountSurfaceProps {
   hideHeaderOnMobile?: boolean;
 }
 
-export async function EmployeeCountPageContent({
+async function buildEmployeeCountSurface({
   searchParams,
   routeBranchId,
-  hideHeaderOnMobile,
-}: EmployeeCountPageContentProps) {
+  baseHref,
+}: EmployeeCountSurfaceProps): Promise<{
+  branchName: string | null;
+  content: ReactNode;
+}> {
   const ctx = await getEmployeeContext();
   if (!ctx) {
-    return (
-      <EmployeePage title={copy.title} hideHeaderOnMobile={hideHeaderOnMobile}>
-        <EmployeeMissingProfileEmpty />
-      </EmployeePage>
-    );
+    return { branchName: null, content: <EmployeeMissingProfileEmpty /> };
   }
 
   const { supabase, claims, employeeId } = ctx;
@@ -109,20 +114,22 @@ export async function EmployeeCountPageContent({
       : await resolveBranchName(supabase, claims.tenant_id, routeBranchId);
 
   if (!branchId) {
-    return (
-      <EmployeePage title={copy.title} hideHeaderOnMobile={hideHeaderOnMobile}>
+    return {
+      branchName: null,
+      content: (
         <EmployeeMissingProfileEmpty
           title={copy.unavailableTitle}
           description={copy.missingBranchDescription}
         />
-      </EmployeePage>
-    );
+      ),
+    };
   }
 
-  const { data: assignmentData } = await supabase
+  const countReadClient = createServiceClient();
+  const { data: assignmentData } = await countReadClient
     .from("inventory_count_assignments")
     .select(
-      "ingredient_id, location_id, ingredients ( name, measure_unit, ingredient_units ( unit_id, is_base, sort_order, units ( code ) ) )",
+      "ingredient_id, location_id, ingredients ( name, measure_unit, ingredient_units!ingredient_units_ingredient_tenant_fkey ( unit_id, is_base, sort_order, units!ingredient_units_unit_tenant_fkey ( code ) ) )",
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("employee_id", employeeId)
@@ -132,25 +139,22 @@ export async function EmployeeCountPageContent({
   const assignmentRows = (assignmentData ?? []) as unknown as AssignmentRow[];
 
   if (assignmentRows.length === 0) {
-    return (
-      <EmployeePage
-        title={copy.title}
-        description={branchName ?? undefined}
-        hideHeaderOnMobile={hideHeaderOnMobile}
-      >
+    return {
+      branchName,
+      content: (
         <EmployeeMissingProfileEmpty
           title={copy.noAssignmentsTitle}
           description={copy.noAssignmentsDescription}
         />
-      </EmployeePage>
-    );
+      ),
+    };
   }
 
   const locationIds = [
     ...new Set(assignmentRows.map((row) => row.location_id)),
   ];
 
-  const { data: locationData } = await supabase
+  const { data: locationData } = await countReadClient
     .from("inventory_locations")
     .select("id, name")
     .eq("tenant_id", claims.tenant_id)
@@ -270,22 +274,44 @@ export async function EmployeeCountPageContent({
     );
   }
 
-  return (
-    <EmployeePage
-      title={copy.title}
-      description={branchName ?? undefined}
-      hideHeaderOnMobile={hideHeaderOnMobile}
-    >
+  return {
+    branchName,
+    content: (
       <CountSlipClient
         branchId={branchId}
         baseHref={
-          routeBranchId ? `/br/${branchId}/stock/count` : "/employee/count"
+          baseHref ??
+          (routeBranchId ? `/br/${branchId}/stock/count` : "/employee/count")
         }
         groups={groups}
         selectedLocationId={selectedLocationId}
         slipByLocation={Object.fromEntries(slipByLocation)}
         prefill={prefill}
       />
+    ),
+  };
+}
+
+export async function EmployeeCountPanelContent(
+  props: EmployeeCountSurfaceProps,
+) {
+  const { content } = await buildEmployeeCountSurface(props);
+  return content;
+}
+
+export async function EmployeeCountPageContent({
+  hideHeaderOnMobile,
+  ...props
+}: EmployeeCountPageContentProps) {
+  const { branchName, content } = await buildEmployeeCountSurface(props);
+
+  return (
+    <EmployeePage
+      title={copy.title}
+      description={branchName ?? undefined}
+      hideHeaderOnMobile={hideHeaderOnMobile}
+    >
+      {content}
     </EmployeePage>
   );
 }

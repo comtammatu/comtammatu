@@ -185,7 +185,7 @@ export async function fetchProductionRecipes(): Promise<
     if (claims.branch_id == null) {
       return {
         success: false,
-        error: "Tài khoản chưa được gán chi nhánh sản xuất.",
+        error: "Tài khoản chưa được gán Bếp Trung Tâm.",
       };
     }
     const access = await requireProductionBranch(
@@ -702,7 +702,7 @@ export const upsertProductionRecipeLines = withAction(
       if (claims.branch_id == null) {
         return {
           success: false,
-          error: "Tài khoản chưa được gán chi nhánh sản xuất.",
+          error: "Tài khoản chưa được gán Bếp Trung Tâm.",
         };
       }
       const access = await requireProductionBranch(
@@ -773,7 +773,7 @@ export async function deleteProductionRecipe(
     if (claims.branch_id == null) {
       return {
         success: false,
-        error: "Tài khoản chưa được gán chi nhánh sản xuất.",
+        error: "Tài khoản chưa được gán Bếp Trung Tâm.",
       };
     }
     const access = await requireProductionBranch(
@@ -816,7 +816,7 @@ export async function deleteProductionRecipeGroup(
     if (claims.branch_id == null) {
       return {
         success: false,
-        error: "Tài khoản chưa được gán chi nhánh sản xuất.",
+        error: "Tài khoản chưa được gán Bếp Trung Tâm.",
       };
     }
     const access = await requireProductionBranch(

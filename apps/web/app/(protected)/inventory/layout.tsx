@@ -47,17 +47,17 @@ export default async function InventoryLayout({
       PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
     ]),
   ]);
-  const isOversightRole = claims.user_role === "owner";
+  const isOwner = claims.user_role === "owner";
   const showProcurement =
-    !isOversightRole &&
-    canAccess(claims.user_role, "inventory_procurement") &&
-    hasProcurementRead;
+    isOwner ||
+    (canAccess(claims.user_role, "inventory_procurement") &&
+      hasProcurementRead);
   const showProduction =
-    !isOversightRole &&
-    canAccessProductionSurface(claims.user_role) &&
-    hasProductionPermission &&
-    hasProductionBranchAccess;
-  const showWasteApprovals = canApproveWaste;
+    isOwner ||
+    (canAccessProductionSurface(claims.user_role) &&
+      hasProductionPermission &&
+      hasProductionBranchAccess);
+  const showWasteApprovals = isOwner || canApproveWaste;
 
   const defaultBranch = scope.allowedBranches.find(
     (b) => b.id === scope.selectedBranchId,
@@ -82,10 +82,10 @@ export default async function InventoryLayout({
       siteKind={siteKind}
       showProcurement={showProcurement}
       showProduction={showProduction}
-      showCatalogManagement={canManageCatalog}
-      showSettings={canOpenSettings}
+      showCatalogManagement={isOwner || canManageCatalog}
+      showSettings={isOwner || canOpenSettings}
       showWasteApprovals={showWasteApprovals}
-      showCountManagement={canManageCounts}
+      showCountManagement={isOwner || canManageCounts}
       allowedBranches={scope.allowedBranches}
       defaultBranchId={scope.selectedBranchId}
     >

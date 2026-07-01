@@ -19,6 +19,7 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
+  ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
@@ -733,26 +734,30 @@ function ChecklistDetail({ record }: { record: AttendanceRecord }) {
             <div className="text-sm font-medium">
               {CHECKLIST_PHASE_LABELS[phase]}
             </div>
-            <div className="divide-y rounded-md border">
+            <ItemGroup>
               {phaseItems.map((item) => (
-                <div key={item.id} className="flex gap-3 p-3">
+                <Item key={item.id} variant="outline" className="items-start">
                   <Badge variant={item.is_done ? "success" : "secondary"}>
                     {item.is_done ? "Xong" : "Chưa làm"}
                   </Badge>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium">{item.title}</div>
+                  <ItemContent className="min-w-0">
+                    <ItemTitle className="line-clamp-none text-sm">
+                      {item.title}
+                    </ItemTitle>
                     {item.done_definition ? (
-                      <div className="mt-1 text-xs text-muted-foreground">
+                      <ItemDescription className="line-clamp-none">
                         {item.done_definition}
-                      </div>
+                      </ItemDescription>
                     ) : null}
-                  </div>
+                  </ItemContent>
                   {item.is_required ? (
-                    <Badge variant="outline">Bắt buộc</Badge>
+                    <ItemActions>
+                      <Badge variant="outline">Bắt buộc</Badge>
+                    </ItemActions>
                   ) : null}
-                </div>
+                </Item>
               ))}
-            </div>
+            </ItemGroup>
           </div>
         );
       })}

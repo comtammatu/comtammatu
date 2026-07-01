@@ -63,7 +63,15 @@ function varianceClassName(value: number): string {
   return "text-muted-foreground";
 }
 
-export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
+export function CountSlipsClient({
+  initial,
+  branchScoped = false,
+  embedded = false,
+}: {
+  initial: CountSlipRow[];
+  branchScoped?: boolean;
+  embedded?: boolean;
+}) {
   const [rows, setRows] = useState(initial);
 
   const { pending, history } = useMemo(() => {
@@ -82,10 +90,10 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
     );
   }
 
-  return (
-    <AppPage width="default">
+  const content = (
+    <>
       <AppPageHeader
-        eyebrow="Kho hàng"
+        eyebrow={embedded ? undefined : "Kho hàng"}
         title="Duyệt phiếu đếm tồn"
         description="Đối chiếu số đếm với tồn hệ thống. Duyệt để ghi điều chỉnh kho, hoặc yêu cầu nhân viên đếm lại."
         badge={{
@@ -104,12 +112,13 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
       ) : (
         <ItemGroup className="flex flex-col gap-3 p-0 rounded-none border-0">
           {pending.map((row) => (
-            <CountSlipCard
-              key={row.id}
-              row={row}
-              onApproved={() => applyStatus(row.id, "approved")}
-              onRecount={() => applyStatus(row.id, "needs_changes")}
-            />
+              <CountSlipCard
+                key={row.id}
+                row={row}
+                branchScoped={branchScoped}
+                onApproved={() => applyStatus(row.id, "approved")}
+                onRecount={() => applyStatus(row.id, "needs_changes")}
+              />
           ))}
         </ItemGroup>
       )}
@@ -121,22 +130,39 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
           </h2>
           <ItemGroup className="flex flex-col gap-3 p-0 rounded-none border-0">
             {history.map((row) => (
-              <CountSlipCard key={row.id} row={row} readOnly />
+              <CountSlipCard
+                key={row.id}
+                row={row}
+                branchScoped={branchScoped}
+                readOnly
+              />
             ))}
           </ItemGroup>
         </section>
       ) : null}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <AppPage width="default">
+      {content}
     </AppPage>
   );
 }
 
 function CountSlipCard({
   row,
+  branchScoped = false,
   readOnly = false,
   onApproved,
   onRecount,
 }: {
   row: CountSlipRow;
+  branchScoped?: boolean;
   readOnly?: boolean;
   onApproved?: () => void;
   onRecount?: () => void;
@@ -221,9 +247,11 @@ function CountSlipCard({
           <div className="min-w-0">
             <div className="font-heading flex flex-wrap items-center gap-2 text-base font-semibold">
               {row.employeeName}
-              <Badge variant="outline" className="text-xs">
-                {row.branchName}
-              </Badge>
+              {branchScoped ? null : (
+                <Badge variant="outline" className="text-xs">
+                  {row.branchName}
+                </Badge>
+              )}
               <Badge variant="outline" className="text-xs">
                 {row.locationName}
               </Badge>

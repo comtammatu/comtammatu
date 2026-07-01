@@ -81,19 +81,40 @@ function normalizeBranch(branch: unknown): string | null {
 async function loadVisibleBranchIds({
   role,
   branchId,
+  routeBranchId,
 }: {
   role: StaffRole;
   branchId: number | null;
+  routeBranchId?: number;
 }): Promise<number[] | null> {
+  if (routeBranchId !== undefined) {
+    if (role === "owner") return [routeBranchId];
+    if (role === "branch_manager" && branchId === routeBranchId) {
+      return [routeBranchId];
+    }
+    return [];
+  }
+
   if (role === "owner") return null;
   if (role === "branch_manager") return branchId ? [branchId] : [];
   return [];
 }
 
-export default async function CheckoutApprovalsPage() {
+interface CheckoutApprovalsPageContentProps {
+  routeBranchId?: number;
+  hideHeaderOnMobile?: boolean;
+}
+
+export async function CheckoutApprovalsPageContent({
+  routeBranchId,
+  hideHeaderOnMobile,
+}: CheckoutApprovalsPageContentProps = {}) {
   const { supabase, claims } = await loadAuthState();
   const branchId = claims.branch_id;
-  const homeLink = resolveRoleHomeLink(claims.user_role, branchId);
+  const homeLink =
+    routeBranchId !== undefined
+      ? { href: `/br/${routeBranchId}`, label: "Hôm nay" }
+      : resolveRoleHomeLink(claims.user_role, branchId);
   const canUseApprovalRoute = CHECKOUT_APPROVER_ROLES.includes(
     claims.user_role,
   );
@@ -103,6 +124,7 @@ export default async function CheckoutApprovalsPage() {
       <EmployeePage
         title={copy.checkoutApprovalsTitle}
         description={copy.checkoutApprovalsDescriptionAll}
+        hideHeaderOnMobile={hideHeaderOnMobile}
         action={
           <Button
             asChild
@@ -130,13 +152,15 @@ export default async function CheckoutApprovalsPage() {
   const visibleBranchIds = await loadVisibleBranchIds({
     role: claims.user_role,
     branchId,
+    routeBranchId,
   });
   const scopedOut = visibleBranchIds !== null && visibleBranchIds.length === 0;
+  const permissionBranchId = routeBranchId ?? branchId;
 
   const canApprovePromise =
-    claims.user_role === "branch_manager" && branchId
+    claims.user_role === "branch_manager" && permissionBranchId
       ? supabase.rpc("has_permission", {
-          p_branch_id: branchId,
+          p_branch_id: permissionBranchId,
           p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
         })
       : supabase.rpc("has_permission_any", {
@@ -215,6 +239,7 @@ export default async function CheckoutApprovalsPage() {
     <EmployeePage
       title={copy.checkoutApprovalsTitle}
       description={copy.checkoutApprovalsDescriptionAll}
+      hideHeaderOnMobile={hideHeaderOnMobile}
       action={
         <Button
           asChild
@@ -246,4 +271,8 @@ export default async function CheckoutApprovalsPage() {
       </EmployeePanel>
     </EmployeePage>
   );
+}
+
+export default async function CheckoutApprovalsPage() {
+  return <CheckoutApprovalsPageContent />;
 }

@@ -102,7 +102,7 @@ export async function fetchProductionOrders(): Promise<
     if (claims.branch_id == null) {
       return {
         success: false,
-        error: "Tài khoản chưa được gán chi nhánh sản xuất.",
+        error: "Tài khoản chưa được gán Bếp Trung Tâm.",
       };
     }
     const access = await requireProductionBranch(
@@ -126,7 +126,7 @@ export async function fetchProductionOrders(): Promise<
       notes,
       completed_at,
       created_at,
-      branches ( id, name ),
+      branches!inner ( id, name, branch_kind ),
       production_order_items (
         id,
         finished_good_id,
@@ -138,9 +138,10 @@ export async function fetchProductionOrders(): Promise<
     `,
     )
     .eq("tenant_id", claims.tenant_id)
+    .eq("branches.branch_kind", "central_kitchen")
     .order("created_at", { ascending: false });
 
-  // Branch-scoped production managers see only their own branch's orders.
+  // Site-scoped production managers see only their assigned central kitchen.
   // Tenant-wide roles keep full tenant visibility.
   if (
     isProductionSiteScopedRole(claims.user_role) &&
@@ -196,7 +197,7 @@ export async function fetchProductionOrders(): Promise<
   });
 
   // Draft orders haven't been through the RPC, so unit_cost_at_production is
-  // still null. Estimate as BOM × WAC at the branch (mirrors the
+  // still null. Estimate as BOM × WAC at the central kitchen (mirrors the
   // confirm_production_order RPC) so the UI can show an estimated total
   // cost before confirmation.
   const draftFgIds = new Set<number>();
@@ -208,6 +209,7 @@ export async function fetchProductionOrders(): Promise<
 
   if (draftFgIds.size > 0) {
     const fgIds = Array.from(draftFgIds);
+    const branchIds = Array.from(new Set(rows.map((order) => order.branch_id)));
     const [bomRes, wacRes] = await Promise.all([
       supabase
         .from("production_recipes")
@@ -218,27 +220,31 @@ export async function fetchProductionOrders(): Promise<
         .eq("tenant_id", claims.tenant_id),
       supabase
         .from("stock_levels")
-        .select("ingredient_id, avg_unit_cost, branches!inner ( branch_kind )")
+        .select(
+          "branch_id, ingredient_id, avg_unit_cost, branches!inner ( branch_kind )",
+        )
         .eq("tenant_id", claims.tenant_id)
-        .eq("branches.branch_kind", "branch")
+        .eq("branches.branch_kind", "central_kitchen")
+        .in("branch_id", branchIds)
         .not("avg_unit_cost", "is", null),
     ]);
 
-    const wacMap = new Map<number, number>();
+    const wacMap = new Map<string, number>();
     if (wacRes.data) {
-      const acc = new Map<number, { sum: number; count: number }>();
+      const acc = new Map<string, { sum: number; count: number }>();
       for (const w of wacRes.data as Array<{
+        branch_id: number;
         ingredient_id: number;
         avg_unit_cost: number | string | null;
       }>) {
-        const id = Number(w.ingredient_id);
+        const key = `${Number(w.branch_id)}:${Number(w.ingredient_id)}`;
         const cost = Number(w.avg_unit_cost ?? 0);
-        const e = acc.get(id) ?? { sum: 0, count: 0 };
+        const e = acc.get(key) ?? { sum: 0, count: 0 };
         e.sum += cost;
         e.count += 1;
-        acc.set(id, e);
+        acc.set(key, e);
       }
-      for (const [id, e] of acc) wacMap.set(id, e.sum / e.count);
+      for (const [key, e] of acc) wacMap.set(key, e.sum / e.count);
     }
 
     type BomRow = {
@@ -251,25 +257,13 @@ export async function fetchProductionOrders(): Promise<
         unit_cost: number | string | null;
       } | null;
     };
-    const costPerFg = new Map<number, number>();
+    const bomByFinishedGood = new Map<number, BomRow[]>();
     for (const bom of (bomRes.data ?? []) as BomRow[]) {
       const fgId = Number(bom.finished_good_id);
-      const rawId = Number(bom.ingredient_id);
-      const qty = Number(bom.quantity ?? 0);
-      const yf = Number(bom.yield_factor ?? 1) || 1;
-      const conv =
-        Number(bom.ingredients?.purchase_to_measure_factor ?? 1) || 1;
-      const wac = wacMap.get(rawId);
-      const refCost =
-        bom.ingredients?.unit_cost != null
-          ? Number(bom.ingredients.unit_cost)
-          : 0;
-      const rawUnitCost = wac != null ? wac : refCost;
-      const rawNeedPurchase = qty / yf / conv;
-      costPerFg.set(
-        fgId,
-        (costPerFg.get(fgId) ?? 0) + rawNeedPurchase * rawUnitCost,
-      );
+      bomByFinishedGood.set(fgId, [
+        ...(bomByFinishedGood.get(fgId) ?? []),
+        bom,
+      ]);
     }
 
     for (const order of rows) {
@@ -277,8 +271,23 @@ export async function fetchProductionOrders(): Promise<
       let total = 0;
       for (const item of order.items) {
         if (item.unit_cost_at_production == null) {
-          item.unit_cost_at_production =
-            costPerFg.get(item.finished_good_id) ?? 0;
+          item.unit_cost_at_production = (
+            bomByFinishedGood.get(item.finished_good_id) ?? []
+          ).reduce((sum, bom) => {
+            const rawId = Number(bom.ingredient_id);
+            const qty = Number(bom.quantity ?? 0);
+            const yf = Number(bom.yield_factor ?? 1) || 1;
+            const conv =
+              Number(bom.ingredients?.purchase_to_measure_factor ?? 1) || 1;
+            const wac = wacMap.get(`${order.branch_id}:${rawId}`);
+            const refCost =
+              bom.ingredients?.unit_cost != null
+                ? Number(bom.ingredients.unit_cost)
+                : 0;
+            const rawUnitCost = wac != null ? wac : refCost;
+            const rawNeedPurchase = qty / yf / conv;
+            return sum + rawNeedPurchase * rawUnitCost;
+          }, 0);
         }
         total += item.quantity * (item.unit_cost_at_production ?? 0);
       }
@@ -296,7 +305,16 @@ export const createProductionOrder = withAction(
     permission: PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
     permissionBranchId: (data) => data.branchId,
   },
-  async (data, { supabase }) => {
+  async (data, { supabase, claims }) => {
+    const access = await requireProductionBranch(
+      supabase,
+      claims.tenant_id,
+      data.branchId,
+    );
+    if (!access.ok) {
+      return { success: false, error: access.error };
+    }
+
     const sb = supabase as unknown as RpcClient;
     const { error } = await sb.rpc("create_production_order", {
       p_branch_id: data.branchId,
@@ -320,7 +338,7 @@ export const createProductionOrder = withAction(
       ) {
         return {
           success: false,
-          error: "Chi nhánh sản xuất hoặc thành phẩm chưa hợp lệ.",
+          error: "Bếp Trung Tâm hoặc thành phẩm chưa hợp lệ.",
         };
       }
       if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
@@ -346,7 +364,28 @@ export async function confirmProductionOrder(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+  const { data: order, error: orderError } = await supabase
+    .from("production_orders")
+    .select("branch_id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("id", parsed.data)
+    .maybeSingle();
+  if (orderError) {
+    return { success: false, error: "Không thể kiểm tra lệnh sản xuất." };
+  }
+  if (!order) {
+    return { success: false, error: "Không tìm thấy lệnh sản xuất." };
+  }
+  const access = await requireProductionBranch(
+    supabase,
+    claims.tenant_id,
+    Number(order.branch_id),
+  );
+  if (!access.ok) {
+    return { success: false, error: access.error };
+  }
+
   const sb = supabase as unknown as RpcClient;
   const { error } = await sb.rpc("confirm_production_order", {
     p_order_id: parsed.data,
@@ -360,7 +399,7 @@ export async function confirmProductionOrder(
         return {
           success: false,
           error:
-            "Tài khoản chưa được cấp quyền xác nhận sản xuất tại chi nhánh này.",
+            "Tài khoản chưa được cấp quyền xác nhận sản xuất tại Bếp Trung Tâm.",
         };
       }
       return {
@@ -374,7 +413,7 @@ export async function confirmProductionOrder(
         return {
           success: false,
           error:
-            "Chi nhánh chưa có kho nhận mặc định. Tạo Inventory Location với 'Mặc định nhận hàng'.",
+            "Bếp Trung Tâm chưa có kho nhận mặc định. Tạo Inventory Location với 'Mặc định nhận hàng'.",
         };
       }
       if (message.includes("production_order_not_found")) {
@@ -398,8 +437,8 @@ export async function confirmProductionOrder(
         const shortages = parseShortagesDetail(error.details);
         const summary =
           shortages.length > 0
-            ? `Thiếu ${shortages.length} nguyên liệu trong chi nhánh.`
-            : "Không đủ tồn kho nguyên liệu trong chi nhánh để sản xuất lệnh này.";
+            ? `Thiếu ${shortages.length} nguyên liệu trong Bếp Trung Tâm.`
+            : "Không đủ tồn kho nguyên liệu trong Bếp Trung Tâm để sản xuất lệnh này.";
         return {
           success: false,
           error: summary,
@@ -432,7 +471,7 @@ export async function confirmProductionOrder(
       if (message.includes("branch_must_be_operational")) {
         return {
           success: false,
-          error: "Chi nhánh sản xuất không hợp lệ.",
+          error: "Bếp Trung Tâm không hợp lệ.",
         };
       }
       if (message.includes("production_item_must_be_finished_good")) {
@@ -464,7 +503,28 @@ export async function cancelProductionOrder(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+  const { data: order, error: orderError } = await supabase
+    .from("production_orders")
+    .select("branch_id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("id", parsed.data)
+    .maybeSingle();
+  if (orderError) {
+    return { success: false, error: "Không thể kiểm tra lệnh sản xuất." };
+  }
+  if (!order) {
+    return { success: false, error: "Không tìm thấy lệnh sản xuất." };
+  }
+  const access = await requireProductionBranch(
+    supabase,
+    claims.tenant_id,
+    Number(order.branch_id),
+  );
+  if (!access.ok) {
+    return { success: false, error: access.error };
+  }
+
   const sb = supabase as unknown as RpcClient;
   const { error } = await sb.rpc("cancel_production_order", {
     p_order_id: parsed.data,

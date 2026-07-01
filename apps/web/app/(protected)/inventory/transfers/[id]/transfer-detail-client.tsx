@@ -29,6 +29,7 @@ import {
   AppPageHeader,
   AppSection,
 } from "@/components/surface";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
@@ -41,10 +42,6 @@ import {
   transferMarkInTransit,
   transferReceive,
 } from "../../transfer-actions";
-import {
-  getInventoryStatusBadgeVariant,
-  getInventoryStatusLabel,
-} from "../../_lib/ui";
 import { messages } from "@lib/messages";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
@@ -82,15 +79,20 @@ export function TransferDetailClient({
   userBranchId,
   correctionBranches,
   auditLogs = [],
+  embedded = false,
+  listHref,
 }: {
   transfer: TransferDetail;
   userRole: StaffRole;
   userBranchId: number | null;
   correctionBranches: CorrectionBranchOption[];
   auditLogs?: AuditLogRow[];
+  embedded?: boolean;
+  listHref?: string;
 }) {
   const router = useRouter();
   const copy = messages.inventory.transfer;
+  const statusBadge = getStatusBadgeMeta("inventory", transfer.status);
   const [isPending, startTransition] = useTransition();
   const [receiveQty, setReceiveQty] = useState<Record<number, string>>(() => {
     const initial: Record<number, string> = {};
@@ -105,9 +107,10 @@ export function TransferDetailClient({
   const isBranchScopedOps =
     userRole === "warehouse_manager" || userRole === "production_manager";
   const transferListHref =
-    userBranchId != null
+    listHref ??
+    (userBranchId != null
       ? `/inventory/transfers?branchId=${userBranchId}`
-      : "/inventory/transfers";
+      : "/inventory/transfers");
   const shortLines = useMemo(() => {
     if (!isReceiveMode) return 0;
     let count = 0;
@@ -326,10 +329,9 @@ export function TransferDetailClient({
     },
   ];
 
-  return (
-    <AppPage>
-      <AppPageHeader
-        eyebrow="Kho hàng"
+  const content = (
+    <AppPageHeader
+        eyebrow={embedded ? undefined : "Kho hàng"}
         title={transfer.code}
         description={copy.routeMeta(
           transfer.fromBranch,
@@ -337,8 +339,8 @@ export function TransferDetailClient({
           transfer.date,
         )}
         badge={{
-          children: getInventoryStatusLabel(transfer.status),
-          variant: getInventoryStatusBadgeVariant(transfer.status),
+          children: statusBadge.label,
+          variant: statusBadge.variant,
         }}
         breadcrumb={
           <Link
@@ -634,10 +636,15 @@ export function TransferDetailClient({
               <AuditHistoryList logs={auditLogs} />
             </TabsContent>
           </AppPageTabs>
-        }
-      />
-    </AppPage>
+      }
+    />
   );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return <AppPage>{content}</AppPage>;
 }
 
 function TransferLineMobileCard({

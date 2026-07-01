@@ -8,6 +8,8 @@ export const KDS_VI = {
   filterAll: "Tất cả",
   filterOrderTypeAria: "Lọc theo loại đơn",
   filterOrderTypePlaceholder: "Loại đơn",
+  statusErrorTitle: "KDS chưa sẵn sàng",
+  statusErrorBadge: "Cần tải lại",
   stationsLoadFailed:
     "Không tải được danh sách trạm bếp. Vui lòng tải lại trang.",
   queueLoadFailed: "Không tải được món chờ chế biến. Vui lòng tải lại trang.",

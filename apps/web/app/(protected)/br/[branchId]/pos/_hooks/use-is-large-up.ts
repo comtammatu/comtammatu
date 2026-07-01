@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 // sidebar variants use: TabbedSidebar is `md:flex lg:hidden`, SplitSidebar is
 // `lg:flex`. SSR returns false so first paint renders the TabbedSidebar tree
 // (correct for the md–lg tablet range); client reads the store synchronously,
-// matching the `useIsMobile` SSR behavior.
+// matching the shared responsive-hook SSR behavior.
 const LG_BREAKPOINT = 1024;
 
 let lgMql: MediaQueryList | null = null;

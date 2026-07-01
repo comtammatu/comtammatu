@@ -1,18 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
+import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
+import { Field, FieldLabel } from "@comtammatu/ui/components/field";
+import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import {
   Tabs,
   TabsContent,
@@ -27,9 +36,8 @@ import type { ItemRow } from "./item-table";
 import { AppEmptyState } from "@/components/surface";
 import { FormattedNumberInput } from "@/components/form";
 
-/* ─── Local Types ─── */
-
 import { FORM_VI, MENU_VI } from "@comtammatu/shared/messages";
+
 interface VariantEntry {
   id?: number;
   name: string;
@@ -69,9 +77,9 @@ export function ItemDetailDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const checkboxIdPrefix = useId();
   const loadTokenRef = useRef(0);
 
-  // Side dish items (from categories with type "side_dish")
   const sideItems = allItems.filter(
     (i) => i.category_type === SIDE_DISH_TYPE && i.id !== item?.id,
   );
@@ -133,8 +141,6 @@ export function ItemDetailDialog({
     }
   }, [open, item, loadItemDetails]);
 
-  /* ─── Variant Handlers ─── */
-
   function addVariant() {
     setVariants((prev) => {
       const next = [...prev, { name: "", price_adjustment: 0, sort_order: 0 }];
@@ -174,8 +180,6 @@ export function ItemDetailDialog({
     });
   }
 
-  /* ─── Modifier Handlers ─── */
-
   function addModifier() {
     setModifiers((prev) => {
       const next = [...prev, { name: "", price: 0, sort_order: 0 }];
@@ -214,8 +218,6 @@ export function ItemDetailDialog({
       }
     });
   }
-
-  /* ─── Sides Handlers ─── */
 
   function toggleSide(sideItemId: number, sideItemName: string) {
     setSides((prev) => {
@@ -266,7 +268,7 @@ export function ItemDetailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{item.name} — Chi tiết</DialogTitle>
+          <DialogTitle>{MENU_VI.itemDetailTitle(item.name)}</DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
@@ -274,9 +276,9 @@ export function ItemDetailDialog({
             <Spinner className="size-6 text-muted-foreground" />
           </div>
         ) : loadError ? (
-          <p className="py-6 text-center text-sm text-destructive" role="alert">
-            {loadError}
-          </p>
+          <Alert variant="destructive">
+            <AlertDescription>{loadError}</AlertDescription>
+          </Alert>
         ) : (
           <Tabs defaultValue="variants" className="w-full">
             <TabsList className="w-full">
@@ -291,15 +293,14 @@ export function ItemDetailDialog({
               </TabsTrigger>
             </TabsList>
 
-            {/* ─── Variants Tab ─── */}
             <TabsContent value="variants" className="flex flex-col gap-3">
               {variants.map((v, idx) => (
                 <div
                   key={v.id ?? `new-${idx}`}
                   className="flex items-end gap-2"
                 >
-                  <div className="flex-1 flex flex-col gap-1">
-                    <Label className="text-xs">{FORM_VI.name}</Label>
+                  <Field className="min-w-0 flex-1 gap-1">
+                    <FieldLabel className="text-xs">{FORM_VI.name}</FieldLabel>
                     <Input
                       value={v.name}
                       onChange={(e) =>
@@ -307,9 +308,11 @@ export function ItemDetailDialog({
                       }
                       placeholder={MENU_VI.variantNamePlaceholder}
                     />
-                  </div>
-                  <div className="w-28 flex flex-col gap-1">
-                    <Label className="text-xs">{MENU_VI.priceDeltaLabel}</Label>
+                  </Field>
+                  <Field className="w-28 shrink-0 gap-1">
+                    <FieldLabel className="text-xs">
+                      {MENU_VI.priceDeltaLabel}
+                    </FieldLabel>
                     <FormattedNumberInput
                       defaultValue={String(v.price_adjustment)}
                       allowNegative
@@ -322,7 +325,7 @@ export function ItemDetailDialog({
                         }
                       }}
                     />
-                  </div>
+                  </Field>
                   <Button
                     type="button"
                     variant="ghost"
@@ -357,15 +360,14 @@ export function ItemDetailDialog({
               </div>
             </TabsContent>
 
-            {/* ─── Modifiers Tab ─── */}
             <TabsContent value="modifiers" className="flex flex-col gap-3">
               {modifiers.map((m, idx) => (
                 <div
                   key={m.id ?? `new-${idx}`}
                   className="flex items-end gap-2"
                 >
-                  <div className="flex-1 flex flex-col gap-1">
-                    <Label className="text-xs">{FORM_VI.name}</Label>
+                  <Field className="min-w-0 flex-1 gap-1">
+                    <FieldLabel className="text-xs">{FORM_VI.name}</FieldLabel>
                     <Input
                       value={m.name}
                       onChange={(e) =>
@@ -373,9 +375,9 @@ export function ItemDetailDialog({
                       }
                       placeholder={MENU_VI.modifierNamePlaceholder}
                     />
-                  </div>
-                  <div className="w-28 flex flex-col gap-1">
-                    <Label className="text-xs">{FORM_VI.price}</Label>
+                  </Field>
+                  <Field className="w-28 shrink-0 gap-1">
+                    <FieldLabel className="text-xs">{FORM_VI.price}</FieldLabel>
                     <FormattedNumberInput
                       defaultValue={String(m.price)}
                       maxFractionDigits={0}
@@ -387,7 +389,7 @@ export function ItemDetailDialog({
                         }
                       }}
                     />
-                  </div>
+                  </Field>
                   <Button
                     type="button"
                     variant="ghost"
@@ -422,7 +424,6 @@ export function ItemDetailDialog({
               </div>
             </TabsContent>
 
-            {/* ─── Sides Tab ─── */}
             <TabsContent value="sides" className="flex flex-col gap-3">
               {sideItems.length === 0 ? (
                 <AppEmptyState
@@ -436,34 +437,53 @@ export function ItemDetailDialog({
                   <p className="text-sm text-muted-foreground">
                     {MENU_VI.sidesSelectHint}
                   </p>
-                  {sideItems.map((si) => {
-                    const selected = sides.find(
-                      (s) => s.side_item_id === si.id,
-                    );
-                    return (
-                      <div
-                        key={si.id}
-                        className="flex items-center justify-between rounded-md border p-2"
-                      >
-                        <label className="flex items-center gap-2">
-                          <Checkbox
-                            checked={!!selected}
-                            onCheckedChange={() => toggleSide(si.id, si.name)}
-                          />
-                          <span className="text-sm">{si.name}</span>
-                        </label>
-                        {selected && (
-                          <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <ItemGroup className="gap-2">
+                    {sideItems.map((si) => {
+                      const selected = sides.find(
+                        (s) => s.side_item_id === si.id,
+                      );
+                      const sideCheckboxId = `${checkboxIdPrefix}-item-${item.id}-side-${si.id}`;
+                      const defaultCheckboxId = `${checkboxIdPrefix}-item-${item.id}-default-side-${si.id}`;
+
+                      return (
+                        <Item
+                          key={si.id}
+                          variant="outline"
+                          size="sm"
+                          className="justify-between"
+                        >
+                          <div className="flex min-w-0 flex-1 items-center gap-2">
                             <Checkbox
-                              checked={selected.is_default}
-                              onCheckedChange={() => toggleSideDefault(si.id)}
+                              id={sideCheckboxId}
+                              checked={!!selected}
+                              onCheckedChange={() => toggleSide(si.id, si.name)}
                             />
-                            {MENU_VI.sideDefault}
-                          </label>
-                        )}
-                      </div>
-                    );
-                  })}
+                            <FieldLabel
+                              htmlFor={sideCheckboxId}
+                              className="min-w-0 flex-1 truncate text-sm font-normal"
+                            >
+                              {si.name}
+                            </FieldLabel>
+                          </div>
+                          {selected && (
+                            <div className="flex shrink-0 items-center gap-1">
+                              <Checkbox
+                                id={defaultCheckboxId}
+                                checked={selected.is_default}
+                                onCheckedChange={() => toggleSideDefault(si.id)}
+                              />
+                              <FieldLabel
+                                htmlFor={defaultCheckboxId}
+                                className="text-xs font-normal text-muted-foreground"
+                              >
+                                {MENU_VI.sideDefault}
+                              </FieldLabel>
+                            </div>
+                          )}
+                        </Item>
+                      );
+                    })}
+                  </ItemGroup>
                 </>
               )}
               <div className="flex justify-end pt-2">

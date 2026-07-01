@@ -3,6 +3,7 @@ import {
   Boxes as IconBoxes,
   FileSpreadsheet as IconFileSpreadsheet,
   FileText as IconFileText,
+  Landmark as IconLandmark,
   Receipt as IconReceipt,
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
@@ -35,6 +36,11 @@ export function resolveFinanceNav({
           href: "/finance/revenue",
           label: financeNav.items.revenue,
           icon: IconBarChart3,
+        },
+        {
+          href: "/finance/bank-transactions",
+          label: financeNav.items.bankTransactions,
+          icon: IconLandmark,
         },
         {
           href: "/finance/inventory-value",

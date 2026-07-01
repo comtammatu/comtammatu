@@ -113,7 +113,7 @@ export function HrClient({
   ];
 
   return (
-    <AppPage width="wide">
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow={workspaceCopy.eyebrow}
         title={
@@ -126,174 +126,175 @@ export function HrClient({
             ? workspaceCopy.branchManagerDescription
             : workspaceCopy.ownerDescription
         }
-        tabs={
-          <div className="flex flex-col gap-4">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <KpiCard
-                label={copy.readiness.activePeople}
-                value={activeEmployees.length}
-                hint={copy.readiness.totalPeople(employees.length)}
-                icon={<IconCalendarCheck aria-hidden />}
-              />
-              <KpiCard
-                label={copy.readiness.payrollReady}
-                value={payrollReadyCount}
-                hint={copy.readiness.payrollReadyHint}
-                tone={payrollReadyCount > 0 ? "success" : "warning"}
-                icon={<IconWalletCards aria-hidden />}
-              />
-              {canManageEmployees ? (
-                <KpiCard
-                  label={copy.readiness.insured}
-                  value={insuredEmployees}
-                  hint={copy.readiness.insuredHint}
-                  tone={insuredEmployees > 0 ? "primary" : "neutral"}
-                  icon={<IconHeartPulse aria-hidden />}
-                />
-              ) : (
-                <KpiCard
-                  label={copy.readiness.branches}
-                  value={branches.length}
-                  hint={copy.readiness.branchScope}
-                  icon={<IconShieldCheck aria-hidden />}
-                />
-              )}
-              {canManageEmployees ? (
-                <KpiCard
-                  label={copy.readiness.contractMissing}
-                  value={missingContractCount}
-                  hint={copy.readiness.contractMissingHint}
-                  tone={missingContractCount > 0 ? "warning" : "success"}
-                  icon={<IconFileSignature aria-hidden />}
-                />
-              ) : (
-                <KpiCard
-                  label={copy.readiness.shifts}
-                  value={shifts.length}
-                  hint={copy.readiness.shiftHint}
-                  icon={<IconFileSignature aria-hidden />}
-                />
-              )}
-            </div>
-
-            <AppPageTabs items={tabItems} defaultValue={defaultTab}>
-              {canViewEmployees ? (
-                <TabsContent value="employees" className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      {copy.employeeCount(employees.length)}
-                    </p>
-                    {canManageEmployees ? (
-                      <div className="flex gap-2">
-                        <Button asChild variant="ghost">
-                          <Link href="/hr/staff">
-                            <IconShieldCheck data-icon="inline-start" />
-                            {copy.staffAccounts}
-                          </Link>
-                        </Button>
-                        <Button onClick={() => setAddOpen(true)}>
-                          <IconUserPlus data-icon="inline-start" />
-                          {copy.addEmployee}
-                        </Button>
-                      </div>
-                    ) : null}
-                  </div>
-                  <EmployeeTable
-                    employees={employees}
-                    branches={branches}
-                    positionOptions={positionOptions}
-                    canManage={canManageEmployees}
-                  />
-                  {canManageEmployees ? (
-                    <EmployeeFormDialog
-                      open={addOpen}
-                      onOpenChange={setAddOpen}
-                      branches={branches}
-                      positionOptions={positionOptions}
-                    />
-                  ) : null}
-                </TabsContent>
-              ) : null}
-
-              <TabsContent value="attendance" className="flex flex-col gap-4">
-                <div className="flex max-w-3xl flex-col gap-1">
-                  <p className="font-heading text-base font-semibold">
-                    {copy.attendanceTitle}
-                  </p>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    {copy.attendanceDescription}
-                  </p>
-                </div>
-                <AttendanceTable branches={branches} />
-                <LeaveRequestsTable branches={branches} />
-              </TabsContent>
-
-              {canManageEmployees ? (
-                <TabsContent value="payroll" className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex max-w-3xl flex-col gap-1">
-                      <p className="font-heading text-base font-semibold">
-                        {copy.payrollTitle}
-                      </p>
-                      <p className="text-sm leading-6 text-muted-foreground">
-                        {copy.payrollDescription}
-                      </p>
-                    </div>
-                    <Button asChild className="w-full sm:w-fit">
-                      <Link href="/hr/payroll">
-                        <IconWalletCards data-icon="inline-start" />
-                        {copy.openPayroll}
-                      </Link>
-                    </Button>
-                  </div>
-                </TabsContent>
-              ) : null}
-
-              <TabsContent value="setup" className="flex flex-col gap-4">
-                <div className="flex max-w-3xl flex-col gap-1">
-                  <p className="font-heading text-base font-semibold">
-                    {copy.setupTitle}
-                  </p>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    {copy.setupDescription}
-                  </p>
-                </div>
-                <AppSection
-                  title={copy.setupSteps.shifts.title}
-                  description={copy.setupSteps.shifts.description}
-                  headerHint={copy.setupSteps.shifts.hint}
-                >
-                  <ShiftsTable
-                    shifts={shifts}
-                    isPending={isPending}
-                    canManage={canManageEmployees}
-                    onShiftSaved={(shift) =>
-                      setShifts((prev) => {
-                        const exists = prev.some(
-                          (item) => item.id === shift.id,
-                        );
-                        if (!exists) return [...prev, shift];
-                        return prev.map((item) =>
-                          item.id === shift.id ? { ...item, ...shift } : item,
-                        );
-                      })
-                    }
-                  />
-                </AppSection>
-                {canManageEmployees ? (
-                  <AppSection
-                    title={copy.positionTasks.title}
-                    description={copy.positionTasks.description}
-                    headerHint={copy.positionTasks.hint}
-                  >
-                    <PositionTasksClient initialData={positionTasksData} />
-                  </AppSection>
-                ) : null}
-              </TabsContent>
-            </AppPageTabs>
-          </div>
-        }
       />
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard
+          label={copy.readiness.activePeople}
+          value={activeEmployees.length}
+          hint={copy.readiness.totalPeople(employees.length)}
+          density="compact"
+          icon={<IconCalendarCheck aria-hidden />}
+        />
+        <KpiCard
+          label={copy.readiness.payrollReady}
+          value={payrollReadyCount}
+          hint={copy.readiness.payrollReadyHint}
+          tone={payrollReadyCount > 0 ? "success" : "warning"}
+          density="compact"
+          icon={<IconWalletCards aria-hidden />}
+        />
+        {canManageEmployees ? (
+          <KpiCard
+            label={copy.readiness.insured}
+            value={insuredEmployees}
+            hint={copy.readiness.insuredHint}
+            tone={insuredEmployees > 0 ? "primary" : "neutral"}
+            density="compact"
+            icon={<IconHeartPulse aria-hidden />}
+          />
+        ) : (
+          <KpiCard
+            label={copy.readiness.branches}
+            value={branches.length}
+            hint={copy.readiness.branchScope}
+            density="compact"
+            icon={<IconShieldCheck aria-hidden />}
+          />
+        )}
+        {canManageEmployees ? (
+          <KpiCard
+            label={copy.readiness.contractMissing}
+            value={missingContractCount}
+            hint={copy.readiness.contractMissingHint}
+            tone={missingContractCount > 0 ? "warning" : "success"}
+            density="compact"
+            icon={<IconFileSignature aria-hidden />}
+          />
+        ) : (
+          <KpiCard
+            label={copy.readiness.shifts}
+            value={shifts.length}
+            hint={copy.readiness.shiftHint}
+            density="compact"
+            icon={<IconFileSignature aria-hidden />}
+          />
+        )}
+      </div>
+
+      <AppPageTabs items={tabItems} defaultValue={defaultTab}>
+        {canViewEmployees ? (
+          <TabsContent value="employees" className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                {copy.employeeCount(employees.length)}
+              </p>
+              {canManageEmployees ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild variant="ghost">
+                    <Link href="/hr/staff">
+                      <IconShieldCheck data-icon="inline-start" />
+                      {copy.staffAccounts}
+                    </Link>
+                  </Button>
+                  <Button onClick={() => setAddOpen(true)}>
+                    <IconUserPlus data-icon="inline-start" />
+                    {copy.addEmployee}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+            <EmployeeTable
+              employees={employees}
+              branches={branches}
+              positionOptions={positionOptions}
+              canManage={canManageEmployees}
+            />
+            {canManageEmployees ? (
+              <EmployeeFormDialog
+                open={addOpen}
+                onOpenChange={setAddOpen}
+                branches={branches}
+                positionOptions={positionOptions}
+              />
+            ) : null}
+          </TabsContent>
+        ) : null}
+
+        <TabsContent value="attendance" className="flex flex-col gap-4">
+          <div className="flex max-w-3xl flex-col gap-1">
+            <p className="font-heading text-base font-semibold">
+              {copy.attendanceTitle}
+            </p>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {copy.attendanceDescription}
+            </p>
+          </div>
+          <AttendanceTable branches={branches} />
+          <LeaveRequestsTable branches={branches} />
+        </TabsContent>
+
+        {canManageEmployees ? (
+          <TabsContent value="payroll" className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex max-w-3xl flex-col gap-1">
+                <p className="font-heading text-base font-semibold">
+                  {copy.payrollTitle}
+                </p>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  {copy.payrollDescription}
+                </p>
+              </div>
+              <Button asChild className="w-full sm:w-fit">
+                <Link href="/hr/payroll">
+                  <IconWalletCards data-icon="inline-start" />
+                  {copy.openPayroll}
+                </Link>
+              </Button>
+            </div>
+          </TabsContent>
+        ) : null}
+
+        <TabsContent value="setup" className="flex flex-col gap-4">
+          <div className="flex max-w-3xl flex-col gap-1">
+            <p className="font-heading text-base font-semibold">
+              {copy.setupTitle}
+            </p>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {copy.setupDescription}
+            </p>
+          </div>
+          <AppSection
+            title={copy.setupSteps.shifts.title}
+            description={copy.setupSteps.shifts.description}
+            headerHint={copy.setupSteps.shifts.hint}
+          >
+            <ShiftsTable
+              shifts={shifts}
+              isPending={isPending}
+              canManage={canManageEmployees}
+              onShiftSaved={(shift) =>
+                setShifts((prev) => {
+                  const exists = prev.some((item) => item.id === shift.id);
+                  if (!exists) return [...prev, shift];
+                  return prev.map((item) =>
+                    item.id === shift.id ? { ...item, ...shift } : item,
+                  );
+                })
+              }
+            />
+          </AppSection>
+          {canManageEmployees ? (
+            <AppSection
+              title={copy.positionTasks.title}
+              description={copy.positionTasks.description}
+              headerHint={copy.positionTasks.hint}
+            >
+              <PositionTasksClient initialData={positionTasksData} />
+            </AppSection>
+          ) : null}
+        </TabsContent>
+      </AppPageTabs>
     </AppPage>
   );
 }

@@ -7,16 +7,8 @@ import {
   X as IconX,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { PwaInstallHelpDialog } from "@/components/pwa-install-help-dialog";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
 import {
   useInstallPrompt,
   useIsIosPwaInstall,
@@ -141,33 +133,16 @@ export function EmployeePwaToolbar() {
           ) : null}
         </div>
       </div>
-      <Dialog
+      <PwaInstallHelpDialog
         open={helpMode != null}
         onOpenChange={(open) => {
           if (!open) setHelpMode(null);
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{helpCopy.title}</DialogTitle>
-            <DialogDescription>{helpCopy.description}</DialogDescription>
-          </DialogHeader>
-          <ol className="grid gap-2 text-sm leading-relaxed">
-            {helpCopy.steps.map((step, index) => (
-              <li key={step}>
-                {index + 1}. {step}
-              </li>
-            ))}
-          </ol>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                {copy.close}
-              </Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={helpCopy.title}
+        description={helpCopy.description}
+        steps={helpCopy.steps}
+        closeLabel={copy.close}
+      />
     </>
   );
 }

@@ -9,10 +9,8 @@ import {
   getKdsScopedGroupKey,
   groupKdsOrdersByColumn,
 } from "../app/(protected)/br/[branchId]/kds/_lib/order-columns";
-import {
-  formatKdsTicketSequenceDisplay,
-  getStatusLabel,
-} from "../app/(protected)/br/[branchId]/kds/_lib/status-config";
+import { getStatusBadgeMeta } from "../app/components/status-badge";
+import { formatKdsTicketSequenceDisplay } from "../app/(protected)/br/[branchId]/kds/_lib/status-config";
 import type {
   KdsOrder,
   KdsOrderItem,
@@ -135,7 +133,7 @@ test("KDS title display falls back to order sequence", () => {
 });
 
 test("KDS ready status uses the shared Sẵn sàng wording", () => {
-  assert.equal(getStatusLabel("ready"), "Sẵn sàng");
+  assert.equal(getStatusBadgeMeta("order-item", "ready").label, "Sẵn sàng");
 });
 
 test("KDS comprehensive board groups orders into item-category service columns", () => {

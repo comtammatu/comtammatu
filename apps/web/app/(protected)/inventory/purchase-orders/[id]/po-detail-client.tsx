@@ -38,6 +38,7 @@ import {
   AppSection,
 } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { TimelineStepper } from "../../_components/timeline-stepper";
@@ -49,10 +50,6 @@ import {
   updatePurchaseOrderStatus,
   upsertPurchaseOrderLine,
 } from "../../procurement-actions";
-import {
-  getInventoryStatusBadgeVariant,
-  getInventoryStatusLabel,
-} from "../../_lib/ui";
 import type { IngredientRow } from "../../page";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
@@ -108,11 +105,15 @@ export function PODetailClient({
   ingredients,
   isOwner = false,
   auditLogs = [],
+  purchaseOrdersBasePath = "/inventory/purchase-orders",
+  afterCreateGrnHref,
 }: {
   po: PODetail;
   ingredients: IngredientRow[];
   isOwner?: boolean;
   auditLogs?: AuditLogRow[];
+  purchaseOrdersBasePath?: string;
+  afterCreateGrnHref?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -128,6 +129,7 @@ export function PODetailClient({
   const canCancelPo = po.status === "draft" || po.status === "sent";
   const canCreateGrn =
     po.status === "sent" || po.status === "partially_received";
+  const statusBadge = getStatusBadgeMeta("inventory", po.status);
   const [lines, setLines] = useState<EditablePoLine[]>(() =>
     po.items.map((item) => ({ ...item, dirty: false })),
   );
@@ -435,7 +437,7 @@ export function PODetailClient({
 
       const created = res.data as { id: number };
       toast.success(poDetailCopy.createGrnOk);
-      router.push(`/inventory/grn/${created.id}`);
+      router.push(afterCreateGrnHref ?? `/inventory/grn/${created.id}`);
     });
   }
 
@@ -446,12 +448,12 @@ export function PODetailClient({
         title={po.code}
         description={poDetailCopy.meta(po.supplier, po.date, po.sentAt)}
         badge={{
-          children: getInventoryStatusLabel(po.status),
-          variant: getInventoryStatusBadgeVariant(po.status),
+          children: statusBadge.label,
+          variant: statusBadge.variant,
         }}
         breadcrumb={
           <Link
-            href="/inventory/purchase-orders"
+            href={purchaseOrdersBasePath}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
             <IconArrowLeft className="size-4" />{" "}
@@ -509,9 +511,7 @@ export function PODetailClient({
               <div className="flex flex-col gap-4">
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="rounded-lg border bg-card p-4">
-                    <Badge variant="secondary">
-                      {poCopy.supplierRequired}
-                    </Badge>
+                    <Badge variant="secondary">{poCopy.supplierRequired}</Badge>
                     <p className="mt-3 text-xl font-semibold">{po.supplier}</p>
                   </div>
                   <div className="rounded-lg border bg-card p-4">
@@ -525,7 +525,9 @@ export function PODetailClient({
                   <div className="rounded-lg border bg-card p-4">
                     <Badge variant="secondary">{FORM_VI.totalAmount}</Badge>
                     <p className="mt-3 text-2xl font-semibold text-primary">
-                      {messages.inventory.common.currency(formatVND(grandTotal))}
+                      {messages.inventory.common.currency(
+                        formatVND(grandTotal),
+                      )}
                     </p>
                   </div>
                 </div>

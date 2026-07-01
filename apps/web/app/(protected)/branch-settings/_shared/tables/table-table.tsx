@@ -2,19 +2,10 @@
 
 import { useState } from "react";
 import {
-  Ellipsis as IconDots,
   Pencil as IconPencil,
   Trash as IconTrash,
   Utensils as IconToolsKitchen,
 } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@comtammatu/ui/components/dropdown-menu";
 import {
   Item,
   ItemActions,
@@ -39,6 +30,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { RowActionsMenu } from "@/components/row-actions-menu";
 
 export interface TableRow {
   id: number;
@@ -80,28 +72,24 @@ export function TableTable({ tables, zones }: TableTableProps) {
 
   function TableActions({ table }: { table: TableRow }) {
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-lg">
-            <IconDots className="size-4" />
-            <span className="sr-only">Menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setEditTable(table)}>
-            <IconPencil data-icon="inline-start" />
-            {ACTIONS_VI.edit}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive"
-            onSelect={() => void handleDelete(table.id)}
-          >
-            <IconTrash data-icon="inline-start" />
-            {ACTIONS_VI.delete}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <RowActionsMenu
+        items={[
+          {
+            key: "edit",
+            label: ACTIONS_VI.edit,
+            icon: <IconPencil data-icon="inline-start" />,
+            onSelect: () => setEditTable(table),
+          },
+          {
+            key: "delete",
+            label: ACTIONS_VI.delete,
+            icon: <IconTrash data-icon="inline-start" />,
+            destructive: true,
+            separatorBefore: true,
+            onSelect: () => void handleDelete(table.id),
+          },
+        ]}
+      />
     );
   }
 

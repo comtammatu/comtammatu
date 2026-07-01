@@ -76,8 +76,8 @@ export function ProductionStats({
   const readinessReady = readinessState === null;
   const activeProductionBranchCopy =
     productionBranchCount > 0
-      ? `${productionBranchCount} chi nhánh sản xuất đang hoạt động`
-      : "Chưa có chi nhánh sản xuất được cấu hình";
+      ? `${productionBranchCount} bếp sản xuất đang hoạt động`
+      : "Chưa có Bếp Trung Tâm được cấu hình";
   const summaryItems = [
     {
       label: "Lệnh nháp",
@@ -175,7 +175,7 @@ export function ProductionStats({
               nguyên liệu và nhập thành phẩm.
             </p>
           </div>
-          <Badge variant="outline">CN</Badge>
+          <Badge variant="outline">BTT</Badge>
         </div>
 
         {readinessMessage ? (

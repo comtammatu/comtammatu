@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { ChevronLeft as IconChevronLeft } from "lucide-react";
+import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPageHeader, DocumentFormShell } from "@/components/surface";
+import { EmployeePage } from "@/(protected)/employee/components/employee-page";
 import { messages } from "@lib/messages";
 import { fetchIngredients } from "../../ingredient-actions";
 import {
@@ -22,18 +24,30 @@ function withBranchQuery(path: string, branchId: number | null) {
   return branchId == null ? path : `${path}?branchId=${branchId}`;
 }
 
-export default async function NewTransferPage({
-  searchParams,
-}: {
-  searchParams: Promise<{
+interface NewTransferPageContentProps {
+  searchParams?: Promise<{
     branchId?: string | string[];
   }>;
-}) {
-  const params = await searchParams;
+  routeBranchId?: number;
+  basePath?: string;
+  embedded?: boolean;
+}
+
+export async function NewTransferPageContent({
+  searchParams,
+  routeBranchId,
+  basePath = "/inventory/transfers",
+  embedded = false,
+}: NewTransferPageContentProps) {
+  const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
-  const requested = await resolveRequestedBranchId(params.branchId);
+  const requested =
+    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
   const userBranchId = scope.selectedBranchId;
+  if (routeBranchId != null && userBranchId !== routeBranchId) {
+    notFound();
+  }
 
   const [brRes, ingRes] = await Promise.all([
     fetchBranchesForTransfer(),
@@ -47,6 +61,34 @@ export default async function NewTransferPage({
     ? ((ingRes.data ?? []) as IngredientRow[])
     : [];
   const title = messages.inventory.transfer.createTransferTitle;
+  const backHref =
+    routeBranchId != null ? basePath : withBranchQuery(basePath, userBranchId);
+  const backAction = (
+    <Button variant="outline" size="sm" asChild>
+      <Link href={backHref}>
+        <IconChevronLeft data-icon="inline-start" />
+        {messages.inventory.grn.back}
+      </Link>
+    </Button>
+  );
+
+  if (embedded) {
+    return (
+      <EmployeePage
+        title={title}
+        description={messages.inventory.transfer.transferDescription}
+        action={backAction}
+      >
+        <CreateTransferForm
+          branches={branches}
+          ingredients={ingredients}
+          userBranchId={userBranchId}
+          userRole={claims.user_role}
+          basePath={basePath}
+        />
+      </EmployeePage>
+    );
+  }
 
   return (
     <DocumentFormShell
@@ -56,14 +98,7 @@ export default async function NewTransferPage({
           eyebrow={messages.inventory.shell.moduleName}
           title={title}
           description={messages.inventory.transfer.transferDescription}
-          actions={
-            <Button variant="outline" size="sm" asChild>
-              <Link href={withBranchQuery("/inventory/transfers", userBranchId)}>
-                <IconChevronLeft data-icon="inline-start" />
-                {messages.inventory.grn.back}
-              </Link>
-            </Button>
-          }
+          actions={backAction}
         />
       }
     >
@@ -72,7 +107,18 @@ export default async function NewTransferPage({
         ingredients={ingredients}
         userBranchId={userBranchId}
         userRole={claims.user_role}
+        basePath={basePath}
       />
     </DocumentFormShell>
   );
+}
+
+export default async function NewTransferPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    branchId?: string | string[];
+  }>;
+}) {
+  return <NewTransferPageContent searchParams={searchParams} />;
 }

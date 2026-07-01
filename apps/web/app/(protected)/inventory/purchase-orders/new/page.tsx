@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchIngredients } from "../../ingredient-actions";
 import { fetchPoSuggestions, fetchSuppliers } from "../../procurement-actions";
@@ -11,12 +12,18 @@ import type { SupplierRow } from "../../suppliers/suppliers-client";
 import type { IngredientRow } from "../../page";
 import type { PoSuggestionRow } from "../../procurement-actions";
 
-export default async function NewPurchaseOrderPage({
+interface NewPurchaseOrderPageContentProps {
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+  routeBranchId?: number;
+  poBasePath?: string;
+}
+
+export async function NewPurchaseOrderPageContent({
   searchParams,
-}: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
-}) {
-  const params = await searchParams;
+  routeBranchId,
+  poBasePath = "/inventory/purchase-orders",
+}: NewPurchaseOrderPageContentProps) {
+  const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
   const procBranches = await fetchProcurementBranches(
     supabase,
@@ -31,12 +38,16 @@ export default async function NewPurchaseOrderPage({
   // Branch-scoped procurement roles auto-use their assigned branch; others
   // honor the URL branch if it is a procurement branch, else fall back to
   // the first available branch.
-  const requestedBranchId = parseBranchIdParam(params.branchId);
+  const requestedBranchId =
+    routeBranchId ?? parseBranchIdParam(params.branchId);
   const scope = await resolveInventoryBranchScope(
     supabase,
     claims,
     requestedBranchId,
   );
+  if (routeBranchId != null && scope.selectedBranchId !== routeBranchId) {
+    notFound();
+  }
   const scopeProcurementBranchId =
     scope.selectedBranchId != null &&
     procBranches.some((b) => b.id === scope.selectedBranchId)
@@ -47,6 +58,7 @@ export default async function NewPurchaseOrderPage({
     claims.user_role === "warehouse_manager" ||
     claims.user_role === "production_manager";
   const defaultBranchId =
+    routeBranchId ??
     (isBranchScoped ? claims.branch_id : scopeProcurementBranchId) ??
     procBranches[0]?.id ??
     null;
@@ -78,8 +90,16 @@ export default async function NewPurchaseOrderPage({
       initialSuggestions={suggestions}
       procurementBranches={branchOptions}
       initialBranchId={defaultBranchId}
-      canSwitchBranch={!isBranchScoped}
-      poBasePath="/inventory/purchase-orders"
+      canSwitchBranch={routeBranchId == null && !isBranchScoped}
+      poBasePath={poBasePath}
     />
   );
+}
+
+export default async function NewPurchaseOrderPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  return <NewPurchaseOrderPageContent searchParams={searchParams} />;
 }

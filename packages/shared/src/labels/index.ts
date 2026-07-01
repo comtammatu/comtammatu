@@ -11,6 +11,7 @@ export {
   NAV_GROUP_LABELS_VI,
   PAYROLL_PERIOD_STATUS_LABELS_VI,
   CONSUMPTION_REPORT_STATUS_LABELS_VI,
+  INVENTORY_STATUS_LABELS_VI,
   getModuleLabelVi,
   getInventorySiteKindLabelVi,
   getInventorySiteLabelVi,

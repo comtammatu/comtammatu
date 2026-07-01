@@ -1,15 +1,7 @@
 "use client";
 
+import { PwaInstallHelpDialog } from "@/components/pwa-install-help-dialog";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
 import {
   Download as IconDownload,
   RefreshCw as IconRefreshCw,
@@ -248,28 +240,14 @@ export function OperationalPwaToolbar({
           </Button>
         ) : null}
       </div>
-      <Dialog open={iosDialogOpen} onOpenChange={setIosDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{copy.iosDialogTitle}</DialogTitle>
-            <DialogDescription>{copy.iosDialogDescription}</DialogDescription>
-          </DialogHeader>
-          <ol className="grid gap-2 text-sm leading-relaxed">
-            {copy.iosSteps.map((step, index) => (
-              <li key={step}>
-                {index + 1}. {step}
-              </li>
-            ))}
-          </ol>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                {copy.close}
-              </Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PwaInstallHelpDialog
+        open={iosDialogOpen}
+        onOpenChange={setIosDialogOpen}
+        title={copy.iosDialogTitle}
+        description={copy.iosDialogDescription}
+        steps={copy.iosSteps}
+        closeLabel={copy.close}
+      />
     </>
   );
 }

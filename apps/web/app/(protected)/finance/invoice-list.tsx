@@ -2,7 +2,8 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: legacy inline Vietnamese copy in finance invoice list */
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { z } from "zod";
 import {
   ArrowRightLeft as IconSwap,
   Download as IconDownload,
@@ -14,19 +15,9 @@ import {
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
-import { Textarea } from "@comtammatu/ui/components/textarea";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@comtammatu/ui/components/alert-dialog";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { formatVND } from "@comtammatu/shared/format";
 import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
@@ -48,6 +39,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { FormDialog, TextareaField, TextField } from "@/components/form";
 import {
   Item,
   ItemContent,
@@ -57,7 +49,14 @@ import {
 import { DescriptionList } from "@/components/surface";
 import { formatVNDateTime, getVNDateString } from "@/_lib/format-datetime";
 
-import { FINANCE_VI, FORM_VI, ORDER_VI, POS_VI } from "@comtammatu/shared/messages";
+import {
+  FINANCE_VI,
+  FORM_VI,
+  ORDER_VI,
+  POS_VI,
+  VALIDATION_VI,
+} from "@comtammatu/shared/messages";
+import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
 import { StatusBadge } from "@/components/status-badge";
 
@@ -86,6 +85,53 @@ const REPLACE_REASON_MIN = 20;
 const REPLACE_REASON_MAX = 255;
 const REPLACE_AGREEMENT_MAX = 225;
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
+
+const replaceInvoiceSchema = z
+  .object({
+    reason: z
+      .string()
+      .trim()
+      .min(REPLACE_REASON_MIN, {
+        error: `Lý do thay thế tối thiểu ${REPLACE_REASON_MIN} ký tự`,
+      })
+      .max(REPLACE_REASON_MAX, {
+        error: `Lý do thay thế tối đa ${REPLACE_REASON_MAX} ký tự`,
+      }),
+    agreementRef: z
+      .string()
+      .trim()
+      .min(1, { error: VALIDATION_VI.required(FINANCE_VI.agreementDocLabel) })
+      .max(REPLACE_AGREEMENT_MAX, {
+        error: `Văn bản thỏa thuận tối đa ${REPLACE_AGREEMENT_MAX} ký tự`,
+      }),
+    agreementDate: z
+      .string()
+      .min(1, { error: VALIDATION_VI.required(FINANCE_VI.agreementDateLabel) }),
+    buyerName: z.string().trim().max(200, {
+      error: "Tên người mua tối đa 200 ký tự",
+    }),
+    buyerTaxCode: z
+      .string()
+      .trim()
+      .refine((value) => value.length === 0 || MST_REGEX.test(value), {
+        error: FINANCE_VI.taxCodeFormatError,
+      }),
+    buyerAddress: z.string().trim().max(500, {
+      error: "Địa chỉ tối đa 500 ký tự",
+    }),
+  })
+  .refine((values) => !values.buyerTaxCode || values.buyerName.length > 0, {
+    path: ["buyerName"],
+    error: "Tên người mua không được để trống khi có MST",
+  });
+
+type ReplaceInvoiceFormValues = z.infer<typeof replaceInvoiceSchema>;
+
+type ReplaceInvoiceResultData = {
+  new_id?: number;
+  new_invoice_number?: string | null;
+  new_status?: string;
+} | null;
 
 function todayISODate(): string {
   return getVNDateString();
@@ -118,88 +164,61 @@ export function InvoiceList({
   const [isPending, startTransition] = useTransition();
   const [resyncingId, setResyncingId] = useState<number | null>(null);
   const [reissuingId, setReissuingId] = useState<number | null>(null);
-  const [reissueAllOpen, setReissueAllOpen] = useState(false);
   const [replaceTarget, setReplaceTarget] = useState<InvoiceRow | null>(null);
-  const [replaceReason, setReplaceReason] = useState("");
-  const [replaceAgreementRef, setReplaceAgreementRef] = useState("");
-  const [replaceAgreementDate, setReplaceAgreementDate] =
-    useState(todayISODate());
-  const [replaceBuyerName, setReplaceBuyerName] = useState("");
-  const [replaceBuyerTaxCode, setReplaceBuyerTaxCode] = useState("");
-  const [replaceBuyerAddress, setReplaceBuyerAddress] = useState("");
-
-  const trimmedReplaceReason = replaceReason.trim();
-  const trimmedReplaceAgreementRef = replaceAgreementRef.trim();
-  const replaceReasonValid =
-    trimmedReplaceReason.length >= REPLACE_REASON_MIN &&
-    trimmedReplaceReason.length <= REPLACE_REASON_MAX;
-  const replaceAgreementValid =
-    trimmedReplaceAgreementRef.length > 0 &&
-    trimmedReplaceAgreementRef.length <= REPLACE_AGREEMENT_MAX;
-  const replaceMstValid =
-    !replaceBuyerTaxCode.trim() || MST_REGEX.test(replaceBuyerTaxCode.trim());
-  const replaceBuyerNameValid =
-    !replaceBuyerTaxCode.trim() || replaceBuyerName.trim().length > 0;
-  const replaceFormValid =
-    replaceReasonValid &&
-    replaceAgreementValid &&
-    replaceMstValid &&
-    replaceBuyerNameValid;
+  const replaceDefaultValues = useMemo<ReplaceInvoiceFormValues>(
+    () => ({
+      reason: "",
+      agreementRef: "",
+      agreementDate: todayISODate(),
+      buyerName: replaceTarget?.buyer_name ?? "",
+      buyerTaxCode: replaceTarget?.buyer_tax_code ?? "",
+      buyerAddress: "",
+    }),
+    [replaceTarget],
+  );
 
   function openReplaceDialog(inv: InvoiceRow) {
     setReplaceTarget(inv);
-    setReplaceReason("");
-    setReplaceAgreementRef("");
-    setReplaceAgreementDate(todayISODate());
-    setReplaceBuyerName(inv.buyer_name ?? "");
-    setReplaceBuyerTaxCode(inv.buyer_tax_code ?? "");
-    setReplaceBuyerAddress("");
   }
 
   function resetReplaceDialog() {
     setReplaceTarget(null);
-    setReplaceReason("");
-    setReplaceAgreementRef("");
-    setReplaceAgreementDate(todayISODate());
-    setReplaceBuyerName("");
-    setReplaceBuyerTaxCode("");
-    setReplaceBuyerAddress("");
   }
 
-  function handleReplace() {
-    if (!replaceTarget || !replaceFormValid) return;
+  async function handleReplace(
+    values: ReplaceInvoiceFormValues,
+  ): Promise<ActionResult> {
+    if (!replaceTarget) {
+      return { success: false, error: FINANCE_VI.replaceFailed };
+    }
     const oldId = replaceTarget.id;
-    startTransition(async () => {
-      const result = await replaceTaxInvoice({
-        originalId: oldId,
-        reason: trimmedReplaceReason,
-        agreementRef: trimmedReplaceAgreementRef,
-        agreementDate: replaceAgreementDate,
-        buyerName: replaceBuyerName.trim() || undefined,
-        buyerTaxCode: replaceBuyerTaxCode.trim() || undefined,
-        buyerAddress: replaceBuyerAddress.trim() || undefined,
-      });
-      if (!result.success) {
-        toast.error(result.error ?? FINANCE_VI.replaceFailed);
-        return;
-      }
-      const data = result.data as {
-        new_id?: number;
-        new_invoice_number?: string | null;
-        new_status?: string;
-      } | null;
-      toast.success(
-        `Đã tạo HĐ thay thế ${
-          data?.new_invoice_number ?? `#${data?.new_id ?? "?"}`
-        }`,
-      );
+
+    const result = await replaceTaxInvoice({
+      originalId: oldId,
+      reason: values.reason,
+      agreementRef: values.agreementRef,
+      agreementDate: values.agreementDate,
+      buyerName: values.buyerName || undefined,
+      buyerTaxCode: values.buyerTaxCode || undefined,
+      buyerAddress: values.buyerAddress || undefined,
+    });
+
+    if (result.success) {
       setInvoices((prev) =>
         prev.map((inv) =>
           inv.id === oldId ? { ...inv, status: "replaced" } : inv,
         ),
       );
-      resetReplaceDialog();
-    });
+    }
+
+    return result;
+  }
+
+  function handleReplaceSuccess(result: ActionResult) {
+    const data = result.data as ReplaceInvoiceResultData;
+    toast.success(
+      `Đã tạo HĐ thay thế ${data?.new_invoice_number ?? `#${data?.new_id ?? "?"}`}`,
+    );
   }
 
   const trimmedReason = cancelReason.trim();
@@ -437,7 +456,6 @@ export function InvoiceList({
           failed?: number;
           remaining?: number;
         } | null;
-        setReissueAllOpen(false);
         toast.success(
           messages.finance.invoiceList.reissueAllResult(
             d?.issued ?? 0,
@@ -451,6 +469,17 @@ export function InvoiceList({
         toast.error(messages.finance.invoiceList.reissueAllError);
       }
     });
+  }
+
+  async function handleConfirmReissueAll() {
+    const ok = await confirm({
+      title: messages.finance.invoiceList.reissueAllTitle,
+      description: messages.finance.invoiceList.reissueAllDescription(draftCount),
+      cancelText: messages.finance.invoiceList.reissueAllCancel,
+      confirmText: messages.finance.invoiceList.reissueAllConfirm,
+    });
+    if (!ok) return;
+    handleReissueAll();
   }
 
   function renderActions(inv: InvoiceRow, variant: "card" | "table") {
@@ -654,7 +683,7 @@ export function InvoiceList({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setReissueAllOpen(true)}
+              onClick={handleConfirmReissueAll}
               disabled={isPending}
             >
               <IconRefreshCw className="size-4" />
@@ -735,298 +764,223 @@ export function InvoiceList({
         ) : null}
       </div>
 
-      <AlertDialog
+      <ReasonConfirmDialog
         open={!!cancelTarget}
         onOpenChange={(open) => !open && resetCancelDialog()}
+        title={FINANCE_VI.cancelConfirmTitle}
+        description={
+          <>
+            Hủy hóa đơn{" "}
+            <strong>
+              {cancelTarget?.invoice_number ?? `#${cancelTarget?.id}`}
+            </strong>
+            ? {FINANCE_VI.cancelIrreversibleHint}
+          </>
+        }
+        reasonId="invoice-cancel-reason"
+        reason={cancelReason}
+        onReasonChange={setCancelReason}
+        reasonLabel={`Lý do hủy (tối thiểu ${CANCEL_REASON_MIN} ký tự)`}
+        reasonPlaceholder={FINANCE_VI.cancelReasonPlaceholder}
+        reasonMinLength={CANCEL_REASON_MIN}
+        reasonTextareaProps={{
+          rows: 3,
+          maxLength: CANCEL_REASON_MAX,
+          disabled: isPending,
+        }}
+        cancelLabel="Không"
+        cancelDisabled={isPending}
+        confirmLabel={FINANCE_VI.cancelInvoice}
+        confirmVariant="destructive"
+        canConfirm={reasonValid}
+        isPending={isPending}
+        onConfirm={handleCancel}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{FINANCE_VI.cancelConfirmTitle}</AlertDialogTitle>
-            <AlertDialogDescription>
-              Hủy hóa đơn{" "}
-              <strong>
-                {cancelTarget?.invoice_number ?? `#${cancelTarget?.id}`}
-              </strong>
-              ? {FINANCE_VI.cancelIrreversibleHint}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="grid gap-2">
-            <Label htmlFor="invoice-cancel-reason">
-              Lý do hủy (tối thiểu {CANCEL_REASON_MIN} ký tự)
-            </Label>
-            <Textarea
-              id="invoice-cancel-reason"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder={FINANCE_VI.cancelReasonPlaceholder}
-              rows={3}
-              maxLength={CANCEL_REASON_MAX}
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              {trimmedReason.length}/{CANCEL_REASON_MAX}
-            </p>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Không</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancel}
-              disabled={isPending || !reasonValid}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {FINANCE_VI.cancelInvoice}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <Label htmlFor="invoice-cancel-reason">
+            Lý do hủy (tối thiểu {CANCEL_REASON_MIN} ký tự)
+          </Label>
+          <span className="text-muted-foreground">
+            {trimmedReason.length}/{CANCEL_REASON_MAX}
+          </span>
+        </div>
+      </ReasonConfirmDialog>
 
-      <AlertDialog
+      <ReasonConfirmDialog
         open={!!refundTarget}
         onOpenChange={(open) => !open && resetRefundDialog()}
+        title={messages.finance.invoiceList.refundDialogTitle}
+        description={messages.finance.invoiceList.refundWarning}
+        reasonId="invoice-refund-reason"
+        reason={refundReason}
+        onReasonChange={setRefundReason}
+        reasonLabel={messages.finance.invoiceList.refundReasonLabel(
+          REFUND_REASON_MIN,
+        )}
+        reasonPlaceholder={messages.finance.invoiceList.refundReasonPlaceholder}
+        reasonMinLength={REFUND_REASON_MIN}
+        reasonTextareaProps={{
+          rows: 3,
+          maxLength: REFUND_REASON_MAX,
+          disabled: isPending,
+        }}
+        cancelLabel={messages.finance.invoiceList.refundCancel}
+        cancelDisabled={isPending}
+        confirmLabel={messages.finance.invoiceList.refundConfirm}
+        confirmVariant="destructive"
+        canConfirm={refundReasonValid}
+        isPending={isPending}
+        onConfirm={handleRefund}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {messages.finance.invoiceList.refundDialogTitle}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {messages.finance.invoiceList.refundWarning}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <Label htmlFor="invoice-refund-reason">
+            {messages.finance.invoiceList.refundReasonLabel(REFUND_REASON_MIN)}
+          </Label>
+          <span className="text-muted-foreground">
+            {trimmedRefundReason.length}/{REFUND_REASON_MAX}
+          </span>
+        </div>
+      </ReasonConfirmDialog>
+
+      <ReasonConfirmDialog
+        open={!!methodFixTarget}
+        onOpenChange={(open) => !open && resetMethodFixDialog()}
+        title={messages.finance.invoiceList.methodFixDialogTitle}
+        description={messages.finance.invoiceList.methodFixWarning}
+        reasonId="invoice-methodfix-reason"
+        reason={methodFixReason}
+        onReasonChange={setMethodFixReason}
+        reasonLabel={messages.finance.invoiceList.methodFixReasonLabel(
+          REFUND_REASON_MIN,
+        )}
+        reasonPlaceholder={
+          messages.finance.invoiceList.methodFixReasonPlaceholder
+        }
+        reasonMinLength={REFUND_REASON_MIN}
+        reasonTextareaProps={{
+          rows: 3,
+          maxLength: REFUND_REASON_MAX,
+          disabled: isPending,
+        }}
+        cancelLabel={messages.finance.invoiceList.methodFixCancel}
+        cancelDisabled={isPending}
+        confirmLabel={messages.finance.invoiceList.methodFixConfirm}
+        canConfirm={methodFixValid}
+        isPending={isPending}
+        onConfirm={handleMethodFix}
+      >
+        <div className="grid gap-3">
           <div className="grid gap-2">
-            <Label htmlFor="invoice-refund-reason">
-              {messages.finance.invoiceList.refundReasonLabel(
+            <Label>{messages.finance.invoiceList.methodFixNewLabel}</Label>
+            <div className="flex gap-2">
+              {METHOD_OPTIONS.map((m) => (
+                <Button
+                  key={m}
+                  type="button"
+                  variant={methodFixMethod === m ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setMethodFixMethod(m)}
+                  disabled={isPending}
+                >
+                  {PAYMENT_METHOD_LABELS_VI[m]}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-3 text-xs">
+            <Label htmlFor="invoice-methodfix-reason">
+              {messages.finance.invoiceList.methodFixReasonLabel(
                 REFUND_REASON_MIN,
               )}
             </Label>
-            <Textarea
-              id="invoice-refund-reason"
-              value={refundReason}
-              onChange={(e) => setRefundReason(e.target.value)}
-              placeholder={messages.finance.invoiceList.refundReasonPlaceholder}
-              rows={3}
-              maxLength={REFUND_REASON_MAX}
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              {trimmedRefundReason.length}/{REFUND_REASON_MAX}
-            </p>
+            <span className="text-muted-foreground">
+              {trimmedMethodFixReason.length}/{REFUND_REASON_MAX}
+            </span>
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>
-              {messages.finance.invoiceList.refundCancel}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRefund}
-              disabled={isPending || !refundReasonValid}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {messages.finance.invoiceList.refundConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        </div>
+      </ReasonConfirmDialog>
 
-      <AlertDialog
-        open={!!methodFixTarget}
-        onOpenChange={(open) => !open && resetMethodFixDialog()}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {messages.finance.invoiceList.methodFixDialogTitle}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {messages.finance.invoiceList.methodFixWarning}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="grid gap-3">
-            <div className="grid gap-2">
-              <Label>{messages.finance.invoiceList.methodFixNewLabel}</Label>
-              <div className="flex gap-2">
-                {METHOD_OPTIONS.map((m) => (
-                  <Button
-                    key={m}
-                    type="button"
-                    variant={methodFixMethod === m ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setMethodFixMethod(m)}
-                    disabled={isPending}
-                  >
-                    {PAYMENT_METHOD_LABELS_VI[m]}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="invoice-methodfix-reason">
-                {messages.finance.invoiceList.methodFixReasonLabel(
-                  REFUND_REASON_MIN,
-                )}
-              </Label>
-              <Textarea
-                id="invoice-methodfix-reason"
-                value={methodFixReason}
-                onChange={(e) => setMethodFixReason(e.target.value)}
-                placeholder={
-                  messages.finance.invoiceList.methodFixReasonPlaceholder
-                }
-                rows={3}
-                maxLength={REFUND_REASON_MAX}
-                disabled={isPending}
-              />
-              <p className="text-xs text-muted-foreground">
-                {trimmedMethodFixReason.length}/{REFUND_REASON_MAX}
-              </p>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>
-              {messages.finance.invoiceList.methodFixCancel}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleMethodFix}
-              disabled={isPending || !methodFixValid}
-            >
-              {messages.finance.invoiceList.methodFixConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
+      <FormDialog
         open={!!replaceTarget}
-        onOpenChange={(open) => !open && resetReplaceDialog()}
+        onOpenChange={(open) => {
+          if (!open) resetReplaceDialog();
+        }}
+        title={FINANCE_VI.replaceConfirmTitle}
+        description={`Tạo HĐ thay thế cho ${
+          replaceTarget?.invoice_number ?? `#${replaceTarget?.id}`
+        }. HĐ gốc sẽ chuyển sang trạng thái "Đã thay thế". Cần văn bản thỏa thuận với người mua theo TT78 §7.`}
+        schema={replaceInvoiceSchema}
+        defaultValues={replaceDefaultValues}
+        entityKey={replaceTarget?.id ?? "replace-invoice"}
+        onSubmit={handleReplace}
+        onSuccess={handleReplaceSuccess}
+        submitLabel={FINANCE_VI.createReplacementInvoice}
+        cancelLabel="Không"
+        contentClassName="max-w-lg"
       >
-        <AlertDialogContent className="max-w-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{FINANCE_VI.replaceConfirmTitle}</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tạo HĐ thay thế cho{" "}
-              <strong>
-                {replaceTarget?.invoice_number ?? `#${replaceTarget?.id}`}
-              </strong>
-              . HĐ gốc sẽ chuyển sang trạng thái &quot;Đã thay thế&quot;. Cần
-              văn bản thỏa thuận với người mua theo TT78 §7.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="grid gap-3">
-            <div className="grid gap-2">
-              <Label htmlFor="replace-reason">
-                Lý do thay thế (≥{REPLACE_REASON_MIN} ký tự)
-              </Label>
-              <Textarea
+        {(form) => {
+          const reasonLength = form.watch("reason").trim().length;
+
+          return (
+            <>
+              <TextareaField
+                control={form.control}
+                name="reason"
                 id="replace-reason"
-                value={replaceReason}
-                onChange={(e) => setReplaceReason(e.target.value)}
+                label={`Lý do thay thế (tối thiểu ${REPLACE_REASON_MIN} ký tự)`}
                 placeholder={FINANCE_VI.replaceReasonPlaceholder}
+                description={`${reasonLength}/${REPLACE_REASON_MAX}`}
                 rows={3}
                 maxLength={REPLACE_REASON_MAX}
-                disabled={isPending}
+                required
               />
-              <p className="text-xs text-muted-foreground">
-                {trimmedReplaceReason.length}/{REPLACE_REASON_MAX}
-              </p>
-            </div>
-            <div className="grid gap-2 md:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="replace-agreement-ref">
-                  {FINANCE_VI.agreementDocLabel}
-                </Label>
-                <Input
+              <div className="grid gap-2 md:grid-cols-2">
+                <TextField
+                  control={form.control}
+                  name="agreementRef"
                   id="replace-agreement-ref"
-                  value={replaceAgreementRef}
-                  onChange={(e) => setReplaceAgreementRef(e.target.value)}
+                  label={FINANCE_VI.agreementDocLabel}
                   placeholder={FINANCE_VI.agreementDocPlaceholder}
                   maxLength={REPLACE_AGREEMENT_MAX}
-                  disabled={isPending}
+                  required
                 />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="replace-agreement-date">{FINANCE_VI.agreementDateLabel}</Label>
-                <Input
+                <TextField
+                  control={form.control}
+                  name="agreementDate"
                   id="replace-agreement-date"
+                  label={FINANCE_VI.agreementDateLabel}
                   type="date"
-                  value={replaceAgreementDate}
-                  onChange={(e) => setReplaceAgreementDate(e.target.value)}
                   max={todayISODate()}
-                  disabled={isPending}
+                  required
                 />
               </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="replace-buyer-name">{FINANCE_VI.buyerNameLabel}</Label>
-              <Input
+              <TextField
+                control={form.control}
+                name="buyerName"
                 id="replace-buyer-name"
-                value={replaceBuyerName}
-                onChange={(e) => setReplaceBuyerName(e.target.value)}
+                label={FINANCE_VI.buyerNameLabel}
                 maxLength={200}
-                disabled={isPending}
               />
-            </div>
-            <div className="grid gap-2 md:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="replace-buyer-mst">{FINANCE_VI.buyerTaxCodeLabel}</Label>
-                <Input
+              <div className="grid gap-2 md:grid-cols-2">
+                <TextField
+                  control={form.control}
+                  name="buyerTaxCode"
                   id="replace-buyer-mst"
-                  value={replaceBuyerTaxCode}
-                  onChange={(e) => setReplaceBuyerTaxCode(e.target.value)}
+                  label={FINANCE_VI.buyerTaxCodeLabel}
                   placeholder={FINANCE_VI.buyerTaxCodePlaceholder}
-                  disabled={isPending}
                 />
-                {replaceBuyerTaxCode.trim() && !replaceMstValid ? (
-                  <p className="text-xs text-destructive">
-                    {FINANCE_VI.taxCodeFormatError}
-                  </p>
-                ) : null}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="replace-buyer-address">{POS_VI.addressLabel}</Label>
-                <Input
+                <TextField
+                  control={form.control}
+                  name="buyerAddress"
                   id="replace-buyer-address"
-                  value={replaceBuyerAddress}
-                  onChange={(e) => setReplaceBuyerAddress(e.target.value)}
+                  label={POS_VI.addressLabel}
                   maxLength={500}
-                  disabled={isPending}
                 />
               </div>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Không</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleReplace}
-              disabled={isPending || !replaceFormValid}
-            >
-              {FINANCE_VI.createReplacementInvoice}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={reissueAllOpen}
-        onOpenChange={(open) => !open && setReissueAllOpen(false)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {messages.finance.invoiceList.reissueAllTitle}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {messages.finance.invoiceList.reissueAllDescription(draftCount)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>
-              {messages.finance.invoiceList.reissueAllCancel}
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleReissueAll} disabled={isPending}>
-              {messages.finance.invoiceList.reissueAllConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </>
+          );
+        }}
+      </FormDialog>
     </>
   );
 }

@@ -1,3 +1,5 @@
+import { notFound } from "next/navigation";
+import { loadAuthState } from "@/_lib/auth";
 import {
   fetchApAging,
   fetchConsumptionVariance,
@@ -12,6 +14,7 @@ import {
 import { ReportsClient } from "./reports-client";
 import type { ApAgingItem, VarianceItem } from "./reports-client";
 import type { InventorySemanticColor } from "../_lib/ui";
+import { resolveInventoryBranchScope } from "../_lib/inventory-scope";
 
 type MovementSummaryItem = {
   label: string;
@@ -60,16 +63,37 @@ function calculateTrendDeltaPct(trend: number[]) {
   return Number((((current - previous) / previous) * 100).toFixed(1));
 }
 
-export default async function ReportsPage() {
+interface ReportsPageContentProps {
+  routeBranchId?: number;
+  embedded?: boolean;
+}
+
+export async function ReportsPageContent({
+  routeBranchId,
+  embedded = false,
+}: ReportsPageContentProps = {}) {
   const startDate = getVNMonthStartDateString();
   const endDate = getVNDateString();
   const trendStartDate = getVNMonthSequenceBack(12).at(-1)?.date ?? startDate;
+  if (routeBranchId != null) {
+    const { supabase, claims } = await loadAuthState();
+    const scope = await resolveInventoryBranchScope(
+      supabase,
+      claims,
+      routeBranchId,
+    );
+    if (scope.selectedBranchId !== routeBranchId) notFound();
+  }
 
   const [apRes, varRes, movementRes, foodCostRes] = await Promise.all([
     fetchApAging(),
-    fetchConsumptionVariance({ startDate, endDate }),
-    fetchStockMovementReport({ startDate, endDate }),
-    fetchFoodCost({ startDate: trendStartDate, endDate }),
+    fetchConsumptionVariance({ startDate, endDate, branchId: routeBranchId }),
+    fetchStockMovementReport({ startDate, endDate, branchId: routeBranchId }),
+    fetchFoodCost({
+      startDate: trendStartDate,
+      endDate,
+      branchId: routeBranchId,
+    }),
   ]);
 
   let apAging: ApAgingItem[] = [];
@@ -200,6 +224,11 @@ export default async function ReportsPage() {
       foodCostTrend={foodCostTrend}
       foodCostTrendAvailable={foodCostTrendAvailable}
       foodCostTrendDeltaPct={foodCostTrendDeltaPct}
+      supplierInvoicesHref={embedded ? null : "/inventory/supplier-invoices"}
     />
   );
+}
+
+export default async function ReportsPage() {
+  return <ReportsPageContent />;
 }

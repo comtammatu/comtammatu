@@ -6,8 +6,8 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 
 - Agent entrypoint: `AGENTS.md`
 - Skill/plugin/tool routing: `docs/agent/rules/skills.md`
-- Multi-agent team loop + Codex orchestration: `docs/agent/rules/team.md`
-- Orchestration routing + context budget + anti-repeat loop: `docs/agent/rules/orchestration.md`
+- Optional T3 / cross-runtime team loop: `docs/agent/rules/team.md`
+- Optional subagent / multi-agent routing: `docs/agent/rules/orchestration.md`
 - Codebase map + module index: `docs/CODEBASE_MAP.md`
 - Auth & ACL: `docs/modules/auth.md`
 - Database: `docs/modules/database.md`
@@ -21,20 +21,25 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 
 ## Agent Entrypoints Per IDE
 
-Supported runtimes are **Claude Code** and **Codex**. Each loads its own
-entrypoint and wires the same canonical prod-DB guard; adding another IDE means
-adding an adapter, not duplicating rules.
+Registered runtime adapters are **Claude Code** and **Codex**. Each loads its
+own entrypoint and wires the same canonical prod-DB guard. Root adapter
+directories such as `.claude/`, `.codex/`, `.cursor/`, and `.agents/` are
+allowed when they wire tools back to this repo's rules instead of becoming a
+second source of truth. Adding another IDE means adding an adapter, not
+duplicating rules.
 
 | IDE         | Auto-loaded entrypoint           | MCP config           | Prod-DB guard adapter                                 |
 | ----------- | -------------------------------- | -------------------- | ----------------------------------------------------- |
 | Claude Code | `CLAUDE.md` (shim → `AGENTS.md`) | `.mcp.json`          | `.claude/settings.json` → `scripts/guard-prod-db.mjs` |
 | Codex       | `AGENTS.md` (native)             | `.codex/config.toml` | `.codex/hooks.json` → `scripts/guard-prod-db.mjs`     |
+| Cursor      | adapter-local pointer to `AGENTS.md` | adapter-specific | add adapter + register in `scripts/check-guard-sync.mjs` before write-capable DB/tool use |
 
 `scripts/guard-prod-db.mjs` is the single guard; the adapter configs only wire it
 per runtime. `corepack pnpm lint:guard-sync` enforces that every adapter in `ADAPTER_PATHS`
 (`scripts/check-guard-sync.mjs`) wires the canonical hook with matching matchers.
 A new IDE without a registered adapter runs **UNGUARDED against the production
 DB** — add the adapter and register it in `check-guard-sync.mjs` before using it.
+Until then, keep production-affecting tools read-only in that IDE adapter.
 
 Per-user toolsets are not repo-pinned: the reproducible Claude plugin set lives in
 `.claude/settings.json`, while `gstack` QA/review/deploy skills are self-installed

@@ -29,7 +29,7 @@ import {
   InventoryPageContent,
 } from "../_components/inventory-page-layout";
 import { InteractiveCard } from "../_components/interactive-card";
-import { StatusBadge } from "../_components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
 import { SupplierDialog } from "./supplier-dialog";
 import type { SupplierRow } from "./supplier-dialog";
@@ -100,7 +100,8 @@ function SupplierMobileCard({
           </div>
         </div>
         <StatusBadge
-          status={supplier.is_active ? "active" : "suspended"}
+          domain="inventory"
+          value={supplier.is_active ? "active" : "suspended"}
           size="sm"
         />
       </div>
@@ -234,7 +235,11 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
       key: "status",
       header: FORM_VI.status,
       render: (s) => (
-        <StatusBadge status={s.is_active ? "active" : "suspended"} size="sm" />
+        <StatusBadge
+          domain="inventory"
+          value={s.is_active ? "active" : "suspended"}
+          size="sm"
+        />
       ),
     },
     {

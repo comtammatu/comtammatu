@@ -8,12 +8,13 @@ import {
   Item,
   ItemActions,
   ItemContent,
+  ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { Label } from "@comtammatu/ui/components/label";
+import { FieldLabel } from "@comtammatu/ui/components/field";
 import {
   Tabs,
   TabsList,
@@ -143,7 +144,6 @@ export function ItemCustomizer({
     [],
   );
 
-  // Reset state when item prop changes
   useEffect(() => {
     if (item) {
       resetStateForItem(item, initialCartItem);
@@ -374,7 +374,6 @@ export function ItemCustomizer({
 
             <ScrollArea className="flex-1">
               <div className="flex flex-col gap-4 px-4 pb-4">
-                {/* Variants */}
                 {item.menu_item_variants.length > 0 && (
                   <div>
                     <h3 className="font-heading mb-2 text-base font-semibold">
@@ -389,8 +388,9 @@ export function ItemCustomizer({
                             key={v.id}
                             type="button"
                             variant={isSelected ? "default" : "outline"}
+                            size="touch"
                             className={cn(
-                              "h-auto justify-start px-3 py-2 text-base whitespace-normal",
+                              "justify-start text-base whitespace-normal",
                               isSelected ? "font-medium" : "hover:bg-accent",
                             )}
                             onClick={() => setSelectedVariant(v)}
@@ -406,13 +406,12 @@ export function ItemCustomizer({
                   </div>
                 )}
 
-                {/* Modifiers */}
                 {item.menu_item_modifiers.length > 0 && (
                   <div>
                     <h3 className="font-heading mb-2 text-base font-semibold">
                       {ACTIONS_VI.add}
                     </h3>
-                    <div className="flex flex-col gap-2">
+                    <ItemGroup className="gap-2">
                       {item.menu_item_modifiers.map((m) => (
                         <Item
                           key={m.id}
@@ -420,7 +419,7 @@ export function ItemCustomizer({
                           variant="outline"
                           className="cursor-pointer hover:bg-accent"
                         >
-                          <Label
+                          <FieldLabel
                             htmlFor={`modifier-${m.id}`}
                             className="flex items-center gap-3 w-full font-normal cursor-pointer"
                           >
@@ -439,20 +438,19 @@ export function ItemCustomizer({
                                 +{formatVND(m.price)}
                               </span>
                             </ItemActions>
-                          </Label>
+                          </FieldLabel>
                         </Item>
                       ))}
-                    </div>
+                    </ItemGroup>
                   </div>
                 )}
 
-                {/* Available Sides */}
                 {item.menu_item_available_sides.length > 0 && (
                   <div>
                     <h3 className="font-heading mb-2 text-base font-semibold">
                       {messages.pos.customizer.sides}
                     </h3>
-                    <div className="flex flex-col gap-2">
+                    <ItemGroup className="gap-2">
                       {item.menu_item_available_sides.map((s) => {
                         const sideQuantity = selectedSideQuantities.get(
                           s.side_item.id,
@@ -475,7 +473,7 @@ export function ItemCustomizer({
                               onCheckedChange={() => toggleSide(s.side_item.id)}
                             />
                             <div className="min-w-0 flex-1">
-                              <Label
+                              <FieldLabel
                                 htmlFor={`side-${String(s.id)}`}
                                 className="block cursor-pointer text-base leading-snug font-normal whitespace-normal"
                               >
@@ -487,7 +485,7 @@ export function ItemCustomizer({
                                     {messages.pos.customizer.defaultSide}
                                   </span>
                                 )}
-                              </Label>
+                              </FieldLabel>
                               <span className="mt-1 block text-base font-medium tabular-nums text-muted-foreground">
                                 +{formatVND(sideLineTotal)}
                               </span>
@@ -533,18 +531,17 @@ export function ItemCustomizer({
                           </Item>
                         );
                       })}
-                    </div>
+                    </ItemGroup>
                   </div>
                 )}
 
-                {/* Note */}
                 <div>
-                  <Label
+                  <FieldLabel
                     htmlFor="item-note"
                     className="mb-2 text-base font-semibold"
                   >
                     {FORM_VI.notes}
-                  </Label>
+                  </FieldLabel>
                   <QuickReasonChips
                     presets={ITEM_NOTE_PRESETS}
                     value={note}
@@ -562,18 +559,16 @@ export function ItemCustomizer({
                   />
                 </div>
 
-                {/* Per-item discount. Hidden in edit-sent: an item already
-                    sent to the kitchen is discounted via the post-hoc
-                    "Chiết khấu món" flow, not here. */}
+                {/* Per-item discount stays out of edit-sent; sent items use the post-hoc item-discount flow. */}
                 {mode !== "edit-sent" && (
                   <div>
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <Label
+                      <FieldLabel
                         htmlFor="item-discount-toggle"
                         className="text-base font-semibold"
                       >
                         {messages.pos.customizer.discountLabel}
-                      </Label>
+                      </FieldLabel>
                       <Checkbox
                         id="item-discount-toggle"
                         checked={discountEnabled}
@@ -651,7 +646,6 @@ export function ItemCustomizer({
               </div>
             </ScrollArea>
 
-            {/* Footer */}
             <Separator />
             <div className="flex items-center justify-between gap-3 p-4">
               <div>

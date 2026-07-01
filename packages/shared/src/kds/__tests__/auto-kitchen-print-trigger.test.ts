@@ -25,6 +25,8 @@ const cleanupMigrationPath =
   "supabase/migrations/_archive/20260602001000_drop_kds_auto_print_trigger_function.sql";
 const nonKdsDispatchMigrationPath =
   "supabase/migrations/_archive/20260602002000_non_kds_dispatch_print_on_pos_send.sql";
+const routePolicyMigrationPath =
+  "supabase/migrations/20260701065350_pos_kitchen_print_route_policy.sql";
 
 test("KDS ticket creation no longer auto-enqueues kitchen print jobs", () => {
   const src = `${read(migrationPath)}\n${read(cleanupMigrationPath)}`;
@@ -173,5 +175,38 @@ test("printer-only categories print at POS dispatch without entering food KDS", 
     src,
     /UPDATE public\.order_items[\s\S]*SET sent_to_kitchen_at = COALESCE\(sent_to_kitchen_at, now\(\)\)/,
     "printer-only dispatch must advance the existing print cursor",
+  );
+});
+
+test("non-KDS items use kitchen printer routing without category-type hardcode", () => {
+  const migration = read(routePolicyMigrationPath);
+  const printActions = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/print-actions.ts",
+  );
+
+  assert.match(
+    migration,
+    /LEFT JOIN public\.printer_menu_categories pmc[\s\S]*FROM public\.printer_menu_categories pmc_any/,
+    "route function must use category-specific or default kitchen printer routing",
+  );
+  assert.match(
+    migration,
+    /v_station_id IS NULL AND v_has_printer_route[\s\S]*CONTINUE;/,
+    "printer-routed items must be skipped from KDS ticket creation",
+  );
+  assert.match(
+    migration,
+    /:non-kds-dispatch:printer:/,
+    "printer-routed items must enqueue kitchen-ticket print jobs at POS dispatch",
+  );
+  assert.doesNotMatch(
+    migration,
+    /category_type = 'drink'|mc\.type\s*(?:=|<>)/,
+    "routing must not depend on menu category type",
+  );
+  assert.match(
+    printActions,
+    /\.select\("id, kds_tickets\(id\)"\)[\s\S]*\(item\.kds_tickets \?\? \[\]\)\.length === 0/,
+    "POS partial-send warning must follow routing result instead of category type",
   );
 });

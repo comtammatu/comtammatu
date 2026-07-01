@@ -107,11 +107,11 @@ export async function loadInventoryDashboardData(
 
   // Sync gates first — short-circuit avoids unnecessary RPC fetches when
   // role/permission map already disqualifies the user.
-  const isOversightRole = claims.user_role === "owner";
+  const isOwner = claims.user_role === "owner";
   const procurementSyncOk =
-    !isOversightRole && canAccess(claims.user_role, "inventory_procurement");
+    isOwner || canAccess(claims.user_role, "inventory_procurement");
   const productionSyncOk =
-    claims.user_role !== "owner" && canAccessProductionSurface(claims.user_role);
+    isOwner || canAccessProductionSurface(claims.user_role);
 
   // Permission RPCs + branch scope are independent — fan them out in
   // parallel instead of awaiting them serially via &&. Saves 2-3 RTTs
@@ -125,10 +125,14 @@ export async function loadInventoryDashboardData(
     scope,
   ] = await Promise.all([
     procurementSyncOk
-      ? currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ)
+      ? isOwner
+        ? Promise.resolve(true)
+        : currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ)
       : Promise.resolve(false),
     productionSyncOk
-      ? currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS)
+      ? isOwner
+        ? Promise.resolve(true)
+        : currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS)
       : Promise.resolve(false),
     productionSyncOk
       ? hasCurrentProductionBranchAccess(supabase, claims)
@@ -137,9 +141,10 @@ export async function loadInventoryDashboardData(
     resolveInventoryBranchScope(supabase, claims, requestedBranchId),
   ]);
 
-  const showProcurement = procurementSyncOk && procurementAsync;
+  const showProcurement = isOwner || (procurementSyncOk && procurementAsync);
   const showProduction =
-    productionSyncOk && productionPermissionAsync && productionBranchAsync;
+    isOwner ||
+    (productionSyncOk && productionPermissionAsync && productionBranchAsync);
 
   const selectedBranch = scope.allowedBranches.find(
     (b) => b.id === scope.selectedBranchId,

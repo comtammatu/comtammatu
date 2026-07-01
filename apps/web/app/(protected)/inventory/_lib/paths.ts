@@ -18,8 +18,10 @@ export type InventoryPaths = {
   consumption: string;
   issues: string;
   suppliers: string;
+  ingredients: string;
   recipes: string;
   settings: string;
+  units: string;
 };
 
 function joinInventoryPath(base: InventoryRouteBase, segment: string): string {
@@ -46,7 +48,9 @@ export function getInventoryPaths(base: InventoryRouteBase): InventoryPaths {
     consumption: joinInventoryPath(base, "/consumption"),
     issues: joinInventoryPath(base, "/issues"),
     suppliers: joinInventoryPath(base, "/suppliers"),
+    ingredients: joinInventoryPath(base, "/ingredients"),
     recipes: joinInventoryPath(base, "/recipes"),
     settings: joinInventoryPath(base, "/settings"),
+    units: joinInventoryPath(base, "/settings/units"),
   };
 }

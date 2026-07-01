@@ -382,7 +382,7 @@ export function EmployeeStatusStrip({
             </ItemDescription>
             <ItemTitle
               className={cn(
-                "line-clamp-1 max-w-full text-sm font-semibold",
+                "max-w-full whitespace-normal break-words text-sm font-semibold leading-5",
                 item.mono && "font-mono tabular-nums",
                 item.muted ? "text-muted-foreground" : "text-foreground",
               )}
@@ -441,19 +441,24 @@ export function EmployeeDetailList({
 interface EmployeeActionListProps {
   children: ReactNode;
   columns?: 1 | 2;
+  mobileColumns?: 1 | 2;
   className?: string;
 }
 
 function EmployeeActionList({
   children,
   columns = 1,
+  mobileColumns = 1,
   className,
 }: EmployeeActionListProps) {
   return (
     <ItemGroup
       className={cn(
         "gap-2",
-        columns === 2 && "grid grid-cols-1 sm:grid-cols-2",
+        columns === 2 &&
+          (mobileColumns === 2
+            ? "grid grid-cols-2"
+            : "grid grid-cols-1 sm:grid-cols-2"),
         className,
       )}
     >
@@ -515,7 +520,7 @@ function EmployeeActionItem({
 }
 
 interface EmployeeActionSectionProps {
-  title: string;
+  title?: string;
   description?: string;
   links: Array<{
     key: string;
@@ -525,6 +530,7 @@ interface EmployeeActionSectionProps {
     description?: string;
   }>;
   columns?: 1 | 2;
+  mobileColumns?: 1 | 2;
   size?: "default" | "sm";
   className?: string;
 }
@@ -534,6 +540,7 @@ export function EmployeeActionSection({
   description,
   links,
   columns = 2,
+  mobileColumns = 1,
   size = "sm",
   className,
 }: EmployeeActionSectionProps) {
@@ -546,7 +553,7 @@ export function EmployeeActionSection({
       size={size}
       className={className}
     >
-      <EmployeeActionList columns={columns}>
+      <EmployeeActionList columns={columns} mobileColumns={mobileColumns}>
         {links.map((link) => (
           <EmployeeActionItem
             key={link.key}

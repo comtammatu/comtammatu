@@ -1,11 +1,8 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: menu item table keeps management copy inline */
-
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import {
-  Ellipsis as IconDots,
   Pencil as IconPencil,
   ToggleLeft as IconToggleLeft,
   ToggleRight as IconToggleRight,
@@ -16,14 +13,6 @@ import {
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@comtammatu/ui/components/dropdown-menu";
 import {
   Item,
   ItemActions,
@@ -43,6 +32,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { RowActionsMenu } from "@/components/row-actions-menu";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 export interface ItemRow {
@@ -110,38 +100,36 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
 
   function renderActions(item: ItemRow) {
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <IconDots className="size-4" />
-            <span className="sr-only">Menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setEditItem(item)}>
-            <IconPencil className="mr-2 size-4" />
-            Chỉnh sửa
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setDetailItem(item)}>
-            <IconSettings2 className="mr-2 size-4" />
-            Biến thể & Tùy chọn
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => void handleToggleActive(item)}>
-            {item.is_active ? (
-              <>
-                <IconToggleLeft className="mr-2 size-4" />
-                Vô hiệu hóa
-              </>
+      <RowActionsMenu
+        label="Menu"
+        triggerSize="icon"
+        triggerClassName="rounded-full"
+        items={[
+          {
+            key: "edit",
+            label: "Chỉnh sửa",
+            icon: <IconPencil data-icon="inline-start" />,
+            onSelect: () => setEditItem(item),
+          },
+          {
+            key: "detail",
+            label: "Biến thể & Tùy chọn",
+            icon: <IconSettings2 data-icon="inline-start" />,
+            onSelect: () => setDetailItem(item),
+          },
+          {
+            key: item.is_active ? "deactivate" : "activate",
+            label: item.is_active ? "Vô hiệu hóa" : "Kích hoạt",
+            icon: item.is_active ? (
+              <IconToggleLeft data-icon="inline-start" />
             ) : (
-              <>
-                <IconToggleRight className="mr-2 size-4" />
-                Kích hoạt
-              </>
-            )}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+              <IconToggleRight data-icon="inline-start" />
+            ),
+            separatorBefore: true,
+            onSelect: () => void handleToggleActive(item),
+          },
+        ]}
+      />
     );
   }
 

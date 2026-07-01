@@ -4,7 +4,6 @@ import { useMemo, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Warehouse as IconWarehouse } from "lucide-react";
 import { type StaffRole } from "@comtammatu/shared/auth";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { AppShell } from "@/components/app-shell";
 import { messages } from "@lib/messages";
 import { resolveInventoryNav } from "../_lib/inventory-nav";
@@ -36,6 +35,10 @@ function isStocktakeSessionPath(pathname: string | null): boolean {
   return segment !== "new" && segment !== "conflicts";
 }
 
+function isProductionPath(pathname: string | null): boolean {
+  return pathname === "/inventory/production";
+}
+
 export function InventoryShell({
   children,
   user,
@@ -54,7 +57,9 @@ export function InventoryShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const branchQuery = searchParams.get("branchId");
+  const productionPath = isProductionPath(pathname);
   const activeBranchId = useMemo(() => {
+    if (productionPath) return null;
     if (branchQuery) {
       const parsed = Number(branchQuery);
       if (
@@ -66,7 +71,7 @@ export function InventoryShell({
       }
     }
     return defaultBranchId;
-  }, [allowedBranches, branchQuery, defaultBranchId]);
+  }, [allowedBranches, branchQuery, defaultBranchId, productionPath]);
   const activeBranch = useMemo(
     () =>
       activeBranchId == null
@@ -75,8 +80,12 @@ export function InventoryShell({
           null),
     [activeBranchId, allowedBranches],
   );
-  const effectiveSiteName = activeBranch?.name ?? siteName;
-  const effectiveSiteKind = activeBranch?.branch_kind ?? siteKind;
+  const effectiveSiteName = productionPath
+    ? "Bếp Trung Tâm"
+    : (activeBranch?.name ?? siteName);
+  const effectiveSiteKind = productionPath
+    ? "central_kitchen"
+    : (activeBranch?.branch_kind ?? siteKind);
   // Primary tabs use the home branch, so they must not rebuild on URL branch
   // changes — keyed on userRole/defaultBranchId only.
   const tier1 = useMemo(
@@ -107,8 +116,7 @@ export function InventoryShell({
     ],
   );
 
-  const isMobile = useIsMobile();
-  const branchPickerLocked = isStocktakeSessionPath(pathname);
+  const branchPickerLocked = productionPath || isStocktakeSessionPath(pathname);
 
   const branchFilter =
     allowedBranches.length > 1 && !branchPickerLocked ? (
@@ -135,11 +143,7 @@ export function InventoryShell({
       defaultPageTitle={messages.inventory.shell.brandName}
       pageHeader={{
         headerExtras: branchFilter,
-        mobileTopBar: isMobile ? (
-          <MobileTopBar siteName={effectiveSiteName} />
-        ) : (
-          branchFilter
-        ),
+        mobileTopBar: <MobileTopBar siteName={effectiveSiteName} />,
       }}
     >
       {children}

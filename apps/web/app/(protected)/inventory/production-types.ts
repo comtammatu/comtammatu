@@ -95,7 +95,7 @@ export function getProductionReadinessSummary({
 
   const readinessMessage =
     readinessState === "missing-production-branch"
-      ? "Chưa có chi nhánh sản xuất nào được cấu hình."
+      ? "Chưa có Bếp Trung Tâm nào được cấu hình."
       : readinessState === "missing-finished-good"
         ? "Chưa có thành phẩm nào được gắn `item_kind = finished_good`, nên chưa thể tạo lệnh sản xuất."
         : readinessState === "missing-raw-material"

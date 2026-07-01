@@ -78,11 +78,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     surface: "admin",
     entryPath: MODULE_ACL.dashboard.path,
     matchPrefixes: ["/admin"],
-    moduleKeys: [
-      "dashboard",
-      "reports",
-      "settings",
-    ],
+    moduleKeys: ["dashboard", "reports", "settings"],
     primaryNav: "admin-sidebar",
     backBehavior: "none",
     breadcrumbRoot: APP_COPY_VI.adminSurface,
@@ -229,8 +225,8 @@ export const ROUTE_FAMILY_CONTRACTS = [
     entryPath: "/br/[branchId]/settings/menu-limits",
     matchPrefixes: ["/br/[branchId]/settings/menu-limits"],
     moduleKeys: ["branch_menu_limits"],
-    primaryNav: "management-sidebar",
-    backBehavior: "role-home",
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
     requiresBranchId: true,
   },
@@ -241,8 +237,8 @@ export const ROUTE_FAMILY_CONTRACTS = [
     entryPath: "/br/[branchId]/settings",
     matchPrefixes: ["/br/[branchId]/settings"],
     moduleKeys: ["branch_settings"],
-    primaryNav: "management-sidebar",
-    backBehavior: "role-home",
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
     requiresBranchId: true,
   },
@@ -253,8 +249,8 @@ export const ROUTE_FAMILY_CONTRACTS = [
     entryPath: "/br/[branchId]/dashboard",
     matchPrefixes: ["/br/[branchId]/dashboard"],
     moduleKeys: ["branch_dashboard"],
-    primaryNav: "management-sidebar",
-    backBehavior: "role-home",
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
     requiresBranchId: true,
   },
@@ -329,10 +325,7 @@ export function resolveRouteFamilyContract(
   const publicFamily =
     ROUTE_FAMILY_CONTRACTS.find((family) => family.id === "public") ?? null;
 
-  if (
-    isPublicAppPath(normalizedPathname) ||
-    normalizedPathname === "/login"
-  ) {
+  if (isPublicAppPath(normalizedPathname) || normalizedPathname === "/login") {
     return publicFamily;
   }
 

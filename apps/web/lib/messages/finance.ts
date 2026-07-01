@@ -179,8 +179,7 @@ export const finance = {
       inventoryValue: "Giá trị tồn kho",
       inventoryValueHint: "Giá trị tại thời điểm hiện tại",
       operatingExpense: "Chi vận hành",
-      operatingExpenseHint:
-        "Chi vận hành đã ghi nhận, không gồm giá vốn món",
+      operatingExpenseHint: "Chi vận hành đã ghi nhận, không gồm giá vốn món",
       grossProfit: "Lãi gộp",
       grossProfitHint: (foodCost: string, margin: string) =>
         `Giá vốn ${foodCost} · biên gộp ${margin}`,
@@ -201,6 +200,7 @@ export const finance = {
       inventoryValue: "Tồn kho",
       grossProfit: "Lãi gộp",
       revenue: "Doanh thu ròng",
+      bankTransactions: "Giao dịch ngân hàng",
       expenses: "Chi vận hành",
       invoices: "Hóa đơn điện tử",
       summary: "HĐ khách không lấy hóa đơn",
@@ -217,7 +217,8 @@ export const finance = {
     add: "Thêm khoản chi",
     totalLabel: "Tổng chi trong kỳ",
     totalHint: (count: string) => `${count} khoản đã ghi`,
-    foodCostReadonlyHint: "Tiêu hao thực tế từ kho · không tính vào chi vận hành",
+    foodCostReadonlyHint:
+      "Tiêu hao thực tế từ kho · không tính vào chi vận hành",
     tenantLevel: "Toàn quán",
     empty: {
       title: "Chưa có khoản chi trong kỳ",
@@ -292,6 +293,7 @@ export const finance = {
       cashOut: string,
     ) => `Tồn ${date}: ${opening} + thu ${cashIn} − chi ${cashOut}`,
     bankTitle: "Tài khoản ngân hàng",
+    bankTransactionsAction: "Giao dịch",
     bankNoOpening:
       "Chưa đặt số dư tài khoản ngân hàng. Cập nhật lại tồn quỹ và đếm cả tiền mặt lẫn ngân hàng cùng ngày.",
     bankBreakdown: (
@@ -301,8 +303,7 @@ export const finance = {
       bankOut: string,
     ) => `Tồn ${date}: ${opening} + thu CK ${bankIn} − chi CK ${bankOut}`,
     cashDeltaTitle: "Dòng tiền sau chi đã trả",
-    cashDeltaHint:
-      "Tiền đã thu trừ chi đã trả trong kỳ; dùng để đối soát quỹ.",
+    cashDeltaHint: "Tiền đã thu trừ chi đã trả trong kỳ; dùng để đối soát quỹ.",
     openingTitle: "Tồn quỹ đầu kỳ",
     openingDescription:
       "Đếm tiền mặt thực tế và số dư tài khoản ngân hàng cùng một ngày làm mốc. Hệ cộng tiền thu và trừ tiền chi từ ngày này để ra số dư hiện tại.",
@@ -311,6 +312,25 @@ export const finance = {
     openingDateLabel: "Ngày đếm đủ hai số dư",
     openingSubmit: "Lưu tồn quỹ",
     openingSuccess: "Đã lưu tồn quỹ đầu kỳ",
+  },
+  bankTransactions: {
+    eyebrow: "Tài chính",
+    title: "Giao dịch ngân hàng",
+    description: "Danh sách giao dịch SePay gửi về.",
+    listTitle: "Webhook SePay",
+    emptyTitle: "Chưa có giao dịch SePay",
+    emptyDescription: "Khi SePay gửi webhook hợp lệ, giao dịch sẽ hiện ở đây.",
+    moneyIn: "Cộng",
+    moneyOut: "Trừ",
+    account: "Tài khoản",
+    reference: "Mã tham chiếu",
+    noContent: "Không có nội dung",
+    status: {
+      processed: "Đã khớp",
+      ignored: "Đã ghi nhận",
+      failed: "Cần kiểm tra",
+      received: "Đã nhận",
+    },
   },
   revenueReport: {
     granularityLabel: {
@@ -427,8 +447,7 @@ export const finance = {
     },
     workQueue: {
       title: "Việc cần kiểm tra",
-      description:
-        "Các điểm vận hành cần nhìn sau báo cáo tiền đã thu.",
+      description: "Các điểm vận hành cần nhìn sau báo cáo tiền đã thu.",
       period: "Kỳ khóa sổ",
       invoicesAttention: "HĐĐT cần xử lý",
       invoicesAttentionHint: "Nháp, đang ký hoặc đã gửi nhưng chưa có mã CQT",
@@ -438,7 +457,8 @@ export const finance = {
       foodCostAlert: "Cảnh báo giá vốn món",
       thresholdHint: (percent: string) => `Ngưỡng ${percent}`,
       webhookFailures: "Lỗi đồng bộ thanh toán",
-      webhookFailuresHint: "Lỗi đồng bộ từ nhà cung cấp thanh toán trong kỳ hiện tại",
+      webhookFailuresHint:
+        "Lỗi đồng bộ từ nhà cung cấp thanh toán trong kỳ hiện tại",
     },
     periodStatus: {
       open: "Đang mở",

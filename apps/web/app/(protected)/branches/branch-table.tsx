@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import {
   Building as IconBuilding,
   ChefHat as IconChefHat,
-  Ellipsis as IconDots,
   Monitor as IconMonitor,
   MonitorUp as IconMonitorUp,
   Pencil as IconPencil,
@@ -16,14 +14,6 @@ import {
   ToggleRight as IconToggleRight,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@comtammatu/ui/components/dropdown-menu";
 import {
   InputGroup,
   InputGroupAddon,
@@ -47,6 +37,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { RowActionsMenu } from "@/components/row-actions-menu";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
@@ -99,69 +90,66 @@ export function BranchTable({ branches }: BranchTableProps) {
   }
 
   function BranchActions({ branch }: { branch: BranchRow }) {
+    const isActive = branch.is_active !== false;
+
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-lg">
-            <IconDots className="size-4" />
-            <span className="sr-only">Menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          {branch.is_active !== false && (
-            <>
-              <DropdownMenuItem asChild>
-                <Link href={`/br/${branch.id}/settings`}>
-                  <IconSliders className="mr-2 size-4" />
-                  {messages.settings.branch.hubTitle}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href={`/br/${branch.id}/pos`}>
-                  <IconMonitor className="mr-2 size-4" />
-                  {copy.openPos}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={`/br/${branch.id}/kds`}>
-                  <IconChefHat className="mr-2 size-4" />
-                  {copy.openKds}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={`/br/${branch.id}/runner`}>
-                  <IconMonitorUp className="mr-2 size-4" />
-                  {copy.openRunner}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-            </>
-          )}
-          <DropdownMenuItem onClick={() => setEditBranch(branch)}>
-            <IconPencil className="mr-2 size-4" />
-            {messages.settings.common.edit}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleToggleActive(branch)}>
-            {branch.is_active !== false ? (
-              <>
-                <IconToggleLeft className="mr-2 size-4" />
-                {copy.deactivate}
-              </>
+      <RowActionsMenu
+        items={[
+          ...(isActive
+            ? [
+                {
+                  key: "settings",
+                  label: messages.settings.branch.hubTitle,
+                  icon: <IconSliders data-icon="inline-start" />,
+                  href: `/br/${branch.id}/settings`,
+                },
+                {
+                  key: "pos",
+                  label: copy.openPos,
+                  icon: <IconMonitor data-icon="inline-start" />,
+                  href: `/br/${branch.id}/pos`,
+                  separatorBefore: true,
+                },
+                {
+                  key: "kds",
+                  label: copy.openKds,
+                  icon: <IconChefHat data-icon="inline-start" />,
+                  href: `/br/${branch.id}/kds`,
+                },
+                {
+                  key: "runner",
+                  label: copy.openRunner,
+                  icon: <IconMonitorUp data-icon="inline-start" />,
+                  href: `/br/${branch.id}/runner`,
+                },
+              ]
+            : []),
+          {
+            key: "edit",
+            label: messages.settings.common.edit,
+            icon: <IconPencil data-icon="inline-start" />,
+            separatorBefore: isActive,
+            onSelect: () => setEditBranch(branch),
+          },
+          {
+            key: isActive ? "deactivate" : "activate",
+            label: isActive ? copy.deactivate : copy.activate,
+            icon: isActive ? (
+              <IconToggleLeft data-icon="inline-start" />
             ) : (
-              <>
-                <IconToggleRight className="mr-2 size-4" />
-                {copy.activate}
-              </>
-            )}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setNetworkBranch(branch)}>
-            <IconShield className="mr-2 size-4" />
-            {copy.networkGateway}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+              <IconToggleRight data-icon="inline-start" />
+            ),
+            onSelect: () => void handleToggleActive(branch),
+          },
+          {
+            key: "network",
+            label: copy.networkGateway,
+            icon: <IconShield data-icon="inline-start" />,
+            separatorBefore: true,
+            onSelect: () => setNetworkBranch(branch),
+          },
+        ]}
+      />
     );
   }
 

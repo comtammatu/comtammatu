@@ -36,20 +36,20 @@ export function SimpleBarChart({
             {item.values.map((value, valueIndex) => {
               const pct = maxValue > 0 ? (value.value / maxValue) * 100 : 0;
               const color = resolveInventoryColorValue(value.color);
+              const radiusClass = [
+                valueIndex === 0 ? "rounded-t-md" : "",
+                valueIndex === item.values.length - 1 ? "rounded-b-md" : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
               return (
                 <div
                   key={`${item.label}-${valueIndex}`}
-                  className="w-full cursor-pointer transition-[transform,filter,opacity] duration-300 hover:-translate-y-0.5 hover:brightness-110"
+                  className={`w-full ${radiusClass}`}
                   style={{
                     height: `${pct}%`,
                     backgroundColor: color,
                     opacity: isLast(dataIndex) ? 1 : 0.25,
-                    borderRadius:
-                      valueIndex === 0
-                        ? "0.5rem 0.5rem 0 0"
-                        : valueIndex === item.values.length - 1
-                          ? "0 0 0.5rem 0.5rem"
-                          : "0",
                     minHeight: value.value > 0 ? 4 : 0,
                   }}
                 />

@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import {
   fetchStockTransfers,
@@ -10,22 +10,41 @@ import {
 } from "../_lib/inventory-scope";
 import type {
   BranchForTransfer,
+  TransferTab,
   TransferListRow,
 } from "./transfers-list-client";
 import { TransfersListClient } from "./transfers-list-client";
 
-export default async function TransfersPage({
-  searchParams,
-}: {
-  searchParams: Promise<{
+interface TransfersPageContentProps {
+  searchParams?: Promise<{
     branchId?: string | string[];
     create?: string | string[];
   }>;
-}) {
-  const params = await searchParams;
+  routeBranchId?: number;
+  basePath?: string;
+  createEnabled?: boolean;
+  initialTab?: TransferTab;
+  pageTitle?: string;
+  embedded?: boolean;
+}
+
+export async function TransfersPageContent({
+  searchParams,
+  routeBranchId,
+  basePath = "/inventory/transfers",
+  createEnabled = true,
+  initialTab = "receive",
+  pageTitle,
+  embedded = false,
+}: TransfersPageContentProps) {
+  const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
-  const requested = await resolveRequestedBranchId(params.branchId);
+  const requested =
+    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
+  if (routeBranchId != null && scope.selectedBranchId !== routeBranchId) {
+    notFound();
+  }
   // Sidebar-selected branch drives action context. For branch-scoped roles it
   // collapses to claims.branch_id; for owner it reflects the sidebar picker
   // (URL ?branchId=).
@@ -36,6 +55,9 @@ export default async function TransfersPage({
     : params.create;
 
   if (createParam === "cap-bep") {
+    if (routeBranchId != null) {
+      redirect(`/br/${routeBranchId}/stock`);
+    }
     const scopeQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
     redirect(`/inventory/consumption${scopeQuery}`);
   }
@@ -58,7 +80,22 @@ export default async function TransfersPage({
       branches={branches}
       userBranchId={userBranchId}
       userRole={claims.user_role}
-      basePath="/inventory/transfers"
+      basePath={basePath}
+      createEnabled={createEnabled}
+      initialTab={initialTab}
+      pageTitle={pageTitle}
+      embedded={embedded}
     />
   );
+}
+
+export default async function TransfersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    branchId?: string | string[];
+    create?: string | string[];
+  }>;
+}) {
+  return <TransfersPageContent searchParams={searchParams} />;
 }

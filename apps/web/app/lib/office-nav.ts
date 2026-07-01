@@ -17,17 +17,12 @@ import {
   canAccess,
   MODULE_ACL,
   resolveAdminNavGroups,
-  resolveBranchManagementItems,
   resolveWorkspaceItems,
   type ResolvedNavGroup,
   type ResolvedNavLink,
   type StaffRole,
 } from "@comtammatu/shared/auth";
-import {
-  APP_COPY_VI,
-  MODULE_LABELS_VI,
-  NAV_GROUP_LABELS_VI,
-} from "@comtammatu/shared/labels";
+import { APP_COPY_VI, MODULE_LABELS_VI } from "@comtammatu/shared/labels";
 import type { ShellNavGroup, ShellNavItem } from "./shell-primitives";
 
 // Unified office sidebar (D019 § A/D). Every Management route renders the same
@@ -70,10 +65,10 @@ function dedupeByHref(items: ShellNavItem[]): ShellNavItem[] {
 }
 
 // Primary sidebar tabs. Admin command routes collapse into one "Quản trị" tab;
-// their actual pages render as sub-nav for that active tab.
+// branch-scoped routes are owned by the Branch Hub, not the office sidebar.
 export function resolveOfficePrimaryTabs(
   role: StaffRole,
-  branchId?: number | null,
+  _branchId?: number | null,
 ): ShellNavItem[] {
   const adminGroups = resolveAdminNavGroups(role);
   const adminTab: ShellNavItem[] =
@@ -88,22 +83,8 @@ export function resolveOfficePrimaryTabs(
         ]
       : [];
 
-  const branchManagementItems = resolveBranchManagementItems(role, branchId);
-  const branchTab: ShellNavItem[] =
-    branchManagementItems.length > 0 && branchId != null
-      ? [
-          {
-            href: branchManagementItems[0]?.href ?? `/br/${branchId}/dashboard`,
-            label: NAV_GROUP_LABELS_VI.branchManagement,
-            icon: IconBuilding2,
-            matchPrefixes: [`/br/${branchId}`],
-          },
-        ]
-      : [];
-
   return dedupeByHref([
     ...adminTab,
-    ...branchTab,
     ...resolveWorkspaceItems(role).map(mapItem),
   ]);
 }
@@ -181,21 +162,6 @@ export function resolveOfficeDeepNav(
     {
       title: workspaceItem.label,
       items: [mapItem(workspaceItem)],
-    },
-  ];
-}
-
-// Sub-nav for branch-management: the branch-scoped management group.
-export function resolveBranchDeepNav(
-  role: StaffRole,
-  branchId?: number | null,
-): ShellNavGroup[] {
-  const items = resolveBranchManagementItems(role, branchId);
-  if (items.length === 0) return [];
-  return [
-    {
-      title: NAV_GROUP_LABELS_VI.branchManagement,
-      items: items.map(mapItem),
     },
   ];
 }

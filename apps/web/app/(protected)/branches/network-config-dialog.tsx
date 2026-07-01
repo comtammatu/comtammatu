@@ -8,6 +8,11 @@ import {
   ShieldOff as IconShieldOff,
   AlertTriangle as IconAlertTriangle,
 } from "lucide-react";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -141,36 +146,26 @@ export function NetworkConfigDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          {/* Status banner */}
           {!loading && activeRows.length === 0 && (
-            <div className="flex items-start gap-3 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
-              <IconAlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
-              <div>
-                <p className="font-medium">
-                  {messages.settings.network.noTrustedTitle}
-                </p>
-                <p className="mt-1 text-muted-foreground">
-                  {messages.settings.network.noTrustedDescription}
-                </p>
-              </div>
-            </div>
+            <Alert className="border-warning/40 bg-warning/10">
+              <IconAlertTriangle className="size-4 text-warning" />
+              <AlertTitle>{messages.settings.network.noTrustedTitle}</AlertTitle>
+              <AlertDescription>
+                {messages.settings.network.noTrustedDescription}
+              </AlertDescription>
+            </Alert>
           )}
 
           {!loading && activeRows.length > 0 && !hasFreshTrust && (
-            <div className="flex items-start gap-3 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
-              <IconAlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
-              <div>
-                <p className="font-medium">
-                  {messages.settings.network.staleTitle}
-                </p>
-                <p className="mt-1 text-muted-foreground">
-                  {messages.settings.network.staleDescription}
-                </p>
-              </div>
-            </div>
+            <Alert className="border-warning/40 bg-warning/10">
+              <IconAlertTriangle className="size-4 text-warning" />
+              <AlertTitle>{messages.settings.network.staleTitle}</AlertTitle>
+              <AlertDescription>
+                {messages.settings.network.staleDescription}
+              </AlertDescription>
+            </Alert>
           )}
 
-          {/* Bootstrap action */}
           <Item variant="muted" className="sm:flex-nowrap">
             <ItemContent>
               <ItemTitle className="text-sm">
@@ -196,7 +191,6 @@ export function NetworkConfigDialog({
             </ItemActions>
           </Item>
 
-          {/* Active list */}
           <div>
             <h3 className="font-heading mb-2 text-sm font-medium">
               {messages.settings.network.activeTitle(activeRows.length)}
@@ -275,7 +269,6 @@ export function NetworkConfigDialog({
             )}
           </div>
 
-          {/* Revoked list (collapsed by default visually) */}
           {revokedRows.length > 0 && (
             <div>
               <h3 className="font-heading mb-2 text-sm font-medium text-muted-foreground">

@@ -48,6 +48,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
   );
   const [zoneDialogOpen, setZoneDialogOpen] = useState(false);
   const [tableDialogOpen, setTableDialogOpen] = useState(false);
+  const canSwitchBranch = branches.length > 1;
 
   const filteredZones = zones.filter((z) => z.branch_id === selectedBranchId);
   const filteredTables = tables.filter((t) => t.branch_id === selectedBranchId);
@@ -63,30 +64,32 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
 
   return (
     <>
-      <AppToolbar
-        filters={
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <Label htmlFor="branch-select" className="text-sm font-medium">
-              {commonCopy.branchLabel}
-            </Label>
-            <Select
-              value={selectedBranchId?.toString() ?? ""}
-              onValueChange={(v) => setSelectedBranchId(Number(v))}
-            >
-              <SelectTrigger id="branch-select" className="w-full sm:w-60">
-                <SelectValue placeholder={BRANCH_VI.select} />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={b.id.toString()}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        }
-      />
+      {canSwitchBranch ? (
+        <AppToolbar
+          filters={
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <Label htmlFor="branch-select" className="text-sm font-medium">
+                {commonCopy.branchLabel}
+              </Label>
+              <Select
+                value={selectedBranchId?.toString() ?? ""}
+                onValueChange={(v) => setSelectedBranchId(Number(v))}
+              >
+                <SelectTrigger id="branch-select" className="w-full sm:w-60">
+                  <SelectValue placeholder={BRANCH_VI.select} />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id.toString()}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          }
+        />
+      ) : null}
 
       <Tabs defaultValue="zones">
         <TabsList>

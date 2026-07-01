@@ -69,6 +69,8 @@ const hasPermissionGrant = cache(async function hasPermissionGrant(
   permission: PermissionLike,
   branchId?: number | null,
 ): Promise<boolean> {
+  if (ctx.claims.user_role === "owner") return true;
+
   if (branchId == null) {
     const { data, error } = await ctx.supabase.rpc("has_permission_any", {
       p_key: permission,

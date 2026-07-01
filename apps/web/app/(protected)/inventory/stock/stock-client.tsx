@@ -48,7 +48,7 @@ import {
   InventoryFilterBar,
   InventoryPageContent,
 } from "../_components/inventory-page-layout";
-import { StatusBadge } from "../_components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { InteractiveCard } from "../_components/interactive-card";
 import { formatDateTime, formatQty, formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
@@ -172,7 +172,10 @@ function createQuickIssueSchema(maxQuantity: number) {
       .refine((value) => Number(value) <= maxQuantity, {
         error: stockCopy.quickIssue.quantityExceedsStock,
       }),
-    unit: z.string().trim().min(1, { error: stockCopy.quickIssue.unitRequired }),
+    unit: z
+      .string()
+      .trim()
+      .min(1, { error: stockCopy.quickIssue.unitRequired }),
     reason: z
       .string()
       .trim()
@@ -215,6 +218,10 @@ function useStockCompactLayout() {
 
 function branchHref(branchId: number, path: string): string {
   return `${path}?branchId=${branchId}`;
+}
+
+function branchStockHref(basePath: string, segment: string): string {
+  return `${basePath}${segment}`;
 }
 
 function stockValue(item: StockIngredient): number {
@@ -345,11 +352,13 @@ function QuickStockIssueDialog({
   branchId,
   open,
   target,
+  issueBasePath = "/inventory/issues",
   onOpenChange,
 }: {
   branchId: number;
   open: boolean;
   target: QuickIssueTarget;
+  issueBasePath?: string;
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
@@ -393,14 +402,14 @@ function QuickStockIssueDialog({
       reason: values.reason.trim(),
     });
     if (!lineRes.success) {
-      router.push(`/inventory/issues/${issueId}`);
+      router.push(`${issueBasePath}/${issueId}`);
       return {
         success: false,
         error: lineRes.error ?? stockCopy.quickIssue.addLineFailed,
       };
     }
 
-    router.push(`/inventory/issues/${issueId}`);
+    router.push(`${issueBasePath}/${issueId}`);
     return { success: true };
   }
 
@@ -483,6 +492,8 @@ export function StockClient({
   summary,
   permissions,
   movementHistory,
+  branchStockBasePath,
+  embedded = false,
 }: {
   ingredients: StockIngredient[];
   branchId: number;
@@ -491,6 +502,8 @@ export function StockClient({
   summary: StockWorkSummary;
   permissions: StockActionPermissions;
   movementHistory: StockMovementHistory[];
+  branchStockBasePath?: string;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const isCompactLayout = useStockCompactLayout();
@@ -616,6 +629,35 @@ export function StockClient({
   );
   const visibleTotalValue = branchValue ?? filteredValue;
   const liveLabel = formatVNDate(new Date());
+  const stockRootPath = branchStockBasePath ?? `/br/${branchId}/stock`;
+  const stockDetailHref = (ingredientId: number) =>
+    embedded
+      ? branchStockHref(stockRootPath, `/on-hand/${ingredientId}`)
+      : branchHref(branchId, `/inventory/stock/${ingredientId}`);
+  const actionHrefs = embedded
+    ? {
+        receive: branchStockHref(stockRootPath, "/receive"),
+        transfer: branchStockHref(stockRootPath, "/transfer"),
+        stocktake: branchStockHref(stockRootPath, "/count"),
+        waste: branchStockHref(stockRootPath, "/waste"),
+        purchaseSuggestion: branchStockHref(
+          stockRootPath,
+          "/purchase-orders/new",
+        ),
+        reports: branchStockHref(stockRootPath, "/reports"),
+      }
+    : {
+        receive: branchHref(branchId, "/inventory/grn"),
+        transfer: branchHref(branchId, "/inventory/transfers"),
+        stocktake: branchHref(branchId, "/inventory/stocktake"),
+        waste: branchHref(branchId, "/inventory/waste/new"),
+        purchaseSuggestion: branchHref(
+          branchId,
+          "/inventory/purchase-orders/new",
+        ),
+        reports: branchHref(branchId, "/inventory/reports"),
+      };
+  const actionPermissions = permissions;
   const stockColumns: DataTableColumn<StockIngredient>[] = [
     {
       key: "ingredient",
@@ -672,7 +714,7 @@ export function StockClient({
       className: "min-w-40 text-right",
       render: (item) => (
         <div className="flex flex-wrap justify-end gap-2">
-          <StatusBadge status={item.status} size="sm" />
+          <StatusBadge domain="inventory" value={item.status} size="sm" />
           {item.qty <= item.reorder ? (
             <Badge variant="warning">{stockCopy.filters.reorder}</Badge>
           ) : null}
@@ -802,7 +844,9 @@ export function StockClient({
               onValueChange={(v) => setStockFilter(v as StockFilter)}
             >
               <SelectTrigger className="min-w-36">
-                <SelectValue placeholder={stockCopy.filters.statusPlaceholder} />
+                <SelectValue
+                  placeholder={stockCopy.filters.statusPlaceholder}
+                />
               </SelectTrigger>
               <SelectContent>
                 {stockFilterOptions.map((opt) => (
@@ -848,38 +892,39 @@ export function StockClient({
         }
         actions={
           <>
-            {permissions.canReceiveGrn ? (
+            {actionPermissions.canReceiveGrn ? (
               <QuickActionButton
-                href={branchHref(branchId, "/inventory/grn")}
+                href={actionHrefs.receive}
                 icon={IconReceipt}
                 label={stockCopy.actions.receiveGrn}
                 primary
               />
             ) : null}
-            {permissions.canCreateTransfer ? (
+            {actionPermissions.canCreateTransfer ? (
               <QuickActionButton
-                href={branchHref(branchId, "/inventory/transfers")}
+                href={actionHrefs.transfer}
                 icon={IconTruck}
                 label={stockCopy.actions.transfer}
               />
             ) : null}
-            {permissions.canCreateStocktake ? (
+            {actionPermissions.canCreateStocktake ? (
               <QuickActionButton
-                href={branchHref(branchId, "/inventory/stocktake")}
+                href={actionHrefs.stocktake}
                 icon={IconClipboardList}
                 label={stockCopy.actions.stocktake}
               />
             ) : null}
-            {permissions.canWriteoff ? (
+            {actionPermissions.canWriteoff ? (
               <QuickActionButton
-                href={branchHref(branchId, "/inventory/waste/new")}
+                href={actionHrefs.waste}
                 icon={IconTrash}
                 label={stockCopy.actions.waste}
               />
             ) : null}
-            {permissions.canCreatePurchaseOrder ? (
+            {actionPermissions.canCreatePurchaseOrder &&
+            actionHrefs.purchaseSuggestion ? (
               <QuickActionButton
-                href={branchHref(branchId, "/inventory/purchase-orders/new")}
+                href={actionHrefs.purchaseSuggestion}
                 icon={IconShoppingCart}
                 label={stockCopy.actions.purchaseSuggestion}
               />
@@ -901,11 +946,10 @@ export function StockClient({
           description={stockCopy.empty.firstLoadHint}
           icon={<IconShoppingCart />}
         >
-          {permissions.canCreatePurchaseOrder ? (
+          {actionPermissions.canCreatePurchaseOrder &&
+          actionHrefs.purchaseSuggestion ? (
             <Button asChild size="sm">
-              <Link
-                href={branchHref(branchId, "/inventory/purchase-orders/new")}
-              >
+              <Link href={actionHrefs.purchaseSuggestion}>
                 <IconShoppingCart className="size-4" />
                 {stockCopy.actions.purchaseSuggestion}
               </Link>
@@ -938,7 +982,12 @@ export function StockClient({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <p className="truncate font-semibold">{item.name}</p>
+                    <Link
+                      href={stockDetailHref(item.id)}
+                      className="truncate font-semibold hover:underline"
+                    >
+                      {item.name}
+                    </Link>
                     <div className="flex items-center gap-2">
                       {item.category ? (
                         <Badge
@@ -956,7 +1005,11 @@ export function StockClient({
                     </div>
                   </div>
                   <div className="flex flex-wrap justify-end gap-2">
-                    <StatusBadge status={item.status} size="sm" />
+                    <StatusBadge
+                      domain="inventory"
+                      value={item.status}
+                      size="sm"
+                    />
                     {item.qty <= item.reorder ? (
                       <Badge variant="warning">
                         {stockCopy.filters.reorder}
@@ -1011,14 +1064,14 @@ export function StockClient({
                 </div>
 
                 <div className="grid grid-cols-4 gap-2 border-t pt-2">
-                  {permissions.canReceiveGrn ? (
+                  {actionPermissions.canReceiveGrn ? (
                     <Button asChild size="xs" variant="outline">
-                      <Link href={branchHref(branchId, "/inventory/grn")}>
+                      <Link href={actionHrefs.receive}>
                         {stockCopy.actions.receive}
                       </Link>
                     </Button>
                   ) : null}
-                  {permissions.canCreateIssue ? (
+                  {actionPermissions.canCreateIssue ? (
                     <Button
                       type="button"
                       size="xs"
@@ -1033,14 +1086,14 @@ export function StockClient({
                       {ACTIONS_VI.export}
                     </Button>
                   ) : null}
-                  {permissions.canCreateStocktake ? (
+                  {actionPermissions.canCreateStocktake ? (
                     <Button asChild size="xs" variant="outline">
-                      <Link href={branchHref(branchId, "/inventory/stocktake")}>
+                      <Link href={actionHrefs.stocktake}>
                         {stockCopy.actions.count}
                       </Link>
                     </Button>
                   ) : null}
-                  {permissions.canAdjustException ? (
+                  {actionPermissions.canAdjustException ? (
                     <Button
                       type="button"
                       size="icon-xs"
@@ -1077,7 +1130,13 @@ export function StockClient({
                     : stockCopy.empty.noDataDescription
                 }
                 emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
-                onRowClick={(item) => setSelectedId(item.id)}
+                onRowClick={(item) => {
+                  if (embedded) {
+                    router.push(stockDetailHref(item.id));
+                    return;
+                  }
+                  setSelectedId(item.id);
+                }}
                 getRowAriaLabel={(item) =>
                   stockCopy.actions.viewDetailAria(item.name)
                 }
@@ -1106,7 +1165,11 @@ export function StockClient({
                           {selected.category ? ` · ${selected.category}` : ""}
                         </p>
                       </div>
-                      <StatusBadge status={selected.status} size="sm" />
+                      <StatusBadge
+                        domain="inventory"
+                        value={selected.status}
+                        size="sm"
+                      />
                     </div>
                   </div>
 
@@ -1160,15 +1223,15 @@ export function StockClient({
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    {permissions.canReceiveGrn ? (
+                    {actionPermissions.canReceiveGrn ? (
                       <Button asChild size="sm">
-                        <Link href={branchHref(branchId, "/inventory/grn")}>
+                        <Link href={actionHrefs.receive}>
                           <IconReceipt className="size-3.5" />
                           {stockCopy.actions.receiveGoods}
                         </Link>
                       </Button>
                     ) : null}
-                    {permissions.canCreateIssue ? (
+                    {actionPermissions.canCreateIssue ? (
                       <Button
                         type="button"
                         size="sm"
@@ -1184,39 +1247,48 @@ export function StockClient({
                         {stockCopy.actions.issueStock}
                       </Button>
                     ) : null}
-                    {permissions.canCreateStocktake ? (
+                    {actionPermissions.canCreateStocktake ? (
                       <Button asChild size="sm" variant="outline">
-                        <Link
-                          href={branchHref(branchId, "/inventory/stocktake")}
-                        >
+                        <Link href={actionHrefs.stocktake}>
                           <IconClipboardList className="size-3.5" />
                           {stockCopy.actions.stocktake}
                         </Link>
                       </Button>
                     ) : null}
-                    {permissions.canWriteoff ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          setQuickIssueTarget({
-                            ingredient: selected,
-                            issueType: "writeoff",
-                          })
-                        }
-                      >
-                        <IconTrash className="size-3.5" />
-                        {stockCopy.actions.waste}
+                    {actionPermissions.canWriteoff ? (
+                      embedded ? (
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={actionHrefs.waste}>
+                            <IconTrash className="size-3.5" />
+                            {stockCopy.actions.waste}
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setQuickIssueTarget({
+                              ingredient: selected,
+                              issueType: "writeoff",
+                            })
+                          }
+                        >
+                          <IconTrash className="size-3.5" />
+                          {stockCopy.actions.waste}
+                        </Button>
+                      )
+                    ) : null}
+                    {actionHrefs.reports ? (
+                      <Button asChild size="sm" variant="ghost">
+                        <Link href={stockDetailHref(selected.id)}>
+                          <IconArrowBarRight className="size-3.5" />
+                          {stockCopy.actions.viewStockCard}
+                        </Link>
                       </Button>
                     ) : null}
-                    <Button asChild size="sm" variant="ghost">
-                      <Link href={branchHref(branchId, "/inventory/reports")}>
-                        <IconArrowBarRight className="size-3.5" />
-                        {stockCopy.actions.viewStockCard}
-                      </Link>
-                    </Button>
-                    {permissions.canAdjustException ? (
+                    {actionPermissions.canAdjustException ? (
                       <Button
                         type="button"
                         size="sm"
@@ -1341,6 +1413,11 @@ export function StockClient({
           branchId={branchId}
           open={quickIssueTarget !== null}
           target={quickIssueTarget}
+          issueBasePath={
+            embedded
+              ? branchStockHref(stockRootPath, "/issues")
+              : "/inventory/issues"
+          }
           onOpenChange={(open) => {
             if (!open) setQuickIssueTarget(null);
           }}

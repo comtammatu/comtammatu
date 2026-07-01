@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Bell as IconBell, User as IconUser } from "lucide-react";
+import { Bell as IconBell } from "lucide-react";
 import { canAccess, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage } from "@/components/surface";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
@@ -34,9 +33,15 @@ export default async function OperatorLayout({
   const context = await resolveBranchContext(supabase, claims, branchId);
   if (!context) notFound();
 
-  const canUseEmployeePortal = canAccess(claims.user_role, "employee");
+  const canUseEmployeePortal =
+    canAccess(claims.user_role, "employee") ||
+    canAccess(claims.user_role, "employee_checkout_approvals");
+  const canManageBranch =
+    canAccess(claims.user_role, "branch_dashboard") ||
+    canAccess(claims.user_role, "branch_settings");
   const unreadResult = await getUnreadCount().catch(() => null);
   const unread = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
+  const notificationsHref = `/notifications?returnTo=${encodeURIComponent(`/br/${context.branchId}`)}`;
 
   return (
     <PwaRuntimeProvider>
@@ -51,44 +56,28 @@ export default async function OperatorLayout({
                 <p className="font-heading truncate text-sm font-semibold sm:text-base">
                   {context.branch.name}
                 </p>
-                <p className="hidden truncate text-xs text-muted-foreground sm:block">
+                <p className="truncate text-xs text-muted-foreground">
                   {ROLE_LABEL_VI[claims.user_role]}
                 </p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <Badge variant="outline" className="hidden sm:inline-flex">
-                {ROLE_LABEL_VI[claims.user_role]}
-              </Badge>
               <Button
                 asChild
                 variant="outline"
-                size="touch"
+                size="icon-touch"
                 aria-label={messages.employee.header.notificationsAria}
-                className="relative min-w-12 px-0"
+                className="relative"
               >
-                <Link href="/notifications">
-                  <IconBell data-icon="inline-start" />
+                <Link href={notificationsHref}>
+                  <IconBell />
                   {unread > 0 ? (
-                    <span className="absolute -right-1 -top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-2xs font-semibold text-destructive-foreground">
+                    <span className="absolute right-1 top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-2xs font-semibold leading-none text-destructive-foreground">
                       {unread > 99 ? "99+" : unread}
                     </span>
                   ) : null}
                 </Link>
               </Button>
-              {canUseEmployeePortal ? (
-                <Button
-                  asChild
-                  variant="outline"
-                  size="touch"
-                  aria-label={messages.employee.header.profileAria}
-                  className="min-w-12 px-0"
-                >
-                  <Link href={`/br/${context.branchId}/shift/profile`}>
-                    <IconUser data-icon="inline-start" />
-                  </Link>
-                </Button>
-              ) : null}
             </div>
           </div>
         </header>
@@ -108,6 +97,7 @@ export default async function OperatorLayout({
         <OperatorBottomNav
           branchId={context.branchId}
           showEmployeeLinks={canUseEmployeePortal}
+          showBranchManagement={canManageBranch}
         />
       </div>
     </PwaRuntimeProvider>

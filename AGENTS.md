@@ -34,9 +34,9 @@ Before implementation, read the applicable rule files:
 - Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents. It opens with a **Layer Skill Map** (UI / FE / BE / Infra / Architecture / Review / Process) for layer-first routing into the rules, skills, and verification a task needs.
 - Read `docs/agent/rules/database.md` for Supabase, migrations, RLS, ACL, auth, Server Actions, RPCs, or database type work.
 - Read `docs/agent/rules/ui.md` before any UI, UX, route surface, component, styling, or copy change.
-- Read `docs/agent/rules/workflow.md` for review-tier rules (T3 full debate / T2 self-review / T1 skip), verification, and completion gates.
-- Read `docs/agent/rules/team.md` for the standing operating-team roles and missions, the end-to-end task loop, and the cross-runtime (Codex) review pass.
-- Read `docs/agent/rules/orchestration.md` to route a task across execution lanes (inline / single sub-agent / dynamic multi-agent Workflow / standing team), budget the context window, and reuse prior solutions instead of re-deriving them.
+- Read `docs/agent/rules/workflow.md` for behavior changes, review-tier rules (T3 full debate / T2 self-review / T1 skip), verification, and completion gates. T1 doc-only or typo-only work may skip after stating the skip reason.
+- Read `docs/agent/rules/team.md` only for T3 work, cross-runtime review/arbitration, or standing mission handoff.
+- Read `docs/agent/rules/orchestration.md` only when routing work across subagents, multi-agent Workflow, parallel runtimes, or a real context-budget problem. Inline single-agent tasks may skip it.
 - Read `docs/agent/rules/notifications.md` before adding any notification, alert, anomaly detector, or scheduled report (the producer / dedup / routing contract).
 - Read `docs/agent/rules/references.md` when onboarding or choosing the source-of-truth docs for a task.
 
@@ -48,11 +48,14 @@ Instruction memory and learning memory stay separate:
 - Regression lessons live in `tasks/regressions.md`.
 - Retrospectives and durable learnings live in `tasks/lessons.md`.
 - Current work tracking lives in `tasks/todo.md`.
-- Project-owned Agent Workspace config may live in the repo for Claude and
-  Codex (the two supported runtimes). Keep secrets, MCP tokens, plugin caches,
-  generated sessions, worktrees, and per-user local state out of version
-  control. See `docs/agent/rules/references.md` → "Agent Entrypoints Per IDE"
-  for the per-runtime entrypoint + prod-DB guard-adapter map.
+- Project-owned Agent Workspace config may live in root runtime-adapter
+  directories such as `.claude/`, `.codex/`, `.cursor/`, and `.agents/`.
+  These directories are tool wiring, not a second source of truth: they must
+  point back to `AGENTS.md` and `docs/agent/rules/` for project rules. Keep
+  secrets, MCP tokens, plugin caches, generated sessions, worktrees, and
+  per-user local state out of version control. See
+  `docs/agent/rules/references.md` → "Agent Entrypoints Per IDE" for the
+  registered entrypoint + prod-DB guard-adapter map.
 
 ## Communication Protocol
 

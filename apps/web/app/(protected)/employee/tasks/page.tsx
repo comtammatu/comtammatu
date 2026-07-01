@@ -21,6 +21,7 @@ import {
 import { resolveEmployeeBranchRuntimePath } from "../_lib/branch-runtime-redirect";
 import { getTodayWorkState } from "../_lib/today-work-state";
 import { formatTimeVN } from "../_lib/vn-business-date";
+import { EmployeeCountPanelContent } from "../count/page";
 import { TasksClient } from "./tasks-client";
 
 const copy = messages.employee.home;
@@ -30,9 +31,15 @@ const managerTaskCopy = messages.employee.managerTasks;
 export async function EmployeeTasksPageContent({
   clockHref = "/employee/clock",
   countHref = "/employee/count",
+  countBaseHref = "/employee/tasks",
+  routeBranchId,
+  searchParams,
 }: {
   clockHref?: string;
   countHref?: string;
+  countBaseHref?: string;
+  routeBranchId?: number;
+  searchParams?: Promise<{ location?: string }>;
 } = {}) {
   const state = await getTodayWorkState();
 
@@ -152,6 +159,12 @@ export async function EmployeeTasksPageContent({
       : allRequiredDone
         ? copy.statusReadyToCheckout
         : `${state.checklist.requiredRemaining} ${taskCopy.requiredRemaining}`;
+  const hasCountTask = state.checklist.items.some(
+    (item) => item.taskKind === "inventory_count",
+  );
+  const countPanelId = "shift-inventory-count";
+  const countSearchParams = searchParams ?? Promise.resolve({});
+  const countRouteBranchId = routeBranchId ?? state.branchId ?? undefined;
 
   return (
     <EmployeePage title={copy.shiftTasks} hideHeaderOnMobile>
@@ -195,7 +208,7 @@ export async function EmployeeTasksPageContent({
           <TasksClient
             items={state.checklist.items}
             disabled={checkoutPending || checkoutDone}
-            countHref={countHref}
+            countHref={hasCountTask ? `#${countPanelId}` : countHref}
           />
         ) : (
           <AppEmptyState
@@ -224,11 +237,24 @@ export async function EmployeeTasksPageContent({
           </Button>
         ) : null}
       </EmployeePanel>
+      {hasCountTask ? (
+        <div id={countPanelId}>
+          <EmployeeCountPanelContent
+            searchParams={countSearchParams}
+            routeBranchId={countRouteBranchId}
+            baseHref={countBaseHref}
+          />
+        </div>
+      ) : null}
     </EmployeePage>
   );
 }
 
-export default async function EmployeeTasksPage() {
+export default async function EmployeeTasksPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ location?: string }>;
+}) {
   const { claims } = await loadAuthState();
   const branchRuntimePath = resolveEmployeeBranchRuntimePath(
     claims,
@@ -236,5 +262,5 @@ export default async function EmployeeTasksPage() {
   );
   if (branchRuntimePath) redirect(branchRuntimePath);
 
-  return <EmployeeTasksPageContent />;
+  return <EmployeeTasksPageContent searchParams={searchParams} />;
 }

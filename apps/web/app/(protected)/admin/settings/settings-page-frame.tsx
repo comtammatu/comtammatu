@@ -18,7 +18,7 @@ export function SettingsPageFrame({
   width = "default",
 }: SettingsPageFrameProps) {
   return (
-    <AppPage width={width}>
+    <AppPage width={width} density="compact">
       <AppPageHeader title={title} description={description} actions={actions} />
       {children}
     </AppPage>

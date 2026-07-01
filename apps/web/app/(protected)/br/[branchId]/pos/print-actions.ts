@@ -54,6 +54,10 @@ type KitchenEnqueueResult = {
   deferred_to?: "kds_completion";
 };
 
+type RemainingKitchenItem = {
+  kds_tickets: Array<{ id: number }> | null;
+};
+
 export async function sendToKitchen(
   orderId: number,
 ): Promise<ActionResult<KitchenEnqueueResult>> {
@@ -102,13 +106,7 @@ export async function sendToKitchen(
     };
   }
 
-  // Silent-drop guard: `route_order_to_kds` returns void and (pre-migration)
-  // skips an item whose category has no KDS station, no fallback station, and
-  // no kitchen-ticket printer — neither ticketing nor printing it. Such an item
-  // is left with `sent_to_kitchen_at IS NULL` and no `kds_tickets` row. Detect
-  // that remainder and downgrade the outcome to a warning so the counter does
-  // not see a green "sent" when the kitchen got nothing. Order/payment state is
-  // untouched. Cancelled items never need routing, so they are excluded.
+  // Items must either get a KDS ticket or a printer-only dispatch mark.
   const { data: remaining } = await supabase
     .from("order_items")
     .select("id, kds_tickets(id)")
@@ -117,7 +115,7 @@ export async function sendToKitchen(
     .neq("status", "cancelled")
     .is("sent_to_kitchen_at", null);
 
-  const unrouted = (remaining ?? []).filter(
+  const unrouted = ((remaining ?? []) as RemainingKitchenItem[]).filter(
     (item) => (item.kds_tickets ?? []).length === 0,
   ).length;
 

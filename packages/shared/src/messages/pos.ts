@@ -12,6 +12,12 @@ export const POS_VI = {
   apply: "Áp dụng",
   reduceQtyTitleFallback: "Giảm số lượng?",
   reduceQtyNewLabel: "Số lượng mới",
+  reduceQtyDescription: (
+    currentQuantity: number,
+    minQty: number,
+    maxQty: number,
+  ) => `Hiện tại ${currentQuantity}. Mới: ${minQty}–${maxQty}.`,
+  reduceQtyDelta: (quantity: number) => `Giảm ${quantity} phần`,
   reduceQtyNewAria: "Chọn số lượng mới",
   decreaseAria: "Giảm",
   increaseAria: "Tăng",

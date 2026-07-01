@@ -63,8 +63,8 @@ export function useFinanceRealtimeRefresh({
       return supabase
         .channel(
           branchId == null
-            ? "finance-revenue-payments-all"
-            : `finance-revenue-payments-${String(branchId)}`,
+            ? "finance-money-events-all"
+            : `finance-money-events-${String(branchId)}`,
         )
         .on(
           "postgres_changes",
@@ -73,6 +73,16 @@ export function useFinanceRealtimeRefresh({
             schema: "public",
             table: "payments",
             filter,
+          },
+          () => scheduleRefresh(),
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "webhook_events",
+            filter: "provider=eq.sepay",
           },
           () => scheduleRefresh(),
         )

@@ -138,7 +138,8 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (pathname.startsWith("/hr")) return "hr";
   if (pathname === "/br" || pathname === "/br/") return "branch_picker";
   if (/^\/br\/\d+\/?$/.test(pathname)) return "operator_home";
-  if (/^\/br\/\d+\/shift/.test(pathname)) return "employee";
+  if (/^\/br\/\d+\/shift/.test(pathname)) return "operator_home";
+  if (/^\/br\/\d+\/stock\/count(?:\/|$)/.test(pathname)) return "operator_home";
   if (/^\/br\/\d+\/stock/.test(pathname)) return "inventory";
   if (/^\/br\/\d+\/dashboard/.test(pathname)) return "branch_dashboard";
   // menu-limits lives UNDER /settings — check it BEFORE branch_settings so the

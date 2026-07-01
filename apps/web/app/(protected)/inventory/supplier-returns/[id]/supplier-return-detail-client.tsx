@@ -2,7 +2,7 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: supplier return detail keeps warehouse operator copy inline */
 
-import { StatusBadge } from "../../_components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import {
   Item,
   ItemContent,
@@ -137,7 +137,11 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-md border p-3">
           <p className="text-xs text-muted-foreground">Trạng thái</p>
-          <StatusBadge status={header.status} className="mt-2" />
+          <StatusBadge
+            domain="inventory"
+            value={header.status}
+            className="mt-2"
+          />
         </div>
         <div className="rounded-md border p-3">
           <p className="text-xs text-muted-foreground">Lý do</p>

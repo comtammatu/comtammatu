@@ -51,6 +51,7 @@ import {
   AppPageHeader,
   AppSection,
 } from "@/components/surface";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
@@ -58,10 +59,6 @@ import { DocumentStockCorrectionDialog } from "../../_components/document-stock-
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
 import { messages } from "@lib/messages";
-import {
-  getInventoryStatusBadgeVariant,
-  getInventoryStatusLabel,
-} from "../../_lib/ui";
 import {
   cancelStockIssue,
   confirmStockIssue,
@@ -192,6 +189,7 @@ export function IssueDetailClient({
   ingredients,
   canAdjustStock,
   auditLogs = [],
+  listBasePath = "/inventory/consumption",
 }: {
   issueId: number;
   initialIssue: IssueRecord;
@@ -199,6 +197,7 @@ export function IssueDetailClient({
   ingredients: IngredientRow[];
   canAdjustStock: boolean;
   auditLogs?: AuditLogRow[];
+  listBasePath?: string;
 }) {
   const router = useRouter();
   const [issue, setIssue] = useState(initialIssue);
@@ -210,6 +209,7 @@ export function IssueDetailClient({
     issue.issue_type,
     issue.branches?.branch_kind ?? null,
   );
+  const statusBadge = getStatusBadgeMeta("inventory", issue.status);
 
   const totalAmount = useMemo(
     () => lines.reduce((sum, line) => sum + Number(line.total_cost ?? 0), 0),
@@ -382,12 +382,12 @@ export function IssueDetailClient({
         title={issue.issue_number}
         description={`${surface.label} tại ${issue.branches?.name ?? `Chi nhánh #${issue.branch_id}`} • ${issue.issued_at ? formatDateTime(issue.issued_at) : "—"}`}
         badge={{
-          children: getInventoryStatusLabel(issue.status),
-          variant: getInventoryStatusBadgeVariant(issue.status),
+          children: statusBadge.label,
+          variant: statusBadge.variant,
         }}
         breadcrumb={
           <Link
-            href="/inventory/consumption"
+            href={listBasePath}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
             <IconArrowLeft className="size-4" />{" "}
@@ -487,67 +487,67 @@ export function IssueDetailClient({
                     ) : null
                   }
                 >
-                    {lines.length === 0 ? (
-                      <AppEmptyState
-                        mode="no-data"
-                        title={
-                          isDraft
-                            ? "Chưa có dòng nguyên liệu"
-                            : `${surface.label} chưa có dòng nguyên liệu`
-                        }
-                        description={
-                          isDraft
-                            ? `Thêm ít nhất một dòng để ${surface.confirmAction.toLowerCase()}.`
-                            : "Danh sách nguyên liệu sẽ hiển thị ở đây nếu phiếu có dữ liệu."
-                        }
-                        compact
-                      />
-                    ) : (
-                      <DataTable
-                        columns={lineColumns}
-                        data={lines}
-                        getRowKey={(line) => line.id}
-                        mobileCardRender={(item) => (
-                          <IssueLineMobileCard
-                            item={item}
-                            isDraft={isDraft}
-                            isPending={isPending}
-                            onDelete={handleDeleteLine}
-                          />
-                        )}
-                      />
-                    )}
+                  {lines.length === 0 ? (
+                    <AppEmptyState
+                      mode="no-data"
+                      title={
+                        isDraft
+                          ? "Chưa có dòng nguyên liệu"
+                          : `${surface.label} chưa có dòng nguyên liệu`
+                      }
+                      description={
+                        isDraft
+                          ? `Thêm ít nhất một dòng để ${surface.confirmAction.toLowerCase()}.`
+                          : "Danh sách nguyên liệu sẽ hiển thị ở đây nếu phiếu có dữ liệu."
+                      }
+                      compact
+                    />
+                  ) : (
+                    <DataTable
+                      columns={lineColumns}
+                      data={lines}
+                      getRowKey={(line) => line.id}
+                      mobileCardRender={(item) => (
+                        <IssueLineMobileCard
+                          item={item}
+                          isDraft={isDraft}
+                          isPending={isPending}
+                          onDelete={handleDeleteLine}
+                        />
+                      )}
+                    />
+                  )}
 
-                    <div className="flex justify-end rounded-md border border-border/60 bg-muted/30 p-4">
-                      <div className="flex w-full max-w-sm flex-col gap-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Tổng số dòng:
+                  <div className="flex justify-end rounded-md border border-border/60 bg-muted/30 p-4">
+                    <div className="flex w-full max-w-sm flex-col gap-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          Tổng số dòng:
+                        </span>
+                        <span className="font-bold">
+                          {String(lines.length).padStart(2, "0")}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          Cộng tiền hàng:
+                        </span>
+                        <span className="font-bold">
+                          {formatVND(totalAmount)}
+                        </span>
+                      </div>
+                      <div className="flex items-end justify-between border-t border-border pt-3">
+                        <span className="text-sm font-bold">TỔNG CỘNG</span>
+                        <div className="text-right">
+                          <span className="block font-mono text-xl font-semibold leading-none tabular-nums text-primary">
+                            {messages.inventory.common.currency(
+                              formatVND(totalAmount),
+                            )}
                           </span>
-                          <span className="font-bold">
-                            {String(lines.length).padStart(2, "0")}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Cộng tiền hàng:
-                          </span>
-                          <span className="font-bold">
-                            {formatVND(totalAmount)}
-                          </span>
-                        </div>
-                        <div className="flex items-end justify-between border-t border-border pt-3">
-                          <span className="text-sm font-bold">TỔNG CỘNG</span>
-                          <div className="text-right">
-                            <span className="block font-mono text-xl font-semibold leading-none tabular-nums text-primary">
-                              {messages.inventory.common.currency(
-                                formatVND(totalAmount),
-                              )}
-                            </span>
-                          </div>
                         </div>
                       </div>
                     </div>
+                  </div>
                 </AppSection>
 
                 {isDraft ? (
@@ -788,7 +788,9 @@ function IssueLineMobileCard({
     <Item variant="outline" className="bg-muted/20">
       <ItemHeader>
         <div>
-          <ItemTitle>{item.ingredients?.name ?? `#${item.ingredient_id}`}</ItemTitle>
+          <ItemTitle>
+            {item.ingredients?.name ?? `#${item.ingredient_id}`}
+          </ItemTitle>
           <ItemDescription>ID: {item.ingredient_id}</ItemDescription>
         </div>
         {isDraft ? (

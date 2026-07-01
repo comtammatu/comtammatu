@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchStockIssues } from "../issue-actions";
 import {
@@ -80,22 +81,32 @@ function vnBusinessDateBoundaryUtc(value: string, offsetDays = 0): string {
   ).toISOString();
 }
 
-export default async function IssuesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{
+interface IssuesPageContentProps {
+  searchParams?: Promise<{
     branchId?: string | string[];
     endDate?: string | string[];
     startDate?: string | string[];
   }>;
-}) {
-  const params = await searchParams;
-  const requested = await resolveRequestedBranchId(params.branchId);
+  routeBranchId?: number;
+  consumptionBasePath?: string;
+}
+
+export async function IssuesPageContent({
+  searchParams,
+  routeBranchId,
+  consumptionBasePath = "/inventory/consumption",
+}: IssuesPageContentProps) {
+  const params = searchParams ? await searchParams : {};
+  const requested =
+    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
   const startDate = parseBusinessDateParam(params.startDate);
   const endDate = parseBusinessDateParam(params.endDate);
   const hasRecordedDateFilter = startDate != null || endDate != null;
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
+  if (routeBranchId != null && scope.selectedBranchId !== routeBranchId) {
+    notFound();
+  }
   const branchFilter = scope.selectedBranchId ?? undefined;
 
   let recordedConsumptionQuery = supabase
@@ -147,7 +158,11 @@ export default async function IssuesPage({
   const recordedConsumptionRows = (recordedConsumptionRes.data ?? []) as Array<
     Record<string, unknown>
   >;
-  const branches: IssueBranchOption[] = scope.allowedBranches.map((b) => ({
+  const scopedBranchOptions =
+    routeBranchId != null
+      ? scope.allowedBranches.filter((branch) => branch.id === routeBranchId)
+      : scope.allowedBranches;
+  const branches: IssueBranchOption[] = scopedBranchOptions.map((b) => ({
     id: b.id,
     name: b.name,
     branchKind: b.branch_kind,
@@ -208,6 +223,19 @@ export default async function IssuesPage({
       recordedEndDate={endDate ?? ""}
       recordedIsLimited={!hasRecordedDateFilter}
       recordedStartDate={startDate ?? ""}
+      consumptionBasePath={consumptionBasePath}
     />
   );
+}
+
+export default async function IssuesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    branchId?: string | string[];
+    endDate?: string | string[];
+    startDate?: string | string[];
+  }>;
+}) {
+  return <IssuesPageContent searchParams={searchParams} />;
 }

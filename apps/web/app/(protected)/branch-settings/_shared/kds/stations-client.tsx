@@ -73,6 +73,7 @@ export function StationsClient({
   /** Remount dialog to reset useActionState — stale success + create flow wiped category rows */
   const [dialogSession, setDialogSession] = useState(0);
   const [editStation, setEditStation] = useState<StationRow | null>(null);
+  const canSwitchBranch = branches.length > 1;
 
   const filteredStations = stations.filter(
     (s) => s.branch_id === selectedBranchId,
@@ -165,26 +166,28 @@ export function StationsClient({
     <>
       <AppToolbar
         filters={
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <Label htmlFor="branch-select" className="text-sm font-medium">
-              {messages.settings.common.branchLabel}
-            </Label>
-            <Select
-              value={selectedBranchId?.toString() ?? ""}
-              onValueChange={(v) => setSelectedBranchId(Number(v))}
-            >
-              <SelectTrigger id="branch-select" className="w-full sm:w-60">
-                <SelectValue placeholder={BRANCH_VI.select} />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={b.id.toString()}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          canSwitchBranch ? (
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <Label htmlFor="branch-select" className="text-sm font-medium">
+                {messages.settings.common.branchLabel}
+              </Label>
+              <Select
+                value={selectedBranchId?.toString() ?? ""}
+                onValueChange={(v) => setSelectedBranchId(Number(v))}
+              >
+                <SelectTrigger id="branch-select" className="w-full sm:w-60">
+                  <SelectValue placeholder={BRANCH_VI.select} />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id.toString()}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : undefined
         }
         actions={
           <Button

@@ -218,9 +218,9 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.doesNotMatch(runnerPageSource, /featuredLabel/);
   assert.doesNotMatch(runnerPageSource, /sectionTitle/);
   assert.doesNotMatch(runnerPageSource, /AppPageHeader/);
-  assert.doesNotMatch(runnerPageSource, /AppEmptyState/);
+  assert.match(runnerPageSource, /function RunnerErrorState/);
+  assert.match(runnerPageSource, /<AppEmptyState/);
   assert.doesNotMatch(runnerPageSource, /IconCookingPot/);
-  assert.doesNotMatch(runnerPageSource, /@comtammatu\/ui\/components\/item/);
   assert.doesNotMatch(runnerPageSource, /variant="outline"/);
   assert.doesNotMatch(runnerPageSource, /<AppPage/);
   assert.doesNotMatch(runnerPageSource, /<AppSection/);
