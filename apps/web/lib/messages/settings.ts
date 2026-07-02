@@ -334,6 +334,8 @@ export const settings = {
       "Đặt số phần tối đa hoặc tắt món trong ngày cho POS và bếp.",
     dayRevenueLabel: "Doanh thu hôm nay",
     dayRevenueHint: "Tiền đã thu tại chi nhánh.",
+    hubOverviewTitle: "Tổng quan hôm nay",
+    hubOverviewUnreadLabel: "Thông báo chưa đọc của bạn",
     dayPaidOrdersLabel: "Đơn đã thanh toán",
     dayPaidOrdersHint: "Số đơn đã thu tiền hôm nay.",
     dayTablesLabel: "Bàn đang dùng",

@@ -211,6 +211,28 @@ test("pre-clock-in gate disables floor tiles instead of hiding them", () => {
   assert.doesNotMatch(page, /tiles: \[\]/);
 });
 
+test("operator home overview KPIs are gated by branch_dashboard access", () => {
+  const home = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
+  );
+
+  assert.match(
+    home,
+    /showOverview = canAccess\(claims\.user_role, "branch_dashboard"\)/,
+  );
+  assert.match(home, /showOverview\s*\? await Promise\.all\(\[\s*fetchBranchDayStatus\(supabase, claims, context\.branchId\)/);
+  assert.match(home, /getUnreadCount\(\)/);
+  assert.match(home, /formatVND\(day\.todayRevenue\)/);
+  assert.match(home, /showOverview && day \?/);
+  assert.match(home, /messages\.settings\.branch\.hubOverviewTitle/);
+  assert.match(home, /messages\.settings\.branch\.dayRevenueLabel/);
+  assert.match(home, /messages\.settings\.branch\.hubOverviewUnreadLabel/);
+  assert.match(home, /href=\{`\$\{basePath\}\/dashboard`\}/);
+  assert.match(home, /href="\/notifications"/);
+  assert.doesNotMatch(home, /count_unread_notifications/);
+  assert.doesNotMatch(home, /createServiceClient/);
+});
+
 test("manager smart card counts pending waste approvals with checkouts", () => {
   const home = read("apps/web/app/(protected)/employee/page.tsx");
 
