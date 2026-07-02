@@ -645,3 +645,15 @@ là nơi chốt quyết định; `docs/worklog/*` chỉ là staging tạm.
 **Consequences:** Cleanup workflow hiện tại phải ưu tiên xóa/promote staging
 docs, tách lane dirty WIP, và chạy guard nhỏ (`rules-mirror`, `doc-staleness`,
 `guard-sync`, `review-tier`) trước khi quay lại feature code.
+
+## D055: Operator plane mở rộng cho warehouse/production qua central site; /employee giữ cho office (2026-07-02)
+
+**Context:** Sau khi Operator plane chín (D050 + cutover spec), 3 role không có `operator_home` (`office`, `warehouse_manager`, `production_manager`) vẫn "ở nhà" tại `/employee`. Proxy-level redirect `/employee/*` → `/br/{branchId}/...` (Wave A) chỉ áp cho role có `operator_home` + branch — 3 role này KHÔNG bị redirect.
+
+**Decision (owner):**
+
+1. **Hướng chốt:** mở `operator_home` cho `warehouse_manager` + `production_manager`, gắn họ vào **central site** của mình (`/br/{central-site-id}` — `branches.branch_kind` `central_supply`/`central_kitchen`, D000). Operator hub trở thành home thống nhất cho MỌI role gắn site.
+2. **Thi công là workstream riêng** (chưa làm ở đợt cutover này): cần thiết kế tile set cho central site (nhận/điều chuyển/sản xuất thay vì POS/KDS), rà network-gate + `MODULE_ACL` + route matrix, và JWT `branch_id` cho 2 role này (hiện tenant-level null).
+3. **`/employee` giữ nguyên làm home cho `office`** (và cho warehouse/production tới khi §1 thi công xong) — đây là trạng thái CHỦ ĐÍCH, không phải leftover; cấm xóa `/employee` khi còn role home ở đó.
+
+**Consequences:** Mở rộng D050 (không đảo). Khi thi công §1 phải sửa `MODULE_ACL.operator_home.allowedRoles`, JWT hook branch assignment, network-gate central-site, và bản ghi này (đánh dấu đã thi công). Đảo hướng (giữ warehouse/production ở `/employee` vĩnh viễn) phải sửa bản ghi này trước.
