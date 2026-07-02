@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   resolveBranchContext,
+  selectBranchScope,
   selectOperatorBranchScope,
   type OperatorBranchOption,
 } from "../app/_lib/branch-context";
@@ -74,7 +75,47 @@ test("selectOperatorBranchScope -> office has no operator branch scope", () => {
   assert.equal(selected.canSwitchBranch, false);
 });
 
-test("resolveBranchContext queries branch-only active sites and returns current branch", async () => {
+test("selectBranchScope -> tenant-wide roles see every branch kind", () => {
+  const scope = selectBranchScope(claims("office", null), BRANCHES, null, [
+    "owner",
+    "office",
+  ]);
+
+  assert.deepEqual(
+    scope.allowedBranches.map((branch) => branch.id),
+    [1, 2, 10],
+  );
+  assert.equal(scope.canSelectAll, true);
+  assert.equal(scope.selectedBranchId, 1);
+  assert.equal(scope.defaultBranchId, 1);
+});
+
+test("selectBranchScope -> pinned role locked to own branch, requested ignored", () => {
+  const scope = selectBranchScope(claims("cashier", 2), BRANCHES, 1, [
+    "owner",
+    "office",
+  ]);
+
+  assert.deepEqual(
+    scope.allowedBranches.map((branch) => branch.id),
+    [2],
+  );
+  assert.equal(scope.canSelectAll, false);
+  assert.equal(scope.selectedBranchId, 2);
+});
+
+test("selectBranchScope -> no allowed branches yields null selection", () => {
+  const scope = selectBranchScope(claims("cashier", null), BRANCHES, 1, [
+    "owner",
+  ]);
+
+  assert.deepEqual(scope.allowedBranches, []);
+  assert.equal(scope.selectedBranchId, null);
+  assert.equal(scope.defaultBranchId, null);
+  assert.equal(scope.canSelectAll, false);
+});
+
+test("resolveBranchContext queries active sites once and returns current branch", async () => {
   const filters: Record<string, unknown> = {};
   let selectedColumns = "";
 
@@ -107,7 +148,6 @@ test("resolveBranchContext queries branch-only active sites and returns current 
   assert.deepEqual(filters, {
     tenant_id: 1,
     is_active: true,
-    branch_kind: "branch",
   });
   assert.equal(context?.branchId, 2);
   assert.equal(context?.branch.id, 2);
