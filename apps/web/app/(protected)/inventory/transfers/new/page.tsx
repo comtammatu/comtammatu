@@ -9,10 +9,7 @@ import { fetchIngredients } from "../../ingredient-actions";
 import {
   fetchBranchesForTransfer,
 } from "../../transfer-actions";
-import {
-  resolveInventoryBranchScope,
-  resolveRequestedBranchId,
-} from "../../_lib/inventory-scope";
+import { resolveInventoryListScope } from "../../_lib/inventory-scope";
 import type { IngredientRow } from "../../page";
 import {
   CreateTransferForm,
@@ -40,13 +37,12 @@ export async function NewTransferPageContent({
 }: NewTransferPageContentProps) {
   const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
-  const requested =
-    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
-  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
   const userBranchId = scope.selectedBranchId;
-  if (routeBranchId != null && userBranchId !== routeBranchId) {
-    notFound();
-  }
+  if (scope.outOfScope) notFound();
 
   const [brRes, ingRes] = await Promise.all([
     fetchBranchesForTransfer(),

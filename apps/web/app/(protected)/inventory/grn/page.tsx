@@ -1,6 +1,8 @@
+import { notFound } from "next/navigation";
+import { loadAuthState } from "@/_lib/auth";
 import { fetchGrns } from "../procurement-actions";
 import { formatDate } from "../_lib/format";
-import { resolveRequestedBranchId } from "../_lib/inventory-scope";
+import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import { GrnListClient } from "./grn-list-client";
 import type { GrnRow } from "./grn-list-client";
 
@@ -18,8 +20,13 @@ export async function GRNListPageContent({
   purchaseOrdersPath = "/inventory/purchase-orders",
 }: GRNListPageContentProps) {
   const params = await searchParams;
-  const branchId =
-    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
+  const { supabase, claims } = await loadAuthState();
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
+  if (scope.outOfScope) notFound();
+  const branchId = scope.selectedBranchId;
   const res = await fetchGrns(branchId ?? undefined);
   const dbRows = res.success
     ? (res.data as Array<Record<string, unknown>>)

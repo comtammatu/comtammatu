@@ -6,7 +6,7 @@ import {
   INVENTORY_FEATURE_FLAGS,
   isFeatureEnabledForBranch,
 } from "@/(protected)/inventory/_lib/feature-flags";
-import { resolveRequestedBranchId } from "@/(protected)/inventory/_lib/inventory-scope";
+import { parseBranchIdParam } from "@/(protected)/inventory/_lib/inventory-scope";
 import { getWasteCapStatus } from "@/(protected)/inventory/waste-actions";
 import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
 import {
@@ -55,8 +55,7 @@ export async function WasteNewPageContent({
   embedded = false,
 }: WasteNewPageContentProps) {
   const params = searchParams ? await searchParams : {};
-  const branchId =
-    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
+  const branchId = routeBranchId ?? parseBranchIdParam(params.branchId);
 
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,

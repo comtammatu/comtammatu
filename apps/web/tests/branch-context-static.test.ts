@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  parseBranchIdParam,
   resolveBranchContext,
+  resolveListScope,
   selectBranchScope,
   selectOperatorBranchScope,
   type OperatorBranchOption,
@@ -195,4 +197,79 @@ test("resolveBranchContext queries active sites once and returns current branch"
   assert.equal(context?.branchId, 2);
   assert.equal(context?.branch.id, 2);
   assert.equal(context?.role, "owner");
+});
+
+/* ─── parseBranchIdParam / resolveListScope (D058 W3b) ─── */
+
+test("parseBranchIdParam -> parses a single numeric value, rejects malformed/non-positive input", () => {
+  assert.equal(parseBranchIdParam("2"), 2);
+  assert.equal(parseBranchIdParam(["2", "3"]), 2);
+  assert.equal(parseBranchIdParam(undefined), null);
+  assert.equal(parseBranchIdParam(""), null);
+  assert.equal(parseBranchIdParam("0"), null);
+  assert.equal(parseBranchIdParam("-1"), null);
+  assert.equal(parseBranchIdParam("abc"), null);
+  assert.equal(parseBranchIdParam("1.5"), null);
+});
+
+test("resolveListScope -> routeBranchId (embedded) and queryBranchId (office) requesting the same branch resolve identically", () => {
+  const tenantWideRoles: readonly JwtClaims["user_role"][] = ["owner", "office"];
+
+  const embedded = resolveListScope(
+    {},
+    claims("owner", 1),
+    BRANCHES,
+    { routeBranchId: 2, tenantWideRoles },
+  );
+  const office = resolveListScope(
+    {},
+    claims("owner", 1),
+    BRANCHES,
+    { queryBranchId: "2", tenantWideRoles },
+  );
+
+  return Promise.all([embedded, office]).then(([embeddedScope, officeScope]) => {
+    assert.equal(embeddedScope.selectedBranchId, 2);
+    assert.equal(officeScope.selectedBranchId, 2);
+    assert.deepEqual(
+      embeddedScope.allowedBranches.map((b) => b.id),
+      officeScope.allowedBranches.map((b) => b.id),
+    );
+    assert.equal(embeddedScope.canSelectAll, officeScope.canSelectAll);
+    assert.equal(embeddedScope.defaultBranchId, officeScope.defaultBranchId);
+    // outOfScope is embedded-only semantics — office callers never notFound().
+    assert.equal(embeddedScope.outOfScope, false);
+    assert.equal(officeScope.outOfScope, false);
+  });
+});
+
+test("resolveListScope -> routeBranchId outside the allowed set flags outOfScope; queryBranchId never does", async () => {
+  const tenantWideRoles: readonly JwtClaims["user_role"][] = ["owner"];
+
+  const embedded = await resolveListScope({}, claims("cashier", 2), BRANCHES, {
+    routeBranchId: 1,
+    tenantWideRoles,
+  });
+  assert.equal(embedded.selectedBranchId, 2);
+  assert.equal(embedded.outOfScope, true);
+
+  const office = await resolveListScope({}, claims("cashier", 2), BRANCHES, {
+    queryBranchId: "1",
+    tenantWideRoles,
+  });
+  assert.equal(office.selectedBranchId, 2);
+  assert.equal(office.outOfScope, false);
+});
+
+test("resolveListScope -> routeBranchId always wins over a simultaneously-present queryBranchId", async () => {
+  const tenantWideRoles: readonly JwtClaims["user_role"][] = ["owner"];
+
+  const scope = await resolveListScope({}, claims("owner", null), BRANCHES, {
+    routeBranchId: 10,
+    queryBranchId: "2",
+    tenantWideRoles,
+  });
+
+  assert.equal(scope.selectedBranchId, 10);
+  assert.equal(scope.outOfScope, false);
 });

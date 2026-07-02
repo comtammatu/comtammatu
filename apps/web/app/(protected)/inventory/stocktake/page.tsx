@@ -1,10 +1,7 @@
 import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchStocktakeSessions } from "../actions";
-import {
-  resolveInventoryBranchScope,
-  resolveRequestedBranchId,
-} from "../_lib/inventory-scope";
+import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import type {
   BranchOption,
   StocktakeSessionRow,
@@ -30,13 +27,12 @@ export async function StocktakePageContent({
 
   // Sidebar-selected branch drives action context (session branch default +
   // role-gated filters). Collapses to claims.branch_id for branch-scoped roles.
-  const requested =
-    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
-  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
-  if (routeBranchId != null && scope.selectedBranchId !== routeBranchId) {
-    notFound();
-  }
-  const branchFilter = scope?.selectedBranchId ?? undefined;
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
+  if (scope.outOfScope) notFound();
+  const branchFilter = scope.selectedBranchId ?? undefined;
 
   const sessionsRes = await fetchStocktakeSessions(branchFilter);
 

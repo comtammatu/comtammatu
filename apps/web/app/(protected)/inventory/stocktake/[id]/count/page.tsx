@@ -4,7 +4,7 @@ import {
   INVENTORY_FEATURE_FLAGS,
   isFeatureEnabledForBranch,
 } from "../../../_lib/feature-flags";
-import { resolveRequestedBranchId } from "../../../_lib/inventory-scope";
+import { parseBranchIdParam } from "../../../_lib/inventory-scope";
 import { getStocktakeLinesBlind } from "../../../stocktake-actions";
 import type { CountUnitOption } from "../../../_lib/count-units";
 import { StocktakeCountClient } from "./count-client";
@@ -39,8 +39,7 @@ export async function StocktakeCountPageContent({
   if (!sessionRow) notFound();
   const sessionBranchId = sessionRow.branch_id as number;
   const sp = searchParams ? await searchParams : {};
-  const requestedBranchId =
-    routeBranchId ?? (await resolveRequestedBranchId(sp.branchId));
+  const requestedBranchId = routeBranchId ?? parseBranchIdParam(sp.branchId);
   if (routeBranchId != null && routeBranchId !== sessionBranchId) {
     notFound();
   }

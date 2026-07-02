@@ -1,10 +1,7 @@
 import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchExpiryAlerts } from "@/(protected)/inventory/alert-actions";
-import {
-  resolveInventoryBranchScope,
-  resolveRequestedBranchId,
-} from "@/(protected)/inventory/_lib/inventory-scope";
+import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { ExpiryListClient } from "@/(protected)/inventory/expiry/expiry-list-client";
 import type {
   BranchOption,
@@ -27,12 +24,11 @@ export async function ExpiryPageContent({
   const { supabase, claims } = await loadAuthState();
 
   // Sidebar-selected branch drives both read filter and client action context.
-  const requested =
-    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
-  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
-  if (routeBranchId != null && scope.selectedBranchId !== routeBranchId) {
-    notFound();
-  }
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
+  if (scope.outOfScope) notFound();
   const branchFilter = scope.selectedBranchId ?? undefined;
 
   const [alertsRes, branchesRes] = await Promise.all([

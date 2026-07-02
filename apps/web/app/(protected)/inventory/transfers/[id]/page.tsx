@@ -7,10 +7,7 @@ import { notFound } from "next/navigation";
 import { fetchStockTransferDetail } from "../../transfer-actions";
 import { fetchEntityAuditLogs } from "@/_lib/audit";
 import { formatDateTime } from "../../_lib/format";
-import {
-  resolveInventoryBranchScope,
-  resolveRequestedBranchId,
-} from "../../_lib/inventory-scope";
+import { resolveInventoryListScope } from "../../_lib/inventory-scope";
 import { TransferDetailClient } from "./transfer-detail-client";
 import type { TransferDetail } from "./transfer-detail-client";
 
@@ -31,13 +28,12 @@ export async function TransferDetailPageContent({
 
   // Sidebar-selected branch scopes action enablement for tenant-wide roles.
   const sp = searchParams ? await searchParams : {};
-  const requested =
-    routeBranchId ?? (await resolveRequestedBranchId(sp.branchId));
-  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
-  const scopedBranchId = scope?.selectedBranchId ?? null;
-  if (routeBranchId != null && scopedBranchId !== routeBranchId) {
-    notFound();
-  }
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: sp.branchId,
+  });
+  const scopedBranchId = scope.selectedBranchId;
+  if (scope.outOfScope) notFound();
 
   const [res, auditLogs] = await Promise.all([
     fetchStockTransferDetail(transferId, scopedBranchId ?? undefined),

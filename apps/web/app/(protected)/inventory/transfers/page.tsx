@@ -4,10 +4,7 @@ import {
   fetchStockTransfers,
   fetchBranchesForTransfer,
 } from "../transfer-actions";
-import {
-  resolveInventoryBranchScope,
-  resolveRequestedBranchId,
-} from "../_lib/inventory-scope";
+import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import type {
   BranchForTransfer,
   TransferTab,
@@ -41,12 +38,11 @@ export async function TransfersPageContent({
 }: TransfersPageContentProps) {
   const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
-  const requested =
-    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
-  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
-  if (routeBranchId != null && scope.selectedBranchId !== routeBranchId) {
-    notFound();
-  }
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
+  if (scope.outOfScope) notFound();
   // Sidebar-selected branch drives action context. For branch-scoped roles it
   // collapses to claims.branch_id; for owner it reflects the sidebar picker
   // (URL ?branchId=).
