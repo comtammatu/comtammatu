@@ -33,7 +33,12 @@ import { StatusBadge } from "@/components/status-badge";
 import { formatVND } from "../_lib/format";
 import { tNav } from "../_lib/dictionary";
 
-import { FORM_VI, INVENTORY_VI, KDS_VI, STATES_VI } from "@comtammatu/shared/messages";
+import {
+  FORM_VI,
+  INVENTORY_VI,
+  KDS_VI,
+  STATES_VI,
+} from "@comtammatu/shared/messages";
 export type GrnRow = {
   id: number;
   code: string;
@@ -51,67 +56,78 @@ const statusFilterOptions = [
   { value: "cancelled", label: STATES_VI.cancelled },
 ];
 
-const GRN_COLUMNS: DataTableColumn<GrnRow>[] = [
-  {
-    key: "code",
-    header: INVENTORY_VI.grnCode,
-    render: (g) => (
-      <Link
-        href={`/inventory/grn/${g.id}`}
-        className="font-medium text-primary hover:underline"
-      >
-        {g.code}
-      </Link>
-    ),
-  },
-  {
-    key: "supplier",
-    header: INVENTORY_VI.supplier,
-    className: "text-sm font-medium",
-    render: (g) => g.supplierName,
-  },
-  {
-    key: "po",
-    header: INVENTORY_VI.linkedPo,
-    className: "text-sm text-muted-foreground",
-    render: (g) => g.poCode || "—",
-  },
-  {
-    key: "date",
-    header: INVENTORY_VI.receiveDate,
-    className: "text-sm text-muted-foreground",
-    render: (g) => g.date || "—",
-  },
-  {
-    key: "total",
-    header: FORM_VI.totalAmount,
-    className: "text-sm font-medium",
-    render: (g) => formatVND(g.total),
-  },
-  {
-    key: "status",
-    header: FORM_VI.status,
-    render: (g) => (
-      <StatusBadge domain="inventory" value={g.status} size="sm" />
-    ),
-  },
-  {
-    key: "actions",
-    header: "",
-    className: "w-10",
-    render: (g) => (
-      <Button asChild variant="ghost" size="icon-sm">
-        <Link href={`/inventory/grn/${g.id}`}>
-          <IconDotsVertical className="size-4" />
-        </Link>
-      </Button>
-    ),
-  },
-];
+function grnDetailHref(basePath: string, id: number) {
+  return `${basePath}/${id}`;
+}
 
-export function GrnListClient({ grns }: { grns: GrnRow[] }) {
+export function GrnListClient({
+  grns,
+  basePath = "/inventory/grn",
+  purchaseOrdersPath = "/inventory/purchase-orders",
+}: {
+  grns: GrnRow[];
+  basePath?: string;
+  purchaseOrdersPath?: string;
+}) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const grnColumns: DataTableColumn<GrnRow>[] = [
+    {
+      key: "code",
+      header: INVENTORY_VI.grnCode,
+      render: (g) => (
+        <Link
+          href={grnDetailHref(basePath, g.id)}
+          className="font-medium text-primary hover:underline"
+        >
+          {g.code}
+        </Link>
+      ),
+    },
+    {
+      key: "supplier",
+      header: INVENTORY_VI.supplier,
+      className: "text-sm font-medium",
+      render: (g) => g.supplierName,
+    },
+    {
+      key: "po",
+      header: INVENTORY_VI.linkedPo,
+      className: "text-sm text-muted-foreground",
+      render: (g) => g.poCode || "—",
+    },
+    {
+      key: "date",
+      header: INVENTORY_VI.receiveDate,
+      className: "text-sm text-muted-foreground",
+      render: (g) => g.date || "—",
+    },
+    {
+      key: "total",
+      header: FORM_VI.totalAmount,
+      className: "text-sm font-medium",
+      render: (g) => formatVND(g.total),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (g) => (
+        <StatusBadge domain="inventory" value={g.status} size="sm" />
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "w-10",
+      render: (g) => (
+        <Button asChild variant="ghost" size="icon-sm">
+          <Link href={grnDetailHref(basePath, g.id)}>
+            <IconDotsVertical className="size-4" />
+          </Link>
+        </Button>
+      ),
+    },
+  ];
 
   const filtered = useMemo(() => {
     let result = grns;
@@ -136,7 +152,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         title={tNav("grn", "navigation")}
         actions={
           <Button asChild size="sm">
-            <Link href="/inventory/purchase-orders">
+            <Link href={purchaseOrdersPath}>
               <IconPlus className="size-4" />
               {INVENTORY_VI.choosePoToCreateGrn}
             </Link>
@@ -175,7 +191,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
       </AppToolbar>
 
       <DataTable
-        columns={GRN_COLUMNS}
+        columns={grnColumns}
         data={filtered}
         getRowKey={(g) => g.id}
         emptyTitle={
@@ -188,16 +204,16 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         rowClassName={(g) =>
           g.status === "cancelled" ? "opacity-60" : undefined
         }
-        mobileCardRender={(g) => <GrnMobileCard grn={g} />}
+        mobileCardRender={(g) => <GrnMobileCard grn={g} basePath={basePath} />}
       />
     </AppPage>
   );
 }
 
-function GrnMobileCard({ grn }: { grn: GrnRow }) {
+function GrnMobileCard({ grn, basePath }: { grn: GrnRow; basePath: string }) {
   return (
     <InteractiveCard asChild minHeight="mobile" padding="default">
-      <Link href={`/inventory/grn/${grn.id}`} className="block">
+      <Link href={grnDetailHref(basePath, grn.id)} className="block">
         <div className="min-w-0 flex-1 flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="font-mono text-sm font-semibold">{grn.code}</span>

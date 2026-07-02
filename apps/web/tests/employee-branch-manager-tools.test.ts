@@ -34,21 +34,6 @@ test("Employee home keeps Branch Manager tools out of the hot path", () => {
     /employee_checkout_approvals|MANAGER_LINKS|managerTools/,
     "Employee home must stay focused on the personal next action, not manager tools",
   );
-  assert.match(
-    employeeHomeSource,
-    /const isBranchManager = claims\.user_role === "branch_manager";/,
-    "Branch Manager hot path must be explicit",
-  );
-  assert.match(
-    employeeHomeSource,
-    /canAccess\(claims\.user_role, "branch_dashboard"\)/,
-    "Branch Manager hot path should route through Branch Command",
-  );
-  assert.match(
-    employeeHomeSource,
-    /branchId && branchIsOperational && !isBranchManager/,
-    "POS/KDS/Runner grid must stay out of the Branch Manager hot path",
-  );
 });
 
 test("Employee profile launcher is ACL-driven for non-admin frontline roles", () => {

@@ -437,12 +437,16 @@ export function PODetailClient({
 
       const created = res.data as { id: number };
       toast.success(poDetailCopy.createGrnOk);
-      router.push(afterCreateGrnHref ?? `/inventory/grn/${created.id}`);
+      router.push(
+        afterCreateGrnHref
+          ? afterCreateGrnHref.replace(":id", String(created.id))
+          : `/inventory/grn/${created.id}`,
+      );
     });
   }
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow="Kho hàng"
         title={po.code}

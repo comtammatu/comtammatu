@@ -132,7 +132,7 @@ test("Schedule is the single day-axis: leave ranges render and link to leave req
   for (const expected of [
     "expandLeavesByDate",
     "leaveByDate",
-    'href="/employee/leave"',
+    "href={leaveHref}",
     "copy.requestLeaveCta",
   ]) {
     assert.ok(client.includes(expected), `expected ${expected}`);

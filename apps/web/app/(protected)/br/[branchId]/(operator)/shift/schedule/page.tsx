@@ -7,5 +7,7 @@ export default async function OperatorShiftSchedulePage({
 }) {
   const { branchId } = await params;
 
-  return <SchedulePageContent leaveHref={`/br/${branchId}/shift/leave`} />;
+  return (
+    <SchedulePageContent leaveHref={`/br/${branchId}/shift/schedule/leave`} />
+  );
 }

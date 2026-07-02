@@ -21,7 +21,7 @@ export default async function SupplierReturnsPage({
     : [];
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow={INVENTORY_VI.warehouse}
         title={INVENTORY_VI.supplierReturnsTitle}

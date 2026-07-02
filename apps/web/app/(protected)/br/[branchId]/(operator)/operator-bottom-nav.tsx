@@ -33,10 +33,6 @@ export function OperatorBottomNav({
             exact: true,
             matchPrefixes: [
               `/br/${branchId}/shift/clock`,
-              `/br/${branchId}/shift/tasks`,
-              `/br/${branchId}/shift/profile`,
-              `/br/${branchId}/shift/leave`,
-              `/br/${branchId}/shift/payslip`,
               `/br/${branchId}/shift/checkout-approvals`,
             ],
           },

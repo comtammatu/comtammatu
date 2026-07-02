@@ -39,13 +39,7 @@ export function getMenuLimitEffectiveCap(
 }
 
 export function getMenuLimitRemaining(row: MenuLimitCapFields): number | null {
-  if (
-    typeof row.available_to_sell === "number" &&
-    Number.isFinite(row.available_to_sell)
-  ) {
-    return Math.max(0, row.available_to_sell);
-  }
-  const cap = getMenuLimitEffectiveCap(row);
+  const cap = row.limit_quantity ?? row.stock_capacity;
   if (cap === null) return null;
   return Math.max(0, cap - row.sold_today);
 }

@@ -44,9 +44,9 @@ test("employee legacy entrypoints redirect to branch runtime equivalents", () =>
     ["clock/page.tsx", "shiftClock"],
     ["tasks/page.tsx", "shiftTasks"],
     ["schedule/page.tsx", "shiftSchedule"],
-    ["profile/page.tsx", "shiftProfile"],
-    ["leave/page.tsx", "shiftLeave"],
-    ["payslip/page.tsx", "shiftPayslip"],
+    ["profile/page.tsx", "profile"],
+    ["leave/page.tsx", "scheduleLeave"],
+    ["payslip/page.tsx", "profilePayslip"],
     ["count/page.tsx", "stockCount"],
   ] as const;
 

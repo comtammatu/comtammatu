@@ -44,7 +44,7 @@ export default async function ExpensesPage({
   const todayBusinessDate = getVNDateString();
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow={copy.page.eyebrow}
         title={copy.page.title}

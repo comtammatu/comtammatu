@@ -638,7 +638,7 @@ export function StockClient({
     ? {
         receive: branchStockHref(stockRootPath, "/receive"),
         transfer: branchStockHref(stockRootPath, "/transfer"),
-        stocktake: branchStockHref(stockRootPath, "/count"),
+        stocktake: null,
         waste: branchStockHref(stockRootPath, "/waste"),
         purchaseSuggestion: branchStockHref(
           stockRootPath,
@@ -907,7 +907,7 @@ export function StockClient({
                 label={stockCopy.actions.transfer}
               />
             ) : null}
-            {actionPermissions.canCreateStocktake ? (
+            {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
               <QuickActionButton
                 href={actionHrefs.stocktake}
                 icon={IconClipboardList}
@@ -1086,7 +1086,8 @@ export function StockClient({
                       {ACTIONS_VI.export}
                     </Button>
                   ) : null}
-                  {actionPermissions.canCreateStocktake ? (
+                  {actionPermissions.canCreateStocktake &&
+                  actionHrefs.stocktake ? (
                     <Button asChild size="xs" variant="outline">
                       <Link href={actionHrefs.stocktake}>
                         {stockCopy.actions.count}
@@ -1247,7 +1248,8 @@ export function StockClient({
                         {stockCopy.actions.issueStock}
                       </Button>
                     ) : null}
-                    {actionPermissions.canCreateStocktake ? (
+                    {actionPermissions.canCreateStocktake &&
+                    actionHrefs.stocktake ? (
                       <Button asChild size="sm" variant="outline">
                         <Link href={actionHrefs.stocktake}>
                           <IconClipboardList className="size-3.5" />

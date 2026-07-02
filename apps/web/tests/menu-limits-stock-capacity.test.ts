@@ -83,6 +83,14 @@ const stockOutcomeAvailabilityMigration = readFileSync(
   "utf8",
 );
 
+const liveStockCapacityMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260701181757_menu_limits_live_stock_capacity.sql",
+  ),
+  "utf8",
+);
+
 test("Menu-Limits effective cap composes manual and stock caps", () => {
   assert.equal(getMenuLimitEffectiveCap(row({})), null);
   assert.equal(
@@ -101,9 +109,23 @@ test("Menu-Limits effective cap composes manual and stock caps", () => {
     getMenuLimitRemaining(
       row({ stock_capacity: 10, sold_today: 8, available_to_sell: 5 }),
     ),
-    5,
+    2,
   );
   assert.equal(getMenuLimitRemaining(row({ stock_capacity: 0 })), 0);
+});
+
+test("Menu-Limits manager remaining follows daily cap instead of live stock", () => {
+  assert.equal(
+    getMenuLimitRemaining(
+      row({
+        limit_quantity: 100,
+        stock_capacity: 47,
+        sold_today: 49,
+        available_to_sell: 0,
+      }),
+    ),
+    51,
+  );
 });
 
 test("stock-backed Menu-Limits rows default Giới hạn bán to Tồn kho", () => {
@@ -130,6 +152,7 @@ test("Menu-Limits admin RPC and UI expose stock_capacity", () => {
   assert.match(actionsSource, /stock_capacity: number \| null/);
   assert.match(tableSource, /stockCapacityLabel/);
   assert.match(tableSource, /getDraftLimitQuantity/);
+  assert.match(tableSource, /getMenuLimitRemaining/);
   assert.match(tableSource, /getSoldProgress/);
   assert.match(tableSource, /renderRemainingBar/);
   assert.match(
@@ -225,6 +248,29 @@ test("Menu-Limits RPC exposes availability components", () => {
   assert.match(stockOutcomeAvailabilityMigration, /active_hold_demand integer/);
   assert.match(stockOutcomeAvailabilityMigration, /available_to_sell integer/);
   assert.match(actionsSource, /available_to_sell: number \| null/);
+});
+
+test("Menu-Limits availability computes live stock when daily row is missing", () => {
+  assert.match(
+    liveStockCapacityMigration,
+    /CREATE OR REPLACE FUNCTION public\.branch_menu_limit_availability/,
+  );
+  assert.match(
+    liveStockCapacityMigration,
+    /compute_menu_item_stock_capacity\(\s*p_tenant_id,\s*p_branch_id,\s*mi\.id\s*\)/,
+  );
+  assert.match(
+    liveStockCapacityMigration,
+    /COALESCE\(bl\.limit_quantity, sc\.stock_capacity\) AS limit_quantity/,
+  );
+  assert.match(
+    liveStockCapacityMigration,
+    /sc\.stock_capacity AS stock_capacity_live/,
+  );
+  assert.doesNotMatch(
+    liveStockCapacityMigration,
+    /bl\.stock_capacity AS stock_capacity_live/,
+  );
 });
 
 test("Menu-Limits manager copy uses stock availability vocabulary", () => {

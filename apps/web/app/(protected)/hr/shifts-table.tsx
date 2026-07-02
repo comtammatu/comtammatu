@@ -9,8 +9,7 @@ import {
   Plus as IconPlus,
   PowerOff as IconPowerOff,
 } from "lucide-react";
-import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
@@ -192,11 +191,10 @@ export function ShiftsTable({
       key: "status",
       header: FORM_VI.status,
       render: (shift) => (
-        <Badge variant={shift.is_active ? "default" : "outline"}>
-          {shift.is_active
-            ? ACTIVE_STATE_LABELS_VI.active
-            : ACTIVE_STATE_LABELS_VI.inactive}
-        </Badge>
+        <StatusBadge
+          domain="active-state"
+          value={shift.is_active ? "active" : "inactive"}
+        />
       ),
     },
   ];
@@ -242,14 +240,11 @@ export function ShiftsTable({
               <ItemDescription className="line-clamp-none text-sm leading-6">
                 {shift.start_time} - {shift.end_time}
               </ItemDescription>
-              <Badge
-                variant={shift.is_active ? "default" : "outline"}
+              <StatusBadge
+                domain="active-state"
+                value={shift.is_active ? "active" : "inactive"}
                 className="w-fit"
-              >
-                {shift.is_active
-                  ? ACTIVE_STATE_LABELS_VI.active
-                  : ACTIVE_STATE_LABELS_VI.inactive}
-              </Badge>
+              />
               <div className="mt-2 flex flex-wrap gap-4">
                 <div className="flex items-center gap-2">
                   {renderBoundaryToggle(shift, "opening")}

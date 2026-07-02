@@ -621,7 +621,7 @@ export function DashboardClient(props: DashboardProps) {
   ];
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow={`Kho hàng · ${siteKindLabel}`}
         title={siteName}

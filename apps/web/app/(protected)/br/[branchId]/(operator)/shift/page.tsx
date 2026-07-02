@@ -11,16 +11,14 @@ export default async function OperatorShiftPage({
     <EmployeeHomePageContent
       routes={{
         clock: `/br/${branchId}/shift/clock`,
-        tasks: `/br/${branchId}/shift/tasks`,
+        tasks: `/br/${branchId}/shift`,
         schedule: `/br/${branchId}/shift/schedule`,
-        profile: `/br/${branchId}/shift/profile`,
-        leave: `/br/${branchId}/shift/leave`,
-        payslip: `/br/${branchId}/shift/payslip`,
+        profile: `/br/${branchId}/profile`,
         checkoutApprovals: `/br/${branchId}/shift/checkout-approvals`,
         count: `/br/${branchId}/stock/count`,
       }}
       showNotificationControl={false}
-      showPersonalActions
+      workflowLayout="stepper"
     />
   );
 }

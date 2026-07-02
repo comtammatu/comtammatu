@@ -32,6 +32,7 @@ import {
 } from "@/components/data-table/data-table";
 import { normalizeSearch } from "@lib/search";
 import { type MenuLimitRow, setBranchMenuDailyLimit } from "./actions";
+import { getMenuLimitRemaining } from "./menu-limit-cap";
 import { messages } from "@lib/messages";
 
 interface Props {
@@ -70,10 +71,10 @@ function getSoldProgress(row: MenuLimitRow): {
   value: number;
 } | null {
   const limit = getDraftLimitQuantity(row);
-  if (limit == null) return null;
+  const remaining = getMenuLimitRemaining(row);
+  if (limit == null || remaining == null) return null;
 
   const sold = Math.max(0, row.sold_today);
-  const remaining = Math.max(0, limit - sold);
   const value =
     limit <= 0
       ? sold > 0

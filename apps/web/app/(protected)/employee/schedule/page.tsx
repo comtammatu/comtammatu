@@ -42,7 +42,7 @@ export async function SchedulePageContent({
     currentMonth.month,
   );
 
-  const [attendanceResult, leaveResult] = await Promise.all([
+  const [attendanceResult, leaveResult, employeeResult] = await Promise.all([
     supabase
       .from("attendance_records")
       .select(
@@ -62,6 +62,12 @@ export async function SchedulePageContent({
       .lte("start_date", monthEndStr)
       .gte("end_date", monthStart)
       .order("start_date"),
+    supabase
+      .from("employees")
+      .select("base_salary")
+      .eq("id", employeeId)
+      .eq("tenant_id", claims.tenant_id)
+      .maybeSingle(),
   ]);
 
   const initialAttendance: ScheduleAttendance[] = (
@@ -106,6 +112,7 @@ export async function SchedulePageContent({
         }}
         initialMonthStart={monthStart}
         leaveHref={leaveHref}
+        monthlySalary={employeeResult.data?.base_salary ?? 0}
       />
     </EmployeePage>
   );

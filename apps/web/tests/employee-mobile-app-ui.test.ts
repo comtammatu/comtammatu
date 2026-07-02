@@ -248,20 +248,6 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
     "Employee home should not repeat the same state through a separate workflow rail",
   );
   assert.match(
-    employeeHomeSource,
-    /const operationHandoffs =\s*branchId && branchIsOperational && !isBranchManager\s*\?\s*OPERATION_HANDOFFS\.filter/,
-    "Operation handoffs stay ACL-gated and require an operational branch",
-  );
-  const operationHandoffSource =
-    employeeHomeSource.match(
-      /const operationHandoffs =[\s\S]*?const tone = getWorkTone/,
-    )?.[0] ?? "";
-  assert.doesNotMatch(
-    operationHandoffSource,
-    /state\.(status|attendance)/,
-    "Operation handoffs must not be tied to clock-in or working state",
-  );
-  assert.match(
     employeeTasksSource,
     /items-center bg-card/,
     "Checklist rows must keep their card surface and centered alignment",
@@ -419,6 +405,36 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeScheduleClientSource,
+    /summaryWorkdays[\s\S]*summaryEstimatedDays[\s\S]*summaryLeaveDays/,
+    "Schedule summary should focus on Ngày công, Tạm tính, and Ngày phép",
+  );
+  assert.match(
+    employeeScheduleClientSource,
+    /const hasMonthlySalary = monthlySalary > 0;/,
+    "Schedule Tạm tính should detect whether base salary is available",
+  );
+  assert.match(
+    employeeScheduleClientSource,
+    /const estimatedPay = hasMonthlySalary[\s\S]*\(workdaysCount \* monthlySalary\) \/ 27[\s\S]*: null;/,
+    "Schedule Tạm tính should use ngày công * tiền lương / 27",
+  );
+  assert.match(
+    employeeScheduleClientSource,
+    /value: estimatedPay == null \? "—" : formatVND\(estimatedPay\)/,
+    "Schedule Tạm tính should render as VND only when salary exists",
+  );
+  assert.match(
+    employeeSchedulePageSource,
+    /select\("base_salary"\)[\s\S]*monthlySalary=\{employeeResult\.data\?\.base_salary \?\? 0\}/,
+    "Schedule page should pass employee base salary into the estimate",
+  );
+  assert.doesNotMatch(
+    employeeScheduleClientSource,
+    /summaryOpenShifts/,
+    "Schedule summary should not spend top-level space on open shift count",
+  );
+  assert.match(
+    employeeScheduleClientSource,
     /leaveHref = "\/employee\/leave"/,
     "Schedule should keep the legacy employee leave route as the default leave action",
   );
@@ -451,6 +467,16 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
     employeeProfileSource,
     /ManagerToolsSheet|MANAGER_LINKS/,
     "Profile should no longer use the hand-maintained manager-tools sheet",
+  );
+  assert.doesNotMatch(
+    employeeProfileSource,
+    /key: "leave"/,
+    "Leave belongs to Schedule, not Profile personal tools",
+  );
+  assert.match(
+    employeeProfileSource,
+    /key: "payslip"/,
+    "Payslip should stay in Profile personal tools",
   );
 });
 

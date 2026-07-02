@@ -17,11 +17,8 @@ import { Switch } from "@comtammatu/ui/components/switch";
 import { Label } from "@comtammatu/ui/components/label";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
-  Field,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
-import { Input } from "@comtammatu/ui/components/input";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   Select,
   SelectContent,
@@ -29,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { MultiSelectCombobox } from "@/components/form";
+import { TextField, SelectField, TextareaField, MultiSelectCombobox } from "@/components/form";
 import {
   fetchPositionTasksData,
   savePositionTasks,
@@ -180,90 +177,45 @@ function TaskRow({
   return (
     <div className="flex flex-col gap-3 rounded-md border p-3">
       <div className="grid gap-3 lg:grid-cols-[1fr_170px_150px_150px_auto]">
-        <Controller
+        <TextField
           control={control}
           name={`tasks.${index}.title`}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}>
-              <FieldLabel htmlFor={`task-title-${index}`}>
-                {copy.titleLabel}
-              </FieldLabel>
-              <Input
-                id={`task-title-${index}`}
-                className="h-10"
-                placeholder={copy.titlePlaceholder}
-                aria-invalid={!!fieldState.error}
-                {...field}
-                value={field.value ?? ""}
-              />
-            </Field>
-          )}
+          label={copy.titleLabel}
+          id={`task-title-${index}`}
+          placeholder={copy.titlePlaceholder}
         />
 
-        <Controller
+        <SelectField
           control={control}
           name={`tasks.${index}.kind`}
-          render={({ field }) => (
-            <Field>
-              <FieldLabel>{copy.kindLabel}</FieldLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger className="!h-10 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {POSITION_TASK_KINDS.map((kind) => (
-                    <SelectItem key={kind} value={kind}>
-                      {copy.kindLabels[kind]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          )}
+          label={copy.kindLabel}
+          id={`task-kind-${index}`}
+          options={POSITION_TASK_KINDS.map((kind) => ({
+            value: kind,
+            label: copy.kindLabels[kind],
+          }))}
         />
 
-        <Controller
+        <SelectField
           control={control}
           name={`tasks.${index}.applicability`}
-          render={({ field }) => (
-            <Field>
-              <FieldLabel>{copy.applicabilityLabel}</FieldLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger className="!h-10 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {POSITION_TASK_APPLICABILITY.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {copy.applicabilityLabels[value]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          )}
+          label={copy.applicabilityLabel}
+          id={`task-applicability-${index}`}
+          options={POSITION_TASK_APPLICABILITY.map((value) => ({
+            value,
+            label: copy.applicabilityLabels[value],
+          }))}
         />
 
-        <Controller
+        <SelectField
           control={control}
           name={`tasks.${index}.phase`}
-          render={({ field }) => (
-            <Field>
-              <FieldLabel>{copy.phaseLabel}</FieldLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger className="!h-10 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {POSITION_TASK_PHASES.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {copy.phaseLabels[value]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          )}
+          label={copy.phaseLabel}
+          id={`task-phase-${index}`}
+          options={POSITION_TASK_PHASES.map((value) => ({
+            value,
+            label: copy.phaseLabels[value],
+          }))}
         />
 
         <Button
@@ -279,23 +231,13 @@ function TaskRow({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-        <Controller
+        <TextareaField
           control={control}
           name={`tasks.${index}.doneDefinition`}
-          render={({ field }) => (
-            <Field>
-              <FieldLabel htmlFor={`task-done-${index}`}>
-                {copy.doneDefinitionLabel}
-              </FieldLabel>
-              <Textarea
-                id={`task-done-${index}`}
-                className="min-h-16"
-                placeholder={copy.doneDefinitionPlaceholder}
-                {...field}
-                value={field.value ?? ""}
-              />
-            </Field>
-          )}
+          label={copy.doneDefinitionLabel}
+          id={`task-done-${index}`}
+          placeholder={copy.doneDefinitionPlaceholder}
+          className="min-h-16"
         />
         <Controller
           control={control}

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { EmployeeLeavePageContent } from "@/(protected)/employee/leave/page";
 
-export default async function OperatorShiftLeavePage({
+export default async function OperatorShiftScheduleLeavePage({
   params,
 }: {
   params: Promise<{ branchId: string }>;
@@ -12,7 +12,7 @@ export default async function OperatorShiftLeavePage({
 
   return (
     <EmployeeLeavePageContent
-      profileHref={`/br/${branchId}/shift/profile`}
+      returnHref={`/br/${branchId}/shift/schedule`}
       routeBranchId={branchId}
       hideHeaderOnMobile
     />

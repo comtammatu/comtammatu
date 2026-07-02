@@ -11,16 +11,25 @@ import { GRNDetailClient } from "./grn-detail-client";
 import type { GRNDetail } from "./grn-detail-client";
 import type { IngredientRow } from "../../page";
 
-export default async function GRNDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
+interface GRNDetailPageContentProps {
+  grnId: number;
+  routeBranchId?: number;
+  grnListBasePath?: string;
+  grnMobileBackPath?: string;
+  purchaseOrdersBasePath?: string;
+}
+
+export async function GRNDetailPageContent({
+  grnId,
+  routeBranchId,
+  grnListBasePath = "/inventory/grn",
+  grnMobileBackPath = "/inventory/grn/new",
+  purchaseOrdersBasePath = "/inventory/purchase-orders",
+}: GRNDetailPageContentProps) {
   const [res, ingredientsRes, auditLogs] = await Promise.all([
-    fetchGrnDetail(Number(id)),
+    fetchGrnDetail(grnId),
     fetchIngredients(),
-    fetchEntityAuditLogs("goods_receipt_note", Number(id), 50),
+    fetchEntityAuditLogs("goods_receipt_note", grnId, 50),
   ]);
   if (!res.success || !res.data) notFound();
 
@@ -76,6 +85,8 @@ export default async function GRNDetailPage({
       } | null;
     }>;
   };
+
+  if (routeBranchId != null && d.grn.branch_id !== routeBranchId) notFound();
 
   const supplier = d.grn.suppliers as { id: number; name: string } | null;
   const po = d.grn.purchase_orders as {
@@ -140,7 +151,7 @@ export default async function GRNDetailPage({
   const totalAmount = items.reduce((sum, i) => sum + i.cost * i.accepted, 0);
 
   const grn: GRNDetail = {
-    id: Number(id),
+    id: grnId,
     tenantId: ctx?.claims.tenant_id ?? 0,
     code: d.grn.grn_number ?? "",
     poCode: po?.po_number ?? "",
@@ -180,6 +191,18 @@ export default async function GRNDetailPage({
       canAdjustStock={canAdjustStock}
       canAmendConfirmed={canAmendConfirmed}
       auditLogs={auditLogs}
+      grnListBasePath={grnListBasePath}
+      grnMobileBackPath={grnMobileBackPath}
+      purchaseOrdersBasePath={purchaseOrdersBasePath}
     />
   );
+}
+
+export default async function GRNDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  return <GRNDetailPageContent grnId={Number(id)} />;
 }

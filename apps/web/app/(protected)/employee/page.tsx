@@ -1,7 +1,7 @@
+import type { ElementType, ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  CalendarX as IconCalendarX,
   Camera as IconCamera,
   CheckCircle2 as IconDone,
   ClipboardCheck as IconClipboardCheck,
@@ -9,18 +9,16 @@ import {
   ListChecks as IconListChecks,
   LogOut as IconLogout,
   UserCircle as IconUserCircle,
-  WalletCards as IconPayslip,
 } from "lucide-react";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { loadAuthState } from "@/_lib/auth";
 import { NotificationPopupControl } from "@/_components/notification-popup-control";
 import { messages } from "@lib/messages";
 import {
-  EmployeeActionSection,
   EmployeeInlineState,
   EmployeePanel,
   EmployeePage as EmployeePageShell,
@@ -34,6 +32,9 @@ import {
 } from "./_lib/today-work-state";
 import { resolveEmployeeBranchRuntimePath } from "./_lib/branch-runtime-redirect";
 import { formatDateVN, formatTimeVN } from "./_lib/vn-business-date";
+import { AppEmptyState } from "@/components/surface";
+import { TasksClient } from "./tasks/tasks-client";
+import { EmployeeCountPanelContent } from "./count/page";
 
 const copy = messages.employee.home;
 
@@ -49,8 +50,6 @@ export type EmployeeHomeRoutes = {
   tasks: string;
   schedule: string;
   profile: string;
-  leave: string;
-  payslip: string;
   checkoutApprovals: string;
   count: string;
 };
@@ -60,13 +59,71 @@ const DEFAULT_HOME_ROUTES: EmployeeHomeRoutes = {
   tasks: "/employee/tasks",
   schedule: "/employee/schedule",
   profile: "/employee/profile",
-  leave: "/employee/leave",
-  payslip: "/employee/payslip",
   checkoutApprovals: "/employee/checkout-approvals",
   count: "/employee/count",
 };
 
 type EmployeeHomeAuthState = Awaited<ReturnType<typeof loadAuthState>>;
+type EmployeeHomeWorkflowLayout = "standard" | "stepper";
+type StepTone = "default" | "success" | "warning" | "info";
+type StepBadgeVariant = NonNullable<BadgeProps["variant"]>;
+
+type ShiftWorkflowStep = {
+  key: string;
+  number: number;
+  icon: ElementType;
+  title: string;
+  description?: ReactNode;
+  statusLabel: string;
+  statusVariant: StepBadgeVariant;
+  tone: StepTone;
+  content?: ReactNode;
+};
+
+function ShiftWorkflowPanel({ steps }: { steps: ShiftWorkflowStep[] }) {
+  return (
+    <EmployeePanel
+      icon={IconListChecks}
+      title={copy.workflowTitle}
+      contentClassName="gap-2"
+      size="sm"
+    >
+      <div className="flex flex-col gap-2">
+        {steps.map((step) => {
+          const hasContent = Boolean(step.content);
+          return (
+            <EmployeeInlineState
+              key={step.key}
+              icon={step.icon}
+              title={
+                <span className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {copy.workflowStep(step.number)}
+                  </span>
+                  <span>{step.title}</span>
+                </span>
+              }
+              description={step.description}
+              tone={step.tone}
+              actions={
+                <Badge variant={step.statusVariant}>{step.statusLabel}</Badge>
+              }
+              className={
+                hasContent ? "items-start bg-background" : "bg-background"
+              }
+            >
+              {hasContent ? (
+                <div className="mt-3 flex w-full flex-col gap-3">
+                  {step.content}
+                </div>
+              ) : null}
+            </EmployeeInlineState>
+          );
+        })}
+      </div>
+    </EmployeePanel>
+  );
+}
 
 function getShiftStateBadge(shift: TodayShiftEntry): {
   label: string;
@@ -114,14 +171,14 @@ export async function EmployeeHomePageContent({
   routes = DEFAULT_HOME_ROUTES,
   authState,
   showNotificationControl = true,
-  showPersonalActions = false,
   mode = "full",
+  workflowLayout = "standard",
 }: {
   routes?: EmployeeHomeRoutes;
   authState?: EmployeeHomeAuthState;
   showNotificationControl?: boolean;
-  showPersonalActions?: boolean;
   mode?: "full" | "today-card";
+  workflowLayout?: EmployeeHomeWorkflowLayout;
 } = {}) {
   const { supabase, claims, session } = authState ?? (await loadAuthState());
   const state = await getTodayWorkState();
@@ -355,7 +412,7 @@ export async function EmployeeHomePageContent({
             {progressValue}%
           </Badge>
         </div>
-        <div>{primaryAction}</div>
+        {workflowLayout === "stepper" ? null : <div>{primaryAction}</div>}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2 text-xs">
             <span className="font-medium text-muted-foreground">
@@ -374,6 +431,214 @@ export async function EmployeeHomePageContent({
 
   if (mode === "today-card") return todayCard;
 
+  const activeWorkStatus =
+    state.status === "working" ||
+    state.status === "checkout_pending" ||
+    state.status === "done";
+  const countPanel =
+    countAssignmentCount > 0 && activeWorkStatus ? (
+      <div id="shift-inventory-count" className="flex flex-col gap-3">
+        <EmployeeCountPanelContent
+          searchParams={Promise.resolve({})}
+          routeBranchId={state.branchId ?? undefined}
+          baseHref={routes.tasks}
+        />
+      </div>
+    ) : null;
+  const checklistContent =
+    state.checklist.items.length > 0 ? (
+      <TasksClient
+        items={state.checklist.items}
+        disabled={
+          state.status === "checkout_pending" || state.status === "done"
+        }
+        countHref={
+          countAssignmentCount > 0 ? "#shift-inventory-count" : routes.count
+        }
+      />
+    ) : (
+      <AppEmptyState
+        title={messages.employee.tasks.noChecklistTitle}
+        description={messages.employee.tasks.noChecklistDescription}
+        icon={<IconListChecks />}
+      />
+    );
+  const shiftsTodaySection =
+    state.todayShifts.length > 0 ? (
+      <EmployeePanel icon={IconClock} title={copy.shiftsTodayTitle} size="sm">
+        <div className="flex flex-col gap-2">
+          {state.todayShifts.map((shift) => {
+            const badge = getShiftStateBadge(shift);
+            const shiftTimeRange = `${shift.checkIn ? formatTimeVN(shift.checkIn) : "—"} - ${
+              shift.checkOut ? formatTimeVN(shift.checkOut) : "—"
+            }`;
+            return (
+              <EmployeeInlineState
+                key={shift.shiftId}
+                title={shift.shiftName ?? "—"}
+                description={
+                  <span className="font-mono tabular-nums">
+                    {shiftTimeRange}
+                  </span>
+                }
+                actions={<Badge variant={badge.variant}>{badge.label}</Badge>}
+                className="bg-background"
+              />
+            );
+          })}
+        </div>
+      </EmployeePanel>
+    ) : null;
+  const staleOpenShiftSection = state.staleOpenShift ? (
+    <EmployeePanel
+      icon={IconClock}
+      title={copy.staleShiftTitle}
+      tone="warning"
+      size="sm"
+    >
+      <p className="text-sm text-muted-foreground">
+        {copy.staleShiftDescription(formatDateVN(state.staleOpenShift.date))}
+      </p>
+    </EmployeePanel>
+  ) : null;
+  const checkoutApprovalsSection =
+    pendingCheckouts > 0 ? (
+      <EmployeePanel
+        icon={IconClipboardCheck}
+        title={copy.checkoutApprovalsTitle}
+        tone="warning"
+        badge={{ children: String(pendingCheckouts), variant: "warning" }}
+        size="sm"
+      >
+        <Button asChild size="touch" className="w-full sm:w-fit">
+          <Link href={routes.checkoutApprovals}>
+            <IconClipboardCheck data-icon="inline-start" />
+            {copy.checkoutApprovalsTitle}
+          </Link>
+        </Button>
+      </EmployeePanel>
+    ) : null;
+  const checklistSection = activeWorkStatus ? (
+    <EmployeePanel
+      icon={state.status === "done" ? IconDone : IconListChecks}
+      title={messages.employee.tasks.checklistTitle}
+      headerHint={`${state.checklist.done}/${state.checklist.total}`}
+      tone={
+        state.status === "checkout_pending"
+          ? "warning"
+          : state.status === "done"
+            ? "success"
+            : "info"
+      }
+      contentClassName="gap-3"
+      size="sm"
+    >
+      {checklistContent}
+    </EmployeePanel>
+  ) : null;
+  const notificationSection = showNotificationControl ? (
+    <EmployeePanel tone="info" size="sm">
+      <NotificationPopupControl compact />
+    </EmployeePanel>
+  ) : null;
+
+  const hasClockedIn = Boolean(state.attendance?.checkIn);
+  const checkoutDone =
+    Boolean(state.attendance?.checkOut) || state.status === "done";
+  const checkoutPending = state.status === "checkout_pending";
+  const requiredTasksDone = state.checklist.requiredRemaining === 0;
+  const tasksDone =
+    state.managerAttendanceOnly ||
+    (hasClockedIn && (requiredTasksDone || checkoutPending || checkoutDone));
+  const tasksActive =
+    !state.managerAttendanceOnly &&
+    hasClockedIn &&
+    state.status === "working" &&
+    !requiredTasksDone;
+  const checkoutActive =
+    hasClockedIn && state.status === "working" && canRequestCheckout(state);
+  const checkoutAction = checkoutActive ? (
+    <Button asChild size="touch-lg" className={primaryActionClassName}>
+      <Link href={routes.clock}>
+        <IconLogout data-icon="inline-start" />
+        {state.managerAttendanceOnly ? copy.clockOutDirect : copy.clockOut}
+      </Link>
+    </Button>
+  ) : undefined;
+
+  const clockStep: ShiftWorkflowStep = {
+    key: "clock-in",
+    number: 1,
+    icon: IconCamera,
+    title: copy.workflowClockInStep,
+    description: hasClockedIn ? undefined : title,
+    statusLabel: hasClockedIn ? copy.shiftDone : copy.workflowCurrent,
+    statusVariant: hasClockedIn ? "success" : "warning",
+    tone: hasClockedIn ? "success" : "warning",
+    content: hasClockedIn ? undefined : primaryAction,
+  };
+  const taskStep: ShiftWorkflowStep = {
+    key: "tasks",
+    number: 2,
+    icon: IconListChecks,
+    title: copy.workflowTasksStep,
+    description: tasksDone
+      ? undefined
+      : tasksActive
+        ? copy.workflowTasksDescription
+        : copy.workflowWaiting,
+    statusLabel: tasksDone
+      ? copy.shiftDone
+      : tasksActive
+        ? `${state.checklist.requiredRemaining} ${messages.employee.tasks.requiredRemaining}`
+        : copy.workflowWaiting,
+    statusVariant: tasksDone
+      ? "success"
+      : tasksActive
+        ? "warning"
+        : "secondary",
+    tone: tasksDone ? "success" : tasksActive ? "info" : "default",
+    content: tasksActive ? (
+      <>
+        {checklistContent}
+        {countPanel}
+      </>
+    ) : undefined,
+  };
+  const checkoutStep: ShiftWorkflowStep = {
+    key: "checkout",
+    number: state.managerAttendanceOnly ? 2 : 3,
+    icon: IconLogout,
+    title: state.managerAttendanceOnly
+      ? copy.workflowManagerCheckoutStep
+      : copy.workflowCheckoutStep,
+    description: checkoutDone
+      ? undefined
+      : checkoutPending
+        ? copy.descriptionCheckoutPending
+        : checkoutActive
+          ? copy.workflowCheckoutDescription
+          : copy.workflowWaiting,
+    statusLabel: checkoutDone
+      ? copy.shiftDone
+      : checkoutPending
+        ? copy.checkoutPending
+        : checkoutActive
+          ? copy.workflowReady
+          : copy.workflowWaiting,
+    statusVariant: checkoutDone
+      ? "success"
+      : checkoutPending
+        ? "warning"
+        : "secondary",
+    tone: checkoutDone ? "success" : checkoutPending ? "warning" : "default",
+    content: checkoutAction,
+  };
+  const shiftStepItems = state.managerAttendanceOnly
+    ? [clockStep, checkoutStep]
+    : [clockStep, taskStep, checkoutStep];
+  const workflowSection = <ShiftWorkflowPanel steps={shiftStepItems} />;
+
   return (
     <EmployeePageShell
       title={copy.title}
@@ -383,126 +648,23 @@ export async function EmployeeHomePageContent({
       <div className="flex flex-col gap-3">
         {todayCard}
 
-        {showPersonalActions ? (
-          <EmployeeActionSection
-            title={messages.employee.profile.personalToolsTitle}
-            links={[
-              {
-                key: "profile",
-                href: routes.profile,
-                icon: IconUserCircle,
-                title: copy.profileTitle,
-                description: copy.profileDescription,
-              },
-              {
-                key: "payslip",
-                href: routes.payslip,
-                icon: IconPayslip,
-                title: messages.employee.payslip.title,
-                description: copy.payslipLongDescription,
-              },
-              {
-                key: "leave",
-                href: routes.leave,
-                icon: IconCalendarX,
-                title: messages.employee.leave.title,
-                description: messages.employee.leave.description,
-              },
-            ]}
-            columns={1}
-          />
-        ) : null}
-
-        {state.todayShifts.length > 0 ? (
-          <EmployeePanel
-            icon={IconClock}
-            title={copy.shiftsTodayTitle}
-            size="sm"
-          >
-            <div className="flex flex-col gap-2">
-              {state.todayShifts.map((shift) => {
-                const badge = getShiftStateBadge(shift);
-                const shiftTimeRange = `${shift.checkIn ? formatTimeVN(shift.checkIn) : "—"} - ${
-                  shift.checkOut ? formatTimeVN(shift.checkOut) : "—"
-                }`;
-                return (
-                  <EmployeeInlineState
-                    key={shift.shiftId}
-                    title={shift.shiftName ?? "—"}
-                    description={
-                      <span className="font-mono tabular-nums">
-                        {shiftTimeRange}
-                      </span>
-                    }
-                    actions={
-                      <Badge variant={badge.variant}>{badge.label}</Badge>
-                    }
-                    className="bg-background"
-                  />
-                );
-              })}
-            </div>
-          </EmployeePanel>
-        ) : null}
-
-        {state.staleOpenShift ? (
-          <EmployeePanel
-            icon={IconClock}
-            title={copy.staleShiftTitle}
-            tone="warning"
-            size="sm"
-          >
-            <p className="text-sm text-muted-foreground">
-              {copy.staleShiftDescription(
-                formatDateVN(state.staleOpenShift.date),
-              )}
-            </p>
-          </EmployeePanel>
-        ) : null}
-
-        {pendingCheckouts > 0 ? (
-          <EmployeePanel
-            icon={IconClipboardCheck}
-            title={copy.checkoutApprovalsTitle}
-            tone="warning"
-            badge={{ children: String(pendingCheckouts), variant: "warning" }}
-            size="sm"
-          >
-            <Button asChild size="touch" className="w-full sm:w-fit">
-              <Link href={routes.checkoutApprovals}>
-                <IconClipboardCheck data-icon="inline-start" />
-                {copy.checkoutApprovalsTitle}
-              </Link>
-            </Button>
-          </EmployeePanel>
-        ) : null}
-
-        {countAssignmentCount > 0 ? (
-          <EmployeePanel
-            icon={IconClipboardCheck}
-            title={copy.countTitle}
-            tone="info"
-            size="sm"
-          >
-            <div className="flex flex-col gap-2">
-              <p className="text-sm text-muted-foreground">
-                {copy.countDescription}
-              </p>
-              <Button asChild size="touch" className="w-full sm:w-fit">
-                <Link href={routes.count}>
-                  <IconClipboardCheck data-icon="inline-start" />
-                  {copy.countCta}
-                </Link>
-              </Button>
-            </div>
-          </EmployeePanel>
-        ) : null}
-
-        {showNotificationControl ? (
-          <EmployeePanel tone="info" size="sm">
-            <NotificationPopupControl compact />
-          </EmployeePanel>
-        ) : null}
+        {workflowLayout === "stepper" ? (
+          <>
+            {workflowSection}
+            {staleOpenShiftSection}
+            {checkoutApprovalsSection}
+            {notificationSection}
+          </>
+        ) : (
+          <>
+            {shiftsTodaySection}
+            {staleOpenShiftSection}
+            {checkoutApprovalsSection}
+            {checklistSection}
+            {countPanel}
+            {notificationSection}
+          </>
+        )}
       </div>
     </EmployeePageShell>
   );

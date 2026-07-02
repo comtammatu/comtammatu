@@ -352,7 +352,7 @@ export function TransfersListClient({
   }
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       {content}
     </AppPage>
   );

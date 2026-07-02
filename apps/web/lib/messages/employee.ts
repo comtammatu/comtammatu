@@ -100,6 +100,17 @@ export const employee = {
     workProgress: "Tiến độ",
     notYet: "Chưa bắt đầu",
     nextActionTitle: "Bước tiếp theo",
+    workflowTitle: "Quy trình ca",
+    workflowStep: (step: number) => `Bước ${step}`,
+    workflowCurrent: "Đang làm",
+    workflowWaiting: "Chờ bước trước",
+    workflowReady: "Sẵn sàng",
+    workflowClockInStep: "Vào ca",
+    workflowTasksStep: "Việc trong ca",
+    workflowTasksDescription: "Hoàn thành từng việc bắt buộc trong ca.",
+    workflowCheckoutStep: "Kết ca",
+    workflowManagerCheckoutStep: "Ra ca",
+    workflowCheckoutDescription: "Gửi kết ca khi việc bắt buộc đã xong.",
     viewSchedule: "Xem lịch ca",
     scheduleTitle: "Lịch ca",
     scheduleDescription: "Ca làm và ngày công",
@@ -139,7 +150,8 @@ export const employee = {
     managerCheckoutApprovalsDescription: "Duyệt yêu cầu ra ca của nhân viên",
     checkoutApprovalsTitle: "Duyệt kết ca",
     countTitle: "Kiểm kê tồn",
-    countDescription: "Bạn có nguyên liệu được giao cần đếm tồn và gửi quản lý duyệt.",
+    countDescription:
+      "Bạn có nguyên liệu được giao cần đếm tồn và gửi quản lý duyệt.",
     countCta: "Đếm tồn ngay",
     staleShiftTitle: "Còn ca chưa kết",
     staleShiftDescription: (date: string) =>
@@ -255,8 +267,8 @@ export const employee = {
   schedule: {
     currentMonth: "Tháng này",
     summaryWorkdays: "Ngày công",
-    summaryOpenShifts: "Ca chưa kết",
-    summaryLeaveDays: "Nghỉ phép",
+    summaryEstimatedDays: "Tạm tính",
+    summaryLeaveDays: "Ngày phép",
     days: [
       "Chủ Nhật",
       "Thứ Hai",
@@ -363,7 +375,7 @@ export const employee = {
     dayUnit: "ngày",
     cancelRequest: "Huỷ yêu cầu",
     rejectedReason: "Lý do từ chối",
-    backToProfile: "Hồ sơ",
+    backToSchedule: "Lịch",
   },
   payslip: {
     title: "Lương đã trả",

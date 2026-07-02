@@ -72,7 +72,7 @@ export function ReportsClient({
     }),
   );
   return (
-    <AppPage scroll>
+    <AppPage width="wide" density="compact" scroll>
       <AppPageHeader title={messages.inventory.reports.pageTitle} />
 
       {/* Dashboard Grid — 12 col asymmetric */}

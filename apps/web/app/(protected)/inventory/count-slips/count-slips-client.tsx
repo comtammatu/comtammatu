@@ -148,7 +148,7 @@ export function CountSlipsClient({
   }
 
   return (
-    <AppPage width="default">
+    <AppPage width="wide" density="compact">
       {content}
     </AppPage>
   );

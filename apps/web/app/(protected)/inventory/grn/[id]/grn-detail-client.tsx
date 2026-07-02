@@ -47,12 +47,18 @@ export function GRNDetailClient({
   canAdjustStock,
   canAmendConfirmed = false,
   auditLogs = [],
+  grnListBasePath = "/inventory/grn",
+  grnMobileBackPath = "/inventory/grn/new",
+  purchaseOrdersBasePath = "/inventory/purchase-orders",
 }: {
   grn: GRNDetail;
   ingredients: IngredientRow[];
   canAdjustStock: boolean;
   canAmendConfirmed?: boolean;
   auditLogs?: AuditLogRow[];
+  grnListBasePath?: string;
+  grnMobileBackPath?: string;
+  purchaseOrdersBasePath?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -88,10 +94,13 @@ export function GRNDetailClient({
       setLines,
       startSave,
       startConfirm,
+      grnListBasePath,
+      grnMobileBackPath,
+      purchaseOrdersBasePath,
     });
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow="Kho hàng"
         title={grn.code}
@@ -102,7 +111,7 @@ export function GRNDetailClient({
         }}
         breadcrumb={
           <Link
-            href={isMobile ? "/inventory/grn/new" : "/inventory/grn"}
+            href={isMobile ? grnMobileBackPath : grnListBasePath}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
             <IconArrowLeft className="size-4" />{" "}
@@ -134,7 +143,7 @@ export function GRNDetailClient({
                     value={
                       grn.poCode && grn.poId ? (
                         <Link
-                          href={`/inventory/purchase-orders/${grn.poId}`}
+                          href={`${purchaseOrdersBasePath}/${grn.poId}`}
                           className="text-primary hover:underline"
                         >
                           {grn.poCode}
@@ -263,10 +272,10 @@ export function GRNDetailClient({
                           <Link
                             href={
                               isMobile
-                                ? "/inventory/grn/new"
+                                ? grnMobileBackPath
                                 : grn.poId
-                                  ? `/inventory/purchase-orders/${grn.poId}`
-                                  : "/inventory/grn"
+                                  ? `${purchaseOrdersBasePath}/${grn.poId}`
+                                  : grnListBasePath
                             }
                           >
                             <IconArrowLeft className="size-5" />

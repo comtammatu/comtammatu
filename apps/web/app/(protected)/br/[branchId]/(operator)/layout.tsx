@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Bell as IconBell } from "lucide-react";
+import { Bell as IconBell, User as IconUser } from "lucide-react";
 import { canAccess, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage } from "@/components/surface";
@@ -62,6 +62,16 @@ export default async function OperatorLayout({
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              <Button
+                asChild
+                variant="outline"
+                size="icon-touch"
+                aria-label={messages.employee.nav.profileShort}
+              >
+                <Link href={`/br/${context.branchId}/profile`}>
+                  <IconUser />
+                </Link>
+              </Button>
               <Button
                 asChild
                 variant="outline"

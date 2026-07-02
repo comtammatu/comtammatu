@@ -110,7 +110,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
     : messages.admin.staffPermissions.tenantWide;
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         title={profile.full_name}
         description={messages.admin.staffPermissions.headerDescription(

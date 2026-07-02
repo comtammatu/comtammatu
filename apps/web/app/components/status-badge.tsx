@@ -1,4 +1,5 @@
 import {
+  ACTIVE_STATE_LABELS_VI,
   ATTENDANCE_STATUS_LABELS_VI,
   CONSUMPTION_REPORT_STATUS_LABELS_VI,
   COUNT_SLIP_STATUS_LABELS_VI,
@@ -28,6 +29,13 @@ type DomainConfig = {
 };
 
 const STATUS_DOMAINS = {
+  "active-state": {
+    labels: ACTIVE_STATE_LABELS_VI,
+    variants: {
+      active: "success",
+      inactive: "secondary",
+    },
+  },
   order: {
     labels: ORDER_STATUS_LABELS_VI,
     variants: {

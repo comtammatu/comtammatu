@@ -1,13 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { canAccess } from "../module-acl";
-import {
-  resolvePostLoginRedirect,
-} from "../scope";
+import { resolvePostLoginRedirect } from "../scope";
 import type { JwtClaims } from "../types";
-import {
-  resolveModuleFromPath,
-} from "../route-resolution";
+import { resolveModuleFromPath } from "../route-resolution";
 import { resolveRouteFamilyContract } from "../route-map";
 
 function claims(
@@ -48,6 +44,7 @@ test("operator route families use operator bottom nav", () => {
     ["/br/7/stock/count", "operator-stock"],
     ["/br/7/stock/count-slips", "operator-stock"],
     ["/br/7/stock/receive", "operator-stock"],
+    ["/br/7/stock/receive/123", "operator-stock"],
     ["/br/7/stock/transfer", "operator-stock"],
     ["/br/7/stock/transfer/123", "operator-stock"],
     ["/br/7/stock/transfer/new", "operator-stock"],
@@ -73,7 +70,10 @@ test("post-login hub fallback is device and branch aware", () => {
   const phone = { standaloneStation: null, isDesktop: false } as const;
   const desktop = { standaloneStation: null, isDesktop: true } as const;
 
-  assert.equal(resolvePostLoginRedirect(claims("owner", null), null, phone), "/br");
+  assert.equal(
+    resolvePostLoginRedirect(claims("owner", null), null, phone),
+    "/br",
+  );
   assert.equal(
     resolvePostLoginRedirect(claims("owner", null), null, desktop),
     "/admin/dashboard",
@@ -100,7 +100,11 @@ test("post-login returnTo cannot cross branch-scoped operator routes", () => {
     "/br/7",
   );
   assert.equal(
-    resolvePostLoginRedirect(claims("warehouse_manager", 7), "/br/8/stock", phone),
+    resolvePostLoginRedirect(
+      claims("warehouse_manager", 7),
+      "/br/8/stock",
+      phone,
+    ),
     "/employee",
   );
 });

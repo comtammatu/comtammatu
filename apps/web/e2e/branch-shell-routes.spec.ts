@@ -149,13 +149,12 @@ test.describe("branch route shell ownership", () => {
 
     for (const path of [
       `/br/${branchId}`,
+      `/br/${branchId}/profile`,
+      `/br/${branchId}/profile/payslip`,
       `/br/${branchId}/shift`,
       `/br/${branchId}/shift/schedule`,
+      `/br/${branchId}/shift/schedule/leave`,
       `/br/${branchId}/shift/clock`,
-      `/br/${branchId}/shift/tasks`,
-      `/br/${branchId}/shift/profile`,
-      `/br/${branchId}/shift/leave`,
-      `/br/${branchId}/shift/payslip`,
       `/br/${branchId}/shift/checkout-approvals`,
     ]) {
       await expectHealthyRoute(page, path);
@@ -168,7 +167,9 @@ test.describe("branch route shell ownership", () => {
         name: APP_COPY_VI.operatorAriaLabel,
       });
       await expect(operatorNav).toBeVisible();
-      await expect(operatorNav.locator('[aria-current="page"]')).toHaveCount(1);
+      await expect(operatorNav.locator('[aria-current="page"]')).toHaveCount(
+        path.startsWith(`/br/${branchId}/profile`) ? 0 : 1,
+      );
     }
 
     expect(health.consoleErrors).toEqual([]);

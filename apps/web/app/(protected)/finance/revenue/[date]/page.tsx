@@ -60,7 +60,7 @@ export default async function RevenueDrillPage({
 
   if (!isValidIsoDate(date)) {
     return (
-      <AppPage>
+      <AppPage width="wide" density="compact">
         <AppPageHeader
           eyebrow={copy.eyebrow}
           title={copy.invalidDateTitle}
@@ -83,7 +83,7 @@ export default async function RevenueDrillPage({
       name: string;
     }[];
     return (
-      <AppPage>
+      <AppPage width="wide" density="compact">
         <AppPageHeader
           eyebrow={copy.eyebrow}
           title={copy.selectBranchTitle(date)}
@@ -141,7 +141,7 @@ export default async function RevenueDrillPage({
   const totalTax = orders.reduce((s, o) => s + Number(o.tax_amount), 0);
 
   return (
-    <AppPage density="compact">
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow={copy.eyebrow}
         title={copy.detailTitle(branchName, date)}

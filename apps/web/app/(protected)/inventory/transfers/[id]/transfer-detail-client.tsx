@@ -644,7 +644,7 @@ export function TransferDetailClient({
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
-  return <AppPage>{content}</AppPage>;
+  return <AppPage width="wide" density="compact">{content}</AppPage>;
 }
 
 function TransferLineMobileCard({

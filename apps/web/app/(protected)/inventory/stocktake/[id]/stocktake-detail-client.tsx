@@ -219,7 +219,7 @@ export function StocktakeDetailClient({
   }
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow="Kho hàng"
         title={`KK-${session.id}`}

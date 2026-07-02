@@ -326,7 +326,7 @@ export function NewPoClient({
   ).length;
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow={messages.inventory.po.draftEyebrow}
         title={messages.inventory.po.newTitle}

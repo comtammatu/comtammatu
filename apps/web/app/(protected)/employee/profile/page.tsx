@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import {
   BarChart3 as IconBarChart3,
   Briefcase as IconBriefcase,
-  CalendarX as IconCalendarX,
   ChefHat as IconChefHat,
   ClipboardList as IconClipboardList,
   LayoutDashboard as IconLayoutDashboard,
@@ -65,12 +64,6 @@ const WORKSPACE_ICON_MAP: Record<string, LucideIcon> = {
 };
 
 export const PERSONAL_LINKS: ProfileLink[] = [
-  {
-    key: "leave",
-    href: "/employee/leave",
-    icon: IconCalendarX,
-    title: employeeCopy.leave.title,
-  },
   {
     key: "payslip",
     href: "/employee/payslip",
@@ -202,10 +195,7 @@ export async function ProfilePageContent({
 
 export default async function ProfilePage() {
   const { claims } = await loadAuthState();
-  const branchRuntimePath = resolveEmployeeBranchRuntimePath(
-    claims,
-    "shiftProfile",
-  );
+  const branchRuntimePath = resolveEmployeeBranchRuntimePath(claims, "profile");
   if (branchRuntimePath) redirect(branchRuntimePath);
 
   return <ProfilePageContent />;

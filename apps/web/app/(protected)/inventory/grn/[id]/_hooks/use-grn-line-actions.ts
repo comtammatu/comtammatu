@@ -23,6 +23,9 @@ interface UseGrnLineActionsArgs {
   setLines: Dispatch<SetStateAction<EditableLine[]>>;
   startSave: TransitionStartFunction;
   startConfirm: TransitionStartFunction;
+  grnListBasePath?: string;
+  grnMobileBackPath?: string;
+  purchaseOrdersBasePath?: string;
 }
 
 interface UseGrnLineActionsReturn {
@@ -46,6 +49,9 @@ export function useGrnLineActions({
   setLines,
   startSave,
   startConfirm,
+  grnListBasePath = "/inventory/grn",
+  grnMobileBackPath = "/inventory/grn/new",
+  purchaseOrdersBasePath = "/inventory/purchase-orders",
 }: UseGrnLineActionsArgs): UseGrnLineActionsReturn {
   const router = useRouter();
 
@@ -205,11 +211,11 @@ export function useGrnLineActions({
           : messages.inventory.grn.confirmed,
       );
       if (isMobile) {
-        router.push("/inventory/grn/new");
+        router.push(grnMobileBackPath);
       } else if (grn.poId) {
-        router.push(`/inventory/purchase-orders/${grn.poId}`);
+        router.push(`${purchaseOrdersBasePath}/${grn.poId}`);
       } else {
-        router.push("/inventory/grn");
+        router.push(grnListBasePath);
       }
     });
   }

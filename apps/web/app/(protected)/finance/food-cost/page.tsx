@@ -34,7 +34,7 @@ export default async function FoodCostPage({
   const rows = (foodRes.success ? (foodRes.data ?? []) : []) as FoodCostRow[];
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow={messages.finance.shell.subLabel}
         title={messages.finance.nav.items.foodCost}

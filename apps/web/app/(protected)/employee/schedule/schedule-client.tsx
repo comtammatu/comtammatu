@@ -8,6 +8,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
+import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
@@ -58,6 +59,7 @@ interface ScheduleClientProps {
   initialData: ScheduleMonthData;
   initialMonthStart: string;
   leaveHref?: string;
+  monthlySalary?: number;
 }
 
 function formatDate(dateStr: string): string {
@@ -79,6 +81,12 @@ function formatTime(iso: string | null | undefined): string {
 function formatShiftWindow(start: string | null, end: string | null): string {
   if (!start) return "—";
   return `${start.slice(0, 5)} - ${end ? end.slice(0, 5) : "—"}`;
+}
+
+function formatDayCount(count: number): string {
+  return Number.isInteger(count)
+    ? String(count)
+    : count.toFixed(1).replace(".", ",");
 }
 
 function getMonthStartForOffset(monthStartStr: string, delta: number): string {
@@ -533,6 +541,7 @@ export function ScheduleClient({
   initialData,
   initialMonthStart,
   leaveHref = "/employee/leave",
+  monthlySalary = 0,
 }: ScheduleClientProps) {
   const [monthStart, setMonthStart] = useState(initialMonthStart);
   const [monthData, setMonthData] = useState<ScheduleMonthData>(initialData);
@@ -590,12 +599,14 @@ export function ScheduleClient({
   for (const count of shiftCountByDate.values()) {
     workdaysCount += Math.min(count, 2) * 0.5;
   }
-  const openShiftsCount = monthData.attendance.filter(
-    (item) => !item.check_out,
-  ).length;
-  const leaveDaysCount = monthData.leaves.filter(
-    (item) => item.status === "approved",
-  ).length;
+  let leaveDaysCount = 0;
+  for (const status of leaveByDate.values()) {
+    if (status === "approved") leaveDaysCount += 1;
+  }
+  const hasMonthlySalary = monthlySalary > 0;
+  const estimatedPay = hasMonthlySalary
+    ? (workdaysCount * monthlySalary) / 27
+    : null;
 
   return (
     <EmployeePanel contentClassName="gap-3">
@@ -641,16 +652,20 @@ export function ScheduleClient({
 
       <EmployeeStatusStrip
         items={[
-          { label: copy.summaryWorkdays, value: String(workdaysCount), mono: true },
           {
-            label: copy.summaryOpenShifts,
-            value: String(openShiftsCount),
-            muted: openShiftsCount === 0,
+            label: copy.summaryWorkdays,
+            value: formatDayCount(workdaysCount),
+            mono: true,
+          },
+          {
+            label: copy.summaryEstimatedDays,
+            value: estimatedPay == null ? "—" : formatVND(estimatedPay),
+            muted: !hasMonthlySalary,
             mono: true,
           },
           {
             label: copy.summaryLeaveDays,
-            value: String(leaveDaysCount),
+            value: formatDayCount(leaveDaysCount),
             muted: leaveDaysCount === 0,
             mono: true,
           },

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { User as IconUser } from "lucide-react";
+import { CalendarDays as IconCalendarDays } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { getEmployeeContext } from "../_lib/employee-context";
@@ -15,11 +15,11 @@ import { messages } from "@lib/messages";
 const copy = messages.employee.leave;
 
 export async function EmployeeLeavePageContent({
-  profileHref = "/employee/profile",
+  returnHref = "/employee/schedule",
   routeBranchId,
   hideHeaderOnMobile,
 }: {
-  profileHref?: string;
+  returnHref?: string;
   routeBranchId?: number;
   hideHeaderOnMobile?: boolean;
 } = {}) {
@@ -86,9 +86,9 @@ export async function EmployeeLeavePageContent({
           size="touch"
           className="w-full sm:w-fit"
         >
-          <Link href={profileHref}>
-            <IconUser data-icon="inline-start" />
-            {copy.backToProfile}
+          <Link href={returnHref}>
+            <IconCalendarDays data-icon="inline-start" />
+            {copy.backToSchedule}
           </Link>
         </Button>
       }
@@ -106,7 +106,7 @@ export default async function EmployeeLeavePage() {
   const { claims } = await loadAuthState();
   const branchRuntimePath = resolveEmployeeBranchRuntimePath(
     claims,
-    "shiftLeave",
+    "scheduleLeave",
   );
   if (branchRuntimePath) redirect(branchRuntimePath);
 

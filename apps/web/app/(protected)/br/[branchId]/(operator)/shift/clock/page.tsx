@@ -10,8 +10,8 @@ export default async function OperatorShiftClockPage({
   return (
     <ClockPageContent
       routes={{
-        home: `/br/${branchId}`,
-        tasks: `/br/${branchId}/shift/tasks`,
+        home: `/br/${branchId}/shift`,
+        tasks: `/br/${branchId}/shift`,
         schedule: `/br/${branchId}/shift/schedule`,
         managerHr: "/hr",
       }}

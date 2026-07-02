@@ -146,7 +146,7 @@ export const OPERATOR_TILE_ITEMS = [
     moduleKey: "employee",
     icon: "ListChecks",
     group: "my_shift",
-    hrefTemplate: "/br/{branchId}/shift/tasks",
+    hrefTemplate: "/br/{branchId}/shift",
     label: "Việc trong ca",
   },
   {
@@ -209,13 +209,6 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/transfer",
     label: "Yêu cầu hàng",
-  },
-  {
-    moduleKey: "inventory",
-    icon: "ClipboardCheck",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/count",
-    label: "Kiểm kê tồn",
   },
   {
     moduleKey: "inventory",

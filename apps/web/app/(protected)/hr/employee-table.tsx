@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Pencil as IconPencil, Users as IconUsers } from "lucide-react";
-import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { formatVND } from "@comtammatu/shared/format";
 import {
@@ -45,11 +45,10 @@ export function EmployeeTable({
 
   function renderStatus(employee: EmployeeRow) {
     return (
-      <Badge variant={employee.is_active ? "default" : "outline"}>
-        {employee.is_active
-          ? ACTIVE_STATE_LABELS_VI.active
-          : ACTIVE_STATE_LABELS_VI.inactive}
-      </Badge>
+      <StatusBadge
+        domain="active-state"
+        value={employee.is_active ? "active" : "inactive"}
+      />
     );
   }
 

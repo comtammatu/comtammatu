@@ -1,3 +1,4 @@
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator hub homepage displays inline vietnamese warning for clock-in gate */
 import {
   ChefHat,
   ClipboardCheck,
@@ -22,6 +23,7 @@ import {
   EmployeePage,
 } from "@/(protected)/employee/components/employee-page";
 import { EmployeeHomePageContent } from "@/(protected)/employee/page";
+import { getTodayWorkState } from "@/(protected)/employee/_lib/today-work-state";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 
@@ -68,6 +70,25 @@ export default async function OperatorHomePage({
   const showManagementCard =
     !showTodayCard && canAccess(claims.user_role, "branch_dashboard");
 
+  // Pre-clock-in gate for cashier/chef roles
+  const isFloorRole =
+    claims.user_role === "cashier" || claims.user_role === "chef";
+  const workState = await getTodayWorkState();
+  const beforeClockIn = workState.status === "not_started";
+
+  const filteredGroups = groups
+    .map((group) => {
+      if (
+        isFloorRole &&
+        beforeClockIn &&
+        (group.id === "sales_kitchen" || group.id === "stock")
+      ) {
+        return { ...group, tiles: [] };
+      }
+      return group;
+    })
+    .filter((group) => group.tiles.length > 0);
+
   return (
     <EmployeePage title={APP_COPY_VI.operatorHome} hideHeaderOnMobile>
       {showTodayCard ? (
@@ -76,11 +97,9 @@ export default async function OperatorHomePage({
           mode="today-card"
           routes={{
             clock: `${basePath}/shift/clock`,
-            tasks: `${basePath}/shift/tasks`,
+            tasks: `${basePath}/shift`,
             schedule: `${basePath}/shift/schedule`,
-            profile: `${basePath}/shift/profile`,
-            leave: `${basePath}/shift/leave`,
-            payslip: `${basePath}/shift/payslip`,
+            profile: `${basePath}/profile`,
             checkoutApprovals: `${basePath}/shift/checkout-approvals`,
             count: `${basePath}/stock/count`,
           }}
@@ -101,7 +120,15 @@ export default async function OperatorHomePage({
           </Button>
         </EmployeePanel>
       ) : null}
-      {groups.map((group) => (
+
+      {isFloorRole && beforeClockIn && (
+        <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm text-warning-foreground">
+          Bạn cần <strong>chấm công vào ca</strong> để mở khóa các chức năng Bán
+          hàng, Bếp và Kho chi nhánh.
+        </div>
+      )}
+
+      {filteredGroups.map((group) => (
         <EmployeeActionSection
           key={group.id}
           title={group.title}

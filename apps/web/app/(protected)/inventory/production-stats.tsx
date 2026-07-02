@@ -19,6 +19,7 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppSection } from "@/components/surface";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   QuickFinishedGoodDialog,
   QuickRawIngredientDialog,
@@ -150,20 +151,13 @@ export function ProductionStats({
       >
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {summaryItems.map((item) => (
-            <div
+            <KpiCard
               key={item.label}
-              className="flex min-h-24 flex-col justify-between rounded-md border bg-muted/30 p-3"
-            >
-              <div className="text-xs font-medium text-muted-foreground">
-                {item.label}
-              </div>
-              <div className="text-2xl font-semibold tabular-nums">
-                {item.value}
-              </div>
-              <div className="line-clamp-2 break-words text-xs text-muted-foreground">
-                {item.description}
-              </div>
-            </div>
+              label={item.label}
+              value={item.value}
+              hint={item.description}
+              density="compact"
+            />
           ))}
         </div>
 

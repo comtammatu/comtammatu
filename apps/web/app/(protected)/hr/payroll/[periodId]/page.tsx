@@ -20,7 +20,7 @@ export default async function PayrollDetailPage({
 
   if (!id || id <= 0) {
     return (
-      <AppPage>
+      <AppPage width="wide" density="compact">
         <AppEmptyState
           mode="no-access"
           title={copy.detail.invalidTitle}
@@ -43,7 +43,7 @@ export default async function PayrollDetailPage({
     : [];
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow={copy.eyebrow}
         title={copy.detail.title}

@@ -10,6 +10,13 @@ import {
   Users as IconUsers,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { StatusBadge } from "@/components/status-badge";
+import { matchesSearch } from "@lib/search";
+import { messages } from "@lib/messages";
+import { toggleStaffActive } from "./actions";
+import { StaffFormDialog } from "./staff-form-dialog";
+import { toast } from "@comtammatu/ui/components/sonner";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   InputGroup,
   InputGroupAddon,
@@ -20,13 +27,6 @@ import {
   ItemActions,
   ItemContent,
 } from "@comtammatu/ui/components/item";
-import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
-import { matchesSearch } from "@lib/search";
-import { messages } from "@lib/messages";
-import { toggleStaffActive } from "./actions";
-import { StaffFormDialog } from "./staff-form-dialog";
-import { toast } from "@comtammatu/ui/components/sonner";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   DataTable,
   type DataTableColumn,
@@ -65,11 +65,10 @@ interface StaffTableProps {
 
 function StaffActiveBadge({ active }: { active: boolean | null }) {
   return (
-    <Badge variant={active !== false ? "default" : "outline"}>
-      {active !== false
-        ? ACTIVE_STATE_LABELS_VI.active
-        : ACTIVE_STATE_LABELS_VI.inactive}
-    </Badge>
+    <StatusBadge
+      domain="active-state"
+      value={active !== false ? "active" : "inactive"}
+    />
   );
 }
 

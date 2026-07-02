@@ -563,7 +563,7 @@ export function WasteCreateClient({
   }
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       {content}
     </AppPage>
   );

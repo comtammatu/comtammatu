@@ -23,7 +23,7 @@ test("operator routes use a route group without wrapping station apps", () => {
   }
 });
 
-test("operator bottom nav keeps personal routes nested under shift", () => {
+test("operator bottom nav keeps profile out of shift navigation", () => {
   const bottomNav = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
   );
@@ -35,21 +35,30 @@ test("operator bottom nav keeps personal routes nested under shift", () => {
   ]) {
     assert.ok(bottomNav.includes(expected), expected);
   }
-  assert.ok(bottomNav.includes("`/br/${branchId}/shift/profile`"));
+  assert.doesNotMatch(bottomNav, /shift\/profile/);
+  assert.doesNotMatch(bottomNav, /shift\/leave/);
+  assert.doesNotMatch(bottomNav, /shift\/payslip/);
+  assert.doesNotMatch(bottomNav, /`\/br\/\$\{branchId\}\/profile`/);
   assert.ok(bottomNav.includes("showBranchManagement"));
   assert.ok(bottomNav.includes("`/br/${branchId}/dashboard`"));
   assert.ok(bottomNav.includes("`/br/${branchId}/settings`"));
   assert.ok(bottomNav.includes("APP_COPY_VI.operatorManagement"));
-  assert.doesNotMatch(bottomNav, /label: messages\.employee\.nav\.profileShort/);
+  assert.doesNotMatch(
+    bottomNav,
+    /label: messages\.employee\.nav\.profileShort/,
+  );
   assert.doesNotMatch(bottomNav, /"\/notifications"/);
   assert.doesNotMatch(bottomNav, /MAX_VISIBLE_ITEMS/);
 });
 
-test("operator header keeps notifications and leaves profile out of chrome", () => {
+test("operator header keeps profile and notifications in chrome", () => {
   const layout = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
   );
 
+  assert.match(layout, /IconUser/);
+  assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/profile`\}/);
+  assert.match(layout, /aria-label=\{messages\.employee\.nav\.profileShort\}/);
   assert.match(layout, /notificationsHref/);
   assert.match(layout, /encodeURIComponent\(`\/br\/\$\{context\.branchId\}`\)/);
   assert.match(layout, /href=\{notificationsHref\}/);
@@ -84,15 +93,21 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /resolveOperatorTiles/);
   assert.match(home, /EmployeeHomePageContent/);
   assert.match(home, /mode="today-card"/);
-  assert.match(home, /showTodayCard = canAccess\(claims\.user_role, "employee"\)/);
+  assert.match(
+    home,
+    /showTodayCard = canAccess\(claims\.user_role, "employee"\)/,
+  );
   assert.match(home, /showManagementCard/);
   assert.match(home, /APP_COPY_VI\.branchCommand/);
   assert.match(home, /href=\{`\$\{basePath\}\/dashboard`\}/);
   assert.match(home, /clock: `\$\{basePath\}\/shift\/clock`/);
   assert.match(home, /count: `\$\{basePath\}\/stock\/count`/);
   assert.match(home, /EmployeeActionSection/);
-  assert.match(home, /groups\.map/);
-  assert.match(home, /key: `\$\{group\.id\}-\$\{tile\.moduleKey\}-\$\{tile\.href\}`/);
+  assert.match(home, /filteredGroups\.map/);
+  assert.match(
+    home,
+    /key: `\$\{group\.id\}-\$\{tile\.moduleKey\}-\$\{tile\.href\}`/,
+  );
   assert.match(home, /mobileColumns=\{2\}/);
   assert.doesNotMatch(home, /operatorRuntimeActions/);
   assert.doesNotMatch(home, /operatorOpsActions/);
@@ -110,8 +125,15 @@ test("operator hub owns branch workflow entry tiles", () => {
   assert.match(navConfig, /approvals: "Duyệt"/);
   assert.match(navConfig, /sales_kitchen: "Bán hàng & bếp"/);
   assert.match(navConfig, /stock: "Kho chi nhánh"/);
-  assert.match(operatorTiles, /hrefTemplate: "\/br\/\{branchId\}\/shift\/clock"/);
-  assert.match(operatorTiles, /hrefTemplate: "\/br\/\{branchId\}\/shift\/tasks"/);
+  assert.match(
+    operatorTiles,
+    /hrefTemplate: "\/br\/\{branchId\}\/shift\/clock"/,
+  );
+  assert.match(operatorTiles, /hrefTemplate: "\/br\/\{branchId\}\/shift"/);
+  assert.doesNotMatch(
+    operatorTiles,
+    /hrefTemplate: "\/br\/\{branchId\}\/shift\/tasks"/,
+  );
   assert.match(operatorTiles, /moduleKey: "employee_checkout_approvals"/);
   assert.match(
     operatorTiles,
@@ -125,11 +147,26 @@ test("operator hub owns branch workflow entry tiles", () => {
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/count-slips"/,
   );
-  assert.doesNotMatch(operatorTiles, /hrefTemplate: "\/inventory\/count-slips"/);
-  assert.match(operatorTiles, /hrefTemplate: "\/br\/\{branchId\}\/stock\/receive"/);
-  assert.match(operatorTiles, /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer"/);
-  assert.match(operatorTiles, /hrefTemplate: "\/br\/\{branchId\}\/stock\/count"/);
-  assert.match(operatorTiles, /hrefTemplate: "\/br\/\{branchId\}\/stock\/waste"/);
+  assert.doesNotMatch(
+    operatorTiles,
+    /hrefTemplate: "\/inventory\/count-slips"/,
+  );
+  assert.match(
+    operatorTiles,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/receive"/,
+  );
+  assert.match(
+    operatorTiles,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer"/,
+  );
+  assert.doesNotMatch(
+    operatorTiles,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/count"/,
+  );
+  assert.match(
+    operatorTiles,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/waste"/,
+  );
   assert.doesNotMatch(operatorTiles, /hrefTemplate: "\/inventory\/stocktake"/);
   assert.doesNotMatch(operatorTiles, /hrefTemplate: "\/inventory\/transfers"/);
   assert.doesNotMatch(operatorTiles, /hrefTemplate: "\/inventory\/waste/);

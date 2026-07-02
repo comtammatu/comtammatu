@@ -376,7 +376,7 @@ export function IssueDetailClient({
   ];
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow={surface.eyebrow}
         title={issue.issue_number}

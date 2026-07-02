@@ -79,7 +79,7 @@ export default async function PayslipPage(props: {
   const { claims } = await loadAuthState();
   const branchRuntimePath = resolveEmployeeBranchRuntimePath(
     claims,
-    "shiftPayslip",
+    "profilePayslip",
   );
   if (branchRuntimePath) {
     const { year } = await props.searchParams;

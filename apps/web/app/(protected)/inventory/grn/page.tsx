@@ -4,13 +4,22 @@ import { resolveRequestedBranchId } from "../_lib/inventory-scope";
 import { GrnListClient } from "./grn-list-client";
 import type { GrnRow } from "./grn-list-client";
 
-export default async function GRNListPage({
-  searchParams,
-}: {
+interface GRNListPageContentProps {
   searchParams: Promise<{ branchId?: string | string[] }>;
-}) {
+  routeBranchId?: number;
+  basePath?: string;
+  purchaseOrdersPath?: string;
+}
+
+export async function GRNListPageContent({
+  searchParams,
+  routeBranchId,
+  basePath = "/inventory/grn",
+  purchaseOrdersPath = "/inventory/purchase-orders",
+}: GRNListPageContentProps) {
   const params = await searchParams;
-  const branchId = await resolveRequestedBranchId(params.branchId);
+  const branchId =
+    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
   const res = await fetchGrns(branchId ?? undefined);
   const dbRows = res.success
     ? (res.data as Array<Record<string, unknown>>)
@@ -43,5 +52,19 @@ export default async function GRNListPage({
     status: (row.status as string) ?? "pending",
   }));
 
-  return <GrnListClient grns={grns} />;
+  return (
+    <GrnListClient
+      grns={grns}
+      basePath={basePath}
+      purchaseOrdersPath={purchaseOrdersPath}
+    />
+  );
+}
+
+export default async function GRNListPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  return <GRNListPageContent searchParams={searchParams} />;
 }

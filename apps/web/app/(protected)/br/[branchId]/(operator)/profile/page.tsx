@@ -4,7 +4,7 @@ import {
   ProfilePageContent,
 } from "@/(protected)/employee/profile/page";
 
-export default async function OperatorShiftProfilePage({
+export default async function OperatorProfilePage({
   params,
 }: {
   params: Promise<{ branchId: string }>;
@@ -14,11 +14,9 @@ export default async function OperatorShiftProfilePage({
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
   const personalLinks = PERSONAL_LINKS.map((link) =>
-    link.key === "leave"
-      ? { ...link, href: `/br/${branchId}/shift/leave` }
-      : link.key === "payslip"
-        ? { ...link, href: `/br/${branchId}/shift/payslip` }
-        : link,
+    link.key === "payslip"
+      ? { ...link, href: `/br/${branchId}/profile/payslip` }
+      : link,
   );
 
   return <ProfilePageContent personalLinks={personalLinks} />;

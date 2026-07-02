@@ -21,6 +21,11 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.ensure_production_order_central_kitchen()
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.ensure_production_order_central_kitchen()
+  TO service_role;
+
 DROP TRIGGER IF EXISTS trg_production_orders_central_kitchen_only
   ON public.production_orders;
 

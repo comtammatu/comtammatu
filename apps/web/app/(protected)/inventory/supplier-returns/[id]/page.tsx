@@ -55,7 +55,7 @@ export default async function SupplierReturnDetailPage({
   const { header, lines } = detail;
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow="Kho hàng"
         title={header.return_number}

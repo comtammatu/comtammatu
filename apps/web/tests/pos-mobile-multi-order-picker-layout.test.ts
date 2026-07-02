@@ -14,12 +14,12 @@ const source = readFileSync(
 test("mobile multi-order picker keeps its order list scrollable inside the drawer", () => {
   assert.match(
     source,
-    /DrawerContent[\s\S]*className="mx-auto w-full max-w-md overflow-hidden sm:max-w-lg"/,
+    /DrawerContent[\s\S]*className="mx-auto flex max-h-dvh-80 w-full max-w-md flex-col overflow-hidden sm:max-w-lg"/,
   );
   assert.match(source, /DrawerHeader className="shrink-0"/);
   assert.match(
     source,
-    /ScrollArea[\s\S]*className="flex min-h-0 flex-1 max-h-dvh-80 overflow-hidden px-4"/,
+    /ScrollArea[\s\S]*className="min-h-0 flex-1 px-4"/,
   );
   assert.match(source, /data-vaul-no-drag/);
   assert.match(

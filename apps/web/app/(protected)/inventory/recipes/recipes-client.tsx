@@ -160,7 +160,7 @@ export function RecipesClient({
   ];
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         title="Định mức món bán"
         actions={

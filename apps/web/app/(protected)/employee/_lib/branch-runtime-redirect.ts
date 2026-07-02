@@ -5,19 +5,19 @@ type BranchRuntimeRoute =
   | "shiftClock"
   | "shiftTasks"
   | "shiftSchedule"
-  | "shiftProfile"
-  | "shiftLeave"
-  | "shiftPayslip"
+  | "profile"
+  | "scheduleLeave"
+  | "profilePayslip"
   | "stockCount";
 
 const BRANCH_RUNTIME_PATHS = {
   home: "",
   shiftClock: "/shift/clock",
-  shiftTasks: "/shift/tasks",
+  shiftTasks: "/shift",
   shiftSchedule: "/shift/schedule",
-  shiftProfile: "/shift/profile",
-  shiftLeave: "/shift/leave",
-  shiftPayslip: "/shift/payslip",
+  profile: "/profile",
+  scheduleLeave: "/shift/schedule/leave",
+  profilePayslip: "/profile/payslip",
   stockCount: "/stock/count",
 } satisfies Record<BranchRuntimeRoute, string>;
 

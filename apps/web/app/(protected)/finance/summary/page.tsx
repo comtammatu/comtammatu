@@ -18,7 +18,7 @@ export default async function SummaryPage() {
   );
   if (!allowed) {
     return (
-      <AppPage>
+      <AppPage width="wide" density="compact">
         <AppPageHeader
           eyebrow={copy.eyebrow}
           title={copy.title}
@@ -44,7 +44,7 @@ export default async function SummaryPage() {
 
   if (!queueRes.success) {
     return (
-      <AppPage>
+      <AppPage width="wide" density="compact">
         <AppPageHeader
           eyebrow={copy.eyebrow}
           title={copy.title}
@@ -62,7 +62,7 @@ export default async function SummaryPage() {
   const queue = (queueRes.data ?? []) as SummaryQueueRow[];
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow={copy.eyebrow}
         title={copy.title}
