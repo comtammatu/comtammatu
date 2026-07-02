@@ -29,6 +29,10 @@ const CLASSIFIED_FILES = new Map([
     "UI freeze guard vocabulary; not runtime implementation.",
   ],
   [
+    "scripts/page-archetypes.mjs",
+    "PAGE_ARCHETYPES census data for the UI freeze guard; REDIRECT-SHIM is an archetype id, not runtime implementation.",
+  ],
+  [
     "scripts/update-i18n-baseline.mjs",
     "i18n baseline tooling vocabulary; describes the inline-Vietnamese baseline mechanism.",
   ],
