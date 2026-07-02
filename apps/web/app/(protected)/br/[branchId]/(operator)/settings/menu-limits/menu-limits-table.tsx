@@ -101,6 +101,11 @@ function getItemBadge(row: MenuLimitRow): {
   return null;
 }
 
+function renderItemBadge(row: MenuLimitRow) {
+  const badge = getItemBadge(row);
+  return badge ? <Badge variant={badge.variant}>{badge.label}</Badge> : null;
+}
+
 function getMenuLimitQueuePriority(row: MenuLimitRow): number {
   if (row.is_disabled) return 0;
   const progress = getSoldProgress(row);
@@ -370,14 +375,11 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
       header: messages.pos.menu.itemLabel,
       className: "min-w-56",
       render: (row) => {
-        const badge = getItemBadge(row);
         return (
           <div className="flex flex-col gap-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">{row.item_name}</span>
-              {badge ? (
-                <Badge variant={badge.variant}>{badge.label}</Badge>
-              ) : null}
+              {renderItemBadge(row)}
             </div>
             <div className="font-mono text-xs tabular-nums text-muted-foreground">
               {formatVND(row.base_price)}
@@ -478,35 +480,32 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
             data={group.items}
             getRowKey={(row) => row.menu_item_id}
             mobileCardRender={(row) => (
-              <Item variant="outline" className="items-stretch">
-                <ItemHeader>
-                  <ItemContent>
-                    <ItemTitle>
-                      {row.item_name}
-                      {(() => {
-                        const badge = getItemBadge(row);
-                        return badge ? (
-                          <Badge variant={badge.variant}>{badge.label}</Badge>
-                        ) : null;
-                      })()}
+              <Item variant="outline" className="items-stretch gap-3">
+                <ItemHeader className="items-start">
+                  <ItemContent className="min-w-0 gap-1">
+                    <ItemTitle className="line-clamp-2 w-full flex-wrap text-sm">
+                      <span className="min-w-0">{row.item_name}</span>
+                      {renderItemBadge(row)}
                     </ItemTitle>
-                    <ItemDescription>
-                      {formatVND(row.base_price)}
-                    </ItemDescription>
-                    <ItemDescription>
-                      {messages.pos.menu.stockCapacityLabel}:{" "}
-                      {renderStockCapacity(row)}
+                    <ItemDescription className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono tabular-nums text-foreground">
+                        {formatVND(row.base_price)}
+                      </span>
+                      <span>
+                        {messages.pos.menu.stockCapacityLabel}:{" "}
+                        {renderStockCapacity(row)}
+                      </span>
                     </ItemDescription>
                   </ItemContent>
                 </ItemHeader>
-                {renderRemainingBar(row)}
-                <ItemFooter className="flex-col items-stretch sm:flex-row sm:items-center">
-                  <span className="text-sm text-muted-foreground">
+                <div className="basis-full rounded-md bg-muted/30 p-2">
+                  {renderRemainingBar(row)}
+                </div>
+                <ItemFooter className="flex-col items-stretch gap-2 border-t pt-2">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {messages.pos.menu.manualLimitLabel}
                   </span>
-                  <div className="w-full sm:w-40">
-                    {renderLimitControls(row, true)}
-                  </div>
+                  {renderLimitControls(row, true)}
                 </ItemFooter>
               </Item>
             )}
