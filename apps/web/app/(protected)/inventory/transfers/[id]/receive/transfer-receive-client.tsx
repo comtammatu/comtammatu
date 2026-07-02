@@ -112,9 +112,14 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
   const needsReceiveMode = transfer.status === "in_transit";
   const canAct = READY_STATES.includes(transfer.status);
   const hasShort = totals.shortLines > 0;
+  const needsAcknowledgement = hasShort;
   const noteOk = !hasShort || shortNote.trim().length >= 3;
   const canSubmit =
-    canAct && !needsReceiveMode && acknowledged && noteOk && !pending;
+    canAct &&
+    !needsReceiveMode &&
+    (!needsAcknowledgement || acknowledged) &&
+    noteOk &&
+    !pending;
 
   async function startReceiveMode() {
     setStartingReceive(true);
@@ -141,15 +146,18 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
     }
     setPending(true);
     setError(null);
-    const items: Record<string, { qty: number; note?: string }> = {};
-    for (const line of lines) {
-      const qty = values[line.ingredientId] ?? 0;
-      items[String(line.ingredientId)] = {
-        qty,
-        ...(qty < line.sentQty && shortNote.trim()
-          ? { note: shortNote.trim() }
-          : {}),
-      };
+    const items: Record<string, { qty: number; note?: string }> | null =
+      hasShort ? {} : null;
+    if (items) {
+      for (const line of lines) {
+        const qty = values[line.ingredientId] ?? 0;
+        items[String(line.ingredientId)] = {
+          qty,
+          ...(qty < line.sentQty && shortNote.trim()
+            ? { note: shortNote.trim() }
+            : {}),
+        };
+      }
     }
     const res = await transferReceive(transfer.id, items);
     setPending(false);
@@ -336,7 +344,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
         </AppSection>
       ) : null}
 
-      {!needsReceiveMode ? (
+      {needsAcknowledgement && !needsReceiveMode ? (
         <div className="flex items-start gap-2 rounded-md bg-muted/40 px-3 py-3">
           <Checkbox
             id="acknowledge-receive"
@@ -373,7 +381,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
               </>
             ) : !canAct ? (
               TRANSFER_RECEIVE_COPY.inactive
-            ) : !acknowledged ? (
+            ) : needsAcknowledgement && !acknowledged ? (
               TRANSFER_RECEIVE_COPY.needsAcknowledgement
             ) : hasShort ? (
               TRANSFER_RECEIVE_COPY.confirmShort

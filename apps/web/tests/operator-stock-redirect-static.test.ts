@@ -514,6 +514,24 @@ test("branch stock wrappers keep inventory fallbacks inside the branch shell", (
   assert.match(expiryClient, embeddedContentWrapperPattern);
 });
 
+test("transfer receive full receipt stays one-click on the existing atomic action", () => {
+  const receiveClient = read(
+    "apps/web/app/(protected)/inventory/transfers/[id]/receive/transfer-receive-client.tsx",
+  );
+  const transferActions = read(
+    "apps/web/app/(protected)/inventory/transfer-actions.ts",
+  );
+
+  assert.match(receiveClient, /const needsAcknowledgement = hasShort/);
+  assert.match(
+    receiveClient,
+    /const items: Record<string, \{ qty: number; note\?: string \}> \| null =\s*hasShort \? \{\} : null;/,
+  );
+  assert.match(receiveClient, /transferReceive\(transfer\.id, items\)/);
+  assert.match(transferActions, /stock_transfer_receive/);
+  assert.match(transferActions, /p_items: items \?\? null/);
+});
+
 test("operator waste approvals render branch-locked inside the branch shell", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx",
