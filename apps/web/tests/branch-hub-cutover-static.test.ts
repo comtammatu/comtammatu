@@ -28,6 +28,27 @@ test("proxy passes device context into post-login redirect", () => {
   );
 });
 
+test("login action passes device context into post-login redirect", () => {
+  const actions = read("apps/web/app/(public)/(auth)/login/actions.ts");
+
+  assert.match(actions, /resolveBranchHubContextFromHeaders/);
+  assert.match(
+    actions,
+    /resolvePostLoginRedirect\(\s*claims,\s*returnTo,\s*resolveBranchHubContextFromHeaders\(await headers\(\)\),?\s*\)/,
+  );
+});
+
+test("employee runtime redirect sends owner to the branch picker", () => {
+  const redirectLib = read(
+    "apps/web/app/(protected)/employee/_lib/branch-runtime-redirect.ts",
+  );
+
+  assert.match(
+    redirectLib,
+    /isAdminRole\(claims\.user_role\)\s*\?\s*"\/br"\s*:\s*null/,
+  );
+});
+
 test("employee portal home delegates branch-runtime roles to Branch Hub", () => {
   const employeeHome = read("apps/web/app/(protected)/employee/page.tsx");
 

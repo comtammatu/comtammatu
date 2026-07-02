@@ -1,4 +1,4 @@
-import { canAccess, type JwtClaims } from "@comtammatu/shared/auth";
+import { canAccess, isAdminRole, type JwtClaims } from "@comtammatu/shared/auth";
 
 type BranchRuntimeRoute =
   | "home"
@@ -25,11 +25,12 @@ export function resolveEmployeeBranchRuntimePath(
   claims: JwtClaims,
   route: BranchRuntimeRoute,
 ): string | null {
-  if (
-    claims.branch_id == null ||
-    !canAccess(claims.user_role, "operator_home")
-  ) {
+  if (!canAccess(claims.user_role, "operator_home")) {
     return null;
+  }
+
+  if (claims.branch_id == null) {
+    return isAdminRole(claims.user_role) ? "/br" : null;
   }
 
   return `/br/${claims.branch_id}${BRANCH_RUNTIME_PATHS[route]}`;
