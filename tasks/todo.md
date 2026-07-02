@@ -30,8 +30,9 @@ checkout.
   (ROUTE_FAMILY_CONTRACTS ↔ resolveModuleFromPath), fix operator-shift/profile
   drift toward enforcement, re-key `/br/*/shift/checkout-approvals` →
   `employee_checkout_approvals` (D058 §5), 7-role ACL matrix test.
-- [ ] **W0b — generate `docs/spec/role-route-matrix.md` from code** + staleness
-  lint (post W0).
+- [x] **W0b — generated `role-route-matrix.md`** (merged PR #185): generator
+  `scripts/gen-role-route-matrix.mjs` + `lint:route-matrix` drift check in the
+  lint pipeline; fixed stale non-owner homes + office `/finance` grant.
 - [x] **W1 — branch relief** (merged PR #177): "Văn phòng" bridge tile group (≤6, D058 §6),
   delete dead `[]` special-case in `employee/profile/page.tsx`, pass `hrHref`
   on branch dashboard, `branch_kind × role` tiles (D058 §7), quick-win wrappers:
@@ -48,14 +49,20 @@ checkout.
   `/inventory/receiving`, add `/inventory/drafts` +
   `/inventory/supplier-returns` nav entries. Scope-read (`?branchId=`)
   unification stays deferred (D058 §12/W3 scope note).
-- [ ] **W5 — page archetype standard**: `docs/spec/page-archetypes` spec (12
-  archetypes, D058 §9, not yet created), component registry in
-  `docs/modules/ui.md` (§10), archetype gate in `check-ui-contract.mjs`,
-  wire `audit:ui-components`.
-- [ ] **W6 — Claude Design mirror push** (after W5; one-way repo→design, §11).
-- [ ] **Perf lane (interleaved, D058 §12)**: POS client code-split, `radix-ui`
-  in `optimizePackageImports`, KDS/runner fetch parallelize+stream, `use cache`
-  tenant-stable reads, bound PO/hr-staff fetches.
+- [x] **W5 — page archetype standard** (merged PR #182 + hotfix #183):
+  `docs/spec/page-archetypes.md` (11 archetypes, 135-page census), component
+  registry in `docs/modules/ui.md`, `page-archetype` gate (map data in
+  `scripts/page-archetypes.mjs`), turbo test-cache input fix for `scripts/**`.
+- [ ] **W3b — scope-read unification**: retire the `?branchId=` vs URL-segment
+  duality inside shared inventory PageContents; one `resolveBranchContext`
+  engine, `?branchId=` = display filter only (D050 §4, D058 contract).
+- [ ] **W6 — Claude Design mirror push** (W5 landed; one-way repo→design, §11):
+  bundle recipes (11 archetype cards) + adapter-layer cards, push via
+  DesignSync to project `Má Tư Design System`.
+- [x] **Perf lane slice 1** (merged PR #184): `radix-ui` optimizePackageImports,
+  KDS fetch parallelized, POS sheets code-split + idle prefetch (POS gzip
+  −29.4%: 579.6→409.1 kB), bounded PO/hr-staff fetches. `use cache` expansion
+  deferred as slice 2.
 
 ## Now — Workflow Reset
 
