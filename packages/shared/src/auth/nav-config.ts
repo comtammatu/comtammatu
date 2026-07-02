@@ -34,7 +34,8 @@ export type OperatorTileGroupId =
   | "my_shift"
   | "approvals"
   | "sales_kitchen"
-  | "stock";
+  | "stock"
+  | "office_bridge";
 
 export interface OperatorTileConfig extends BranchScopedNavItemConfig {
   group: OperatorTileGroupId;
@@ -125,6 +126,7 @@ export const OPERATOR_TILE_GROUP_TITLES: Record<OperatorTileGroupId, string> = {
   approvals: "Duyệt",
   sales_kitchen: "Bán hàng & bếp",
   stock: "Kho chi nhánh",
+  office_bridge: "Văn phòng",
 };
 
 export const OPERATOR_TILE_GROUP_ORDER: readonly OperatorTileGroupId[] = [
@@ -132,6 +134,7 @@ export const OPERATOR_TILE_GROUP_ORDER: readonly OperatorTileGroupId[] = [
   "approvals",
   "sales_kitchen",
   "stock",
+  "office_bridge",
 ] as const;
 
 export const OPERATOR_TILE_ITEMS = [
@@ -223,5 +226,54 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/waste",
     label: "Báo hao hụt",
+  },
+  {
+    moduleKey: "inventory",
+    icon: "FileText",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/grn",
+    label: "Phiếu nhập",
+  },
+  {
+    moduleKey: "inventory",
+    icon: "ClipboardList",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/consumption",
+    label: "Tiêu hao",
+  },
+  {
+    moduleKey: "menu",
+    icon: "Utensils",
+    group: "office_bridge",
+    hrefTemplate: "/menu",
+    label: "Thực đơn",
+  },
+  {
+    moduleKey: "hr",
+    icon: "Briefcase",
+    group: "office_bridge",
+    hrefTemplate: "/hr",
+    label: APP_COPY_VI.hrWorkspace,
+  },
+  {
+    moduleKey: "orders",
+    icon: "ClipboardList",
+    group: "office_bridge",
+    hrefTemplate: "/orders",
+    label: "Đơn hàng",
+  },
+  {
+    moduleKey: "inventory",
+    icon: "Package",
+    group: "office_bridge",
+    hrefTemplate: "/inventory",
+    label: "Kho văn phòng",
+  },
+  {
+    moduleKey: "inventory",
+    icon: "ChefHat",
+    group: "office_bridge",
+    hrefTemplate: "/inventory/production",
+    label: "Sản xuất",
   },
 ] satisfies readonly OperatorTileConfig[];

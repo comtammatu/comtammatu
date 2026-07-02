@@ -36,7 +36,7 @@ test("Employee home keeps Branch Manager tools out of the hot path", () => {
   );
 });
 
-test("Employee profile launcher is ACL-driven for non-admin frontline roles", () => {
+test("Employee profile launcher is ACL-driven for every role", () => {
   assert.match(
     employeeProfileSource,
     /const effectiveBranchId = ctx\?\.branchId \?\? claims\.branch_id \?\? null;/,
@@ -44,18 +44,8 @@ test("Employee profile launcher is ACL-driven for non-admin frontline roles", ()
   );
   assert.match(
     employeeProfileSource,
-    /resolveQuickLaunchGroups\(claims\.user_role, effectiveBranchId\)/,
-    "Workspace launcher must derive direct links from the shared ACL nav resolvers",
-  );
-  assert.match(
-    employeeProfileSource,
-    /isAdminRole\(claims\.user_role\)/,
-    "Workspace launcher must skip admin roles (they land in Tenant Command)",
-  );
-  assert.match(
-    employeeProfileSource,
-    /claims\.user_role === "branch_manager"/,
-    "Branch Manager profile must stay personal instead of becoming a second Branch Command hub",
+    /resolveQuickLaunchGroups\(\s*claims\.user_role,\s*effectiveBranchId,\s*\)/,
+    "Workspace launcher must derive direct links from the shared ACL nav resolvers for every role, admin and branch_manager included",
   );
   assert.match(
     employeeProfileSource,

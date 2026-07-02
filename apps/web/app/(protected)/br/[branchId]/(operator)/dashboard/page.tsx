@@ -66,6 +66,7 @@ export default async function BranchCommandPage({
   const checkoutApprovalsHref = canAccess(role, "employee_checkout_approvals")
     ? `/br/${branchId}/shift/checkout-approvals`
     : undefined;
+  const hrHref = canAccess(role, "hr") ? "/hr" : undefined;
 
   const readinessItems = buildReadinessItems(day, copy, {
     menuHref,
@@ -74,6 +75,7 @@ export default async function BranchCommandPage({
     posHref,
     kdsHref,
     printersHref,
+    hrHref,
     settingsHref,
     checkoutApprovalsHref,
   });

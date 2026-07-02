@@ -1,8 +1,11 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator hub homepage displays inline vietnamese warning for clock-in gate */
 import {
+  Briefcase,
   ChefHat,
   ClipboardCheck,
+  ClipboardList,
   Clock,
+  FileText,
   LayoutDashboard,
   ListChecks,
   Monitor,
@@ -14,7 +17,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { canAccess, resolveOperatorTiles } from "@comtammatu/shared/auth";
+import {
+  canAccess,
+  resolveOperatorTiles,
+  type BranchKind,
+} from "@comtammatu/shared/auth";
 import { formatVND } from "@comtammatu/shared/format";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
@@ -33,9 +40,12 @@ import { messages } from "@lib/messages";
 import { fetchBranchDayStatus } from "./dashboard/data";
 
 const ICONS = {
+  Briefcase,
   ChefHat,
   ClipboardCheck,
+  ClipboardList,
   Clock,
+  FileText,
   LayoutDashboard,
   ListChecks,
   Monitor,
@@ -69,7 +79,11 @@ export default async function OperatorHomePage({
   const context = await resolveBranchContext(supabase, claims, branchId);
   if (!context) notFound();
 
-  const groups = resolveOperatorTiles(claims.user_role, context.branchId);
+  const groups = resolveOperatorTiles(
+    claims.user_role,
+    context.branchId,
+    context.branch.branch_kind as BranchKind,
+  );
   const basePath = `/br/${context.branchId}`;
   const showTodayCard = canAccess(claims.user_role, "employee");
   const showOverview = canAccess(claims.user_role, "branch_dashboard");

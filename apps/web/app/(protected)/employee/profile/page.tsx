@@ -18,7 +18,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
-  isAdminRole,
   resolveQuickLaunchGroups,
   type ResolvedNavLink,
 } from "@comtammatu/shared/auth";
@@ -122,14 +121,12 @@ export async function ProfilePageContent({
     session.user.email ??
     copy.fallbackName;
 
-  // Profile stays personal. Branch Managers enter management tools from
-  // `/employee` to Branch Command, not from a second launcher here.
-  const workspaceLinks: ProfileLink[] =
-    isAdminRole(claims.user_role) || claims.user_role === "branch_manager"
-      ? []
-      : resolveQuickLaunchGroups(claims.user_role, effectiveBranchId)
-          .flatMap((group) => group.items)
-          .map(mapWorkspaceLink);
+  const workspaceLinks: ProfileLink[] = resolveQuickLaunchGroups(
+    claims.user_role,
+    effectiveBranchId,
+  )
+    .flatMap((group) => group.items)
+    .map(mapWorkspaceLink);
 
   return (
     <EmployeePage

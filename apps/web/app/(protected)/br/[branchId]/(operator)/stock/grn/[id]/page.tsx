@@ -22,8 +22,8 @@ export default async function OperatorStockGrnDetailPage({ params }: PageProps) 
     <GRNDetailPageContent
       grnId={grnId}
       routeBranchId={branchId}
-      grnListBasePath={`/br/${branchId}/stock/purchase-orders`}
-      grnMobileBackPath={`/br/${branchId}/stock/purchase-orders`}
+      grnListBasePath={`/br/${branchId}/stock/grn`}
+      grnMobileBackPath={`/br/${branchId}/stock/grn`}
       purchaseOrdersBasePath={`/br/${branchId}/stock/purchase-orders`}
     />
   );

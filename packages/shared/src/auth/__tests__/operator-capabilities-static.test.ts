@@ -95,3 +95,66 @@ test("resolveOperatorTiles -> drops empty groups", () => {
     true,
   );
 });
+
+test("resolveOperatorTiles -> central_supply/central_kitchen branchKind hides sales_kitchen and adds PO tile", () => {
+  for (const branchKind of ["central_supply", "central_kitchen"] as const) {
+    for (const role of ["warehouse_manager", "production_manager"] as const) {
+      const groups = resolveOperatorTiles(role, 15, branchKind);
+      const groupIds = groups.map((group) => group.id);
+      const stock = groups.find((group) => group.id === "stock");
+
+      assert.equal(groupIds.includes("sales_kitchen"), false, `${role}/${branchKind}`);
+      assert.ok(
+        stock?.tiles.some(
+          (tile) => tile.href === "/br/15/stock/purchase-orders",
+        ),
+        `${role}/${branchKind} must see the purchase-orders tile`,
+      );
+    }
+
+    const ownerGroups = resolveOperatorTiles("owner", 15, branchKind);
+    const ownerStock = ownerGroups.find((group) => group.id === "stock");
+    assert.equal(
+      ownerGroups.map((group) => group.id).includes("sales_kitchen"),
+      false,
+      `owner/${branchKind}`,
+    );
+    assert.ok(
+      ownerStock?.tiles.some(
+        (tile) => tile.href === "/br/15/stock/purchase-orders",
+      ),
+      `owner/${branchKind} must see the purchase-orders tile`,
+    );
+  }
+});
+
+test("resolveOperatorTiles -> default branchKind ('branch') keeps sales_kitchen and omits the PO tile", () => {
+  const groups = resolveOperatorTiles("owner", 3, "branch");
+  const groupIds = groups.map((group) => group.id);
+  const stock = groups.find((group) => group.id === "stock");
+
+  assert.ok(groupIds.includes("sales_kitchen"));
+  assert.equal(
+    stock?.tiles.some((tile) => tile.href === "/br/3/stock/purchase-orders"),
+    false,
+  );
+});
+
+test("resolveOperatorTiles -> office_bridge tiles carry absolute office hrefs", () => {
+  const groups = resolveOperatorTiles("owner", 3);
+  const officeBridge = groups.find((group) => group.id === "office_bridge");
+
+  assert.ok(officeBridge, "owner must see the office_bridge group");
+  assert.ok((officeBridge?.tiles.length ?? 0) <= 6);
+
+  const hrefs = officeBridge?.tiles.map((tile) => tile.href) ?? [];
+  assert.ok(hrefs.includes("/menu"));
+  assert.ok(hrefs.includes("/hr"));
+  assert.ok(hrefs.includes("/orders"));
+  assert.ok(hrefs.includes("/inventory"));
+  assert.ok(hrefs.includes("/inventory/production"));
+  for (const href of hrefs) {
+    assert.doesNotMatch(href, /\{branchId\}/, href);
+    assert.doesNotMatch(href, /^\/br\//, href);
+  }
+});
