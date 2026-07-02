@@ -99,4 +99,9 @@ JOIN public.branches b
   ON b.tenant_id = t.id
 WHERE b.is_active;
 
+REVOKE ALL ON FUNCTION public.compute_menu_item_stock_capacity(bigint, bigint, bigint)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.compute_menu_item_stock_capacity(bigint, bigint, bigint)
+  TO service_role;
+
 COMMIT;
