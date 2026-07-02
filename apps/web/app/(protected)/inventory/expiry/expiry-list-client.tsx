@@ -139,12 +139,14 @@ export function ExpiryListClient({
   tenantId,
   userRole,
   userBranchId,
+  embedded = false,
 }: {
   initial: ExpiryAlertRow[];
   branches: BranchOption[];
   tenantId: number;
   userRole: StaffRole;
   userBranchId: number | null;
+  embedded?: boolean;
 }) {
   const [alerts, setAlerts] = useState(initial);
   const [search, setSearch] = useState("");
@@ -342,8 +344,8 @@ export function ExpiryListClient({
     );
   }
 
-  return (
-    <AppPage>
+  const content = (
+    <>
       <AppPageHeader eyebrow={INVENTORY_VI.warehouse} title={INVENTORY_VI.expiryTitle} />
       {/* IconSearch + branch filter */}
       <AppToolbar>
@@ -544,6 +546,12 @@ export function ExpiryListClient({
           </>
         )}
       </FormDialog>
-    </AppPage>
+    </>
   );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return <AppPage>{content}</AppPage>;
 }

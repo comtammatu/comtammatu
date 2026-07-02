@@ -388,6 +388,7 @@ export const inventory = {
       receiveGrn: "Nhận phiếu nhập",
       transfer: "Điều chuyển",
       stocktake: "Kiểm kê",
+      expiry: "HSD",
       waste: "Hao hụt",
       purchaseSuggestion: "Đề xuất mua",
       receive: "Nhận",

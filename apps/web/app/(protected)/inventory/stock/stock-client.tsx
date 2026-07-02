@@ -7,6 +7,7 @@ import { z } from "zod";
 import { formatVNDate } from "@comtammatu/shared/time";
 import {
   ArrowRightToLine as IconArrowBarRight,
+  CalendarClock as IconCalendarClock,
   ClipboardList as IconClipboardList,
   Pencil as IconPencil,
   Receipt as IconReceipt,
@@ -640,6 +641,7 @@ export function StockClient({
         receive: branchStockHref(stockRootPath, "/receive"),
         transfer: branchStockHref(stockRootPath, "/transfer"),
         stocktake: branchStockHref(stockRootPath, "/stocktake"),
+        expiry: branchStockHref(stockRootPath, "/expiry"),
         waste: branchStockHref(stockRootPath, "/waste"),
         purchaseSuggestion: branchStockHref(
           stockRootPath,
@@ -651,6 +653,7 @@ export function StockClient({
         receive: branchHref(branchId, "/inventory/grn"),
         transfer: branchHref(branchId, "/inventory/transfers"),
         stocktake: branchHref(branchId, "/inventory/stocktake"),
+        expiry: branchHref(branchId, "/inventory/expiry"),
         waste: branchHref(branchId, "/inventory/waste/new"),
         purchaseSuggestion: branchHref(
           branchId,
@@ -914,6 +917,13 @@ export function StockClient({
                 href={actionHrefs.stocktake}
                 icon={IconClipboardList}
                 label={stockCopy.actions.stocktake}
+              />
+            ) : null}
+            {actionPermissions.canWriteoff && summary.expiryCount > 0 ? (
+              <QuickActionButton
+                href={actionHrefs.expiry}
+                icon={IconCalendarClock}
+                label={stockCopy.actions.expiry}
               />
             ) : null}
             {actionPermissions.canWriteoff ? (

@@ -13,6 +13,7 @@ test("operator stock task routes render branch-shell content instead of redirect
   const expectations = [
     ["transfer", "TransfersPageContent", 'initialTab="dispatch"'],
     ["waste", "WasteNewPageContent", null],
+    ["expiry", "ExpiryPageContent", "embedded"],
   ] as const;
 
   for (const [segment, component, tabProp] of expectations) {
@@ -231,6 +232,10 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
     stockClientSource,
     /branchStockHref\(stockRootPath, "\/stocktake"\)/,
   );
+  assert.match(
+    stockClientSource,
+    /branchStockHref\(stockRootPath, "\/expiry"\)/,
+  );
   assert.doesNotMatch(
     stockClientSource,
     /stocktake: branchStockHref\(stockRootPath, "\/count"\)/,
@@ -252,6 +257,7 @@ test("operator stock landing keeps manager action affordances visible", () => {
     /<QuickActionButton[\s\S]*href=\{actionHrefs\.receive\}[\s\S]*label=\{receiveActionLabel\}[\s\S]*primary/,
     /<QuickActionButton[\s\S]*href=\{actionHrefs\.transfer\}[\s\S]*label=\{stockCopy\.actions\.transfer\}/,
     /<QuickActionButton[\s\S]*href=\{actionHrefs\.stocktake\}[\s\S]*label=\{stockCopy\.actions\.stocktake\}/,
+    /summary\.expiryCount > 0[\s\S]*<QuickActionButton[\s\S]*href=\{actionHrefs\.expiry\}[\s\S]*label=\{stockCopy\.actions\.expiry\}/,
     /<QuickActionButton[\s\S]*href=\{actionHrefs\.waste\}[\s\S]*label=\{stockCopy\.actions\.waste\}/,
     /<QuickActionButton[\s\S]*href=\{actionHrefs\.purchaseSuggestion\}[\s\S]*label=\{stockCopy\.actions\.purchaseSuggestion\}/,
   ]) {
@@ -471,6 +477,15 @@ test("branch stock wrappers keep inventory fallbacks inside the branch shell", (
   const wasteRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx",
   );
+  const expiryPage = read(
+    "apps/web/app/(protected)/inventory/expiry/page.tsx",
+  );
+  const expiryClient = read(
+    "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx",
+  );
+  const expiryRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/expiry/page.tsx",
+  );
 
   assert.match(
     transfersPage,
@@ -488,6 +503,15 @@ test("branch stock wrappers keep inventory fallbacks inside the branch shell", (
   assert.match(wastePage, /if \(routeBranchId == null\)/);
   assert.doesNotMatch(wastePage, /if \(!flagEnabled\) \{\s*if \(routeBranchId != null\)/);
   assert.doesNotMatch(wastePage, /EmployeePage/);
+
+  assert.match(expiryRoute, /ExpiryPageContent/);
+  assert.match(expiryRoute, /routeBranchId=\{branchId\}/);
+  assert.match(expiryRoute, /embedded/);
+  assert.match(expiryPage, /export async function ExpiryPageContent/);
+  assert.match(expiryPage, /routeBranchId\?: number/);
+  assert.match(expiryPage, /scope\.selectedBranchId !== routeBranchId/);
+  assert.match(expiryClient, /embedded\?: boolean/);
+  assert.match(expiryClient, embeddedContentWrapperPattern);
 });
 
 test("operator waste approvals render branch-locked inside the branch shell", () => {
