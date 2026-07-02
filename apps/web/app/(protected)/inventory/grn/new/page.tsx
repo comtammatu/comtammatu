@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  ArrowLeft as IconArrowLeft,
   ChevronRight as IconChevronRight,
   Phone as IconPhone,
   Receipt as IconReceipt,
@@ -17,10 +18,8 @@ import {
   formatVNDate,
   getVNDateString,
 } from "@comtammatu/shared/time";
-import { MobilePage } from "../../_components/mobile/mobile-page";
-import { MobileSectionHeader } from "../../_components/mobile/mobile-section-header";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { AppEmptyState } from "@/components/surface";
+import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import {
   fetchOpenPurchaseOrdersForReceiving,
   type OpenPurchaseOrderRow,
@@ -99,6 +98,10 @@ function formatLastGrn(iso: string | null): string | null {
   return formatVNDate(iso);
 }
 
+function formatRecentGrnCount(count: number): string {
+  return `${count} phiếu`;
+}
+
 export default async function GrnNewSupplierPage() {
   const { claims } = await loadAuthState();
   if (
@@ -118,10 +121,17 @@ export default async function GrnNewSupplierPage() {
     : [];
 
   return (
-    <MobilePage>
-      <MobileSectionHeader
-        backHref="/inventory/grn"
-        backLabel={INVENTORY_VI.grnListBackLabel}
+    <AppPage width="narrow">
+      <AppPageHeader
+        breadcrumb={
+          <Link
+            href="/inventory/grn"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+          >
+            <IconArrowLeft className="size-4" />{" "}
+            {INVENTORY_VI.grnListBackLabel}
+          </Link>
+        }
         eyebrow={INVENTORY_VI.receivingEyebrow}
         title={INVENTORY_VI.chooseSourceTitle}
         description={INVENTORY_VI.chooseSourceDescription}
@@ -172,7 +182,7 @@ export default async function GrnNewSupplierPage() {
                       {supplier.recent_grn_count > 0 ? (
                         <span className="inline-flex items-center gap-1">
                           <IconReceipt className="size-3" />
-                          {supplier.recent_grn_count} phiếu
+                          {formatRecentGrnCount(supplier.recent_grn_count)}
                         </span>
                       ) : null}
                       {lastLabel ? <span>{lastLabel}</span> : null}
@@ -185,6 +195,6 @@ export default async function GrnNewSupplierPage() {
           })
         )}
       </section>
-    </MobilePage>
+    </AppPage>
   );
 }

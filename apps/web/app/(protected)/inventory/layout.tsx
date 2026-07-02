@@ -62,11 +62,6 @@ export default async function InventoryLayout({
   const defaultBranch = scope.allowedBranches.find(
     (b) => b.id === scope.selectedBranchId,
   );
-  const siteName =
-    defaultBranch?.name ??
-    (claims.user_role === "owner" || claims.user_role === "office"
-      ? "Kho hàng"
-      : "Điểm vận hành");
   const siteKind: string = defaultBranch?.branch_kind ?? "branch";
 
   return (
@@ -78,7 +73,6 @@ export default async function InventoryLayout({
           "",
       }}
       userRole={claims.user_role}
-      siteName={siteName}
       siteKind={siteKind}
       showProcurement={showProcurement}
       showProduction={showProduction}

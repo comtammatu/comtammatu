@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft as IconArrowLeft,
   ArrowRight as IconArrowRight,
   Check as IconCheck,
   PackagePlus as IconPackageImport,
@@ -17,11 +19,8 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Label } from "@comtammatu/ui/components/label";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { cn } from "@comtammatu/ui";
-import { AppSection } from "@/components/surface";
-import { MobilePage } from "../../../_components/mobile/mobile-page";
-import { MobileSectionHeader } from "../../../_components/mobile/mobile-section-header";
-import { TouchButton } from "../../../_components/mobile/touch-button";
-import { NumberPadSheet } from "../../../_components/mobile/number-pad-sheet";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import { NumberPadSheet } from "@/components/form";
 import { formatQty } from "../../../_lib/format";
 import {
   transferConfirmReceive,
@@ -163,10 +162,17 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
   }
 
   return (
-    <MobilePage>
-      <MobileSectionHeader
-        backHref={`/inventory/transfers/${transfer.id}`}
-        backLabel={TRANSFER_RECEIVE_COPY.backToDetail}
+    <AppPage width="narrow">
+      <AppPageHeader
+        breadcrumb={
+          <Link
+            href={`/inventory/transfers/${transfer.id}`}
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+          >
+            <IconArrowLeft className="size-4" />{" "}
+            {TRANSFER_RECEIVE_COPY.backToDetail}
+          </Link>
+        }
         eyebrow={TRANSFER_RECEIVE_COPY.receiveEyebrow}
         title={transfer.code}
       />
@@ -353,8 +359,10 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
 
       {!needsReceiveMode ? (
         <div className="sticky chrome-safe-bottom z-10">
-          <TouchButton
+          <Button
             type="button"
+            size="touch-lg"
+            className="w-full"
             onClick={submit}
             disabled={!canSubmit}
           >
@@ -372,7 +380,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
             ) : (
               TRANSFER_RECEIVE_COPY.confirmEnough
             )}
-          </TouchButton>
+          </Button>
         </div>
       ) : null}
 
@@ -394,6 +402,6 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
         }}
         allowDecimal
       />
-    </MobilePage>
+    </AppPage>
   );
 }

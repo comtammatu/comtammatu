@@ -3,8 +3,10 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory draft review surface keeps operational copy inline */
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft as IconArrowLeft,
   ClipboardList as IconClipboardList,
   Pencil as IconPencil,
   Trash as IconTrash,
@@ -21,9 +23,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppEmptyState } from "@/components/surface";
-import { MobilePage } from "../_components/mobile/mobile-page";
-import { MobileSectionHeader } from "../_components/mobile/mobile-section-header";
+import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { discardGrnDraft } from "../grn-actions";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -73,10 +73,16 @@ export function MobileDraftsClient({ drafts }: { drafts: ServerDraftRow[] }) {
   }
 
   return (
-    <MobilePage>
-      <MobileSectionHeader
-        backHref="/inventory"
-        backLabel="Trang chính"
+    <AppPage width="narrow">
+      <AppPageHeader
+        breadcrumb={
+          <Link
+            href="/inventory"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+          >
+            <IconArrowLeft className="size-4" /> Trang chính
+          </Link>
+        }
         eyebrow="Phiếu nhập"
         title="Phiếu nháp đã lưu"
         description="Mở lại phiếu nhập đang làm dở theo nhà cung cấp."
@@ -138,6 +144,6 @@ export function MobileDraftsClient({ drafts }: { drafts: ServerDraftRow[] }) {
           ))}
         </div>
       )}
-    </MobilePage>
+    </AppPage>
   );
 }

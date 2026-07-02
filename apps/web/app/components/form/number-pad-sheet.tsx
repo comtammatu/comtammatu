@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { Delete as IconBackspace } from "lucide-react";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Sheet,
   SheetContent,
@@ -10,7 +12,6 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import { cn } from "@comtammatu/ui";
-import { TouchButton } from "./touch-button";
 
 const KEYS = [
   "7",
@@ -61,7 +62,7 @@ export function NumberPadSheet({
   initialValue,
   suffix,
   onConfirm,
-  confirmLabel = "Xác nhận",
+  confirmLabel = ACTIONS_VI.confirm,
   allowDecimal = true,
 }: NumberPadSheetProps) {
   const initial = React.useMemo(
@@ -94,7 +95,7 @@ export function NumberPadSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-auto max-h-dvh-95 gap-0 bg-background p-0 text-foreground"
+        className="h-auto max-h-dvh-95 bg-background p-0 text-foreground"
         showCloseButton={false}
       >
         <SheetHeader>
@@ -112,28 +113,36 @@ export function NumberPadSheet({
         </SheetHeader>
         <div className="grid grid-cols-3 gap-2 p-3">
           {KEYS.map((key) => (
-            <button
+            <Button
               key={key}
               type="button"
+              variant="secondary"
+              size="touch-lg"
               onClick={() => handleTap(key)}
               className={cn(
-                "flex h-16 items-center justify-center rounded-md border border-transparent bg-muted text-2xl font-semibold tabular-nums",
+                "bg-muted text-2xl font-semibold tabular-nums",
                 "transition-transform active:scale-95 active:bg-muted-foreground/20",
                 key === "del" && "text-destructive",
                 key === "." &&
                   !allowDecimal &&
                   "pointer-events-none opacity-30",
               )}
-              aria-label={key === "del" ? "Xóa" : key}
+              aria-label={key === "del" ? ACTIONS_VI.delete : key}
             >
               {key === "del" ? <IconBackspace className="size-6" /> : key}
-            </button>
+            </Button>
           ))}
         </div>
         <SheetFooter>
-          <TouchButton type="button" onClick={handleConfirm} disabled={!valid}>
+          <Button
+            type="button"
+            size="touch-lg"
+            className="w-full"
+            onClick={handleConfirm}
+            disabled={!valid}
+          >
             {confirmLabel}
-          </TouchButton>
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

@@ -9,14 +9,12 @@ import { messages } from "@lib/messages";
 import { resolveInventoryNav } from "../_lib/inventory-nav";
 import { resolveOfficePrimaryTabs } from "@/lib/office-nav";
 import type { InventoryBranchOption } from "../_lib/inventory-scope";
-import { MobileTopBar } from "./mobile/mobile-top-bar";
 import { InventoryBranchFilter } from "./inventory-branch-filter";
 
 interface InventoryShellProps {
   children: ReactNode;
   user: { name: string };
   userRole: StaffRole;
-  siteName: string;
   siteKind: string;
   showProcurement: boolean;
   showProduction: boolean;
@@ -43,7 +41,6 @@ export function InventoryShell({
   children,
   user,
   userRole,
-  siteName,
   siteKind,
   showProcurement,
   showProduction,
@@ -80,9 +77,6 @@ export function InventoryShell({
           null),
     [activeBranchId, allowedBranches],
   );
-  const effectiveSiteName = productionPath
-    ? "Bếp Trung Tâm"
-    : (activeBranch?.name ?? siteName);
   const effectiveSiteKind = productionPath
     ? "central_kitchen"
     : (activeBranch?.branch_kind ?? siteKind);
@@ -143,7 +137,6 @@ export function InventoryShell({
       defaultPageTitle={messages.inventory.shell.brandName}
       pageHeader={{
         headerExtras: branchFilter,
-        mobileTopBar: <MobileTopBar siteName={effectiveSiteName} />,
       }}
     >
       {children}

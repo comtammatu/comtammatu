@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft as IconArrowLeft,
   TriangleAlert as IconAlertTriangle,
   CircleCheck as IconCircleCheck,
   ChevronRight as IconChevronRight,
@@ -27,14 +29,10 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
-import { MoneyVndInput, QuantityInput } from "@/components/form";
+import { MoneyVndInput, NumberPadSheet, QuantityInput } from "@/components/form";
 import { matchesSearch } from "@lib/search";
-import { MobilePage } from "../../../_components/mobile/mobile-page";
-import { MobileSectionHeader } from "../../../_components/mobile/mobile-section-header";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { AppEmptyState, AppSection } from "@/components/surface";
-import { TouchButton } from "../../../_components/mobile/touch-button";
-import { NumberPadSheet } from "../../../_components/mobile/number-pad-sheet";
+import { AppEmptyState, AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import {
   draftTotal,
   type GrnDraft,
@@ -312,14 +310,21 @@ export function GrnCreateClient({
   const canSubmit = lineCount > 0 && !submitting;
 
   return (
-    <MobilePage>
-      <MobileSectionHeader
-        backHref="/inventory/grn/new"
-        backLabel={GRN_CREATE_COPY.changeSupplier}
+    <AppPage width="narrow">
+      <AppPageHeader
+        breadcrumb={
+          <Link
+            href="/inventory/grn/new"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+          >
+            <IconArrowLeft className="size-4" />{" "}
+            {GRN_CREATE_COPY.changeSupplier}
+          </Link>
+        }
         eyebrow={GRN_CREATE_COPY.newReceiptEyebrow}
         title={supplier.name}
         description={GRN_CREATE_COPY.newReceiptDescription}
-        action={
+        actions={
           lineCount > 0 ? (
             <Button
               type="button"
@@ -462,7 +467,13 @@ export function GrnCreateClient({
       ) : null}
 
       <div className="sticky chrome-safe-bottom z-10">
-        <TouchButton type="button" onClick={submit} disabled={!canSubmit}>
+        <Button
+          type="button"
+          size="touch-lg"
+          className="w-full"
+          onClick={submit}
+          disabled={!canSubmit}
+        >
           {submitting ? (
             <>
               <Spinner className="size-5" />
@@ -473,7 +484,7 @@ export function GrnCreateClient({
           ) : (
             GRN_CREATE_COPY.saveDraft(lineCount, total)
           )}
-        </TouchButton>
+        </Button>
       </div>
 
       <LineEditSheet
@@ -517,7 +528,7 @@ export function GrnCreateClient({
         }
         allowDecimal={false}
       />
-    </MobilePage>
+    </AppPage>
   );
 }
 
@@ -658,28 +669,36 @@ function LineEditSheet({
             </div>
 
             <SheetFooter>
-              <TouchButton type="button" onClick={onSave} disabled={!valid}>
+              <Button
+                type="button"
+                size="touch-lg"
+                className="w-full"
+                onClick={onSave}
+                disabled={!valid}
+              >
                 {edit.line ? "Cập nhật" : "Thêm vào phiếu"}
-              </TouchButton>
+              </Button>
               <div className="flex items-center gap-2">
                 {edit.line ? (
-                  <TouchButton
+                  <Button
                     type="button"
                     variant="destructive"
+                    size="touch-lg"
                     onClick={onRemove}
                     className="flex-1"
                   >
                     {ACTIONS_VI.delete}
-                  </TouchButton>
+                  </Button>
                 ) : null}
-                <TouchButton
+                <Button
                   type="button"
                   variant="outline"
+                  size="touch-lg"
                   onClick={onClose}
                   className="flex-1"
                 >
                   {ACTIONS_VI.close}
-                </TouchButton>
+                </Button>
               </div>
             </SheetFooter>
           </>
