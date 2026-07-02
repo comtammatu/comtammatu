@@ -117,3 +117,54 @@ test("operational PWA install dismissal is isolated by app and branch", () => {
   assert.doesNotMatch(toolbarSource, /LEGACY_POS_DISMISS_STORAGE_KEY/);
   assert.doesNotMatch(toolbarSource, /pos-pwa-install-dismissed/);
 });
+
+test("POS and KDS toolbars render a return-to-hub link; runner never does", () => {
+  const toolbarSource = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/_components/operational-pwa/toolbar.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  // Runner is a guest-facing display: staff navigation is excluded there.
+  assert.match(toolbarSource, /const showHubLink = surface !== "runner";/);
+  assert.match(toolbarSource, /surface="pos"/);
+  assert.match(toolbarSource, /surface="kds"/);
+  assert.match(toolbarSource, /surface="runner"/);
+
+  // The link targets the operator hub home for the current branch, carries an
+  // accessible label from the copy catalog, and uses the 48px touch size.
+  assert.match(
+    toolbarSource,
+    /<Link href=\{`\/br\/\$\{branchId\}`\} aria-label=\{copy\.hubLinkLabel\}>/,
+  );
+  assert.match(toolbarSource, /hubLinkLabel: "Về màn hình chính chi nhánh"/);
+  assert.match(
+    toolbarSource,
+    /asChild\s+variant="ghost"\s+size="icon-touch"/,
+  );
+
+  // POS/KDS keep the hub link even in the quiet state (standalone or install
+  // hint dismissed) where the toolbar previously rendered nothing; only the
+  // runner surface still returns null there.
+  assert.match(toolbarSource, /if \(hubLink == null\) return null;/);
+});
+
+test("station layouts mount the branch-scoped PWA toolbars", () => {
+  const layoutSource = (station: string) =>
+    readFileSync(
+      new URL(
+        `../app/(protected)/br/[branchId]/${station}/layout.tsx`,
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+  assert.match(layoutSource("pos"), /<PosPwaToolbar branchId=\{branchId\} \/>/);
+  assert.match(layoutSource("kds"), /<KdsPwaToolbar branchId=\{branchId\} \/>/);
+  assert.match(
+    layoutSource("runner"),
+    /<RunnerPwaToolbar branchId=\{branchId\} \/>/,
+  );
+});

@@ -4,11 +4,13 @@ import { PwaInstallHelpDialog } from "@/components/pwa-install-help-dialog";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Download as IconDownload,
+  LayoutGrid as IconLayoutGrid,
   RefreshCw as IconRefreshCw,
   Share2 as IconShare,
   WifiOff as IconWifiOff,
   X as IconX,
 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   useHasNewVersion,
@@ -30,6 +32,7 @@ function getDismissStorageKey(
 interface OperationalPwaCopy {
   appLabel: string;
   regionLabel: string;
+  hubLinkLabel: string;
   offline: string;
   iosInstallHint: string;
   iosInstallHintShort: string;
@@ -60,6 +63,7 @@ function buildCopy(surface: OperationalPwaSurface): OperationalPwaCopy {
   return {
     appLabel,
     regionLabel: `${appLabel} - cài đặt và trạng thái kết nối`,
+    hubLinkLabel: "Về màn hình chính chi nhánh",
     offline: `Mất kết nối - không thể cập nhật ${jobLabel}.`,
     iosInstallHint: `iOS: dùng Chia sẻ để thêm ${appLabel} vào Màn hình chính.`,
     iosInstallHintShort: "iOS: thêm vào Màn hình",
@@ -145,6 +149,23 @@ export function OperationalPwaToolbar({
     }
   }, [dismissStorageKey]);
 
+  // Runner is a guest-facing display: it never gets staff navigation.
+  // POS/KDS keep the hub link in every toolbar state (including standalone,
+  // where browser chrome is absent) so staff can always return to the hub.
+  const showHubLink = surface !== "runner";
+  const hubLink = showHubLink ? (
+    <Button
+      asChild
+      variant="ghost"
+      size="icon-touch"
+      className="shrink-0 text-muted-foreground"
+    >
+      <Link href={`/br/${branchId}`} aria-label={copy.hubLinkLabel}>
+        <IconLayoutGrid />
+      </Link>
+    </Button>
+  ) : null;
+
   // The update banner is the one row that must ALSO show in standalone —
   // installed tablets running a whole shift are exactly the clients that
   // break on a stale chunk after a deploy. It cannot be dismissed.
@@ -155,6 +176,7 @@ export function OperationalPwaToolbar({
         role="region"
         aria-label={copy.regionLabel}
       >
+        {hubLink}
         <div
           className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground"
           role="alert"
@@ -178,9 +200,21 @@ export function OperationalPwaToolbar({
     );
   }
 
-  if (isStandalone) return null;
-  if (isOnline && installDismissed) return null;
-  if (isOnline && !installAvailable) return null;
+  const showInstallRow =
+    !isStandalone && (!isOnline || (!installDismissed && installAvailable));
+
+  if (!showInstallRow) {
+    if (hubLink == null) return null;
+    return (
+      <div
+        className="flex shrink-0 items-center gap-2 border-b border-border/60 bg-background/90 px-2 py-1 md:px-4"
+        role="region"
+        aria-label={copy.regionLabel}
+      >
+        {hubLink}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -189,6 +223,7 @@ export function OperationalPwaToolbar({
         role="region"
         aria-label={copy.regionLabel}
       >
+        {hubLink}
         {!isOnline ? (
           <div
             className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-destructive"
