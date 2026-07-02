@@ -389,6 +389,9 @@ Targeted gates by phase:
 
 ## Open implementation notes
 
-- Decide exact redirect behavior for `/employee` when owner has multiple branches.
-- Decide whether pre-clock-in POS/KDS tiles are hidden or shown disabled for cashier/chef.
-- Decide the minimum branch-manager smart-card counters for Phase 1; do not block the Hub on a full branch KPI dashboard.
+Resolved by owner 2026-07-02:
+
+- `/employee` for owner (`branch_id=null`, multi-branch) redirects to `/br` (branch picker) — same picker as the post-login Hub flow; no per-owner "last branch" storage (Non-goals: no new branch scope storage). Implemented in `resolveEmployeeBranchRuntimePath`.
+- Pre-clock-in POS/KDS tiles for cashier/chef are SHOWN but DISABLED with a "Chấm công để mở" hint — the disabled tile is itself the clock-in prompt. (UI change lands with Phase 1 smart-card work.)
+- Phase 1 branch-manager smart card shows ONE counter: pending approvals (checkout + waste). Revenue/alert KPIs stay in Phase 3 Overview.
+- Installed-station PWA entry needs no user-agent detection: each station manifest `start_url` points at `/br/{branchId}/{pos|kds|runner}`, so entry flows through `returnTo` in `resolvePostLoginRedirect`. `BranchHubContext.standaloneStation` intentionally stays `null` from headers.
