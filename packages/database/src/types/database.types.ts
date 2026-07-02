@@ -9550,11 +9550,7 @@ export type Database = {
         }[]
       }
       get_stock_movement_report: {
-        Args: {
-          p_branch_id?: number
-          p_end_date: string
-          p_start_date: string
-        }
+        Args: { p_branch_id?: number; p_end_date: string; p_start_date: string }
         Returns: {
           adjustment: number
           closing: number
