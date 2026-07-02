@@ -55,36 +55,160 @@ reference framing.
 
 ## Role Boundaries
 
-| Role bucket          | Home target                                   | Can manage                                                                                            | Must not become                                   |
-| -------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `owner`              | `/admin/dashboard`                            | Tenant governance, branch network, permission grants, finance/reports, emergency oversight in domains | Daily floor operator by default                   |
-| `branch_manager`     | `/employee` plus Branch Command direct link   | One branch: POS/KDS/floor settings, branch day flow, branch inventory tasks, branch staff approvals   | Partial Admin user                                |
-| `warehouse_manager`  | `/employee` plus Inventory direct link        | Kho Tổng receiving, stock, transfers, procurement tasks according to grants                            | Tenant admin                                      |
-| `production_manager` | `/employee` plus Inventory direct link        | Bếp Trung Tâm production and related stock movement according to grants                                | Tenant admin                                      |
-| `cashier`            | `/employee` plus POS direct link              | POS orders, payments, receipts according to grants                                                    | Branch settings owner                             |
-| `chef`               | `/employee` plus KDS direct link              | KDS ready/recall and kitchen status according to grants                                               | Inventory production manager                      |
-| `office`             | `/employee` or assigned workspace direct link | Back-office tasks explicitly granted                                                                  | Tenant admin by label alone                       |
+Home target (post-login landing) is device-aware and site-aware per D050/D055
+— see the generated "Post-Login Home By Role" table below for the exact
+per-device destination derived from `scope.ts`/`branch-hub.ts`. This table
+states the durable "can manage / must not become" boundary, which the code
+does not fully encode and stays hand-authored.
+
+| Role bucket           | Can manage                                                                                              | Must not become                 |
+| ---------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `owner`                | Tenant governance, branch network, permission grants, finance/reports, emergency oversight in domains     | Daily floor operator by default    |
+| `branch_manager`       | One branch: POS/KDS/floor settings, branch day flow, branch inventory tasks, branch staff approvals       | Partial Admin user                 |
+| `warehouse_manager`    | Kho Tổng receiving, stock, transfers, procurement tasks according to grants                                | Tenant admin                       |
+| `production_manager`   | Bếp Trung Tâm production and related stock movement according to grants                                    | Tenant admin                       |
+| `cashier`              | POS orders, payments, receipts according to grants                                                         | Branch settings owner              |
+| `chef`                 | KDS ready/recall and kitchen status according to grants                                                    | Inventory production manager       |
+| `office`               | Back-office tasks explicitly granted, read access to `/finance` (D058 §3)                                  | Tenant admin by label alone        |
 
 ## Permission Boundary
 
-Route access and action authorization must stay separate:
+Route access and action authorization must stay separate. The generated
+section below (`## Permission Boundary (generated)`) derives this per route
+family straight from `permissions.ts`, `module-acl.ts`, and `route-map.ts`;
+this hand-authored intro states the rule, the generated table states the
+current fact.
 
-| Capability                 | Route family                    | Required route bucket              | Action gate examples                                                           |
-| -------------------------- | ------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------ |
-| Tenant settings            | `/admin/settings/general`       | owner                              | `settings:tenant`, `settings:integrations`                                     |
-| Branch network             | `/admin/settings/branches`      | owner                              | `settings:branch_network`                                                      |
-| Staff access grants        | `/admin/staff/*`                | owner                              | `staff:manage`, `staff:assign_position`, `staff:assign_permission`             |
-| Permission audit log       | `/admin/staff/audit`            | owner                              | `staff:assign_permission`, `settings:tenant` (RLS-gated read)                  |
-| Branch floor setup         | `/br/[branchId]/settings/*`     | owner/branch_manager               | `settings:branch`, `printer:manage`, POS/KDS config-specific grants when added |
-| POS service                | `/br/[branchId]/pos`            | owner/branch_manager/cashier | `pos:use`, `pos:confirm_payment`, `pos:print`, `pos:void_order`                |
-| KDS service                | `/br/[branchId]/kds`            | owner/branch_manager/chef           | `kds:use`, `kds:mark_ready`, `kds:recall`                                      |
-| Branch staff day approvals | `/hr/*` or branch command links | owner/branch_manager               | `hr:view_employee`, `hr:approve_checkout`, `hr:approve_leave_request`          |
-| Tenant finance             | `/finance/*`                    | owner                              | `finance:view`, `finance:expense_approve`, `finance:ap_pay`                    |
-| HĐĐT register              | `/finance/invoices`             | owner                              | `finance:view`                                                                 |
-| HĐĐT B2C daily summary     | `/finance/summary`              | owner                              | `settings:tenant`                                                              |
-| Supplier invoice đối soát  | `/inventory/supplier-invoices`  | owner/warehouse_manager/production_manager | `procurement:read`, `procurement:invoice_match`                        |
-| Waste approvals            | `/inventory/waste/approvals`    | all staff with grant                | `inventory:waste_approve`                                                       |
-| QC receiving policy        | `/inventory/settings/qc`        | owner/branch_manager/warehouse_manager/production_manager | `settings:tenant`                                       |
+<!-- GENERATED:role-route-matrix:begin -->
+
+<!--
+  This section is GENERATED by scripts/gen-role-route-matrix.mjs from:
+  packages/shared/src/auth/module-acl.ts, packages/shared/src/auth/route-map.ts, packages/shared/src/auth/nav-config.ts,
+  packages/shared/src/auth/scope.ts, packages/shared/src/auth/branch-hub.ts, packages/shared/src/auth/types.ts, packages/shared/src/auth/permissions.ts.
+  Do NOT hand-edit below this line — run `corepack pnpm gen:route-matrix`
+  after any auth-source change, and `corepack pnpm lint:route-matrix` (or
+  `--check`) verifies this block is not stale. Hand-authored prose
+  (product frame, principles, navigation contract, change checklist) lives
+  in the preamble above/below this block, which the generator preserves
+  verbatim.
+-->
+
+## Module ACL (generated)
+
+Single source: `packages/shared/src/auth/module-acl.ts`. "Nav/tile
+advertisement source" lists every nav array in `nav-config.ts` that
+surfaces the module to a role; a module with no source is reachable only
+by direct URL or as a redirect target.
+
+| Module key | Route path | Allowed roles | Nav/tile advertisement source |
+| ---------- | ---------- | ------------- | ------------------------------ |
+| `dashboard` | `/admin/dashboard` | Chủ sở hữu | Admin sidebar |
+| `menu` | `/menu` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (office_bridge); Workspace nav |
+| `inventory` | `/inventory` | Chủ sở hữu, Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm | Operator tile (approvals); Operator tile (office_bridge); Operator tile (stock); Workspace nav |
+| `inventory_procurement` | `/inventory/suppliers` | Chủ sở hữu, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm | (not advertised in nav — direct URL / redirect target only) |
+| `inventory_admin` | `/admin/inventory` | (none — retired) | (not advertised in nav — direct URL / redirect target only) |
+| `orders` | `/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân | Operator tile (office_bridge); Workspace nav |
+| `staff` | `/hr/staff` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
+| `hr` | `/hr` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (office_bridge); Workspace nav |
+| `hr_payroll` | `/hr/payroll` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
+| `finance` | `/finance` | Chủ sở hữu | Workspace nav |
+| `branches` | `/branches` | Chủ sở hữu | Workspace nav |
+| `branch_picker` | `/br` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
+| `settings` | `/admin/settings` | Chủ sở hữu | Admin sidebar |
+| `pos` | `/br/*/pos` | Chủ sở hữu, Thu ngân, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
+| `kds` | `/br/*/kds` | Chủ sở hữu, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
+| `runner` | `/br/*/runner` | Chủ sở hữu, Thu ngân, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
+| `operator_home` | `/br/*` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm | (not advertised in nav — direct URL / redirect target only) |
+| `branch_dashboard` | `/br/*/dashboard` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
+| `branch_settings` | `/br/*/settings` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
+| `branch_menu_limits` | `/br/*/settings/menu-limits` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav; Operator tile (sales_kitchen) |
+| `employee` | `/employee` | Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Thu ngân, Bếp, Văn phòng | Operator tile (my_shift) |
+| `employee_checkout_approvals` | `/employee/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals) |
+| `notifications` | `/notifications` | Chủ sở hữu, Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Thu ngân, Bếp, Văn phòng | (not advertised in nav — direct URL / redirect target only) |
+
+## Route Family Contracts (generated)
+
+Single source: `ROUTE_FAMILY_CONTRACTS` in
+`packages/shared/src/auth/route-map.ts`. `resolveRouteFamilyContract`
+matches a pathname against `matchPrefixes` in declaration order (first
+match wins), which is why some families with narrower prefixes are
+declared before their broader siblings.
+
+| Family id | Surface | Entry path | Match prefixes | Module keys | Requires branchId |
+| --------- | ------- | ---------- | --------------- | ----------- | ------------------ |
+| `public` | public | `/login` | `/login`, `/access-denied`, `/payment/momo`, `/api/health`, `/api/webhooks`, `/manifest.webmanifest`, `/sw.js` | — | no |
+| `employee` | employee | `/employee` | `/employee` | `employee` | no |
+| `admin` | admin | `/admin/dashboard` | `/admin` | `dashboard`, `settings` | no |
+| `menu` | workspace | `/menu` | `/menu` | `menu` | no |
+| `orders` | workspace | `/orders` | `/orders` | `orders` | no |
+| `inventory` | workspace | `/inventory` | `/inventory` | `inventory`, `inventory_procurement` | no |
+| `finance` | workspace | `/finance` | `/finance` | `finance` | no |
+| `branches` | workspace | `/branches` | `/branches` | `branches` | no |
+| `hr` | workspace | `/hr` | `/hr` | `hr`, `hr_payroll`, `staff` | no |
+| `notifications` | workspace | `/notifications` | `/notifications` | `notifications` | no |
+| `branch-picker` | branch_operation | `/br` | `/br` | `branch_picker` | no |
+| `operator-home` | branch_operation | `/br/[branchId]` | `/br/[branchId]` | `operator_home` | yes |
+| `operator-shift-checkout-approvals` | branch_operation | `/br/[branchId]/shift/checkout-approvals` | `/br/[branchId]/shift/checkout-approvals` | `employee_checkout_approvals` | yes |
+| `operator-shift` | branch_operation | `/br/[branchId]/shift` | `/br/[branchId]/shift` | `operator_home` | yes |
+| `operator-profile` | branch_operation | `/br/[branchId]/profile` | `/br/[branchId]/profile` | `operator_home` | yes |
+| `operator-stock` | branch_operation | `/br/[branchId]/stock` | `/br/[branchId]/stock` | `inventory` | yes |
+| `branch-menu-limits` | branch_management | `/br/[branchId]/settings/menu-limits` | `/br/[branchId]/settings/menu-limits` | `branch_menu_limits` | yes |
+| `branch-settings` | branch_management | `/br/[branchId]/settings` | `/br/[branchId]/settings` | `branch_settings` | yes |
+| `branch-dashboard` | branch_management | `/br/[branchId]/dashboard` | `/br/[branchId]/dashboard` | `branch_dashboard` | yes |
+| `pos` | branch_operation | `/br/[branchId]/pos` | `/br/[branchId]/pos` | `pos` | yes |
+| `kds` | branch_operation | `/br/[branchId]/kds` | `/br/[branchId]/kds` | `kds` | yes |
+| `runner` | branch_operation | `/br/[branchId]/runner` | `/br/[branchId]/runner` | `runner` | yes |
+
+## Post-Login Home By Role (generated)
+
+Derived from `resolvePostLoginRedirect` (`scope.ts`) falling through to
+`resolveBranchHubDestination` (`branch-hub.ts`) for the no-`returnTo`,
+no-standalone-station case — i.e. where a fresh login actually lands.
+Device-aware split and central-site soft-routing per D050/D055.
+
+| Role | Desktop / office context | Phone / station context | Notes |
+| ---- | ------------------------- | ------------------------ | ----- |
+| Chủ sở hữu (`owner`) | /admin/dashboard (Office plane, Tenant Command) | /br (Operator plane branch picker, >1 branch) or /br/{branchId} directly | Device-aware split (D050 §5): desktop/office context -> Office; phone -> Operator. Owner may also open any active branch POS/KDS/Runner to cover a shift. |
+| Quản lý chi nhánh (`branch_manager`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, non-office, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
+| Quản lý Kho Tổng (`warehouse_manager`) | /br/{central-site-id} (home branch resolved server-side to the active central_supply site) | /br/{central-site-id} (same central site) | D055 soft-routing: JWT branch_id stays null; Branch Hub resolves homeBranchId by matching branches.branch_kind="central_supply". Falls back to /employee until resolved. |
+| Quản lý Bếp Trung Tâm (`production_manager`) | /br/{central-site-id} (home branch resolved server-side to the active central_kitchen site) | /br/{central-site-id} (same central site) | D055 soft-routing: JWT branch_id stays null; Branch Hub resolves homeBranchId by matching branches.branch_kind="central_kitchen". Falls back to /employee until resolved. |
+| Thu ngân (`cashier`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, non-office, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
+| Bếp (`chef`) | /br/{branchId} (Operator hub for the claimed branch) | /br/{branchId} (Operator hub for the claimed branch) | D050 §5: non-admin, non-office, branch-pinned roles land in the Operator plane home for their JWT branch_id. |
+| Văn phòng (`office`) | /employee | /employee | D055 §3: /employee stays home for office by explicit decision, not leftover. Read access to /finance added (D058 §3). |
+
+## Permission Boundary (generated)
+
+Route family -> required route bucket (module ACL union) -> the action-gate
+permission keys in that family's namespace(s), read from
+`PERMISSION_KEYS` in `permissions.ts`. This is the full set in-namespace,
+not a hand-picked sample — route access and action authorization stay
+separate gates (route bucket here, permission key at the mutation site).
+
+| Route family | Route prefix(es) | Required route bucket | Action gate keys (from `permissions.ts`) |
+| ------------ | ------------------ | ----------------------- | ------------------------------------------ |
+| employee | `/employee` | branch_manager/cashier/chef/office/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
+| admin | `/admin` | owner | `dashboard:view`, `settings:branch`, `settings:branch_network`, `settings:integrations`, `settings:tenant` |
+| menu | `/menu` | branch_manager/owner | `menu:manage_category`, `menu:publish`, `menu:read`, `menu:write` |
+| orders | `/orders` | branch_manager/cashier/owner | `orders:read`, `orders:refund`, `orders:refund_approve`, `orders:void`, `orders:write` |
+| inventory | `/inventory` | branch_manager/owner/production_manager/warehouse_manager | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
+| finance | `/finance` | owner | `finance:ap_pay`, `finance:expense_approve`, `finance:expense_create`, `finance:payroll_approve`, `finance:payroll_calculate`, `finance:view` |
+| branches | `/branches` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| hr | `/hr` | branch_manager/owner | `hr:approve_checkout`, `hr:approve_leave_request`, `hr:manage_employee`, `hr:request_leave`, `hr:view_employee`, `staff:assign_permission`, `staff:assign_position`, `staff:manage`, `staff:view` |
+| notifications | `/notifications` | branch_manager/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
+| branch-picker | `/br` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-home | `/br/[branchId]` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-shift-checkout-approvals | `/br/[branchId]/shift/checkout-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-shift | `/br/[branchId]/shift` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-profile | `/br/[branchId]/profile` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-stock | `/br/[branchId]/stock` | branch_manager/owner/production_manager/warehouse_manager | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
+| branch-menu-limits | `/br/[branchId]/settings/menu-limits` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| branch-settings | `/br/[branchId]/settings` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| branch-dashboard | `/br/[branchId]/dashboard` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| pos | `/br/[branchId]/pos` | branch_manager/cashier/owner | `pos:apply_discount`, `pos:close_shift`, `pos:close_shift_variance_override`, `pos:confirm_payment`, `pos:open_cashbox`, `pos:print`, `pos:reprint_receipt`, `pos:send_kitchen`, `pos:use`, `pos:void_order`, `pos:void_paid_order` |
+| kds | `/br/[branchId]/kds` | branch_manager/chef/owner | `kds:mark_ready`, `kds:recall`, `kds:use` |
+| runner | `/br/[branchId]/runner` | branch_manager/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+
+<!-- GENERATED:role-route-matrix:end -->
 
 ## Navigation Contract
 
@@ -102,11 +226,16 @@ Branch manager needs a branch flow that answers:
 - What branch tasks need action now?
 - Where do I correct branch setup without entering tenant Admin?
 
-Root entry (`/`) delegates to the shared role default. Owner
-lands in Tenant Command; Branch Manager and other non-admin staff land in
-`/employee`. Employee is the default staff/manager task entry. Branch Command
-stays available as a branch-scoped management surface from Employee manager
-tools or direct links, not as a new hub.
+Root entry (`/`) delegates to the shared role default, resolved per-role and
+per-device by the Branch Hub (`scope.ts`/`branch-hub.ts`) — see the generated
+"Post-Login Home By Role" table above for the exact current destination.
+Owner lands in Tenant Command on desktop and the Operator plane on phone
+(D050 §5); branch-pinned roles (`branch_manager`, `cashier`, `chef`) land
+directly in their branch's Operator hub (`/br/{branchId}`); central-site
+roles (`warehouse_manager`, `production_manager`) land in their central site
+via soft-routing (D055); `office` stays on `/employee` by explicit decision
+(D055 §3). Branch Command stays available as a branch-scoped management
+surface from the Operator hub or direct links, not as a new top-level hub.
 
 ## Runtime Status
 
@@ -155,7 +284,19 @@ Any PR that changes role/surface behavior must update these together:
 - `packages/shared/src/auth/nav-config.ts`
 - `packages/shared/src/auth/app-discovery.ts`
 - `packages/shared/src/auth/scope.ts`
+- `packages/shared/src/auth/branch-hub.ts`
 - Auth/navigation tests in `packages/shared/src/auth/__tests__/`
 - `docs/modules/auth.md`
 - `docs/modules/web-app.md`
-- This spec
+- This spec's hand-authored preamble (Product Frame, Principles, Scope
+  Layers, Canonical Surfaces, Role Boundaries "can manage" column,
+  Navigation Contract, Runtime Status) when the change is a rule/boundary
+  decision, not a mechanical fact.
+
+The `## Module ACL`, `## Route Family Contracts`, `## Post-Login Home By
+Role`, and `## Permission Boundary` sections below are **GENERATED, not
+hand-maintained** — run `corepack pnpm gen:route-matrix` after any auth-source
+change and commit the result; do not hand-edit inside the
+`GENERATED:role-route-matrix` markers. `corepack pnpm lint:route-matrix`
+(wired into the root lint aggregate) fails the build if the doc drifts from
+`packages/shared/src/auth/{module-acl,route-map,nav-config,scope,branch-hub,types,permissions}.ts`.
