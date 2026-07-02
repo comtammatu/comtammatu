@@ -1,5 +1,7 @@
 # Schema Drift Audit — 2026-07-02
 
+Reconciled-through c945d7fc
+
 Skill plan: repo rules = engineering + database + workflow; external skills = supabase, supabase-postgres-best-practices, ponytail; runtime tools = Supabase MCP SELECT-only on `iexwsuaqqenyjiskawoj`, pnpm/node.
 
 PM: scope = expose baseline.sql versus prod drift before the next migration; acceptance = repeatable audit script plus a report of known drift and owner decision needed; priority = high because baseline replay can be false-green.
