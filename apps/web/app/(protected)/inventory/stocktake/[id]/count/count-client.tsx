@@ -32,6 +32,8 @@ interface Props {
   currentRound: 1 | 2 | 3 | 4;
   initialLines: StocktakeLineBlind[];
   unitOptionsByIngredient: Record<number, CountUnitOption[]>;
+  routeBase?: string;
+  embedded?: boolean;
 }
 
 export function StocktakeCountClient({
@@ -41,6 +43,8 @@ export function StocktakeCountClient({
   currentRound,
   initialLines,
   unitOptionsByIngredient,
+  routeBase = "/inventory/stocktake",
+  embedded = false,
 }: Props) {
   const router = useRouter();
   const [lines] = useState<StocktakeLineBlind[]>(initialLines);
@@ -136,8 +140,8 @@ export function StocktakeCountClient({
     });
   }
 
-  return (
-    <InventoryPageContent>
+  const content = (
+    <>
       <AppPageHeader
         eyebrow={messages.inventory.stocktake.title}
         title={`${messages.inventory.stocktake.startCounting} #${sessionId}`}
@@ -187,7 +191,7 @@ export function StocktakeCountClient({
         >
           <Button type="button" variant="outline" size="sm" asChild>
             <Link
-              href={`/inventory/stocktake/${sessionId}?branchId=${branchId}&view=detail`}
+              href={`${routeBase}/${sessionId}?branchId=${branchId}&view=detail`}
             >
               {messages.inventory.stocktake.detail.completeAction}
             </Link>
@@ -201,6 +205,16 @@ export function StocktakeCountClient({
           ) : null}
         </BlindCountingGridToolbar>
       </AppSection>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <InventoryPageContent>
+      {content}
     </InventoryPageContent>
   );
 }

@@ -1,25 +1,23 @@
 import { notFound } from "next/navigation";
-import { GRNListPageContent } from "@/(protected)/inventory/grn/page";
+import { TransfersPageContent } from "@/(protected)/inventory/transfers/page";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
-  searchParams: Promise<{ branchId?: string | string[] }>;
 }
 
-export default async function OperatorStockReceivePage({
-  params,
-  searchParams,
-}: PageProps) {
+export default async function OperatorStockReceivePage({ params }: PageProps) {
   const { branchId: rawBranchId } = await params;
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
   return (
-    <GRNListPageContent
-      searchParams={searchParams}
+    <TransfersPageContent
       routeBranchId={branchId}
       basePath={`/br/${branchId}/stock/receive`}
-      purchaseOrdersPath={`/br/${branchId}/stock/purchase-orders`}
+      createBasePath={`/br/${branchId}/stock/transfer`}
+      initialTab="receive"
+      pageTitle="Nhận hàng"
+      embedded
     />
   );
 }

@@ -312,11 +312,7 @@ export async function createStockTransfer(
     };
   }
   const { fromBranchId, toBranchId } = parsed.data;
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
-    fromBranchId,
-  );
+  const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 
@@ -326,13 +322,6 @@ export async function createStockTransfer(
     return {
       success: false,
       error: INTRA_BRANCH_TRANSFER_RETIRED_ERROR,
-    };
-  }
-
-  if (claims.user_role === "branch_manager") {
-    return {
-      success: false,
-      error: BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR,
     };
   }
 
@@ -347,7 +336,11 @@ export async function createStockTransfer(
     };
   }
 
-  const fromKind = await loadBranchKind(supabase, claims.tenant_id, fromBranchId);
+  const fromKind = await loadBranchKind(
+    supabase,
+    claims.tenant_id,
+    fromBranchId,
+  );
   const toKind = await loadBranchKind(supabase, claims.tenant_id, toBranchId);
   if (!fromKind || !toKind) {
     return { success: false, error: "Điểm vận hành không hợp lệ." };
@@ -358,6 +351,34 @@ export async function createStockTransfer(
       error:
         "Luồng luân chuyển không hợp lệ. Chỉ hỗ trợ Kho Tổng/Bếp Trung Tâm cấp chi nhánh hoặc điều chuyển giữa các chi nhánh.",
     };
+  }
+  if (claims.user_role === "branch_manager") {
+    if (claims.branch_id == null || toBranchId !== claims.branch_id) {
+      return {
+        success: false,
+        error: "Quản lý chi nhánh chỉ được yêu cầu hàng về chi nhánh của mình.",
+      };
+    }
+    if (fromKind !== "central_supply" && fromKind !== "central_kitchen") {
+      return {
+        success: false,
+        error:
+          "Quản lý chi nhánh chỉ được yêu cầu hàng từ Kho Tổng hoặc Bếp Trung Tâm.",
+      };
+    }
+  }
+
+  const permissionBranchId =
+    claims.user_role === "branch_manager" ? toBranchId : fromBranchId;
+  const { data: canCreate, error: canCreateError } = await supabase.rpc(
+    "has_permission",
+    {
+      p_branch_id: permissionBranchId,
+      p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
+    },
+  );
+  if (canCreateError || canCreate !== true) {
+    return { success: false, error: "Không có quyền tạo phiếu chuyển." };
   }
 
   // Branch-scoped role check
@@ -578,7 +599,10 @@ export async function fetchBranchesForTransfer(): Promise<ActionResult> {
         claims.branch_id == null
           ? []
           : branches.filter(
-              (branch: { id: number }) => branch.id === claims.branch_id,
+              (branch: { id: number; branch_kind?: string | null }) =>
+                branch.id === claims.branch_id ||
+                branch.branch_kind === "central_supply" ||
+                branch.branch_kind === "central_kitchen",
             ),
     };
   }

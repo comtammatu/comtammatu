@@ -212,6 +212,13 @@ export const OPERATOR_TILE_ITEMS = [
   },
   {
     moduleKey: "inventory",
+    icon: "ClipboardCheck",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/stocktake",
+    label: "Kiểm kê",
+  },
+  {
+    moduleKey: "inventory",
     icon: "Package",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/waste",

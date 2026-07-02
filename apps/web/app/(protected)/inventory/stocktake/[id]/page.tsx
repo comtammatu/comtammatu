@@ -4,19 +4,26 @@ import { resolveRequestedBranchId } from "../../_lib/inventory-scope";
 import { fetchEntityAuditLogs } from "@/_lib/audit";
 import { StocktakeDetailClient } from "./stocktake-detail-client";
 
-export default async function StocktakeDetailPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{
+interface StocktakeDetailPageContentProps {
+  stocktakeId: number;
+  searchParams?: Promise<{
     branchId?: string | string[];
     error?: string;
     view?: string;
   }>;
-}) {
-  const { id } = await params;
-  const sessionId = Number(id);
+  routeBranchId?: number;
+  routeBase?: string;
+  embedded?: boolean;
+}
+
+export async function StocktakeDetailPageContent({
+  stocktakeId,
+  searchParams,
+  routeBranchId,
+  routeBase = "/inventory/stocktake",
+  embedded = false,
+}: StocktakeDetailPageContentProps) {
+  const sessionId = stocktakeId;
 
   if (!Number.isFinite(sessionId) || sessionId <= 0) {
     notFound();
@@ -57,23 +64,26 @@ export default async function StocktakeDetailPage({
       } | null;
     }>;
   };
-  const sp = await searchParams;
-  const requestedBranchId = await resolveRequestedBranchId(sp.branchId);
+  const sp = searchParams ? await searchParams : {};
+  const requestedBranchId =
+    routeBranchId ?? (await resolveRequestedBranchId(sp.branchId));
   const sessionBranchId = stocktakeSession.branch_id;
   const isDetailView =
     sp.view === "detail" || sp.error === "stocktake_redesigned_not_enabled";
   const detailViewParam = isDetailView ? "&view=detail" : "";
 
+  if (routeBranchId != null && routeBranchId !== sessionBranchId) {
+    notFound();
+  }
+
   if (requestedBranchId !== sessionBranchId) {
     redirect(
-      `/inventory/stocktake/${sessionId}?branchId=${sessionBranchId}${detailViewParam}`,
+      `${routeBase}/${sessionId}?branchId=${sessionBranchId}${detailViewParam}`,
     );
   }
 
   if (stocktakeSession.status === "in_progress" && !isDetailView) {
-    redirect(
-      `/inventory/stocktake/${sessionId}/count?branchId=${sessionBranchId}`,
-    );
+    redirect(`${routeBase}/${sessionId}/count?branchId=${sessionBranchId}`);
   }
 
   const auditLogs = await fetchEntityAuditLogs(
@@ -86,9 +96,29 @@ export default async function StocktakeDetailPage({
     <StocktakeDetailClient
       session={stocktakeSession}
       lines={lines}
-      routeBase="/inventory/stocktake"
-      inventoryBasePath="/inventory"
+      routeBase={routeBase}
       auditLogs={auditLogs}
+      embedded={embedded}
+    />
+  );
+}
+
+export default async function StocktakeDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    branchId?: string | string[];
+    error?: string;
+    view?: string;
+  }>;
+}) {
+  const { id } = await params;
+  return (
+    <StocktakeDetailPageContent
+      stocktakeId={Number(id)}
+      searchParams={searchParams}
     />
   );
 }

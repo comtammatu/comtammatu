@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { Label } from "@comtammatu/ui/components/label";
@@ -97,9 +97,9 @@ type LineState = {
   photoUrls: string[];
 };
 
-function newLine(): LineState {
+function newLine(uid: string): LineState {
   return {
-    uid: Math.random().toString(36).slice(2, 10),
+    uid,
     ingredientId: null,
     unit: "kg",
     entryUnitId: "",
@@ -123,11 +123,12 @@ export function WasteCreateClient({
   embedded?: boolean;
 }) {
   const router = useRouter();
+  const nextLineId = useRef(1);
   const [locationId, setLocationId] = useState<number | null>(
     context.locations[0]?.id ?? null,
   );
   const [formNotes, setFormNotes] = useState("");
-  const [lines, setLines] = useState<LineState[]>(() => [newLine()]);
+  const [lines, setLines] = useState<LineState[]>(() => [newLine("line-0")]);
   const [isSubmitting, startSubmit] = useTransition();
 
   const ingredientOptions = useMemo(
@@ -167,7 +168,9 @@ export function WasteCreateClient({
   }
 
   function addLine() {
-    setLines((prev) => [...prev, newLine()]);
+    const uid = `line-${nextLineId.current}`;
+    nextLineId.current += 1;
+    setLines((prev) => [...prev, newLine(uid)]);
   }
 
   function handleIngredientChange(uid: string, value: string) {

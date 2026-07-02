@@ -1,30 +1,31 @@
 import { notFound } from "next/navigation";
-import { TransferDetailPageContent } from "@/(protected)/inventory/transfers/[id]/page";
+import { StocktakeCountPageContent } from "@/(protected)/inventory/stocktake/[id]/count/page";
 
 interface PageProps {
   params: Promise<{ branchId: string; id: string }>;
 }
 
-export default async function OperatorStockReceiveDetailPage({
+export default async function OperatorStocktakeCountPage({
   params,
 }: PageProps) {
   const { branchId: rawBranchId, id: rawId } = await params;
   const branchId = Number(rawBranchId);
-  const transferId = Number(rawId);
+  const stocktakeId = Number(rawId);
   if (
     !Number.isInteger(branchId) ||
     branchId <= 0 ||
-    !Number.isInteger(transferId) ||
-    transferId <= 0
+    !Number.isInteger(stocktakeId) ||
+    stocktakeId <= 0
   ) {
     notFound();
   }
 
   return (
-    <TransferDetailPageContent
-      transferId={transferId}
+    <StocktakeCountPageContent
+      stocktakeId={stocktakeId}
       routeBranchId={branchId}
-      basePath={`/br/${branchId}/stock/receive`}
+      routeBase={`/br/${branchId}/stock/stocktake`}
+      embedded
     />
   );
 }
