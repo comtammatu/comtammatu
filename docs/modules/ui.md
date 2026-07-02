@@ -219,6 +219,93 @@ Audit này đọc code hiện tại trong `apps/web/app` và in ra:
 mâu thuẫn với `docs/spec/design-system.md`, contract thắng; sửa runtime hoặc
 guard để quay về contract.
 
+## Shared Component Registry
+
+Bảng tra cứu "component → vai trò → rule khóa" cho toàn bộ adapter layer đã
+duyệt (D058 W5). Mọi rule cột cuối trỏ về section của
+`docs/spec/design-system.md` (viết tắt DS); đây là bảng mô tả, không phải
+authority — khi runtime lệch bảng, sửa runtime hoặc cập nhật DS trước.
+
+Trước khi build/sửa trang, đọc `docs/spec/page-archetypes.md` để biết page
+đang sửa thuộc archetype nào và recipe khóa những component nào; bảng này trả
+lời "component X đang khóa vai trò gì, rule ở đâu". Muốn biết "component X
+đang dùng ở đâu trong repo", chạy `codegraph_explore` / `codegraph_callers`
+hoặc `pnpm audit:ui-components` (xem § Component Audit ở trên) — không
+grep-mò và không copy một file đã thấy làm mẫu.
+
+### Page/surface adapters — `apps/web/app/components/surface.tsx`
+
+Layer adapter app-level duy nhất cho pattern lặp lại.
+
+| Export | Vai trò | Rule khóa (DS) |
+|---|---|---|
+| `AppPage` | Content container: width/scroll/density, padding nesting-aware | § Rhythm A (page padding từ AppPage) + § Structural E |
+| `AppShellPaddingBoundary` | Đánh dấu `AppShell main` sở hữu padding để `AppPage` lồng bên trong bỏ padding riêng | § Structural E (padding áp dụng đúng 1 lần) |
+| `AppPageHeader` | Page H1 lockup: eyebrow/title/badge/description/actions/breadcrumb/tabs/meta | § Rhythm B (Page H1 PHẢI từ AppPageHeader) |
+| `AppSection` | Card-backed section frame | § Card Roles + § Component Authority |
+| `AppToolbar` | Filter/action toolbar (search/filters/bulk/actions/reset) | § Layout Patterns (một toolbar/workflow) |
+| `AppEmptyState` | Empty/no-results/no-access/error panel | § Empty/Confirm lock |
+| `AppLinkCard` | Navigation/action card | § Card Roles + § Component Authority |
+| `LinkCardGrid` | Grid responsive (1/2/3 cột) bọc `AppLinkCard` | § Component Authority |
+| `KpiRow` | Grid responsive (1/2/3 cột) bọc `KpiCard` | § Component Authority + § Metric Card Role |
+| `DescriptionList` | `<dl>` term/description cho trang chi tiết | § Component Authority |
+| `DocumentFormFrame` | Khung trang document/line-form (header + body cuộn + footer), compose AppPage | § Component Authority — page-section adapter, không phải chrome shell |
+| `AppDetailFooter` | Hàng footer leading/trailing ở trang chi tiết | § Component Authority |
+| `OperationalTile` | Tile chọn được (Button-based) với tone + selected ring | § Card Roles; § Rhythm D `tile` size |
+| `OperationalBoardCard` | Card board POS/KDS/runner, ring tone `current` | § Card Roles + § Elevation Hover rung |
+
+### Data display / status / metric
+
+| Component | Vai trò | Rule khóa (DS) |
+|---|---|---|
+| `data-table/data-table.tsx` → `DataTable`, `DataTableColumn`, `DataTableFooterCell/Row` | List/table responsive DUY NHẤT: desktop Table + `mobileCardRender`, empty state + pagination chung, `desktopFooter`/`mobileFooter`, `(row,index)` cho inline-edit line sheet | § List Surface contract — twin tree `md:hidden`/`md:block` bị khóa bởi `responsive-double-render` (baseline 0) |
+| `data-table/interactive-card.tsx` → `InteractiveCard` | Card row có thể click (hover elevation) | § Card Roles + § Elevation Hover rung |
+| `kpi/kpi-card.tsx` → `KpiCard` | Metric/stat card DUY NHẤT: label 2xs uppercase, value `text-2xl font-bold tabular-nums`, CompareChip delta, sparkline, drill-down href | § Metric Card Role — `STATUS_*`/StatCard/SummaryCard cục bộ bị `stat-card-ssot` ratchet |
+| `status-badge.tsx` → `StatusBadge`, `getStatusBadgeMeta`, `getStatusDotClassName`, `StatusDomain` | Nguồn duy nhất label+variant badge business-state, khóa theo DB CHECK vocabulary qua `packages/shared/src/labels/vi.ts` | § Status vocabulary — `STATUS_*` map cục bộ mới bị cấm (`status-label-ssot`) |
+| `table-empty-state-row.tsx` → `TableEmptyStateRow` | Empty state BÊN TRONG Table | § Empty/Confirm lock |
+| `audit-history-list.tsx` → `AuditHistoryList` | Lịch sử audit entity (tab "Lịch sử") lọc theo `audit_logs` entity | § Inventory surface contract (audit inline ở trang chi tiết) |
+
+### Route transition frames
+
+| Component | Vai trò | Rule khóa (DS) |
+|---|---|---|
+| `page-skeleton.tsx` → `PageSkeleton`, `PageSpinner` | Khung `loading.tsx`; board realtime chỉ dùng PageSpinner | § Loading/Error/Not-found — không hand-roll skeleton mới; POS giữ `PosPageSkeleton` là ngoại lệ duy nhất |
+| `error-panel.tsx` → `ErrorPanel` | Khung `error.tsx`: AppEmptyState mode="error" + reset() + digest mono | § Loading/Error/Not-found |
+| `not-found-panel.tsx` → `NotFoundPanel` | Khung `not-found.tsx` | § Loading/Error/Not-found |
+
+### Form wrapper layer — `apps/web/app/components/form/` (barrel `form/index.ts`)
+
+| Export (file) | Vai trò | Rule khóa (DS) |
+|---|---|---|
+| `TextField`, `TextareaField` | Input text có label, cao `h-10` | § Rhythm D — `h-10` CHỈ cho phép trên form/* control |
+| `NumberField`, `FormattedNumberInput` | Nhập số có format VN | § Rhythm D + § Inventory (input tiền/số lượng/thuế/ngày PHẢI qua form wrapper) |
+| `MoneyVndField`, `MoneyVndInput`, `QuantityField`, `QuantityInput` (domain-number-inputs) | Input tiền/số lượng theo domain | Như trên + § Numeric cells (`formatVND` SSoT) |
+| `NumberPadSheet` | Sheet nhập số bằng bàn phím chạm (`text-3xl tabular-nums`) | § Rhythm B numeric-input-echo |
+| `BusinessDateField` | Date picker theo business-date VN | § Rhythm D field-trigger `h-10`; `date-format-ssot` |
+| `SelectField`, `Combobox`, `ComboboxField`, `MultiSelectCombobox` | Select/searchable-select field trigger | § Rhythm D field-trigger — không hand-patch raw SelectTrigger lên `h-10` |
+| `FormDialog`, `FileImportDialog`, `valuesToFormData` (form-dialog) | Khung dialog CRUD (RHF+Zod) | § High-level primitive governance — raw `dialog` import route qua FormDialog/Sheet |
+
+### Chrome, navigation, brand, confirmation
+
+| Component | Vai trò | Rule khóa (DS) |
+|---|---|---|
+| `app-shell.tsx` → `AppShell` (+`BrandConfig`, `PageHeaderConfig`) | Management chrome DUY NHẤT: một SidebarProvider, một sidebar (tier1 + tier2), một header | § Structural A/B — shell registry đóng băng baseline |
+| `office-module-shell.tsx` → `OfficeModuleShell`, `OfficeModuleId` | Wrapper Management chung cho admin/hr/menu/orders (không giữ client state riêng) | § Structural B shell allowlist |
+| `app-bottom-nav.tsx` → `AppBottomNav`, `AppBottomNavItem`, `BOTTOM_NAV_ITEM_CLASS` | Bottom-nav mobile chuẩn cho mọi chrome family | § Structural B — bottom-nav PHẢI là primitive export, không tự impl lại |
+| `app-page-tabs.tsx` → `AppPageTabs` (+re-export `TabsContent`) | Tab strip cấp page cho slot `AppPageHeader.tabs` | § Rhythm — segmented view = Tabs |
+| `brand.tsx` → `BrandMark`, `BrandLogoBox`, `BrandLockup`, `BrandSymbol`, `BrandMascot`, `BRAND_*` | Đường duy nhất tới logo/symbol/mascot asset | § Typography rules — không reference `/brand/*` trực tiếp từ route component |
+| `management-chrome.tsx`, `branch-switcher.tsx`, `workspace-bottom-nav.tsx` | Helper chrome Management (scope/branch context) | § Structural A/D (nav single-source, `isNavItemActive`) |
+| `row-actions-menu.tsx` → `RowActionsMenu`, `RowActionItem` | Menu overflow action trên table row | § Inventory (row actions tách biệt hành động destructive) |
+| `settings-form-section.tsx` → `SettingsFormSection` | Wrapper AppSection cho settings form | Ví dụ delegation pattern |
+| `packages/ui/src/components/confirm-dialog.tsx` → `confirm()`, `ConfirmDialogProvider`, `ConfirmOptions` (+ `reason-confirm-dialog.tsx`) | Xác nhận destructive yes/no đơn giản, provider mount ở root layout | § Empty/Confirm — cấm `window.confirm/alert` (`no-native-dialog`); AlertDialog hand-roll chỉ cho flow cần input |
+
+Domain layer đã duyệt nhưng chưa vào registry trước bản này:
+`(protected)/employee/components/employee-page.tsx` export 12 `Employee*`
+adapter (Page/Panel/Frame/ControlBar/ActionBar/ActionGrid/InlineState/
+BadgeList/StatusStrip/DetailList/ActionSection/MissingProfileEmpty), branch
+hub cũng dùng lại layer này (xem § Branch Operator Hub ở trên). Từ bản này nó
+là một phần của registry, không phải wrapper ẩn.
+
 ## Keyboard Shortcuts
 
 Operational surfaces (POS, KDS) support keyboard shortcuts cho power users.

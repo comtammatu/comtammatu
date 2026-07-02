@@ -46,6 +46,7 @@ token layer requires a design-system contract change first.
 - NEVER use a separate visual-token layer or compatibility wrapper for app UI. Route reusable patterns through `apps/web/app/components/surface.tsx` and semantic token classes unless the design-system contract explicitly changes first.
 - REMOVE stale UI rules; keep only live hard rails, workflows, contracts, or guards.
 - BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked Custom Theme contract.
+- BEFORE building or changing any page, consult `docs/spec/page-archetypes.md` (archetype recipe + exemplar) and the Shared Component Registry in `docs/modules/ui.md` § Shared Component Registry. Answer "where is component X used" with `codegraph_explore` / `codegraph_callers` or `pnpm audit:ui-components` — NEVER by grep-guessing or by cloning a component you found once.
 - UI/UX rebuild PRs MUST state the surface, primary user job, route family, change type, and primitives used before implementation.
 
 ## Typography Rules

@@ -1194,6 +1194,262 @@ for (const aclPath of ACL_PATHS) {
   seenAclPaths.add(aclPath);
 }
 
+// page-archetype (design-system.md § F / D058 W5): every protected page.tsx
+// declares exactly one archetype id from docs/spec/page-archetypes.md. This is
+// a mapping-presence gate only — it does not regex-enforce recipe internals
+// (which primitives a page actually renders stays a review concern); it just
+// keeps every page inside the declared taxonomy so a new page cannot land
+// without an owner picking its archetype. EMBED-WRAPPER carries two cheap
+// signature checks (line count, no local fetch) because that archetype's
+// entire contract is "delegate, nothing else" — the other archetypes do not
+// get signature checks here for the same reason recipe compliance stays
+// review-owned.
+const VALID_ARCHETYPES = new Set([
+  "LIST",
+  "EMBED-WRAPPER",
+  "DETAIL",
+  "SETTINGS-PANEL",
+  "DOC-WORKFLOW",
+  "REDIRECT-SHIM",
+  "HUB",
+  "REPORT",
+  "DASHBOARD",
+  "GATE/AUTH",
+  "BOARD",
+]);
+
+// Baseline: DOC-WORKFLOW pages that pre-date the DocumentFormFrame mandate
+// (docs/spec/page-archetypes.md § DOC-WORKFLOW). Only shrinks as pages migrate.
+const DOC_WORKFLOW_FRAME_BASELINE = new Set([
+  "apps/web/app/(protected)/inventory/grn/new/page.tsx",
+  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx",
+  "apps/web/app/(protected)/inventory/transfers/[id]/receive/page.tsx",
+  "apps/web/app/(protected)/inventory/stocktake/new/page.tsx",
+  "apps/web/app/(protected)/inventory/stocktake/[id]/count/page.tsx",
+  "apps/web/app/(protected)/inventory/purchase-orders/new/page.tsx",
+  "apps/web/app/(protected)/inventory/supplier-returns/new/page.tsx",
+  "apps/web/app/(protected)/inventory/waste/new/page.tsx",
+  "apps/web/app/(protected)/employee/count/page.tsx",
+]);
+
+const PAGE_ARCHETYPES = {
+  "apps/web/app/(protected)/admin/dashboard/page.tsx": "DASHBOARD",
+  "apps/web/app/(protected)/admin/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/admin/reports/inventory-value/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/admin/reports/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/admin/reports/stock-movement/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/admin/settings/(tenant)/general/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/admin/settings/(tenant)/payments/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/admin/settings/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/admin/settings/printers/jobs/page.tsx": "LIST",
+  "apps/web/app/(protected)/admin/settings/printers/page.tsx": "HUB",
+  "apps/web/app/(protected)/admin/settings/printers/templates/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx": "DASHBOARD",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx": "HUB",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/profile/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/profile/payslip/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/kds/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/menu-limits/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx": "HUB",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos-sessions/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/printers/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/tables/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/leave/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/expiry/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/[id]/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/[id]/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/new/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/reports/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/[id]/count/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/[id]/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/new/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": "BOARD",
+  "apps/web/app/(protected)/br/[branchId]/pos/page.tsx": "BOARD",
+  "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": "BOARD",
+  "apps/web/app/(protected)/br/page.tsx": "GATE/AUTH",
+  "apps/web/app/(protected)/branches/page.tsx": "LIST",
+  "apps/web/app/(protected)/employee/attendance/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/employee/checkout-approvals/page.tsx": "LIST",
+  "apps/web/app/(protected)/employee/clock/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/employee/count/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/employee/leave/page.tsx": "LIST",
+  "apps/web/app/(protected)/employee/page.tsx": "HUB",
+  "apps/web/app/(protected)/employee/payslip/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/employee/permissions/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/employee/profile/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/employee/schedule/page.tsx": "LIST",
+  "apps/web/app/(protected)/employee/tasks/page.tsx": "LIST",
+  "apps/web/app/(protected)/finance/bank-transactions/page.tsx": "LIST",
+  "apps/web/app/(protected)/finance/expenses/page.tsx": "REPORT",
+  "apps/web/app/(protected)/finance/food-cost/page.tsx": "REPORT",
+  "apps/web/app/(protected)/finance/inventory-value/page.tsx": "REPORT",
+  "apps/web/app/(protected)/finance/invoices/page.tsx": "LIST",
+  "apps/web/app/(protected)/finance/page.tsx": "DASHBOARD",
+  "apps/web/app/(protected)/finance/revenue/[date]/page.tsx": "REPORT",
+  "apps/web/app/(protected)/finance/revenue/page.tsx": "REPORT",
+  "apps/web/app/(protected)/finance/summary/page.tsx": "REPORT",
+  "apps/web/app/(protected)/hr/page.tsx": "LIST",
+  "apps/web/app/(protected)/hr/payroll/[periodId]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/hr/payroll/page.tsx": "LIST",
+  "apps/web/app/(protected)/hr/staff/[id]/permissions/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/hr/staff/audit/page.tsx": "LIST",
+  "apps/web/app/(protected)/hr/staff/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/consumption/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/consumption/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/count-assignments/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/count-slips/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/dashboard/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/inventory/drafts/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/expiry/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/grn/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/inventory/grn/new/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/inventory/grn/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/ingredients/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/issues/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/issues/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/page.tsx": "DASHBOARD",
+  "apps/web/app/(protected)/inventory/production/page.tsx": "HUB",
+  "apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/purchase-orders/new/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/inventory/purchase-orders/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/recipes/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/reports/page.tsx": "REPORT",
+  "apps/web/app/(protected)/inventory/settings/categories/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/inventory/settings/expiry/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/inventory/settings/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/inventory/settings/qc/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/inventory/settings/units/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/stock/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/stocktake/[id]/count/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/inventory/stocktake/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/stocktake/new/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/inventory/stocktake/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/supplier-invoices/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/supplier-returns/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/supplier-returns/new/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/inventory/supplier-returns/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/suppliers/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/transfers/[id]/receive/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/inventory/transfers/new/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/inventory/transfers/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/waste/approvals/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/waste/new/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/menu/page.tsx": "LIST",
+  "apps/web/app/(protected)/notifications/page.tsx": "LIST",
+  "apps/web/app/(protected)/orders/page.tsx": "LIST",
+  "apps/web/app/(public)/(auth)/login/page.tsx": "GATE/AUTH",
+  "apps/web/app/(public)/access-denied/page.tsx": "GATE/AUTH",
+  "apps/web/app/(public)/payment/momo/return/page.tsx": "GATE/AUTH",
+  "apps/web/app/page.tsx": "REDIRECT-SHIM",
+};
+
+const allPageFiles = [
+  ...walkFiles("apps/web/app/(protected)", [".tsx"]),
+  ...walkFiles("apps/web/app/(public)", [".tsx"]),
+]
+  .map(toPosix)
+  .filter((file) => file.endsWith("/page.tsx"));
+if (fs.existsSync(path.join(REPO_ROOT, "apps/web/app/page.tsx"))) {
+  allPageFiles.push("apps/web/app/page.tsx");
+}
+
+for (const file of allPageFiles) {
+  const archetype = PAGE_ARCHETYPES[file];
+  if (!archetype) {
+    failures.push(
+      `page-archetype: ${file} has no archetype entry in PAGE_ARCHETYPES. Pick an archetype from docs/spec/page-archetypes.md and add it to scripts/check-ui-contract.mjs.`,
+    );
+    continue;
+  }
+  if (!VALID_ARCHETYPES.has(archetype)) {
+    failures.push(
+      `page-archetype: ${file} declares unknown archetype "${archetype}". Valid ids are documented in docs/spec/page-archetypes.md § 2.`,
+    );
+  }
+}
+
+for (const file of Object.keys(PAGE_ARCHETYPES)) {
+  if (!allPageFiles.includes(file)) {
+    failures.push(
+      `page-archetype: PAGE_ARCHETYPES has a dead entry for ${file}, which no longer exists. Remove it from scripts/check-ui-contract.mjs.`,
+    );
+  }
+}
+
+for (const file of allPageFiles) {
+  if (PAGE_ARCHETYPES[file] !== "EMBED-WRAPPER") continue;
+  const content = fs.readFileSync(path.join(REPO_ROOT, file), "utf8");
+  const lineCount = content.split("\n").length;
+  if (lineCount > 40) {
+    failures.push(
+      `page-archetype: ${file} is an EMBED-WRAPPER with ${lineCount} lines (limit 40). EMBED-WRAPPER pages only delegate to a canonical *PageContent export (docs/spec/page-archetypes.md § EMBED-WRAPPER).`,
+    );
+  }
+  if (/\bcreateClient\s*\(|\.from\(\s*["'`]/.test(content)) {
+    failures.push(
+      `page-archetype: ${file} is an EMBED-WRAPPER with a local Supabase call. EMBED-WRAPPER pages must have zero local fetch — delegate to the canonical *PageContent export (docs/spec/page-archetypes.md § EMBED-WRAPPER).`,
+    );
+  }
+}
+
+for (const file of allPageFiles) {
+  if (PAGE_ARCHETYPES[file] !== "DOC-WORKFLOW") continue;
+  const content = fs.readFileSync(path.join(REPO_ROOT, file), "utf8");
+  if (
+    !content.includes("DocumentFormFrame") &&
+    !DOC_WORKFLOW_FRAME_BASELINE.has(file)
+  ) {
+    failures.push(
+      `page-archetype: ${file} is a new DOC-WORKFLOW page without DocumentFormFrame. DocumentFormFrame is mandatory for new DOC-WORKFLOW pages (docs/spec/page-archetypes.md § DOC-WORKFLOW); the hand-rolled baseline is frozen and only shrinks.`,
+    );
+  }
+}
+
+for (const file of DOC_WORKFLOW_FRAME_BASELINE) {
+  if (PAGE_ARCHETYPES[file] !== "DOC-WORKFLOW") {
+    failures.push(
+      `page-archetype: DOC_WORKFLOW_FRAME_BASELINE has a stale entry for ${file}, which is no longer DOC-WORKFLOW. Remove it from scripts/check-ui-contract.mjs.`,
+    );
+  }
+}
+
+for (const file of allPageFiles) {
+  if (PAGE_ARCHETYPES[file] !== "REDIRECT-SHIM") continue;
+  const content = fs.readFileSync(path.join(REPO_ROOT, file), "utf8");
+  if (content.includes("return (") || content.includes("return <")) {
+    failures.push(
+      `page-archetype: ${file} is a REDIRECT-SHIM that renders JSX. REDIRECT-SHIM is redirect()-only (docs/spec/page-archetypes.md § REDIRECT-SHIM).`,
+    );
+  }
+}
+
 // page-padding (Stage 0, design-system.md § E / D019): outer page padding is
 // owned by AppPage. A page.tsx that composes its own centered, padded outer
 // container (max-w-* + p-*) is an ad-hoc AppPage clone and fails CI. Route

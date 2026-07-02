@@ -725,6 +725,18 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
   nesting-awareness is what keeps padding from compounding, so no surface owns it
   twice.
 
+### F. Page Archetypes
+
+Every `(protected)/**/page.tsx` renders exactly one page archetype — a locked
+recipe for its layout skeleton, data-display idiom, states, and shared
+status/money/date/navigation vocabulary. The archetype taxonomy and
+per-archetype recipes live in `docs/spec/page-archetypes.md`, a subordinate
+contract under this file (on conflict, this file wins). A new archetype is a
+contract change here first, the same rule that governs Chrome Archetypes in
+§ A. Enforcement is a mapping-presence gate in `scripts/check-ui-contract.mjs`
+(`PAGE_ARCHETYPES`): every protected page must be declared with a valid
+archetype id, and an undeclared new page fails CI pointing at the spec.
+
 ### Enforcement Status
 
 This section is contract today; the behavioral gates land in Stage 0 (`D019`).
@@ -752,6 +764,12 @@ Stage 0 gate status (each flips to **live** as its ratchet lands in
   and `AppPage` is nesting-aware via `AppShellPaddingBoundary` so Management
   pages stop double-padding without un-padding pages that rely on `AppShell`
   main.
+- `page-archetype` (§ F / D058 W5) — **live**: a `PAGE_ARCHETYPES` map in
+  `scripts/check-ui-contract.mjs` asserts every protected `page.tsx` is
+  declared with a valid archetype id from `docs/spec/page-archetypes.md`; an
+  undeclared page fails CI. Mapping-presence only — recipe-internal
+  compliance (which primitives a page actually uses) stays review-owned, not
+  regex-enforced.
 - `status-label-ssot` regex un-blinding (W1 ratchet) — **live**: the ratchet
   now also catches `STATUS`-first names (`STATUS_LABELS`, `STATUS_CONFIG`, …)
   and multi-line type annotations (`const X_STATUS: Record<…> = {`)
