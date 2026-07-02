@@ -1,7 +1,7 @@
 # Branch Operator Hub full cutover — master spec (2026-07-01)
 
-> Reconciled-through `18d060cbbb4a`
-> Status: **Foundation and stock-shell cutover in progress; route/surface guards added**.
+> Reconciled-through `9536e615`
+> Status: **Phases 1–5 landed on main** (device-aware hub entry, shift cockpit, branch control + settings in operator shell, stock floor slices, station re-root + hub links, branch-scoped waste approvals, central-site operator access per D055 §1). Remaining: central-role parity polish (returnTo deep-link, `/employee` proxy redirect, role home link) and Phase 6 `/employee` retirement — blocked while `office` homes there (D055 §3).
 > Scope: master spec for a mobile-first Branch Operator Hub at `/br/[branchId]`, with full cutover across Employee hot path, Branch Control, Stock floor tasks, POS, KDS, and Runner. Build is phased, not big-bang.
 
 ## Decisions approved

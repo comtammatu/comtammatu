@@ -36,13 +36,14 @@ checkout.
   and Shared UI/rules must land separately. Do not land POS/KDS print migrations
   (`20260701010100_pos_drink_bill_only_no_kds.sql`,
   `20260701065350_pos_kitchen_print_route_policy.sql`) with Branch Operator Hub.
-- [ ] **Branch Operator Hub first landable slice** — Goal:
-  `/br/[branchId]` owns branch-native shell/IA for Hub, Shift, Branch Control,
-  Settings, and Stock floor tasks without normal fallback to office/admin chrome.
-  First PR scope: shell ownership, bottom-nav contract, Hub/Shift first viewport,
-  stock fallback guards, and one mobile route smoke. Settings and remaining stock
-  detail screens follow as smaller slices unless a shared prop is required to keep
-  actions branch-native.
+- [x] **Branch Operator Hub first landable slice** — LANDED and pushed
+  (origin/main `9536e615`, 2026-07-02): shell ownership, bottom-nav contract,
+  Hub/Shift first viewport, stock guards, device-aware post-login entry,
+  pre-clock-in disabled tiles, combined approvals + overview smart cards,
+  station hub links, branch-scoped waste approvals, central-site operator
+  access (D055 §1). Spec status header tracks what remains (central-role
+  parity polish + Phase 6 `/employee` retirement, blocked on `office` role).
+  Owner smoke on real devices still pending.
 
 ## Agent-Doable Now
 
