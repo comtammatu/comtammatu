@@ -62,9 +62,11 @@ checkout.
   the shared `parseBranchIdParam`, `?branchId=` stays a display filter only
   (D050 §4, D058 contract); write paths audited, all already re-validate
   branch scope via claims/RLS/RPC `has_permission`, no trust gap found.
-- [ ] **W6 — Claude Design mirror push** (W5 landed; one-way repo→design, §11):
-  bundle recipes (11 archetype cards) + adapter-layer cards, push via
-  DesignSync to project `Má Tư Design System`.
+- [x] **W6 — Claude Design mirror push** (2026-07-03): 23 cards live on the
+  claude.ai/design project `Má Tư Design System` — 11 archetype recipe cards
+  (group "Recipes") + 12 adapter-layer cards (group "Adapters"), tokens
+  extracted verbatim from `globals.css` v14.12; additive one-way push via
+  DesignSync (existing components/mockups untouched).
 - [x] **Perf lane slice 1** (merged PR #184): `radix-ui` optimizePackageImports,
   KDS fetch parallelized, POS sheets code-split + idle prefetch (POS gzip
   −29.4%: 579.6→409.1 kB), bounded PO/hr-staff fetches. `use cache` expansion
