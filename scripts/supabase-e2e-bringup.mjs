@@ -1,14 +1,18 @@
 #!/usr/bin/env node
 // Bring up a from-empty Supabase Local stack for the e2e smoke and wire the app
-// env to it. Applies the self-contained baseline + the dev-tenant + QA seeds
-// (cashier.datdo / chef.datdo, password Test1234!), then writes the env files
-// Playwright and `next dev` need. Used by the CI e2e-smoke job; runnable locally.
+// env to it. Applies the active migration chain (baseline + forward) + the
+// dev-tenant + QA seeds (cashier.datdo / chef.datdo, password Test1234!), then
+// writes the env files Playwright and `next dev` need. Used by the CI e2e-smoke
+// job; runnable locally.
 //
-// Non-essential services (studio/inbucket/analytics/storage) are disabled — the
-// POS->payment->KDS smoke does not use them, and it keeps startup fast and free
-// of port contention with any other local Supabase project.
+// Non-essential services (studio/inbucket/analytics/edge runtime) are disabled —
+// the POS->payment->KDS smoke does not use them (the repo has no edge functions,
+// and the edge runtime boots by fetching from jsr.io, a network flake source),
+// and it keeps startup fast and free of port contention with any other local
+// Supabase project. Storage stays enabled: the fold migration provisions storage
+// buckets + policies, which need the storage schema the storage service creates.
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const REPO = process.cwd();
@@ -31,7 +35,14 @@ function writeScratch() {
   rmSync(WORKDIR, { recursive: true, force: true });
   mkdirSync(join(WORKDIR, "supabase", "migrations"), { recursive: true });
   mkdirSync(join(WORKDIR, "supabase", "_local-dev"), { recursive: true });
-  cpSync(join(REPO, "supabase/migrations/00000000000000_baseline.sql"), join(WORKDIR, "supabase/migrations/00000000000000_baseline.sql"));
+  // Full active chain (baseline + forward migrations), same as a fresh-env
+  // install: the seeds track post-forward schema semantics, so baseline-only
+  // rejects them (e.g. WF10 central-site NULL branch claims).
+  for (const f of readdirSync(join(REPO, "supabase/migrations")).sort()) {
+    if (/^\d{14}_.+\.sql$/.test(f)) {
+      cpSync(join(REPO, "supabase/migrations", f), join(WORKDIR, "supabase/migrations", f));
+    }
+  }
   cpSync(join(REPO, "supabase/_local-dev/dev-tenant-seed.sql"), join(WORKDIR, "supabase/_local-dev/dev-tenant-seed.sql"));
   cpSync(join(REPO, "supabase/seed.sql"), join(WORKDIR, "supabase/seed.sql"));
   writeFileSync(
@@ -52,7 +63,7 @@ enabled = false
 enabled = false
 [analytics]
 enabled = false
-[storage]
+[edge_runtime]
 enabled = false
 [auth]
 enabled = true
