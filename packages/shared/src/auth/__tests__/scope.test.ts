@@ -70,11 +70,32 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     label: "Quản trị",
     href: "/admin/dashboard",
   });
-  assert.deepEqual(resolveRoleHomeLink("branch_manager", 3), {
+  // Owner stays on the office plane even when a branch is in scope.
+  assert.deepEqual(resolveRoleHomeLink("owner", 3), {
+    label: "Quản trị",
+    href: "/admin/dashboard",
+  });
+  assert.deepEqual(resolveRoleHomeLink("branch_manager"), {
     label: "Ca của tôi",
     href: "/employee",
   });
-  assert.deepEqual(resolveRoleHomeLink("branch_manager"), {
+
+  // Operator-plane roles with a branch in scope go home to the operator hub.
+  for (const role of [
+    "branch_manager",
+    "warehouse_manager",
+    "production_manager",
+    "cashier",
+    "chef",
+  ] as const) {
+    assert.deepEqual(resolveRoleHomeLink(role, 3), {
+      label: "Hôm nay",
+      href: "/br/3",
+    });
+  }
+
+  // Office has no operator hub; a stray branch id must not move it.
+  assert.deepEqual(resolveRoleHomeLink("office", 3), {
     label: "Ca của tôi",
     href: "/employee",
   });
@@ -385,6 +406,50 @@ test("resolvePostLoginRedirect → branch_manager on own POS → allowed", () =>
   assert.equal(
     resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/br/3/pos"),
     "/br/3/pos",
+  );
+});
+
+test("resolvePostLoginRedirect → central-site returnTo into own home site is honored", () => {
+  const ctx = { standaloneStation: null, isDesktop: false, homeBranchId: 9 };
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("warehouse_manager"),
+      "/br/9/stock/receive",
+      ctx,
+    ),
+    "/br/9/stock/receive",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("warehouse_manager"), "/br/9", ctx),
+    "/br/9",
+  );
+});
+
+test("resolvePostLoginRedirect → central-site returnTo to another branch falls back to home site", () => {
+  const ctx = { standaloneStation: null, isDesktop: false, homeBranchId: 9 };
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("warehouse_manager"),
+      "/br/7/stock/receive",
+      ctx,
+    ),
+    "/br/9",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("warehouse_manager"), "/br/7", ctx),
+    "/br/9",
+  );
+});
+
+test("resolvePostLoginRedirect → cashier branch gating unchanged with hub context", () => {
+  const ctx = { standaloneStation: null, isDesktop: false, homeBranchId: null };
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/3/pos", ctx),
+    "/br/3/pos",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/7/pos", ctx),
+    "/br/3",
   );
 });
 

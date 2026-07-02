@@ -2,9 +2,22 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import type { JwtClaims } from "@comtammatu/shared/auth";
+import { resolveLegacyEmployeeBranchRuntimePath } from "../app/(protected)/employee/_lib/branch-runtime-redirect";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+
+function claims(
+  role: JwtClaims["user_role"],
+  branchId: number | null,
+): JwtClaims {
+  return {
+    tenant_id: 1,
+    branch_id: branchId,
+    user_role: role,
+  };
+}
 
 test("root route uses Branch Hub context instead of raw role default", () => {
   const rootPage = read("apps/web/app/page.tsx");
@@ -57,13 +70,69 @@ test("post-login redirect call sites resolve the central-site home branch (D055 
 });
 
 test("employee runtime redirect sends owner to the branch picker", () => {
-  const redirectLib = read(
-    "apps/web/app/(protected)/employee/_lib/branch-runtime-redirect.ts",
+  assert.equal(
+    resolveLegacyEmployeeBranchRuntimePath(claims("owner", null), "/employee"),
+    "/br",
   );
+  // Owner keeps the picker even when a caller passes a home site.
+  assert.equal(
+    resolveLegacyEmployeeBranchRuntimePath(
+      claims("owner", null),
+      "/employee",
+      9,
+    ),
+    "/br",
+  );
+});
 
-  assert.match(
-    redirectLib,
-    /isAdminRole\(claims\.user_role\)\s*\?\s*"\/br"\s*:\s*null/,
+test("employee runtime redirect resolves the central-site home (D055 §1)", () => {
+  for (const role of ["warehouse_manager", "production_manager"] as const) {
+    assert.equal(
+      resolveLegacyEmployeeBranchRuntimePath(
+        claims(role, null),
+        "/employee/clock",
+        9,
+      ),
+      "/br/9/shift/clock",
+      role,
+    );
+    assert.equal(
+      resolveLegacyEmployeeBranchRuntimePath(claims(role, null), "/employee", 9),
+      "/br/9",
+      role,
+    );
+    // Without a resolved home site they stay on /employee.
+    assert.equal(
+      resolveLegacyEmployeeBranchRuntimePath(
+        claims(role, null),
+        "/employee/clock",
+        null,
+      ),
+      null,
+      role,
+    );
+  }
+});
+
+test("employee runtime redirect never moves office off /employee", () => {
+  assert.equal(
+    resolveLegacyEmployeeBranchRuntimePath(
+      claims("office", null),
+      "/employee/clock",
+      9,
+    ),
+    null,
+  );
+});
+
+test("employee runtime redirect keeps pinned operators on their claims branch", () => {
+  assert.equal(
+    resolveLegacyEmployeeBranchRuntimePath(
+      claims("cashier", 3),
+      "/employee/clock",
+      9,
+    ),
+    "/br/3/shift/clock",
   );
 });
 
@@ -72,6 +141,11 @@ test("proxy redirects legacy /employee entrypoints to branch runtime", () => {
 
   assert.match(proxy, /resolveLegacyEmployeeBranchRuntimePath/);
   assert.match(proxy, /pathname\.startsWith\("\/employee"\)/);
+  // Central-site roles resolve their home site through the cached lookup.
+  assert.match(
+    proxy,
+    /resolveLegacyEmployeeBranchRuntimePath\(\s*claims,\s*pathname,\s*await resolveCentralSiteHomeBranchId\(supabase, claims\),\s*\)/,
+  );
   // Redirect happens before module ACL resolution.
   assert.ok(
     proxy.indexOf("resolveLegacyEmployeeBranchRuntimePath(") <

@@ -32,12 +32,19 @@ export interface ResolvedHomeLink {
 
 export function resolveRoleHomeLink(
   role: StaffRole,
-  _branchId?: number | null,
+  branchId?: number | null,
 ): ResolvedHomeLink {
   if (canAccess(role, "dashboard")) {
     return {
       label: APP_COPY_VI.adminSurface,
       href: MODULE_ACL.dashboard.path,
+    };
+  }
+
+  if (branchId != null && branchId > 0 && canAccess(role, "operator_home")) {
+    return {
+      label: APP_COPY_VI.operatorHome,
+      href: `/br/${branchId}`,
     };
   }
 

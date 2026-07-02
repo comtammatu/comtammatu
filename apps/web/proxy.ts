@@ -213,14 +213,15 @@ export async function proxy(request: NextRequest) {
   }
 
   // Legacy /employee entrypoints: branch-runtime roles are redirected to the
-  // /br/{branchId} equivalent before module ACL runs. Roles without
-  // operator_home access (office, warehouse/production managers) fall through
-  // and keep using /employee. Query string is preserved (payslip ?year,
-  // count ?location).
+  // /br/{branchId} equivalent before module ACL runs. Central-site roles
+  // (D055 §1) resolve their home site via the cached branch_kind lookup;
+  // roles without operator_home access (office) fall through and keep using
+  // /employee. Query string is preserved (payslip ?year, count ?location).
   if (pathname.startsWith("/employee")) {
     const branchRuntimePath = resolveLegacyEmployeeBranchRuntimePath(
       claims,
       pathname,
+      await resolveCentralSiteHomeBranchId(supabase, claims),
     );
     if (branchRuntimePath) {
       const url = request.nextUrl.clone();

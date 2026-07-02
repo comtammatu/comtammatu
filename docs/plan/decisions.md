@@ -659,3 +659,5 @@ docs, tách lane dirty WIP, và chạy guard nhỏ (`rules-mirror`, `doc-stalene
 **Consequences:** Mở rộng D050 (không đảo). Khi thi công §1 phải sửa `MODULE_ACL.operator_home.allowedRoles`, JWT hook branch assignment, network-gate central-site, và bản ghi này (đánh dấu đã thi công). Đảo hướng (giữ warehouse/production ở `/employee` vĩnh viễn) phải sửa bản ghi này trước.
 
 **Status (2026-07-02):** §1 đã thi công theo soft-routing (code-only, không đổi JWT/DB): claims của warehouse/production giữ tenant-level (`branch_id` null), proxy gate `/br/{id}` theo `branches.branch_kind` khớp domain role (`central_supply`/`central_kitchen`, site active); station POS/KDS/runner vẫn khóa branch-kind `branch`.
+
+**Status (2026-07-02, hoàn thiện parity):** 3 khe hở còn lại của §1 đã đóng: `returnTo` deep-link vào đúng central site của role được giữ (qua `homeBranchId` server-computed trong `resolvePostLoginRedirect`), redirect `/employee/*` → `/br/{central-site}/...` áp cho warehouse/production (office giữ `/employee`, owner giữ `/br`), và home link shell (`resolveRoleHomeLink`) trỏ operator hub khi role có `operator_home` kèm branch trong scope.

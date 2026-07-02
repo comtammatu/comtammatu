@@ -39,13 +39,18 @@ const LEGACY_EMPLOYEE_ROUTES: Record<string, BranchRuntimeRoute> = {
 export function resolveEmployeeBranchRuntimePath(
   claims: JwtClaims,
   route: BranchRuntimeRoute,
+  homeBranchId?: number | null,
 ): string | null {
   if (!canAccess(claims.user_role, "operator_home")) {
     return null;
   }
 
   if (claims.branch_id == null) {
-    return isAdminRole(claims.user_role) ? "/br" : null;
+    if (isAdminRole(claims.user_role)) return "/br";
+    // Central-site roles (D055 §1) carry no branch claim; callers resolve
+    // their home site via resolveCentralSiteHomeBranchId.
+    if (homeBranchId == null) return null;
+    return `/br/${homeBranchId}${BRANCH_RUNTIME_PATHS[route]}`;
   }
 
   return `/br/${claims.branch_id}${BRANCH_RUNTIME_PATHS[route]}`;
@@ -54,10 +59,11 @@ export function resolveEmployeeBranchRuntimePath(
 export function resolveLegacyEmployeeBranchRuntimePath(
   claims: JwtClaims,
   pathname: string,
+  homeBranchId?: number | null,
 ): string | null {
   const route = LEGACY_EMPLOYEE_ROUTES[pathname];
   if (!route) return null;
-  return resolveEmployeeBranchRuntimePath(claims, route);
+  return resolveEmployeeBranchRuntimePath(claims, route, homeBranchId);
 }
 
 export function appendSearchParams(
