@@ -52,14 +52,19 @@ export type PendingWasteRow = {
 interface Props {
   initial: PendingWasteRow[];
   branchFilter: number | null;
+  embedded?: boolean;
 }
 
-export function WasteApprovalsClient({ initial, branchFilter }: Props) {
+export function WasteApprovalsClient({
+  initial,
+  branchFilter,
+  embedded = false,
+}: Props) {
   const [rows, setRows] = useState(initial);
   const copy = messages.inventory.waste.approvals;
 
-  return (
-    <AppPage width="default">
+  const content = (
+    <>
       <AppPageHeader
         eyebrow="Kho hàng"
         title={copy.title}
@@ -82,8 +87,14 @@ export function WasteApprovalsClient({ initial, branchFilter }: Props) {
           ))}
         </ItemGroup>
       )}
-    </AppPage>
+    </>
   );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return <AppPage width="default">{content}</AppPage>;
 }
 
 function WasteApprovalCard({

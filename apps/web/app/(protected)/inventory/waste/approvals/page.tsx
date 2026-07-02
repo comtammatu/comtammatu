@@ -9,17 +9,25 @@ import {
 
 export const dynamic = "force-dynamic";
 
-interface PageProps {
-  searchParams: Promise<{ branchId?: string }>;
+interface WasteApprovalsPageContentProps {
+  searchParams?: Promise<{ branchId?: string }>;
+  routeBranchId?: number;
+  embedded?: boolean;
 }
 
-export default async function WasteApprovalsPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const branchFilter = await resolveRequestedBranchId(params.branchId);
+export async function WasteApprovalsPageContent({
+  searchParams,
+  routeBranchId,
+  embedded = false,
+}: WasteApprovalsPageContentProps) {
+  const params = searchParams ? await searchParams : {};
+  const branchFilter =
+    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
 
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
+    routeBranchId,
   );
   if (!ctx) redirect("/");
   const { supabase, claims, user } = ctx;
@@ -150,5 +158,19 @@ export default async function WasteApprovalsPage({ searchParams }: PageProps) {
     };
   });
 
-  return <WasteApprovalsClient initial={rows} branchFilter={branchFilter} />;
+  return (
+    <WasteApprovalsClient
+      initial={rows}
+      branchFilter={branchFilter}
+      embedded={embedded}
+    />
+  );
+}
+
+export default async function WasteApprovalsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string }>;
+}) {
+  return <WasteApprovalsPageContent searchParams={searchParams} />;
 }

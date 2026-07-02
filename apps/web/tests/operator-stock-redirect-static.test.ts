@@ -473,6 +473,48 @@ test("branch stock wrappers keep inventory fallbacks inside the branch shell", (
   assert.doesNotMatch(wastePage, /EmployeePage/);
 });
 
+test("operator waste approvals render branch-locked inside the branch shell", () => {
+  const route = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx",
+  );
+  const officePage = read(
+    "apps/web/app/(protected)/inventory/waste/approvals/page.tsx",
+  );
+  const client = read(
+    "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx",
+  );
+  const operatorHome = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
+  );
+  const shiftPage = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx",
+  );
+  const employeeHome = read("apps/web/app/(protected)/employee/page.tsx");
+
+  assert.match(route, /params: Promise<\{ branchId: string \}>/);
+  assert.match(route, /WasteApprovalsPageContent/);
+  assert.match(route, /routeBranchId=\{branchId\}/);
+  assert.match(route, /embedded/);
+  assert.doesNotMatch(route, /redirect\(`\/inventory\/waste/);
+
+  assert.match(officePage, /export async function WasteApprovalsPageContent/);
+  assert.match(officePage, /routeBranchId\?: number/);
+  assert.match(officePage, /embedded\?: boolean/);
+  assert.match(officePage, /embedded=\{embedded\}/);
+  assert.match(client, /embedded\?: boolean/);
+  assert.match(client, embeddedContentWrapperPattern);
+
+  assert.match(
+    operatorHome,
+    /wasteApprovals: `\$\{basePath\}\/stock\/waste-approvals`/,
+  );
+  assert.match(
+    shiftPage,
+    /wasteApprovals: `\/br\/\$\{branchId\}\/stock\/waste-approvals`/,
+  );
+  assert.match(employeeHome, /wasteApprovals: "\/inventory\/waste\/approvals"/);
+});
+
 test("operator stocktake routes use branch stocktake, not employee count", () => {
   const stocktakeRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/page.tsx",
