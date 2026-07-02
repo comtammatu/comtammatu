@@ -73,7 +73,12 @@ Two duplications are deliberate and machine-enforced — do NOT "de-duplicate" t
 - Architecture decisions: `docs/plan/decisions.md`
 - Active ADRs: `docs/plan/adr/`
 - System architecture: `docs/spec/architecture.md`
-- Role/scope/route matrix: `docs/spec/role-route-matrix.md`
+- Role/scope/route matrix: `docs/spec/role-route-matrix.md` — hand-authored
+  preamble (product frame, principles, navigation contract) plus a
+  `GENERATED:role-route-matrix` block regenerated from
+  `packages/shared/src/auth/*.ts` by `scripts/gen-role-route-matrix.mjs`
+  (`corepack pnpm gen:route-matrix` / `lint:route-matrix` drift check); do not
+  hand-edit inside the GENERATED markers
 - Database schema source ladder: `docs/spec/database-schema.md`
 - Design system contract: `docs/spec/design-system.md`
 - Inventory overview diagrams: `docs/spec/inventory-overview-diagrams.md`
