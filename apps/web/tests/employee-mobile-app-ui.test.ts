@@ -316,6 +316,21 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeClockSource,
+    /type="file"[\s\S]*accept=\{UPLOAD_PHOTO_ACCEPT\}[\s\S]*aria-label=\{clockCopy\.uploadPhoto\}/,
+    "Clock-in should offer a file upload fallback when camera capture is unavailable",
+  );
+  assert.match(
+    employeeClockSource,
+    /FormData\(\)[\s\S]*formData\.set\("photo", photo\)[\s\S]*clockInWithPhoto/,
+    "Clock-in should submit uploaded or captured photos through the existing server action",
+  );
+  assert.match(
+    employeeMessagesSource,
+    /uploadPhoto: "Tải ảnh lên"[\s\S]*uploadUnsupported: "Ảnh chấm công chỉ nhận JPG, PNG hoặc WebP\."/,
+    "Employee clock upload fallback copy should live in the employee message registry",
+  );
+  assert.match(
+    employeeClockSource,
     /cameraActive \? \(/,
     "Clock camera frame must be conditionally rendered when camera is active",
   );

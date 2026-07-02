@@ -10,6 +10,7 @@ import {
   CircleX as IconCircleX,
   Clock as IconClock,
   ListChecks as IconListChecks,
+  Upload as IconUpload,
 } from "lucide-react";
 import {
   Alert,
@@ -44,12 +45,22 @@ interface ClockClientProps {
   routes: EmployeeClockRoutes;
 }
 
-type PhotoState = "idle" | "ready" | "submitting" | "success" | "error";
+type PhotoState =
+  | "idle"
+  | "ready"
+  | "processing"
+  | "submitting"
+  | "success"
+  | "error";
 type CameraState = "idle" | "starting" | "ready" | "capturing" | "error";
 type CheckoutState = "idle" | "submitting" | "success" | "error";
 
 const MAX_CLIENT_PHOTO_EDGE = 1280;
+const MAX_UPLOAD_SOURCE_BYTES = 15_000_000;
+const MAX_CLOCK_PHOTO_BYTES = 3_500_000;
 const PHOTO_QUALITY = 0.82;
+const UPLOAD_PHOTO_ACCEPT = "image/jpeg,image/png,image/webp";
+const UPLOAD_PHOTO_TYPES = new Set(UPLOAD_PHOTO_ACCEPT.split(","));
 const clockCopy = messages.employee.clock;
 
 function waitForNextAnimationFrame(): Promise<void> {
@@ -107,6 +118,48 @@ async function capturePhotoFromVideo(
     : null;
 }
 
+function loadImageFromObjectUrl(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("photo_decode_failed"));
+    image.src = url;
+  });
+}
+
+async function normalizePhotoFile(file: File): Promise<File | null> {
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await loadImageFromObjectUrl(objectUrl);
+    const sourceWidth = image.naturalWidth;
+    const sourceHeight = image.naturalHeight;
+    if (!sourceWidth || !sourceHeight) return null;
+
+    const scale = Math.min(
+      1,
+      MAX_CLIENT_PHOTO_EDGE / Math.max(sourceWidth, sourceHeight),
+    );
+    const width = Math.max(1, Math.round(sourceWidth * scale));
+    const height = Math.max(1, Math.round(sourceHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(image, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/webp", PHOTO_QUALITY);
+    });
+
+    if (!blob) return null;
+    return new File([blob], "attendance-upload.webp", { type: "image/webp" });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 export function ClockClient({ state, routes }: ClockClientProps) {
   const router = useRouter();
   const [photoState, setPhotoState] = useState<PhotoState>("idle");
@@ -117,6 +170,7 @@ export function ClockClient({ state, routes }: ClockClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const managerAttendanceOnly = state.managerAttendanceOnly;
 
@@ -218,9 +272,54 @@ export function ClockClient({ state, routes }: ClockClientProps) {
     setCameraState("idle");
   }, [stopCamera]);
 
+  const uploadPhoto = useCallback(
+    async (file: File) => {
+      setError(null);
+      setPhotoState("processing");
+
+      if (!UPLOAD_PHOTO_TYPES.has(file.type)) {
+        setPhotoState("error");
+        setError(clockCopy.uploadUnsupported);
+        return;
+      }
+
+      if (file.size > MAX_UPLOAD_SOURCE_BYTES) {
+        setPhotoState("error");
+        setError(clockCopy.uploadTooLarge);
+        return;
+      }
+
+      let normalized: File | null;
+      try {
+        normalized = await normalizePhotoFile(file);
+      } catch {
+        normalized = null;
+      }
+
+      if (!normalized) {
+        setPhotoState("error");
+        setError(clockCopy.uploadUnreadable);
+        return;
+      }
+
+      if (normalized.size > MAX_CLOCK_PHOTO_BYTES) {
+        setPhotoState("error");
+        setError(clockCopy.uploadTooLargeAfterResize);
+        return;
+      }
+
+      setPhoto(normalized);
+      setPreviewUrl(URL.createObjectURL(normalized));
+      setPhotoState("ready");
+      stopCamera();
+      setCameraState("idle");
+    },
+    [stopCamera],
+  );
+
   const submitClockIn = useCallback(() => {
     if (!photo) {
-      setError("Cần chụp ảnh chấm công.");
+      setError(clockCopy.photoRequired);
       return;
     }
 
@@ -317,6 +416,8 @@ export function ClockClient({ state, routes }: ClockClientProps) {
     cameraState === "starting" ||
     cameraState === "ready" ||
     cameraState === "capturing";
+  const photoBusy =
+    isPending || photoState === "processing" || photoState === "submitting";
 
   if (state.status === "missing_branch") {
     return (
@@ -632,6 +733,20 @@ export function ClockClient({ state, routes }: ClockClientProps) {
 
       {error ? <ErrorAlert message={error} /> : null}
 
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept={UPLOAD_PHOTO_ACCEPT}
+        className="hidden"
+        disabled={photoBusy}
+        aria-label={clockCopy.uploadPhoto}
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void uploadPhoto(file);
+          event.target.value = "";
+        }}
+      />
+
       {cameraState === "ready" || cameraState === "capturing" ? (
         <EmployeeActionGrid>
           <Button
@@ -667,11 +782,7 @@ export function ClockClient({ state, routes }: ClockClientProps) {
             variant="outline"
             size="touch"
             onClick={startCamera}
-            disabled={
-              isPending ||
-              photoState === "submitting" ||
-              cameraState === "starting"
-            }
+            disabled={photoBusy || cameraState === "starting"}
           >
             {cameraState === "starting" ? (
               <Spinner data-icon="inline-start" />
@@ -684,9 +795,26 @@ export function ClockClient({ state, routes }: ClockClientProps) {
           </Button>
           <Button
             type="button"
+            variant="outline"
             size="touch"
+            onClick={() => photoInputRef.current?.click()}
+            disabled={photoBusy}
+          >
+            {photoState === "processing" ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <IconUpload data-icon="inline-start" />
+            )}
+            {photoState === "processing"
+              ? clockCopy.uploadProcessing
+              : clockCopy.uploadAnotherPhoto}
+          </Button>
+          <Button
+            type="button"
+            size="touch"
+            className="sm:col-span-2"
             onClick={submitClockIn}
-            disabled={isPending || photoState === "submitting"}
+            disabled={photoBusy}
           >
             {photoState === "submitting" || isPending ? (
               <Spinner data-icon="inline-start" />
@@ -697,16 +825,33 @@ export function ClockClient({ state, routes }: ClockClientProps) {
           </Button>
         </EmployeeActionGrid>
       ) : cameraState === "starting" ? null : (
-        <Button
-          type="button"
-          size="touch"
-          className="w-full sm:w-fit"
-          onClick={startCamera}
-          disabled={isPending || photoState === "submitting"}
-        >
-          <IconCamera data-icon="inline-start" />
-          {clockCopy.openCamera}
-        </Button>
+        <EmployeeActionGrid>
+          <Button
+            type="button"
+            size="touch"
+            onClick={startCamera}
+            disabled={photoBusy}
+          >
+            <IconCamera data-icon="inline-start" />
+            {clockCopy.openCamera}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            onClick={() => photoInputRef.current?.click()}
+            disabled={photoBusy}
+          >
+            {photoState === "processing" ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <IconUpload data-icon="inline-start" />
+            )}
+            {photoState === "processing"
+              ? clockCopy.uploadProcessing
+              : clockCopy.uploadPhoto}
+          </Button>
+        </EmployeeActionGrid>
       )}
     </EmployeePanel>
   );
