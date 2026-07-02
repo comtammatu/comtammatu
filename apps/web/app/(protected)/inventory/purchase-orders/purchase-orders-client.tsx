@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   ArrowRight as IconArrowRight,
@@ -10,6 +10,7 @@ import {
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { toast } from "@comtammatu/ui/components/sonner";
 import {
   InputGroup,
   InputGroupAddon,
@@ -39,6 +40,8 @@ import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
 import { tRoute, tStatus } from "../_lib/dictionary";
 import type { SupplierRow } from "../suppliers/suppliers-client";
+import { fetchPurchaseOrdersPage } from "../procurement-actions";
+import type { PurchaseOrderCursor } from "../procurement-actions";
 import { messages } from "@lib/messages";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
@@ -85,28 +88,58 @@ function formatRelative(value: string): string {
 export function PurchaseOrdersClient({
   initial,
   suppliers,
+  statusCounts,
+  initialHasMore = false,
+  initialNextCursor = null,
+  branchId,
   purchaseOrdersBasePath = "/inventory/purchase-orders",
   suppliersPath = "/inventory/suppliers",
   embedded = false,
 }: {
   initial: PurchaseOrderRow[];
   suppliers: SupplierRow[];
+  statusCounts: Record<string, number>;
+  initialHasMore?: boolean;
+  initialNextCursor?: PurchaseOrderCursor | null;
+  branchId?: number;
   purchaseOrdersBasePath?: string;
   suppliersPath?: string | null;
   embedded?: boolean;
 }) {
-  const [rows] = useState(initial);
+  const [rows, setRows] = useState(initial);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [nextCursor, setNextCursor] = useState<PurchaseOrderCursor | null>(
+    initialNextCursor,
+  );
+  const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(ALL_FILTER_VALUE);
   const [supplierFilter, setSupplierFilter] = useState(ALL_FILTER_VALUE);
 
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const row of rows) {
-      counts[row.status] = (counts[row.status] ?? 0) + 1;
-    }
-    return counts;
-  }, [rows]);
+  // Total across the whole tenant/branch (server count-only queries), so the
+  // status tabs stay accurate even though the table is keyset-paginated.
+  const totalCount = useMemo(
+    () => Object.values(statusCounts).reduce((sum, count) => sum + count, 0),
+    [statusCounts],
+  );
+
+  function handleLoadMore() {
+    if (isPending || !hasMore || !nextCursor) return;
+    startTransition(async () => {
+      const result = await fetchPurchaseOrdersPage({
+        branchId,
+        before: nextCursor,
+      });
+      if (!result.success || !result.data) {
+        toast.error(result.error ?? poCopy.loadMoreFailed);
+        return;
+      }
+      const { items, hasMore: more, nextCursor: cursor } = result.data;
+      setRows((current) => [...current, ...(items as PurchaseOrderRow[])]);
+      setHasMore(more);
+      setNextCursor(cursor);
+    });
+  }
 
   const filteredRows = useMemo(() => {
     const query = search.trim();
@@ -294,7 +327,7 @@ export function PurchaseOrdersClient({
         />
 
         <Badge variant="outline" className="rounded-full">
-          {filteredRows.length} / {rows.length} PO
+          {filteredRows.length} / {totalCount} PO
         </Badge>
       </FilterToolbar>
 
@@ -319,6 +352,19 @@ export function PurchaseOrdersClient({
           />
         )}
       />
+
+      {hasMore ? (
+        <div className="flex justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleLoadMore}
+            disabled={isPending}
+          >
+            {poCopy.loadMore}
+          </Button>
+        </div>
+      ) : null}
     </>
   );
 

@@ -1,6 +1,11 @@
 import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
-import { fetchPurchaseOrders, fetchSuppliers } from "../procurement-actions";
+import {
+  fetchPurchaseOrdersPage,
+  fetchPurchaseOrderStatusCounts,
+  fetchSuppliers,
+} from "../procurement-actions";
+import type { PurchaseOrderCursor } from "../procurement-actions";
 import {
   resolveInventoryBranchScope,
   resolveRequestedBranchId,
@@ -40,14 +45,23 @@ export async function PurchaseOrdersPageContent({
     if (scope.selectedBranchId !== routeBranchId) notFound();
   }
 
-  const [poRes, supRes] = await Promise.all([
-    fetchPurchaseOrders(branchFilter ?? undefined),
+  const [poRes, countsRes, supRes] = await Promise.all([
+    fetchPurchaseOrdersPage({ branchId: branchFilter ?? undefined }),
+    fetchPurchaseOrderStatusCounts(branchFilter ?? undefined),
     fetchSuppliers(),
   ]);
 
-  const rows: PurchaseOrderRow[] = poRes.success
-    ? ((poRes.data ?? []) as PurchaseOrderRow[])
-    : [];
+  const page = poRes.success
+    ? poRes.data
+    : { items: [], hasMore: false, nextCursor: null };
+  const rows: PurchaseOrderRow[] = (page?.items ?? []) as PurchaseOrderRow[];
+  const initialHasMore = page?.hasMore ?? false;
+  const initialNextCursor = (page?.nextCursor ??
+    null) as PurchaseOrderCursor | null;
+
+  const statusCounts: Record<string, number> = countsRes.success
+    ? (countsRes.data ?? {})
+    : {};
 
   const suppliers: SupplierRow[] = supRes.success
     ? ((supRes.data ?? []) as SupplierRow[])
@@ -57,6 +71,10 @@ export async function PurchaseOrdersPageContent({
     <PurchaseOrdersClient
       initial={rows}
       suppliers={suppliers}
+      statusCounts={statusCounts}
+      initialHasMore={initialHasMore}
+      initialNextCursor={initialNextCursor}
+      branchId={branchFilter ?? undefined}
       purchaseOrdersBasePath={basePath}
       suppliersPath={suppliersPath}
       embedded={embedded}

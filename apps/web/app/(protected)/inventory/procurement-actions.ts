@@ -15,7 +15,8 @@ export {
 } from "./supplier-actions";
 
 export {
-  fetchPurchaseOrders,
+  fetchPurchaseOrdersPage,
+  fetchPurchaseOrderStatusCounts,
   createPurchaseOrder,
   createPurchaseOrderWithLines,
   fetchPurchaseOrderDetail,
@@ -28,6 +29,8 @@ export {
 export type {
   PoSuggestionRow,
   SinglePriceDeviation,
+  PurchaseOrderCursor,
+  PurchaseOrderPage,
 } from "./purchase-order-actions";
 
 export {
