@@ -9306,6 +9306,15 @@ export type Database = {
         }[]
       }
       generate_order_payment_code: { Args: never; Returns: string }
+      get_ap_aging: {
+        Args: never
+        Returns: {
+          buckets: Json
+          supplier_id: number
+          supplier_name: string
+          total_outstanding: number
+        }[]
+      }
       get_branch_menu_daily_limits_for_pos: {
         Args: { p_branch_id: number }
         Returns: {

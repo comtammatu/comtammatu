@@ -8,11 +8,7 @@ import {
   PERMISSION_KEYS,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
-import {
-  diffVNDateDays,
-  getVNDateString,
-  getVNDayUtcRange,
-} from "@comtammatu/shared/time";
+import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
@@ -275,93 +271,19 @@ export async function fetchApAging(): Promise<ActionResult<ApAgingRow[]>> {
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  // Fetch unpaid/partial invoices with supplier info
-  const { data: invoices, error } = await supabase
-    .from("supplier_invoices")
-    .select(
-      "id, supplier_id, total_amount, paid_amount, due_date, payment_status, suppliers ( id, name )",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .in("payment_status", ["unpaid", "partial"]);
+  const { data, error } = await supabase.rpc("get_ap_aging");
 
   if (error) return { success: false, error: "Không tải được hóa đơn NCC." };
-  if (!invoices || invoices.length === 0) return { success: true, data: [] };
+  if (!data || data.length === 0) return { success: true, data: [] };
 
-  const today = getVNDateString();
-
-  const emptyBucket = (): ApAgingBucket => ({
-    current: { count: 0, total: 0 },
-    days_1_30: { count: 0, total: 0 },
-    days_31_60: { count: 0, total: 0 },
-    days_61_90: { count: 0, total: 0 },
-    days_over_90: { count: 0, total: 0 },
-  });
-
-  const bySupplier = new Map<
-    number,
-    { name: string; buckets: ApAgingBucket; total: number }
-  >();
-
-  for (const inv of invoices) {
-    const supplierId = inv.supplier_id;
-    const supplierObj = inv.suppliers as unknown as {
-      id: number;
-      name: string;
-    } | null;
-    const supplierName = supplierObj?.name ?? `NCC #${String(supplierId)}`;
-
-    if (!bySupplier.has(supplierId)) {
-      bySupplier.set(supplierId, {
-        name: supplierName,
-        buckets: emptyBucket(),
-        total: 0,
-      });
-    }
-    const entry = bySupplier.get(supplierId)!;
-
-    const totalAmount = Number(inv.total_amount);
-    const paidAmount = Number(inv.paid_amount ?? 0);
-    const outstanding = totalAmount - paidAmount;
-    entry.total += outstanding;
-
-    // Determine aging bucket
-    const dueDate = inv.due_date;
-    let bucket: keyof ApAgingBucket;
-    if (!dueDate) {
-      // No due date — treat as current
-      bucket = "current";
-    } else {
-      const daysOverdue = diffVNDateDays(dueDate, today);
-      if (daysOverdue <= 0) {
-        bucket = "current";
-      } else if (daysOverdue <= 30) {
-        bucket = "days_1_30";
-      } else if (daysOverdue <= 60) {
-        bucket = "days_31_60";
-      } else if (daysOverdue <= 90) {
-        bucket = "days_61_90";
-      } else {
-        bucket = "days_over_90";
-      }
-    }
-
-    entry.buckets[bucket].count += 1;
-    entry.buckets[bucket].total += outstanding;
-  }
-
-  const rows: ApAgingRow[] = [];
-  for (const [supplierId, entry] of bySupplier) {
-    rows.push({
-      supplier_id: supplierId,
-      supplier_name: entry.name,
-      buckets: entry.buckets,
-      total_outstanding: Math.round(entry.total * 100) / 100,
-    });
-  }
-
-  rows.sort((a, b) => b.total_outstanding - a.total_outstanding);
+  const rows: ApAgingRow[] = data.map((row) => ({
+    supplier_id: row.supplier_id,
+    supplier_name: row.supplier_name,
+    buckets: row.buckets as unknown as ApAgingBucket,
+    total_outstanding: row.total_outstanding,
+  }));
 
   return { success: true, data: rows };
 }
