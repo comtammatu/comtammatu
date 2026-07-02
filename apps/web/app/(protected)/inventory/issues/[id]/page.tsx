@@ -87,5 +87,10 @@ export default async function IssueDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <IssueDetailPageContent issueId={Number(id)} />;
+  return (
+    <IssueDetailPageContent
+      issueId={Number(id)}
+      listBasePath="/inventory/issues"
+    />
+  );
 }

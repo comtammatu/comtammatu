@@ -95,7 +95,7 @@ export function resolveInventoryNav({
       },
       {
         href: "/inventory/issues",
-        label: "Hao hụt/điều chỉnh",
+        label: "Xuất kho nội bộ",
         icon: IconFileText,
       },
       {
