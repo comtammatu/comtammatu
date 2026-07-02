@@ -14,21 +14,14 @@ Pick review depth by the task's blast radius, not by file count. Higher tiers AD
 
 When in doubt between tiers, pick the higher one.
 
-A deterministic floor backs this up: `scripts/check-review-tier.mjs` (`corepack pnpm lint:review-tier`) independently classifies the diff by blast radius — migration paths, a `SECURITY DEFINER` token, auth/RLS files, money paths — and flags a declared tier below that floor. It is advisory until `REVIEW_TIER_STRICT=1` is enabled and never replaces judgment: it only catches under-classification (a money/RLS/migration diff self-assigned too low), the dominant tiering failure. It reads the tier from the `Verification:`/tier note that `engineering.md` already requires in the commit body.
+A deterministic floor backs this up: `scripts/check-review-tier.mjs` (`corepack pnpm lint:review-tier`) independently classifies the diff by blast radius — migration paths, a `SECURITY DEFINER` token, auth/RLS files, money paths — and flags a declared tier below that floor. CI runs it fail-closed (`REVIEW_TIER_STRICT=1`); locally it is advisory unless the flag is set. It matches the declared tier as a bare `T1`/`T2`/`T3` token in any commit body between the merge-base and HEAD (plus a `REVIEW_TIER` env variable as an additional source — the highest tier found anywhere wins), so keep the tier token in the `Verification:` note that `engineering.md` requires. It never replaces judgment: it only catches under-classification (a money/RLS/migration diff self-assigned too low), the dominant tiering failure.
 
 ## Skill Plan Gate
 
-T3 tasks MUST write a short skill plan before coding — it feeds the four-perspective debate and lands in the PR description, task notes, or a `docs/worklog/` T3 note when the contract is too large for the PR. T2 tasks SHOULD write one, but may omit it when routing is obvious (engineering + the single topic rule, no external skills). Use `docs/agent/rules/skills.md` to choose the minimum useful set:
-
-```text
-Skill plan: repo rules = engineering + <topic rules>; external skills = <names>;
-runtime tools = <browser/db/cli>; skipped = <reason>.
-```
-
-T1 work may skip this plan only when it is truly typo-only, doc-only, or a
-dependency version bump with no API change. State the T1 skip reason in the
-commit or PR body. If a worklog was created for a T2/T3 task, promote durable
-facts to the owning doc and delete the worklog when the task lands.
+T3 tasks MUST state a short skill plan before coding — it feeds the
+four-perspective debate. T2 tasks SHOULD; T1 may skip with the skip reason
+stated. The template, routing, and where the plan lives are owned by
+`docs/agent/rules/skills.md` → Skill Plan Gate.
 
 ## The Four Perspectives
 
@@ -103,25 +96,15 @@ This is for the next reader (future you, the owner, a reviewer) — make it stan
 Before marking implementation work complete:
 
 1. **Hard gate.** `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` MUST pass. For release-grade slices, prefer `corepack pnpm verify` (adds deps audit, baseline hygiene, and tests). This and green CI (step 6) are the only machine-enforced gates here.
-2. **CodeGraph freshness.** If `.codegraph/` exists and the task touched source code, SQL migrations, or generated database types, run `codegraph index .` after the final file changes and before final review/closeout. For database changes, run it after `corepack pnpm db:types` when generated types were refreshed. Do not rely on `codegraph status .` alone after active code/DB churn; `status` is a post-refresh check, not the refresh. N/A for doc-only T1 changes that CodeGraph does not index.
+2. **CodeGraph freshness.** Re-index per `AGENTS.md` → CodeGraph after the final source/SQL/generated-type changes and before closeout (for database changes, after `corepack pnpm db:types`). N/A for doc-only changes.
 3. **Cross-boundary coherence.** When the change spans more than one module/shell or crosses an API ↔ hook ↔ nav boundary (e.g. the finance/hr/inventory/menu/orders shells), cross-compare response shape ↔ consumer type and route ↔ link at each pair's completion rather than batching the whole slice — generic casts and `any` compile clean. N/A for T1 or single-component changes.
 4. **Self-attestation (advisory, not CI-gated).** Contract-vs-diff is irreducibly semantic; a reviewer subagent judging "are the business rules implemented?" is itself a non-deterministic call, not a gate. The four-perspective debate is a thinking tool — its only enforcement is that the artifact below is present for owner review:
    - T3: paste a 3-line attestation into the PR / worklog contract — test-plan items covered vs deferred-with-reason; each BA rule mapped to the implementing file/line; known out-of-scope gaps.
    - T2: a 1-line attestation that the diff matches the self-review block.
    - T1: state why the debate was skipped in the commit body.
-5. **Tier floor (advisory until strict mode).** `corepack pnpm lint:review-tier` flags a declared tier below the computed blast-radius floor. Treat a flag as a prompt to re-justify the tier, not an automatic block, until `REVIEW_TIER_STRICT=1` promotes it to fail-closed.
+5. **Tier floor.** `corepack pnpm lint:review-tier` flags a declared tier below the computed blast-radius floor — fail-closed in CI (`REVIEW_TIER_STRICT=1`), advisory locally. Treat a local flag as a prompt to re-justify the tier.
 6. CI (`.github/workflows/ci.yml`) runs typecheck, lint, test, and build on every PR and on push to `main` — a push to a working branch alone triggers nothing. Landed work is complete only with green CI.
 7. Learning-loop hygiene (T2/T3) — one pass before closing, so the loop stays bounded:
    - A recurring failure surfaced → add a `tasks/regressions.md` rule. If its detection is a deterministic code pattern, add a guard row to `scripts/check-regression-guards.mjs` instead of relying on prose — an enforced rule costs zero context.
    - The task's worklog has landed → promote any durable rule to its canonical doc (`docs/agent/rules/`, a module/ref doc) and delete the worklog; git history is the archive.
    - State the learning (or "none") in the commit/PR body.
-
-## Skip Conditions (T1 only)
-
-The ONLY time to skip both T3 and T2:
-
-- Typo fixes under 3 changed lines
-- Documentation-only changes
-- Dependency version bumps (with no API change in the bumped package)
-
-For any skipped task, still verify the changed files and state the skip reason in the commit body.

@@ -65,10 +65,22 @@ for (const p of changed) {
 
 let securityDefiner = false;
 try {
-  const added = git(`diff ${base}`)
-    .split("\n")
-    .filter((l) => l.startsWith("+") && !l.startsWith("+++"));
-  securityDefiner = added.some((l) => /SECURITY DEFINER/i.test(l));
+  // Track the current file via +++ headers so the definer token in .md prose
+  // (rule docs describing the trigger) does not trip the floor. The \s+ form
+  // also keeps this script's own source from matching itself in a diff.
+  const DEFINER_TOKEN = /SECURITY\s+DEFINER/i;
+  let inMd = false;
+  for (const l of git(`diff ${base}`).split("\n")) {
+    if (l.startsWith("+++ ")) {
+      inMd = l.endsWith(".md");
+      continue;
+    }
+    if (inMd || !l.startsWith("+")) continue;
+    if (DEFINER_TOKEN.test(l)) {
+      securityDefiner = true;
+      break;
+    }
+  }
 } catch {
   /* diff body optional — path signals already gathered */
 }

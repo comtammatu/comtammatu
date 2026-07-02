@@ -40,11 +40,9 @@ or agent memory.
 
 ## Query Boundary
 
-- MUST use `supabase-js` for all queries.
-- NEVER use Prisma.
-- Server Actions and RSC may import `@comtammatu/database`.
-- Client components may import only `@comtammatu/database/supabase/client`.
-- Proxy and Edge code must import `@comtammatu/database/supabase/middleware`.
+- MUST use `supabase-js` for all queries. NEVER use Prisma.
+- Import boundaries (barrel / client / middleware) are owned by
+  `docs/agent/rules/engineering.md` → Import Boundaries.
 
 ## Server Actions
 
@@ -57,12 +55,12 @@ or agent memory.
 
 - Write the SQL migration file before applying it.
 - Agents MAY apply migrations directly on approved dev/test Supabase servers for verification.
-- Before applying to dev/test, verify the target ref against the Environment Registry above and confirm it is not production. As of 2026-06-11 no dev/test server exists, so there is nowhere an agent may apply.
+- Before applying to dev/test, verify the target ref against the Environment Registry above and confirm it is not production (currently no dev/test server exists — see the registry).
 - NEVER apply migrations directly to production.
 - Production flow: open a PR, merge the PR, then the owner applies the migration manually.
 - After the migration is applied to the schema used for generated types, run `corepack pnpm db:types`.
-- In indexed repos, after SQL migrations and generated types are final, run
-  `codegraph index .` before relying on graph output or closing the DB task.
+- After SQL migrations and generated types are final, refresh CodeGraph per
+  `AGENTS.md` → CodeGraph before closing the DB task.
 - Clean up data that would violate a new CHECK constraint BEFORE adding it: `ALTER TABLE ADD CONSTRAINT` fails on dirty data and aborts every later statement in the same migration.
 
 ### Owner-Delegated Production Apply
@@ -73,8 +71,11 @@ session; never as a default. The mechanics that work in practice:
 
 - Apply through the org-scoped Supabase MCP server's `apply_migration` with
   `project_id = iexwsuaqqenyjiskawoj`. The repo-scoped `mcp__supabase__*` server
-  is read-only and deny-listed; the org-scoped server is gated ONLY by the
-  `guard-prod-db.mjs` PreToolUse hook.
+  has its migration/deploy tools (`apply_migration`, `deploy_edge_function`,
+  pause/restore) deny-listed in `.claude/settings.json`, while `execute_sql`
+  and branch operations are gated only by the `guard-prod-db.mjs` hook — the
+  server itself is NOT read-only (see the Environment Registry); the org-scoped
+  server is gated ONLY by the same hook.
 - Disabling the hook by editing `.claude/settings.json` is unreliable — a watcher
   restores it mid-session. The working path is a temporary early `process.exit(0)`
   at the top of `scripts/guard-prod-db.mjs` (the hook re-reads that file on every

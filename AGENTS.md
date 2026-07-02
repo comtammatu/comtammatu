@@ -31,7 +31,7 @@ repo root), keep the graph fresh instead of trusting a previous session:
 Before implementation, read the applicable rule files:
 
 - Always read `docs/agent/rules/engineering.md` for repo commands, architecture, import boundaries, and core constraints.
-- Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents. It opens with a **Layer Skill Map** (UI / FE / BE / Infra / Architecture / Review / Process) for layer-first routing into the rules, skills, and verification a task needs.
+- Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents. Its **Layer Index** and **Required Routing Matrix** give layer-first and task-signal routing into the rules, skills, and verification a task needs.
 - Read `docs/agent/rules/database.md` for Supabase, migrations, RLS, ACL, auth, Server Actions, RPCs, or database type work.
 - Read `docs/agent/rules/ui.md` before any UI, UX, route surface, component, styling, or copy change.
 - Read `docs/agent/rules/workflow.md` for behavior changes, review-tier rules (T3 full debate / T2 self-review / T1 skip), verification, and completion gates. T1 doc-only or typo-only work may skip after stating the skip reason.
@@ -48,14 +48,10 @@ Instruction memory and learning memory stay separate:
 - Regression lessons live in `tasks/regressions.md`.
 - Retrospectives and durable learnings live in `tasks/lessons.md`.
 - Current work tracking lives in `tasks/todo.md`.
-- Project-owned Agent Workspace config may live in root runtime-adapter
-  directories such as `.claude/`, `.codex/`, `.cursor/`, and `.agents/`.
-  These directories are tool wiring, not a second source of truth: they must
-  point back to `AGENTS.md` and `docs/agent/rules/` for project rules. Keep
-  secrets, MCP tokens, plugin caches, generated sessions, worktrees, and
-  per-user local state out of version control. See
-  `docs/agent/rules/references.md` → "Agent Entrypoints Per IDE" for the
-  registered entrypoint + prod-DB guard-adapter map.
+- Root runtime-adapter directories (`.claude/`, `.codex/`, …) are tool wiring,
+  not a second source of truth. The adapter registry, guard-adapter map, and
+  hygiene rules live in `docs/agent/rules/references.md` → "Agent Entrypoints
+  Per IDE".
 
 ## Communication Protocol
 
@@ -100,13 +96,9 @@ it elsewhere — point here.
 
 ## UI Authority
 
-- NEVER invent or redesign the UI outside the project's established design system.
-- NEVER exceed authority when editing UI; only make UI changes explicitly requested or clearly required by the task.
 - UI design-system SSOT is `docs/spec/design-system.md`; it defines the Com Tam Ma Tu Custom Theme.
-- USE Má Tư Design System primitives from `@comtammatu/ui` and the app surface adapters after the design-system contract selects the pattern.
-- NEVER treat `globals.css`, app wrappers, regression notes, external skill files, or worklogs as competing UI authorities.
-- BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked Custom Theme contract.
-- UI/UX rebuild PRs MUST state the surface, primary user job, route family, change type, and primitives used before implementation.
+- NEVER invent or redesign UI outside that contract, and never exceed the UI authority the task grants.
+- All UI guardrails, typography rules, and the operational-UI philosophy live in `docs/agent/rules/ui.md` — read it before any UI change.
 
 ## Architecture
 
@@ -129,7 +121,7 @@ Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.
 corepack pnpm dev          # Start dev server (Turbopack)
 corepack pnpm build        # Production build
 corepack pnpm typecheck    # Type checking across all packages
-corepack pnpm lint         # Repo guard checks (copy, ui-contract, client-storage, rules-mirror, guard-sync, regression-guards, review-tier) + ESLint
+corepack pnpm lint         # Repo guard checks (copy, ui-contract, client-storage, rules-mirror, guard-sync, regression-guards, review-tier, doc-staleness, i18n:no-grow) + ESLint
 corepack pnpm test         # Test suites (turbo test)
 corepack pnpm verify       # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
 corepack pnpm db:types     # Regenerate Supabase types after migration is applied to the type source schema
@@ -139,10 +131,11 @@ corepack pnpm db:types     # Regenerate Supabase types after migration is applie
 
 ## Workflow Summary
 
-Pick review depth by blast radius (full rules in `docs/agent/rules/workflow.md`):
+Pick review depth by blast radius — tiers, triggers, and the four perspectives
+(PM / BA / Senior Dev / QA) are owned by `docs/agent/rules/workflow.md`:
 
-- **T3 — full debate** (auth/RLS, money, multi-row writes, new `SECURITY DEFINER` RPC, schema-changing migration, data backfill). Write or spawn all four perspectives (PM / BA / Senior Dev / QA) before coding.
+- **T3 — full debate** (auth/RLS, money, multi-row writes, new `SECURITY DEFINER` RPC, schema migration touching constraints, production data backfill). All four perspectives written or spawned before coding; one independent second-runtime pass before landing.
 - **T2 — self-review** (everything else that changes behavior). Write 2–4 lines per perspective in the task notes / PR body before coding.
-- **T1 — skip** allowed only for typo fixes under 3 changed lines, doc-only changes, and dependency version bumps with no API change. State the skip reason in the commit body.
+- **T1 — skip** (typo / doc-only / dep-bump — exact conditions in the tier table). State the skip reason in the commit body.
 
 For how these tiers sit inside the end-to-end team loop (intake → land → learn) and the cross-runtime Codex review pass, see `docs/agent/rules/team.md`.

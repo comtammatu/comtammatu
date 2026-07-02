@@ -26,13 +26,14 @@ own entrypoint and wires the same canonical prod-DB guard. Root adapter
 directories such as `.claude/`, `.codex/`, `.cursor/`, and `.agents/` are
 allowed when they wire tools back to this repo's rules instead of becoming a
 second source of truth. Adding another IDE means adding an adapter, not
-duplicating rules.
+duplicating rules. Keep secrets, MCP tokens, plugin caches, generated sessions,
+worktrees, and per-user local state out of version control.
 
 | IDE         | Auto-loaded entrypoint           | MCP config           | Prod-DB guard adapter                                 |
 | ----------- | -------------------------------- | -------------------- | ----------------------------------------------------- |
 | Claude Code | `CLAUDE.md` (shim → `AGENTS.md`) | `.mcp.json`          | `.claude/settings.json` → `scripts/guard-prod-db.mjs` |
 | Codex       | `AGENTS.md` (native)             | `.codex/config.toml` | `.codex/hooks.json` → `scripts/guard-prod-db.mjs`     |
-| Cursor      | adapter-local pointer to `AGENTS.md` | adapter-specific | add adapter + register in `scripts/check-guard-sync.mjs` before write-capable DB/tool use |
+| Cursor      | (none yet — create an adapter-local pointer to `AGENTS.md`) | adapter-specific | add adapter + register in `scripts/check-guard-sync.mjs` before write-capable DB/tool use |
 
 `scripts/guard-prod-db.mjs` is the single guard; the adapter configs only wire it
 per runtime. `corepack pnpm lint:guard-sync` enforces that every adapter in `ADAPTER_PATHS`
@@ -45,6 +46,14 @@ Per-user toolsets are not repo-pinned: the reproducible Claude plugin set lives 
 `.claude/settings.json`, while `gstack` QA/review/deploy skills are self-installed
 (`~/.claude/skills/gstack/`, own installer) and optional. Details and per-layer
 fallbacks: `docs/agent/rules/skills.md` → Toolset Reproducibility.
+
+Claude-runtime accelerators tracked in-repo: `.claude/agents/t3-lens.md` (a
+generic read-only T3 debate lens subagent) and `.claude/commands/t3-debate.md` +
+`.claude/commands/verify-gate.md` (pointer-only launchers). They carry section
+pointers into `docs/agent/rules/`, never rule copies. The asymmetry is
+intentional: Codex has no equivalent surface and runs the same loop from the
+rule docs directly — the written transcript stays the canonical form
+(`docs/agent/rules/team.md` → Runtime-Neutral Mandate).
 
 ## Intentional Mirrors
 
@@ -117,7 +126,7 @@ that list.
 `docs/plan/*` dated audit/remediation files and `docs/worklog/*` are **point-in-time snapshots, not source of truth**. Their findings get fixed by later PRs; an unreconciled snapshot reads as if every finding is still open and misleads the next agent (and any model reading the repo cold).
 
 - **Verify before acting.** Treat a finding in a snapshot doc as a claim to re-verify against current code + git history, never a live fact. Durable truth lives in the `docs/agent/rules/`, `docs/ref/`, `docs/spec/`, `docs/modules/` zones above.
-- **Required banner.** Every snapshot doc MUST carry, in its first 15 lines, a status line naming the commit it was last reconciled against: `Reconciled-through <git-sha>`. `corepack pnpm lint:doc-staleness` flags snapshot docs missing it (advisory; `DOC_STALENESS_STRICT=1` fails closed). `docs/plan/decisions.md`, `docs/plan/adr/`, and `README.md` are durable and exempt.
+- **Required banner.** Every snapshot doc MUST carry, in its first 15 lines, a status line naming the commit it was last reconciled against: `Reconciled-through <git-sha>`. `corepack pnpm lint:doc-staleness` flags snapshot docs missing it (fail-closed in CI via `DOC_STALENESS_STRICT=1`; advisory locally). `docs/plan/decisions.md`, `docs/plan/adr/`, and `README.md` are durable and exempt.
 - **Reconcile-on-merge.** When a PR lands a finding tracked in a snapshot doc, tag that finding `✅ #<PR>` in place and bump the doc's `Reconciled-through` sha. Never leave a landed finding presented as open.
 - **Retire when empty.** When all findings have landed, delete the doc (git is the archive) or promote any durable rule to its canonical doc above. Do not keep a fully-resolved audit as a tombstone.
 
