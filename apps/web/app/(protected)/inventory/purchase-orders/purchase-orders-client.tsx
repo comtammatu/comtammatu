@@ -275,8 +275,8 @@ export function PurchaseOrdersClient({
         </AppSection>
       ) : null}
 
-      <AppToolbar>
-        <InputGroup className="h-10 flex-1">
+      <AppToolbar className="items-stretch sm:items-center">
+        <InputGroup className="min-h-10 w-full sm:h-10 sm:flex-1">
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -295,7 +295,7 @@ export function PurchaseOrdersClient({
             )
           }
         >
-          <SelectTrigger className="h-10 w-44">
+          <SelectTrigger className="min-h-10 w-full sm:h-10 sm:w-44">
             <SelectValue placeholder={poCopy.statusPlaceholder} />
           </SelectTrigger>
           <SelectContent>
@@ -323,7 +323,7 @@ export function PurchaseOrdersClient({
           placeholder={poCopy.supplierRequired}
           searchPlaceholder={poCopy.supplierSearchPlaceholder}
           aria-label={poCopy.supplierFilterAria}
-          triggerClassName="h-10 w-48"
+          triggerClassName="min-h-10 w-full sm:h-10 sm:w-48"
         />
 
         <Badge variant="outline" className="rounded-full">
@@ -384,7 +384,7 @@ function PurchaseOrderCard({
 }) {
   return (
     <InteractiveCard asChild minHeight="mobile" padding="default">
-      <Link href={href} className="block">
+      <Link href={href} className="min-w-0">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="font-mono text-sm font-semibold">
             {row.display_id ?? row.po_number}

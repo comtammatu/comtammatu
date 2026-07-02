@@ -692,7 +692,7 @@ export function SupplierInvoicesClient({
   ];
 
   return (
-    <AppPage width="full">
+    <AppPage width="wide">
       <AppPageHeader
         eyebrow="Kho hàng"
         title={copy.title}

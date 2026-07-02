@@ -23,7 +23,11 @@ export default async function ExpirySettingsPage({
 
   // URL-selected branch drives client action context for tenant-wide roles.
   const requestedBranchId = parseBranchIdParam(params.branchId);
-  const scope = await resolveInventoryBranchScope(supabase, claims, requestedBranchId);
+  const scope = await resolveInventoryBranchScope(
+    supabase,
+    claims,
+    requestedBranchId,
+  );
 
   const [alertsRes, branchesRes] = await Promise.all([
     fetchExpiryAlerts(),
@@ -46,6 +50,7 @@ export default async function ExpirySettingsPage({
   return (
     <AppPage>
       <AppPageHeader
+        headingLevel="h2"
         eyebrow={INVENTORY_VI.settingsEyebrow}
         title={INVENTORY_VI.expiryAlertTitle}
         description={INVENTORY_VI.expiryAlertDescription}
@@ -56,6 +61,7 @@ export default async function ExpirySettingsPage({
         tenantId={claims.tenant_id}
         userRole={claims.user_role}
         userBranchId={scope?.selectedBranchId ?? null}
+        headingLevel="h2"
       />
     </AppPage>
   );

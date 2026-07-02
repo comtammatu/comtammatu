@@ -101,6 +101,22 @@ function getItemBadge(row: MenuLimitRow): {
   return null;
 }
 
+function getMenuLimitQueuePriority(row: MenuLimitRow): number {
+  if (row.is_disabled) return 0;
+  const progress = getSoldProgress(row);
+  if (progress !== null && progress.remaining <= 0) return 1;
+  if (row.stock_capacity === null) return 2;
+  if (progress !== null && progress.remaining <= 5) return 3;
+  return 10;
+}
+
+function compareMenuLimitRows(a: MenuLimitRow, b: MenuLimitRow): number {
+  return (
+    getMenuLimitQueuePriority(a) - getMenuLimitQueuePriority(b) ||
+    a.item_name.localeCompare(b.item_name, "vi")
+  );
+}
+
 export function MenuLimitsTable({ branchId, rows }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -137,7 +153,23 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
       }
     }
 
-    return Array.from(map.values());
+    const groups = Array.from(map.values()).map((group) => ({
+      ...group,
+      items: [...group.items].sort(compareMenuLimitRows),
+    }));
+    groups.sort((a, b) => {
+      const aPriority = Math.min(
+        ...a.items.map((item) => getMenuLimitQueuePriority(item)),
+      );
+      const bPriority = Math.min(
+        ...b.items.map((item) => getMenuLimitQueuePriority(item)),
+      );
+      return (
+        aPriority - bPriority ||
+        a.categoryName.localeCompare(b.categoryName, "vi")
+      );
+    });
+    return groups;
   }, [query, rows]);
 
   const summary = useMemo(
@@ -209,7 +241,7 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     });
   }
 
-  function renderSaveButton(row: MenuLimitRow) {
+  function renderSaveButton(row: MenuLimitRow, touch = false) {
     const draft = drafts[row.menu_item_id] ?? buildDraft(row);
     const dirty = isDirty(row, draft);
     const rowPending = isPending && pendingId === row.menu_item_id;
@@ -217,7 +249,8 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     return (
       <Button
         type="button"
-        size="sm"
+        size={touch ? "touch" : "sm"}
+        className={touch ? "w-full" : undefined}
         disabled={rowPending}
         onClick={() => handleSave(row)}
       >
@@ -298,11 +331,12 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     );
   }
 
-  function renderDisabledSwitch(row: MenuLimitRow) {
+  function renderDisabledSwitch(row: MenuLimitRow, touch = false) {
     const draft = drafts[row.menu_item_id] ?? buildDraft(row);
     const rowPending = isPending && pendingId === row.menu_item_id;
     return (
       <Switch
+        size={touch ? "touch" : "default"}
         checked={draft.isDisabled}
         disabled={rowPending}
         onCheckedChange={(checked) =>
@@ -315,16 +349,16 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     );
   }
 
-  function renderLimitControls(row: MenuLimitRow) {
+  function renderLimitControls(row: MenuLimitRow, touch = false) {
     return (
       <div className="flex flex-col gap-2">
         {renderLimitInput(row)}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {renderDisabledSwitch(row)}
+            {renderDisabledSwitch(row, touch)}
             {messages.pos.menu.toggleDisabled}
           </div>
-          {renderSaveButton(row)}
+          {renderSaveButton(row, touch)}
         </div>
       </div>
     );
@@ -391,7 +425,7 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
     <>
       <AppToolbar
         search={
-          <InputGroup className="h-9 w-full sm:w-80">
+          <InputGroup className="w-full sm:w-80">
             <InputGroupAddon>
               <IconSearch />
             </InputGroupAddon>
@@ -444,7 +478,7 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
             data={group.items}
             getRowKey={(row) => row.menu_item_id}
             mobileCardRender={(row) => (
-              <Item variant="outline">
+              <Item variant="outline" className="items-stretch">
                 <ItemHeader>
                   <ItemContent>
                     <ItemTitle>
@@ -466,11 +500,13 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
                   </ItemContent>
                 </ItemHeader>
                 {renderRemainingBar(row)}
-                <ItemFooter>
+                <ItemFooter className="flex-col items-stretch sm:flex-row sm:items-center">
                   <span className="text-sm text-muted-foreground">
                     {messages.pos.menu.manualLimitLabel}
                   </span>
-                  <div className="w-40">{renderLimitControls(row)}</div>
+                  <div className="w-full sm:w-40">
+                    {renderLimitControls(row, true)}
+                  </div>
                 </ItemFooter>
               </Item>
             )}

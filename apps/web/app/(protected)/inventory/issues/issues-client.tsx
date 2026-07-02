@@ -726,6 +726,10 @@ export function IssuesClient({
         title={pageTitle ?? tNav("consumption", "navigation")}
         actions={
           <>
+            <Button type="button" onClick={() => setCreateOpen(true)}>
+              <IconPlus className="size-4" />
+              Tạo phiếu
+            </Button>
             {showExportAction && (
               <Button
                 type="button"
@@ -736,10 +740,6 @@ export function IssuesClient({
                 Xuất báo cáo
               </Button>
             )}
-            <Button type="button" onClick={() => setCreateOpen(true)}>
-              <IconPlus className="size-4" />
-              Tạo phiếu
-            </Button>
           </>
         }
       />
@@ -760,6 +760,9 @@ export function IssuesClient({
             </Button>
           }
           contentFlush
+          size={embedded ? "sm" : "default"}
+          collapsible
+          defaultOpen={!embedded}
         >
           {recordedConsumptionFilterBar}
           <div className="grid gap-3 border-b p-3 sm:grid-cols-3">

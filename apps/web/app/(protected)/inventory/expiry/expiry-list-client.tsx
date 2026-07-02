@@ -8,7 +8,14 @@ import {
   Trash as IconTrash,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import { ACTIONS_VI, BRANCH_VI, FORM_VI, INVENTORY_VI, PRODUCT_VI, TOAST_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  BRANCH_VI,
+  FORM_VI,
+  INVENTORY_VI,
+  PRODUCT_VI,
+  TOAST_VI,
+} from "@comtammatu/shared/messages";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -113,8 +120,8 @@ function ExpiryAlertCard({
         </ItemTitle>
         <ItemDescription className="truncate">
           {INVENTORY_VI.batchShort}: {alert.batch_number ?? "—"} · GRN:{" "}
-          {alert.grn_number} ·{" "}
-          {alert.branch_name} · {formatVNDate(alert.expiry_date)}
+          {alert.grn_number} · {alert.branch_name} ·{" "}
+          {formatVNDate(alert.expiry_date)}
         </ItemDescription>
       </ItemContent>
       <ItemActions>
@@ -140,6 +147,7 @@ export function ExpiryListClient({
   userRole,
   userBranchId,
   embedded = false,
+  headingLevel = "h1",
 }: {
   initial: ExpiryAlertRow[];
   branches: BranchOption[];
@@ -147,6 +155,7 @@ export function ExpiryListClient({
   userRole: StaffRole;
   userBranchId: number | null;
   embedded?: boolean;
+  headingLevel?: "h1" | "h2";
 }) {
   const [alerts, setAlerts] = useState(initial);
   const [search, setSearch] = useState("");
@@ -158,7 +167,8 @@ export function ExpiryListClient({
   const [urgencyFilter, setUrgencyFilter] = useState<string | null>(null);
   const [writeOff, setWriteOff] = useState<ExpiryAlertRow | null>(null);
 
-  const isBranchLocked = userRole === "branch_manager" && userBranchId != null;
+  const isBranchLocked =
+    embedded || (userRole === "branch_manager" && userBranchId != null);
 
   const filtered = useMemo(() => {
     let items = alerts;
@@ -346,7 +356,11 @@ export function ExpiryListClient({
 
   const content = (
     <>
-      <AppPageHeader eyebrow={INVENTORY_VI.warehouse} title={INVENTORY_VI.expiryTitle} />
+      <AppPageHeader
+        headingLevel={headingLevel}
+        eyebrow={INVENTORY_VI.warehouse}
+        title={INVENTORY_VI.expiryTitle}
+      />
       {/* IconSearch + branch filter */}
       <AppToolbar>
         <InputGroup className="h-10 flex-1">
@@ -477,9 +491,7 @@ export function ExpiryListClient({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all">
-          {renderTable(displayItems)}
-        </TabsContent>
+        <TabsContent value="all">{renderTable(displayItems)}</TabsContent>
         <TabsContent value="expired">
           {renderTable(
             urgencyFilter

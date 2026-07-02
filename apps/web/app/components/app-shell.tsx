@@ -79,6 +79,7 @@ export interface PageHeaderConfig {
   headerExtras?: ReactNode;
   /** Renders BELOW the existing header on screens < md, full-width sticky band. */
   mobileTopBar?: ReactNode;
+  suppressTitleHeading?: boolean;
 }
 
 export interface AppShellProps {
@@ -351,7 +352,9 @@ export function AppShell({
                 <span className="truncate text-sm font-medium">
                   {pageTitle}
                 </span>
-                <h1 className="font-heading sr-only">{pageTitle}</h1>
+                {pageHeader.suppressTitleHeading ? null : (
+                  <h1 className="font-heading sr-only">{pageTitle}</h1>
+                )}
               </div>
               {pageHeader.headerExtras ? (
                 <div className="flex shrink-0 flex-wrap items-center gap-2">

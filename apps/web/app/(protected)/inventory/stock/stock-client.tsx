@@ -310,17 +310,19 @@ function SummaryMetric({
 
   if (onClick) {
     return (
-      <button
+      <Button
         type="button"
+        size="sm"
+        variant="ghost"
         onClick={onClick}
         className={cn(
-          "flex min-w-fit items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/40",
+          "min-w-fit justify-start gap-2 text-left",
           active && "bg-primary/10",
         )}
         aria-pressed={active}
       >
         {content}
-      </button>
+      </Button>
     );
   }
 
@@ -334,14 +336,23 @@ function QuickActionButton({
   icon: Icon,
   label,
   primary,
+  size = "sm",
+  className,
 }: {
   href: string;
   icon: typeof IconReceipt;
   label: string;
   primary?: boolean;
+  size?: "sm" | "touch";
+  className?: string;
 }) {
   return (
-    <Button asChild size="sm" variant={primary ? "default" : "outline"}>
+    <Button
+      asChild
+      size={size}
+      variant={primary ? "default" : "outline"}
+      className={className}
+    >
       <Link href={href}>
         <Icon className="size-3.5" />
         {label}
@@ -755,6 +766,324 @@ export function StockClient({
     },
   ];
 
+  const summaryMetrics = (
+    <div className="flex flex-wrap items-center divide-x">
+      <SummaryMetric
+        label={stockCopy.metrics.selectedWarehouse}
+        value={inventoryCommon.currencyCompact(formatVND(visibleTotalValue))}
+      />
+      {totalValue != null ? (
+        <SummaryMetric
+          label={stockCopy.metrics.wholeSystem}
+          value={inventoryCommon.currencyCompact(formatVND(totalValue))}
+        />
+      ) : null}
+      <SummaryMetric
+        label={stockCopy.metrics.underThreshold}
+        value={String(summary.underThresholdCount)}
+        tone={summary.underThresholdCount > 0 ? "warning" : "muted"}
+        onClick={
+          summary.underThresholdCount > 0
+            ? () => {
+                setStockFilter(stockFilter === "low" ? "all" : "low");
+              }
+            : undefined
+        }
+        active={stockFilter === "low"}
+      />
+      <SummaryMetric
+        label={stockCopy.metrics.nearExpiry}
+        value={String(summary.expiryCount)}
+        tone={summary.expiryCount > 0 ? "warning" : "muted"}
+      />
+      <SummaryMetric
+        label={stockCopy.metrics.pending}
+        value={String(summary.pendingWorkCount)}
+        tone={summary.pendingWorkCount > 0 ? "warning" : "muted"}
+      />
+    </div>
+  );
+
+  const searchControl = (
+    <InputGroup
+      className={cn("w-full min-w-0", !isCompactLayout && "min-w-56 flex-1")}
+    >
+      <InputGroupAddon>
+        <IconSearch />
+      </InputGroupAddon>
+      <InputGroupInput
+        value={searchQuery}
+        onChange={(event) => setSearchQuery(event.target.value)}
+        placeholder={stockCopy.filters.searchPlaceholder}
+        inputMode="search"
+      />
+    </InputGroup>
+  );
+
+  const filterControls = (
+    <>
+      <Select value={activeCategory} onValueChange={setActiveCategory}>
+        <SelectTrigger
+          size={isCompactLayout ? "touch" : "default"}
+          className={isCompactLayout ? "w-full" : "min-w-40"}
+        >
+          <SelectValue placeholder={stockCopy.filters.categoryPlaceholder} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{stockCopy.filters.allCategories}</SelectItem>
+          {categories.map((cat) => (
+            <SelectItem key={cat} value={cat}>
+              {cat}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={stockFilter}
+        onValueChange={(v) => setStockFilter(v as StockFilter)}
+      >
+        <SelectTrigger
+          size={isCompactLayout ? "touch" : "default"}
+          className={isCompactLayout ? "w-full" : "min-w-36"}
+        >
+          <SelectValue placeholder={stockCopy.filters.statusPlaceholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {stockFilterOptions.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={riskFilter}
+        onValueChange={(v) => setRiskFilter(v as RiskFilter)}
+      >
+        <SelectTrigger
+          size={isCompactLayout ? "touch" : "default"}
+          className={isCompactLayout ? "w-full" : "min-w-40"}
+        >
+          <SelectValue placeholder={stockCopy.filters.riskPlaceholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {riskFilterOptions.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={sortMode}
+        onValueChange={(v) => setSortMode(v as SortMode)}
+      >
+        <SelectTrigger
+          size={isCompactLayout ? "touch" : "default"}
+          className={isCompactLayout ? "w-full" : "min-w-56"}
+        >
+          <SelectValue placeholder={stockCopy.filters.sortPlaceholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {sortOptions.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
+  );
+
+  const resultCountBadge = !isFirstLoadEmpty ? (
+    <Badge variant="outline" aria-live="polite">
+      {filtered.length}/{ingredients.length}
+    </Badge>
+  ) : null;
+
+  const primaryReceiveAction = canReceiveStock ? (
+    <QuickActionButton
+      href={actionHrefs.receive}
+      icon={IconReceipt}
+      label={receiveActionLabel}
+      primary
+      size={isCompactLayout ? "touch" : "sm"}
+      className={isCompactLayout ? "w-full sm:w-auto" : undefined}
+    />
+  ) : null;
+
+  const secondaryStockActions = (
+    <>
+      {actionPermissions.canCreateTransfer ? (
+        <QuickActionButton
+          href={actionHrefs.transfer}
+          icon={IconTruck}
+          label={stockCopy.actions.transfer}
+          size={isCompactLayout ? "touch" : "sm"}
+        />
+      ) : null}
+      {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
+        <QuickActionButton
+          href={actionHrefs.stocktake}
+          icon={IconClipboardList}
+          label={stockCopy.actions.stocktake}
+          size={isCompactLayout ? "touch" : "sm"}
+        />
+      ) : null}
+      {actionPermissions.canWriteoff && summary.expiryCount > 0 ? (
+        <QuickActionButton
+          href={actionHrefs.expiry}
+          icon={IconCalendarClock}
+          label={stockCopy.actions.expiry}
+          size={isCompactLayout ? "touch" : "sm"}
+        />
+      ) : null}
+      {actionPermissions.canWriteoff ? (
+        <QuickActionButton
+          href={actionHrefs.waste}
+          icon={IconTrash}
+          label={stockCopy.actions.waste}
+          size={isCompactLayout ? "touch" : "sm"}
+        />
+      ) : null}
+      {actionPermissions.canCreatePurchaseOrder &&
+      actionHrefs.purchaseSuggestion ? (
+        <QuickActionButton
+          href={actionHrefs.purchaseSuggestion}
+          icon={IconShoppingCart}
+          label={stockCopy.actions.purchaseSuggestion}
+          size={isCompactLayout ? "touch" : "sm"}
+        />
+      ) : null}
+    </>
+  );
+
+  const hasItemActions =
+    actionPermissions.canCreateIssue ||
+    Boolean(actionPermissions.canCreateStocktake && actionHrefs.stocktake) ||
+    actionPermissions.canAdjustException;
+
+  const renderStockMobileCard = (item: StockIngredient) => (
+    <InteractiveCard
+      key={item.id}
+      minHeight="mobile"
+      padding="default"
+      className="flex-col items-stretch gap-3"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <Link
+            href={stockDetailHref(item.id)}
+            className="truncate font-semibold hover:underline"
+          >
+            {item.name}
+          </Link>
+          <div className="flex items-center gap-2">
+            {item.category ? (
+              <Badge
+                className={
+                  CATEGORY_TONE_CLASS[item.category] ??
+                  "bg-muted text-muted-foreground"
+                }
+              >
+                {item.category}
+              </Badge>
+            ) : null}
+            <span className="text-xs text-muted-foreground">{item.sku}</span>
+          </div>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          <StatusBadge domain="inventory" value={item.status} size="sm" />
+          {item.qty <= item.reorder ? (
+            <Badge variant="warning">{stockCopy.filters.reorder}</Badge>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div>
+          <p className="text-xs text-muted-foreground">
+            {stockCopy.table.availableStock}
+          </p>
+          <p
+            className={cn(
+              "font-semibold tabular-nums",
+              (item.status === "low" || item.status === "out") &&
+                "text-destructive",
+            )}
+          >
+            {formatQty(item.qty)} {item.unit}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-muted-foreground">{FORM_VI.value}</p>
+          <p className="font-semibold tabular-nums">
+            {stockValue(item) > 0
+              ? inventoryCommon.currencyCompact(formatVND(stockValue(item)))
+              : inventoryCommon.noValue}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">{stockCopy.table.wac}</p>
+          <p className="tabular-nums">
+            {item.cost > 0
+              ? inventoryCommon.currencyCompact(formatVND(item.cost))
+              : inventoryCommon.noValue}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-muted-foreground">
+            {stockCopy.table.lastCount}
+          </p>
+          <p>{item.lastCount}</p>
+        </div>
+      </div>
+
+      {hasItemActions ? (
+        <div className="grid grid-cols-2 gap-2 border-t pt-2">
+          {actionPermissions.canCreateIssue ? (
+            <Button
+              type="button"
+              size="touch"
+              variant="outline"
+              onClick={() =>
+                setQuickIssueTarget({
+                  ingredient: item,
+                  issueType: "consumption",
+                })
+              }
+            >
+              {ACTIONS_VI.export}
+            </Button>
+          ) : null}
+          {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
+            <Button asChild size="touch" variant="outline">
+              <Link href={actionHrefs.stocktake}>
+                {stockCopy.actions.count}
+              </Link>
+            </Button>
+          ) : null}
+          {actionPermissions.canAdjustException ? (
+            <Button
+              type="button"
+              size="touch"
+              variant="destructive"
+              className="col-span-2"
+              onClick={() => setAdjustTarget(item)}
+              aria-label={stockCopy.actions.adjustExceptionAria(item.name)}
+            >
+              <IconPencil />
+              {stockCopy.actions.exception}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+    </InteractiveCard>
+  );
+
   const content = (
     <>
       <AppPageHeader
@@ -768,189 +1097,44 @@ export function StockClient({
           </div>
         }
       />
-      <AppSection className="overflow-hidden" contentFlush>
-        <div className="flex flex-wrap items-center divide-x">
-          <SummaryMetric
-            label={stockCopy.metrics.selectedWarehouse}
-            value={inventoryCommon.currencyCompact(
-              formatVND(visibleTotalValue),
-            )}
-          />
-          {totalValue != null ? (
-            <SummaryMetric
-              label={stockCopy.metrics.wholeSystem}
-              value={inventoryCommon.currencyCompact(formatVND(totalValue))}
-            />
-          ) : null}
-          <SummaryMetric
-            label={stockCopy.metrics.underThreshold}
-            value={String(summary.underThresholdCount)}
-            tone={summary.underThresholdCount > 0 ? "warning" : "muted"}
-            onClick={
-              summary.underThresholdCount > 0
-                ? () => {
-                    setStockFilter(stockFilter === "low" ? "all" : "low");
-                  }
-                : undefined
-            }
-            active={stockFilter === "low"}
-          />
-          <SummaryMetric
-            label={stockCopy.metrics.nearExpiry}
-            value={String(summary.expiryCount)}
-            tone={summary.expiryCount > 0 ? "warning" : "muted"}
-          />
-          <SummaryMetric
-            label={stockCopy.metrics.pending}
-            value={String(summary.pendingWorkCount)}
-            tone={summary.pendingWorkCount > 0 ? "warning" : "muted"}
-          />
-        </div>
-      </AppSection>
+      {!isCompactLayout ? (
+        <AppSection className="overflow-hidden" contentFlush>
+          {summaryMetrics}
+        </AppSection>
+      ) : null}
 
       <InventoryFilterBar
-        search={
-          <InputGroup
-            className={cn("min-w-56 flex-1", isCompactLayout ? "h-12" : "h-10")}
-          >
-            <InputGroupAddon>
-              <IconSearch />
-            </InputGroupAddon>
-            <InputGroupInput
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder={stockCopy.filters.searchPlaceholder}
-              inputMode="search"
-            />
-          </InputGroup>
-        }
-        filters={
-          <>
-            <Select value={activeCategory} onValueChange={setActiveCategory}>
-              <SelectTrigger className="min-w-40">
-                <SelectValue
-                  placeholder={stockCopy.filters.categoryPlaceholder}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  {stockCopy.filters.allCategories}
-                </SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={stockFilter}
-              onValueChange={(v) => setStockFilter(v as StockFilter)}
-            >
-              <SelectTrigger className="min-w-36">
-                <SelectValue
-                  placeholder={stockCopy.filters.statusPlaceholder}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {stockFilterOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={riskFilter}
-              onValueChange={(v) => setRiskFilter(v as RiskFilter)}
-            >
-              <SelectTrigger className="min-w-40">
-                <SelectValue placeholder={stockCopy.filters.riskPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {riskFilterOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={sortMode}
-              onValueChange={(v) => setSortMode(v as SortMode)}
-            >
-              <SelectTrigger className="min-w-56">
-                <SelectValue placeholder={stockCopy.filters.sortPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {sortOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </>
-        }
+        search={searchControl}
+        filters={!isCompactLayout ? filterControls : undefined}
         actions={
-          <>
-            {canReceiveStock ? (
-              <QuickActionButton
-                href={actionHrefs.receive}
-                icon={IconReceipt}
-                label={receiveActionLabel}
-                primary
-              />
-            ) : null}
-            {actionPermissions.canCreateTransfer ? (
-              <QuickActionButton
-                href={actionHrefs.transfer}
-                icon={IconTruck}
-                label={stockCopy.actions.transfer}
-              />
-            ) : null}
-            {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
-              <QuickActionButton
-                href={actionHrefs.stocktake}
-                icon={IconClipboardList}
-                label={stockCopy.actions.stocktake}
-              />
-            ) : null}
-            {actionPermissions.canWriteoff && summary.expiryCount > 0 ? (
-              <QuickActionButton
-                href={actionHrefs.expiry}
-                icon={IconCalendarClock}
-                label={stockCopy.actions.expiry}
-              />
-            ) : null}
-            {actionPermissions.canWriteoff ? (
-              <QuickActionButton
-                href={actionHrefs.waste}
-                icon={IconTrash}
-                label={stockCopy.actions.waste}
-              />
-            ) : null}
-            {actionPermissions.canCreatePurchaseOrder &&
-            actionHrefs.purchaseSuggestion ? (
-              <QuickActionButton
-                href={actionHrefs.purchaseSuggestion}
-                icon={IconShoppingCart}
-                label={stockCopy.actions.purchaseSuggestion}
-              />
-            ) : null}
-          </>
+          isCompactLayout ? (
+            primaryReceiveAction
+          ) : (
+            <>
+              {primaryReceiveAction}
+              {secondaryStockActions}
+            </>
+          )
         }
-        reset={
-          !isFirstLoadEmpty ? (
-            <Badge variant="outline" aria-live="polite">
-              {filtered.length}/{ingredients.length}
-            </Badge>
-          ) : null
-        }
+        reset={resultCountBadge}
       />
+
+      {isCompactLayout ? (
+        <AppSection
+          title={stockCopy.filters.controlsTitle}
+          badge={{
+            children: `${filtered.length}/${ingredients.length}`,
+            variant: "outline",
+          }}
+          size="sm"
+          collapsible
+          defaultOpen={false}
+        >
+          {summaryMetrics}
+          <div className="grid gap-2 sm:grid-cols-2">{filterControls}</div>
+          <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
+        </AppSection>
+      ) : null}
 
       {isFirstLoadEmpty ? (
         <AppEmptyState
@@ -985,143 +1169,7 @@ export function StockClient({
               }
             />
           ) : (
-            filtered.map((item) => (
-              <InteractiveCard
-                key={item.id}
-                minHeight="mobile"
-                padding="default"
-                className="flex-col items-stretch gap-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <Link
-                      href={stockDetailHref(item.id)}
-                      className="truncate font-semibold hover:underline"
-                    >
-                      {item.name}
-                    </Link>
-                    <div className="flex items-center gap-2">
-                      {item.category ? (
-                        <Badge
-                          className={
-                            CATEGORY_TONE_CLASS[item.category] ??
-                            "bg-muted text-muted-foreground"
-                          }
-                        >
-                          {item.category}
-                        </Badge>
-                      ) : null}
-                      <span className="text-xs text-muted-foreground">
-                        {item.sku}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <StatusBadge
-                      domain="inventory"
-                      value={item.status}
-                      size="sm"
-                    />
-                    {item.qty <= item.reorder ? (
-                      <Badge variant="warning">
-                        {stockCopy.filters.reorder}
-                      </Badge>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      {stockCopy.table.availableStock}
-                    </p>
-                    <p
-                      className={cn(
-                        "font-semibold tabular-nums",
-                        (item.status === "low" || item.status === "out") &&
-                          "text-destructive",
-                      )}
-                    >
-                      {formatQty(item.qty)} {item.unit}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">
-                      {FORM_VI.value}
-                    </p>
-                    <p className="font-semibold tabular-nums">
-                      {stockValue(item) > 0
-                        ? inventoryCommon.currencyCompact(
-                            formatVND(stockValue(item)),
-                          )
-                        : inventoryCommon.noValue}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      {stockCopy.table.wac}
-                    </p>
-                    <p className="tabular-nums">
-                      {item.cost > 0
-                        ? inventoryCommon.currencyCompact(formatVND(item.cost))
-                        : inventoryCommon.noValue}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">
-                      {stockCopy.table.lastCount}
-                    </p>
-                    <p>{item.lastCount}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 gap-2 border-t pt-2">
-                  {canReceiveStock ? (
-                    <Button asChild size="xs" variant="outline">
-                      <Link href={actionHrefs.receive}>
-                        {stockCopy.actions.receive}
-                      </Link>
-                    </Button>
-                  ) : null}
-                  {actionPermissions.canCreateIssue ? (
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="outline"
-                      onClick={() =>
-                        setQuickIssueTarget({
-                          ingredient: item,
-                          issueType: "consumption",
-                        })
-                      }
-                    >
-                      {ACTIONS_VI.export}
-                    </Button>
-                  ) : null}
-                  {actionPermissions.canCreateStocktake &&
-                  actionHrefs.stocktake ? (
-                    <Button asChild size="xs" variant="outline">
-                      <Link href={actionHrefs.stocktake}>
-                        {stockCopy.actions.count}
-                      </Link>
-                    </Button>
-                  ) : null}
-                  {actionPermissions.canAdjustException ? (
-                    <Button
-                      type="button"
-                      size="icon-xs"
-                      variant="ghost"
-                      onClick={() => setAdjustTarget(item)}
-                      aria-label={stockCopy.actions.adjustExceptionAria(
-                        item.name,
-                      )}
-                    >
-                      <IconPencil />
-                    </Button>
-                  ) : null}
-                </div>
-              </InteractiveCard>
-            ))
+            filtered.map((item) => renderStockMobileCard(item))
           )}
         </div>
       ) : (
@@ -1156,11 +1204,7 @@ export function StockClient({
                 getRowDataState={(item) =>
                   selected?.id === item.id ? "selected" : undefined
                 }
-                mobileCardRender={(item) => (
-                  <InteractiveCard minHeight="mobile" padding="default">
-                    <span className="font-semibold">{item.name}</span>
-                  </InteractiveCard>
-                )}
+                mobileCardRender={(item) => renderStockMobileCard(item)}
               />
             </div>
 

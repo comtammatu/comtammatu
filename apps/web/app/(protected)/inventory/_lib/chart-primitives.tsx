@@ -101,7 +101,12 @@ export function TrendSparkline({
   const fillPath = `M${points.join(" L")} L${width},${height} L0,${height} Z`;
 
   return (
-    <svg width={width} height={height} className="overflow-visible">
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      className="h-auto w-full max-w-full overflow-visible"
+    >
       <defs>
         <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor={strokeColor} stopOpacity={0.15} />

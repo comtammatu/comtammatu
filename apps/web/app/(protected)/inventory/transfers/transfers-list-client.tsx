@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { formatVNDate } from "@comtammatu/shared/time";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   InputGroup,
@@ -21,7 +22,7 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@comtammatu/ui/components/input-group";
-import { cn } from "@comtammatu/ui";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import {
   DataTable,
   type DataTableColumn,
@@ -61,6 +62,27 @@ const TAB_LABELS: Record<TransferTab, string> = {
   dispatch: copy.list.tabs.dispatch,
   history: copy.list.tabs.history,
 };
+
+const TRANSFER_QUEUE_PRIORITY: Record<string, number> = {
+  in_transit: 0,
+  confirmed_ship: 1,
+  confirmed_receive: 2,
+  draft: 3,
+  received: 20,
+  completed: 21,
+  cancelled: 22,
+};
+
+function compareTransferQueue(a: TransferListRow, b: TransferListRow): number {
+  const aCreatedAt = Date.parse(a.created_at);
+  const bCreatedAt = Date.parse(b.created_at);
+  return (
+    (TRANSFER_QUEUE_PRIORITY[a.status] ?? 10) -
+      (TRANSFER_QUEUE_PRIORITY[b.status] ?? 10) ||
+    (Number.isNaN(bCreatedAt) ? 0 : bCreatedAt) -
+      (Number.isNaN(aCreatedAt) ? 0 : aCreatedAt)
+  );
+}
 
 function classifyTransfer(
   status: string,
@@ -167,6 +189,9 @@ export function TransfersListClient({
         userRole,
       );
       groups[tab].push(r);
+    }
+    for (const tab of Object.keys(groups) as TransferTab[]) {
+      groups[tab].sort(compareTransferQueue);
     }
     return groups;
   }, [rows, userBranchId, userRole]);
@@ -296,38 +321,25 @@ export function TransfersListClient({
           ) : undefined
         }
       />
-      <nav className="grid grid-cols-3 gap-1 rounded-md border bg-muted/30 p-1">
-        {(Object.keys(tabLabels) as TransferTab[]).map((tab) => {
-          const active = tab === activeTab;
-          return (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                "flex items-center justify-center rounded-md px-2 py-2 text-xs font-semibold transition",
-                active
-                  ? "border border-primary/20 bg-background text-foreground ring-1 ring-primary/20"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {tabLabels[tab]}
-              {tabCounts[tab] > 0 && (
-                <span
-                  className={cn(
-                    "ml-1.5 rounded-full px-1.5 py-1 text-xs tabular-nums",
-                    active
-                      ? "bg-primary/15 text-primary"
-                      : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {tabCounts[tab]}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </nav>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as TransferTab)}
+      >
+        <TabsList variant="toolbar" className="p-1">
+          {(Object.keys(tabLabels) as TransferTab[]).map((tab) => {
+            return (
+              <TabsTrigger key={tab} value={tab} className="min-h-9 min-w-0">
+                {tabLabels[tab]}
+                {tabCounts[tab] > 0 && (
+                  <Badge variant="secondary" className="ml-1.5 font-mono">
+                    {tabCounts[tab]}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+      </Tabs>
 
       <InputGroup className="h-10">
         <InputGroupAddon>

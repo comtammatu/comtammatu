@@ -137,6 +137,7 @@ export function InventoryShell({
       defaultPageTitle={messages.inventory.shell.brandName}
       pageHeader={{
         headerExtras: branchFilter,
+        suppressTitleHeading: true,
       }}
     >
       {children}

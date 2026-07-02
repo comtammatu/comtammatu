@@ -34,7 +34,7 @@ export default async function InventorySettingsLayout({
   }
 
   return (
-    <AppPage width="full">
+    <AppPage width="wide">
       <AppPageHeader
         eyebrow={messages.inventory.settings.eyebrow}
         title={messages.inventory.settings.policyTitle}

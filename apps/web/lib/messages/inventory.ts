@@ -5,8 +5,8 @@ export const inventory = {
     signOut: "Đăng xuất",
     quantityShort: "SL",
     unitShort: "ĐV",
-    currency: (amount: string) => `${amount} ₫`,
-    currencyCompact: (amount: string) => `${amount}đ`,
+    currency: (amount: string) => amount,
+    currencyCompact: (amount: string) => amount,
   },
   shell: {
     brandName: "Cơm Tấm Má Tư",
@@ -383,6 +383,7 @@ export const inventory = {
       riskPlaceholder: "Rủi ro",
       sortPlaceholder: "Sắp xếp",
       searchPlaceholder: "Tìm nhanh: tên hoặc SKU",
+      controlsTitle: "Tóm tắt & bộ lọc",
     },
     actions: {
       receiveGrn: "Nhận phiếu nhập",
@@ -430,9 +431,9 @@ export const inventory = {
       noRecentHistory: "Chưa có biến động gần đây cho nguyên liệu này.",
       chooseIngredientDetail: "Chọn một nguyên liệu để xem chi tiết thao tác.",
       wac: "WAC",
-      wacValue: (amount: string) => `WAC: ${amount} đ`,
+      wacValue: (amount: string) => `WAC: ${amount}`,
       filteredSummary: (count: number, value: string) =>
-        `Tổng theo bộ lọc: ${count} mặt hàng · ${value} đ`,
+        `Tổng theo bộ lọc: ${count} mặt hàng · ${value}`,
     },
     detail: {
       eyebrow: "Thẻ kho chi tiết",
@@ -532,7 +533,7 @@ export const inventory = {
     production: "Sản xuất",
     currentMonthSnapshot: "Đang xem tháng này",
     supplierPayables: "Công nợ nhà cung cấp",
-    amountVnd: (amount: string) => `${amount}đ`,
+    amountVnd: (amount: string) => amount,
     openSupplierDebt: "Mở công nợ NCC",
     consumptionVariance: "Chênh lệch tiêu hao",
     recipeActualVsStandard: "Thực tế so với định mức món",

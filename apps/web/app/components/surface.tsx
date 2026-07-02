@@ -268,6 +268,7 @@ export type AppSectionProps = {
   size?: "default" | "sm";
   tone?: AppSectionTone;
   collapsible?: boolean;
+  defaultOpen?: boolean;
   footer?: ReactNode;
 };
 
@@ -287,9 +288,10 @@ export function AppSection({
   size = "default",
   tone = "default",
   collapsible = false,
+  defaultOpen = true,
   footer,
 }: AppSectionProps) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(defaultOpen);
   const hasHeader = Boolean(
     title ||
     description ||
