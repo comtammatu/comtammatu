@@ -139,6 +139,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (pathname === "/br" || pathname === "/br/") return "branch_picker";
   if (/^\/br\/\d+\/?$/.test(pathname)) return "operator_home";
   if (/^\/br\/\d+\/shift/.test(pathname)) return "operator_home";
+  if (/^\/br\/\d+\/profile/.test(pathname)) return "operator_home";
   if (/^\/br\/\d+\/stock\/count(?:\/|$)/.test(pathname)) return "operator_home";
   if (/^\/br\/\d+\/stock/.test(pathname)) return "inventory";
   if (/^\/br\/\d+\/dashboard/.test(pathname)) return "branch_dashboard";

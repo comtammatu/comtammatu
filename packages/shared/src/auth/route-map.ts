@@ -205,6 +205,18 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
+    id: "operator-profile",
+    label: MODULE_ACL.employee.label,
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]/profile",
+    matchPrefixes: ["/br/[branchId]/profile"],
+    moduleKeys: ["employee"],
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
     id: "operator-stock",
     label: MODULE_ACL.inventory.label,
     surface: "branch_operation",
