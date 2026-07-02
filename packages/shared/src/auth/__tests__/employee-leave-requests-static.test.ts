@@ -80,8 +80,8 @@ test("Employee leave permission and generated type mirrors are wired", () => {
   }
 });
 
-test("Cổng nhân viên exposes leave request self-service from Profile", () => {
-  const profile = read("apps/web/app/(protected)/employee/profile/page.tsx");
+test("Cổng nhân viên exposes leave request self-service from Schedule", () => {
+  const schedule = read("apps/web/app/(protected)/employee/schedule/page.tsx");
   const page = read("apps/web/app/(protected)/employee/leave/page.tsx");
   const client = read(
     "apps/web/app/(protected)/employee/leave/leave-client.tsx",
@@ -90,11 +90,10 @@ test("Cổng nhân viên exposes leave request self-service from Profile", () =>
   const messages = read("apps/web/lib/messages/employee.ts");
 
   for (const expected of [
-    'href: "/employee/leave"',
-    "IconCalendarX",
-    "employeeCopy.leave.title",
+    'leaveHref = "/employee/leave"',
+    '.from("leave_requests")',
   ]) {
-    assert.ok(profile.includes(expected), `expected profile ${expected}`);
+    assert.ok(schedule.includes(expected), `expected schedule ${expected}`);
   }
 
   for (const expected of [
