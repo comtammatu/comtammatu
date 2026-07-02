@@ -3,7 +3,7 @@ import { ChevronLeft as IconChevronLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { Button } from "@comtammatu/ui/components/button";
-import { AppPageHeader, DocumentFormShell } from "@/components/surface";
+import { AppPageHeader, DocumentFormFrame } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchIngredients } from "../../ingredient-actions";
 import {
@@ -91,7 +91,7 @@ export async function NewTransferPageContent({
   }
 
   return (
-    <DocumentFormShell
+    <DocumentFormFrame
       width="default"
       header={
         <AppPageHeader
@@ -109,7 +109,7 @@ export async function NewTransferPageContent({
         userRole={claims.user_role}
         basePath={basePath}
       />
-    </DocumentFormShell>
+    </DocumentFormFrame>
   );
 }
 

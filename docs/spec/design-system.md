@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.12.0 | Updated: 2026-07-01 | Status: locked single source for UI agents
+> Version: 14.13.0 | Updated: 2026-07-02 | Status: locked single source for UI agents
 
 ## Single Source Decision
 
@@ -103,10 +103,15 @@ Approved project utilities:
 - `max-h-dvh-95` and `max-h-dvh-80` are bottom-sheet height utilities for
   mobile dynamic viewport constraints.
 - `pos-text-overlay` is limited to text over POS menu item photos.
-- `pos-safe-top` / `pos-safe-bottom` are limited to POS PWA floating bars.
+- `pos-safe-bottom` is limited to POS PWA floating bottom bars.
 - `chrome-safe-pb` / `chrome-safe-bottom` are limited to fixed or sticky app
   shell chrome affected by mobile safe areas.
-- `shadow-effect-*` (popover / dialog / drawer / tooltip / toast / card-hover),
+- `no-scrollbar` hides scrollbars on horizontally scrolling chrome rails
+  (sidebar, command list, bottom-nav, filter rails) without disabling scroll.
+- `mascot-cotlet` + `animate-cotlet-idle` render the Cốt Lết sprite-sheet idle
+  loop; limited to the runner idle board (the documented § G full-screen idle
+  exception) and always gated with `motion-safe:`.
+- `shadow-effect-*` (popover / dialog / drawer / tooltip / card-hover),
   `bg-effect-scrim`, and `drawer-scrim` are the Má Tư DS depth utilities backed by
   the `--effect-*` token family (see § Elevation). The `--motion-*` / `--ease-*`
   motion tokens (see § G Motion) are consumed inside `packages/ui` primitives via
@@ -289,7 +294,7 @@ Radius is a tier, not a free choice. Pick the token from the element's role:
 | Pill                  | `rounded-full` | Avatar, pill badge, circular (truly round) icon container                                |
 | Reset                 | `rounded-none` | Explicit reset only (table cell internals, edge-bleed media)                             |
 
-`rounded` (no suffix), `rounded-sm`, `rounded-xl`, `rounded-2xl`, `rounded-3xl`, `rounded-4xl` are NOT allowed in app code. The radius primitive token surface (`--radius-sm/md/lg/xl/2xl/3xl/4xl`) exists in `globals.css` for primitive compatibility — app surfaces consume them indirectly through Card/Sheet/etc., not directly.
+`rounded` (no suffix), `rounded-sm`, `rounded-xl`, `rounded-2xl`, `rounded-3xl`, `rounded-4xl` are NOT allowed in app code. The radius primitive token surface (`--radius-sm/md/lg`) exists in `globals.css` for primitive compatibility — app surfaces consume them indirectly through Card/Sheet/etc., not directly.
 
 Tier misalignment is mostly a review concern, but two unambiguous cases are enforced by the `radius-tier-baseline` gate: a `rounded-full` on a sized icon-box (`size-8/10/12/14/16` — that is a square control, so it should be `rounded-md`), and `rounded-lg` on a small inset (`size-8/10/12` — control tier, so `rounded-md`). The gate is a detectable subset only; full tier-correctness comes from this table plus review.
 
@@ -307,16 +312,16 @@ Motion is functional only — it signals state change (loading, enter/exit, focu
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
 | `duration-150`                            | `transition-colors` / focus-ring / border feedback on interactive controls                                                                         | app + primitive |
 | `duration-300`                            | Overlay / dialog / sheet enter–exit (Radix `animate-in` / `animate-out`)                                                                           | app + primitive |
-| `duration-100`/`200`/`240` (`--motion-*`) | Primitive-layer overlay/drawer enter–exit timings inside `packages/ui/*` only, sourced from the `--motion-*` tokens — do not introduce in app code | primitive only  |
+| `duration-120`/`200`/`240` (`--motion-*`) | Primitive-layer overlay/drawer enter–exit timings inside `packages/ui/*` only, sourced from the `--motion-*` tokens — do not introduce in app code | primitive only  |
 | `duration-500`                            | Full-screen idle/empty visuals only (Runner idle board); never on interactive controls                                                             | app (exception) |
 
-The primitive layer's finer timings are the **`--motion-*` / `--ease-*` token family** (Má Tư Design System; `globals.css`): `--motion-fast 120ms` / `base 150` / `overlay 200` / `drawer 240` / `progress 300`, the loop rungs `spinner 700` / `indeterminate 1100` / `skeleton 1300`, and `--ease-enter` / `--ease-move` / `--ease-linear`. `packages/ui` primitives consume them as `duration-[var(--motion-*)]` / `ease-[var(--ease-*)]` (Tailwind v4 has no `--duration-*` / `--ease-*` utility namespace); the global spinner is retimed to `--motion-spinner` (700ms) via the `--animate-spin` rebind. App surfaces still author only `duration-150` / `duration-300` (== `--motion-base` / `--motion-progress`).
+The primitive layer's finer timings are the **`--motion-*` / `--ease-*` token family** (Má Tư Design System; `globals.css`): `--motion-fast 120ms` / `base 150` / `overlay 200` / `drawer 240` / `progress 300`, the loop rung `spinner 700`, and `--ease-move` / `--ease-linear`. `packages/ui` primitives consume them as `duration-[var(--motion-*)]` / `ease-[var(--ease-*)]` (Tailwind v4 has no `--duration-*` / `--ease-*` utility namespace); the global spinner is retimed to `--motion-spinner` (700ms) via the `--animate-spin` rebind. App surfaces still author only `duration-150` / `duration-300` (== `--motion-base` / `--motion-progress`).
 
 Arbitrary `duration-[…]` is NOT allowed in app code.
 
 **Easing.** Use Tailwind defaults: bare `transition*` (default ease), `ease-out` for enter, `ease-linear` only for continuous indicators (spinner, progress). Arbitrary `ease-[cubic-bezier(…)]` is reserved for the shared primitive layer and is not allowed in app surfaces.
 
-**Allowed animations.** `animate-spin` (only via `Spinner`), `animate-pulse` (skeleton / loading placeholders), `animate-in` / `animate-out` and `animate-accordion-*` (Radix-driven, via primitives), `animate-caret-blink` (input caret). No custom `@keyframes` outside `globals.css`.
+**Allowed animations.** `animate-spin` (only via `Spinner`), `animate-pulse` (skeleton / loading placeholders), `animate-in` / `animate-out` and `animate-accordion-*` (Radix-driven, via primitives), `animate-caret-blink` (input caret), `motion-safe:animate-cotlet-idle` (runner idle mascot only — the § G full-screen idle exception). No custom `@keyframes` outside `globals.css`.
 
 **Press feedback.** `active:scale-[…]` (≥ `0.97`) is allowed on tap targets for tactile press feedback. `hover:scale-*` grow/shrink on hover is forbidden on ERP surfaces — it reads as decorative.
 
@@ -340,7 +345,7 @@ The system is **border-first**: resting surfaces are separated by `--border`, no
 | Modal          | `shadow-effect-dialog`             | `dialog` content.                                                                                                                                                                            |
 | Sheet / Drawer | `shadow-effect-drawer`             | `sheet` content and `drawer` (vaul `before:`) panel.                                                                                                                                         |
 | Tooltip        | `shadow-effect-tooltip`            | `tooltip` content.                                                                                                                                                                           |
-| Toast          | `shadow-effect-toast`              | Sonner toasts (applied on `.cn-toast` in `globals.css`).                                                                                                                                     |
+| Toast          | `--effect-toast` (on `.cn-toast`)  | Sonner toasts — `box-shadow: var(--effect-toast)` is applied directly on `.cn-toast` in `globals.css`; there is no separate utility class.                                                   |
 | Sticky CTA     | `shadow-lg`                        | CTAs **inside a genuinely sticky/fixed action bar** (e.g. GRN-create and transfer-receive `sticky chrome-safe-bottom` footers).                                                              |
 | Ceiling        | `shadow-xl` / `shadow-2xl`         | **Only** fixed surfaces floating over scrolling content: POS mobile action bar (`shadow-2xl`), KDS focus card / chart tooltip (`shadow-xl`). Nowhere else.                                   |
 | Overlay scrim  | `bg-effect-scrim` / `drawer-scrim` | Dialog/Sheet backdrop = `bg-effect-scrim`; Drawer backdrop = `drawer-scrim` (scrim + `--effect-drawer-blur`).                                                                                |
@@ -365,6 +370,10 @@ Shared layout primitives also exported from `surface.tsx`:
 - `KpiRow` — responsive grid (1/2/3 columns) wrapping `KpiCard` metric tiles.
 - `DescriptionList` — `<dl>` term/description pairs for detail-page metadata.
 - `LinkCardGrid` — responsive grid (1/2/3 columns) wrapping `AppLinkCard` entries.
+- `DocumentFormFrame` — page frame for document/line-form workflows (header +
+  scrollable body + footer) composing `AppPage`; a page-section adapter, not a
+  chrome shell.
+- `AppDetailFooter` — leading/trailing footer row for detail pages.
 
 ### Card Roles
 

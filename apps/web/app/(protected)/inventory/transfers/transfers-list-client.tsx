@@ -29,7 +29,7 @@ import {
 import { matchesSearch } from "@lib/search";
 import type { BranchForTransfer } from "./create-transfer-dialog";
 import { AppPage, AppPageHeader } from "@/components/surface";
-import { InteractiveCard } from "../_components/interactive-card";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
 import { messages } from "@lib/messages";
 

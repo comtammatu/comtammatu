@@ -132,6 +132,9 @@ Không dùng local `className="p-0"` hoặc `className="overflow-x-auto"` trên
   metric/stat-value.
 - `DescriptionList` cho cặp term/description (`<dl>`) ở trang chi tiết.
 - `LinkCardGrid` cho grid responsive (1/2/3 cột) bọc các `AppLinkCard`.
+- `DocumentFormFrame` cho khung trang document/line-form (header + body cuộn +
+  footer) compose `AppPage`; là page-section adapter, không phải chrome shell.
+- `AppDetailFooter` cho hàng footer leading/trailing ở trang chi tiết.
 
 Domain wrappers như Inventory/Employee/Admin có thể giữ API riêng để tránh sửa hàng loạt call site, nhưng phải delegate về các adapter này thay vì tự style lại `Card`, `Empty`, hoặc page container.
 

@@ -19,7 +19,7 @@ import {
 } from "@comtammatu/shared/time";
 import { MobilePage } from "../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../_components/mobile/mobile-section-header";
-import { InteractiveCard } from "../../_components/mobile/interactive-card";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppEmptyState } from "@/components/surface";
 import {
   fetchOpenPurchaseOrdersForReceiving,

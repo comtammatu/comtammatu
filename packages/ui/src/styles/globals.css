@@ -63,10 +63,6 @@
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -103,26 +99,6 @@
   --sidebar-accent-foreground: oklch(0.218 0.036 251.3);
   --sidebar-border: oklch(0.903 0.021 72.1);
   --sidebar-ring: oklch(0.77 0.164 73.2);
-
-  /* ---- ELEVATED ADDITIVE TOKENS (Concept 01 - Elevated) ---- */
-  --surface-inset: oklch(0.962 0.016 66);
-  --border-inset: oklch(0.915 0.02 70);
-  --border-raised: oklch(0.872 0.026 70);
-  --border-strong: oklch(0.84 0.026 71);
-  --navy-900: oklch(0.16 0.03 252);
-  --info-accent: oklch(0.55 0.13 248);
-
-  /* Semantic Soft-Ink Pairs (Tương phản chuẩn WCAG AA) */
-  --primary-soft: oklch(0.94 0.03 36);
-  --primary-ink: oklch(0.43 0.15 32);
-  --success-soft: oklch(0.945 0.045 140);
-  --success-ink: oklch(0.43 0.075 138);
-  --warning-soft: oklch(0.962 0.04 78);
-  --warning-ink: oklch(0.52 0.11 70);
-  --info-soft: oklch(0.945 0.035 245);
-  --info-ink: oklch(0.4 0.09 250);
-  --destructive-soft: oklch(0.945 0.04 32);
-  --destructive-ink: oklch(0.466 0.147 33.3);
 }
 
 .dark {
@@ -157,26 +133,6 @@
   --sidebar-accent-foreground: oklch(0.978 0.014 64.3);
   --sidebar-border: oklch(0.978 0.014 64.3 / 14%);
   --sidebar-ring: oklch(0.77 0.164 73.2);
-
-  /* ---- ELEVATED ADDITIVE TOKENS (Concept 01 - Elevated) ---- */
-  --surface-inset: oklch(0.262 0.044 255);
-  --border-inset: oklch(0.978 0.014 64.3 / 10%);
-  --border-raised: oklch(0.978 0.014 64.3 / 22%);
-  --border-strong: oklch(0.978 0.014 64.3 / 30%);
-  --navy-900: oklch(0.978 0.014 64.3);
-  --info-accent: oklch(0.7 0.12 248);
-
-  /* Semantic Soft-Ink Pairs (Tương phản chuẩn WCAG AA) */
-  --primary-soft: oklch(0.94 0.03 36);
-  --primary-ink: oklch(0.43 0.15 32);
-  --success-soft: oklch(0.945 0.045 140);
-  --success-ink: oklch(0.43 0.075 138);
-  --warning-soft: oklch(0.962 0.04 78);
-  --warning-ink: oklch(0.52 0.11 70);
-  --info-soft: oklch(0.945 0.035 245);
-  --info-ink: oklch(0.4 0.09 250);
-  --destructive-soft: oklch(0.945 0.04 32);
-  --destructive-ink: oklch(0.466 0.147 33.3);
 }
 
 @layer base {
@@ -217,24 +173,6 @@
   --color-tier-elite-foreground: var(--tier-elite-foreground);
   --color-tier-note: var(--tier-note);
   --color-tier-note-foreground: var(--tier-note-foreground);
-
-  --color-surface-inset: var(--surface-inset);
-  --color-border-inset: var(--border-inset);
-  --color-border-raised: var(--border-raised);
-  --color-border-strong: var(--border-strong);
-  --color-navy-900: var(--navy-900);
-  --color-info-accent: var(--info-accent);
-
-  --color-primary-soft: var(--primary-soft);
-  --color-primary-ink: var(--primary-ink);
-  --color-success-soft: var(--success-soft);
-  --color-success-ink: var(--success-ink);
-  --color-warning-soft: var(--warning-soft);
-  --color-warning-ink: var(--warning-ink);
-  --color-info-soft: var(--info-soft);
-  --color-info-ink: var(--info-ink);
-  --color-destructive-soft: var(--destructive-soft);
-  --color-destructive-ink: var(--destructive-ink);
 }
 
 :root {
@@ -270,14 +208,9 @@
  * #2 (OKLCH-only): these are compositing / depth values (box-shadow + scrim),
  * NOT semantic colors, so they are authored as rgba by design. Border-first
  * stays the resting default — only floating / overlay surfaces consume an effect
- * shadow. Ref-based tokens (--effect-ring-border, --effect-focus-ring,
- * --effect-avatar-ring) theme-flip automatically via var(--border) / var(--ring)
- * / var(--foreground) / var(--background). The float / overlay / scrim rungs are
- * consumed through the shadow-effect-* @utility set + bg-effect-scrim +
- * drawer-scrim (ZONE C). The focus-ring, validation rings (info / success /
- * warning / destructive / invalid), inline-shadow, control-thumb, and avatar-ring
- * rungs are the full DS depth family, reserved for the upcoming focus / validation
- * / avatar passes — defined for parity, not yet wired to a utility. */
+ * shadow. --effect-ring-border theme-flips automatically via var(--border).
+ * The float / overlay / scrim rungs are consumed through the shadow-effect-*
+ * @utility set + bg-effect-scrim + drawer-scrim (ZONE C). */
 @theme inline {
   --color-effect-scrim: var(--effect-scrim);
 }
@@ -287,17 +220,8 @@
   --effect-drawer-blur: blur(2px);
   --effect-ring-hairline: inset 0 0 0 1px rgba(13, 27, 42, 0.1);
   --effect-ring-border: inset 0 0 0 1px var(--border);
-  --effect-ring-info: inset 0 0 0 1px rgba(13, 27, 42, 0.2);
-  --effect-ring-success: inset 0 0 0 1px rgba(106, 143, 91, 0.45);
-  --effect-ring-warning: inset 0 0 0 1px rgba(242, 161, 0, 0.5);
-  --effect-ring-destructive: inset 0 0 0 1px rgba(168, 49, 28, 0.45);
-  --effect-focus-ring: 0 0 0 2px var(--ring), 0 0 0 4px var(--foreground);
-  --effect-invalid-ring: 0 0 0 1px rgba(168, 49, 28, 0.2);
   --effect-card-hover:
     var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.1);
-  --effect-inline-shadow: 0 1px 0 rgba(13, 27, 42, 0.1);
-  --effect-control-thumb: 0 1px 2px rgba(13, 27, 42, 0.3);
-  --effect-avatar-ring: 0 0 0 2px var(--background);
   --effect-popover:
     var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.16);
   --effect-toast: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.18);
@@ -308,24 +232,15 @@
 
 .dark {
   /* Runtime theme is forced light; .dark is defined to satisfy the dual-mode
-   * governance rule. Pilot mirrors the :root navy rgba (ref-based ring/avatar
-   * tokens already theme-flip). Raise alpha here if dark elevation reads weak
-   * should dark mode ever be re-enabled. */
+   * governance rule. Pilot mirrors the :root navy rgba (the ref-based
+   * ring-border token already theme-flips). Raise alpha here if dark elevation
+   * reads weak should dark mode ever be re-enabled. */
   --effect-scrim: rgba(13, 27, 42, 0.45);
   --effect-drawer-blur: blur(2px);
   --effect-ring-hairline: inset 0 0 0 1px rgba(13, 27, 42, 0.1);
   --effect-ring-border: inset 0 0 0 1px var(--border);
-  --effect-ring-info: inset 0 0 0 1px rgba(13, 27, 42, 0.2);
-  --effect-ring-success: inset 0 0 0 1px rgba(106, 143, 91, 0.45);
-  --effect-ring-warning: inset 0 0 0 1px rgba(242, 161, 0, 0.5);
-  --effect-ring-destructive: inset 0 0 0 1px rgba(168, 49, 28, 0.45);
-  --effect-focus-ring: 0 0 0 2px var(--ring), 0 0 0 4px var(--foreground);
-  --effect-invalid-ring: 0 0 0 1px rgba(168, 49, 28, 0.2);
   --effect-card-hover:
     var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.1);
-  --effect-inline-shadow: 0 1px 0 rgba(13, 27, 42, 0.1);
-  --effect-control-thumb: 0 1px 2px rgba(13, 27, 42, 0.3);
-  --effect-avatar-ring: 0 0 0 2px var(--background);
   --effect-popover:
     var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.16);
   --effect-toast: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.18);
@@ -364,7 +279,7 @@
  * Update here only through the design-system contract.
  * ============================================================ */
 
-/* Override: Geist for headings + body, Geist Mono for data (D037 reverses
+/* Override: Geist for headings + body, Geist Mono for data (D038 reverses
  * D032 — owner adopts the Má Tư Design System single-family roster). Geist is
  * loaded via the `geist` package (full Vietnamese glyph coverage, self-hosted,
  * offline) and exposes `--font-geist-sans` / `--font-geist-mono`. `font-mono`
@@ -449,9 +364,6 @@
   --motion-drawer: 240ms;
   --motion-progress: 300ms;
   --motion-spinner: 700ms;
-  --motion-indeterminate: 1100ms;
-  --motion-skeleton: 1300ms;
-  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-move: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-linear: linear;
 }
@@ -570,9 +482,6 @@
 @utility pos-safe-bottom {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
-@utility pos-safe-top {
-  padding-top: max(0.5rem, env(safe-area-inset-top));
-}
 
 /* Override: safe-area for app-shell chrome (BottomNav, sticky toolbars)
  * when the PWA runs standalone on Android — viewport-fit:cover lets the
@@ -618,9 +527,6 @@
  * border-first — these apply ONLY to floating / overlay primitives. */
 @utility shadow-effect-popover {
   box-shadow: var(--effect-popover);
-}
-@utility shadow-effect-toast {
-  box-shadow: var(--effect-toast);
 }
 @utility shadow-effect-dialog {
   box-shadow: var(--effect-dialog);

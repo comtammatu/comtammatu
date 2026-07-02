@@ -39,7 +39,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { InteractiveCard } from "../_components/interactive-card";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
 import { formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";

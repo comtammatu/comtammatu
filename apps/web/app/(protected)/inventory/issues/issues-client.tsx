@@ -44,7 +44,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { InteractiveCard } from "../_components/interactive-card";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { formatVND } from "../_lib/format";
 import { tNav } from "../_lib/dictionary";

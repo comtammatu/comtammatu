@@ -14,7 +14,7 @@ import {
   getVNDateString,
 } from "@comtammatu/shared/time";
 import { INVENTORY_VI, TOAST_VI } from "@comtammatu/shared/messages";
-import { InteractiveCard } from "../../_components/mobile/interactive-card";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { createGrnFromPo } from "../../grn-actions";
 import { formatVND } from "../../_lib/format";
 

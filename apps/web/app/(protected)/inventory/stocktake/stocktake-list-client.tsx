@@ -35,7 +35,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/status-badge";
-import { InteractiveCard } from "../_components/interactive-card";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { createStocktakeSession } from "../actions";
 
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";

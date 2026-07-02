@@ -47,7 +47,7 @@ Không migrate nội dung `/employee/*` hay Kho sàn đầy đủ trong lát nà
 
 4. **Home bằng capability tiles**
    - Dùng `resolveOperatorTiles(role, branchId)` từ foundation #1.
-   - Render nhóm tile qua primitive sẵn có (`AppLinkCard`/`SurfaceLinkCard` nếu phù hợp).
+   - Render nhóm tile qua primitive sẵn có (`AppLinkCard` nếu phù hợp).
    - Empty state phải là deny-by-absence; auth vẫn do proxy/RLS/MODULE_ACL.
    - Smart card lấy `getTodayWorkState` hiện có; nếu trạng thái không có branch thì
      hiển thị CTA về `/br/[id]/shift` thay vì tự sửa dữ liệu.

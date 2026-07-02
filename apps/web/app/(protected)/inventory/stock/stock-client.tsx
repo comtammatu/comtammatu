@@ -49,7 +49,7 @@ import {
   InventoryPageContent,
 } from "../_components/inventory-page-layout";
 import { StatusBadge } from "@/components/status-badge";
-import { InteractiveCard } from "../_components/interactive-card";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatDateTime, formatQty, formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";

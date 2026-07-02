@@ -457,13 +457,7 @@ export function AppToolbar({
   );
 }
 
-export type FilterToolbarProps = AppToolbarProps;
-
-export function FilterToolbar(props: FilterToolbarProps) {
-  return <AppToolbar {...props} />;
-}
-
-export type DocumentFormShellProps = {
+export type DocumentFormFrameProps = {
   header?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
@@ -477,7 +471,7 @@ export type DocumentFormShellProps = {
   mobile?: boolean;
 };
 
-export function DocumentFormShell({
+export function DocumentFormFrame({
   header,
   children,
   footer,
@@ -489,7 +483,7 @@ export function DocumentFormShell({
   padded = true,
   density = "comfortable",
   mobile = false,
-}: DocumentFormShellProps) {
+}: DocumentFormFrameProps) {
   return (
     <AppPage
       scroll={scroll}

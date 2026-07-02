@@ -7,6 +7,7 @@ import {
   CloudUpload as IconCloudUpload,
   CircleAlert as IconAlertCircle,
 } from "lucide-react";
+import { formatVNTime } from "@comtammatu/shared/time";
 import { saveStocktakeDraft } from "../stocktake-actions";
 
 export type DraftCounts = Record<
@@ -132,13 +133,13 @@ export function StocktakeDraftSaverBadge({
         return "Đang lưu draft…";
       case "saved":
         return lastSavedAt
-          ? `Đã lưu ${formatTimeHHmm(lastSavedAt)}`
+          ? `Đã lưu ${formatVNTime(lastSavedAt)}`
           : "Đã lưu draft";
       case "error":
         return "Lỗi lưu draft — sẽ thử lại";
       default:
         return lastSavedAt
-          ? `Đã lưu ${formatTimeHHmm(lastSavedAt)}`
+          ? `Đã lưu ${formatVNTime(lastSavedAt)}`
           : "Chưa có draft";
     }
   })();
@@ -173,15 +174,4 @@ export function StocktakeDraftSaverBadge({
       {label}
     </span>
   );
-}
-
-function formatTimeHHmm(iso: string): string {
-  try {
-    const d = new Date(iso);
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mm = String(d.getMinutes()).padStart(2, "0");
-    return `${hh}:${mm}`;
-  } catch {
-    return "";
-  }
 }

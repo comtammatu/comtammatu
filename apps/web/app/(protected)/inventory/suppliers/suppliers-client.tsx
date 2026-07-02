@@ -28,7 +28,7 @@ import {
   InventoryFilterBar,
   InventoryPageContent,
 } from "../_components/inventory-page-layout";
-import { InteractiveCard } from "../_components/interactive-card";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
 import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
 import { SupplierDialog } from "./supplier-dialog";

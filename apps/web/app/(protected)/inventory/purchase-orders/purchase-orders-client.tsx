@@ -34,9 +34,9 @@ import {
   AppPage,
   AppPageHeader,
   AppSection,
-  FilterToolbar,
+  AppToolbar,
 } from "@/components/surface";
-import { InteractiveCard } from "../_components/interactive-card";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
 import { tRoute, tStatus } from "../_lib/dictionary";
 import type { SupplierRow } from "../suppliers/suppliers-client";
@@ -275,7 +275,7 @@ export function PurchaseOrdersClient({
         </AppSection>
       ) : null}
 
-      <FilterToolbar>
+      <AppToolbar>
         <InputGroup className="h-10 flex-1">
           <InputGroupAddon>
             <IconSearch />
@@ -329,7 +329,7 @@ export function PurchaseOrdersClient({
         <Badge variant="outline" className="rounded-full">
           {filteredRows.length} / {totalCount} PO
         </Badge>
-      </FilterToolbar>
+      </AppToolbar>
 
       <DataTable
         className="md:rounded-lg md:border"
