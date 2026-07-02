@@ -41,13 +41,12 @@ BEGIN
       RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
     END IF;
   ELSE
+    -- Branch containment via has_permission (a branch_manager only holds
+    -- inventory:read for its own branch); mirrors get_inventory_dashboard.
     IF NOT (
-      public.can_access_branch(p_branch_id)
-      AND (
-        public.has_permission(p_branch_id, 'inventory:read')
-        OR public.has_permission(NULL, 'reports:view_branch')
-        OR public.has_permission(NULL, 'reports:view_tenant')
-      )
+      public.has_permission(p_branch_id, 'inventory:read')
+      OR public.has_permission(NULL, 'reports:view_branch')
+      OR public.has_permission(NULL, 'reports:view_tenant')
     ) THEN
       RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
     END IF;
