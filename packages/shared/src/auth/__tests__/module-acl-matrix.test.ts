@@ -36,7 +36,6 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "operator_home",
     "orders",
     "pos",
-    "reports",
     "runner",
     "settings",
     "staff",

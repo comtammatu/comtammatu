@@ -91,7 +91,7 @@ test("owner sidebar tabs include admin + all tenant workspaces", () => {
     );
   }
 
-  for (const key of ["reports", "settings"] as ModuleKey[]) {
+  for (const key of ["settings"] as ModuleKey[]) {
     assert.equal(
       hrefs.has(MODULE_ACL[key].path),
       false,
@@ -180,7 +180,9 @@ test("deep-nav hrefs and labels are deduplicated", () => {
 
 test("findActivePrimaryNavItem matches the primary tab for the current path", () => {
   const items = resolveOfficePrimaryTabs("owner", BRANCH_ID);
-  const reportsHref = MODULE_ACL.reports.path;
+  // /admin/reports now redirects to /finance (D058 §4), but the path still
+  // falls under the /admin primary tab prefix anchored on dashboard.
+  const reportsHref = "/admin/reports";
   const active = findActivePrimaryNavItem(items, reportsHref);
   assert.ok(active, "an active sidebar tab must be found for the reports path");
   assert.equal(active?.href, MODULE_ACL.dashboard.path);

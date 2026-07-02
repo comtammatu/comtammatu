@@ -11,7 +11,7 @@ import {
   fetchTopItems,
   type FinanceDashboardSummary,
 } from "../actions";
-import { fetchFoodCost } from "../accounting-actions";
+import { fetchFoodCost } from "@/_lib/food-cost-actions";
 import type { FinanceParams, ResolvedFinanceRange } from "./finance-params";
 import { fetchStockBearingLocationIds } from "../../inventory/_lib/stock-bearing-locations";
 

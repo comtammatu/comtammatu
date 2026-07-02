@@ -18,9 +18,10 @@ export const INVENTORY_PROCUREMENT_PREFIXES = [
   "/inventory/grn",
   "/inventory/supplier-invoices",
   "/inventory/recipes",
-  "/inventory/receiving",
 ] as const;
 
+// Entries already matched by INVENTORY_PROCUREMENT_PREFIXES (checked first in
+// resolveModuleFromPath) are omitted here — they would never be reached.
 export const INVENTORY_ROUTE_PREFIXES = [
   "/inventory/dashboard",
   "/inventory/consumption",
@@ -28,22 +29,12 @@ export const INVENTORY_ROUTE_PREFIXES = [
   "/inventory/count-slips",
   "/inventory/drafts",
   "/inventory/expiry",
-  "/inventory/grn",
-  "/inventory/ingredients",
   "/inventory/issues",
   "/inventory/production",
-  "/inventory/purchase-orders",
-  "/inventory/receiving",
-  "/inventory/recipes",
   "/inventory/reports",
-  "/inventory/settings",
-  "/inventory/settings/categories",
-  "/inventory/settings/units",
   "/inventory/stock",
   "/inventory/stocktake",
-  "/inventory/supplier-invoices",
   "/inventory/supplier-returns",
-  "/inventory/suppliers",
   "/inventory/transfers",
   "/inventory/waste",
 ] as const;
@@ -87,6 +78,30 @@ export function resolveLegacyRouteRedirectPath(
     return `/hr/staff${suffix}`;
   }
 
+  // Reports one-door (D058 §4): the hub and inventory-value drill go to
+  // /finance; stock-movement's canonical home is /inventory/reports. Order
+  // matters — check the two-segment sub-paths before the broader hub prefix.
+  if (
+    pathname === "/admin/reports/stock-movement" ||
+    pathname.startsWith("/admin/reports/stock-movement/")
+  ) {
+    const suffix = pathname.slice("/admin/reports/stock-movement".length);
+    return `/inventory/reports${suffix}`;
+  }
+
+  if (
+    pathname === "/admin/reports/inventory-value" ||
+    pathname.startsWith("/admin/reports/inventory-value/")
+  ) {
+    const suffix = pathname.slice("/admin/reports/inventory-value".length);
+    return `/finance/inventory-value${suffix}`;
+  }
+
+  if (pathname === "/admin/reports" || pathname.startsWith("/admin/reports/")) {
+    const suffix = pathname.slice("/admin/reports".length);
+    return `/finance${suffix}`;
+  }
+
   if (
     pathname === "/admin/settings/branches" ||
     pathname.startsWith("/admin/settings/branches/")
@@ -112,7 +127,6 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
     return "dashboard";
   }
   if (pathname.startsWith("/admin/dashboard")) return "dashboard";
-  if (pathname.startsWith("/admin/reports")) return "reports";
   if (pathname.startsWith("/admin/settings")) return "settings";
   // /admin/inventory/* RETIRED: pages removed; module ACL has empty allowedRoles.
   // Mapping kept so URL space resolves to access-denied via standard ACL flow

@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
+import { fetchFoodCost } from "@/_lib/food-cost-actions";
 import {
   fetchApAging,
   fetchConsumptionVariance,
-  fetchFoodCost,
   fetchStockMovementReport,
 } from "../report-actions";
 import {

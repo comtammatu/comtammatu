@@ -51,7 +51,7 @@ export default async function OrdersPage() {
         description={ORDERS_COPY.description}
         actions={
           <Button asChild variant="outline" size="sm">
-            <Link href="/admin/reports">{ORDERS_COPY.reportsAction}</Link>
+            <Link href="/finance">{ORDERS_COPY.reportsAction}</Link>
           </Button>
         }
         tabs={

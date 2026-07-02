@@ -51,11 +51,6 @@ export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
         icon: "LayoutDashboard",
         label: APP_COPY_VI.ownerHome,
       },
-      {
-        moduleKey: "reports",
-        icon: "BarChart3",
-        label: APP_COPY_VI.reportsLabel,
-      },
     ],
   },
   {

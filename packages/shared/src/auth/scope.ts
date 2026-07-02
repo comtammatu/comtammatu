@@ -1,5 +1,6 @@
 import { canAccess } from "./module-acl";
 import {
+  getDefaultRedirect,
   resolveBranchHubDestination,
   type BranchHubContext,
 } from "./branch-hub";
@@ -10,6 +11,8 @@ import {
 } from "./route-resolution";
 import type { JwtClaims, StaffRole } from "./types";
 import { ADMIN_ROLES } from "./types";
+
+export { getDefaultRedirect } from "./branch-hub";
 
 /** Extract claims from Supabase user app_metadata */
 function extractClaims(appMetadata: Record<string, unknown>): JwtClaims | null {
@@ -97,18 +100,6 @@ export function extractClaimsFromAccessToken(
   const appMetadata = decodeJwtAppMetadata(accessToken);
   if (!appMetadata) return null;
   return extractClaims(appMetadata);
-}
-
-/** Determine the default redirect path for a role after login */
-export function getDefaultRedirect(claims: JwtClaims): string {
-  const { user_role } = claims;
-
-  if (ADMIN_ROLES.includes(user_role)) {
-    return "/admin/dashboard";
-  }
-
-  // All non-admin staff land on the employee workspace.
-  return "/employee";
 }
 
 /** Validate and normalize an internal return path. */

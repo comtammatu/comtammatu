@@ -19,7 +19,8 @@ function isAdminRole(role: JwtClaims["user_role"]): boolean {
   return ADMIN_ROLES.includes(role);
 }
 
-function defaultRedirect(claims: JwtClaims): string {
+/** Determine the default redirect path for a role after login */
+export function getDefaultRedirect(claims: JwtClaims): string {
   return isAdminRole(claims.user_role) ? "/admin/dashboard" : "/employee";
 }
 
@@ -36,11 +37,11 @@ export function resolveBranchHubDestination(
   }
 
   if (ctx.isDesktop && isAdminRole(claims.user_role)) {
-    return defaultRedirect(claims);
+    return getDefaultRedirect(claims);
   }
 
   if (claims.user_role === "office") {
-    return defaultRedirect(claims);
+    return getDefaultRedirect(claims);
   }
 
   const hubBranchId = claims.branch_id ?? ctx.homeBranchId ?? null;
@@ -52,5 +53,5 @@ export function resolveBranchHubDestination(
     return "/br";
   }
 
-  return defaultRedirect(claims);
+  return getDefaultRedirect(claims);
 }

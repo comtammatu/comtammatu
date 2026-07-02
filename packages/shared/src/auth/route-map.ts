@@ -1,7 +1,6 @@
 import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
 import { MODULE_ACL, type ModuleKey } from "./module-acl";
 import {
-  INVENTORY_ROUTE_PREFIXES,
   isPublicAppPath,
   resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
@@ -78,7 +77,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     surface: "admin",
     entryPath: MODULE_ACL.dashboard.path,
     matchPrefixes: ["/admin"],
-    moduleKeys: ["dashboard", "reports", "settings"],
+    moduleKeys: ["dashboard", "settings"],
     primaryNav: "admin-sidebar",
     backBehavior: "none",
     breadcrumbRoot: APP_COPY_VI.adminSurface,
@@ -113,7 +112,10 @@ export const ROUTE_FAMILY_CONTRACTS = [
     label: MODULE_ACL.inventory.label,
     surface: "workspace",
     entryPath: MODULE_ACL.inventory.path,
-    matchPrefixes: [MODULE_ACL.inventory.path, ...INVENTORY_ROUTE_PREFIXES],
+    // MODULE_ACL.inventory.path ("/inventory") prefix-matches every
+    // /inventory/* sub-route already; the INVENTORY_ROUTE_PREFIXES spread
+    // here was fully redundant (D058 W3).
+    matchPrefixes: [MODULE_ACL.inventory.path],
     moduleKeys: ["inventory", "inventory_procurement"],
     primaryNav: "workspace-sidebar",
     backBehavior: "role-home",

@@ -1,6 +1,6 @@
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
-import { fetchFoodCost } from "../accounting-actions";
+import { fetchFoodCost } from "@/_lib/food-cost-actions";
 import { fetchAccessibleBranches } from "../actions";
 import {
   parseFinanceParams,

@@ -707,3 +707,24 @@ liệt kê trong báo cáo (mục 7).
 **Verification chuẩn khi nghi cache:** probe mutation — sửa 1 file `packages/*/src` rồi `turbo typecheck --filter=@comtammatu/web --dry=json`, hash phải đổi; sửa `tsconfig.base.json`, hash mọi typecheck phải đổi.
 
 **Consequences:** Gate kết quả từ cache giờ tin được ở mức cấu hình; CI vốn always-fresh nên không đổi hành vi. Đảo bất kỳ điểm nào phải sửa bản ghi này trước.
+
+## D058: IA thống nhất "Hai plane — Một chrome — Một cửa mỗi việc" + chuẩn lắp ráp trang (2026-07-03)
+
+**Decision (owner, "duyệt theo khuyến nghị" sau T3 full debate — transcript + contract: `docs/worklog/t3-ia-direction-debate-2026-07-02.md`):**
+
+1. **Hướng IA khóa:** giữ 2 route plane (Office/Management + Branch Operator theo D019/D050/D055) + station chrome; hợp nhất TOÀN BỘ chrome primitives (1 `AppHeader` — extract mới, 1 `AppBottomNav`, 1 `PwaToolbar`); mỗi việc đúng 1 cửa được quảng bá per role (cửa thua = redirect); cầu nối 2 chiều tường minh. Đây là HOÀN TẤT D050, không phải đảo. Từ chối: single responsive shell (B) và operator-first pseudo-site (C).
+2. **Ratify nav đã ship (amend D050 §6):** bottom-nav operator chính thức là `Hôm nay · Ca · Lịch · Tôi` như code hiện tại; bản ghi D050 hết hiệu lực ở điểm label.
+3. **Role `office`:** thêm quyền read `/finance`; home giữ `/employee` tới khi có workspace riêng. Phase 6 (khai tử `/employee`) mở khóa sau khi thi công điểm này.
+4. **Nhà báo cáo = `/finance`.** `/admin/reports` hub xóa (redirect); stock-movement về 1 cửa; operator giữ tối đa 1 wrapper read-only branch-scoped.
+5. **Approvals canonical = bản `/br/*`** (checkout: `/br/[id]/shift/checkout-approvals`, waste: `/br/[id]/stock/waste-approvals`); cửa office là oversight cross-branch có nhãn, không phải hàng đợi thứ hai; re-key route `/br/*/shift/checkout-approvals` về `employee_checkout_approvals` (vá lỗ cashier/chef qua route gate).
+6. **Bridge "Văn phòng" trên operator hub:** nhóm tile capability-gated, cap ≤6, chỉ link sang office plane, không nhân đôi nhà.
+7. **Floor-slice:** `/br/[id]/stock/purchase-orders` + `/stock/reports` GIỮ nhưng gate theo `inventory_procurement`/site-kind (phục vụ central-site); tile hub sinh từ `branch_kind × role`, không role-only.
+8. **Branch parity W1:** quick-wins S (wrapper GRN list `/br/[id]/stock/grn`, consumption qua `IssuesPageContent scope="consumption"`, tile PO + production); hàng M/L refactor-first (orders lookup+refund, count-assignments, supplier-returns, GRN create, HR approvals, production surface) xếp theo lộ trình, mỗi cái tách `*PageContent` trước.
+9. **Page Archetype Standard:** taxonomy 12 archetype (EMBED-WRAPPER là archetype hạng nhất; FORM-PAGE gộp vào DOC-WORKFLOW/SETTINGS-PANEL); luật shell chung = export `*PageContent({searchParams?, routeBranchId?, basePath?, embedded?})`; spec sống ở `docs/spec/page-archetypes` (chưa tạo — W5) TRỰC THUỘC design-system.md (thêm pointer § Structural Governance F); enforce bằng gate mở rộng route-manifest walker trong `scripts/check-ui-contract.mjs` (baseline chỉ giảm); 8 ngoại lệ đặt tên tường minh trong spec.
+10. **Component Registry:** bảng component → vai trò → rule vào `docs/modules/ui.md`; rule agent mới trong `docs/agent/rules/ui.md`: trước khi build trang phải tra archetype spec + registry, trả lời "dùng ở đâu" bằng codegraph / `pnpm audit:ui-components` (wire vào CI), cấm grep-mò/clone.
+11. **Claude Design project** (`Má Tư Design System`, claude.ai/design) = mirror MỘT CHIỀU repo→design; không bao giờ là authority; push sau khi spec archetype land (token v14.12 + tầng adapter + 12 recipe cards).
+12. **Yêu cầu chất lượng xuyên suốt:** chạy mượt trên fleet thật — mọi surface đổi phải QA đủ 3 viewport (phone ~375, tablet 768/1024, desktop); perf lane vào scope: code-split POS client tree, `radix-ui` vào `optimizePackageImports`, song song hóa + stream KDS/runner page fetch, mở rộng `use cache` cho read tenant-stable, chặn unbounded fetch (PO list, hr/staff).
+
+**Thứ tự thi công:** W0 guards (consistency test + re-key ACL + ma trận 7 role + generate role-route-matrix) → W1 branch relief (bridge + quick-wins S + tile site-kind) → W2 chrome (AppHeader, PwaToolbar) → W3 một cửa (canonical URLs + prune nav + scope-read) → W5 archetype (spec + registry + gate) → W6 Claude Design push. Perf items chạy xen như lane riêng. Mỗi PR 1 concern, worktree riêng, full gate fresh.
+
+**Consequences:** Amend D050 §6 (label); mở rộng D019/D050/D055. Đảo bất kỳ điểm nào phải sửa bản ghi này trước. Route-map/route-resolution drift resolve theo hướng enforcement.

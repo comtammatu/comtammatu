@@ -59,11 +59,6 @@ export default async function InventoryLayout({
       hasProductionBranchAccess);
   const showWasteApprovals = isOwner || canApproveWaste;
 
-  const defaultBranch = scope.allowedBranches.find(
-    (b) => b.id === scope.selectedBranchId,
-  );
-  const siteKind: string = defaultBranch?.branch_kind ?? "branch";
-
   return (
     <InventoryShell
       user={{
@@ -73,7 +68,6 @@ export default async function InventoryLayout({
           "",
       }}
       userRole={claims.user_role}
-      siteKind={siteKind}
       showProcurement={showProcurement}
       showProduction={showProduction}
       showCatalogManagement={isOwner || canManageCatalog}

@@ -78,7 +78,7 @@ const NOTIFICATION_SKELETON_ITEMS: NotificationItemModel[] = [
     body: "Phieu nhap can doi chieu chung tu.",
     entity_type: "grn",
     entity_id: 3,
-    action_url: "/inventory/receiving",
+    action_url: "/inventory/grn",
     meta: {},
     created_at: new Date(2026, 0, 5, 8, 5).toISOString(),
     expires_at: null,

@@ -13,7 +13,6 @@ export type ModuleLabelKey =
   | "finance"
   | "branches"
   | "branch_picker"
-  | "reports"
   | "settings"
   | "pos"
   | "kds"
@@ -43,7 +42,6 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   finance: "Tài chính",
   branches: "Chi nhánh",
   branch_picker: "Chọn chi nhánh",
-  reports: "Báo cáo",
   settings: "Cài đặt",
   pos: "POS",
   kds: "KDS",

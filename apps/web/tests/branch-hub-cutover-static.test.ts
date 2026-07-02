@@ -169,6 +169,7 @@ test("old /employee route map mirrors branch runtime pairs", () => {
     ["/employee/leave", "scheduleLeave"],
     ["/employee/payslip", "profilePayslip"],
     ["/employee/count", "stockCount"],
+    ["/employee/checkout-approvals", "checkoutApprovals"],
   ] as const;
 
   for (const [path, route] of cases) {
@@ -180,7 +181,6 @@ test("old /employee route map mirrors branch runtime pairs", () => {
   }
 
   // Paths outside the map keep their /employee surface.
-  assert.doesNotMatch(redirectLib, /"\/employee\/checkout-approvals":/);
   assert.doesNotMatch(redirectLib, /"\/employee\/permissions":/);
 });
 
