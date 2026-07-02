@@ -57,7 +57,10 @@ or agent memory.
 - Agents MAY apply migrations directly on approved dev/test Supabase servers for verification.
 - Before applying to dev/test, verify the target ref against the Environment Registry above and confirm it is not production (currently no dev/test server exists — see the registry).
 - NEVER apply migrations directly to production.
-- Production flow: open a PR, merge the PR, then the owner applies the migration manually.
+- Production flow is migration-type aware. For additive migrations that dependent
+  app code will call or read (new RPC, column, or RETURNS field), get production
+  applied before the dependent code is merged/deployed; split a DB-first PR when
+  one PR would otherwise ship code before the owner can apply the migration.
 - After the migration is applied to the schema used for generated types, run `corepack pnpm db:types`.
 - After SQL migrations and generated types are final, refresh CodeGraph per
   `AGENTS.md` → CodeGraph before closing the DB task.
@@ -91,11 +94,13 @@ session; never as a default. The mechanics that work in practice:
   (DROP COLUMN, narrowing a RETURNS, rename) breaks the *currently-deployed* app
   if its code still reads the old shape, so deploy the code that stops reading it
   FIRST, then apply. **Additive** migrations (new column/RPC, new RETURNS field)
-  are safe to apply before the code that uses them deploys. The prod Vercel
-  project `comtammatu-web` auto-deploys production from `main`, but the owner's
-  primary usage is local dev pointed at prod DB and unpushed local commits are
-  NOT deployed — so an applied destructive migration can leave the dormant Vercel
-  deploy broken-in-waiting until the code is pushed to `main` (see
+  must be applied before code that uses them reaches production; if SQL and code
+  sit in one PR, hold deployment until the owner confirms the prod apply or split
+  a DB-first PR. The prod Vercel project `comtammatu-web` auto-deploys production
+  from `main`, but the owner's primary usage is local dev pointed at prod DB and
+  unpushed local commits are NOT deployed — so an applied destructive migration
+  can leave the dormant Vercel deploy broken-in-waiting until the code is pushed
+  to `main` (see
   decisions.md D031/D033, 2026-06-16).
 - `apply_migration` stamps the ledger `version` with the apply time, not the file
   timestamp, so `schema_migrations.version` does not match the file name (464 ledger
