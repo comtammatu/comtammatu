@@ -10,6 +10,22 @@ import { resolveCentralSiteHomeBranchId } from "../app/_lib/branch-hub-device";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const proxySource = readFileSync(resolve(repoRoot, "apps/web/proxy.ts"), "utf8");
+const hrStaffActionsSource = readFileSync(
+  resolve(repoRoot, "apps/web/app/(protected)/hr/staff/actions.ts"),
+  "utf8",
+);
+const hrActionsSource = readFileSync(
+  resolve(repoRoot, "apps/web/app/(protected)/hr/actions.ts"),
+  "utf8",
+);
+const centralSiteClaimsMigration = readFileSync(
+  resolve(
+    repoRoot,
+    "supabase/migrations/20260702123000_wf10_central_site_roles_tenant_claims.sql",
+  ),
+  "utf8",
+);
+const seedSource = readFileSync(resolve(repoRoot, "supabase/seed.sql"), "utf8");
 
 function claims(
   role: JwtClaims["user_role"],
@@ -199,4 +215,51 @@ test("resolveCentralSiteHomeBranchId does not cache a failed lookup", async () =
     10,
   );
   assert.equal(okLog.fromCalls, 1);
+});
+
+test("central-site auth SQL keeps warehouse/production branch claims tenant-level", () => {
+  assert.match(
+    centralSiteClaimsMigration,
+    /v_final_role IN \('warehouse_manager', 'production_manager'\)[\s\S]*?v_final_branch := NULL;/,
+  );
+  assert.match(
+    centralSiteClaimsMigration,
+    /v_access_bucket IN \('warehouse_manager', 'production_manager'\)[\s\S]*?v_branch_id := NULL;/,
+  );
+
+  const branchRequiredFunction =
+    centralSiteClaimsMigration.match(
+      /CREATE OR REPLACE FUNCTION public\.check_branch_required\(\)[\s\S]*?\$\$;/,
+    )?.[0] ?? "";
+  assert.doesNotMatch(branchRequiredFunction, /warehouse_manager/);
+  assert.doesNotMatch(branchRequiredFunction, /production_manager/);
+});
+
+test("dev seed keeps central-site operator users tenant-scoped", () => {
+  assert.match(
+    seedSource,
+    /'warehouse@comtammatu\.vn'::text,\s*'warehouse_manager'::text,\s*NULL::bigint/,
+  );
+  assert.match(
+    seedSource,
+    /'production@comtammatu\.vn'::text,\s*'production_manager'::text,\s*NULL::bigint/,
+  );
+});
+
+test("HR create/update actions normalize central-site branch ids before auth writes", () => {
+  assert.match(
+    hrStaffActionsSource,
+    /const effectiveBranchId =\s*centralSiteBranchKindForRole\(role\) === null \? branch_id : undefined;/,
+  );
+  assert.match(hrStaffActionsSource, /branch_id: effectiveBranchId \?\? null/);
+  assert.match(
+    hrStaffActionsSource,
+    /p_branch_id: effectiveBranchId \?\? undefined/,
+  );
+
+  assert.match(
+    hrActionsSource,
+    /const effectiveBranchId =\s*centralSiteBranchKindForRole\(role\) === null \? data\.branchId : undefined;/,
+  );
+  assert.match(hrActionsSource, /branch_id: effectiveBranchId \?\? null/);
 });

@@ -225,11 +225,10 @@ BEGIN
       UNION ALL
       SELECT 'a0000008-0000-4000-8000-000000000008'::uuid, 'office@comtammatu.vn'::text, 'office'::text, NULL::bigint, 'Văn phòng'::text, 'EMP-OFF'::text
       UNION ALL
-      -- Warehouse manager: must be assigned to Kho Tổng.
-      SELECT 'a000000a-0000-4000-8000-00000000000a'::uuid, 'warehouse@comtammatu.vn'::text, 'warehouse_manager'::text, v_central_supply::bigint, 'QL Kho Tổng'::text, 'EMP-WH'::text
+      -- Central-site managers keep branch_id null; Branch Hub resolves the active site by role domain.
+      SELECT 'a000000a-0000-4000-8000-00000000000a'::uuid, 'warehouse@comtammatu.vn'::text, 'warehouse_manager'::text, NULL::bigint, 'QL Kho Tổng'::text, 'EMP-WH'::text
       UNION ALL
-      -- Production manager: must be assigned to Bếp Trung Tâm.
-      SELECT 'a000000b-0000-4000-8000-00000000000b'::uuid, 'production@comtammatu.vn'::text, 'production_manager'::text, v_central_kitchen::bigint, 'QL Bếp Trung Tâm'::text, 'EMP-PROD'::text
+      SELECT 'a000000b-0000-4000-8000-00000000000b'::uuid, 'production@comtammatu.vn'::text, 'production_manager'::text, NULL::bigint, 'QL Bếp Trung Tâm'::text, 'EMP-PROD'::text
       UNION ALL
       SELECT 'a000000c-0000-4000-8000-00000000000c'::uuid, 'manager.phuochai@comtammatu.vn'::text, 'branch_manager'::text, v_phuochai, 'QL Chi nhánh Phước Hải'::text, 'EMP-MGR-PH'::text
       UNION ALL

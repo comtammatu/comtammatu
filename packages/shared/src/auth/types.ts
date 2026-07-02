@@ -138,11 +138,11 @@ const POSITION_CODE_TO_REQUIRED_BRANCH_KIND: Record<string, BranchKind | null> =
     kitchen_helper: "branch",
     grill_counter: "branch",
     cleaner: "branch",
-    warehouse_manager: "central_supply",
-    central_supply_manager: "central_supply",
-    production_manager: "central_kitchen",
-    central_kitchen_manager: "central_kitchen",
-    head_chef: "central_kitchen",
+    warehouse_manager: null,
+    central_supply_manager: null,
+    production_manager: null,
+    central_kitchen_manager: null,
+    head_chef: null,
     waiter: "branch",
   };
 

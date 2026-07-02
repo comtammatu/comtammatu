@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   PERMISSION_KEYS,
   STAFF_ROLES,
+  centralSiteBranchKindForRole,
   requiredBranchKindForPositionCode,
   staffRoleFromPositionCode,
   type StaffRole,
@@ -290,6 +291,8 @@ export const createEmployeeAccount = withAction(
     if (!(STAFF_ROLES as readonly string[]).includes(role)) {
       return { success: false, error: "Vai trò không hợp lệ." };
     }
+    const effectiveBranchId =
+      centralSiteBranchKindForRole(role) === null ? data.branchId : undefined;
 
     const requiredBranchKind = requiredBranchKindForPositionCode(
       data.positionCode,
@@ -297,7 +300,7 @@ export const createEmployeeAccount = withAction(
     if (requiredBranchKind === "unassigned") {
       return { success: false, error: "Chức vụ không hợp lệ." };
     }
-    if (requiredBranchKind !== null && !data.branchId) {
+    if (requiredBranchKind !== null && !effectiveBranchId) {
       return {
         success: false,
         error: "Chức vụ vận hành phải thuộc một địa điểm.",
@@ -307,11 +310,11 @@ export const createEmployeeAccount = withAction(
     const service = createServiceClient();
     let branchName: string | null = null;
 
-    if (data.branchId != null) {
+    if (effectiveBranchId != null) {
       const { data: branch } = await service
         .from("branches")
         .select("branch_kind, name")
-        .eq("id", data.branchId)
+        .eq("id", effectiveBranchId)
         .eq("tenant_id", claims.tenant_id)
         .maybeSingle();
       if (!branch) {
@@ -342,7 +345,7 @@ export const createEmployeeAccount = withAction(
       }
       if (
         templateBranchId != null &&
-        templateBranchId !== (data.branchId ?? null)
+        templateBranchId !== (effectiveBranchId ?? null)
       ) {
         return {
           success: false,
@@ -358,7 +361,7 @@ export const createEmployeeAccount = withAction(
         email_confirm: true,
         app_metadata: {
           tenant_id: claims.tenant_id,
-          branch_id: data.branchId ?? null,
+          branch_id: effectiveBranchId ?? null,
           role,
           user_role: role,
           access_bucket: role,

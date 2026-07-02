@@ -5,6 +5,7 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
   MODULE_ACL,
   PERMISSION_KEYS,
+  centralSiteBranchKindForRole,
   requiredBranchKindForPositionCode,
   staffRoleFromPositionCode,
 } from "@comtammatu/shared/auth";
@@ -142,6 +143,8 @@ export async function createStaff(
   if (role === "unassigned" || role === "owner") {
     return { success: false, error: "Chức vụ không hợp lệ" };
   }
+  const effectiveBranchId =
+    centralSiteBranchKindForRole(role) === null ? branch_id : undefined;
 
   const ctx = await getAuthContextWithPermissions(
     MANAGER_ROLES,
@@ -161,13 +164,13 @@ export async function createStaff(
     supabase,
     claims.tenant_id,
     position_code,
-    branch_id,
+    effectiveBranchId,
   );
   if (siteError) return { success: false, error: siteError };
 
   // Branch managers can only create staff in their own branch
   if (claims.user_role === "branch_manager") {
-    if (branch_id !== claims.branch_id) {
+    if (effectiveBranchId !== claims.branch_id) {
       return {
         success: false,
         error: "Không có quyền tạo nhân viên ở chi nhánh khác",
@@ -184,7 +187,7 @@ export async function createStaff(
     email_confirm: true,
     app_metadata: {
       tenant_id: claims.tenant_id,
-      branch_id: branch_id ?? null,
+      branch_id: effectiveBranchId ?? null,
       role,
       user_role: role,
       access_bucket: role,
@@ -238,6 +241,8 @@ export async function updateStaff(
   if (role === "unassigned" || role === "owner") {
     return { success: false, error: "Chức vụ không hợp lệ" };
   }
+  const effectiveBranchId =
+    centralSiteBranchKindForRole(role) === null ? branch_id : undefined;
 
   const ctx = await getAuthContextWithPermissions(
     MANAGER_ROLES,
@@ -257,7 +262,7 @@ export async function updateStaff(
     supabase,
     claims.tenant_id,
     position_code,
-    branch_id,
+    effectiveBranchId,
   );
   if (siteError) return { success: false, error: siteError };
 
@@ -266,7 +271,7 @@ export async function updateStaff(
     p_full_name: full_name,
     p_phone: phone || undefined,
     p_role: position_code,
-    p_branch_id: branch_id ?? undefined,
+    p_branch_id: effectiveBranchId ?? undefined,
   });
 
   if (error) {

@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { canAccess } from "../module-acl";
 import { resolvePostLoginRedirect } from "../scope";
 import type { JwtClaims } from "../types";
+import {
+  centralSiteBranchKindForRole,
+  requiredBranchKindForPositionCode,
+} from "../types";
 import { resolveModuleFromPath } from "../route-resolution";
 import { resolveRouteFamilyContract } from "../route-map";
 
@@ -69,6 +73,38 @@ test("operator home excludes office but includes every site-attached role", () =
     assert.equal(canAccess(role, "operator_home"), true, role);
   }
   assert.equal(canAccess("office", "operator_home"), false);
+});
+
+test("central-site role positions keep tenant-level branch claims", () => {
+  assert.equal(
+    requiredBranchKindForPositionCode("warehouse_manager"),
+    null,
+  );
+  assert.equal(
+    requiredBranchKindForPositionCode("central_supply_manager"),
+    null,
+  );
+  assert.equal(
+    requiredBranchKindForPositionCode("production_manager"),
+    null,
+  );
+  assert.equal(
+    requiredBranchKindForPositionCode("central_kitchen_manager"),
+    null,
+  );
+  assert.equal(requiredBranchKindForPositionCode("head_chef"), null);
+
+  assert.equal(
+    centralSiteBranchKindForRole("warehouse_manager"),
+    "central_supply",
+  );
+  assert.equal(
+    centralSiteBranchKindForRole("production_manager"),
+    "central_kitchen",
+  );
+  assert.equal(requiredBranchKindForPositionCode("branch_manager"), "branch");
+  assert.equal(requiredBranchKindForPositionCode("cashier"), "branch");
+  assert.equal(requiredBranchKindForPositionCode("chef"), "branch");
 });
 
 test("post-login hub fallback is device and branch aware", () => {

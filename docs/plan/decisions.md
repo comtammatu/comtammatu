@@ -662,6 +662,8 @@ docs, tách lane dirty WIP, và chạy guard nhỏ (`rules-mirror`, `doc-stalene
 
 **Status (2026-07-02, hoàn thiện parity):** 3 khe hở còn lại của §1 đã đóng: `returnTo` deep-link vào đúng central site của role được giữ (qua `homeBranchId` server-computed trong `resolvePostLoginRedirect`), redirect `/employee/*` → `/br/{central-site}/...` áp cho warehouse/production (office giữ `/employee`, owner giữ `/br`), và home link shell (`resolveRoleHomeLink`) trỏ operator hub khi role có `operator_home` kèm branch trong scope.
 
+**Status (2026-07-02, WF-10 auth twin):** repo đã thêm migration `20260702123000_wf10_central_site_roles_tenant_claims.sql` để DB auth/profile twins cũng normalize `warehouse_manager`/`production_manager` về `branch_id = null`; production cần owner apply migration sau PR/merge.
+
 ## D056: Operator GRN-receive route + hướng xử lý consumption alias (2026-07-02)
 
 Ra từ đợt điều tra Inventory (multi-agent, verified vs code hiện tại). Bối cảnh:
