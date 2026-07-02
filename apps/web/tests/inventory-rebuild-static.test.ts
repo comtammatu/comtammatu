@@ -170,10 +170,24 @@ test("consumption route is first-class while issues route remains compatible", (
     inventoryNav,
     /href: "\/inventory\/consumption"[\s\S]*label: "Tiêu hao"/,
   );
-  assert.match(consumptionPage, /export \{ default \} from "\.\.\/issues\/page"/);
+  // consumption routes are real wrappers scoped to issue_type='consumption',
+  // not byte-identical re-exports of the internal-issues route.
+  assert.match(
+    consumptionPage,
+    /import \{ IssuesPageContent \} from "\.\.\/issues\/page"/,
+  );
+  assert.match(consumptionPage, /scope="consumption"/);
+  assert.match(
+    consumptionPage,
+    /consumptionBasePath="\/inventory\/consumption"/,
+  );
   assert.match(
     consumptionDetailPage,
-    /export \{ default \} from "\.\.\/\.\.\/issues\/\[id\]\/page"/,
+    /import \{ IssueDetailPageContent \} from "\.\.\/\.\.\/issues\/\[id\]\/page"/,
+  );
+  assert.match(
+    consumptionDetailPage,
+    /listBasePath="\/inventory\/consumption"/,
   );
   assert.match(issuesClient, /\/inventory\/consumption/);
   assert.match(issueDetailClient, /\/inventory\/consumption/);

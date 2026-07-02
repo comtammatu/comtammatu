@@ -11,6 +11,7 @@ import {
   resolveInventoryBranchScope,
   resolveRequestedBranchId,
 } from "../_lib/inventory-scope";
+import { tRoute } from "../_lib/dictionary";
 import { IssuesClient } from "./issues-client";
 import type {
   IssueBranchOption,
@@ -81,6 +82,40 @@ function vnBusinessDateBoundaryUtc(value: string, offsetDays = 0): string {
   ).toISOString();
 }
 
+// Scope splits the shared stock_issues surface into two route variants:
+// "consumption" (Tiêu hao) and "internal" (Xuất kho nội bộ). "all" keeps the
+// prior full-list behavior so callers that omit scope (operator branch shell)
+// are unaffected.
+type IssuesScope = "all" | "consumption" | "internal";
+
+interface ScopeConfig {
+  issueTypes: string[] | undefined;
+  showRecordedConsumptions: boolean;
+  allowedIssueTypes: string[];
+  defaultIssueType: string;
+}
+
+const SCOPE_CONFIG: Record<IssuesScope, ScopeConfig> = {
+  all: {
+    issueTypes: undefined,
+    showRecordedConsumptions: true,
+    allowedIssueTypes: ["consumption", "writeoff", "other"],
+    defaultIssueType: "consumption",
+  },
+  consumption: {
+    issueTypes: ["consumption"],
+    showRecordedConsumptions: true,
+    allowedIssueTypes: ["consumption"],
+    defaultIssueType: "consumption",
+  },
+  internal: {
+    issueTypes: ["writeoff", "other"],
+    showRecordedConsumptions: false,
+    allowedIssueTypes: ["writeoff", "other"],
+    defaultIssueType: "writeoff",
+  },
+};
+
 interface IssuesPageContentProps {
   searchParams?: Promise<{
     branchId?: string | string[];
@@ -89,6 +124,7 @@ interface IssuesPageContentProps {
   }>;
   routeBranchId?: number;
   consumptionBasePath?: string;
+  scope?: IssuesScope;
   embedded?: boolean;
 }
 
@@ -96,8 +132,10 @@ export async function IssuesPageContent({
   searchParams,
   routeBranchId,
   consumptionBasePath = "/inventory/consumption",
+  scope: scopeVariant = "all",
   embedded = false,
 }: IssuesPageContentProps) {
+  const scopeConfig = SCOPE_CONFIG[scopeVariant];
   const params = searchParams ? await searchParams : {};
   const requested =
     routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
@@ -111,53 +149,64 @@ export async function IssuesPageContent({
   }
   const branchFilter = scope.selectedBranchId ?? undefined;
 
-  let recordedConsumptionQuery = supabase
-    .from("stock_movements")
-    .select(
-      "id, branch_id, location_id, ingredient_id, quantity_change, unit_cost, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, unit )",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .eq("type", "consumption")
-    .eq("movement_subtype", "sale_consumption")
-    .order("created_at", { ascending: false });
+  // Internal-issue scope hides the sale_consumption ledger entirely; skip the
+  // query so the client renders no recordedConsumptions section. Other scopes
+  // fetch it in parallel with the stock-issue list.
+  let recordedConsumptionQuery = scopeConfig.showRecordedConsumptions
+    ? supabase
+        .from("stock_movements")
+        .select(
+          "id, branch_id, location_id, ingredient_id, quantity_change, unit_cost, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, unit )",
+        )
+        .eq("tenant_id", claims.tenant_id)
+        .eq("type", "consumption")
+        .eq("movement_subtype", "sale_consumption")
+        .order("created_at", { ascending: false })
+    : null;
 
-  if (branchFilter != null) {
-    recordedConsumptionQuery = recordedConsumptionQuery.eq(
-      "branch_id",
-      branchFilter,
-    );
-  } else if (claims.branch_id) {
-    recordedConsumptionQuery = recordedConsumptionQuery.eq(
-      "branch_id",
-      claims.branch_id,
-    );
-  }
-  if (startDate) {
-    recordedConsumptionQuery = recordedConsumptionQuery.gte(
-      "created_at",
-      vnBusinessDateBoundaryUtc(startDate),
-    );
-  }
-  if (endDate) {
-    recordedConsumptionQuery = recordedConsumptionQuery.lt(
-      "created_at",
-      vnBusinessDateBoundaryUtc(endDate, 1),
-    );
-  }
-  if (!hasRecordedDateFilter) {
-    recordedConsumptionQuery = recordedConsumptionQuery.limit(50);
+  if (recordedConsumptionQuery) {
+    if (branchFilter != null) {
+      recordedConsumptionQuery = recordedConsumptionQuery.eq(
+        "branch_id",
+        branchFilter,
+      );
+    } else if (claims.branch_id) {
+      recordedConsumptionQuery = recordedConsumptionQuery.eq(
+        "branch_id",
+        claims.branch_id,
+      );
+    }
+    if (startDate) {
+      recordedConsumptionQuery = recordedConsumptionQuery.gte(
+        "created_at",
+        vnBusinessDateBoundaryUtc(startDate),
+      );
+    }
+    if (endDate) {
+      recordedConsumptionQuery = recordedConsumptionQuery.lt(
+        "created_at",
+        vnBusinessDateBoundaryUtc(endDate, 1),
+      );
+    }
+    if (!hasRecordedDateFilter) {
+      recordedConsumptionQuery = recordedConsumptionQuery.limit(50);
+    }
   }
 
   const [res, recordedConsumptionRes] = await Promise.all([
-    fetchStockIssues(
-      branchFilter != null ? { branchId: branchFilter } : undefined,
-    ),
+    fetchStockIssues({
+      ...(branchFilter != null ? { branchId: branchFilter } : {}),
+      ...(scopeConfig.issueTypes
+        ? { issueTypes: scopeConfig.issueTypes }
+        : {}),
+    }),
     recordedConsumptionQuery,
   ]);
+
   const dbRows = res.success
     ? (res.data as Array<Record<string, unknown>>)
     : [];
-  const recordedConsumptionRows = (recordedConsumptionRes.data ?? []) as Array<
+  const recordedConsumptionRows = (recordedConsumptionRes?.data ?? []) as Array<
     Record<string, unknown>
   >;
   const scopedBranchOptions =
@@ -215,6 +264,12 @@ export async function IssuesPageContent({
       };
     });
 
+  // Desktop route variants derive their heading/section title from the route
+  // dictionary so each variant shows its own label; "all" (operator shell)
+  // leaves it undefined so the client keeps its Tiêu hao default.
+  const pageTitle =
+    scopeVariant === "all" ? undefined : tRoute(consumptionBasePath);
+
   return (
     <IssuesClient
       issues={issues}
@@ -226,6 +281,9 @@ export async function IssuesPageContent({
       recordedIsLimited={!hasRecordedDateFilter}
       recordedStartDate={startDate ?? ""}
       consumptionBasePath={consumptionBasePath}
+      allowedIssueTypes={scopeConfig.allowedIssueTypes}
+      defaultIssueType={scopeConfig.defaultIssueType}
+      pageTitle={pageTitle}
       embedded={embedded}
     />
   );
@@ -240,5 +298,11 @@ export default async function IssuesPage({
     startDate?: string | string[];
   }>;
 }) {
-  return <IssuesPageContent searchParams={searchParams} />;
+  return (
+    <IssuesPageContent
+      searchParams={searchParams}
+      scope="internal"
+      consumptionBasePath="/inventory/issues"
+    />
+  );
 }

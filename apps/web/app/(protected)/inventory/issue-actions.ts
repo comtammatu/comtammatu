@@ -45,11 +45,13 @@ const issueLineDeleteSchema = z.object({
 const fetchStockIssuesSchema = z.object({
   branchId: z.coerce.number().int().positive().optional(),
   status: z.string().optional(),
+  issueTypes: z.array(z.string()).optional(),
 });
 
 export async function fetchStockIssues(opts?: {
   branchId?: number;
   status?: string;
+  issueTypes?: string[];
 }): Promise<ActionResult> {
   const parsed = fetchStockIssuesSchema.safeParse(opts ?? {});
   if (!parsed.success) {
@@ -75,6 +77,9 @@ export async function fetchStockIssues(opts?: {
   }
   if (parsed.data.status) {
     query = query.eq("status", parsed.data.status);
+  }
+  if (parsed.data.issueTypes && parsed.data.issueTypes.length > 0) {
+    query = query.in("issue_type", parsed.data.issueTypes);
   }
   if (claims.branch_id) {
     query = query.eq("branch_id", claims.branch_id);

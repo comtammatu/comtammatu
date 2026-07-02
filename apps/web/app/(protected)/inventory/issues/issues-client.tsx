@@ -153,6 +153,9 @@ export function IssuesClient({
   recordedIsLimited,
   recordedStartDate: initialRecordedStartDate,
   consumptionBasePath = "/inventory/consumption",
+  allowedIssueTypes = ["consumption", "writeoff", "other"],
+  defaultIssueType = "consumption",
+  pageTitle,
   embedded = false,
 }: {
   issues: IssueRow[];
@@ -164,6 +167,9 @@ export function IssuesClient({
   recordedIsLimited: boolean;
   recordedStartDate: string;
   consumptionBasePath?: string;
+  allowedIssueTypes?: string[];
+  defaultIssueType?: string;
+  pageTitle?: string;
   embedded?: boolean;
 }) {
   const router = useRouter();
@@ -185,10 +191,17 @@ export function IssuesClient({
   const createIssueDefaultValues = useMemo<CreateIssueValues>(
     () => ({
       branchId: defaultBranchId ? String(defaultBranchId) : "",
-      issueType: "consumption",
+      issueType: defaultIssueType as CreateIssueValues["issueType"],
       notes: "",
     }),
-    [defaultBranchId],
+    [defaultBranchId, defaultIssueType],
+  );
+  const allowedCreateIssueTypes = ISSUE_TYPES.filter((option) =>
+    allowedIssueTypes.includes(option.value),
+  );
+  const allowedTypeFilterOptions = TYPE_FILTER_OPTIONS.filter(
+    (option) =>
+      option.value === "all" || allowedIssueTypes.includes(option.value),
   );
   // Capability-gated only — the CSV builds client-side and downloads fine
   // on phones; hiding it by breakpoint forced warehouse staff back to a
@@ -406,7 +419,7 @@ export function IssuesClient({
             <SelectValue placeholder="Tất cả loại xuất" />
           </SelectTrigger>
           <SelectContent>
-            {TYPE_FILTER_OPTIONS.map((opt) => (
+            {allowedTypeFilterOptions.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
               </SelectItem>
@@ -710,7 +723,7 @@ export function IssuesClient({
     <>
       <AppPageHeader
         eyebrow="Kho hàng"
-        title={tNav("consumption", "navigation")}
+        title={pageTitle ?? tNav("consumption", "navigation")}
         actions={
           <>
             {showExportAction && (
@@ -731,57 +744,62 @@ export function IssuesClient({
         }
       />
 
-      <AppSection
-        title="Tiêu hao đã ghi nhận"
-        headerHint={visibleRecordedConsumptionHint}
-        action={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleExportRecordedCsv}
-          >
-            <IconFileDownload className="size-4" />
-            Xuất CSV
-          </Button>
-        }
-        contentFlush
-      >
-        {recordedConsumptionFilterBar}
-        <div className="grid gap-3 border-b p-3 sm:grid-cols-3">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">Dòng hiển thị</span>
-            <span className="font-mono text-sm font-semibold">
-              {visibleRecordedConsumptions.length}/{recordedConsumptions.length}
-            </span>
+      {recordedConsumptions.length > 0 && (
+        <AppSection
+          title="Tiêu hao đã ghi nhận"
+          headerHint={visibleRecordedConsumptionHint}
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleExportRecordedCsv}
+            >
+              <IconFileDownload className="size-4" />
+              Xuất CSV
+            </Button>
+          }
+          contentFlush
+        >
+          {recordedConsumptionFilterBar}
+          <div className="grid gap-3 border-b p-3 sm:grid-cols-3">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">
+                Dòng hiển thị
+              </span>
+              <span className="font-mono text-sm font-semibold">
+                {visibleRecordedConsumptions.length}/
+                {recordedConsumptions.length}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">
+                Tổng thành tiền
+              </span>
+              <span className="font-mono text-sm font-semibold">
+                {formatVND(visibleRecordedConsumptionTotal)}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Phạm vi</span>
+              <span className="text-sm font-medium">
+                {recordedConsumptionHeaderHint}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">
-              Tổng thành tiền
-            </span>
-            <span className="font-mono text-sm font-semibold">
-              {formatVND(visibleRecordedConsumptionTotal)}
-            </span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">Phạm vi</span>
-            <span className="text-sm font-medium">
-              {recordedConsumptionHeaderHint}
-            </span>
-          </div>
-        </div>
-        <DataTable
-          columns={recordedConsumptionColumns}
-          data={visibleRecordedConsumptions}
-          getRowKey={(item) => item.id}
-          emptyTitle="Chưa có tiêu hao đã ghi nhận"
-          emptyDescription="Các báo cáo tiêu hao đã duyệt sẽ xuất hiện ở đây sau khi trừ kho."
-          emptyMode="no-data"
-          mobileCardRender={renderRecordedConsumptionCard}
-        />
-      </AppSection>
+          <DataTable
+            columns={recordedConsumptionColumns}
+            data={visibleRecordedConsumptions}
+            getRowKey={(item) => item.id}
+            emptyTitle="Chưa có tiêu hao đã ghi nhận"
+            emptyDescription="Các báo cáo tiêu hao đã duyệt sẽ xuất hiện ở đây sau khi trừ kho."
+            emptyMode="no-data"
+            mobileCardRender={renderRecordedConsumptionCard}
+          />
+        </AppSection>
+      )}
 
-      <AppSection title="Phiếu tiêu hao" contentFlush>
+      <AppSection title={pageTitle ?? "Phiếu tiêu hao"} contentFlush>
         {filterBar}
         <DataTable
           columns={issueColumns}
@@ -833,7 +851,7 @@ export function IssuesClient({
                 control={form.control}
                 name="issueType"
                 label="Loại xuất"
-                options={ISSUE_TYPES.map((option) => ({
+                options={allowedCreateIssueTypes.map((option) => ({
                   value: option.value,
                   label:
                     option.value === "consumption"
