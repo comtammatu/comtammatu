@@ -576,7 +576,8 @@ export async function fetchOpenPurchaseOrdersForReceiving(): Promise<
     )
     .eq("tenant_id", claims.tenant_id)
     .in("status", ["sent", "partially_received"])
-    .order("ordered_at", { ascending: false });
+    .order("ordered_at", { ascending: false })
+    .limit(100);
 
   if (
     (claims.user_role === "warehouse_manager" ||

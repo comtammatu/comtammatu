@@ -293,22 +293,35 @@ export default async function KdsPage({
   const branchIdNum = Number(branchId);
   const { startIso: todayStartIso } = getVNDayUtcRange(getVNDateString());
 
-  const { data: rawStations, error: stationsError } = await supabase
-    .from("kds_stations")
-    .select("id, name, position, is_active")
-    .eq("branch_id", branchIdNum)
-    .eq("is_active", true)
-    .order("position");
+  // Stations, tickets, and permission flags are mutually independent — fetch
+  // them together instead of waterfalling. Station-category mapping and the
+  // ticket→orders/items/batches chain are each a real dependency (need
+  // resolved station ids / ticket ids respectively) and stay sequential
+  // relative to their inputs, but run concurrently with each other below.
+  const [stationsRes, ticketResult, [canMarkReady, canRecall]] =
+    await Promise.all([
+      supabase
+        .from("kds_stations")
+        .select("id, name, position, is_active")
+        .eq("branch_id", branchIdNum)
+        .eq("is_active", true)
+        .order("position"),
+      fetchVisibleKdsTickets({
+        supabase,
+        branchId: branchIdNum,
+        todayStartIso,
+      }),
+      Promise.all([
+        currentUserHasPermission(branchIdNum, "kds:mark_ready"),
+        currentUserHasPermission(branchIdNum, "kds:recall"),
+      ]),
+    ]);
+
+  const { data: rawStations, error: stationsError } = stationsRes;
 
   if (stationsError) {
     return <KdsStatusShell description={KDS_VI.stationsLoadFailed} />;
   }
-
-  const ticketResult = await fetchVisibleKdsTickets({
-    supabase,
-    branchId: branchIdNum,
-    todayStartIso,
-  });
 
   if (ticketResult.error) {
     return <KdsStatusShell description={KDS_VI.queueLoadFailed} />;
@@ -317,73 +330,64 @@ export default async function KdsPage({
   const stations = (rawStations ?? []) as KdsStation[];
   const tickets = ticketResult.tickets;
 
-  // Fallback station detection: a station with zero category mappings receives
-  // unrouted items. Surface these as menu categories missing station config.
-  let fallbackStationIds: number[] = [];
-  if (stations.length > 0) {
-    const { data: mappingRows } = await supabase
-      .from("kds_station_categories")
-      .select("station_id")
-      .in(
-        "station_id",
-        stations.map((s) => s.id),
-      );
-    const mapped = new Set(
-      ((mappingRows ?? []) as { station_id: number }[]).map(
-        (r) => r.station_id,
-      ),
-    );
-    fallbackStationIds = stations
-      .filter((s) => !mapped.has(s.id))
-      .map((s) => s.id);
-  }
-
-  const [canMarkReady, canRecall] = await Promise.all([
-    currentUserHasPermission(branchIdNum, "kds:mark_ready"),
-    currentUserHasPermission(branchIdNum, "kds:recall"),
-  ]);
-
   const orderIds = uniqueNumbers(tickets.map((t) => t.order_id));
   const orderItemIds = uniqueNumbers(tickets.map((t) => t.order_item_id));
-
-  let orders: KdsOrderInfo[] = [];
-  let orderItems: KdsOrderItem[] = [];
-  let kitchenBatches: KdsKitchenSendBatch[] = [];
-
-  if (orderIds.length > 0) {
-    const [ordersRes, itemsRes] = await Promise.all([
-      fetchKdsOrdersByIds({
-        supabase,
-        branchId: branchIdNum,
-        orderIds,
-      }),
-      fetchKdsOrderItemsByIds({ supabase, orderItemIds }),
-    ]);
-
-    if (ordersRes.error || itemsRes.error) {
-      return <KdsStatusShell description={KDS_VI.queueDetailLoadFailed} />;
-    }
-
-    orders = ordersRes.data ?? [];
-    orderItems = itemsRes.data ?? [];
-  }
-
   const batchIds = uniqueNumbers(
     tickets
       .map((ticket) => ticket.kitchen_send_batch_id)
       .filter((id): id is number => id !== null),
   );
 
-  if (batchIds.length > 0) {
-    const batchRes = await fetchKdsKitchenBatchesByIds({
-      supabase,
-      batchIds,
-    });
-    if (batchRes.error) {
-      return <KdsStatusShell description={KDS_VI.ticketCountLoadFailed} />;
-    }
-    kitchenBatches = batchRes.data ?? [];
+  // Station-category mapping (depends on stations) and the ticket-derived
+  // orders/items/batches fetches (depend on tickets) share no inputs, so run
+  // them concurrently. The orders/items pair and the batches fetch are
+  // likewise mutually independent — only the ticket→{orders,items,batches}
+  // edge is a real dependency.
+  const [mappingRows, ordersRes, itemsRes, batchRes] = await Promise.all([
+    stations.length > 0
+      ? supabase
+          .from("kds_station_categories")
+          .select("station_id")
+          .in(
+            "station_id",
+            stations.map((s) => s.id),
+          )
+          .then((res) => res.data)
+      : Promise.resolve(null),
+    orderIds.length > 0
+      ? fetchKdsOrdersByIds({ supabase, branchId: branchIdNum, orderIds })
+      : Promise.resolve({ data: [] as KdsOrderInfo[], error: null }),
+    orderIds.length > 0
+      ? fetchKdsOrderItemsByIds({ supabase, orderItemIds })
+      : Promise.resolve({ data: [] as KdsOrderItem[], error: null }),
+    batchIds.length > 0
+      ? fetchKdsKitchenBatchesByIds({ supabase, batchIds })
+      : Promise.resolve({ data: [] as KdsKitchenSendBatch[], error: null }),
+  ]);
+
+  // Fallback station detection: a station with zero category mappings receives
+  // unrouted items. Surface these as menu categories missing station config.
+  const mapped = new Set(
+    ((mappingRows ?? []) as { station_id: number }[]).map(
+      (r) => r.station_id,
+    ),
+  );
+  const fallbackStationIds = stations
+    .filter((s) => !mapped.has(s.id))
+    .map((s) => s.id);
+
+  if (ordersRes.error || itemsRes.error) {
+    return <KdsStatusShell description={KDS_VI.queueDetailLoadFailed} />;
   }
+
+  const orders: KdsOrderInfo[] = ordersRes.data ?? [];
+  const orderItems: KdsOrderItem[] = itemsRes.data ?? [];
+
+  if (batchRes.error) {
+    return <KdsStatusShell description={KDS_VI.ticketCountLoadFailed} />;
+  }
+
+  const kitchenBatches: KdsKitchenSendBatch[] = batchRes.data ?? [];
 
   return (
     <KdsBoard

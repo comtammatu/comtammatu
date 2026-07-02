@@ -27,8 +27,6 @@ import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import { PosTableGate } from "./pos-table-gate";
 import { PosTakeawayGate } from "./pos-takeaway-gate";
 import { ItemCustomizer } from "./item-customizer";
-import { BillReceipt } from "./_components/bill/bill-receipt-sheet";
-import { OrderDetailSheet } from "./order-detail-sheet";
 import { PosSessionHeader } from "./pos-session-header";
 import { MenuPane } from "./_components/menu-pane";
 import { PosMobileActionBar } from "./_components/pos-mobile-action-bar";
@@ -44,17 +42,14 @@ import {
   type OrderTarget,
 } from "./_components/pos-order-target-row";
 
-// Lazy-load 3 modals OFF the cash path. Trims first-paint JS by ~14KB
-// minified (Sheet/Drawer/Card deps) without affecting payment latency.
+// Lazy-load these modals OFF the cash path, code-splitting their JS out of
+// the initial POS bundle. Trims first-paint JS without affecting payment
+// latency, PROVIDED the chunk is warm by the time it's needed — see the
+// idle-prefetch effect below for BillReceipt/OrderDetailSheet.
 //
 // HotkeyOverlay: rare ?-key help.
 // CloseSessionSheet: once per shift via F10.
 // MultiOrderTablePicker: only when cashier taps an occupied table.
-//
-// BillReceipt + OrderDetailSheet + ItemCustomizer stay EAGER — they
-// participate in HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN +
-// HDDT-FORM-PAYLOAD-FREEZE-AT-CLICK + POS-PAYMENT-REUSE-UNIQUE-SLOT;
-// any chunk-load latency mid-payment is an unrecoverable cash risk.
 const HotkeyOverlay = dynamic(
   () =>
     import("./_components/hotkey-overlay").then((m) => ({
@@ -85,6 +80,24 @@ const ArchivedOrdersSheet = dynamic(
     })),
   { ssr: false },
 );
+// BillReceipt + OrderDetailSheet are the two heaviest eager sheets (bill
+// pulls qrcode via payment-qr-code.tsx; order-detail pulls its full item/
+// void/discount/transfer sub-component tree). Code-split like the modals
+// above, but participate in HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN +
+// HDDT-FORM-PAYLOAD-FREEZE-AT-CLICK + POS-PAYMENT-REUSE-UNIQUE-SLOT, so a
+// cold chunk-load at the moment the cashier opens either sheet is an
+// unrecoverable cash-flow risk. The idle-prefetch effect below fetches both
+// chunks shortly after mount so they are warm long before first use.
+const loadBillReceipt = () =>
+  import("./_components/bill/bill-receipt-sheet").then((m) => ({
+    default: m.BillReceipt,
+  }));
+const loadOrderDetailSheet = () =>
+  import("./order-detail-sheet").then((m) => ({
+    default: m.OrderDetailSheet,
+  }));
+const BillReceipt = dynamic(loadBillReceipt, { ssr: false });
+const OrderDetailSheet = dynamic(loadOrderDetailSheet, { ssr: false });
 import { fetchActiveOrderForTable, editPendingOrderItem } from "./actions";
 import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
 import { usePosAppend } from "./_hooks/use-pos-append";
@@ -230,6 +243,22 @@ export function PosDesktopInner({
     },
     [branchId, session.id, router],
   );
+
+  // Warm the BillReceipt/OrderDetailSheet chunks during browser idle time so
+  // the code-split above never costs a spinner at payment time — by the time
+  // the cashier taps a table or order, both chunks are already fetched.
+  useEffect(() => {
+    const prefetch = () => {
+      void loadBillReceipt();
+      void loadOrderDetailSheet();
+    };
+    if (typeof requestIdleCallback === "function") {
+      const handle = requestIdleCallback(prefetch, { timeout: 2000 });
+      return () => cancelIdleCallback(handle);
+    }
+    const timer = setTimeout(prefetch, 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const [customizerItem, setCustomizerItem] = useState<MenuItem | null>(null);
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
