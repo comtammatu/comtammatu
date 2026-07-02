@@ -291,7 +291,7 @@ export function EmployeeInlineState({
           <Icon />
         </ItemMedia>
       ) : null}
-      {title || description || children ? (
+      {title || description ? (
         <ItemContent className="min-w-0">
           {title ? (
             <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
@@ -303,12 +303,12 @@ export function EmployeeInlineState({
               {description}
             </ItemDescription>
           ) : null}
-          {children}
         </ItemContent>
       ) : null}
       {actions ? (
         <ItemActions className="ml-auto shrink-0">{actions}</ItemActions>
       ) : null}
+      {children ? <div className="basis-full min-w-0">{children}</div> : null}
     </Item>
   );
 }

@@ -118,14 +118,14 @@ export function TasksClient({
                     key={item.id}
                     variant="outline"
                     className={cn(
-                      "items-center bg-card transition-[transform,background-color,border-color,box-shadow] duration-150 sm:flex-nowrap",
+                      "flex-col items-start bg-card transition-[transform,background-color,border-color,box-shadow] duration-150",
                       item.done
                         ? "border-success/30 bg-success/5"
                         : "hover:bg-muted/50",
                       disabled && "bg-muted/40",
                     )}
                   >
-                    <ItemContent>
+                    <ItemContent className="w-full min-w-0">
                       <ItemTitle
                         className={cn(
                           "w-full text-sm leading-5",
@@ -149,7 +149,7 @@ export function TasksClient({
                         </ItemDescription>
                       ) : null}
                     </ItemContent>
-                    <ItemActions className="ml-auto shrink-0">
+                    <ItemActions className="w-full flex-wrap justify-start">
                       {item.isRequired ? (
                         <Badge variant="outline">{taskCopy.required}</Badge>
                       ) : null}
