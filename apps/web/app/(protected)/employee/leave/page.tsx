@@ -1,14 +1,11 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { CalendarDays as IconCalendarDays } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { loadAuthState } from "@/_lib/auth";
 import { getEmployeeContext } from "../_lib/employee-context";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/employee-page";
-import { resolveEmployeeBranchRuntimePath } from "../_lib/branch-runtime-redirect";
 import { LeaveRequestClient } from "./leave-client";
 import { messages } from "@lib/messages";
 
@@ -102,14 +99,7 @@ export async function EmployeeLeavePageContent({
   );
 }
 
-export default async function EmployeeLeavePage() {
-  const { claims } = await loadAuthState();
-  const branchRuntimePath = resolveEmployeeBranchRuntimePath(
-    claims,
-    "scheduleLeave",
-  );
-  if (branchRuntimePath) redirect(branchRuntimePath);
-
+export default function EmployeeLeavePage() {
   return <EmployeeLeavePageContent />;
 }
 

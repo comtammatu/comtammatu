@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-import { loadAuthState } from "@/_lib/auth";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { PayslipClient } from "./payslip-client";
 import {
@@ -7,10 +5,6 @@ import {
   EmployeePage,
 } from "../components/employee-page";
 import { YearPicker } from "./year-picker";
-import {
-  appendSearchParams,
-  resolveEmployeeBranchRuntimePath,
-} from "../_lib/branch-runtime-redirect";
 import { getTodayVN } from "../_lib/vn-business-date";
 import { messages } from "@lib/messages";
 
@@ -73,19 +67,9 @@ export async function PayslipPageContent(props: {
   );
 }
 
-export default async function PayslipPage(props: {
+export default function PayslipPage(props: {
   searchParams: Promise<{ year?: string }>;
 }) {
-  const { claims } = await loadAuthState();
-  const branchRuntimePath = resolveEmployeeBranchRuntimePath(
-    claims,
-    "profilePayslip",
-  );
-  if (branchRuntimePath) {
-    const { year } = await props.searchParams;
-    redirect(appendSearchParams(branchRuntimePath, { year }));
-  }
-
   return <PayslipPageContent searchParams={props.searchParams} />;
 }
 

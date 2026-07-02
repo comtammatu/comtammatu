@@ -1,19 +1,13 @@
-import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getVNDateString } from "@comtammatu/shared/time";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { getEmployeeContext } from "../_lib/employee-context";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/employee-page";
-import {
-  appendSearchParams,
-  resolveEmployeeBranchRuntimePath,
-} from "../_lib/branch-runtime-redirect";
 import { CountSlipClient } from "./count-client";
 
 const copy = messages.employee.count;
@@ -330,18 +324,8 @@ async function resolveBranchName(
   return data?.name ?? null;
 }
 
-export default async function EmployeeCountPage(props: {
+export default function EmployeeCountPage(props: {
   searchParams: Promise<{ location?: string }>;
 }) {
-  const { claims } = await loadAuthState();
-  const branchRuntimePath = resolveEmployeeBranchRuntimePath(
-    claims,
-    "stockCount",
-  );
-  if (branchRuntimePath) {
-    const { location } = await props.searchParams;
-    redirect(appendSearchParams(branchRuntimePath, { location }));
-  }
-
   return <EmployeeCountPageContent searchParams={props.searchParams} />;
 }

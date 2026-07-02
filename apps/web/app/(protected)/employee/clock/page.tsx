@@ -1,18 +1,15 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import {
   CalendarDays as IconCalendarDays,
   ListChecks as IconListChecks,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/employee-page";
 import { getTodayWorkState } from "../_lib/today-work-state";
-import { resolveEmployeeBranchRuntimePath } from "../_lib/branch-runtime-redirect";
 import { ClockClient } from "./clock-client";
 
 const copy = messages.employee.home;
@@ -77,13 +74,6 @@ export async function ClockPageContent({
   );
 }
 
-export default async function ClockPage() {
-  const { claims } = await loadAuthState();
-  const branchRuntimePath = resolveEmployeeBranchRuntimePath(
-    claims,
-    "shiftClock",
-  );
-  if (branchRuntimePath) redirect(branchRuntimePath);
-
+export default function ClockPage() {
   return <ClockPageContent />;
 }
