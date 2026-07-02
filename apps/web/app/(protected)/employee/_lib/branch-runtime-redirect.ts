@@ -21,6 +21,21 @@ const BRANCH_RUNTIME_PATHS = {
   stockCount: "/stock/count",
 } satisfies Record<BranchRuntimeRoute, string>;
 
+// Legacy /employee entrypoints and their branch-runtime equivalents. The
+// proxy consumes this map so redirects happen before pages render; paths
+// missing from the map (checkout-approvals, permissions) stay on /employee.
+const LEGACY_EMPLOYEE_ROUTES: Record<string, BranchRuntimeRoute> = {
+  "/employee": "home",
+  "/employee/clock": "shiftClock",
+  "/employee/tasks": "shiftTasks",
+  "/employee/schedule": "shiftSchedule",
+  "/employee/attendance": "shiftSchedule",
+  "/employee/profile": "profile",
+  "/employee/leave": "scheduleLeave",
+  "/employee/payslip": "profilePayslip",
+  "/employee/count": "stockCount",
+};
+
 export function resolveEmployeeBranchRuntimePath(
   claims: JwtClaims,
   route: BranchRuntimeRoute,
@@ -34,6 +49,15 @@ export function resolveEmployeeBranchRuntimePath(
   }
 
   return `/br/${claims.branch_id}${BRANCH_RUNTIME_PATHS[route]}`;
+}
+
+export function resolveLegacyEmployeeBranchRuntimePath(
+  claims: JwtClaims,
+  pathname: string,
+): string | null {
+  const route = LEGACY_EMPLOYEE_ROUTES[pathname];
+  if (!route) return null;
+  return resolveEmployeeBranchRuntimePath(claims, route);
 }
 
 export function appendSearchParams(

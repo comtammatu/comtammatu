@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import {
   Camera as IconCamera,
   CheckCircle2 as IconDone,
@@ -8,7 +7,6 @@ import {
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Progress } from "@comtammatu/ui/components/progress";
-import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
 import {
@@ -18,7 +16,6 @@ import {
   EmployeePanel,
   EmployeeStatusStrip,
 } from "../components/employee-page";
-import { resolveEmployeeBranchRuntimePath } from "../_lib/branch-runtime-redirect";
 import { getTodayWorkState } from "../_lib/today-work-state";
 import { formatTimeVN } from "../_lib/vn-business-date";
 import { EmployeeCountPanelContent } from "../count/page";
@@ -250,17 +247,10 @@ export async function EmployeeTasksPageContent({
   );
 }
 
-export default async function EmployeeTasksPage({
+export default function EmployeeTasksPage({
   searchParams,
 }: {
   searchParams: Promise<{ location?: string }>;
 }) {
-  const { claims } = await loadAuthState();
-  const branchRuntimePath = resolveEmployeeBranchRuntimePath(
-    claims,
-    "shiftTasks",
-  );
-  if (branchRuntimePath) redirect(branchRuntimePath);
-
   return <EmployeeTasksPageContent searchParams={searchParams} />;
 }

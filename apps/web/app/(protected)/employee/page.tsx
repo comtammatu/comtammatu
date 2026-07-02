@@ -1,6 +1,5 @@
 import type { ElementType, ReactNode } from "react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import {
   Camera as IconCamera,
   CheckCircle2 as IconDone,
@@ -30,7 +29,6 @@ import {
   type TodayWorkState,
   type TodayWorkStatus,
 } from "./_lib/today-work-state";
-import { resolveEmployeeBranchRuntimePath } from "./_lib/branch-runtime-redirect";
 import { formatDateVN, formatTimeVN } from "./_lib/vn-business-date";
 import { AppEmptyState } from "@/components/surface";
 import { TasksClient } from "./tasks/tasks-client";
@@ -672,11 +670,5 @@ export async function EmployeeHomePageContent({
 
 export default async function EmployeePage() {
   const authState = await loadAuthState();
-  const { claims } = authState;
-  const branchRuntimePath = resolveEmployeeBranchRuntimePath(claims, "home");
-  if (branchRuntimePath) {
-    redirect(branchRuntimePath);
-  }
-
   return <EmployeeHomePageContent authState={authState} />;
 }

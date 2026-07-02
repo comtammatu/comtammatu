@@ -49,48 +49,76 @@ test("employee runtime redirect sends owner to the branch picker", () => {
   );
 });
 
-test("employee portal home delegates branch-runtime roles to Branch Hub", () => {
-  const employeeHome = read("apps/web/app/(protected)/employee/page.tsx");
+test("proxy redirects legacy /employee entrypoints to branch runtime", () => {
+  const proxy = read("apps/web/proxy.ts");
 
-  assert.match(
-    employeeHome,
-    /resolveEmployeeBranchRuntimePath\(claims, "home"\)/,
+  assert.match(proxy, /resolveLegacyEmployeeBranchRuntimePath/);
+  assert.match(proxy, /pathname\.startsWith\("\/employee"\)/);
+  // Redirect happens before module ACL resolution.
+  assert.ok(
+    proxy.indexOf("resolveLegacyEmployeeBranchRuntimePath(") <
+      proxy.indexOf("resolveModuleFromPath(pathname)"),
+    "legacy employee redirect must run before module ACL",
   );
-  assert.match(employeeHome, /redirect\(branchRuntimePath\)/);
-  assert.doesNotMatch(employeeHome, /OPERATION_HANDOFFS/);
 });
 
-test("employee legacy entrypoints redirect to branch runtime equivalents", () => {
+test("legacy employee route map mirrors branch runtime pairs", () => {
+  const redirectLib = read(
+    "apps/web/app/(protected)/employee/_lib/branch-runtime-redirect.ts",
+  );
+
   const cases = [
-    ["clock/page.tsx", "shiftClock"],
-    ["tasks/page.tsx", "shiftTasks"],
-    ["schedule/page.tsx", "shiftSchedule"],
-    ["profile/page.tsx", "profile"],
-    ["leave/page.tsx", "scheduleLeave"],
-    ["payslip/page.tsx", "profilePayslip"],
-    ["count/page.tsx", "stockCount"],
+    ["/employee", "home"],
+    ["/employee/clock", "shiftClock"],
+    ["/employee/tasks", "shiftTasks"],
+    ["/employee/schedule", "shiftSchedule"],
+    ["/employee/attendance", "shiftSchedule"],
+    ["/employee/profile", "profile"],
+    ["/employee/leave", "scheduleLeave"],
+    ["/employee/payslip", "profilePayslip"],
+    ["/employee/count", "stockCount"],
   ] as const;
 
   for (const [path, route] of cases) {
-    const source = read(`apps/web/app/(protected)/employee/${path}`);
     assert.match(
-      source,
-      new RegExp(
-        `resolveEmployeeBranchRuntimePath\\(\\s*claims,\\s*"${route}"`,
-      ),
+      redirectLib,
+      new RegExp(`"${path.replaceAll("/", "\\/")}": "${route}"`),
       path,
     );
-    assert.match(source, /redirect\(/, path);
   }
+
+  // Paths outside the map keep their /employee surface.
+  assert.doesNotMatch(redirectLib, /"\/employee\/checkout-approvals":/);
+  assert.doesNotMatch(redirectLib, /"\/employee\/permissions":/);
 });
 
-test("employee branch-runtime redirects preserve query state where needed", () => {
-  const payslip = read("apps/web/app/(protected)/employee/payslip/page.tsx");
-  const count = read("apps/web/app/(protected)/employee/count/page.tsx");
+test("proxy preserves query string on legacy employee redirects", () => {
+  const proxy = read("apps/web/proxy.ts");
 
-  assert.match(payslip, /appendSearchParams\(branchRuntimePath, \{ year \}\)/);
   assert.match(
-    count,
-    /appendSearchParams\(branchRuntimePath, \{ location \}\)/,
+    proxy,
+    /const url = request\.nextUrl\.clone\(\);\s*url\.pathname = branchRuntimePath;\s*return redirectWithCookies\(url, response\);/,
   );
+});
+
+test("employee pages no longer run page-level branch runtime redirects", () => {
+  const pages = [
+    "page.tsx",
+    "clock/page.tsx",
+    "tasks/page.tsx",
+    "schedule/page.tsx",
+    "attendance/page.tsx",
+    "profile/page.tsx",
+    "leave/page.tsx",
+    "payslip/page.tsx",
+    "count/page.tsx",
+  ] as const;
+
+  for (const path of pages) {
+    const source = read(`apps/web/app/(protected)/employee/${path}`);
+    assert.doesNotMatch(source, /resolveEmployeeBranchRuntimePath/, path);
+  }
+
+  const employeeHome = read("apps/web/app/(protected)/employee/page.tsx");
+  assert.doesNotMatch(employeeHome, /OPERATION_HANDOFFS/);
 });

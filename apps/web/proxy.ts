@@ -16,6 +16,7 @@ import {
   type ModuleKey,
 } from "@comtammatu/shared/auth";
 import { resolveBranchHubContextFromHeaders } from "@/_lib/branch-hub-device";
+import { resolveLegacyEmployeeBranchRuntimePath } from "@/(protected)/employee/_lib/branch-runtime-redirect";
 import { getClientIp } from "@lib/network/client-ip";
 
 // Module-level flag — emit one warning per warm Edge instance when the POS
@@ -158,6 +159,23 @@ export async function proxy(request: NextRequest) {
   // `user_role` or `position`.
   if (!claims) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
+  }
+
+  // Legacy /employee entrypoints: branch-runtime roles are redirected to the
+  // /br/{branchId} equivalent before module ACL runs. Roles without
+  // operator_home access (office, warehouse/production managers) fall through
+  // and keep using /employee. Query string is preserved (payslip ?year,
+  // count ?location).
+  if (pathname.startsWith("/employee")) {
+    const branchRuntimePath = resolveLegacyEmployeeBranchRuntimePath(
+      claims,
+      pathname,
+    );
+    if (branchRuntimePath) {
+      const url = request.nextUrl.clone();
+      url.pathname = branchRuntimePath;
+      return redirectWithCookies(url, response);
+    }
   }
 
   if (
