@@ -35,12 +35,15 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   ]);
 
   // Build staff query — role is derived from positions.code via the role-bridge mapper.
+  // Role/owner filtering happens in JS below (position→role bucket is a
+  // mapping table, not a column), so bound the fetch itself instead.
   let query = supabase
     .from("profiles")
     .select(
       "id, full_name, phone, branch_id, position_id, is_active, positions(code, label_vi), branches(name)",
     )
-    .order("full_name");
+    .order("full_name")
+    .limit(500);
 
   if (params.branch) {
     query = query.eq("branch_id", Number(params.branch));
