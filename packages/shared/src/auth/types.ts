@@ -146,6 +146,24 @@ const POSITION_CODE_TO_REQUIRED_BRANCH_KIND: Record<string, BranchKind | null> =
     waiter: "branch",
   };
 
+/**
+ * Central-site operator roles (D055 §1, soft-routing): their JWT claims stay
+ * tenant-level (`branch_id` null); the proxy and Branch Hub route them to
+ * their central site by matching `branches.branch_kind` instead of pinning
+ * a branch into the JWT (pinning would lock their tenant-wide inventory
+ * scope).
+ */
+const CENTRAL_SITE_ROLE_BRANCH_KINDS: Partial<Record<StaffRole, BranchKind>> = {
+  warehouse_manager: "central_supply",
+  production_manager: "central_kitchen",
+};
+
+export function centralSiteBranchKindForRole(
+  role: StaffRole,
+): BranchKind | null {
+  return CENTRAL_SITE_ROLE_BRANCH_KINDS[role] ?? null;
+}
+
 export function staffRoleFromPositionCode(
   code: string | null | undefined,
 ): StaffRole | "unassigned" {

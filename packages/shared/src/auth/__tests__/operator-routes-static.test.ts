@@ -57,12 +57,17 @@ test("operator route families use operator bottom nav", () => {
   }
 });
 
-test("operator home excludes office but includes active branch roles", () => {
-  for (const role of ["owner", "branch_manager", "cashier", "chef"] as const) {
+test("operator home excludes office but includes every site-attached role", () => {
+  for (const role of [
+    "owner",
+    "branch_manager",
+    "cashier",
+    "chef",
+    "warehouse_manager",
+    "production_manager",
+  ] as const) {
     assert.equal(canAccess(role, "operator_home"), true, role);
   }
-  assert.equal(canAccess("warehouse_manager", "operator_home"), false);
-  assert.equal(canAccess("production_manager", "operator_home"), false);
   assert.equal(canAccess("office", "operator_home"), false);
 });
 
@@ -99,12 +104,22 @@ test("post-login returnTo cannot cross branch-scoped operator routes", () => {
     resolvePostLoginRedirect(claims("cashier", 7), "/br/8/shift", phone),
     "/br/7",
   );
+  // Central-site role without a resolved home site: cross-site returnTo
+  // falls back to /employee (claims stay tenant-level, D055 §1).
   assert.equal(
     resolvePostLoginRedirect(
-      claims("warehouse_manager", 7),
+      claims("warehouse_manager", null),
       "/br/8/stock",
       phone,
     ),
     "/employee",
+  );
+  // With a resolved central home site, the fallback is that site's hub.
+  assert.equal(
+    resolvePostLoginRedirect(claims("warehouse_manager", null), "/br/8/stock", {
+      ...phone,
+      homeBranchId: 10,
+    }),
+    "/br/10",
   );
 });

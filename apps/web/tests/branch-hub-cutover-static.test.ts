@@ -31,11 +31,29 @@ test("proxy passes device context into post-login redirect", () => {
 test("login action passes device context into post-login redirect", () => {
   const actions = read("apps/web/app/(public)/(auth)/login/actions.ts");
 
-  assert.match(actions, /resolveBranchHubContextFromHeaders/);
   assert.match(
     actions,
-    /resolvePostLoginRedirect\(\s*claims,\s*returnTo,\s*resolveBranchHubContextFromHeaders\(await headers\(\)\),?\s*\)/,
+    /resolveBranchHubContextFromHeaders\(await headers\(\)\)/,
   );
+  assert.match(
+    actions,
+    /resolvePostLoginRedirect\(claims, returnTo, branchHubContext\)/,
+  );
+});
+
+test("post-login redirect call sites resolve the central-site home branch (D055 §1)", () => {
+  for (const path of [
+    "apps/web/app/page.tsx",
+    "apps/web/app/(public)/(auth)/login/actions.ts",
+    "apps/web/proxy.ts",
+  ]) {
+    const source = read(path);
+    assert.match(
+      source,
+      /homeBranchId: await resolveCentralSiteHomeBranchId\(supabase, claims\)/,
+      path,
+    );
+  }
 });
 
 test("employee runtime redirect sends owner to the branch picker", () => {

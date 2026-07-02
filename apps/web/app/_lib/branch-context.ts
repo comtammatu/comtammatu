@@ -1,5 +1,9 @@
 import { cache } from "react";
-import type { JwtClaims, StaffRole } from "@comtammatu/shared/auth";
+import {
+  centralSiteBranchKindForRole,
+  type JwtClaims,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 
 export interface OperatorBranchOption {
   id: number;
@@ -50,8 +54,9 @@ const OPERATOR_TENANT_WIDE_ROLES: readonly StaffRole[] = ["owner"];
 
 function operatorBranches(
   branches: readonly OperatorBranchOption[],
+  operableKind: string,
 ): OperatorBranchOption[] {
-  return branches.filter((branch) => branch.branch_kind === "branch");
+  return branches.filter((branch) => branch.branch_kind === operableKind);
 }
 
 function pickDefaultBranchId(
@@ -105,18 +110,27 @@ export function selectBranchScope(
 /**
  * Operator scope diverges from inventory scope on purpose: only owner is
  * tenant-wide (office is not), and only branch_kind "branch" sites are
- * operable. Inventory covers every active branch kind for owner + office.
+ * operable — except central-site roles (D055 §1 soft-routing): with
+ * tenant-level claims (branch_id null) they operate the active sites whose
+ * branch_kind matches their central domain. Inventory covers every active
+ * branch kind for owner + office.
  */
 export function selectOperatorBranchScope(
   claims: JwtClaims,
   branches: readonly OperatorBranchOption[],
   requestedBranchId: number | null,
 ): BranchScopeSelection {
+  const centralSiteKind =
+    claims.branch_id == null
+      ? centralSiteBranchKindForRole(claims.user_role)
+      : null;
   const scope = selectBranchScope(
     claims,
-    operatorBranches(branches),
+    operatorBranches(branches, centralSiteKind ?? "branch"),
     requestedBranchId,
-    OPERATOR_TENANT_WIDE_ROLES,
+    centralSiteKind
+      ? [...OPERATOR_TENANT_WIDE_ROLES, claims.user_role]
+      : OPERATOR_TENANT_WIDE_ROLES,
   );
 
   return {

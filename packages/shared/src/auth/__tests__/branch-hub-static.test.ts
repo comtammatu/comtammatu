@@ -54,17 +54,51 @@ test("resolveBranchHubDestination -> pinned operator lands on branch home", () =
   );
 });
 
-test("resolveBranchHubDestination -> central inventory roles keep current fallback", () => {
+test("resolveBranchHubDestination -> central-site roles land on their resolved home site", () => {
   for (const role of ["warehouse_manager", "production_manager"] as const) {
     assert.equal(
-      resolveBranchHubDestination(claims(role, 5), {
+      resolveBranchHubDestination(claims(role, null), {
+        standaloneStation: null,
+        isDesktop: false,
+        homeBranchId: 9,
+      }),
+      "/br/9",
+      role,
+    );
+  }
+});
+
+test("resolveBranchHubDestination -> central-site roles without a home site keep /employee", () => {
+  for (const role of ["warehouse_manager", "production_manager"] as const) {
+    assert.equal(
+      resolveBranchHubDestination(claims(role, null), {
         standaloneStation: null,
         isDesktop: false,
       }),
       "/employee",
       role,
     );
+    assert.equal(
+      resolveBranchHubDestination(claims(role, null), {
+        standaloneStation: null,
+        isDesktop: false,
+        homeBranchId: null,
+      }),
+      "/employee",
+      role,
+    );
   }
+});
+
+test("resolveBranchHubDestination -> homeBranchId never overrides pinned claims", () => {
+  assert.equal(
+    resolveBranchHubDestination(claims("cashier", 2), {
+      standaloneStation: null,
+      isDesktop: false,
+      homeBranchId: 9,
+    }),
+    "/br/2",
+  );
 });
 
 test("resolveBranchHubDestination -> owner phone without branch lands on picker", () => {
@@ -82,6 +116,15 @@ test("resolveBranchHubDestination -> office phone keeps current role fallback", 
     resolveBranchHubDestination(claims("office", null), {
       standaloneStation: null,
       isDesktop: false,
+    }),
+    "/employee",
+  );
+  // Office stays home on /employee even when a caller passes a home site.
+  assert.equal(
+    resolveBranchHubDestination(claims("office", null), {
+      standaloneStation: null,
+      isDesktop: false,
+      homeBranchId: 9,
     }),
     "/employee",
   );

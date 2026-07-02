@@ -657,3 +657,5 @@ docs, tách lane dirty WIP, và chạy guard nhỏ (`rules-mirror`, `doc-stalene
 3. **`/employee` giữ nguyên làm home cho `office`** (và cho warehouse/production tới khi §1 thi công xong) — đây là trạng thái CHỦ ĐÍCH, không phải leftover; cấm xóa `/employee` khi còn role home ở đó.
 
 **Consequences:** Mở rộng D050 (không đảo). Khi thi công §1 phải sửa `MODULE_ACL.operator_home.allowedRoles`, JWT hook branch assignment, network-gate central-site, và bản ghi này (đánh dấu đã thi công). Đảo hướng (giữ warehouse/production ở `/employee` vĩnh viễn) phải sửa bản ghi này trước.
+
+**Status (2026-07-02):** §1 đã thi công theo soft-routing (code-only, không đổi JWT/DB): claims của warehouse/production giữ tenant-level (`branch_id` null), proxy gate `/br/{id}` theo `branches.branch_kind` khớp domain role (`central_supply`/`central_kitchen`, site active); station POS/KDS/runner vẫn khóa branch-kind `branch`.

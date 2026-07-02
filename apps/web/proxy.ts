@@ -3,6 +3,7 @@ import { updateSession } from "@comtammatu/database/supabase/middleware";
 import {
   buildAccessDeniedPath,
   canAccess,
+  centralSiteBranchKindForRole,
   extractClaimsFromAccessToken,
   isAdminRole,
   isAdminRoutePath,
@@ -15,7 +16,10 @@ import {
   type JwtClaims,
   type ModuleKey,
 } from "@comtammatu/shared/auth";
-import { resolveBranchHubContextFromHeaders } from "@/_lib/branch-hub-device";
+import {
+  resolveBranchHubContextFromHeaders,
+  resolveCentralSiteHomeBranchId,
+} from "@/_lib/branch-hub-device";
 import { resolveLegacyEmployeeBranchRuntimePath } from "@/(protected)/employee/_lib/branch-runtime-redirect";
 import { getClientIp } from "@lib/network/client-ip";
 
@@ -30,10 +34,52 @@ type BranchSurfaceGate = {
   isActive: boolean | null;
 };
 
-// Per-warm-instance cache of the POS/KDS/runner branch-surface gate lookup.
-// Key includes tenant_id so an entry can never be reused across tenants. Value
-// is null when no matching branch row exists for that tenant.
+// Per-warm-instance cache of the branch-surface gate lookup (POS/KDS/runner
+// surfaces and central-site scope checks). Key includes tenant_id so an entry
+// can never be reused across tenants. Value is null when no matching branch
+// row exists for that tenant.
 const BRANCH_SURFACE_CACHE = new Map<string, BranchSurfaceGate | null>();
+
+type ProxySupabase = Awaited<ReturnType<typeof updateSession>>["supabase"];
+
+async function getBranchSurface(
+  supabase: ProxySupabase,
+  tenantId: number,
+  branchId: number,
+): Promise<BranchSurfaceGate | null> {
+  const branchSurfaceKey = `${String(tenantId)}:${String(branchId)}`;
+  let branchSurface = BRANCH_SURFACE_CACHE.get(branchSurfaceKey);
+  if (branchSurface === undefined) {
+    const { data: branchRow } = await supabase
+      .from("branches")
+      .select("branch_kind, is_active")
+      .eq("id", branchId)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+    branchSurface = branchRow
+      ? {
+          branchKind: (branchRow.branch_kind as string | undefined) ?? null,
+          isActive:
+            typeof branchRow.is_active === "boolean"
+              ? branchRow.is_active
+              : null,
+        }
+      : null;
+    BRANCH_SURFACE_CACHE.set(branchSurfaceKey, branchSurface);
+  }
+  return branchSurface;
+}
+
+function branchSurfaceAllows(
+  branchSurface: BranchSurfaceGate | null,
+  requiredBranchKind: string,
+): boolean {
+  return (
+    branchSurface !== null &&
+    branchSurface.branchKind === requiredBranchKind &&
+    branchSurface.isActive === true
+  );
+}
 
 /** Create a redirect that preserves Set-Cookie from updateSession response */
 function redirectWithCookies(
@@ -60,12 +106,16 @@ function redirectToAccessDenied(
   return redirectWithCookies(url, sessionResponse);
 }
 
-function redirectToDefaultLanding(
+async function redirectToDefaultLanding(
   request: NextRequest,
   sessionResponse: NextResponse,
+  supabase: ProxySupabase,
   claims: JwtClaims,
-): NextResponse {
-  const branchHubContext = resolveBranchHubContextFromHeaders(request.headers);
+): Promise<NextResponse> {
+  const branchHubContext = {
+    ...resolveBranchHubContextFromHeaders(request.headers),
+    homeBranchId: await resolveCentralSiteHomeBranchId(supabase, claims),
+  };
   const url = new URL(
     resolvePostLoginRedirect(claims, null, branchHubContext),
     request.nextUrl.origin,
@@ -124,9 +174,10 @@ export async function proxy(request: NextRequest) {
     // Authenticated → bounce to role's post-login destination.
     if (claims) {
       const returnTo = request.nextUrl.searchParams.get("returnTo");
-      const branchHubContext = resolveBranchHubContextFromHeaders(
-        request.headers,
-      );
+      const branchHubContext = {
+        ...resolveBranchHubContextFromHeaders(request.headers),
+        homeBranchId: await resolveCentralSiteHomeBranchId(supabase, claims),
+      };
       const url = new URL(
         resolvePostLoginRedirect(claims, returnTo, branchHubContext),
         request.nextUrl.origin,
@@ -182,7 +233,7 @@ export async function proxy(request: NextRequest) {
     (pathname === "/br" || pathname === "/br/") &&
     claims.user_role !== "owner"
   ) {
-    return redirectToDefaultLanding(request, response, claims);
+    return redirectToDefaultLanding(request, response, supabase, claims);
   }
 
   // Module ACL: each route resolves to a ModuleKey, and the user's role
@@ -196,7 +247,7 @@ export async function proxy(request: NextRequest) {
         isAdminRoutePath(pathname) ||
         (moduleKey === "employee" && isAdminRole(claims.user_role))
       ) {
-        return redirectToDefaultLanding(request, response, claims);
+        return redirectToDefaultLanding(request, response, supabase, claims);
       }
 
       return redirectToAccessDenied(
@@ -227,16 +278,38 @@ export async function proxy(request: NextRequest) {
     if (pathMatch) {
       const routeBranchId = Number(pathMatch[1]);
       const allowCrossBranch = claims.user_role === "owner";
+      // Central-site soft-routing (D055 §1): warehouse/production managers
+      // keep tenant-level claims (branch_id null); instead of a claims match
+      // they may enter /br/{id} ONLY when the target branch is active and its
+      // branch_kind matches the role's central domain.
+      const centralSiteKind =
+        claims.branch_id === null
+          ? centralSiteBranchKindForRole(claims.user_role)
+          : null;
 
       if (
         !allowCrossBranch &&
         (claims.branch_id === null || claims.branch_id !== routeBranchId)
       ) {
-        return redirectToAccessDenied(
-          request,
-          response,
-          "branch-scope-mismatch",
+        if (centralSiteKind === null) {
+          return redirectToAccessDenied(
+            request,
+            response,
+            "branch-scope-mismatch",
+          );
+        }
+        const branchSurface = await getBranchSurface(
+          supabase,
+          claims.tenant_id,
+          routeBranchId,
         );
+        if (!branchSurfaceAllows(branchSurface, centralSiteKind)) {
+          return redirectToAccessDenied(
+            request,
+            response,
+            "branch-scope-mismatch",
+          );
+        }
       }
 
       const isStationRoute =
@@ -245,32 +318,18 @@ export async function proxy(request: NextRequest) {
         isStationRoute || pathname.startsWith(`/br/${routeBranchId}/stock`);
 
       if (needsBranchSurface) {
-        const branchSurfaceKey = `${String(claims.tenant_id)}:${String(routeBranchId)}`;
-        let branchSurface = BRANCH_SURFACE_CACHE.get(branchSurfaceKey);
-        if (branchSurface === undefined) {
-          const { data: branchRow } = await supabase
-            .from("branches")
-            .select("branch_kind, is_active")
-            .eq("id", routeBranchId)
-            .eq("tenant_id", claims.tenant_id)
-            .maybeSingle();
-          branchSurface = branchRow
-            ? {
-                branchKind:
-                  (branchRow.branch_kind as string | undefined) ?? null,
-                isActive:
-                  typeof branchRow.is_active === "boolean"
-                    ? branchRow.is_active
-                    : null,
-              }
-            : null;
-          BRANCH_SURFACE_CACHE.set(branchSurfaceKey, branchSurface);
-        }
-        if (
-          branchSurface === null ||
-          branchSurface.branchKind !== "branch" ||
-          branchSurface.isActive !== true
-        ) {
+        // Stations (POS/KDS/runner) stay branch-kind "branch" — central sites
+        // have no POS. Central-site roles get their matching kind ONLY for
+        // the non-station /br/{id}/stock surfaces.
+        const requiredBranchKind = isStationRoute
+          ? "branch"
+          : (centralSiteKind ?? "branch");
+        const branchSurface = await getBranchSurface(
+          supabase,
+          claims.tenant_id,
+          routeBranchId,
+        );
+        if (!branchSurfaceAllows(branchSurface, requiredBranchKind)) {
           return redirectToAccessDenied(
             request,
             response,
@@ -345,7 +404,7 @@ export async function proxy(request: NextRequest) {
   } else if (isAdminRoutePath(pathname)) {
     // Admin route with no module mapping — redirect to default landing
     // to avoid serving admin pages without ACL enforcement.
-    return redirectToDefaultLanding(request, response, claims);
+    return redirectToDefaultLanding(request, response, supabase, claims);
   }
 
   return response;

@@ -12,6 +12,7 @@ const BRANCHES: OperatorBranchOption[] = [
   { id: 1, name: "Branch 1", branch_kind: "branch" },
   { id: 2, name: "Branch 2", branch_kind: "branch" },
   { id: 10, name: "Central Kitchen", branch_kind: "central_kitchen" },
+  { id: 20, name: "Central Supply", branch_kind: "central_supply" },
 ];
 
 function claims(
@@ -75,6 +76,48 @@ test("selectOperatorBranchScope -> office has no operator branch scope", () => {
   assert.equal(selected.canSwitchBranch, false);
 });
 
+test("selectOperatorBranchScope -> warehouse manager operates only central_supply sites", () => {
+  const selected = selectOperatorBranchScope(
+    claims("warehouse_manager", null),
+    BRANCHES,
+    null,
+  );
+
+  assert.deepEqual(
+    selected.allowedBranches.map((branch) => branch.id),
+    [20],
+  );
+  assert.equal(selected.currentBranchId, 20);
+  assert.equal(selected.canSwitchBranch, false);
+});
+
+test("selectOperatorBranchScope -> production manager operates only central_kitchen sites", () => {
+  const selected = selectOperatorBranchScope(
+    claims("production_manager", null),
+    BRANCHES,
+    null,
+  );
+
+  assert.deepEqual(
+    selected.allowedBranches.map((branch) => branch.id),
+    [10],
+  );
+  assert.equal(selected.currentBranchId, 10);
+});
+
+test("selectOperatorBranchScope -> central-site roles cannot select regular or foreign-kind sites", () => {
+  assert.equal(
+    selectOperatorBranchScope(claims("warehouse_manager", null), BRANCHES, 1)
+      .currentBranchId,
+    20,
+  );
+  assert.equal(
+    selectOperatorBranchScope(claims("warehouse_manager", null), BRANCHES, 10)
+      .currentBranchId,
+    20,
+  );
+});
+
 test("selectBranchScope -> tenant-wide roles see every branch kind", () => {
   const scope = selectBranchScope(claims("office", null), BRANCHES, null, [
     "owner",
@@ -83,7 +126,7 @@ test("selectBranchScope -> tenant-wide roles see every branch kind", () => {
 
   assert.deepEqual(
     scope.allowedBranches.map((branch) => branch.id),
-    [1, 2, 10],
+    [1, 2, 10, 20],
   );
   assert.equal(scope.canSelectAll, true);
   assert.equal(scope.selectedBranchId, 1);

@@ -66,6 +66,29 @@ test("resolveOperatorTiles -> office has no operator plane tiles", () => {
   assert.deepEqual(resolveOperatorTiles("office", 1), []);
 });
 
+test("resolveOperatorTiles -> central-site roles get stock tools without POS/KDS", () => {
+  for (const role of ["warehouse_manager", "production_manager"] as const) {
+    const groups = resolveOperatorTiles(role, 15);
+    const stock = groups.find((group) => group.id === "stock");
+    const moduleKeys = groups.flatMap((group) =>
+      group.tiles.map((tile) => tile.moduleKey),
+    );
+
+    assert.ok(stock, `${role} must get a stock group`);
+    assert.ok(
+      (stock?.tiles.length ?? 0) > 0,
+      `${role} stock group must be non-empty`,
+    );
+    assert.ok(
+      stock?.tiles.some((tile) => tile.href === "/br/15/stock"),
+      role,
+    );
+    assert.equal(moduleKeys.includes("pos"), false, role);
+    assert.equal(moduleKeys.includes("kds"), false, role);
+    assert.equal(moduleKeys.includes("runner"), false, role);
+  }
+});
+
 test("resolveOperatorTiles -> drops empty groups", () => {
   assert.equal(
     resolveOperatorTiles("chef", 1).every((group) => group.tiles.length > 0),

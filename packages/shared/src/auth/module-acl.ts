@@ -145,7 +145,14 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   operator_home: {
     path: "/br/*",
-    allowedRoles: ["owner", "branch_manager", "cashier", "chef"],
+    allowedRoles: [
+      "owner",
+      "branch_manager",
+      "cashier",
+      "chef",
+      "warehouse_manager",
+      "production_manager",
+    ],
     label: getModuleLabelVi("operator_home"),
   },
   branch_dashboard: {

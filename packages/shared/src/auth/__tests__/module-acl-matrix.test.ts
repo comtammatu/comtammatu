@@ -73,12 +73,14 @@ const EXPECTED_MATRIX: Record<
     "inventory",
     "inventory_procurement",
     "notifications",
+    "operator_home",
   ],
   production_manager: [
     "employee",
     "inventory",
     "inventory_procurement",
     "notifications",
+    "operator_home",
   ],
 };
 

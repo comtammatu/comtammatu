@@ -6,6 +6,13 @@ export type StationKind = "pos" | "kds" | "runner";
 export interface BranchHubContext {
   standaloneStation: StationKind | null;
   isDesktop: boolean;
+  /**
+   * Resolved home site for roles whose claims carry no branch (D055 §1
+   * soft-routing: central-site operators keep `branch_id` null in the JWT).
+   * Callers resolve it via `resolveCentralSiteHomeBranchId`; the resolver
+   * only consumes it when `claims.branch_id` is null.
+   */
+  homeBranchId?: number | null;
 }
 
 function isAdminRole(role: JwtClaims["user_role"]): boolean {
@@ -36,11 +43,9 @@ export function resolveBranchHubDestination(
     return defaultRedirect(claims);
   }
 
-  if (
-    claims.branch_id != null &&
-    canAccess(claims.user_role, "operator_home")
-  ) {
-    return `/br/${claims.branch_id}`;
+  const hubBranchId = claims.branch_id ?? ctx.homeBranchId ?? null;
+  if (hubBranchId != null && canAccess(claims.user_role, "operator_home")) {
+    return `/br/${hubBranchId}`;
   }
 
   if (isAdminRole(claims.user_role)) {
