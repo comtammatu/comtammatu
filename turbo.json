@@ -1,6 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": [".env.local", "apps/web/.env.local"],
   "ui": "tui",
   "tasks": {
     "build": {
@@ -38,11 +38,15 @@
         "MOMO_SECRET_KEY",
         "MOMO_SANDBOX",
         "MOMO_REDIRECT_URL",
+        "MOMO_ALLOW_LOCALHOST",
         "VIETQR_API_KEY",
         "VIETQR_BANK_ID",
         "VIETQR_ACCOUNT_NO",
         "VIETQR_ACCOUNT_NAME",
         "CRON_SECRET",
+        "SEPAY_WEBHOOK_SECRET",
+        "DISABLE_LOGIN_RATE_LIMIT",
+        "ENABLE_DEBUG_CLAIMS",
         "HDDT_ARCHIVE_ENABLED",
         "HDDT_DAILY_SUMMARY_ENABLED",
         "HDDT_RECONCILE_ENABLED"
@@ -59,27 +63,20 @@
       ]
     },
     "lint": {
-      "inputs": [
-        "**/*.ts",
-        "**/*.tsx",
-        "**/*.js",
-        "**/*.cjs",
-        "**/*.mjs",
-        ".eslintrc*",
-        "eslint.config.*",
-        "tsconfig*.json",
-        "package.json"
-      ]
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/eslint.config.mjs"]
     },
     "typecheck": {
-      "inputs": [
-        "**/*.ts",
-        "**/*.tsx",
-        "tsconfig*.json",
-        "package.json"
-      ]
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.base.json"]
     },
     "test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@comtammatu/web#test": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/supabase/migrations/**"],
       "outputs": []
     },
     "dev": {

@@ -687,3 +687,21 @@ scoped + cờ `embedded`. Nợ thật là IA/nhãn/URL collision, không phải 
 lại của báo cáo điều tra (UI-ROOT-A/B, WF-03 pagination, WF-04 report RPC, WF-07/08
 count/stocktake, v.v.) vẫn mở, chờ owner chọn slice tiếp theo; cổng quyết định owner
 liệt kê trong báo cáo (mục 7).
+
+## D057: Chốt kiến trúc Turborepo — cache phải sound, package tiêu thụ source trực tiếp (2026-07-02)
+
+**Context:** Bài học "cache turbo nói xanh nhưng chạy fresh thì đỏ" có nguyên nhân cấu hình, không phải bản chất turbo: `typecheck`/`lint`/`test` không khai `dependsOn` nên sửa `packages/*/src` không làm mất hiệu lực cache gate của `apps/web` (probe dry-run: hash không đổi); config dùng chung ở root (`tsconfig.base.json`, `eslint.config.mjs`) không nằm trong hash của bất kỳ task nào; input kiểu `**/*.ts` còn hash cả 2004 file `.next/**` sinh ra khi dev → hash không ổn định.
+
+**Decision:**
+
+1. **Mô hình package giữ nguyên:** internal packages export thẳng `src/*.ts` (Just-in-Time, không build step); chỉ 2 app có build. Không thêm build/dist cho packages.
+2. **Mọi task gate (`typecheck`/`lint`/`test`) khai `dependsOn: ["^build"]`** — phantom task `^build` của packages không chạy gì nhưng mang hash file của package vào cache key (đã probe xác nhận trong repo này).
+3. **Inputs dùng `$TURBO_DEFAULT$` (chỉ file git-tracked)** thay cho glob tay: loại `.next/**` khỏi hash, tự bao gồm `eslint-i18n-baseline.json` + tsconfig/package.json per-package. Config root vào hash qua `$TURBO_ROOT$/tsconfig.base.json` (typecheck) và `$TURBO_ROOT$/eslint.config.mjs` (lint). `@comtammatu/web#test` thêm `$TURBO_ROOT$/supabase/migrations/**` (static tests đọc migration ngoài package).
+4. **`globalDependencies` thu hẹp** về đúng 2 file build thật sự đọc: `.env.local`, `apps/web/.env.local` (bỏ `apps/web/.env.test.local` — chỉ Playwright ngoài turbo dùng).
+5. **`@comtammatu/web#build` env khai đủ** các biến runtime đọc: bổ sung `SEPAY_WEBHOOK_SECRET`, `DISABLE_LOGIN_RATE_LIMIT`, `ENABLE_DEBUG_CLAIMS`, `MOMO_ALLOW_LOCALHOST`; giữ `envMode` strict.
+6. **`apps/print-agent` + `packages/print-render` có `lint: eslint src/`** — trước đây 2 package in tiền/renderer chưa từng qua gate lint.
+7. **9 guard script root giữ nguyên ngoài turbo** (~1.5s tổng, input trải docs/scripts/git-state — cache hoá là tự tạo lại lớp staleness vừa vá). Cấm pipe nuốt exit code (`pnpm lint | tail`).
+
+**Verification chuẩn khi nghi cache:** probe mutation — sửa 1 file `packages/*/src` rồi `turbo typecheck --filter=@comtammatu/web --dry=json`, hash phải đổi; sửa `tsconfig.base.json`, hash mọi typecheck phải đổi.
+
+**Consequences:** Gate kết quả từ cache giờ tin được ở mức cấu hình; CI vốn always-fresh nên không đổi hành vi. Đảo bất kỳ điểm nào phải sửa bản ghi này trước.

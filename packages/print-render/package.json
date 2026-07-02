@@ -10,6 +10,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
     "test": "tsx --test src/__tests__/*.test.ts",
     "fonts:embed": "node scripts/embed-fonts.mjs"
   },
