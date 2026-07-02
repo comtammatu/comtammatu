@@ -1,6 +1,6 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: legacy inline Vietnamese copy in order merge sibling dialog */
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: baseline inline Vietnamese copy in order merge sibling dialog */
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { formatVND } from "@comtammatu/shared/format";

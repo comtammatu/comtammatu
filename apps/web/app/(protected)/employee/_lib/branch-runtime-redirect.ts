@@ -21,7 +21,7 @@ const BRANCH_RUNTIME_PATHS = {
   stockCount: "/stock/count",
 } satisfies Record<BranchRuntimeRoute, string>;
 
-// Legacy /employee entrypoints and their branch-runtime equivalents. The
+// Old /employee entrypoints and their branch-runtime equivalents. The
 // proxy consumes this map so redirects happen before pages render; paths
 // missing from the map (checkout-approvals, permissions) stay on /employee.
 const LEGACY_EMPLOYEE_ROUTES: Record<string, BranchRuntimeRoute> = {

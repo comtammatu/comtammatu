@@ -1,6 +1,6 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: legacy inline Vietnamese copy in menu import dialog */
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: baseline inline Vietnamese copy in menu import dialog */
 
 import { useState, useTransition } from "react";
 import {

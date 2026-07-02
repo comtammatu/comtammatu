@@ -212,7 +212,7 @@ export async function proxy(request: NextRequest) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
 
-  // Legacy /employee entrypoints: branch-runtime roles are redirected to the
+  // Old /employee entrypoints: branch-runtime roles are redirected to the
   // /br/{branchId} equivalent before module ACL runs. Central-site roles
   // (D055 §1) resolve their home site via the cached branch_kind lookup;
   // roles without operator_home access (office) fall through and keep using

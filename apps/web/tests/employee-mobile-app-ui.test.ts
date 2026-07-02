@@ -451,7 +451,7 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   assert.match(
     employeeScheduleClientSource,
     /leaveHref = "\/employee\/leave"/,
-    "Schedule should keep the legacy employee leave route as the default leave action",
+    "Schedule should keep the old employee leave route as the default leave action",
   );
   assert.match(
     employeeScheduleClientSource,

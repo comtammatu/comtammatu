@@ -1,6 +1,6 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: legacy inline Vietnamese copy in finance invoice list */
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: baseline inline Vietnamese copy in finance invoice list */
 
 import { useMemo, useState, useTransition } from "react";
 import { z } from "zod";

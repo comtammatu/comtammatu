@@ -136,7 +136,7 @@ test("employee runtime redirect keeps pinned operators on their claims branch", 
   );
 });
 
-test("proxy redirects legacy /employee entrypoints to branch runtime", () => {
+test("proxy redirects old /employee entrypoints to branch runtime", () => {
   const proxy = read("apps/web/proxy.ts");
 
   assert.match(proxy, /resolveLegacyEmployeeBranchRuntimePath/);
@@ -150,11 +150,11 @@ test("proxy redirects legacy /employee entrypoints to branch runtime", () => {
   assert.ok(
     proxy.indexOf("resolveLegacyEmployeeBranchRuntimePath(") <
       proxy.indexOf("resolveModuleFromPath(pathname)"),
-    "legacy employee redirect must run before module ACL",
+    "old /employee redirect must run before module ACL",
   );
 });
 
-test("legacy employee route map mirrors branch runtime pairs", () => {
+test("old /employee route map mirrors branch runtime pairs", () => {
   const redirectLib = read(
     "apps/web/app/(protected)/employee/_lib/branch-runtime-redirect.ts",
   );
@@ -184,7 +184,7 @@ test("legacy employee route map mirrors branch runtime pairs", () => {
   assert.doesNotMatch(redirectLib, /"\/employee\/permissions":/);
 });
 
-test("proxy preserves query string on legacy employee redirects", () => {
+test("proxy preserves query string on old /employee redirects", () => {
   const proxy = read("apps/web/proxy.ts");
 
   assert.match(

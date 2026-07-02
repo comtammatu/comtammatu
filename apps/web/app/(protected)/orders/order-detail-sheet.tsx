@@ -1,6 +1,6 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: legacy inline Vietnamese copy in order detail sheet */
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: baseline inline Vietnamese copy in order detail sheet */
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
