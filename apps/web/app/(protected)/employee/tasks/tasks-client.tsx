@@ -11,10 +11,10 @@ import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Item,
-  ItemActions,
   ItemContent,
   ItemDescription,
   ItemGroup,
+  ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -118,56 +118,25 @@ export function TasksClient({
                     key={item.id}
                     variant="outline"
                     className={cn(
-                      "flex-col items-start bg-card transition-[transform,background-color,border-color,box-shadow] duration-150",
+                      "items-start bg-card transition-[transform,background-color,border-color,box-shadow] duration-150",
                       item.done
                         ? "border-success/30 bg-success/5"
                         : "hover:bg-muted/50",
                       disabled && "bg-muted/40",
                     )}
                   >
-                    <ItemContent className="w-full min-w-0">
-                      <ItemTitle
+                    {isCountTask ? (
+                      <ItemMedia
+                        variant="icon"
                         className={cn(
-                          "w-full text-sm leading-5",
-                          item.done && "text-muted-foreground",
+                          "rounded-md bg-muted p-2 text-muted-foreground",
+                          item.done && "bg-success/10 text-success",
                         )}
                       >
-                        {isCountTask ? (
-                          <span>{item.title}</span>
-                        ) : (
-                          <Label
-                            className="w-full cursor-pointer font-normal text-sm"
-                            htmlFor={checkboxId}
-                          >
-                            {item.title}
-                          </Label>
-                        )}
-                      </ItemTitle>
-                      {item.doneDefinition ? (
-                        <ItemDescription className="line-clamp-none text-xs leading-5">
-                          {item.doneDefinition}
-                        </ItemDescription>
-                      ) : null}
-                    </ItemContent>
-                    <ItemActions className="w-full flex-wrap justify-start">
-                      {item.isRequired ? (
-                        <Badge variant="outline">{taskCopy.required}</Badge>
-                      ) : null}
-                      <Badge variant={item.done ? "success" : "secondary"}>
-                        {item.done ? taskCopy.done : taskCopy.todo}
-                      </Badge>
-                      {isCountTask ? (
-                        <Button
-                          asChild
-                          size="sm"
-                          variant={item.done ? "outline" : "default"}
-                        >
-                          <Link href={countHref}>
-                            <IconCount data-icon="inline-start" />
-                            {homeCopy.countCta}
-                          </Link>
-                        </Button>
-                      ) : (
+                        <IconCount />
+                      </ItemMedia>
+                    ) : (
+                      <div className="flex shrink-0 pt-0.5">
                         <Checkbox
                           id={checkboxId}
                           checked={item.done}
@@ -179,8 +148,58 @@ export function TasksClient({
                             item.done ? taskCopy.markTodo : taskCopy.markDone
                           }
                         />
-                      )}
-                    </ItemActions>
+                      </div>
+                    )}
+                    <ItemContent className="min-w-0 gap-2">
+                      <ItemTitle
+                        className={cn(
+                          "line-clamp-none w-full max-w-full items-start text-sm leading-5",
+                          item.done && "text-muted-foreground",
+                        )}
+                      >
+                        {isCountTask ? (
+                          <span className="block min-w-0 max-w-full whitespace-normal break-words">
+                            {item.title}
+                          </span>
+                        ) : (
+                          <Label
+                            className="block min-w-0 max-w-full cursor-pointer whitespace-normal break-words font-normal text-sm leading-5"
+                            htmlFor={checkboxId}
+                          >
+                            {item.title}
+                          </Label>
+                        )}
+                      </ItemTitle>
+                      {item.doneDefinition ? (
+                        <ItemDescription className="line-clamp-none max-w-full whitespace-normal break-words text-xs leading-5">
+                          {item.doneDefinition}
+                        </ItemDescription>
+                      ) : null}
+                      <div
+                        className="flex w-full flex-wrap items-center gap-1.5"
+                        data-shift-task-meta
+                      >
+                        {item.isRequired ? (
+                          <Badge variant="outline">{taskCopy.required}</Badge>
+                        ) : null}
+                        <Badge variant={item.done ? "success" : "secondary"}>
+                          {item.done ? taskCopy.done : taskCopy.todo}
+                        </Badge>
+                      </div>
+                      {isCountTask ? (
+                        <Button
+                          asChild
+                          size="touch"
+                          className="w-full sm:w-fit"
+                          variant={item.done ? "outline" : "default"}
+                        >
+                          <Link href={countHref}>
+                            <IconCount data-icon="inline-start" />
+                            {homeCopy.countCta}
+                          </Link>
+                        </Button>
+                      ) : null}
+                    </ItemContent>
                   </Item>
                 );
               })}

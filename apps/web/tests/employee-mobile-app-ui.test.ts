@@ -249,8 +249,8 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeTasksSource,
-    /items-center bg-card/,
-    "Checklist rows must keep their card surface and centered alignment",
+    /items-start bg-card/,
+    "Checklist rows must keep their card surface and top-aligned content",
   );
   assert.match(
     employeeTasksSource,

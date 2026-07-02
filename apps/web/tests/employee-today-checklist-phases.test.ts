@@ -107,8 +107,13 @@ test("employee task UI renders inventory count as a count link, not a checkbox",
 
   assert.match(
     employeeTasksClientSource,
-    /\{isCountTask \? \(\s*<Button[\s\S]*?<Link href=\{countHref\}>[\s\S]*?\) : \(\s*<Checkbox/,
-    "Count task should render the link CTA in the true branch and leave Checkbox in the normal-task branch",
+    /\{isCountTask \? \(\s*<ItemMedia[\s\S]*?<IconCount \/>[\s\S]*?\) : \(\s*<div className="flex shrink-0 pt-0\.5">[\s\S]*<Checkbox/,
+    "Count task should render count media while normal tasks keep a left-side checkbox",
+  );
+  assert.match(
+    employeeTasksClientSource,
+    /\{isCountTask \? \(\s*<Button[\s\S]*?<Link href=\{countHref\}>[\s\S]*?\) : null\}/,
+    "Count task should render the count link CTA without replacing normal-task checkboxes",
   );
   assert.match(
     employeeTasksPageSource,
@@ -139,5 +144,38 @@ test("employee task UI renders inventory count as a count link, not a checkbox",
     employeeCountPageSource,
     /const countReadClient = createServiceClient\(\);[\s\S]*countReadClient\s*\.from\("inventory_count_assignments"\)[\s\S]*\.eq\("employee_id", employeeId\)/,
     "Employee count assignment details should be read through the scoped service client so catalog RLS does not hide names",
+  );
+});
+
+test("employee task checklist stays single-column and wraps long task copy", () => {
+  assert.match(
+    employeeTasksClientSource,
+    /<ItemGroup className="gap-2">/,
+    "Checklist should stay a simple one-column task list",
+  );
+  assert.doesNotMatch(
+    employeeTasksClientSource,
+    /grid-cols-\d|sm:grid-cols-\d|md:grid-cols-\d|lg:grid-cols-\d/,
+    "Checklist rows must not force task copy into fixed columns",
+  );
+  assert.match(
+    employeeTasksClientSource,
+    /<ItemContent className="min-w-0 gap-2">/,
+    "Task copy should render inside the flexible content column",
+  );
+  assert.match(
+    employeeTasksClientSource,
+    /className="block min-w-0 max-w-full cursor-pointer whitespace-normal break-words font-normal text-sm leading-5"/,
+    "Standard task labels must wrap instead of overflowing the card",
+  );
+  assert.match(
+    employeeTasksClientSource,
+    /<ItemDescription className="line-clamp-none max-w-full whitespace-normal break-words text-xs leading-5">/,
+    "Long done definitions must wrap without clamping",
+  );
+  assert.match(
+    employeeTasksClientSource,
+    /className="flex w-full flex-wrap items-center gap-1\.5"[\s\S]*data-shift-task-meta/,
+    "Task badges should wrap under the task copy",
   );
 });
