@@ -95,7 +95,7 @@ export default async function OperatorHomePage({
             profile: `${basePath}/profile`,
             checkoutApprovals: `${basePath}/shift/checkout-approvals`,
             count: `${basePath}/stock/count`,
-            wasteApprovals: "/inventory/waste/approvals",
+            wasteApprovals: `${basePath}/stock/waste-approvals`,
           }}
           showNotificationControl={false}
         />
