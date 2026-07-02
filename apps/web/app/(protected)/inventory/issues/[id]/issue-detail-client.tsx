@@ -190,6 +190,7 @@ export function IssueDetailClient({
   canAdjustStock,
   auditLogs = [],
   listBasePath = "/inventory/consumption",
+  embedded = false,
 }: {
   issueId: number;
   initialIssue: IssueRecord;
@@ -198,6 +199,7 @@ export function IssueDetailClient({
   canAdjustStock: boolean;
   auditLogs?: AuditLogRow[];
   listBasePath?: string;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const [issue, setIssue] = useState(initialIssue);
@@ -375,8 +377,8 @@ export function IssueDetailClient({
     },
   ];
 
-  return (
-    <AppPage width="wide" density="compact">
+  const content = (
+    <>
       <AppPageHeader
         eyebrow={surface.eyebrow}
         title={issue.issue_number}
@@ -595,6 +597,16 @@ export function IssueDetailClient({
         onOpenChange={setAddDialogOpen}
         onSaved={reload}
       />
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <AppPage width="wide" density="compact">
+      {content}
     </AppPage>
   );
 }

@@ -43,6 +43,7 @@ export type ReportsProps = {
   foodCostTrendAvailable: boolean;
   foodCostTrendDeltaPct: number | null;
   supplierInvoicesHref?: string | null;
+  embedded?: boolean;
 };
 
 export function ReportsClient({
@@ -53,6 +54,7 @@ export function ReportsClient({
   foodCostTrendAvailable,
   foodCostTrendDeltaPct,
   supplierInvoicesHref = "/inventory/supplier-invoices",
+  embedded = false,
 }: ReportsProps) {
   const maxAP = Math.max(...apAging.map((a) => a.amount), 1);
   const trendLabel =
@@ -71,8 +73,8 @@ export function ReportsClient({
       ]!,
     }),
   );
-  return (
-    <AppPage width="wide" density="compact" scroll>
+  const content = (
+    <>
       <AppPageHeader title={messages.inventory.reports.pageTitle} />
 
       {/* Dashboard Grid — 12 col asymmetric */}
@@ -294,6 +296,16 @@ export function ReportsClient({
           />
         ))}
       </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <AppPage width="wide" density="compact" scroll>
+      {content}
     </AppPage>
   );
 }

@@ -17,6 +17,7 @@ export default async function OperatorPurchaseOrdersPage({
       routeBranchId={branchId}
       basePath={`/br/${branchId}/stock/purchase-orders`}
       suppliersPath={null}
+      embedded
     />
   );
 }

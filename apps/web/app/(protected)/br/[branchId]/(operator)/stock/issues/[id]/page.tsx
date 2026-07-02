@@ -25,6 +25,7 @@ export default async function OperatorStockIssueDetailPage({
       issueId={issueId}
       routeBranchId={branchId}
       listBasePath={`/br/${branchId}/stock/issues`}
+      embedded
     />
   );
 }

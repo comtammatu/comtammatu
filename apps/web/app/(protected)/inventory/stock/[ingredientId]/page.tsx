@@ -374,8 +374,8 @@ export async function StockIngredientDetailPageContent({
   const statusBadge = getStatusBadgeMeta("inventory", status);
   const temperature = storageTemp(ingredient.storage_type);
 
-  return (
-    <InventoryPageContent width="wide" scroll>
+  const content = (
+    <>
       <AppPageHeader
         eyebrow={detailCopy.eyebrow}
         title={ingredient.name}
@@ -702,6 +702,16 @@ export async function StockIngredientDetailPageContent({
           </Button>
         </div>
       </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <InventoryPageContent width="wide" scroll>
+      {content}
     </InventoryPageContent>
   );
 }

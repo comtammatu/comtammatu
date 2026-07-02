@@ -225,6 +225,7 @@ export async function ReportsPageContent({
       foodCostTrendAvailable={foodCostTrendAvailable}
       foodCostTrendDeltaPct={foodCostTrendDeltaPct}
       supplierInvoicesHref={embedded ? null : "/inventory/supplier-invoices"}
+      embedded={embedded}
     />
   );
 }

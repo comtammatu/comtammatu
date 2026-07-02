@@ -121,6 +121,7 @@ export function NewPoClient({
   initialBranchId,
   canSwitchBranch,
   poBasePath = "/inventory/purchase-orders",
+  embedded = false,
 }: {
   suppliers: SupplierRow[];
   ingredients: IngredientRow[];
@@ -129,6 +130,7 @@ export function NewPoClient({
   initialBranchId: number | null;
   canSwitchBranch: boolean;
   poBasePath?: string;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const isCompactLineItems = useIsCompactLineItems();
@@ -325,8 +327,8 @@ export function NewPoClient({
     (s) => !lineIngredientIds.has(s.ingredient_id) && s.suggested_qty > 0,
   ).length;
 
-  return (
-    <AppPage width="wide" density="compact">
+  const content = (
+    <>
       <AppPageHeader
         eyebrow={messages.inventory.po.draftEyebrow}
         title={messages.inventory.po.newTitle}
@@ -422,8 +424,18 @@ export function NewPoClient({
                 : messages.inventory.po.createPo}
             </Button>
           </div>
+          </div>
         </div>
-      </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <AppPage width="wide" density="compact">
+      {content}
     </AppPage>
   );
 }

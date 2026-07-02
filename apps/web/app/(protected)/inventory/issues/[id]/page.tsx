@@ -11,12 +11,14 @@ interface IssueDetailPageContentProps {
   issueId: number;
   routeBranchId?: number;
   listBasePath?: string;
+  embedded?: boolean;
 }
 
 export async function IssueDetailPageContent({
   issueId,
   routeBranchId,
   listBasePath = "/inventory/consumption",
+  embedded = false,
 }: IssueDetailPageContentProps) {
   if (!Number.isFinite(issueId) || issueId <= 0) notFound();
 
@@ -74,6 +76,7 @@ export async function IssueDetailPageContent({
       canAdjustStock={canAdjustStock}
       auditLogs={auditLogs}
       listBasePath={listBasePath}
+      embedded={embedded}
     />
   );
 }

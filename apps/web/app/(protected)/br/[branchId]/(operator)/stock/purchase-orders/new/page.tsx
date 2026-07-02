@@ -16,6 +16,7 @@ export default async function OperatorNewPurchaseOrderPage({
     <NewPurchaseOrderPageContent
       routeBranchId={branchId}
       poBasePath={`/br/${branchId}/stock/purchase-orders`}
+      embedded
     />
   );
 }

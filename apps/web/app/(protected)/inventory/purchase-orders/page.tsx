@@ -16,6 +16,7 @@ interface PurchaseOrdersPageContentProps {
   routeBranchId?: number;
   basePath?: string;
   suppliersPath?: string | null;
+  embedded?: boolean;
 }
 
 export async function PurchaseOrdersPageContent({
@@ -23,6 +24,7 @@ export async function PurchaseOrdersPageContent({
   routeBranchId,
   basePath = "/inventory/purchase-orders",
   suppliersPath = "/inventory/suppliers",
+  embedded = false,
 }: PurchaseOrdersPageContentProps) {
   const params = searchParams ? await searchParams : {};
   const branchFilter =
@@ -57,6 +59,7 @@ export async function PurchaseOrdersPageContent({
       suppliers={suppliers}
       purchaseOrdersBasePath={basePath}
       suppliersPath={suppliersPath}
+      embedded={embedded}
     />
   );
 }

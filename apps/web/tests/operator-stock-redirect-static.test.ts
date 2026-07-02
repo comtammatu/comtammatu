@@ -179,6 +179,11 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(stockDetailPageSource, /routeBranchId\?: number/);
   assert.match(stockDetailPageSource, /branchStockBasePath\?: string/);
   assert.match(stockDetailPageSource, /embedded\?: boolean/);
+  assert.match(stockDetailPageSource, embeddedContentWrapperPattern);
+  assert.match(
+    stockDetailPageSource,
+    /<InventoryPageContent width="wide" scroll>\s*\{content\}\s*<\/InventoryPageContent>/,
+  );
   assert.match(
     stockDetailPageSource,
     /scope\.selectedBranchId !== routeBranchId/,
@@ -276,6 +281,9 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   const newPoPage = read(
     "apps/web/app/(protected)/inventory/purchase-orders/new/page.tsx",
   );
+  const newPoClient = read(
+    "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx",
+  );
   const poDetailPage = read(
     "apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx",
   );
@@ -291,18 +299,21 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
 
   assert.match(issueRoute, /IssuesPageContent/);
   assert.match(issueRoute, /routeBranchId=\{branchId\}/);
+  assert.match(issueRoute, /embedded/);
   assert.match(
     issueRoute,
     /consumptionBasePath=\{`\/br\/\$\{branchId\}\/stock\/issues`\}/,
   );
   assert.match(issueDetailRoute, /IssueDetailPageContent/);
   assert.match(issueDetailRoute, /routeBranchId=\{branchId\}/);
+  assert.match(issueDetailRoute, /embedded/);
   assert.match(
     issueDetailRoute,
     /listBasePath=\{`\/br\/\$\{branchId\}\/stock\/issues`\}/,
   );
   assert.match(poRoute, /PurchaseOrdersPageContent/);
   assert.match(poRoute, /routeBranchId=\{branchId\}/);
+  assert.match(poRoute, /embedded/);
   assert.match(
     poRoute,
     /basePath=\{`\/br\/\$\{branchId\}\/stock\/purchase-orders`\}/,
@@ -310,12 +321,14 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(poRoute, /suppliersPath=\{null\}/);
   assert.match(poNewRoute, /NewPurchaseOrderPageContent/);
   assert.match(poNewRoute, /routeBranchId=\{branchId\}/);
+  assert.match(poNewRoute, /embedded/);
   assert.match(
     poNewRoute,
     /poBasePath=\{`\/br\/\$\{branchId\}\/stock\/purchase-orders`\}/,
   );
   assert.match(poDetailRoute, /PODetailPageContent/);
   assert.match(poDetailRoute, /routeBranchId=\{branchId\}/);
+  assert.match(poDetailRoute, /embedded/);
   assert.match(
     poDetailRoute,
     /purchaseOrdersBasePath=\{`\/br\/\$\{branchId\}\/stock\/purchase-orders`\}/,
@@ -329,8 +342,12 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(reportsRoute, /embedded/);
 
   assert.match(issuesPage, /routeBranchId\?: number/);
+  assert.match(issuesPage, /embedded\?: boolean/);
+  assert.match(issuesPage, /embedded=\{embedded\}/);
   assert.match(issuesPage, /scope\.selectedBranchId !== routeBranchId/);
   assert.match(issuesPage, /consumptionBasePath\?: string/);
+  assert.match(issuesClient, /embedded\?: boolean/);
+  assert.match(issuesClient, embeddedContentWrapperPattern);
   assert.match(
     issuesClient,
     /consumptionBasePath = "\/inventory\/consumption"/,
@@ -341,26 +358,42 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   );
   assert.doesNotMatch(issuesClient, /router\.push\(`\/inventory\/consumption/);
   assert.match(issueDetailPage, /routeBranchId\?: number/);
+  assert.match(issueDetailPage, /embedded\?: boolean/);
+  assert.match(issueDetailPage, /embedded=\{embedded\}/);
   assert.match(issueDetailPage, /d\.issue\.branch_id !== routeBranchId/);
   assert.match(issueDetailClient, /listBasePath = "\/inventory\/consumption"/);
+  assert.match(issueDetailClient, /embedded\?: boolean/);
+  assert.match(issueDetailClient, embeddedContentWrapperPattern);
   assert.match(issueDetailClient, /href=\{listBasePath\}/);
 
   assert.match(purchaseOrdersPage, /routeBranchId\?: number/);
+  assert.match(purchaseOrdersPage, /embedded\?: boolean/);
+  assert.match(purchaseOrdersPage, /embedded=\{embedded\}/);
   assert.match(purchaseOrdersPage, /scope\.selectedBranchId !== routeBranchId/);
   assert.match(purchaseOrdersClient, /suppliersPath\?: string \| null/);
+  assert.match(purchaseOrdersClient, /embedded\?: boolean/);
+  assert.match(purchaseOrdersClient, embeddedContentWrapperPattern);
   assert.match(purchaseOrdersClient, /suppliersPath \?/);
   assert.match(newPoPage, /routeBranchId\?: number/);
   assert.match(newPoPage, /poBasePath\?: string/);
+  assert.match(newPoPage, /embedded\?: boolean/);
+  assert.match(newPoPage, /embedded=\{embedded\}/);
+  assert.match(newPoClient, /embedded\?: boolean/);
+  assert.match(newPoClient, embeddedContentWrapperPattern);
   assert.match(
     newPoPage,
     /canSwitchBranch=\{routeBranchId == null && !isBranchScoped\}/,
   );
   assert.match(poDetailPage, /routeBranchId\?: number/);
+  assert.match(poDetailPage, /embedded\?: boolean/);
+  assert.match(poDetailPage, /embedded=\{embedded\}/);
   assert.match(poDetailPage, /d\.po\.branch_id !== routeBranchId/);
   assert.match(
     poDetailClient,
     /purchaseOrdersBasePath = "\/inventory\/purchase-orders"/,
   );
+  assert.match(poDetailClient, /embedded\?: boolean/);
+  assert.match(poDetailClient, embeddedContentWrapperPattern);
   assert.match(
     poDetailClient,
     /afterCreateGrnHref[\s\S]*replace\(":id", String\(created\.id\)\)/,
@@ -368,11 +401,14 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
 
   assert.match(reportsPage, /routeBranchId\?: number/);
   assert.match(reportsPage, /branchId: routeBranchId/);
+  assert.match(reportsPage, /embedded=\{embedded\}/);
   assert.match(
     reportsPage,
     /supplierInvoicesHref=\{embedded \? null : "\/inventory\/supplier-invoices"\}/,
   );
   assert.match(reportsClient, /supplierInvoicesHref\?: string \| null/);
+  assert.match(reportsClient, /embedded\?: boolean/);
+  assert.match(reportsClient, embeddedContentWrapperPattern);
   assert.match(reportsClient, /supplierInvoicesHref \?/);
 });
 
