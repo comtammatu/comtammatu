@@ -371,6 +371,8 @@ here in the shared rules, not in a single runtime's private memory.
   sweeps, caller/evidence collection, test-log triage, small mechanical patches,
   and QA sidecars. Any borrowed orchestrator/harness template that hardcodes one
   model tier on every call must have that mandate stripped before adoption.
+  The concrete per-task routing table lives in
+  [orchestration.md](orchestration.md) → Model-Tier Lanes (L0–L3).
 - Agent Teams (`TeamCreate` / `SendMessage` / `TaskCreate`) is enabled for the
   Claude runtime (`.claude/settings.json` → `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`)
   and MAY be used for live multi-agent coordination. It is an OPTIONAL capability:
