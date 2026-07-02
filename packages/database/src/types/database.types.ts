@@ -8839,6 +8839,11 @@ export type Database = {
           stock_capacity_live: number
         }[]
       }
+      bulk_import_ingredients: { Args: { p_rows: Json }; Returns: Json }
+      bulk_import_production_recipes: {
+        Args: { p_groups: Json }
+        Returns: Json
+      }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       cancel_leave_request: {
         Args: { p_request_id: number }
