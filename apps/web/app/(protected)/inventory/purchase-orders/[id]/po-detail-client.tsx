@@ -39,6 +39,7 @@ import {
 } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { getStatusBadgeMeta } from "@/components/status-badge";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { TimelineStepper } from "../../_components/timeline-stepper";
@@ -516,26 +517,23 @@ export function PODetailClient({
             <TabsContent value="overview">
               <div className="flex flex-col gap-4">
                 <div className="grid gap-3 md:grid-cols-3">
-                  <div className="rounded-lg border bg-card p-4">
-                    <Badge variant="secondary">{poCopy.supplierRequired}</Badge>
-                    <p className="mt-3 text-xl font-semibold">{po.supplier}</p>
-                  </div>
-                  <div className="rounded-lg border bg-card p-4">
-                    <Badge variant="secondary">{poDetailCopy.goodsTotal}</Badge>
-                    <p className="mt-3 text-xl font-semibold">
-                      {messages.inventory.common.currency(
-                        formatVND(totalAmount),
-                      )}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border bg-card p-4">
-                    <Badge variant="secondary">{FORM_VI.totalAmount}</Badge>
-                    <p className="mt-3 text-2xl font-semibold text-primary">
-                      {messages.inventory.common.currency(
-                        formatVND(grandTotal),
-                      )}
-                    </p>
-                  </div>
+                  <KpiCard label={poCopy.supplierRequired} value={po.supplier} />
+                  <KpiCard
+                    label={poDetailCopy.goodsTotal}
+                    value={messages.inventory.common.currency(
+                      formatVND(totalAmount),
+                    )}
+                  />
+                  <KpiCard
+                    label={FORM_VI.totalAmount}
+                    value={
+                      <span className="text-primary">
+                        {messages.inventory.common.currency(
+                          formatVND(grandTotal),
+                        )}
+                      </span>
+                    }
+                  />
                 </div>
 
                 <AppSection contentClassName="py-4">
