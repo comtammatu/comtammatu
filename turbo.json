@@ -76,7 +76,11 @@
     },
     "@comtammatu/web#test": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/supabase/migrations/**"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/supabase/migrations/**",
+        "$TURBO_ROOT$/scripts/**"
+      ],
       "outputs": []
     },
     "dev": {

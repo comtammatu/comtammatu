@@ -314,7 +314,7 @@ Before building or changing any `(protected)/**/page.tsx`:
 5. Build the new page from the exemplar's `PageContent` skeleton: swap the
    domain fetch/map, keep the shell shape.
 6. Add the new page to the `PAGE_ARCHETYPES` map in
-   `scripts/check-ui-contract.mjs` with the correct archetype id. An
+   `scripts/page-archetypes.mjs` with the correct archetype id. An
    undeclared page fails CI with a message pointing back at this file.
 
 ## 6. Census (verified against code, 2026-07-03)
