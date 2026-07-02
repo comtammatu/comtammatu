@@ -661,3 +661,29 @@ docs, tách lane dirty WIP, và chạy guard nhỏ (`rules-mirror`, `doc-stalene
 **Status (2026-07-02):** §1 đã thi công theo soft-routing (code-only, không đổi JWT/DB): claims của warehouse/production giữ tenant-level (`branch_id` null), proxy gate `/br/{id}` theo `branches.branch_kind` khớp domain role (`central_supply`/`central_kitchen`, site active); station POS/KDS/runner vẫn khóa branch-kind `branch`.
 
 **Status (2026-07-02, hoàn thiện parity):** 3 khe hở còn lại của §1 đã đóng: `returnTo` deep-link vào đúng central site của role được giữ (qua `homeBranchId` server-computed trong `resolvePostLoginRedirect`), redirect `/employee/*` → `/br/{central-site}/...` áp cho warehouse/production (office giữ `/employee`, owner giữ `/br`), và home link shell (`resolveRoleHomeLink`) trỏ operator hub khi role có `operator_home` kèm branch trong scope.
+
+## D056: Operator GRN-receive route + hướng xử lý consumption alias (2026-07-02)
+
+Ra từ đợt điều tra Inventory (multi-agent, verified vs code hiện tại). Bối cảnh:
+surface operator `/br/[branchId]/(operator)/stock/*` KHÔNG phải bản viết lại song
+song — 17/21 page là wrapper mỏng re-export `PageContent` back-office với `basePath`
+scoped + cờ `embedded`. Nợ thật là IA/nhãn/URL collision, không phải trùng logic.
+
+1. **WF-01 (bug P1, ĐÃ FIX):** operator "Tạo GRN từ PO" đẩy GRN id vào route
+   `/stock/receive/:id` (=`TransferDetailPageContent` → query `stock_transfers`)
+   → not-found. Chọn **Opt B**: thêm route operator `stock/grn/[id]` wrap
+   `GRNDetailPageContent` (embedded, branch-scoped), trỏ `afterCreateGrnHref` tới
+   đó — giữ operator trong IA `/stock` thay vì văng ra `/inventory`. `receive` vẫn
+   dành riêng cho transfer-receipt; goods-receipt (GRN) không chia sẻ URL prefix.
+2. **WF-05 (chốt, CHƯA làm):** `/inventory/consumption` hiện là re-export
+   byte-identical của `/inventory/issues` (2 nhãn nav 1 màn). Hướng ban đầu định
+   xoá+redirect, nhưng `docs/runbooks/inventory/route-cta-matrix.md` là contract
+   **P0** coi consumption (**Tiêu hao** = thực phẩm chi nhánh dùng thật) và issues
+   (**Xuất kho nội bộ**) là hai khái niệm khác nhau, và cấm dùng nhãn "Xuất kho
+   nội bộ" cho tiêu hao. **Chốt lại: biến consumption thành variant thật** (giữ 2
+   khái niệm phân biệt như runbook), KHÔNG gộp. Thực thi ở đợt sau (ngoài scope WF-01).
+
+**Consequences:** WF-01 land trên `fix/operator-grn-receive-route`. Các item còn
+lại của báo cáo điều tra (UI-ROOT-A/B, WF-03 pagination, WF-04 report RPC, WF-07/08
+count/stocktake, v.v.) vẫn mở, chờ owner chọn slice tiếp theo; cổng quyết định owner
+liệt kê trong báo cáo (mục 7).

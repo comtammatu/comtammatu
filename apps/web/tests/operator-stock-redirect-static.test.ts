@@ -291,6 +291,9 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   const poDetailRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-orders/[id]/page.tsx",
   );
+  const grnDetailRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx",
+  );
   const reportsRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/reports/page.tsx",
   );
@@ -365,10 +368,24 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
     poDetailRoute,
     /purchaseOrdersBasePath=\{`\/br\/\$\{branchId\}\/stock\/purchase-orders`\}/,
   );
+  // GRN receipt must route to the operator GRN wrapper, NOT the transfers
+  // receive route (a GRN id fed to /stock/receive resolves against
+  // stock_transfers → wrong entity).
   assert.match(
+    poDetailRoute,
+    /afterCreateGrnHref=\{`\/br\/\$\{branchId\}\/stock\/grn\/:id`\}/,
+  );
+  assert.doesNotMatch(
     poDetailRoute,
     /afterCreateGrnHref=\{`\/br\/\$\{branchId\}\/stock\/receive\/:id`\}/,
   );
+  assert.match(grnDetailRoute, /GRNDetailPageContent/);
+  assert.match(grnDetailRoute, /routeBranchId=\{branchId\}/);
+  assert.match(
+    grnDetailRoute,
+    /purchaseOrdersBasePath=\{`\/br\/\$\{branchId\}\/stock\/purchase-orders`\}/,
+  );
+  assert.doesNotMatch(grnDetailRoute, /TransferDetailPageContent/);
   assert.match(reportsRoute, /ReportsPageContent/);
   assert.match(reportsRoute, /routeBranchId=\{branchId\}/);
   assert.match(reportsRoute, /embedded/);
