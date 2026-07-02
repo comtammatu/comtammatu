@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { fetchStocktakeDetail } from "../../actions";
-import { resolveRequestedBranchId } from "../../_lib/inventory-scope";
+import { parseBranchIdParam } from "../../_lib/inventory-scope";
 import { fetchEntityAuditLogs } from "@/_lib/audit";
 import { StocktakeDetailClient } from "./stocktake-detail-client";
 
@@ -65,8 +65,7 @@ export async function StocktakeDetailPageContent({
     }>;
   };
   const sp = searchParams ? await searchParams : {};
-  const requestedBranchId =
-    routeBranchId ?? (await resolveRequestedBranchId(sp.branchId));
+  const requestedBranchId = routeBranchId ?? parseBranchIdParam(sp.branchId);
   const sessionBranchId = stocktakeSession.branch_id;
   const isDetailView =
     sp.view === "detail" || sp.error === "stocktake_redesigned_not_enabled";

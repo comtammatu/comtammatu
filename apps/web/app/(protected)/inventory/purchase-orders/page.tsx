@@ -6,10 +6,7 @@ import {
   fetchSuppliers,
 } from "../procurement-actions";
 import type { PurchaseOrderCursor } from "../procurement-actions";
-import {
-  resolveInventoryBranchScope,
-  resolveRequestedBranchId,
-} from "../_lib/inventory-scope";
+import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import {
   PurchaseOrdersClient,
   type PurchaseOrderRow,
@@ -32,18 +29,13 @@ export async function PurchaseOrdersPageContent({
   embedded = false,
 }: PurchaseOrdersPageContentProps) {
   const params = searchParams ? await searchParams : {};
-  const branchFilter =
-    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
-
-  if (routeBranchId != null) {
-    const { supabase, claims } = await loadAuthState();
-    const scope = await resolveInventoryBranchScope(
-      supabase,
-      claims,
-      routeBranchId,
-    );
-    if (scope.selectedBranchId !== routeBranchId) notFound();
-  }
+  const { supabase, claims } = await loadAuthState();
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
+  if (scope.outOfScope) notFound();
+  const branchFilter = scope.selectedBranchId;
 
   const [poRes, countsRes, supRes] = await Promise.all([
     fetchPurchaseOrdersPage({ branchId: branchFilter ?? undefined }),

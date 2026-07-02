@@ -157,6 +157,64 @@ export const fetchActiveBranches = cache(async function fetchActiveBranches(
   return data ?? [];
 });
 
+/**
+ * Parse a raw `branchId` query-param value. Returns null for missing or
+ * malformed values (non-numeric, <=0).
+ */
+export function parseBranchIdParam(
+  raw: string | string[] | undefined,
+): number | null {
+  if (raw == null) return null;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (!value) return null;
+  const n = Number(value);
+  if (!Number.isInteger(n) || n <= 0) return null;
+  return n;
+}
+
+export interface ListScopeResolution extends BranchScope {
+  /** True when an embedded (routeBranchId) caller resolved to a different
+   * branch than requested — caller must `notFound()`. */
+  outOfScope: boolean;
+}
+
+/**
+ * Single scope-read entry point for shared `*PageContent` list/report
+ * surfaces (D058 W3b). Embedded callers pass the validated `routeBranchId`
+ * from the URL segment; it always wins, and a mismatch against the
+ * resolved scope means the branch is not allowed for this user — the
+ * caller must `notFound()`. Office callers pass the raw `?branchId=` query
+ * value instead; it survives ONLY as a display filter/default — never as
+ * write authority. Writes MUST re-derive their own scope from
+ * claims/RLS/RPC permission checks, not from this resolution.
+ */
+export async function resolveListScope(
+  supabase: unknown,
+  claims: JwtClaims,
+  branches: readonly OperatorBranchOption[],
+  options: {
+    routeBranchId?: number;
+    queryBranchId?: string | string[] | undefined;
+    tenantWideRoles: readonly StaffRole[];
+  },
+): Promise<ListScopeResolution> {
+  const requestedBranchId =
+    options.routeBranchId ?? parseBranchIdParam(options.queryBranchId);
+  const scope = selectBranchScope(
+    claims,
+    branches,
+    requestedBranchId,
+    options.tenantWideRoles,
+  );
+
+  return {
+    ...scope,
+    outOfScope:
+      options.routeBranchId != null &&
+      scope.selectedBranchId !== options.routeBranchId,
+  };
+}
+
 export const resolveBranchContext = cache(async function resolveBranchContext(
   supabase: unknown,
   claims: JwtClaims,

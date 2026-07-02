@@ -53,9 +53,15 @@ checkout.
   `docs/spec/page-archetypes.md` (11 archetypes, 135-page census), component
   registry in `docs/modules/ui.md`, `page-archetype` gate (map data in
   `scripts/page-archetypes.mjs`), turbo test-cache input fix for `scripts/**`.
-- [ ] **W3b — scope-read unification**: retire the `?branchId=` vs URL-segment
-  duality inside shared inventory PageContents; one `resolveBranchContext`
-  engine, `?branchId=` = display filter only (D050 §4, D058 contract).
+- [x] **W3b — scope-read unification**: retired the `?branchId=` vs
+  URL-segment duality inside shared inventory `*PageContent` list/report
+  surfaces; added `resolveListScope`/`parseBranchIdParam` to
+  `apps/web/app/_lib/branch-context.ts` and a thin
+  `resolveInventoryListScope` adapter in `inventory-scope.ts` — 13
+  PageContents migrated to the single engine + 3 detail pages deduped onto
+  the shared `parseBranchIdParam`, `?branchId=` stays a display filter only
+  (D050 §4, D058 contract); write paths audited, all already re-validate
+  branch scope via claims/RLS/RPC `has_permission`, no trust gap found.
 - [ ] **W6 — Claude Design mirror push** (W5 landed; one-way repo→design, §11):
   bundle recipes (11 archetype cards) + adapter-layer cards, push via
   DesignSync to project `Má Tư Design System`.

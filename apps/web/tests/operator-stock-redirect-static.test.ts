@@ -176,7 +176,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(stockPageSource, /routeBranchId\?: number/);
   assert.match(stockPageSource, /branchStockBasePath\?: string/);
   assert.match(stockPageSource, /embedded\?: boolean/);
-  assert.match(stockPageSource, /scope\.selectedBranchId !== routeBranchId/);
+  assert.match(stockPageSource, /scope\.outOfScope/);
   assert.match(stockDetailPageSource, /routeBranchId\?: number/);
   assert.match(stockDetailPageSource, /branchStockBasePath\?: string/);
   assert.match(stockDetailPageSource, /embedded\?: boolean/);
@@ -187,7 +187,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   );
   assert.match(
     stockDetailPageSource,
-    /scope\.selectedBranchId !== routeBranchId/,
+    /scope\.outOfScope/,
   );
   assert.match(stockDetailPageSource, /fetchStockBearingLocationIds/);
   assert.match(stockDetailPageSource, /\.from\("stock_levels"\)/);
@@ -399,7 +399,7 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(issuesPage, /routeBranchId\?: number/);
   assert.match(issuesPage, /embedded\?: boolean/);
   assert.match(issuesPage, /embedded=\{embedded\}/);
-  assert.match(issuesPage, /scope\.selectedBranchId !== routeBranchId/);
+  assert.match(issuesPage, /scope\.outOfScope/);
   assert.match(issuesPage, /consumptionBasePath\?: string/);
   assert.match(issuesClient, /embedded\?: boolean/);
   assert.match(issuesClient, embeddedContentWrapperPattern);
@@ -424,7 +424,7 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(purchaseOrdersPage, /routeBranchId\?: number/);
   assert.match(purchaseOrdersPage, /embedded\?: boolean/);
   assert.match(purchaseOrdersPage, /embedded=\{embedded\}/);
-  assert.match(purchaseOrdersPage, /scope\.selectedBranchId !== routeBranchId/);
+  assert.match(purchaseOrdersPage, /scope\.outOfScope/);
   assert.match(purchaseOrdersClient, /suppliersPath\?: string \| null/);
   assert.match(purchaseOrdersClient, /embedded\?: boolean/);
   assert.match(purchaseOrdersClient, embeddedContentWrapperPattern);
@@ -512,7 +512,7 @@ test("branch stock wrappers keep inventory fallbacks inside the branch shell", (
   assert.match(expiryRoute, /embedded/);
   assert.match(expiryPage, /export async function ExpiryPageContent/);
   assert.match(expiryPage, /routeBranchId\?: number/);
-  assert.match(expiryPage, /scope\.selectedBranchId !== routeBranchId/);
+  assert.match(expiryPage, /scope\.outOfScope/);
   assert.match(expiryClient, /embedded\?: boolean/);
   assert.match(expiryClient, embeddedContentWrapperPattern);
 });

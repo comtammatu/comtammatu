@@ -4,6 +4,7 @@ import { test } from "node:test";
 import type { JwtClaims } from "@comtammatu/shared/auth";
 import {
   resolveInventoryBranchScope,
+  resolveInventoryListScope,
   type InventoryBranchOption,
 } from "../app/(protected)/inventory/_lib/inventory-scope";
 
@@ -73,6 +74,50 @@ test("inventory-scope no longer owns a branches query — engine is shared", () 
 
   const branchQueries = BRANCH_CONTEXT_SOURCE.match(/\.from\("branches"\)/g);
   assert.equal(branchQueries?.length, 1);
+});
+
+test("inventory-scope's list-scope reader delegates to the shared resolveListScope engine (D058 W3b)", () => {
+  assert.match(INVENTORY_SCOPE_SOURCE, /resolveInventoryListScope/);
+  assert.match(INVENTORY_SCOPE_SOURCE, /resolveListScope/);
+  assert.match(INVENTORY_SCOPE_SOURCE, /from "@\/_lib\/branch-context"/);
+});
+
+test("shared inventory PageContents route scope-read through resolveInventoryListScope, not a hand-rolled routeBranchId/query merge (D058 W3b)", () => {
+  const legacyDualityPattern =
+    /routeBranchId\s*\?\?\s*\(await resolveRequestedBranchId/;
+
+  const pageContentFiles = [
+    "purchase-orders/page.tsx",
+    "purchase-orders/new/page.tsx",
+    "transfers/page.tsx",
+    "transfers/new/page.tsx",
+    "transfers/[id]/page.tsx",
+    "stock/page.tsx",
+    "stock/[ingredientId]/page.tsx",
+    "stocktake/page.tsx",
+    "stocktake/new/page.tsx",
+    "issues/page.tsx",
+    "expiry/page.tsx",
+    "grn/page.tsx",
+    "waste/approvals/page.tsx",
+  ];
+
+  for (const relPath of pageContentFiles) {
+    const source = readFileSync(
+      new URL(`../app/(protected)/inventory/${relPath}`, import.meta.url),
+      "utf8",
+    );
+    assert.doesNotMatch(
+      source,
+      legacyDualityPattern,
+      `${relPath} still hand-rolls the routeBranchId/query duality`,
+    );
+    assert.match(
+      source,
+      /resolveInventoryListScope/,
+      `${relPath} does not use the unified list-scope engine`,
+    );
+  }
 });
 
 test("adapter -> office sees every active branch kind and can select all", async () => {
@@ -146,4 +191,75 @@ test("adapter -> query error degrades to empty scope, canSelectAll intact", asyn
   assert.equal(scope.canSelectAll, true);
   assert.equal(scope.selectedBranchId, null);
   assert.equal(scope.defaultBranchId, null);
+});
+
+/* ─── resolveInventoryListScope (D058 W3b — one engine for both scope-read paths) ─── */
+
+test("list scope -> embedded routeBranchId and office ?branchId= resolve through the identical selectBranchScope call", async () => {
+  // Same owner claims requesting the same branch (2) two ways: as a
+  // validated URL segment (embedded/br runtime) and as a raw ?branchId=
+  // query string (office plane). Both must land on the exact same
+  // selection — proving there is one engine, not two parallel readers.
+  const embedded = await resolveInventoryListScope(
+    fakeSupabase(BRANCHES, null).supabase,
+    claims("owner", 1),
+    { routeBranchId: 2 },
+  );
+  const office = await resolveInventoryListScope(
+    fakeSupabase(BRANCHES, null).supabase,
+    claims("owner", 1),
+    { queryBranchId: "2" },
+  );
+
+  assert.deepEqual(
+    { ...embedded, outOfScope: undefined },
+    { ...office, outOfScope: undefined },
+  );
+  assert.equal(embedded.selectedBranchId, 2);
+  assert.equal(embedded.outOfScope, false);
+  assert.equal(office.outOfScope, false);
+});
+
+test("list scope -> routeBranchId always wins over a conflicting query value", () => {
+  return resolveInventoryListScope(
+    fakeSupabase(BRANCHES, null).supabase,
+    claims("owner", 1),
+    { routeBranchId: 2, queryBranchId: "10" },
+  ).then((scope) => {
+    assert.equal(scope.selectedBranchId, 2);
+    assert.equal(scope.outOfScope, false);
+  });
+});
+
+test("list scope -> embedded branch outside the caller's allowed set flags outOfScope", async () => {
+  const scope = await resolveInventoryListScope(
+    fakeSupabase(BRANCHES, null).supabase,
+    claims("cashier", 2),
+    { routeBranchId: 1 },
+  );
+
+  assert.equal(scope.selectedBranchId, 2);
+  assert.equal(scope.outOfScope, true);
+});
+
+test("list scope -> office ?branchId= never triggers outOfScope, only clamps the selection", async () => {
+  const scope = await resolveInventoryListScope(
+    fakeSupabase(BRANCHES, null).supabase,
+    claims("cashier", 2),
+    { queryBranchId: "1" },
+  );
+
+  assert.equal(scope.selectedBranchId, 2);
+  assert.equal(scope.outOfScope, false);
+});
+
+test("list scope -> malformed query branchId parses to null and falls back to default", async () => {
+  const scope = await resolveInventoryListScope(
+    fakeSupabase(BRANCHES, null).supabase,
+    claims("office", null),
+    { queryBranchId: "not-a-number" },
+  );
+
+  assert.equal(scope.selectedBranchId, 1);
+  assert.equal(scope.outOfScope, false);
 });

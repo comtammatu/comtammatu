@@ -7,10 +7,7 @@ import {
   formatQty,
   formatVND,
 } from "../_lib/format";
-import {
-  resolveInventoryBranchScope,
-  resolveRequestedBranchId,
-} from "../_lib/inventory-scope";
+import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import { tRoute } from "../_lib/dictionary";
 import { IssuesClient } from "./issues-client";
 import type {
@@ -137,16 +134,15 @@ export async function IssuesPageContent({
 }: IssuesPageContentProps) {
   const scopeConfig = SCOPE_CONFIG[scopeVariant];
   const params = searchParams ? await searchParams : {};
-  const requested =
-    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
   const startDate = parseBusinessDateParam(params.startDate);
   const endDate = parseBusinessDateParam(params.endDate);
   const hasRecordedDateFilter = startDate != null || endDate != null;
   const { supabase, claims } = await loadAuthState();
-  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
-  if (routeBranchId != null && scope.selectedBranchId !== routeBranchId) {
-    notFound();
-  }
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
+  if (scope.outOfScope) notFound();
   const branchFilter = scope.selectedBranchId ?? undefined;
 
   // Internal-issue scope hides the sale_consumption ledger entirely; skip the

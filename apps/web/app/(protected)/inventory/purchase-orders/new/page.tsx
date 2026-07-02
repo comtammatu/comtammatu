@@ -3,10 +3,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { fetchIngredients } from "../../ingredient-actions";
 import { fetchPoSuggestions, fetchSuppliers } from "../../procurement-actions";
 import { fetchProcurementBranches } from "../../_lib/procurement-branches";
-import {
-  parseBranchIdParam,
-  resolveInventoryBranchScope,
-} from "../../_lib/inventory-scope";
+import { resolveInventoryListScope } from "../../_lib/inventory-scope";
 import { NewPoClient, type ProcurementBranchOption } from "./new-po-client";
 import type { SupplierRow } from "../../suppliers/suppliers-client";
 import type { IngredientRow } from "../../page";
@@ -40,16 +37,11 @@ export async function NewPurchaseOrderPageContent({
   // Branch-scoped procurement roles auto-use their assigned branch; others
   // honor the URL branch if it is a procurement branch, else fall back to
   // the first available branch.
-  const requestedBranchId =
-    routeBranchId ?? parseBranchIdParam(params.branchId);
-  const scope = await resolveInventoryBranchScope(
-    supabase,
-    claims,
-    requestedBranchId,
-  );
-  if (routeBranchId != null && scope.selectedBranchId !== routeBranchId) {
-    notFound();
-  }
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
+  if (scope.outOfScope) notFound();
   const scopeProcurementBranchId =
     scope.selectedBranchId != null &&
     procBranches.some((b) => b.id === scope.selectedBranchId)

@@ -1,7 +1,7 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
-import { resolveRequestedBranchId } from "@/(protected)/inventory/_lib/inventory-scope";
+import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import {
   WasteApprovalsClient,
   type PendingWasteRow,
@@ -21,8 +21,6 @@ export async function WasteApprovalsPageContent({
   embedded = false,
 }: WasteApprovalsPageContentProps) {
   const params = searchParams ? await searchParams : {};
-  const branchFilter =
-    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
 
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
@@ -31,6 +29,13 @@ export async function WasteApprovalsPageContent({
   );
   if (!ctx) redirect("/");
   const { supabase, claims, user } = ctx;
+
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
+  if (scope.outOfScope) notFound();
+  const branchFilter = scope.selectedBranchId;
 
   // Fetch pending waste issues + their items + ingredient names
   let query = supabase

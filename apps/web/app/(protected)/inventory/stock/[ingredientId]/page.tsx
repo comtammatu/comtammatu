@@ -30,10 +30,7 @@ import {
   formatQty,
   formatVND,
 } from "../../_lib/format";
-import {
-  resolveInventoryBranchScope,
-  resolveRequestedBranchId,
-} from "../../_lib/inventory-scope";
+import { resolveInventoryListScope } from "../../_lib/inventory-scope";
 import { fetchStockBearingLocationIds } from "../../_lib/stock-bearing-locations";
 
 const stockCopy = messages.inventory.stock;
@@ -242,12 +239,11 @@ export async function StockIngredientDetailPageContent({
 
   const { supabase, claims } = await loadAuthState();
   const params = searchParams ? await searchParams : {};
-  const requested =
-    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
-  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
-  if (routeBranchId != null && scope.selectedBranchId !== routeBranchId) {
-    notFound();
-  }
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
+  if (scope.outOfScope) notFound();
 
   const branchId = scope.selectedBranchId;
   if (!branchId) redirect("/inventory");
