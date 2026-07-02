@@ -15,7 +15,6 @@ import {
 } from "@comtammatu/shared/time";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
-import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
 
 const REPORT_ROLES: readonly StaffRole[] = ["owner"];
 
@@ -111,181 +110,35 @@ export async function fetchStockMovementReport(
 
   const { supabase, claims } = ctx;
   const { startDate, endDate, branchId } = parsed.data;
-  const startRange = getVNDayUtcRange(startDate);
-  const endRange = getVNDayUtcRange(endDate);
 
-  // Effective branch filter for branch_manager
+  // branch_manager is clamped to their own branch regardless of input.
   const effectiveBranchId =
     claims.user_role === "branch_manager" && claims.branch_id != null
       ? claims.branch_id
       : branchId;
-  const stockBearingLocationIds = await fetchStockBearingLocationIds({
-    supabase,
-    tenantId: claims.tenant_id,
-    ...(effectiveBranchId != null ? { branchId: effectiveBranchId } : {}),
+
+  const { data, error } = await supabase.rpc("get_stock_movement_report", {
+    p_start_date: startDate,
+    p_end_date: endDate,
+    p_branch_id: effectiveBranchId ?? undefined,
   });
 
-  // 1. Get all ingredients
-  const { data: ingredients, error: ingErr } = await supabase
-    .from("ingredients")
-    .select("id, name, unit, purchase_unit")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("is_active", true)
-    .order("name");
+  if (error) return { success: false, error: "Không tải được biến động kho." };
 
-  if (ingErr) return { success: false, error: "Không tải được nguyên liệu." };
-
-  // 2. Get current stock levels (for computing opening balance)
-  let levelsQuery =
-    stockBearingLocationIds.length > 0
-      ? supabase
-          .from("stock_levels")
-          .select("ingredient_id, current_quantity")
-          .eq("tenant_id", claims.tenant_id)
-          .in("location_id", stockBearingLocationIds)
-      : null;
-  if (levelsQuery && effectiveBranchId) {
-    levelsQuery = levelsQuery.eq("branch_id", effectiveBranchId);
-  }
-  const { data: levels, error: levErr } = levelsQuery
-    ? await levelsQuery
-    : { data: [], error: null };
-  if (levErr) return { success: false, error: "Không tải được tồn kho." };
-
-  // Sum current_quantity per ingredient (across branches if no filter)
-  const currentByIngredient = new Map<number, number>();
-  for (const lv of levels ?? []) {
-    currentByIngredient.set(
-      lv.ingredient_id,
-      (currentByIngredient.get(lv.ingredient_id) ?? 0) +
-        Number(lv.current_quantity),
-    );
-  }
-
-  // 3. Get movements in the period
-  let movQuery =
-    stockBearingLocationIds.length > 0
-      ? supabase
-          .from("stock_movements")
-          .select("ingredient_id, type, quantity_change")
-          .eq("tenant_id", claims.tenant_id)
-          .in("location_id", stockBearingLocationIds)
-          .gte("created_at", startRange.startIso)
-          .lt("created_at", endRange.endIso)
-      : null;
-  if (movQuery && effectiveBranchId) {
-    movQuery = movQuery.eq("branch_id", effectiveBranchId);
-  }
-  const { data: movements, error: movErr } = movQuery
-    ? await movQuery
-    : { data: [], error: null };
-  if (movErr) return { success: false, error: "Không tải được biến động kho." };
-
-  // 4. Get movements AFTER the period (to compute opening balance)
-  // opening = current_quantity - sum(movements from startDate to now)
-  // But more accurately: opening = current - movements_in_and_after_period
-  // closing = opening + movements_in_period = current - movements_after_period
-  let afterQuery =
-    stockBearingLocationIds.length > 0
-      ? supabase
-          .from("stock_movements")
-          .select("ingredient_id, quantity_change")
-          .eq("tenant_id", claims.tenant_id)
-          .in("location_id", stockBearingLocationIds)
-          .gte("created_at", endRange.endIso)
-      : null;
-  if (afterQuery && effectiveBranchId) {
-    afterQuery = afterQuery.eq("branch_id", effectiveBranchId);
-  }
-  const { data: afterMovements, error: afterErr } = afterQuery
-    ? await afterQuery
-    : { data: [], error: null };
-  if (afterErr)
-    return { success: false, error: "Không tải được biến động kho." };
-
-  // Sum after-period movements per ingredient
-  const afterSumByIngredient = new Map<number, number>();
-  for (const m of afterMovements ?? []) {
-    afterSumByIngredient.set(
-      m.ingredient_id,
-      (afterSumByIngredient.get(m.ingredient_id) ?? 0) +
-        Number(m.quantity_change),
-    );
-  }
-
-  // 5. Build report rows
-  type MovementType =
-    | "grn_receipt"
-    | "transfer_in"
-    | "transfer_out"
-    | "consumption"
-    | "production_consumption"
-    | "production_output"
-    | "adjustment"
-    | "count_adjustment";
-
-  const periodSums = new Map<number, Record<MovementType, number>>();
-
-  for (const m of movements ?? []) {
-    let entry = periodSums.get(m.ingredient_id);
-    if (!entry) {
-      entry = {
-        grn_receipt: 0,
-        transfer_in: 0,
-        transfer_out: 0,
-        consumption: 0,
-        production_consumption: 0,
-        production_output: 0,
-        adjustment: 0,
-        count_adjustment: 0,
-      };
-      periodSums.set(m.ingredient_id, entry);
-    }
-    const t = m.type as MovementType;
-    if (t in entry) {
-      entry[t] += Number(m.quantity_change);
-    }
-  }
-
-  const rows: MovementReportRow[] = [];
-  for (const ing of ingredients ?? []) {
-    const sums = periodSums.get(ing.id);
-    const current = currentByIngredient.get(ing.id) ?? 0;
-    const afterSum = afterSumByIngredient.get(ing.id) ?? 0;
-
-    // closing = current - afterSum (movements after period)
-    const closing = current - afterSum;
-    // opening = closing - sum of all movements in period
-    const periodTotal = sums
-      ? sums.grn_receipt +
-        sums.transfer_in +
-        sums.transfer_out +
-        sums.consumption +
-        sums.production_consumption +
-        sums.production_output +
-        sums.adjustment +
-        sums.count_adjustment
-      : 0;
-    const opening = closing - periodTotal;
-
-    // Only include ingredients that have stock or movements
-    if (opening !== 0 || closing !== 0 || periodTotal !== 0) {
-      rows.push({
-        ingredient_id: ing.id,
-        ingredient_name: ing.name,
-        unit: ing.purchase_unit || ing.unit,
-        opening,
-        grn_receipt: sums?.grn_receipt ?? 0,
-        transfer_in: sums?.transfer_in ?? 0,
-        transfer_out: sums?.transfer_out ?? 0,
-        consumption: sums?.consumption ?? 0,
-        production_consumption: sums?.production_consumption ?? 0,
-        production_output: sums?.production_output ?? 0,
-        adjustment: (sums?.adjustment ?? 0) + (sums?.count_adjustment ?? 0),
-        closing,
-      });
-    }
-  }
+  const rows: MovementReportRow[] = (data ?? []).map((row) => ({
+    ingredient_id: row.ingredient_id,
+    ingredient_name: row.ingredient_name,
+    unit: row.unit,
+    opening: Number(row.opening),
+    grn_receipt: Number(row.grn_receipt),
+    transfer_in: Number(row.transfer_in),
+    transfer_out: Number(row.transfer_out),
+    consumption: Number(row.consumption),
+    production_consumption: Number(row.production_consumption),
+    production_output: Number(row.production_output),
+    adjustment: Number(row.adjustment),
+    closing: Number(row.closing),
+  }));
 
   return { success: true, data: rows };
 }

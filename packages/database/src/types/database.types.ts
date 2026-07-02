@@ -9540,6 +9540,27 @@ export type Database = {
           vietqr_revenue: number
         }[]
       }
+      get_stock_movement_report: {
+        Args: {
+          p_branch_id?: number
+          p_end_date: string
+          p_start_date: string
+        }
+        Returns: {
+          adjustment: number
+          closing: number
+          consumption: number
+          grn_receipt: number
+          ingredient_id: number
+          ingredient_name: string
+          opening: number
+          production_consumption: number
+          production_output: number
+          transfer_in: number
+          transfer_out: number
+          unit: string
+        }[]
+      }
       get_stocktake_lines_blind: {
         Args: { p_session_id: number }
         Returns: {
