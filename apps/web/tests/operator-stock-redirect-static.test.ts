@@ -265,7 +265,7 @@ test("operator stock landing keeps manager action affordances visible", () => {
   }
 
   for (const expected of [
-    /canReceiveStock[\s\S]*<Button asChild size="xs" variant="outline">[\s\S]*href=\{actionHrefs\.receive\}/,
+    /const primaryReceiveAction = canReceiveStock \?[\s\S]*href=\{actionHrefs\.receive\}/,
     /actionPermissions\.canCreateIssue[\s\S]*setQuickIssueTarget\(\{[\s\S]*issueType: "consumption"/,
     /actionPermissions\.canCreateStocktake[\s\S]*href=\{actionHrefs\.stocktake\}/,
     /actionPermissions\.canAdjustException[\s\S]*setAdjustTarget\(item\)/,
@@ -464,7 +464,10 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(reportsClient, /supplierInvoicesHref\?: string \| null/);
   assert.match(reportsClient, /embedded\?: boolean/);
   assert.match(reportsClient, embeddedContentWrapperPattern);
-  assert.match(reportsClient, /supplierInvoicesHref \?/);
+  assert.match(
+    reportsClient,
+    /showSupplierPayables = supplierInvoicesHref != null/,
+  );
 });
 
 test("branch stock wrappers keep inventory fallbacks inside the branch shell", () => {
