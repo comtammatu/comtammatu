@@ -251,7 +251,6 @@ test("stock and inventory value exclude legacy branch kitchen locations", () => 
   for (const [name, source] of [
     ["stock page", stockPage],
     ["inventory value", inventoryValue],
-    ["movement report", reportActions],
     ["finance inventory tied cash", financeCockpit],
   ] as const) {
     assert.match(
@@ -265,6 +264,22 @@ test("stock and inventory value exclude legacy branch kitchen locations", () => 
       `${name} should filter by stock-bearing location ids`,
     );
   }
+
+  // Movement report delegates stock-bearing filtering to the SECURITY DEFINER
+  // RPC, which replicates the same predicate in SQL.
+  assert.match(
+    reportActions,
+    /supabase\.rpc\("get_stock_movement_report"/,
+    "movement report should call the get_stock_movement_report RPC",
+  );
+  const movementRpc = readRepo(
+    "supabase/migrations/20260702200000_report_stock_movement_rpc.sql",
+  );
+  assert.match(movementRpc, /location_kind = 'warehouse'/);
+  assert.match(
+    movementRpc,
+    /branch_kind = 'central_kitchen' AND il\.location_kind = 'production_storage'/,
+  );
 });
 
 test("finance gross profit uses actual approved consumption, not mv_food_cost", () => {
