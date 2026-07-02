@@ -9,7 +9,7 @@ import {
   fetchTopItems,
   type FinanceDashboardSummary,
 } from "../../actions";
-import { fetchFoodCost } from "../../accounting-actions";
+import { fetchFoodCost } from "@/_lib/food-cost-actions";
 import { diffVNDateDays } from "@comtammatu/shared/time";
 import type {
   FinanceDashboardHealth,

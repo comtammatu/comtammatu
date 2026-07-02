@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Warehouse as IconWarehouse } from "lucide-react";
 import { type StaffRole } from "@comtammatu/shared/auth";
 import { AppShell } from "@/components/app-shell";
@@ -15,7 +15,6 @@ interface InventoryShellProps {
   children: ReactNode;
   user: { name: string };
   userRole: StaffRole;
-  siteKind: string;
   showProcurement: boolean;
   showProduction: boolean;
   showCatalogManagement: boolean;
@@ -41,7 +40,6 @@ export function InventoryShell({
   children,
   user,
   userRole,
-  siteKind,
   showProcurement,
   showProduction,
   showCatalogManagement,
@@ -52,34 +50,7 @@ export function InventoryShell({
   defaultBranchId,
 }: InventoryShellProps) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const branchQuery = searchParams.get("branchId");
   const productionPath = isProductionPath(pathname);
-  const activeBranchId = useMemo(() => {
-    if (productionPath) return null;
-    if (branchQuery) {
-      const parsed = Number(branchQuery);
-      if (
-        Number.isInteger(parsed) &&
-        parsed > 0 &&
-        allowedBranches.some((branch) => branch.id === parsed)
-      ) {
-        return parsed;
-      }
-    }
-    return defaultBranchId;
-  }, [allowedBranches, branchQuery, defaultBranchId, productionPath]);
-  const activeBranch = useMemo(
-    () =>
-      activeBranchId == null
-        ? null
-        : (allowedBranches.find((branch) => branch.id === activeBranchId) ??
-          null),
-    [activeBranchId, allowedBranches],
-  );
-  const effectiveSiteKind = productionPath
-    ? "central_kitchen"
-    : (activeBranch?.branch_kind ?? siteKind);
   // Primary tabs use the home branch, so they must not rebuild on URL branch
   // changes — keyed on userRole/defaultBranchId only.
   const tier1 = useMemo(
@@ -96,10 +67,8 @@ export function InventoryShell({
         showSettings,
         showWasteApprovals,
         showCountManagement,
-        siteKind: effectiveSiteKind,
       }),
     [
-      effectiveSiteKind,
       showCatalogManagement,
       showCountManagement,
       showProcurement,

@@ -3,9 +3,9 @@
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContextWithPermission } from "@/_lib/auth";
+import { getAuthContextWithPermission } from "./auth";
 
-const REPORT_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
+const REPORT_ROLES: readonly StaffRole[] = ["owner"];
 
 const fetchFoodCostSchema = z.object({
   startDate: z.string().date().optional(),
@@ -29,6 +29,8 @@ export async function fetchFoodCost(
 
   const { supabase } = ctx;
 
+  // mv_food_cost direct SELECT was revoked in 20260426023632; use the
+  // SECURITY DEFINER wrapper. NULL branch = all branches caller can access.
   const { data, error } = await supabase.rpc("get_food_cost", {
     p_branch_id: parsed.data.branchId ?? undefined,
     p_start_date: parsed.data.startDate ?? undefined,

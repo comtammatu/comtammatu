@@ -17,15 +17,16 @@ interface InventoryDictionary {
 
 const VI_DICTIONARY: InventoryDictionary = {
   // ------------------------------------------------------------------
-  // Sidebar navigation items (8 entries)
+  // Sidebar navigation items
   // ------------------------------------------------------------------
   navigation: {
     home: { long: "Tổng quan" },
     stock: { long: "Tồn kho" },
-    receiving: { short: "Nhập hàng", long: "Nhập hàng chi nhánh" },
     purchaseOrders: { short: "Đơn đặt hàng", long: "Đơn đặt hàng NCC" },
     grn: { short: "Phiếu nhập", long: "Phiếu nhập kho" },
     supplierInvoices: { long: "Hóa đơn NCC" },
+    drafts: { short: "Phiếu nháp", long: "Phiếu nháp GRN" },
+    supplierReturns: { short: "Trả hàng NCC", long: "Phiếu trả hàng NCC" },
     transfers: { short: "Điều chuyển", long: "Điều chuyển nội bộ" },
     stocktake: { long: "Kiểm kê" },
     issues: { short: "Xuất kho", long: "Xuất kho nội bộ" },
@@ -45,19 +46,6 @@ const VI_DICTIONARY: InventoryDictionary = {
   routes: {
     "/inventory": { long: "Tổng quan" },
     "/inventory/stock": { long: "Tồn kho" },
-    "/inventory/receiving": { short: "Nhập hàng", long: "Nhập hàng chi nhánh" },
-    "/inventory/receiving/po": {
-      short: "Đơn đặt hàng",
-      long: "Danh sách đơn đặt hàng NCC",
-    },
-    "/inventory/receiving/po/create": {
-      short: "Tạo mới",
-      long: "Tạo đơn đặt hàng NCC mới",
-    },
-    "/inventory/receiving/grn": { short: "Phiếu nhập", long: "Phiếu nhập kho" },
-    "/inventory/receiving/invoices": {
-      long: "Hóa đơn NCC",
-    },
     "/inventory/purchase-orders": {
       short: "Đơn đặt hàng",
       long: "Danh sách đơn đặt hàng NCC",

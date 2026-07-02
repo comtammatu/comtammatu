@@ -8,7 +8,7 @@ import {
 } from "@/_lib/permissions";
 import { fetchStocktakeSessions } from "../actions";
 import { fetchReorderAlerts, fetchExpiryAlerts } from "../alert-actions";
-import { countOpenPurchaseOrders } from "../receiving/receiving-counts";
+import { countOpenPurchaseOrders } from "./receiving-counts";
 import { fetchStockTransfers } from "../transfer-actions";
 import { getInventoryDashboard } from "../dashboard-actions";
 import { formatDate } from "./format";

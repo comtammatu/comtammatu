@@ -47,15 +47,12 @@ export default async function DashboardPage() {
   ]);
 
   const role = claims.user_role;
-  const reportsHref = canAccess(role, "reports")
-    ? "/finance/revenue"
-    : undefined;
   const financeHref = canAccess(role, "finance")
     ? "/finance?range=mtd&compare=prev_month"
     : undefined;
   const revenueHref = canAccess(role, "finance")
     ? "/finance/revenue?range=mtd&compare=prev_month"
-    : reportsHref;
+    : undefined;
   const inventoryHref = canAccess(role, "inventory")
     ? MODULE_ACL.inventory.path
     : undefined;

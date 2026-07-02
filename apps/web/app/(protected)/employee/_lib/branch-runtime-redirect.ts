@@ -8,7 +8,8 @@ type BranchRuntimeRoute =
   | "profile"
   | "scheduleLeave"
   | "profilePayslip"
-  | "stockCount";
+  | "stockCount"
+  | "checkoutApprovals";
 
 const BRANCH_RUNTIME_PATHS = {
   home: "",
@@ -19,11 +20,16 @@ const BRANCH_RUNTIME_PATHS = {
   scheduleLeave: "/shift/schedule/leave",
   profilePayslip: "/profile/payslip",
   stockCount: "/stock/count",
+  checkoutApprovals: "/shift/checkout-approvals",
 } satisfies Record<BranchRuntimeRoute, string>;
 
-// Old /employee entrypoints and their branch-runtime equivalents. The
-// proxy consumes this map so redirects happen before pages render; paths
-// missing from the map (checkout-approvals, permissions) stay on /employee.
+// Old /employee entrypoints and their branch-runtime equivalents. The proxy
+// consumes this map so redirects happen before pages render; paths missing
+// from the map (permissions) stay on /employee. checkout-approvals (D058 §5)
+// redirects for every operator_home role — the destination's own
+// employee_checkout_approvals ACL (owner+branch_manager) rejects cashier/chef
+// on the follow-up request, so office (no operator_home) is the only role
+// that falls through and keeps using /employee.
 const LEGACY_EMPLOYEE_ROUTES: Record<string, BranchRuntimeRoute> = {
   "/employee": "home",
   "/employee/clock": "shiftClock",
@@ -34,6 +40,7 @@ const LEGACY_EMPLOYEE_ROUTES: Record<string, BranchRuntimeRoute> = {
   "/employee/leave": "scheduleLeave",
   "/employee/payslip": "profilePayslip",
   "/employee/count": "stockCount",
+  "/employee/checkout-approvals": "checkoutApprovals",
 };
 
 export function resolveEmployeeBranchRuntimePath(

@@ -60,62 +60,6 @@ export const admin = {
     branchStatusEmptyDescription:
       "Khai báo chi nhánh trong Thiết lập hệ thống để bắt đầu vận hành.",
   },
-  reports: {
-    index: {
-      title: "Báo cáo điều hành",
-      description:
-        "Xem nhanh tiền đã thu, tồn kho, dòng tiền vận hành và ngày công.",
-      aggregateTitle: "Báo cáo tổng hợp",
-      aggregateDescription:
-        "Các chỉ số quan trọng cho tiền đã thu, tồn kho, tiền vận hành và ngày công.",
-      openReport: "Mở báo cáo",
-      summaryBadge: "Tổng hợp",
-      operationsBadge: "Vận hành",
-      cards: {
-        revenue: "Doanh thu ròng",
-        inventoryValue: "Giá trị tồn kho",
-        stockMovement: "Biến động tồn kho",
-      },
-      cardDescriptions: {
-        revenue:
-          "Tiền đã thu và doanh thu ròng theo ngày, chi nhánh và phương thức thanh toán.",
-        inventoryValue: "Tổng giá trị tồn kho toàn hệ thống và theo chi nhánh.",
-        stockMovement: "Nhập – xuất – tồn nguyên liệu theo kỳ.",
-      },
-    },
-    inventoryValue: {
-      title: "Giá trị tồn kho",
-    },
-    stockMovement: {
-      pageTitle: "Biến động tồn kho",
-      pageDescription:
-        "Theo dõi nhập – xuất – tồn nguyên liệu theo kỳ và theo chi nhánh.",
-      loadError: "Lỗi tải báo cáo",
-      allBranchesPlaceholder: "Tất cả",
-      dayPreset: (days: number) => `${days} ngày`,
-      loading: "Đang tải...",
-      viewReport: "Xem báo cáo",
-      choosePeriodTitle: "Chọn kỳ báo cáo",
-      detailTab: (count: number) => `Chi tiết (${count})`,
-      branchTab: (count: number) => `Theo chi nhánh (${count})`,
-      emptyTitle: "Không có dữ liệu",
-      detailEmptyDescription: "Không có biến động tồn kho trong kỳ đã chọn.",
-      branchEmptyDescription:
-        "Không có biến động tồn kho theo chi nhánh trong kỳ đã chọn.",
-      unit: "ĐV",
-      opening: "Tồn đầu",
-      openingPeriod: "Tồn đầu kỳ",
-      closing: "Tồn cuối",
-      closingPeriod: "Tồn cuối kỳ",
-      grnReceipt: "Nhập kho",
-      productionConsumption: "SX tiêu hao",
-      productionOutput: "SX nhập",
-      transferIn: "Chuyển vào",
-      transferOut: "Chuyển ra",
-      consumption: "Tiêu hao",
-      adjustment: "Điều chỉnh",
-    },
-  },
   printTemplates: {
     loadErrorTitle: "Không thể tải mẫu phiếu in",
     loadErrorTemplates: "Không tải được danh sách mẫu phiếu in. Vui lòng thử lại.",

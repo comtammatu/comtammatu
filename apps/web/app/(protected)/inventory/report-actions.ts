@@ -1,7 +1,6 @@
 "use server";
 
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   INVENTORY_OPS_ROLES,
@@ -12,19 +11,11 @@ import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
-const REPORT_ROLES: readonly StaffRole[] = ["owner"];
-
 /* ─── Schemas ─── */
 
 const stockMovementReportSchema = z.object({
   startDate: z.string().min(1, { error: "Ngày bắt đầu không hợp lệ" }),
   endDate: z.string().min(1, { error: "Ngày kết thúc không hợp lệ" }),
-  branchId: z.coerce.number().int().positive().optional(),
-});
-
-const fetchFoodCostSchema = z.object({
-  startDate: z.string().date().optional(),
-  endDate: z.string().date().optional(),
   branchId: z.coerce.number().int().positive().optional(),
 });
 
@@ -55,37 +46,6 @@ export interface BranchMovementSummaryRow {
   production_consumption: number;
   production_output: number;
   adjustment: number;
-}
-
-export async function fetchFoodCost(
-  input?: z.infer<typeof fetchFoodCostSchema>,
-): Promise<ActionResult> {
-  const parsed = fetchFoodCostSchema.safeParse(input ?? {});
-  if (!parsed.success) {
-    return { success: false, error: "Tham số không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    REPORT_ROLES,
-    PERMISSION_KEYS.FINANCE_VIEW,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase } = ctx;
-
-  // mv_food_cost direct SELECT was revoked in 20260426023632; use the
-  // SECURITY DEFINER wrapper. NULL branch = all branches caller can access.
-  const { data, error } = await supabase.rpc("get_food_cost", {
-    p_branch_id: parsed.data.branchId ?? undefined,
-    p_start_date: parsed.data.startDate ?? undefined,
-    p_end_date: parsed.data.endDate ?? undefined,
-  });
-
-  if (error) {
-    return { success: false, error: "Không thể tải dữ liệu giá vốn món." };
-  }
-
-  return { success: true, data: data ?? [] };
 }
 
 /* ─── fetchStockMovementReport ─── */

@@ -19,7 +19,6 @@ export type ModuleKey =
   | "finance"
   | "branches"
   | "branch_picker"
-  | "reports"
   | "settings"
   | "pos"
   | "kds"
@@ -117,11 +116,6 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/br",
     allowedRoles: ["owner"],
     label: getModuleLabelVi("branch_picker"),
-  },
-  reports: {
-    path: "/admin/reports",
-    allowedRoles: ["owner"],
-    label: getModuleLabelVi("reports"),
   },
   settings: {
     path: "/admin/settings",

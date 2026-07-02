@@ -1096,6 +1096,9 @@ const ACL_PATHS = [
 const ROUTE_MANIFEST_SHIM_ROUTES = new Set([
   "/admin",
   "/admin/finance/[[...slug]]",
+  "/admin/reports",
+  "/admin/reports/stock-movement",
+  "/admin/reports/inventory-value",
 ]);
 // ACL family roots without a landing page still resolve through shared ACL.
 const ROUTE_MANIFEST_NO_PAGE_ACL = new Set(["/admin/inventory"]);

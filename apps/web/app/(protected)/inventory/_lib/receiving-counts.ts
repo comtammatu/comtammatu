@@ -1,7 +1,7 @@
 "use server";
 
 import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
-import { getAuthContextWithPermission } from "../_lib/auth";
+import { getAuthContextWithPermission } from "./auth";
 
 // Receiving-hub badge counts. The hub previously fetched the full PO / GRN /
 // supplier-invoice lists (with eager joins) only to count a filtered subset and

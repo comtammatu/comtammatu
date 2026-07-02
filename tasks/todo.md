@@ -19,6 +19,44 @@ Verify the live checkout with `git status` before acting on any in-flight notes;
 do not reopen plan rows that are already represented by code in the current
 checkout.
 
+## Now — IA Unification Program (D058)
+
+> Direction locked 2026-07-03: "Hai plane — Một chrome — Một cửa mỗi việc".
+> Contract: `docs/worklog/t3-ia-direction-debate-2026-07-02.md`. One PR per
+> wave slice, separate worktree, fresh full gate. 3-viewport QA (phone/tablet/
+> desktop) on every changed surface.
+
+- [x] **W0 — route-table guards** (T3, merged PR #176): consistency test
+  (ROUTE_FAMILY_CONTRACTS ↔ resolveModuleFromPath), fix operator-shift/profile
+  drift toward enforcement, re-key `/br/*/shift/checkout-approvals` →
+  `employee_checkout_approvals` (D058 §5), 7-role ACL matrix test.
+- [ ] **W0b — generate `docs/spec/role-route-matrix.md` from code** + staleness
+  lint (post W0).
+- [x] **W1 — branch relief** (merged PR #177): "Văn phòng" bridge tile group (≤6, D058 §6),
+  delete dead `[]` special-case in `employee/profile/page.tsx`, pass `hrHref`
+  on branch dashboard, `branch_kind × role` tiles (D058 §7), quick-win wrappers:
+  `/br/[id]/stock/grn` (GRNListPageContent), consumption
+  (`IssuesPageContent scope="consumption"`), PO + production tiles.
+- [x] **W2 — chrome primitives** (merged PR #180): `AppHeader` primitive (2 true
+  duplicates consolidated; sidebar brand + POS station lockups intentionally
+  distinct, frozen by new `header-lockup-registry` gate), one `PwaToolbar`,
+  `/notifications` + `/br` classified in design-system.md § A.
+- [x] **W3 — one door per job**: canonical URLs + redirects (reports→/finance
+  D058 §4, approvals D058 §5), prune migrated floor items from inventory-nav,
+  dedup `fetchFoodCost` + `defaultRedirect`/`getDefaultRedirect`, delete dead
+  `INVENTORY_ROUTE_PREFIXES` shadow entries + spread, delete orphan
+  `/inventory/receiving`, add `/inventory/drafts` +
+  `/inventory/supplier-returns` nav entries. Scope-read (`?branchId=`)
+  unification stays deferred (D058 §12/W3 scope note).
+- [ ] **W5 — page archetype standard**: `docs/spec/page-archetypes` spec (12
+  archetypes, D058 §9, not yet created), component registry in
+  `docs/modules/ui.md` (§10), archetype gate in `check-ui-contract.mjs`,
+  wire `audit:ui-components`.
+- [ ] **W6 — Claude Design mirror push** (after W5; one-way repo→design, §11).
+- [ ] **Perf lane (interleaved, D058 §12)**: POS client code-split, `radix-ui`
+  in `optimizePackageImports`, KDS/runner fetch parallelize+stream, `use cache`
+  tenant-stable reads, bound PO/hr-staff fetches.
+
 ## Now — Workflow Reset
 
 - [x] **Agent workflow frame cleanup** — Goal: one entrypoint, one active board,
