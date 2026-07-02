@@ -36,6 +36,7 @@
     "db:baseline:extract": "node scripts/supabase-baseline-extract.mjs",
     "db:baseline:extract:dry-run": "node scripts/supabase-baseline-extract.mjs --dry-run",
     "db:baseline:local-check": "node scripts/supabase-baseline-local-check.mjs",
+    "db:schema-drift": "node scripts/check-schema-drift.mjs",
     "inventory:matu-platform:dry-run": "node --env-file=.env.local scripts/inventory-matu-platform-dry-run.mjs",
     "inventory:matu-platform:master-data": "node --env-file=.env.local scripts/inventory-matu-platform-master-data.mjs",
     "inventory:matu-platform:operational": "node --env-file=.env.local scripts/inventory-matu-platform-operational-import.mjs",
