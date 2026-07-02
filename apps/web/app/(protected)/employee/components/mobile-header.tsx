@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Bell as IconBell, User as IconUser } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { BrandLogoBox, BrandMark } from "@/components/brand";
+import { AppHeader } from "@/components/app-header";
 import { getUnreadCount } from "@/(protected)/notifications/actions";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { loadAuthState } from "@/_lib/auth";
@@ -34,23 +34,14 @@ export async function MobileHeader() {
   const headerSubtitle = branchName ? positionLabel : copy.noBranch;
 
   return (
-    <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur print:hidden">
-      <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-2 px-3 py-1.5 sm:gap-3 sm:py-2 lg:max-w-3xl">
-        <div className="flex min-w-0 items-center gap-2">
-          <BrandLogoBox>
-            <BrandMark decorative className="size-full" />
-          </BrandLogoBox>
-          <div className="min-w-0">
-            <p className="font-heading truncate text-sm font-semibold sm:text-base">
-              {headerTitle}
-            </p>
-            <p className="hidden truncate text-xs text-muted-foreground sm:block">
-              {headerSubtitle}
-            </p>
-          </div>
-        </div>
-        <EmployeeDesktopNav />
-        <div className="flex shrink-0 items-center gap-2">
+    <AppHeader
+      title={headerTitle}
+      subtitle={headerSubtitle}
+      subtitleHiddenOnMobile
+      wide
+      nav={<EmployeeDesktopNav />}
+      actions={
+        <>
           <Badge variant="outline" className="hidden sm:inline-flex lg:hidden">
             {positionLabel}
           </Badge>
@@ -81,8 +72,8 @@ export async function MobileHeader() {
               <IconUser data-icon="inline-start" />
             </Link>
           </Button>
-        </div>
-      </div>
-    </header>
+        </>
+      }
+    />
   );
 }

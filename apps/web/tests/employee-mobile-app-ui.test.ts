@@ -40,6 +40,8 @@ const pwaInstallHelpDialogSource = readWebSource(
 const employeePwaToolbarSource = readWebSource(
   "app/(protected)/employee/components/employee-pwa-toolbar.tsx",
 );
+const pwaToolbarSource = readWebSource("app/components/pwa-toolbar.tsx");
+const appHeaderSource = readWebSource("app/components/app-header.tsx");
 const employeeHeaderSource = readWebSource(
   "app/(protected)/employee/components/mobile-header.tsx",
 );
@@ -113,8 +115,13 @@ test("Employee shell is phone-first and touch-safe", () => {
   );
   assert.match(
     employeeHeaderSource,
-    /hidden truncate text-xs text-muted-foreground sm:block/,
-    "Mobile header should hide the subtitle/position line on narrow screens",
+    /subtitleHiddenOnMobile/,
+    "Mobile header should hide the subtitle/position line on narrow screens via the shared AppHeader",
+  );
+  assert.match(
+    appHeaderSource,
+    /truncate text-xs text-muted-foreground[\s\S]*subtitleHiddenOnMobile && "hidden sm:block"/,
+    "Shared AppHeader should hide its subtitle line on narrow screens when requested",
   );
   assert.equal(
     (employeeBottomNavSource.match(/href: "\/employee/g) ?? []).length,
@@ -155,22 +162,22 @@ test("Employee PWA shell explains install and offline state without persisted wo
     "PWA runtime should capture the browser install prompt",
   );
   assert.match(
-    employeePwaToolbarSource,
+    pwaToolbarSource,
     /useIsOnline[\s\S]*useIsStandalone[\s\S]*useInstallPrompt/,
-    "Employee PWA toolbar should read online, standalone, and install state from the runtime",
+    "Shared PWA toolbar should read online, standalone, and install state from the runtime",
   );
   assert.match(
-    employeePwaToolbarSource,
+    pwaToolbarSource,
     /role="alert"[\s\S]*copy\.offline/,
     "Offline state should be visible in the Employee shell",
   );
   assert.match(
-    employeePwaToolbarSource,
+    pwaToolbarSource,
     /setHelpMode\(isIosPwaInstall \? "ios" : "browser"\)/,
     "Install action should fall back to clear platform instructions when no browser prompt is available",
   );
   assert.match(
-    employeePwaToolbarSource,
+    pwaToolbarSource,
     /<PwaInstallHelpDialog[\s\S]*title=\{helpCopy\.title\}/,
     "Install instructions should delegate title copy to the shared PWA help dialog",
   );
@@ -182,7 +189,12 @@ test("Employee PWA shell explains install and offline state without persisted wo
   assert.doesNotMatch(
     employeePwaToolbarSource,
     /localStorage|sessionStorage/,
-    "Employee PWA shell must not persist scope or workflow state in browser storage",
+    "Employee PWA toolbar wrapper must not persist scope or workflow state in browser storage",
+  );
+  assert.doesNotMatch(
+    employeePwaToolbarSource,
+    /dismissStorageKey=/,
+    "Employee PWA toolbar must not opt into install-dismiss persistence",
   );
   assert.match(
     employeeMessagesSource,

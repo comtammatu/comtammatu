@@ -126,9 +126,14 @@ test("POS and KDS toolbars render a return-to-hub link; runner never does", () =
     ),
     "utf8",
   );
+  const pwaToolbarSource = readFileSync(
+    new URL("../app/components/pwa-toolbar.tsx", import.meta.url),
+    "utf8",
+  );
 
   // Runner is a guest-facing display: staff navigation is excluded there.
-  assert.match(toolbarSource, /const showHubLink = surface !== "runner";/);
+  assert.match(toolbarSource, /surface !== "runner"/);
+  assert.match(toolbarSource, /<PwaToolbarHubLink/);
   assert.match(toolbarSource, /surface="pos"/);
   assert.match(toolbarSource, /surface="kds"/);
   assert.match(toolbarSource, /surface="runner"/);
@@ -137,18 +142,22 @@ test("POS and KDS toolbars render a return-to-hub link; runner never does", () =
   // accessible label from the copy catalog, and uses the 48px touch size.
   assert.match(
     toolbarSource,
-    /<Link href=\{`\/br\/\$\{branchId\}`\} aria-label=\{copy\.hubLinkLabel\}>/,
+    /<PwaToolbarHubLink\s+href=\{`\/br\/\$\{branchId\}`\}\s+label=\{copy\.hubLinkLabel\}/,
   );
   assert.match(toolbarSource, /hubLinkLabel: "Về màn hình chính chi nhánh"/);
   assert.match(
-    toolbarSource,
+    pwaToolbarSource,
+    /<Link href=\{href\} aria-label=\{label\}>/,
+  );
+  assert.match(
+    pwaToolbarSource,
     /asChild\s+variant="ghost"\s+size="icon-touch"/,
   );
 
   // POS/KDS keep the hub link even in the quiet state (standalone or install
   // hint dismissed) where the toolbar previously rendered nothing; only the
   // runner surface still returns null there.
-  assert.match(toolbarSource, /if \(hubLink == null\) return null;/);
+  assert.match(pwaToolbarSource, /if \(hubLink == null\) return null;/);
 });
 
 test("station layouts mount the branch-scoped PWA toolbars", () => {

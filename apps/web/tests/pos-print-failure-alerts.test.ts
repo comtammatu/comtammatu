@@ -39,6 +39,10 @@ const toolbarSource = readFileSync(
   ),
   "utf8",
 );
+const pwaToolbarSource = readFileSync(
+  join(process.cwd(), "app/components/pwa-toolbar.tsx"),
+  "utf8",
+);
 const pwaRuntimeSource = readFileSync(
   join(process.cwd(), "app/components/pwa-runtime.tsx"),
   "utf8",
@@ -79,7 +83,7 @@ test("draft invoices expose a one-tap reissue wired to the existing retry path",
 test("PWA runtime exposes the new-version signal and the toolbar offers reload", () => {
   assert.match(pwaRuntimeSource, /controllerchange/);
   assert.match(pwaRuntimeSource, /export function useHasNewVersion/);
-  assert.match(toolbarSource, /useHasNewVersion/);
-  assert.match(toolbarSource, /window\.location\.reload\(\)/);
+  assert.match(pwaToolbarSource, /useHasNewVersion/);
+  assert.match(pwaToolbarSource, /window\.location\.reload\(\)/);
   assert.match(toolbarSource, /"pos" \| "kds" \| "runner"/);
 });

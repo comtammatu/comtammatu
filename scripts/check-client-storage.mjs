@@ -6,11 +6,10 @@ const STORAGE_PATTERN =
   /\b(?:window\.)?(?:localStorage|sessionStorage)\.(?:getItem|setItem|removeItem|clear)\b/g;
 
 const ALLOWLIST = {
-  "apps/web/app/(protected)/br/[branchId]/_components/operational-pwa/toolbar.tsx":
-    {
-      count: 2,
-      reason: "operational PWA install hint dismissal only",
-    },
+  "apps/web/app/components/pwa-toolbar.tsx": {
+    count: 2,
+    reason: "operational PWA install hint dismissal only",
+  },
   "apps/web/lib/device-prefs.ts": {
     count: 2,
     reason: "device-local operational preferences (POS/KDS sound) only",
