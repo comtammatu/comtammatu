@@ -76,15 +76,25 @@ function parseEnv(text) {
   );
 }
 
-function main() {
+function startStack() {
   writeScratch();
-
   process.stdout.write("Starting Supabase Local for e2e (baseline + seeds)...\n");
   const start = supabase(["start", "--workdir", WORKDIR]);
   process.stdout.write((start.stdout || "") + (start.stderr || ""));
-  if (start.status !== 0) {
-    process.stderr.write("\nsupabase start failed\n");
-    process.exit(1);
+  return start.status === 0;
+}
+
+function main() {
+  if (!startStack()) {
+    // One retry with full teardown: shared CI runners intermittently hit
+    // Docker Hub pull rate limits mid-start and leave a half-started stack.
+    process.stderr.write("\nsupabase start failed — tearing down and retrying once in 90s\n");
+    supabase(["stop", "--workdir", WORKDIR, "--no-backup"], { timeoutMs: 120_000 });
+    spawnSync("sleep", ["90"]);
+    if (!startStack()) {
+      process.stderr.write("\nsupabase start failed\n");
+      process.exit(1);
+    }
   }
 
   const status = supabase(["status", "--workdir", WORKDIR, "-o", "env"], { timeoutMs: 60_000 });
