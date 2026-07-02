@@ -1,22 +1,19 @@
 import { notFound } from "next/navigation";
-import { PurchaseOrdersPageContent } from "@/(protected)/inventory/purchase-orders/page";
+import { StocktakePageContent } from "@/(protected)/inventory/stocktake/page";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
 }
 
-export default async function OperatorPurchaseOrdersPage({
-  params,
-}: PageProps) {
+export default async function OperatorStocktakePage({ params }: PageProps) {
   const { branchId: rawBranchId } = await params;
   const branchId = Number(rawBranchId);
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();
 
   return (
-    <PurchaseOrdersPageContent
+    <StocktakePageContent
       routeBranchId={branchId}
-      basePath={`/br/${branchId}/stock/purchase-orders`}
-      suppliersPath={null}
+      routeBase={`/br/${branchId}/stock/stocktake`}
       embedded
     />
   );

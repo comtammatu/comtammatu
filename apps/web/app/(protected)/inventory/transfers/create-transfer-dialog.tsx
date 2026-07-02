@@ -3,10 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Plus as IconPlus,
-  Trash as IconTrash,
-} from "lucide-react";
+import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -24,10 +21,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
-import {
-  getDefaultIssueUnit,
-  getIssueUnitOptions,
-} from "../_lib/issue-units";
+import { getDefaultIssueUnit, getIssueUnitOptions } from "../_lib/issue-units";
 import { createStockTransfer } from "../transfer-actions";
 import type { IngredientRow } from "../page";
 import { messages } from "@lib/messages";
@@ -90,12 +84,23 @@ export function CreateTransferForm({
     !isBranchManager &&
     outboundSourceBranchId != null &&
     isTransferSourceKind(currentBranchKind);
+  const requestDestinationBranchId =
+    isBranchManager && currentBranchKind === "branch" ? userBranchId : null;
+  const canCreateInboundRequest = requestDestinationBranchId != null;
   const outboundDestinationOptions = branches.filter((branch) => {
     if (!branch.is_active || branch.id === outboundSourceBranchId) return false;
     return (branch.branch_kind ?? "branch") === "branch";
   });
+  const inboundSourceOptions = branches.filter((branch) => {
+    if (!branch.is_active || branch.id === requestDestinationBranchId) {
+      return false;
+    }
+    const kind = branch.branch_kind ?? "branch";
+    return kind === "central_supply" || kind === "central_kitchen";
+  });
 
   const [outboundToBranchId, setOutboundToBranchId] = useState("");
+  const [inboundFromBranchId, setInboundFromBranchId] = useState("");
   const [draftLines, setDraftLines] = useState<DraftLine[]>([]);
   const [pickerIngredientId, setPickerIngredientId] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -113,6 +118,7 @@ export function CreateTransferForm({
 
   function resetForm() {
     setOutboundToBranchId("");
+    setInboundFromBranchId("");
     setDraftLines([]);
     setPickerIngredientId("");
   }
@@ -158,9 +164,7 @@ export function CreateTransferForm({
     );
   }
 
-  function buildLinesPayload(
-    lines: DraftLine[],
-  ):
+  function buildLinesPayload(lines: DraftLine[]):
     | {
         ingredientId: number;
         quantity: number;
@@ -197,23 +201,33 @@ export function CreateTransferForm({
     const notes = String(formData.get("notes") ?? "") || undefined;
     const vehicleInfo = String(formData.get("vehicleInfo") ?? "") || undefined;
 
-    if (!canCreateOutbound || outboundSourceBranchId == null) {
+    if (!canCreateOutbound && !canCreateInboundRequest) {
       toast.error(messages.inventory.transfer.createForbidden);
       return;
     }
 
-    const toBranchId = Number(outboundToBranchId) || undefined;
-    if (!toBranchId) {
+    let fromBranchId = outboundSourceBranchId ?? undefined;
+    let toBranchId = Number(outboundToBranchId) || undefined;
+
+    if (isBranchManager) {
+      fromBranchId = Number(inboundFromBranchId) || undefined;
+      toBranchId = requestDestinationBranchId ?? undefined;
+      if (!fromBranchId) {
+        toast.error("Chọn kho cấp hàng.");
+        return;
+      }
+    } else if (!toBranchId) {
       toast.error("Chọn kho nhận.");
       return;
     }
+    if (!fromBranchId || !toBranchId) return;
 
     const linesPayload = buildLinesPayload(draftLines);
     if (linesPayload === undefined) return;
 
     startTransition(async () => {
       const res = await createStockTransfer({
-        fromBranchId: outboundSourceBranchId,
+        fromBranchId,
         toBranchId,
         notes,
         vehicleInfo,
@@ -233,14 +247,48 @@ export function CreateTransferForm({
 
   const submitDisabled =
     isPending ||
-    !canCreateOutbound ||
-    !outboundToBranchId ||
+    (!canCreateOutbound && !canCreateInboundRequest) ||
+    (isBranchManager ? !inboundFromBranchId : !outboundToBranchId) ||
     draftLines.length === 0;
 
   return (
     <form onSubmit={submit} className="flex min-w-0 flex-col gap-4">
       <AppSection title={messages.inventory.transfer.createTransferTitle}>
-        {canCreateOutbound ? (
+        {canCreateInboundRequest ? (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">
+              {myBranchName
+                ? `Yêu cầu hàng về ${myBranchName}.`
+                : messages.inventory.transfer.inboundToSelected}
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <Label>
+                {messages.inventory.transfer.sendingWarehouseRequired}
+              </Label>
+              <Select
+                value={inboundFromBranchId}
+                onValueChange={setInboundFromBranchId}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      messages.inventory.transfer.chooseSendingWarehouse
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {inboundSourceOptions.map((branch) => (
+                      <SelectItem key={branch.id} value={String(branch.id)}>
+                        {formatBranchSiteLabel(branch)}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        ) : canCreateOutbound ? (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
               {myBranchName
@@ -329,7 +377,9 @@ export function CreateTransferForm({
           <AppEmptyState
             compact
             title={messages.inventory.transfer.emptyIngredientsTitle}
-            description={messages.inventory.transfer.emptyIngredientsDescription}
+            description={
+              messages.inventory.transfer.emptyIngredientsDescription
+            }
           />
         ) : (
           <div className="flex flex-col gap-2">
@@ -339,75 +389,75 @@ export function CreateTransferForm({
               );
               const lineUnitOptions = getIssueUnitOptions(lineIngredient);
               return (
-              <div
-                key={line.key}
-                className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2"
-              >
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                  {line.name}
-                </span>
-                <FormattedNumberInput
-                  className="h-8 w-20"
-                  placeholder={messages.inventory.common.quantityShort}
-                  value={line.quantity}
-                  onValueChange={(value) =>
-                    updateLine(line.key, { quantity: value })
-                  }
-                  maxFractionDigits={3}
-                  required
-                />
-                {lineUnitOptions.length > 0 ? (
-                  <Select
-                    value={line.entryUnitId}
-                    onValueChange={(value) => {
-                      const opt = lineUnitOptions.find(
-                        (o) => String(o.unitId) === value,
-                      );
-                      updateLine(line.key, {
-                        entryUnitId: value,
-                        unit: opt?.code ?? line.unit,
-                      });
-                    }}
-                  >
-                    <SelectTrigger
-                      className="h-8 w-20"
-                      aria-label={messages.inventory.transfer.unit}
-                    >
-                      <SelectValue
-                        placeholder={messages.inventory.transfer.selectUnit}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {lineUnitOptions.map((o) => (
-                          <SelectItem key={o.unitId} value={String(o.unitId)}>
-                            {o.code}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    className="h-8 w-16"
-                    value={line.unit}
-                    onChange={(event) =>
-                      updateLine(line.key, { unit: event.target.value })
+                <div
+                  key={line.key}
+                  className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2"
+                >
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    {line.name}
+                  </span>
+                  <FormattedNumberInput
+                    className="h-8 w-20"
+                    placeholder={messages.inventory.common.quantityShort}
+                    value={line.quantity}
+                    onValueChange={(value) =>
+                      updateLine(line.key, { quantity: value })
                     }
+                    maxFractionDigits={3}
                     required
                   />
-                )}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="shrink-0"
-                  onClick={() => removeLine(line.key)}
-                  aria-label={messages.inventory.transfer.removeLineAria}
-                >
-                  <IconTrash />
-                </Button>
-              </div>
+                  {lineUnitOptions.length > 0 ? (
+                    <Select
+                      value={line.entryUnitId}
+                      onValueChange={(value) => {
+                        const opt = lineUnitOptions.find(
+                          (o) => String(o.unitId) === value,
+                        );
+                        updateLine(line.key, {
+                          entryUnitId: value,
+                          unit: opt?.code ?? line.unit,
+                        });
+                      }}
+                    >
+                      <SelectTrigger
+                        className="h-8 w-20"
+                        aria-label={messages.inventory.transfer.unit}
+                      >
+                        <SelectValue
+                          placeholder={messages.inventory.transfer.selectUnit}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {lineUnitOptions.map((o) => (
+                            <SelectItem key={o.unitId} value={String(o.unitId)}>
+                              {o.code}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      className="h-8 w-16"
+                      value={line.unit}
+                      onChange={(event) =>
+                        updateLine(line.key, { unit: event.target.value })
+                      }
+                      required
+                    />
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="shrink-0"
+                    onClick={() => removeLine(line.key)}
+                    aria-label={messages.inventory.transfer.removeLineAria}
+                  >
+                    <IconTrash />
+                  </Button>
+                </div>
               );
             })}
           </div>

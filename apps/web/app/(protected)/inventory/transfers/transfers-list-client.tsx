@@ -27,9 +27,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { matchesSearch } from "@lib/search";
-import type {
-  BranchForTransfer,
-} from "./create-transfer-dialog";
+import type { BranchForTransfer } from "./create-transfer-dialog";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
@@ -83,6 +81,9 @@ function classifyTransfer(
     return "receive";
   }
   if (dispatchStates.includes(status)) {
+    if (userRole === "branch_manager" && viewerBranchId === toId) {
+      return "receive";
+    }
     if (viewerBranchId != null && viewerBranchId !== fromId) return "history";
     if (userRole === "branch_manager" && fromId !== toId) return "history";
     return "dispatch";
@@ -96,6 +97,7 @@ export function TransfersListClient({
   userBranchId,
   userRole,
   basePath = "/inventory/transfers",
+  createBasePath,
   createEnabled = true,
   initialTab = "receive",
   pageTitle: pageTitleOverride,
@@ -106,6 +108,7 @@ export function TransfersListClient({
   userBranchId: number | null;
   userRole: StaffRole;
   basePath?: string;
+  createBasePath?: string;
   createEnabled?: boolean;
   initialTab?: TransferTab;
   pageTitle?: string;
@@ -124,18 +127,30 @@ export function TransfersListClient({
       userBranchKind === "central_supply" ||
       userBranchKind === "central_kitchen") &&
     branches.length >= 2;
-  const canCreate = createEnabled && canCreateOutbound;
+  const canCreateInboundRequest =
+    isBranchManager &&
+    userBranchId != null &&
+    userBranchKind === "branch" &&
+    branches.some(
+      (branch) =>
+        branch.is_active &&
+        (branch.branch_kind === "central_supply" ||
+          branch.branch_kind === "central_kitchen"),
+    );
+  const canCreate =
+    createEnabled && (canCreateOutbound || canCreateInboundRequest);
   const rows = initial;
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<TransferTab>(initialTab);
 
-  const createLabel = copy.createSlip;
+  const createLabel = isBranchManager ? "Yêu cầu hàng" : copy.createSlip;
   const pageTitle = pageTitleOverride ?? copy.internalTransferTitle;
   const tabLabels: Record<TransferTab, string> = TAB_LABELS;
+  const createPathBase = createBasePath ?? basePath;
   const createHref =
     userBranchId == null
-      ? `${basePath}/new`
-      : `${basePath}/new?branchId=${userBranchId}`;
+      ? `${createPathBase}/new`
+      : `${createPathBase}/new?branchId=${userBranchId}`;
 
   const tabGroups = useMemo(() => {
     const groups: Record<TransferTab, TransferListRow[]> = {

@@ -87,11 +87,13 @@ export function PurchaseOrdersClient({
   suppliers,
   purchaseOrdersBasePath = "/inventory/purchase-orders",
   suppliersPath = "/inventory/suppliers",
+  embedded = false,
 }: {
   initial: PurchaseOrderRow[];
   suppliers: SupplierRow[];
   purchaseOrdersBasePath?: string;
   suppliersPath?: string | null;
+  embedded?: boolean;
 }) {
   const [rows] = useState(initial);
   const [search, setSearch] = useState("");
@@ -209,8 +211,8 @@ export function PurchaseOrdersClient({
     },
   ];
 
-  return (
-    <AppPage width="wide">
+  const content = (
+    <>
       <AppPageHeader
         eyebrow={inventoryShellCopy.moduleName}
         title={tRoute("/inventory/purchase-orders", "heading")}
@@ -317,8 +319,14 @@ export function PurchaseOrdersClient({
           />
         )}
       />
-    </AppPage>
+    </>
   );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return <AppPage width="wide">{content}</AppPage>;
 }
 
 function PurchaseOrderCard({

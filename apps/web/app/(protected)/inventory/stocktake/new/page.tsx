@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import {
   INVENTORY_FEATURE_FLAGS,
@@ -13,19 +13,31 @@ import { NewStocktakeSessionClient } from "./new-session-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewStocktakeSessionPage({
+interface NewStocktakeSessionPageContentProps {
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+  routeBranchId?: number;
+  routeBase?: string;
+  embedded?: boolean;
+}
+
+export async function NewStocktakeSessionPageContent({
   searchParams,
-}: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
-}) {
-  const sp = await searchParams;
+  routeBranchId,
+  routeBase = "/inventory/stocktake",
+  embedded = false,
+}: NewStocktakeSessionPageContentProps) {
+  const sp = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
 
   // Sidebar-selected branch drives the feature-flag gate and default session
   // branch. For tenant-wide roles (owner) this is the sidebar picker; for
   // branch-scoped roles it collapses to claims.branch_id.
-  const requested = await resolveRequestedBranchId(sp.branchId);
+  const requested =
+    routeBranchId ?? (await resolveRequestedBranchId(sp.branchId));
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
+  if (routeBranchId != null && scope.selectedBranchId !== routeBranchId) {
+    notFound();
+  }
 
   // Feature flag gate — S13a new stocktake UI must be enabled per-branch.
   const gateBranchId = scope.selectedBranchId;
@@ -37,7 +49,7 @@ export default async function NewStocktakeSessionPage({
     );
     if (!flagEnabled) {
       redirect(
-        `/inventory/stocktake?branchId=${gateBranchId}&error=stocktake_redesigned_not_enabled`,
+        `${routeBase}?branchId=${gateBranchId}&error=stocktake_redesigned_not_enabled`,
       );
     }
   }
@@ -69,6 +81,16 @@ export default async function NewStocktakeSessionPage({
       branches={branches}
       locations={locations}
       defaultBranchId={scope.selectedBranchId ?? branches[0]?.id ?? null}
+      routeBase={routeBase}
+      embedded={embedded}
     />
   );
+}
+
+export default async function NewStocktakeSessionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  return <NewStocktakeSessionPageContent searchParams={searchParams} />;
 }

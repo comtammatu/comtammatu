@@ -76,6 +76,7 @@ export async function StockPageContent({
     inboundTransferRes,
     movementHistoryRes,
     canReceiveGrn,
+    canReceiveTransfer,
     canCreateTransfer,
     canCreateStocktake,
     canWriteoff,
@@ -123,6 +124,10 @@ export async function StockPageContent({
       .order("created_at", { ascending: false })
       .limit(300),
     currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
+    currentUserHasPermission(
+      branchId,
+      PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE,
+    ),
     currentUserHasPermission(
       branchId,
       PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
@@ -268,6 +273,7 @@ export async function StockPageContent({
   };
   const permissions: StockActionPermissions = {
     canReceiveGrn,
+    canReceiveTransfer,
     canCreateIssue: canAdjustException,
     canCreateTransfer,
     canCreateStocktake,

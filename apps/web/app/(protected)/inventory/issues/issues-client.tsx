@@ -153,6 +153,7 @@ export function IssuesClient({
   recordedIsLimited,
   recordedStartDate: initialRecordedStartDate,
   consumptionBasePath = "/inventory/consumption",
+  embedded = false,
 }: {
   issues: IssueRow[];
   recordedConsumptions: RecordedConsumptionRow[];
@@ -163,6 +164,7 @@ export function IssuesClient({
   recordedIsLimited: boolean;
   recordedStartDate: string;
   consumptionBasePath?: string;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -704,8 +706,8 @@ export function IssuesClient({
     </InteractiveCard>
   );
 
-  return (
-    <AppPage width="wide">
+  const content = (
+    <>
       <AppPageHeader
         eyebrow="Kho hàng"
         title={tNav("consumption", "navigation")}
@@ -851,6 +853,12 @@ export function IssuesClient({
           );
         }}
       </FormDialog>
-    </AppPage>
+    </>
   );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return <AppPage width="wide">{content}</AppPage>;
 }

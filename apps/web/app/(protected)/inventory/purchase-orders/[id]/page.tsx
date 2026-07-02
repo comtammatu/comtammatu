@@ -14,6 +14,7 @@ interface PODetailPageContentProps {
   routeBranchId?: number;
   purchaseOrdersBasePath?: string;
   afterCreateGrnHref?: string;
+  embedded?: boolean;
 }
 
 export async function PODetailPageContent({
@@ -21,6 +22,7 @@ export async function PODetailPageContent({
   routeBranchId,
   purchaseOrdersBasePath = "/inventory/purchase-orders",
   afterCreateGrnHref,
+  embedded = false,
 }: PODetailPageContentProps) {
   if (!Number.isInteger(poId) || poId <= 0) notFound();
 
@@ -120,6 +122,7 @@ export async function PODetailPageContent({
       auditLogs={auditLogs}
       purchaseOrdersBasePath={purchaseOrdersBasePath}
       afterCreateGrnHref={afterCreateGrnHref}
+      embedded={embedded}
     />
   );
 }

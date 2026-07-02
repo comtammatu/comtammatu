@@ -105,12 +105,14 @@ export function StocktakeListClient({
   userRole: _userRole,
   userBranchId,
   routeBase = "/inventory/stocktake",
+  embedded = false,
 }: {
   initial: StocktakeSessionRow[];
   branches: BranchOption[];
   userRole: StaffRole;
   userBranchId: number | null;
   routeBase?: string;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const [rows, setRows] = useState(initial);
@@ -221,8 +223,8 @@ export function StocktakeListClient({
     },
   ];
 
-  return (
-    <AppPage width="wide">
+  const content = (
+    <>
       <AppPageHeader
         eyebrow="Kho hàng"
         title={messages.inventory.stocktake.title}
@@ -334,6 +336,16 @@ export function StocktakeListClient({
           />
         )}
       </FormDialog>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <AppPage width="wide">
+      {content}
     </AppPage>
   );
 }

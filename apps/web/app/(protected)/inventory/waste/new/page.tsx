@@ -9,7 +9,6 @@ import {
 import { resolveRequestedBranchId } from "@/(protected)/inventory/_lib/inventory-scope";
 import { getWasteCapStatus } from "@/(protected)/inventory/waste-actions";
 import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
-import { EmployeePage } from "@/(protected)/employee/components/employee-page";
 import {
   WasteCreateClient,
   type WasteFormContext,
@@ -23,6 +22,29 @@ interface WasteNewPageContentProps {
   successHref?: string;
   cancelHref?: string;
   embedded?: boolean;
+}
+
+function renderWasteUnavailable({
+  title,
+  description,
+  embedded,
+}: {
+  title: string;
+  description: string;
+  embedded: boolean;
+}) {
+  const content = (
+    <>
+      <AppPageHeader title={INVENTORY_VI.createWasteTitle} />
+      <AppEmptyState mode="no-access" title={title} description={description} />
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return <AppPage width="default">{content}</AppPage>;
 }
 
 export async function WasteNewPageContent({
@@ -39,58 +61,32 @@ export async function WasteNewPageContent({
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
+    branchId,
   );
   if (!ctx) redirect("/");
   const { supabase, claims } = ctx;
 
   if (branchId === null) {
-    return (
-      <AppPage width="default">
-        <AppPageHeader title={INVENTORY_VI.createWasteTitle} />
-        <AppEmptyState
-          mode="no-access"
-          title={INVENTORY_VI.branchRequiredTitle}
-          description={INVENTORY_VI.branchRequiredWasteHint}
-        />
-      </AppPage>
-    );
+    return renderWasteUnavailable({
+      title: INVENTORY_VI.branchRequiredTitle,
+      description: INVENTORY_VI.branchRequiredWasteHint,
+      embedded,
+    });
   }
   const fallbackHref =
     routeBranchId != null
       ? `/br/${routeBranchId}/stock`
       : `/inventory/issues?branchId=${branchId}`;
 
-  // Feature flag gate: S11 waste redesign must be enabled per-branch before UI shows
-  const flagEnabled = await isFeatureEnabledForBranch(
-    supabase,
-    branchId,
-    INVENTORY_FEATURE_FLAGS.S11_WASTE_TIER,
-  );
-  if (!flagEnabled) {
-    if (routeBranchId != null) {
-      if (embedded) {
-        return (
-          <EmployeePage title={INVENTORY_VI.createWasteTitle}>
-            <AppEmptyState
-              mode="no-access"
-              title={INVENTORY_VI.wasteFeatureDisabledTitle}
-              description={INVENTORY_VI.wasteFeatureDisabledBranchHint}
-            />
-          </EmployeePage>
-        );
-      }
-      return (
-        <AppPage width="default">
-          <AppPageHeader title={INVENTORY_VI.createWasteTitle} />
-          <AppEmptyState
-            mode="no-access"
-            title={INVENTORY_VI.wasteFeatureDisabledTitle}
-            description={INVENTORY_VI.wasteFeatureDisabledBranchHint}
-          />
-        </AppPage>
-      );
+  if (routeBranchId == null) {
+    const flagEnabled = await isFeatureEnabledForBranch(
+      supabase,
+      branchId,
+      INVENTORY_FEATURE_FLAGS.S11_WASTE_TIER,
+    );
+    if (!flagEnabled) {
+      redirect(fallbackHref);
     }
-    redirect(fallbackHref);
   }
 
   // Fetch branch detail + locations at this branch + active ingredients

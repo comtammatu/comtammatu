@@ -22,6 +22,7 @@ interface TransfersPageContentProps {
   }>;
   routeBranchId?: number;
   basePath?: string;
+  createBasePath?: string;
   createEnabled?: boolean;
   initialTab?: TransferTab;
   pageTitle?: string;
@@ -32,6 +33,7 @@ export async function TransfersPageContent({
   searchParams,
   routeBranchId,
   basePath = "/inventory/transfers",
+  createBasePath,
   createEnabled = true,
   initialTab = "receive",
   pageTitle,
@@ -81,6 +83,7 @@ export async function TransfersPageContent({
       userBranchId={userBranchId}
       userRole={claims.user_role}
       basePath={basePath}
+      createBasePath={createBasePath}
       createEnabled={createEnabled}
       initialTab={initialTab}
       pageTitle={pageTitle}

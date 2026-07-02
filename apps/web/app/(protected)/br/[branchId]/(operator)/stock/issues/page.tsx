@@ -22,6 +22,7 @@ export default async function OperatorStockIssuesPage({
       searchParams={searchParams}
       routeBranchId={branchId}
       consumptionBasePath={`/br/${branchId}/stock/issues`}
+      embedded
     />
   );
 }

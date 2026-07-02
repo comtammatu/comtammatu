@@ -107,6 +107,7 @@ export function PODetailClient({
   auditLogs = [],
   purchaseOrdersBasePath = "/inventory/purchase-orders",
   afterCreateGrnHref,
+  embedded = false,
 }: {
   po: PODetail;
   ingredients: IngredientRow[];
@@ -114,6 +115,7 @@ export function PODetailClient({
   auditLogs?: AuditLogRow[];
   purchaseOrdersBasePath?: string;
   afterCreateGrnHref?: string;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -445,8 +447,8 @@ export function PODetailClient({
     });
   }
 
-  return (
-    <AppPage width="wide" density="compact">
+  const content = (
+    <>
       <AppPageHeader
         eyebrow="Kho hàng"
         title={po.code}
@@ -871,6 +873,16 @@ export function PODetailClient({
           </AppPageTabs>
         }
       />
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <AppPage width="wide" density="compact">
+      {content}
     </AppPage>
   );
 }

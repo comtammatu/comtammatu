@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPageHeader, DocumentFormShell } from "@/components/surface";
-import { EmployeePage } from "@/(protected)/employee/components/employee-page";
 import { messages } from "@lib/messages";
 import { fetchIngredients } from "../../ingredient-actions";
 import {
@@ -74,11 +73,12 @@ export async function NewTransferPageContent({
 
   if (embedded) {
     return (
-      <EmployeePage
-        title={title}
-        description={messages.inventory.transfer.transferDescription}
-        action={backAction}
-      >
+      <div className="flex w-full flex-col gap-3">
+        <AppPageHeader
+          title={title}
+          description={messages.inventory.transfer.transferDescription}
+          actions={backAction}
+        />
         <CreateTransferForm
           branches={branches}
           ingredients={ingredients}
@@ -86,7 +86,7 @@ export async function NewTransferPageContent({
           userRole={claims.user_role}
           basePath={basePath}
         />
-      </EmployeePage>
+      </div>
     );
   }
 

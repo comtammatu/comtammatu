@@ -79,12 +79,14 @@ export function StocktakeDetailClient({
   session: initialSession,
   lines: initialLines,
   routeBase = "/inventory/stocktake",
+  embedded = false,
   auditLogs = [],
 }: {
   session: StocktakeSession;
   lines: StocktakeLine[];
   routeBase?: string;
   inventoryBasePath?: string;
+  embedded?: boolean;
   auditLogs?: AuditLogRow[];
 }) {
   const [isPending, startTransition] = useTransition();
@@ -218,140 +220,141 @@ export function StocktakeDetailClient({
     });
   }
 
+  const content = (
+    <AppPageHeader
+      eyebrow="Kho hàng"
+      title={`KK-${session.id}`}
+      description={headerDescription}
+      badge={{
+        children: statusLabel,
+        variant: statusBadge.variant,
+      }}
+      breadcrumb={
+        <Link
+          href={`${routeBase}?branchId=${session.branch_id}`}
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:underline"
+        >
+          <IconArrowLeft className="size-4" /> {tRoute("/inventory/stocktake")}
+        </Link>
+      }
+      actions={
+        session.status === "in_progress" ? (
+          <>
+            <Button variant="outline" onClick={handleCancel} disabled={isPending}>
+              <IconBan className="mr-2 size-4" />
+              {stocktakeDetailCopy.cancelAction}
+            </Button>
+            <Button onClick={handleComplete} disabled={isPending}>
+              <IconCircleCheck className="mr-2 size-4" />
+              {stocktakeDetailCopy.completeAction}
+            </Button>
+          </>
+        ) : null
+      }
+      tabs={
+        <AppPageTabs
+          items={[
+            { value: "overview", label: "Tổng quan" },
+            { value: "lines", label: "Dòng", count: lines.length },
+            { value: "history", label: "Lịch sử", count: auditLogs.length },
+          ]}
+        >
+          <TabsContent value="overview">
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                  {
+                    label: stocktakeDetailCopy.metrics.status,
+                    value: statusLabel,
+                  },
+                  {
+                    label: stocktakeDetailCopy.metrics.counted,
+                    value: `${countedCount}/${lines.length}`,
+                  },
+                  {
+                    label: stocktakeDetailCopy.metrics.progress,
+                    value: `${progressPct}%`,
+                  },
+                  {
+                    label: stocktakeDetailCopy.metrics.varianceLines,
+                    value: String(varianceCount).padStart(2, "0"),
+                  },
+                ].map((item) => (
+                  <AppSection key={item.label} size="sm">
+                    <Badge variant="secondary">{item.label}</Badge>
+                    <p className="text-xl font-semibold">{item.value}</p>
+                  </AppSection>
+                ))}
+              </div>
+
+              {/* Progress (in_progress only) */}
+              {session.status === "in_progress" && (
+                <AppSection>
+                  <div className="flex items-center gap-3 text-sm">
+                    <IconClipboardCheck className="size-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">
+                      {stocktakeDetailCopy.progressText(
+                        countedCount,
+                        lines.length,
+                        progressPct,
+                      )}
+                    </span>
+                    <Progress
+                      value={progressPct}
+                      className="h-2 max-w-48 flex-1"
+                    />
+                  </div>
+                </AppSection>
+              )}
+
+              {/* Cancelled state */}
+              {session.status === "cancelled" && (
+                <AppSection contentClassName="items-center justify-center gap-2 py-6 text-center">
+                  <IconCircleX className="size-8 text-muted-foreground" />
+                  <p className="text-base font-semibold">
+                    {stocktakeDetailCopy.cancelledTitle}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {stocktakeDetailCopy.cancelledDescription}
+                  </p>
+                </AppSection>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="lines">
+            <div className="flex flex-col gap-4">
+              {/* Counting phase (in_progress) */}
+              {session.status === "in_progress" && (
+                <CountingPhase
+                  lines={lines}
+                  savedLines={savedLines}
+                  isPending={isPending}
+                  onLineBlur={handleLineBlur}
+                  onReasonBlur={handleReasonBlur}
+                />
+              )}
+
+              {/* Results phase (completed) */}
+              {session.status === "completed" && <ResultsPhase lines={lines} />}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="history">
+            <AuditHistoryList logs={auditLogs} />
+          </TabsContent>
+        </AppPageTabs>
+      }
+    />
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
   return (
     <AppPage width="wide" density="compact">
-      <AppPageHeader
-        eyebrow="Kho hàng"
-        title={`KK-${session.id}`}
-        description={headerDescription}
-        badge={{
-          children: statusLabel,
-          variant: statusBadge.variant,
-        }}
-        breadcrumb={
-          <Link
-            href={`${routeBase}?branchId=${session.branch_id}`}
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:underline"
-          >
-            <IconArrowLeft className="size-4" />{" "}
-            {tRoute("/inventory/stocktake")}
-          </Link>
-        }
-        actions={
-          session.status === "in_progress" ? (
-            <>
-              <Button
-                variant="outline"
-                onClick={handleCancel}
-                disabled={isPending}
-              >
-                <IconBan className="mr-2 size-4" />
-                {stocktakeDetailCopy.cancelAction}
-              </Button>
-              <Button onClick={handleComplete} disabled={isPending}>
-                <IconCircleCheck className="mr-2 size-4" />
-                {stocktakeDetailCopy.completeAction}
-              </Button>
-            </>
-          ) : null
-        }
-        tabs={
-          <AppPageTabs
-            items={[
-              { value: "overview", label: "Tổng quan" },
-              { value: "lines", label: "Dòng", count: lines.length },
-              { value: "history", label: "Lịch sử", count: auditLogs.length },
-            ]}
-          >
-            <TabsContent value="overview">
-              <div className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  {[
-                    {
-                      label: stocktakeDetailCopy.metrics.status,
-                      value: statusLabel,
-                    },
-                    {
-                      label: stocktakeDetailCopy.metrics.counted,
-                      value: `${countedCount}/${lines.length}`,
-                    },
-                    {
-                      label: stocktakeDetailCopy.metrics.progress,
-                      value: `${progressPct}%`,
-                    },
-                    {
-                      label: stocktakeDetailCopy.metrics.varianceLines,
-                      value: String(varianceCount).padStart(2, "0"),
-                    },
-                  ].map((item) => (
-                    <AppSection key={item.label} size="sm">
-                      <Badge variant="secondary">{item.label}</Badge>
-                      <p className="text-xl font-semibold">{item.value}</p>
-                    </AppSection>
-                  ))}
-                </div>
-
-                {/* Progress (in_progress only) */}
-                {session.status === "in_progress" && (
-                  <AppSection>
-                    <div className="flex items-center gap-3 text-sm">
-                      <IconClipboardCheck className="size-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {stocktakeDetailCopy.progressText(
-                          countedCount,
-                          lines.length,
-                          progressPct,
-                        )}
-                      </span>
-                      <Progress
-                        value={progressPct}
-                        className="h-2 max-w-48 flex-1"
-                      />
-                    </div>
-                  </AppSection>
-                )}
-
-                {/* Cancelled state */}
-                {session.status === "cancelled" && (
-                  <AppSection contentClassName="items-center justify-center gap-2 py-6 text-center">
-                    <IconCircleX className="size-8 text-muted-foreground" />
-                    <p className="text-base font-semibold">
-                      {stocktakeDetailCopy.cancelledTitle}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {stocktakeDetailCopy.cancelledDescription}
-                    </p>
-                  </AppSection>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="lines">
-              <div className="flex flex-col gap-4">
-                {/* Counting phase (in_progress) */}
-                {session.status === "in_progress" && (
-                  <CountingPhase
-                    lines={lines}
-                    savedLines={savedLines}
-                    isPending={isPending}
-                    onLineBlur={handleLineBlur}
-                    onReasonBlur={handleReasonBlur}
-                  />
-                )}
-
-                {/* Results phase (completed) */}
-                {session.status === "completed" && (
-                  <ResultsPhase lines={lines} />
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="history">
-              <AuditHistoryList logs={auditLogs} />
-            </TabsContent>
-          </AppPageTabs>
-        }
-      />
+      {content}
     </AppPage>
   );
 }

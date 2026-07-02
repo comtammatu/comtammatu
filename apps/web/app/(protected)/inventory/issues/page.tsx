@@ -89,12 +89,14 @@ interface IssuesPageContentProps {
   }>;
   routeBranchId?: number;
   consumptionBasePath?: string;
+  embedded?: boolean;
 }
 
 export async function IssuesPageContent({
   searchParams,
   routeBranchId,
   consumptionBasePath = "/inventory/consumption",
+  embedded = false,
 }: IssuesPageContentProps) {
   const params = searchParams ? await searchParams : {};
   const requested =
@@ -224,6 +226,7 @@ export async function IssuesPageContent({
       recordedIsLimited={!hasRecordedDateFilter}
       recordedStartDate={startDate ?? ""}
       consumptionBasePath={consumptionBasePath}
+      embedded={embedded}
     />
   );
 }

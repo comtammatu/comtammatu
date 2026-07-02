@@ -86,6 +86,7 @@ export type StockWorkSummary = {
 
 export type StockActionPermissions = {
   canReceiveGrn: boolean;
+  canReceiveTransfer: boolean;
   canCreateIssue: boolean;
   canCreateTransfer: boolean;
   canCreateStocktake: boolean;
@@ -638,7 +639,7 @@ export function StockClient({
     ? {
         receive: branchStockHref(stockRootPath, "/receive"),
         transfer: branchStockHref(stockRootPath, "/transfer"),
-        stocktake: null,
+        stocktake: branchStockHref(stockRootPath, "/stocktake"),
         waste: branchStockHref(stockRootPath, "/waste"),
         purchaseSuggestion: branchStockHref(
           stockRootPath,
@@ -658,6 +659,12 @@ export function StockClient({
         reports: branchHref(branchId, "/inventory/reports"),
       };
   const actionPermissions = permissions;
+  const canReceiveStock = embedded
+    ? actionPermissions.canReceiveTransfer
+    : actionPermissions.canReceiveGrn;
+  const receiveActionLabel = embedded
+    ? stockCopy.actions.receive
+    : stockCopy.actions.receiveGrn;
   const stockColumns: DataTableColumn<StockIngredient>[] = [
     {
       key: "ingredient",
@@ -745,13 +752,8 @@ export function StockClient({
     },
   ];
 
-  return (
-    <InventoryPageContent
-      width={isCompactLayout ? "narrow" : "wide"}
-      className={isCompactLayout ? undefined : "p-3"}
-      contentClassName={isCompactLayout ? undefined : "max-w-none gap-3"}
-      scroll
-    >
+  const content = (
+    <>
       <AppPageHeader
         title={stockCopy.title}
         actions={
@@ -892,11 +894,11 @@ export function StockClient({
         }
         actions={
           <>
-            {actionPermissions.canReceiveGrn ? (
+            {canReceiveStock ? (
               <QuickActionButton
                 href={actionHrefs.receive}
                 icon={IconReceipt}
-                label={stockCopy.actions.receiveGrn}
+                label={receiveActionLabel}
                 primary
               />
             ) : null}
@@ -1064,7 +1066,7 @@ export function StockClient({
                 </div>
 
                 <div className="grid grid-cols-4 gap-2 border-t pt-2">
-                  {actionPermissions.canReceiveGrn ? (
+                  {canReceiveStock ? (
                     <Button asChild size="xs" variant="outline">
                       <Link href={actionHrefs.receive}>
                         {stockCopy.actions.receive}
@@ -1224,7 +1226,7 @@ export function StockClient({
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    {actionPermissions.canReceiveGrn ? (
+                    {canReceiveStock ? (
                       <Button asChild size="sm">
                         <Link href={actionHrefs.receive}>
                           <IconReceipt className="size-3.5" />
@@ -1425,6 +1427,21 @@ export function StockClient({
           }}
         />
       ) : null}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <InventoryPageContent
+      width={isCompactLayout ? "narrow" : "wide"}
+      className={isCompactLayout ? undefined : "p-3"}
+      contentClassName={isCompactLayout ? undefined : "max-w-none gap-3"}
+      scroll
+    >
+      {content}
     </InventoryPageContent>
   );
 }

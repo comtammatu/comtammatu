@@ -26,6 +26,7 @@ export default async function OperatorPurchaseOrderDetailPage({
       routeBranchId={branchId}
       purchaseOrdersBasePath={`/br/${branchId}/stock/purchase-orders`}
       afterCreateGrnHref={`/br/${branchId}/stock/receive/:id`}
+      embedded
     />
   );
 }

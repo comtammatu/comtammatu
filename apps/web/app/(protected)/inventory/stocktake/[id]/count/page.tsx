@@ -11,15 +11,22 @@ import { StocktakeCountClient } from "./count-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function StocktakeCountPage({
-  params,
+interface StocktakeCountPageContentProps {
+  stocktakeId: number;
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+  routeBranchId?: number;
+  routeBase?: string;
+  embedded?: boolean;
+}
+
+export async function StocktakeCountPageContent({
+  stocktakeId,
   searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ branchId?: string | string[] }>;
-}) {
-  const { id } = await params;
-  const sessionId = Number(id);
+  routeBranchId,
+  routeBase = "/inventory/stocktake",
+  embedded = false,
+}: StocktakeCountPageContentProps) {
+  const sessionId = stocktakeId;
   if (!Number.isFinite(sessionId) || sessionId <= 0) notFound();
 
   const supabase = await createClient();
@@ -31,12 +38,14 @@ export default async function StocktakeCountPage({
 
   if (!sessionRow) notFound();
   const sessionBranchId = sessionRow.branch_id as number;
-  const sp = await searchParams;
-  const requestedBranchId = await resolveRequestedBranchId(sp.branchId);
+  const sp = searchParams ? await searchParams : {};
+  const requestedBranchId =
+    routeBranchId ?? (await resolveRequestedBranchId(sp.branchId));
+  if (routeBranchId != null && routeBranchId !== sessionBranchId) {
+    notFound();
+  }
   if (requestedBranchId !== sessionBranchId) {
-    redirect(
-      `/inventory/stocktake/${sessionId}/count?branchId=${sessionBranchId}`,
-    );
+    redirect(`${routeBase}/${sessionId}/count?branchId=${sessionBranchId}`);
   }
 
   // Feature flag gate — route the counter to the pre-redesign detail screen when the flag is off.
@@ -47,7 +56,7 @@ export default async function StocktakeCountPage({
   );
   if (!flagEnabled) {
     redirect(
-      `/inventory/stocktake/${sessionId}?branchId=${sessionBranchId}&error=stocktake_redesigned_not_enabled`,
+      `${routeBase}/${sessionId}?branchId=${sessionBranchId}&error=stocktake_redesigned_not_enabled`,
     );
   }
 
@@ -97,6 +106,24 @@ export default async function StocktakeCountPage({
       currentRound={Math.min(4, currentRound) as 1 | 2 | 3 | 4}
       initialLines={linesRes.data}
       unitOptionsByIngredient={unitOptionsByIngredient}
+      routeBase={routeBase}
+      embedded={embedded}
+    />
+  );
+}
+
+export default async function StocktakeCountPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  const { id } = await params;
+  return (
+    <StocktakeCountPageContent
+      stocktakeId={Number(id)}
+      searchParams={searchParams}
     />
   );
 }

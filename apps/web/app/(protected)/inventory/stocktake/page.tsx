@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchStocktakeSessions } from "../actions";
 import {
@@ -11,18 +12,30 @@ import type {
 import { StocktakeListClient } from "./stocktake-list-client";
 import { getBranchSiteDisplayName } from "../_lib/branch-site-labels";
 
-export default async function StocktakePage({
+interface StocktakePageContentProps {
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+  routeBranchId?: number;
+  routeBase?: string;
+  embedded?: boolean;
+}
+
+export async function StocktakePageContent({
   searchParams,
-}: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
-}) {
-  const params = await searchParams;
+  routeBranchId,
+  routeBase = "/inventory/stocktake",
+  embedded = false,
+}: StocktakePageContentProps) {
+  const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
 
   // Sidebar-selected branch drives action context (session branch default +
   // role-gated filters). Collapses to claims.branch_id for branch-scoped roles.
-  const requested = await resolveRequestedBranchId(params.branchId);
+  const requested =
+    routeBranchId ?? (await resolveRequestedBranchId(params.branchId));
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
+  if (routeBranchId != null && scope.selectedBranchId !== routeBranchId) {
+    notFound();
+  }
   const branchFilter = scope?.selectedBranchId ?? undefined;
 
   const sessionsRes = await fetchStocktakeSessions(branchFilter);
@@ -42,7 +55,16 @@ export default async function StocktakePage({
       branches={branches}
       userRole={claims.user_role}
       userBranchId={scope?.selectedBranchId ?? null}
-      routeBase="/inventory/stocktake"
+      routeBase={routeBase}
+      embedded={embedded}
     />
   );
+}
+
+export default async function StocktakePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  return <StocktakePageContent searchParams={searchParams} />;
 }

@@ -40,12 +40,16 @@ interface Props {
   branches: BranchOpt[];
   locations: LocationOpt[];
   defaultBranchId: number | null;
+  routeBase?: string;
+  embedded?: boolean;
 }
 
 export function NewStocktakeSessionClient({
   branches,
   locations,
   defaultBranchId,
+  routeBase = "/inventory/stocktake",
+  embedded = false,
 }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<StocktakeMode>("daily");
@@ -90,13 +94,13 @@ export function NewStocktakeSessionClient({
         ),
       );
       router.push(
-        `/inventory/stocktake/${res.data.sessionId}/count?branchId=${branchId}`,
+        `${routeBase}/${res.data.sessionId}/count?branchId=${branchId}`,
       );
     });
   }
 
-  return (
-    <InventoryPageContent>
+  const content = (
+    <>
       <AppPageHeader
         eyebrow="Kiểm kê"
         title={messages.inventory.stocktake.startTitle}
@@ -229,6 +233,16 @@ export function NewStocktakeSessionClient({
           </Button>
         </AppSection>
       </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <InventoryPageContent>
+      {content}
     </InventoryPageContent>
   );
 }

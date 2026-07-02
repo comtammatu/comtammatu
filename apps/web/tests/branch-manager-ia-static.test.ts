@@ -393,12 +393,14 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
 
 test("Branch-scoped operational routes do not use management shell", () => {
   const forbiddenShells = [
-    /BranchManagementShell/,
-    /OfficeModuleShell/,
-    /InventoryShell/,
-    /FinanceShell/,
-    /ManagementShell/,
-  ];
+    ["BranchManagementShell", /BranchManagementShell/],
+    ["OfficeModuleShell", /OfficeModuleShell/],
+    ["InventoryShell", /InventoryShell/],
+    ["FinanceShell", /FinanceShell/],
+    ["ManagementShell", /ManagementShell/],
+    ["AppPage import", /import\s+\{[^}]*\bAppPage\b/],
+    ["AppPage render", /<AppPage\b/],
+  ] as const;
 
   for (const dir of [
     "apps/web/app/(protected)/br/[branchId]/pos",
@@ -411,11 +413,11 @@ test("Branch-scoped operational routes do not use management shell", () => {
     if (!existsSync(resolve(repoRoot, dir))) continue;
     for (const file of listSourceFiles(dir)) {
       const source = read(file);
-      for (const forbiddenShell of forbiddenShells) {
+      for (const [label, forbiddenShell] of forbiddenShells) {
         assert.doesNotMatch(
           source,
           forbiddenShell,
-          `${file} must not import or render office/management shell chrome`,
+          `${file} must not import or render ${label}; the operator layout owns page chrome`,
         );
       }
     }

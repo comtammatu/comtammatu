@@ -16,12 +16,14 @@ interface NewPurchaseOrderPageContentProps {
   searchParams?: Promise<{ branchId?: string | string[] }>;
   routeBranchId?: number;
   poBasePath?: string;
+  embedded?: boolean;
 }
 
 export async function NewPurchaseOrderPageContent({
   searchParams,
   routeBranchId,
   poBasePath = "/inventory/purchase-orders",
+  embedded = false,
 }: NewPurchaseOrderPageContentProps) {
   const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
@@ -92,6 +94,7 @@ export async function NewPurchaseOrderPageContent({
       initialBranchId={defaultBranchId}
       canSwitchBranch={routeBranchId == null && !isBranchScoped}
       poBasePath={poBasePath}
+      embedded={embedded}
     />
   );
 }

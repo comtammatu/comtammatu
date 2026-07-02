@@ -151,6 +151,7 @@ test("operator hub owns branch workflow entry tiles", () => {
     operatorTiles,
     /hrefTemplate: "\/inventory\/count-slips"/,
   );
+  assert.match(operatorTiles, /hrefTemplate: "\/br\/\{branchId\}\/stock"/);
   assert.match(
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/receive"/,
@@ -158,6 +159,10 @@ test("operator hub owns branch workflow entry tiles", () => {
   assert.match(
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer"/,
+  );
+  assert.match(
+    operatorTiles,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/stocktake"/,
   );
   assert.doesNotMatch(
     operatorTiles,

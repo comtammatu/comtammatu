@@ -31,14 +31,15 @@ test("resolveOperatorTiles -> chef sees kitchen tools but not POS", () => {
 test("resolveOperatorTiles -> branch manager sees branch workflows in operator hub", () => {
   const groups = resolveOperatorTiles("branch_manager", 3);
   const approvals = groups.find((group) => group.id === "approvals");
-  const stock = groups.find((group) => group.id === "stock");
   const moduleKeys = groups.flatMap((group) =>
     group.tiles.map((tile) => tile.moduleKey),
   );
+  const hrefs = groups.flatMap((group) => group.tiles.map((tile) => tile.href));
 
   assert.equal(
-    approvals?.tiles.find((tile) => tile.moduleKey === "employee_checkout_approvals")
-      ?.href,
+    approvals?.tiles.find(
+      (tile) => tile.moduleKey === "employee_checkout_approvals",
+    )?.href,
     "/br/3/shift/checkout-approvals",
   );
   assert.equal(
@@ -47,9 +48,16 @@ test("resolveOperatorTiles -> branch manager sees branch workflows in operator h
     "Duyệt kiểm kê",
   );
   assert.equal(
-    stock?.tiles.find((tile) => tile.href === "/br/3/stock/receive")?.label,
+    groups
+      .find((group) => group.id === "stock")
+      ?.tiles.find((tile) => tile.href === "/br/3/stock/receive")?.label,
     "Nhận hàng",
   );
+  assert.equal(hrefs.includes("/br/3/stock"), true);
+  assert.equal(hrefs.includes("/br/3/stock/receive"), true);
+  assert.equal(hrefs.includes("/br/3/stock/transfer"), true);
+  assert.equal(hrefs.includes("/br/3/stock/stocktake"), true);
+  assert.equal(hrefs.includes("/br/3/stock/waste"), true);
   assert.equal(moduleKeys.includes("branch_dashboard"), false);
   assert.equal(moduleKeys.includes("branch_settings"), false);
 });
