@@ -25,9 +25,9 @@ QA/QC: run `scripts/check-schema-drift.mjs --self-test`, repeat the drift audit 
 ## Results
 
 - Prod schema dump artifact: `.baseline-artifacts/supabase-live-baseline-20260702T102855Z/` (not committed).
-- Prod ledger snapshot: 594 rows; active migration files were ledger-applied except `20260627140000_fold_managed_surfaces.sql`, which intentionally remains active for managed surfaces excluded from `pg_dump --schema=public,private`.
-- Active migration chain after re-baseline: `00000000000000_baseline.sql` + `20260627140000_fold_managed_surfaces.sql`.
-- Archived squashed forward migrations: 84 files moved from `supabase/migrations/` to `supabase/migrations/_archive/`.
+- Prod ledger snapshot: 594 rows; active migration files were ledger-applied except `20260627140000_fold_managed_surfaces.sql`, which intentionally remains active for managed surfaces excluded from `pg_dump --schema=public,private`, and `20260702094500_branch_stock_operator_actions.sql`, which is not yet represented by prod.
+- Active migration chain after re-baseline: `00000000000000_baseline.sql` + `20260627140000_fold_managed_surfaces.sql` + `20260702094500_branch_stock_operator_actions.sql`.
+- Archived squashed forward migrations: 83 files moved from `supabase/migrations/` to `supabase/migrations/_archive/`.
 - Drift audit after re-baseline: baseline and prod both report `functions=320`, `tables=117`, `columns=1393`; Set A and Set B are empty.
 - `corepack pnpm db:baseline:local-check` applies both the rebuilt baseline and the fold migration, then exits 0.
 - `corepack pnpm db:types` regenerated `packages/database/src/types/database.types.ts` with no diff.

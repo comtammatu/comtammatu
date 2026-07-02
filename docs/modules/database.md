@@ -48,8 +48,9 @@ generated from the current checkout on 2026-07-02 with
 `node scripts/project-snapshot.mjs`:
 
 - **117 tables**, **8 views**, **271 RPC/SQL functions**
-- **2 active migration files** in `supabase/migrations/`: the baseline plus the
-  managed-surfaces fold migration
+- **3 active migration files** in `supabase/migrations/`: the baseline, the
+  managed-surfaces fold migration, plus the branch-stock operator action
+  migration not yet represented by prod
 - **0 enums** — staff roles vẫn là strings carried in
   JWT claims; `position` is the canonical claim and `user_role` remains the
   compatibility claim

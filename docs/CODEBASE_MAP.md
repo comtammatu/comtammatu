@@ -69,11 +69,11 @@ Generated checkout snapshot from 2026-07-02 (`node scripts/project-snapshot.mjs`
 | `apps/web/app/**/page.tsx` routes (committed)         |               133 |
 | API routes / route handlers                           |           10 / 13 |
 | Generated DB tables / views / functions / enums       | 117 / 8 / 271 / 0 |
-| Active SQL migrations (baseline-first; +544 archived) |                 2 |
+| Active SQL migrations (baseline-first; +543 archived) |                 3 |
 | Test/spec files (`apps/web/e2e` + shared unit tests)  |                42 |
 | Playwright specs / shared unit tests                  |           11 / 31 |
 
-> Migrations are **baseline-first** since 2026-05-30 and were re-baselined on 2026-07-02: `supabase/migrations/00000000000000_baseline.sql` (canonical public+private schema install) plus the managed-surfaces fold migration, with the 544-file historical/squashed chain under `supabase/migrations/_archive/`. See `docs/spec/database-schema.md`.
+> Migrations are **baseline-first** since 2026-05-30 and were re-baselined on 2026-07-02: `supabase/migrations/00000000000000_baseline.sql` (canonical public+private schema install) plus the managed-surfaces fold migration and the branch-stock operator action migration not yet represented by prod, with the 543-file historical/squashed chain under `supabase/migrations/_archive/`. See `docs/spec/database-schema.md`.
 
 The repo is not a flat "apps/packages" map. The operational shape is:
 
