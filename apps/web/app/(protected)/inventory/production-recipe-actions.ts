@@ -112,6 +112,43 @@ type ImportProductionRecipesResult =
       issues?: ImportProductionRecipeIssue[];
     };
 
+type BulkImportProductionRecipesRpcResult = {
+  recipes?: number;
+  lines?: number;
+};
+
+function mapProductionRecipeImportError(
+  code: string | undefined,
+  message: string | undefined,
+): string {
+  if (
+    code === PG_ERR.INSUFFICIENT_PRIVILEGE ||
+    message?.includes("forbidden")
+  ) {
+    return "Không có quyền import BOM sản xuất.";
+  }
+  if (
+    code === PG_ERR.UNIQUE_VIOLATION ||
+    message?.includes("duplicate_ingredient") ||
+    message?.includes("duplicate_finished_good")
+  ) {
+    return "File import có dòng BOM bị trùng.";
+  }
+  if (message?.includes("finished_good_not_found")) {
+    return "Có thành phẩm không còn hợp lệ.";
+  }
+  if (message?.includes("ingredient_not_found")) {
+    return "Có nguyên liệu không còn hợp lệ.";
+  }
+  if (
+    code === PG_ERR.INVALID_TEXT_REPRESENTATION ||
+    code === PG_ERR.CHECK_VIOLATION
+  ) {
+    return "Dữ liệu BOM chưa hợp lệ.";
+  }
+  return "Không thể import BOM sản xuất.";
+}
+
 type IngredientLookupRow = {
   id: number;
   name: string;
@@ -483,7 +520,6 @@ export async function importProductionRecipes(
   const groups = new Map<
     number,
     {
-      finishedGoodName: string;
       lines: Array<{
         ingredientId: number;
         quantity: number;
@@ -634,7 +670,6 @@ export async function importProductionRecipes(
     }
 
     const group = groups.get(parsedRow.data.finishedGoodId) ?? {
-      finishedGoodName: finishedGood.name,
       lines: [],
     };
     group.lines.push({
@@ -660,35 +695,51 @@ export async function importProductionRecipes(
   }
 
   const sb = supabase as unknown as RpcClient;
-  let lineCount = 0;
-  for (const [finishedGoodId, group] of groups) {
-    lineCount += group.lines.length;
-    const { error: rpcError } = await sb.rpc("upsert_production_recipe_lines", {
-      p_finished_good_id: finishedGoodId,
-      p_lines: group.lines.map((line) => ({
-        ingredient_id: line.ingredientId,
-        quantity: line.quantity,
-        unit: line.unit,
-        note: line.note,
-        yield_factor: line.yieldFactor,
+  const { data: rpcData, error: rpcError } = await sb.rpc(
+    "bulk_import_production_recipes",
+    {
+      p_groups: [...groups].map(([finishedGoodId, group]) => ({
+        finished_good_id: finishedGoodId,
+        lines: group.lines.map((line) => ({
+          ingredient_id: line.ingredientId,
+          quantity: line.quantity,
+          unit: line.unit,
+          note: line.note,
+          yield_factor: line.yieldFactor,
+        })),
       })),
-    });
+    },
+  );
 
-    if (rpcError) {
-      return {
-        success: false,
-        error: `Không thể import BOM sản xuất "${group.finishedGoodName}".`,
-      };
-    }
+  if (rpcError) {
+    console.error("inventory.production_recipes.bulk_import_failed", {
+      code: rpcError.code,
+      message: rpcError.message,
+    });
+    return {
+      success: false,
+      error: mapProductionRecipeImportError(rpcError.code, rpcError.message),
+    };
   }
 
+  const summary = (rpcData ?? {}) as BulkImportProductionRecipesRpcResult;
   revalidatePath("/inventory/production");
   return {
     success: true,
-    data: { summary: { recipes: groups.size, lines: lineCount } },
+    data: {
+      summary: {
+        recipes: Number(summary.recipes ?? groups.size),
+        lines: Number(
+          summary.lines ??
+            [...groups.values()].reduce(
+              (total, group) => total + group.lines.length,
+              0,
+            ),
+        ),
+      },
+    },
   };
 }
-
 
 export const upsertProductionRecipeLines = withAction(
   {
