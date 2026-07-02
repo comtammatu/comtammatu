@@ -436,6 +436,19 @@ const SHELL_REGISTRY_BASELINE = new Set([
   "apps/web/app/(protected)/br/[branchId]/pos/pos-status-shell.tsx",
 ]);
 
+// header-lockup-registry (D058 W2, design-system.md § B): freeze the file set
+// allowed to render a top-level brand lockup (BrandLogoBox/BrandMark) outside
+// the shared AppHeader primitive. The canonical header lockup MUST be an
+// exported primitive that approved chrome families consume, not
+// re-implemented per surface — a new direct BrandLogoBox/BrandMark caller
+// outside this baseline is drift. The baseline only shrinks.
+const HEADER_LOCKUP_REGISTRY_BASELINE = new Set([
+  "apps/web/app/components/app-header.tsx",
+  "apps/web/app/components/app-shell.tsx",
+  "apps/web/app/(protected)/br/[branchId]/pos/pos-session-header.tsx",
+  "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx",
+]);
+
 const failures = [];
 
 if (fs.existsSync(path.join(REPO_ROOT, "docs/archive"))) {
@@ -804,7 +817,6 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-actions-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-sidebar-panel.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/mobile/number-pad-sheet.tsx": 1,
       "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx": 1,
       "apps/web/app/(protected)/inventory/grn/[id]/views/amend-owner-dialog.tsx": 1,
       "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
@@ -825,11 +837,9 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-page-skeleton.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/mobile/mobile-top-bar.tsx": 1,
       "apps/web/app/(protected)/inventory/grn/[id]/views/grn-line-row.tsx": 1,
       "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 3,
       "apps/web/app/(protected)/inventory/production-stats.tsx": 1,
-      "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 3,
       "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 3,
       "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 1,
       "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx": 3,
@@ -1055,6 +1065,21 @@ for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
   }
 }
 
+// header-lockup-registry (D058 W2, design-system.md § B): a direct
+// BrandLogoBox/BrandMark caller outside the frozen baseline means a new
+// hand-rolled header lockup instead of consuming the shared AppHeader.
+for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
+  const normalized = toPosix(filePath);
+  if (normalized === "apps/web/app/components/brand.tsx") continue;
+  const content = fs.readFileSync(filePath, "utf8");
+  if (!/\b(?:BrandLogoBox|BrandMark)\b/.test(content)) continue;
+  if (!HEADER_LOCKUP_REGISTRY_BASELINE.has(normalized)) {
+    failures.push(
+      `header-lockup-registry: ${normalized} renders BrandLogoBox/BrandMark directly outside the frozen baseline (design-system.md § B / D058 W2). Consume the shared AppHeader primitive instead of a new hand-rolled header lockup; expanding the baseline needs an owner decision.`,
+    );
+  }
+}
+
 // route-manifest (Stage 0, design-system.md § C/D / D019): every protected page
 // resolves to exactly one MODULE_ACL family, and every family-root has a
 // landing page. Keeps the route tree inside the declared taxonomy so a new
@@ -1205,7 +1230,6 @@ const BUTTON_HEIGHT_BASELINE = {
   "apps/web/app/components/form/multi-select-combobox.tsx": 1,
   "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
   "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-row.tsx": 1,
-  "apps/web/app/(protected)/inventory/_components/mobile/number-pad-sheet.tsx": 1,
 };
 const BUTTON_HEIGHT_TOKEN =
   /\b(?:h-(?:10|11|12|14|16|20|24|28|32|36|40|44)|min-h-(?:12|14|16|20|24))\b/;

@@ -619,6 +619,16 @@ contract change; route-local chrome outside this list is drift.
    (`/employee/*`). These keep bespoke layout, but consume the same tokens,
    typography, status vocabulary, header lockup, and bottom-nav primitives as
    Management — a different layout, never a second visual language.
+4. Standalone chrome-less surfaces — a named, closed exception, not a fourth
+   general-purpose shell: `/notifications` and `/br` (the branch picker). Both
+   are reachable from more than one plane (`/notifications` from Management,
+   Branch runtime, and Operations via `?returnTo=`; `/br` is reached before any
+   branch context — and therefore any Branch runtime chrome — exists) so they
+   deliberately mount no sidebar, header lockup, or bottom nav; they render
+   `AppPage`/`AppPageHeader` only and rely on an explicit in-page back link
+   (`returnTo` / role-home) instead of persistent chrome. Adding a fourth
+   general-purpose chrome family for cross-plane utility pages remains drift —
+   new candidates for this exception need an owner decision and a name here.
 
 A surface that is neither is drift: a route may not invent another chrome (a
 hand-rolled `<main>` + back-button container, a per-page header lockup, or a

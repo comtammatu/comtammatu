@@ -5,7 +5,7 @@ import { Bell as IconBell, User as IconUser } from "lucide-react";
 import { canAccess, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage } from "@/components/surface";
-import { BrandLogoBox, BrandMark } from "@/components/brand";
+import { AppHeader } from "@/components/app-header";
 import { PwaRuntimeProvider } from "@/components/pwa-runtime";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
@@ -46,22 +46,11 @@ export default async function OperatorLayout({
   return (
     <PwaRuntimeProvider>
       <div className="flex min-h-dvh w-full flex-col bg-muted/30">
-        <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur print:hidden">
-          <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-2 px-3 py-1.5 sm:gap-3 sm:py-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <BrandLogoBox>
-                <BrandMark decorative className="size-full" />
-              </BrandLogoBox>
-              <div className="min-w-0">
-                <p className="font-heading truncate text-sm font-semibold sm:text-base">
-                  {context.branch.name}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {ROLE_LABEL_VI[claims.user_role]}
-                </p>
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
+        <AppHeader
+          title={context.branch.name}
+          subtitle={ROLE_LABEL_VI[claims.user_role]}
+          actions={
+            <>
               <Button
                 asChild
                 variant="outline"
@@ -88,9 +77,9 @@ export default async function OperatorLayout({
                   ) : null}
                 </Link>
               </Button>
-            </div>
-          </div>
-        </header>
+            </>
+          }
+        />
         <div
           id="main-content"
           role="main"
