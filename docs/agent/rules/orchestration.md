@@ -12,8 +12,8 @@ team loop ([team.md](team.md)), review tiers and verification gates
 
 | Work shape | Lane | Notes |
 | --- | --- | --- |
-| Single fact, one command, an edit you can place from context, a read of ≤3 files | Inline (main thread) | No delegation overhead. |
-| Orientation read across >3 files you will NOT edit | One read-only Explore sub-agent | Context economy — owned by [skills.md](skills.md) "Subagents, Debate, And Read Delegation". Return conclusions, not file dumps. |
+| Single fact, one command, an edit you can place from context, a read within the inline threshold | Inline (main thread) | No delegation overhead. Threshold owned by [skills.md](skills.md) → Subagents, Debate, And Read Delegation. |
+| Orientation read beyond the inline threshold, over files you will NOT edit | One read-only Explore sub-agent | Context economy — owned by [skills.md](skills.md) "Subagents, Debate, And Read Delegation". Return conclusions, not file dumps. |
 | One isolated, well-scoped implementation chunk | One `executor` sub-agent | Keeps the chunk's working context out of the main thread; model tier is chosen by [skills.md](skills.md) → Subagents, Debate, And Read Delegation. |
 | Independent work that fans out — audit sweep, multi-file migration, multi-dimension review, N candidate designs | Dynamic multi-agent Workflow | A transient set of sub-agents spawned for one fan-out task, then torn down — not the standing team. Pipeline by default; barrier only when a stage needs all prior results. |
 | Recurring standing mission, cross-runtime review, arbitration | Standing team + Codex pass | Defined in [team.md](team.md). |

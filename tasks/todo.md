@@ -30,6 +30,15 @@ checkout.
   competing rule stores; every worklog file is linked, promoted, or deleted;
   focused guards pass (`rules-mirror`, `doc-staleness`, `guard-sync`,
   `review-tier`). T2 doc/process lane.
+- [ ] **Agent framework rebuild (2026-07-02)** — branch `agent-system-rebuild`
+  ready for owner review/merge (D054 follow-through, T2). Fixed the
+  database.md MCP-posture self-contradiction and stale engineering.md JWT
+  shape; collapsed ~200 duplicated rule lines to single owners; replaced dead
+  skill names in `skills.md`; corrected strict-CI claims (`REVIEW_TIER_STRICT`
+  / `DOC_STALENESS_STRICT` are ON); added `.claude/agents/t3-lens.md` +
+  `.claude/commands/{t3-debate,verify-gate}.md` + codegraph allows; made the
+  review-tier definer scan file-aware (.md prose no longer floors T3). Full
+  lint + typecheck green in the worktree. **REMAINING (owner):** review + merge.
 - [x] **Split current dirty WIP before feature landing** — Landing boundary is
   now explicit in `docs/plan/branch-operator-hub-full-cutover-2026-07-01.md`:
   Branch Operator Hub, Branch stock floor, POS/KDS print routing, Finance/SePay,

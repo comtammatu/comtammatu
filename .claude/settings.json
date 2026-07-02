@@ -32,7 +32,11 @@
       "Bash(corepack pnpm build)",
       "Bash(corepack pnpm verify)",
       "Bash(corepack pnpm deps:audit)",
-      "Bash(corepack pnpm db:types)"
+      "Bash(corepack pnpm db:types)",
+      "Bash(codegraph index:*)",
+      "Bash(codegraph status:*)",
+      "Bash(codegraph explore:*)",
+      "Bash(codegraph node:*)"
     ],
     "deny": [
       "Bash(supabase db push:*)",

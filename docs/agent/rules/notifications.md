@@ -157,9 +157,9 @@ emits zero rows of any trigger-owned `kind`.
   auto-act. See the autonomy ladder in `docs/plan/agentic-os-blueprint.md`.
 - **Agent action surface = existing `SECURITY DEFINER` RPCs** (allowlist + caps).
   No new action API.
-- **Migrations: file → PR → owner applies.** No dev DB; `guard-prod-db.mjs` blocks
-  agent writes to prod (SELECT-only for verification). Parallel file-writing agents
-  each work in their own git worktree.
+- **Migration/prod posture is owned by `database.md`** (Environment Registry +
+  Migration Policy). Parallel file-writing agents each work in their own git
+  worktree.
 - **Single tenant** (`tenant_id = 1`); still scope every query by
   `tenant_id` + `branch_id` explicitly (service-role bypasses RLS).
 

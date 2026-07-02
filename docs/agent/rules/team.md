@@ -69,7 +69,7 @@ Each is a *flex* of the four lenses (per [`workflow.md`](workflow.md)'s flex rul
 | **Data/DB & Migration steward** | Schema changes stay safe, ordered, and type-synced; the DB↔API↔TS contract holds. | "Is this migration reversible, ordered, and does every column still match its API field and TS type?" | Supabase rows of the matrix ([`skills.md`](skills.md) → Supabase); migration policy and the no-default-prod-apply rule owned by [`database.md`](database.md). |
 | **Security & Prod-Guard** | Prod data and the guard triad stay protected; no privilege escalation or data leak. | "Can this leak, escalate, or run against prod unguarded?" | Security audit via the `cso` row ([`skills.md`](skills.md)); RLS/ACL/grants, the guard triad, and MCP read-only posture owned by [`database.md`](database.md) → Environment Registry and [`references.md`](references.md) → Intentional Mirrors. |
 | **Domain / HKD-Tax** | Tax / HĐĐT / payroll behavior stays legally correct for a Hộ kinh doanh; no rate, threshold, or deadline asserted from memory. | "Which văn bản governs this, and does code match the doc?" | [`skills.md`](skills.md) → HKD Domain (routes the legal docs, recites no number). |
-| **UI / Design-System** | Operational surfaces stay inside the locked Custom Theme; no second design system. | "Does this fit the Custom Theme, or is it inventing one?" | [`skills.md`](skills.md) → Shadcn And UI Design; [`AGENTS.md`](../../../AGENTS.md) → UI Authority; [`ui.md`](ui.md). |
+| **UI / Design-System** | Operational surfaces stay inside the locked Custom Theme; no second design system. | "Does this fit the Custom Theme, or is it inventing one?" | [`skills.md`](skills.md) → Má Tư UI Skill Routing; [`AGENTS.md`](../../../AGENTS.md) → UI Authority; [`ui.md`](ui.md). |
 | **Print / Integration** | The print pipeline and external providers (VietQR / Momo / Viettel HĐĐT) stay coherent end to end and fail loud. | "Are all three sides of the print/provider mirror in sync, and are failures fail-loud?" | [`skills.md`](skills.md) → Browser And QA for smoke; engineering + relevant module docs. |
 
 Every specialist lens runs on either runtime and inherits the same constraints as everyone else — the migration, MCP, and guard rules in their owner files apply unchanged.
@@ -78,12 +78,12 @@ Every specialist lens runs on either runtime and inherits the same constraints a
 
 Codex is not a tool the team calls — it is a second runtime that can hold the main thread itself OR plug into a Claude-led session. Its distinct value is *independence*: a separate model reviewing the same diff catches what the author rationalized. The protocol is symmetric — read "Codex" as "the other runtime"; a Codex Orchestrator invoking Claude follows the same triggers, handoff, and arbitration.
 
-| Hat | Mission | When the Orchestrator reaches for it | Mode (→ [`skills.md`](skills.md)) |
-| --- | --- | --- | --- |
-| **Independent Reviewer** | Pass/fail gate on a diff from a separate model. | Every T3; any diff the author wants a second opinion on before landing. | `codex` review mode; the `review` skill row. |
-| **Challenger** | Adversarially try to break the change. | The highest-blast-radius T3 work (see [`workflow.md`](workflow.md) → Review Depth for which surfaces qualify). | `codex` challenge mode. |
-| **Consultant** | Answer an open design/architecture question with session continuity. | A stuck design decision; a tradeoff the single thread cannot resolve; before a `docs/plan/decisions.md` D0xx. | `codex` consult mode. |
-| **Parallel implementer** | Own a separable slice while the other runtime owns another. | Only when slices are truly independent (e.g. one PR per file). | Normal repo rules; atomic per-task staging ([`engineering.md`](engineering.md) → Git). |
+| Hat / mode (→ [`skills.md`](skills.md)) | Mission | When (team moment) |
+| --- | --- | --- |
+| **Independent Reviewer** — `codex` review | Pass/fail gate on a diff from a separate model. | Late — the standard pre-land second-runtime gate on every T3; any diff the author wants a second opinion on. |
+| **Challenger** — `codex` challenge | Adversarially try to break the change. | Late — after implementation, before merge, on the highest-blast-radius T3 surfaces ([`workflow.md`](workflow.md) → Review Depth). |
+| **Consultant** — `codex` consult | Answer an open design/architecture question with session continuity. | Early — an architecture fork or stuck tradeoff, before a `docs/plan/decisions.md` D0xx. |
+| **Parallel implementer** | Own a separable slice while the other runtime owns another. | Only when slices are truly independent; atomic per-task staging ([`engineering.md`](engineering.md) → Git). |
 
 The second runtime inherits every constraint of the first — no relaxed posture for "it's just a reviewer". It has no Agent Teams, so any Codex involvement uses the written-transcript fan-in. Prod-migration and MCP posture are owned by [`database.md`](database.md) (default flow file → PR → owner; owner-delegated apply is the only exception); see Safety.
 
@@ -110,42 +110,17 @@ this frame for T1 and small T2 work where the owner request already fits in one
 sentence. This goal frame is not a second board — [`tasks/todo.md`](../../../tasks/todo.md)
 remains the live tracker.
 
-```text
-  ┌──────────┐   ┌────────────┐   ┌────────────┐   ┌──────────────┐
-  │ 1 INTAKE │──▶│ 2 TRIAGE & │──▶│ 3 SKILL    │──▶│ 4 ROLE       │
-  │          │   │   TIER     │   │   PLAN     │   │   ASSIGNMENT │
-  └──────────┘   └────────────┘   └────────────┘   └──────┬───────┘
-   todo.md /      workflow.md       skills.md        (this file:
-   owner          T1/T2/T3          Skill Plan Gate   Standing Roles)
-                                                            │
-  ┌──────────┐   ┌────────────┐   ┌────────────┐   ┌───────▼──────┐
-  │ 9 LEARN  │◀──│ 8 LAND     │◀──│ 7 VERIFY   │◀──│ 5 IMPLEMENT  │
-  │ & OPTIM. │   │            │   │            │   │              │
-  │          │   │            │   │            │   │              │
-  └──────────┘   └─────┬──────┘   └─────┬──────┘   └───────┬──────┘
-   regressions.md/      engineering.md   workflow.md        engineering.md
-   lessons.md +         git conv. +      Verification +     MIRROR:constraints
-   workflow.md          database.md      gate                     │
-   learning loop        owner gate              ▲                 ▼
-                                                │          ┌──────────────┐
-                                                └──────────│ 6 X-RUNTIME  │
-                                                           │   REVIEW     │
-                                                           └──────────────┘
-                                                          (this file: Codex
-                                                           Orchestration)
-```
-
 1. **Intake** — A task enters from the owner or from [`tasks/todo.md`](../../../tasks/todo.md). The Orchestrator restates the request and the surfaces it touches.
 2. **Triage & tier** — Classify blast radius and pick the lenses. *Owns:* [`workflow.md`](workflow.md) → Review Depth (tier table, flex-the-lens rule). The floor `corepack pnpm lint:review-tier` catches under-classification. This file never restates a tier.
 3. **Skill plan** — Write the skill-plan line (repo rules + external skills + runtime tools). *Owns:* [`skills.md`](skills.md) → Skill Plan Gate, Required Routing Matrix. Mandatory for T3, expected for T2.
-4. **Role assignment** — *This file's stage.* Assign the standing roles and pick the four lenses, flexing to the specialist rows above when the trigger surface calls for it. For T3, spawn the four perspectives (parallel subagents / Agent Teams if available). If neither subagents nor Agent Teams are available (e.g. a Codex session), the Orchestrator writes the four perspectives inline as a transcript — this is the canonical form, not a degraded one.
+4. **Role assignment** — *This file's stage.* Assign the standing roles and pick the four lenses, flexing to the specialist rows above when the trigger surface calls for it. For T3, spawn the four perspectives (parallel subagents / Agent Teams if available). If neither subagents nor Agent Teams are available (e.g. a Codex session), the Orchestrator writes the four perspectives inline as a transcript (Runtime-Neutral Mandate).
 5. **Implement** — Write the code under the `MIRROR:constraints`. *Owns:* [`engineering.md`](engineering.md) (Core Constraints, Import Boundaries, URL Structure). Database work additionally obeys [`database.md`](database.md); UI additionally obeys [`ui.md`](ui.md).
 6. **Cross-runtime review** — *This file's stage; see Codex Orchestration Protocol.* The Reviewer runs an independent pass on the diff. *Skill routing owned by* [`skills.md`](skills.md); *review depth owned by* [`workflow.md`](workflow.md).
 7. **Verify** — Run the gates. *Owns:* [`workflow.md`](workflow.md) → Verification (hard gate, `corepack pnpm verify` for release slices, cross-boundary coherence, self-attestation, tier floor, CI). Do not mark complete until they pass and CI is green. This file restates no gate.
 8. **Land** — Stage atomically, commit, land. *Owns:* [`engineering.md`](engineering.md) → Git And Commit Conventions. Prod and migration steps are **owner-gated**: by default agents do not apply prod migrations — file → PR → merge → owner applies; the only exception is the owner-delegated apply in [`database.md`](database.md) → Owner-Delegated Production Apply. *Owns:* [`database.md`](database.md) → Environment Registry, Migration Policy.
 9. **Learn & optimize** — One learning-loop pass before closing. *Owns:* [`workflow.md`](workflow.md) (learning-loop hygiene) routing to `tasks/regressions.md` and `tasks/lessons.md`; promotion-and-delete in [`references.md`](references.md) → Memory Maintenance Rules; next-loop optimization in [`orchestration.md`](orchestration.md) → Anti-Repeat And Loop Engineering. State the learning (or "none") in the commit/PR body.
 
-A single agent walks all nine stages itself; a team distributes them across roles; a Claude↔Codex split typically puts Implement on one runtime and stage 6 on the other. Owner-facing synthesis is Vietnamese; agent-to-agent transcripts are English ([`AGENTS.md`](../../../AGENTS.md) → Communication Protocol).
+A single agent walks all nine stages itself; a team distributes them across roles; a Claude↔Codex split typically puts Implement on one runtime and stage 6 on the other. (Language per [`AGENTS.md`](../../../AGENTS.md) → Communication Protocol.)
 
 For substantial owner-facing closeout, use this report shape unless the task asks
 for a different artifact:
@@ -178,14 +153,7 @@ T1 may skip the pass; state the skip in the commit body (per [`workflow.md`](wor
 
 ### Modes Mapped To Team Moments
 
-The three `codex` modes (see [`skills.md`](skills.md)) map to specific moments:
-
-| Mode | Team moment | When |
-| --- | --- | --- |
-| `consult` | Architecture fork, before a D0xx; "is this approach sound"; design question | Early — before/while shaping the plan, in the T3 debate or T2 self-review |
-| `challenge` | Adversarial pass before landing the highest-risk diffs | Late — after implementation, before merge, on the T3 trigger surfaces ([`workflow.md`](workflow.md)) |
-| `review` | The pre-land independent diff review with a pass/fail gate | Late — the standard second-runtime gate on every T3 and the surfaces above |
-
+The hat/mode table lives in Roles → Codex As A Co-Equal Runtime.
 `challenge` and `review` can both run on one change: `review` for the structured pass/fail, `challenge` to actively try to break a high-risk path. Do not stack modes that cover the same risk surface ([`skills.md`](skills.md) → "Load the minimum useful set").
 
 ### Handoff Format
@@ -203,19 +171,23 @@ A Claude↔Codex disagreement is a feature, not a failure — it surfaced a real
 
 ### Safety
 
-The second runtime is bound by the same safety net as the first — there is no relaxed posture for "it's just a reviewer". The whole posture is owned elsewhere; this is the pointer:
-
-- **MCP posture is per-server, not blanket.** Codex's `.codex/config.toml` Supabase MCP is pinned `read_only=true`; the repo-scoped Claude `.mcp.json` entry and the org-scoped / Supabase-CLI paths are NOT read-only and are gated by the deny-list plus the `guard-prod-db.mjs` hook. Re-check the ref before any write-capable call ([`database.md`](database.md) → Environment Registry).
-- **Neither runtime applies prod migrations by default.** Flow is file → PR → merge → owner applies. The ONLY exception is [`database.md`](database.md) → Owner-Delegated Production Apply (owner authorizes a prod write in the current session). This file sets no looser or stricter rule than `database.md`; a routine second-runtime pass reviews a migration FILE and a PR.
-- **Both runtimes inherit the single guard triad.** The guard, its adapters, the `lint:guard-sync` drift check, and the rule that a new IDE needs a registered adapter before use are owned by [`references.md`](references.md) → Intentional Mirrors and Agent Entrypoints Per IDE. A second runtime inherits the guard; it does not get a private bypass.
+The second runtime is bound by the same safety net as the first — there is no
+relaxed posture for "it's just a reviewer", and no private bypass. The whole
+posture is owned elsewhere: per-server MCP posture, the Environment Registry,
+the migration flow, and the owner-delegated prod-apply exception by
+[`database.md`](database.md); the guard triad, its drift checks, and the
+new-adapter registration rule by [`references.md`](references.md) → Intentional
+Mirrors and Agent Entrypoints Per IDE.
 
 ### Fallback
 
-If only one runtime is available, the loop does not change — only its execution does:
-
-- The Orchestrator writes the second opinion itself as a debate transcript (per [`workflow.md`](workflow.md)), adopting the adversarial / consult / review stance the moment called for, and notes which runtime was unavailable (e.g. "Codex unavailable this session; second-opinion pass written single-runtime").
-- The fallback note lives where the real pass would have — PR body (T3) or `docs/worklog/` note. The pass/fail gate and the arbitration record still apply; a single agent argues both sides and resolves on the same evidence standard.
-- A self-written second opinion is weaker than a genuinely independent runtime — state that limitation in the note so the owner can weigh it for high-risk changes.
+If only one runtime is available, the loop does not change — the Orchestrator
+writes the second opinion itself (Runtime-Neutral Mandate), adopting the stance
+the moment calls for and noting which runtime was unavailable. The note lives
+where the real pass would have — PR body (T3) or the `docs/worklog/` note — and
+the pass/fail gate and arbitration record still apply. A self-written second
+opinion is weaker than a genuinely independent runtime; state that limitation
+so the owner can weigh it for high-risk changes.
 
 ## Coordination & Concurrency
 
@@ -227,10 +199,6 @@ When more than one agent (or runtime) works the same tree:
 
 ## Anti-Patterns
 
-- **No duplication of the owner files.** Restating a tier, a four-perspective definition, the skill matrix, a verification gate or its command string, or a constraint here instead of pointing at its owner. If a stage needs one, it links — see Purpose & Scope.
-- **No governance dependent on Agent Teams or parallel subagents.** Roles, missions, the loop, and the cross-runtime pass MUST work single-agent and on Codex, with a written-transcript fallback. Agent Teams is an optional accelerator ([`skills.md`](skills.md) → Subagents), never a precondition.
-- **No prod write by default, and no blanket "MCP is read-only".** Stage 8 is owner-gated: file → PR → merge → owner applies, with the single owner-delegated exception in [`database.md`](database.md). MCP read-only is per-server, not universal (see Safety). The guard triad is the backstop.
-- **No parallel agent-doc tree or second store.** Do not spin up `docs/llm-wiki/`, a second learning/config store, or a parallel progress tracker instead of the canonical homes in [`references.md`](references.md). Do not track loop state in this file.
-- **No tombstones, no narrative.** No change-log, no "previously the team did X" notes, no provenance for deleted roles (`MIRROR:constraints`).
-- **No forking the guard or the mirrors.** Do not add a second prod-DB guard, a second mirror block, or a per-runtime copy of these rules. Enforcement stays the single `scripts/guard-prod-db.mjs` and the existing `lint:rules-mirror` / `lint:guard-sync` triad ([`references.md`](references.md) → Intentional Mirrors).
-- **No second design/UI authority and no skill-as-authority.** Cross-runtime review obeys the same Authority Order as everything else: repo wins over any external skill ([`skills.md`](skills.md)). Choosing roles or skills by agent preference rather than by the triggering surface and the routing matrix is out of bounds.
+- **No restating owned facts.** A tier, perspective, gate command, constraint, or migration rule stated here instead of linked to its owner (see Purpose & Scope) is a stale duplicate waiting to drift.
+- **No governance dependent on Agent Teams, parallel subagents, or any single-runtime capability.** Everything here must run single-agent, on either runtime, with the written transcript.
+- **No second guard, mirror, tracker, doc tree, or UI authority — and no skill-as-authority.** The canonical homes in [`references.md`](references.md), [`database.md`](database.md), [`ui.md`](ui.md), and the Authority Order in [`skills.md`](skills.md) win; route roles and skills by the triggering surface, never by agent preference.

@@ -19,11 +19,11 @@ database policy, copy, or business rules.
 
 ## Repository Boundary
 
-- Project-owned Agent Workspace config may live in root runtime-adapter
-  directories such as `.claude/`, `.codex/`, `.cursor/`, and `.agents/`. Treat
-  these directories as adapters to the repo rules, not as competing sources of
-  truth. They may wire tools, permissions, hooks, launchers, local prompts, and
-  lightweight handoff helpers.
+- Root runtime-adapter directories (`.claude/`, `.codex/`, …) are adapters to
+  the repo rules, never competing sources of truth (registry:
+  `references.md` → Agent Entrypoints Per IDE). They may wire tools,
+  permissions, hooks, launchers, local prompts, and lightweight handoff
+  helpers.
 - Adapter config MAY carry runtime enforcement for its own agent — permission
   allow/deny lists and hook wiring. Shared guard logic lives once in
   `scripts/` (e.g. `scripts/guard-prod-db.mjs` enforces the Environment
@@ -35,8 +35,9 @@ database policy, copy, or business rules.
   wired to the canonical guard before use. Until an adapter is registered in
   `scripts/check-guard-sync.mjs`, keep it read-only for production-affecting
   tools.
-- Do not commit secrets, MCP tokens, plugin caches, generated sessions,
-  worktrees, or per-user local state.
+- Version-control hygiene for adapter dirs (no secrets, tokens, caches,
+  sessions, worktrees, per-user state) is owned by `references.md` → Agent
+  Entrypoints Per IDE.
 - Do not vendor external skills into this repo unless the owner explicitly asks
   for a product-owned skill package and approves the path.
 - Durable project routing lives here, under `docs/agent/rules/`, not in a
@@ -65,26 +66,19 @@ body must say it was T1/doc-only.
 Load the minimum useful set. Do not stack several overlapping skills unless each
 one owns a different risk surface.
 
-## Layer Skill Map
+## Layer Index
 
-Layer-indexed entry view for the way an agent thinks about a change ("I'm
-touching FE / BE / Infra…"). It is a dispatch table over the same rule docs and
-the same skill set as the task-signal **Required Routing Matrix** below — not a
-competing authority. Pick the **minimum useful set** per the anti-stacking rule;
-each skill named owns a distinct risk surface. Skills are capability contracts:
-if one is unavailable, use the closest installed equivalent and continue with the
-rule docs, which every runtime loads. Most of these skills are per-user Claude
-state, not repo-pinned (see Toolset Reproducibility).
+Layer-first entry points into the **Required Routing Matrix** below — the
+matrix owns the rules, skills, and verification; this index only routes. Pick
+the minimum useful set per the anti-stacking rule above.
 
-| Layer (you're touching…)                      | Load rules first                                                                      | Matrix row → verify lives there      | Default tier               | Skills by risk-surface (use what's available)                                                                                                                                           |
-| --------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **UI** / UX / copy / route surface            | `ui.md`, `spec/design-system.md`, `modules/ui.md`, `tasks/regressions.md`             | "UI, UX, route surface…"             | T2 (T3 if auth-gated flow) | product surfaces: repo Má Tư DS primitives first; `ui-ux-pro-max` for checklist coverage; `impeccable` only for explicit audit/polish; brand/landing only: `design-taste-frontend`      |
-| **FE** (RSC / Server Actions / proxy / perf)  | `engineering.md` (+ `database.md` if data/auth)                                       | "Next.js App Router…", "React perf…" | T2                         | `vercel:nextjs`, `vercel:react-best-practices`; use caching/routing/build-specific Vercel skills only when that exact surface is touched                                                |
-| **BE** (Supabase / RLS / RPC / auth / money)  | `database.md`, `workflow.md`, `tasks/regressions.md`, `spec/database-schema.md`       | "Supabase queries…", "Money…HĐĐT…"   | T3                         | `supabase`, `supabase-postgres-best-practices`; tax/HĐĐT/payroll rules: `tax-vn` (repo skill); serverless: `vercel:vercel-functions`                                                    |
-| **Infra** (deploy / CI / env / print-agent)   | `engineering.md`, `modules/infrastructure.md`, `workflow.md`, runbooks                | "Deployment, Vercel, CI…"            | T2 (T3 if prod-affecting)  | `vercel:deployments-cicd`, `vercel:env-vars`, `vercel:vercel-cli`, `vercel:vercel-firewall`; `gh` CLI; publish (only when owner asks): `ship`, `land-and-deploy`, `canary`              |
-| **Architecture** (cross-cutting design)       | `engineering.md`, `architecture/README.md`, `spec/architecture.md`, `CODEBASE_MAP.md` | "Broad repo audit…orientation"       | T3                         | orient: `codegraph_explore`; planning: `superpowers:brainstorming` → `superpowers:writing-plans`; optional artifact template: `eos-system-design` / `eos-tech-spec` only when installed |
-| **Review** / PR / regression / security       | `workflow.md`, `tasks/regressions.md`, relevant module docs                           | "Code review, PR review…"            | per diff blast-radius      | repo flow first (`review` + T-tier); independent second pass: `codex` when requested/T3; security: `cso` or `codex-security:*` only for security scope                                  |
-| **Process** (debug / test / QA — cross-layer) | `workflow.md`                                                                         | "Browser QA, route smoke…" for QA    | inherit                    | debug: `investigate` or `superpowers:systematic-debugging`; QA: `qa` / `qa-only` / `playwright`; TDD/verification superpowers only when they directly own the task step                 |
+- **UI / UX / copy / route surface** → matrix row "UI, UX, route surface…" and Má Tư UI Skill Routing below. Default T2 (T3 if auth-gated flow).
+- **FE — RSC / Server Actions / proxy / perf** → rows "Next.js App Router…" and "React component performance…". Default T2.
+- **BE — Supabase / RLS / RPC / auth / money** → rows "Supabase queries…" and "Money, payments…". Default T3.
+- **Infra — deploy / CI / env / print-agent** → row "Deployment, Vercel, CI…" plus `docs/modules/infrastructure.md` and runbooks. Default T2 (T3 if prod-affecting).
+- **Architecture — cross-cutting design** → row "Broad repo audit…" plus `docs/architecture/README.md` and `docs/spec/architecture.md`; planning: `superpowers:brainstorming` → `superpowers:writing-plans`; optional artifact template `eos-system-design` / `eos-tech-spec` when installed. Default T3.
+- **Review / PR / regression / security** → row "Code review, PR review…"; security scope: `cso` or the built-in `security-review`. Tier per diff blast radius.
+- **Process — debug / test / QA** → row "Browser QA, route smoke…" for QA; debug: `investigate` or `superpowers:systematic-debugging`; TDD/verification superpowers only when they directly own the task step. Tier inherited from the task.
 
 ## Toolset Reproducibility
 
@@ -94,8 +88,8 @@ in `~/.claude/settings.json`; the gitignored `.claude/settings.local.json` only
 adds `oh-my-claudecode`. The only git-tracked repo skill is `tax-vn`
 (`.claude/skills/tax-vn/`). What survives a different machine or runtime:
 
-- **The durable, runtime-neutral contract is the Layer Skill Map + Routing Matrix
-  in THIS file.** Codex (no plugin loading) and any other-machine agent read it
+- **The durable, runtime-neutral contract is the Layer Index + Required Routing
+  Matrix in THIS file.** Codex (no plugin loading) and any other-machine agent read it
   and route to the closest available capability. This is why no rule may DEPEND on
   a plugin (see Plugin Lanes and Anti-Patterns).
 - **Reproducible Claude default:** the project-relevant official-marketplace
@@ -108,12 +102,13 @@ adds `oh-my-claudecode`. The only git-tracked repo skill is `tax-vn`
   risk surface; if a plugin is unavailable or its context conflicts with repo
   rules, skip it and use the repo rules plus the closest local tool.
 - **Per-user marketplace plugins — NOT pinned, keep in your own config:**
-  `oh-my-claudecode`, `ponytail`, `telegram`; `engineering-os` is a local-path
-  marketplace (machine-specific, not reproducible).
+  `oh-my-claudecode`, `ponytail`, `telegram`; `engineering-os` runs from a
+  per-user plugin cache (its local-path marketplace source is machine-specific
+  and may dangle — never load-bearing).
 - **`gstack` is not a marketplace plugin** — it is a separately-installed project
   under `~/.claude/skills/gstack/` (its own installer / `gstack-upgrade`), so it
   cannot be pinned via `enabledPlugins`; a dev installs it themselves. The Layer
-  Skill Map names gstack skills (`review`, `qa`, `investigate`, `cso`,
+  Index and Routing Matrix name gstack skills (`review`, `qa`, `investigate`, `cso`,
   `ship`/`land-and-deploy`/`canary`) only as capability contracts — each pairs in
   the same row with a reproducible or runtime-neutral fallback (T-tier debate,
   `playwright`, `superpowers:systematic-debugging`, `security-review` / OMC
@@ -121,50 +116,32 @@ adds `oh-my-claudecode`. The only git-tracked repo skill is `tax-vn`
 
 ### Headroom Context Compression
 
-Headroom is a per-user workflow accelerator for long agent sessions. It is not a
-repo dependency, not a source of truth, and not a replacement for CodeGraph,
-repo rules, production verification, or the hard gates in `workflow.md`.
-
-- Use it for log-heavy and tool-output-heavy work: `corepack pnpm verify`, build/test
-  failures, large Supabase SELECT results, long review sessions, or multi-agent
-  handoffs.
-- Skip it for short chat, small code-only edits, and source lookup where
-  CodeGraph already returns the needed source directly.
-- Keep setup local/user-level (`headroom wrap codex` / `headroom wrap claude`);
-  do not add `headroom-ai` to `package.json`, vendor its skills, or commit
-  generated Headroom caches/session state.
-- `headroom learn` is dry-run only for this repo unless the owner explicitly
-  asks to apply a learning. Do not let it write tracked `AGENTS.md` or
-  `CLAUDE.md`; promote durable corrections manually to `tasks/regressions.md`,
-  `tasks/lessons.md`, or the owning rule doc per `references.md`.
-- Prefer `HEADROOM_TELEMETRY=off` while working with operational data.
-
-Operational checklist: `docs/runbooks/agent-headroom.md`.
+Headroom is an optional per-user context compressor — never a repo dependency
+or source of truth (do not add `headroom-ai` to `package.json` or vendor its
+skills); `headroom learn` is dry-run-only for this repo. Operational checklist:
+`docs/runbooks/agent-headroom.md`.
 
 ## Required Routing Matrix
 
-The Layer Skill Map above is the layer-indexed companion to this table; rows below
-are the task-signal view, and the verification column lives here. Skill names in
-both are capability contracts (see Repository Boundary), not a promise that the
-exact skill is installed. Inventory last re-verified 2026-06-22. When a named
-skill is missing, use the closest installed equivalent, or `find-skills` if the
-owner asked for new tooling.
+The Layer Index above routes into this table; rows below are the task-signal
+view, and the verification column lives here. Skill names are capability
+contracts (see Repository Boundary). Inventory last re-verified 2026-07-02.
 
 | Task signal                                                                       | Required repo rules/docs                                                                                | Required skills/plugins when available                                                                                                                                                                                                                                                                                                                                           | Required verification                                                                                                                         |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Broad repo audit, onboarding, "read all source", architecture orientation         | `engineering.md`, `references.md`, `docs/CODEBASE_MAP.md`                                               | if `.codegraph/` exists, `codegraph_explore` first (both runtimes — verbatim source + blast radius in one call; treat its output as already Read), else a read-only Explore/search subagent (see Subagents, Debate, And Read Delegation); `understand-anything` plugin optional; `health`/`review` for audit and `cso` for a security/threat-model audit only when the user asks | Summarize evidence paths; do not claim runtime state without smoke evidence                                                                   |
+| Broad repo audit, onboarding, "read all source", architecture orientation         | `engineering.md`, `references.md`, `docs/CODEBASE_MAP.md`                                               | if `.codegraph/` exists, `codegraph_explore` first (both runtimes — verbatim source + blast radius in one call; treat its output as already Read), else a read-only Explore/search subagent (see Subagents, Debate, And Read Delegation); `health`/`review` for audit and `cso` for a security/threat-model audit only when the user asks | Summarize evidence paths; do not claim runtime state without smoke evidence                                                                   |
 | Code review, PR review, regression hunt                                           | `engineering.md`, `workflow.md`, relevant module docs, `tasks/regressions.md`                           | `review`; an external second-opinion reviewer (e.g. `codex`) only when requested; a diff-understanding skill for large diffs when installed                                                                                                                                                                                                                                      | Findings first with file/line refs; run targeted checks when feasible                                                                         |
 | Next.js App Router, RSC, Server Actions, routing, proxy                           | `engineering.md`, `database.md` if data/auth touched, relevant module doc                               | `vercel:nextjs`, `vercel:react-best-practices` when available                                                                                                                                                                                                                                                                                                                    | `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` for implementation                                                     |
 | React component performance or bundle risk                                        | `engineering.md`, `ui.md` if UI changes                                                                 | `vercel:react-best-practices` or the closest installed React best-practices skill                                                                                                                                                                                                                                                                                                | Typecheck/lint/build; inspect imports for barrel/client boundary drift                                                                        |
-| UI, UX, route surface, copy, Má Tư DS component, forms, operational POS/KDS UI    | `ui.md`, `docs/spec/design-system.md`, `docs/modules/ui.md`, `tasks/regressions.md`, domain docs        | repo Má Tư DS primitives and surface adapters first; `ui-ux-pro-max` as a checklist/reasoning aid when available; `impeccable` for explicit product-UI audit/polish after project UI authority is loaded                                                                                                                                                                         | Browser/runtime smoke for meaningful UI; no fake primitives or design-system drift                                                            |
-| Landing, marketing, portfolio, or visual concept outside operational ERP surfaces | `ui.md`, `docs/spec/design-system.md` if it touches web runtime                                         | an anti-slop/brand design skill (e.g. `taste-skill`) only when the surface is actually brand/marketing/prototype work; `impeccable` brand/polish when useful                                                                                                                                                                                                                     | Visual/browser verification; do not override the Custom Theme for app surfaces                                                                |
+| UI, UX, route surface, copy, Má Tư DS component, forms, operational POS/KDS UI    | `ui.md`, `docs/spec/design-system.md`, `docs/modules/ui.md`, `tasks/regressions.md`, domain docs        | repo Má Tư DS primitives and surface adapters first; a UI/UX checklist skill when installed; `impeccable-design-polish` for explicit product-UI audit/polish after project UI authority is loaded                                                                                                                                                                         | Browser/runtime smoke for meaningful UI; no fake primitives or design-system drift                                                            |
+| Landing, marketing, portfolio, or visual concept outside operational ERP surfaces | `ui.md`, `docs/spec/design-system.md` if it touches web runtime                                         | `taste-skill` (anti-slop/brand) only when the surface is actually brand/marketing/prototype work; `impeccable-design-polish` brand critique/polish when useful                                                                                                                                                                                                                     | Visual/browser verification; do not override the Custom Theme for app surfaces                                                                |
 | Supabase queries, migrations, RLS, grants, auth, storage, generated types, RPCs   | `database.md`, `workflow.md`, `tasks/regressions.md`, `docs/spec/database-schema.md`                    | `supabase`, `supabase-postgres-best-practices`; use Supabase MCP/CLI only after target env is verified                                                                                                                                                                                                                                                                           | T3 if schema/RLS/money/security-definer/data backfill; migration file before apply; `corepack pnpm db:types` after applied type-source schema |
 | Money, payments, refunds, HĐĐT, journal, payroll/tax                              | `database.md`, `workflow.md`, `docs/ref/legal-framework-2026.md`, finance/legal docs, relevant runbooks | `tax-vn` (repo skill: routes the legal/tax/HĐĐT/payroll docs and names the real compute functions); `supabase`, `supabase-postgres-best-practices`; product/QA perspectives required by T3                                                                                                                                                                                       | Full T3 debate; targeted domain tests plus full gates                                                                                         |
 | Browser QA, route smoke, responsive/layout evidence                               | `workflow.md`, relevant UI/module docs                                                                  | `playwright` for repeatable browser interaction; `browse`, `qa`, or `qa-only` for broader QA                                                                                                                                                                                                                                                                                     | Capture URL, viewport, route, and observed state; separate auth/env blockers from code regressions                                            |
 | Deployment, Vercel, CI, GitHub PR, release/canary                                 | `engineering.md`, `workflow.md`, deployment/runbook docs                                                | `gh` CLI / GitHub tools, `vercel:*`, `ship`, `land-and-deploy`, `canary` only when owner asks to publish/land/deploy                                                                                                                                                                                                                                                             | Do not mutate production without owner-approved flow; cite CI/deploy evidence                                                                 |
 | Documentation, runbooks, lessons, task tracker                                    | `references.md`, relevant module/spec/runbook                                                           | Usually no external skill. Use a docx skill (e.g. `anthropic-skills:docx`) only for Word artifacts; use `make-pdf` only when asked for PDF                                                                                                                                                                                                                                       | Check links/anchors and keep docs in the correct SSOT location                                                                                |
 | TikTok, campaign, offer, brand exploration, launch assets                         | `references.md`, `docs/ref/business-context.md`                                                         | a creative/brand skill when installed (e.g. `taste-skill`)                                                                                                                                                                                                                                                                                                                       | Keep output human, operational, and separate from product/runtime docs                                                                        |
-| Need a new reusable agent workflow or external skill                              | This file plus `references.md`                                                                          | `skill-creator`, `find-skills` only when the owner explicitly asks to create/install/update a skill                                                                                                                                                                                                                                                                              | Do not install or vendor silently; record durable project routing here if it affects future work                                              |
+| Need a new reusable agent workflow or external skill                              | This file plus `references.md`                                                                          | `anthropic-skills:skill-creator` (harness-bundled), `find-skills` only when the owner explicitly asks to create/install/update a skill                                                                                                                                                                                                                                                                              | Do not install or vendor silently; record durable project routing here if it affects future work                                              |
 
 ## Project-Specific Skill Rules
 
@@ -206,90 +183,63 @@ owner asked for new tooling.
     defined" → codegraph. `tax-vn` routes legal/tax/HĐĐT _rules_, not schema,
     layout, or code-location lookups.
 
-### Má Tư UI Design
+### Má Tư UI Skill Routing
 
-- Use `@comtammatu/ui` primitives and `apps/web/app/components/surface.tsx` for
-  primitive composition and form/control structure. Do not use external UI CLI,
-  registry, or preset output as a project authority.
-- Use `ui-ux-pro-max` only as a supplemental UI/UX checklist and reasoning aid:
-  accessibility, touch targets, responsive behavior, forms, navigation, charts,
-  motion meaning, and pre-delivery quality control. Never let it generate or
-  persist a parallel `design-system/MASTER.md`, page override tree,
-  `PRODUCT.md`, `DESIGN.md`, route-local theme, or any other competing UI source
-  of truth in this repo.
-- Use `impeccable` for product-UI critique, audit, polish, hardening, layout,
-  typography, and copy refinement when the user asks for design work. If the
-  skill asks for root `PRODUCT.md` / `DESIGN.md`, map that context to existing
-  repo sources instead: `docs/ref/business-context.md`,
-  `docs/spec/design-system.md`, `docs/modules/ui.md`, and the relevant module
-  docs.
-- Do not use anti-slop/brand design skills (e.g. `taste-skill`) for Admin, POS,
-  KDS, Inventory, Employee, Finance, HR, or other operational app surfaces. They
-  are allowed for landing, portfolio, campaign, and brand concept work only.
-- Product Design plugin skills are for prototypes and product direction. They do
-  not replace the runtime design-system SSOT.
-- Do not install, vendor, or copy external skills into the repo silently. If an
-  exact skill such as `ui-ux-pro-max` is not installed, use the closest installed
-  equivalent, or use the owner-provided GitHub reference only for the current
-  task. Use `find-skills` / `skill-installer` only when the owner explicitly asks
-  to install or update tooling.
+Classify the surface first: Admin, POS, KDS, Inventory, Employee, Finance, HR,
+Menu, Orders, and authenticated tools are **product UI** (design serves the
+operator workflow); landing pages, campaigns, portfolios, brand concepts, and
+launch assets are **brand/marketing UI**.
 
-#### External Design-Skill Context Map
+Load authority before external skills: `docs/spec/design-system.md`,
+`docs/modules/ui.md`, `tasks/regressions.md`, and the domain docs for the route
+family. The Custom Theme contract wins over every external skill, generated
+design system, preset suggestion, color palette, font pairing, or motion
+recipe. Then write the UI rebuild gate before implementation: surface, primary
+user job, route family, change type (visual refactor / UX flow / copy /
+behavior), primitives to use, and regression rules at risk.
 
-When an external UI/design skill asks for its own project context files, do not
-create them in this repo. Map the request to existing project sources:
+Skill stacks, in order (capability contracts — use the closest installed
+equivalent):
+
+- **Product UI:** repo Má Tư DS primitives (`@comtammatu/ui`) and
+  `apps/web/app/components/surface.tsx` for composition and form/control
+  structure — never external UI CLI, registry, or preset output as a project
+  authority; a UI/UX checklist skill (accessibility, touch targets, responsive
+  behavior, forms, pre-delivery quality control) when installed;
+  `impeccable-design-polish` for product-UI critique/audit/polish/harden when
+  the user asks for design work. Never `taste-skill` or other anti-slop/brand
+  skills on operational app surfaces — they are for landing, portfolio,
+  campaign, and brand concept work only.
+- **Brand/marketing UI:** `taste-skill` for design-read and anti-slop
+  direction; `impeccable-design-polish` for brand critique/polish; a checklist
+  skill for accessibility/responsive pre-flight coverage. Any runtime touch
+  still stays inside the Custom Theme contract.
+
+When an external design skill asks for its own project context files
+(`PRODUCT.md`, `DESIGN.md`, `design-system/MASTER.md`, page override trees,
+route-local themes), treat that as a tooling mismatch, not a repo gap — never
+create or persist them. Map the request to existing sources and state the
+substitution in the skill plan:
 
 - Product/business context: `docs/ref/business-context.md`, relevant
   `docs/ref/*`, and the route family module doc.
-- UI/design contract: `docs/spec/design-system.md`.
-- UI implementation patterns: `docs/modules/ui.md`,
-  `apps/web/app/components/surface.tsx`, and `packages/ui/src/components/*`.
-- Negative rules and known drift: `tasks/regressions.md`.
-- Current work state: `tasks/todo.md`.
+- UI/design contract: `docs/spec/design-system.md`; implementation patterns:
+  `docs/modules/ui.md`, `apps/web/app/components/surface.tsx`,
+  `packages/ui/src/components/*`.
+- Negative rules and known drift: `tasks/regressions.md`; current work state:
+  `tasks/todo.md`.
 
-If a skill reports missing `PRODUCT.md`, `DESIGN.md`, or
-`design-system/MASTER.md`, treat that as a tooling mismatch, not a repo gap.
-Continue with the map above and state the substitution in the skill plan or
-final note. External skill outputs are advisory: translate them back into route
-family, primary user job, approved primitives, regression rules at risk, and the
-verification that the repo expects.
-
-### Ma Tu UI/UX Workflow
-
-Use this workflow for UI/UX design tasks in this repo:
-
-1. Classify the surface first. Admin, POS, KDS, Inventory, Employee, Finance,
-   HR, Menu, Orders, and authenticated tools are product UI: design serves the
-   operator workflow. Landing pages, campaigns, portfolios, brand concepts, and
-   launch assets are brand/marketing UI.
-2. Load authority before external skills: `docs/spec/design-system.md`,
-   `docs/modules/ui.md`, `tasks/regressions.md`, and the domain docs for the
-   route family. The Custom Theme contract wins over every external skill,
-   generated design system, preset suggestion, color palette, font pairing, or
-   motion recipe.
-3. Write the UI rebuild gate before implementation: surface, primary user job,
-   route family, change type (visual refactor / UX flow / copy / behavior),
-   primitives to use, and regression rules at risk.
-4. For product UI, use this stack in order:
-   repo Má Tư DS primitives and surface adapters for composition;
-   `ui-ux-pro-max` for checklist coverage;
-   `impeccable` for product-UI critique/polish/harden;
-   skip `taste-skill` unless the task has a brand/landing/prototype surface.
-5. For brand/marketing UI, use this skill stack in order:
-   `taste-skill` for design-read and anti-slop direction;
-   `impeccable` for brand critique/polish;
-   `ui-ux-pro-max` for accessibility/responsive/pre-flight coverage;
-   still keep any runtime touch inside the Custom Theme contract.
-6. Reject external-skill output that conflicts with app constraints: no new
-   fonts, dark-mode strategy, arbitrary color ramps, kinetic/GSAP/motion
-   libraries, fake primitives, fake screenshots, route-local themes, or
-   decorative page structures on ERP surfaces unless the owner explicitly
-   changes `docs/spec/design-system.md` first.
-7. Verify by route behavior, not aesthetics alone: mobile first viewport exposes
-   the next safe action or live queue where relevant, desktop adds density
-   without changing IA, empty/loading/error states use approved primitives, and
-   meaningful UI changes get browser/runtime smoke when a safe dev target is
-   available.
+Reject external-skill output that conflicts with app constraints: no new fonts,
+dark-mode strategy, arbitrary color ramps, kinetic/GSAP/motion libraries, fake
+primitives, fake screenshots, route-local themes, or decorative page structures
+on operational surfaces unless the owner explicitly changes
+`docs/spec/design-system.md` first. External skill outputs are advisory —
+translate them back into route family, primary user job, approved primitives,
+regression rules at risk, and the verification the repo expects. Verify by
+route behavior, not aesthetics alone: the mobile-first viewport exposes the
+next safe action or live queue where relevant, desktop adds density without
+changing IA, empty/loading/error states use approved primitives, and meaningful
+UI changes get browser/runtime smoke when a safe dev target is available.
 
 ### Browser And QA
 
@@ -306,14 +256,8 @@ Use this workflow for UI/UX design tasks in this repo:
 
 ### Repo Understanding, Search, And Context Economy
 
-- In indexed repos, start each implementation session/task with
-  `codegraph index .` before trusting graph output. `codegraph status .` is only
-  a post-refresh check; do not treat it as sufficient after active code or DB
-  churn.
-- After editing source files, SQL migrations, or generated database type files,
-  run `codegraph index .` again before final review/verification. For database
-  work, do this after `corepack pnpm db:types` when generated types were
-  refreshed, so the graph reflects the final code/type surface.
+- CodeGraph freshness rules (index at session start, re-index after final
+  source/SQL/generated-type changes) are owned by `AGENTS.md` → CodeGraph.
 - For broad repo orientation, "where/how/which" questions, naming-convention
   sweeps, large-refactor mapping, domain extraction, onboarding, and large diff
   explanation: if `.codegraph/` exists, call `codegraph_explore` first. One
@@ -324,33 +268,27 @@ Use this workflow for UI/UX design tasks in this repo:
   Explore/search subagent (see Subagents, Debate, And Read Delegation) rather
   than reading many files on the main thread. Indexing is an owner decision.
 - Treat `codegraph_explore` / `codegraph_node` source output as already Read —
-  do not re-open those files. `understand-anything` is an optional alternative;
-  its output dir is gitignored (`.understand-anything/`, alongside `.codegraph/`).
-  A graph is a navigation aid, never a substitute for reading the current source
-  of the specific symbol you are about to edit.
+  do not re-open those files. A graph is a navigation aid, never a substitute
+  for reading the current source of the specific symbol you are about to edit.
 
 ### GStack Workflow Skills
 
-- Use `review` for pre-landing risk review.
-- Use `investigate` for systematic root-cause debugging.
-- Use `qa` for full QA runs; use `qa-only` when the user asks for report-only QA.
-- Use `ship`, `land-and-deploy`, `canary`, and deployment workflow skills only
-  when the user explicitly asks to ship, land, deploy, or monitor.
-- Use `context-save` / `context-restore` only for continuity work, not as product
-  documentation.
-- Use `cso` for a security audit / threat model (OWASP, STRIDE, secrets,
-  dependency and skill supply-chain). It fits this repo's `packages/security`
-  and prod-guard posture; route here for "security review", not a generic
-  `review`.
-- Use `careful` / `guard` / `freeze` for destructive or prod-adjacent work
-  (migrations, data backfill, anything touching the production DB) — they warn
-  before `DROP`/`rm -rf`/force-push and can scope edits to one directory. They
-  complement, never replace, the migration policy in `database.md`.
-- `learn`, `retro`, and `setup-deploy` keep their own gstack-side stores. Do not
-  let them fork a parallel learning or config source: this repo's SSoT stays
-  `tasks/lessons.md`, `tasks/regressions.md`, `docs/worklog/`, and `AGENTS.md`
-  (see Anti-Patterns). `setup-deploy` must not rewrite `CLAUDE.md` (a stable
-  pointer to `AGENTS.md`).
+Per-user gstack skills (`review`, `investigate`, `qa`/`qa-only`, `cso`,
+`careful`/`guard`/`freeze`, `ship`/`land-and-deploy`/`canary`,
+`context-save`/`context-restore`) route per the matrix; nothing is load-bearing
+on them. Net-new constraints:
+
+- Use `cso` for security audit / threat model scope ("security review"), not a
+  generic `review`.
+- `careful` / `guard` / `freeze` complement, never replace, the migration
+  policy in `database.md`.
+- Publish skills (`ship`, `land-and-deploy`, `canary`) only when the user
+  explicitly asks to ship, land, deploy, or monitor; `context-save` /
+  `context-restore` are continuity aids, not product documentation.
+- `learn`, `retro`, and `setup-deploy` keep gstack-side stores — never let them
+  fork this repo's SSoT (`tasks/lessons.md`, `tasks/regressions.md`,
+  `docs/worklog/`, `AGENTS.md`); `setup-deploy` must not rewrite `CLAUDE.md`
+  (a stable pointer to `AGENTS.md`).
 
 ### Plugin Lanes — OMC, engineering-os, Ponytail
 
@@ -373,10 +311,9 @@ does not load them, so no rule, gate, or workflow may DEPEND on one. Route by la
   nothing, governs how code is written.
 
 Where a plugin overlaps a native system (EOS `eos-code-review` / OMC
-`code-reviewer` vs repo `review` + T-tier; OMC `team`/`ultrawork` vs the T3 debate
-
-- Agent Teams), prefer the repo flow; reach for the plugin only for a capability
-  the repo flow lacks.
+`code-reviewer` vs repo `review` + T-tier; OMC `team`/`ultrawork` vs the T3
+debate + Agent Teams), prefer the repo flow; reach for the plugin only for a
+capability the repo flow lacks.
 
 ### GitHub, Vercel, And CI
 
@@ -442,6 +379,13 @@ here in the shared rules, not in a single runtime's private memory.
   graceful single-agent / written-transcript fallback (see `workflow.md`). It is an
   experimental flag — expect it to churn; never make load-bearing governance
   contingent on it.
+- Claude-runtime accelerators for the T3 flow live in-repo: the
+  `.claude/agents/t3-lens.md` subagent (generic read-only lens — the
+  orchestrator's prompt assigns PM/BA/Dev/QA or a specialist flex) and the
+  `.claude/commands/t3-debate.md` / `.claude/commands/verify-gate.md`
+  launchers. They are optional accelerators, registered in `references.md` →
+  Agent Entrypoints Per IDE; the written transcript stays the canonical form
+  (`team.md` → Runtime-Neutral Mandate).
 
 ## Anti-Patterns
 
