@@ -5,7 +5,7 @@ a hand-maintained per-column schema dump.
 
 ## Current Snapshot
 
-Generated from the current checkout on 2026-06-27 with:
+Generated from the current checkout on 2026-07-02 with:
 
 ```bash
 node scripts/project-snapshot.mjs
@@ -13,16 +13,16 @@ node scripts/project-snapshot.mjs
 
 | Area                                        | Count |
 | ------------------------------------------- | ----: |
-| Public tables in generated types            |   110 |
+| Public tables in generated types            |   117 |
 | Public views in generated types             |     8 |
-| Public RPC/SQL functions in generated types |   251 |
+| Public RPC/SQL functions in generated types |   271 |
 | Public enums in generated types             |     0 |
-| Active SQL migration files                  |    27 |
+| Active SQL migration files                  |     2 |
 
 The early-2026 hand-written table-by-table reference has been removed. Use the
 source ladder below instead of resurrecting stale schema dumps.
 
-## Migration layout (baseline-first — 2026-05-30)
+## Migration layout (baseline-first, re-baselined — 2026-07-02)
 
 The pre-baseline incremental chain could not replay from an empty DB (ordering bug at
 `20260508055046`), so it was consolidated:
@@ -30,18 +30,19 @@ The pre-baseline incremental chain could not replay from an empty DB (ordering b
 - `supabase/migrations/00000000000000_baseline.sql` — canonical public+private
   schema install; validated to replay on an empty DB.
 - `supabase/migrations/<timestamp>_*.sql` after it — forward migrations on the baseline.
-- `supabase/migrations/_archive/` — the 460 historical migrations (retained, NOT applied).
+- `supabase/migrations/_archive/` — the 544 historical and squashed forward
+  migrations (retained, NOT applied).
 - `supabase/migrations/20260627140000_fold_managed_surfaces.sql` — extensions /
   storage buckets + RLS policies / realtime publication / cron jobs (excluded from
   the baseline schema dump, folded back in here). It is a forward migration in the
   chain, so it is applied automatically after the baseline — not a separate manual
   step (the storage-policy section needs `storage.objects` owner, which the migration
   role has).
-- **Option X**: production keeps its applied migration history; the baseline is the
-  fresh/dev install path. Regeneration via `pnpm db:baseline:extract -- --project-ref=<dev-ref>`
-  (Docker-free libpq engine) is currently **blocked**: matu-dev has been deleted and
-  there is no dev project right now — the owner must provision/restore a dev ref
-  before the extract can be rerun. Fresh-env install notes live in `supabase/migrations/README.md`.
+- Production keeps its applied migration history; the baseline is the fresh/dev
+  install path. There is still no dev/test Supabase project, so future
+  verification uses prod SELECT-only evidence plus local baseline replay unless
+  the owner provisions a dev ref. Fresh-env install notes live in
+  `supabase/migrations/README.md`.
 
 ## Source Ladder
 

@@ -15,7 +15,7 @@ function escaped(pattern: string): RegExp {
 
 test("inventory entry units are persisted inside atomic RPCs", () => {
   const sql = read(
-    "supabase/migrations/20260629125621_persist_entry_unit_in_atomic_rpcs.sql",
+    "supabase/migrations/_archive/20260629125621_persist_entry_unit_in_atomic_rpcs.sql",
   );
 
   for (const table of [
@@ -81,7 +81,7 @@ test("server action payload keys match the RPC contract", () => {
 
 test("employee count slip prefill preserves the submitted entry unit", () => {
   const sql = read(
-    "supabase/migrations/20260629144912_employee_count_slip_entry_unit_prefill.sql",
+    "supabase/migrations/_archive/20260629144912_employee_count_slip_entry_unit_prefill.sql",
   );
 
   assert.match(sql, /entry_unit_id\s+BIGINT/);

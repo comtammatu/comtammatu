@@ -70,14 +70,19 @@ now-squashed forward chain.
      fold migration `20260627140000_fold_managed_surfaces.sql` (Section C storage
      policies etc.).
 
-2. **Archive the squashed forward chain.** Every migration with a timestamp at or
-   before the new dump's cutoff is now represented by the baseline:
+2. **Archive the squashed forward chain.** Every public/private schema migration
+   with a timestamp at or before the new dump's cutoff is now represented by the
+   baseline:
 
    ```bash
    git mv supabase/migrations/<each-forward>.sql supabase/migrations/_archive/
    ```
 
-   Keep only migrations newer than the re-baseline cutoff in `supabase/migrations/`.
+   Keep only migrations newer than the re-baseline cutoff in
+   `supabase/migrations/`, plus the managed-surfaces fold migration
+   `20260627140000_fold_managed_surfaces.sql`. The fold migration intentionally
+   remains active because `pg_dump --schema=public,private` omits extensions,
+   storage buckets/policies, realtime publication membership, and cron jobs.
 
 3. **Prove a clean from-empty replay** (full chain now = baseline + only the
    post-cutoff migrations):
@@ -110,5 +115,5 @@ now-squashed forward chain.
 
 - `pnpm db:baseline:local-check` exits 0 on a from-empty docker DB.
 - `pnpm db:types` produces no diff vs committed types.
-- The first forward migration after the new baseline is strictly newer than the
-  dump cutoff, and the whole remaining chain replays clean.
+- The remaining forward chain is either strictly newer than the dump cutoff or
+  the managed-surfaces fold migration, and the whole remaining chain replays clean.

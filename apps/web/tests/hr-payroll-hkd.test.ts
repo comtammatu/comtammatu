@@ -11,14 +11,14 @@ const payrollActionsSource = readFileSync(
 const annualLeaveMigrationSource = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260626102342_hr_payroll_annual_leave.sql",
+    "../../supabase/migrations/_archive/20260626102342_hr_payroll_annual_leave.sql",
   ),
   "utf8",
 );
 const contractInsuranceMigrationSource = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260626144240_hr_contracts_insurance_payroll.sql",
+    "../../supabase/migrations/_archive/20260626144240_hr_contracts_insurance_payroll.sql",
   ),
   "utf8",
 );

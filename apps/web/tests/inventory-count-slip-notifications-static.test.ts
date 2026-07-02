@@ -17,10 +17,10 @@ function around(source: string, needle: string) {
 
 test("count-slip RPCs emit durable notifications with review links", () => {
   const submitApproveSql = readRepoFile(
-    "supabase/migrations/20260629130000_inventory_multiunit_stocktake_count.sql",
+    "supabase/migrations/_archive/20260629130000_inventory_multiunit_stocktake_count.sql",
   );
   const recountSql = readRepoFile(
-    "supabase/migrations/20260627201823_inventory_per_employee_count_slips.sql",
+    "supabase/migrations/_archive/20260627201823_inventory_per_employee_count_slips.sql",
   );
   const messageSrc = readRepoFile("apps/web/lib/messages/notifications.ts");
   const itemSrc = readRepoFile("apps/web/app/_components/notification-item.tsx");

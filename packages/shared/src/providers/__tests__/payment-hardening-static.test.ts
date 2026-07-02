@@ -112,10 +112,10 @@ test("SePay webhook prefers full transfer content code over truncated code field
 test("SePay can correct a cash-confirmed QR payment to VietQR", () => {
   const route = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
   const migration = readRepoFile(
-    "supabase/migrations/20260625215140_sepay_cash_vietqr_correction.sql",
+    "supabase/migrations/_archive/20260625215140_sepay_cash_vietqr_correction.sql",
   );
   const orderCodeMigration = readRepoFile(
-    "supabase/migrations/20260625221432_order_payment_code_fixed.sql",
+    "supabase/migrations/_archive/20260625221432_order_payment_code_fixed.sql",
   );
 
   assert.match(route, /\.ilike\("payment_code", paymentCode\)/);
@@ -135,13 +135,13 @@ test("SePay can correct a cash-confirmed QR payment to VietQR", () => {
 
 test("Each order owns one immutable MB speaker payment code", () => {
   const migration = readRepoFile(
-    "supabase/migrations/20260629160000_mb_speaker_payment_code.sql",
+    "supabase/migrations/_archive/20260629160000_mb_speaker_payment_code.sql",
   );
   const grantMigration = readRepoFile(
-    "supabase/migrations/20260629161000_restrict_order_payment_code_generator.sql",
+    "supabase/migrations/_archive/20260629161000_restrict_order_payment_code_generator.sql",
   );
   const sequenceGrantMigration = readRepoFile(
-    "supabase/migrations/20260629162000_restrict_order_payment_code_sequence.sql",
+    "supabase/migrations/_archive/20260629162000_restrict_order_payment_code_sequence.sql",
   );
 
   assert.match(
@@ -183,7 +183,7 @@ test("Each order owns one immutable MB speaker payment code", () => {
 
 test("SePay migration extends webhook provider check and keeps RPC service-only", () => {
   const source = readRepoFile(
-    "supabase/migrations/20260625171721_sepay_webhook_payment.sql",
+    "supabase/migrations/_archive/20260625171721_sepay_webhook_payment.sql",
   );
 
   assert.match(source, /webhook_events_provider_check/);
@@ -235,7 +235,7 @@ test("SePay migration extends webhook provider check and keeps RPC service-only"
 
 test("Webhook event audit table is not selectable by anon", () => {
   const source = readRepoFile(
-    "supabase/migrations/20260626021425_revoke_webhook_events_anon_select.sql",
+    "supabase/migrations/_archive/20260626021425_revoke_webhook_events_anon_select.sql",
   );
 
   assert.match(
@@ -281,10 +281,10 @@ test("Printed provisional bills do not include payment QR", () => {
 
 test("Order money mutations are locked after VietQR code exposure", () => {
   const migration = readRepoFile(
-    "supabase/migrations/20260626072000_lock_order_amount_after_payment_code_exposed.sql",
+    "supabase/migrations/_archive/20260626072000_lock_order_amount_after_payment_code_exposed.sql",
   );
   const cancelFixMigration = readRepoFile(
-    "supabase/migrations/20260630134012_allow_cancel_after_pending_payment_cancel.sql",
+    "supabase/migrations/_archive/20260630134012_allow_cancel_after_pending_payment_cancel.sql",
   );
   const messages = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/_lib/messages.ts",
@@ -327,7 +327,7 @@ test("Order money mutations are locked after VietQR code exposure", () => {
   );
 
   const revokeMigration = readRepoFile(
-    "supabase/migrations/20260626073500_revoke_payment_code_lock_function_exec.sql",
+    "supabase/migrations/_archive/20260626073500_revoke_payment_code_lock_function_exec.sql",
   );
   assert.match(revokeMigration, /FROM anon;/);
   assert.match(revokeMigration, /FROM authenticated;/);
@@ -384,7 +384,7 @@ test("POS VietQR uses locally generated EMVCo payloads, not VietQR image URLs", 
     "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
   );
   const migration = readRepoFile(
-    "supabase/migrations/20260626043000_refresh_vietqr_bank_bins.sql",
+    "supabase/migrations/_archive/20260626043000_refresh_vietqr_bank_bins.sql",
   );
 
   assert.match(provider, /const qrData = buildVietQrEmvco\(/);

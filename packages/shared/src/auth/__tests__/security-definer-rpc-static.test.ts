@@ -68,61 +68,61 @@ const securityHardeningMigration = readRepoFile(
   "supabase/migrations/_archive/20260619062853_security_rpc_cron_runner_hardening.sql",
 );
 const branchScopePaymentPrintMigration = readRepoFile(
-  "supabase/migrations/20260625130000_branch_scope_pos_payment_print.sql",
+  "supabase/migrations/_archive/20260625130000_branch_scope_pos_payment_print.sql",
 );
 const permissionScopeGrantsMigration = readRepoFile(
-  "supabase/migrations/20260625131000_permission_scope_grants.sql",
+  "supabase/migrations/_archive/20260625131000_permission_scope_grants.sql",
 );
 const permissionScopeCleanupMigration = readRepoFile(
-  "supabase/migrations/20260629190445_auth_rls_permission_scope_cleanup.sql",
+  "supabase/migrations/_archive/20260629190445_auth_rls_permission_scope_cleanup.sql",
 );
 const hddtTaxInvoiceRpcScopeMigration = readRepoFile(
-  "supabase/migrations/20260625132000_hddt_tax_invoice_rpc_scope.sql",
+  "supabase/migrations/_archive/20260625132000_hddt_tax_invoice_rpc_scope.sql",
 );
 const retiredIntraBranchRpcMigration = readRepoFile(
-  "supabase/migrations/20260625075939_harden_retired_intra_branch_rpc.sql",
+  "supabase/migrations/_archive/20260625075939_harden_retired_intra_branch_rpc.sql",
 );
 const featureFlagRpcMigration = readRepoFile(
-  "supabase/migrations/20260625123413_gate_feature_flag_rpc.sql",
+  "supabase/migrations/_archive/20260625123413_gate_feature_flag_rpc.sql",
 );
 const hddtSummaryRpcGrantMigration = readRepoFile(
-  "supabase/migrations/20260625125528_restrict_hddt_summary_rpc_grant.sql",
+  "supabase/migrations/_archive/20260625125528_restrict_hddt_summary_rpc_grant.sql",
 );
 const financeTopItemsWrapperInvokerMigration = readRepoFile(
-  "supabase/migrations/20260625133000_finance_top_items_wrapper_security_invoker.sql",
+  "supabase/migrations/_archive/20260625133000_finance_top_items_wrapper_security_invoker.sql",
 );
 const inventoryShiftKeyInvokerMigration = readRepoFile(
-  "supabase/migrations/20260625132310_inventory_shift_key_invoker.sql",
+  "supabase/migrations/_archive/20260625132310_inventory_shift_key_invoker.sql",
 );
 const inventoryProductionOperatorInvokerMigration = readRepoFile(
-  "supabase/migrations/20260625134329_inventory_production_operator_invoker.sql",
+  "supabase/migrations/_archive/20260625134329_inventory_production_operator_invoker.sql",
 );
 const positionHelperRpcGrantMigration = readRepoFile(
-  "supabase/migrations/20260625141001_restrict_position_helper_rpc_grants.sql",
+  "supabase/migrations/_archive/20260625141001_restrict_position_helper_rpc_grants.sql",
 );
 const inventoryRefreshRpcGrantMigration = readRepoFile(
-  "supabase/migrations/20260625151715_restrict_inventory_refresh_rpc_grant.sql",
+  "supabase/migrations/_archive/20260625151715_restrict_inventory_refresh_rpc_grant.sql",
 );
 const branchMenuLimitGrantMigration = readRepoFile(
-  "supabase/migrations/20260625172456_restrict_branch_menu_limit_table_grants.sql",
+  "supabase/migrations/_archive/20260625172456_restrict_branch_menu_limit_table_grants.sql",
 );
 const branchMenuLimitG1AccessMigration = readRepoFile(
-  "supabase/migrations/20260630062650_pos_kds_inventory_truth_g1_access.sql",
+  "supabase/migrations/_archive/20260630062650_pos_kds_inventory_truth_g1_access.sql",
 );
 const branchMenuLimitG2AvailabilityMigration = readRepoFile(
-  "supabase/migrations/20260630071000_pos_kds_inventory_truth_g2_availability.sql",
+  "supabase/migrations/_archive/20260630071000_pos_kds_inventory_truth_g2_availability.sql",
 );
 const posKdsInventoryTruthG3OutcomesMigration = readRepoFile(
-  "supabase/migrations/20260630082000_pos_kds_inventory_truth_g3_outcomes.sql",
+  "supabase/migrations/_archive/20260630082000_pos_kds_inventory_truth_g3_outcomes.sql",
 );
 const posRefundVoidAfterPaidMigration = readRepoFile(
-  "supabase/migrations/20260628120000_pos_refund_void_after_paid.sql",
+  "supabase/migrations/_archive/20260628120000_pos_refund_void_after_paid.sql",
 );
 const orderDailyCounterGrantMigration = readRepoFile(
-  "supabase/migrations/20260625174605_restrict_order_daily_counter_grants.sql",
+  "supabase/migrations/_archive/20260625174605_restrict_order_daily_counter_grants.sql",
 );
 const hddtRunLogGrantMigration = readRepoFile(
-  "supabase/migrations/20260625180722_restrict_hddt_run_log_grants.sql",
+  "supabase/migrations/_archive/20260625180722_restrict_hddt_run_log_grants.sql",
 );
 
 function extractSqlFunction(source: string, functionName: string): string {

@@ -26,7 +26,7 @@ const cleanupMigrationPath =
 const nonKdsDispatchMigrationPath =
   "supabase/migrations/_archive/20260602002000_non_kds_dispatch_print_on_pos_send.sql";
 const routePolicyMigrationPath =
-  "supabase/migrations/20260701065350_pos_kitchen_print_route_policy.sql";
+  "supabase/migrations/_archive/20260701065350_pos_kitchen_print_route_policy.sql";
 
 test("KDS ticket creation no longer auto-enqueues kitchen print jobs", () => {
   const src = `${read(migrationPath)}\n${read(cleanupMigrationPath)}`;

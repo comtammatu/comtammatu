@@ -273,7 +273,7 @@ test("stock and inventory value exclude legacy branch kitchen locations", () => 
     "movement report should call the get_stock_movement_report RPC",
   );
   const movementRpc = readRepo(
-    "supabase/migrations/20260702200000_report_stock_movement_rpc.sql",
+    "supabase/migrations/_archive/20260702200000_report_stock_movement_rpc.sql",
   );
   assert.match(movementRpc, /location_kind = 'warehouse'/);
   assert.match(

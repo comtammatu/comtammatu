@@ -10,7 +10,7 @@ function readRepo(path: string): string {
 }
 
 const hardeningSql = readRepo(
-  "supabase/migrations/20260629144952_ingredient_catalog_tenant_scope_hardening.sql",
+  "supabase/migrations/_archive/20260629144952_ingredient_catalog_tenant_scope_hardening.sql",
 );
 
 test("ingredient catalog tenant-scope hardening enforces new cross-tenant rows", () => {

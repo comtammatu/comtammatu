@@ -23,7 +23,7 @@ function row(patch: Partial<MenuLimitCapFields>): MenuLimitCapFields {
 const migration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260629164000_menu_limits_stock_capacity_admin_list.sql",
+    "../../supabase/migrations/_archive/20260629164000_menu_limits_stock_capacity_admin_list.sql",
   ),
   "utf8",
 );
@@ -31,7 +31,7 @@ const migration = readFileSync(
 const stockCapacityMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260629100001_menu_stock_capacity_daily_limit.sql",
+    "../../supabase/migrations/_archive/20260629100001_menu_stock_capacity_daily_limit.sql",
   ),
   "utf8",
 );
@@ -39,7 +39,7 @@ const stockCapacityMigration = readFileSync(
 const stockCapacityMultiUnitMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260630083000_menu_stock_capacity_multiunit.sql",
+    "../../supabase/migrations/_archive/20260630083000_menu_stock_capacity_multiunit.sql",
   ),
   "utf8",
 );
@@ -78,7 +78,7 @@ const settingsMessagesSource = readFileSync(
 const stockOutcomeAvailabilityMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260630071000_pos_kds_inventory_truth_g2_availability.sql",
+    "../../supabase/migrations/_archive/20260630071000_pos_kds_inventory_truth_g2_availability.sql",
   ),
   "utf8",
 );
@@ -86,7 +86,7 @@ const stockOutcomeAvailabilityMigration = readFileSync(
 const liveStockCapacityMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260701181757_menu_limits_live_stock_capacity.sql",
+    "../../supabase/migrations/_archive/20260701181757_menu_limits_live_stock_capacity.sql",
   ),
   "utf8",
 );
@@ -188,7 +188,7 @@ test("Menu-Limits manager must set Giới hạn bán between 0 and Tồn kho", (
     readFileSync(
       join(
         process.cwd(),
-        "../../supabase/migrations/20260630062650_pos_kds_inventory_truth_g1_access.sql",
+        "../../supabase/migrations/_archive/20260630062650_pos_kds_inventory_truth_g1_access.sql",
       ),
       "utf8",
     ),

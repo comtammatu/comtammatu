@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 
 const DEFAULT_API_PORT = 55421;
 const DEFAULT_DB_PORT = 55432;
@@ -24,7 +26,7 @@ function printHelp() {
   pnpm db:baseline:local-check -- --baseline=<path> [options]
 
 Options:
-  --baseline=<path>        SQL baseline file to apply. Default: ${DEFAULT_BASELINE}
+  --baseline=<path>        SQL baseline file to apply before active forward migrations. Default: ${DEFAULT_BASELINE}
   --bootstrap=<path>       Optional private-schema bootstrap prepended to baseline (none by default; baseline is self-contained).
   --workdir=<path>         Scratch workdir. Default: /tmp/comtammatu-baseline-local-check-<timestamp>
   --api-port=<number>      Supabase API port. Default: ${DEFAULT_API_PORT}
@@ -126,6 +128,21 @@ function run(command, args, options = {}) {
   }
 }
 
+function copyActiveForwardMigrations(migrationsDir, baselinePath) {
+  const sourceDir = join(process.cwd(), "supabase", "migrations");
+  const excluded = new Set([
+    "00000000000000_baseline.sql",
+    basename(baselinePath),
+  ]);
+
+  for (const fileName of readdirSync(sourceDir).sort()) {
+    if (!/^\d{14}_.+\.sql$/.test(fileName) || excluded.has(fileName)) {
+      continue;
+    }
+    copyFileSync(join(sourceDir, fileName), join(migrationsDir, fileName));
+  }
+}
+
 function writeScratchProject(options, baselinePath, bootstrapPath, workdir) {
   const supabaseDir = join(workdir, "supabase");
   const migrationsDir = join(supabaseDir, "migrations");
@@ -161,6 +178,7 @@ site_url = "http://localhost:3000"
     join(migrationsDir, "20260526000000_live_schema_baseline.sql"),
     bootstrapSql ? `${bootstrapSql}\n\n${baselineSql}` : baselineSql,
   );
+  copyActiveForwardMigrations(migrationsDir, baselinePath);
 }
 
 async function main() {

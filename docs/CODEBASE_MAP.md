@@ -62,18 +62,18 @@ source-of-truth inputs.
 | Tests               | Playwright route coverage and shared unit tests                                       |
 | Core                | Repository metadata, E2E helpers, cross-cutting supporting files                      |
 
-Generated checkout snapshot from 2026-06-27 (`node scripts/project-snapshot.mjs`):
+Generated checkout snapshot from 2026-07-02 (`node scripts/project-snapshot.mjs`):
 
 | Area                                                  |             Count |
 | ----------------------------------------------------- | ----------------: |
-| `apps/web/app/**/page.tsx` routes (committed)         |                94 |
+| `apps/web/app/**/page.tsx` routes (committed)         |               133 |
 | API routes / route handlers                           |           10 / 13 |
-| Generated DB tables / views / functions / enums       | 110 / 8 / 251 / 0 |
-| Active SQL migrations (baseline-first; +460 archived) |                27 |
-| Test/spec files (`apps/web/e2e` + shared unit tests)  |                38 |
-| Playwright specs / shared unit tests                  |           10 / 28 |
+| Generated DB tables / views / functions / enums       | 117 / 8 / 271 / 0 |
+| Active SQL migrations (baseline-first; +544 archived) |                 2 |
+| Test/spec files (`apps/web/e2e` + shared unit tests)  |                42 |
+| Playwright specs / shared unit tests                  |           11 / 31 |
 
-> Migrations are **baseline-first** since 2026-05-30: `supabase/migrations/00000000000000_baseline.sql` (canonical public+private schema install) + forward migrations, with the 460-file historical chain under `supabase/migrations/_archive/` and managed surfaces folded into the chain as `supabase/migrations/20260627140000_fold_managed_surfaces.sql`. See `docs/spec/database-schema.md`.
+> Migrations are **baseline-first** since 2026-05-30 and were re-baselined on 2026-07-02: `supabase/migrations/00000000000000_baseline.sql` (canonical public+private schema install) plus the managed-surfaces fold migration, with the 544-file historical/squashed chain under `supabase/migrations/_archive/`. See `docs/spec/database-schema.md`.
 
 The repo is not a flat "apps/packages" map. The operational shape is:
 

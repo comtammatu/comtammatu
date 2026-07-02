@@ -22,7 +22,7 @@ function limit(p: Partial<MenuItemDailyLimit>): MenuItemDailyLimit {
 const stockOutcomeAvailabilityMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260630071000_pos_kds_inventory_truth_g2_availability.sql",
+    "../../supabase/migrations/_archive/20260630071000_pos_kds_inventory_truth_g2_availability.sql",
   ),
   "utf8",
 );

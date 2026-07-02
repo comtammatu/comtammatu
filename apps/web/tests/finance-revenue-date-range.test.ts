@@ -99,7 +99,7 @@ test("Finance top-items decomposes side-items without double-counting revenue", 
 
 test("Finance top-items side-item fanout avoids PL/pgSQL output-column ambiguity", () => {
   const migration = read(
-    "supabase/migrations/20260701000214_fix_top_items_branch_ambiguity.sql",
+    "supabase/migrations/_archive/20260701000214_fix_top_items_branch_ambiguity.sql",
   );
 
   assert.match(

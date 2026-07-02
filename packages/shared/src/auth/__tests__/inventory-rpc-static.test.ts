@@ -34,7 +34,7 @@ test("classic stocktake completion RPC is gated by stocktake_complete permission
 
 test("stocktake heartbeat lock RPC rechecks ttl and branch permission", () => {
   const source = readRepoFile(
-    "supabase/migrations/20260625165845_harden_stocktake_heartbeat_lock.sql",
+    "supabase/migrations/_archive/20260625165845_harden_stocktake_heartbeat_lock.sql",
   );
 
   assert.match(
@@ -66,7 +66,7 @@ test("stocktake heartbeat lock RPC rechecks ttl and branch permission", () => {
 
 test("branch manager transfer request RPC gates inbound requests by receiving branch", () => {
   const source = readRepoFile(
-    "supabase/migrations/20260702094500_branch_stock_operator_actions.sql",
+    "supabase/migrations/_archive/20260702094500_branch_stock_operator_actions.sql",
   );
 
   assert.match(
