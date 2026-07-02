@@ -16,6 +16,7 @@ export default async function OperatorShiftPage({
         profile: `/br/${branchId}/profile`,
         checkoutApprovals: `/br/${branchId}/shift/checkout-approvals`,
         count: `/br/${branchId}/stock/count`,
+        wasteApprovals: "/inventory/waste/approvals",
       }}
       showNotificationControl={false}
       workflowLayout="stepper"

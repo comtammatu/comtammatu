@@ -149,6 +149,10 @@ export const employee = {
     managerCheckoutApprovalsTitle: "Duyệt kết ca",
     managerCheckoutApprovalsDescription: "Duyệt yêu cầu ra ca của nhân viên",
     checkoutApprovalsTitle: "Duyệt kết ca",
+    approvalsQueueTitle: "Cần duyệt",
+    approvalsCheckoutUnit: "kết ca",
+    approvalsWasteUnit: "hao hụt",
+    wasteApprovalsTitle: "Duyệt hao hụt",
     countTitle: "Kiểm kê tồn",
     countDescription:
       "Bạn có nguyên liệu được giao cần đếm tồn và gửi quản lý duyệt.",

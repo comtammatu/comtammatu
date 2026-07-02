@@ -103,7 +103,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /clock: `\$\{basePath\}\/shift\/clock`/);
   assert.match(home, /count: `\$\{basePath\}\/stock\/count`/);
   assert.match(home, /EmployeeActionSection/);
-  assert.match(home, /filteredGroups\.map/);
+  assert.match(home, /groups\.map/);
   assert.match(
     home,
     /key: `\$\{group\.id\}-\$\{tile\.moduleKey\}-\$\{tile\.href\}`/,
@@ -197,4 +197,25 @@ test("branch dashboard and settings routes live inside operator shell", () => {
     assert.doesNotMatch(source, /BranchManagementShell/);
     assert.doesNotMatch(source, /management-chrome/);
   }
+});
+
+test("pre-clock-in gate disables floor tiles instead of hiding them", () => {
+  const page = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
+  );
+
+  assert.match(
+    page,
+    /tilesLockedBeforeClockIn && lockedGroupIds\.has\(group\.id\)/,
+  );
+  assert.doesNotMatch(page, /tiles: \[\]/);
+});
+
+test("manager smart card counts pending waste approvals with checkouts", () => {
+  const home = read("apps/web/app/(protected)/employee/page.tsx");
+
+  assert.match(home, /\.eq\("issue_type", "writeoff"\)/);
+  assert.match(home, /\.eq\("approval_status", "pending"\)/);
+  assert.match(home, /INVENTORY_WASTE_APPROVE/);
+  assert.match(home, /pendingCheckouts \+ pendingWaste/);
 });

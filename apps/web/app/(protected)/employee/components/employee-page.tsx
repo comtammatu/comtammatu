@@ -473,6 +473,7 @@ interface EmployeeActionItemProps {
   title: string;
   description?: string;
   size?: "default" | "sm";
+  disabled?: boolean;
 }
 
 function EmployeeActionItem({
@@ -481,7 +482,41 @@ function EmployeeActionItem({
   title,
   description,
   size,
+  disabled,
 }: EmployeeActionItemProps) {
+  if (disabled) {
+    return (
+      <Item
+        variant="outline"
+        size={size}
+        aria-disabled="true"
+        className={cn(
+          "min-h-14 items-start bg-card opacity-50 sm:items-center",
+          size === "sm" && "min-h-12",
+        )}
+      >
+        {Icon ? (
+          <ItemMedia
+            variant="icon"
+            className="rounded-md bg-muted p-2 text-muted-foreground"
+          >
+            <Icon />
+          </ItemMedia>
+        ) : null}
+        <ItemContent className="min-w-0">
+          <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
+            {title}
+          </ItemTitle>
+          {description ? (
+            <ItemDescription className="line-clamp-none text-sm leading-6">
+              {description}
+            </ItemDescription>
+          ) : null}
+        </ItemContent>
+      </Item>
+    );
+  }
+
   return (
     <Item
       asChild
@@ -528,6 +563,7 @@ interface EmployeeActionSectionProps {
     icon?: ElementType;
     title: string;
     description?: string;
+    disabled?: boolean;
   }>;
   columns?: 1 | 2;
   mobileColumns?: 1 | 2;
@@ -562,6 +598,7 @@ export function EmployeeActionSection({
             title={link.title}
             description={link.description}
             size={size}
+            disabled={link.disabled}
           />
         ))}
       </EmployeeActionList>

@@ -76,18 +76,11 @@ export default async function OperatorHomePage({
   const workState = await getTodayWorkState();
   const beforeClockIn = workState.status === "not_started";
 
-  const filteredGroups = groups
-    .map((group) => {
-      if (
-        isFloorRole &&
-        beforeClockIn &&
-        (group.id === "sales_kitchen" || group.id === "stock")
-      ) {
-        return { ...group, tiles: [] };
-      }
-      return group;
-    })
-    .filter((group) => group.tiles.length > 0);
+  // Pre-clock-in: tiles stay VISIBLE but disabled (owner decision, cutover
+  // spec "Open implementation notes") — the greyed tile plus the banner is
+  // the clock-in prompt.
+  const lockedGroupIds = new Set(["sales_kitchen", "stock"]);
+  const tilesLockedBeforeClockIn = isFloorRole && beforeClockIn;
 
   return (
     <EmployeePage title={APP_COPY_VI.operatorHome} hideHeaderOnMobile>
@@ -102,6 +95,7 @@ export default async function OperatorHomePage({
             profile: `${basePath}/profile`,
             checkoutApprovals: `${basePath}/shift/checkout-approvals`,
             count: `${basePath}/stock/count`,
+            wasteApprovals: "/inventory/waste/approvals",
           }}
           showNotificationControl={false}
         />
@@ -128,7 +122,7 @@ export default async function OperatorHomePage({
         </div>
       )}
 
-      {filteredGroups.map((group) => (
+      {groups.map((group) => (
         <EmployeeActionSection
           key={group.id}
           title={group.title}
@@ -137,6 +131,7 @@ export default async function OperatorHomePage({
             href: tile.href,
             icon: resolveIcon(tile.icon),
             title: tile.label,
+            disabled: tilesLockedBeforeClockIn && lockedGroupIds.has(group.id),
           }))}
           columns={2}
           mobileColumns={2}

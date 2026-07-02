@@ -52,6 +52,7 @@ export type EmployeeHomeRoutes = {
   profile: string;
   checkoutApprovals: string;
   count: string;
+  wasteApprovals: string;
 };
 
 const DEFAULT_HOME_ROUTES: EmployeeHomeRoutes = {
@@ -61,6 +62,7 @@ const DEFAULT_HOME_ROUTES: EmployeeHomeRoutes = {
   profile: "/employee/profile",
   checkoutApprovals: "/employee/checkout-approvals",
   count: "/employee/count",
+  wasteApprovals: "/inventory/waste/approvals",
 };
 
 type EmployeeHomeAuthState = Awaited<ReturnType<typeof loadAuthState>>;
@@ -214,6 +216,37 @@ export async function EmployeeHomePageContent({
     ]);
     if (permissionResult.data === true) {
       pendingCheckouts = countResult.count ?? 0;
+    }
+  }
+
+  // Pending tier-2 waste writeoffs join the same approval queue — the D050
+  // Phase 1 smart card shows ONE combined "needs approval" counter.
+  let pendingWaste = 0;
+  if (CHECKOUT_APPROVER_ROLES.includes(claims.user_role)) {
+    let wasteQuery = supabase
+      .from("stock_issues")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("issue_type", "writeoff")
+      .eq("approval_status", "pending");
+    if (claims.user_role === "branch_manager") {
+      wasteQuery = wasteQuery.eq("branch_id", claims.branch_id ?? -1);
+    }
+    const wastePermissionPromise =
+      typeof claims.branch_id === "number"
+        ? supabase.rpc("has_permission", {
+            p_branch_id: claims.branch_id,
+            p_key: PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
+          })
+        : supabase.rpc("has_permission_any", {
+            p_key: PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
+          });
+    const [wastePermissionResult, wasteCountResult] = await Promise.all([
+      wastePermissionPromise,
+      wasteQuery,
+    ]);
+    if (wastePermissionResult.data === true) {
+      pendingWaste = wasteCountResult.count ?? 0;
     }
   }
 
@@ -501,21 +534,47 @@ export async function EmployeeHomePageContent({
       </p>
     </EmployeePanel>
   ) : null;
+  const pendingApprovalsTotal = pendingCheckouts + pendingWaste;
   const checkoutApprovalsSection =
-    pendingCheckouts > 0 ? (
+    pendingApprovalsTotal > 0 ? (
       <EmployeePanel
         icon={IconClipboardCheck}
-        title={copy.checkoutApprovalsTitle}
+        title={copy.approvalsQueueTitle}
+        description={[
+          pendingCheckouts > 0
+            ? `${pendingCheckouts} ${copy.approvalsCheckoutUnit}`
+            : null,
+          pendingWaste > 0 ? `${pendingWaste} ${copy.approvalsWasteUnit}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         tone="warning"
-        badge={{ children: String(pendingCheckouts), variant: "warning" }}
+        badge={{ children: String(pendingApprovalsTotal), variant: "warning" }}
         size="sm"
       >
-        <Button asChild size="touch" className="w-full sm:w-fit">
-          <Link href={routes.checkoutApprovals}>
-            <IconClipboardCheck data-icon="inline-start" />
-            {copy.checkoutApprovalsTitle}
-          </Link>
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:flex-row">
+          {pendingCheckouts > 0 ? (
+            <Button asChild size="touch" className="w-full sm:w-fit">
+              <Link href={routes.checkoutApprovals}>
+                <IconClipboardCheck data-icon="inline-start" />
+                {copy.checkoutApprovalsTitle}
+              </Link>
+            </Button>
+          ) : null}
+          {pendingWaste > 0 ? (
+            <Button
+              asChild
+              size="touch"
+              variant="outline"
+              className="w-full sm:w-fit"
+            >
+              <Link href={routes.wasteApprovals}>
+                <IconClipboardCheck data-icon="inline-start" />
+                {copy.wasteApprovalsTitle}
+              </Link>
+            </Button>
+          ) : null}
+        </div>
       </EmployeePanel>
     ) : null;
   const checklistSection = activeWorkStatus ? (
