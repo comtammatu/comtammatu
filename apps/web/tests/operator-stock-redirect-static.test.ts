@@ -243,6 +243,38 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   );
 });
 
+test("operator stock landing keeps manager action affordances visible", () => {
+  const stockClientSource = read(
+    "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
+  );
+
+  for (const expected of [
+    /<QuickActionButton[\s\S]*href=\{actionHrefs\.receive\}[\s\S]*label=\{receiveActionLabel\}[\s\S]*primary/,
+    /<QuickActionButton[\s\S]*href=\{actionHrefs\.transfer\}[\s\S]*label=\{stockCopy\.actions\.transfer\}/,
+    /<QuickActionButton[\s\S]*href=\{actionHrefs\.stocktake\}[\s\S]*label=\{stockCopy\.actions\.stocktake\}/,
+    /<QuickActionButton[\s\S]*href=\{actionHrefs\.waste\}[\s\S]*label=\{stockCopy\.actions\.waste\}/,
+    /<QuickActionButton[\s\S]*href=\{actionHrefs\.purchaseSuggestion\}[\s\S]*label=\{stockCopy\.actions\.purchaseSuggestion\}/,
+  ]) {
+    assert.match(stockClientSource, expected);
+  }
+
+  for (const expected of [
+    /canReceiveStock[\s\S]*<Button asChild size="xs" variant="outline">[\s\S]*href=\{actionHrefs\.receive\}/,
+    /actionPermissions\.canCreateIssue[\s\S]*setQuickIssueTarget\(\{[\s\S]*issueType: "consumption"/,
+    /actionPermissions\.canCreateStocktake[\s\S]*href=\{actionHrefs\.stocktake\}/,
+    /actionPermissions\.canAdjustException[\s\S]*setAdjustTarget\(item\)/,
+  ]) {
+    assert.match(stockClientSource, expected);
+  }
+
+  assert.match(stockClientSource, /<AdjustStockDialog/);
+  assert.match(stockClientSource, /<QuickStockIssueDialog/);
+  assert.match(
+    stockClientSource,
+    /embedded[\s\S]*branchStockHref\(stockRootPath, "\/issues"\)[\s\S]*: "\/inventory\/issues"/,
+  );
+});
+
 test("operator stock branch-native extensions keep PO, issue, and report actions in the branch shell", () => {
   const issueRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/page.tsx",
