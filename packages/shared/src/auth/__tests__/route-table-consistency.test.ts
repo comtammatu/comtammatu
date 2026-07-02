@@ -1,0 +1,199 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import { canAccess, type ModuleKey } from "../module-acl";
+import { STAFF_ROLES } from "../types";
+import { ROUTE_FAMILY_CONTRACTS } from "../route-map";
+import { resolveModuleFromPath } from "../route-resolution";
+import {
+  ADMIN_NAV_GROUPS,
+  BRANCH_MANAGEMENT_ITEMS,
+  DOMAIN_WORKSPACE_ITEMS,
+  OPERATOR_TILE_ITEMS,
+} from "../nav-config";
+import {
+  resolveAdminNavGroups,
+  resolveBranchManagementItems,
+  resolveWorkspaceItems,
+} from "../nav-resolution";
+
+// Guards the route-table contract (D058 W0): every path a route family
+// declares reachable, and every href the nav resolvers produce, must resolve
+// (via resolveModuleFromPath, the function proxy.ts/middleware actually
+// enforces) to a module the family/role is supposed to have. A declared
+// moduleKey with no matching enforcement (or vice versa) is a silent ACL gap.
+
+const BRANCH_ID = "7";
+
+// A realistic one-level-deeper path for families whose matchPrefixes root
+// implies real sub-routes, grounded in actual page.tsx directories rather
+// than a synthetic segment (some roots, e.g. "/admin", only resolve their
+// own explicit sub-prefixes — an arbitrary child would fall through to
+// null and is not representative of the family's real route space).
+const DEEPER_SUBPATH_BY_PREFIX: Record<string, string> = {
+  "/admin": "/admin/dashboard",
+  "/menu": "/menu/categories",
+  "/orders": "/orders/history",
+  "/inventory": "/inventory/stock",
+  "/finance": "/finance/revenue",
+  "/branches": "/branches/settings",
+  "/hr": "/hr/staff",
+  "/notifications": "/notifications/settings",
+  "/employee": "/employee/profile",
+  "/br/[branchId]/shift": `/br/${BRANCH_ID}/shift/clock`,
+  "/br/[branchId]/shift/checkout-approvals": `/br/${BRANCH_ID}/shift/checkout-approvals`,
+  "/br/[branchId]/profile": `/br/${BRANCH_ID}/profile/edit`,
+  "/br/[branchId]/stock": `/br/${BRANCH_ID}/stock/waste`,
+  "/br/[branchId]/settings/menu-limits": `/br/${BRANCH_ID}/settings/menu-limits`,
+  "/br/[branchId]/settings": `/br/${BRANCH_ID}/settings/tables`,
+  "/br/[branchId]/dashboard": `/br/${BRANCH_ID}/dashboard`,
+  "/br/[branchId]/pos": `/br/${BRANCH_ID}/pos`,
+  "/br/[branchId]/kds": `/br/${BRANCH_ID}/kds`,
+  "/br/[branchId]/runner": `/br/${BRANCH_ID}/runner`,
+};
+
+function substituteBranchId(prefix: string): string {
+  return prefix.replace("[branchId]", BRANCH_ID);
+}
+
+function concretePathsForPrefix(prefix: string): string[] {
+  const root = substituteBranchId(prefix);
+  const deeper = DEEPER_SUBPATH_BY_PREFIX[prefix];
+  return deeper && deeper !== root ? [root, deeper] : [root];
+}
+
+test("every ROUTE_FAMILY_CONTRACTS entry's concrete paths resolve to a declared moduleKey", () => {
+  const failures: string[] = [];
+
+  for (const family of ROUTE_FAMILY_CONTRACTS) {
+    if (family.moduleKeys.length === 0) {
+      // "public" family: intentionally has no ACL module (isPublicAppPath
+      // short-circuits before resolveModuleFromPath in resolveRouteFamilyContract).
+      continue;
+    }
+
+    for (const prefix of family.matchPrefixes) {
+      for (const path of concretePathsForPrefix(prefix)) {
+        const resolved = resolveModuleFromPath(path);
+        const moduleKeys: readonly ModuleKey[] = family.moduleKeys;
+        if (!resolved || !moduleKeys.includes(resolved)) {
+          failures.push(
+            `family "${family.id}" prefix "${prefix}" -> path "${path}" resolved to "${resolved ?? "null"}", expected one of [${family.moduleKeys.join(", ")}]`,
+          );
+        }
+      }
+    }
+  }
+
+  assert.equal(
+    failures.length,
+    0,
+    `Route table drift between route-map.ts and route-resolution.ts:\n${failures.join("\n")}`,
+  );
+});
+
+function assertHrefResolvesForAudience(
+  href: string,
+  audienceRoles: readonly string[],
+  failures: string[],
+): void {
+  const resolved = resolveModuleFromPath(href);
+  if (!resolved) {
+    failures.push(`href "${href}" resolved to no module`);
+    return;
+  }
+
+  const reachable = audienceRoles.some((role) =>
+    canAccess(role as (typeof STAFF_ROLES)[number], resolved),
+  );
+  if (!reachable) {
+    failures.push(
+      `href "${href}" resolved to module "${resolved}", but none of [${audienceRoles.join(", ")}] can access it`,
+    );
+  }
+}
+
+test("resolveAdminNavGroups hrefs resolve to a module reachable by an admin-audience role", () => {
+  const failures: string[] = [];
+
+  for (const group of ADMIN_NAV_GROUPS) {
+    for (const item of group.items) {
+      const audienceRoles = STAFF_ROLES.filter((role) =>
+        resolveAdminNavGroups(role).some((resolvedGroup) =>
+          resolvedGroup.items.some((link) => link.moduleKey === item.moduleKey),
+        ),
+      );
+      if (audienceRoles.length === 0) continue;
+
+      const sampleRole = audienceRoles[0]!;
+      const link = resolveAdminNavGroups(sampleRole)
+        .flatMap((resolvedGroup) => resolvedGroup.items)
+        .find((navLink) => navLink.moduleKey === item.moduleKey);
+      assert.ok(link, `expected a resolved link for ${item.moduleKey}`);
+      assertHrefResolvesForAudience(link.href, audienceRoles, failures);
+    }
+  }
+
+  assert.equal(failures.length, 0, failures.join("\n"));
+});
+
+test("resolveWorkspaceItems hrefs resolve to a module reachable by an audience role", () => {
+  const failures: string[] = [];
+
+  for (const item of DOMAIN_WORKSPACE_ITEMS) {
+    const audienceRoles = STAFF_ROLES.filter((role) =>
+      resolveWorkspaceItems(role).some(
+        (link) => link.moduleKey === item.moduleKey,
+      ),
+    );
+    if (audienceRoles.length === 0) continue;
+
+    const sampleRole = audienceRoles[0]!;
+    const link = resolveWorkspaceItems(sampleRole).find(
+      (navLink) => navLink.moduleKey === item.moduleKey,
+    );
+    assert.ok(link, `expected a resolved link for ${item.moduleKey}`);
+    assertHrefResolvesForAudience(link.href, audienceRoles, failures);
+  }
+
+  assert.equal(failures.length, 0, failures.join("\n"));
+});
+
+test("resolveBranchManagementItems hrefs resolve to a module reachable by an audience role", () => {
+  const failures: string[] = [];
+
+  for (const item of BRANCH_MANAGEMENT_ITEMS) {
+    const audienceRoles = STAFF_ROLES.filter((role) =>
+      resolveBranchManagementItems(role, Number(BRANCH_ID)).some(
+        (link) => link.moduleKey === item.moduleKey,
+      ),
+    );
+    if (audienceRoles.length === 0) continue;
+
+    const sampleRole = audienceRoles[0]!;
+    const link = resolveBranchManagementItems(
+      sampleRole,
+      Number(BRANCH_ID),
+    ).find((navLink) => navLink.moduleKey === item.moduleKey);
+    assert.ok(link, `expected a resolved link for ${item.moduleKey}`);
+    assertHrefResolvesForAudience(link.href, audienceRoles, failures);
+  }
+
+  assert.equal(failures.length, 0, failures.join("\n"));
+});
+
+test("OPERATOR_TILE_ITEMS hrefTemplates resolve to a module reachable by an audience role", () => {
+  const failures: string[] = [];
+
+  for (const tile of OPERATOR_TILE_ITEMS) {
+    const audienceRoles = STAFF_ROLES.filter((role) =>
+      canAccess(role, tile.moduleKey),
+    );
+    if (audienceRoles.length === 0) continue;
+
+    const href = tile.hrefTemplate.replace("{branchId}", BRANCH_ID);
+    assertHrefResolvesForAudience(href, audienceRoles, failures);
+  }
+
+  assert.equal(failures.length, 0, failures.join("\n"));
+});
