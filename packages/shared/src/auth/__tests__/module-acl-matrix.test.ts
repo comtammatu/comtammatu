@@ -16,10 +16,7 @@ function accessibleModules(role: StaffRole): ModuleKey[] {
   return ALL_MODULE_KEYS.filter((key) => canAccess(role, key)).sort();
 }
 
-const EXPECTED_MATRIX: Record<
-  "owner" | "branch_manager" | "cashier" | "warehouse_manager" | "production_manager",
-  ModuleKey[]
-> = {
+const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
   owner: [
     "branch_dashboard",
     "branch_menu_limits",
@@ -82,6 +79,14 @@ const EXPECTED_MATRIX: Record<
     "notifications",
     "operator_home",
   ],
+  chef: [
+    "employee",
+    "kds",
+    "notifications",
+    "operator_home",
+    "runner",
+  ],
+  office: ["employee", "notifications"],
 };
 
 for (const [role, expected] of Object.entries(EXPECTED_MATRIX)) {

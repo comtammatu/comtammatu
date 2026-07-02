@@ -25,6 +25,10 @@ test("operator routes resolve to ACL modules", () => {
   assert.equal(resolveModuleFromPath("/br"), "branch_picker");
   assert.equal(resolveModuleFromPath("/br/7"), "operator_home");
   assert.equal(resolveModuleFromPath("/br/7/shift"), "operator_home");
+  assert.equal(
+    resolveModuleFromPath("/br/7/shift/checkout-approvals"),
+    "employee_checkout_approvals",
+  );
   assert.equal(resolveModuleFromPath("/br/7/stock"), "inventory");
   assert.equal(resolveModuleFromPath("/br/7/stock/count"), "operator_home");
   assert.equal(resolveModuleFromPath("/br/7/stock/count-slips"), "inventory");
@@ -43,7 +47,7 @@ test("operator route families use operator bottom nav", () => {
   for (const [path, id] of [
     ["/br/7", "operator-home"],
     ["/br/7/shift", "operator-shift"],
-    ["/br/7/shift/checkout-approvals", "operator-shift"],
+    ["/br/7/shift/checkout-approvals", "operator-shift-checkout-approvals"],
     ["/br/7/stock", "operator-stock"],
     ["/br/7/stock/count", "operator-stock"],
     ["/br/7/stock/count-slips", "operator-stock"],
