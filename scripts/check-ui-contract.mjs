@@ -913,6 +913,7 @@ const frozenPrimitiveImportBaselines = [
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/transfer-table-dialog.tsx": 1,
       "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
+      "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 1,
       "apps/web/app/(protected)/inventory/production-order-list.tsx": 1,
       "apps/web/app/(protected)/menu/item-detail-dialog.tsx": 1,
       "apps/web/app/components/form/form-dialog.tsx": 1,

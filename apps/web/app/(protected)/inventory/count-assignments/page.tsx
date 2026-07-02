@@ -6,14 +6,8 @@ import {
   resolveRequestedBranchId,
   parseBranchIdParam,
 } from "@/(protected)/inventory/_lib/inventory-scope";
-import { getBranchSiteDisplayName } from "@/(protected)/inventory/_lib/branch-site-labels";
 import { CountAssignmentsClient } from "./count-assignments-client";
-import type {
-  BranchOption,
-  LocationOption,
-  EmployeeRow,
-  IngredientOption,
-} from "./count-assignments-client";
+import type { EmployeeRow, IngredientOption } from "./count-assignments-client";
 
 export const dynamic = "force-dynamic";
 
@@ -41,27 +35,23 @@ export default async function CountAssignmentsPage({ searchParams }: PageProps) 
     requestedBranchId,
   );
 
-  const branches: BranchOption[] = scope.allowedBranches.map((b) => ({
-    id: b.id,
-    name: getBranchSiteDisplayName(b),
-  }));
-
   const selectedBranchId = scope.selectedBranchId;
   const requestedLocationId = parseBranchIdParam(sp.locationId);
 
-  // Locations at the selected branch (scope lives in URL params, never state).
-  const locations: LocationOption[] = [];
+  // Count assignments target the branch warehouse. URL scope stays supported
+  // for deep links.
+  const locations: Array<{ id: number; kind: string | null }> = [];
   if (selectedBranchId !== null) {
     const locationsRes = await supabase
       .from("inventory_locations")
-      .select("id, name, location_kind")
+      .select("id, location_kind")
       .eq("branch_id", selectedBranchId)
       .eq("is_active", true)
+      .eq("location_kind", "warehouse")
       .order("sort_order", { ascending: true });
     for (const l of locationsRes.data ?? []) {
       locations.push({
         id: l.id,
-        name: l.name,
         kind: l.location_kind ?? null,
       });
     }
@@ -71,7 +61,9 @@ export default async function CountAssignmentsPage({ searchParams }: PageProps) 
     requestedLocationId != null &&
     locations.some((l) => l.id === requestedLocationId)
       ? requestedLocationId
-      : null;
+      : (locations.find((l) => l.kind === "warehouse")?.id ??
+        locations[0]?.id ??
+        null);
 
   // Employees in the selected branch (branch lives on profiles, joined via
   // employees.profile_id). Only resolve once a branch is chosen.
@@ -95,11 +87,12 @@ export default async function CountAssignmentsPage({ searchParams }: PageProps) 
     }
   }
 
-  // Active ingredient catalog (the pool each employee multi-selects from).
+  // Active finished-good catalog for the per-employee checklist.
   const ingredientsRes = await supabase
     .from("ingredients")
     .select("id, name, unit, purchase_unit")
     .eq("tenant_id", claims.tenant_id)
+    .eq("item_kind", "finished_good")
     .eq("is_active", true)
     .order("name");
   const ingredients: IngredientOption[] = (ingredientsRes.data ?? []).map(
@@ -111,7 +104,7 @@ export default async function CountAssignmentsPage({ searchParams }: PageProps) 
   );
 
   // Current active assignments at this branch+location, grouped per employee,
-  // to prefill each multi-select.
+  // to prefill each checklist.
   const assignmentsByEmployee: Record<string, number[]> = {};
   if (selectedBranchId !== null && selectedLocationId !== null) {
     const assignmentsRes = await supabase
@@ -129,9 +122,7 @@ export default async function CountAssignmentsPage({ searchParams }: PageProps) 
 
   return (
     <CountAssignmentsClient
-      branches={branches}
       selectedBranchId={selectedBranchId}
-      locations={locations}
       selectedLocationId={selectedLocationId}
       employees={employees}
       ingredients={ingredients}
