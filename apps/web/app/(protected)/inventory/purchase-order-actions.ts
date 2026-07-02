@@ -23,28 +23,138 @@ function canAccessProcurementBranch(
   );
 }
 
-/* ─── fetchPurchaseOrders ─── */
+/* ─── fetchPurchaseOrdersPage ─── */
 
-export async function fetchPurchaseOrders(
-  branchId?: number,
-): Promise<ActionResult> {
+const PURCHASE_ORDER_SELECT =
+  "id, po_number, display_id, status, ordered_at, notes, supplier_id, branch_id, created_by, suppliers ( id, name ), purchase_order_items ( line_total )";
+
+const PURCHASE_ORDER_PAGE_SIZE = 50;
+
+const PURCHASE_ORDER_FILTER_KEYS = [
+  "draft",
+  "sent",
+  "partially_received",
+  "received",
+  "cancelled",
+] as const;
+
+export interface PurchaseOrderCursor {
+  orderedAt: string;
+  id: number;
+}
+
+export interface PurchaseOrderPage {
+  items: unknown[];
+  hasMore: boolean;
+  nextCursor: PurchaseOrderCursor | null;
+}
+
+const purchaseOrderCursorSchema = z.object({
+  orderedAt: z.string(),
+  id: z.coerce.number().int().positive(),
+});
+
+const fetchPurchaseOrdersPaginatedSchema = z.object({
+  branchId: z.coerce.number().int().positive().optional(),
+  before: purchaseOrderCursorSchema.optional(),
+  pageSize: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(200)
+    .optional()
+    .default(PURCHASE_ORDER_PAGE_SIZE),
+});
+
+/**
+ * Keyset-paginated PO list (ordered_at desc, id desc tiebreaker). ordered_at
+ * is DEFAULT now() NOT NULL with frequent ties, so the id tiebreaker is
+ * required for stable paging. Mirrors fetchSupplierInvoicesPage: fetch
+ * pageSize+1 to probe hasMore, slice to pageSize, expose the last row as
+ * nextCursor. Scoped to tenant + optional branch.
+ */
+export async function fetchPurchaseOrdersPage(
+  input: z.input<typeof fetchPurchaseOrdersPaginatedSchema> = {},
+): Promise<ActionResult<PurchaseOrderPage>> {
+  const parsed = fetchPurchaseOrdersPaginatedSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Tham số tải đơn đặt hàng không hợp lệ" };
+  }
+
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
+  const { branchId, before, pageSize } = parsed.data;
+
   let query = supabase
     .from("purchase_orders")
-    .select(
-      "id, po_number, display_id, status, ordered_at, notes, supplier_id, branch_id, created_by, suppliers ( id, name ), purchase_order_items ( line_total )",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .order("ordered_at", { ascending: false });
+    .select(PURCHASE_ORDER_SELECT)
+    .eq("tenant_id", claims.tenant_id);
   if (branchId != null) query = query.eq("branch_id", branchId);
-  const { data, error } = await query;
+
+  if (before) {
+    // Keyset: rows STRICTLY after the cursor under (ordered_at desc, id desc).
+    // PostgREST has no composite "<", so OR two disjoint half-spaces.
+    query = query.or(
+      `ordered_at.lt.${before.orderedAt},and(ordered_at.eq.${before.orderedAt},id.lt.${String(before.id)})`,
+    );
+  }
+
+  const { data, error } = await query
+    .order("ordered_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(pageSize + 1);
+
   if (error) return { success: false, error: "Không thể tải đơn đặt hàng." };
-  return { success: true, data: data ?? [] };
+
+  const fetched = (data ?? []) as unknown as Array<{
+    id: number;
+    ordered_at: string;
+    [k: string]: unknown;
+  }>;
+  const hasMore = fetched.length > pageSize;
+  const items = hasMore ? fetched.slice(0, pageSize) : fetched;
+  const last = items.at(-1);
+  const nextCursor =
+    hasMore && last !== undefined
+      ? { orderedAt: last.ordered_at, id: last.id }
+      : null;
+
+  return { success: true, data: { items, hasMore, nextCursor } };
+}
+
+/**
+ * Total PO count per status for the list filter tabs, independent of the
+ * paginated window (count-only head queries, one per status). Keeps the
+ * status-filter counts accurate without loading every PO into the client.
+ */
+export async function fetchPurchaseOrderStatusCounts(
+  branchId?: number,
+): Promise<ActionResult<Record<string, number>>> {
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.PROCUREMENT_READ,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+
+  const entries = await Promise.all(
+    PURCHASE_ORDER_FILTER_KEYS.map(async (status) => {
+      let q = supabase
+        .from("purchase_orders")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", claims.tenant_id)
+        .eq("status", status);
+      if (branchId != null) q = q.eq("branch_id", branchId);
+      const { count } = await q;
+      return [status, count ?? 0] as const;
+    }),
+  );
+
+  return { success: true, data: Object.fromEntries(entries) };
 }
 
 /* ─── createPurchaseOrder ─── */

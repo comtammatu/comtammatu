@@ -250,6 +250,8 @@ export const inventory = {
     emptyInitialDescription:
       'Nhấn "Tạo đơn mua" để bắt đầu lập đơn mua đầu tiên.',
     supplierFallback: "Chưa gắn nhà cung cấp",
+    loadMore: "Tải thêm",
+    loadMoreFailed: "Không thể tải thêm đơn đặt hàng",
     orderedDatePrefix: "Ngày đặt",
     newTitle: "Tạo đơn đặt hàng",
     list: "Danh sách đơn mua",
