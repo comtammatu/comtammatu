@@ -15,8 +15,10 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { canAccess, resolveOperatorTiles } from "@comtammatu/shared/auth";
+import { formatVND } from "@comtammatu/shared/format";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   EmployeeActionSection,
   EmployeePanel,
@@ -24,8 +26,11 @@ import {
 } from "@/(protected)/employee/components/employee-page";
 import { EmployeeHomePageContent } from "@/(protected)/employee/page";
 import { getTodayWorkState } from "@/(protected)/employee/_lib/today-work-state";
+import { getUnreadCount } from "@/(protected)/notifications/actions";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
+import { messages } from "@lib/messages";
+import { fetchBranchDayStatus } from "./dashboard/data";
 
 const ICONS = {
   ChefHat,
@@ -67,8 +72,16 @@ export default async function OperatorHomePage({
   const groups = resolveOperatorTiles(claims.user_role, context.branchId);
   const basePath = `/br/${context.branchId}`;
   const showTodayCard = canAccess(claims.user_role, "employee");
-  const showManagementCard =
-    !showTodayCard && canAccess(claims.user_role, "branch_dashboard");
+  const showOverview = canAccess(claims.user_role, "branch_dashboard");
+  const showManagementCard = !showTodayCard && showOverview;
+
+  const [day, unreadResult] = showOverview
+    ? await Promise.all([
+        fetchBranchDayStatus(supabase, claims, context.branchId),
+        getUnreadCount().catch(() => null),
+      ])
+    : [null, null];
+  const unreadCount = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
 
   // Pre-clock-in gate for cashier/chef roles
   const isFloorRole =
@@ -112,6 +125,26 @@ export default async function OperatorHomePage({
               {APP_COPY_VI.branchCommand}
             </Link>
           </Button>
+        </EmployeePanel>
+      ) : null}
+
+      {showOverview && day ? (
+        <EmployeePanel title={messages.settings.branch.hubOverviewTitle} size="sm">
+          <div className="grid grid-cols-2 gap-2">
+            <KpiCard
+              label={messages.settings.branch.dayRevenueLabel}
+              value={formatVND(day.todayRevenue)}
+              density="compact"
+              href={`${basePath}/dashboard`}
+            />
+            <KpiCard
+              label={messages.settings.branch.hubOverviewUnreadLabel}
+              value={String(unreadCount)}
+              density="compact"
+              tone={unreadCount > 0 ? "warning" : "neutral"}
+              href="/notifications"
+            />
+          </div>
         </EmployeePanel>
       ) : null}
 
