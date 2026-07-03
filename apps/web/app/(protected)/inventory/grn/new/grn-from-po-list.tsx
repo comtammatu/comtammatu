@@ -30,6 +30,7 @@ type OpenPoRow = {
 
 type Props = {
   openPos: OpenPoRow[];
+  grnBasePath?: string;
 };
 
 function formatOrderedAt(iso: string | null): string {
@@ -41,7 +42,7 @@ function formatOrderedAt(iso: string | null): string {
   return formatVNDate(iso);
 }
 
-export function GrnFromPoList({ openPos }: Props) {
+export function GrnFromPoList({ openPos, grnBasePath = "/inventory/grn" }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
   const [pendingPoId, setPendingPoId] = React.useState<number | null>(null);
@@ -56,7 +57,7 @@ export function GrnFromPoList({ openPos }: Props) {
         return;
       }
       const grn = res.data as { id: number };
-      router.push(`/inventory/grn/${grn.id}?review=1`);
+      router.push(`${grnBasePath}/${grn.id}?review=1`);
       router.refresh();
     });
   }

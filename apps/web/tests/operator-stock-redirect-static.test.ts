@@ -470,6 +470,84 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   );
 });
 
+test("operator stock GRN create routes stay branch-native (D059 §4 slice 1)", () => {
+  const grnNewRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx",
+  );
+  const grnCreateRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx",
+  );
+  const grnNewPage = read(
+    "apps/web/app/(protected)/inventory/grn/new/page.tsx",
+  );
+  const grnFromPoList = read(
+    "apps/web/app/(protected)/inventory/grn/new/grn-from-po-list.tsx",
+  );
+  const grnCreatePage = read(
+    "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx",
+  );
+  const grnCreateClient = read(
+    "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
+  );
+
+  assert.match(grnNewRoute, /params: Promise<\{ branchId: string \}>/);
+  assert.match(grnNewRoute, /GrnNewPageContent/);
+  assert.match(grnNewRoute, /routeBranchId=\{branchId\}/);
+  assert.match(
+    grnNewRoute,
+    /basePath=\{`\/br\/\$\{branchId\}\/stock\/grn\/new`\}/,
+  );
+  assert.match(
+    grnNewRoute,
+    /grnListBasePath=\{`\/br\/\$\{branchId\}\/stock\/grn`\}/,
+  );
+  assert.match(grnNewRoute, /embedded/);
+
+  assert.match(
+    grnCreateRoute,
+    /params: Promise<\{ branchId: string; supplierId: string \}>/,
+  );
+  assert.match(grnCreateRoute, /GrnCreatePageContent/);
+  assert.match(grnCreateRoute, /supplierId=\{supplierId\}/);
+  assert.match(grnCreateRoute, /routeBranchId=\{branchId\}/);
+  assert.match(
+    grnCreateRoute,
+    /basePath=\{`\/br\/\$\{branchId\}\/stock\/grn\/new`\}/,
+  );
+  assert.match(
+    grnCreateRoute,
+    /grnBasePath=\{`\/br\/\$\{branchId\}\/stock\/grn`\}/,
+  );
+  assert.match(grnCreateRoute, /embedded/);
+
+  assert.match(grnNewPage, /routeBranchId\?: number/);
+  assert.match(grnNewPage, /basePath\?: string/);
+  assert.match(grnNewPage, /grnListBasePath\?: string/);
+  assert.match(grnNewPage, /embedded\?: boolean/);
+  assert.match(grnNewPage, /scope\.outOfScope/);
+  assert.match(grnNewPage, embeddedContentWrapperPattern);
+  assert.match(grnFromPoList, /grnBasePath = "\/inventory\/grn"/);
+  assert.match(
+    grnFromPoList,
+    /router\.push\(`\$\{grnBasePath\}\/\$\{grn\.id\}\?review=1`\)/,
+  );
+
+  assert.match(grnCreatePage, /supplierId: number/);
+  assert.match(grnCreatePage, /routeBranchId\?: number/);
+  assert.match(grnCreatePage, /basePath\?: string/);
+  assert.match(grnCreatePage, /grnBasePath\?: string/);
+  assert.match(grnCreatePage, /embedded\?: boolean/);
+  assert.match(grnCreatePage, /scope\.outOfScope/);
+  assert.match(grnCreateClient, /basePath\?: string/);
+  assert.match(grnCreateClient, /grnBasePath\?: string/);
+  assert.match(grnCreateClient, /embedded\?: boolean/);
+  assert.match(grnCreateClient, embeddedContentWrapperPattern);
+  assert.match(
+    grnCreateClient,
+    /router\.push\(`\$\{grnBasePath\}\/\$\{grnId\}\?review=1`\)/,
+  );
+});
+
 test("branch stock wrappers keep inventory fallbacks inside the branch shell", () => {
   const transfersPage = read(
     "apps/web/app/(protected)/inventory/transfers/page.tsx",
