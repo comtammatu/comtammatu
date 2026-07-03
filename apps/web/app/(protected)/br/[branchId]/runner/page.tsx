@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import { CircleAlert as IconAlertCircle } from "lucide-react";
 import { AppEmptyState } from "@/components/surface";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
@@ -97,6 +98,41 @@ type RunnerQueryResult = {
   data: unknown[] | null;
   error: { message?: string } | null;
 };
+
+type RunnerBranchRow = {
+  id: number;
+  tenant_id: number;
+  name: string;
+  branch_kind: string;
+  is_active: boolean;
+};
+
+/**
+ * Branch identity (name/kind/active flag) rarely changes but this kiosk
+ * screen polls via `RunnerRealtimeRefresh` (15s `router.refresh()`), so an
+ * uncached lookup re-queries `branches` every poll for hours per shift.
+ * Tag `"branches-list"` busts via the same tag `branches/actions.ts`
+ * mutations already call. 5-minute TTL is a safety net for any mutation
+ * path that forgets to call the tag.
+ */
+const getCachedRunnerBranch = unstable_cache(
+  async (branchId: number): Promise<RunnerBranchRow | null> => {
+    const sb = createServiceClient();
+    const { data, error } = await sb
+      .from("branches")
+      .select("id, tenant_id, name, branch_kind, is_active")
+      .eq("id", branchId)
+      .maybeSingle();
+
+    if (error) return null;
+    return data as RunnerBranchRow | null;
+  },
+  ["runner-branch"],
+  {
+    revalidate: 300,
+    tags: ["branches-list"],
+  },
+);
 
 async function fetchRunnerTodayTicketCount(args: {
   supabase: RunnerSupabase;
@@ -379,15 +415,8 @@ export default async function RunnerPage({
   const { startIso: todayStartIso, endIso: todayEndIso } =
     getVNDayUtcRange(getVNDateString());
 
-  const { data: branch, error: branchError } = await supabase
-    .from("branches")
-    .select("id, tenant_id, name, branch_kind, is_active")
-    .eq("id", branchIdNum)
-    .maybeSingle();
+  const branch = await getCachedRunnerBranch(branchIdNum);
 
-  if (branchError) {
-    return <RunnerErrorState />;
-  }
   if (
     !branch ||
     !isRunnerOperationalBranchKind(branch.branch_kind) ||

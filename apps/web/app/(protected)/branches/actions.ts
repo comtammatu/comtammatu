@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { updateTag } from "next/cache";
 import {
   PERMISSION_KEYS,
   TENANT_STRATEGY_SETTINGS_ROLES,
@@ -69,6 +70,7 @@ export const createBranch = withFormAction(
     }
 
     revalidateSurfacePath("/branches");
+    updateTag("branches-list");
     return { success: true };
   },
 );
@@ -112,6 +114,7 @@ export const updateBranch = withFormAction(
     }
 
     revalidateSurfacePath("/branches");
+    updateTag("branches-list");
     return { success: true };
   },
 );
@@ -146,6 +149,7 @@ export const toggleBranchActive = withAction(
     }
 
     revalidateSurfacePath("/branches");
+    updateTag("branches-list");
     return { success: true };
   },
 );
