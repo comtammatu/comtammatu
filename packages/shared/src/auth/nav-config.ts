@@ -320,11 +320,4 @@ export const OPERATOR_TILE_ITEMS = [
     hrefTemplate: "/inventory",
     label: "Kho văn phòng",
   },
-  {
-    moduleKey: "inventory",
-    icon: "ChefHat",
-    group: "office_bridge",
-    hrefTemplate: "/inventory/production",
-    label: "Sản xuất",
-  },
 ] satisfies readonly OperatorTileConfig[];

@@ -978,3 +978,72 @@ test("operator supplier returns render branch-native inside the branch operator 
     /moduleKey: "inventory",\s*icon: "Undo2",\s*group: "stock",\s*hrefTemplate: "\/br\/\{branchId\}\/stock\/supplier-returns"/,
   );
 });
+
+test("operator production renders branch-native inside the central_kitchen operator shell (D059 §4 production)", () => {
+  const route = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx",
+  );
+  const officePage = read(
+    "apps/web/app/(protected)/inventory/production/page.tsx",
+  );
+  const dataSource = read(
+    "apps/web/app/(protected)/inventory/production-data.ts",
+  );
+  const clientSource = read(
+    "apps/web/app/(protected)/inventory/production-client.tsx",
+  );
+  const navConfig = read("packages/shared/src/auth/nav-config.ts");
+  const operatorCapabilities = read(
+    "packages/shared/src/auth/operator-capabilities.ts",
+  );
+
+  assert.match(route, /params: Promise<\{ branchId: string \}>/);
+  assert.match(route, /ProductionPageContent/);
+  assert.match(route, /routeBranchId=\{branchId\}/);
+  assert.match(route, /embedded/);
+  assert.doesNotMatch(route, /redirect\(`\/inventory\/production/);
+
+  assert.match(officePage, /export async function ProductionPageContent/);
+  assert.match(officePage, /routeBranchId\?: number/);
+  assert.match(officePage, /embedded\?: boolean/);
+  assert.match(officePage, /embedded=\{embedded\}/);
+
+  // hasCurrentProductionBranchAccess must prefer routeBranchId over
+  // claims.branch_id — production_manager claims stay tenant-level
+  // (D055 §1), so claims.branch_id is always null for that role.
+  assert.match(
+    dataSource,
+    /hasCurrentProductionBranchAccess[\s\S]*routeBranchId\?: number,/,
+  );
+  assert.match(dataSource, /const branchId = routeBranchId \?\? claims\.branch_id;/);
+  assert.match(
+    dataSource,
+    /hasCurrentProductionBranchAccess\(supabase, claims, routeBranchId\)/,
+  );
+
+  assert.match(clientSource, /embedded\?: boolean/);
+  assert.match(
+    clientSource,
+    /eyebrow=\{embedded \? undefined : INVENTORY_VI\.warehouse\}/,
+  );
+
+  // Native production tile is gated to branch_kind central_kitchen only —
+  // must never render at central_supply or retail branches.
+  assert.match(
+    operatorCapabilities,
+    /CENTRAL_KITCHEN_PRODUCTION_TILE[\s\S]*hrefTemplate: "\/br\/\{branchId\}\/stock\/production"/,
+  );
+  assert.match(
+    operatorCapabilities,
+    /branchKind === "central_kitchen"\s*\?\s*\[\.\.\.tileSource, CENTRAL_KITCHEN_PRODUCTION_TILE\]/,
+  );
+
+  // The office_bridge "Sản xuất" tile is retired now that the native
+  // surface has landed (D059 §2 shrink-to-zero).
+  assert.doesNotMatch(navConfig, /hrefTemplate: "\/inventory\/production"/);
+
+  assert.match(
+    operatorCapabilities,
+    /moduleKey: "inventory_procurement",\s*icon: "FileText",\s*group: "stock",\s*hrefTemplate: "\/br\/\{branchId\}\/stock\/purchase-orders"/,
+  );
+});

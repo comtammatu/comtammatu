@@ -88,15 +88,25 @@ async function currentUserHasOneOfPermissions(
   return false;
 }
 
+/**
+ * `production_manager` claims stay tenant-level (D055 §1: `branch_id` null)
+ * so this role's own tenant-wide inventory scope is not pinned to one
+ * branch. `routeBranchId` (the embedded operator route's URL segment) is
+ * the only branch id available for that role — it must win over
+ * `claims.branch_id`, or this gate always returns false for the exact role
+ * it exists to check.
+ */
 export async function hasCurrentProductionBranchAccess(
   supabase: InventorySupabase,
   claims: JwtClaims,
+  routeBranchId?: number,
 ): Promise<boolean> {
   if (!isProductionBranchScopedRole(claims.user_role)) {
     return true;
   }
 
-  if (claims.branch_id == null) {
+  const branchId = routeBranchId ?? claims.branch_id;
+  if (branchId == null) {
     return false;
   }
 
@@ -104,7 +114,7 @@ export async function hasCurrentProductionBranchAccess(
     .from("branches")
     .select("branch_kind")
     .eq("tenant_id", claims.tenant_id)
-    .eq("id", claims.branch_id)
+    .eq("id", branchId)
     .maybeSingle();
 
   return !error && data?.branch_kind === "central_kitchen";
@@ -112,8 +122,10 @@ export async function hasCurrentProductionBranchAccess(
 
 export async function loadProductionSurfaceData({
   includeRecipes = true,
+  routeBranchId,
 }: {
   includeRecipes?: boolean;
+  routeBranchId?: number;
 } = {}): Promise<ProductionSurfaceData> {
   const supabase = await createClient();
   const {
@@ -147,7 +159,7 @@ export async function loadProductionSurfaceData({
       PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
     ),
     currentUserHasAnyPermission(supabase, PERMISSION_KEYS.INVENTORY_WRITE),
-    hasCurrentProductionBranchAccess(supabase, claims),
+    hasCurrentProductionBranchAccess(supabase, claims, routeBranchId),
   ]);
 
   if (!canOpenProduction || !hasBranchAccess) {
@@ -181,9 +193,10 @@ export async function loadProductionSurfaceData({
       id: branch.id,
       name: branch.name,
     }));
-  if (isProductionBranchScopedRole(role) && claims.branch_id != null) {
+  const scopedBranchId = claims.branch_id ?? routeBranchId;
+  if (isProductionBranchScopedRole(role) && scopedBranchId != null) {
     productionBranches = productionBranches.filter(
-      (branch) => branch.id === claims.branch_id,
+      (branch) => branch.id === scopedBranchId,
     );
   }
 
