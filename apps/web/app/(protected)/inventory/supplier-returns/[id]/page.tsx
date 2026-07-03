@@ -6,14 +6,17 @@ import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "@/(protected)/inventory/_components/audit-history-list";
 import { SupplierReturnDetailClient } from "./supplier-return-detail-client";
 
-export default async function SupplierReturnDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const returnId = Number(id);
+interface SupplierReturnDetailPageContentProps {
+  returnId: number;
+  routeBranchId?: number;
+  embedded?: boolean;
+}
 
+export async function SupplierReturnDetailPageContent({
+  returnId,
+  routeBranchId,
+  embedded = false,
+}: SupplierReturnDetailPageContentProps) {
   if (!returnId || returnId <= 0) notFound();
 
   const [result, auditLogs] = await Promise.all([
@@ -35,6 +38,7 @@ export default async function SupplierReturnDetailPage({
       created_at: string;
       confirmed_at: string | null;
       notes: string | null;
+      branch_id: number;
       suppliers: { id: number; name: string } | null;
       branches: { id: number; name: string } | null;
       goods_received_notes: { id: number; grn_number: string } | null;
@@ -54,32 +58,51 @@ export default async function SupplierReturnDetailPage({
 
   const { header, lines } = detail;
 
+  if (routeBranchId != null && header.branch_id !== routeBranchId) notFound();
+
+  const content = (
+    <AppPageHeader
+      eyebrow={embedded ? undefined : "Kho hàng"}
+      title={header.return_number}
+      description={`NCC: ${header.suppliers?.name ?? "—"} · Chi nhánh: ${header.branches?.name ?? "—"}`}
+      tabs={
+        <AppPageTabs
+          items={[
+            { value: "overview", label: "Tổng quan" },
+            { value: "lines", label: "Dòng", count: lines.length },
+            { value: "history", label: "Lịch sử", count: auditLogs.length },
+          ]}
+        >
+          <TabsContent value="overview">
+            <SupplierReturnDetailClient header={header} lines={lines} />
+          </TabsContent>
+          <TabsContent value="lines">
+            <SupplierReturnDetailClient header={header} lines={lines} />
+          </TabsContent>
+          <TabsContent value="history">
+            <AuditHistoryList logs={auditLogs} />
+          </TabsContent>
+        </AppPageTabs>
+      }
+    />
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
   return (
     <AppPage width="wide" density="compact">
-      <AppPageHeader
-        eyebrow="Kho hàng"
-        title={header.return_number}
-        description={`NCC: ${header.suppliers?.name ?? "—"} · Chi nhánh: ${header.branches?.name ?? "—"}`}
-        tabs={
-          <AppPageTabs
-            items={[
-              { value: "overview", label: "Tổng quan" },
-              { value: "lines", label: "Dòng", count: lines.length },
-              { value: "history", label: "Lịch sử", count: auditLogs.length },
-            ]}
-          >
-            <TabsContent value="overview">
-              <SupplierReturnDetailClient header={header} lines={lines} />
-            </TabsContent>
-            <TabsContent value="lines">
-              <SupplierReturnDetailClient header={header} lines={lines} />
-            </TabsContent>
-            <TabsContent value="history">
-              <AuditHistoryList logs={auditLogs} />
-            </TabsContent>
-          </AppPageTabs>
-        }
-      />
+      {content}
     </AppPage>
   );
+}
+
+export default async function SupplierReturnDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  return <SupplierReturnDetailPageContent returnId={Number(id)} />;
 }

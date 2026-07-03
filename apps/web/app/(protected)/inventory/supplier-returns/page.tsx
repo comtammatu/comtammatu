@@ -1,39 +1,51 @@
+import { notFound } from "next/navigation";
+import { loadAuthState } from "@/_lib/auth";
 import { fetchSupplierReturns } from "@/(protected)/inventory/supplier-return-actions";
-import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
-import { INVENTORY_VI } from "@comtammatu/shared/messages";
+import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { SupplierReturnsClient } from "./supplier-returns-client";
 
-export default async function SupplierReturnsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
-}) {
-  const params = await searchParams;
-  const branchId = Array.isArray(params.branchId)
-    ? Number(params.branchId[0])
-    : params.branchId
-      ? Number(params.branchId)
-      : undefined;
+interface SupplierReturnsPageContentProps {
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+  routeBranchId?: number;
+  basePath?: string;
+  embedded?: boolean;
+}
 
-  const result = await fetchSupplierReturns(branchId);
+export async function SupplierReturnsPageContent({
+  searchParams,
+  routeBranchId,
+  basePath = "/inventory/supplier-returns",
+  embedded = false,
+}: SupplierReturnsPageContentProps) {
+  const params = searchParams ? await searchParams : {};
+  const { supabase, claims } = await loadAuthState();
+
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
+  if (scope.outOfScope) notFound();
+
+  const result = await fetchSupplierReturns(scope.selectedBranchId ?? undefined);
   const returns = result.success
     ? ((result.data ?? []) as SupplierReturnRow[])
     : [];
 
   return (
-    <AppPage width="wide" density="compact">
-      <AppPageHeader
-        eyebrow={INVENTORY_VI.warehouse}
-        title={INVENTORY_VI.supplierReturnsTitle}
-        description={INVENTORY_VI.supplierReturnsDescription}
-      />
-      {returns.length === 0 ? (
-        <AppEmptyState mode="no-data" title={INVENTORY_VI.noSupplierReturns} />
-      ) : (
-        <SupplierReturnsClient initialReturns={returns} />
-      )}
-    </AppPage>
+    <SupplierReturnsClient
+      initialReturns={returns}
+      basePath={basePath}
+      embedded={embedded}
+    />
   );
+}
+
+export default async function SupplierReturnsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+}) {
+  return <SupplierReturnsPageContent searchParams={searchParams} />;
 }
 
 export interface SupplierReturnRow {

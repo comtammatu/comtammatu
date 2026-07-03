@@ -905,3 +905,76 @@ test("operator count assignments render branch-native inside the branch operator
     /moduleKey: "employee_checkout_approvals",\s*icon: "ClipboardList",\s*group: "stock",\s*hrefTemplate: "\/br\/\{branchId\}\/stock\/count-assignments"/,
   );
 });
+
+test("operator supplier returns render branch-native inside the branch operator shell (D059 §4 slice 3)", () => {
+  const listRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/page.tsx",
+  );
+  const newRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/new/page.tsx",
+  );
+  const detailRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/supplier-returns/[id]/page.tsx",
+  );
+  const officeListPage = read(
+    "apps/web/app/(protected)/inventory/supplier-returns/page.tsx",
+  );
+  const officeNewPage = read(
+    "apps/web/app/(protected)/inventory/supplier-returns/new/page.tsx",
+  );
+  const officeDetailPage = read(
+    "apps/web/app/(protected)/inventory/supplier-returns/[id]/page.tsx",
+  );
+  const listClient = read(
+    "apps/web/app/(protected)/inventory/supplier-returns/supplier-returns-client.tsx",
+  );
+  const navConfig = read("packages/shared/src/auth/nav-config.ts");
+
+  assert.match(listRoute, /params: Promise<\{ branchId: string \}>/);
+  assert.match(listRoute, /SupplierReturnsPageContent/);
+  assert.match(listRoute, /routeBranchId=\{branchId\}/);
+  assert.match(
+    listRoute,
+    /basePath=\{`\/br\/\$\{branchId\}\/stock\/supplier-returns`\}/,
+  );
+  assert.match(listRoute, /embedded/);
+  assert.doesNotMatch(listRoute, /redirect\(`\/inventory\/supplier-returns/);
+
+  assert.match(newRoute, /params: Promise<\{ branchId: string \}>/);
+  assert.match(newRoute, /SupplierReturnNewPageContent/);
+  assert.doesNotMatch(newRoute, /redirect\(`\/inventory\/supplier-returns/);
+
+  assert.match(detailRoute, /params: Promise<\{ branchId: string; id: string \}>/);
+  assert.match(detailRoute, /SupplierReturnDetailPageContent/);
+  assert.match(detailRoute, /routeBranchId=\{branchId\}/);
+  assert.doesNotMatch(detailRoute, /redirect\(`\/inventory\/supplier-returns/);
+
+  assert.match(
+    officeListPage,
+    /export async function SupplierReturnsPageContent/,
+  );
+  assert.match(officeListPage, /routeBranchId\?: number/);
+  assert.match(officeListPage, /basePath\?: string/);
+  assert.match(officeListPage, /embedded\?: boolean/);
+  assert.match(officeListPage, /embedded=\{embedded\}/);
+  assert.match(listClient, /embedded\?: boolean/);
+  assert.match(listClient, embeddedContentWrapperPattern);
+
+  assert.match(
+    officeNewPage,
+    /export function SupplierReturnNewPageContent/,
+  );
+  assert.match(officeNewPage, /embedded\?: boolean/);
+
+  assert.match(
+    officeDetailPage,
+    /export async function SupplierReturnDetailPageContent/,
+  );
+  assert.match(officeDetailPage, /routeBranchId\?: number/);
+  assert.match(officeDetailPage, /embedded\?: boolean/);
+
+  assert.match(
+    navConfig,
+    /moduleKey: "inventory",\s*icon: "Undo2",\s*group: "stock",\s*hrefTemplate: "\/br\/\{branchId\}\/stock\/supplier-returns"/,
+  );
+});
