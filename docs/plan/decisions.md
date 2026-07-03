@@ -741,3 +741,26 @@ liệt kê trong báo cáo (mục 7).
 6. **Hướng thiết kế khóa:** mobile-first từ Branch, desktop = densify (đã áp PR #189). PO creation + analytics nặng giữ desktop-first kèm bản tóm tắt phone.
 
 **Consequences:** siết D058 §6 (bridge từ "cap ≤6" → shrink-to-zero cho branch roles); mở rộng D050 §5. Đảo điểm nào phải sửa bản ghi này trước.
+
+## D060: Inventory workflow — giữ WAC, không FIFO/Lô/requisition formal; ledger-fix gắn vào nhập đầu kỳ (2026-07-03)
+
+**Context:** Owner directive tham khảo quy trình Inventory của matu-platform (SKU/FIFO/Lô/mua hàng/yêu cầu hàng). Điều tra (workflow `inventory-workflow-reference`, verify PROD 2026-07-03: 114 nguyên liệu SKU cấu trúc sẵn, 0 lô, 0 hạn dùng từng ghi; báo cáo gap trong `docs/worklog/inventory-audit-2026-07-03.md`) cho thấy matu-platform CŨNG chạy WAC, KHÔNG có bảng lô, KHÔNG có requisition — nên phần lớn khái niệm owner nêu là over-engineering ở quy mô HKD 4-site.
+
+**Decisions (owner):**
+
+1. **Costing: GIỮ WAC.** Không chuyển FIFO/lô-lớp-cost. Cả comtammatu lẫn matu-platform đều WAC; FIFO tốn lớn (cost-layer ledger + ~11 RPC + đụng D053), giá trị ~0 cho ~100 SKU chủ yếu để lâu được. `lot_id` vestigial giữ nguyên, không dùng.
+2. **SKU: coi như XONG.** 114/114 nguyên liệu đã có SKU cấu trúc (tiền tố nhóm). Verdict "PARTIAL/free-text" của audit là stale. Không mở dự án SKU.
+3. **Lô/batch-expiry: KHÔNG xây sổ lô.** Owner xác nhận không (hoặc hiếm khi) theo dõi hạn dùng hàng tươi như quy trình; PROD 0 usage; nguyên liệu chủ yếu shelf-stable. Để ngủ/bỏ cảnh báo hạn dùng naive hiện tại. Nếu sau này bật hàng tươi → chỉ bản ghi lô-hạn-dùng NHẸ đối soát tồn thật, KHÔNG phải cost-layer ledger (cần D0xx mới).
+4. **"Yêu cầu hàng": GIỮ transfer-request** (branch xin Kho Tổng/Bếp Trung Tâm — đã chạy). KHÔNG xây chuỗi requisition→duyệt→PO formal. Thay bằng **reorder-suggestion → 1-chạm tạo PO nháp** (`fetchPoSuggestions` đã có → thêm CTA tạo draft PO).
+5. **Ledger-correctness migrations HOÃN, gắn vào NHẬP ĐẦU KỲ.** Owner cho biết dữ liệu inventory PROD hiện đang sai và sắp làm lại nhập đầu kỳ. Fix đóng-băng-base-qty+cost lúc confirm (audit #2) + RPC `verify_inventory_ledger()` KHÔNG land rời rạc bây giờ — sequence để land NGAY TRƯỚC đợt nhập đầu kỳ, để số liệu mới đúng từ đầu. Đây là hoãn-có-điều-kiện, không phải bác.
+
+**Việc pure-exec được phép làm ngay (không đụng model/schema):**
+- Flow-stitch links PO↔GRN↔hóa đơn + movement→transfer (PR đang chạy).
+- Nav restructure (thêm tồn/kiểm kê/transfer vào sidebar; dedup 4 cửa GRN; completeStocktake next-action) — mirror operator tiles D058/D059.
+- reorder → 1-chạm PO nháp (§4).
+- GRN create-from-supplier purchase-unit picker (audit #3).
+- VAT default hóa đơn NCC: HKD KHÔNG xuất hóa đơn VAT → default 0/không-VAT; verify qua skill `tax-vn` trước, không đặt số từ trí nhớ.
+
+**Rejected (over-engineering cho scale này):** FIFO, sổ lô đầy đủ + FEFO, chuỗi requisition formal, multi-bin WMS cutover, per-location reorder-override (chờ pilot).
+
+**Consequences:** khép hướng Inventory. Đảo điểm nào phải sửa bản ghi này trước. Migration ledger-fix chờ trigger "nhập đầu kỳ" — khi owner báo bắt đầu, mở slice owner-gated theo §5.
