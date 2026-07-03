@@ -91,6 +91,19 @@ const liveStockCapacityMigration = readFileSync(
   "utf8",
 );
 
+const unlimitedWhenDeductionOffMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260703150000_menu_limit_availability_unlimited_when_deduction_off.sql",
+  ),
+  "utf8",
+);
+
+const baselineSource = readFileSync(
+  join(process.cwd(), "../../supabase/migrations/00000000000000_baseline.sql"),
+  "utf8",
+);
+
 test("Menu-Limits effective cap composes manual and stock caps", () => {
   assert.equal(getMenuLimitEffectiveCap(row({})), null);
   assert.equal(
@@ -300,6 +313,52 @@ test("Menu-Limits manager copy uses stock availability vocabulary", () => {
   );
   assert.match(settingsMessagesSource, /menuLimitsTitle: "Giới hạn bán"/);
   assert.doesNotMatch(posMessagesSource, /Trần thủ công|Phần bán được/);
+});
+
+test("Menu-Limits availability sells freely when stock-outcome deduction is off", () => {
+  assert.match(
+    unlimitedWhenDeductionOffMigration,
+    /CREATE OR REPLACE FUNCTION public\.branch_menu_limit_availability/,
+  );
+
+  const stockRemaining = unlimitedWhenDeductionOffMigration.match(
+    /CASE\s+WHEN NOT p_stock_outcome_enabled THEN NULL::integer[\s\S]*?END AS stock_remaining,/,
+  )?.[0] ?? "";
+
+  // Deduction OFF: unlimited (NULL) regardless of recipe/live stock — manual
+  // cap alone gates sales via manual_remaining.
+  assert.match(stockRemaining, /WHEN NOT p_stock_outcome_enabled THEN NULL::integer/);
+  // Deduction ON: unchanged stock-capped behavior (no recipe -> 0, else capacity - pending - hold).
+  assert.match(stockRemaining, /WHEN r\.stock_capacity_live IS NULL THEN 0/);
+  assert.match(
+    stockRemaining,
+    /ELSE r\.stock_capacity_live - r\.pending_unfinalized_demand - r\.active_hold_demand/,
+  );
+  assert.doesNotMatch(
+    unlimitedWhenDeductionOffMigration,
+    /r\.stock_capacity_live - r\.accepted_today - r\.active_hold_demand/,
+  );
+
+  // Manual cap computation and final composition are untouched by this fix.
+  assert.match(
+    unlimitedWhenDeductionOffMigration,
+    /WHEN r\.manual_limit_quantity IS NULL THEN NULL::integer[\s\S]*ELSE r\.manual_limit_quantity - r\.accepted_today - r\.active_hold_demand/,
+  );
+  assert.match(
+    unlimitedWhenDeductionOffMigration,
+    /WHEN c\.is_disabled THEN 0[\s\S]*WHEN c\.stock_remaining IS NULL AND c\.manual_remaining IS NULL THEN NULL[\s\S]*WHEN c\.stock_remaining IS NULL THEN GREATEST\(0, c\.manual_remaining\)[\s\S]*WHEN c\.manual_remaining IS NULL THEN GREATEST\(0, c\.stock_remaining\)[\s\S]*ELSE GREATEST\(0, LEAST\(c\.stock_remaining, c\.manual_remaining\)\)/,
+  );
+});
+
+test("Menu-Limits availability fix is mirrored in the baseline", () => {
+  assert.match(
+    baselineSource,
+    /CREATE FUNCTION public\.branch_menu_limit_availability[\s\S]*?WHEN NOT p_stock_outcome_enabled THEN NULL::integer\s+WHEN r\.stock_capacity_live IS NULL THEN 0\s+ELSE r\.stock_capacity_live - r\.pending_unfinalized_demand - r\.active_hold_demand\s+END AS stock_remaining/,
+  );
+  assert.doesNotMatch(
+    baselineSource,
+    /r\.stock_capacity_live - r\.accepted_today - r\.active_hold_demand/,
+  );
 });
 
 test("Menu-Limits manager table uses four requested columns and sold bar", () => {

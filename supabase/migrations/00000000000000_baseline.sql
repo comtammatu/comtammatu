@@ -3642,12 +3642,9 @@ CREATE FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_bran
     SELECT
       r.*,
       CASE
-        WHEN r.stock_capacity_live IS NULL AND p_stock_outcome_enabled THEN 0
-        WHEN r.stock_capacity_live IS NULL THEN NULL::integer
-        WHEN p_stock_outcome_enabled THEN
-          r.stock_capacity_live - r.pending_unfinalized_demand - r.active_hold_demand
-        ELSE
-          r.stock_capacity_live - r.accepted_today - r.active_hold_demand
+        WHEN NOT p_stock_outcome_enabled THEN NULL::integer
+        WHEN r.stock_capacity_live IS NULL THEN 0
+        ELSE r.stock_capacity_live - r.pending_unfinalized_demand - r.active_hold_demand
       END AS stock_remaining,
       CASE
         WHEN r.manual_limit_quantity IS NULL THEN NULL::integer
