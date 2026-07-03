@@ -140,6 +140,7 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
         args: Record<string, unknown>,
       ) => Promise<{ data: unknown; error: unknown }>;
     };
+    // RSC initial load has no live hold token yet — omit p_exclude_hold_tokens.
     const limitsPromise = rpcCaller.rpc(
       "get_branch_menu_daily_limits_for_pos",
       { p_branch_id: parsedBranchId.data },
@@ -243,6 +244,12 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
  * categories/variants/sides static (set at SSR by `fetchMenuForPos`) and
  * refreshes only the volatile `sold_today` + `is_disabled` slice.
  *
+ * `excludeHoldTokens` forwards the calling terminal's own live daily-limit
+ * hold token(s) so the server drops its own reservation from
+ * `active_hold_demand` — the terminal's own demand is still accounted for
+ * client-side via the draft-demand subtraction in `daily-limit-draft.ts`
+ * (exactly one side credits own holds; D064 §4).
+ *
  * Also returns the ingredient caps under `meta.ingredientCaps` so the same
  * post-submit revalidation that refreshes daily-limits picks up the new
  * `max_sellable` snapshot (caps couple via shared ingredients — a sale of
@@ -251,6 +258,7 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
  */
 export async function fetchDailyLimitsForPos(
   branchId: number,
+  excludeHoldTokens?: string[],
 ): Promise<ActionResult> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
@@ -270,20 +278,25 @@ export async function fetchDailyLimitsForPos(
 
   // `get_branch_menu_ingredient_caps_for_pos` is not yet in generated types —
   // call it via the same cast escape hatch as the daily-limit RPC.
-  const capsPromise = (
-    supabase as unknown as {
-      rpc: (
-        name: string,
-        args: Record<string, unknown>,
-      ) => Promise<{ data: unknown; error: unknown }>;
-    }
-  ).rpc("get_branch_menu_ingredient_caps_for_pos", {
+  const rpcCaller = supabase as unknown as {
+    rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: unknown }>;
+  };
+  const capsPromise = rpcCaller.rpc("get_branch_menu_ingredient_caps_for_pos", {
     p_branch_id: parsedBranchId.data,
   });
 
+  // `p_exclude_hold_tokens` is not yet in generated types — same cast escape
+  // hatch as above.
   const [limitsRes, capsRes] = await Promise.all([
-    supabase.rpc("get_branch_menu_daily_limits_for_pos", {
+    rpcCaller.rpc("get_branch_menu_daily_limits_for_pos", {
       p_branch_id: parsedBranchId.data,
+      p_exclude_hold_tokens:
+        excludeHoldTokens && excludeHoldTokens.length > 0
+          ? excludeHoldTokens
+          : null,
     }),
     capsPromise,
   ]);

@@ -166,7 +166,11 @@ export function PosDesktopInner({
   const { branchId, session } = usePosSession();
   const orders = usePosOrders();
   const tables = usePosTables();
-  const { refreshOrders, refreshOrdersDeduped } = usePosOperationalDispatch();
+  const {
+    refreshOrders,
+    refreshOrdersDeduped,
+    registerDailyLimitHoldTokenGetter,
+  } = usePosOperationalDispatch();
 
   // Categories come straight from the RSC seed — no re-mapping per event.
   // MenuItemButton subscribes to the daily-limit slice via
@@ -522,6 +526,16 @@ export function PosDesktopInner({
     appendDraftItems,
     appendTarget,
   });
+
+  // Register a live getter (not a snapshot) so the provider's daily-limit
+  // refetch always reads this terminal's current cart/append hold tokens,
+  // including after a rotation — see `registerDailyLimitHoldTokenGetter`.
+  useEffect(() => {
+    registerDailyLimitHoldTokenGetter(() => [
+      getDailyLimitHoldToken("pos_cart"),
+      getDailyLimitHoldToken("pos_append"),
+    ]);
+  }, [registerDailyLimitHoldTokenGetter, getDailyLimitHoldToken]);
 
   const focusOrderWorkflow = useCallback(
     (orderId: number, orderNumber?: string | null) => {

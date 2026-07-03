@@ -8837,8 +8837,9 @@ export type Database = {
       branch_menu_limit_availability: {
         Args: {
           p_branch_id: number
+          p_exclude_hold_tokens?: string[]
           p_limit_date: string
-          p_stock_outcome_enabled?: boolean
+          p_stock_gate_enabled?: boolean
           p_tenant_id: number
         }
         Returns: {
@@ -9343,7 +9344,7 @@ export type Database = {
         }[]
       }
       get_branch_menu_daily_limits_for_pos: {
-        Args: { p_branch_id: number }
+        Args: { p_branch_id: number; p_exclude_hold_tokens?: string[] }
         Returns: {
           accepted_today: number
           active_hold_demand: number
