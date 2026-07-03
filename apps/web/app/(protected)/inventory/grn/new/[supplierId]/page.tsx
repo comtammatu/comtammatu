@@ -1,9 +1,10 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import {
   canAccess,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
+import { resolveInventoryListScope } from "../../../_lib/inventory-scope";
 import { fetchProcurementBranches } from "../../../_lib/procurement-branches";
 import { fetchGrnDetail, loadActiveGrnDraft } from "../../../grn-actions";
 import type { GrnDraftLine } from "../../../_lib/grn-draft";
@@ -19,17 +20,28 @@ type Ingredient = {
   category: string | null;
 };
 
-export default async function GrnCreatePage({
-  params,
-}: {
-  params: Promise<{ supplierId: string }>;
-}) {
-  const { supplierId: supplierIdStr } = await params;
-  const supplierId = Number(supplierIdStr);
+interface GrnCreatePageContentProps {
+  supplierId: number;
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+  routeBranchId?: number;
+  basePath?: string;
+  grnBasePath?: string;
+  embedded?: boolean;
+}
+
+export async function GrnCreatePageContent({
+  supplierId,
+  searchParams,
+  routeBranchId,
+  basePath = "/inventory/grn/new",
+  grnBasePath = "/inventory/grn",
+  embedded = false,
+}: GrnCreatePageContentProps) {
   if (!Number.isFinite(supplierId) || supplierId <= 0) {
-    redirect("/inventory/grn/new");
+    redirect(basePath);
   }
 
+  const queryParams = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
   if (
     !PROCUREMENT_ROLES.includes(claims.user_role) ||
@@ -37,6 +49,12 @@ export default async function GrnCreatePage({
   ) {
     redirect("/access-denied?reason=insufficient-permission");
   }
+
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: queryParams.branchId,
+  });
+  if (scope.outOfScope) notFound();
 
   const [supplierRes, ingredientsRes] = await Promise.all([
     supabase
@@ -54,13 +72,16 @@ export default async function GrnCreatePage({
       .limit(500),
   ]);
 
-  if (!supplierRes.data) redirect("/inventory/grn/new");
+  if (!supplierRes.data) redirect(basePath);
 
   const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
   const defaultBranchId =
-    claims.branch_id && branches.some((b) => b.id === claims.branch_id)
-      ? claims.branch_id
-      : (branches[0]?.id ?? null);
+    scope.selectedBranchId != null &&
+    branches.some((b) => b.id === scope.selectedBranchId)
+      ? scope.selectedBranchId
+      : (claims.branch_id && branches.some((b) => b.id === claims.branch_id)
+          ? claims.branch_id
+          : (branches[0]?.id ?? null));
 
   const ingredients = ((ingredientsRes.data ?? []) as Ingredient[]).map(
     (ingredient) => ({
@@ -112,6 +133,18 @@ export default async function GrnCreatePage({
       branchId={defaultBranchId}
       ingredients={ingredients}
       existingDraft={existingDraft}
+      basePath={basePath}
+      grnBasePath={grnBasePath}
+      embedded={embedded}
     />
   );
+}
+
+export default async function GrnCreatePage({
+  params,
+}: {
+  params: Promise<{ supplierId: string }>;
+}) {
+  const { supplierId: supplierIdStr } = await params;
+  return <GrnCreatePageContent supplierId={Number(supplierIdStr)} />;
 }

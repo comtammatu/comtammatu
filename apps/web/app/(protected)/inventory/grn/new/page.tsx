@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   ArrowLeft as IconArrowLeft,
   ChevronRight as IconChevronRight,
@@ -8,6 +8,8 @@ import {
   Users as IconUsers,
 } from "lucide-react";
 import { loadAuthState } from "@/_lib/auth";
+import { resolveInventoryListScope } from "../../_lib/inventory-scope";
+import type { TenantSupabase } from "../../_lib/types";
 import {
   canAccess,
   PROCUREMENT_ROLES,
@@ -34,19 +36,20 @@ type SupplierRow = {
   last_grn_at: string | null;
 };
 
-async function loadSuppliers(): Promise<SupplierRow[]> {
-  const { supabase, claims } = await loadAuthState();
-
+async function loadSuppliers(
+  tenantId: number,
+  supabase: TenantSupabase,
+): Promise<SupplierRow[]> {
   const [suppliersRes, grnRes] = await Promise.all([
     supabase
       .from("suppliers")
       .select("id, name, phone")
-      .eq("tenant_id", claims.tenant_id)
+      .eq("tenant_id", tenantId)
       .order("name"),
     supabase
       .from("goods_received_notes")
       .select("id, supplier_id, received_date")
-      .eq("tenant_id", claims.tenant_id)
+      .eq("tenant_id", tenantId)
       .order("received_date", { ascending: false })
       .limit(200),
   ]);
@@ -102,8 +105,23 @@ function formatRecentGrnCount(count: number): string {
   return `${count} phiếu`;
 }
 
-export default async function GrnNewSupplierPage() {
-  const { claims } = await loadAuthState();
+interface GrnNewPageContentProps {
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+  routeBranchId?: number;
+  basePath?: string;
+  grnListBasePath?: string;
+  embedded?: boolean;
+}
+
+export async function GrnNewPageContent({
+  searchParams,
+  routeBranchId,
+  basePath = "/inventory/grn/new",
+  grnListBasePath = "/inventory/grn",
+  embedded = false,
+}: GrnNewPageContentProps) {
+  const params = searchParams ? await searchParams : {};
+  const { supabase, claims } = await loadAuthState();
   if (
     !PROCUREMENT_ROLES.includes(claims.user_role) ||
     !canAccess(claims.user_role, "inventory_procurement")
@@ -111,8 +129,14 @@ export default async function GrnNewSupplierPage() {
     redirect("/access-denied?reason=insufficient-permission");
   }
 
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
+  if (scope.outOfScope) notFound();
+
   const [suppliers, openPosRes] = await Promise.all([
-    loadSuppliers(),
+    loadSuppliers(claims.tenant_id, supabase),
     fetchOpenPurchaseOrdersForReceiving(),
   ]);
 
@@ -120,24 +144,11 @@ export default async function GrnNewSupplierPage() {
     ? (openPosRes.data ?? [])
     : [];
 
-  return (
-    <AppPage width="narrow">
-      <AppPageHeader
-        breadcrumb={
-          <Link
-            href="/inventory/grn"
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-          >
-            <IconArrowLeft className="size-4" />{" "}
-            {INVENTORY_VI.grnListBackLabel}
-          </Link>
-        }
-        eyebrow={INVENTORY_VI.receivingEyebrow}
-        title={INVENTORY_VI.chooseSourceTitle}
-        description={INVENTORY_VI.chooseSourceDescription}
-      />
-
-      {openPos.length > 0 ? <GrnFromPoList openPos={openPos} /> : null}
+  const content = (
+    <>
+      {openPos.length > 0 ? (
+        <GrnFromPoList openPos={openPos} grnBasePath={grnListBasePath} />
+      ) : null}
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between px-1">
@@ -164,7 +175,7 @@ export default async function GrnNewSupplierPage() {
                 padding="default"
                 className="h-auto"
               >
-                <Link href={`/inventory/grn/new/${supplier.id}`}>
+                <Link href={`${basePath}/${supplier.id}`}>
                   <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold uppercase text-muted-foreground">
                     {initials}
                   </span>
@@ -195,6 +206,38 @@ export default async function GrnNewSupplierPage() {
           })
         )}
       </section>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return (
+    <AppPage width="narrow">
+      <AppPageHeader
+        breadcrumb={
+          <Link
+            href={grnListBasePath}
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+          >
+            <IconArrowLeft className="size-4" />{" "}
+            {INVENTORY_VI.grnListBackLabel}
+          </Link>
+        }
+        eyebrow={INVENTORY_VI.receivingEyebrow}
+        title={INVENTORY_VI.chooseSourceTitle}
+        description={INVENTORY_VI.chooseSourceDescription}
+      />
+      {content}
     </AppPage>
   );
+}
+
+export default async function GrnNewPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+}) {
+  return <GrnNewPageContent searchParams={searchParams} />;
 }

@@ -36,6 +36,8 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/expiry/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/[id]/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/page.tsx": "EMBED-WRAPPER",

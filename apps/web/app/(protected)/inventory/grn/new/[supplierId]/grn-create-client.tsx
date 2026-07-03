@@ -63,6 +63,9 @@ type Props = {
   branchId: number | null;
   ingredients: Ingredient[];
   existingDraft: { id: number; lines: ServerDraftLine[] } | null;
+  basePath?: string;
+  grnBasePath?: string;
+  embedded?: boolean;
 };
 
 const DEFAULT_VARIANCE_WARNING = 0.2;
@@ -110,6 +113,9 @@ export function GrnCreateClient({
   branchId,
   ingredients,
   existingDraft,
+  basePath = "/inventory/grn/new",
+  grnBasePath = "/inventory/grn",
+  embedded = false,
 }: Props) {
   const router = useRouter();
   // Sprint 6 #3: server-side draft is the source of truth. React state mirrors
@@ -272,7 +278,7 @@ export function GrnCreateClient({
         return;
       }
     }
-    router.push("/inventory/grn/new");
+    router.push(basePath);
   }
 
   async function submit() {
@@ -292,7 +298,7 @@ export function GrnCreateClient({
       // surface; it must not re-write lines on every navigation.
       const grnId = await ensureServerDraft();
       if (grnId === null) return;
-      router.push(`/inventory/grn/${grnId}?review=1`);
+      router.push(`${grnBasePath}/${grnId}?review=1`);
       router.refresh();
     } catch (err) {
       setSubmitError(
@@ -309,12 +315,12 @@ export function GrnCreateClient({
   const lineCount = draft.lines.length;
   const canSubmit = lineCount > 0 && !submitting;
 
-  return (
-    <AppPage width="narrow">
+  const content = (
+    <>
       <AppPageHeader
         breadcrumb={
           <Link
-            href="/inventory/grn/new"
+            href={basePath}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
             <IconArrowLeft className="size-4" />{" "}
@@ -528,8 +534,14 @@ export function GrnCreateClient({
         }
         allowDecimal={false}
       />
-    </AppPage>
+    </>
   );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return <AppPage width="narrow">{content}</AppPage>;
 }
 
 type LineEditSheetProps = {
