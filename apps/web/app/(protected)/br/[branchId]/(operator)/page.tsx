@@ -5,6 +5,7 @@ import {
   ChartBar,
   ChefHat,
   CheckCircle,
+  ChevronRight,
   ClipboardCheck,
   ClipboardList,
   Clock,
@@ -29,9 +30,18 @@ import {
 } from "@comtammatu/shared/auth";
 import { formatVND } from "@comtammatu/shared/format";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { KpiCard } from "@/components/kpi/kpi-card";
-import { AppLinkCard, AppSection, LinkCardGrid } from "@/components/surface";
+import { AppEmptyState } from "@/components/surface";
 import {
   EmployeeActionSection,
   EmployeePanel,
@@ -112,6 +122,48 @@ function buildQueueRows(
     });
   }
   return rows;
+}
+
+function QueueRowItem({ row }: { row: QueueRow }) {
+  return (
+    <Item asChild variant="outline" size="sm" className="min-h-12 bg-card">
+      <Link href={row.href}>
+        <ItemMedia
+          variant="icon"
+          className="rounded-md bg-warning/10 p-2 text-warning"
+        >
+          <row.icon />
+        </ItemMedia>
+        <ItemContent className="min-w-0">
+          <ItemTitle className="line-clamp-none w-full text-sm font-semibold">
+            {row.title}
+          </ItemTitle>
+        </ItemContent>
+        <ItemActions className="shrink-0 text-muted-foreground">
+          <Badge variant="warning">{row.count}</Badge>
+          <ChevronRight />
+        </ItemActions>
+      </Link>
+    </Item>
+  );
+}
+
+function CompactQueueSection({ rows }: { rows: QueueRow[] }) {
+  const pendingRows = rows.filter((row) => row.count > 0);
+
+  if (pendingRows.length === 0) {
+    return (
+      <AppEmptyState compact title={branchCopy.queueEmpty} className="py-3" />
+    );
+  }
+
+  return (
+    <ItemGroup className="gap-2">
+      {pendingRows.map((row) => (
+        <QueueRowItem key={row.key} row={row} />
+      ))}
+    </ItemGroup>
+  );
 }
 
 const ICONS = {
@@ -199,12 +251,14 @@ export default async function OperatorHomePage({
   const lockedGroupIds = new Set(["sales_kitchen", "stock"]);
   const tilesLockedBeforeClockIn = isFloorRole && beforeClockIn;
 
+  const queuePendingTotal = queueRows.reduce((sum, row) => sum + row.count, 0);
+
   return (
     <EmployeePage title={APP_COPY_VI.operatorHome} hideHeaderOnMobile>
       {showTodayCard ? (
         <EmployeeHomePageContent
           authState={authState}
-          mode="today-card"
+          mode="compact-status"
           routes={{
             clock: `${basePath}/shift/clock`,
             tasks: `${basePath}/shift`,
@@ -233,51 +287,18 @@ export default async function OperatorHomePage({
       ) : null}
 
       {queueRows.length > 0 ? (
-        <AppSection
+        <EmployeePanel
           title={branchCopy.queueTitle}
-          icon={<ClipboardCheck />}
+          icon={ClipboardCheck}
           tone="warning"
           size="sm"
-          badge={{
-            children: String(
-              queueRows.reduce((sum, row) => sum + row.count, 0),
-            ),
-            variant: "warning",
-          }}
+          badge={
+            queuePendingTotal > 0
+              ? { children: String(queuePendingTotal), variant: "warning" }
+              : undefined
+          }
         >
-          <LinkCardGrid className="lg:grid-cols-2">
-            {queueRows.map((row) => (
-              <AppLinkCard
-                key={row.key}
-                href={row.href}
-                title={row.title}
-                description={row.meta}
-                icon={<row.icon />}
-                tone="warning"
-                metric={{ value: row.count }}
-              />
-            ))}
-          </LinkCardGrid>
-        </AppSection>
-      ) : null}
-
-      {showOverview && day ? (
-        <EmployeePanel title={messages.settings.branch.hubOverviewTitle} size="sm">
-          <div className="grid grid-cols-2 gap-2">
-            <KpiCard
-              label={messages.settings.branch.dayRevenueLabel}
-              value={formatVND(day.todayRevenue)}
-              density="compact"
-              href={`${basePath}/dashboard`}
-            />
-            <KpiCard
-              label={messages.settings.branch.hubOverviewUnreadLabel}
-              value={String(unreadCount)}
-              density="compact"
-              tone={unreadCount > 0 ? "warning" : "neutral"}
-              href="/notifications"
-            />
-          </div>
+          <CompactQueueSection rows={queueRows} />
         </EmployeePanel>
       ) : null}
 
@@ -300,10 +321,30 @@ export default async function OperatorHomePage({
             disabled: tilesLockedBeforeClockIn && lockedGroupIds.has(group.id),
           }))}
           columns={2}
-          mobileColumns={2}
+          mobileColumns={group.id === "sales_kitchen" ? 1 : 2}
           wideColumns
         />
       ))}
+
+      {showOverview && day ? (
+        <EmployeePanel title={messages.settings.branch.hubOverviewTitle} size="sm">
+          <div className="grid grid-cols-2 gap-2">
+            <KpiCard
+              label={messages.settings.branch.dayRevenueLabel}
+              value={formatVND(day.todayRevenue)}
+              density="compact"
+              href={`${basePath}/dashboard`}
+            />
+            <KpiCard
+              label={messages.settings.branch.hubOverviewUnreadLabel}
+              value={String(unreadCount)}
+              density="compact"
+              tone={unreadCount > 0 ? "warning" : "neutral"}
+              href="/notifications"
+            />
+          </div>
+        </EmployeePanel>
+      ) : null}
     </EmployeePage>
   );
 }

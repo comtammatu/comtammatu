@@ -18,6 +18,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { NotificationPopupControl } from "@/_components/notification-popup-control";
 import { messages } from "@lib/messages";
 import {
+  EmployeeControlBar,
   EmployeeInlineState,
   EmployeePanel,
   EmployeePage as EmployeePageShell,
@@ -177,7 +178,7 @@ export async function EmployeeHomePageContent({
   routes?: EmployeeHomeRoutes;
   authState?: EmployeeHomeAuthState;
   showNotificationControl?: boolean;
-  mode?: "full" | "today-card";
+  mode?: "full" | "today-card" | "compact-status";
   workflowLayout?: EmployeeHomeWorkflowLayout;
 } = {}) {
   const { supabase, claims, session } = authState ?? (await loadAuthState());
@@ -461,6 +462,30 @@ export async function EmployeeHomePageContent({
   );
 
   if (mode === "today-card") return todayCard;
+
+  if (mode === "compact-status") {
+    const compactCta =
+      state.status === "not_started" ? (
+        <Button asChild size="touch">
+          <Link href={routes.clock}>
+            <IconCamera data-icon="inline-start" />
+            {copy.clockIn}
+          </Link>
+        </Button>
+      ) : null;
+
+    return (
+      <EmployeeControlBar>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{title}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {todayMeta}
+          </p>
+        </div>
+        {compactCta}
+      </EmployeeControlBar>
+    );
+  }
 
   const activeWorkStatus =
     state.status === "working" ||

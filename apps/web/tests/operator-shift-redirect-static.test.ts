@@ -257,9 +257,10 @@ test("operator home uses the shared employee action layout", () => {
     source.includes("EmployeeActionSection"),
     "operator home uses domain tile rows via shared action rows",
   );
-  // V2 queue-first hub (D059): the unified "Cần xử lý" queue reuses
-  // AppLinkCard/LinkCardGrid for its badge/metric props — domain tile rows
-  // below it still render through EmployeeActionSection.
-  assert.match(source, /AppLinkCard/);
-  assert.match(source, /LinkCardGrid/);
+  // Hub hierarchy W2: the unified "Cần xử lý" queue collapses to compact
+  // single-line rows (Item/ItemMedia/ItemActions), not full AppLinkCard
+  // tiles — domain tile rows below it still render through
+  // EmployeeActionSection.
+  assert.match(source, /CompactQueueSection/);
+  assert.match(source, /QueueRowItem/);
 });
