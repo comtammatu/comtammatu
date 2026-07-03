@@ -10,8 +10,6 @@ import type {
   ExpiryAlertRow,
 } from "@/(protected)/inventory/page";
 import { getBranchSiteDisplayName } from "@/(protected)/inventory/_lib/branch-site-labels";
-import { AppPage, AppPageHeader } from "@/components/surface";
-import { INVENTORY_VI } from "@comtammatu/shared/messages";
 
 export default async function ExpirySettingsPage({
   searchParams,
@@ -48,21 +46,16 @@ export default async function ExpirySettingsPage({
     })) as BranchOption[];
 
   return (
-    <AppPage>
-      <AppPageHeader
-        headingLevel="h2"
-        eyebrow={INVENTORY_VI.settingsEyebrow}
-        title={INVENTORY_VI.expiryAlertTitle}
-        description={INVENTORY_VI.expiryAlertDescription}
-      />
+    <div className="flex flex-col gap-4">
       <ExpiryListClient
         initial={alerts}
         branches={branches}
         tenantId={claims.tenant_id}
         userRole={claims.user_role}
         userBranchId={scope?.selectedBranchId ?? null}
+        embedded
         headingLevel="h2"
       />
-    </AppPage>
+    </div>
   );
 }
