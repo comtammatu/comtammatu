@@ -21,8 +21,6 @@ export const UNITS_VI = {
     editTitle: "Sửa đơn vị",
     code: "Mã đơn vị",
     codePlaceholder: "Ví dụ: kg, gói, thùng",
-    name: "Tên đơn vị",
-    namePlaceholder: "Ví dụ: Ki-lô-gam",
     isActive: "Đang dùng",
     save: "Lưu",
     cancel: "Huỷ",

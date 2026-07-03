@@ -31875,6 +31875,7 @@ CREATE TABLE public.units (
     dimension text,
     is_standard boolean DEFAULT false NOT NULL,
     standard_factor numeric(18,9),
+    CONSTRAINT units_code_lowercase_chk CHECK ((code = lower(code))),
     CONSTRAINT units_dimension_check CHECK (((dimension IS NULL) OR (dimension = ANY (ARRAY['mass'::text, 'volume'::text])))),
     CONSTRAINT units_standard_factor_requires_dimension CHECK ((((is_standard = false) AND (standard_factor IS NULL)) OR ((is_standard = true) AND (dimension IS NOT NULL) AND (standard_factor > (0)::numeric))))
 );
