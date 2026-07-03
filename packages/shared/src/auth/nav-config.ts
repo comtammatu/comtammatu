@@ -252,6 +252,13 @@ export const OPERATOR_TILE_ITEMS = [
   },
   {
     moduleKey: "inventory",
+    icon: "Undo2",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/supplier-returns",
+    label: "Trả hàng NCC",
+  },
+  {
+    moduleKey: "inventory",
     icon: "FileText",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/grn",

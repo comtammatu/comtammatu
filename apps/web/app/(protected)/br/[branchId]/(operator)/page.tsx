@@ -16,6 +16,7 @@ import {
   Package,
   Settings,
   Truck,
+  Undo2,
   Utensils,
 } from "lucide-react";
 import Link from "next/link";
@@ -119,6 +120,7 @@ const ICONS = {
   Package,
   Settings,
   Truck,
+  Undo2,
   Utensils,
 } as const;
 

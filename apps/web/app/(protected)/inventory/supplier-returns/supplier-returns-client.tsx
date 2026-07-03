@@ -17,6 +17,8 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import type { SupplierReturnRow } from "./page";
 
 import { formatVND as formatVndNumber } from "../_lib/format";
@@ -28,11 +30,17 @@ const formatReturnValue = (v: number | null) =>
     ? inventoryMessages.inventory.common.noValue
     : inventoryMessages.inventory.common.currency(formatVndNumber(v));
 
+interface Props {
+  initialReturns: SupplierReturnRow[];
+  basePath?: string;
+  embedded?: boolean;
+}
+
 export function SupplierReturnsClient({
   initialReturns,
-}: {
-  initialReturns: SupplierReturnRow[];
-}) {
+  basePath = "/inventory/supplier-returns",
+  embedded = false,
+}: Props) {
   const columns: DataTableColumn<SupplierReturnRow>[] = [
     {
       key: "return_number",
@@ -68,26 +76,57 @@ export function SupplierReturnsClient({
       key: "actions",
       header: "",
       render: (row) => (
-        <Button variant="ghost" size="sm" asChild>
-          <Link href={`/inventory/supplier-returns/${row.id}`}>Chi tiết</Link>
+        <Button variant="ghost" size={embedded ? "touch" : "sm"} asChild>
+          <Link href={`${basePath}/${row.id}`}>Chi tiết</Link>
         </Button>
       ),
     },
   ];
 
+  const content = (
+    <>
+      <AppPageHeader
+        eyebrow={embedded ? undefined : INVENTORY_VI.warehouse}
+        title={INVENTORY_VI.supplierReturnsTitle}
+        description={INVENTORY_VI.supplierReturnsDescription}
+      />
+      {initialReturns.length === 0 ? (
+        <AppEmptyState mode="no-data" title={INVENTORY_VI.noSupplierReturns} />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={initialReturns}
+          getRowKey={(row) => row.id}
+          emptyTitle="Chưa có phiếu trả hàng NCC"
+          emptyMode="no-data"
+          mobileCardRender={(row) => (
+            <SupplierReturnItem row={row} basePath={basePath} embedded={embedded} />
+          )}
+        />
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
   return (
-    <DataTable
-      columns={columns}
-      data={initialReturns}
-      getRowKey={(row) => row.id}
-      emptyTitle="Chưa có phiếu trả hàng NCC"
-      emptyMode="no-data"
-      mobileCardRender={(row) => <SupplierReturnItem row={row} />}
-    />
+    <AppPage width="wide" density="compact">
+      {content}
+    </AppPage>
   );
 }
 
-function SupplierReturnItem({ row }: { row: SupplierReturnRow }) {
+function SupplierReturnItem({
+  row,
+  basePath,
+  embedded,
+}: {
+  row: SupplierReturnRow;
+  basePath: string;
+  embedded: boolean;
+}) {
   return (
     <Item variant="outline">
       <ItemHeader>
@@ -104,8 +143,8 @@ function SupplierReturnItem({ row }: { row: SupplierReturnRow }) {
           {formatReturnValue(row.total_value)}
         </span>
         <ItemActions>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/inventory/supplier-returns/${row.id}`}>Chi tiết</Link>
+          <Button variant="ghost" size={embedded ? "touch" : "sm"} asChild>
+            <Link href={`${basePath}/${row.id}`}>Chi tiết</Link>
           </Button>
         </ItemActions>
       </ItemFooter>
