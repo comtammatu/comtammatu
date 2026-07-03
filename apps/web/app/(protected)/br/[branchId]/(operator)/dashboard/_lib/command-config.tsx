@@ -72,7 +72,7 @@ function buildTileGroups(
       {
         moduleKey: "branch_menu_limits",
         href: `/br/${branchId}/settings/menu-limits`,
-        title: "Hạn mức bán",
+        title: copy.menuLimitsTitle,
         description: copy.commandMenuLimitsDescription,
         icon: <IconUtensils />,
       },

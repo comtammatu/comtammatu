@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import { messages } from "@lib/messages";
 import {
   usePosDailyLimitStore,
   usePosIngredientCapStore,
@@ -20,27 +21,32 @@ import type { CartItem } from "../types";
 /**
  * Unified add-to-cart block message for both gates. Daily-limit (per-item
  * quota) and ingredient-cap (shared-stock snapshot) are separate models but
- * share the same toast surface — whichever blocks first wins.
+ * share the same toast surface — whichever blocks first wins. The daily-limit
+ * "exceeded" reason further splits copy by leg (manual quota vs stock) per
+ * D064 §6, matching the server's reason codes.
  */
 export function formatAddToCartBlockMessage(
   block: DailyLimitBlock | IngredientCapBlock,
 ): string {
   if (block.reason === "ingredient_stock") {
-    if (block.available <= 0) {
-      return `${block.itemName} đã hết nguyên liệu trong kho.`;
-    }
-    return `${block.itemName} chỉ còn đủ nguyên liệu cho ${block.available} phần.`;
+    return block.available <= 0
+      ? messages.pos.menu.blockedStockExhausted(block.itemName)
+      : messages.pos.menu.blockedStockLow(block.itemName, block.available);
   }
 
   if (block.reason === "disabled") {
-    return `${block.itemName} đang tắt hôm nay.`;
+    return messages.pos.menu.blockedDisabled(block.itemName);
   }
 
-  if (block.available <= 0) {
-    return `${block.itemName} đã hết suất hôm nay.`;
+  if (block.stockLeg) {
+    return block.available <= 0
+      ? messages.pos.menu.blockedStockExhausted(block.itemName)
+      : messages.pos.menu.blockedStockLow(block.itemName, block.available);
   }
 
-  return `${block.itemName} chỉ còn ${block.available} suất.`;
+  return block.available <= 0
+    ? messages.pos.menu.blockedManualExhausted(block.itemName)
+    : messages.pos.menu.blockedManualLow(block.itemName, block.available);
 }
 
 export interface UseAddToCartGateArgs {

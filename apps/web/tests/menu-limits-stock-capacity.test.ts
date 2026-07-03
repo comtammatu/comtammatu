@@ -2,23 +2,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import {
-  getMenuLimitCapSource,
-  getMenuLimitEffectiveCap,
-  getMenuLimitRemaining,
-  hasManualMenuLimit,
-  type MenuLimitCapFields,
-} from "../app/(protected)/br/[branchId]/(operator)/settings/menu-limits/menu-limit-cap";
-
-function row(patch: Partial<MenuLimitCapFields>): MenuLimitCapFields {
-  return {
-    limit_quantity: null,
-    stock_capacity: null,
-    sold_today: 0,
-    is_disabled: false,
-    ...patch,
-  };
-}
 
 const migration = readFileSync(
   join(
@@ -104,54 +87,6 @@ const baselineSource = readFileSync(
   "utf8",
 );
 
-test("Menu-Limits effective cap composes manual and stock caps", () => {
-  assert.equal(getMenuLimitEffectiveCap(row({})), null);
-  assert.equal(
-    getMenuLimitEffectiveCap(row({ limit_quantity: 10, stock_capacity: 4 })),
-    4,
-  );
-  assert.equal(
-    getMenuLimitEffectiveCap(row({ limit_quantity: 3, stock_capacity: 8 })),
-    3,
-  );
-  assert.equal(
-    getMenuLimitRemaining(row({ stock_capacity: 4, sold_today: 1 })),
-    3,
-  );
-  assert.equal(
-    getMenuLimitRemaining(
-      row({ stock_capacity: 10, sold_today: 8, available_to_sell: 5 }),
-    ),
-    2,
-  );
-  assert.equal(getMenuLimitRemaining(row({ stock_capacity: 0 })), 0);
-});
-
-test("Menu-Limits manager remaining follows daily cap instead of live stock", () => {
-  assert.equal(
-    getMenuLimitRemaining(
-      row({
-        limit_quantity: 100,
-        stock_capacity: 47,
-        sold_today: 49,
-        available_to_sell: 0,
-      }),
-    ),
-    51,
-  );
-});
-
-test("stock-backed Menu-Limits rows default Giới hạn bán to Tồn kho", () => {
-  assert.equal(hasManualMenuLimit(row({ stock_capacity: 4 })), true);
-  assert.equal(hasManualMenuLimit(row({ limit_quantity: 4 })), true);
-  assert.equal(hasManualMenuLimit(row({ is_disabled: true })), true);
-  assert.equal(getMenuLimitCapSource(row({ stock_capacity: 4 })), "equal");
-  assert.equal(
-    getMenuLimitCapSource(row({ limit_quantity: 10, stock_capacity: 4 })),
-    "stock_lower",
-  );
-});
-
 test("Menu-Limits admin RPC and UI expose stock_capacity", () => {
   assert.match(
     migration,
@@ -164,8 +99,7 @@ test("Menu-Limits admin RPC and UI expose stock_capacity", () => {
   );
   assert.match(actionsSource, /stock_capacity: number \| null/);
   assert.match(tableSource, /stockCapacityLabel/);
-  assert.match(tableSource, /getDraftLimitQuantity/);
-  assert.match(tableSource, /getMenuLimitRemaining/);
+  assert.match(tableSource, /manual_limit_quantity/);
   assert.match(tableSource, /getSoldProgress/);
   assert.match(tableSource, /renderRemainingBar/);
   assert.match(
@@ -174,21 +108,24 @@ test("Menu-Limits admin RPC and UI expose stock_capacity", () => {
   );
 });
 
-test("Menu-Limits manager must set Giới hạn bán between 0 and Tồn kho", () => {
+test("Menu-Limits manager saves raw manual limit; empty input clears without client block", () => {
   const limitQuantitySchemaSource =
     actionsSource.match(/limitQuantity:[\s\S]*?isDisabled:/)?.[0] ?? "";
 
-  assert.match(tableSource, /parsed > row\.stock_capacity/);
-  assert.match(tableSource, /manualLimitExceedsStock/);
-  assert.match(tableSource, /manualLimitRequired/);
+  // Client no longer clamps the input to stock capacity or blocks on empty.
+  assert.doesNotMatch(tableSource, /parsed > row\.stock_capacity/);
+  assert.doesNotMatch(tableSource, /manualLimitExceedsStock/);
+  assert.doesNotMatch(tableSource, /manualLimitRequired/);
+  assert.doesNotMatch(tableSource, /stockCapacityRequired/);
+  assert.doesNotMatch(tableSource, /max=\{row\.stock_capacity/);
   assert.match(tableSource, /manualLimitRange/);
-  assert.match(tableSource, /stockCapacityRequired/);
-  assert.match(tableSource, /max=\{row\.stock_capacity \?\? 9999\}/);
   assert.match(tableSource, /min=\{0\}/);
-  assert.match(tableSource, /required/);
   assert.match(tableSource, /manualLimitPlaceholder/);
   assert.match(limitQuantitySchemaSource, /\.min\(0/);
   assert.doesNotMatch(limitQuantitySchemaSource, /\.positive\(/);
+
+  // Server-side substring mappings still exist (M2 removes them) — keep the
+  // Vietnamese copy wired until the migration lands.
   assert.match(
     actionsSource,
     /msg\.includes\("exceeds stock capacity"\)[\s\S]*Giới hạn bán không được vượt Tồn kho/,
@@ -211,6 +148,11 @@ test("Menu-Limits manager must set Giới hạn bán between 0 and Tồn kho", (
     stockOutcomeAvailabilityMigration,
     /COALESCE\(bl\.limit_quantity, bl\.stock_capacity\) AS limit_quantity/,
   );
+});
+
+test("Menu-Limits clear-limit button is wired", () => {
+  assert.match(tableSource, /clearBranchMenuDailyLimit/);
+  assert.match(tableSource, /messages\.pos\.menu\.clearLimit/);
 });
 
 test("stock capacity compute converts recipe entry units to base", () => {
@@ -290,10 +232,6 @@ test("Menu-Limits manager copy uses stock availability vocabulary", () => {
   assert.match(posMessagesSource, /stockCapacityLabel: "Tồn kho"/);
   assert.match(posMessagesSource, /manualLimitLabel: "Giới hạn bán"/);
   assert.match(posMessagesSource, /manualLimitPlaceholder: "Nhập số"/);
-  assert.match(
-    posMessagesSource,
-    /manualLimitRequired: "Giới hạn bán là bắt buộc\."/,
-  );
   assert.match(
     posMessagesSource,
     /manualLimitRange: "Giới hạn bán phải là số nguyên từ 0 đến 9999\."/,

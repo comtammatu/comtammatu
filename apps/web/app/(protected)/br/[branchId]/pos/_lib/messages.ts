@@ -165,7 +165,7 @@ function formatDailyLimitConflictMessage(
 
   const itemLabel = getDailyLimitItemLabel(itemLabels, menuItemId);
   if (reason === "daily_limit_item_disabled") {
-    return `${itemLabel} đang bị tắt bán hôm nay — bỏ khỏi giỏ hoặc đổi món.`;
+    return `${itemLabel} đang tắt hôm nay — bỏ khỏi giỏ hoặc đổi món.`;
   }
 
   const limit = detail.limit_quantity;

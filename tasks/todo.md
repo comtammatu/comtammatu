@@ -19,6 +19,24 @@ Verify the live checkout with `git status` before acting on any in-flight notes;
 do not reopen plan rows that are already represented by code in the current
 checkout.
 
+## Now — Menu limit / stock-deduction semantics redesign (owner-directed 2026-07-04)
+
+- [~] **T3 debate DONE → D064 recorded (all owner decisions in), PR-1 IN FLIGHT.**
+  Contract: `docs/worklog/t3-menu-limit-stock-debate-2026-07-04.md`. Root
+  defects: posting+gating fused in UI-less `pos_stock_outcome_posting`;
+  capacity NULL→0 blocks no-recipe items; Giới hạn bán page renders COALESCE
+  blend as manual limit (limit-ratchet paradox, owner-reported); Path 2
+  `consume_stock_for_order` flag-free + double-deduct hole. Owner chốt
+  2026-07-04 (D064): two switches (`GATE_eff = GATE AND DED`), NULL=unlimited
+  fail-open, manual limit decoupled from capacity, advisory gate (no new hard
+  trigger), refund first-ready quota boundary, "Còn N phần" on POS cards,
+  ingredient-gate `pos_ingredient_stock_block` REMOVE FULLY. PR-1 (this
+  branch): TS truth/collapse + two switches + "Còn N phần" + migration M2
+  `20260704120000_menu_manual_limit_decouple.sql` (owner applies BEFORE
+  deploy). NEXT: PR-2 migrations M1+M3 (M3 REQUIRED before posting
+  re-enable) → PR-3 slim fields + full ingredient-gate removal; M4
+  refund-quota per D064 §5.
+
 ## Now — IA Unification Program (D058)
 
 > Direction locked 2026-07-03: "Hai plane — Một chrome — Một cửa mỗi việc".

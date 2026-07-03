@@ -38,8 +38,8 @@ import {
   useDailyLimit,
   useIngredientCap,
 } from "./_providers/pos-desktop-provider";
-import { isDailyLimitBlockedAfterDemand } from "./_utils/daily-limit-draft";
-import { isIngredientCapBlockedAfterDemand } from "./_utils/ingredient-cap-draft";
+import { remainingDailyQuotaAfterDemand } from "./_utils/daily-limit-draft";
+import { remainingIngredientCapAfterDemand } from "./_utils/ingredient-cap-draft";
 
 interface PosMenuGridProps {
   categories: MenuCategory[];
@@ -63,6 +63,73 @@ interface MenuItemGridProps {
 
 const ALL_MENU_VALUE = "all";
 
+interface MenuCardStatus {
+  blocked: boolean;
+  /** Reason badge shown when blocked at zero; null when not blocked. */
+  reasonLabel: string | null;
+  /** Remaining-quota label shown whenever finite and not blocked. */
+  remainingLabel: string | null;
+}
+
+/**
+ * Mirrors the reason rule in `findDailyLimitBlockForProposal` /
+ * `formatAddToCartBlockMessage` exactly: when the daily-limit leg blocks,
+ * `manual_limit_quantity == null` means the block came from the stock leg
+ * ("Hết nguyên liệu"), otherwise it's the manual quota ("Hết suất"). The
+ * separate `ingredientCap` store only adds another stock-reason source; it
+ * must never override the daily-limit-derived reason, so the card and the
+ * tap-toast never disagree for the same state.
+ */
+function getMenuCardStatus(
+  dailyLimit: ReturnType<typeof useDailyLimit>,
+  ingredientCap: ReturnType<typeof useIngredientCap>,
+  draftDemand: number,
+): MenuCardStatus {
+  if (dailyLimit?.is_disabled) {
+    return {
+      blocked: true,
+      reasonLabel: messages.pos.menu.reasonDisabled,
+      remainingLabel: null,
+    };
+  }
+
+  const dailyRemaining = remainingDailyQuotaAfterDemand(
+    dailyLimit,
+    draftDemand,
+  );
+  const ingredientRemaining = remainingIngredientCapAfterDemand(
+    ingredientCap,
+    draftDemand,
+  );
+
+  const dailyBlocked = dailyRemaining !== null && dailyRemaining <= 0;
+  const ingredientBlocked =
+    ingredientRemaining !== null && ingredientRemaining <= 0;
+  const blocked = dailyBlocked || ingredientBlocked;
+
+  if (blocked) {
+    const reasonLabel = dailyBlocked
+      ? dailyLimit?.manual_limit_quantity == null
+        ? messages.pos.menu.reasonStockExhausted
+        : messages.pos.menu.reasonManualExhausted
+      : messages.pos.menu.reasonStockExhausted;
+    return { blocked: true, reasonLabel, remainingLabel: null };
+  }
+
+  const finiteRemaining = [dailyRemaining, ingredientRemaining]
+    .filter((value): value is number => value !== null)
+    .sort((a, b) => a - b)[0];
+
+  return {
+    blocked: false,
+    reasonLabel: null,
+    remainingLabel:
+      finiteRemaining === undefined
+        ? null
+        : messages.pos.menu.remainingOnCard(finiteRemaining),
+  };
+}
+
 const MenuItemButton = memo(function MenuItemButton({
   item,
   sparseMenu,
@@ -72,12 +139,8 @@ const MenuItemButton = memo(function MenuItemButton({
   const dailyLimit = useDailyLimit(item.id);
   const ingredientCap = useIngredientCap(item.id);
   const draftDemand = dailyLimitDemandByMenuItem?.get(item.id) ?? 0;
-  const dailyBlocked = isDailyLimitBlockedAfterDemand(dailyLimit, draftDemand);
-  const ingredientBlocked = isIngredientCapBlockedAfterDemand(
-    ingredientCap,
-    draftDemand,
-  );
-  const blocked = dailyBlocked || ingredientBlocked;
+  const status = getMenuCardStatus(dailyLimit, ingredientCap, draftDemand);
+  const blocked = status.blocked;
   const handleClick = useCallback(() => {
     if (blocked) return;
     onItemTap(item);
@@ -123,6 +186,23 @@ const MenuItemButton = memo(function MenuItemButton({
 
       {/* Bottom-up black gradient keeps the white item name readable on bright photos. */}
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
+
+      {/* Remaining-quota / block-reason badge — top left, opposite the price. */}
+      {status.reasonLabel !== null ? (
+        <Badge
+          variant="destructive"
+          className="absolute left-2 top-2 z-10 md:left-3 md:top-3"
+        >
+          {status.reasonLabel}
+        </Badge>
+      ) : status.remainingLabel !== null ? (
+        <Badge
+          variant="secondary"
+          className="absolute left-2 top-2 z-10 md:left-3 md:top-3"
+        >
+          {status.remainingLabel}
+        </Badge>
+      ) : null}
 
       {/* Price — top right, primary badge with shadow. */}
       <span

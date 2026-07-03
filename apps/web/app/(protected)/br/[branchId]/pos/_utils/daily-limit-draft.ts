@@ -24,6 +24,8 @@ export type DailyLimitBlock =
       itemName: string;
       available: number;
       requested: number;
+      /** True when the block is caused by the stock leg (no manual limit set). */
+      stockLeg: boolean;
     };
 
 function addDemand(
@@ -53,36 +55,20 @@ export function buildDailyLimitDemand(
 }
 
 /**
- * Effective daily cap = min over the non-null values of limit_quantity and
- * stock_capacity. Current RPCs return limit_quantity as the effective Sẵn bán
- * cap; stock_capacity stays as the compatibility fallback for older payloads.
+ * Single source of truth for remaining quota: the server-computed
+ * `available_to_sell` (NULL = unlimited). No client-side fallback math — a
+ * live-shrinking stock capacity must never be compared against cumulative
+ * `sold_today` again (see the limit_ratchet invariant in
+ * docs/plan/decisions.md D064 §3).
  */
-function effectiveDailyCap(limit: MenuItemDailyLimit): number | null {
-  const stockCap = limit.stock_capacity ?? null;
-  if (limit.limit_quantity == null) return stockCap;
-  if (stockCap == null) return limit.limit_quantity;
-  return Math.min(limit.limit_quantity, stockCap);
-}
-
-function serverAvailableToSell(limit: MenuItemDailyLimit): number | null {
-  const value = limit.available_to_sell;
-  return typeof value === "number" && Number.isFinite(value)
-    ? Math.max(0, value)
-    : null;
-}
-
 export function remainingDailyQuotaAfterDemand(
   limit: MenuItemDailyLimit | null,
   currentDraftDemand: number,
 ): number | null {
   if (!limit) return null;
-  const serverRemaining = serverAvailableToSell(limit);
-  if (serverRemaining !== null) {
-    return Math.max(0, serverRemaining - currentDraftDemand);
-  }
-  const cap = effectiveDailyCap(limit);
-  if (cap == null) return null;
-  return Math.max(0, cap - limit.sold_today - currentDraftDemand);
+  const value = limit.available_to_sell;
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return Math.max(0, value - currentDraftDemand);
 }
 
 export function isDailyLimitBlockedAfterDemand(
@@ -155,6 +141,7 @@ export function findDailyLimitBlockForProposal({
         itemName: request.itemName,
         available,
         requested: request.quantity,
+        stockLeg: limit.manual_limit_quantity == null,
       };
     }
   }

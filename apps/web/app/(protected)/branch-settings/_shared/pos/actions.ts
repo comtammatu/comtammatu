@@ -8,7 +8,11 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { withActionPositional, withFormAction } from "@/_lib/with-action";
+import {
+  type ActionContext,
+  withActionPositional,
+  withFormAction,
+} from "@/_lib/with-action";
 import { INVENTORY_FEATURE_FLAGS } from "@/(protected)/inventory/_lib/feature-flags";
 import { canOperateBranch, verifyBranchOwnership } from "../branch-guards";
 
@@ -165,17 +169,39 @@ export const updateTerminal = withFormAction(
   },
 );
 
-/* ─── setBranchIngredientStockBlock ─── */
+/* ─── Feature-flag upserts (ingredient block, stock posting, stock gate) ─── */
 
-const ingredientStockBlockSchema = z.object({
+const featureFlagSchema = z.object({
   branchId: z.coerce.number().int().positive({ error: "Chọn chi nhánh" }),
   enabled: z.boolean(),
 });
 
+function upsertBranchFeatureFlag(
+  supabase: ActionContext["supabase"],
+  branchId: number,
+  flagKey: string,
+  enabled: boolean,
+  userId: string,
+) {
+  const now = new Date().toISOString();
+  return supabase.from("branch_feature_flags").upsert(
+    {
+      branch_id: branchId,
+      flag_key: flagKey,
+      enabled,
+      enabled_by: userId,
+      enabled_at: enabled ? now : null,
+      disabled_at: enabled ? null : now,
+      updated_at: now,
+    },
+    { onConflict: "branch_id,flag_key" },
+  );
+}
+
 export const setBranchIngredientStockBlock = withActionPositional(
   {
     roles: SETTINGS_ROLES,
-    schema: ingredientStockBlockSchema,
+    schema: featureFlagSchema,
     permission: PERMISSION_KEYS.SETTINGS_BRANCH,
     permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
@@ -195,22 +221,98 @@ export const setBranchIngredientStockBlock = withActionPositional(
       return { success: false, error: "Chi nhánh không hợp lệ" };
     }
 
-    const now = new Date().toISOString();
-    const { error } = await supabase.from("branch_feature_flags").upsert(
-      {
-        branch_id: data.branchId,
-        flag_key: INVENTORY_FEATURE_FLAGS.POS_INGREDIENT_STOCK_BLOCK,
-        enabled: data.enabled,
-        enabled_by: user.id,
-        enabled_at: data.enabled ? now : null,
-        disabled_at: data.enabled ? null : now,
-        updated_at: now,
-      },
-      { onConflict: "branch_id,flag_key" },
+    const { error } = await upsertBranchFeatureFlag(
+      supabase,
+      data.branchId,
+      INVENTORY_FEATURE_FLAGS.POS_INGREDIENT_STOCK_BLOCK,
+      data.enabled,
+      user.id,
     );
 
     if (error) {
       console.error("[branch-settings/pos:setBranchIngredientStockBlock] Upsert ingredient stock block flag error:", error);
+      return { success: false, error: "Không thể lưu cấu hình. Vui lòng thử lại." };
+    }
+
+    revalidatePosSettings(data.branchId);
+    return { success: true };
+  },
+);
+
+export const setBranchStockOutcomePosting = withActionPositional(
+  {
+    roles: SETTINGS_ROLES,
+    schema: featureFlagSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+    argsToInput: (branchId: number, enabled: boolean) => ({
+      branchId,
+      enabled,
+    }),
+  },
+  async (data, { supabase, claims, user }): Promise<ActionResult> => {
+    if (!canOperateBranch(claims.branch_id, data.branchId)) {
+      return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+    }
+
+    if (
+      !(await verifyBranchOwnership(supabase, data.branchId, claims.tenant_id))
+    ) {
+      return { success: false, error: "Chi nhánh không hợp lệ" };
+    }
+
+    const { error } = await upsertBranchFeatureFlag(
+      supabase,
+      data.branchId,
+      INVENTORY_FEATURE_FLAGS.POS_STOCK_OUTCOME_POSTING,
+      data.enabled,
+      user.id,
+    );
+
+    if (error) {
+      console.error("[branch-settings/pos:setBranchStockOutcomePosting] Upsert stock outcome posting flag error:", error);
+      return { success: false, error: "Không thể lưu cấu hình. Vui lòng thử lại." };
+    }
+
+    revalidatePosSettings(data.branchId);
+    return { success: true };
+  },
+);
+
+export const setBranchStockAvailabilityGate = withActionPositional(
+  {
+    roles: SETTINGS_ROLES,
+    schema: featureFlagSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+    argsToInput: (branchId: number, enabled: boolean) => ({
+      branchId,
+      enabled,
+    }),
+  },
+  async (data, { supabase, claims, user }): Promise<ActionResult> => {
+    if (!canOperateBranch(claims.branch_id, data.branchId)) {
+      return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+    }
+
+    if (
+      !(await verifyBranchOwnership(supabase, data.branchId, claims.tenant_id))
+    ) {
+      return { success: false, error: "Chi nhánh không hợp lệ" };
+    }
+
+    const { error } = await upsertBranchFeatureFlag(
+      supabase,
+      data.branchId,
+      INVENTORY_FEATURE_FLAGS.POS_STOCK_AVAILABILITY_GATE,
+      data.enabled,
+      user.id,
+    );
+
+    if (error) {
+      console.error("[branch-settings/pos:setBranchStockAvailabilityGate] Upsert stock availability gate flag error:", error);
       return { success: false, error: "Không thể lưu cấu hình. Vui lòng thử lại." };
     }
 

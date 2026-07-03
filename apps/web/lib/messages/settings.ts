@@ -263,6 +263,23 @@ export const settings = {
       "Chỉ bật khi tồn kho của chi nhánh chính xác — nếu kho sai, POS sẽ chặn bán nhầm.",
     ingredientStockBlockSaved: "Đã cập nhật cấu hình chặn bán",
     ingredientStockBlockFailed: "Không thể lưu cấu hình. Vui lòng thử lại.",
+    ingredientStockBlockReplacedTitle: "Bán theo tồn kho (đã thay thế)",
+    ingredientStockBlockReplacedHelp:
+      "Tính năng này đã được thay thế bởi \"Giới hạn bán theo tồn kho\". Tắt để dùng cơ chế mới.",
+    ingredientStockBlockTurnOff: "Tắt",
+    stockControlTitle: "Kiểm soát bán theo tồn kho",
+    stockOutcomePostingLabel: "Trừ kho khi bán",
+    stockOutcomePostingHelp:
+      "Trừ tồn kho nguyên liệu khi món được thanh toán và bếp bắt đầu làm.",
+    stockOutcomePostingSaved: "Đã cập nhật cấu hình trừ kho",
+    stockOutcomePostingFailed: "Không thể lưu cấu hình. Vui lòng thử lại.",
+    stockAvailabilityGateLabel: "Giới hạn bán theo tồn kho",
+    stockAvailabilityGateHelp:
+      "Chặn bán khi tồn kho nguyên liệu không đủ. Chỉ có hiệu lực khi \"Trừ kho khi bán\" đang bật.",
+    stockAvailabilityGateDisabledHelp:
+      "Bật \"Trừ kho khi bán\" trước để dùng giới hạn này.",
+    stockAvailabilityGateSaved: "Đã cập nhật cấu hình giới hạn bán",
+    stockAvailabilityGateFailed: "Không thể lưu cấu hình. Vui lòng thử lại.",
   },
   printers: {
     backPrinters: "Máy in",

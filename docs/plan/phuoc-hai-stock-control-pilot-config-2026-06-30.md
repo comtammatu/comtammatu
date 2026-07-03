@@ -1,7 +1,7 @@
 # Gói cấu hình pilot stock-control Phước Hải
 
 > Reconciled-through `26fb168c`
-> Trạng thái: PROD PILOT ENABLED - đã seed stock-control test data cho 20/20 món active tại Phước Hải và bật `pos_stock_outcome_posting` ngày 2026-06-30.
+> Trạng thái: PILOT DISABLED 2026-07-03 (toàn menu "còn 0" → tắt `pos_stock_outcome_posting`; kho đã wipe theo `docs/worklog/inventory-reset-2026-07-03.md`). Rule fail-closed cho item thiếu config trong doc này bị SUPERSEDE bởi D064 §2 (fail-open: capacity NULL = bán vô hạn, fail-loud trên trang quản lý). Re-enable theo runbook D064.
 > Phạm vi: pilot một chi nhánh cho `Phước Hải` (`branch_id=3`) sau khi bật `pos_stock_outcome_posting`.
 
 ## Mục tiêu

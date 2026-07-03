@@ -25,20 +25,14 @@ interface MenuAvailableSide {
  * Absent (`null`) when no limit is configured for today.
  */
 export interface MenuItemDailyLimit {
-  /** Cap on portions sellable today; null = unlimited. */
-  limit_quantity: number | null;
   /** Manager toggled the item OFF for the day. */
   is_disabled: boolean;
   /** Portions already taken by accepted orders today. */
   sold_today: number;
-  /** Compatibility stock cap; use available_to_sell when present. */
-  stock_capacity?: number | null;
-  stock_capacity_live?: number | null;
-  manual_limit_quantity?: number | null;
-  accepted_today?: number | null;
-  pending_unfinalized_demand?: number | null;
-  active_hold_demand?: number | null;
-  available_to_sell?: number | null;
+  /** Manual daily cap set by the manager; null = no manual limit. */
+  manual_limit_quantity: number | null;
+  /** Server-computed remaining quota; null = unlimited. */
+  available_to_sell: number | null;
 }
 
 export interface MenuItem {

@@ -39,9 +39,15 @@ import type { OrderType } from "../types";
 export type DailyLimitsMap = ReadonlyMap<number, MenuItemDailyLimit>;
 export type IngredientCapsMap = ReadonlyMap<number, number | null>;
 
-type DailyLimitRow = MenuItemDailyLimit & {
+// Today's RPCs still return the full 11-field shape (PR-2 slims this
+// server-side). The client only reads a subset — see MenuItemDailyLimit.
+interface DailyLimitRow {
   menu_item_id: number;
-};
+  is_disabled: boolean;
+  sold_today: number;
+  manual_limit_quantity: number | null;
+  available_to_sell: number | null;
+}
 
 /* ─── Session context (stable) ─── */
 
@@ -340,15 +346,9 @@ export function PosDesktopProvider({
     // is applied to the type-source schema.
     for (const row of result.data as DailyLimitRow[]) {
       next.set(row.menu_item_id, {
-        limit_quantity: row.limit_quantity,
         is_disabled: row.is_disabled,
         sold_today: row.sold_today,
-        stock_capacity: row.stock_capacity,
-        stock_capacity_live: row.stock_capacity_live,
         manual_limit_quantity: row.manual_limit_quantity,
-        accepted_today: row.accepted_today,
-        pending_unfinalized_demand: row.pending_unfinalized_demand,
-        active_hold_demand: row.active_hold_demand,
         available_to_sell: row.available_to_sell,
       });
     }
@@ -432,7 +432,6 @@ export function PosDesktopProvider({
   // events missed during disconnect.
   useDailyLimitSync({
     branchId,
-    store: dailyLimitStore,
     refreshLimits: refreshDailyLimitsDeduped,
     skipFirstSubscribedRefresh: true,
   });
