@@ -1,4 +1,4 @@
-import type { IngredientRow, IngredientUnitRow } from "./types";
+import type { IngredientUnitRow } from "./types";
 
 export interface PurchaseUnitOption {
   unitId: number;
@@ -6,13 +6,17 @@ export interface PurchaseUnitOption {
   isBase: boolean;
 }
 
+// Structurally accepts IngredientRow plus any narrower ingredient shape that
+// still carries `units` (e.g. GRN create-from-supplier's local Ingredient type).
+type IngredientWithUnits = { units?: IngredientUnitRow[] };
+
 /**
  * Selectable purchase-role units for an ingredient: its ingredient_units rows
  * where allow_purchase is true, base unit first. Returns [] when the ingredient
  * carries no units[] so callers can fall back to a free-text unit input.
  */
 export function getPurchaseUnitOptions(
-  ingredient: IngredientRow | undefined,
+  ingredient: IngredientWithUnits | undefined,
 ): PurchaseUnitOption[] {
   const units = ingredient?.units ?? [];
   return units
@@ -29,7 +33,7 @@ export function getPurchaseUnitOptions(
  * else the first purchase-role unit, else null.
  */
 export function getDefaultPurchaseUnit(
-  ingredient: IngredientRow | undefined,
+  ingredient: IngredientWithUnits | undefined,
 ): PurchaseUnitOption | null {
   const options = getPurchaseUnitOptions(ingredient);
   return options.find((o) => o.isBase) ?? options[0] ?? null;
