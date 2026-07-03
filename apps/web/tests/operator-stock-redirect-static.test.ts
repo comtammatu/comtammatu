@@ -596,19 +596,25 @@ test("branch stock wrappers keep inventory fallbacks inside the branch shell", (
 });
 
 test("transfer receive full receipt stays one-click on the existing atomic action", () => {
-  const receiveClient = read(
-    "apps/web/app/(protected)/inventory/transfers/[id]/receive/transfer-receive-client.tsx",
+  // Receive happens inline on the detail page (action: "receive"); the
+  // standalone [id]/receive sub-route was an unreachable orphan and was
+  // removed.
+  assert.equal(
+    exists(
+      "apps/web/app/(protected)/inventory/transfers/[id]/receive/transfer-receive-client.tsx",
+    ),
+    false,
+  );
+
+  const detailClient = read(
+    "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx",
   );
   const transferActions = read(
     "apps/web/app/(protected)/inventory/transfer-actions.ts",
   );
 
-  assert.match(receiveClient, /const needsAcknowledgement = hasShort/);
-  assert.match(
-    receiveClient,
-    /const items: Record<string, \{ qty: number; note\?: string \}> \| null =\s*hasShort \? \{\} : null;/,
-  );
-  assert.match(receiveClient, /transferReceive\(transfer\.id, items\)/);
+  assert.match(detailClient, /const noteOk = !hasShort \|\| shortNote\.trim\(\)\.length >= 3;/);
+  assert.match(detailClient, /transferReceive\(transfer\.id, payload\)/);
   assert.match(transferActions, /stock_transfer_receive/);
   assert.match(transferActions, /p_items: items \?\? null/);
 });

@@ -36,5 +36,5 @@ export default async function DraftsPage() {
     lineCount: row.grn_items?.length ?? 0,
   }));
 
-  return <MobileDraftsClient drafts={drafts} />;
+  return <MobileDraftsClient drafts={drafts} basePath="/inventory" />;
 }

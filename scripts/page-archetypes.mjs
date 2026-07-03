@@ -131,7 +131,6 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/supplier-returns/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/suppliers/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx": "DETAIL",
-  "apps/web/app/(protected)/inventory/transfers/[id]/receive/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/transfers/new/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/transfers/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/waste/approvals/page.tsx": "LIST",
