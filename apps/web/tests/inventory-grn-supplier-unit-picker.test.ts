@@ -24,6 +24,7 @@ test("GRN supplier line resolves a non-base purchase unit as the entry unit", ()
         unit_code: "Lon",
         to_base_factor: 1,
         is_base: true,
+        is_active: true,
         allow_purchase: true,
         allow_issue: true,
         allow_production: false,
@@ -35,6 +36,7 @@ test("GRN supplier line resolves a non-base purchase unit as the entry unit", ()
         unit_code: "Thùng",
         to_base_factor: 24,
         is_base: false,
+        is_active: true,
         allow_purchase: true,
         allow_issue: false,
         allow_production: false,
@@ -56,6 +58,58 @@ test("GRN supplier line resolves a non-base purchase unit as the entry unit", ()
   const nonBase = options.find((o) => o.code === "Thùng");
   assert.equal(nonBase?.unitId, 200);
   assert.equal(nonBase?.isBase, false);
+});
+
+test("getPurchaseUnitOptions excludes an is_active=false allow_purchase unit (inv_to_base would reject it)", () => {
+  // Mirrors the GRN-create bug: an ingredient_units row with allow_purchase
+  // true but is_active false must never reach the picker, because
+  // inv_to_base(ingredient_id, entry_unit_id, qty) requires is_active and
+  // raises 23503 otherwise, which confirm_goods_receipt_note surfaces as
+  // "Không thể xác nhận phiếu nhập." on the whole GRN.
+  const ingredient = {
+    units: [
+      {
+        id: 1,
+        unit_id: 100,
+        unit_code: "Kg",
+        to_base_factor: 1,
+        is_base: true,
+        is_active: true,
+        allow_purchase: true,
+        allow_issue: true,
+        allow_production: false,
+        sort_order: 0,
+      },
+      {
+        id: 2,
+        unit_id: 200,
+        unit_code: "Bao",
+        to_base_factor: 25,
+        is_base: false,
+        is_active: false,
+        allow_purchase: true,
+        allow_issue: false,
+        allow_production: false,
+        sort_order: 1,
+      },
+    ],
+  };
+
+  const options = getPurchaseUnitOptions(ingredient);
+  assert.equal(options.length, 1);
+  assert.deepEqual(
+    options.map((o) => o.code),
+    ["Kg"],
+  );
+  assert.equal(
+    options.some((o) => o.unitId === 200),
+    false,
+    "inactive unit must not appear in purchase unit options",
+  );
+
+  // With the inactive unit gone, default must not fall back to it either.
+  const defaultUnit = getDefaultPurchaseUnit(ingredient);
+  assert.equal(defaultUnit?.unitId, 100);
 });
 
 test("GRN create-from-supplier saveLine threads the picked entryUnitId to upsertGrnLine", () => {

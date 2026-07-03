@@ -8,6 +8,7 @@ export interface IngredientUnitRow {
   unit_code: string;
   to_base_factor: number;
   is_base: boolean;
+  is_active: boolean;
   allow_purchase: boolean;
   allow_issue: boolean;
   allow_production: boolean;

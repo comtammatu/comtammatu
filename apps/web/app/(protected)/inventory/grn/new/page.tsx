@@ -214,7 +214,7 @@ export async function GrnNewPageContent({
   }
 
   return (
-    <AppPage width="narrow">
+    <AppPage width="wide">
       <AppPageHeader
         breadcrumb={
           <Link
