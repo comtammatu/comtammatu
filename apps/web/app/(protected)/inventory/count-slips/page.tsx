@@ -6,6 +6,7 @@ import {
   type CountSlipRow,
   type CountSlipStatus,
 } from "./count-slips-client";
+import { buildCountSlipLineView } from "./line-view-model";
 
 export const dynamic = "force-dynamic";
 
@@ -20,13 +21,21 @@ function normalizeStatus(value: unknown): CountSlipStatus {
 }
 
 function embeddedName(value: unknown): string | null {
+  return embeddedString(value, "name");
+}
+
+function embeddedCode(value: unknown): string | null {
+  return embeddedString(value, "code");
+}
+
+function embeddedString(value: unknown, key: "code" | "name"): string | null {
   if (Array.isArray(value)) {
-    const first = value[0] as { name?: unknown } | undefined;
-    return typeof first?.name === "string" ? first.name : null;
+    const first = value[0] as Record<string, unknown> | undefined;
+    return typeof first?.[key] === "string" ? first[key] : null;
   }
   if (value && typeof value === "object") {
-    const name = (value as { name?: unknown }).name;
-    return typeof name === "string" ? name : null;
+    const raw = (value as Record<string, unknown>)[key];
+    return typeof raw === "string" ? raw : null;
   }
   return null;
 }
@@ -48,6 +57,31 @@ interface CountSlipsPageContentProps {
   embedded?: boolean;
 }
 
+interface CountSlipQueryLine {
+  id: number;
+  ingredient_id: number;
+  system_quantity: number | string | null;
+  counted_quantity: number | string | null;
+  entry_unit_id: number | null;
+  note: string | null;
+  ingredients: unknown;
+  units: unknown;
+}
+
+interface UnitMeta {
+  code: string;
+  toBaseFactor: number | null;
+  isBase: boolean;
+}
+
+function slipLines(value: unknown): CountSlipQueryLine[] {
+  return Array.isArray(value) ? (value as CountSlipQueryLine[]) : [];
+}
+
+function unitKey(ingredientId: number, unitId: number): string {
+  return `${ingredientId}:${unitId}`;
+}
+
 export async function CountSlipsPageContent({
   routeBranchId,
   embedded = false,
@@ -60,8 +94,7 @@ export async function CountSlipsPageContent({
   const { supabase, claims } = ctx;
 
   // RLS limits these rows to branches where the manager holds
-  // `inventory:count_approve`, and exposes system_quantity + variance on the
-  // lines (the employee-facing RLS hides those columns).
+  // `inventory:count_approve`; the employee-facing RLS hides system quantity.
   let slipsQuery = supabase
     .from("inventory_count_slips")
     .select(
@@ -87,7 +120,7 @@ export async function CountSlipsPageContent({
         ingredient_id,
         system_quantity,
         counted_quantity,
-        variance,
+        entry_unit_id,
         note,
         ingredients ( name, unit ),
         units ( code )
@@ -105,10 +138,48 @@ export async function CountSlipsPageContent({
     ascending: false,
   });
 
-  const rows: CountSlipRow[] = (slips ?? []).map((slip) => {
-    const lines = Array.isArray(slip.inventory_count_slip_lines)
-      ? slip.inventory_count_slip_lines
-      : [];
+  const slipRows = slips ?? [];
+  const allLines = slipRows.flatMap((slip) =>
+    slipLines(slip.inventory_count_slip_lines),
+  );
+  const ingredientIds = [
+    ...new Set(
+      allLines
+        .map((line) => Number(line.ingredient_id))
+        .filter((id) => Number.isFinite(id)),
+    ),
+  ];
+  const unitByIngredient = new Map<string, UnitMeta>();
+  const baseUnitByIngredient = new Map<number, UnitMeta>();
+
+  if (ingredientIds.length > 0) {
+    const { data: unitRows } = await supabase
+      .from("ingredient_units")
+      .select("ingredient_id, unit_id, to_base_factor, is_base, units ( code )")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .in("ingredient_id", ingredientIds);
+
+    for (const row of unitRows ?? []) {
+      const ingredientId = Number(row.ingredient_id);
+      const unitId = Number(row.unit_id);
+      const code = embeddedCode(row.units);
+      if (!Number.isFinite(ingredientId) || !Number.isFinite(unitId) || !code) {
+        continue;
+      }
+      const meta: UnitMeta = {
+        code,
+        toBaseFactor:
+          row.to_base_factor == null ? null : Number(row.to_base_factor),
+        isBase: row.is_base === true,
+      };
+      unitByIngredient.set(unitKey(ingredientId, unitId), meta);
+      if (meta.isBase) baseUnitByIngredient.set(ingredientId, meta);
+    }
+  }
+
+  const rows: CountSlipRow[] = slipRows.map((slip) => {
+    const lines = slipLines(slip.inventory_count_slip_lines);
     return {
       id: slip.id,
       branchName: embeddedName(slip.branches) ?? `CN #${slip.branch_id}`,
@@ -130,30 +201,27 @@ export async function CountSlipsPageContent({
           unitSource && typeof unitSource === "object"
             ? ((unitSource as { unit?: unknown }).unit ?? null)
             : null;
-        // Prefer the entry unit the line was counted in; fall back to the
-        // ingredient's default unit for lines without entry_unit_id.
-        const entryUnitSource = Array.isArray(line.units)
-          ? line.units[0]
-          : line.units;
-        const entryUnitCode =
-          entryUnitSource && typeof entryUnitSource === "object"
-            ? ((entryUnitSource as { code?: unknown }).code ?? null)
+        const ingredientId = Number(line.ingredient_id);
+        const entryUnitId =
+          line.entry_unit_id == null ? null : Number(line.entry_unit_id);
+        const entryUnit =
+          entryUnitId !== null
+            ? (unitByIngredient.get(unitKey(ingredientId, entryUnitId)) ?? null)
             : null;
-        const unit =
-          typeof entryUnitCode === "string" && entryUnitCode !== ""
-            ? entryUnitCode
-            : typeof ingredientUnit === "string"
-              ? ingredientUnit
-              : null;
-        return {
+        const baseUnit = baseUnitByIngredient.get(ingredientId) ?? null;
+        return buildCountSlipLineView({
           id: line.id,
           ingredientName: ingredient ?? `#${line.ingredient_id}`,
-          unit: typeof unit === "string" ? unit : "",
+          entryUnitId,
+          entryUnitCode: entryUnit?.code ?? embeddedCode(line.units),
+          baseUnitCode:
+            baseUnit?.code ??
+            (typeof ingredientUnit === "string" ? ingredientUnit : null),
+          toBaseFactor: entryUnit?.toBaseFactor ?? null,
           systemQuantity: Number(line.system_quantity ?? 0),
           countedQuantity: Number(line.counted_quantity ?? 0),
-          variance: Number(line.variance ?? 0),
           note: line.note ?? null,
-        };
+        });
       }),
     };
   });

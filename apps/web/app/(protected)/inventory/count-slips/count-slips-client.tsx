@@ -23,18 +23,11 @@ import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { formatQty } from "../_lib/format";
 import { approveCountSlip, requestCountRecount } from "./actions";
+import type { CountSlipLineView } from "./line-view-model";
 
 export type CountSlipStatus = "submitted" | "needs_changes" | "approved";
 
-export type CountSlipLine = {
-  id: number;
-  ingredientName: string;
-  unit: string;
-  systemQuantity: number;
-  countedQuantity: number;
-  variance: number;
-  note: string | null;
-};
+export type CountSlipLine = CountSlipLineView;
 
 export type CountSlipRow = {
   id: number;
@@ -50,17 +43,25 @@ export type CountSlipRow = {
   lines: CountSlipLine[];
 };
 
-function formatVariance(value: number): string {
+function formatVariance(value: number | null): string {
+  if (value === null) return "—";
   const formatted = formatQty(Math.abs(value));
   if (value > 0) return `+${formatted}`;
   if (value < 0) return `−${formatted}`;
   return formatted;
 }
 
-function varianceClassName(value: number): string {
+function varianceClassName(value: number | null): string {
+  if (value === null) return "text-muted-foreground";
   if (value < 0) return "text-destructive";
   if (value > 0) return "text-warning";
   return "text-muted-foreground";
+}
+
+function hasVariance(
+  line: CountSlipLine,
+): line is CountSlipLine & { variance: number } {
+  return line.variance !== null;
 }
 
 export function CountSlipsClient({
@@ -112,13 +113,13 @@ export function CountSlipsClient({
       ) : (
         <ItemGroup className="flex flex-col gap-3 p-0 rounded-none border-0">
           {pending.map((row) => (
-              <CountSlipCard
-                key={row.id}
-                row={row}
-                branchScoped={branchScoped}
-                onApproved={() => applyStatus(row.id, "approved")}
-                onRecount={() => applyStatus(row.id, "needs_changes")}
-              />
+            <CountSlipCard
+              key={row.id}
+              row={row}
+              branchScoped={branchScoped}
+              onApproved={() => applyStatus(row.id, "approved")}
+              onRecount={() => applyStatus(row.id, "needs_changes")}
+            />
           ))}
         </ItemGroup>
       )}
@@ -175,11 +176,24 @@ function CountSlipCard({
   >(null);
   const [, startTransition] = useTransition();
 
-  const totalVariance = row.lines.reduce(
-    (sum, line) => sum + line.variance,
+  const knownVarianceLines = row.lines.filter(hasVariance);
+  const totalVariance = knownVarianceLines.reduce(
+    (sum, line) => sum + (line.variance ?? 0),
     0,
   );
-  const hasShrinkage = row.lines.some((line) => line.variance < 0);
+  const varianceUnits = new Set(
+    knownVarianceLines.map((line) => line.varianceUnit).filter(Boolean),
+  );
+  const totalVarianceUnit =
+    varianceUnits.size === 1 ? (varianceUnits.values().next().value ?? "") : "";
+  const showTotalVariance =
+    knownVarianceLines.length === row.lines.length && totalVarianceUnit !== "";
+  const changedLineCount = knownVarianceLines.filter(
+    (line) => line.variance !== 0,
+  ).length;
+  const hasShrinkage = row.lines.some(
+    (line) => line.variance !== null && line.variance < 0,
+  );
 
   async function handleApprove() {
     const ok = await confirm({
@@ -281,15 +295,25 @@ function CountSlipCard({
                       <span>
                         Tồn hệ thống:{" "}
                         <span className="font-mono tabular-nums text-foreground">
-                          {formatQty(line.systemQuantity)} {line.unit}
+                          {formatQty(line.systemQuantity)} {line.systemUnit}
                         </span>
                       </span>
                       <span>
                         Số đếm:{" "}
                         <span className="font-mono tabular-nums text-foreground">
-                          {formatQty(line.countedQuantity)} {line.unit}
+                          {formatQty(line.countedQuantity)} {line.countedUnit}
                         </span>
                       </span>
+                      {line.countedBaseQuantity !== null &&
+                      line.countedUnit !== line.systemUnit ? (
+                        <span>
+                          Quy đổi:{" "}
+                          <span className="font-mono tabular-nums text-foreground">
+                            {formatQty(line.countedBaseQuantity)}{" "}
+                            {line.systemUnit}
+                          </span>
+                        </span>
+                      ) : null}
                     </div>
                     {line.note ? (
                       <p className="mt-1 text-xs italic text-muted-foreground">
@@ -304,7 +328,8 @@ function CountSlipCard({
                         varianceClassName(line.variance),
                       )}
                     >
-                      {formatVariance(line.variance)} {line.unit}
+                      {formatVariance(line.variance)}
+                      {line.variance !== null ? ` ${line.varianceUnit}` : ""}
                     </div>
                     <div className="text-xs text-muted-foreground">Lệch</div>
                   </div>
@@ -335,7 +360,9 @@ function CountSlipCard({
                 varianceClassName(totalVariance),
               )}
             >
-              Tổng lệch {formatVariance(totalVariance)}
+              {showTotalVariance
+                ? `Tổng lệch ${formatVariance(totalVariance)} ${totalVarianceUnit}`
+                : `${changedLineCount} dòng có lệch`}
             </span>
           </div>
 
