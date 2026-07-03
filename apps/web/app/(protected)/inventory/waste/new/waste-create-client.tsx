@@ -259,19 +259,21 @@ export function WasteCreateClient({
 
   const content = (
     <>
-      <AppPageHeader
-        eyebrow={embedded ? undefined : "Kho hàng"}
-        title={messages.inventory.waste.title}
-        description={
-          <>
-            {context.branch.name}{" "}
-            <Badge variant="outline" className="ml-1 text-xs">
-              {messages.inventory.waste.shiftPrefix}{" "}
-              {context.capStatus.shiftKey || "?"}
-            </Badge>
-          </>
-        }
-      />
+      {!embedded ? (
+        <AppPageHeader
+          eyebrow="Kho hàng"
+          title={messages.inventory.waste.title}
+          description={
+            <>
+              {context.branch.name}{" "}
+              <Badge variant="outline" className="ml-1 text-xs">
+                {messages.inventory.waste.shiftPrefix}{" "}
+                {context.capStatus.shiftKey || "?"}
+              </Badge>
+            </>
+          }
+        />
+      ) : null}
 
       <BranchDailyCapBanner
         branchToday={context.capStatus.branchToday}

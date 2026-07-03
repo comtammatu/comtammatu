@@ -21,6 +21,7 @@ export default async function OperatorStockGrnPage({
       basePath={`/br/${branchId}/stock/grn`}
       purchaseOrdersPath={`/br/${branchId}/stock/purchase-orders`}
       showDrafts={false}
+      embedded
     />
   );
 }

@@ -174,10 +174,43 @@ test("resolveOperatorTiles -> office_bridge tiles carry absolute office hrefs", 
   assert.ok(hrefs.includes("/menu"));
   assert.ok(hrefs.includes("/hr"));
   assert.ok(hrefs.includes("/inventory"));
-  assert.ok(hrefs.includes("/inventory/production"));
+  // The office_bridge "Sản xuất" tile is retired (D059 §2 shrink-to-zero) —
+  // production now has a native central_kitchen tile instead.
+  assert.equal(hrefs.includes("/inventory/production"), false);
   for (const href of hrefs) {
     assert.doesNotMatch(href, /\{branchId\}/, href);
     assert.doesNotMatch(href, /^\/br\//, href);
+  }
+});
+
+test("resolveOperatorTiles -> production tile is native under stock at central_kitchen, not office_bridge", () => {
+  const groups = resolveOperatorTiles("production_manager", 15, "central_kitchen");
+  const officeBridge = groups.find((group) => group.id === "office_bridge");
+  const stock = groups.find((group) => group.id === "stock");
+
+  const officeBridgeHrefs = officeBridge?.tiles.map((tile) => tile.href) ?? [];
+  assert.equal(officeBridgeHrefs.includes("/inventory/production"), false);
+
+  const productionTile = stock?.tiles.find(
+    (tile) => tile.href === "/br/15/stock/production",
+  );
+  assert.ok(productionTile, "production_manager must see native production tile");
+  assert.equal(productionTile?.label, "Sản xuất");
+});
+
+test("resolveOperatorTiles -> production tile never renders outside central_kitchen", () => {
+  for (const branchKind of ["branch", "central_supply"] as const) {
+    for (const role of ["owner", "production_manager"] as const) {
+      const groups = resolveOperatorTiles(role, 15, branchKind);
+      const hrefs = groups.flatMap((group) =>
+        group.tiles.map((tile) => tile.href),
+      );
+      assert.equal(
+        hrefs.includes("/br/15/stock/production"),
+        false,
+        `${role}/${branchKind} must not see production tile`,
+      );
+    }
   }
 });
 

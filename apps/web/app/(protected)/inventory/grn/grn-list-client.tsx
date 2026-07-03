@@ -98,11 +98,13 @@ export function GrnListClient({
   basePath = "/inventory/grn",
   purchaseOrdersPath = "/inventory/purchase-orders",
   drafts,
+  embedded = false,
 }: {
   grns: GrnRow[];
   basePath?: string;
   purchaseOrdersPath?: string;
   drafts?: GrnDraftRow[];
+  embedded?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -242,41 +244,53 @@ export function GrnListClient({
     </>
   );
 
+  const content = (
+    <>
+      {!embedded ? (
+        <AppPageHeader
+          eyebrow={INVENTORY_VI.warehouse}
+          title={tNav("grn", "navigation")}
+          actions={
+            <Button asChild size={embedded ? "touch" : "sm"}>
+              <Link href={purchaseOrdersPath}>
+                <IconPlus className="size-4" />
+                {INVENTORY_VI.choosePoToCreateGrn}
+              </Link>
+            </Button>
+          }
+          tabs={
+            drafts ? (
+              <AppPageTabs
+                items={[
+                  { value: "list", label: INVENTORY_VI.grnListTab },
+                  {
+                    value: "drafts",
+                    label: INVENTORY_VI.draft,
+                    count: drafts.length,
+                  },
+                ]}
+              >
+                <TabsContent value="list">{listBody}</TabsContent>
+                <TabsContent value="drafts">
+                  <GrnDraftsTab drafts={drafts} basePath={basePath} />
+                </TabsContent>
+              </AppPageTabs>
+            ) : undefined
+          }
+        />
+      ) : null}
+
+      {embedded || !drafts ? listBody : null}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
   return (
     <AppPage width="wide" contentClassName="max-md:max-w-xl">
-      <AppPageHeader
-        eyebrow={INVENTORY_VI.warehouse}
-        title={tNav("grn", "navigation")}
-        actions={
-          <Button asChild size="sm">
-            <Link href={purchaseOrdersPath}>
-              <IconPlus className="size-4" />
-              {INVENTORY_VI.choosePoToCreateGrn}
-            </Link>
-          </Button>
-        }
-        tabs={
-          drafts ? (
-            <AppPageTabs
-              items={[
-                { value: "list", label: INVENTORY_VI.grnListTab },
-                {
-                  value: "drafts",
-                  label: INVENTORY_VI.draft,
-                  count: drafts.length,
-                },
-              ]}
-            >
-              <TabsContent value="list">{listBody}</TabsContent>
-              <TabsContent value="drafts">
-                <GrnDraftsTab drafts={drafts} basePath={basePath} />
-              </TabsContent>
-            </AppPageTabs>
-          ) : undefined
-        }
-      />
-
-      {drafts ? null : listBody}
+      {content}
     </AppPage>
   );
 }

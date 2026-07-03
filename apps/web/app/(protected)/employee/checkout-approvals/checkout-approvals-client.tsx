@@ -41,11 +41,13 @@ export interface CheckoutApprovalItem {
 interface CheckoutApprovalsClientProps {
   items: CheckoutApprovalItem[];
   canApprove: boolean;
+  embedded?: boolean;
 }
 
 export function CheckoutApprovalsClient({
   items,
   canApprove,
+  embedded = false,
 }: CheckoutApprovalsClientProps) {
   const [localItems, setLocalItems] = useState(items);
   const [pendingId, setPendingId] = useState<number | null>(null);
@@ -151,7 +153,7 @@ export function CheckoutApprovalsClient({
               <ItemActions>
                 <Badge variant="warning">Chờ duyệt</Badge>
                 <Button
-                  size="sm"
+                  size={embedded ? "touch" : "sm"}
                   disabled={!canApprove || approving || isPending}
                   onClick={() => approve(item)}
                 >

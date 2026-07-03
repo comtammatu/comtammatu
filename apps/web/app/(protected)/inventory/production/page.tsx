@@ -1,7 +1,24 @@
 import { loadProductionSurfaceData } from "../production-data";
 import { ProductionHubClient } from "../production-client";
 
-export default async function ProductionPage() {
+interface ProductionPageContentProps {
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+  routeBranchId?: number;
+  basePath?: string;
+  embedded?: boolean;
+}
+
+/**
+ * `basePath` is accepted for shell-contract parity with the other
+ * `*PageContent` exports (`docs/spec/page-archetypes.md`), but the
+ * production hub has no nested detail routes today — orders/recipes are
+ * managed inline via dialogs, not navigation — so it is not threaded
+ * further.
+ */
+export async function ProductionPageContent({
+  routeBranchId,
+  embedded = false,
+}: ProductionPageContentProps) {
   const {
     canManageCatalog,
     canManageRecipes,
@@ -13,7 +30,7 @@ export default async function ProductionPage() {
     finishedGoods,
     orders,
     recipes,
-  } = await loadProductionSurfaceData();
+  } = await loadProductionSurfaceData({ routeBranchId });
 
   return (
     <ProductionHubClient
@@ -27,6 +44,11 @@ export default async function ProductionPage() {
       finishedGoods={finishedGoods}
       orders={orders}
       recipes={recipes}
+      embedded={embedded}
     />
   );
+}
+
+export default async function ProductionPage() {
+  return <ProductionPageContent />;
 }
