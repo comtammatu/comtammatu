@@ -1225,7 +1225,6 @@ const VALID_ARCHETYPES = new Set([
 const DOC_WORKFLOW_FRAME_BASELINE = new Set([
   "apps/web/app/(protected)/inventory/grn/new/page.tsx",
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx",
-  "apps/web/app/(protected)/inventory/transfers/[id]/receive/page.tsx",
   "apps/web/app/(protected)/inventory/stocktake/new/page.tsx",
   "apps/web/app/(protected)/inventory/stocktake/[id]/count/page.tsx",
   "apps/web/app/(protected)/inventory/purchase-orders/new/page.tsx",

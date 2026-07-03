@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -221,6 +222,7 @@ export const upsertStockIssueLine = withAction(
     if (error) {
       return { success: false, error: "Không thể lưu dòng phiếu xuất." };
     }
+    revalidatePath(`/inventory/issues/${d.issueId}`);
     return { success: true };
   },
 );
@@ -255,6 +257,7 @@ export const deleteStockIssueLine = withAction(
     if (error) {
       return { success: false, error: "Không thể xóa dòng." };
     }
+    revalidatePath(`/inventory/issues/${d.issueId}`);
     return { success: true };
   },
 );
@@ -289,6 +292,8 @@ export async function confirmStockIssue(
     return { success: false, error: "Không thể xác nhận phiếu xuất." };
   }
 
+  revalidatePath("/inventory/issues");
+  revalidatePath(`/inventory/issues/${id.data}`);
   return { success: true, data };
 }
 
@@ -317,5 +322,7 @@ export async function cancelStockIssue(issueId: number): Promise<ActionResult> {
   if (!data || data.length === 0) {
     return { success: false, error: "Không tìm thấy phiếu xuất nháp để hủy." };
   }
+  revalidatePath("/inventory/issues");
+  revalidatePath(`/inventory/issues/${id.data}`);
   return { success: true };
 }

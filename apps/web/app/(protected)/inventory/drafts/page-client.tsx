@@ -42,7 +42,13 @@ function formatUpdatedAt(value: string): string {
   return formatVNDateTime(value);
 }
 
-export function MobileDraftsClient({ drafts }: { drafts: ServerDraftRow[] }) {
+export function MobileDraftsClient({
+  drafts,
+  basePath = "/inventory",
+}: {
+  drafts: ServerDraftRow[];
+  basePath?: string;
+}) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
 
@@ -50,7 +56,7 @@ export function MobileDraftsClient({ drafts }: { drafts: ServerDraftRow[] }) {
     // Server-side draft is loaded by /grn/new/[supplierId]/page.tsx via
     // loadActiveGrnDraft + fetchGrnDetail RSC pre-fetch — no client-side
     // handoff needed.
-    router.push(`/inventory/grn/new/${draft.supplierId}`);
+    router.push(`${basePath}/grn/new/${draft.supplierId}`);
   }
 
   async function handleDiscard(draft: ServerDraftRow) {
@@ -77,7 +83,7 @@ export function MobileDraftsClient({ drafts }: { drafts: ServerDraftRow[] }) {
       <AppPageHeader
         breadcrumb={
           <Link
-            href="/inventory"
+            href={basePath}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
             <IconArrowLeft className="size-4" /> Trang chính

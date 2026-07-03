@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   INVENTORY_OPS_ROLES,
@@ -216,7 +217,48 @@ export async function fetchStockTransferDetail(
     from_branch_name: nameById.get(tr.from_branch_id) ?? null,
     to_branch_name: nameById.get(tr.to_branch_id) ?? null,
   };
-  return { success: true, data: { transfer: enriched, lines: lines ?? [] } };
+
+  // entry_unit_id on the line is the unit `quantity` is expressed in;
+  // unit_cost_at_ship is per BASE unit (set by stock_transfer_confirm_ship).
+  // Look up to_base_factor so the caller can convert before pricing the line.
+  const entryUnitIds = [
+    ...new Set(
+      (lines ?? [])
+        .map((l) => l.entry_unit_id as number | null)
+        .filter((v): v is number => v != null),
+    ),
+  ];
+  const ingredientIds = [
+    ...new Set((lines ?? []).map((l) => l.ingredient_id as number)),
+  ];
+  let toBaseFactorByKey = new Map<string, number>();
+  if (entryUnitIds.length > 0 && ingredientIds.length > 0) {
+    const { data: unitRows } = await supabase
+      .from("ingredient_units")
+      .select("ingredient_id, unit_id, to_base_factor")
+      .eq("tenant_id", claims.tenant_id)
+      .in("ingredient_id", ingredientIds)
+      .in("unit_id", entryUnitIds);
+    toBaseFactorByKey = new Map(
+      (unitRows ?? []).map((row) => [
+        `${row.ingredient_id}:${row.unit_id}`,
+        Number(row.to_base_factor),
+      ]),
+    );
+  }
+  const linesWithFactor = (lines ?? []).map((l) => ({
+    ...l,
+    to_base_factor:
+      l.entry_unit_id == null
+        ? null
+        : (toBaseFactorByKey.get(`${l.ingredient_id}:${l.entry_unit_id}`) ??
+          null),
+  }));
+
+  return {
+    success: true,
+    data: { transfer: enriched, lines: linesWithFactor },
+  };
 }
 
 export async function fetchStockTransfers(
@@ -490,6 +532,8 @@ export async function transferConfirmShip(
       error: "Không thể xác nhận xuất (kiểm tra tồn kho gửi).",
     };
   }
+  revalidatePath("/inventory/transfers");
+  revalidatePath(`/inventory/transfers/${id.data}`);
   return { success: true };
 }
 
@@ -513,6 +557,8 @@ export async function transferMarkInTransit(
     });
     return { success: false, error: "Không thể chuyển trạng thái vận chuyển." };
   }
+  revalidatePath("/inventory/transfers");
+  revalidatePath(`/inventory/transfers/${id.data}`);
   return { success: true };
 }
 
@@ -539,6 +585,8 @@ export async function transferConfirmReceive(
       error: "Không thể bắt đầu kiểm nhận (phiếu phải đang vận chuyển).",
     };
   }
+  revalidatePath("/inventory/transfers");
+  revalidatePath(`/inventory/transfers/${id.data}`);
   return { success: true };
 }
 
@@ -578,6 +626,8 @@ export async function transferReceive(
     });
     return { success: false, error: "Không thể xác nhận nhập kho đích." };
   }
+  revalidatePath("/inventory/transfers");
+  revalidatePath(`/inventory/transfers/${id.data}`);
   return { success: true };
 }
 

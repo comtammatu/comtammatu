@@ -10,6 +10,7 @@ import { formatDateTime } from "../../_lib/format";
 import { resolveInventoryListScope } from "../../_lib/inventory-scope";
 import { TransferDetailClient } from "./transfer-detail-client";
 import type { TransferDetail } from "./transfer-detail-client";
+import { computeTransferLineTotal } from "./line-view-model";
 
 interface TransferDetailPageContentProps {
   transferId: number;
@@ -62,6 +63,8 @@ export async function TransferDetailPageContent({
       quantity_received: number | null;
       unit: string;
       unit_cost_at_ship: number | null;
+      entry_unit_id: number | null;
+      to_base_factor: number | null;
       ingredients: {
         id: number;
         name: string;
@@ -80,6 +83,12 @@ export async function TransferDetailPageContent({
     } | null;
     const cost = Number(l.unit_cost_at_ship ?? 0);
     const qty = Number(l.quantity ?? 0);
+    const { total } = computeTransferLineTotal({
+      entryQuantity: qty,
+      baseUnitCost: cost,
+      entryUnitId: l.entry_unit_id ?? null,
+      toBaseFactor: l.to_base_factor ?? null,
+    });
     return {
       ingredientId: l.ingredient_id ?? ing?.id ?? 0,
       name: ing?.name ?? "—",
@@ -87,7 +96,7 @@ export async function TransferDetailPageContent({
       qty,
       unit: l.unit ?? ing?.purchase_unit ?? ing?.unit ?? "",
       cost,
-      total: cost * qty,
+      total,
       received:
         l.quantity_received != null ? Number(l.quantity_received) : null,
     };
