@@ -442,6 +442,7 @@ interface EmployeeActionListProps {
   children: ReactNode;
   columns?: 1 | 2;
   mobileColumns?: 1 | 2;
+  wideColumns?: boolean;
   className?: string;
 }
 
@@ -449,6 +450,7 @@ function EmployeeActionList({
   children,
   columns = 1,
   mobileColumns = 1,
+  wideColumns = false,
   className,
 }: EmployeeActionListProps) {
   return (
@@ -459,6 +461,7 @@ function EmployeeActionList({
           (mobileColumns === 2
             ? "grid grid-cols-2"
             : "grid grid-cols-1 sm:grid-cols-2"),
+        columns === 2 && wideColumns && "lg:grid-cols-3 xl:grid-cols-4",
         className,
       )}
     >
@@ -567,6 +570,7 @@ interface EmployeeActionSectionProps {
   }>;
   columns?: 1 | 2;
   mobileColumns?: 1 | 2;
+  wideColumns?: boolean;
   size?: "default" | "sm";
   className?: string;
 }
@@ -577,6 +581,7 @@ export function EmployeeActionSection({
   links,
   columns = 2,
   mobileColumns = 1,
+  wideColumns = false,
   size = "sm",
   className,
 }: EmployeeActionSectionProps) {
@@ -589,7 +594,11 @@ export function EmployeeActionSection({
       size={size}
       className={className}
     >
-      <EmployeeActionList columns={columns} mobileColumns={mobileColumns}>
+      <EmployeeActionList
+        columns={columns}
+        mobileColumns={mobileColumns}
+        wideColumns={wideColumns}
+      >
         {links.map((link) => (
           <EmployeeActionItem
             key={link.key}

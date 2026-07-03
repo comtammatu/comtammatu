@@ -1,11 +1,14 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator hub homepage displays inline vietnamese warning for clock-in gate */
 import {
   Briefcase,
+  ChartBar,
   ChefHat,
+  CheckCircle,
   ClipboardCheck,
   ClipboardList,
   Clock,
   FileText,
+  Hourglass,
   LayoutDashboard,
   ListChecks,
   Monitor,
@@ -41,11 +44,14 @@ import { fetchBranchDayStatus } from "./dashboard/data";
 
 const ICONS = {
   Briefcase,
+  ChartBar,
   ChefHat,
+  CheckCircle,
   ClipboardCheck,
   ClipboardList,
   Clock,
   FileText,
+  Hourglass,
   LayoutDashboard,
   ListChecks,
   Monitor,
@@ -182,6 +188,7 @@ export default async function OperatorHomePage({
           }))}
           columns={2}
           mobileColumns={2}
+          wideColumns
         />
       ))}
     </EmployeePage>
