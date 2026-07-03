@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import {
@@ -158,9 +160,11 @@ const supplierInvoiceSchema = z.object({
 
 type SupplierInvoiceFormValues = z.infer<typeof supplierInvoiceSchema>;
 
-function createSupplierInvoiceDefaultValues(): SupplierInvoiceFormValues {
+function createSupplierInvoiceDefaultValues(
+  preselectGrnId?: number | null,
+): SupplierInvoiceFormValues {
   return {
-    grnId: "none",
+    grnId: preselectGrnId != null ? String(preselectGrnId) : "none",
     supplierId: "",
     invoiceNumber: "",
     invoiceDate: getVNDateString(),
@@ -329,6 +333,7 @@ export function SupplierInvoicesClient({
   initialHasMore = false,
   initialNextCursor = null,
   branchId,
+  grnBasePath = "/inventory/grn",
 }: {
   invoices: SupplierInvoiceRow[];
   suppliers: SupplierOption[];
@@ -336,7 +341,14 @@ export function SupplierInvoicesClient({
   initialHasMore?: boolean;
   initialNextCursor?: SupplierInvoiceCursor | null;
   branchId?: number;
+  grnBasePath?: string;
 }) {
+  const searchParams = useSearchParams();
+  const invoiceIdParam = searchParams.get("invoiceId");
+  const grnIdParam = searchParams.get("grnId");
+  const preselectInvoiceId = invoiceIdParam ? Number(invoiceIdParam) : null;
+  const preselectGrnId = grnIdParam ? Number(grnIdParam) : null;
+
   const [rows, setRows] = useState(invoices);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [nextCursor, setNextCursor] = useState<SupplierInvoiceCursor | null>(
@@ -350,14 +362,16 @@ export function SupplierInvoicesClient({
     useState(ALL_FILTER_VALUE);
   const [showOnlyOverdue, setShowOnlyOverdue] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
-    invoices[0]?.id ?? null,
+    preselectInvoiceId ?? invoices[0]?.id ?? null,
   );
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(
+    preselectGrnId != null && preselectInvoiceId == null,
+  );
   const [isPending, startTransition] = useTransition();
   const copy = messages.inventory.supplierInvoices;
   const createDefaultValues = useMemo(
-    () => createSupplierInvoiceDefaultValues(),
-    [createOpen],
+    () => createSupplierInvoiceDefaultValues(preselectGrnId),
+    [createOpen, preselectGrnId],
   );
 
   const supplierOptions = useMemo(() => {
@@ -605,10 +619,14 @@ export function SupplierInvoicesClient({
           <p className="font-mono font-semibold text-foreground">
             {invoice.code}
           </p>
-          {invoice.grnCode ? (
-            <p className="text-xs text-muted-foreground">
+          {invoice.grnCode && invoice.grnId != null ? (
+            <Link
+              href={`${grnBasePath}/${invoice.grnId}`}
+              className="text-xs text-primary hover:underline"
+              onClick={(event) => event.stopPropagation()}
+            >
               GRN: {invoice.grnCode}
-            </p>
+            </Link>
           ) : null}
         </div>
       ),
@@ -913,7 +931,16 @@ export function SupplierInvoicesClient({
                     {copy.linkedGrn}
                   </dt>
                   <dd className="text-sm font-medium">
-                    {selectedInvoice.grnCode ?? copy.notLinked}
+                    {selectedInvoice.grnCode && selectedInvoice.grnId != null ? (
+                      <Link
+                        href={`${grnBasePath}/${selectedInvoice.grnId}`}
+                        className="text-primary hover:underline"
+                      >
+                        {selectedInvoice.grnCode}
+                      </Link>
+                    ) : (
+                      copy.notLinked
+                    )}
                   </dd>
                 </div>
               </dl>
@@ -930,6 +957,14 @@ export function SupplierInvoicesClient({
                       <p className="text-sm text-muted-foreground">
                         {copy.varianceDescription}
                       </p>
+                      {selectedInvoice.grnId != null ? (
+                        <Link
+                          href={`${grnBasePath}/${selectedInvoice.grnId}`}
+                          className="text-sm font-medium text-primary hover:underline"
+                        >
+                          {copy.viewGrnLine}
+                        </Link>
+                      ) : null}
                     </div>
                   </div>
                 </div>

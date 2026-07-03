@@ -37,6 +37,7 @@ export async function GRNListPageContent({
     code: (row.grn_number as string) ?? "",
     supplierName:
       ((row.suppliers as Record<string, unknown>)?.name as string) ?? "—",
+    poId: row.po_id != null ? Number(row.po_id) : null,
     poCode:
       ((row.purchase_orders as Record<string, unknown>)?.po_number as string) ??
       "—",

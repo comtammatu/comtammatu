@@ -10,6 +10,7 @@ import {
   ArrowLeft as IconArrowLeft,
   CircleCheck as IconCircleCheck,
   Info as IconInfoCircle,
+  Receipt as IconReceipt,
   Save as IconDeviceFloppy,
   Plus as IconPlus,
 } from "lucide-react";
@@ -50,6 +51,7 @@ export function GRNDetailClient({
   grnListBasePath = "/inventory/grn",
   grnMobileBackPath = "/inventory/grn/new",
   purchaseOrdersBasePath = "/inventory/purchase-orders",
+  supplierInvoicesBasePath = "/inventory/supplier-invoices",
 }: {
   grn: GRNDetail;
   ingredients: IngredientRow[];
@@ -59,6 +61,7 @@ export function GRNDetailClient({
   grnListBasePath?: string;
   grnMobileBackPath?: string;
   purchaseOrdersBasePath?: string;
+  supplierInvoicesBasePath?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -300,6 +303,22 @@ export function GRNDetailClient({
                             unit: line.unit,
                           }))}
                         />
+                      ) : null}
+                      {!isDraft ? (
+                        <Button asChild variant="outline">
+                          <Link
+                            href={
+                              grn.invoiceId
+                                ? `${supplierInvoicesBasePath}?invoiceId=${grn.invoiceId}`
+                                : `${supplierInvoicesBasePath}?grnId=${grn.id}`
+                            }
+                          >
+                            <IconReceipt className="size-5" />
+                            {grn.invoiceId
+                              ? grnCopy.viewInvoice
+                              : grnCopy.createInvoice}
+                          </Link>
+                        </Button>
                       ) : null}
                     </>
                   }
