@@ -80,8 +80,8 @@ test("count assignment UI uses the branch warehouse checklist layout", () => {
   );
   assert.match(
     countAssignmentsClientSource,
-    /<DialogTitle>Thêm phân công mới<\/DialogTitle>[\s\S]*<SelectValue placeholder="Chọn nhân viên" \/>/,
-    "New assignments should choose an employee before selecting finished goods",
+    /<AppDialog[\s\S]*title="Thêm phân công mới"[\s\S]*<SelectValue placeholder="Chọn nhân viên" \/>/,
+    "New assignments should open a titled dialog and choose an employee before selecting finished goods",
   );
   assert.match(
     countAssignmentsClientSource,

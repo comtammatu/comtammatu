@@ -207,11 +207,17 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
     stockClientSource,
     /branchStockHref\(stockRootPath, `\/on-hand\/\$\{ingredientId\}`\)/,
   );
-  assert.match(
+  // Stock-card navigation must resolve through the branch-native
+  // stockDetailHref (embedded => /br/{branchId}/stock/on-hand/{id}). The row
+  // now navigates via the RowActionsMenu "view stock card" item and the
+  // mobile card Link, both bound to stockDetailHref(item.id) — never an
+  // office /inventory/stock href.
+  assert.match(stockClientSource, /href: stockDetailHref\(item\.id\)/);
+  assert.match(stockClientSource, /href=\{stockDetailHref\(item\.id\)\}/);
+  assert.doesNotMatch(
     stockClientSource,
-    /router\.push\(stockDetailHref\(item\.id\)\)/,
+    /router\.push\(`?\/inventory\/stock/,
   );
-  assert.match(stockClientSource, /href=\{stockDetailHref\(selected\.id\)\}/);
   assert.match(
     stockClientSource,
     /purchaseSuggestion: branchStockHref\(\s*stockRootPath,\s*"\/purchase-orders\/new",?\s*\)/,
@@ -434,7 +440,16 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(newPoPage, /embedded\?: boolean/);
   assert.match(newPoPage, /embedded=\{embedded\}/);
   assert.match(newPoClient, /embedded\?: boolean/);
-  assert.match(newPoClient, embeddedContentWrapperPattern);
+  // R2 — no nested page shell. The new-PO form composes header/body/footer:
+  // embedded returns the bare flex wrapper as its FIRST return path (no
+  // AppPage/DocumentFormFrame chrome), and the office plane wraps the same
+  // body in DocumentFormFrame (an AppPage-backed desktop shell) only after
+  // the embedded short-circuit. Pinning the embedded branch to the bare div
+  // keeps it from ever re-nesting the desktop frame.
+  assert.match(
+    newPoClient,
+    /if \(embedded\) \{\s*return \(\s*<div className="flex w-full flex-col gap-3">[\s\S]*?\}\s*return \(\s*<DocumentFormFrame/,
+  );
   assert.match(
     newPoPage,
     /canSwitchBranch=\{routeBranchId == null && !isBranchScoped\}/,
@@ -1022,10 +1037,15 @@ test("operator production renders branch-native inside the central_kitchen opera
   );
 
   assert.match(clientSource, /embedded\?: boolean/);
+  // R1 — no nested page header. The embedded branch renders no AppPageHeader
+  // at all (just the create action); the AppPageHeader with the warehouse
+  // eyebrow lives only in the office (!embedded) branch, and the embedded
+  // return path is the bare flex wrapper (R2).
   assert.match(
     clientSource,
-    /eyebrow=\{embedded \? undefined : INVENTORY_VI\.warehouse\}/,
+    /\{embedded \? \(\s*<div className="flex justify-end">\{createAction\}<\/div>\s*\) : \(\s*<AppPageHeader\s+eyebrow=\{INVENTORY_VI\.warehouse\}/,
   );
+  assert.match(clientSource, embeddedContentWrapperPattern);
 
   // Native production tile is gated to branch_kind central_kitchen only —
   // must never render at central_supply or retail branches.
