@@ -1,11 +1,10 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft as IconArrowLeft,
-  ChevronDown as IconChevronDown,
   Lightbulb as IconBulb,
   Package as IconPackage,
   Plus as IconPlus,
@@ -16,11 +15,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@comtammatu/ui/components/collapsible";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Item,
@@ -41,6 +35,10 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { formatVND } from "../../_lib/format";
 import {
@@ -48,7 +46,12 @@ import {
   getPurchaseUnitOptions,
   type PurchaseUnitOption,
 } from "../../_lib/purchase-units";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPageHeader,
+  AppSection,
+  DocumentFormFrame,
+} from "@/components/surface";
 import {
   createPurchaseOrderWithLines,
   fetchPoSuggestions,
@@ -78,35 +81,6 @@ interface LocalLine {
   unitPriceEst: number | null;
 }
 
-let compactLineItemsMql: MediaQueryList | null = null;
-
-function getCompactLineItemsQuery(): MediaQueryList {
-  compactLineItemsMql ??= window.matchMedia("(max-width: 1023px)");
-  return compactLineItemsMql;
-}
-
-function subscribeCompactLineItems(onStoreChange: () => void): () => void {
-  const list = getCompactLineItemsQuery();
-  list.addEventListener("change", onStoreChange);
-  return () => list.removeEventListener("change", onStoreChange);
-}
-
-function getCompactLineItemsSnapshot(): boolean {
-  return getCompactLineItemsQuery().matches;
-}
-
-function getCompactLineItemsServerSnapshot(): boolean {
-  return false;
-}
-
-function useIsCompactLineItems(): boolean {
-  return useSyncExternalStore(
-    subscribeCompactLineItems,
-    getCompactLineItemsSnapshot,
-    getCompactLineItemsServerSnapshot,
-  );
-}
-
 export interface ProcurementBranchOption {
   id: number;
   name: string;
@@ -133,7 +107,6 @@ export function NewPoClient({
   embedded?: boolean;
 }) {
   const router = useRouter();
-  const isCompactLineItems = useIsCompactLineItems();
 
   const [supplierId, setSupplierId] = useState("");
   const [notes, setNotes] = useState("");
@@ -145,9 +118,6 @@ export function NewPoClient({
   const [suggestions, setSuggestions] =
     useState<PoSuggestionRow[]>(initialSuggestions);
   const [periodDays, setPeriodDays] = useState<7 | 14 | 30>(7);
-  const [suggestionsOpen, setSuggestionsOpen] = useState(
-    initialSuggestions.length > 0,
-  );
   const [isLoadingSuggestions, startSuggestionsTransition] = useTransition();
 
   // Price deviation state
@@ -327,116 +297,119 @@ export function NewPoClient({
     (s) => !lineIngredientIds.has(s.ingredient_id) && s.suggested_qty > 0,
   ).length;
 
-  const content = (
+  const header = (
+    <AppPageHeader
+      eyebrow={messages.inventory.po.draftEyebrow}
+      title={messages.inventory.po.newTitle}
+      description={messages.inventory.po.draftDescription}
+      breadcrumb={
+        <Link
+          href={poBasePath}
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+        >
+          <IconArrowLeft className="size-4" />
+          {messages.inventory.po.list}
+        </Link>
+      }
+    />
+  );
+
+  const body = (
     <>
-      <AppPageHeader
-        eyebrow={messages.inventory.po.draftEyebrow}
-        title={messages.inventory.po.newTitle}
-        description={messages.inventory.po.draftDescription}
-        breadcrumb={
-          <Link
-            href={poBasePath}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-          >
-            <IconArrowLeft className="size-4" />
-            {messages.inventory.po.list}
-          </Link>
-        }
+      <SupplierSection
+        suppliers={suppliers}
+        supplierId={supplierId}
+        onSupplierChange={setSupplierId}
+        notes={notes}
+        onNotesChange={setNotes}
       />
-      <div className="mx-auto flex max-w-4xl flex-col gap-4">
-        {/* PO header */}
-        <SupplierSection
-          suppliers={suppliers}
-          supplierId={supplierId}
-          onSupplierChange={setSupplierId}
-          notes={notes}
-          onNotesChange={setNotes}
-        />
-
-        {/* Suggestions panel */}
-        <SuggestionsPanel
-          suggestions={sortedSuggestions}
-          suggestionsOpen={suggestionsOpen}
-          onOpenChange={setSuggestionsOpen}
-          periodDays={periodDays}
-          onPeriodChange={handlePeriodChange}
-          isLoading={isLoadingSuggestions}
-          addableCount={addableCount}
-          lineIngredientIds={lineIngredientIds}
-          onAddSuggestion={addSuggestionToLines}
-          onAddAll={addAllSuggestions}
-          procurementBranches={procurementBranches}
-          branchId={branchId}
-          onBranchChange={handleBranchChange}
-          canSwitchBranch={canSwitchBranch}
-        />
-
-        {/* Line items */}
-        <LineItemsSection
-          lines={lines}
-          lineDeviations={lineDeviations}
-          ingredients={ingredients}
-          supplierId={supplierId}
-          totalValue={totalValue}
-          hasValue={hasValue}
-          isCompact={isCompactLineItems}
-          onRemoveLine={removeLine}
-          onAddLine={(line) => {
-            if (lines.some((l) => l.ingredientId === line.ingredientId)) {
-              toast.error("Nguyên liệu đã có trong danh sách");
-              return;
-            }
-            setLines((prev) => [...prev, line]);
-            if (line.unitPriceEst != null && line.unitPriceEst > 0) {
-              checkPriceDeviation(line.ingredientId, line.unitPriceEst, "line");
-            }
-          }}
-        />
-
-        {/* Footer */}
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" asChild>
-            <Link
-              href={
-                branchId ? `${poBasePath}?branchId=${branchId}` : poBasePath
-              }
-            >
-              {ACTIONS_VI.cancel}
-            </Link>
-          </Button>
-          <div className="flex items-center gap-3">
-            {lines.length > 0 && (
-              <span className="text-sm text-muted-foreground">
-                {messages.inventory.po.lineCount(lines.length)}
-                {hasValue
-                  ? messages.inventory.po.totalAmountSuffix(
-                      totalValue.toLocaleString("vi-VN"),
-                    )
-                  : ""}
-              </span>
-            )}
-            <Button
-              onClick={submit}
-              disabled={isPending || !supplierId || lines.length === 0}
-            >
-              {isPending
-                ? messages.inventory.po.creating
-                : messages.inventory.po.createPo}
-            </Button>
-          </div>
-          </div>
-        </div>
+      <SuggestionsPanel
+        suggestions={sortedSuggestions}
+        periodDays={periodDays}
+        onPeriodChange={handlePeriodChange}
+        isLoading={isLoadingSuggestions}
+        addableCount={addableCount}
+        lineIngredientIds={lineIngredientIds}
+        onAddSuggestion={addSuggestionToLines}
+        onAddAll={addAllSuggestions}
+        procurementBranches={procurementBranches}
+        branchId={branchId}
+        onBranchChange={handleBranchChange}
+        canSwitchBranch={canSwitchBranch}
+      />
+      <LineItemsSection
+        lines={lines}
+        lineDeviations={lineDeviations}
+        ingredients={ingredients}
+        supplierId={supplierId}
+        totalValue={totalValue}
+        hasValue={hasValue}
+        onRemoveLine={removeLine}
+        onAddLine={(line) => {
+          if (lines.some((l) => l.ingredientId === line.ingredientId)) {
+            toast.error("Nguyên liệu đã có trong danh sách");
+            return;
+          }
+          setLines((prev) => [...prev, line]);
+          if (line.unitPriceEst != null && line.unitPriceEst > 0) {
+            checkPriceDeviation(line.ingredientId, line.unitPriceEst, "line");
+          }
+        }}
+      />
     </>
   );
 
+  const footer = (
+    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <Button variant="ghost" asChild>
+        <Link
+          href={branchId ? `${poBasePath}?branchId=${branchId}` : poBasePath}
+        >
+          {ACTIONS_VI.cancel}
+        </Link>
+      </Button>
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:gap-3">
+        {lines.length > 0 && (
+          <span className="text-sm text-muted-foreground sm:text-right">
+            {messages.inventory.po.lineCount(lines.length)}
+            {hasValue
+              ? messages.inventory.po.totalAmountSuffix(
+                  totalValue.toLocaleString("vi-VN"),
+                )
+              : ""}
+          </span>
+        )}
+        <Button
+          onClick={submit}
+          disabled={isPending || !supplierId || lines.length === 0}
+        >
+          {isPending
+            ? messages.inventory.po.creating
+            : messages.inventory.po.createPo}
+        </Button>
+      </div>
+    </div>
+  );
+
   if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
+    return (
+      <div className="flex w-full flex-col gap-3">
+        {header}
+        <div className="flex flex-col gap-4">{body}</div>
+        {footer}
+      </div>
+    );
   }
 
   return (
-    <AppPage width="wide" density="compact">
-      {content}
-    </AppPage>
+    <DocumentFormFrame
+      header={header}
+      width="default"
+      density="compact"
+      footer={footer}
+    >
+      {body}
+    </DocumentFormFrame>
   );
 }
 
@@ -461,7 +434,7 @@ function SupplierSection({
       title={messages.inventory.po.headerInfoTitle}
       description={messages.inventory.po.headerInfoDescription}
     >
-      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+      <div className="grid gap-3 md:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label>
             {messages.inventory.po.supplierRequired}{" "}
@@ -499,8 +472,6 @@ function SupplierSection({
 // ---------------------------------------------------------------------------
 function SuggestionsPanel({
   suggestions,
-  suggestionsOpen,
-  onOpenChange,
   periodDays,
   onPeriodChange,
   isLoading,
@@ -514,8 +485,6 @@ function SuggestionsPanel({
   canSwitchBranch,
 }: {
   suggestions: PoSuggestionRow[];
-  suggestionsOpen: boolean;
-  onOpenChange: (open: boolean) => void;
   periodDays: number;
   onPeriodChange: (val: string) => void;
   isLoading: boolean;
@@ -532,269 +501,147 @@ function SuggestionsPanel({
     procurementBranches.find((b) => b.id === branchId)?.name ?? "Chưa chọn";
   const showBranchSwitcher = canSwitchBranch && procurementBranches.length > 1;
   return (
-    <AppSection tone="info" contentFlush>
-      <div className="p-4">
-        <Collapsible open={suggestionsOpen} onOpenChange={onOpenChange}>
-          <div className="-m-4">
-            <CollapsibleTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-auto w-full justify-between rounded-none px-4 py-3 text-left md:px-4"
-              >
-                <div className="flex items-center gap-2">
-                  <IconBulb className="size-4 text-info" />
-                  <span className="text-sm font-semibold">
-                    {messages.inventory.po.suggestionsTitle}
-                  </span>
-                  {suggestions.length > 0 && (
-                    <Badge variant="info">{suggestions.length}</Badge>
-                  )}
-                </div>
-                <IconChevronDown
-                  className={`size-4 text-muted-foreground transition-transform ${suggestionsOpen ? "rotate-180" : ""}`}
-                />
-              </Button>
-            </CollapsibleTrigger>
-
-            <CollapsibleContent>
-              <div className="border-t border-info/20 px-4 pb-4 pt-3 md:px-4">
-                {/* Branch + period selector + bulk action */}
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {messages.inventory.po.warehouseShort}
-                    </span>
-                    {showBranchSwitcher ? (
-                      <Select
-                        value={branchId ? String(branchId) : ""}
-                        onValueChange={onBranchChange}
-                        disabled={isLoading}
-                      >
-                        <SelectTrigger className="h-7 w-40 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {procurementBranches.map((b) => (
-                            <SelectItem key={b.id} value={String(b.id)}>
-                              {b.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="text-xs font-medium">{branchLabel}</span>
-                    )}
-                    <span className="text-xs text-muted-foreground">·</span>
-                    <span className="text-xs text-muted-foreground">
-                      {messages.inventory.po.averageConsumption}
-                    </span>
-                    <Select
-                      value={String(periodDays)}
-                      onValueChange={onPeriodChange}
-                      disabled={isLoading}
-                    >
-                      <SelectTrigger className="h-7 w-28 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="7">
-                          {messages.inventory.po.sevenDays}
-                        </SelectItem>
-                        <SelectItem value="14">
-                          {messages.inventory.po.fourteenDays}
-                        </SelectItem>
-                        <SelectItem value="30">
-                          {messages.inventory.po.thirtyDays}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {isLoading && (
-                      <span className="text-xs text-muted-foreground">
-                        {STATES_VI.loading}
-                      </span>
-                    )}
-                  </div>
-                  {addableCount > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={onAddAll}
-                    >
-                      <IconCirclePlus className="mr-1 size-3.5" />
-                      {messages.inventory.po.addAll(addableCount)}
-                    </Button>
-                  )}
-                </div>
-
-                {/* Suggestion rows */}
-                {suggestions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed bg-background/35 px-4 py-4 text-center">
-                    <IconPackage className="size-5 text-muted-foreground" />
-                    <p className="text-base font-semibold">
-                      {messages.inventory.po.stableStockTitle}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {messages.inventory.po.stableStockDescription}
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex flex-col gap-1.5 md:hidden">
-                      {suggestions.map((s) => {
-                        const alreadyAdded = lineIngredientIds.has(
-                          s.ingredient_id,
-                        );
-                        return (
-                          <Item
-                            key={s.ingredient_id}
-                            variant="outline"
-                            size="sm"
-                            className={cn(
-                              "justify-between transition-colors",
-                              alreadyAdded
-                                ? "bg-muted/30 opacity-60"
-                                : "bg-background/70 hover:bg-info/5",
-                            )}
-                          >
-                            <ItemContent>
-                              <ItemTitle className="text-sm font-medium">
-                                <span className="truncate">
-                                  {s.ingredient_name}
-                                </span>
-                                {s.below_reorder && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="text-xs shrink-0"
-                                  >
-                                    {messages.inventory.po.low}
-                                  </Badge>
-                                )}
-                              </ItemTitle>
-                              <ItemDescription>
-                                {messages.inventory.po.suggestionDescription(
-                                  s.hq_current_qty.toLocaleString("vi-VN"),
-                                  s.avg_daily_consumption.toLocaleString(
-                                    "vi-VN",
-                                  ),
-                                )}
-                              </ItemDescription>
-                            </ItemContent>
-                            <ItemActions>
-                              <span className="font-mono text-sm font-semibold">
-                                {s.suggested_qty.toLocaleString("vi-VN")}{" "}
-                                <span className="text-xs font-normal text-muted-foreground">
-                                  {s.unit}
-                                </span>
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs"
-                                disabled={alreadyAdded || s.suggested_qty <= 0}
-                                onClick={() => onAddSuggestion(s)}
-                              >
-                                {alreadyAdded ? (
-                                  messages.inventory.po.alreadyAdded
-                                ) : (
-                                  <IconPlus className="size-3.5" />
-                                )}
-                              </Button>
-                            </ItemActions>
-                          </Item>
-                        );
-                      })}
-                    </div>
-
-                    <div className="hidden flex-col gap-1 md:flex">
-                      <div className="grid grid-cols-12 gap-2 px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        <span className="col-span-3">
-                          {PRODUCT_VI.rawIngredient}
-                        </span>
-                        <span className="col-span-2 text-right">
-                          {messages.inventory.po.hqStock}
-                        </span>
-                        <span className="col-span-2 text-right">
-                          {messages.inventory.po.consumptionPerDay}
-                        </span>
-                        <span className="col-span-2 text-right">
-                          {messages.inventory.po.suggestedQty}
-                        </span>
-                        <span className="col-span-1">
-                          {messages.inventory.po.unitShort}
-                        </span>
-                        <span className="col-span-2" />
-                      </div>
-
-                      {suggestions.map((s) => {
-                        const alreadyAdded = lineIngredientIds.has(
-                          s.ingredient_id,
-                        );
-                        return (
-                          <div
-                            key={s.ingredient_id}
-                            className={cn(
-                              "grid grid-cols-12 items-center gap-2 rounded-md border border-transparent px-3 py-2 text-sm transition-colors",
-                              alreadyAdded
-                                ? "bg-muted/30 opacity-60"
-                                : "bg-background/70 hover:border-info/20 hover:bg-info/5",
-                            )}
-                          >
-                            <div className="col-span-3 flex items-center gap-1.5">
-                              <span className="truncate font-medium">
-                                {s.ingredient_name}
-                              </span>
-                              {s.below_reorder && (
-                                <Badge
-                                  variant="destructive"
-                                  className="text-xs"
-                                >
-                                  {messages.inventory.po.low}
-                                </Badge>
-                              )}
-                            </div>
-                            <span className="col-span-2 text-right font-mono text-muted-foreground">
-                              {s.hq_current_qty.toLocaleString("vi-VN")}
-                            </span>
-                            <span className="col-span-2 text-right font-mono">
-                              ~{s.avg_daily_consumption.toLocaleString("vi-VN")}
-                            </span>
-                            <span className="col-span-2 text-right font-mono font-semibold">
-                              {s.suggested_qty.toLocaleString("vi-VN")}
-                            </span>
-                            <span className="col-span-1 text-xs text-muted-foreground">
-                              {s.unit}
-                            </span>
-                            <div className="col-span-2 flex justify-end">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs"
-                                disabled={alreadyAdded || s.suggested_qty <= 0}
-                                onClick={() => onAddSuggestion(s)}
-                              >
-                                {alreadyAdded ? (
-                                  "Đã thêm"
-                                ) : (
-                                  <>
-                                    <IconPlus className="mr-1 size-3" />
-                                    {ACTIONS_VI.add}
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-            </CollapsibleContent>
-          </div>
-        </Collapsible>
+    <AppSection
+      tone="info"
+      title={messages.inventory.po.suggestionsTitle}
+      icon={<IconBulb />}
+      badge={
+        suggestions.length > 0
+          ? { children: suggestions.length, variant: "info" }
+          : undefined
+      }
+      action={
+        addableCount > 0 ? (
+          <Button variant="outline" size="sm" onClick={onAddAll}>
+            <IconCirclePlus data-icon="inline-start" />
+            {messages.inventory.po.addAll(addableCount)}
+          </Button>
+        ) : null
+      }
+      collapsible
+      defaultOpen={suggestions.length > 0}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground">
+          {messages.inventory.po.warehouseShort}
+        </span>
+        {showBranchSwitcher ? (
+          <Select
+            value={branchId ? String(branchId) : ""}
+            onValueChange={onBranchChange}
+            disabled={isLoading}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {procurementBranches.map((b) => (
+                <SelectItem key={b.id} value={String(b.id)}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="text-xs font-medium">{branchLabel}</span>
+        )}
+        <span className="text-xs text-muted-foreground">/</span>
+        <span className="text-xs text-muted-foreground">
+          {messages.inventory.po.averageConsumption}
+        </span>
+        <Select
+          value={String(periodDays)}
+          onValueChange={onPeriodChange}
+          disabled={isLoading}
+        >
+          <SelectTrigger className="w-28">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7">{messages.inventory.po.sevenDays}</SelectItem>
+            <SelectItem value="14">
+              {messages.inventory.po.fourteenDays}
+            </SelectItem>
+            <SelectItem value="30">
+              {messages.inventory.po.thirtyDays}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        {isLoading ? (
+          <span className="text-xs text-muted-foreground">
+            {STATES_VI.loading}
+          </span>
+        ) : null}
       </div>
+
+      {suggestions.length === 0 ? (
+        <AppEmptyState
+          compact
+          title={messages.inventory.po.stableStockTitle}
+          description={messages.inventory.po.stableStockDescription}
+          icon={<IconPackage />}
+        />
+      ) : (
+        <div className="flex flex-col gap-2">
+          {suggestions.map((s) => {
+            const alreadyAdded = lineIngredientIds.has(s.ingredient_id);
+            return (
+              <Item
+                key={s.ingredient_id}
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "justify-between",
+                  alreadyAdded
+                    ? "bg-muted/30 opacity-60"
+                    : "bg-background/70 hover:bg-info/5",
+                )}
+              >
+                <ItemContent className="min-w-0">
+                  <ItemTitle className="w-full">
+                    <span className="truncate">{s.ingredient_name}</span>
+                    {s.below_reorder ? (
+                      <Badge variant="destructive">
+                        {messages.inventory.po.low}
+                      </Badge>
+                    ) : null}
+                  </ItemTitle>
+                  <ItemDescription>
+                    {messages.inventory.po.suggestionDescription(
+                      s.hq_current_qty.toLocaleString("vi-VN"),
+                      s.avg_daily_consumption.toLocaleString("vi-VN"),
+                    )}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions className="flex-wrap justify-end">
+                  <span className="font-mono text-sm font-semibold">
+                    {s.suggested_qty.toLocaleString("vi-VN")}{" "}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {s.unit}
+                    </span>
+                  </span>
+                  <Button
+                    type="button"
+                    variant={alreadyAdded ? "secondary" : "ghost"}
+                    size="sm"
+                    disabled={alreadyAdded || s.suggested_qty <= 0}
+                    onClick={() => onAddSuggestion(s)}
+                  >
+                    {alreadyAdded ? (
+                      messages.inventory.po.alreadyAdded
+                    ) : (
+                      <>
+                        <IconPlus data-icon="inline-start" />
+                        {ACTIONS_VI.add}
+                      </>
+                    )}
+                  </Button>
+                </ItemActions>
+              </Item>
+            );
+          })}
+        </div>
+      )}
     </AppSection>
   );
 }
@@ -809,7 +656,6 @@ function LineItemsSection({
   supplierId,
   totalValue,
   hasValue,
-  isCompact,
   onRemoveLine,
   onAddLine,
 }: {
@@ -819,7 +665,6 @@ function LineItemsSection({
   supplierId: string;
   totalValue: number;
   hasValue: boolean;
-  isCompact: boolean;
   onRemoveLine: (idx: number) => void;
   onAddLine: (line: LocalLine) => void;
 }) {
@@ -906,326 +751,247 @@ function LineItemsSection({
     }
   }
 
-  if (isCompact) {
-    return (
-      <div className="overflow-hidden rounded-lg border bg-card">
-        <div className="-m-4">
-          <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2 md:px-4">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {PRODUCT_VI.rawIngredient}
-            </span>
-            {hasValue && (
-              <span className="text-sm font-semibold font-mono">
+  const columns: DataTableColumn<LocalLine>[] = [
+    {
+      key: "ingredient",
+      header: PRODUCT_VI.rawIngredient,
+      render: (line) => {
+        const dev = lineDeviations.get(line.ingredientId);
+        return (
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="truncate font-medium">{line.ingredientName}</span>
+            {dev && Math.abs(dev.deviation_pct) > 5 ? (
+              <InlineDeviationHint deviation={dev} unit={line.unit} />
+            ) : null}
+          </div>
+        );
+      },
+    },
+    {
+      key: "quantity",
+      header: FORM_VI.quantity,
+      className: "w-24 text-right",
+      render: (line) => (
+        <span className="font-mono">
+          {line.quantity.toLocaleString("vi-VN")}
+        </span>
+      ),
+    },
+    {
+      key: "unit",
+      header: messages.inventory.po.unitShort,
+      className: "w-20",
+      render: (line) => (
+        <span className="text-muted-foreground">{line.unit}</span>
+      ),
+    },
+    {
+      key: "unitPrice",
+      header: messages.inventory.po.unitPrice,
+      className: "w-32 text-right",
+      render: (line) => (
+        <span className="font-mono text-muted-foreground">
+          {line.unitPriceEst != null
+            ? line.unitPriceEst.toLocaleString("vi-VN")
+            : "-"}
+        </span>
+      ),
+    },
+    {
+      key: "amount",
+      header: FORM_VI.amount,
+      className: "w-32 text-right",
+      render: (line) => (
+        <span className="font-mono">
+          {line.unitPriceEst != null
+            ? formatVND(line.quantity * line.unitPriceEst)
+            : "-"}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "w-8 text-right",
+      render: (_line, idx) => (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onRemoveLine(idx)}
+          className="text-muted-foreground hover:text-destructive"
+          aria-label={messages.inventory.po.removeLineAria}
+        >
+          <IconTrash />
+        </Button>
+      ),
+    },
+  ];
+
+  return (
+    <AppSection
+      title={PRODUCT_VI.rawIngredient}
+      badge={
+        lines.length > 0
+          ? { children: messages.inventory.po.lineCount(lines.length) }
+          : undefined
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={lines}
+        getRowKey={(line) => line.ingredientId}
+        emptyTitle={messages.inventory.po.emptyIngredientsTitle}
+        emptyDescription={messages.inventory.po.emptyIngredientsDescription}
+        emptyIcon={<IconPackage />}
+        mobileCardRender={(line, idx) => {
+          const dev = lineDeviations.get(line.ingredientId);
+          return (
+            <Item variant="outline" size="sm">
+              <ItemContent className="min-w-0">
+                <ItemTitle className="w-full">
+                  <span className="truncate">{line.ingredientName}</span>
+                </ItemTitle>
+                <ItemDescription>
+                  {line.quantity.toLocaleString("vi-VN")} {line.unit}
+                  {line.unitPriceEst != null
+                    ? messages.inventory.po.totalAmountSuffix(
+                        line.unitPriceEst.toLocaleString("vi-VN"),
+                      )
+                    : ""}
+                </ItemDescription>
+                {dev && Math.abs(dev.deviation_pct) > 5 ? (
+                  <InlineDeviationHint deviation={dev} unit={line.unit} />
+                ) : null}
+              </ItemContent>
+              <ItemActions>
+                {line.unitPriceEst != null ? (
+                  <span className="font-mono text-sm">
+                    {formatVND(line.quantity * line.unitPriceEst)}
+                  </span>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => onRemoveLine(idx)}
+                  className="text-muted-foreground hover:text-destructive"
+                  aria-label={messages.inventory.po.removeLineAria}
+                >
+                  <IconTrash />
+                </Button>
+              </ItemActions>
+            </Item>
+          );
+        }}
+        desktopFooterRows={
+          hasValue
+            ? [
+                {
+                  key: "total",
+                  cells: [
+                    {
+                      key: "label",
+                      colSpan: 4,
+                      className:
+                        "text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+                      content: messages.inventory.po.estimatedTotal,
+                    },
+                    {
+                      key: "value",
+                      className: "text-right font-mono font-semibold",
+                      content: formatVND(totalValue),
+                    },
+                    { key: "spacer", content: null },
+                  ],
+                },
+              ]
+            : undefined
+        }
+        mobileFooter={
+          hasValue ? (
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <span className="text-muted-foreground">
+                {messages.inventory.po.estimatedTotal}
+              </span>
+              <span className="font-mono font-semibold">
                 {formatVND(totalValue)}
               </span>
-            )}
-          </div>
+            </div>
+          ) : null
+        }
+      />
 
-          {lines.length === 0 ? (
-            <div className="px-4 py-4 text-center">
-              <p className="text-base font-semibold">
-                {messages.inventory.po.emptyIngredientsTitle}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {messages.inventory.po.emptyIngredientsDescription}
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y">
-              {lines.map((l, idx) => {
-                const dev = lineDeviations.get(l.ingredientId);
-                return (
-                  <div
-                    key={idx}
-                    className="px-4 py-2 flex items-center justify-between gap-2"
-                  >
-                    <div className="min-w-0">
-                      <span className="text-sm font-medium">
-                        {l.ingredientName}
-                      </span>
-                      <p className="text-xs text-muted-foreground">
-                        {l.quantity.toLocaleString("vi-VN")} {l.unit}
-                        {l.unitPriceEst != null && (
-                          <>
-                            {messages.inventory.po.totalAmountSuffix(
-                              l.unitPriceEst.toLocaleString("vi-VN"),
-                            )}
-                          </>
-                        )}
-                      </p>
-                      {dev && Math.abs(dev.deviation_pct) > 5 && (
-                        <InlineDeviationHint deviation={dev} unit={l.unit} />
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {l.unitPriceEst != null && (
-                        <span className="font-mono text-sm">
-                          {(l.quantity * l.unitPriceEst).toLocaleString(
-                            "vi-VN",
-                          )}{" "}
-                          ₫
-                        </span>
-                      )}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => onRemoveLine(idx)}
-                        className="rounded-md border-none bg-transparent text-muted-foreground shadow-none hover:bg-destructive/10 hover:text-destructive"
-                        aria-label={messages.inventory.po.removeLineAria}
-                      >
-                        <IconTrash className="size-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Mobile add-row form */}
-          <form
-            onSubmit={handleAddLine}
-            className="flex flex-col gap-2 border-t bg-muted/5 p-3 md:px-4"
-          >
-            <Combobox
-              value={ingredientId}
-              onValueChange={handleIngredientChange}
-              options={ingredients.map((i) => ({
-                value: String(i.id),
-                label: i.name,
-                hint: i.purchase_unit ?? i.unit,
-                keywords: [i.sku ?? "", i.category ?? ""],
-              }))}
-              placeholder={messages.inventory.po.ingredientPlaceholder}
-              searchPlaceholder={
-                messages.inventory.po.ingredientSearchPlaceholder
-              }
-              triggerClassName="h-8 border-dashed text-sm"
-            />
-            <div className="grid grid-cols-3 gap-2">
-              <FormattedNumberInput
-                ref={qtyRef}
-                placeholder={messages.inventory.po.quantityShort}
-                className="h-8 text-sm"
-                value={qtyInput}
-                onValueChange={setQtyInput}
-                maxFractionDigits={3}
-                required
-              />
-              <UnitField
-                options={purchaseUnitOptions}
-                entryUnitId={entryUnitId}
-                unit={unit}
-                onUnitChange={handleUnitChange}
-                onFreeTextChange={setUnit}
-              />
-              <FormattedNumberInput
-                ref={priceRef}
-                placeholder={messages.inventory.po.pricePlaceholder}
-                className="h-8 text-sm"
-                value={unitPriceInput}
-                onValueChange={setUnitPriceInput}
-                onBlur={checkAddRowDeviation}
-                maxFractionDigits={0}
-              />
-            </div>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={!ingredientId}
-              className="w-full"
-            >
-              <IconPlus className="mr-1 size-3.5" />
-              {messages.inventory.po.addLine}
-            </Button>
-            {addRowDeviation && Math.abs(addRowDeviation.deviation_pct) > 5 && (
-              <InlineDeviationHint
-                deviation={addRowDeviation}
-                unit={unit || messages.inventory.po.unitShort}
-              />
-            )}
-          </form>
+      <form
+        onSubmit={handleAddLine}
+        className="grid grid-cols-1 gap-2 border-t pt-3 sm:grid-cols-2 lg:grid-cols-12"
+      >
+        <div className="lg:col-span-5">
+          <Combobox
+            value={ingredientId}
+            onValueChange={handleIngredientChange}
+            options={ingredients.map((i) => ({
+              value: String(i.id),
+              label: i.name,
+              hint: i.purchase_unit ?? i.unit,
+              keywords: [i.sku ?? "", i.category ?? ""],
+            }))}
+            placeholder={messages.inventory.po.ingredientPlaceholder}
+            searchPlaceholder={messages.inventory.po.ingredientSearchPlaceholder}
+            triggerClassName="border-dashed"
+          />
         </div>
-      </div>
-    );
-  }
-
-  // Desktop layout
-  return (
-    <div className="overflow-hidden rounded-lg border bg-card">
-      <div className="-m-4">
-        {/* Table header */}
-        <div className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 border-b bg-muted/30 px-3 py-2 md:px-4">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {PRODUCT_VI.rawIngredient}
-          </span>
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
-            {FORM_VI.quantity}
-          </span>
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-2">
-            {messages.inventory.po.unitShort}
-          </span>
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
-            {messages.inventory.po.unitPrice}
-          </span>
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
-            {FORM_VI.amount}
-          </span>
-          <span />
+        <div className="lg:col-span-2">
+          <FormattedNumberInput
+            ref={qtyRef}
+            placeholder={messages.inventory.po.quantityShort}
+            className="text-right"
+            value={qtyInput}
+            onValueChange={setQtyInput}
+            maxFractionDigits={3}
+            required
+          />
         </div>
-
-        {/* Existing lines */}
-        {lines.length === 0 ? (
-          <div className="px-4 py-4 text-center">
-            <p className="text-base font-semibold">
-              {messages.inventory.po.emptyIngredientsTitle}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {messages.inventory.po.emptyIngredientsDescription}
-            </p>
-          </div>
-        ) : (
-          <div>
-            {lines.map((l, idx) => {
-              const dev = lineDeviations.get(l.ingredientId);
-              return (
-                <div
-                  key={idx}
-                  className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 items-center border-b px-3 py-2 hover:bg-muted/20 transition-colors"
-                >
-                  <span className="text-sm font-medium truncate min-w-0">
-                    {l.ingredientName}
-                  </span>
-                  <span className="text-sm font-mono text-right">
-                    {l.quantity.toLocaleString("vi-VN")}
-                  </span>
-                  <span className="text-sm pl-2 text-muted-foreground">
-                    {l.unit}
-                  </span>
-                  <div className="text-sm font-mono text-right text-muted-foreground">
-                    <span>
-                      {l.unitPriceEst != null
-                        ? l.unitPriceEst.toLocaleString("vi-VN")
-                        : "—"}
-                    </span>
-                    {dev && Math.abs(dev.deviation_pct) > 5 && (
-                      <InlineDeviationHint deviation={dev} unit={l.unit} />
-                    )}
-                  </div>
-                  <span className="text-sm font-mono text-right">
-                    {l.unitPriceEst != null
-                      ? (l.quantity * l.unitPriceEst).toLocaleString("vi-VN")
-                      : "—"}
-                  </span>
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => onRemoveLine(idx)}
-                      className="rounded-md border-none bg-transparent text-muted-foreground shadow-none hover:bg-destructive/10 hover:text-destructive"
-                      aria-label={messages.inventory.po.removeLineAria}
-                    >
-                      <IconTrash className="size-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Total row */}
-            {hasValue && (
-              <div className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 items-center border-b px-3 py-2 bg-muted/10">
-                <span className="col-span-4 text-xs font-semibold text-right text-muted-foreground uppercase tracking-wider">
-                  {messages.inventory.po.estimatedTotal}
-                </span>
-                <span className="text-sm font-semibold font-mono text-right">
-                  {messages.inventory.common.currency(
-                    totalValue.toLocaleString("vi-VN"),
-                  )}
-                </span>
-                <span />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Add-row form */}
-        <form
-          onSubmit={handleAddLine}
-          className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] items-center gap-0 border-t bg-muted/5 px-3 py-2 md:px-4"
+        <div className="lg:col-span-2">
+          <UnitField
+            options={purchaseUnitOptions}
+            entryUnitId={entryUnitId}
+            unit={unit}
+            onUnitChange={handleUnitChange}
+            onFreeTextChange={setUnit}
+          />
+        </div>
+        <div className="lg:col-span-2">
+          <FormattedNumberInput
+            ref={priceRef}
+            placeholder={messages.inventory.po.priceOptionalPlaceholder}
+            className="text-right"
+            value={unitPriceInput}
+            onValueChange={setUnitPriceInput}
+            onBlur={checkAddRowDeviation}
+            maxFractionDigits={0}
+          />
+        </div>
+        <Button
+          type="submit"
+          disabled={!ingredientId}
+          size="sm"
+          className="w-full lg:col-span-1"
+          aria-label={messages.inventory.po.addLine}
         >
-          <div className="pr-2">
-            <Combobox
-              value={ingredientId}
-              onValueChange={handleIngredientChange}
-              options={ingredients.map((i) => ({
-                value: String(i.id),
-                label: i.name,
-                hint: i.purchase_unit ?? i.unit,
-                keywords: [i.sku ?? "", i.category ?? ""],
-              }))}
-              placeholder={messages.inventory.po.ingredientPlaceholder}
-              searchPlaceholder={
-                messages.inventory.po.ingredientSearchPlaceholder
-              }
-              triggerClassName="h-8 border-dashed text-sm"
-            />
-          </div>
-          <div>
-            <FormattedNumberInput
-              ref={qtyRef}
-              placeholder={messages.inventory.po.quantityShort}
-              className="h-8 text-sm text-right"
-              value={qtyInput}
-              onValueChange={setQtyInput}
-              maxFractionDigits={3}
-              required
-            />
-          </div>
-          <div className="pl-2">
-            <UnitField
-              options={purchaseUnitOptions}
-              entryUnitId={entryUnitId}
-              unit={unit}
-              onUnitChange={handleUnitChange}
-              onFreeTextChange={setUnit}
-            />
-          </div>
-          <div className="pl-2">
-            <FormattedNumberInput
-              ref={priceRef}
-              placeholder={messages.inventory.po.priceOptionalPlaceholder}
-              className="h-8 text-sm text-right"
-              value={unitPriceInput}
-              onValueChange={setUnitPriceInput}
-              onBlur={checkAddRowDeviation}
-              maxFractionDigits={0}
-            />
-          </div>
-          <div className="pl-2 flex justify-end">
-            <Button
-              type="submit"
-              disabled={!ingredientId}
-              size="icon-sm"
-              aria-label={messages.inventory.po.addLine}
-            >
-              <IconPlus className="size-3.5" />
-            </Button>
-          </div>
-          <span />
-        </form>
-        {addRowDeviation && Math.abs(addRowDeviation.deviation_pct) > 5 && (
-          <div className="px-3 pb-2">
+          <IconPlus data-icon="inline-start" />
+          <span className="lg:sr-only">{messages.inventory.po.addLine}</span>
+        </Button>
+        {addRowDeviation && Math.abs(addRowDeviation.deviation_pct) > 5 ? (
+          <div className="sm:col-span-2 lg:col-span-12">
             <InlineDeviationHint
               deviation={addRowDeviation}
               unit={unit || messages.inventory.po.unitShort}
             />
           </div>
-        )}
-      </div>
-    </div>
+        ) : null}
+      </form>
+    </AppSection>
   );
 }
 
@@ -1254,7 +1020,6 @@ function UnitField({
         value={unit}
         onChange={(e) => onFreeTextChange(e.target.value)}
         required
-        className="h-8 text-sm"
       />
     );
   }
@@ -1263,7 +1028,7 @@ function UnitField({
       value={entryUnitId != null ? String(entryUnitId) : ""}
       onValueChange={onUnitChange}
     >
-      <SelectTrigger className="h-8 w-full text-sm" aria-label={unit}>
+      <SelectTrigger className="w-full" aria-label={unit}>
         <SelectValue placeholder={messages.inventory.po.selectUnit} />
       </SelectTrigger>
       <SelectContent>
