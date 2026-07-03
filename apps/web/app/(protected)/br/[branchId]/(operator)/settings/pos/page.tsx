@@ -8,7 +8,6 @@ import {
   type BranchOption,
   type TerminalRow,
 } from "@/(protected)/branch-settings/_shared/pos/terminals-client";
-import { IngredientStockBlockCard } from "@/(protected)/branch-settings/_shared/pos/ingredient-stock-block-card";
 import { StockControlCard } from "@/(protected)/branch-settings/_shared/pos/stock-control-card";
 import {
   INVENTORY_FEATURE_FLAGS,
@@ -33,7 +32,6 @@ export default async function BranchPosSettingsPage({
   const [
     branchRes,
     terminalsRes,
-    ingredientStockBlockEnabled,
     stockOutcomePostingEnabled,
     stockAvailabilityGateEnabled,
   ] = await Promise.all([
@@ -49,11 +47,6 @@ export default async function BranchPosSettingsPage({
       .select("id, name, branch_id, device_id, is_active")
       .eq("branch_id", branchId)
       .order("name"),
-    isFeatureEnabledForBranch(
-      supabase,
-      branchId,
-      INVENTORY_FEATURE_FLAGS.POS_INGREDIENT_STOCK_BLOCK,
-    ),
     isFeatureEnabledForBranch(
       supabase,
       branchId,
@@ -82,10 +75,6 @@ export default async function BranchPosSettingsPage({
         branchId={branchId}
         initialPostingEnabled={stockOutcomePostingEnabled}
         initialGateEnabled={stockAvailabilityGateEnabled}
-      />
-      <IngredientStockBlockCard
-        branchId={branchId}
-        initialEnabled={ingredientStockBlockEnabled}
       />
     </EmployeePage>
   );

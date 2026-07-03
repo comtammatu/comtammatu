@@ -34,12 +34,8 @@ import {
   X as IconX,
 } from "lucide-react";
 import { type MenuCategory, type MenuItem } from "./pos-menu-types";
-import {
-  useDailyLimit,
-  useIngredientCap,
-} from "./_providers/pos-desktop-provider";
+import { useDailyLimit } from "./_providers/pos-desktop-provider";
 import { remainingDailyQuotaAfterDemand } from "./_utils/daily-limit-draft";
-import { remainingIngredientCapAfterDemand } from "./_utils/ingredient-cap-draft";
 
 interface PosMenuGridProps {
   categories: MenuCategory[];
@@ -73,16 +69,13 @@ interface MenuCardStatus {
 
 /**
  * Mirrors the reason rule in `findDailyLimitBlockForProposal` /
- * `formatAddToCartBlockMessage` exactly: when the daily-limit leg blocks,
- * `manual_limit_quantity == null` means the block came from the stock leg
- * ("Hết nguyên liệu"), otherwise it's the manual quota ("Hết suất"). The
- * separate `ingredientCap` store only adds another stock-reason source; it
- * must never override the daily-limit-derived reason, so the card and the
- * tap-toast never disagree for the same state.
+ * `formatAddToCartBlockMessage` exactly: `manual_limit_quantity == null`
+ * means the block came from the stock leg ("Hết nguyên liệu"), otherwise
+ * it's the manual quota ("Hết suất") — so the card and the tap-toast never
+ * disagree for the same state.
  */
 function getMenuCardStatus(
   dailyLimit: ReturnType<typeof useDailyLimit>,
-  ingredientCap: ReturnType<typeof useIngredientCap>,
   draftDemand: number,
 ): MenuCardStatus {
   if (dailyLimit?.is_disabled) {
@@ -97,36 +90,24 @@ function getMenuCardStatus(
     dailyLimit,
     draftDemand,
   );
-  const ingredientRemaining = remainingIngredientCapAfterDemand(
-    ingredientCap,
-    draftDemand,
-  );
 
-  const dailyBlocked = dailyRemaining !== null && dailyRemaining <= 0;
-  const ingredientBlocked =
-    ingredientRemaining !== null && ingredientRemaining <= 0;
-  const blocked = dailyBlocked || ingredientBlocked;
+  const blocked = dailyRemaining !== null && dailyRemaining <= 0;
 
   if (blocked) {
-    const reasonLabel = dailyBlocked
-      ? dailyLimit?.manual_limit_quantity == null
+    const reasonLabel =
+      dailyLimit?.manual_limit_quantity == null
         ? messages.pos.menu.reasonStockExhausted
-        : messages.pos.menu.reasonManualExhausted
-      : messages.pos.menu.reasonStockExhausted;
+        : messages.pos.menu.reasonManualExhausted;
     return { blocked: true, reasonLabel, remainingLabel: null };
   }
-
-  const finiteRemaining = [dailyRemaining, ingredientRemaining]
-    .filter((value): value is number => value !== null)
-    .sort((a, b) => a - b)[0];
 
   return {
     blocked: false,
     reasonLabel: null,
     remainingLabel:
-      finiteRemaining === undefined
+      dailyRemaining === null
         ? null
-        : messages.pos.menu.remainingOnCard(finiteRemaining),
+        : messages.pos.menu.remainingOnCard(dailyRemaining),
   };
 }
 
@@ -137,9 +118,8 @@ const MenuItemButton = memo(function MenuItemButton({
   onItemTap,
 }: MenuItemButtonProps) {
   const dailyLimit = useDailyLimit(item.id);
-  const ingredientCap = useIngredientCap(item.id);
   const draftDemand = dailyLimitDemandByMenuItem?.get(item.id) ?? 0;
-  const status = getMenuCardStatus(dailyLimit, ingredientCap, draftDemand);
+  const status = getMenuCardStatus(dailyLimit, draftDemand);
   const blocked = status.blocked;
   const handleClick = useCallback(() => {
     if (blocked) return;

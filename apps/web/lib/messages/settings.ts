@@ -257,16 +257,6 @@ export const settings = {
     deviceIdOptional: "Mã thiết bị (tuỳ chọn)",
     deviceIdPlaceholder: "VD: tablet-thungan-01",
     terminalActive: "Hoạt động",
-    ingredientStockBlockTitle: "Bán theo tồn kho",
-    ingredientStockBlockLabel: "Chặn bán khi hết nguyên liệu trong kho",
-    ingredientStockBlockHelp:
-      "Chỉ bật khi tồn kho của chi nhánh chính xác — nếu kho sai, POS sẽ chặn bán nhầm.",
-    ingredientStockBlockSaved: "Đã cập nhật cấu hình chặn bán",
-    ingredientStockBlockFailed: "Không thể lưu cấu hình. Vui lòng thử lại.",
-    ingredientStockBlockReplacedTitle: "Bán theo tồn kho (đã thay thế)",
-    ingredientStockBlockReplacedHelp:
-      "Tính năng này đã được thay thế bởi \"Giới hạn bán theo tồn kho\". Tắt để dùng cơ chế mới.",
-    ingredientStockBlockTurnOff: "Tắt",
     stockControlTitle: "Kiểm soát bán theo tồn kho",
     stockOutcomePostingLabel: "Trừ kho khi bán",
     stockOutcomePostingHelp:

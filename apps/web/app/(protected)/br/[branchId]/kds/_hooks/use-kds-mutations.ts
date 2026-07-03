@@ -16,7 +16,6 @@ export interface UseKdsMutationsArgs {
 export interface KdsMutations {
   handleRecall: (ticketId: number) => Promise<void>;
   handleCompleteTickets: (ticketIds: number[]) => Promise<void>;
-  handleOutOfStock: (ticketId: number, disableForDay?: boolean) => Promise<void>;
   pendingTicketIds: Set<number>;
 }
 
@@ -180,35 +179,9 @@ export function useKdsMutations({
     ],
   );
 
-  const handleOutOfStock = useCallback(
-    async (ticketId: number, disableForDay = true) => {
-      // Optimistic update: remove the ticket immediately
-      setTickets((prev) => prev.filter((t) => t.id !== ticketId));
-
-      try {
-        const sb = supabaseRef.current;
-        const { error } = await sb.rpc("mark_kds_item_out_of_stock", {
-          p_ticket_id: ticketId,
-          p_disable_for_day: disableForDay,
-          p_reason: "Hết món",
-        });
-
-        if (error) {
-          toast.error("Không thể báo hết món. Vui lòng thử lại.");
-          await refreshBoardSnapshot();
-        }
-      } catch {
-        toast.error("Có lỗi xảy ra khi báo hết món.");
-        await refreshBoardSnapshot();
-      }
-    },
-    [refreshBoardSnapshot, setTickets],
-  );
-
   return {
     handleRecall,
     handleCompleteTickets,
-    handleOutOfStock,
     pendingTicketIds,
   };
 }

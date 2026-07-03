@@ -26,13 +26,10 @@ export interface MenuLimitRow {
   base_price: number;
   limit_id: number | null;
   limit_date: string | null;
-  limit_quantity: number | null;
   is_disabled: boolean;
   sold_today: number;
   stock_capacity: number | null;
-  stock_capacity_live: number | null;
   manual_limit_quantity: number | null;
-  accepted_today: number;
   pending_unfinalized_demand: number;
   active_hold_demand: number;
   available_to_sell: number | null;

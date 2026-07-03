@@ -16,14 +16,6 @@ const kdsRealtimeSource = readFileSync(
   "utf8",
 );
 
-const kdsMutationsSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/kds/_hooks/use-kds-mutations.ts",
-  ),
-  "utf8",
-);
-
 function extractVisibleStatuses(source: string): string[] {
   const match = source.match(
     /const KDS_VISIBLE_STATUSES = \[([\s\S]*?)\](?: as const)?;/,
@@ -54,16 +46,5 @@ test("KDS realtime evicts tickets that become cancelled", () => {
   assert.match(
     kdsRealtimeSource,
     /isVisibleKdsTicket\(updated\)[\s\S]*prev\.filter\(\(t\) => t\.id !== updated\.id\)/,
-  );
-});
-
-test("KDS out-of-stock optimistic path removes the row instead of marking it cancelled", () => {
-  assert.match(
-    kdsMutationsSource,
-    /setTickets\(\(prev\) => prev\.filter\(\(t\) => t\.id !== ticketId\)\);/,
-  );
-  assert.doesNotMatch(
-    kdsMutationsSource,
-    /t\.id === ticketId \? \{ \.\.\.t, status: "cancelled" \} : t/,
   );
 });

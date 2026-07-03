@@ -46,15 +46,6 @@ export interface MenuItem {
   menu_item_modifiers: MenuModifier[];
   menu_item_available_sides: MenuAvailableSide[];
   daily_limit: MenuItemDailyLimit | null;
-  /**
-   * Snapshot upper bound on how many of this dish are still sellable given
-   * current kitchen ingredient stock (`max_sellable` from
-   * `get_branch_menu_ingredient_caps_for_pos`). `null` when the branch flag
-   * `pos_ingredient_stock_block` is off, or the dish has no recipe — i.e. no
-   * cap. Advisory only: shared ingredients couple dishes, so the server's
-   * order_items trigger is the authoritative gate.
-   */
-  ingredient_cap?: number | null;
 }
 
 export interface MenuCategory {
