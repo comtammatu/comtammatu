@@ -90,7 +90,7 @@ export function ReportsClient({
           contentClassName="flex flex-1 flex-col gap-4"
         >
           <div className="flex items-center justify-end">
-            <div className="flex items-center gap-3 text-xs font-medium">
+            <div className="flex flex-wrap items-center gap-3 text-xs font-medium">
               <span className="flex items-center gap-1.5">
                 <span className="size-3 rounded-full bg-chart-1" />
                 <span className="text-muted-foreground">
@@ -223,8 +223,8 @@ export function ReportsClient({
                     <div className="flex size-10 items-center justify-center rounded-md bg-card">
                       <IconPackage className="size-5 text-muted-foreground" />
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-foreground">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-foreground">
                         {item.name}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -232,7 +232,7 @@ export function ReportsClient({
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="shrink-0 text-right">
                     <p
                       className={cn(
                         "text-sm font-bold",
