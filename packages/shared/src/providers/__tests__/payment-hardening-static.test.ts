@@ -279,6 +279,53 @@ test("Printed provisional bills do not include payment QR", () => {
   assert.doesNotMatch(action, /"create_payment"/);
 });
 
+test("SePay webhook retries receipt enqueue on already-completed settlements", () => {
+  const migration = readRepoFile(
+    "supabase/migrations/20260703140015_sepay_webhook_receipt_already_completed.sql",
+  );
+  const baseline = readRepoFile(
+    "supabase/migrations/00000000000000_baseline.sql",
+  );
+
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.confirm_sepay_payment/,
+  );
+  const alreadyCompletedStart = migration.indexOf(
+    "IF v_payment.payment_method = 'vietqr'",
+  );
+  const alreadyCompletedEnd = migration.indexOf(
+    "UPDATE public.payments",
+    alreadyCompletedStart,
+  );
+  const alreadyCompletedBlock = migration.slice(
+    alreadyCompletedStart,
+    alreadyCompletedEnd,
+  );
+  assert.ok(alreadyCompletedStart > 0, "already-completed branch should exist");
+  assert.ok(
+    alreadyCompletedEnd > alreadyCompletedStart,
+    "already-completed branch should be bounded",
+  );
+  assert.match(
+    alreadyCompletedBlock,
+    /v_receipt_res := public\.enqueue_receipt_print\(v_order\.order_id, NULL, NULL\);/,
+  );
+  assert.match(alreadyCompletedBlock, /'status', 'already_completed'/);
+  assert.match(alreadyCompletedBlock, /'job_id', v_print_job_id/);
+  assert.match(alreadyCompletedBlock, /'failed', v_print_failed/);
+  assert.match(alreadyCompletedBlock, /EXCEPTION WHEN OTHERS/);
+  assert.match(migration, /public\.complete_payment_and_consume_stock/);
+  assert.match(
+    migration,
+    /GRANT EXECUTE ON FUNCTION public\.confirm_sepay_payment\(bigint, bigint, text, numeric, text, text, jsonb\) TO service_role;/,
+  );
+  assert.match(
+    baseline,
+    /WHEN public\.print_jobs\.status = 'printed' AND NOT v_is_service/,
+  );
+});
+
 test("Order money mutations are locked after VietQR code exposure", () => {
   const migration = readRepoFile(
     "supabase/migrations/_archive/20260626072000_lock_order_amount_after_payment_code_exposed.sql",
