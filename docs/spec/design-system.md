@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.13.0 | Updated: 2026-07-02 | Status: locked single source for UI agents
+> Version: 14.14.0 | Updated: 2026-07-03 | Status: locked single source for UI agents
 
 ## Single Source Decision
 
@@ -172,7 +172,8 @@ Rules:
 - Use `BrandMark` / `BrandLockup` for web runtime logo rendering; do not reference `/brand/logo-*` directly from route components.
 - Use `BrandSymbol` for Concept 01 symbol assets and `BrandMascot` for the Cốt Lết mascot; do not reference `/brand/symbols/*` or `/brand/mascot/cotlet*` directly from route components.
 - Purpose-specific mascot assets may be used as decorative public images in customer-facing empty or splash states; they must not replace core workflow content.
-- The three brand patterns (`ke-caro`, `hat-gao`, `vong-to`) ship as tileable SVG under `/brand/patterns` with the `brand-pattern-caro` / `brand-pattern-hat-gao` / `brand-pattern-vong-to` and `brand-strip` utilities in `globals.css`. Use them only as decorative footer strips, packaging trim, or section separators — never as a background behind body text.
+- `BrandSymbol` is approved as decorative, static `EmptyMedia` content for any `AppEmptyState` (any surface, ERP included) via the adapter's `symbol` prop; it is not a mascot and carries no motion.
+- The three brand patterns (`ke-caro`, `hat-gao`, `vong-to`) ship as tileable SVG under `/brand/patterns` with the `brand-pattern-caro` / `brand-pattern-hat-gao` / `brand-pattern-vong-to` and `brand-strip` utilities in `globals.css`. Use them only as decorative footer strips, packaging trim, or section separators — never as a background behind body text. Sanctioned placements: the login brand panel footer and the Runner display footer.
 - Do not hardcode raw palette classes for status meaning (`amber`, `emerald`, `zinc`, etc.) when a semantic token exists.
 - Do not add arbitrary dimensions such as `text-[10px]`, `w-[200px]`, or `h-[3rem]`.
 - Do not add static inline styles for presentation.

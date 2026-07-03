@@ -34,6 +34,7 @@ import {
 } from "@comtammatu/ui/components/empty";
 import { Separator } from "@comtammatu/ui/components/separator";
 import { Toolbar, ToolbarGroup } from "@comtammatu/ui/components/toolbar";
+import { BrandSymbol, type BrandSymbolVariant } from "@/components/brand";
 
 type SurfaceWidth = "narrow" | "default" | "wide" | "full";
 type SurfaceTone = "primary" | "success" | "warning" | "info" | "secondary";
@@ -601,6 +602,11 @@ export type AppEmptyStateProps = AppEmptyRootProps & {
   description?: string;
   icon?: ReactNode;
   iconClassName?: string;
+  /**
+   * Decorative Concept 01 brand symbol rendered in place of `icon`. Static
+   * only — no mascot, no motion (design-system.md § brand rules).
+   */
+  symbol?: BrandSymbolVariant;
   children?: ReactNode;
   className?: string;
   titleClassName?: string;
@@ -615,6 +621,7 @@ export function AppEmptyState({
   description,
   icon,
   iconClassName,
+  symbol,
   children,
   className,
   titleClassName,
@@ -633,7 +640,11 @@ export function AppEmptyState({
       )}
       {...props}
     >
-      {icon ? (
+      {symbol ? (
+        <EmptyMedia variant="default" className={iconClassName}>
+          <BrandSymbol variant={symbol} size="lg" />
+        </EmptyMedia>
+      ) : icon ? (
         <EmptyMedia variant="icon" className={iconClassName}>
           {icon}
         </EmptyMedia>

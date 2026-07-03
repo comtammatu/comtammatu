@@ -502,7 +502,8 @@ export function OrderGrid({
                 ? "Thay đổi bộ lọc để xem thêm đơn."
                 : "Chưa có đơn hàng mới."
             }
-            icon={<IconChefHat />}
+            icon={hasGroupedOrders ? <IconChefHat /> : undefined}
+            symbol={hasGroupedOrders ? undefined : "riceBowl"}
           />
         </div>
       ) : (
