@@ -27,9 +27,7 @@ reports
 - **Foreground popups** are **[live]** — the open PWA fires an OS notification
   (`Notification` API, shown via the service worker) for new unread rows it can
   see, RLS-scoped. Client-side only: no dispatcher, no VAPID, no delivery
-  ledger, **and no delivery when the app is closed**. The former server Web Push
-  layer (`notifications-push` cron, VAPID, `claim_notification_push_delivery` +
-  `notification_push_deliveries`) was removed.
+  ledger, **and no delivery when the app is closed**.
 - **Telegram** is **[designed]** — the first true server dispatcher: it MUST own
   a claim-RPC + `notification_telegram_deliveries` ledger (the dispatcher
   pattern above). Do **NOT** reuse `notification_outbox` /
@@ -58,16 +56,18 @@ pure function per producer (unit-testable).
 | kind | dedup_key | fires | status |
 | --- | --- | --- | --- |
 | `pos.shift_variance` | `pos.shift_variance:{session_id}` | once/session | **[live]** trigger |
-| `pos.payment_stock_failed` | `pos.payment_stock_failed:{payment_id}` | once/payment | **[live]** trigger + MoMo webhook |
+| `pos.payment_stock_failed` | `payment_stock_failed:{payment_id}` | once/payment | **[live]** MoMo webhook only (no DB trigger); dedup_key lacks the `pos.` prefix — fix on next touch |
+| `pos.order_new` | none | n/a | **[live]** trigger, no dedup_key |
+| `pos.kds_out_of_stock` | `kds_out_of_stock:{ticket_id}` | once/ticket | **[live]** trigger |
 | `pos.void_rate_high` | `pos.void_rate_high:{session_id}` | once/session | **[designed]** |
 | `pos.discount_high_session` | `pos.discount_high_session:{session_id}` | once/session | **[designed]** |
 | `pos.discount_high_order` | `pos.discount_high_order:{order_id}` | once/order | **[designed]** |
 | `pos.session_stale` | `pos.session_stale:{session_id}:{floor(now/6h)}` | re-nag 6h | **[designed]** |
 | `pos.payment_pending_stale` | `pos.payment_pending_stale:{payment_id}:{floor(now/2h)}` | re-nag 2h | **[designed]** |
 | `pos.void_after_paid_unrefunded` | `pos.void_after_paid_unrefunded:{order_item_id}` | once/item | **[designed]** |
-| `inventory.stock_low` | `inventory.stock_low:{ingredient_id}:{date}` | daily | **[live]** kind, detector **[designed]** |
-| `inventory.expiry_soon` | `inventory.expiry_soon:{ingredient_id}:{date}` | daily | **[designed]** |
-| `procure.grn_price_variance` | `procure.grn_price_variance:{grn_item_id}` | once/line | **[designed]** |
+| `inventory.stock_low` | `inventory.stock_low:{ingredient_id}:{date}` | daily | **[live]** trigger + `scan_inventory_alerts()`, pg_cron daily |
+| `inventory.expiry_soon` | `inventory.expiry_soon:{ingredient_id}:{date}` | daily | **[live]** `scan_inventory_alerts()`, pg_cron daily |
+| `procure.grn_price_variance` | — | — | **[designed]**; live `grn.requires_review` trigger writes `notification_outbox`, not this table |
 | `hddt.reconcile_stuck` | `hddt.reconcile_stuck:{tax_invoice_id}` | once/invoice | **[designed]** |
 | `hr.leave_requested` | `hr.leave_request:{request_id}` | once/request | **[live]** RPC (submit) |
 | `hr.leave_approved` | `hr.leave_approved:{request_id}` | once/request | **[live]** RPC (approve) |
@@ -75,20 +75,28 @@ pure function per producer (unit-testable).
 | `inventory.count_slip_submitted` | `inventory.count_slip:{slip_id}:submitted` | once/submit | **[live]** RPC (submit) |
 | `inventory.count_slip_approved` | `inventory.count_slip:{slip_id}:approved` | once/approve | **[live]** RPC (approve) |
 | `inventory.count_slip_recount` | `inventory.count_slip:{slip_id}:recount` | once/recount | **[live]** RPC (recount) |
+| `workflow.grn_pending` | none | n/a | **[live]** trigger, no dedup_key |
+| `workflow.po_sent` | none | n/a | **[live]** trigger, no dedup_key |
+| `workflow.stocktake_submitted` | none | n/a | **[live]** trigger, no dedup_key |
+| `workflow.transfer_in_transit` | none | n/a | **[live]** trigger, no dedup_key |
+| `attendance.checkout_requested` | `attendance.checkout_request:{attendance_id}` | once/request | **[live]** RPC |
 | `report.daily_closeout` | `report.daily_closeout:{branch_id}:{date}` | once/day | **[designed]** |
 | `report.weekly` | `report.weekly:{branch_id}:{iso_week}` | once/week | **[designed]** |
 
 Enforce with `UNIQUE(tenant_id, dedup_key)` (partial, `WHERE dedup_key IS NOT
 NULL`) + `INSERT ... ON CONFLICT DO NOTHING` (or `DO UPDATE SET created_at=now()`
 to refresh within a re-nag bucket). The constraint IS the cursor — no separate
-alert-state table.
+alert-state table. Several live triggers above (`pos.order_new`,
+`workflow.*`) currently insert with no `dedup_key` at all — a known gap
+against the "every producer MUST set dedup_key" rule below.
 
 ## `kind` namespace
 
 Reserved, **disjoint** prefixes so independent producers never merge-conflict on
 the registry (this is what makes per-domain producers parallel-safe):
 `pos.*` / `cash.*` · `inventory.*` / `stock.*` · `procure.*` · `fin.*` / `tax.*`
-/ `hddt.*` · `hr.*` · `report.*` · `advisory.*` (LLM, future).
+/ `hddt.*` · `hr.*` · `report.*` · `advisory.*` (LLM, future) · `workflow.*` ·
+`attendance.*` · `grn.*`.
 
 Register every new `kind` in `apps/web/lib/messages/notifications.ts` `kindLabel`
 + the icon map, or it renders as a raw string.
@@ -118,10 +126,9 @@ Two channels, two independent audiences:
 - **Foreground popup** = role-based via `target_roles[]` (RLS decides who can
   see the row). Fires an OS popup **only while that user's PWA is open** — there
   is no closed-app delivery. Audience is whoever has the app open among the
-  targeted roles. Severity (owner-locked, decided 2026-06-22): popups fire for
-  **ALL** visible severities (incl. `info` `pos.order_new`), unlike the former
-  critical-only server push — a foreground popup only shows while the app is
-  open, so the noise cost is low.
+  targeted roles. Severity (owner-locked, see D046): popups fire for **ALL**
+  visible severities, incl. `info` `pos.order_new` — a foreground popup only
+  shows while the app is open, so the noise cost is low.
 - **Telegram supergroup** = audience is **group membership** (owner + specially
   invited people), DECOUPLED from app roles. The dispatcher is role-agnostic and
   routes by `kind` + `severity` → forum topic. Both `critical` and `warning` flow
@@ -135,14 +142,13 @@ DEFAULT topic, never throws (forward-compat for future producers).
 🔴 Khẩn (Critical) · 💵 Tiền-Quỹ · 🍳 Bếp-Void · 📦 Kho-Tồn · 🛒 Mua hàng-Nhập ·
 🧾 Hóa đơn-Thuế · 👥 Nhân sự · 📊 Báo cáo ngày · 📈 Báo cáo tuần-tháng.
 `critical` → 🔴; else by `kind` prefix. The 20 msg/min cap is per WHOLE group
-(shared across topics) — daily digest batching is the pressure valve. Topic-id
-map lives in `inventory_qc_settings.telegram_topic_map` (jsonb); bot token +
-chat_id stay in env, never in the DB.
+(shared across topics) — daily digest batching is the pressure valve. Bot
+token + chat_id stay in env, never in the DB.
 
 ## Trigger vs detector ownership (no double-alert)
 
-Single-row events stay DB triggers (already live): `pos.shift_variance` (#1
-cash variance, retune constants only), `pos.payment_stock_failed` (#6),
+Single-row events stay DB triggers (already live): `pos.shift_variance`
+(cash variance, retune constants only), `pos.payment_stock_failed`,
 `trg_notify_*` for order/GRN/transfer/stocktake. The scheduled detector cron owns
 ONLY what triggers cannot: cross-row aggregates (void/discount rate per session)
 and time/age staleness (session > 16h, payment > 2h). A test MUST assert the cron
@@ -158,8 +164,8 @@ emits zero rows of any trigger-owned `kind`.
 - **Agent action surface = existing `SECURITY DEFINER` RPCs** (allowlist + caps).
   No new action API.
 - **Migration/prod posture is owned by `database.md`** (Environment Registry +
-  Migration Policy). Parallel file-writing agents each work in their own git
-  worktree.
+  Migration Policy). Concurrent-agent worktree discipline is owned by
+  `orchestration.md`.
 - **Single tenant** (`tenant_id = 1`); still scope every query by
   `tenant_id` + `branch_id` explicitly (service-role bypasses RLS).
 

@@ -20,24 +20,14 @@ database policy, copy, or business rules.
 ## Repository Boundary
 
 - Root runtime-adapter directories (`.claude/`, `.codex/`, …) are adapters to
-  the repo rules, never competing sources of truth (registry:
-  `references.md` → Agent Entrypoints Per IDE). They may wire tools,
-  permissions, hooks, launchers, local prompts, and lightweight handoff
-  helpers.
-- Adapter config MAY carry runtime enforcement for its own agent — permission
-  allow/deny lists and hook wiring. Shared guard logic lives once in
-  `scripts/` (e.g. `scripts/guard-prod-db.mjs` enforces the Environment
-  Registry in `database.md`; `.claude/settings.json` and `.codex/hooks.json`
-  only wire it to their runtime). Adapters MUST NOT duplicate rule content or
-  fork guard scripts: enforcement references the shared rules and shared
-  scripts. Share facts and logic; wire per runtime.
-- New IDE adapters are allowed, but write-capable database/tool actions must be
-  wired to the canonical guard before use. Until an adapter is registered in
-  `scripts/check-guard-sync.mjs`, keep it read-only for production-affecting
-  tools.
-- Version-control hygiene for adapter dirs (no secrets, tokens, caches,
-  sessions, worktrees, per-user state) is owned by `references.md` → Agent
-  Entrypoints Per IDE.
+  the repo rules, never competing sources of truth. They may wire tools,
+  permissions, hooks, launchers, local prompts, and lightweight handoff helpers,
+  but MUST NOT duplicate rule content or fork guard scripts — share facts and
+  logic, wire per runtime. The adapter registry, the shared prod-DB guard
+  wiring, the new-IDE registration rule (`scripts/check-guard-sync.mjs`, else
+  read-only), and version-control hygiene are owned by `references.md` → Agent
+  Entrypoints Per IDE (guard enforcement per `database.md` → Environment
+  Registry).
 - Do not vendor external skills into this repo unless the owner explicitly asks
   for a product-owned skill package and approves the path.
 - Durable project routing lives here, under `docs/agent/rules/`, not in a
@@ -72,20 +62,24 @@ Layer-first entry points into the **Required Routing Matrix** below — the
 matrix owns the rules, skills, and verification; this index only routes. Pick
 the minimum useful set per the anti-stacking rule above.
 
-- **UI / UX / copy / route surface** → matrix row "UI, UX, route surface…" and Má Tư UI Skill Routing below. Default T2 (T3 if auth-gated flow).
-- **FE — RSC / Server Actions / proxy / perf** → rows "Next.js App Router…" and "React component performance…". Default T2.
-- **BE — Supabase / RLS / RPC / auth / money** → rows "Supabase queries…" and "Money, payments…". Default T3.
-- **Infra — deploy / CI / env / print-agent** → row "Deployment, Vercel, CI…" plus `docs/modules/infrastructure.md` and runbooks. Default T2 (T3 if prod-affecting).
-- **Architecture — cross-cutting design** → row "Broad repo audit…" plus `docs/architecture/README.md` and `docs/spec/architecture.md`; planning: `superpowers:brainstorming` → `superpowers:writing-plans`; optional artifact template `eos-system-design` / `eos-tech-spec` when installed. Default T3.
-- **Review / PR / regression / security** → row "Code review, PR review…"; security scope: `cso` or the built-in `security-review`. Tier per diff blast radius.
-- **Process — debug / test / QA** → row "Browser QA, route smoke…" for QA; debug: `investigate` or `superpowers:systematic-debugging`; TDD/verification superpowers only when they directly own the task step. Tier inherited from the task.
+Review tier for every layer below is set by `workflow.md` → Review Depth, by
+blast radius — not by layer.
+
+- **UI / UX / copy / route surface** → matrix row "UI, UX, route surface…" and Má Tư UI Skill Routing below.
+- **FE — RSC / Server Actions / proxy / perf** → rows "Next.js App Router…" and "React component performance…".
+- **BE — Supabase / RLS / RPC / auth / money** → rows "Supabase queries…" and "Money, payments…".
+- **Infra — deploy / CI / env / print-agent** → row "Deployment, Vercel, CI…" plus `docs/modules/infrastructure.md` and runbooks.
+- **Architecture — cross-cutting design** → row "Broad repo audit…" plus `docs/architecture/README.md` and `docs/spec/architecture.md`; planning: `superpowers:brainstorming` → `superpowers:writing-plans`; optional artifact template `eos-system-design` / `eos-tech-spec` when installed.
+- **Review / PR / regression / security** → row "Code review, PR review…"; security scope: `cso` or the built-in `security-review`.
+- **Process — debug / test / QA** → row "Browser QA, route smoke…" for QA; debug: `investigate` or `superpowers:systematic-debugging`; TDD/verification superpowers only when they directly own the task step.
 
 ## Toolset Reproducibility
 
-These plugins/skills are **per-user Claude state, not repo-pinned**: the rich set
-(`frontend-design`, `vercel:*`, `supabase`, `playwright`, `superpowers`, …) lives
-in `~/.claude/settings.json`; the gitignored `.claude/settings.local.json` only
-adds `oh-my-claudecode`. The only git-tracked repo skill is `tax-vn`
+Six official-marketplace plugins are repo-pinned via `.claude/settings.json` →
+`enabledPlugins` (`frontend-design`, `vercel`, `supabase`, `playwright`,
+`superpowers`, `claude-md-management`); everything else is per-user Claude
+state layered on top in `~/.claude/settings.json` or the gitignored
+`.claude/settings.local.json`. The only git-tracked repo skill is `tax-vn`
 (`.claude/skills/tax-vn/`). What survives a different machine or runtime:
 
 - **The durable, runtime-neutral contract is the Layer Index + Required Routing
@@ -102,7 +96,7 @@ adds `oh-my-claudecode`. The only git-tracked repo skill is `tax-vn`
   risk surface; if a plugin is unavailable or its context conflicts with repo
   rules, skip it and use the repo rules plus the closest local tool.
 - **Per-user marketplace plugins — NOT pinned, keep in your own config:**
-  `oh-my-claudecode`, `ponytail`, `telegram`; `engineering-os` runs from a
+  `oh-my-claudecode`, `ponytail`, `caveman`, `telegram`; `engineering-os` runs from a
   per-user plugin cache (its local-path marketplace source is machine-specific
   and may dangle — never load-bearing).
 - **`gstack` is not a marketplace plugin** — it is a separately-installed project
@@ -125,7 +119,7 @@ skills); `headroom learn` is dry-run-only for this repo. Operational checklist:
 
 The Layer Index above routes into this table; rows below are the task-signal
 view, and the verification column lives here. Skill names are capability
-contracts (see Repository Boundary). Inventory last re-verified 2026-07-02.
+contracts (see Repository Boundary).
 
 | Task signal                                                                       | Required repo rules/docs                                                                                | Required skills/plugins when available                                                                                                                                                                                                                                                                                                                                           | Required verification                                                                                                                         |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -194,9 +188,8 @@ Load authority before external skills: `docs/spec/design-system.md`,
 `docs/modules/ui.md`, `tasks/regressions.md`, and the domain docs for the route
 family. The Custom Theme contract wins over every external skill, generated
 design system, preset suggestion, color palette, font pairing, or motion
-recipe. Then write the UI rebuild gate before implementation: surface, primary
-user job, route family, change type (visual refactor / UX flow / copy /
-behavior), primitives to use, and regression rules at risk.
+recipe. Write the UI rebuild gate before implementation — its required fields
+and the operational-UI philosophy are owned by [ui.md](ui.md).
 
 Skill stacks, in order (capability contracts — use the closest installed
 equivalent):
@@ -236,10 +229,10 @@ on operational surfaces unless the owner explicitly changes
 `docs/spec/design-system.md` first. External skill outputs are advisory —
 translate them back into route family, primary user job, approved primitives,
 regression rules at risk, and the verification the repo expects. Verify by
-route behavior, not aesthetics alone: the mobile-first viewport exposes the
-next safe action or live queue where relevant, desktop adds density without
-changing IA, empty/loading/error states use approved primitives, and meaningful
-UI changes get browser/runtime smoke when a safe dev target is available.
+route behavior, not aesthetics alone — against [ui.md](ui.md) → Operational UI
+Philosophy, with empty/loading/error states on approved primitives and
+browser/runtime smoke for meaningful UI changes when a safe dev target is
+available.
 
 ### Browser And QA
 
@@ -273,10 +266,8 @@ UI changes get browser/runtime smoke when a safe dev target is available.
 
 ### GStack Workflow Skills
 
-Per-user gstack skills (`review`, `investigate`, `qa`/`qa-only`, `cso`,
-`careful`/`guard`/`freeze`, `ship`/`land-and-deploy`/`canary`,
-`context-save`/`context-restore`) route per the matrix; nothing is load-bearing
-on them. Net-new constraints:
+The gstack skills named in Toolset Reproducibility above route per the matrix.
+Net-new constraints:
 
 - Use `cso` for security audit / threat model scope ("security review"), not a
   generic `review`.
@@ -290,7 +281,7 @@ on them. Net-new constraints:
   `docs/worklog/`, `AGENTS.md`); `setup-deploy` must not rewrite `CLAUDE.md`
   (a stable pointer to `AGENTS.md`).
 
-### Plugin Lanes — OMC, engineering-os, Ponytail
+### Plugin Lanes — OMC, engineering-os, Ponytail, Caveman
 
 These installed workflow plugins are Claude-runtime aids, not authority — Codex
 does not load them, so no rule, gate, or workflow may DEPEND on one. Route by lane:
@@ -309,6 +300,11 @@ does not load them, so no rule, gate, or workflow may DEPEND on one. Route by la
   `AGENTS.md`, `docs/agent/rules/` (Anti-Patterns).
 - **ponytail** — laziest-correct / YAGNI code discipline. Orthogonal; routes
   nothing, governs how code is written.
+- **caveman** — terse-prose discipline for chat and agent-to-agent transcripts
+  (debates, handoffs, subagent output). Style only, never scope: the
+  Communication Protocol in `AGENTS.md` wins — owner replies stay Vietnamese
+  and complete, and persisted docs, commit messages, and code comments keep
+  their existing standards untouched.
 
 Where a plugin overlaps a native system (EOS `eos-code-review` / OMC
 `code-reviewer` vs repo `review` + T-tier; OMC `team`/`ultrawork` vs the T3
@@ -363,16 +359,11 @@ here in the shared rules, not in a single runtime's private memory.
   full T3 debate and the runtime supports spawning them.
 - If subagents are unavailable, write the four-perspective debate yourself and
   call out that subagents were unavailable.
-- Model tier is chosen per call by task complexity, not fixed. Use the strongest
-  available reviewer (for example GPT-5.5 or equivalent) for T3 challenge,
-  architecture forks, auth/RLS/security, money, migrations, and ambiguous BA/PM
-  calls. Use a mid-tier coding model for bounded implementation slices. Use fast
-  coding models (for example GPT-5.3-Codex-Spark or equivalent) for read-only
-  sweeps, caller/evidence collection, test-log triage, small mechanical patches,
-  and QA sidecars. Any borrowed orchestrator/harness template that hardcodes one
-  model tier on every call must have that mandate stripped before adoption.
-  The concrete per-task routing table lives in
-  [orchestration.md](orchestration.md) → Model-Tier Lanes (L0–L3).
+- Model tier is chosen per call by task complexity, not fixed — the concrete
+  per-task lane assignments are owned by [orchestration.md](orchestration.md) →
+  Model-Tier Lanes (L0–L3). Any borrowed orchestrator/harness template that
+  hardcodes one model tier on every call must have that mandate stripped before
+  adoption.
 - Agent Teams (`TeamCreate` / `SendMessage` / `TaskCreate`) is enabled for the
   Claude runtime (`.claude/settings.json` → `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`)
   and MAY be used for live multi-agent coordination. It is an OPTIONAL capability:
@@ -381,13 +372,10 @@ here in the shared rules, not in a single runtime's private memory.
   graceful single-agent / written-transcript fallback (see `workflow.md`). It is an
   experimental flag — expect it to churn; never make load-bearing governance
   contingent on it.
-- Claude-runtime accelerators for the T3 flow live in-repo: the
-  `.claude/agents/t3-lens.md` subagent (generic read-only lens — the
-  orchestrator's prompt assigns PM/BA/Dev/QA or a specialist flex) and the
-  `.claude/commands/t3-debate.md` / `.claude/commands/verify-gate.md`
-  launchers. They are optional accelerators, registered in `references.md` →
-  Agent Entrypoints Per IDE; the written transcript stays the canonical form
-  (`team.md` → Runtime-Neutral Mandate).
+- Optional Claude-runtime T3 accelerators (`t3-lens` subagent, `t3-debate` /
+  `verify-gate` launchers) are registered in `references.md` → Agent Entrypoints
+  Per IDE; the written transcript stays the canonical form (`team.md` →
+  Runtime-Neutral Mandate).
 
 ## Anti-Patterns
 

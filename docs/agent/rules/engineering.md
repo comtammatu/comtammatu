@@ -10,7 +10,7 @@ Use this file for repo-wide engineering constraints, commands, architecture, imp
 corepack pnpm dev          # Start dev server (Turbopack)
 corepack pnpm build        # Production build
 corepack pnpm typecheck    # Type checking across all packages
-corepack pnpm lint         # Repo guard checks (copy, ui-contract, client-storage, rules-mirror, guard-sync, seed-permissions, regression-guards, baseline hygiene, review-tier, doc-staleness, i18n:no-grow) + ESLint
+corepack pnpm lint         # Repo guard checks (copy, ui-contract, client-storage, rules-mirror, guard-sync, seed-permissions, regression-guards, baseline hygiene, review-tier, doc-staleness, i18n:no-grow, route-matrix) + ESLint
 corepack pnpm test         # Test suites (turbo test)
 corepack pnpm verify       # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
 corepack pnpm db:types     # Regenerate Supabase types after migration is applied to the type source schema
@@ -61,16 +61,15 @@ Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.
 - Server Actions / RSC: `@comtammatu/database` full barrel.
 - Proxy / Edge: `@comtammatu/database/supabase/middleware`.
 - Client `"use client"` components: `@comtammatu/database/supabase/client` only. NEVER use the full barrel.
+- A `"use client"` component importing the `@comtammatu/database` barrel fails the build.
+
+## Package tsconfig
+
+- TypeScript 6 packages using `process.env` need `"types": ["node"]` in tsconfig.
 
 ## URL Structure
 
-```text
-/admin/*              → Tenant-level management (manager+ roles)
-/br/[branchId]/pos    → POS (cashier / service workflow)
-/br/[branchId]/kds    → KDS (chef)
-/employee             → Employee task surface (all staff)
-/login                → Auth
-```
+Canonical route families and ownership: `docs/spec/role-route-matrix.md`.
 
 ## Proxy
 

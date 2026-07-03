@@ -14,7 +14,7 @@ team loop ([team.md](team.md)), review tiers and verification gates
 | --- | --- | --- |
 | Single fact, one command, an edit you can place from context, a read within the inline threshold | Inline (main thread) | No delegation overhead. Threshold owned by [skills.md](skills.md) → Subagents, Debate, And Read Delegation. |
 | Orientation read beyond the inline threshold, over files you will NOT edit | One read-only Explore sub-agent | Context economy — owned by [skills.md](skills.md) "Subagents, Debate, And Read Delegation". Return conclusions, not file dumps. |
-| One isolated, well-scoped implementation chunk | One `executor` sub-agent | Keeps the chunk's working context out of the main thread; model tier is chosen by [skills.md](skills.md) → Subagents, Debate, And Read Delegation. |
+| One isolated, well-scoped implementation chunk | One `executor` sub-agent | Keeps the chunk's working context out of the main thread; model tier is chosen by Model-Tier Lanes below. |
 | Independent work that fans out — audit sweep, multi-file migration, multi-dimension review, N candidate designs | Dynamic multi-agent Workflow | A transient set of sub-agents spawned for one fan-out task, then torn down — not the standing team. Pipeline by default; barrier only when a stage needs all prior results. |
 | Recurring standing mission, cross-runtime review, arbitration | Standing team + Codex pass | Defined in [team.md](team.md). |
 
@@ -85,10 +85,12 @@ anti-pattern paid in tokens:
 - File moves/renames; deletion of confirmed-dead-now code (caveat above).
 - Single-fact reads within the inline threshold ([skills.md](skills.md)).
 
-Not on this list: **applying a migration**. Prod apply is owner-only
-([database.md](database.md)); `apply_migration` never appears in an agent
-script. Agent scope for DB work ends at authoring the file plus PR
-scaffolding, and — after the owner applies — `corepack pnpm db:types`.
+Not on this list: **applying a migration to the protected prod ref**. That
+apply is owner-only ([database.md](database.md) → Owner-Delegated Production
+Apply); agent scope there ends at authoring the file plus PR scaffolding, and
+— after the owner applies — `corepack pnpm db:types`. `apply_migration`
+against a non-protected preview-branch ref is guard-allowed and stays agent
+scope ([database.md](database.md) → Preview Branches).
 
 ### Lane discipline in practice
 
@@ -124,6 +126,8 @@ The main context window is the scarce resource — protect it.
 - Sub-agent prompts and inter-agent text are English (see `AGENTS.md` → Communication Protocol) — denser, runtime-identical.
 - Cap what returns: ask sub-agents for structured, terse output; no raw file dumps into the main thread.
 - One thread, one job. When a thread is doing two unrelated things, branch or hand off rather than letting both contexts bloat each other.
+- Anchor intent outside the window. Before any fan-out or multi-step work, the lead thread writes the goal and open items to durable state (session task list / `tasks/todo.md`) and reconciles against it after each wave. The plan must survive the lead thread losing context; a lead that "remembers" the mission only in-window will lose it.
+- The lead thread is an orchestrator, not a worker. Owner-facing sessions analyze, brief, delegate, and synthesize; bulk reads, sweeps, and multi-file investigation go down to sub-agents even when the lead *could* do them inline — inline grinding is how the original intent, notes, and rules get evicted.
 
 ## Anti-Repeat And Loop Engineering
 
@@ -137,36 +141,24 @@ Before:
 - Consult `tasks/regressions.md` (named failure rules) and `tasks/lessons.md` (staged insights) before risky or familiar-smelling work.
 - Trust durable zones (`docs/agent/rules/`, `docs/ref/`, `docs/spec/`, `docs/modules/`) over dated snapshots ([references.md](references.md) → Transient Snapshot Docs).
 
-After — promote to the cheapest durable home (an enforced rule costs zero
-context; prose is re-read every session):
+After — promote each learning to the cheapest durable home. The promotion
+ladder and its cleanup policy are owned by [references.md](references.md) →
+Memory Maintenance Rules; recording the learning line in the PR/worklog is
+owned by [workflow.md](workflow.md) → Verification. Point there, do not restate.
 
-- Mechanical / checkable → a lint guard or `tasks/regressions.md`.
-- Insight not yet enforceable → `tasks/lessons.md`.
-- Stable architecture or contract → the owning rule / module / spec doc, then delete the staged copy.
-- Reusable task recipe or prompt shape → a skill, or a row in the Routing Matrix above.
-
-Optimize the next loop only from evidence:
+This file's own lane is optimizing the next loop from evidence:
 
 - If a step wasted time, first try deletion, reuse, or a narrower lane before
   adding process.
 - If a check catches a recurring class, prefer a guard/test/hook over prose.
 - If a model or sub-agent tier was overkill, downgrade the next comparable
   task; if it missed a high-risk issue, route that lens to a stronger reviewer.
-- For T2/T3 work, record one closing line in the PR/worklog: `Learning: none` or
-  the promoted rule, plus `Next loop: <one concrete optimization>`.
-
-The ladder and its cleanup policy are owned by `tasks/lessons.md`,
-`tasks/regressions.md`, and [references.md](references.md) → Memory Maintenance
-Rules — point there, do not restate.
 
 ## Anti-Patterns
 
-- Spinning a multi-agent Workflow for work one agent finishes.
-- Re-solving a problem `tasks/regressions.md` or `tasks/lessons.md` already names.
-- Pulling raw file contents into the main thread when a sub-agent could return the conclusion.
+Beyond the lane, pinning, and read-delegation rules stated above:
+
 - Parallel agents mutating the same files without git-worktree isolation.
 - Approving your own work in the same lane — authoring and review are separate passes ([workflow.md](workflow.md), [team.md](team.md)).
-- An unpinned sub-agent or Workflow-stage call — it inherits the strongest model for work a light tier or plain shell covers (Model-Tier Lanes above).
 - Standing machinery (team, cron, scheduled agents) provisioned with no named recurring need.
 - Reflexive cross-runtime consult on every diff — mandatory only where [workflow.md](workflow.md) requires it (T3).
-- `apply_migration` inside an agent script — prod apply is owner-only ([database.md](database.md)).

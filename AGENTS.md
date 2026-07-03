@@ -121,7 +121,7 @@ Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.
 corepack pnpm dev          # Start dev server (Turbopack)
 corepack pnpm build        # Production build
 corepack pnpm typecheck    # Type checking across all packages
-corepack pnpm lint         # Repo guard checks (copy, ui-contract, client-storage, rules-mirror, guard-sync, seed-permissions, regression-guards, baseline hygiene, review-tier, doc-staleness, i18n:no-grow) + ESLint
+corepack pnpm lint         # Repo guard checks (copy, ui-contract, client-storage, rules-mirror, guard-sync, seed-permissions, regression-guards, baseline hygiene, review-tier, doc-staleness, i18n:no-grow, route-matrix) + ESLint
 corepack pnpm test         # Test suites (turbo test)
 corepack pnpm verify       # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
 corepack pnpm db:types     # Regenerate Supabase types after migration is applied to the type source schema
@@ -131,11 +131,8 @@ corepack pnpm db:types     # Regenerate Supabase types after migration is applie
 
 ## Workflow Summary
 
-Pick review depth by blast radius — tiers, triggers, and the four perspectives
-(PM / BA / Senior Dev / QA) are owned by `docs/agent/rules/workflow.md`:
-
-- **T3 — full debate** (auth/RLS, money, multi-row writes, new `SECURITY DEFINER` RPC, schema migration touching constraints, production data backfill). All four perspectives written or spawned before coding; one independent second-runtime pass before landing.
-- **T2 — self-review** (everything else that changes behavior). Write 2–4 lines per perspective in the task notes / PR body before coding.
-- **T1 — skip** (typo / doc-only / dep-bump — exact conditions in the tier table). State the skip reason in the commit body.
-
-For how these tiers sit inside the end-to-end team loop (intake → land → learn) and the cross-runtime Codex review pass, see `docs/agent/rules/team.md`.
+Review depth (T1/T2/T3), tier triggers, and the four perspectives (PM / BA /
+Senior Dev / QA) are owned by `docs/agent/rules/workflow.md` → Review Depth —
+Tier By Risk. For how these tiers sit inside the end-to-end team loop
+(intake → land → learn) and the cross-runtime Codex review pass, see
+`docs/agent/rules/team.md`.
