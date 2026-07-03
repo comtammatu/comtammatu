@@ -169,7 +169,9 @@ function createSupplierInvoiceDefaultValues(
     invoiceNumber: "",
     invoiceDate: getVNDateString(),
     subtotal: "",
-    vatRate: "8",
+    // HKD does not deduct input VAT by default (einvoice-tax.md §4.1/§4.3) —
+    // field stays editable so the actual supplier-charged rate can be recorded.
+    vatRate: "0",
     matchingNotes: "",
   };
 }
@@ -297,7 +299,7 @@ function SupplierInvoiceCreateFields({
           name="vatRate"
           label={`${copy.vat} %`}
           maxFractionDigits={1}
-          placeholder="8"
+          placeholder="0"
           required
         />
       </div>
