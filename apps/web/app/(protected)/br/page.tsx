@@ -1,6 +1,13 @@
 import { notFound } from "next/navigation";
-import { Building2 as IconBuilding2 } from "lucide-react";
-import { MODULE_ACL } from "@comtammatu/shared/auth";
+import {
+  Building2 as IconBuilding2,
+  LayoutDashboard as IconLayoutDashboard,
+} from "lucide-react";
+import {
+  canAccess,
+  MODULE_ACL,
+  OPERATOR_TILE_GROUP_TITLES,
+} from "@comtammatu/shared/auth";
 import {
   AppEmptyState,
   AppLinkCard,
@@ -29,11 +36,12 @@ export default async function BranchPickerPage() {
     (data ?? []) as OperatorBranchOption[],
     null,
   );
+  const showOfficeCard = canAccess(claims.user_role, "dashboard");
 
   return (
     <AppPage mobile density="compact" contentClassName="max-w-lg">
       <AppPageHeader title={MODULE_ACL.branches.label} />
-      {allowedBranches.length > 0 ? (
+      {allowedBranches.length > 0 || showOfficeCard ? (
         <LinkCardGrid>
           {allowedBranches.map((branch) => (
             <AppLinkCard
@@ -43,6 +51,14 @@ export default async function BranchPickerPage() {
               icon={<IconBuilding2 />}
             />
           ))}
+          {showOfficeCard ? (
+            <AppLinkCard
+              href={MODULE_ACL.dashboard.path}
+              title={OPERATOR_TILE_GROUP_TITLES.office_bridge}
+              icon={<IconLayoutDashboard />}
+              tone="secondary"
+            />
+          ) : null}
         </LinkCardGrid>
       ) : (
         <AppEmptyState title={MODULE_ACL.branches.label} />
