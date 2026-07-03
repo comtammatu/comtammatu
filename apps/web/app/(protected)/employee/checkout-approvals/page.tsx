@@ -267,6 +267,7 @@ export async function CheckoutApprovalsPageContent({
         <CheckoutApprovalsClient
           items={items}
           canApprove={canApprove === true}
+          embedded={routeBranchId !== undefined}
         />
       </EmployeePanel>
     </EmployeePage>

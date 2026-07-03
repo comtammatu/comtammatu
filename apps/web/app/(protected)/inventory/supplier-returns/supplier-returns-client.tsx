@@ -85,11 +85,13 @@ export function SupplierReturnsClient({
 
   const content = (
     <>
-      <AppPageHeader
-        eyebrow={embedded ? undefined : INVENTORY_VI.warehouse}
-        title={INVENTORY_VI.supplierReturnsTitle}
-        description={INVENTORY_VI.supplierReturnsDescription}
-      />
+      {!embedded ? (
+        <AppPageHeader
+          eyebrow={INVENTORY_VI.warehouse}
+          title={INVENTORY_VI.supplierReturnsTitle}
+          description={INVENTORY_VI.supplierReturnsDescription}
+        />
+      ) : null}
       {initialReturns.length === 0 ? (
         <AppEmptyState mode="no-data" title={INVENTORY_VI.noSupplierReturns} />
       ) : (

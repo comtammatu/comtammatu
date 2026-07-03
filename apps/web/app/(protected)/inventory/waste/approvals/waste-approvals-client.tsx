@@ -65,12 +65,14 @@ export function WasteApprovalsClient({
 
   const content = (
     <>
-      <AppPageHeader
-        eyebrow="Kho hàng"
-        title={copy.title}
-        description={`${copy.principle}${branchFilter !== null ? copy.branchSuffix(branchFilter) : ""}`}
-        badge={{ children: copy.count(rows.length) }}
-      />
+      {!embedded ? (
+        <AppPageHeader
+          eyebrow="Kho hàng"
+          title={copy.title}
+          description={`${copy.principle}${branchFilter !== null ? copy.branchSuffix(branchFilter) : ""}`}
+          badge={{ children: copy.count(rows.length) }}
+        />
+      ) : null}
 
       {rows.length === 0 ? (
         <AppEmptyState compact title={copy.empty} />
@@ -80,6 +82,7 @@ export function WasteApprovalsClient({
             <WasteApprovalCard
               key={row.issueId}
               row={row}
+              embedded={embedded}
               onResolved={(id) =>
                 setRows((prev) => prev.filter((r) => r.issueId !== id))
               }
@@ -100,9 +103,11 @@ export function WasteApprovalsClient({
 function WasteApprovalCard({
   row,
   onResolved,
+  embedded = false,
 }: {
   row: PendingWasteRow;
   onResolved: (issueId: number) => void;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const [note, setNote] = useState("");
@@ -258,6 +263,7 @@ function WasteApprovalCard({
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
+              size={embedded ? "touch" : "default"}
               onClick={() => handleDecision("rejected")}
               disabled={pending !== null || row.isSelfCreated}
               className="text-destructive"
@@ -270,6 +276,7 @@ function WasteApprovalCard({
               {copy.reject}
             </Button>
             <Button
+              size={embedded ? "touch" : "default"}
               onClick={() => handleDecision("approved")}
               disabled={pending !== null || row.isSelfCreated}
             >

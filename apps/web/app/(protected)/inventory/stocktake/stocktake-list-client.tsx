@@ -223,28 +223,43 @@ export function StocktakeListClient({
     },
   ];
 
+  const stocktakeActions = (
+    <div className="flex items-center gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size={embedded ? "touch" : "default"}
+        asChild
+      >
+        {/* S13a pilot entry. Route is feature-flag gated server-side —
+            non-pilot branches redirect to list with error=stocktake_redesigned_not_enabled. */}
+        <Link href={`${routeBase}/new${branchQuery}`}>
+          <IconClipboardCheck className="size-4" />
+          {messages.inventory.stocktake.v2}
+        </Link>
+      </Button>
+      <Button
+        type="button"
+        size={embedded ? "touch" : "default"}
+        onClick={handleCreate}
+      >
+        <IconPlus className="size-4" />
+        {messages.inventory.stocktake.openSession}
+      </Button>
+    </div>
+  );
+
   const content = (
     <>
-      <AppPageHeader
-        eyebrow="Kho hàng"
-        title={messages.inventory.stocktake.title}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" asChild>
-              {/* S13a pilot entry. Route is feature-flag gated server-side —
-                  non-pilot branches redirect to list with error=stocktake_redesigned_not_enabled. */}
-              <Link href={`${routeBase}/new${branchQuery}`}>
-                <IconClipboardCheck className="size-4" />
-                {messages.inventory.stocktake.v2}
-              </Link>
-            </Button>
-            <Button type="button" onClick={handleCreate}>
-              <IconPlus className="size-4" />
-              {messages.inventory.stocktake.openSession}
-            </Button>
-          </div>
-        }
-      />
+      {embedded ? (
+        stocktakeActions
+      ) : (
+        <AppPageHeader
+          eyebrow="Kho hàng"
+          title={messages.inventory.stocktake.title}
+          actions={stocktakeActions}
+        />
+      )}
       {/* Filters */}
       <AppToolbar>
         <Select value={statusFilter} onValueChange={setStatusFilter}>

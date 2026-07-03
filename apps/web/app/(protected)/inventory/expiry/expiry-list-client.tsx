@@ -98,10 +98,12 @@ function ExpiryAlertCard({
   alert,
   disabled,
   onWriteOff,
+  embedded = false,
 }: {
   alert: ExpiryAlertRow;
   disabled: boolean;
   onWriteOff: (alert: ExpiryAlertRow) => void;
+  embedded?: boolean;
 }) {
   const meta = URGENCY_META[alert.urgency] ?? {
     label: alert.urgency,
@@ -127,8 +129,8 @@ function ExpiryAlertCard({
       <ItemActions>
         <Button
           variant="destructive"
-          size="sm"
-          className="h-7 gap-1.5 text-xs shrink-0"
+          size={embedded ? "touch" : "sm"}
+          className={embedded ? "shrink-0" : "h-7 gap-1.5 text-xs shrink-0"}
           onClick={() => onWriteOff(alert)}
           disabled={disabled}
         >
@@ -318,8 +320,8 @@ export function ExpiryListClient({
       render: (alert) => (
         <Button
           variant="destructive"
-          size="sm"
-          className="h-7 gap-1.5 text-xs"
+          size={embedded ? "touch" : "sm"}
+          className={embedded ? undefined : "h-7 gap-1.5 text-xs"}
           onClick={() => openWriteOff(alert)}
           disabled={writeOff != null}
         >
@@ -348,6 +350,7 @@ export function ExpiryListClient({
             alert={row}
             disabled={writeOff != null}
             onWriteOff={openWriteOff}
+            embedded={embedded}
           />
         )}
       />
@@ -403,7 +406,8 @@ export function ExpiryListClient({
             setUrgencyFilter((prev) => (prev === "expired" ? null : "expired"))
           }
           className={cn(
-            "h-auto gap-1.5 rounded-full px-3 py-1 font-medium",
+            "h-auto gap-1.5 rounded-full px-3 font-medium",
+            embedded ? "py-2.5" : "py-1",
             urgencyFilter === "expired"
               ? "bg-destructive/10 text-destructive border-destructive/30"
               : "bg-muted/50 text-muted-foreground hover:bg-muted",
@@ -424,7 +428,8 @@ export function ExpiryListClient({
             )
           }
           className={cn(
-            "h-auto gap-1.5 rounded-full px-3 py-1 font-medium",
+            "h-auto gap-1.5 rounded-full px-3 font-medium",
+            embedded ? "py-2.5" : "py-1",
             urgencyFilter === "critical"
               ? "bg-destructive/10 text-destructive border-destructive/30"
               : "bg-muted/50 text-muted-foreground hover:bg-muted",
@@ -443,7 +448,8 @@ export function ExpiryListClient({
             setUrgencyFilter((prev) => (prev === "warning" ? null : "warning"))
           }
           className={cn(
-            "h-auto gap-1.5 rounded-full px-3 py-1 font-medium",
+            "h-auto gap-1.5 rounded-full px-3 font-medium",
+            embedded ? "py-2.5" : "py-1",
             urgencyFilter === "warning"
               ? "bg-warning/10 text-warning border-warning/30"
               : "bg-muted/50 text-muted-foreground hover:bg-muted",

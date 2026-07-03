@@ -122,33 +122,44 @@ export function CountAssignmentsClient({
     [employees, selectionByEmployee],
   );
 
+  const assignmentActions = (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {countHref ? (
+        <Button
+          asChild
+          variant="outline"
+          size={embedded ? "touch" : "default"}
+        >
+          <Link href={countHref}>
+            <IconArrowRight className="size-4" />
+            Mở màn đếm tồn
+          </Link>
+        </Button>
+      ) : null}
+      <Button
+        type="button"
+        size={embedded ? "touch" : "default"}
+        onClick={() => setNewDialogOpen(true)}
+        disabled={!scopeReady || unassignedEmployees.length === 0}
+      >
+        <IconPlus className="size-4" />
+        Thêm phân công mới
+      </Button>
+    </div>
+  );
+
   const content = (
     <>
-      <AppPageHeader
-        eyebrow={embedded ? undefined : "Kiểm kê"}
-        title="Phân công đếm tồn"
-        description="Giao danh sách thành phẩm cần kiểm kê cho từng nhân viên tại kho chi nhánh hiện tại."
-        actions={
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {countHref ? (
-              <Button asChild variant="outline">
-                <Link href={countHref}>
-                  <IconArrowRight className="size-4" />
-                  Mở màn đếm tồn
-                </Link>
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              onClick={() => setNewDialogOpen(true)}
-              disabled={!scopeReady || unassignedEmployees.length === 0}
-            >
-              <IconPlus className="size-4" />
-              Thêm phân công mới
-            </Button>
-          </div>
-        }
-      />
+      {embedded ? (
+        assignmentActions
+      ) : (
+        <AppPageHeader
+          eyebrow="Kiểm kê"
+          title="Phân công đếm tồn"
+          description="Giao danh sách thành phẩm cần kiểm kê cho từng nhân viên tại kho chi nhánh hiện tại."
+          actions={assignmentActions}
+        />
+      )}
 
       {!scopeReady && (
         <AppEmptyState
