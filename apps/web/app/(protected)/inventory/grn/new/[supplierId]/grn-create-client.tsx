@@ -101,6 +101,8 @@ const GRN_CREATE_COPY = {
   searchPlaceholder: "Tìm theo tên hoặc mã SKU",
   emptyTitle: "Không thấy nguyên liệu",
   emptyDescription: "Thử từ khóa khác hoặc kiểm tra lại danh mục.",
+  panelEmptyTitle: "Chưa chọn mặt hàng",
+  panelEmptyDescription: "Chọn một nguyên liệu ở danh sách để sửa thông tin.",
   optionalNote: "Ghi chú (tùy chọn)",
   notePlaceholder: "Tình trạng, lô, nhiệt độ...",
   addedSummary: (lineCount: number) => `Đã thêm ${lineCount} mặt hàng`,
@@ -127,6 +129,36 @@ type EditState = {
   note: string;
 };
 
+// Desktop (lg+) docks line-edit inline instead of the mobile bottom sheet.
+let deskLineEditMql: MediaQueryList | null = null;
+
+function getDeskLineEditQuery(): MediaQueryList {
+  deskLineEditMql ??= window.matchMedia("(min-width: 1024px)");
+  return deskLineEditMql;
+}
+
+function subscribeDeskLineEdit(onStoreChange: () => void): () => void {
+  const list = getDeskLineEditQuery();
+  list.addEventListener("change", onStoreChange);
+  return () => list.removeEventListener("change", onStoreChange);
+}
+
+function getDeskLineEditSnapshot(): boolean {
+  return getDeskLineEditQuery().matches;
+}
+
+function getDeskLineEditServerSnapshot(): boolean {
+  return false;
+}
+
+function useIsDesktopLineEdit(): boolean {
+  return React.useSyncExternalStore(
+    subscribeDeskLineEdit,
+    getDeskLineEditSnapshot,
+    getDeskLineEditServerSnapshot,
+  );
+}
+
 export function GrnCreateClient({
   supplier,
   branchId,
@@ -137,6 +169,9 @@ export function GrnCreateClient({
   embedded = false,
 }: Props) {
   const router = useRouter();
+  // Desktop 2-column line-edit is an office-surface upgrade only; the branch
+  // operator root (embedded) always stays single-column regardless of viewport.
+  const isDesktopLineEdit = useIsDesktopLineEdit() && !embedded;
   // Sprint 6 #3: server-side draft is the source of truth. React state mirrors
   // server state for UI rendering; lazy-create on first saveLine when no
   // draft exists yet.
@@ -341,37 +376,8 @@ export function GrnCreateClient({
   const lineCount = draft.lines.length;
   const canSubmit = lineCount > 0 && !submitting;
 
-  const content = (
+  const listColumn = (
     <>
-      <AppPageHeader
-        breadcrumb={
-          <Link
-            href={basePath}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-          >
-            <IconArrowLeft className="size-4" />{" "}
-            {GRN_CREATE_COPY.changeSupplier}
-          </Link>
-        }
-        eyebrow={GRN_CREATE_COPY.newReceiptEyebrow}
-        title={supplier.name}
-        description={GRN_CREATE_COPY.newReceiptDescription}
-        actions={
-          lineCount > 0 ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={discardDraft}
-            >
-              <IconTrash className="size-4" />
-              {GRN_CREATE_COPY.discardDraft}
-            </Button>
-          ) : undefined
-        }
-      />
-
       {lineCount > 0 ? (
         <AppSection size="sm" contentClassName="gap-2">
           <div className="flex items-center justify-between text-2xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -498,7 +504,7 @@ export function GrnCreateClient({
         </Alert>
       ) : null}
 
-      <div className="sticky chrome-safe-bottom z-10">
+      <div className="sticky chrome-safe-bottom z-10 lg:static">
         <Button
           type="button"
           size="touch-lg"
@@ -518,9 +524,70 @@ export function GrnCreateClient({
           )}
         </Button>
       </div>
+    </>
+  );
+
+  const content = (
+    <>
+      <AppPageHeader
+        breadcrumb={
+          <Link
+            href={basePath}
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+          >
+            <IconArrowLeft className="size-4" />{" "}
+            {GRN_CREATE_COPY.changeSupplier}
+          </Link>
+        }
+        eyebrow={GRN_CREATE_COPY.newReceiptEyebrow}
+        title={supplier.name}
+        description={GRN_CREATE_COPY.newReceiptDescription}
+        actions={
+          lineCount > 0 ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={discardDraft}
+            >
+              <IconTrash className="size-4" />
+              {GRN_CREATE_COPY.discardDraft}
+            </Button>
+          ) : undefined
+        }
+      />
+
+      {/* Desktop (lg+, non-embedded office surface): ingredient/line list +
+          line-edit panel side by side. The embedded branch root and smaller
+          viewports stay single-column, editing a line through LineEditSheet. */}
+      {embedded ? (
+        listColumn
+      ) : (
+        <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-6">
+          <div className="flex flex-col gap-3">{listColumn}</div>
+          <div className="hidden lg:block">
+            <LineEditPanel
+              edit={edit}
+              onClose={closeEdit}
+              onSave={saveLine}
+              onRemove={() => {
+                if (!edit) return;
+                removeLine(edit.ingredient.id);
+                closeEdit();
+              }}
+              onPatch={(patch) =>
+                setEdit((current) =>
+                  current ? { ...current, ...patch } : current,
+                )
+              }
+            />
+          </div>
+        </div>
+      )}
 
       <LineEditSheet
-        edit={edit}
+        edit={isDesktopLineEdit ? null : edit}
         onClose={closeEdit}
         onSave={saveLine}
         onRemove={() => {
@@ -567,7 +634,7 @@ export function GrnCreateClient({
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
-  return <AppPage width="narrow">{content}</AppPage>;
+  return <AppPage width="wide">{content}</AppPage>;
 }
 
 type LineEditSheetProps = {
@@ -579,6 +646,114 @@ type LineEditSheetProps = {
   onOpenNumpad: (key: "qty" | "cost") => void;
 };
 
+// Shared field body for the GRN line editor: the mobile bottom LineEditSheet
+// and the desktop docked LineEditPanel both render this, so there is exactly
+// one line-edit fields tree (not a hidden/duplicated twin per breakpoint).
+function LineEditFields({
+  edit,
+  onPatch,
+  onOpenNumpad,
+}: {
+  edit: EditState;
+  onPatch: (patch: Partial<EditState>) => void;
+  onOpenNumpad?: (key: "qty" | "cost") => void;
+}) {
+  const referenceCost = edit.ingredient.unit_cost
+    ? Number(edit.ingredient.unit_cost)
+    : null;
+  const variance =
+    referenceCost && referenceCost > 0
+      ? (edit.unitCost - referenceCost) / referenceCost
+      : null;
+  const showVarianceWarning =
+    variance != null && Math.abs(variance) > DEFAULT_VARIANCE_WARNING;
+  const lineTotal = edit.quantity * edit.unitCost;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <UnitField
+        options={getPurchaseUnitOptions(edit.ingredient)}
+        entryUnitId={edit.entryUnitId}
+        unit={edit.unit}
+        onUnitChange={(unitId, code) =>
+          onPatch({ entryUnitId: unitId, unit: code })
+        }
+      />
+      <div className="grid grid-cols-2 gap-3">
+        <LineValueField
+          label={FORM_VI.quantity}
+          display={edit.quantity}
+          detail={edit.unit}
+          onOpenNumpad={() => onOpenNumpad?.("qty")}
+        >
+          <QuantityInput
+            value={String(edit.quantity)}
+            onValueChange={(v) => onPatch({ quantity: Number(v) || 0 })}
+            maxFractionDigits={3}
+            autoFocus
+            onFocus={(e) => e.currentTarget.select()}
+            className="h-auto border-0 bg-transparent p-0 text-2xl font-semibold tabular-nums shadow-none ring-0 focus-visible:border-0 focus-visible:ring-0"
+          />
+        </LineValueField>
+        <LineValueField
+          label={FORM_VI.unitPrice}
+          display={formatVND(edit.unitCost)}
+          detail={GRN_CREATE_COPY.unitPriceUnit(edit.unit)}
+          onOpenNumpad={() => onOpenNumpad?.("cost")}
+        >
+          <MoneyVndInput
+            value={String(edit.unitCost)}
+            onValueChange={(v) => onPatch({ unitCost: Number(v) || 0 })}
+            onFocus={(e) => e.currentTarget.select()}
+            className="h-auto border-0 bg-transparent p-0 text-2xl font-semibold tabular-nums shadow-none ring-0 focus-visible:border-0 focus-visible:ring-0"
+          />
+        </LineValueField>
+      </div>
+
+      <div className="rounded-md bg-muted/50 px-3 py-3">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">{FORM_VI.amount}</span>
+          <span className="text-base font-semibold">
+            {GRN_CREATE_COPY.moneyVnd(lineTotal)}
+          </span>
+        </div>
+        {referenceCost ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {GRN_CREATE_COPY.lastCost(referenceCost, edit.unit)}
+          </p>
+        ) : null}
+      </div>
+
+      {showVarianceWarning && variance != null ? (
+        <Alert variant="destructive">
+          <IconAlertTriangle className="size-4" />
+          <AlertDescription>
+            {GRN_CREATE_COPY.varianceWarning(variance)}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div>
+        <Label
+          htmlFor="line-note"
+          className="text-2xs font-medium uppercase tracking-wider text-muted-foreground"
+        >
+          {GRN_CREATE_COPY.optionalNote}
+        </Label>
+        <Textarea
+          id="line-note"
+          value={edit.note}
+          onChange={(e) => onPatch({ note: e.target.value })}
+          rows={2}
+          maxLength={200}
+          placeholder={GRN_CREATE_COPY.notePlaceholder}
+          className="mt-1"
+        />
+      </div>
+    </div>
+  );
+}
+
 function LineEditSheet({
   edit,
   onClose,
@@ -588,16 +763,6 @@ function LineEditSheet({
   onOpenNumpad,
 }: LineEditSheetProps) {
   const open = edit != null;
-  const referenceCost = edit?.ingredient.unit_cost
-    ? Number(edit.ingredient.unit_cost)
-    : null;
-  const variance =
-    referenceCost && referenceCost > 0 && edit
-      ? (edit.unitCost - referenceCost) / referenceCost
-      : null;
-  const showVarianceWarning =
-    variance != null && Math.abs(variance) > DEFAULT_VARIANCE_WARNING;
-  const lineTotal = edit ? edit.quantity * edit.unitCost : 0;
   const valid = edit != null && edit.quantity > 0 && edit.unitCost >= 0;
 
   return (
@@ -627,89 +792,12 @@ function LineEditSheet({
               </p>
             </SheetHeader>
 
-            <div className="flex flex-col gap-3 p-4">
-              <UnitField
-                options={getPurchaseUnitOptions(edit.ingredient)}
-                entryUnitId={edit.entryUnitId}
-                unit={edit.unit}
-                onUnitChange={(unitId, code) =>
-                  onPatch({ entryUnitId: unitId, unit: code })
-                }
-                onFreeTextChange={(value) => onPatch({ unit: value })}
+            <div className="p-4">
+              <LineEditFields
+                edit={edit}
+                onPatch={onPatch}
+                onOpenNumpad={onOpenNumpad}
               />
-              <div className="grid grid-cols-2 gap-3">
-                <LineValueField
-                  label={FORM_VI.quantity}
-                  display={edit.quantity}
-                  detail={edit.unit}
-                  onOpenNumpad={() => onOpenNumpad("qty")}
-                >
-                  <QuantityInput
-                    value={String(edit.quantity)}
-                    onValueChange={(v) => onPatch({ quantity: Number(v) || 0 })}
-                    maxFractionDigits={3}
-                    autoFocus
-                    onFocus={(e) => e.currentTarget.select()}
-                    className="h-auto border-0 bg-transparent p-0 text-2xl font-semibold tabular-nums shadow-none ring-0 focus-visible:border-0 focus-visible:ring-0"
-                  />
-                </LineValueField>
-                <LineValueField
-                  label={FORM_VI.unitPrice}
-                  display={formatVND(edit.unitCost)}
-                  detail={GRN_CREATE_COPY.unitPriceUnit(edit.unit)}
-                  onOpenNumpad={() => onOpenNumpad("cost")}
-                >
-                  <MoneyVndInput
-                    value={String(edit.unitCost)}
-                    onValueChange={(v) => onPatch({ unitCost: Number(v) || 0 })}
-                    onFocus={(e) => e.currentTarget.select()}
-                    className="h-auto border-0 bg-transparent p-0 text-2xl font-semibold tabular-nums shadow-none ring-0 focus-visible:border-0 focus-visible:ring-0"
-                  />
-                </LineValueField>
-              </div>
-
-              <div className="rounded-md bg-muted/50 px-3 py-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {FORM_VI.amount}
-                  </span>
-                  <span className="text-base font-semibold">
-                    {GRN_CREATE_COPY.moneyVnd(lineTotal)}
-                  </span>
-                </div>
-                {referenceCost ? (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {GRN_CREATE_COPY.lastCost(referenceCost, edit.unit)}
-                  </p>
-                ) : null}
-              </div>
-
-              {showVarianceWarning && variance != null ? (
-                <Alert variant="destructive">
-                  <IconAlertTriangle className="size-4" />
-                  <AlertDescription>
-                    {GRN_CREATE_COPY.varianceWarning(variance)}
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-
-              <div>
-                <Label
-                  htmlFor="line-note"
-                  className="text-2xs font-medium uppercase tracking-wider text-muted-foreground"
-                >
-                  {GRN_CREATE_COPY.optionalNote}
-                </Label>
-                <Textarea
-                  id="line-note"
-                  value={edit.note}
-                  onChange={(e) => onPatch({ note: e.target.value })}
-                  rows={2}
-                  maxLength={200}
-                  placeholder={GRN_CREATE_COPY.notePlaceholder}
-                  className="mt-1"
-                />
-              </div>
             </div>
 
             <SheetFooter>
@@ -752,6 +840,77 @@ function LineEditSheet({
   );
 }
 
+// Desktop (lg+) docked line-edit panel: same LineEditFields tree as the
+// mobile sheet, framed by AppSection instead of a bottom Sheet. Shows an
+// empty prompt when no line is selected.
+function LineEditPanel({
+  edit,
+  onClose,
+  onSave,
+  onRemove,
+  onPatch,
+}: Omit<LineEditSheetProps, "onOpenNumpad">) {
+  const valid = edit != null && edit.quantity > 0 && edit.unitCost >= 0;
+
+  if (!edit) {
+    return (
+      <AppSection contentClassName="items-center justify-center py-10 text-center">
+        <p className="text-sm font-medium text-muted-foreground">
+          {GRN_CREATE_COPY.panelEmptyTitle}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {GRN_CREATE_COPY.panelEmptyDescription}
+        </p>
+      </AppSection>
+    );
+  }
+
+  return (
+    <AppSection
+      title={edit.ingredient.name}
+      description={
+        edit.ingredient.sku
+          ? `${edit.ingredient.sku} · ${GRN_CREATE_COPY.unitLabel(edit.unit)}`
+          : GRN_CREATE_COPY.unitLabel(edit.unit)
+      }
+      footer={
+        <div className="flex w-full flex-col gap-2">
+          <Button
+            type="button"
+            className="w-full"
+            onClick={onSave}
+            disabled={!valid}
+          >
+            {edit.line ? "Cập nhật" : "Thêm vào phiếu"}
+          </Button>
+          <div className="flex items-center gap-2">
+            {edit.line ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={onRemove}
+                className="flex-1"
+              >
+                {ACTIONS_VI.delete}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="flex-1"
+            >
+              {ACTIONS_VI.close}
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <LineEditFields edit={edit} onPatch={onPatch} />
+    </AppSection>
+  );
+}
+
 function LineValueField({
   label,
   display,
@@ -791,19 +950,20 @@ function LineValueField({
 
 // Purchase-role unit picker for the GRN line, matching the PO create flow's
 // UnitField (new-po-client.tsx): dropdown when the ingredient carries
-// purchase-role ingredient_units, free-text fallback otherwise.
+// purchase-role ingredient_units. No allow_purchase+is_active unit means
+// entryUnitId stays null (qty is already base per inv_to_base), so the field
+// shows the ingredient's own base/measure unit code read-only instead of a
+// free-text input the user could set to a unit inv_to_base doesn't recognize.
 function UnitField({
   options,
   entryUnitId,
   unit,
   onUnitChange,
-  onFreeTextChange,
 }: {
   options: PurchaseUnitOption[];
   entryUnitId: number | null;
   unit: string;
   onUnitChange: (unitId: number, code: string) => void;
-  onFreeTextChange: (value: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -832,11 +992,7 @@ function UnitField({
           </SelectContent>
         </Select>
       ) : (
-        <Input
-          value={unit}
-          onChange={(e) => onFreeTextChange(e.target.value)}
-          className="h-9 text-sm"
-        />
+        <Input value={unit} readOnly disabled className="h-9 text-sm" />
       )}
     </div>
   );

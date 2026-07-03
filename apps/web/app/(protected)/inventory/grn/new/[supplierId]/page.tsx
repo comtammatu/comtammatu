@@ -16,6 +16,7 @@ type IngredientUnitJoinRow = {
   unit_id: number;
   to_base_factor: number | string;
   is_base: boolean;
+  is_active: boolean;
   allow_purchase: boolean;
   allow_issue: boolean;
   allow_production: boolean;
@@ -80,7 +81,7 @@ export async function GrnCreatePageContent({
     supabase
       .from("ingredients")
       .select(
-        "id, name, sku, unit, purchase_unit, unit_cost, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code))",
+        "id, name, sku, unit, purchase_unit, unit_cost, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
@@ -106,12 +107,14 @@ export async function GrnCreatePageContent({
   const ingredients = ((ingredientsRes.data ?? []) as IngredientJoinRow[]).map(
     ({ ingredient_units, ...ingredient }) => {
       const units: IngredientUnitRow[] = (ingredient_units ?? [])
+        .filter((u) => u.is_active)
         .map((u) => ({
           id: u.id,
           unit_id: u.unit_id,
           unit_code: u.units?.code ?? "",
           to_base_factor: Number(u.to_base_factor ?? 1),
           is_base: u.is_base,
+          is_active: u.is_active,
           allow_purchase: u.allow_purchase,
           allow_issue: u.allow_issue,
           allow_production: u.allow_production,

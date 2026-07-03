@@ -173,7 +173,7 @@ export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
   const { data, error } = await supabase
     .from("ingredients")
     .select(
-      "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code))",
+      "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code))",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("name")
@@ -192,6 +192,7 @@ export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
         unit_code: u.units?.code ?? "",
         to_base_factor: Number(u.to_base_factor ?? 1),
         is_base: u.is_base,
+        is_active: u.is_active,
         allow_purchase: u.allow_purchase,
         allow_issue: u.allow_issue,
         allow_production: u.allow_production,
