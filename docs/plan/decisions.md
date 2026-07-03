@@ -779,3 +779,20 @@ liệt kê trong báo cáo (mục 7).
 4. Test `apps/web/tests/inventory-nav-resolver.test.ts` (trước đây assert 3 route này VẮNG MẶT theo D058 W3) cập nhật để assert CÓ MẶT, trích D061.
 
 **Consequences:** amend D058 §4/W3 — chỉ 3 entry này quay lại office sidebar dưới dạng oversight, phần còn lại của W3 (một cửa cho các job khác) giữ nguyên. Không đổi D059 (branch-complete vẫn là hướng cho vai trò tại chi nhánh; oversight ở office không kéo lùi nguyên tắc đó). Đảo điểm nào phải sửa bản ghi này trước.
+
+## D062: Native-quality PWA là hướng giao (mở rộng D012, KHÔNG rewrite native) (2026-07-03)
+
+**Context:** Owner khảo lại hướng mobile sau D050/D059 (branch-complete, Operator plane mobile-first). Câu hỏi: có nên rewrite bằng native framework (Flutter/Capacitor/React Native) để đạt trải nghiệm/hiệu năng "native" không. Hiện chỉ POS/KDS/Runner có PWA manifest (`docs/spec/design-system.md`); Operator Hub (`/br/[branchId]`) — nơi role tại chi nhánh làm việc theo D059 — chưa cài đặt được như một app riêng.
+
+**Decision (owner chốt A):**
+
+1. Mục tiêu = trải nghiệm/hiệu năng **native giao** bằng PWA chất lượng native, không phải rewrite bằng native framework. D012 ("native POS Flutter/Capacitor — PWA chạy ổn") **VẪN đứng, KHÔNG bị đảo** — D062 mở rộng D012 bằng một chương trình nâng cấp PWA, không mở lại lựa chọn native-framework.
+2. Chương trình 4+ slice, additive, không cutover một lần:
+   - **PWA-1** (slice này): Operator Hub cài được như 1 app — manifest riêng cho `/br/[branchId]` mirror pattern POS/KDS/Runner, install-prompt tái dùng hạ tầng có sẵn (`pwa-runtime`, `pwa-toolbar`, `pwa-install-help-dialog`).
+   - **PWA-2**: offline shell (precache/fallback tối thiểu cho Hub, không đổi hành vi station).
+   - **PWA-3**: native-feel — standalone chrome, safe-area, press feedback, back kiểu app (trong khung Motion Contract § G, không animation library mới).
+   - **PWA-4**: perf — nối vào perf lane hiện có (Core Web Vitals/bundle), không mở lane đo mới.
+   - Sau đó: hoàn thiện mobile-first W3/W4 còn lại; push notification là hạng mục tùy chọn, không bắt buộc cho chương trình này.
+3. Không đổi route-family, ACL, hay schema để làm PWA-1..4; mọi slice là bồi đắp lên hạ tầng PWA hiện có (Serwist `sw.ts`, `operational-manifest.ts`, `pwa-runtime.tsx`), không tạo framework/dep PWA thứ hai.
+
+**Consequences:** Mở rộng D012 (giữ nguyên phần loại native-framework) và D050 (Operator plane mobile-first có thêm trục "cài đặt được" bên cạnh route/nav đã có); không đụng D059 (branch-complete vẫn là hướng vai trò, D062 chỉ là lớp installable/offline/perf phủ lên trên). Đảo hướng (mở lại native-framework rewrite, hoặc bỏ cài-đặt-được cho Hub) phải sửa bản ghi này trước.

@@ -13,6 +13,7 @@ import {
   UNITS_VI,
 } from "./inventory-master";
 import { notifications } from "./notifications";
+import { operator } from "./operator";
 import { payment } from "./payment";
 import { pos } from "./pos";
 import { settings } from "./settings";
@@ -31,6 +32,7 @@ export const messages = {
     ingredientForm: INGREDIENT_FORM_VI,
   },
   notifications,
+  operator,
   payment,
   pos,
   settings,
