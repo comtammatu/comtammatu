@@ -72,6 +72,29 @@ checkout.
   −29.4%: 579.6→409.1 kB), bounded PO/hr-staff fetches. `use cache` expansion
   deferred as slice 2.
 
+## Now — Branch Hub Runtime QA + Gap Audit (owner-requested 2026-07-03)
+
+- [~] **QA sweep `/br/[branchId]/*` per role** (report-only): DONE for
+  branch_manager @ branch 1 × 3 viewports on the local e2e stack — hub, tile
+  groups (incl. Văn phòng bridge), GRN/consumption wrappers, shift, dashboard,
+  settings all render + route correctly; findings QA-1 (hub density on
+  tablet/desktop) and the CSP `connect-src` 127.0.0.1:54321 hardcode (breaks
+  auth-refresh/realtime on non-default local ports — next.config.ts should
+  derive it from NEXT_PUBLIC_SUPABASE_URL). REMAINING: cashier/chef/
+  warehouse/production role sweeps + interaction-depth passes (forms,
+  approvals flows). Env restored to prod after the session; re-enter QA mode
+  with `node scripts/supabase-e2e-bringup.mjs` + `pnpm dev`.
+- [~] **Gap audit v2**: report at `docs/worklog/branch-hub-gap-audit-2026-07-03.md`
+  (in progress). QA runtime findings so far (local e2e stack, branch_manager @
+  branch 1, 3 viewports): hub + all 4 tile groups incl. new "Văn phòng" render
+  correctly; W1 GRN wrapper works end-to-end with V1 brand empty state; auth
+  landing correct. **FINDING QA-1 (density):** operator hub content is capped at
+  `max-w-3xl` (768px) with 2-col tiles — on tablet (768) and desktop (1280) it
+  stays a narrow centered column, wastes 40-60% horizontal space, forces extra
+  scroll. Desktop/tablet should add tile-grid density (3-4 col at lg/xl, wider
+  max-width) per design-system "desktop adds density" clause. Owner "optimize
+  mobile+tablet+desktop" target.
+
 ## Now — Workflow Reset
 
 - [x] **Agent workflow frame cleanup** — Goal: one entrypoint, one active board,
