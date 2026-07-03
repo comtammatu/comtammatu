@@ -860,3 +860,42 @@ test("operator transfer routes keep list, create, detail, and form actions branc
     /router\.(?:push|replace)\(\s*["'`]\/inventory\/transfers/,
   );
 });
+
+test("operator count assignments render branch-native inside the branch operator shell (D059 §4 slice 2)", () => {
+  const route = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx",
+  );
+  const officePage = read(
+    "apps/web/app/(protected)/inventory/count-assignments/page.tsx",
+  );
+  const client = read(
+    "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
+  );
+  const navConfig = read("packages/shared/src/auth/nav-config.ts");
+
+  assert.match(route, /params: Promise<\{ branchId: string \}>/);
+  assert.match(route, /CountAssignmentsPageContent/);
+  assert.match(route, /routeBranchId=\{branchId\}/);
+  assert.match(
+    route,
+    /basePath=\{`\/br\/\$\{branchId\}\/stock\/count-assignments`\}/,
+  );
+  assert.match(route, /embedded/);
+  assert.doesNotMatch(route, /redirect\(`\/inventory\/count-assignments/);
+
+  assert.match(
+    officePage,
+    /export async function CountAssignmentsPageContent/,
+  );
+  assert.match(officePage, /routeBranchId\?: number/);
+  assert.match(officePage, /basePath\?: string/);
+  assert.match(officePage, /embedded\?: boolean/);
+  assert.match(officePage, /embedded=\{embedded\}/);
+  assert.match(client, /embedded\?: boolean/);
+  assert.match(client, embeddedContentWrapperPattern);
+
+  assert.match(
+    navConfig,
+    /moduleKey: "employee_checkout_approvals",\s*icon: "ClipboardList",\s*group: "stock",\s*hrefTemplate: "\/br\/\{branchId\}\/stock\/count-assignments"/,
+  );
+});

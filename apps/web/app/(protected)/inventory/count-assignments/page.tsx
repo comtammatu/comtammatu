@@ -1,42 +1,46 @@
 import { redirect } from "next/navigation";
 import { PERMISSION_KEYS, INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
-import {
-  resolveInventoryBranchScope,
-  resolveRequestedBranchId,
-  parseBranchIdParam,
-} from "@/(protected)/inventory/_lib/inventory-scope";
+import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
+import { parseBranchIdParam } from "@/_lib/branch-context";
 import { CountAssignmentsClient } from "./count-assignments-client";
 import type { EmployeeRow, IngredientOption } from "./count-assignments-client";
 
 export const dynamic = "force-dynamic";
 
-interface PageProps {
-  searchParams: Promise<{
+interface CountAssignmentsPageContentProps {
+  searchParams?: Promise<{
     branchId?: string | string[];
     locationId?: string | string[];
   }>;
+  routeBranchId?: number;
+  basePath?: string;
+  embedded?: boolean;
 }
 
-export default async function CountAssignmentsPage({ searchParams }: PageProps) {
-  const sp = await searchParams;
+export async function CountAssignmentsPageContent({
+  searchParams,
+  routeBranchId,
+  basePath = "/inventory/count-assignments",
+  embedded = false,
+}: CountAssignmentsPageContentProps) {
+  const params = searchParams ? await searchParams : {};
 
   const ctx = await getAuthContextWithPermission(
     INVENTORY_OPS_ROLES,
     PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN,
+    routeBranchId,
   );
   if (!ctx) redirect("/");
   const { supabase, claims } = ctx;
 
-  const requestedBranchId = await resolveRequestedBranchId(sp.branchId);
-  const scope = await resolveInventoryBranchScope(
-    supabase,
-    claims,
-    requestedBranchId,
-  );
+  const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId,
+    queryBranchId: params.branchId,
+  });
 
   const selectedBranchId = scope.selectedBranchId;
-  const requestedLocationId = parseBranchIdParam(sp.locationId);
+  const requestedLocationId = parseBranchIdParam(params.locationId);
 
   // Count assignments target the branch warehouse. URL scope stays supported
   // for deep links.
@@ -127,6 +131,19 @@ export default async function CountAssignmentsPage({ searchParams }: PageProps) 
       employees={employees}
       ingredients={ingredients}
       assignmentsByEmployee={assignmentsByEmployee}
+      basePath={basePath}
+      embedded={embedded}
     />
   );
+}
+
+export default async function CountAssignmentsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    branchId?: string | string[];
+    locationId?: string | string[];
+  }>;
+}) {
+  return <CountAssignmentsPageContent searchParams={searchParams} />;
 }
