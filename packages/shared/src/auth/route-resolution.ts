@@ -163,6 +163,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (/^\/br\/\d+\/stock/.test(pathname)) return "inventory";
   if (/^\/br\/\d+\/orders/.test(pathname)) return "orders";
   if (/^\/br\/\d+\/dashboard/.test(pathname)) return "branch_dashboard";
+  if (/^\/br\/\d+\/team/.test(pathname)) return "branch_team";
   // menu-limits lives UNDER /settings — check it BEFORE branch_settings so the
   // broader /settings prefix does not swallow the menu-limits sub-route.
   if (/^\/br\/\d+\/settings\/menu-limits/.test(pathname))
