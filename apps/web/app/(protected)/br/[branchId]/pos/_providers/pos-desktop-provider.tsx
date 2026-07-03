@@ -111,6 +111,15 @@ type OperationalDispatch = {
   /** Deduped full refresh. Used by SUBSCRIBED catch-up + stale poll. */
   refreshAllDeduped: () => void;
   setTables: (tables: BranchTable[]) => void;
+  /**
+   * Registers a getter for this terminal's currently-live daily-limit hold
+   * token(s), read at refetch time by `loadDailyLimits` so the RPC excludes
+   * them server-side — a terminal's own reservation must not double-count
+   * against itself (D064 §4). Called from `PosDesktopInner`, which owns the
+   * tokens via `useDailyLimitHolds`. A getter (not a value) avoids
+   * re-rendering the provider on every token rotation.
+   */
+  registerDailyLimitHoldTokenGetter: (getTokens: () => readonly string[]) => void;
 };
 
 const OrdersContext = createContext<SessionOrder[] | null>(null);
@@ -338,8 +347,24 @@ export function PosDesktopProvider({
     }
   }, [branchId]);
 
+  // Getter for this terminal's live hold token(s), registered by
+  // `PosDesktopInner` via `registerDailyLimitHoldTokenGetter`. Called fresh
+  // inside `loadDailyLimits` on every refetch so a token rotation needs no
+  // callback / realtime-subscription recreation.
+  const holdTokenGetterRef = useRef<(() => readonly string[]) | null>(null);
+  const registerDailyLimitHoldTokenGetter = useCallback(
+    (getTokens: () => readonly string[]): void => {
+      holdTokenGetterRef.current = getTokens;
+    },
+    [],
+  );
+
   const loadDailyLimits = useCallback(async () => {
-    const result = await fetchDailyLimitsForPos(branchId);
+    const liveTokens = holdTokenGetterRef.current?.() ?? [];
+    const result = await fetchDailyLimitsForPos(
+      branchId,
+      liveTokens.length > 0 ? [...liveTokens] : undefined,
+    );
     if (!result.success || !Array.isArray(result.data)) return;
     const next = new Map<number, MenuItemDailyLimit>();
     // Availability fields are absent from generated types until the migration
@@ -443,8 +468,15 @@ export function PosDesktopProvider({
       refreshOrdersDeduped,
       refreshAllDeduped,
       setTables,
+      registerDailyLimitHoldTokenGetter,
     }),
-    [refreshAll, loadOrders, refreshOrdersDeduped, refreshAllDeduped],
+    [
+      refreshAll,
+      loadOrders,
+      refreshOrdersDeduped,
+      refreshAllDeduped,
+      registerDailyLimitHoldTokenGetter,
+    ],
   );
 
   return (
