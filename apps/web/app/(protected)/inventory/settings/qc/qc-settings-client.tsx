@@ -7,7 +7,7 @@ import { Label } from "@comtammatu/ui/components/label";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Save as IconDeviceFloppy } from "lucide-react";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import { AppSection } from "@/components/surface";
 import { FormattedNumberInput } from "@/(protected)/inventory/_components/formatted-number-input";
 import { messages } from "@lib/messages";
 import { saveQcSettings } from "../../notifications-actions";
@@ -56,76 +56,70 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
   }
 
   return (
-    <AppPage>
-      <AppPageHeader eyebrow={copy.eyebrow} title={copy.title} />
-      <div className="mx-auto flex max-w-3xl flex-col gap-4">
-        <Alert>
-          <AlertDescription>{copy.description}</AlertDescription>
-        </Alert>
+    <div className="mx-auto flex max-w-3xl flex-col gap-4">
+      <Alert>
+        <AlertDescription>{copy.description}</AlertDescription>
+      </Alert>
 
-        <AppSection
-          title={copy.toleranceTitle}
-          size="sm"
-          contentClassName="grid gap-4 md:grid-cols-3"
-        >
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="short-tol">{copy.shortToleranceLabel}</Label>
-            <FormattedNumberInput
-              id="short-tol"
-              value={String(shortTol)}
-              onValueChange={(v) => setShortTol(Number(v || 0))}
-              maxFractionDigits={1}
-            />
-            <p className="text-xs text-muted-foreground">
-              {copy.shortToleranceHelp}
-            </p>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="warn-pct">{copy.warningThresholdLabel}</Label>
-            <FormattedNumberInput
-              id="warn-pct"
-              value={String(warnPct)}
-              onValueChange={(v) => setWarnPct(Number(v || 0))}
-              maxFractionDigits={1}
-            />
-            <p className="text-xs text-muted-foreground">
-              {copy.warningThresholdHelp}
-            </p>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="review-pct">{copy.reviewThresholdLabel}</Label>
-            <FormattedNumberInput
-              id="review-pct"
-              value={String(reviewPct)}
-              onValueChange={(v) => setReviewPct(Number(v || 0))}
-              maxFractionDigits={1}
-            />
-            <p className="text-xs text-muted-foreground">
-              {copy.reviewThresholdHelp}
-            </p>
-          </div>
-          <div className="md:col-span-3">
-            <div className="flex items-center justify-between rounded-md border p-3">
-              <div>
-                <Label className="text-sm">{copy.rejectPhotoLabel}</Label>
-                <p className="text-xs text-muted-foreground">
-                  {copy.rejectPhotoHelp}
-                </p>
-              </div>
-              <Switch
-                checked={requirePhoto}
-                onCheckedChange={setRequirePhoto}
-              />
+      <AppSection
+        title={copy.toleranceTitle}
+        size="sm"
+        contentClassName="grid gap-4 md:grid-cols-3"
+      >
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="short-tol">{copy.shortToleranceLabel}</Label>
+          <FormattedNumberInput
+            id="short-tol"
+            value={String(shortTol)}
+            onValueChange={(v) => setShortTol(Number(v || 0))}
+            maxFractionDigits={1}
+          />
+          <p className="text-xs text-muted-foreground">
+            {copy.shortToleranceHelp}
+          </p>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="warn-pct">{copy.warningThresholdLabel}</Label>
+          <FormattedNumberInput
+            id="warn-pct"
+            value={String(warnPct)}
+            onValueChange={(v) => setWarnPct(Number(v || 0))}
+            maxFractionDigits={1}
+          />
+          <p className="text-xs text-muted-foreground">
+            {copy.warningThresholdHelp}
+          </p>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="review-pct">{copy.reviewThresholdLabel}</Label>
+          <FormattedNumberInput
+            id="review-pct"
+            value={String(reviewPct)}
+            onValueChange={(v) => setReviewPct(Number(v || 0))}
+            maxFractionDigits={1}
+          />
+          <p className="text-xs text-muted-foreground">
+            {copy.reviewThresholdHelp}
+          </p>
+        </div>
+        <div className="md:col-span-3">
+          <div className="flex items-center justify-between rounded-md border p-3">
+            <div>
+              <Label className="text-sm">{copy.rejectPhotoLabel}</Label>
+              <p className="text-xs text-muted-foreground">
+                {copy.rejectPhotoHelp}
+              </p>
             </div>
+            <Switch checked={requirePhoto} onCheckedChange={setRequirePhoto} />
           </div>
-        </AppSection>
+        </div>
+      </AppSection>
 
-        <footer className="flex justify-end gap-2 border-t pt-4">
-          <Button onClick={handleSave} disabled={isSaving}>
-            <IconDeviceFloppy className="size-4" /> {copy.saveButton}
-          </Button>
-        </footer>
-      </div>
-    </AppPage>
+      <footer className="flex justify-end gap-2 border-t pt-4">
+        <Button onClick={handleSave} disabled={isSaving}>
+          <IconDeviceFloppy className="size-4" /> {copy.saveButton}
+        </Button>
+      </footer>
+    </div>
   );
 }

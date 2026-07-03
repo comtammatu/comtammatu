@@ -6,7 +6,7 @@ import {
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { fetchQcSettingsForForm } from "../../notifications-actions";
 import { QcSettingsClient } from "./qc-settings-client";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 
 export default async function QcSettingsPage() {
@@ -32,13 +32,13 @@ export default async function QcSettingsPage() {
       };
 
   return (
-    <AppPage>
+    <div className="flex flex-col gap-4">
       <AppPageHeader
         eyebrow={messages.settings.qcSettings.eyebrow}
         title={messages.settings.qcSettings.title}
         description={messages.settings.qcSettings.description}
       />
       <QcSettingsClient initial={settings} />
-    </AppPage>
+    </div>
   );
 }
