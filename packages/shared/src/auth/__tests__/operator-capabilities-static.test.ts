@@ -30,23 +30,11 @@ test("resolveOperatorTiles -> chef sees kitchen tools but not POS", () => {
 
 test("resolveOperatorTiles -> branch manager sees branch workflows in operator hub", () => {
   const groups = resolveOperatorTiles("branch_manager", 3);
-  const approvals = groups.find((group) => group.id === "approvals");
   const moduleKeys = groups.flatMap((group) =>
     group.tiles.map((tile) => tile.moduleKey),
   );
   const hrefs = groups.flatMap((group) => group.tiles.map((tile) => tile.href));
 
-  assert.equal(
-    approvals?.tiles.find(
-      (tile) => tile.moduleKey === "employee_checkout_approvals",
-    )?.href,
-    "/br/3/shift/checkout-approvals",
-  );
-  assert.equal(
-    approvals?.tiles.find((tile) => tile.href === "/br/3/stock/count-slips")
-      ?.label,
-    "Duyệt kiểm kê",
-  );
   assert.equal(
     groups
       .find((group) => group.id === "stock")
@@ -60,6 +48,41 @@ test("resolveOperatorTiles -> branch manager sees branch workflows in operator h
   assert.equal(hrefs.includes("/br/3/stock/waste"), true);
   assert.equal(moduleKeys.includes("branch_dashboard"), false);
   assert.equal(moduleKeys.includes("branch_settings"), false);
+});
+
+test("resolveOperatorTiles -> approvals group dissolves into the hub queue, not a domain tile group (V2)", () => {
+  const groups = resolveOperatorTiles("branch_manager", 3);
+  const groupIds = groups.map((group) => group.id);
+
+  assert.equal(groupIds.includes("approvals"), false);
+  assert.equal(
+    groups.flatMap((group) => group.tiles.map((tile) => tile.href)).includes(
+      "/br/3/shift/checkout-approvals",
+    ),
+    false,
+  );
+  assert.equal(
+    groups.flatMap((group) => group.tiles.map((tile) => tile.href)).includes(
+      "/br/3/stock/count-slips",
+    ),
+    false,
+  );
+});
+
+test("resolveOperatorTiles -> domain groups render Bán hàng, Nhân sự, Kho hàng in that order", () => {
+  const groups = resolveOperatorTiles("branch_manager", 3);
+  const groupIds = groups.map((group) => group.id);
+
+  assert.deepEqual(groupIds, ["sales_kitchen", "my_shift", "stock", "office_bridge"]);
+  assert.equal(
+    groups.find((group) => group.id === "sales_kitchen")?.title,
+    "Bán hàng",
+  );
+  assert.equal(
+    groups.find((group) => group.id === "my_shift")?.title,
+    "Nhân sự",
+  );
+  assert.equal(groups.find((group) => group.id === "stock")?.title, "Kho hàng");
 });
 
 test("resolveOperatorTiles -> office has no operator plane tiles", () => {

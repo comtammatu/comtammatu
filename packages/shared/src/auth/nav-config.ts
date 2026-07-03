@@ -117,17 +117,17 @@ export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
 ];
 
 export const OPERATOR_TILE_GROUP_TITLES: Record<OperatorTileGroupId, string> = {
-  my_shift: "Ca hôm nay",
+  my_shift: "Nhân sự",
   approvals: "Duyệt",
-  sales_kitchen: "Bán hàng & bếp",
-  stock: "Kho chi nhánh",
+  sales_kitchen: "Bán hàng",
+  stock: "Kho hàng",
   office_bridge: "Văn phòng",
 };
 
 export const OPERATOR_TILE_GROUP_ORDER: readonly OperatorTileGroupId[] = [
+  "sales_kitchen",
   "my_shift",
   "approvals",
-  "sales_kitchen",
   "stock",
   "office_bridge",
 ] as const;

@@ -408,6 +408,18 @@ export const settings = {
       `${String(count)} yêu cầu đang chờ duyệt.`,
     readinessCheckoutEmpty: "Không có yêu cầu chờ duyệt.",
     readinessCheckoutCta: "Mở duyệt kết ca",
+    queueTitle: "Cần xử lý",
+    queueCheckoutMeta: (count: number) =>
+      `${count.toLocaleString("vi-VN")} nhân viên đang chờ`,
+    queueCountSlipsTitle: "Duyệt kiểm kê",
+    queueCountSlipsMeta: (count: number) =>
+      `${count.toLocaleString("vi-VN")} phiếu chờ duyệt`,
+    queueWasteTitle: "Duyệt hao hụt",
+    queueWasteMeta: (count: number) =>
+      `${count.toLocaleString("vi-VN")} báo cáo chờ duyệt`,
+    queueExpiryTitle: "Hạn dùng",
+    queueExpiryMeta: (count: number) =>
+      `${count.toLocaleString("vi-VN")} mặt hàng sắp hết hạn`,
     settingsBack: "Thiết lập",
     posBack: "Về POS",
     employeeBack: "Về Cổng",
