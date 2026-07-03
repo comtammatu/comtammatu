@@ -102,8 +102,23 @@ ingredient_units(
 5. Phạm vi: **spec đầy đủ A+B**; Phase B gắn nhập đầu kỳ.
 6. POS "phần" ≠ inventory "phần": tách biệt.
 
-## 8. Còn mở (không chặn spec)
-- Danh sách packaging seed ban đầu (bao/thùng/túi/phần/hộp/quả/chục...) — owner rà khi làm Phase A.
+## 8. Seed đơn vị (chốt 2026-07-03, từ dữ liệu PROD thật 114 nguyên liệu)
+
+**Đơn vị chuẩn (auto-seed, `is_standard=true`, factor khóa):**
+- mass: `g` (canonical, factor 1), `kg` (1000), `mg` (0.001).
+- volume: `ml` (canonical, factor 1), `l` (1000), `cl` (10). Chuẩn hóa `lit` → `l`.
+
+**Packaging seed (13 đơn vị, `dimension=NULL`, `is_standard=false`, owner khai anchor lúc dùng):**
+`bao`, `thùng`, `chai`, `lon`, `hũ`, `hộp`, `gói`, `túi` (gộp biến thể `bich`), `lốc`, `khay`, `vỉ`, `trái` (≈ quả), `cái`.
+
+**Chuẩn hóa dữ liệu khi migrate (Phase A):**
+- `piece` (tiếng Anh, rác) → `cái`.
+- `ly` (6 nguyên liệu, measure_unit) → **LOẠI khỏi kho** (owner: là đơn vị định mức POS). Các nguyên liệu đó đổi measure sang `ml`/`l`; "ly" ở lại bên recipe/menu, không seed vào `units`.
+- `lit` → `l`; `bich` → `túi`.
+
+**Ranh giới:** đơn vị bán hàng POS (phần/suất/đĩa/tô/ly) KHÔNG seed vào `units` kho — xác nhận chúng không xuất hiện trong dữ liệu nguyên liệu (trừ `ly` đã loại).
+
+## 8b. Còn mở (không chặn spec)
 - Category master: theo draft cũ §3.3 (giữ nguyên, orthogonal).
 
 ## 9. Rủi ro
