@@ -62,7 +62,7 @@ const BRAND_MASCOT_ASSETS = {
 } as const;
 
 type BrandAssetVariant = keyof typeof BRAND_ASSETS;
-type BrandSymbolVariant = keyof typeof BRAND_SYMBOL_ASSETS;
+export type BrandSymbolVariant = keyof typeof BRAND_SYMBOL_ASSETS;
 type BrandMascotVariant = keyof typeof BRAND_MASCOT_ASSETS;
 export type BrandMarkVariant = Extract<BrandAssetVariant, "seal">;
 export type BrandLockupVariant = Extract<

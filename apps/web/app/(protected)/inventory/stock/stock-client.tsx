@@ -1140,7 +1140,7 @@ export function StockClient({
         <AppEmptyState
           title={stockCopy.empty.firstLoadTitle}
           description={stockCopy.empty.firstLoadHint}
-          icon={<IconShoppingCart />}
+          symbol="riceGrain"
         >
           {actionPermissions.canCreatePurchaseOrder &&
           actionHrefs.purchaseSuggestion ? (

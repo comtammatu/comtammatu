@@ -327,6 +327,7 @@ function CartPaneComponent({
         <div className="flex min-h-0 flex-1 items-center justify-center px-6">
           <AppEmptyState
             compact
+            symbol="roundPlate"
             title={
               cart.orderType === "takeaway" || selectedTableNumber != null
                 ? messages.pos.pendingDraft.emptyWithContext

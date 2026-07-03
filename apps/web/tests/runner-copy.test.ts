@@ -278,24 +278,25 @@ test("Runner public board uses polling, not raw Realtime changes", () => {
 
 test("Runner idle visual animates the Cot Let sprite atlas with a static fallback", () => {
   assert.match(runnerIdleVisualSource, /"use client";/);
-  assert.match(runnerIdleVisualSource, /import Image from "next\/image";/);
   assert.match(
     runnerIdleVisualSource,
     /export type RunnerIdleState = "empty" \| "done";/,
   );
-  assert.match(runnerIdleVisualSource, /src: "\/brand\/mascot\/cotlet\.png"/);
-  assert.match(runnerIdleVisualSource, /width: 384/);
-  assert.match(runnerIdleVisualSource, /height: 512/);
-  assert.match(runnerIdleVisualSource, /alt: ""/);
+  // Idle mascot renders through the shared BrandMascot adapter, not a direct
+  // /brand/mascot/* asset reference (design-system.md brand rules).
+  assert.match(
+    runnerIdleVisualSource,
+    /import \{ BrandMascot \} from "@\/components\/brand";/,
+  );
+  assert.doesNotMatch(runnerIdleVisualSource, /\/brand\/mascot\/cotlet\.png/);
+  assert.doesNotMatch(runnerIdleVisualSource, /next\/image/);
   assert.match(
     runnerIdleVisualSource,
     /window\.matchMedia\("\(prefers-reduced-motion: no-preference\)"\)/,
   );
-  assert.match(runnerIdleVisualSource, /<Image/);
+  assert.match(runnerIdleVisualSource, /<BrandMascot/);
+  assert.match(runnerIdleVisualSource, /animated=\{canAnimate\}/);
   assert.match(runnerIdleVisualSource, /priority/);
-  // Animated branch consumes the Codex Pet Atlas sprite via globals utilities.
-  assert.match(runnerIdleVisualSource, /mascot-cotlet/);
-  assert.match(runnerIdleVisualSource, /motion-safe:animate-cotlet-idle/);
   assert.match(runnerIdleVisualSource, /bg-warning\/15/);
   assert.match(runnerIdleVisualSource, /bg-warning\/25/);
   assert.match(runnerIdleVisualSource, /data-runner-idle-state=\{state\}/);
@@ -303,6 +304,18 @@ test("Runner idle visual animates the Cot Let sprite atlas with a static fallbac
   assert.doesNotMatch(runnerIdleVisualSource, /@lottiefiles/);
   assert.doesNotMatch(runnerIdleVisualSource, /be-suon-tuoi/);
   assert.doesNotMatch(runnerIdleVisualSource, /https?:\/\//);
+
+  // BrandMascot (single source for the mascot asset/animation) still consumes
+  // the Codex Pet Atlas sprite via globals utilities.
+  const brandSource = readFileSync(
+    join(process.cwd(), "app/components/brand.tsx"),
+    "utf8",
+  );
+  assert.match(brandSource, /src: "\/brand\/mascot\/cotlet\.png"/);
+  assert.match(brandSource, /width: 384/);
+  assert.match(brandSource, /height: 512/);
+  assert.match(brandSource, /mascot-cotlet/);
+  assert.match(brandSource, /motion-safe:animate-cotlet-idle/);
 
   // Sprite runtime is single-sourced in globals.css: Codex Pet Atlas =
   // 8 cols × 9 rows, 192×208 per frame, row 0 = idle (8-frame steps loop).

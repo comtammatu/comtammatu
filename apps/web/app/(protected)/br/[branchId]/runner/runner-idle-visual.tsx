@@ -1,17 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { cn } from "@comtammatu/ui";
+import { BrandMascot } from "@/components/brand";
 
 export type RunnerIdleState = "empty" | "done";
-
-const RUNNER_MASCOT = {
-  src: "/brand/mascot/cotlet.png",
-  width: 384,
-  height: 512,
-  alt: "",
-} as const;
 
 export function RunnerIdleVisual({ state }: { state: RunnerIdleState }) {
   const canAnimate = usePrefersMotion();
@@ -37,22 +30,19 @@ export function RunnerIdleVisual({ state }: { state: RunnerIdleState }) {
         </>
       ) : null}
 
-      <div className="relative z-10 flex h-56 w-44 items-center justify-center md:h-64 md:w-48">
-        {canAnimate ? (
-          <div
-            className="mascot-cotlet shrink-0 drop-shadow-lg motion-safe:animate-cotlet-idle"
-            data-runner-idle-state={state}
-          />
-        ) : (
-          <Image
-            src={RUNNER_MASCOT.src}
-            width={RUNNER_MASCOT.width}
-            height={RUNNER_MASCOT.height}
-            alt={RUNNER_MASCOT.alt}
-            priority
-            className="h-full w-auto shrink-0 object-contain drop-shadow-lg"
-          />
-        )}
+      <div
+        className="relative z-10 flex h-56 w-44 items-center justify-center md:h-64 md:w-48"
+        data-runner-idle-state={state}
+      >
+        <BrandMascot
+          animated={canAnimate}
+          decorative
+          priority
+          className={cn(
+            "shrink-0 drop-shadow-lg",
+            canAnimate ? undefined : "h-full w-auto",
+          )}
+        />
       </div>
     </div>
   );
