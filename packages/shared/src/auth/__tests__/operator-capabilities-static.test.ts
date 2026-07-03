@@ -150,11 +150,34 @@ test("resolveOperatorTiles -> office_bridge tiles carry absolute office hrefs", 
   const hrefs = officeBridge?.tiles.map((tile) => tile.href) ?? [];
   assert.ok(hrefs.includes("/menu"));
   assert.ok(hrefs.includes("/hr"));
-  assert.ok(hrefs.includes("/orders"));
   assert.ok(hrefs.includes("/inventory"));
   assert.ok(hrefs.includes("/inventory/production"));
   for (const href of hrefs) {
     assert.doesNotMatch(href, /\{branchId\}/, href);
     assert.doesNotMatch(href, /^\/br\//, href);
   }
+});
+
+test("resolveOperatorTiles -> orders tile is branch-native under sales_kitchen, not office_bridge", () => {
+  const groups = resolveOperatorTiles("owner", 3);
+  const officeBridge = groups.find((group) => group.id === "office_bridge");
+  const salesKitchen = groups.find((group) => group.id === "sales_kitchen");
+
+  const officeBridgeHrefs =
+    officeBridge?.tiles.map((tile) => tile.href) ?? [];
+  assert.equal(officeBridgeHrefs.includes("/orders"), false);
+
+  const ordersTile = salesKitchen?.tiles.find(
+    (tile) => tile.moduleKey === "orders",
+  );
+  assert.equal(ordersTile?.href, "/br/3/orders");
+});
+
+test("resolveOperatorTiles -> cashier sees the branch-native orders tile", () => {
+  const groups = resolveOperatorTiles("cashier", 7);
+  const salesKitchen = groups.find((group) => group.id === "sales_kitchen");
+  const ordersTile = salesKitchen?.tiles.find(
+    (tile) => tile.moduleKey === "orders",
+  );
+  assert.equal(ordersTile?.href, "/br/7/orders");
 });

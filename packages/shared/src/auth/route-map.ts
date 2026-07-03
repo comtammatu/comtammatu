@@ -246,6 +246,18 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
+    id: "operator-orders",
+    label: MODULE_ACL.orders.label,
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]/orders",
+    matchPrefixes: ["/br/[branchId]/orders"],
+    moduleKeys: ["orders"],
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
     // First-match: menu-limits is nested under /settings, so it MUST precede
     // the broader branch-settings family or that less-specific prefix wins.
     id: "branch-menu-limits",
