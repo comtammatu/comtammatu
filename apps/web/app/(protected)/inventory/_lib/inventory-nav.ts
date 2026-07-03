@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight as IconArrowLeftRight,
   ChartBar as IconChartBar,
   CheckCircle as IconCheckCircle,
   ClipboardCheck as IconClipboardCheck,
@@ -8,6 +9,7 @@ import {
   FileText as IconFileText,
   Hourglass as IconHourglass,
   LayoutDashboard as IconLayoutDashboard,
+  Package as IconPackage,
   Receipt as IconReceipt,
   RotateCcw as IconRotateCcw,
   Settings as IconSettings,
@@ -60,6 +62,18 @@ export function resolveInventoryNav({
   groups.push({
     title: "1 · Kiểm soát tồn",
     items: [
+      // Cross-branch oversight entries (D061), additive to the branch
+      // operator plane at /br/[id]/stock/* — office=oversight, branch=floor.
+      {
+        href: "/inventory/stock",
+        label: tNav("stock", "navigation"),
+        icon: IconPackage,
+      },
+      {
+        href: "/inventory/stocktake",
+        label: tNav("stocktake", "navigation"),
+        icon: IconClipboardCheck,
+      },
       ...(showCountManagement
         ? [
             {
@@ -138,6 +152,13 @@ export function resolveInventoryNav({
     groups.push({
       title: "3 · Điều phối/Sản xuất",
       items: [
+        // Cross-branch oversight entry (D061), additive to the branch
+        // operator plane at /br/[id]/stock/transfer.
+        {
+          href: "/inventory/transfers",
+          label: tNav("transfers", "navigation"),
+          icon: IconArrowLeftRight,
+        },
         {
           href: "/inventory/production",
           label: "Lệnh sản xuất",

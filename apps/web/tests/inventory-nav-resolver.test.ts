@@ -57,7 +57,7 @@ test("owner inventory nav excludes /inventory/drafts (folded into GRN list draft
   );
 });
 
-test("office inventory nav excludes branch-floor routes migrated to /br/[id]/stock/* (D058 W3)", () => {
+test("office inventory nav shows on-hand, stocktake, and transfers as cross-branch oversight (D061, amends D058 W3)", () => {
   const visible = hrefs(
     resolveInventoryNav({
       userRole: "owner",
@@ -77,8 +77,8 @@ test("office inventory nav excludes branch-floor routes migrated to /br/[id]/sto
   ]) {
     assert.equal(
       visible.has(href),
-      false,
-      `office inventory nav must not advertise ${href} — canonical door is /br/[id]/stock/*`,
+      true,
+      `office inventory nav must advertise ${href} as an oversight entry — additive to the branch operator door at /br/[id]/stock/*`,
     );
   }
 });
