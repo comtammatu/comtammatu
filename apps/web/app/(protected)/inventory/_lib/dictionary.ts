@@ -25,7 +25,6 @@ const VI_DICTIONARY: InventoryDictionary = {
     purchaseOrders: { short: "Đơn đặt hàng", long: "Đơn đặt hàng NCC" },
     grn: { short: "Phiếu nhập", long: "Phiếu nhập kho" },
     supplierInvoices: { long: "Hóa đơn NCC" },
-    drafts: { short: "Phiếu nháp", long: "Phiếu nháp GRN" },
     supplierReturns: { short: "Trả hàng NCC", long: "Phiếu trả hàng NCC" },
     transfers: { short: "Điều chuyển", long: "Điều chuyển nội bộ" },
     stocktake: { long: "Kiểm kê" },

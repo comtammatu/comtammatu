@@ -25,7 +25,6 @@ test("owner inventory nav includes procurement, catalog, production, and control
     "/inventory/count-slips",
     "/inventory/purchase-orders",
     "/inventory/grn",
-    "/inventory/drafts",
     "/inventory/supplier-invoices",
     "/inventory/supplier-returns",
     "/inventory/production",
@@ -36,6 +35,26 @@ test("owner inventory nav includes procurement, catalog, production, and control
   ]) {
     assert.equal(visible.has(href), true, `owner inventory nav must include ${href}`);
   }
+});
+
+test("owner inventory nav excludes /inventory/drafts (folded into GRN list drafts tab)", () => {
+  const visible = hrefs(
+    resolveInventoryNav({
+      userRole: "owner",
+      showProcurement: true,
+      showProduction: true,
+      showCatalogManagement: true,
+      showSettings: true,
+      showWasteApprovals: true,
+      showCountManagement: true,
+    }),
+  );
+
+  assert.equal(
+    visible.has("/inventory/drafts"),
+    false,
+    "GRN drafts are a tab on /inventory/grn, not a separate nav entry — /inventory/drafts redirects there",
+  );
 });
 
 test("office inventory nav excludes branch-floor routes migrated to /br/[id]/stock/* (D058 W3)", () => {

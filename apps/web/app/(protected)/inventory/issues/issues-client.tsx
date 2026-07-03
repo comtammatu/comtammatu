@@ -135,12 +135,12 @@ function toUtf8Base64(value: string): string {
   return btoa(binary);
 }
 
-function buildConsumptionHref(
-  consumptionBasePath: string,
+function buildListHref(
+  listBasePath: string,
   params: URLSearchParams,
 ): string {
   const query = params.toString();
-  return query ? `${consumptionBasePath}?${query}` : consumptionBasePath;
+  return query ? `${listBasePath}?${query}` : listBasePath;
 }
 
 export function IssuesClient({
@@ -152,7 +152,7 @@ export function IssuesClient({
   recordedEndDate: initialRecordedEndDate,
   recordedIsLimited,
   recordedStartDate: initialRecordedStartDate,
-  consumptionBasePath = "/inventory/consumption",
+  listBasePath = "/inventory/consumption",
   allowedIssueTypes = ["consumption", "writeoff", "other"],
   defaultIssueType = "consumption",
   pageTitle,
@@ -166,7 +166,7 @@ export function IssuesClient({
   recordedEndDate: string;
   recordedIsLimited: boolean;
   recordedStartDate: string;
-  consumptionBasePath?: string;
+  listBasePath?: string;
   allowedIssueTypes?: string[];
   defaultIssueType?: string;
   pageTitle?: string;
@@ -261,7 +261,7 @@ export function IssuesClient({
 
     if (res.success && res.data) {
       const newId = (res.data as { id: number }).id;
-      router.push(`${consumptionBasePath}/${newId}`);
+      router.push(`${listBasePath}/${newId}`);
     }
 
     return res;
@@ -383,7 +383,7 @@ export function IssuesClient({
       next.delete("branchId");
     }
 
-    router.push(buildConsumptionHref(consumptionBasePath, next));
+    router.push(buildListHref(listBasePath, next));
   }
 
   function clearRecordedDateFilter() {
@@ -394,7 +394,7 @@ export function IssuesClient({
     setRecordedStartDate("");
     setRecordedEndDate("");
     setRecordedBranchId("all");
-    router.push(buildConsumptionHref(consumptionBasePath, next));
+    router.push(buildListHref(listBasePath, next));
   }
 
   const filterBar = (
@@ -554,7 +554,7 @@ export function IssuesClient({
       header: "Mã phiếu",
       render: (item) => (
         <Link
-          href={`${consumptionBasePath}/${item.id}`}
+          href={`${listBasePath}/${item.id}`}
           className="text-sm font-semibold text-primary hover:underline"
         >
           {item.code}
@@ -597,7 +597,7 @@ export function IssuesClient({
       className: "w-10",
       render: (item) => (
         <Button variant="ghost" size="icon-sm" asChild>
-          <Link href={`${consumptionBasePath}/${item.id}`}>
+          <Link href={`${listBasePath}/${item.id}`}>
             <IconDotsVertical className="size-4" />
           </Link>
         </Button>
@@ -679,7 +679,7 @@ export function IssuesClient({
 
   const renderIssueCard = (item: IssueRow) => (
     <InteractiveCard asChild minHeight="mobile" padding="default">
-      <Link href={`${consumptionBasePath}/${item.id}`} className="block">
+      <Link href={`${listBasePath}/${item.id}`} className="block">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="font-mono text-sm font-semibold">{item.code}</span>

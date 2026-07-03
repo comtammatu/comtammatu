@@ -28,6 +28,7 @@ export default async function OperatorStocktakeDetailPage({
       searchParams={searchParams}
       routeBranchId={branchId}
       routeBase={`/br/${branchId}/stock/stocktake`}
+      wasteBasePath={`/br/${branchId}/stock/waste`}
       embedded
     />
   );

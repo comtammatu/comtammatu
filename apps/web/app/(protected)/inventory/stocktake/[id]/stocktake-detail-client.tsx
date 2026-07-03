@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   ArrowLeft as IconArrowLeft,
+  ArrowRight as IconArrowRight,
   Ban as IconBan,
   Check as IconCheck,
   CircleCheck as IconCircleCheck,
@@ -79,6 +80,7 @@ export function StocktakeDetailClient({
   session: initialSession,
   lines: initialLines,
   routeBase = "/inventory/stocktake",
+  wasteBasePath = "/inventory/waste/new",
   embedded = false,
   auditLogs = [],
 }: {
@@ -86,6 +88,7 @@ export function StocktakeDetailClient({
   lines: StocktakeLine[];
   routeBase?: string;
   inventoryBasePath?: string;
+  wasteBasePath?: string;
   embedded?: boolean;
   auditLogs?: AuditLogRow[];
 }) {
@@ -336,7 +339,13 @@ export function StocktakeDetailClient({
               )}
 
               {/* Results phase (completed) */}
-              {session.status === "completed" && <ResultsPhase lines={lines} />}
+              {session.status === "completed" && (
+                <ResultsPhase
+                  lines={lines}
+                  varianceCount={varianceCount}
+                  wasteHref={`${wasteBasePath}?branchId=${session.branch_id}`}
+                />
+              )}
             </div>
           </TabsContent>
 
@@ -510,7 +519,15 @@ function getVarianceBg(line: StocktakeLine): string {
   return "bg-destructive/5";
 }
 
-function ResultsPhase({ lines }: { lines: StocktakeLine[] }) {
+function ResultsPhase({
+  lines,
+  varianceCount,
+  wasteHref,
+}: {
+  lines: StocktakeLine[];
+  varianceCount: number;
+  wasteHref: string;
+}) {
   const resultColumns: DataTableColumn<StocktakeLine>[] = [
     {
       key: "ingredient",
@@ -599,6 +616,30 @@ function ResultsPhase({ lines }: { lines: StocktakeLine[] }) {
           {stocktakeDetailCopy.results.severe}
         </span>
       </div>
+
+      {varianceCount > 0 && (
+        <AppSection
+          tone="warning"
+          contentClassName="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
+        >
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-semibold">
+              {stocktakeDetailCopy.results.nextActionTitle}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {stocktakeDetailCopy.results.nextActionDescription(
+                varianceCount,
+              )}
+            </p>
+          </div>
+          <Button asChild size="sm">
+            <Link href={wasteHref}>
+              {stocktakeDetailCopy.results.nextActionCta}
+              <IconArrowRight className="size-4" />
+            </Link>
+          </Button>
+        </AppSection>
+      )}
 
       <AppSection className="overflow-hidden" contentFlush>
         <DataTable

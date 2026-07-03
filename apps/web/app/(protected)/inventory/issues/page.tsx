@@ -120,7 +120,7 @@ interface IssuesPageContentProps {
     startDate?: string | string[];
   }>;
   routeBranchId?: number;
-  consumptionBasePath?: string;
+  listBasePath?: string;
   scope?: IssuesScope;
   embedded?: boolean;
 }
@@ -128,7 +128,7 @@ interface IssuesPageContentProps {
 export async function IssuesPageContent({
   searchParams,
   routeBranchId,
-  consumptionBasePath = "/inventory/consumption",
+  listBasePath = "/inventory/consumption",
   scope: scopeVariant = "all",
   embedded = false,
 }: IssuesPageContentProps) {
@@ -264,7 +264,7 @@ export async function IssuesPageContent({
   // dictionary so each variant shows its own label; "all" (operator shell)
   // leaves it undefined so the client keeps its Tiêu hao default.
   const pageTitle =
-    scopeVariant === "all" ? undefined : tRoute(consumptionBasePath);
+    scopeVariant === "all" ? undefined : tRoute(listBasePath);
 
   return (
     <IssuesClient
@@ -276,7 +276,7 @@ export async function IssuesPageContent({
       recordedEndDate={endDate ?? ""}
       recordedIsLimited={!hasRecordedDateFilter}
       recordedStartDate={startDate ?? ""}
-      consumptionBasePath={consumptionBasePath}
+      listBasePath={listBasePath}
       allowedIssueTypes={scopeConfig.allowedIssueTypes}
       defaultIssueType={scopeConfig.defaultIssueType}
       pageTitle={pageTitle}
@@ -298,7 +298,7 @@ export default async function IssuesPage({
     <IssuesPageContent
       searchParams={searchParams}
       scope="internal"
-      consumptionBasePath="/inventory/issues"
+      listBasePath="/inventory/issues"
     />
   );
 }

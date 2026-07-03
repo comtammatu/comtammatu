@@ -5,7 +5,6 @@ import {
   ClipboardList as IconClipboardList,
   Factory as IconBuildingFactory,
   FileCheck as IconFileCheck,
-  FilePen as IconFilePen,
   FileText as IconFileText,
   Hourglass as IconHourglass,
   LayoutDashboard as IconLayoutDashboard,
@@ -120,11 +119,6 @@ export function resolveInventoryNav({
           href: "/inventory/grn",
           label: tNav("grn", "navigation"),
           icon: IconReceipt,
-        },
-        {
-          href: "/inventory/drafts",
-          label: tNav("drafts", "navigation"),
-          icon: IconFilePen,
         },
         {
           href: "/inventory/supplier-invoices",

@@ -343,7 +343,7 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(issueRoute, /embedded/);
   assert.match(
     issueRoute,
-    /consumptionBasePath=\{`\/br\/\$\{branchId\}\/stock\/issues`\}/,
+    /listBasePath=\{`\/br\/\$\{branchId\}\/stock\/issues`\}/,
   );
   assert.match(issueDetailRoute, /IssueDetailPageContent/);
   assert.match(issueDetailRoute, /routeBranchId=\{branchId\}/);
@@ -400,16 +400,16 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(issuesPage, /embedded\?: boolean/);
   assert.match(issuesPage, /embedded=\{embedded\}/);
   assert.match(issuesPage, /scope\.outOfScope/);
-  assert.match(issuesPage, /consumptionBasePath\?: string/);
+  assert.match(issuesPage, /listBasePath\?: string/);
   assert.match(issuesClient, /embedded\?: boolean/);
   assert.match(issuesClient, embeddedContentWrapperPattern);
   assert.match(
     issuesClient,
-    /consumptionBasePath = "\/inventory\/consumption"/,
+    /listBasePath = "\/inventory\/consumption"/,
   );
   assert.match(
     issuesClient,
-    /router\.push\(`\$\{consumptionBasePath\}\/\$\{newId\}`\)/,
+    /router\.push\(`\$\{listBasePath\}\/\$\{newId\}`\)/,
   );
   assert.doesNotMatch(issuesClient, /router\.push\(`\/inventory\/consumption/);
   assert.match(issueDetailPage, /routeBranchId\?: number/);

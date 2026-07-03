@@ -21,7 +21,7 @@ export default async function OperatorStockIssuesPage({
     <IssuesPageContent
       searchParams={searchParams}
       routeBranchId={branchId}
-      consumptionBasePath={`/br/${branchId}/stock/issues`}
+      listBasePath={`/br/${branchId}/stock/issues`}
       embedded
     />
   );

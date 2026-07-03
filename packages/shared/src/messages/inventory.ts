@@ -128,6 +128,13 @@ export const INVENTORY_VI = {
   grnSearchPlaceholder: "Tìm mã GRN, nhà cung cấp, PO...",
   grnNotFoundFiltered: "Không tìm thấy phiếu nhập phù hợp",
   grnEmptyNoData: "Chưa có phiếu nhập kho nào",
+  grnListTab: "Danh sách",
+  grnDraftsEmptyTitle: "Chưa có phiếu nháp",
+  grnDraftsEmptyDescription:
+    "Bắt đầu tạo phiếu nhập để hệ thống lưu lại tiến độ cho bạn.",
+  grnDraftUpdatedAt: (date: string) => `Cập nhật lúc ${date}`,
+  grnDraftLineCount: (count: number) => `${count} dòng`,
+  grnDraftContinue: "Tiếp tục",
   createSupplierReturnTitle: "Tạo phiếu trả hàng NCC",
   createSupplierReturnDescription: "Tạo phiếu trả hàng mới cho nhà cung cấp.",
   featureInDevelopmentTitle: "Tính năng đang phát triển",

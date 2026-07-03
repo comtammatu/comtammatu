@@ -16,7 +16,7 @@ export default async function OperatorStockConsumptionPage({
     <IssuesPageContent
       routeBranchId={branchId}
       scope="consumption"
-      consumptionBasePath={`/br/${branchId}/stock/consumption`}
+      listBasePath={`/br/${branchId}/stock/consumption`}
       embedded
     />
   );
