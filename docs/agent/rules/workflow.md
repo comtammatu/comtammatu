@@ -104,7 +104,7 @@ Before marking implementation work complete:
    - T3: paste a 3-line attestation into the PR / worklog contract — test-plan items covered vs deferred-with-reason; each BA rule mapped to the implementing file/line; known out-of-scope gaps.
    - T2: a 1-line attestation that the diff matches the self-review block.
    - T1: state why the debate was skipped in the commit body.
-5. **Tier floor.** `corepack pnpm lint:review-tier` flags a declared tier below the computed blast-radius floor — fail-closed in CI (`REVIEW_TIER_STRICT=1`), advisory locally. Treat a local flag as a prompt to re-justify the tier.
+5. **Tier floor.** Run `corepack pnpm lint:review-tier`; semantics owned by Review Depth above.
 6. CI (`.github/workflows/ci.yml`) runs typecheck, lint, test, and build on every PR and on push to `main` — a push to a working branch alone triggers nothing. Landed work is complete only with green CI.
 7. Learning-loop hygiene (T2/T3) — one pass before closing, so the loop stays bounded:
    - A recurring failure surfaced → add a `tasks/regressions.md` rule. If its detection is a deterministic code pattern, add a guard row to `scripts/check-regression-guards.mjs` instead of relying on prose — an enforced rule costs zero context.

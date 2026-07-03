@@ -108,8 +108,8 @@ session; never as a default. The mechanics that work in practice:
   `supabase/migrations/README.md`); the prod ledger only records what ran,
   keyed by `name`. NEVER run file-based `supabase db push` / branch-replay
   against prod — it keys on `version`, will not find the file timestamp, and
-  will try to re-apply. A full ledger re-baseline is owner-gated (see D020);
-  until then apply via `apply_migration` only.
+  will try to re-apply. A full ledger re-baseline is owner-gated (ADR 0006);
+  apply via `apply_migration` only.
 
 ### Preview Branches (D047)
 
