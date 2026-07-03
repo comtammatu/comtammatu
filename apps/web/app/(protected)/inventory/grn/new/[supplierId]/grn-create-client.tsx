@@ -19,6 +19,7 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Button } from "@comtammatu/ui/components/button";
+import { Input } from "@comtammatu/ui/components/input";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -28,6 +29,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { MoneyVndInput, NumberPadSheet, QuantityInput } from "@/components/form";
 import { matchesSearch } from "@lib/search";
@@ -40,6 +48,12 @@ import {
 } from "../../../_lib/grn-draft";
 import { formatVND } from "../../../_lib/format";
 import {
+  getDefaultPurchaseUnit,
+  getPurchaseUnitOptions,
+  type PurchaseUnitOption,
+} from "../../../_lib/purchase-units";
+import type { IngredientUnitRow } from "../../../_lib/types";
+import {
   createGrnDraft,
   deleteGrnLine,
   discardGrnDraft,
@@ -47,6 +61,7 @@ import {
 } from "../../../grn-actions";
 
 import { ACTIONS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
 type Ingredient = {
   id: number;
   name: string;
@@ -54,6 +69,7 @@ type Ingredient = {
   unit: string;
   unit_cost: number | null;
   category: string | null;
+  units?: IngredientUnitRow[];
 };
 
 type ServerDraftLine = GrnDraftLine & { lineId: number };
@@ -104,6 +120,9 @@ type EditState = {
   ingredient: Ingredient;
   line: GrnDraftLine | null;
   quantity: number;
+  unit: string;
+  // Purchase-role unit the qty is entered in. NULL = free-text/base unit.
+  entryUnitId: number | null;
   unitCost: number;
   note: string;
 };
@@ -186,10 +205,15 @@ export function GrnCreateClient({
 
   function openEdit(ingredient: Ingredient) {
     const existing = addedMap.get(ingredient.id);
+    const defaultUnit = getDefaultPurchaseUnit(ingredient);
     setEdit({
       ingredient,
       line: existing ?? null,
       quantity: existing?.quantity ?? 0,
+      unit: existing?.unit ?? defaultUnit?.code ?? ingredient.unit,
+      entryUnitId: existing
+        ? (existing.entryUnitId ?? null)
+        : (defaultUnit?.unitId ?? null),
       unitCost: existing?.unitCost ?? Number(ingredient.unit_cost ?? 0),
       note: existing?.note ?? "",
     });
@@ -211,7 +235,8 @@ export function GrnCreateClient({
         grnId,
         ingredientId: edit.ingredient.id,
         receivedQuantity: edit.quantity,
-        unit: edit.ingredient.unit,
+        unit: edit.unit,
+        entryUnitId: edit.entryUnitId,
         unitCost: edit.unitCost,
         qualityStatus: "accepted",
       });
@@ -223,7 +248,8 @@ export function GrnCreateClient({
       const nextLine: GrnDraftLine & { lineId?: number } = {
         ingredientId: edit.ingredient.id,
         ingredientName: edit.ingredient.name,
-        unit: edit.ingredient.unit,
+        unit: edit.unit,
+        entryUnitId: edit.entryUnitId,
         quantity: edit.quantity,
         unitCost: edit.unitCost,
         note: edit.note.trim() ? edit.note.trim() : undefined,
@@ -511,9 +537,9 @@ export function GrnCreateClient({
       <NumberPadSheet
         open={numpad === "qty"}
         onOpenChange={(next) => setNumpad(next ? "qty" : null)}
-        title={`Số lượng (${edit?.ingredient.unit ?? ""})`}
+        title={`Số lượng (${edit?.unit ?? ""})`}
         initialValue={edit?.quantity ?? 0}
-        suffix={edit?.ingredient.unit ?? ""}
+        suffix={edit?.unit ?? ""}
         onConfirm={(value) =>
           setEdit((current) =>
             current ? { ...current, quantity: value } : current,
@@ -597,16 +623,25 @@ function LineEditSheet({
               </SheetTitle>
               <p className="text-xs text-muted-foreground">
                 {edit.ingredient.sku ? `${edit.ingredient.sku} · ` : ""}
-                {GRN_CREATE_COPY.unitLabel(edit.ingredient.unit)}
+                {GRN_CREATE_COPY.unitLabel(edit.unit)}
               </p>
             </SheetHeader>
 
             <div className="flex flex-col gap-3 p-4">
+              <UnitField
+                options={getPurchaseUnitOptions(edit.ingredient)}
+                entryUnitId={edit.entryUnitId}
+                unit={edit.unit}
+                onUnitChange={(unitId, code) =>
+                  onPatch({ entryUnitId: unitId, unit: code })
+                }
+                onFreeTextChange={(value) => onPatch({ unit: value })}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <LineValueField
                   label={FORM_VI.quantity}
                   display={edit.quantity}
-                  detail={edit.ingredient.unit}
+                  detail={edit.unit}
                   onOpenNumpad={() => onOpenNumpad("qty")}
                 >
                   <QuantityInput
@@ -621,7 +656,7 @@ function LineEditSheet({
                 <LineValueField
                   label={FORM_VI.unitPrice}
                   display={formatVND(edit.unitCost)}
-                  detail={GRN_CREATE_COPY.unitPriceUnit(edit.ingredient.unit)}
+                  detail={GRN_CREATE_COPY.unitPriceUnit(edit.unit)}
                   onOpenNumpad={() => onOpenNumpad("cost")}
                 >
                   <MoneyVndInput
@@ -644,10 +679,7 @@ function LineEditSheet({
                 </div>
                 {referenceCost ? (
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {GRN_CREATE_COPY.lastCost(
-                      referenceCost,
-                      edit.ingredient.unit,
-                    )}
+                    {GRN_CREATE_COPY.lastCost(referenceCost, edit.unit)}
                   </p>
                 ) : null}
               </div>
@@ -754,5 +786,58 @@ function LineValueField({
         <span className="text-xs text-muted-foreground">{detail}</span>
       </label>
     </>
+  );
+}
+
+// Purchase-role unit picker for the GRN line, matching the PO create flow's
+// UnitField (new-po-client.tsx): dropdown when the ingredient carries
+// purchase-role ingredient_units, free-text fallback otherwise.
+function UnitField({
+  options,
+  entryUnitId,
+  unit,
+  onUnitChange,
+  onFreeTextChange,
+}: {
+  options: PurchaseUnitOption[];
+  entryUnitId: number | null;
+  unit: string;
+  onUnitChange: (unitId: number, code: string) => void;
+  onFreeTextChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+        {messages.inventory.grn.addDialog.unitLabel}
+      </Label>
+      {options.length > 0 ? (
+        <Select
+          value={entryUnitId != null ? String(entryUnitId) : ""}
+          onValueChange={(value) => {
+            const opt = options.find((o) => String(o.unitId) === value);
+            if (opt) onUnitChange(opt.unitId, opt.code);
+          }}
+        >
+          <SelectTrigger className="h-9 w-full text-sm" aria-label={unit}>
+            <SelectValue
+              placeholder={messages.inventory.grn.addDialog.selectUnit}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((o) => (
+              <SelectItem key={o.unitId} value={String(o.unitId)}>
+                {o.code}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : (
+        <Input
+          value={unit}
+          onChange={(e) => onFreeTextChange(e.target.value)}
+          className="h-9 text-sm"
+        />
+      )}
+    </div>
   );
 }

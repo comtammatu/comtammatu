@@ -8,7 +8,20 @@ import { resolveInventoryListScope } from "../../../_lib/inventory-scope";
 import { fetchProcurementBranches } from "../../../_lib/procurement-branches";
 import { fetchGrnDetail, loadActiveGrnDraft } from "../../../grn-actions";
 import type { GrnDraftLine } from "../../../_lib/grn-draft";
+import type { IngredientUnitRow } from "../../../_lib/types";
 import { GrnCreateClient } from "./grn-create-client";
+
+type IngredientUnitJoinRow = {
+  id: number;
+  unit_id: number;
+  to_base_factor: number | string;
+  is_base: boolean;
+  allow_purchase: boolean;
+  allow_issue: boolean;
+  allow_production: boolean;
+  sort_order: number;
+  units: { code: string } | null;
+};
 
 type Ingredient = {
   id: number;
@@ -18,6 +31,7 @@ type Ingredient = {
   purchase_unit: string | null;
   unit_cost: number | null;
   category: string | null;
+  units?: IngredientUnitRow[];
 };
 
 interface GrnCreatePageContentProps {
@@ -65,7 +79,9 @@ export async function GrnCreatePageContent({
       .maybeSingle(),
     supabase
       .from("ingredients")
-      .select("id, name, sku, unit, purchase_unit, unit_cost, category")
+      .select(
+        "id, name, sku, unit, purchase_unit, unit_cost, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code))",
+      )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
       .order("name")
@@ -83,11 +99,31 @@ export async function GrnCreatePageContent({
           ? claims.branch_id
           : (branches[0]?.id ?? null));
 
-  const ingredients = ((ingredientsRes.data ?? []) as Ingredient[]).map(
-    (ingredient) => ({
-      ...ingredient,
-      unit: ingredient.purchase_unit ?? ingredient.unit,
-    }),
+  type IngredientJoinRow = Omit<Ingredient, "units"> & {
+    ingredient_units: IngredientUnitJoinRow[] | null;
+  };
+
+  const ingredients = ((ingredientsRes.data ?? []) as IngredientJoinRow[]).map(
+    ({ ingredient_units, ...ingredient }) => {
+      const units: IngredientUnitRow[] = (ingredient_units ?? [])
+        .map((u) => ({
+          id: u.id,
+          unit_id: u.unit_id,
+          unit_code: u.units?.code ?? "",
+          to_base_factor: Number(u.to_base_factor ?? 1),
+          is_base: u.is_base,
+          allow_purchase: u.allow_purchase,
+          allow_issue: u.allow_issue,
+          allow_production: u.allow_production,
+          sort_order: u.sort_order,
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order);
+      return {
+        ...ingredient,
+        unit: ingredient.purchase_unit ?? ingredient.unit,
+        units,
+      };
+    },
   );
 
   // Sprint 6 #3: pre-fetch active draft (server-side state, no localStorage).
@@ -109,6 +145,7 @@ export async function GrnCreatePageContent({
           ingredient_id: number;
           received_quantity: number | string;
           unit: string;
+          entry_unit_id: number | null;
           unit_cost: number | string;
           ingredients: { name: string } | null;
         }>;
@@ -120,6 +157,7 @@ export async function GrnCreatePageContent({
           ingredientId: l.ingredient_id,
           ingredientName: l.ingredients?.name ?? "",
           unit: l.unit,
+          entryUnitId: l.entry_unit_id,
           quantity: Number(l.received_quantity ?? 0),
           unitCost: Number(l.unit_cost ?? 0),
         })),
