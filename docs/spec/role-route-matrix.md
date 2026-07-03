@@ -125,6 +125,7 @@ by direct URL or as a redirect target.
 | `branch_team` | `/br/*/team` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (my_shift) |
 | `employee` | `/employee` | Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Thu ngân, Bếp, Văn phòng | Operator tile (my_shift) |
 | `employee_checkout_approvals` | `/employee/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals); Operator tile (stock) |
+| `employee_leave_approvals` | `/br/*/shift/leave-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals) |
 | `notifications` | `/notifications` | Chủ sở hữu, Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Thu ngân, Bếp, Văn phòng | (not advertised in nav — direct URL / redirect target only) |
 
 ## Route Family Contracts (generated)
@@ -150,6 +151,7 @@ declared before their broader siblings.
 | `branch-picker` | branch_operation | `/br` | `/br` | `branch_picker` | no |
 | `operator-home` | branch_operation | `/br/[branchId]` | `/br/[branchId]` | `operator_home` | yes |
 | `operator-shift-checkout-approvals` | branch_operation | `/br/[branchId]/shift/checkout-approvals` | `/br/[branchId]/shift/checkout-approvals` | `employee_checkout_approvals` | yes |
+| `operator-shift-leave-approvals` | branch_operation | `/br/[branchId]/shift/leave-approvals` | `/br/[branchId]/shift/leave-approvals` | `employee_leave_approvals` | yes |
 | `operator-shift` | branch_operation | `/br/[branchId]/shift` | `/br/[branchId]/shift` | `operator_home` | yes |
 | `operator-profile` | branch_operation | `/br/[branchId]/profile` | `/br/[branchId]/profile` | `operator_home` | yes |
 | `operator-stock` | branch_operation | `/br/[branchId]/stock` | `/br/[branchId]/stock` | `inventory` | yes |
@@ -201,6 +203,7 @@ separate gates (route bucket here, permission key at the mutation site).
 | branch-picker | `/br` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-home | `/br/[branchId]` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-shift-checkout-approvals | `/br/[branchId]/shift/checkout-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-shift-leave-approvals | `/br/[branchId]/shift/leave-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-shift | `/br/[branchId]/shift` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-profile | `/br/[branchId]/profile` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-stock | `/br/[branchId]/stock` | branch_manager/owner/production_manager/warehouse_manager | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |

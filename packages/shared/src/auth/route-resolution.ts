@@ -157,6 +157,11 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (/^\/br\/\d+\/shift\/checkout-approvals(?:\/|$)/.test(pathname)) {
     return "employee_checkout_approvals";
   }
+  // leave-approvals gets its own module key (D059 §4) for the same reason —
+  // must precede the generic /shift prefix match below.
+  if (/^\/br\/\d+\/shift\/leave-approvals(?:\/|$)/.test(pathname)) {
+    return "employee_leave_approvals";
+  }
   if (/^\/br\/\d+\/shift/.test(pathname)) return "operator_home";
   if (/^\/br\/\d+\/profile/.test(pathname)) return "operator_home";
   if (/^\/br\/\d+\/stock\/count(?:\/|$)/.test(pathname)) return "operator_home";

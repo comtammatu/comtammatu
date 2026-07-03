@@ -166,6 +166,13 @@ export const hr = {
     rejectReasonLabel: "Lý do (không bắt buộc)",
     rejectReasonPlaceholder: "Ví dụ: ngày đó thiếu người trực ca",
     rejectSubmit: "Từ chối",
+    approvalsTitle: "Duyệt nghỉ phép",
+    approvalsDescription:
+      "Duyệt hoặc từ chối yêu cầu nghỉ phép của nhân viên chi nhánh.",
+    approvalsHomeLabel: "Hôm nay",
+    approvalsNoAccessTitle: "Không có quyền duyệt nghỉ phép",
+    approvalsNoAccessDescription:
+      "Chỉ tài khoản quản lý có quyền nhân sự mới duyệt yêu cầu nghỉ phép.",
   },
   payroll: {
     eyebrow: "Nhân sự",

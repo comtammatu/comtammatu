@@ -162,6 +162,13 @@ export const OPERATOR_TILE_ITEMS = [
     label: "Duyệt kết ca",
   },
   {
+    moduleKey: "employee_leave_approvals",
+    icon: "CalendarCheck",
+    group: "approvals",
+    hrefTemplate: "/br/{branchId}/shift/leave-approvals",
+    label: "Duyệt nghỉ phép",
+  },
+  {
     moduleKey: "inventory",
     icon: "ClipboardCheck",
     group: "approvals",
