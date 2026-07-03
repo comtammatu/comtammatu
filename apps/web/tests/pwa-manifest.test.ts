@@ -238,3 +238,69 @@ test("Operator Hub layout mounts its manifest link and install toolbar", () => {
   );
   assert.match(layoutSource, /<OperatorPwaToolbar \/>/);
 });
+
+test("SW offline fallback (PWA-2) only precaches/serves the Hub shell, never station or authed data", () => {
+  const swSource = readFileSync(
+    new URL("../app/sw.ts", import.meta.url),
+    "utf8",
+  );
+
+  // Hub navigations get a fallback plugin; POS/KDS/Runner stay plain NetworkOnly.
+  assert.match(swSource, /isHubPath\(url\.pathname\)/);
+  assert.match(
+    swSource,
+    /handler: new NetworkOnly\(\{ plugins: \[hubOfflineFallback\] \}\)/,
+  );
+  assert.match(swSource, /BRANCH_STATION_SEGMENTS = \["pos", "kds", "runner"\]/);
+
+  // The fallback only fires on handlerDidError (network failure), and only
+  // returns the precached shell — no data/mutation caching is introduced.
+  assert.match(
+    swSource,
+    /handlerDidError: async \(\) => serwist\.matchPrecache\("\/offline"\)/,
+  );
+
+  // Remaining authed navigations (stations + admin/employee/etc.) are
+  // unchanged: still NetworkOnly with no fallback plugin.
+  assert.match(
+    swSource,
+    /request\.mode === "navigate" && isAuthedPath\(url\.pathname\),\s*\n\s*handler: new NetworkOnly\(\),/,
+  );
+});
+
+// Mirrors app/sw.ts's isHubPath — sw.ts runs in the SW global scope and can't
+// be imported directly from a Node test.
+const BRANCH_STATION_SEGMENTS = ["pos", "kds", "runner"];
+function isHubPath(pathname: string) {
+  if (!pathname.startsWith("/br/")) return false;
+  const segments = pathname.split("/").filter(Boolean);
+  const stationSegment = segments[2];
+  return (
+    stationSegment == null || !BRANCH_STATION_SEGMENTS.includes(stationSegment)
+  );
+}
+
+test("isHubPath matches the Hub root and its sub-routes but excludes POS/KDS/Runner", () => {
+  assert.equal(isHubPath("/br/3"), true);
+  assert.equal(isHubPath("/br/3/dashboard"), true);
+  assert.equal(isHubPath("/br/3/stock/on-hand"), true);
+  assert.equal(isHubPath("/br/3/pos"), false);
+  assert.equal(isHubPath("/br/3/kds"), false);
+  assert.equal(isHubPath("/br/3/runner"), false);
+  assert.equal(isHubPath("/admin"), false);
+  assert.equal(isHubPath("/employee"), false);
+});
+
+test("offline page precaches statically and reuses the shared error copy", () => {
+  const offlinePageSource = readFileSync(
+    new URL("../app/offline/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  // Static (no dynamic data), so it's swept into the precache manifest by
+  // Serwist's `precachePrerendered` glob and reachable while fully offline.
+  assert.doesNotMatch(offlinePageSource, /force-dynamic/);
+  assert.match(offlinePageSource, /ERRORS_VI\.networkError/);
+  assert.match(offlinePageSource, /ACTIONS_VI\.retry/);
+  assert.match(offlinePageSource, /AppEmptyState/);
+});

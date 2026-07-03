@@ -2,6 +2,7 @@ import type {
   PrecacheEntry,
   RuntimeCaching,
   SerwistGlobalConfig,
+  SerwistPlugin,
 } from "serwist";
 import {
   CacheFirst,
@@ -42,6 +43,34 @@ const AUTHED_NAV_PREFIXES = [
 ];
 const isAuthedPath = (pathname: string) =>
   AUTHED_NAV_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+// Branch Operator Hub only (PWA-2, D062) — the operator plane's own routes
+// under `/br/{branchId}` (dashboard/orders/profile/settings/shift/stock/
+// team), excluding the POS/KDS/Runner station apps. Stations keep their
+// existing offline handling untouched; only the Hub gets the offline shell.
+const BRANCH_STATION_SEGMENTS = ["pos", "kds", "runner"];
+const isHubPath = (pathname: string) => {
+  if (!pathname.startsWith("/br/")) return false;
+  const segments = pathname.split("/").filter(Boolean);
+  const stationSegment = segments[2];
+  return stationSegment == null || !BRANCH_STATION_SEGMENTS.includes(stationSegment);
+};
+
+// Assigned once below, after `runtimeCaching` is built. `hubOfflineFallback`
+// only reads it lazily inside handlerDidError (called on an actual failed
+// navigation, always after module init finishes), so the forward reference
+// is safe.
+// eslint-disable-next-line prefer-const -- assigned once, after declaration, by design (forward reference)
+let serwist: Serwist;
+
+// Serves the precached offline shell when a Hub navigation fails (offline).
+// Equivalent to serwist's PrecacheFallbackPlugin, written inline because that
+// plugin resolves its `serwist` reference eagerly at construction time — too
+// early here, since this plugin is built while assembling the `runtimeCaching`
+// array that `new Serwist(...)` itself consumes.
+const hubOfflineFallback: SerwistPlugin = {
+  handlerDidError: async () => serwist.matchPrecache("/offline"),
+};
 
 const runtimeCaching: RuntimeCaching[] = [
   // 1. Mutations: never cache.
@@ -89,14 +118,25 @@ const runtimeCaching: RuntimeCaching[] = [
         url.pathname.endsWith(".woff")),
     handler: new StaleWhileRevalidate({ cacheName: "static-assets" }),
   },
-  // 7. Authed navigations: never cache. Protected shells embed user identity in
-  //    the SSR'd HTML; a cached page leaks across users on a shared device/PWA.
+  // 7. Branch Operator Hub navigations: never cache the response (same
+  //    identity-leak rule as #8), but on network failure serve the precached
+  //    offline shell instead of the browser's default error page. Data stays
+  //    correct — this only replaces the error page, never the live HTML.
+  {
+    matcher: ({ request, url }) =>
+      request.mode === "navigate" && isHubPath(url.pathname),
+    handler: new NetworkOnly({ plugins: [hubOfflineFallback] }),
+  },
+  // 8. Remaining authed navigations (POS/KDS/Runner stations, admin,
+  //    employee, etc.): never cache, no offline fallback — unchanged from
+  //    before PWA-2. Protected shells embed user identity in the SSR'd HTML,
+  //    so the service worker must never persist a navigation response.
   {
     matcher: ({ request, url }) =>
       request.mode === "navigate" && isAuthedPath(url.pathname),
     handler: new NetworkOnly(),
   },
-  // 8. Public HTML navigation: network-first with short timeout, cached fallback.
+  // 9. Public HTML navigation: network-first with short timeout, cached fallback.
   {
     matcher: ({ request }) => request.mode === "navigate",
     handler: new NetworkFirst({
@@ -106,7 +146,7 @@ const runtimeCaching: RuntimeCaching[] = [
   },
 ];
 
-const serwist = new Serwist({
+serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
@@ -150,7 +190,7 @@ self.addEventListener("notificationclick", (event: NotificationEvent) => {
 });
 
 // Purge any identity-bearing navigation HTML cached by a prior SW version
-// before rule #7 excluded authed routes.
+// before authed routes were excluded from the "pages" cache.
 self.addEventListener("activate", (event) => {
   event.waitUntil(caches.delete("pages"));
 });
