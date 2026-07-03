@@ -1,21 +1,45 @@
-import Link from "next/link";
+import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
+import { fetchActiveBranches, resolveListScope } from "@/_lib/branch-context";
 import { fetchOrders } from "./actions";
 import { fetchRefunds } from "./refund-actions";
-import { OrdersClient } from "./orders-client";
-import { RefundsClient } from "./refunds-client";
-import { Button } from "@comtammatu/ui/components/button";
-import { TabsContent } from "@comtammatu/ui/components/tabs";
+import { OrdersPageBody } from "./orders-page-body";
 import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
-import { AppPageTabs } from "@/components/app-page-tabs";
 
 import { ORDER_VI } from "@comtammatu/shared/messages";
 import { ORDERS_COPY } from "./orders-copy";
-export default async function OrdersPage() {
-  const { claims } = await loadAuthState();
+
+interface OrdersPageContentProps {
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+  routeBranchId?: number;
+  embedded?: boolean;
+}
+
+export async function OrdersPageContent({
+  searchParams,
+  routeBranchId,
+  embedded = false,
+}: OrdersPageContentProps) {
+  const params = searchParams ? await searchParams : {};
+  const { supabase, claims } = await loadAuthState();
+
+  // Scope resolution only applies to embedded (routeBranchId) callers: the
+  // engine always resolves a concrete default branch, which would narrow the
+  // office page's unfiltered-by-default view for owner.
+  let branchFilter: number | undefined;
+  if (routeBranchId != null) {
+    const branches = await fetchActiveBranches(supabase, claims.tenant_id);
+    const scope = await resolveListScope(supabase, claims, branches, {
+      routeBranchId,
+      queryBranchId: params.branchId,
+      tenantWideRoles: ["owner"],
+    });
+    if (scope.outOfScope) notFound();
+    branchFilter = scope.selectedBranchId ?? undefined;
+  }
 
   const [ordersResult, refundsResult] = await Promise.all([
-    fetchOrders(),
+    fetchOrders(branchFilter != null ? { branchId: branchFilter } : undefined),
     fetchRefunds(),
   ]);
 
@@ -31,7 +55,7 @@ export default async function OrdersPage() {
     );
   }
 
-  const { orders, branches, summary } = ordersResult.data;
+  const { orders, branches: orderBranches, summary } = ordersResult.data;
   const refunds = refundsResult.success
     ? (refundsResult.data?.refunds ?? [])
     : [];
@@ -39,49 +63,23 @@ export default async function OrdersPage() {
   const isManagerOrAbove = claims.user_role === "owner";
   const canApproveRefund = claims.user_role === "owner";
 
-  const pendingRefundCount = refunds.filter(
-    (r) => r.status === "pending",
-  ).length;
-
   return (
-    <AppPage width="wide">
-      <AppPageHeader
-        eyebrow={ORDERS_COPY.eyebrow}
-        title={ORDER_VI.long}
-        description={ORDERS_COPY.description}
-        actions={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/finance">{ORDERS_COPY.reportsAction}</Link>
-          </Button>
-        }
-        tabs={
-          <AppPageTabs
-            items={[
-              { value: "orders", label: ORDERS_COPY.tabOrders },
-              {
-                value: "refunds",
-                label: ORDERS_COPY.tabRefunds,
-                count: pendingRefundCount > 0 ? pendingRefundCount : undefined,
-              },
-            ]}
-          >
-            <TabsContent value="orders" className="flex flex-col gap-4">
-              <OrdersClient
-                initialOrders={orders}
-                initialSummary={summary}
-                branches={branches}
-                showBranchFilter={isManagerOrAbove}
-              />
-            </TabsContent>
-            <TabsContent value="refunds" className="flex flex-col gap-4">
-              <RefundsClient
-                initialRefunds={refunds}
-                canApprove={canApproveRefund}
-              />
-            </TabsContent>
-          </AppPageTabs>
-        }
-      />
-    </AppPage>
+    <OrdersPageBody
+      orders={orders}
+      summary={summary}
+      branches={orderBranches}
+      showBranchFilter={isManagerOrAbove}
+      refunds={refunds}
+      canApproveRefund={canApproveRefund}
+      embedded={embedded}
+    />
   );
+}
+
+export default async function OrdersPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ branchId?: string | string[] }>;
+}) {
+  return <OrdersPageContent searchParams={searchParams} />;
 }

@@ -188,6 +188,13 @@ export const OPERATOR_TILE_ITEMS = [
     hrefTemplate: "/br/{branchId}/settings/menu-limits",
   },
   {
+    moduleKey: "orders",
+    icon: "ClipboardList",
+    group: "sales_kitchen",
+    hrefTemplate: "/br/{branchId}/orders",
+    label: "Đơn hàng",
+  },
+  {
     moduleKey: "inventory",
     icon: "Package",
     group: "stock",
@@ -249,13 +256,6 @@ export const OPERATOR_TILE_ITEMS = [
     group: "office_bridge",
     hrefTemplate: "/hr",
     label: APP_COPY_VI.hrWorkspace,
-  },
-  {
-    moduleKey: "orders",
-    icon: "ClipboardList",
-    group: "office_bridge",
-    hrefTemplate: "/orders",
-    label: "Đơn hàng",
   },
   {
     moduleKey: "inventory",

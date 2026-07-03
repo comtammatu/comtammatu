@@ -107,7 +107,7 @@ by direct URL or as a redirect target.
 | `inventory` | `/inventory` | Chủ sở hữu, Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm | Operator tile (approvals); Operator tile (office_bridge); Operator tile (stock); Workspace nav |
 | `inventory_procurement` | `/inventory/suppliers` | Chủ sở hữu, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm | (not advertised in nav — direct URL / redirect target only) |
 | `inventory_admin` | `/admin/inventory` | (none — retired) | (not advertised in nav — direct URL / redirect target only) |
-| `orders` | `/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân | Operator tile (office_bridge); Workspace nav |
+| `orders` | `/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân | Operator tile (sales_kitchen); Workspace nav |
 | `staff` | `/hr/staff` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
 | `hr` | `/hr` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (office_bridge); Workspace nav |
 | `hr_payroll` | `/hr/payroll` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
@@ -152,6 +152,7 @@ declared before their broader siblings.
 | `operator-shift` | branch_operation | `/br/[branchId]/shift` | `/br/[branchId]/shift` | `operator_home` | yes |
 | `operator-profile` | branch_operation | `/br/[branchId]/profile` | `/br/[branchId]/profile` | `operator_home` | yes |
 | `operator-stock` | branch_operation | `/br/[branchId]/stock` | `/br/[branchId]/stock` | `inventory` | yes |
+| `operator-orders` | branch_operation | `/br/[branchId]/orders` | `/br/[branchId]/orders` | `orders` | yes |
 | `branch-menu-limits` | branch_management | `/br/[branchId]/settings/menu-limits` | `/br/[branchId]/settings/menu-limits` | `branch_menu_limits` | yes |
 | `branch-settings` | branch_management | `/br/[branchId]/settings` | `/br/[branchId]/settings` | `branch_settings` | yes |
 | `branch-dashboard` | branch_management | `/br/[branchId]/dashboard` | `/br/[branchId]/dashboard` | `branch_dashboard` | yes |
@@ -201,6 +202,7 @@ separate gates (route bucket here, permission key at the mutation site).
 | operator-shift | `/br/[branchId]/shift` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-profile | `/br/[branchId]/profile` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-stock | `/br/[branchId]/stock` | branch_manager/owner/production_manager/warehouse_manager | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
+| operator-orders | `/br/[branchId]/orders` | branch_manager/cashier/owner | `orders:read`, `orders:refund`, `orders:refund_approve`, `orders:void`, `orders:write` |
 | branch-menu-limits | `/br/[branchId]/settings/menu-limits` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-settings | `/br/[branchId]/settings` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-dashboard | `/br/[branchId]/dashboard` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
