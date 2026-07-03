@@ -230,6 +230,13 @@ export const OPERATOR_TILE_ITEMS = [
     label: "Kiểm kê",
   },
   {
+    moduleKey: "employee_checkout_approvals",
+    icon: "ClipboardList",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/count-assignments",
+    label: "Phân công đếm tồn",
+  },
+  {
     moduleKey: "inventory",
     icon: "Package",
     group: "stock",

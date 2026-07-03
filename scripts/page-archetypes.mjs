@@ -32,6 +32,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/leave/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/expiry/page.tsx": "EMBED-WRAPPER",

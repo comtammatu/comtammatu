@@ -123,7 +123,7 @@ by direct URL or as a redirect target.
 | `branch_settings` | `/br/*/settings` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
 | `branch_menu_limits` | `/br/*/settings/menu-limits` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav; Operator tile (sales_kitchen) |
 | `employee` | `/employee` | Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Thu ngân, Bếp, Văn phòng | Operator tile (my_shift) |
-| `employee_checkout_approvals` | `/employee/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals) |
+| `employee_checkout_approvals` | `/employee/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals); Operator tile (stock) |
 | `notifications` | `/notifications` | Chủ sở hữu, Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Thu ngân, Bếp, Văn phòng | (not advertised in nav — direct URL / redirect target only) |
 
 ## Route Family Contracts (generated)

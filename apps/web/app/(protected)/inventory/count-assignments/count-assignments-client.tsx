@@ -56,6 +56,8 @@ interface Props {
   employees: EmployeeRow[];
   ingredients: IngredientOption[];
   assignmentsByEmployee: Record<string, number[]>;
+  basePath?: string;
+  embedded?: boolean;
 }
 
 function seedSelections(
@@ -84,6 +86,7 @@ export function CountAssignmentsClient({
   employees,
   ingredients,
   assignmentsByEmployee,
+  embedded = false,
 }: Props) {
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const ingredientMap = useMemo(() => {
@@ -119,81 +122,79 @@ export function CountAssignmentsClient({
     [employees, selectionByEmployee],
   );
 
-  return (
+  const content = (
     <>
-      <AppPage scroll>
-        <AppPageHeader
-          eyebrow="Kiểm kê"
-          title="Phân công đếm tồn"
-          description="Giao danh sách thành phẩm cần kiểm kê cho từng nhân viên tại kho chi nhánh hiện tại."
-          actions={
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {countHref ? (
-                <Button asChild variant="outline">
-                  <Link href={countHref}>
-                    <IconArrowRight className="size-4" />
-                    Mở màn đếm tồn
-                  </Link>
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                onClick={() => setNewDialogOpen(true)}
-                disabled={!scopeReady || unassignedEmployees.length === 0}
-              >
-                <IconPlus className="size-4" />
-                Thêm phân công mới
+      <AppPageHeader
+        eyebrow={embedded ? undefined : "Kiểm kê"}
+        title="Phân công đếm tồn"
+        description="Giao danh sách thành phẩm cần kiểm kê cho từng nhân viên tại kho chi nhánh hiện tại."
+        actions={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {countHref ? (
+              <Button asChild variant="outline">
+                <Link href={countHref}>
+                  <IconArrowRight className="size-4" />
+                  Mở màn đếm tồn
+                </Link>
               </Button>
-            </div>
-          }
-        />
-
-        {!scopeReady && (
-          <AppEmptyState
-            mode="no-data"
-            title="Chưa có kho chi nhánh"
-            description="Cần có kho chi nhánh đang hoạt động trước khi phân công kiểm kê."
-          />
-        )}
-
-        {scopeReady && employees.length === 0 && (
-          <AppEmptyState
-            mode="no-data"
-            title="Chi nhánh chưa có nhân viên"
-            description="Không có nhân viên đang hoạt động tại chi nhánh này để phân công."
-          />
-        )}
-
-        {scopeReady && employees.length > 0 && assignedEmployees.length === 0 && (
-          <AppEmptyState
-            mode="no-data"
-            title="Chưa có phân công"
-            description="Bấm Thêm phân công mới để giao thành phẩm cần kiểm kê cho nhân viên."
-          />
-        )}
-
-        {scopeReady && assignedEmployees.length > 0 && (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {assignedEmployees.map((emp) => (
-              <EmployeeAssignmentCard
-                key={emp.id}
-                employee={emp}
-                branchId={selectedBranchId}
-                locationId={selectedLocationId}
-                ingredients={ingredients}
-                ingredientMap={ingredientMap}
-                selectedIds={selectionByEmployee[String(emp.id)] ?? []}
-                onSelectionChange={(ids) =>
-                  setSelectionByEmployee((prev) => ({
-                    ...prev,
-                    [String(emp.id)]: ids,
-                  }))
-                }
-              />
-            ))}
+            ) : null}
+            <Button
+              type="button"
+              onClick={() => setNewDialogOpen(true)}
+              disabled={!scopeReady || unassignedEmployees.length === 0}
+            >
+              <IconPlus className="size-4" />
+              Thêm phân công mới
+            </Button>
           </div>
-        )}
-      </AppPage>
+        }
+      />
+
+      {!scopeReady && (
+        <AppEmptyState
+          mode="no-data"
+          title="Chưa có kho chi nhánh"
+          description="Cần có kho chi nhánh đang hoạt động trước khi phân công kiểm kê."
+        />
+      )}
+
+      {scopeReady && employees.length === 0 && (
+        <AppEmptyState
+          mode="no-data"
+          title="Chi nhánh chưa có nhân viên"
+          description="Không có nhân viên đang hoạt động tại chi nhánh này để phân công."
+        />
+      )}
+
+      {scopeReady && employees.length > 0 && assignedEmployees.length === 0 && (
+        <AppEmptyState
+          mode="no-data"
+          title="Chưa có phân công"
+          description="Bấm Thêm phân công mới để giao thành phẩm cần kiểm kê cho nhân viên."
+        />
+      )}
+
+      {scopeReady && assignedEmployees.length > 0 && (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {assignedEmployees.map((emp) => (
+            <EmployeeAssignmentCard
+              key={emp.id}
+              employee={emp}
+              branchId={selectedBranchId}
+              locationId={selectedLocationId}
+              ingredients={ingredients}
+              ingredientMap={ingredientMap}
+              selectedIds={selectionByEmployee[String(emp.id)] ?? []}
+              onSelectionChange={(ids) =>
+                setSelectionByEmployee((prev) => ({
+                  ...prev,
+                  [String(emp.id)]: ids,
+                }))
+              }
+            />
+          ))}
+        </div>
+      )}
 
       {scopeReady ? (
         <NewAssignmentDialog
@@ -213,6 +214,12 @@ export function CountAssignmentsClient({
       ) : null}
     </>
   );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return <AppPage scroll>{content}</AppPage>;
 }
 
 function EmployeeAssignmentCard({
