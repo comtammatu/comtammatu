@@ -1094,7 +1094,7 @@ function LineItemsSection({
                   key={idx}
                   className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 items-center border-b px-3 py-2 hover:bg-muted/20 transition-colors"
                 >
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium truncate min-w-0">
                     {l.ingredientName}
                   </span>
                   <span className="text-sm font-mono text-right">

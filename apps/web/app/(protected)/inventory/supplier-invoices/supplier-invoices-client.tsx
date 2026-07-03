@@ -567,7 +567,7 @@ export function SupplierInvoicesClient({
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-1">
-              <p className="font-mono text-sm font-semibold">
+              <p className="truncate font-mono text-sm font-semibold">
                 {invoice.code}
               </p>
               <p className="truncate text-sm text-muted-foreground">
