@@ -36,10 +36,10 @@ import {
   AppPage,
   AppPageHeader,
   AppSection,
+  DescriptionList,
 } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
-import { KpiCard } from "@/components/kpi/kpi-card";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { TimelineStepper } from "../../_components/timeline-stepper";
@@ -523,25 +523,34 @@ export function PODetailClient({
           >
             <TabsContent value="overview">
               <div className="flex flex-col gap-4">
-                <div className="grid gap-3 md:grid-cols-3">
-                  <KpiCard label={poCopy.supplierRequired} value={po.supplier} />
-                  <KpiCard
-                    label={poDetailCopy.goodsTotal}
-                    value={messages.inventory.common.currency(
-                      formatVND(totalAmount),
-                    )}
+                <AppSection title={poDetailCopy.summaryTitle}>
+                  <DescriptionList
+                    className="grid gap-3 md:grid-cols-3"
+                    descriptionClassName="font-semibold"
+                    items={[
+                      {
+                        term: poCopy.supplierRequired,
+                        description: po.supplier,
+                      },
+                      {
+                        term: poDetailCopy.goodsTotal,
+                        description: messages.inventory.common.currency(
+                          formatVND(totalAmount),
+                        ),
+                      },
+                      {
+                        term: FORM_VI.totalAmount,
+                        description: (
+                          <span className="text-primary">
+                            {messages.inventory.common.currency(
+                              formatVND(grandTotal),
+                            )}
+                          </span>
+                        ),
+                      },
+                    ]}
                   />
-                  <KpiCard
-                    label={FORM_VI.totalAmount}
-                    value={
-                      <span className="text-primary">
-                        {messages.inventory.common.currency(
-                          formatVND(grandTotal),
-                        )}
-                      </span>
-                    }
-                  />
-                </div>
+                </AppSection>
 
                 <AppSection contentClassName="py-4">
                   <div className="flex justify-center">
@@ -592,8 +601,8 @@ export function PODetailClient({
 
             <TabsContent value="lines">
               <div className="flex flex-col gap-4">
-                <div className="grid gap-4 lg:grid-cols-3">
-                  <div className="lg:col-span-2">
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+                  <div className="min-w-0">
                     <AppSection
                       className="overflow-hidden"
                       title={poDetailCopy.itemCatalogTitle}
@@ -762,49 +771,7 @@ export function PODetailClient({
                     </AppSection>
                   </div>
 
-                  <div className="flex flex-col gap-4">
-                    <AppSection
-                      title={poDetailCopy.summaryTitle}
-                      contentClassName="flex flex-col gap-3 text-sm"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-muted-foreground">
-                          {poDetailCopy.itemCount}
-                        </span>
-                        <span className="font-semibold">{lines.length}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-muted-foreground">
-                          {poDetailCopy.goodsTotal}
-                        </span>
-                        <span className="font-semibold">
-                          {inventoryCommon.currencyCompact(
-                            formatVND(totalAmount),
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-muted-foreground">
-                          {FORM_VI.tax}
-                        </span>
-                        <span className="font-semibold">
-                          {inventoryCommon.currencyCompact(
-                            formatVND(taxAmount),
-                          )}
-                        </span>
-                      </div>
-                      <div className="border-t border-border pt-3">
-                        <p className="text-muted-foreground">
-                          {FORM_VI.totalAmount}
-                        </p>
-                        <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-primary">
-                          {inventoryCommon.currencyCompact(
-                            formatVND(grandTotal),
-                          )}
-                        </p>
-                      </div>
-                    </AppSection>
-
+                  <div className="min-w-0">
                     <AppSection title={poDetailCopy.supplierInfoTitle}>
                       {supplierInfoAvailable ? (
                         <div className="flex flex-col gap-3 text-sm">

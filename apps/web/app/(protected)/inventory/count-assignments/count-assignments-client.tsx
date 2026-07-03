@@ -13,14 +13,6 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
@@ -31,6 +23,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { AppDialog } from "@/components/form";
 import {
   AppEmptyState,
   AppPage,
@@ -125,11 +118,7 @@ export function CountAssignmentsClient({
   const assignmentActions = (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {countHref ? (
-        <Button
-          asChild
-          variant="outline"
-          size={embedded ? "touch" : "default"}
-        >
+        <Button asChild variant="outline" size={embedded ? "touch" : "default"}>
           <Link href={countHref}>
             <IconArrowRight className="size-4" />
             Mở màn đếm tồn
@@ -372,68 +361,63 @@ function NewAssignmentDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Thêm phân công mới</DialogTitle>
-          <DialogDescription>
-            Chọn nhân viên và thành phẩm cần kiểm kê tại kho chi nhánh hiện tại.
-          </DialogDescription>
-        </DialogHeader>
-
-        {employees.length === 0 ? (
-          <p className="rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
-            Tất cả nhân viên đang có phân công.
-          </p>
-        ) : (
-          <>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="count-assignment-new-employee">Nhân viên</Label>
-              <Select
-                value={selectedEmployeeId}
-                onValueChange={setSelectedEmployeeId}
-                disabled={isPending}
-              >
-                <SelectTrigger id="count-assignment-new-employee">
-                  <SelectValue placeholder="Chọn nhân viên" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.id} value={String(employee.id)}>
-                      {employee.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <AssignmentChecklist
-              employeeId={selectedEmployeeId || "new"}
-              ingredients={ingredients}
-              draftSet={draftSet}
+    <AppDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Thêm phân công mới"
+      description="Chọn nhân viên và thành phẩm cần kiểm kê tại kho chi nhánh hiện tại."
+      footer={
+        <Button
+          type="button"
+          onClick={persist}
+          disabled={
+            isPending ||
+            !selectedEmployee ||
+            ingredients.length === 0 ||
+            draftIds.length === 0
+          }
+        >
+          {isPending && <Spinner />}
+          Lưu
+        </Button>
+      }
+    >
+      {employees.length === 0 ? (
+        <p className="rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
+          Tất cả nhân viên đang có phân công.
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="count-assignment-new-employee">Nhân viên</Label>
+            <Select
+              value={selectedEmployeeId}
+              onValueChange={setSelectedEmployeeId}
               disabled={isPending}
-              onToggle={toggleIngredient}
-            />
-          </>
-        )}
+            >
+              <SelectTrigger id="count-assignment-new-employee">
+                <SelectValue placeholder="Chọn nhân viên" />
+              </SelectTrigger>
+              <SelectContent>
+                {employees.map((employee) => (
+                  <SelectItem key={employee.id} value={String(employee.id)}>
+                    {employee.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            onClick={persist}
-            disabled={
-              isPending ||
-              !selectedEmployee ||
-              ingredients.length === 0 ||
-              draftIds.length === 0
-            }
-          >
-            {isPending && <Spinner />}
-            Lưu
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <AssignmentChecklist
+            employeeId={selectedEmployeeId || "new"}
+            ingredients={ingredients}
+            draftSet={draftSet}
+            disabled={isPending}
+            onToggle={toggleIngredient}
+          />
+        </>
+      )}
+    </AppDialog>
   );
 }
 
@@ -568,24 +552,14 @@ function AssignmentEditDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Chỉnh sửa phân công</DialogTitle>
-          <DialogDescription>
-            {employee.name} kiểm kê các thành phẩm được chọn dưới đây.
-          </DialogDescription>
-        </DialogHeader>
-
-        <AssignmentChecklist
-          employeeId={employee.id}
-          ingredients={ingredients}
-          draftSet={draftSet}
-          disabled={isPending}
-          onToggle={toggleIngredient}
-        />
-
-        <DialogFooter className="sm:justify-between">
+    <AppDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Chỉnh sửa phân công"
+      description={`${employee.name} kiểm kê các thành phẩm được chọn dưới đây.`}
+      footerClassName="sm:justify-between"
+      footer={
+        <>
           <Button
             type="button"
             variant="destructive"
@@ -602,8 +576,16 @@ function AssignmentEditDialog({
             {isPending && <Spinner />}
             Lưu
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <AssignmentChecklist
+        employeeId={employee.id}
+        ingredients={ingredients}
+        draftSet={draftSet}
+        disabled={isPending}
+        onToggle={toggleIngredient}
+      />
+    </AppDialog>
   );
 }

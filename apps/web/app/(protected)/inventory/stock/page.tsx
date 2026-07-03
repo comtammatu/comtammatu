@@ -11,7 +11,6 @@ import { StockClient } from "./stock-client";
 import type {
   StockActionPermissions,
   StockIngredient,
-  StockMovementHistory,
   StockWorkSummary,
 } from "./stock-client";
 
@@ -70,7 +69,6 @@ export async function StockPageContent({
     pendingGrnRes,
     outboundTransferRes,
     inboundTransferRes,
-    movementHistoryRes,
     canReceiveGrn,
     canReceiveTransfer,
     canCreateTransfer,
@@ -110,15 +108,6 @@ export async function StockPageContent({
       .eq("tenant_id", claims.tenant_id)
       .eq("to_branch_id", branchId)
       .in("status", ["in_transit", "confirmed_receive"]),
-    supabase
-      .from("stock_movements")
-      .select(
-        "id, ingredient_id, type, movement_subtype, quantity_change, unit_cost, reason, created_at, grn_id, transfer_id, issue_id, order_id, production_order_id",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .order("created_at", { ascending: false })
-      .limit(300),
     currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
     currentUserHasPermission(
       branchId,
@@ -277,24 +266,6 @@ export async function StockPageContent({
     canCreatePurchaseOrder,
     canAdjustException,
   };
-  const movementHistory: StockMovementHistory[] = (
-    movementHistoryRes.data ?? []
-  ).map((row) => ({
-    id: row.id,
-    ingredientId: row.ingredient_id,
-    type: row.type,
-    movementSubtype: row.movement_subtype,
-    quantityChange: row.quantity_change,
-    unitCost: row.unit_cost,
-    reason: row.reason,
-    createdAt: row.created_at,
-    grnId: row.grn_id,
-    transferId: row.transfer_id,
-    issueId: row.issue_id,
-    orderId: row.order_id,
-    productionOrderId: row.production_order_id,
-  }));
-
   return (
     <StockClient
       ingredients={ingredients}
@@ -303,7 +274,6 @@ export async function StockPageContent({
       totalValue={totalValue}
       summary={summary}
       permissions={permissions}
-      movementHistory={movementHistory}
       branchStockBasePath={branchStockBasePath}
       embedded={embedded}
     />

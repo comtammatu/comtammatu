@@ -142,7 +142,8 @@ export function AppShell({
       .split("/")
       .filter(Boolean)
       .map((segment) => formatPathSegment(segment));
-    return pathTail[pathTail.length - 1] ?? active.label;
+    const lastSegment = pathTail[pathTail.length - 1];
+    return lastSegment && !/^\d+$/.test(lastSegment) ? lastSegment : active.label;
   }, [tier2, pathname, defaultPageTitle]);
 
   const activePrimaryItem = useMemo(

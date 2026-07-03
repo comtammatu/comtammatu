@@ -19,6 +19,7 @@ import {
   AppPage,
   AppPageHeader,
   AppSection,
+  DescriptionList,
 } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { getStatusBadgeMeta } from "@/components/status-badge";
@@ -26,7 +27,6 @@ import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { formatVND } from "../../_lib/format";
-import { KpiCard } from "@/components/kpi/kpi-card";
 import { tRoute } from "../../_lib/dictionary";
 import type { IngredientRow } from "../../page";
 import { useGrnLines } from "./_hooks/use-grn-lines";
@@ -140,46 +140,57 @@ export function GRNDetailClient({
                   </Alert>
                 ) : null}
 
-                <div className="grid gap-3 md:grid-cols-4">
-                  <KpiCard
-                    label={grnCopy.linkedPo}
-                    value={
-                      grn.poCode && grn.poId ? (
-                        <Link
-                          href={`${purchaseOrdersBasePath}/${grn.poId}`}
-                          className="text-primary hover:underline"
-                        >
-                          {grn.poCode}
-                        </Link>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          {inventoryCommon.noValue}
-                        </span>
-                      )
-                    }
+                <AppSection title={grnCopy.qcSummary}>
+                  <DescriptionList
+                    className="grid gap-3 md:grid-cols-4"
+                    descriptionClassName="font-semibold"
+                    items={[
+                      {
+                        term: grnCopy.linkedPo,
+                        description:
+                          grn.poCode && grn.poId ? (
+                            <Link
+                              href={`${purchaseOrdersBasePath}/${grn.poId}`}
+                              className="text-primary hover:underline"
+                            >
+                              {grn.poCode}
+                            </Link>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {inventoryCommon.noValue}
+                            </span>
+                          ),
+                      },
+                      {
+                        term: grnCopy.supplier,
+                        description: grn.supplier,
+                      },
+                      {
+                        term: grnCopy.totalReceivedValue,
+                        description: (
+                          <span className="text-primary">
+                            {inventoryCommon.currency(formatVND(stats.total))}
+                          </span>
+                        ),
+                      },
+                      {
+                        term: grnCopy.priceReviewNeeded,
+                        description: (
+                          <span
+                            className={
+                              stats.reviewLines > 0 ? "text-destructive" : ""
+                            }
+                          >
+                            {grnCopy.reviewRatio(
+                              stats.reviewLines,
+                              lines.length,
+                            )}
+                          </span>
+                        ),
+                      },
+                    ]}
                   />
-                  <KpiCard label={grnCopy.supplier} value={grn.supplier} />
-                  <KpiCard
-                    label={grnCopy.totalReceivedValue}
-                    value={
-                      <span className="text-primary">
-                        {inventoryCommon.currency(formatVND(stats.total))}
-                      </span>
-                    }
-                  />
-                  <KpiCard
-                    label={grnCopy.priceReviewNeeded}
-                    value={
-                      <span
-                        className={
-                          stats.reviewLines > 0 ? "text-destructive" : ""
-                        }
-                      >
-                        {grnCopy.reviewRatio(stats.reviewLines, lines.length)}
-                      </span>
-                    }
-                  />
-                </div>
+                </AppSection>
 
                 <OverviewLinesPreview lines={lines} />
               </div>

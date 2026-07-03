@@ -255,7 +255,7 @@ function CountSlipCard({
   }
 
   return (
-    <li>
+    <div role="listitem">
       <div
         className={cn(
           "rounded-lg border bg-card",
@@ -443,6 +443,6 @@ function CountSlipCard({
           ) : null}
         </div>
       </div>
-    </li>
+    </div>
   );
 }

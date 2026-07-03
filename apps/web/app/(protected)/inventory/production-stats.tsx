@@ -18,7 +18,7 @@ import {
 } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { AppSection } from "@/components/surface";
+import { AppSection, KpiRow } from "@/components/surface";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   QuickFinishedGoodDialog,
@@ -149,7 +149,7 @@ export function ProductionStats({
           ),
         }}
       >
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <KpiRow density="compact">
           {summaryItems.map((item) => (
             <KpiCard
               key={item.label}
@@ -159,7 +159,7 @@ export function ProductionStats({
               density="compact"
             />
           ))}
-        </div>
+        </KpiRow>
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-background p-3">
           <div className="flex min-w-0 flex-col gap-1">

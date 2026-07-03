@@ -227,14 +227,16 @@ function UnitsField({
       </div>
 
       <div className="overflow-hidden rounded-lg border">
-        <div className="hidden grid-cols-7 items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid">
-          <div>{copy.units.colUnit}</div>
-          <div>{copy.units.colFactor}</div>
+        <div className="hidden grid-cols-12 items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid">
+          <div className="col-span-3">{copy.units.colUnit}</div>
+          <div className="col-span-2">{copy.units.colFactor}</div>
           <div className="text-center">{copy.units.colBase}</div>
-          <div className="text-center">{copy.units.colPurchase}</div>
+          <div className="col-span-2 text-center">{copy.units.colPurchase}</div>
           <div className="text-center">{copy.units.colIssue}</div>
-          <div className="text-center">{copy.units.colProduction}</div>
-          <div className="w-8" />
+          <div className="col-span-2 text-center">
+            {copy.units.colProduction}
+          </div>
+          <div />
         </div>
 
         <div className="divide-y">
@@ -281,52 +283,56 @@ function UnitRowCells({
   const canRemove = rowCount > 1 && !isBase;
 
   return (
-    <div className="grid grid-cols-1 items-center gap-2 px-3 py-2 md:grid-cols-7">
-      <Controller
-        control={control}
-        name={`units.${index}.unit_id`}
-        render={({ field, fieldState }) => (
-          <Select value={field.value} onValueChange={field.onChange}>
-            <SelectTrigger
-              className={cn("h-9", fieldState.error && "border-destructive")}
-              aria-invalid={!!fieldState.error}
+    <div className="grid grid-cols-1 items-center gap-2 px-3 py-2 md:grid-cols-12">
+      <div className="min-w-0 md:col-span-3">
+        <Controller
+          control={control}
+          name={`units.${index}.unit_id`}
+          render={({ field, fieldState }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger
+                className={cn("h-9", fieldState.error && "border-destructive")}
+                aria-invalid={!!fieldState.error}
+                onBlur={field.onBlur}
+                ref={field.ref}
+              >
+                <SelectValue placeholder={copy.units.selectUnit} />
+              </SelectTrigger>
+              <SelectContent>
+                {unitOptions.map((u) => (
+                  <SelectItem key={u.id} value={String(u.id)}>
+                    {u.code} — {u.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </div>
+
+      <div className="min-w-0 md:col-span-2">
+        <Controller
+          control={control}
+          name={`units.${index}.to_base_factor`}
+          render={({ field, fieldState }) => (
+            <FormattedNumberInput
+              value={field.value ?? ""}
+              onValueChange={field.onChange}
               onBlur={field.onBlur}
               ref={field.ref}
-            >
-              <SelectValue placeholder={copy.units.selectUnit} />
-            </SelectTrigger>
-            <SelectContent>
-              {unitOptions.map((u) => (
-                <SelectItem key={u.id} value={String(u.id)}>
-                  {u.code} — {u.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      />
-
-      <Controller
-        control={control}
-        name={`units.${index}.to_base_factor`}
-        render={({ field, fieldState }) => (
-          <FormattedNumberInput
-            value={field.value ?? ""}
-            onValueChange={field.onChange}
-            onBlur={field.onBlur}
-            ref={field.ref}
-            name={field.name}
-            maxFractionDigits={6}
-            disabled={isBase}
-            aria-invalid={!!fieldState.error}
-            className={cn(
-              "h-9",
-              isBase && "bg-muted/40",
-              fieldState.error && "border-destructive",
-            )}
-          />
-        )}
-      />
+              name={field.name}
+              maxFractionDigits={6}
+              disabled={isBase}
+              aria-invalid={!!fieldState.error}
+              className={cn(
+                "h-9",
+                isBase && "bg-muted/40",
+                fieldState.error && "border-destructive",
+              )}
+            />
+          )}
+        />
+      </div>
 
       <Controller
         control={control}
@@ -344,19 +350,21 @@ function UnitRowCells({
         )}
       />
 
-      <Controller
-        control={control}
-        name={`units.${index}.allow_purchase`}
-        render={({ field }) => (
-          <div className="flex justify-center">
-            <Checkbox
-              checked={field.value}
-              onCheckedChange={(checked) => field.onChange(checked === true)}
-              aria-label={copy.units.colPurchase}
-            />
-          </div>
-        )}
-      />
+      <div className="md:col-span-2">
+        <Controller
+          control={control}
+          name={`units.${index}.allow_purchase`}
+          render={({ field }) => (
+            <div className="flex justify-center">
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={(checked) => field.onChange(checked === true)}
+                aria-label={copy.units.colPurchase}
+              />
+            </div>
+          )}
+        />
+      </div>
 
       <Controller
         control={control}
@@ -372,19 +380,21 @@ function UnitRowCells({
         )}
       />
 
-      <Controller
-        control={control}
-        name={`units.${index}.allow_production`}
-        render={({ field }) => (
-          <div className="flex justify-center">
-            <Checkbox
-              checked={field.value}
-              onCheckedChange={(checked) => field.onChange(checked === true)}
-              aria-label={copy.units.colProduction}
-            />
-          </div>
-        )}
-      />
+      <div className="md:col-span-2">
+        <Controller
+          control={control}
+          name={`units.${index}.allow_production`}
+          render={({ field }) => (
+            <div className="flex justify-center">
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={(checked) => field.onChange(checked === true)}
+                aria-label={copy.units.colProduction}
+              />
+            </div>
+          )}
+        />
+      </div>
 
       <Button
         type="button"
@@ -480,12 +490,12 @@ export function IngredientDialog({
       successMessage={
         isEdit ? "Đã cập nhật nguyên liệu" : "Đã thêm nguyên liệu mới"
       }
-      contentClassName="sm:max-w-2xl"
+      contentClassName="sm:max-w-3xl"
       onSubmit={handleSubmit}
     >
       {(form) => (
         <>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <TextField
               control={form.control}
               name="name"
@@ -501,7 +511,7 @@ export function IngredientDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SelectField
               control={form.control}
               name="category_id"
@@ -526,7 +536,7 @@ export function IngredientDialog({
             }
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SelectField
               control={form.control}
               name="storage_type"
@@ -541,7 +551,7 @@ export function IngredientDialog({
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <QuantityField
               control={form.control}
               name="min_stock_level"

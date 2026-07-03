@@ -13,14 +13,6 @@ import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import {
   Item,
   ItemActions,
   ItemContent,
@@ -34,6 +26,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { AppDialog } from "@/components/form";
 import { AppSection } from "@/components/surface";
 import { DocumentStockCorrectionDialog } from "./_components/document-stock-correction-dialog";
 import {
@@ -327,7 +320,9 @@ function ProductionShortageDialog({
     {
       key: "ingredient",
       header: "Nguyên liệu",
-      render: (row) => <span className="font-medium">{row.ingredient_name}</span>,
+      render: (row) => (
+        <span className="font-medium">{row.ingredient_name}</span>
+      ),
     },
     {
       key: "needed",
@@ -368,31 +363,33 @@ function ProductionShortageDialog({
   ];
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (next ? null : onClose())}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Thiếu nguyên liệu để sản xuất</DialogTitle>
-          <DialogDescription>
-            {info
-              ? `Lệnh ${info.productionNumber} chưa đủ nguyên liệu tại Bếp Trung Tâm. Bổ sung tồn trong Bếp Trung Tâm trước khi xác nhận lại.`
-            : ""}
-        </DialogDescription>
-      </DialogHeader>
-        <DataTable
-          columns={columns}
-          data={info?.rows ?? []}
-          getRowKey={(row) => row.ingredient_id}
-          emptyTitle="Không có dòng thiếu nguyên liệu"
-          emptyMode="no-data"
-          mobileCardRender={(row) => <ProductionShortageItem row={row} />}
-        />
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            Đóng
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <AppDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      title="Thiếu nguyên liệu để sản xuất"
+      description={
+        info
+          ? `Lệnh ${info.productionNumber} chưa đủ nguyên liệu tại Bếp Trung Tâm. Bổ sung tồn trong Bếp Trung Tâm trước khi xác nhận lại.`
+          : ""
+      }
+      contentClassName="max-w-2xl"
+      footer={
+        <Button type="button" variant="outline" onClick={onClose}>
+          Đóng
+        </Button>
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={info?.rows ?? []}
+        getRowKey={(row) => row.ingredient_id}
+        emptyTitle="Không có dòng thiếu nguyên liệu"
+        emptyMode="no-data"
+        mobileCardRender={(row) => <ProductionShortageItem row={row} />}
+      />
+    </AppDialog>
   );
 }
 

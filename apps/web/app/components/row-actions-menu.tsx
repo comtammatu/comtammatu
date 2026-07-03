@@ -11,6 +11,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
+import {
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from "@comtammatu/ui/components/context-menu";
 
 export type RowActionItem = {
   key: string;
@@ -30,6 +34,8 @@ export type RowActionsMenuProps = {
   triggerSize?: ComponentProps<typeof Button>["size"];
   triggerClassName?: string;
   triggerLabel?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 export function RowActionsMenu({
@@ -39,9 +45,11 @@ export function RowActionsMenu({
   triggerSize = "icon-lg",
   triggerClassName,
   triggerLabel,
+  open,
+  onOpenChange,
 }: RowActionsMenuProps) {
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size={triggerSize} className={triggerClassName}>
           <IconDots
@@ -83,5 +91,41 @@ export function RowActionsMenu({
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+export function RowActionsContextMenuItems({
+  items,
+}: {
+  items: RowActionItem[];
+}) {
+  return (
+    <>
+      {items.map((item) => (
+        <Fragment key={item.key}>
+          {item.separatorBefore ? <ContextMenuSeparator /> : null}
+          {item.href ? (
+            <ContextMenuItem
+              variant={item.destructive ? "destructive" : "default"}
+              asChild
+            >
+              <Link href={item.href}>
+                {item.icon}
+                {item.label}
+              </Link>
+            </ContextMenuItem>
+          ) : (
+            <ContextMenuItem
+              disabled={item.disabled}
+              variant={item.destructive ? "destructive" : "default"}
+              onSelect={() => item.onSelect?.()}
+            >
+              {item.icon}
+              {item.label}
+            </ContextMenuItem>
+          )}
+        </Fragment>
+      ))}
+    </>
   );
 }

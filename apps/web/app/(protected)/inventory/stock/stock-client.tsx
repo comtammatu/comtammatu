@@ -51,10 +51,15 @@ import {
 } from "../_components/inventory-page-layout";
 import { StatusBadge } from "@/components/status-badge";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { formatDateTime, formatQty, formatVND } from "../_lib/format";
+import { formatQty, formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
+import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 
 import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 
@@ -96,26 +101,9 @@ export type StockActionPermissions = {
   canAdjustException: boolean;
 };
 
-export type StockMovementHistory = {
-  id: number;
-  ingredientId: number;
-  type: string;
-  movementSubtype: string | null;
-  quantityChange: number;
-  unitCost: number | null;
-  reason: string | null;
-  createdAt: string;
-  grnId: number | null;
-  transferId: number | null;
-  issueId: number | null;
-  orderId: number | null;
-  productionOrderId: number | null;
-};
-
 type StockFilter = "all" | "in_stock" | "low" | "out";
 type RiskFilter = "all" | "reorder" | "not_counted";
 type SortMode = "priority" | "name" | "value_desc";
-type MovementBadgeVariant = "success" | "destructive" | "secondary";
 type QuickIssueType = "consumption" | "writeoff" | "other";
 type QuickIssueTarget = {
   ingredient: StockIngredient;
@@ -234,50 +222,6 @@ function isReorderRisk(item: StockIngredient): boolean {
   return (
     item.status === "out" || item.status === "low" || item.qty <= item.reorder
   );
-}
-
-function movementLabel(movement: StockMovementHistory): string {
-  if (movement.type === "grn_receipt") return stockCopy.movement.grnReceipt;
-  if (movement.type === "transfer_in") return stockCopy.movement.transferIn;
-  if (movement.type === "transfer_out") return stockCopy.movement.transferOut;
-  if (movement.type === "production_consumption")
-    return stockCopy.movement.productionConsumption;
-  if (movement.type === "production_output")
-    return stockCopy.movement.productionOutput;
-  if (movement.type === "count_adjustment")
-    return stockCopy.movement.countAdjustment;
-  if (movement.type === "adjustment") return stockCopy.movement.adjustment;
-  if (movement.type === "consumption") {
-    if (movement.movementSubtype === "storage_loss")
-      return stockCopy.movement.storageLoss;
-    if (movement.movementSubtype === "sale_consumption")
-      return stockCopy.movement.saleConsumption;
-    if (movement.movementSubtype === "writeoff")
-      return stockCopy.movement.writeoff;
-    if (movement.movementSubtype === "other") return stockCopy.movement.other;
-    return stockCopy.movement.issueStock;
-  }
-  if (movement.type === "writeoff") return stockCopy.movement.writeoff;
-  return movement.type.replaceAll("_", " ");
-}
-
-function movementReference(movement: StockMovementHistory): string | null {
-  if (movement.grnId != null) return `GRN #${movement.grnId}`;
-  if (movement.transferId != null)
-    return stockCopy.movement.transferRef(movement.transferId);
-  if (movement.issueId != null)
-    return stockCopy.movement.issueRef(movement.issueId);
-  if (movement.productionOrderId != null)
-    return stockCopy.movement.productionRef(movement.productionOrderId);
-  if (movement.orderId != null)
-    return stockCopy.movement.orderRef(movement.orderId);
-  return null;
-}
-
-function movementVariant(quantityChange: number): MovementBadgeVariant {
-  if (quantityChange > 0) return "success";
-  if (quantityChange < 0) return "destructive";
-  return "secondary";
 }
 
 function SummaryMetric({
@@ -504,7 +448,6 @@ export function StockClient({
   totalValue,
   summary,
   permissions,
-  movementHistory,
   branchStockBasePath,
   embedded = false,
 }: {
@@ -514,7 +457,6 @@ export function StockClient({
   totalValue: number | null;
   summary: StockWorkSummary;
   permissions: StockActionPermissions;
-  movementHistory: StockMovementHistory[];
   branchStockBasePath?: string;
   embedded?: boolean;
 }) {
@@ -525,14 +467,12 @@ export function StockClient({
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [riskFilter, setRiskFilter] = useState<RiskFilter>("all");
   const [sortMode, setSortMode] = useState<SortMode>("priority");
-  const [selectedId, setSelectedId] = useState<number | null>(
-    ingredients[0]?.id ?? null,
-  );
   const [adjustTarget, setAdjustTarget] = useState<StockIngredient | null>(
     null,
   );
   const [quickIssueTarget, setQuickIssueTarget] =
     useState<QuickIssueTarget | null>(null);
+  const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
 
   const categories = useMemo(() => {
     const values = [
@@ -618,24 +558,6 @@ export function StockClient({
         (!item.lastCount || item.lastCount === inventoryCommon.noValue),
     );
 
-  const selected =
-    filtered.find((ingredient) => ingredient.id === selectedId) ??
-    filtered[0] ??
-    null;
-  const historyByIngredient = useMemo(() => {
-    const history = new Map<number, StockMovementHistory[]>();
-    for (const movement of movementHistory) {
-      const list = history.get(movement.ingredientId) ?? [];
-      if (list.length < 5) {
-        list.push(movement);
-        history.set(movement.ingredientId, list);
-      }
-    }
-    return history;
-  }, [movementHistory]);
-  const selectedHistory = selected
-    ? (historyByIngredient.get(selected.id) ?? [])
-    : [];
   const filteredValue = filtered.reduce(
     (sum, item) => sum + stockValue(item),
     0,
@@ -679,6 +601,75 @@ export function StockClient({
   const receiveActionLabel = embedded
     ? stockCopy.actions.receive
     : stockCopy.actions.receiveGrn;
+  const getStockRowActions = (item: StockIngredient): RowActionItem[] => {
+    const rowActions: RowActionItem[] = [];
+
+    if (actionPermissions.canCreateIssue) {
+      rowActions.push({
+        key: "issue",
+        label: stockCopy.actions.issueStock,
+        icon: <IconTruck />,
+        onSelect: () =>
+          setQuickIssueTarget({
+            ingredient: item,
+            issueType: "consumption",
+          }),
+      });
+    }
+
+    if (actionPermissions.canCreateStocktake && actionHrefs.stocktake) {
+      rowActions.push({
+        key: "stocktake",
+        label: stockCopy.actions.count,
+        icon: <IconClipboardList />,
+        href: actionHrefs.stocktake,
+      });
+    }
+
+    if (actionPermissions.canWriteoff) {
+      rowActions.push(
+        embedded
+          ? {
+              key: "waste",
+              label: stockCopy.actions.waste,
+              icon: <IconTrash />,
+              href: actionHrefs.waste,
+              destructive: true,
+            }
+          : {
+              key: "waste",
+              label: stockCopy.actions.waste,
+              icon: <IconTrash />,
+              destructive: true,
+              onSelect: () =>
+                setQuickIssueTarget({
+                  ingredient: item,
+                  issueType: "writeoff",
+                }),
+            },
+      );
+    }
+
+    rowActions.push({
+      key: "view-stock-card",
+      label: stockCopy.actions.viewStockCard,
+      icon: <IconArrowBarRight />,
+      href: stockDetailHref(item.id),
+      separatorBefore: rowActions.length > 0,
+    });
+
+    if (actionPermissions.canAdjustException) {
+      rowActions.push({
+        key: "exception",
+        label: stockCopy.actions.exception,
+        icon: <IconPencil />,
+        destructive: true,
+        onSelect: () => setAdjustTarget(item),
+      });
+    }
+
+    return rowActions;
+  };
   const stockColumns: DataTableColumn<StockIngredient>[] = [
     {
       key: "ingredient",
@@ -763,6 +754,30 @@ export function StockClient({
             : inventoryCommon.noValue}
         </span>
       ),
+    },
+    {
+      key: "actions",
+      header: <span className="sr-only">{FORM_VI.action}</span>,
+      className: "w-10 text-right",
+      render: (item) => {
+        const items = getStockRowActions(item);
+        if (items.length === 0) return null;
+
+        return (
+          <div
+            className="flex justify-end"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <RowActionsMenu
+              items={items}
+              label={stockCopy.actions.viewDetailAria(item.name)}
+              triggerSize="icon-sm"
+              open={openActionRowId === item.id}
+              onOpenChange={(open) => setOpenActionRowId(open ? item.id : null)}
+            />
+          </div>
+        );
+      },
     },
   ];
 
@@ -1176,267 +1191,29 @@ export function StockClient({
         </div>
       ) : (
         <AppSection className="overflow-hidden" contentFlush>
-          <div className="grid lg:grid-cols-3 xl:grid-cols-4">
-            <div className="min-w-0 lg:col-span-2 xl:col-span-3">
-              <DataTable
-                columns={stockColumns}
-                data={filtered}
-                getRowKey={(item) => item.id}
-                emptyTitle={
-                  searchQuery.trim()
-                    ? stockCopy.empty.search
-                    : stockCopy.empty.noData
-                }
-                emptyDescription={
-                  searchQuery.trim()
-                    ? stockCopy.empty.searchDescription
-                    : stockCopy.empty.noDataDescription
-                }
-                emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
-                onRowClick={(item) => {
-                  if (embedded) {
-                    router.push(stockDetailHref(item.id));
-                    return;
-                  }
-                  setSelectedId(item.id);
-                }}
-                getRowAriaLabel={(item) =>
-                  stockCopy.actions.viewDetailAria(item.name)
-                }
-                getRowDataState={(item) =>
-                  selected?.id === item.id ? "selected" : undefined
-                }
-                mobileCardRender={(item) => renderStockMobileCard(item)}
-              />
-            </div>
-
-            <aside className="border-t bg-background/70 p-3 lg:border-l lg:border-t-0">
-              {selected ? (
-                <div className="flex h-full flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h2 className="font-heading truncate text-base font-semibold">
-                          {selected.name}
-                        </h2>
-                        <p className="text-xs text-muted-foreground">
-                          {selected.sku}
-                          {selected.category ? ` · ${selected.category}` : ""}
-                        </p>
-                      </div>
-                      <StatusBadge
-                        domain="inventory"
-                        value={selected.status}
-                        size="sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.currentStock}
-                      </p>
-                      <p className="font-semibold tabular-nums">
-                        {formatQty(selected.qty)} {selected.unit}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.stockValue}
-                      </p>
-                      <p className="font-semibold tabular-nums">
-                        {inventoryCommon.currencyCompact(
-                          formatVND(stockValue(selected)),
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.wac}
-                      </p>
-                      <p className="tabular-nums">
-                        {inventoryCommon.currencyCompact(
-                          formatVND(selected.cost),
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.lastCount}
-                      </p>
-                      <p>{selected.lastCount}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.minThreshold}
-                      </p>
-                      <p className="tabular-nums">{formatQty(selected.min)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Reorder</p>
-                      <p className="tabular-nums">
-                        {formatQty(selected.reorder)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {canReceiveStock ? (
-                      <Button asChild size="sm">
-                        <Link href={actionHrefs.receive}>
-                          <IconReceipt className="size-3.5" />
-                          {stockCopy.actions.receiveGoods}
-                        </Link>
-                      </Button>
-                    ) : null}
-                    {actionPermissions.canCreateIssue ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          setQuickIssueTarget({
-                            ingredient: selected,
-                            issueType: "consumption",
-                          })
-                        }
-                      >
-                        <IconTruck className="size-3.5" />
-                        {stockCopy.actions.issueStock}
-                      </Button>
-                    ) : null}
-                    {actionPermissions.canCreateStocktake &&
-                    actionHrefs.stocktake ? (
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={actionHrefs.stocktake}>
-                          <IconClipboardList className="size-3.5" />
-                          {stockCopy.actions.stocktake}
-                        </Link>
-                      </Button>
-                    ) : null}
-                    {actionPermissions.canWriteoff ? (
-                      embedded ? (
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={actionHrefs.waste}>
-                            <IconTrash className="size-3.5" />
-                            {stockCopy.actions.waste}
-                          </Link>
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            setQuickIssueTarget({
-                              ingredient: selected,
-                              issueType: "writeoff",
-                            })
-                          }
-                        >
-                          <IconTrash className="size-3.5" />
-                          {stockCopy.actions.waste}
-                        </Button>
-                      )
-                    ) : null}
-                    {actionHrefs.reports ? (
-                      <Button asChild size="sm" variant="ghost">
-                        <Link href={stockDetailHref(selected.id)}>
-                          <IconArrowBarRight className="size-3.5" />
-                          {stockCopy.actions.viewStockCard}
-                        </Link>
-                      </Button>
-                    ) : null}
-                    {actionPermissions.canAdjustException ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => setAdjustTarget(selected)}
-                      >
-                        <IconPencil className="size-3.5" />
-                        {stockCopy.actions.exception}
-                      </Button>
-                    ) : null}
-                  </div>
-
-                  <div className="flex flex-col gap-2 border-t pt-3 text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium">{stockCopy.table.history}</p>
-                      <Badge variant="outline">
-                        {selectedHistory.length}/5
-                      </Badge>
-                    </div>
-                    {selectedHistory.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.noRecentHistory}
-                      </p>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        {selectedHistory.map((movement) => {
-                          const reference = movementReference(movement);
-                          const signedQty =
-                            movement.quantityChange > 0
-                              ? `+${formatQty(movement.quantityChange)}`
-                              : formatQty(movement.quantityChange);
-
-                          return (
-                            <div
-                              key={movement.id}
-                              className="flex flex-col gap-1 rounded-md border bg-background p-2"
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <p className="truncate text-xs font-medium">
-                                    {movementLabel(movement)}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {formatDateTime(movement.createdAt)}
-                                  </p>
-                                </div>
-                                <Badge
-                                  variant={movementVariant(
-                                    movement.quantityChange,
-                                  )}
-                                  className="shrink-0"
-                                >
-                                  {signedQty} {selected.unit}
-                                </Badge>
-                              </div>
-                              {reference ||
-                              movement.reason ||
-                              movement.unitCost != null ? (
-                                <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                                  {reference ? <p>{reference}</p> : null}
-                                  {movement.reason ? (
-                                    <p className="break-words">
-                                      {movement.reason}
-                                    </p>
-                                  ) : null}
-                                  {movement.unitCost != null ? (
-                                    <p>
-                                      {stockCopy.table.wacValue(
-                                        formatVND(movement.unitCost),
-                                      )}
-                                    </p>
-                                  ) : null}
-                                </div>
-                              ) : null}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex h-full items-center justify-center p-4 text-center text-sm text-muted-foreground">
-                  {stockCopy.table.chooseIngredientDetail}
-                </div>
-              )}
-            </aside>
-          </div>
+          <DataTable
+            columns={stockColumns}
+            data={filtered}
+            getRowKey={(item) => item.id}
+            emptyTitle={
+              searchQuery.trim()
+                ? stockCopy.empty.search
+                : stockCopy.empty.noData
+            }
+            emptyDescription={
+              searchQuery.trim()
+                ? stockCopy.empty.searchDescription
+                : stockCopy.empty.noDataDescription
+            }
+            emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
+            renderRowContextMenu={(item) => (
+              <RowActionsContextMenuItems items={getStockRowActions(item)} />
+            )}
+            getRowDataState={(item) =>
+              openActionRowId === item.id ? "selected" : undefined
+            }
+            mobileCardRender={(item) => renderStockMobileCard(item)}
+          />
         </AppSection>
       )}
 

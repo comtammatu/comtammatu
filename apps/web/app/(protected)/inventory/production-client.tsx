@@ -84,20 +84,26 @@ export function ProductionHubClient({
     setActiveTab(PRODUCTION_RECIPES_TAB);
   }, []);
 
-  return (
-    <AppPage>
-      <AppPageHeader
-        eyebrow={embedded ? undefined : INVENTORY_VI.warehouse}
-        title={INVENTORY_VI.productionTitle}
-        description={INVENTORY_VI.productionDescription}
-        actions={
-          <ProductionOrderForm
-            productionBranches={productionBranches}
-            finishedGoodsOptions={sortedFinishedGoods}
-            actionsEnabled={actionsEnabled && canCreateProduction}
-          />
-        }
-      />
+  const createAction = (
+    <ProductionOrderForm
+      productionBranches={productionBranches}
+      finishedGoodsOptions={sortedFinishedGoods}
+      actionsEnabled={actionsEnabled && canCreateProduction}
+    />
+  );
+
+  const content = (
+    <>
+      {embedded ? (
+        <div className="flex justify-end">{createAction}</div>
+      ) : (
+        <AppPageHeader
+          eyebrow={INVENTORY_VI.warehouse}
+          title={INVENTORY_VI.productionTitle}
+          description={INVENTORY_VI.productionDescription}
+          actions={createAction}
+        />
+      )}
       <ProductionStats
         orders={orders}
         readinessMessage={readinessMessage}
@@ -140,6 +146,12 @@ export function ProductionHubClient({
           />
         </TabsContent>
       </Tabs>
-    </AppPage>
+    </>
   );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-3">{content}</div>;
+  }
+
+  return <AppPage>{content}</AppPage>;
 }

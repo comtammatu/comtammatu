@@ -18,6 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuTrigger,
+} from "@comtammatu/ui/components/context-menu";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { Search as IconSearch } from "lucide-react";
@@ -96,6 +101,7 @@ interface DataTableProps<T> {
   currentPage?: number;
   onPageChange?: (page: number) => void;
   onRowClick?: (row: T) => void;
+  renderRowContextMenu?: (row: T, index: number) => ReactNode;
   getRowAriaLabel?: (row: T, index: number) => string | undefined;
   getRowDataState?: (row: T, index: number) => string | undefined;
   rowClassName?: (row: T, index: number) => string | undefined;
@@ -137,6 +143,7 @@ export function DataTable<T>({
   currentPage,
   onPageChange,
   onRowClick,
+  renderRowContextMenu,
   getRowAriaLabel,
   getRowDataState,
   rowClassName,
@@ -146,6 +153,9 @@ export function DataTable<T>({
   mobileFooter,
 }: DataTableProps<T>) {
   const isMobile = useIsMobile();
+  const [openContextRowKey, setOpenContextRowKey] = React.useState<
+    string | number | null
+  >(null);
   const colSpan = columns.length;
   const total = totalCount ?? data.length;
   const showPagination = pageSize != null && total > pageSize;
@@ -260,24 +270,32 @@ export function DataTable<T>({
             />
           ) : (
             data.map((row, index) => {
-              const dataState = getRowDataState?.(row, index);
-              const interactive = onRowClick != null;
+              const rowKey = getRowKey(row);
+              const rowContextMenu = renderRowContextMenu?.(row, index);
+              const hasContextMenu = rowContextMenu != null;
+              const contextOpen = openContextRowKey === rowKey;
+              const dataState = contextOpen
+                ? "selected"
+                : getRowDataState?.(row, index);
+              const clickable = onRowClick != null;
+              const highlighted = clickable || hasContextMenu;
 
-              return (
+              const rowElement = (
                 <TableRow
-                  key={getRowKey(row)}
-                  role={interactive ? "button" : undefined}
-                  tabIndex={interactive ? 0 : undefined}
+                  role={clickable ? "button" : undefined}
+                  tabIndex={clickable ? 0 : undefined}
                   data-state={dataState}
                   aria-label={getRowAriaLabel?.(row, index)}
                   className={cn(
-                    interactive &&
-                      "cursor-pointer hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground",
+                    highlighted && "hover:bg-muted/45",
+                    clickable &&
+                      "cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground",
+                    hasContextMenu && !clickable && "cursor-context-menu",
                     rowClassName?.(row, index),
                   )}
-                  onClick={interactive ? () => onRowClick(row) : undefined}
+                  onClick={clickable ? () => onRowClick(row) : undefined}
                   onKeyDown={
-                    interactive
+                    clickable
                       ? (event) => handleRowKeyDown(event, row)
                       : undefined
                   }
@@ -288,6 +306,24 @@ export function DataTable<T>({
                     </TableCell>
                   ))}
                 </TableRow>
+              );
+
+              if (!hasContextMenu) {
+                return (
+                  <React.Fragment key={rowKey}>{rowElement}</React.Fragment>
+                );
+              }
+
+              return (
+                <ContextMenu
+                  key={rowKey}
+                  onOpenChange={(open) =>
+                    setOpenContextRowKey(open ? rowKey : null)
+                  }
+                >
+                  <ContextMenuTrigger asChild>{rowElement}</ContextMenuTrigger>
+                  <ContextMenuContent>{rowContextMenu}</ContextMenuContent>
+                </ContextMenu>
               );
             })
           )}

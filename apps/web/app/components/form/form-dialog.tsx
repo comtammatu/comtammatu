@@ -24,9 +24,7 @@ type FormContext<TValues extends FieldValues> = UseFormReturn<
   TValues
 >;
 import { cn } from "@comtammatu/ui";
-import {
-  CircleAlert as IconAlertCircle,
-} from "lucide-react";
+import { CircleAlert as IconAlertCircle } from "lucide-react";
 import {
   Alert,
   AlertDescription,
@@ -96,7 +94,9 @@ export interface FileImportDialogProps<
   resultTitle: ReactNode;
   submitLabel: string;
   closeLabel: string;
-  importAction: (formData: FormData) => Promise<FileImportResult<TSummary, TIssue>>;
+  importAction: (
+    formData: FormData,
+  ) => Promise<FileImportResult<TSummary, TIssue>>;
   successMessage: (summary: TSummary) => string;
   renderSummary: (summary: TSummary) => ReactNode;
   renderIssue: (issue: TIssue, index: number) => ReactNode;
@@ -202,6 +202,51 @@ export function FormDialog<TValues extends FieldValues>({
   );
 }
 
+export interface AppDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: ReactNode;
+  description?: ReactNode;
+  children?: ReactNode;
+  footer?: ReactNode;
+  contentClassName?: string;
+  bodyClassName?: string;
+  footerClassName?: string;
+}
+
+export function AppDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  footer,
+  contentClassName,
+  bodyClassName,
+  footerClassName,
+}: AppDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={cn("sm:max-w-lg", contentClassName)}>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className={description ? undefined : "sr-only"}>
+            {description ?? title}
+          </DialogDescription>
+        </DialogHeader>
+        {children ? (
+          <div className={cn("flex flex-col gap-4", bodyClassName)}>
+            {children}
+          </div>
+        ) : null}
+        {footer ? (
+          <DialogFooter className={footerClassName}>{footer}</DialogFooter>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function FileImportDialog<
   TSummary,
   TIssue extends FileImportIssue = FileImportIssue,
@@ -281,7 +326,11 @@ export function FileImportDialog<
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <FieldGroup>
             <Field data-invalid={!!error && !fileName}>
               <FieldLabel htmlFor={inputId}>{chooseFileLabel}</FieldLabel>
@@ -299,7 +348,9 @@ export function FileImportDialog<
                 }}
               />
               {fileName ? (
-                <FieldDescription>{selectedFileLabel(fileName)}</FieldDescription>
+                <FieldDescription>
+                  {selectedFileLabel(fileName)}
+                </FieldDescription>
               ) : null}
             </Field>
           </FieldGroup>

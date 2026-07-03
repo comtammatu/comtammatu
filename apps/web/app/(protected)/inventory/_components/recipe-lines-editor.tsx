@@ -54,7 +54,7 @@ export interface RecipeLineRowValue {
   note?: string;
 }
 
-const GRID_TEMPLATE = "grid-cols-1 md:grid-cols-6";
+const GRID_TEMPLATE = "grid-cols-1 md:grid-cols-12";
 
 const EMPTY_ROW: RecipeLineRowValue = {
   ingredient_id: "",
@@ -206,12 +206,12 @@ export function RecipeLinesEditor<T extends FieldValues>({
             GRID_TEMPLATE,
           )}
         >
-          <div>{PRODUCT_VI.rawIngredient}</div>
-          <div>{FORM_VI.quantity}</div>
-          <div>{FORM_VI.unit}</div>
-          <div>{INVENTORY_VI.yield}</div>
-          <div>{FORM_VI.notes}</div>
-          <div className="w-8" />
+          <div className="col-span-3">{PRODUCT_VI.rawIngredient}</div>
+          <div className="col-span-2">{FORM_VI.quantity}</div>
+          <div className="col-span-2">{FORM_VI.unit}</div>
+          <div className="col-span-2">{INVENTORY_VI.yield}</div>
+          <div className="col-span-2">{FORM_VI.notes}</div>
+          <div />
         </div>
 
         <div className="divide-y">
@@ -282,140 +282,150 @@ function RecipeLineRow<T extends FieldValues>({
   return (
     <div className="flex flex-col gap-1.5">
       <div className={cn("grid items-center gap-2 px-3 py-2", GRID_TEMPLATE)}>
-        <Controller
-          control={control}
-          name={ingredientName}
-          render={({ field }) => (
-            <Combobox
-              value={field.value ?? ""}
-              onValueChange={(v) => {
-                field.onChange(v);
-                onIngredientChange(v);
-              }}
-              options={ingredients.map((ing) => ({
-                value: String(ing.id),
-                label: ing.name,
-                hint: ing.unit,
-              }))}
-              placeholder={INVENTORY_VI.selectIngredientPlaceholder}
-              searchPlaceholder={INVENTORY_VI.searchByName}
-              aria-invalid={!!rowError?.ingredient_id}
-              triggerClassName={cn(
-                "h-9",
-                rowError?.ingredient_id && "border-destructive",
-              )}
-            />
-          )}
-        />
-
-        <Controller
-          control={control}
-          name={quantityName}
-          render={({ field }) => (
-            <FormattedNumberInput
-              placeholder="VD: 0.5"
-              value={field.value ?? ""}
-              onValueChange={field.onChange}
-              onBlur={field.onBlur}
-              ref={field.ref}
-              name={field.name}
-              maxFractionDigits={3}
-              aria-invalid={!!rowError?.quantity}
-              className={cn("h-9", rowError?.quantity && "border-destructive")}
-            />
-          )}
-        />
-
-        {unitOptions.length > 0 ? (
+        <div className="min-w-0 md:col-span-3">
           <Controller
             control={control}
-            name={entryUnitName}
+            name={ingredientName}
             render={({ field }) => (
-              <Select
+              <Combobox
                 value={field.value ?? ""}
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  const opt = unitOptions.find(
-                    (o) => String(o.unitId) === value,
-                  );
-                  if (opt) {
-                    setValue(unitName, opt.code as never, {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    });
-                  }
+                onValueChange={(v) => {
+                  field.onChange(v);
+                  onIngredientChange(v);
                 }}
-              >
-                <SelectTrigger
-                  className={cn("h-9", rowError?.unit && "border-destructive")}
-                  aria-invalid={!!rowError?.unit}
-                  aria-label={FORM_VI.unit}
-                >
-                  <SelectValue placeholder={INVENTORY_VI.selectUnit} />
-                </SelectTrigger>
-                <SelectContent>
-                  {unitOptions.map((opt) => (
-                    <SelectItem key={opt.unitId} value={String(opt.unitId)}>
-                      {opt.code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        ) : (
-          <Controller
-            control={control}
-            name={unitName}
-            render={({ field }) => (
-              <Input
-                placeholder={INVENTORY_VI.unitPlaceholder}
-                {...field}
-                value={field.value ?? ""}
-                readOnly={!unitEditable}
-                aria-invalid={!!rowError?.unit}
-                className={cn(
+                options={ingredients.map((ing) => ({
+                  value: String(ing.id),
+                  label: ing.name,
+                  hint: ing.unit,
+                }))}
+                placeholder={INVENTORY_VI.selectIngredientPlaceholder}
+                searchPlaceholder={INVENTORY_VI.searchByName}
+                aria-invalid={!!rowError?.ingredient_id}
+                triggerClassName={cn(
                   "h-9",
-                  !unitEditable && "bg-muted/40",
-                  rowError?.unit && "border-destructive",
+                  rowError?.ingredient_id && "border-destructive",
                 )}
               />
             )}
           />
-        )}
+        </div>
 
-        <Controller
-          control={control}
-          name={yieldName}
-          render={({ field }) => (
-            <FormattedNumberInput
-              value={field.value ?? ""}
-              onValueChange={field.onChange}
-              onBlur={field.onBlur}
-              ref={field.ref}
-              name={field.name}
-              maxFractionDigits={2}
-              aria-invalid={!!rowError?.yield_factor}
-              className={cn(
-                "h-9",
-                rowError?.yield_factor && "border-destructive",
+        <div className="min-w-0 md:col-span-2">
+          <Controller
+            control={control}
+            name={quantityName}
+            render={({ field }) => (
+              <FormattedNumberInput
+                placeholder="VD: 0.5"
+                value={field.value ?? ""}
+                onValueChange={field.onChange}
+                onBlur={field.onBlur}
+                ref={field.ref}
+                name={field.name}
+                maxFractionDigits={3}
+                aria-invalid={!!rowError?.quantity}
+                className={cn("h-9", rowError?.quantity && "border-destructive")}
+              />
+            )}
+          />
+        </div>
+
+        <div className="min-w-0 md:col-span-2">
+          {unitOptions.length > 0 ? (
+            <Controller
+              control={control}
+              name={entryUnitName}
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? ""}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    const opt = unitOptions.find(
+                      (o) => String(o.unitId) === value,
+                    );
+                    if (opt) {
+                      setValue(unitName, opt.code as never, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    className={cn("h-9", rowError?.unit && "border-destructive")}
+                    aria-invalid={!!rowError?.unit}
+                    aria-label={FORM_VI.unit}
+                  >
+                    <SelectValue placeholder={INVENTORY_VI.selectUnit} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unitOptions.map((opt) => (
+                      <SelectItem key={opt.unitId} value={String(opt.unitId)}>
+                        {opt.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          ) : (
+            <Controller
+              control={control}
+              name={unitName}
+              render={({ field }) => (
+                <Input
+                  placeholder={INVENTORY_VI.unitPlaceholder}
+                  {...field}
+                  value={field.value ?? ""}
+                  readOnly={!unitEditable}
+                  aria-invalid={!!rowError?.unit}
+                  className={cn(
+                    "h-9",
+                    !unitEditable && "bg-muted/40",
+                    rowError?.unit && "border-destructive",
+                  )}
+                />
               )}
             />
           )}
-        />
+        </div>
 
-        <Controller
-          control={control}
-          name={noteName}
-          render={({ field }) => (
-            <Input
-              placeholder={STATES_VI.optional}
-              {...field}
-              value={field.value ?? ""}
-              className="h-9"
-            />
-          )}
-        />
+        <div className="min-w-0 md:col-span-2">
+          <Controller
+            control={control}
+            name={yieldName}
+            render={({ field }) => (
+              <FormattedNumberInput
+                value={field.value ?? ""}
+                onValueChange={field.onChange}
+                onBlur={field.onBlur}
+                ref={field.ref}
+                name={field.name}
+                maxFractionDigits={2}
+                aria-invalid={!!rowError?.yield_factor}
+                className={cn(
+                  "h-9",
+                  rowError?.yield_factor && "border-destructive",
+                )}
+              />
+            )}
+          />
+        </div>
+
+        <div className="min-w-0 md:col-span-2">
+          <Controller
+            control={control}
+            name={noteName}
+            render={({ field }) => (
+              <Input
+                placeholder={STATES_VI.optional}
+                {...field}
+                value={field.value ?? ""}
+                className="h-9"
+              />
+            )}
+          />
+        </div>
 
         <Button
           type="button"
