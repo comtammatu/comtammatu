@@ -323,7 +323,15 @@ export async function fetchPurchaseOrderDetail(
     .order("id");
   if (e2)
     return { success: false, error: "Không thể tải chi tiết đơn đặt hàng." };
-  return { success: true, data: { po, lines: lines ?? [] } };
+  const { data: grns, error: e3 } = await supabase
+    .from("goods_received_notes")
+    .select("id, grn_number, status, received_date")
+    .eq("po_id", id.data)
+    .eq("tenant_id", claims.tenant_id)
+    .order("received_date", { ascending: false });
+  if (e3)
+    return { success: false, error: "Không thể tải phiếu nhập liên kết." };
+  return { success: true, data: { po, lines: lines ?? [], grns: grns ?? [] } };
 }
 
 /* ─── upsertPurchaseOrderLine ─── */

@@ -99,6 +99,8 @@ export const inventory = {
       "Đã lưu phiếu nháp. Kiểm tra số lượng, giá nhập, đánh dấu hàng hư hỏng nếu có, rồi nhấn Chốt nhập kho.",
     documentLabel: "Phiếu nhập kho",
     linkedPo: "Đơn mua liên kết",
+    createInvoice: "Tạo hóa đơn NCC",
+    viewInvoice: "Xem hóa đơn NCC",
     supplier: "Nhà cung cấp",
     totalReceivedValue: "Tổng giá trị nhập",
     totalStockValue: "Tổng giá trị nhập kho",
@@ -362,6 +364,7 @@ export const inventory = {
       overviewLinesTitle: "Dòng đặt mua",
       overviewLinesPreviewHint: (count: number) => `Top ${count} theo giá trị`,
       viewAllLines: (count: number) => `Xem tất cả ${count} dòng →`,
+      linkedGrnsTitle: "Phiếu nhập từ đơn mua này",
     },
   },
   stock: {
@@ -775,6 +778,7 @@ export const inventory = {
     varianceTitle: (percent: number) => `Chênh lệch đối soát ${percent}%`,
     varianceDescription:
       "Kiểm tra lại số lượng thực nhận, đơn giá hoặc khoản phụ phí trước khi xác nhận thanh toán.",
+    viewGrnLine: "Xem dòng phiếu nhập liên quan →",
     safeTitle: "Hóa đơn đang ở ngưỡng an toàn để xử lý tiếp",
     safeDescription: "Không có cảnh báo chênh lệch lớn trên dữ liệu hiện tại.",
     noAnalysisTitle: "Chưa có hóa đơn để phân tích",

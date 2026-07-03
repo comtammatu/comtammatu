@@ -17,6 +17,7 @@ interface GRNDetailPageContentProps {
   grnListBasePath?: string;
   grnMobileBackPath?: string;
   purchaseOrdersBasePath?: string;
+  supplierInvoicesBasePath?: string;
 }
 
 export async function GRNDetailPageContent({
@@ -25,6 +26,7 @@ export async function GRNDetailPageContent({
   grnListBasePath = "/inventory/grn",
   grnMobileBackPath = "/inventory/grn/new",
   purchaseOrdersBasePath = "/inventory/purchase-orders",
+  supplierInvoicesBasePath = "/inventory/supplier-invoices",
 }: GRNDetailPageContentProps) {
   const [res, ingredientsRes, auditLogs] = await Promise.all([
     fetchGrnDetail(grnId),
@@ -84,6 +86,7 @@ export async function GRNDetailPageContent({
         purchase_unit: string | null;
       } | null;
     }>;
+    invoiceId: number | null;
   };
 
   if (routeBranchId != null && d.grn.branch_id !== routeBranchId) notFound();
@@ -156,6 +159,7 @@ export async function GRNDetailPageContent({
     code: d.grn.grn_number ?? "",
     poCode: po?.po_number ?? "",
     poId: po?.id,
+    invoiceId: d.invoiceId ?? null,
     branchId: d.grn.branch_id,
     supplierId: d.grn.supplier_id,
     supplier: supplier?.name ?? "—",
@@ -194,6 +198,7 @@ export async function GRNDetailPageContent({
       grnListBasePath={grnListBasePath}
       grnMobileBackPath={grnMobileBackPath}
       purchaseOrdersBasePath={purchaseOrdersBasePath}
+      supplierInvoicesBasePath={supplierInvoicesBasePath}
     />
   );
 }

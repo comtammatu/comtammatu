@@ -43,6 +43,7 @@ export type GrnRow = {
   id: number;
   code: string;
   supplierName: string;
+  poId: number | null;
   poCode: string;
   date: string;
   total: number;
@@ -94,7 +95,17 @@ export function GrnListClient({
       key: "po",
       header: INVENTORY_VI.linkedPo,
       className: "text-sm text-muted-foreground",
-      render: (g) => g.poCode || "—",
+      render: (g) =>
+        g.poId != null && g.poCode ? (
+          <Link
+            href={`${purchaseOrdersPath}/${g.poId}`}
+            className="font-medium text-primary hover:underline"
+          >
+            {g.poCode}
+          </Link>
+        ) : (
+          "—"
+        ),
     },
     {
       key: "date",

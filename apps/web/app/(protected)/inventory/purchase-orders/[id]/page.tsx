@@ -13,6 +13,7 @@ interface PODetailPageContentProps {
   poId: number;
   routeBranchId?: number;
   purchaseOrdersBasePath?: string;
+  grnBasePath?: string;
   afterCreateGrnHref?: string;
   embedded?: boolean;
 }
@@ -21,6 +22,7 @@ export async function PODetailPageContent({
   poId,
   routeBranchId,
   purchaseOrdersBasePath = "/inventory/purchase-orders",
+  grnBasePath = "/inventory/grn",
   afterCreateGrnHref,
   embedded = false,
 }: PODetailPageContentProps) {
@@ -62,6 +64,12 @@ export async function PODetailPageContent({
         purchase_unit: string | null;
       } | null;
     }>;
+    grns: Array<{
+      id: number;
+      grn_number: string;
+      status: string;
+      received_date: string | null;
+    }>;
   };
   if (routeBranchId != null && d.po.branch_id !== routeBranchId) notFound();
 
@@ -92,6 +100,13 @@ export async function PODetailPageContent({
 
   const totalAmount = items.reduce((sum, i) => sum + i.total, 0);
 
+  const grns: PODetail["grns"] = (d.grns ?? []).map((g) => ({
+    id: g.id,
+    code: g.grn_number ?? "",
+    status: g.status ?? "draft",
+    receivedDate: g.received_date ? formatDate(g.received_date) : "—",
+  }));
+
   const po: PODetail = {
     id: poId,
     code: d.po.display_id ?? d.po.po_number ?? "",
@@ -108,6 +123,7 @@ export async function PODetailPageContent({
       payment: "—",
     },
     items,
+    grns,
   };
 
   const ingredients: IngredientRow[] = ingredientsRes.success
@@ -121,6 +137,7 @@ export async function PODetailPageContent({
       isOwner={isOwner}
       auditLogs={auditLogs}
       purchaseOrdersBasePath={purchaseOrdersBasePath}
+      grnBasePath={grnBasePath}
       afterCreateGrnHref={afterCreateGrnHref}
       embedded={embedded}
     />

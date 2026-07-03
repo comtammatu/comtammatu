@@ -232,7 +232,16 @@ export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
     .eq("tenant_id", claims.tenant_id);
   if (e2)
     return { success: false, error: "Không thể tải chi tiết phiếu nhập." };
-  return { success: true, data: { grn, lines: lines ?? [] } };
+  const { data: invoice } = await supabase
+    .from("supplier_invoices")
+    .select("id")
+    .eq("grn_id", id.data)
+    .eq("tenant_id", claims.tenant_id)
+    .maybeSingle();
+  return {
+    success: true,
+    data: { grn, lines: lines ?? [], invoiceId: invoice?.id ?? null },
+  };
 }
 
 /* ─── createGrnDraft ─── */

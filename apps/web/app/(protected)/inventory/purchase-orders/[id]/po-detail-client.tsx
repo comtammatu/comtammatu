@@ -38,7 +38,7 @@ import {
   AppSection,
 } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
-import { getStatusBadgeMeta } from "@/components/status-badge";
+import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
@@ -82,6 +82,12 @@ export type PODetail = {
     variance: number;
     trend: "up" | "down" | "stable";
   }>;
+  grns: Array<{
+    id: number;
+    code: string;
+    status: string;
+    receivedDate: string;
+  }>;
 };
 
 function VarianceBadge({ variance }: { variance: number }) {
@@ -107,6 +113,7 @@ export function PODetailClient({
   isOwner = false,
   auditLogs = [],
   purchaseOrdersBasePath = "/inventory/purchase-orders",
+  grnBasePath = "/inventory/grn",
   afterCreateGrnHref,
   embedded = false,
 }: {
@@ -115,6 +122,7 @@ export function PODetailClient({
   isOwner?: boolean;
   auditLogs?: AuditLogRow[];
   purchaseOrdersBasePath?: string;
+  grnBasePath?: string;
   afterCreateGrnHref?: string;
   embedded?: boolean;
 }) {
@@ -578,6 +586,8 @@ export function PODetailClient({
                     router.replace("?tab=lines", { scroll: false })
                   }
                 />
+
+                <PoLinkedGrns grns={po.grns} grnBasePath={grnBasePath} />
               </div>
             </TabsContent>
 
@@ -1126,6 +1136,38 @@ function PoOverviewLinesPreview({
           </Button>
         </div>
       ) : null}
+    </AppSection>
+  );
+}
+
+function PoLinkedGrns({
+  grns,
+  grnBasePath,
+}: {
+  grns: PODetail["grns"];
+  grnBasePath: string;
+}) {
+  if (grns.length === 0) return null;
+
+  return (
+    <AppSection title={poDetailCopy.linkedGrnsTitle} contentFlush>
+      <div className="flex flex-col divide-y divide-border">
+        {grns.map((grn) => (
+          <Link
+            key={grn.id}
+            href={`${grnBasePath}/${grn.id}`}
+            className="flex items-center justify-between gap-3 p-4 hover:bg-muted/30"
+          >
+            <div className="flex flex-col">
+              <span className="font-medium text-primary">{grn.code}</span>
+              <span className="text-xs text-muted-foreground">
+                {grn.receivedDate}
+              </span>
+            </div>
+            <StatusBadge domain="inventory" value={grn.status} size="sm" />
+          </Link>
+        ))}
+      </div>
     </AppSection>
   );
 }
