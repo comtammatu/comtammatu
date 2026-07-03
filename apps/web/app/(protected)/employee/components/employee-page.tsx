@@ -526,7 +526,7 @@ function EmployeeActionItem({
       variant="outline"
       size={size}
       className={cn(
-        "group/employee-action min-h-14 items-start bg-card transition-[background-color,border-color,box-shadow] duration-150 hover:bg-muted/50 hover:shadow-sm sm:items-center",
+        "group/employee-action chrome-tap min-h-14 items-start bg-card transition-[background-color,border-color,box-shadow,transform] duration-150 select-none hover:bg-muted/50 hover:shadow-sm active:scale-[0.97] sm:items-center",
         size === "sm" && "min-h-12",
       )}
     >
