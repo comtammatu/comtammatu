@@ -116,15 +116,19 @@ test("management shell renders one sidebar with nested active-tab sub-nav", () =
     /<SidebarMenuSub>/,
     "active module sub-nav must render inside the primary sidebar item",
   );
-  assert.doesNotMatch(
+  // D063 (2026-07-03): desktop Management chrome collapses the single
+  // sidebar to an icon rail in place (collapsible="icon") instead of
+  // offcanvas — this is the SAME <Sidebar> primitive changing width, not a
+  // second rail column, so the "one sidebar" contract below still holds.
+  assert.match(
     appShell,
-    /--sidebar-width-icon/,
-    "management shell must not reintroduce the separate icon rail width",
+    /collapsible="icon"/,
+    "management shell collapses in place to an icon rail (D063), not offcanvas",
   );
-  assert.doesNotMatch(
+  assert.match(
     appShell,
-    /<SidebarRail/,
-    "management shell must not reintroduce a rail layer",
+    /<SidebarRail \/>/,
+    "management shell exposes the drag-to-collapse rail handle for desktop (D063)",
   );
   assert.match(
     appShell,

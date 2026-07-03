@@ -208,7 +208,10 @@ export function GrnListClient({
         </InputGroup>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="min-w-40">
+          <SelectTrigger
+            size={embedded ? "touch" : "default"}
+            className={embedded ? "w-full" : "min-w-40"}
+          >
             <SelectValue placeholder={FORM_VI.status} />
           </SelectTrigger>
           <SelectContent>

@@ -202,6 +202,7 @@ export function CountAssignmentsClient({
                   [String(emp.id)]: ids,
                 }))
               }
+              embedded={embedded}
             />
           ))}
         </div>
@@ -241,6 +242,7 @@ function EmployeeAssignmentCard({
   ingredientMap,
   selectedIds,
   onSelectionChange,
+  embedded = false,
 }: {
   employee: EmployeeRow;
   branchId: number;
@@ -249,6 +251,7 @@ function EmployeeAssignmentCard({
   ingredientMap: Map<number, IngredientOption>;
   selectedIds: number[];
   onSelectionChange: (ids: number[]) => void;
+  embedded?: boolean;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -264,7 +267,7 @@ function EmployeeAssignmentCard({
           </div>
           <Button
             type="button"
-            size="sm"
+            size={embedded ? "touch" : "sm"}
             variant="outline"
             onClick={() => setDialogOpen(true)}
           >

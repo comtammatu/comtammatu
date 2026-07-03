@@ -204,17 +204,16 @@ test("resolveOfficeDeepNav returns admin command groups for the admin surface", 
   assert.ok(totalItems > 0, "admin deep nav groups must contain items");
 });
 
-for (const surface of ["menu", "orders"] as const) {
-  test(`resolveOfficeDeepNav returns a single non-empty landing group for ${surface}`, () => {
+for (const surface of ["menu", "orders", "branches"] as const) {
+  test(`resolveOfficeDeepNav returns no deep-nav group for the flat ${surface} module`, () => {
+    // menu/orders/branches are flat single-page modules: their own primary
+    // tab already links to the module, so no group duplicating that same
+    // leaf under itself is emitted (W2, D063).
     const groups = resolveOfficeDeepNav("owner", surface);
-    assert.equal(
-      groups.length,
-      1,
-      `${surface} deep nav must be a single landing group`,
-    );
-    assert.ok(
-      (groups[0]?.items.length ?? 0) > 0,
-      `${surface} landing group must be non-empty`,
+    assert.deepEqual(
+      groups,
+      [],
+      `${surface} deep nav must not wrap its own primary tab in a group`,
     );
   });
 }

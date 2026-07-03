@@ -344,6 +344,7 @@ export function StocktakeDetailClient({
                   lines={lines}
                   varianceCount={varianceCount}
                   wasteHref={`${wasteBasePath}?branchId=${session.branch_id}`}
+                  embedded={embedded}
                 />
               )}
             </div>
@@ -523,10 +524,12 @@ function ResultsPhase({
   lines,
   varianceCount,
   wasteHref,
+  embedded = false,
 }: {
   lines: StocktakeLine[];
   varianceCount: number;
   wasteHref: string;
+  embedded?: boolean;
 }) {
   const resultColumns: DataTableColumn<StocktakeLine>[] = [
     {
@@ -632,7 +635,7 @@ function ResultsPhase({
               )}
             </p>
           </div>
-          <Button asChild size="sm">
+          <Button asChild size={embedded ? "touch" : "sm"}>
             <Link href={wasteHref}>
               {stocktakeDetailCopy.results.nextActionCta}
               <IconArrowRight className="size-4" />

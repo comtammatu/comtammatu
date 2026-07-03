@@ -24,7 +24,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -34,6 +33,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
 } from "@comtammatu/ui/components/sidebar";
 import {
@@ -158,11 +158,10 @@ export function AppShell({
   const backHref = brand.backHref ?? defaultBackLink.href;
   const backLabel = brand.backLabel ?? defaultBackLink.label;
   const breadcrumbSegments = pageHeader.breadcrumbSegments ?? [];
-  const navCopy = messages.admin.nav;
 
   return (
     <SidebarProvider>
-      <Sidebar variant="inset" collapsible="offcanvas">
+      <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="gap-3 border-b p-3">
           <div className="flex items-center gap-3">
             <BrandLogoBox tone={logoVariant ? "sidebar" : "sidebar-primary"}>
@@ -195,11 +194,13 @@ export function AppShell({
               asChild
               variant="ghost"
               size="sm"
-              className="justify-start text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              className="justify-start text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2!"
             >
               <Link href={backHref}>
                 <IconArrowLeft data-icon="inline-start" />
-                {backLabel}
+                <span className="group-data-[collapsible=icon]:hidden">
+                  {backLabel}
+                </span>
               </Link>
             </Button>
           ) : null}
@@ -207,9 +208,6 @@ export function AppShell({
 
         <SidebarContent className="gap-3 px-2 py-3">
           <SidebarGroup className="px-0 py-0">
-            <SidebarGroupLabel className="h-7 px-2 text-2xs font-medium uppercase tracking-wider text-sidebar-foreground/60">
-              {navCopy.modules}
-            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {tier1.map((item) => {
@@ -241,7 +239,7 @@ export function AppShell({
                             <Fragment key={group.title}>
                               {subNavGroups.length > 1 ? (
                                 <SidebarMenuSubItem>
-                                  <span className="block px-2 py-1 text-2xs font-medium uppercase tracking-wider text-sidebar-foreground/60">
+                                  <span className="block px-2 py-1 text-2xs font-medium uppercase tracking-wider text-sidebar-foreground/70">
                                     {group.title}
                                   </span>
                                 </SidebarMenuSubItem>
@@ -304,13 +302,14 @@ export function AppShell({
             </form>
           </div>
         </SidebarFooter>
+        <SidebarRail />
       </Sidebar>
 
       <SidebarInset id="main-content">
         <header className="sticky top-0 z-30 border-b bg-background px-4 py-2 print:hidden">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-1 items-center gap-3">
-              <SidebarTrigger className="md:hidden" />
+              <SidebarTrigger />
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 {breadcrumbSegments.length > 0 ? (
                   <Breadcrumb>
