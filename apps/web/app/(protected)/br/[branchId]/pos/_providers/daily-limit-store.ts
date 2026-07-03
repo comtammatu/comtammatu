@@ -4,7 +4,6 @@ import type { MenuItemDailyLimit } from "../pos-menu-types";
 
 export interface DailyLimitStore {
   get(id: number): MenuItemDailyLimit | null;
-  set(id: number, value: MenuItemDailyLimit | null): void;
   setAll(seed: ReadonlyMap<number, MenuItemDailyLimit>): void;
   subscribe(listener: () => void): () => void;
 }
@@ -16,17 +15,10 @@ function areLimitsEqual(
   if (a === b) return true;
   if (a === null || b === null) return false;
   return (
-    a.limit_quantity === b.limit_quantity &&
     a.is_disabled === b.is_disabled &&
     a.sold_today === b.sold_today &&
-    (a.stock_capacity ?? null) === (b.stock_capacity ?? null) &&
-    (a.stock_capacity_live ?? null) === (b.stock_capacity_live ?? null) &&
-    (a.manual_limit_quantity ?? null) === (b.manual_limit_quantity ?? null) &&
-    (a.accepted_today ?? null) === (b.accepted_today ?? null) &&
-    (a.pending_unfinalized_demand ?? null) ===
-      (b.pending_unfinalized_demand ?? null) &&
-    (a.active_hold_demand ?? null) === (b.active_hold_demand ?? null) &&
-    (a.available_to_sell ?? null) === (b.available_to_sell ?? null)
+    a.manual_limit_quantity === b.manual_limit_quantity &&
+    a.available_to_sell === b.available_to_sell
   );
 }
 
@@ -47,13 +39,6 @@ export function createDailyLimitStore(
   return {
     get(id) {
       return map.get(id) ?? null;
-    },
-    set(id, value) {
-      const prev = map.get(id) ?? null;
-      if (areLimitsEqual(prev, value)) return;
-      if (value === null) map.delete(id);
-      else map.set(id, value);
-      notify();
     },
     setAll(seed) {
       let changed = false;

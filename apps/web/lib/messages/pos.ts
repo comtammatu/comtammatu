@@ -151,7 +151,18 @@ export const pos = {
   menu: {
     disabled: "Đang tắt",
     soldOut: "Hết suất",
+    outOfIngredients: "Hết nguyên liệu",
     remaining: (quantity: number) => `Còn ${quantity} suất`,
+    remainingOnCard: (quantity: number) => `Còn ${quantity} phần`,
+    blockedDisabled: (itemName: string) => `${itemName} đang tắt hôm nay.`,
+    blockedManualExhausted: (itemName: string) =>
+      `${itemName} đã hết suất hôm nay.`,
+    blockedManualLow: (itemName: string, available: number) =>
+      `${itemName} chỉ còn ${available} suất.`,
+    blockedStockExhausted: (itemName: string) =>
+      `${itemName} đã hết nguyên liệu trong kho.`,
+    blockedStockLow: (itemName: string, available: number) =>
+      `${itemName} chỉ còn đủ nguyên liệu cho ${available} phần.`,
     empty: "Chưa có món trong thực đơn",
     menuLimitsEmptyDescription: "Thêm món trước khi cấu hình giới hạn bán.",
     searchPlaceholder: "Tìm món...",
@@ -177,7 +188,6 @@ export const pos = {
     disabledCount: (quantity: number) => `${quantity} đang tắt`,
     soldCount: (quantity: number) => `${quantity} đã bán`,
     remainingCount: (quantity: number) => `${quantity} còn lại`,
-    remainingUnavailable: "Chưa tính được",
     soldProgressAria: (sold: number, limit: number) =>
       `Đã bán ${sold} trên ${limit} phần giới hạn`,
     limitInputAria: (name: string) => `Giới hạn bán ${name}`,
@@ -197,8 +207,16 @@ export const pos = {
     toggleDisabled: "Tắt",
     disableItemAria: (name: string) => `Tắt món ${name}`,
     clearLimit: "Bỏ",
+    clearLimitAria: (name: string) => `Bỏ giới hạn bán ${name}`,
     saveLimit: "Lưu",
     updateLimit: "Cập nhật",
+    saveLimitFailed: "Không lưu được giới hạn bán.",
+    clearLimitFailed: "Không bỏ được giới hạn bán.",
+    limitUpdated: (itemName: string) => `Đã cập nhật: ${itemName}`,
+    noStockConfig: "Chưa có định mức",
+    reasonDisabled: "Tắt",
+    reasonManualExhausted: "Hết suất",
+    reasonStockExhausted: "Hết nguyên liệu",
   },
   sessionHeader: {
     backAria: "Quay lại trang chính",

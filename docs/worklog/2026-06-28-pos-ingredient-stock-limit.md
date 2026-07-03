@@ -1,6 +1,11 @@
 # POS sell-limit by recipe định mức (Task 2) — T3 contract
 
 > Reconciled-through 49112fa17fec
+> SUPERSEDED by D064 (2026-07-04): the kitchen-pool hard gate
+> `pos_ingredient_stock_block` is frozen do-not-enable (never enabled, QA gates
+> never run); availability gating moves to the warehouse-pool advisory gate
+> `pos_stock_availability_gate`. Full removal pending owner confirmation
+> (D064 §7). The "còn N phần" POS display decision here carries forward.
 
 Owner decision: HARD block (cannot place an order that drives a kitchen ingredient
 negative) + per-branch on/off toggle + POS shows "còn N phần". Sequencing 1→2→3.

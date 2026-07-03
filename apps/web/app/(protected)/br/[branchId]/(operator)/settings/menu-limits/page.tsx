@@ -43,11 +43,7 @@ export default async function BranchMenuLimitsPage({
       title={messages.settings.branch.menuLimitsTitle}
       description={`${branch.name} · ${today}`}
     >
-      <EmployeePanel
-        tone="info"
-        size="sm"
-        className={result.success ? "hidden sm:block" : undefined}
-      >
+      <EmployeePanel tone="info" size="sm">
         <p>
           {messages.settings.branch.menuLimitsIntroBefore}{" "}
           <span className="font-medium text-foreground">

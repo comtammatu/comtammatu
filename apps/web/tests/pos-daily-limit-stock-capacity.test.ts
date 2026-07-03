@@ -11,10 +11,10 @@ import type { MenuItemDailyLimit } from "../app/(protected)/br/[branchId]/pos/po
 
 function limit(p: Partial<MenuItemDailyLimit>): MenuItemDailyLimit {
   return {
-    limit_quantity: null,
     is_disabled: false,
     sold_today: 0,
-    stock_capacity: null,
+    manual_limit_quantity: null,
+    available_to_sell: null,
     ...p,
   };
 }
@@ -27,72 +27,54 @@ const stockOutcomeAvailabilityMigration = readFileSync(
   "utf8",
 );
 
-test("remaining is unbounded when both caps are null", () => {
+test("remaining is unbounded when available_to_sell is null", () => {
   assert.equal(remainingDailyQuotaAfterDemand(limit({}), 3), null);
 });
 
-test("limit_quantity fallback still works when stock_capacity is absent", () => {
+test("remaining follows server available_to_sell verbatim minus draft demand", () => {
+  assert.equal(
+    remainingDailyQuotaAfterDemand(limit({ available_to_sell: 10 }), 3),
+    7,
+  );
   assert.equal(
     remainingDailyQuotaAfterDemand(
-      limit({ limit_quantity: 10, sold_today: 3 }),
-      2,
+      limit({ available_to_sell: 5, sold_today: 999 }),
+      0,
     ),
     5,
   );
 });
 
-test("stock_capacity alone caps remaining", () => {
-  assert.equal(
-    remainingDailyQuotaAfterDemand(
-      limit({ stock_capacity: 4, sold_today: 1 }),
-      0,
-    ),
-    3,
-  );
-});
-
-test("effective cap is the min of limit_quantity and stock_capacity", () => {
-  // stock binds
-  assert.equal(
-    remainingDailyQuotaAfterDemand(
-      limit({ limit_quantity: 10, stock_capacity: 4, sold_today: 2 }),
-      0,
-    ),
-    2,
-  );
-  // manual binds
-  assert.equal(
-    remainingDailyQuotaAfterDemand(
-      limit({ limit_quantity: 4, stock_capacity: 10, sold_today: 3 }),
-      0,
-    ),
-    1,
-  );
-});
-
 test("remaining never goes negative", () => {
   assert.equal(
-    remainingDailyQuotaAfterDemand(
-      limit({ stock_capacity: 2, sold_today: 5 }),
-      0,
-    ),
+    remainingDailyQuotaAfterDemand(limit({ available_to_sell: 2 }), 5),
     0,
   );
 });
 
-test("server available_to_sell overrides stock-minus-sold fallback math", () => {
-  const row = limit({
-    stock_capacity: 10,
-    sold_today: 8,
-    pending_unfinalized_demand: 3,
-    available_to_sell: 5,
+test("proposal blocking uses server availability", () => {
+  const block = findDailyLimitBlockForProposal({
+    activeDraftLines: [],
+    proposed: {
+      menuItemId: 1,
+      itemName: "Sườn",
+      quantity: 3,
+      sides: [],
+    },
+    getLimit: (itemId) =>
+      itemId === 1 ? limit({ available_to_sell: 2 }) : null,
   });
 
-  assert.equal(remainingDailyQuotaAfterDemand(row, 0), 5);
-  assert.equal(remainingDailyQuotaAfterDemand(row, 2), 3);
+  assert.deepEqual(block, {
+    reason: "exceeded",
+    itemName: "Sườn",
+    available: 2,
+    requested: 3,
+    stockLeg: true,
+  });
 });
 
-test("proposal blocking uses server availability when present", () => {
+test("proposal block marks stockLeg=false when a manual limit is set", () => {
   const block = findDailyLimitBlockForProposal({
     activeDraftLines: [],
     proposed: {
@@ -103,7 +85,7 @@ test("proposal blocking uses server availability when present", () => {
     },
     getLimit: (itemId) =>
       itemId === 1
-        ? limit({ stock_capacity: 10, sold_today: 8, available_to_sell: 2 })
+        ? limit({ manual_limit_quantity: 20, available_to_sell: 2 })
         : null,
   });
 
@@ -112,32 +94,55 @@ test("proposal blocking uses server availability when present", () => {
     itemName: "Sườn",
     available: 2,
     requested: 3,
+    stockLeg: false,
   });
 });
 
-test("blocked when stock_capacity is exhausted, even with no manual limit", () => {
+test("blocked when available_to_sell is exhausted", () => {
   assert.equal(
-    isDailyLimitBlockedAfterDemand(
-      limit({ stock_capacity: 2, sold_today: 2 }),
-      1,
-    ),
+    isDailyLimitBlockedAfterDemand(limit({ available_to_sell: 0 }), 1),
     true,
   );
   assert.equal(
-    isDailyLimitBlockedAfterDemand(
-      limit({ stock_capacity: 5, sold_today: 1 }),
-      1,
-    ),
+    isDailyLimitBlockedAfterDemand(limit({ available_to_sell: 5 }), 1),
     false,
   );
 });
 
-test("disabled is always blocked; both-null is never blocked", () => {
+test("disabled is always blocked; unlimited is never blocked", () => {
   assert.equal(
     isDailyLimitBlockedAfterDemand(limit({ is_disabled: true }), 0),
     true,
   );
   assert.equal(isDailyLimitBlockedAfterDemand(limit({}), 99), false);
+});
+
+test("limit_ratchet: shrinking live capacity must not double-count sold_today", () => {
+  // Capacity starts at 100, no manual limit. After 51 sold, capacity
+  // recomputes to 49; server reports available_to_sell = 49 directly (already
+  // net of demand). The client must ALLOW further adds — the old fallback
+  // (min(limit, capacity) - sold_today) double-counted sold_today against a
+  // live-shrinking capacity and would have blocked here (100 vs 49 vs -2).
+  const row = limit({
+    manual_limit_quantity: null,
+    sold_today: 51,
+    available_to_sell: 49,
+  });
+
+  assert.equal(remainingDailyQuotaAfterDemand(row, 0), 49);
+  assert.equal(isDailyLimitBlockedAfterDemand(row, 0), false);
+
+  const block = findDailyLimitBlockForProposal({
+    activeDraftLines: [],
+    proposed: {
+      menuItemId: 1,
+      itemName: "Cơm sườn",
+      quantity: 10,
+      sides: [],
+    },
+    getLimit: (itemId) => (itemId === 1 ? row : null),
+  });
+  assert.equal(block, null);
 });
 
 test("stock-outcome availability SQL separates stock outcome and fallback counters", () => {

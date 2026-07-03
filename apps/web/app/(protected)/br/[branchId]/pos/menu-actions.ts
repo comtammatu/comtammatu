@@ -15,25 +15,14 @@ const branchIdSchema = z.coerce
   .int()
   .positive({ error: "Branch ID không hợp lệ" });
 
-type DailyLimitRow = MenuItemDailyLimit & {
+// Today's RPCs still return the full 11-field shape (PR-2 slims this
+// server-side). The client only reads a subset — see MenuItemDailyLimit.
+interface DailyLimitRow {
   menu_item_id: number;
-};
-
-function dailyLimitRemaining(limit: MenuItemDailyLimit): number | null {
-  if (
-    typeof limit.available_to_sell === "number" &&
-    Number.isFinite(limit.available_to_sell)
-  ) {
-    return Math.max(0, limit.available_to_sell);
-  }
-  const stockCap = limit.stock_capacity ?? null;
-  const cap =
-    limit.limit_quantity == null
-      ? stockCap
-      : stockCap == null
-        ? limit.limit_quantity
-        : Math.min(limit.limit_quantity, stockCap);
-  return cap == null ? null : Math.max(0, cap - limit.sold_today);
+  is_disabled: boolean;
+  sold_today: number;
+  manual_limit_quantity: number | null;
+  available_to_sell: number | null;
 }
 
 /**
@@ -191,15 +180,9 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
     // is applied to the type-source schema.
     for (const row of limitRows as DailyLimitRow[]) {
       limitsByItemId.set(row.menu_item_id, {
-        limit_quantity: row.limit_quantity,
         is_disabled: row.is_disabled,
         sold_today: row.sold_today,
-        stock_capacity: row.stock_capacity,
-        stock_capacity_live: row.stock_capacity_live,
         manual_limit_quantity: row.manual_limit_quantity,
-        accepted_today: row.accepted_today,
-        pending_unfinalized_demand: row.pending_unfinalized_demand,
-        active_hold_demand: row.active_hold_demand,
         available_to_sell: row.available_to_sell,
       });
     }
@@ -235,9 +218,12 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
           if (!sideItem) return null;
           const sideLimit = limitsByItemId.get(s.side_item_id);
           if (sideLimit?.is_disabled) return null;
-          const sideRemaining =
-            sideLimit == null ? null : dailyLimitRemaining(sideLimit);
-          if (sideRemaining !== null && sideRemaining <= 0) {
+          const sideAvailable = sideLimit?.available_to_sell ?? null;
+          if (
+            typeof sideAvailable === "number" &&
+            Number.isFinite(sideAvailable) &&
+            sideAvailable <= 0
+          ) {
             return null;
           }
           return { id: s.id, is_default: s.is_default, side_item: sideItem };
