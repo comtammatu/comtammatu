@@ -13,6 +13,7 @@ interface GRNListPageContentProps {
   basePath?: string;
   purchaseOrdersPath?: string;
   showDrafts?: boolean;
+  embedded?: boolean;
 }
 
 export async function GRNListPageContent({
@@ -21,6 +22,7 @@ export async function GRNListPageContent({
   basePath = "/inventory/grn",
   purchaseOrdersPath = "/inventory/purchase-orders",
   showDrafts = true,
+  embedded = false,
 }: GRNListPageContentProps) {
   const params = await searchParams;
   const { supabase, claims } = await loadAuthState();
@@ -86,6 +88,7 @@ export async function GRNListPageContent({
       basePath={basePath}
       purchaseOrdersPath={purchaseOrdersPath}
       drafts={showDrafts ? drafts : undefined}
+      embedded={embedded}
     />
   );
 }

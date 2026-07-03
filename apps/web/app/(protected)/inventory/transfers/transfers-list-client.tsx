@@ -307,20 +307,33 @@ export function TransfersListClient({
 
   const content = (
     <>
-      <AppPageHeader
-        eyebrow={embedded ? undefined : "Kho hàng"}
-        title={pageTitle}
-        actions={
-          canCreate ? (
-            <Button size="sm" asChild>
+      {embedded ? (
+        canCreate ? (
+          <div className="flex justify-end">
+            <Button size="touch" asChild>
               <Link href={createHref}>
                 <IconPlus data-icon="inline-start" />
                 {createLabel}
               </Link>
             </Button>
-          ) : undefined
-        }
-      />
+          </div>
+        ) : null
+      ) : (
+        <AppPageHeader
+          eyebrow="Kho hàng"
+          title={pageTitle}
+          actions={
+            canCreate ? (
+              <Button size="sm" asChild>
+                <Link href={createHref}>
+                  <IconPlus data-icon="inline-start" />
+                  {createLabel}
+                </Link>
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
       <Tabs
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as TransferTab)}

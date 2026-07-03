@@ -93,15 +93,16 @@ export function CountSlipsClient({
 
   const content = (
     <>
-      <AppPageHeader
-        eyebrow={embedded ? undefined : "Kho hàng"}
-        title="Duyệt phiếu đếm tồn"
-        description="Đối chiếu số đếm với tồn hệ thống. Duyệt để ghi điều chỉnh kho, hoặc yêu cầu nhân viên đếm lại."
-        badge={{
-          children: `${pending.length} chờ duyệt`,
-          variant: pending.length > 0 ? "warning" : "secondary",
-        }}
-      />
+      {!embedded ? (
+        <AppPageHeader
+          title="Duyệt phiếu đếm tồn"
+          description="Đối chiếu số đếm với tồn hệ thống. Duyệt để ghi điều chỉnh kho, hoặc yêu cầu nhân viên đếm lại."
+          badge={{
+            children: `${pending.length} chờ duyệt`,
+            variant: pending.length > 0 ? "warning" : "secondary",
+          }}
+        />
+      ) : null}
 
       {pending.length === 0 ? (
         <AppEmptyState
@@ -117,6 +118,7 @@ export function CountSlipsClient({
               key={row.id}
               row={row}
               branchScoped={branchScoped}
+              embedded={embedded}
               onApproved={() => applyStatus(row.id, "approved")}
               onRecount={() => applyStatus(row.id, "needs_changes")}
             />
@@ -135,6 +137,7 @@ export function CountSlipsClient({
                 key={row.id}
                 row={row}
                 branchScoped={branchScoped}
+                embedded={embedded}
                 readOnly
               />
             ))}
@@ -159,12 +162,14 @@ function CountSlipCard({
   row,
   branchScoped = false,
   readOnly = false,
+  embedded = false,
   onApproved,
   onRecount,
 }: {
   row: CountSlipRow;
   branchScoped?: boolean;
   readOnly?: boolean;
+  embedded?: boolean;
   onApproved?: () => void;
   onRecount?: () => void;
 }) {
@@ -386,6 +391,7 @@ function CountSlipCard({
                   <>
                     <Button
                       variant="outline"
+                      size={embedded ? "touch" : "default"}
                       onClick={() => {
                         setRecounting(false);
                         setNote("");
@@ -395,6 +401,7 @@ function CountSlipCard({
                       Hủy
                     </Button>
                     <Button
+                      size={embedded ? "touch" : "default"}
                       onClick={handleRecount}
                       disabled={pendingAction !== null}
                     >
@@ -410,6 +417,7 @@ function CountSlipCard({
                   <>
                     <Button
                       variant="outline"
+                      size={embedded ? "touch" : "default"}
                       onClick={() => setRecounting(true)}
                       disabled={pendingAction !== null}
                     >
@@ -417,6 +425,7 @@ function CountSlipCard({
                       Yêu cầu đếm lại
                     </Button>
                     <Button
+                      size={embedded ? "touch" : "default"}
                       onClick={handleApprove}
                       disabled={pendingAction !== null}
                     >

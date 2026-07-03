@@ -1395,7 +1395,6 @@ const OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES = [
 const OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE = {
   "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 8,
   "apps/web/app/(protected)/orders/orders-page-body.tsx": 1,
-  "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx": 1,
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
   "apps/web/app/(protected)/inventory/issues/issues-client.tsx": 3,
   "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 1,

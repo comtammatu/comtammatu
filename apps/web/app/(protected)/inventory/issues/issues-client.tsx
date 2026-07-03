@@ -721,28 +721,48 @@ export function IssuesClient({
 
   const content = (
     <>
-      <AppPageHeader
-        eyebrow="Kho hàng"
-        title={pageTitle ?? tNav("consumption", "navigation")}
-        actions={
-          <>
-            <Button type="button" onClick={() => setCreateOpen(true)}>
-              <IconPlus className="size-4" />
-              Tạo phiếu
+      {embedded ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" size="touch" onClick={() => setCreateOpen(true)}>
+            <IconPlus className="size-4" />
+            Tạo phiếu
+          </Button>
+          {showExportAction && (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              onClick={handleExportIssuesCsv}
+            >
+              <IconFileDownload className="size-4" />
+              Xuất báo cáo
             </Button>
-            {showExportAction && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleExportIssuesCsv}
-              >
-                <IconFileDownload className="size-4" />
-                Xuất báo cáo
+          )}
+        </div>
+      ) : (
+        <AppPageHeader
+          eyebrow="Kho hàng"
+          title={pageTitle ?? tNav("consumption", "navigation")}
+          actions={
+            <>
+              <Button type="button" onClick={() => setCreateOpen(true)}>
+                <IconPlus className="size-4" />
+                Tạo phiếu
               </Button>
-            )}
-          </>
-        }
-      />
+              {showExportAction && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleExportIssuesCsv}
+                >
+                  <IconFileDownload className="size-4" />
+                  Xuất báo cáo
+                </Button>
+              )}
+            </>
+          }
+        />
+      )}
 
       {recordedConsumptions.length > 0 && (
         <AppSection
