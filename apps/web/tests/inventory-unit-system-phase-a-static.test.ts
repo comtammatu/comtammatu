@@ -60,7 +60,7 @@ test("Phase A migration backfills existing ingredient_units rows into the anchor
   assert.match(migration, /iu\.anchor_unit_id IS NULL/);
   assert.match(
     migration,
-    /coalesce\(iu_unit\.is_standard, false\) = false/,
+    /NOT EXISTS \(\s*SELECT 1 FROM public\.units u\s+WHERE u\.id = iu\.unit_id[\s\S]*?u\.is_standard = true/,
     "backfill must skip rows whose own unit is a standard unit (ratio comes from standard_factor, not an anchor)",
   );
 });

@@ -160,16 +160,17 @@ UPDATE public.ingredient_units iu
 SET anchor_unit_id = base.unit_id,
     anchor_factor = iu.to_base_factor
 FROM public.ingredient_units base
-JOIN public.units base_unit
-  ON base_unit.id = base.unit_id AND base_unit.tenant_id = base.tenant_id
-LEFT JOIN public.units iu_unit
-  ON iu_unit.id = iu.unit_id AND iu_unit.tenant_id = iu.tenant_id
 WHERE base.ingredient_id = iu.ingredient_id
   AND base.tenant_id = iu.tenant_id
   AND base.is_base = true
   AND iu.is_base = false
   AND iu.anchor_unit_id IS NULL
-  AND coalesce(iu_unit.is_standard, false) = false;
+  AND NOT EXISTS (
+    SELECT 1 FROM public.units u
+    WHERE u.id = iu.unit_id
+      AND u.tenant_id = iu.tenant_id
+      AND u.is_standard = true
+  );
 
 /* ─── 7. Derivation helper: resolve to_base_factor for one ingredient_units row ───
    Fail-closed: RAISEs on cross-dimension anchor or a cycle. Tenant is taken
