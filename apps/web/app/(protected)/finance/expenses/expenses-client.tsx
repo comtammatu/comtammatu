@@ -66,6 +66,7 @@ interface Props {
   resolvedStart: string;
   resolvedEnd: string;
   todayBusinessDate: string;
+  canManageExpenses: boolean;
 }
 
 const expenseFormSchema = z.object({
@@ -109,6 +110,7 @@ export function ExpensesClient({
   resolvedStart,
   resolvedEnd,
   todayBusinessDate,
+  canManageExpenses,
 }: Props) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -236,22 +238,26 @@ export function ExpensesClient({
       className: "max-w-48 truncate text-muted-foreground",
       render: (row) => expenseDetail(row) || "—",
     },
-    {
-      key: "actions",
-      header: "",
-      className: "w-12",
-      render: (row) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onDelete(row)}
-          disabled={isDeleting}
-          aria-label={copy.table.delete}
-        >
-          <IconTrash className="size-4 text-destructive" />
-        </Button>
-      ),
-    },
+    ...(canManageExpenses
+      ? [
+          {
+            key: "actions",
+            header: "",
+            className: "w-12",
+            render: (row: ExpenseRow) => (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onDelete(row)}
+                disabled={isDeleting}
+                aria-label={copy.table.delete}
+              >
+                <IconTrash className="size-4 text-destructive" />
+              </Button>
+            ),
+          } satisfies DataTableColumn<ExpenseRow>,
+        ]
+      : []),
   ];
 
   return (
@@ -263,12 +269,14 @@ export function ExpensesClient({
         hide={["compare", "payment", "granularity"]}
       />
 
-      <div className="flex items-center justify-end">
-        <Button onClick={() => setDialogOpen(true)}>
-          <IconPlus data-icon="inline-start" />
-          {copy.add}
-        </Button>
-      </div>
+      {canManageExpenses ? (
+        <div className="flex items-center justify-end">
+          <Button onClick={() => setDialogOpen(true)}>
+            <IconPlus data-icon="inline-start" />
+            {copy.add}
+          </Button>
+        </div>
+      ) : null}
 
       <KpiRow density="compact" className="sm:grid-cols-3">
         <KpiCard
@@ -309,17 +317,19 @@ export function ExpensesClient({
                       {row.expense_date} · {branchLabel(row.branch_id)}
                     </ItemDescription>
                   </ItemContent>
-                  <ItemActions>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDelete(row)}
-                      disabled={isDeleting}
-                      aria-label={copy.table.delete}
-                    >
-                      <IconTrash className="size-4 text-destructive" />
-                    </Button>
-                  </ItemActions>
+                  {canManageExpenses ? (
+                    <ItemActions>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onDelete(row)}
+                        disabled={isDeleting}
+                        aria-label={copy.table.delete}
+                      >
+                        <IconTrash className="size-4 text-destructive" />
+                      </Button>
+                    </ItemActions>
+                  ) : null}
                 </ItemHeader>
                 <ItemFooter>
                   <ItemDescription>{detail || "—"}</ItemDescription>
@@ -333,68 +343,70 @@ export function ExpensesClient({
         />
       </AppSection>
 
-      <FormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        title={copy.form.title}
-        schema={expenseFormSchema}
-        defaultValues={defaultValues}
-        onSubmit={onSubmit}
-        successMessage={copy.form.success}
-        submitLabel={copy.form.submit}
-      >
-        {(form) => (
-          <>
-            <BusinessDateField
-              control={form.control}
-              name="expenseDate"
-              label={copy.form.date}
-              required
-            />
-            <SelectField
-              control={form.control}
-              name="branchId"
-              label={copy.form.branch}
-              options={branchOptions}
-              placeholder={copy.form.branchTenantLevel}
-            />
-            <SelectField
-              control={form.control}
-              name="category"
-              label={copy.form.category}
-              groups={CATEGORY_GROUPS}
-              placeholder={copy.form.categoryPlaceholder}
-              required
-            />
-            <MoneyVndField
-              control={form.control}
-              name="amount"
-              label={copy.form.amount}
-              required
-            />
-            <SelectField
-              control={form.control}
-              name="paymentMethod"
-              label={copy.form.method}
-              options={METHOD_OPTIONS}
-              placeholder={copy.form.methodPlaceholder}
-              required
-            />
-            <TextField
-              control={form.control}
-              name="vendorName"
-              label={copy.form.vendor}
-              placeholder={copy.form.vendorPlaceholder}
-            />
-            <TextareaField
-              control={form.control}
-              name="note"
-              label={copy.form.note}
-              placeholder={copy.form.notePlaceholder}
-            />
-          </>
-        )}
-      </FormDialog>
+      {canManageExpenses ? (
+        <FormDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          title={copy.form.title}
+          schema={expenseFormSchema}
+          defaultValues={defaultValues}
+          onSubmit={onSubmit}
+          successMessage={copy.form.success}
+          submitLabel={copy.form.submit}
+        >
+          {(form) => (
+            <>
+              <BusinessDateField
+                control={form.control}
+                name="expenseDate"
+                label={copy.form.date}
+                required
+              />
+              <SelectField
+                control={form.control}
+                name="branchId"
+                label={copy.form.branch}
+                options={branchOptions}
+                placeholder={copy.form.branchTenantLevel}
+              />
+              <SelectField
+                control={form.control}
+                name="category"
+                label={copy.form.category}
+                groups={CATEGORY_GROUPS}
+                placeholder={copy.form.categoryPlaceholder}
+                required
+              />
+              <MoneyVndField
+                control={form.control}
+                name="amount"
+                label={copy.form.amount}
+                required
+              />
+              <SelectField
+                control={form.control}
+                name="paymentMethod"
+                label={copy.form.method}
+                options={METHOD_OPTIONS}
+                placeholder={copy.form.methodPlaceholder}
+                required
+              />
+              <TextField
+                control={form.control}
+                name="vendorName"
+                label={copy.form.vendor}
+                placeholder={copy.form.vendorPlaceholder}
+              />
+              <TextareaField
+                control={form.control}
+                name="note"
+                label={copy.form.note}
+                placeholder={copy.form.notePlaceholder}
+              />
+            </>
+          )}
+        </FormDialog>
+      ) : null}
     </>
   );
 }

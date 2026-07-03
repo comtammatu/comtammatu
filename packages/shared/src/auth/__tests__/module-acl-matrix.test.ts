@@ -85,7 +85,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "operator_home",
     "runner",
   ],
-  office: ["employee", "notifications"],
+  office: ["employee", "finance", "notifications"],
 };
 
 for (const [role, expected] of Object.entries(EXPECTED_MATRIX)) {

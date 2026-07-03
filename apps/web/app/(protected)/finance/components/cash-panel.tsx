@@ -38,6 +38,7 @@ interface Props {
   bankOutSince: number;
   cashDeltaAfterPaidExpenses: number;
   todayBusinessDate: string;
+  canManageCashOpening: boolean;
 }
 
 const cashOpeningSchema = z.object({
@@ -67,6 +68,7 @@ export function CashPanel({
   bankOutSince,
   cashDeltaAfterPaidExpenses,
   todayBusinessDate,
+  canManageCashOpening,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -100,10 +102,12 @@ export function CashPanel({
         title={copy.onHandTitle}
         icon={<IconWallet />}
         action={
-          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-            <IconSettings data-icon="inline-start" />
-            {openingDate ? copy.editOpening : copy.setOpening}
-          </Button>
+          canManageCashOpening ? (
+            <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+              <IconSettings data-icon="inline-start" />
+              {openingDate ? copy.editOpening : copy.setOpening}
+            </Button>
+          ) : undefined
         }
       >
         {cashOnHand == null ? (
@@ -175,40 +179,42 @@ export function CashPanel({
         <p className="text-xs text-muted-foreground">{copy.cashDeltaHint}</p>
       </AppSection>
 
-      <FormDialog
-        open={open}
-        onOpenChange={setOpen}
-        title={copy.openingTitle}
-        description={copy.openingDescription}
-        schema={cashOpeningSchema}
-        defaultValues={defaultValues}
-        onSubmit={onSubmit}
-        successMessage={copy.openingSuccess}
-        submitLabel={copy.openingSubmit}
-      >
-        {(form) => (
-          <>
-            <MoneyVndField
-              control={form.control}
-              name="balance"
-              label={copy.openingBalanceLabel}
-              required
-            />
-            <MoneyVndField
-              control={form.control}
-              name="bankBalance"
-              label={copy.openingBankLabel}
-              required
-            />
-            <BusinessDateField
-              control={form.control}
-              name="date"
-              label={copy.openingDateLabel}
-              required
-            />
-          </>
-        )}
-      </FormDialog>
+      {canManageCashOpening ? (
+        <FormDialog
+          open={open}
+          onOpenChange={setOpen}
+          title={copy.openingTitle}
+          description={copy.openingDescription}
+          schema={cashOpeningSchema}
+          defaultValues={defaultValues}
+          onSubmit={onSubmit}
+          successMessage={copy.openingSuccess}
+          submitLabel={copy.openingSubmit}
+        >
+          {(form) => (
+            <>
+              <MoneyVndField
+                control={form.control}
+                name="balance"
+                label={copy.openingBalanceLabel}
+                required
+              />
+              <MoneyVndField
+                control={form.control}
+                name="bankBalance"
+                label={copy.openingBankLabel}
+                required
+              />
+              <BusinessDateField
+                control={form.control}
+                name="date"
+                label={copy.openingDateLabel}
+                required
+              />
+            </>
+          )}
+        </FormDialog>
+      ) : null}
     </div>
   );
 }

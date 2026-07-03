@@ -1,5 +1,7 @@
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { AppPage, AppPageHeader } from "@/components/surface";
+import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
 import { fetchAccessibleBranches } from "../actions";
 import { fetchActualFoodCostTotal, fetchExpenses } from "../expense-actions";
@@ -20,19 +22,21 @@ export default async function ExpensesPage({
   const params = parseFinanceParams(sp);
   const resolved = resolveFinanceRange(params);
 
-  const [branchesRes, expensesRes, foodCostRes] = await Promise.all([
-    fetchAccessibleBranches(),
-    fetchExpenses({
-      startDate: resolved.start,
-      endDate: resolved.end,
-      ...(params.branch != null ? { branchId: params.branch } : {}),
-    }),
-    fetchActualFoodCostTotal({
-      startDate: resolved.start,
-      endDate: resolved.end,
-      ...(params.branch != null ? { branchId: params.branch } : {}),
-    }),
-  ]);
+  const [branchesRes, expensesRes, foodCostRes, canManageExpenses] =
+    await Promise.all([
+      fetchAccessibleBranches(),
+      fetchExpenses({
+        startDate: resolved.start,
+        endDate: resolved.end,
+        ...(params.branch != null ? { branchId: params.branch } : {}),
+      }),
+      fetchActualFoodCostTotal({
+        startDate: resolved.start,
+        endDate: resolved.end,
+        ...(params.branch != null ? { branchId: params.branch } : {}),
+      }),
+      currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_EXPENSE_CREATE),
+    ]);
 
   const branches = (branchesRes.success ? (branchesRes.data ?? []) : []) as {
     id: number;
@@ -60,6 +64,7 @@ export default async function ExpensesPage({
         resolvedStart={resolved.start}
         resolvedEnd={resolved.end}
         todayBusinessDate={todayBusinessDate}
+        canManageExpenses={canManageExpenses}
       />
     </AppPage>
   );

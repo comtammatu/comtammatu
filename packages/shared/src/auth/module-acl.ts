@@ -104,7 +104,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   finance: {
     path: "/finance",
-    allowedRoles: ["owner"],
+    allowedRoles: ["owner", "office"],
     label: getModuleLabelVi("finance"),
   },
   branches: {
