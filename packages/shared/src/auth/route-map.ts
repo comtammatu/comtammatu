@@ -296,6 +296,18 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
+    id: "branch-team",
+    label: MODULE_ACL.branch_team.label,
+    surface: "branch_management",
+    entryPath: "/br/[branchId]/team",
+    matchPrefixes: ["/br/[branchId]/team"],
+    moduleKeys: ["branch_team"],
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
+    requiresBranchId: true,
+  },
+  {
     id: "pos",
     label: MODULE_ACL.pos.label,
     surface: "branch_operation",

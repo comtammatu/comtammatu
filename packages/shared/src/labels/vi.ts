@@ -21,6 +21,7 @@ export type ModuleLabelKey =
   | "branch_dashboard"
   | "branch_settings"
   | "branch_menu_limits"
+  | "branch_team"
   | "employee"
   | "employee_checkout_approvals"
   | "notifications";
@@ -50,6 +51,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   branch_dashboard: "Điều hành chi nhánh",
   branch_settings: "Cài đặt chi nhánh",
   branch_menu_limits: "Giới hạn bán",
+  branch_team: "Đội hôm nay",
   employee: "Ca của tôi",
   employee_checkout_approvals: "Duyệt kết ca",
   notifications: "Thông báo",

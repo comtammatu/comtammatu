@@ -148,6 +148,13 @@ export const OPERATOR_TILE_ITEMS = [
     label: "Việc trong ca",
   },
   {
+    moduleKey: "branch_team",
+    icon: "Users",
+    group: "my_shift",
+    hrefTemplate: "/br/{branchId}/team",
+    label: "Đội hôm nay",
+  },
+  {
     moduleKey: "employee_checkout_approvals",
     icon: "ClipboardCheck",
     group: "approvals",

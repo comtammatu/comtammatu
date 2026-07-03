@@ -27,6 +27,7 @@ export type ModuleKey =
   | "branch_dashboard"
   | "branch_settings"
   | "branch_menu_limits"
+  | "branch_team"
   | "employee"
   | "employee_checkout_approvals"
   | "notifications";
@@ -169,6 +170,19 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/br/*/settings/menu-limits",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("branch_menu_limits"),
+  },
+  /**
+   * "Đội hôm nay" branch team board (D059). Scoped to owner/branch_manager
+   * only — the underlying aggregate read (attendance, checklist, leave)
+   * relies on `hr:view_employee` / `hr:approve_leave_request`, which
+   * warehouse_manager/production_manager role templates do not grant
+   * (`supabase/_local-dev/dev-tenant-seed.sql`). Extending this ACL to those
+   * roles requires a permission-grant change first, not just a nav entry.
+   */
+  branch_team: {
+    path: "/br/*/team",
+    allowedRoles: ["owner", "branch_manager"],
+    label: getModuleLabelVi("branch_team"),
   },
   employee: {
     path: "/employee",

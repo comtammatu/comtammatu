@@ -60,6 +60,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/team/page.tsx": "LIST",
   "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": "BOARD",
   "apps/web/app/(protected)/br/[branchId]/pos/page.tsx": "BOARD",
   "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": "BOARD",
