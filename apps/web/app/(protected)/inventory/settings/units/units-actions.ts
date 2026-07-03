@@ -19,22 +19,20 @@ export interface UnitRow {
   is_active: boolean;
 }
 
+const unitCode = z
+  .string()
+  .trim()
+  .min(1, { error: VALIDATION_VI.required("Mã đơn vị") })
+  .transform((value) => value.toLowerCase());
+
 const unitCreateSchema = z.object({
-  code: z.string().trim().min(1, { error: VALIDATION_VI.required("Mã đơn vị") }),
-  name: z
-    .string()
-    .trim()
-    .min(1, { error: VALIDATION_VI.required("Tên đơn vị") }),
+  code: unitCode,
   is_active: z.boolean().default(true),
 });
 
 const unitUpdateSchema = z.object({
   id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
-  code: z.string().trim().min(1, { error: VALIDATION_VI.required("Mã đơn vị") }),
-  name: z
-    .string()
-    .trim()
-    .min(1, { error: VALIDATION_VI.required("Tên đơn vị") }),
+  code: unitCode,
   is_active: z.boolean().default(true),
 });
 
@@ -74,7 +72,7 @@ export const createUnit = withAction(
     const { error } = await supabase.from("units").insert({
       tenant_id: claims.tenant_id,
       code: data.code,
-      name: data.name,
+      name: data.code,
       is_active: data.is_active,
     });
 
@@ -101,7 +99,7 @@ export const updateUnit = withAction(
       .from("units")
       .update({
         code: data.code,
-        name: data.name,
+        name: data.code,
         is_active: data.is_active,
       })
       .eq("id", data.id)

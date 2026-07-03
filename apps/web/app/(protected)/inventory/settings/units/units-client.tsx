@@ -39,7 +39,6 @@ const copy = messages.inventoryMaster.units;
 
 const unitFormSchema = z.object({
   code: z.string().trim().min(1),
-  name: z.string().trim().min(1),
   is_active: z.boolean(),
 });
 
@@ -47,7 +46,6 @@ type UnitFormValues = z.infer<typeof unitFormSchema>;
 
 const NEW_UNIT_DEFAULTS: UnitFormValues = {
   code: "",
-  name: "",
   is_active: true,
 };
 
@@ -98,7 +96,6 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
   const defaultValues: UnitFormValues = editRow
     ? {
         code: editRow.code,
-        name: editRow.name,
         is_active: editRow.is_active,
       }
     : NEW_UNIT_DEFAULTS;
@@ -208,13 +205,6 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
               name="code"
               label={copy.form.code}
               placeholder={copy.form.codePlaceholder}
-              required
-            />
-            <TextField
-              control={form.control}
-              name="name"
-              label={copy.form.name}
-              placeholder={copy.form.namePlaceholder}
               required
             />
             <Field orientation="horizontal">
