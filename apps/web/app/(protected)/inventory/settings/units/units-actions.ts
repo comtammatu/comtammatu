@@ -7,7 +7,7 @@ import { VALIDATION_VI } from "@comtammatu/shared/messages";
 import { INVENTORY_CATALOG_ROLES } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithAnyPermission } from "../../_lib/auth";
-import { CATALOG_MANAGE_PERMISSIONS } from "../../_lib/catalog-permissions";
+import { UNITS_MASTER_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { PG_ERR } from "../../_lib/constants";
 
 const UNITS_PATH = "/inventory/settings/units";
@@ -45,7 +45,7 @@ const unitDeleteSchema = z.object({
 export async function fetchUnits(): Promise<ActionResult<UnitRow[]>> {
   const ctx = await getAuthContextWithAnyPermission(
     INVENTORY_CATALOG_ROLES,
-    CATALOG_MANAGE_PERMISSIONS,
+    UNITS_MASTER_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -68,7 +68,7 @@ export const createUnit = withAction(
   {
     roles: INVENTORY_CATALOG_ROLES,
     schema: unitCreateSchema,
-    anyPermission: CATALOG_MANAGE_PERMISSIONS,
+    anyPermission: UNITS_MASTER_PERMISSIONS,
   },
   async (data, { supabase, claims }) => {
     const { error } = await supabase.from("units").insert({
@@ -94,7 +94,7 @@ export const updateUnit = withAction(
   {
     roles: INVENTORY_CATALOG_ROLES,
     schema: unitUpdateSchema,
-    anyPermission: CATALOG_MANAGE_PERMISSIONS,
+    anyPermission: UNITS_MASTER_PERMISSIONS,
   },
   async (data, { supabase, claims }) => {
     const { error } = await supabase
@@ -123,7 +123,7 @@ export const deleteUnit = withAction(
   {
     roles: INVENTORY_CATALOG_ROLES,
     schema: unitDeleteSchema,
-    anyPermission: CATALOG_MANAGE_PERMISSIONS,
+    anyPermission: UNITS_MASTER_PERMISSIONS,
   },
   async (data, { supabase, claims }) => {
     const { error } = await supabase

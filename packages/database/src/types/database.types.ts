@@ -2042,6 +2042,8 @@ export type Database = {
           allow_issue: boolean
           allow_production: boolean
           allow_purchase: boolean
+          anchor_factor: number | null
+          anchor_unit_id: number | null
           created_at: string
           id: number
           ingredient_id: number
@@ -2057,6 +2059,8 @@ export type Database = {
           allow_issue?: boolean
           allow_production?: boolean
           allow_purchase?: boolean
+          anchor_factor?: number | null
+          anchor_unit_id?: number | null
           created_at?: string
           id?: never
           ingredient_id: number
@@ -2072,6 +2076,8 @@ export type Database = {
           allow_issue?: boolean
           allow_production?: boolean
           allow_purchase?: boolean
+          anchor_factor?: number | null
+          anchor_unit_id?: number | null
           created_at?: string
           id?: never
           ingredient_id?: number
@@ -2084,6 +2090,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ingredient_units_anchor_unit_id_fkey"
+            columns: ["anchor_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ingredient_units_ingredient_id_fkey"
             columns: ["ingredient_id"]
@@ -8155,27 +8168,36 @@ export type Database = {
         Row: {
           code: string
           created_at: string
+          dimension: string | null
           id: number
           is_active: boolean
+          is_standard: boolean
           name: string
+          standard_factor: number | null
           tenant_id: number
           updated_at: string
         }
         Insert: {
           code: string
           created_at?: string
+          dimension?: string | null
           id?: never
           is_active?: boolean
+          is_standard?: boolean
           name: string
+          standard_factor?: number | null
           tenant_id: number
           updated_at?: string
         }
         Update: {
           code?: string
           created_at?: string
+          dimension?: string | null
           id?: never
           is_active?: boolean
+          is_standard?: boolean
           name?: string
+          standard_factor?: number | null
           tenant_id?: number
           updated_at?: string
         }
@@ -9648,6 +9670,17 @@ export type Database = {
           p_zone_id: string
         }
         Returns: string
+      }
+      inv_derive_to_base_factor: {
+        Args: {
+          p_all_units: Json
+          p_anchor_factor: number
+          p_anchor_unit_id: number
+          p_base_unit_id: number
+          p_is_base: boolean
+          p_unit_id: number
+        }
+        Returns: number
       }
       inv_to_base: {
         Args: { p_ingredient_id: number; p_qty: number; p_unit_id: number }
