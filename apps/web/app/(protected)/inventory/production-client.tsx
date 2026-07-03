@@ -36,6 +36,7 @@ interface ProductionHubClientProps {
   finishedGoods: FinishedGoodOption[];
   orders: ProductionOrderRow[];
   recipes: ProductionRecipeRow[];
+  embedded?: boolean;
 }
 
 export function ProductionHubClient({
@@ -49,6 +50,7 @@ export function ProductionHubClient({
   finishedGoods,
   orders,
   recipes,
+  embedded = false,
 }: ProductionHubClientProps) {
   const {
     sortedFinishedGoods,
@@ -85,7 +87,7 @@ export function ProductionHubClient({
   return (
     <AppPage>
       <AppPageHeader
-        eyebrow={INVENTORY_VI.warehouse}
+        eyebrow={embedded ? undefined : INVENTORY_VI.warehouse}
         title={INVENTORY_VI.productionTitle}
         description={INVENTORY_VI.productionDescription}
         actions={
