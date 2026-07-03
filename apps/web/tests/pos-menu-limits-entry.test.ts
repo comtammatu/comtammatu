@@ -32,6 +32,9 @@ const kdsHeaderSource = readSource(
 const kdsMutationSource = readSource(
   "app/(protected)/br/[branchId]/kds/_hooks/use-kds-mutations.ts",
 );
+const kdsActionsSource = readSource(
+  "app/(protected)/br/[branchId]/kds/actions.ts",
+);
 const managerActionsSource = readSource(
   "app/(protected)/br/[branchId]/(operator)/settings/menu-limits/actions.ts",
 );
@@ -61,6 +64,8 @@ test("KDS no longer exposes menu-limit or out-of-stock controls", () => {
   assert.doesNotMatch(kdsHeaderSource, /menuLimits/);
   assert.doesNotMatch(kdsMutationSource, /onMenuLimitChanged/);
   assert.doesNotMatch(kdsMutationSource, /markKdsItemOutOfStock/);
+  assert.doesNotMatch(kdsMutationSource, /handleOutOfStock/);
+  assert.doesNotMatch(kdsActionsSource, /export async function markKdsItemOutOfStock/);
   assert.equal(
     existsSync(
       join(

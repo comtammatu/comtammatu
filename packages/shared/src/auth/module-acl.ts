@@ -163,9 +163,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   /**
    * Daily sales limits per (branch, menu item). Lives under the branch
-   * settings hub and is restricted to branch managers; cashier/chef mark
-   * items out of stock through the separate KDS path
-   * (mark_kds_item_out_of_stock), not this quota-management surface.
+   * settings hub and is restricted to branch managers.
    */
   branch_menu_limits: {
     path: "/br/*/settings/menu-limits",

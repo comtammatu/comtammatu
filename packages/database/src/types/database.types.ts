@@ -8804,14 +8804,6 @@ export type Database = {
       auth_role_to_position: { Args: { p_role: string }; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
       auto_close_periods: { Args: never; Returns: number }
-      branch_kitchen_ingredient_availability: {
-        Args: { p_branch_id: number; p_tenant_id: number }
-        Returns: {
-          ingredient_id: number
-          on_hand: number
-          pending_demand: number
-        }[]
-      }
       branch_manager_approve_consumption_report: {
         Args: { p_report_id: number; p_tenant_id: number }
         Returns: Json
@@ -8843,7 +8835,6 @@ export type Database = {
           p_tenant_id: number
         }
         Returns: {
-          accepted_today: number
           active_hold_demand: number
           available_to_sell: number
           base_price: number
@@ -8853,13 +8844,11 @@ export type Database = {
           item_name: string
           limit_date: string
           limit_id: number
-          limit_quantity: number
           manual_limit_quantity: number
           menu_item_id: number
           pending_unfinalized_demand: number
           sold_today: number
           stock_capacity: number
-          stock_capacity_live: number
         }[]
       }
       bulk_import_ingredients: { Args: { p_rows: Json }; Returns: Json }
@@ -9346,24 +9335,14 @@ export type Database = {
       get_branch_menu_daily_limits_for_pos: {
         Args: { p_branch_id: number; p_exclude_hold_tokens?: string[] }
         Returns: {
-          accepted_today: number
           active_hold_demand: number
           available_to_sell: number
           is_disabled: boolean
-          limit_quantity: number
           manual_limit_quantity: number
           menu_item_id: number
           pending_unfinalized_demand: number
           sold_today: number
           stock_capacity: number
-          stock_capacity_live: number
-        }[]
-      }
-      get_branch_menu_ingredient_caps_for_pos: {
-        Args: { p_branch_id: number }
-        Returns: {
-          max_sellable: number
-          menu_item_id: number
         }[]
       }
       get_branch_menu_stock_capacity: {
@@ -9712,7 +9691,6 @@ export type Database = {
       list_branch_menu_daily_limits: {
         Args: { p_branch_id: number; p_limit_date?: string }
         Returns: {
-          accepted_today: number
           active_hold_demand: number
           available_to_sell: number
           base_price: number
@@ -9722,13 +9700,11 @@ export type Database = {
           item_name: string
           limit_date: string
           limit_id: number
-          limit_quantity: number
           manual_limit_quantity: number
           menu_item_id: number
           pending_unfinalized_demand: number
           sold_today: number
           stock_capacity: number
-          stock_capacity_live: number
         }[]
       }
       list_notifications: {
@@ -9966,15 +9942,6 @@ export type Database = {
         Returns: Json
       }
       refresh_abc_classification: { Args: never; Returns: number }
-      refresh_branch_menu_stock_capacity: {
-        Args: {
-          p_branch_id: number
-          p_ingredient_id?: number
-          p_menu_item_id?: number
-          p_tenant_id: number
-        }
-        Returns: undefined
-      }
       refresh_finance_views: { Args: never; Returns: undefined }
       refresh_inventory_dashboard: { Args: never; Returns: string }
       refund_paid_order: {

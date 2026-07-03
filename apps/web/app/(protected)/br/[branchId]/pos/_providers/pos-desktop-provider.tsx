@@ -26,10 +26,6 @@ import {
   createDailyLimitStore,
   type DailyLimitStore,
 } from "./daily-limit-store";
-import {
-  createIngredientCapStore,
-  type IngredientCapStore,
-} from "./ingredient-cap-store";
 import type { MenuItemDailyLimit } from "../pos-menu-types";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 import { playAppSignal } from "@lib/audio-signal";
@@ -37,10 +33,9 @@ import { readDevicePref, writeDevicePref } from "@lib/device-prefs";
 import type { OrderType } from "../types";
 
 export type DailyLimitsMap = ReadonlyMap<number, MenuItemDailyLimit>;
-export type IngredientCapsMap = ReadonlyMap<number, number | null>;
 
-// Today's RPCs still return the full 11-field shape (PR-2 slims this
-// server-side). The client only reads a subset — see MenuItemDailyLimit.
+// Matches the slim RPC RETURNS TABLE (PR-3) minus fields the client never
+// reads — see MenuItemDailyLimit.
 interface DailyLimitRow {
   menu_item_id: number;
   is_disabled: boolean;
@@ -136,9 +131,6 @@ const OperationalDispatchContext = createContext<OperationalDispatch | null>(
  * trên mỗi event realtime — Architect option b).
  */
 const DailyLimitStoreContext = createContext<DailyLimitStore | null>(null);
-const IngredientCapStoreContext = createContext<IngredientCapStore | null>(
-  null,
-);
 
 // Monotonic counter that bumps every time an order flips into a terminal
 // status (paid / completed / cancelled). The "Đã xử lý" sheet's pagination
@@ -182,13 +174,6 @@ export function usePosDailyLimitStore(): DailyLimitStore {
   return ctx;
 }
 
-export function usePosIngredientCapStore(): IngredientCapStore {
-  const ctx = useContext(IngredientCapStoreContext);
-  if (!ctx)
-    throw new Error("useIngredientCap must be used inside PosDesktopProvider");
-  return ctx;
-}
-
 /**
  * Per-item daily-limit subscription. Re-renders the consumer ONLY when this
  * specific `menu_item_id`'s slice changes (sold_today / is_disabled / limit_
@@ -197,17 +182,6 @@ export function usePosIngredientCapStore(): IngredientCapStore {
  */
 export function useDailyLimit(itemId: number): MenuItemDailyLimit | null {
   const store = usePosDailyLimitStore();
-  const getSnapshot = useCallback(() => store.get(itemId), [store, itemId]);
-  return useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
-}
-
-/**
- * Per-item ingredient-cap subscription. Caps are refreshed from the same
- * limits-only POS catch-up fetch as daily limits, so coupled dishes sharing
- * ingredients stop using the initial menu snapshot after a sale.
- */
-export function useIngredientCap(itemId: number): number | null {
-  const store = usePosIngredientCapStore();
   const getSnapshot = useCallback(() => store.get(itemId), [store, itemId]);
   return useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
 }
@@ -236,11 +210,6 @@ interface PosDesktopProviderProps {
    * `daily_limit: null` per `pos-menu-types.ts`.
    */
   initialDailyLimits: DailyLimitsMap;
-  /**
-   * Seed map of `menu_item_id -> ingredient max_sellable` from the RSC
-   * `fetchMenuForPos` response. Missing keys and null values mean no cap.
-   */
-  initialIngredientCaps: IngredientCapsMap;
   children: ReactNode;
 }
 
@@ -252,7 +221,6 @@ export function PosDesktopProvider({
   initialOrders,
   initialOrdersSeeded,
   initialDailyLimits,
-  initialIngredientCaps,
   children,
 }: PosDesktopProviderProps) {
   const [orders, setOrders] = useState<SessionOrder[]>(initialOrders);
@@ -266,13 +234,6 @@ export function PosDesktopProvider({
     dailyLimitStoreRef.current = createDailyLimitStore(initialDailyLimits);
   }
   const dailyLimitStore = dailyLimitStoreRef.current;
-  const ingredientCapStoreRef = useRef<IngredientCapStore | null>(null);
-  if (ingredientCapStoreRef.current === null) {
-    ingredientCapStoreRef.current = createIngredientCapStore(
-      initialIngredientCaps,
-    );
-  }
-  const ingredientCapStore = ingredientCapStoreRef.current;
   const [archivedToken, setArchivedToken] = useState(0);
   // Default OFF; the device preference loads after mount to avoid a
   // hydration mismatch. Without persistence the alert channel silently
@@ -336,10 +297,6 @@ export function PosDesktopProvider({
     dailyLimitStore.setAll(initialDailyLimits);
   }, [initialDailyLimits, dailyLimitStore]);
 
-  useEffect(() => {
-    ingredientCapStore.setAll(initialIngredientCaps);
-  }, [initialIngredientCaps, ingredientCapStore]);
-
   const loadOrders = useCallback(async () => {
     const result = await fetchActiveOrders(branchId);
     if (result.success && result.data) {
@@ -378,19 +335,7 @@ export function PosDesktopProvider({
       });
     }
     dailyLimitStore.setAll(next);
-
-    const ingredientCaps = result.meta?.ingredientCaps;
-    const nextCaps = new Map<number, number | null>();
-    if (Array.isArray(ingredientCaps)) {
-      for (const row of ingredientCaps as Array<{
-        menu_item_id: number;
-        max_sellable: number | null;
-      }>) {
-        nextCaps.set(row.menu_item_id, row.max_sellable);
-      }
-    }
-    ingredientCapStore.setAll(nextCaps);
-  }, [branchId, dailyLimitStore, ingredientCapStore]);
+  }, [branchId, dailyLimitStore]);
 
   const refreshAll = useCallback(async () => {
     const [ordersResult, tablesResult] = await Promise.all([
@@ -487,13 +432,9 @@ export function PosDesktopProvider({
             <OrdersContext.Provider value={orders}>
               <TablesContext.Provider value={tables}>
                 <DailyLimitStoreContext.Provider value={dailyLimitStore}>
-                  <IngredientCapStoreContext.Provider
-                    value={ingredientCapStore}
-                  >
-                    <ArchivedInvalidationContext.Provider value={archivedToken}>
-                      {children}
-                    </ArchivedInvalidationContext.Provider>
-                  </IngredientCapStoreContext.Provider>
+                  <ArchivedInvalidationContext.Provider value={archivedToken}>
+                    {children}
+                  </ArchivedInvalidationContext.Provider>
                 </DailyLimitStoreContext.Provider>
               </TablesContext.Provider>
             </OrdersContext.Provider>

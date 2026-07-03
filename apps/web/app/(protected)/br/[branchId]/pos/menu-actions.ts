@@ -15,8 +15,8 @@ const branchIdSchema = z.coerce
   .int()
   .positive({ error: "Branch ID không hợp lệ" });
 
-// Today's RPCs still return the full 11-field shape (PR-2 slims this
-// server-side). The client only reads a subset — see MenuItemDailyLimit.
+// Matches the slim RPC RETURNS TABLE (PR-3) minus fields the client never
+// reads — see MenuItemDailyLimit.
 interface DailyLimitRow {
   menu_item_id: number;
   is_disabled: boolean;
@@ -122,18 +122,14 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // Parallel: cached menu structure + uncached daily-limits + ingredient caps.
-  // Structure cache hit short-circuits the heavy join (~400ms) on every
-  // post-Server-Action route revalidation; daily-limits + caps stay fresh.
-  // The caps RPC returns empty unless the branch flag is on, so the merge is
-  // a no-op for non-enforcing branches.
+  // Parallel: cached menu structure + uncached daily-limits. Structure cache
+  // hit short-circuits the heavy join (~400ms) on every post-Server-Action
+  // route revalidation; daily-limits stay fresh.
   let categories: Awaited<ReturnType<typeof getCachedMenuStructure>>;
   let limitRows: unknown;
-  let capRows: unknown;
   try {
-    // `get_branch_menu_ingredient_caps_for_pos` is new and not yet in the
-    // generated types — call it via the same cast escape hatch as the
-    // daily-limit RPC below.
+    // `p_exclude_hold_tokens` is not yet in generated types — call via the
+    // cast escape hatch.
     const rpcCaller = supabase as unknown as {
       rpc: (
         name: string,
@@ -145,18 +141,12 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
       "get_branch_menu_daily_limits_for_pos",
       { p_branch_id: parsedBranchId.data },
     );
-    const capsPromise = rpcCaller.rpc(
-      "get_branch_menu_ingredient_caps_for_pos",
-      { p_branch_id: parsedBranchId.data },
-    );
-    const [structure, limitsRes, capsRes] = await Promise.all([
+    const [structure, limitsRes] = await Promise.all([
       getCachedMenuStructure(claims.tenant_id),
       limitsPromise,
-      capsPromise,
     ]);
     categories = structure;
     limitRows = limitsRes.data;
-    capRows = capsRes.data;
   } catch {
     return { success: false, error: "Không thể tải menu. Vui lòng thử lại." };
   }
@@ -188,20 +178,6 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
       });
     }
   }
-  // Empty when the branch flag `pos_ingredient_stock_block` is off → every
-  // item gets `ingredient_cap: null` (no cap). `max_sellable` is a snapshot
-  // upper bound, not a per-dish guarantee — the order_items trigger is the
-  // hard gate.
-  const capsByItemId = new Map<number, number>();
-  if (Array.isArray(capRows)) {
-    for (const row of capRows as Array<{
-      menu_item_id: number;
-      max_sellable: number;
-    }>) {
-      capsByItemId.set(row.menu_item_id, row.max_sellable);
-    }
-  }
-
   // Filter nested variants/modifiers to active only, resolve side_item
   const menu = (categories ?? []).map((cat) => ({
     ...cat,
@@ -231,7 +207,6 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
         })
         .filter((s) => s !== null),
       daily_limit: limitsByItemId.get(item.id) ?? null,
-      ingredient_cap: capsByItemId.get(item.id) ?? null,
     })),
   }));
 
@@ -249,12 +224,6 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
  * `active_hold_demand` — the terminal's own demand is still accounted for
  * client-side via the draft-demand subtraction in `daily-limit-draft.ts`
  * (exactly one side credits own holds; D064 §4).
- *
- * Also returns the ingredient caps under `meta.ingredientCaps` so the same
- * post-submit revalidation that refreshes daily-limits picks up the new
- * `max_sellable` snapshot (caps couple via shared ingredients — a sale of
- * dish A can lower dish B's cap). No stock realtime channel: caps ride the
- * existing daily-limit refetch cadence only.
  */
 export async function fetchDailyLimitsForPos(
   branchId: number,
@@ -276,30 +245,22 @@ export async function fetchDailyLimitsForPos(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // `get_branch_menu_ingredient_caps_for_pos` is not yet in generated types —
-  // call it via the same cast escape hatch as the daily-limit RPC.
+  // `p_exclude_hold_tokens` is not yet in generated types — call via the
+  // cast escape hatch.
   const rpcCaller = supabase as unknown as {
     rpc: (
       name: string,
       args: Record<string, unknown>,
     ) => Promise<{ data: unknown; error: unknown }>;
   };
-  const capsPromise = rpcCaller.rpc("get_branch_menu_ingredient_caps_for_pos", {
-    p_branch_id: parsedBranchId.data,
-  });
 
-  // `p_exclude_hold_tokens` is not yet in generated types — same cast escape
-  // hatch as above.
-  const [limitsRes, capsRes] = await Promise.all([
-    rpcCaller.rpc("get_branch_menu_daily_limits_for_pos", {
-      p_branch_id: parsedBranchId.data,
-      p_exclude_hold_tokens:
-        excludeHoldTokens && excludeHoldTokens.length > 0
-          ? excludeHoldTokens
-          : null,
-    }),
-    capsPromise,
-  ]);
+  const limitsRes = await rpcCaller.rpc("get_branch_menu_daily_limits_for_pos", {
+    p_branch_id: parsedBranchId.data,
+    p_exclude_hold_tokens:
+      excludeHoldTokens && excludeHoldTokens.length > 0
+        ? excludeHoldTokens
+        : null,
+  });
 
   if (limitsRes.error) {
     return { success: false, error: "Không thể tải giới hạn bán hàng." };
@@ -308,8 +269,5 @@ export async function fetchDailyLimitsForPos(
   return {
     success: true,
     data: Array.isArray(limitsRes.data) ? limitsRes.data : [],
-    meta: {
-      ingredientCaps: Array.isArray(capsRes.data) ? capsRes.data : [],
-    },
   };
 }
