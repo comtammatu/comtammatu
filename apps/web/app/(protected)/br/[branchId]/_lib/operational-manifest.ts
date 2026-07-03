@@ -1,4 +1,4 @@
-type OperationalApp = "pos" | "kds" | "runner";
+type OperationalApp = "pos" | "kds" | "runner" | "hub";
 type OperationalOrientation = "portrait" | "landscape";
 
 const APP_LABELS: Record<
@@ -20,7 +20,17 @@ const APP_LABELS: Record<
     description: "Màn gọi số - Cơm Tấm Má Tư",
     orientation: "landscape",
   },
+  hub: {
+    label: "Chi nhánh",
+    description: "Vận hành chi nhánh - Cơm Tấm Má Tư",
+    orientation: "portrait",
+  },
 };
+
+// The hub app covers the whole operator plane (dashboard/shift/stock/team/
+// settings/...), not one leaf route, so its manifest scope/start_url is the
+// branch root rather than `/br/{branchId}/{app}` like the single-job stations.
+const HUB_APP: OperationalApp = "hub";
 
 const OPERATIONAL_MANIFEST_REVALIDATE_SECONDS = 3600;
 
@@ -41,17 +51,22 @@ function normalizeManifestBranchId(rawBranchId: string): string | null {
 
 function buildOperationalManifest(app: OperationalApp, branchId: string) {
   const appConfig = APP_LABELS[app];
+  const isHub = app === HUB_APP;
+  const rootUrl = `/br/${branchId}`;
+  const appUrl = isHub ? rootUrl : `${rootUrl}/${app}`;
 
   return {
-    id: `/br/${branchId}/${app}`,
-    name: `Cơm Tấm Má Tư - ${appConfig.label} CN${branchId}`,
+    id: appUrl,
+    name: isHub
+      ? `Cơm Tấm Má Tư - Chi nhánh CN${branchId}`
+      : `Cơm Tấm Má Tư - ${appConfig.label} CN${branchId}`,
     short_name: `Má Tư ${appConfig.label}`,
     description: appConfig.description,
     lang: "vi",
     display: "standalone",
     display_override: ["window-controls-overlay", "standalone"],
-    start_url: `/br/${branchId}/${app}`,
-    scope: `/br/${branchId}/${app}`,
+    start_url: appUrl,
+    scope: appUrl,
     background_color: "#fff6ee",
     theme_color: "#fff6ee",
     orientation: appConfig.orientation,

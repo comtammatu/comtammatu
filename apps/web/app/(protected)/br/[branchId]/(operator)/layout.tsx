@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -12,6 +13,23 @@ import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
 import { getUnreadCount } from "@/(protected)/notifications/actions";
 import { OperatorBottomNav } from "./operator-bottom-nav";
+import { OperatorPwaToolbar } from "./operator-pwa-toolbar";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ branchId: string }>;
+}): Promise<Metadata> {
+  const { branchId } = await params;
+  return {
+    manifest: `/br/${branchId}/manifest.webmanifest`,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "Má Tư Chi nhánh",
+    },
+  };
+}
 
 function parseBranchId(raw: string): number | null {
   const branchId = Number(raw);
@@ -80,6 +98,7 @@ export default async function OperatorLayout({
             </>
           }
         />
+        <OperatorPwaToolbar />
         <div
           id="main-content"
           role="main"

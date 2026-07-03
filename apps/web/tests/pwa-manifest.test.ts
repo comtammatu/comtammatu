@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { GET as getHubManifest } from "../app/(protected)/br/[branchId]/(operator)/manifest.webmanifest/route";
 import { GET as getKdsManifest } from "../app/(protected)/br/[branchId]/kds/manifest.webmanifest/route";
 import { GET as getPosManifest } from "../app/(protected)/br/[branchId]/pos/manifest.webmanifest/route";
 
@@ -76,6 +77,50 @@ test("KDS PWA manifest requests landscape orientation per branch", async () => {
   assert.equal(manifest.scope, "/br/3/kds");
   assert.equal(manifest.short_name, "Má Tư KDS");
   assert.equal(manifest.orientation, "landscape");
+});
+
+test("Operator Hub PWA manifest is installable per branch", async () => {
+  const response = await getHubManifest(
+    new Request(
+      "https://app.test/br/3/manifest.webmanifest",
+    ) as Parameters<typeof getHubManifest>[0],
+    { params: Promise.resolve({ branchId: "3" }) },
+  );
+  const manifest = (await response.json()) as {
+    id?: unknown;
+    display?: unknown;
+    orientation?: unknown;
+    scope?: unknown;
+    short_name?: unknown;
+    start_url?: unknown;
+    icons?: Array<{ src?: unknown; sizes?: unknown; purpose?: unknown }>;
+  };
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Content-Type"), "application/manifest+json; charset=utf-8");
+  assert.equal(manifest.id, "/br/3");
+  assert.equal(manifest.start_url, "/br/3");
+  assert.equal(manifest.scope, "/br/3");
+  assert.equal(manifest.display, "standalone");
+  assert.equal(manifest.short_name, "Má Tư Chi nhánh");
+  assert.equal(manifest.orientation, "portrait");
+  assert.ok(manifest.icons && manifest.icons.length >= 2);
+  assert.ok(
+    manifest.icons?.some(
+      (icon) => icon.sizes === "512x512" && icon.purpose === "any maskable",
+    ),
+  );
+});
+
+test("Operator Hub PWA manifest keeps rejecting invalid branch ids", async () => {
+  const response = await getHubManifest(
+    new Request(
+      "https://app.test/br/abc/manifest.webmanifest",
+    ) as Parameters<typeof getHubManifest>[0],
+    { params: Promise.resolve({ branchId: "abc" }) },
+  );
+
+  assert.equal(response.status, 400);
 });
 
 test("POS PWA manifest keeps rejecting invalid branch ids", async () => {
@@ -176,4 +221,20 @@ test("station layouts mount the branch-scoped PWA toolbars", () => {
     layoutSource("runner"),
     /<RunnerPwaToolbar branchId=\{branchId\} \/>/,
   );
+});
+
+test("Operator Hub layout mounts its manifest link and install toolbar", () => {
+  const layoutSource = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/(operator)/layout.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(
+    layoutSource,
+    /manifest: `\/br\/\$\{branchId\}\/manifest\.webmanifest`/,
+  );
+  assert.match(layoutSource, /<OperatorPwaToolbar \/>/);
 });
