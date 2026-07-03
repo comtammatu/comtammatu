@@ -263,7 +263,10 @@ export function StocktakeListClient({
       {/* Filters */}
       <AppToolbar>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="min-w-44">
+          <SelectTrigger
+            size={embedded ? "touch" : "default"}
+            className={embedded ? "w-full" : "min-w-44"}
+          >
             <SelectValue
               placeholder={messages.inventory.stocktake.statusPlaceholder}
             />

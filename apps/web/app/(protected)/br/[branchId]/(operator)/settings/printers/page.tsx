@@ -95,6 +95,7 @@ export default async function BranchPrintersPage({
         printers={printers as Printer[]}
         agents={(agentRes.data ?? []) as Agent[]}
         categories={(categoriesRes.data ?? []) as Category[]}
+        embedded
       />
     </EmployeePage>
   );
