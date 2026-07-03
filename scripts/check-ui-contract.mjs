@@ -234,9 +234,7 @@ const checks = [
     ],
     pattern:
       /<SelectTrigger\b[^>]*className=["'][^"']*\b(?:h-9|w-36|w-44|w-45)\b/g,
-    allowlist: {
-      "apps/web/app/(protected)/admin/reports/stock-movement/stock-movement-client.tsx": 1,
-    },
+    allowlist: {},
   },
   {
     id: "app-arbitrary-sizing",
@@ -273,7 +271,6 @@ const checks = [
     pattern:
       /toLocaleString\(\s*["']vi-VN["']|Intl\.NumberFormat\(\s*["']vi-VN["']|\b(?:function|const)\s+formatVND\b/g,
     allowlist: {
-      "apps/web/app/(protected)/admin/reports/stock-movement/stock-movement-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
       "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts": 2,
       "apps/web/app/(protected)/finance/components/work-queue-strip.tsx": 1,
@@ -405,7 +402,7 @@ const checks = [
       "apps/web/app/(public)/(auth)/login/page.tsx": 1,
       "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/runner/runner-idle-visual.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/runner/runner-idle-visual.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-status-shell.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx": 1,
@@ -755,7 +752,7 @@ const countBudgets = [
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
       /(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
-    maxCount: 14,
+    maxCount: 13,
   },
 ];
 
@@ -1372,6 +1369,67 @@ for (const filePath of walkFiles("apps/web/app", [".tsx"])) {
   }
 }
 
+// operator-embedded-button-density (page-archetypes.md § Operator Embedded
+// Presentation Contract R3): office-density `size="sm"`/`size="xs"` on
+// `<Button>` inside a client component that is re-mounted embedded under
+// Branch runtime chrome (page-archetypes.md § EMBED-WRAPPER). A static gate
+// cannot see which JSX branch runs when `embedded` is true (the same
+// `content` block is often shared with the office plane), so this ratchets
+// the raw per-file count instead of trying to attribute a hit to a specific
+// branch — shrink-only, so office-density buttons in these files can only
+// decrease as they migrate to `size={embedded ? "touch" : "sm"}`. Scoped to
+// the embedded-mounted client files named in D058/D059, not every
+// EMBED-WRAPPER target — widen the file list only with a contract reason.
+const OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES = [
+  "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
+  "apps/web/app/(protected)/orders/orders-page-body.tsx",
+  "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
+  "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
+  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
+  "apps/web/app/(protected)/inventory/issues/issues-client.tsx",
+  "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
+  "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
+  "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx",
+  "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
+];
+const OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE = {
+  "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 8,
+  "apps/web/app/(protected)/orders/orders-page-body.tsx": 1,
+  "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx": 1,
+  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
+  "apps/web/app/(protected)/inventory/issues/issues-client.tsx": 3,
+  "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 1,
+  "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx": 1,
+  "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 4,
+  "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 2,
+};
+const OPERATOR_EMBEDDED_BUTTON_SIZE_TOKEN =
+  /\bsize=(?:"(?:sm|xs)"|'(?:sm|xs)'|\{["'](?:sm|xs)["']\})/;
+function countOperatorEmbeddedButtonDensity(content) {
+  let count = 0;
+  for (const tag of extractJsxOpeningTags(content, "Button")) {
+    if (OPERATOR_EMBEDDED_BUTTON_SIZE_TOKEN.test(tag)) count += 1;
+  }
+  return count;
+}
+for (const relPath of OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES) {
+  const filePath = path.join(REPO_ROOT, relPath);
+  if (!fs.existsSync(filePath)) {
+    failures.push(
+      `operator-embedded-button-density: ${relPath} is missing; update OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES.`,
+    );
+    continue;
+  }
+  const content = fs.readFileSync(filePath, "utf8");
+  const count = countOperatorEmbeddedButtonDensity(content);
+  const allowed = OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE[relPath] ?? 0;
+  if (count > allowed) {
+    failures.push(
+      `operator-embedded-button-density: ${relPath} has ${count} office-density Button(s) (size="sm"/"xs"), allowed ${allowed}. Operator-plane primary actions use size={embedded ? "touch" : "sm"} (page-archetypes.md § Operator Embedded Presentation Contract R3).`,
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // --write (ratchet) mode: lower the count-budget baselines to the current
 // actuals. NEVER raises a number. The script file is the single source of truth
@@ -1672,6 +1730,51 @@ if (WRITE_MODE) {
     }
     ratchetSummary.push({
       id: "button-height-baseline",
+      oldTotal,
+      newTotal,
+    });
+  }
+
+  // OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE: bare `{file: count}` const
+  // scoped to OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES (fixed list, not
+  // walkFiles) — actuals use the same <Button> tag scanner as the check above.
+  {
+    const actuals = new Map();
+    for (const relPath of OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES) {
+      const filePath = path.join(REPO_ROOT, relPath);
+      if (!fs.existsSync(filePath)) continue;
+      const content = fs.readFileSync(filePath, "utf8");
+      const count = countOperatorEmbeddedButtonDensity(content);
+      if (count > 0) actuals.set(relPath, count);
+    }
+    const oldTotal = Object.values(
+      OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE,
+    ).reduce((a, b) => a + b, 0);
+    const next = ratchetAllowlist(
+      OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE,
+      actuals,
+    );
+    const newTotal = Object.values(next).reduce((a, b) => a + b, 0);
+    const span = locateConstValueSpan(
+      source,
+      "OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE",
+    );
+    if (!span) {
+      console.error(
+        "--write: could not locate OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE",
+      );
+      process.exit(1);
+    }
+    const serialized = serializeAllowlist(next, span.indent);
+    if (source.slice(span.valueStart, span.valueEnd) !== serialized) {
+      edits.push({
+        start: span.valueStart,
+        end: span.valueEnd,
+        text: serialized,
+      });
+    }
+    ratchetSummary.push({
+      id: "operator-embedded-button-density",
       oldTotal,
       newTotal,
     });

@@ -140,6 +140,62 @@ delegation:
   entry; the wrapped family's contract still governs back/breadcrumb behavior
   inside the embedded content.
 
+#### Operator Embedded Presentation Contract
+
+EMBED-WRAPPER re-mounts an office/employee `PageContent` inside Branch
+runtime chrome (`design-system.md` § Structural Governance § A.2). The
+wrapper itself is delegation-only (above); this contract is what the
+re-mounted `PageContent`'s own `embedded` branch must do so the operator
+plane reads as one coherent V2 operator surface instead of Office chrome
+leaking through a branch-scoped shell. It is subordinate to
+`design-system.md` — it does not add tokens, rhythm, or primitives, it only
+locks which existing contract choices apply inside an `embedded` branch.
+The fix for every rule below lives **inside the shared `PageContent`/client
+component via the `embedded` branch**, never as a forked operator-only
+component — the same branch benefits both planes, and the office plane
+(`embedded=false`) must stay byte-identical.
+
+- **R1 — No nested page header.** An embedded branch MUST NOT render
+  `AppPageHeader`. The Branch runtime `(operator)/layout.tsx` chrome (title +
+  branch context) already owns the page-header job; a second `AppPageHeader`
+  inside the embedded content is a duplicate header. Gate `AppPageHeader`
+  rendering on `!embedded`, or split it out of the shared `content` block so
+  the embedded return path skips it entirely.
+- **R2 — No nested page shell.** An embedded branch MUST NOT wrap its content
+  in `AppPage` (or an `AppPage`-backed adapter such as
+  `InventoryPageContent`) — the operator layout's own `AppPage
+  density="compact"` already owns width/padding. Return a bare flex
+  container (`<div className="flex w-full flex-col gap-3">{content}</div>`)
+  per the `purchase-orders-client.tsx` exemplar (§ EMBED-WRAPPER exemplar's
+  wrapped `PageContent`).
+- **R3 — Touch-sized primary actions on the operator plane.** Primary action
+  buttons (create/receive/submit CTAs a thumb must hit reliably) use
+  `size="touch"` when `embedded`, not the office-density `size="sm"` /
+  `size="xs"`. Branch through the `embedded` prop:
+  `size={embedded ? "touch" : "sm"}`, or a locally computed variable
+  (`stock-client.tsx`'s `isCompactLayout` pattern already does this for
+  layout — reuse the same shape for size).
+- **R4 — DataTable, not twin trees.** List/table content inside an embedded
+  branch renders through the shared `DataTable` `mobileCardRender` (Rhythm
+  Contract § List Surface contract), never a hand-maintained
+  `md:hidden`/`hidden md:block` pair. This is the existing repo-wide
+  `responsive-double-render` ratchet, restated here because an embedded
+  branch is by construction always the narrow-column case.
+- **R5 — Compact filters, no desktop toolbar bar.** An embedded branch must
+  not render the full desktop `AppToolbar` filter row when the operator
+  column is narrower than the toolbar needs. Prefer the existing responsive
+  branch a client already uses for its own compact/mobile layout (e.g.
+  `stock-client.tsx`'s `isCompactLayout`) so filters collapse into the
+  compact/collapsible section instead of the inline desktop bar; do not add
+  a second, operator-only toolbar implementation.
+- **R6 — Back-link and breadcrumb target the operator section root.** Any
+  back link, breadcrumb, or "list" href an embedded branch renders MUST use
+  the branch-scoped `basePath` the wrapper passed down, not an office-module
+  path. This is the EMBED-WRAPPER navigation rule above, restated for the
+  presentation layer: the `basePath` prop IS the navigation contract inside
+  `embedded`, so any hand-rolled back/list link must build off `basePath`,
+  never off `ROUTE_FAMILY_CONTRACTS`' office-plane `breadcrumbRoot`.
+
 ### DETAIL
 
 **Exemplar:** `apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx` +
