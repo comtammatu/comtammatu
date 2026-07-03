@@ -154,10 +154,10 @@ test("POS and KDS toolbars render a return-to-hub link; runner never does", () =
     /asChild\s+variant="ghost"\s+size="icon-touch"/,
   );
 
-  // POS/KDS keep the hub link even in the quiet state (standalone or install
-  // hint dismissed) where the toolbar previously rendered nothing; only the
-  // runner surface still returns null there.
-  assert.match(pwaToolbarSource, /if \(hubLink == null\) return null;/);
+  // Quiet POS/KDS state should not reserve a hub-link-only toolbar row over the
+  // operational surface; real offline/update/install banners still carry it.
+  assert.match(pwaToolbarSource, /if \(!showInstallRow\) \{\s*return null;\s*\}/);
+  assert.doesNotMatch(pwaToolbarSource, /if \(hubLink == null\) return null;/);
 });
 
 test("station layouts mount the branch-scoped PWA toolbars", () => {

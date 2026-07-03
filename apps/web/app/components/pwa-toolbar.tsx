@@ -60,12 +60,12 @@ export interface PwaToolbarProps {
    * hides fully once installed+online. "full-bleed" = the Operations
    * (POS/KDS/Runner) toolbar: edge-to-edge bar, md: breakpoints, install row
    * only when a real install path exists, shows an undismissable update
-   * banner, and keeps a slim hub-link row once installed+online.
+   * banner, and otherwise gets out of the operational screen.
    */
   layout: "contained" | "full-bleed";
   /** Persist the install-dismiss flag under this key; omit to skip persistence. */
   dismissStorageKey?: string;
-  /** Leading hub-link button. Full-bleed layout only (Operations surfaces). */
+  /** Leading hub-link button for active full-bleed banners. */
   hubLink?: ReactNode;
 }
 
@@ -218,16 +218,7 @@ export function PwaToolbar({
       !isStandalone && (!isOnline || (!installDismissed && installAvailable));
 
     if (!showInstallRow) {
-      if (hubLink == null) return null;
-      return (
-        <div
-          className="flex shrink-0 items-center gap-2 border-b border-border/60 bg-background/90 px-2 py-1 md:px-4"
-          role="region"
-          aria-label={copy.regionLabel}
-        >
-          {hubLink}
-        </div>
-      );
+      return null;
     }
 
     return (
