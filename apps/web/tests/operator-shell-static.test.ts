@@ -92,7 +92,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
 
   assert.match(home, /resolveOperatorTiles/);
   assert.match(home, /EmployeeHomePageContent/);
-  assert.match(home, /mode="today-card"/);
+  assert.match(home, /mode="compact-status"/);
   assert.match(
     home,
     /showTodayCard = canAccess\(claims\.user_role, "employee"\)/,
@@ -108,7 +108,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
     home,
     /key: `\$\{group\.id\}-\$\{tile\.moduleKey\}-\$\{tile\.href\}`/,
   );
-  assert.match(home, /mobileColumns=\{2\}/);
+  assert.match(home, /mobileColumns=\{group\.id === "sales_kitchen" \? 1 : 2\}/);
   assert.doesNotMatch(home, /operatorRuntimeActions/);
   assert.doesNotMatch(home, /operatorOpsActions/);
   assert.doesNotMatch(home, /EmployeeStatusStrip/);

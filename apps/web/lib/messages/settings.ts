@@ -423,6 +423,7 @@ export const settings = {
     queueExpiryTitle: "Hạn dùng",
     queueExpiryMeta: (count: number) =>
       `${count.toLocaleString("vi-VN")} mặt hàng sắp hết hạn`,
+    queueEmpty: "Không có việc cần xử lý",
     settingsBack: "Thiết lập",
     posBack: "Về POS",
     employeeBack: "Về Cổng",
