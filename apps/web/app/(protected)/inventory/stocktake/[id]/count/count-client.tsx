@@ -189,7 +189,12 @@ export function StocktakeCountClient({
           submitting={pending}
           canSubmit={editable && Object.keys(counts).length > 0}
         >
-          <Button type="button" variant="outline" size="sm" asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size={embedded ? "touch" : "sm"}
+            asChild
+          >
             <Link
               href={`${routeBase}/${sessionId}?branchId=${branchId}&view=detail`}
             >
@@ -197,7 +202,11 @@ export function StocktakeCountClient({
             </Link>
           </Button>
           {!editable ? (
-            <Button variant="outline" size="sm" disabled>
+            <Button
+              variant="outline"
+              size={embedded ? "touch" : "sm"}
+              disabled
+            >
               {status === "completed"
                 ? STOCKTAKE_SESSION_STATUS_LABELS_VI.completed
                 : messages.inventory.stocktake.detail.updateFailed}

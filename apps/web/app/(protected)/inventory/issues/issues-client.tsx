@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { cn } from "@comtammatu/ui";
 import { downloadCsv } from "@/_lib/download-file";
 import { matchesSearch } from "@lib/search";
 import { FormDialog, SelectField, TextareaField } from "@/components/form";
@@ -401,7 +402,10 @@ export function IssuesClient({
     <AppToolbar variant="inline">
       <div className="flex flex-1 flex-wrap items-end gap-3">
         <Select value={activeStatus} onValueChange={setActiveStatus}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger
+            size={embedded ? "touch" : "default"}
+            className={embedded ? "w-full" : "w-48"}
+          >
             <SelectValue placeholder="Tất cả trạng thái" />
           </SelectTrigger>
           <SelectContent>
@@ -415,7 +419,10 @@ export function IssuesClient({
         </Select>
 
         <Select value={activeType} onValueChange={setActiveType}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger
+            size={embedded ? "touch" : "default"}
+            className={embedded ? "w-full" : "w-48"}
+          >
             <SelectValue placeholder="Tất cả loại xuất" />
           </SelectTrigger>
           <SelectContent>
@@ -470,7 +477,10 @@ export function IssuesClient({
           value={selectedRecordedBranchId}
           onValueChange={setRecordedBranchId}
         >
-          <SelectTrigger className="w-48">
+          <SelectTrigger
+            size={embedded ? "touch" : "default"}
+            className={embedded ? "w-full" : "w-48"}
+          >
             <SelectValue placeholder={BRANCH_VI.select} />
           </SelectTrigger>
           <SelectContent>
@@ -484,7 +494,12 @@ export function IssuesClient({
             ))}
           </SelectContent>
         </Select>
-        <div className="flex min-w-40 flex-col gap-1">
+        <div
+          className={cn(
+            "flex flex-col gap-1",
+            embedded ? "w-full sm:w-auto sm:min-w-40" : "min-w-40",
+          )}
+        >
           <Label
             htmlFor="recorded-start-date"
             className="text-xs font-medium text-muted-foreground font-normal"
@@ -496,10 +511,18 @@ export function IssuesClient({
             type="date"
             value={recordedStartDate}
             onChange={(event) => setRecordedStartDate(event.target.value)}
-            className="h-10 w-40 bg-background"
+            className={cn(
+              "bg-background",
+              embedded ? "h-12 w-full" : "h-10 w-40",
+            )}
           />
         </div>
-        <div className="flex min-w-40 flex-col gap-1">
+        <div
+          className={cn(
+            "flex flex-col gap-1",
+            embedded ? "w-full sm:w-auto sm:min-w-40" : "min-w-40",
+          )}
+        >
           <Label
             htmlFor="recorded-end-date"
             className="text-xs font-medium text-muted-foreground font-normal"
@@ -511,17 +534,27 @@ export function IssuesClient({
             type="date"
             value={recordedEndDate}
             onChange={(event) => setRecordedEndDate(event.target.value)}
-            className="h-10 w-40 bg-background"
+            className={cn(
+              "bg-background",
+              embedded ? "h-12 w-full" : "h-10 w-40",
+            )}
           />
         </div>
         <Button
           type="button"
           variant="outline"
+          size={embedded ? "touch" : "default"}
+          className={embedded ? "w-full sm:w-auto" : undefined}
           onClick={applyRecordedDateFilter}
         >
           Lọc
         </Button>
-        <InputGroup className="h-10 min-w-56 flex-1">
+        <InputGroup
+          className={cn(
+            "min-w-56 flex-1",
+            embedded ? "h-12 basis-full sm:h-10 sm:basis-auto" : "h-10",
+          )}
+        >
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -538,7 +571,7 @@ export function IssuesClient({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
+          size={embedded ? "touch" : "sm"}
           onClick={clearRecordedDateFilter}
         >
           <IconFilterX className="mr-1 size-4" />

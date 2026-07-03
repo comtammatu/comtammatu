@@ -1391,13 +1391,15 @@ const OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES = [
   "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx",
   "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
+  "apps/web/app/(protected)/branch-settings/_shared/printers/printers-client.tsx",
+  "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx",
+  "apps/web/app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
 ];
 const OPERATOR_EMBEDDED_BUTTON_DENSITY_BASELINE = {
   "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 8,
   "apps/web/app/(protected)/orders/orders-page-body.tsx": 1,
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
-  "apps/web/app/(protected)/inventory/issues/issues-client.tsx": 3,
-  "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 1,
+  "apps/web/app/(protected)/inventory/issues/issues-client.tsx": 2,
   "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx": 1,
   "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 4,
   "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 2,

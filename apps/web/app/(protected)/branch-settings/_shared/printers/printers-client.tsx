@@ -126,8 +126,9 @@ export function PrintersClient(props: {
   printers: Printer[];
   agents: Agent[];
   categories: Category[];
+  embedded?: boolean;
 }) {
-  const { branches, printers, agents, categories } = props;
+  const { branches, printers, agents, categories, embedded = false } = props;
   const [editing, setEditing] = useState<Printer | null>(null);
   const [adding, setAdding] = useState<{
     branch_id: number;
@@ -222,7 +223,7 @@ export function PrintersClient(props: {
                       {printer ? (
                         <Button
                           variant="outline"
-                          size="sm"
+                          size={embedded ? "touch" : "sm"}
                           className="w-full sm:w-auto"
                           onClick={() => setEditing(printer)}
                         >
@@ -230,7 +231,7 @@ export function PrintersClient(props: {
                         </Button>
                       ) : (
                         <Button
-                          size="sm"
+                          size={embedded ? "touch" : "sm"}
                           className="w-full sm:w-auto"
                           onClick={() =>
                             setAdding({ branch_id: branch.id, role })
