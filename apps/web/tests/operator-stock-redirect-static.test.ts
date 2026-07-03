@@ -741,7 +741,7 @@ test("operator stocktake routes use branch stocktake, not employee count", () =>
   }
   assert.match(
     stocktakeListClient,
-    /<AppPage width="wide">\s*\{content\}\s*<\/AppPage>/,
+    /<AppPage width="xwide">\s*\{content\}\s*<\/AppPage>/,
   );
   assert.match(stocktakeNewClient, /routeBase = "\/inventory\/stocktake"/);
   assert.match(

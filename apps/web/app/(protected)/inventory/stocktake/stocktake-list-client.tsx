@@ -359,7 +359,7 @@ export function StocktakeListClient({
   }
 
   return (
-    <AppPage width="wide">
+    <AppPage width="xwide">
       {content}
     </AppPage>
   );

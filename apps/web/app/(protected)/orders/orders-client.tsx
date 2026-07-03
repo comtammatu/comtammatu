@@ -3,7 +3,7 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing orders review surface keeps operational copy inline */
 
 import { useState, useTransition, useMemo } from "react";
-import { ShoppingBag as IconShoppingBag } from "lucide-react";
+import { ShoppingBag as IconShoppingBag, X as IconX } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
@@ -34,7 +34,8 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { fetchOrders } from "./actions";
-import { OrderDetailSheet } from "./order-detail-sheet";
+import { OrderDetailContent, OrderDetailSheet } from "./order-detail-sheet";
+import { useIsXlUp } from "./_hooks/use-is-xl-up";
 import type {
   OrderRow,
   OrdersSummary,
@@ -139,6 +140,10 @@ export function OrdersClient({
   const [summary, setSummary] = useState<OrdersSummary>(initialSummary);
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
   const [isPending, startTransition] = useTransition();
+  // xl:+ swaps the OrderDetailSheet slide-over for an inline master-detail
+  // right column (design decision D063 W4b) — same OrderDetailContent body,
+  // two mount points.
+  const isXlUp = useIsXlUp();
 
   // Filter state
   const [dateFrom, setDateFrom] = useState("");
@@ -179,8 +184,9 @@ export function OrdersClient({
   const hasFilters = !!(dateFrom || dateTo || status || branchId);
 
   const displayOrders = useMemo(() => orders, [orders]);
+  const showInlineDetail = isXlUp && !!selectedOrder;
 
-  return (
+  const listContent = (
     <>
       <div className="grid gap-3 md:grid-cols-3">
         <KpiCard
@@ -367,13 +373,45 @@ export function OrdersClient({
             )}
           />
       </AppSection>
+    </>
+  );
 
-      {/* ─── Detail sheet ─── */}
-      <OrderDetailSheet
-        order={selectedOrder}
-        open={!!selectedOrder}
-        onOpenChange={(open) => !open && setSelectedOrder(null)}
-      />
+  return (
+    <>
+      {showInlineDetail ? (
+        <div className="flex items-start gap-4">
+          <div className="min-w-0 flex-1 flex flex-col gap-4">
+            {listContent}
+          </div>
+          <AppSection
+            title={`#${selectedOrder.order_number}`}
+            action={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Đóng chi tiết đơn"
+                onClick={() => setSelectedOrder(null)}
+              >
+                <IconX />
+              </Button>
+            }
+            className="sticky top-4 w-96 shrink-0"
+          >
+            <OrderDetailContent order={selectedOrder} />
+          </AppSection>
+        </div>
+      ) : (
+        listContent
+      )}
+
+      {/* ─── Detail sheet (<xl master-detail mode) ─── */}
+      {!isXlUp && (
+        <OrderDetailSheet
+          order={selectedOrder}
+          open={!!selectedOrder}
+          onOpenChange={(open) => !open && setSelectedOrder(null)}
+        />
+      )}
     </>
   );
 }

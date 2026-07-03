@@ -289,7 +289,7 @@ export function GrnListClient({
   }
 
   return (
-    <AppPage width="wide" contentClassName="max-md:max-w-xl">
+    <AppPage width="xwide" contentClassName="max-md:max-w-xl">
       {content}
     </AppPage>
   );

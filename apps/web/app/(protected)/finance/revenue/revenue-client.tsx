@@ -555,7 +555,7 @@ export function RevenueClient({
 
   // ─── Render ────────────────────────────────────────────────
   return (
-    <AppPage width="wide" density="compact">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         eyebrow={revCopy.page.eyebrow}
         title={revCopy.page.title}

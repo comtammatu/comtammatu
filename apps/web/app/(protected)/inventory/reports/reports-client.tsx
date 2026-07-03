@@ -308,7 +308,7 @@ export function ReportsClient({
   }
 
   return (
-    <AppPage width="wide" density="compact" scroll>
+    <AppPage width="xwide" density="compact" scroll>
       {content}
     </AppPage>
   );
