@@ -43,6 +43,8 @@ export const PERMISSION_KEYS = {
   // inventory — per-employee count slips (đếm tồn theo nhân viên)
   INVENTORY_COUNT_ASSIGN: "inventory:count_assign",
   INVENTORY_COUNT_APPROVE: "inventory:count_approve",
+  // inventory — units master (standard + packaging unit registry)
+  INVENTORY_UNITS_MASTER: "inventory:units_master",
 
   // procurement
   PROCUREMENT_READ: "procurement:read",
@@ -138,7 +140,7 @@ export type PermissionKey =
  * (some keys, e.g. crm:*, live only in the DB catalog). Static assertion guarded
  * by a string-match test; bump when a migration adds/removes a catalog key.
  */
-export const PERMISSION_KEY_COUNT = 91;
+export const PERMISSION_KEY_COUNT = 92;
 
 /**
  * Pure function: check if a permission set contains a given key.

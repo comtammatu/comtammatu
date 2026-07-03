@@ -14589,6 +14589,121 @@ $$;
 
 
 --
+-- Name: inv_derive_to_base_factor(bigint, bigint, boolean, bigint, numeric, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.inv_derive_to_base_factor(p_base_unit_id bigint, p_unit_id bigint, p_is_base boolean, p_anchor_unit_id bigint, p_anchor_factor numeric, p_all_units jsonb) RETURNS numeric
+    LANGUAGE plpgsql STABLE
+    SET search_path TO ''
+    AS $$
+DECLARE
+  v_tenant            bigint := public.auth_tenant_id();
+  v_base_dimension    text;
+  v_base_is_standard  boolean;
+  v_unit_dimension    text;
+  v_unit_is_standard  boolean;
+  v_unit_std_factor   numeric;
+  v_base_std_factor   numeric;
+  v_seen              bigint[] := ARRAY[]::bigint[];
+  v_current_unit      bigint;
+  v_current_anchor    bigint;
+  v_current_factor    numeric;
+  v_hop_dimension     text;
+  v_hop_is_standard   boolean;
+  v_hop_std_factor    numeric;
+  v_acc_factor        numeric := 1;
+BEGIN
+  IF p_is_base THEN
+    RETURN 1;
+  END IF;
+
+  SELECT dimension, is_standard, standard_factor
+  INTO v_base_dimension, v_base_is_standard, v_base_std_factor
+  FROM public.units
+  WHERE id = p_base_unit_id AND tenant_id = v_tenant;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'base_unit_not_found' USING ERRCODE = '23503';
+  END IF;
+
+  SELECT dimension, is_standard, standard_factor
+  INTO v_unit_dimension, v_unit_is_standard, v_unit_std_factor
+  FROM public.units
+  WHERE id = p_unit_id AND tenant_id = v_tenant;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'unit_not_found' USING ERRCODE = '23503';
+  END IF;
+
+  -- Case 1: this unit is itself a standard unit. Only valid when the
+  -- ingredient's base is a standard unit of the SAME dimension; the ratio
+  -- is then a pure system constant (never user-entered).
+  IF v_unit_is_standard THEN
+    IF NOT v_base_is_standard OR v_base_dimension IS DISTINCT FROM v_unit_dimension THEN
+      RAISE EXCEPTION 'standard_unit_dimension_mismatch' USING ERRCODE = '23514';
+    END IF;
+    RETURN v_unit_std_factor / v_base_std_factor;
+  END IF;
+
+  -- Case 2: packaging unit. Walk the anchor chain until it reaches either
+  -- the base unit or a standard unit, multiplying anchor_factor at each hop.
+  -- Fail-closed on a missing anchor, a cycle, or a cross-dimension anchor
+  -- once the chain reaches a standard unit.
+  IF p_anchor_unit_id IS NULL OR p_anchor_factor IS NULL THEN
+    RAISE EXCEPTION 'packaging_unit_requires_anchor' USING ERRCODE = '23514';
+  END IF;
+
+  v_current_unit := p_unit_id;
+  v_current_anchor := p_anchor_unit_id;
+  v_current_factor := p_anchor_factor;
+  v_acc_factor := 1;
+
+  LOOP
+    IF v_current_unit = ANY (v_seen) THEN
+      RAISE EXCEPTION 'unit_anchor_cycle' USING ERRCODE = '23514';
+    END IF;
+    v_seen := v_seen || v_current_unit;
+
+    v_acc_factor := v_acc_factor * v_current_factor;
+
+    IF v_current_anchor = p_base_unit_id THEN
+      RETURN v_acc_factor;
+    END IF;
+
+    SELECT dimension, is_standard, standard_factor
+    INTO v_hop_dimension, v_hop_is_standard, v_hop_std_factor
+    FROM public.units
+    WHERE id = v_current_anchor AND tenant_id = v_tenant;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'anchor_unit_not_found' USING ERRCODE = '23503';
+    END IF;
+
+    IF v_hop_is_standard THEN
+      IF NOT v_base_is_standard OR v_base_dimension IS DISTINCT FROM v_hop_dimension THEN
+        RAISE EXCEPTION 'standard_unit_dimension_mismatch' USING ERRCODE = '23514';
+      END IF;
+      RETURN v_acc_factor * (v_hop_std_factor / v_base_std_factor);
+    END IF;
+
+    -- Next hop: the anchor must itself be a packaging row on this
+    -- ingredient (present in p_all_units), anchored further down the chain.
+    v_current_unit := v_current_anchor;
+
+    SELECT (e->>'anchor_unit_id')::bigint, (e->>'anchor_factor')::numeric
+    INTO v_current_anchor, v_current_factor
+    FROM jsonb_array_elements(p_all_units) e
+    WHERE (e->>'unit_id')::bigint = v_current_unit;
+
+    IF v_current_anchor IS NULL OR v_current_factor IS NULL THEN
+      RAISE EXCEPTION 'unit_anchor_cycle' USING ERRCODE = '23514';
+    END IF;
+  END LOOP;
+END;
+$$;
+
+
+--
 -- Name: inv_to_base(bigint, bigint, numeric); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -27918,6 +28033,10 @@ CREATE TABLE public.ingredient_units (
     is_active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    anchor_unit_id bigint,
+    anchor_factor numeric(18,9),
+    CONSTRAINT ingredient_units_anchor_factor_positive CHECK (((anchor_factor IS NULL) OR (anchor_factor > (0)::numeric))),
+    CONSTRAINT ingredient_units_anchor_pair CHECK ((((anchor_unit_id IS NULL) AND (anchor_factor IS NULL)) OR ((anchor_unit_id IS NOT NULL) AND (anchor_factor IS NOT NULL)))),
     CONSTRAINT ingredient_units_to_base_positive CHECK ((to_base_factor > (0)::numeric))
 );
 
@@ -31752,7 +31871,12 @@ CREATE TABLE public.units (
     name text NOT NULL,
     is_active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    dimension text,
+    is_standard boolean DEFAULT false NOT NULL,
+    standard_factor numeric(18,9),
+    CONSTRAINT units_dimension_check CHECK (((dimension IS NULL) OR (dimension = ANY (ARRAY['mass'::text, 'volume'::text])))),
+    CONSTRAINT units_standard_factor_requires_dimension CHECK ((((is_standard = false) AND (standard_factor IS NULL)) OR ((is_standard = true) AND (dimension IS NOT NULL) AND (standard_factor > (0)::numeric))))
 );
 
 
@@ -35451,6 +35575,13 @@ CREATE INDEX idx_zone_lock_expiry ON public.stocktake_zone_locks USING btree (se
 
 
 --
+-- Name: ingredient_units_anchor_unit_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ingredient_units_anchor_unit_idx ON public.ingredient_units USING btree (anchor_unit_id);
+
+
+--
 -- Name: ingredient_units_ingredient_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -37149,6 +37280,14 @@ ALTER TABLE ONLY public.ingredient_category_review_policy
 
 ALTER TABLE ONLY public.ingredient_category_review_policy
     ADD CONSTRAINT ingredient_category_review_policy_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES auth.users(id);
+
+
+--
+-- Name: ingredient_units ingredient_units_anchor_unit_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ingredient_units
+    ADD CONSTRAINT ingredient_units_anchor_unit_id_fkey FOREIGN KEY (anchor_unit_id) REFERENCES public.units(id) ON DELETE RESTRICT;
 
 
 --
@@ -43580,6 +43719,15 @@ GRANT ALL ON FUNCTION public.has_position(p_code text) TO service_role;
 REVOKE ALL ON FUNCTION public.heartbeat_zone_lock(p_session_id bigint, p_zone_id text, p_ttl_seconds integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.heartbeat_zone_lock(p_session_id bigint, p_zone_id text, p_ttl_seconds integer) TO authenticated;
 GRANT ALL ON FUNCTION public.heartbeat_zone_lock(p_session_id bigint, p_zone_id text, p_ttl_seconds integer) TO service_role;
+
+
+--
+-- Name: FUNCTION inv_derive_to_base_factor(p_base_unit_id bigint, p_unit_id bigint, p_is_base boolean, p_anchor_unit_id bigint, p_anchor_factor numeric, p_all_units jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.inv_derive_to_base_factor(p_base_unit_id bigint, p_unit_id bigint, p_is_base boolean, p_anchor_unit_id bigint, p_anchor_factor numeric, p_all_units jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.inv_derive_to_base_factor(p_base_unit_id bigint, p_unit_id bigint, p_is_base boolean, p_anchor_unit_id bigint, p_anchor_factor numeric, p_all_units jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.inv_derive_to_base_factor(p_base_unit_id bigint, p_unit_id bigint, p_is_base boolean, p_anchor_unit_id bigint, p_anchor_factor numeric, p_all_units jsonb) TO service_role;
 
 
 --

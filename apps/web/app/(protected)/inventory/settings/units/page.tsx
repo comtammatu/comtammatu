@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppPageHeader, AppSection } from "@/components/surface";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
-import { CATALOG_MANAGE_PERMISSIONS } from "../../_lib/catalog-permissions";
+import { UNITS_MASTER_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { messages } from "@lib/messages";
 import { fetchUnits, type UnitRow } from "./units-actions";
 import { UnitsClient } from "./units-client";
@@ -10,10 +10,10 @@ const copy = messages.inventoryMaster.units;
 
 export default async function InventoryUnitsPage() {
   const canEdit = await currentUserHasAnyPermissionAny(
-    CATALOG_MANAGE_PERMISSIONS,
+    UNITS_MASTER_PERMISSIONS,
   );
   if (!canEdit) {
-    // Fail closed: page is gated by inventory:write.
+    // Fail closed: page is gated by inventory:units_master or inventory:write.
     redirect("/inventory/settings");
   }
 
