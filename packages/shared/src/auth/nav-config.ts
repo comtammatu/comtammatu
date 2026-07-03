@@ -162,6 +162,13 @@ export const OPERATOR_TILE_ITEMS = [
     label: "Duyệt kiểm kê",
   },
   {
+    moduleKey: "employee_checkout_approvals",
+    icon: "CheckCircle",
+    group: "approvals",
+    hrefTemplate: "/br/{branchId}/stock/waste-approvals",
+    label: "Duyệt hao hụt",
+  },
+  {
     moduleKey: "pos",
     icon: "Monitor",
     group: "sales_kitchen",
@@ -235,6 +242,27 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/consumption",
     label: "Tiêu hao",
+  },
+  {
+    moduleKey: "inventory",
+    icon: "FileText",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/issues",
+    label: "Xuất kho",
+  },
+  {
+    moduleKey: "inventory",
+    icon: "Hourglass",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/expiry",
+    label: "Hạn dùng",
+  },
+  {
+    moduleKey: "inventory",
+    icon: "ChartBar",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/reports",
+    label: "Báo cáo",
   },
   {
     moduleKey: "menu",

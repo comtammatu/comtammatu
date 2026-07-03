@@ -88,7 +88,7 @@ export default async function OperatorLayout({
           <AppPage
             density="compact"
             mobile
-            contentClassName="max-w-lg lg:max-w-3xl"
+            contentClassName="max-w-lg lg:max-w-4xl xl:max-w-6xl"
           >
             {children}
           </AppPage>
