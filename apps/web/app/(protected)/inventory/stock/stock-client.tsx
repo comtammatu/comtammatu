@@ -910,7 +910,7 @@ export function StockClient({
       icon={IconReceipt}
       label={receiveActionLabel}
       primary
-      size={isCompactLayout ? "touch" : "sm"}
+      size={isCompactLayout || embedded ? "touch" : "sm"}
       className={isCompactLayout ? "w-full sm:w-auto" : undefined}
     />
   ) : null;
@@ -1086,17 +1086,19 @@ export function StockClient({
 
   const content = (
     <>
-      <AppPageHeader
-        title={stockCopy.title}
-        actions={
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="hidden sm:inline-flex">
-              {liveLabel}
-            </Badge>
-            <Badge variant="success">Live</Badge>
-          </div>
-        }
-      />
+      {!embedded ? (
+        <AppPageHeader
+          title={stockCopy.title}
+          actions={
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="hidden sm:inline-flex">
+                {liveLabel}
+              </Badge>
+              <Badge variant="success">Live</Badge>
+            </div>
+          }
+        />
+      ) : null}
       {!isCompactLayout ? (
         <AppSection className="overflow-hidden" contentFlush>
           {summaryMetrics}
@@ -1144,7 +1146,7 @@ export function StockClient({
         >
           {actionPermissions.canCreatePurchaseOrder &&
           actionHrefs.purchaseSuggestion ? (
-            <Button asChild size="sm">
+            <Button asChild size={embedded ? "touch" : "sm"}>
               <Link href={actionHrefs.purchaseSuggestion}>
                 <IconShoppingCart className="size-4" />
                 {stockCopy.actions.purchaseSuggestion}
