@@ -131,4 +131,5 @@ CREATE OR REPLACE FUNCTION public.branch_menu_limit_availability(p_tenant_id big
 $_$;
 
 REVOKE ALL ON FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_outcome_enabled boolean) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_outcome_enabled boolean) FROM PUBLIC, anon, authenticated;
 GRANT ALL ON FUNCTION public.branch_menu_limit_availability(p_tenant_id bigint, p_branch_id bigint, p_limit_date date, p_stock_outcome_enabled boolean) TO service_role;
