@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   ArrowRight as IconArrowRight,
+  Lightbulb as IconBulb,
   Plus as IconPlus,
   Search as IconSearch,
 } from "lucide-react";
@@ -95,6 +96,8 @@ export function PurchaseOrdersClient({
   purchaseOrdersBasePath = "/inventory/purchase-orders",
   suppliersPath = "/inventory/suppliers",
   embedded = false,
+  reorderSuggestionsCount = 0,
+  reorderSuggestionsBranchId = null,
 }: {
   initial: PurchaseOrderRow[];
   suppliers: SupplierRow[];
@@ -105,6 +108,8 @@ export function PurchaseOrdersClient({
   purchaseOrdersBasePath?: string;
   suppliersPath?: string | null;
   embedded?: boolean;
+  reorderSuggestionsCount?: number;
+  reorderSuggestionsBranchId?: number | null;
 }) {
   const [rows, setRows] = useState(initial);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -269,6 +274,29 @@ export function PurchaseOrdersClient({
                 <Link href={suppliersPath}>{poCopy.goToSuppliers}</Link>
               </Button>
             ) : null
+          }
+        >
+          <div />
+        </AppSection>
+      ) : null}
+
+      {reorderSuggestionsCount > 0 && reorderSuggestionsBranchId != null ? (
+        <AppSection
+          tone="info"
+          icon={<IconBulb />}
+          title={poCopy.suggestionsTitle}
+          description={poCopy.reorderBannerDescription(
+            reorderSuggestionsCount,
+          )}
+          action={
+            <Button asChild size={embedded ? "touch" : "sm"}>
+              <Link
+                href={`${purchaseOrdersBasePath}/new?branchId=${reorderSuggestionsBranchId}`}
+              >
+                <IconPlus className="size-4" />
+                {poCopy.createDraftFromSuggestions}
+              </Link>
+            </Button>
           }
         >
           <div />

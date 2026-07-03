@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import {
+  fetchPoSuggestions,
   fetchPurchaseOrdersPage,
   fetchPurchaseOrderStatusCounts,
   fetchSuppliers,
 } from "../procurement-actions";
 import type { PurchaseOrderCursor } from "../procurement-actions";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
+import { fetchProcurementBranches } from "../_lib/procurement-branches";
 import {
   PurchaseOrdersClient,
   type PurchaseOrderRow,
@@ -37,10 +39,29 @@ export async function PurchaseOrdersPageContent({
   if (scope.outOfScope) notFound();
   const branchFilter = scope.selectedBranchId;
 
-  const [poRes, countsRes, supRes] = await Promise.all([
+  // Reorder-suggestion CTA needs one concrete procurement branch: the
+  // resolved list-scope branch when set, else the caller's own branch for
+  // branch-scoped roles, else the tenant's first procurement branch.
+  const procBranches = await fetchProcurementBranches(
+    supabase,
+    claims.tenant_id,
+  );
+  const isBranchScopedProcurement =
+    claims.user_role === "warehouse_manager" ||
+    claims.user_role === "production_manager";
+  const suggestionsBranchId =
+    branchFilter ??
+    (isBranchScopedProcurement ? claims.branch_id : null) ??
+    procBranches[0]?.id ??
+    null;
+
+  const [poRes, countsRes, supRes, suggestionsRes] = await Promise.all([
     fetchPurchaseOrdersPage({ branchId: branchFilter ?? undefined }),
     fetchPurchaseOrderStatusCounts(branchFilter ?? undefined),
     fetchSuppliers(),
+    suggestionsBranchId
+      ? fetchPoSuggestions({ branchId: suggestionsBranchId, periodDays: 7 })
+      : Promise.resolve({ success: true as const, data: [] }),
   ]);
 
   const page = poRes.success
@@ -59,6 +80,11 @@ export async function PurchaseOrdersPageContent({
     ? ((supRes.data ?? []) as SupplierRow[])
     : [];
 
+  const suggestionsCount = suggestionsRes.success
+    ? ((suggestionsRes.data ?? []) as Array<{ below_reorder: boolean }>)
+        .filter((s) => s.below_reorder).length
+    : 0;
+
   return (
     <PurchaseOrdersClient
       initial={rows}
@@ -70,6 +96,8 @@ export async function PurchaseOrdersPageContent({
       purchaseOrdersBasePath={basePath}
       suppliersPath={suppliersPath}
       embedded={embedded}
+      reorderSuggestionsCount={suggestionsCount}
+      reorderSuggestionsBranchId={suggestionsBranchId}
     />
   );
 }
