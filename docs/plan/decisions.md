@@ -764,3 +764,18 @@ liệt kê trong báo cáo (mục 7).
 **Rejected (over-engineering cho scale này):** FIFO, sổ lô đầy đủ + FEFO, chuỗi requisition formal, multi-bin WMS cutover, per-location reorder-override (chờ pilot).
 
 **Consequences:** khép hướng Inventory. Đảo điểm nào phải sửa bản ghi này trước. Migration ledger-fix chờ trigger "nhập đầu kỳ" — khi owner báo bắt đầu, mở slice owner-gated theo §5.
+
+## D061: Office Inventory sidebar hiện lại tồn/kiểm kê/điều chuyển làm oversight, additive với branch operator plane (2026-07-03)
+
+**Context:** D058 §4 (W3 "một cửa mỗi việc") đã prune `/inventory/stock`, `/inventory/stocktake`, `/inventory/transfers` khỏi office sidebar vì canonical door cho các job này chuyển về `/br/[id]/stock/*` (floor execution). Owner yêu cầu hiện lại 3 mục này trong office sidebar để phục vụ cross-branch oversight — job khác với job của branch operator nên KHÔNG vi phạm "một cửa mỗi việc" của D058/D059 (job trùng công cụ nhưng khác vai trò: office = xem/điều phối liên chi nhánh, branch = thao tác tại chỗ).
+
+**Decision (owner):**
+
+1. Office Inventory sidebar hiện lại 3 mục làm **oversight entries**, additive với branch operator plane:
+   - `/inventory/stock` (Tồn kho) + `/inventory/stocktake` (Kiểm kê) → nhóm "1 · Kiểm soát tồn".
+   - `/inventory/transfers` (Điều chuyển) → nhóm "3 · Điều phối/Sản xuất".
+2. Branch floor roles GIỮ NGUYÊN cửa canonical của mình tại `/br/[id]/stock/*` (on-hand, stocktake, transfer) — không đổi, không gỡ. Đây là cùng một năng lực hiện diện ở hai plane cho hai công việc khác nhau: office = xem/quản lý liên chi nhánh, branch = thực thi tại quầy/kho — không phải vi phạm một-cửa-mỗi-việc vì công việc khác nhau.
+3. Không có thay đổi route, ACL, hay module-acl: cả ba route đã tồn tại và đã resolve cho vai trò office (`module-acl.ts` → module `inventory`; `route-resolution.ts` → `INVENTORY_ROUTE_PREFIXES`). Đây thuần túy là thay đổi nav-membership trong `apps/web/app/(protected)/inventory/_lib/inventory-nav.ts`.
+4. Test `apps/web/tests/inventory-nav-resolver.test.ts` (trước đây assert 3 route này VẮNG MẶT theo D058 W3) cập nhật để assert CÓ MẶT, trích D061.
+
+**Consequences:** amend D058 §4/W3 — chỉ 3 entry này quay lại office sidebar dưới dạng oversight, phần còn lại của W3 (một cửa cho các job khác) giữ nguyên. Không đổi D059 (branch-complete vẫn là hướng cho vai trò tại chi nhánh; oversight ở office không kéo lùi nguyên tắc đó). Đảo điểm nào phải sửa bản ghi này trước.
