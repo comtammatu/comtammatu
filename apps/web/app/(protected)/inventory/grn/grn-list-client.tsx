@@ -2,11 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   EllipsisVertical as IconDotsVertical,
+  FileText as IconFileText,
+  Pencil as IconPencil,
   Plus as IconPlus,
   Receipt as IconReceipt,
   Search as IconSearch,
+  Trash as IconTrash,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -22,8 +26,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { matchesSearch } from "@lib/search";
-import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppToolbar,
+} from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
   DataTable,
   type DataTableColumn,
@@ -32,7 +52,10 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
 import { formatVND } from "../_lib/format";
 import { tNav } from "../_lib/dictionary";
+import { discardGrnDraft } from "../grn-actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import {
   FORM_VI,
   INVENTORY_VI,
@@ -50,6 +73,15 @@ export type GrnRow = {
   status: string;
 };
 
+export type GrnDraftRow = {
+  grnId: number;
+  supplierId: number;
+  supplierName: string;
+  grnNumber: string;
+  updatedAt: string;
+  lineCount: number;
+};
+
 const statusFilterOptions = [
   { value: "all", label: KDS_VI.filterAll },
   { value: "draft", label: INVENTORY_VI.draft },
@@ -65,10 +97,12 @@ export function GrnListClient({
   grns,
   basePath = "/inventory/grn",
   purchaseOrdersPath = "/inventory/purchase-orders",
+  drafts,
 }: {
   grns: GrnRow[];
   basePath?: string;
   purchaseOrdersPath?: string;
+  drafts?: GrnDraftRow[];
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -156,20 +190,8 @@ export function GrnListClient({
 
   const hasActiveFilters = search.trim() !== "" || statusFilter !== "all";
 
-  return (
-    <AppPage width="wide" contentClassName="max-md:max-w-xl">
-      <AppPageHeader
-        eyebrow={INVENTORY_VI.warehouse}
-        title={tNav("grn", "navigation")}
-        actions={
-          <Button asChild size="sm">
-            <Link href={purchaseOrdersPath}>
-              <IconPlus className="size-4" />
-              {INVENTORY_VI.choosePoToCreateGrn}
-            </Link>
-          </Button>
-        }
-      />
+  const listBody = (
+    <>
       <AppToolbar>
         <InputGroup className="h-12 basis-full flex-1 md:h-7 md:basis-auto">
           <InputGroupAddon>
@@ -217,7 +239,140 @@ export function GrnListClient({
         }
         mobileCardRender={(g) => <GrnMobileCard grn={g} basePath={basePath} />}
       />
+    </>
+  );
+
+  return (
+    <AppPage width="wide" contentClassName="max-md:max-w-xl">
+      <AppPageHeader
+        eyebrow={INVENTORY_VI.warehouse}
+        title={tNav("grn", "navigation")}
+        actions={
+          <Button asChild size="sm">
+            <Link href={purchaseOrdersPath}>
+              <IconPlus className="size-4" />
+              {INVENTORY_VI.choosePoToCreateGrn}
+            </Link>
+          </Button>
+        }
+        tabs={
+          drafts ? (
+            <AppPageTabs
+              items={[
+                { value: "list", label: INVENTORY_VI.grnListTab },
+                {
+                  value: "drafts",
+                  label: INVENTORY_VI.draft,
+                  count: drafts.length,
+                },
+              ]}
+            >
+              <TabsContent value="list">{listBody}</TabsContent>
+              <TabsContent value="drafts">
+                <GrnDraftsTab drafts={drafts} basePath={basePath} />
+              </TabsContent>
+            </AppPageTabs>
+          ) : undefined
+        }
+      />
+
+      {drafts ? null : listBody}
     </AppPage>
+  );
+}
+
+function GrnDraftsTab({
+  drafts,
+  basePath,
+}: {
+  drafts: GrnDraftRow[];
+  basePath: string;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+
+  function openDraft(draft: GrnDraftRow) {
+    router.push(`${basePath}/new/${draft.supplierId}`);
+  }
+
+  async function handleDiscard(draft: GrnDraftRow) {
+    const ok = await confirm({
+      title: `Xóa nháp của ${draft.supplierName}?`,
+      variant: "destructive",
+    });
+    if (!ok) return;
+    setPending(true);
+    try {
+      const res = await discardGrnDraft({ grnId: draft.grnId });
+      if (!res.success) {
+        toast.error(res.error ?? "Không thể hủy phiếu nháp.");
+        return;
+      }
+      router.refresh();
+    } finally {
+      setPending(false);
+    }
+  }
+
+  if (drafts.length === 0) {
+    return (
+      <AppEmptyState
+        compact
+        icon={<IconFileText />}
+        title={INVENTORY_VI.grnDraftsEmptyTitle}
+        description={INVENTORY_VI.grnDraftsEmptyDescription}
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {drafts.map((draft) => (
+        <Item key={draft.grnId} variant="outline">
+          <ItemHeader>
+            <div className="min-w-0">
+              <ItemTitle className="text-base">
+                {draft.supplierName}
+              </ItemTitle>
+              <ItemDescription>{draft.grnNumber}</ItemDescription>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {INVENTORY_VI.grnDraftUpdatedAt(
+                  formatVNDateTime(draft.updatedAt),
+                )}
+              </p>
+            </div>
+            <Badge variant="outline" className="rounded-full px-3 py-1">
+              {INVENTORY_VI.grnDraftLineCount(draft.lineCount)}
+            </Badge>
+          </ItemHeader>
+
+          <ItemContent className="hidden" />
+          <ItemFooter>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                className="flex-1"
+                onClick={() => openDraft(draft)}
+                disabled={pending}
+              >
+                <IconPencil className="size-4" />
+                {INVENTORY_VI.grnDraftContinue}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => handleDiscard(draft)}
+                disabled={pending}
+              >
+                <IconTrash className="size-4" />
+                {ACTIONS_VI.delete}
+              </Button>
+            </div>
+          </ItemFooter>
+        </Item>
+      ))}
+    </div>
   );
 }
 

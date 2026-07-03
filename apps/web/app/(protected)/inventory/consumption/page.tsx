@@ -13,7 +13,7 @@ export default async function ConsumptionPage({
     <IssuesPageContent
       searchParams={searchParams}
       scope="consumption"
-      consumptionBasePath="/inventory/consumption"
+      listBasePath="/inventory/consumption"
     />
   );
 }

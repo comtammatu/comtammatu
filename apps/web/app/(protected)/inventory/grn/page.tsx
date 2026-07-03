@@ -1,16 +1,18 @@
 import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchGrns } from "../procurement-actions";
+import { listMyGrnDrafts } from "../grn-actions";
 import { formatDate } from "../_lib/format";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import { GrnListClient } from "./grn-list-client";
-import type { GrnRow } from "./grn-list-client";
+import type { GrnRow, GrnDraftRow } from "./grn-list-client";
 
 interface GRNListPageContentProps {
   searchParams: Promise<{ branchId?: string | string[] }>;
   routeBranchId?: number;
   basePath?: string;
   purchaseOrdersPath?: string;
+  showDrafts?: boolean;
 }
 
 export async function GRNListPageContent({
@@ -18,6 +20,7 @@ export async function GRNListPageContent({
   routeBranchId,
   basePath = "/inventory/grn",
   purchaseOrdersPath = "/inventory/purchase-orders",
+  showDrafts = true,
 }: GRNListPageContentProps) {
   const params = await searchParams;
   const { supabase, claims } = await loadAuthState();
@@ -27,7 +30,10 @@ export async function GRNListPageContent({
   });
   if (scope.outOfScope) notFound();
   const branchId = scope.selectedBranchId;
-  const res = await fetchGrns(branchId ?? undefined);
+  const [res, draftsRes] = await Promise.all([
+    fetchGrns(branchId ?? undefined),
+    showDrafts ? listMyGrnDrafts() : Promise.resolve(null),
+  ]);
   const dbRows = res.success
     ? (res.data as Array<Record<string, unknown>>)
     : [];
@@ -60,11 +66,26 @@ export async function GRNListPageContent({
     status: (row.status as string) ?? "pending",
   }));
 
+  const draftDbRows =
+    draftsRes?.success && draftsRes.data
+      ? (draftsRes.data as Array<Record<string, unknown>>)
+      : [];
+  const drafts: GrnDraftRow[] = draftDbRows.map((row) => ({
+    grnId: row.id as number,
+    supplierId: row.supplier_id as number,
+    supplierName:
+      ((row.suppliers as Record<string, unknown>)?.name as string) ?? "—",
+    grnNumber: (row.grn_number as string) ?? "",
+    updatedAt: row.updated_at as string,
+    lineCount: (row.grn_items as Array<{ id: number }> | null)?.length ?? 0,
+  }));
+
   return (
     <GrnListClient
       grns={grns}
       basePath={basePath}
       purchaseOrdersPath={purchaseOrdersPath}
+      drafts={showDrafts ? drafts : undefined}
     />
   );
 }

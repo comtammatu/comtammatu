@@ -179,7 +179,7 @@ test("consumption route is first-class while issues route remains compatible", (
   assert.match(consumptionPage, /scope="consumption"/);
   assert.match(
     consumptionPage,
-    /consumptionBasePath="\/inventory\/consumption"/,
+    /listBasePath="\/inventory\/consumption"/,
   );
   assert.match(
     consumptionDetailPage,

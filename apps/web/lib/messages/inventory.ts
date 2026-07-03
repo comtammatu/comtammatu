@@ -916,6 +916,10 @@ export const inventory = {
         variance: "Chênh lệch",
         systemShort: "HT",
         countedShort: "Đếm",
+        nextActionTitle: "Xử lý chênh lệch",
+        nextActionDescription: (count: number) =>
+          `${count} dòng lệch tồn cần điều chỉnh hoặc lập phiếu hao hụt.`,
+        nextActionCta: "Báo hao hụt",
       },
     },
   },

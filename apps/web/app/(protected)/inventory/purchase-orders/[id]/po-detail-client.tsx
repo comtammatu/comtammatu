@@ -448,11 +448,10 @@ export function PODetailClient({
 
       const created = res.data as { id: number };
       toast.success(poDetailCopy.createGrnOk);
-      router.push(
-        afterCreateGrnHref
-          ? afterCreateGrnHref.replace(":id", String(created.id))
-          : `/inventory/grn/${created.id}`,
-      );
+      const destination = afterCreateGrnHref
+        ? afterCreateGrnHref.replace(":id", String(created.id))
+        : `/inventory/grn/${created.id}`;
+      router.push(`${destination}?review=1`);
     });
   }
 
