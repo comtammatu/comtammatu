@@ -400,7 +400,7 @@ export function PurchaseOrdersClient({
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
-  return <AppPage width="wide">{content}</AppPage>;
+  return <AppPage width="xwide">{content}</AppPage>;
 }
 
 function PurchaseOrderCard({

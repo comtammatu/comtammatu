@@ -36,13 +36,18 @@ import { Separator } from "@comtammatu/ui/components/separator";
 import { Toolbar, ToolbarGroup } from "@comtammatu/ui/components/toolbar";
 import { BrandSymbol, type BrandSymbolVariant } from "@/components/brand";
 
-type SurfaceWidth = "narrow" | "default" | "wide" | "full";
+type SurfaceWidth = "narrow" | "default" | "wide" | "xwide" | "full";
 type SurfaceTone = "primary" | "success" | "warning" | "info" | "secondary";
 
+// `xwide` is the one named exception to the arbitrary-dimension ban
+// (design-system.md § Rhythm Contract / app-arbitrary-sizing gate): a single
+// capped tier for dense data-table/list pages on wide desktop viewports, so
+// the 1600px value lives in exactly one place instead of per-page overrides.
 const PAGE_WIDTH_CLASSNAME: Record<SurfaceWidth, string> = {
   narrow: "max-w-xl",
   default: "max-w-5xl",
   wide: "max-w-7xl",
+  xwide: "max-w-[1600px]",
   full: "max-w-none",
 };
 
@@ -800,7 +805,7 @@ export function KpiRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+        "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
         isCompact ? "gap-2" : "gap-3",
         className,
       )}
@@ -858,7 +863,7 @@ export function LinkCardGrid({ children, className }: LinkCardGridProps) {
   return (
     <div
       className={cn(
-        "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3",
+        "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
         className,
       )}
     >
