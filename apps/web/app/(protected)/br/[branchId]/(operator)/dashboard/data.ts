@@ -1,8 +1,13 @@
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import type { JwtClaims } from "@comtammatu/shared/auth";
+import {
+  INVENTORY_OPS_ROLES,
+  PERMISSION_KEYS,
+  type JwtClaims,
+} from "@comtammatu/shared/auth";
 import { getRegisteredMethods } from "@comtammatu/shared/providers";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import type { loadAuthState } from "@/_lib/auth";
+import { fetchExpiryAlerts } from "@/(protected)/inventory/alert-actions";
 import { ensurePaymentProvidersRegistered } from "@lib/payment-providers-init";
 
 type ServerClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
@@ -181,5 +186,94 @@ export async function fetchBranchDayStatus(
     setupActiveStaff: staffRes.count ?? 0,
     setupPaymentReady: registeredPaymentMethods.length > 0,
     setupHddtReady: hddtReady,
+  };
+}
+
+// Mirrors the "critical"/"expired" urgency cutoff in
+// inventory/alert-actions.ts fetchExpiryAlerts (days_remaining <= 3).
+const EXPIRING_SOON_DAYS_REMAINING = 3;
+
+export interface BranchQueueCounts {
+  pendingCheckouts: number | null;
+  pendingCountSlips: number | null;
+  pendingWaste: number | null;
+  expiringItems: number | null;
+}
+
+/**
+ * Permission-gated pending counts for the hub's unified "Cần xử lý" queue.
+ * Each field is `null` when the role lacks the underlying approval
+ * permission (row must not render) and a number — 0 included — when the
+ * role holds it (row always renders, per V2's "queue is the persistent
+ * browse door" rule). One aggregate `Promise.all`, fail-soft per metric.
+ */
+export async function fetchBranchQueueCounts(
+  supabase: ServerClient,
+  claims: JwtClaims,
+  branchId: number,
+): Promise<BranchQueueCounts> {
+  const service = createServiceClient();
+
+  const [checkoutPermission, countPermission, wastePermission] =
+    await Promise.all([
+      supabase.rpc("has_permission", {
+        p_branch_id: branchId,
+        p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+      }),
+      supabase.rpc("has_permission", {
+        p_branch_id: branchId,
+        p_key: PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
+      }),
+      supabase.rpc("has_permission", {
+        p_branch_id: branchId,
+        p_key: PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
+      }),
+    ]);
+  const showExpiring = INVENTORY_OPS_ROLES.includes(claims.user_role);
+
+  const [checkoutRes, countRes, wasteRes, expiryRes] = await Promise.all([
+    checkoutPermission.data === true
+      ? service
+          .from("attendance_records")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", branchId)
+          .is("check_out", null)
+          .not("checkout_requested_at", "is", null)
+      : Promise.resolve(null),
+    countPermission.data === true
+      ? supabase
+          .from("inventory_count_slips")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", branchId)
+          .eq("status", "submitted")
+      : Promise.resolve(null),
+    wastePermission.data === true
+      ? supabase
+          .from("stock_issues")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", branchId)
+          .eq("issue_type", "writeoff")
+          .eq("approval_status", "pending")
+      : Promise.resolve(null),
+    showExpiring ? fetchExpiryAlerts(branchId) : Promise.resolve(null),
+  ]);
+
+  const expiringItems =
+    expiryRes && expiryRes.success
+      ? ((expiryRes.data ?? []) as Array<{ days_remaining: number }>).filter(
+          (alert) => alert.days_remaining <= EXPIRING_SOON_DAYS_REMAINING,
+        ).length
+      : showExpiring
+        ? 0
+        : null;
+
+  return {
+    pendingCheckouts: checkoutRes ? (checkoutRes.count ?? 0) : null,
+    pendingCountSlips: countRes ? (countRes.count ?? 0) : null,
+    pendingWaste: wasteRes ? (wasteRes.count ?? 0) : null,
+    expiringItems,
   };
 }

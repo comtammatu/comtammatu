@@ -121,10 +121,10 @@ test("operator hub owns branch workflow entry tiles", () => {
   const operatorTiles =
     navConfig.split("export const OPERATOR_TILE_ITEMS =")[1] ?? "";
 
-  assert.match(navConfig, /my_shift: "Ca hôm nay"/);
+  assert.match(navConfig, /my_shift: "Nhân sự"/);
   assert.match(navConfig, /approvals: "Duyệt"/);
-  assert.match(navConfig, /sales_kitchen: "Bán hàng & bếp"/);
-  assert.match(navConfig, /stock: "Kho chi nhánh"/);
+  assert.match(navConfig, /sales_kitchen: "Bán hàng"/);
+  assert.match(navConfig, /stock: "Kho hàng"/);
   assert.match(
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/shift\/clock"/,
@@ -220,7 +220,10 @@ test("operator home overview KPIs are gated by branch_dashboard access", () => {
     home,
     /showOverview = canAccess\(claims\.user_role, "branch_dashboard"\)/,
   );
-  assert.match(home, /showOverview\s*\? await Promise\.all\(\[\s*fetchBranchDayStatus\(supabase, claims, context\.branchId\)/);
+  assert.match(
+    home,
+    /showOverview\s*\?\s*fetchBranchDayStatus\(supabase, claims, context\.branchId\)/,
+  );
   assert.match(home, /getUnreadCount\(\)/);
   assert.match(home, /formatVND\(day\.todayRevenue\)/);
   assert.match(home, /showOverview && day \?/);
@@ -231,6 +234,25 @@ test("operator home overview KPIs are gated by branch_dashboard access", () => {
   assert.match(home, /href="\/notifications"/);
   assert.doesNotMatch(home, /count_unread_notifications/);
   assert.doesNotMatch(home, /createServiceClient/);
+});
+
+test("operator home renders the unified Cần xử lý queue before domain tile rows (V2, D059)", () => {
+  const home = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
+  );
+
+  assert.match(home, /fetchBranchQueueCounts/);
+  assert.match(home, /queueRows\.length > 0/);
+  assert.match(home, /branchCopy\.queueTitle/);
+  assert.match(home, /showQueue = !isFloorRole/);
+
+  const queueIndex = home.indexOf("queueRows.length > 0");
+  const groupsIndex = home.indexOf("groups.map((group)");
+  assert.ok(queueIndex > 0 && groupsIndex > 0, "both sections must exist");
+  assert.ok(
+    queueIndex < groupsIndex,
+    "queue section must render before domain tile rows",
+  );
 });
 
 test("manager smart card counts pending waste approvals with checkouts", () => {
