@@ -79,7 +79,7 @@ export function AppHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 border-b bg-card/95 backdrop-blur print:hidden",
+        "sticky top-0 z-30 border-b bg-card/95 backdrop-blur chrome-tap select-none print:hidden",
         className,
       )}
     >

@@ -126,7 +126,12 @@ function buildQueueRows(
 
 function QueueRowItem({ row }: { row: QueueRow }) {
   return (
-    <Item asChild variant="outline" size="sm" className="min-h-12 bg-card">
+    <Item
+      asChild
+      variant="outline"
+      size="sm"
+      className="chrome-tap min-h-12 select-none bg-card transition-transform active:scale-[0.97]"
+    >
       <Link href={row.href}>
         <ItemMedia
           variant="icon"

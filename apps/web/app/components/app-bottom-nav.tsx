@@ -40,7 +40,7 @@ export function AppBottomNav({
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 px-3 pt-2 shadow-sm chrome-safe-pb backdrop-blur lg:hidden print:hidden",
+        "fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 px-3 pt-2 shadow-sm chrome-safe-pb chrome-tap select-none backdrop-blur lg:hidden print:hidden",
         className,
       )}
       aria-label={ariaLabel}

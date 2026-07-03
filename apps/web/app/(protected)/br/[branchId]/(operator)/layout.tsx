@@ -63,7 +63,7 @@ export default async function OperatorLayout({
 
   return (
     <PwaRuntimeProvider>
-      <div className="flex min-h-dvh w-full flex-col bg-muted/30">
+      <div className="flex h-dvh w-full flex-col overflow-y-auto overscroll-none touch-manipulation bg-muted/30">
         <AppHeader
           title={context.branch.name}
           subtitle={ROLE_LABEL_VI[claims.user_role]}

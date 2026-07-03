@@ -497,6 +497,17 @@
   bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
+/* Native-feel PWA polish (PWA-3): kills the mobile-browser text-selection
+ * callout and tap-highlight flash on app CHROME (nav, tiles, headers,
+ * buttons) so the installed operator PWA doesn't read as a website. Do NOT
+ * apply to data content (tables, detail text, copyable IDs) — those must
+ * stay selectable for accessibility/usability. Prefixed `chrome-` to group
+ * with the other chrome-* PWA-shell utilities above. */
+@utility chrome-tap {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
 /* Brand decoration: the three Concept-01 identity patterns as seamless,
  * tileable SVG (art in /brand/patterns). Use only as decorative footer
  * strips, packaging trim, or section separators — never as a background
