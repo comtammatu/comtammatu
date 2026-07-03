@@ -1,5 +1,7 @@
 import { AlertTriangle as IconAlert } from "lucide-react";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
 import { fetchTaxInvoicesPage } from "../actions";
 import type { TaxInvoiceCursor } from "../actions";
@@ -26,7 +28,13 @@ export default async function InvoicesPage({
       ? ("attention" as const)
       : undefined;
 
-  const res = await fetchTaxInvoicesPage({ branchId, queue });
+  const [res, canManageInvoices] = await Promise.all([
+    fetchTaxInvoicesPage({ branchId, queue }),
+    currentUserHasAnyPermissionAny([
+      PERMISSION_KEYS.SETTINGS_TENANT,
+      PERMISSION_KEYS.ORDERS_REFUND_APPROVE,
+    ]),
+  ]);
 
   return (
     <AppPage>
@@ -44,6 +52,7 @@ export default async function InvoicesPage({
           }
           branchId={branchId}
           queue={queue}
+          canManageInvoices={canManageInvoices}
         />
       ) : (
         <AppEmptyState

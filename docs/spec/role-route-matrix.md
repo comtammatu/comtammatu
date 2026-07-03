@@ -111,7 +111,7 @@ by direct URL or as a redirect target.
 | `staff` | `/hr/staff` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
 | `hr` | `/hr` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (office_bridge); Workspace nav |
 | `hr_payroll` | `/hr/payroll` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
-| `finance` | `/finance` | Chủ sở hữu | Workspace nav |
+| `finance` | `/finance` | Chủ sở hữu, Văn phòng | Workspace nav |
 | `branches` | `/branches` | Chủ sở hữu | Workspace nav |
 | `branch_picker` | `/br` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
 | `settings` | `/admin/settings` | Chủ sở hữu | Admin sidebar |
@@ -191,7 +191,7 @@ separate gates (route bucket here, permission key at the mutation site).
 | menu | `/menu` | branch_manager/owner | `menu:manage_category`, `menu:publish`, `menu:read`, `menu:write` |
 | orders | `/orders` | branch_manager/cashier/owner | `orders:read`, `orders:refund`, `orders:refund_approve`, `orders:void`, `orders:write` |
 | inventory | `/inventory` | branch_manager/owner/production_manager/warehouse_manager | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
-| finance | `/finance` | owner | `finance:ap_pay`, `finance:expense_approve`, `finance:expense_create`, `finance:payroll_approve`, `finance:payroll_calculate`, `finance:view` |
+| finance | `/finance` | office/owner | `finance:ap_pay`, `finance:expense_approve`, `finance:expense_create`, `finance:payroll_approve`, `finance:payroll_calculate`, `finance:view` |
 | branches | `/branches` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | hr | `/hr` | branch_manager/owner | `hr:approve_checkout`, `hr:approve_leave_request`, `hr:manage_employee`, `hr:request_leave`, `hr:view_employee`, `staff:assign_permission`, `staff:assign_position`, `staff:manage`, `staff:view` |
 | notifications | `/notifications` | branch_manager/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |

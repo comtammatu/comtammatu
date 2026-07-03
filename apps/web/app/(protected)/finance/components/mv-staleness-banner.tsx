@@ -27,6 +27,7 @@ interface MvStalenessBannerProps {
   /** ISO timestamp of the last successful MV refresh, or null if unknown */
   lastRefreshAt: string | null;
   className?: string;
+  canRefresh: boolean;
 }
 
 const STALE_MINUTES_WARNING = 10;
@@ -43,6 +44,7 @@ function formatTimestamp(iso: string): string {
 export function MvStalenessBanner({
   lastRefreshAt,
   className,
+  canRefresh,
 }: MvStalenessBannerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -82,20 +84,22 @@ export function MvStalenessBanner({
       aria-live="polite"
     >
       <span>{messageWhen}</span>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleRefresh}
-        disabled={isPending}
-        className="h-7 gap-1.5 px-2 text-xs"
-      >
-        {isPending ? (
-          <Spinner className="size-3.5" aria-hidden />
-        ) : (
-          <RefreshCw className="size-3.5" aria-hidden />
-        )}
-        {isPending ? stalenessCopy.refreshing : stalenessCopy.refresh}
-      </Button>
+      {canRefresh ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isPending}
+          className="h-7 gap-1.5 px-2 text-xs"
+        >
+          {isPending ? (
+            <Spinner className="size-3.5" aria-hidden />
+          ) : (
+            <RefreshCw className="size-3.5" aria-hidden />
+          )}
+          {isPending ? stalenessCopy.refreshing : stalenessCopy.refresh}
+        </Button>
+      ) : null}
     </div>
   );
 }

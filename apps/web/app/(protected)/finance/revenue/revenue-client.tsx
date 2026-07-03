@@ -88,6 +88,7 @@ interface Props {
   dashboardHealth: FinanceDashboardHealth;
   resolvedStart: string;
   resolvedEnd: string;
+  canRefreshFinanceViews: boolean;
 }
 
 // ─── Aggregation helpers ────────────────────────────────────────
@@ -229,6 +230,7 @@ export function RevenueClient({
   dashboardHealth,
   resolvedStart,
   resolvedEnd,
+  canRefreshFinanceViews,
 }: Props) {
   const periodRows = useMemo(() => aggregateByPeriod(rollupRows), [rollupRows]);
   const branchRows = useMemo(
@@ -583,7 +585,10 @@ export function RevenueClient({
         hide={["payment"]}
       />
 
-      <MvStalenessBanner lastRefreshAt={kpis?.refreshed_at ?? null} />
+      <MvStalenessBanner
+        lastRefreshAt={kpis?.refreshed_at ?? null}
+        canRefresh={canRefreshFinanceViews}
+      />
 
       <SectionHeading
         title={revCopy.sections.keyMetricsTitle}

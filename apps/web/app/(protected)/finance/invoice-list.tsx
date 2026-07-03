@@ -74,6 +74,7 @@ interface InvoiceListProps {
   initialNextCursor?: TaxInvoiceCursor | null;
   branchId?: number;
   queue?: "attention";
+  canManageInvoices: boolean;
 }
 
 const CANCEL_REASON_MIN = 20;
@@ -143,6 +144,7 @@ export function InvoiceList({
   initialNextCursor = null,
   branchId,
   queue,
+  canManageInvoices,
 }: InvoiceListProps) {
   const [invoices, setInvoices] = useState(initialInvoices);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -517,7 +519,7 @@ export function InvoiceList({
             </Button>
           </>
         ) : null}
-        {inv.status === "draft" ? (
+        {canManageInvoices && inv.status === "draft" ? (
           <Button
             variant="ghost"
             size={size}
@@ -535,7 +537,7 @@ export function InvoiceList({
             )}
           </Button>
         ) : null}
-        {isResyncable(inv.status) ? (
+        {canManageInvoices && isResyncable(inv.status) ? (
           <Button
             variant="ghost"
             size={size}
@@ -551,7 +553,7 @@ export function InvoiceList({
             {dense ? <span className="sr-only">{FINANCE_VI.resync}</span> : FINANCE_VI.sync}
           </Button>
         ) : null}
-        {inv.status === "issued" ? (
+        {canManageInvoices && inv.status === "issued" ? (
           <>
             <Button
               variant="ghost"
@@ -678,7 +680,7 @@ export function InvoiceList({
   return (
     <>
       <div className="flex flex-col gap-4">
-        {draftCount > 0 ? (
+        {canManageInvoices && draftCount > 0 ? (
           <div className="flex justify-end">
             <Button
               variant="outline"

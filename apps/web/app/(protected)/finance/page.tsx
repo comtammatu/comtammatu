@@ -5,7 +5,7 @@ import {
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
 } from "lucide-react";
-import { getInventoryValueVisibility } from "@comtammatu/shared/auth";
+import { getInventoryValueVisibility, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { formatVND } from "@comtammatu/shared/format";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
@@ -18,6 +18,7 @@ import {
   KpiRow,
 } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
+import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
 import { buildCompareDelta } from "@/components/kpi/compare-chip";
 import { FilterBar } from "./components/filter-bar";
@@ -121,9 +122,10 @@ export default async function FinancePage({
   // report's own visibility gate would otherwise render no-access.
   const canViewInventoryValue =
     inventoryValueVisibility.system || inventoryValueVisibility.branch;
-  const [cockpit, cash] = await Promise.all([
+  const [cockpit, cash, canManageCashOpening] = await Promise.all([
     fetchFinanceCockpit(params, resolved),
     fetchCashSummary(params, resolved),
+    currentUserHasPermissionAny(PERMISSION_KEYS.SETTINGS_TENANT),
   ]);
   const cashDeltaAfterPaidExpenses =
     cockpit.kpis.totalCollected - cash.expensesPaidPeriod;
@@ -159,6 +161,7 @@ export default async function FinancePage({
         bankOutSince={cash.bankOutSince}
         cashDeltaAfterPaidExpenses={cashDeltaAfterPaidExpenses}
         todayBusinessDate={todayBusinessDate}
+        canManageCashOpening={canManageCashOpening}
       />
 
       <KpiRow density="compact" className="xl:grid-cols-4">

@@ -1,3 +1,5 @@
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import {
   parseFinanceParams,
   resolveFinanceRange,
@@ -14,7 +16,10 @@ export default async function RevenueReportPage({
   const params = parseFinanceParams(sp);
   const resolved = resolveFinanceRange(params);
 
-  const bundle = await loadRevenueBundle(params, resolved);
+  const [bundle, canRefreshFinanceViews] = await Promise.all([
+    loadRevenueBundle(params, resolved),
+    currentUserHasPermissionAny(PERMISSION_KEYS.SETTINGS_TENANT),
+  ]);
 
   return (
     <RevenueClient
@@ -33,6 +38,7 @@ export default async function RevenueReportPage({
       dashboardHealth={bundle.dashboardHealth}
       resolvedStart={resolved.start}
       resolvedEnd={resolved.end}
+      canRefreshFinanceViews={canRefreshFinanceViews}
     />
   );
 }
