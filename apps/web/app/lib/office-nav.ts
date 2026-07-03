@@ -134,8 +134,11 @@ function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
 }
 
 // Sub-nav for office modules. Admin renders command groups; HR renders the
-// People + account-administration groups; the other office modules render a
-// single landing group built from their own workspace entry.
+// People + account-administration groups; menu/orders/branches are flat
+// single-page modules with no sub-routes — their own primary tab already
+// links to the module, so no deep-nav group is emitted (a group titled after
+// its only child duplicated the tab and rendered nothing new, since the
+// sidebar already filters out a sub-item whose href equals its parent tab).
 export function resolveOfficeDeepNav(
   role: StaffRole,
   module: "admin" | "hr" | "menu" | "orders" | "branches",
@@ -152,16 +155,5 @@ export function resolveOfficeDeepNav(
     return resolveHrDeepNav(role);
   }
 
-  const prefix = "/" + module;
-  const workspaceItem = resolveWorkspaceItems(role).find(
-    (item) => item.href === prefix || item.href.startsWith(prefix + "/"),
-  );
-  if (!workspaceItem) return [];
-
-  return [
-    {
-      title: workspaceItem.label,
-      items: [mapItem(workspaceItem)],
-    },
-  ];
+  return [];
 }

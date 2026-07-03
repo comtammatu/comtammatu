@@ -796,3 +796,20 @@ liệt kê trong báo cáo (mục 7).
 3. Không đổi route-family, ACL, hay schema để làm PWA-1..4; mọi slice là bồi đắp lên hạ tầng PWA hiện có (Serwist `sw.ts`, `operational-manifest.ts`, `pwa-runtime.tsx`), không tạo framework/dep PWA thứ hai.
 
 **Consequences:** Mở rộng D012 (giữ nguyên phần loại native-framework) và D050 (Operator plane mobile-first có thêm trục "cài đặt được" bên cạnh route/nav đã có); không đụng D059 (branch-complete vẫn là hướng vai trò, D062 chỉ là lớp installable/offline/perf phủ lên trên). Đảo hướng (mở lại native-framework rewrite, hoặc bỏ cài-đặt-được cho Hub) phải sửa bản ghi này trước.
+
+## D063: Desktop mode cho office chrome (icon-rail + width tier + master-detail) — targeted, tuân D019/D045 (2026-07-03)
+
+**Context:** Owner phản hồi chrome Office/Management (`AppShell`, D019/D045) "quá khó dùng" trên desktop — chưa từng có một chế độ desktop thật (mật độ, thu gọn sidebar, bề rộng nội dung phù hợp màn lớn). Đây là sửa tại chỗ, KHÔNG teardown/rewrite: D045 đã khoá "một sidebar duy nhất trong một `SidebarProvider`/`SidebarInset`", sửa tại `app-shell.tsx`, cấm thêm `*-shell.tsx` hay `SidebarProvider` thứ hai.
+
+**Decision (owner chốt):**
+
+1. **Sidebar collapse = icon-rail.** `Sidebar` chuyển `collapsible="offcanvas"` → `collapsible="icon"` (cùng một primitive, cùng một `SidebarProvider` — không phải rail thứ hai). Thêm `SidebarRail` (drag-to-collapse handle, có sẵn trong `packages/ui/src/components/sidebar.tsx`, trước đó chưa dùng ở đâu) và bỏ `md:hidden` khỏi `SidebarTrigger` trong header để có nút thu/mở tường minh ở mọi breakpoint. Brand block + back-link ẩn nhãn chữ khi collapsed (`group-data-[collapsible=icon]:hidden`), chỉ còn icon — không đổi hành vi `<md` (Sheet/drawer) vì nhánh mobile của `Sidebar` render trước khi áp dụng `collapsible`.
+2. **Width tier** (đợt sau, PR pages riêng): cap 1600px cho bảng dữ liệu, full-width cho tile board.
+3. **Orders master-detail inline** ở `xl:` (đợt sau, PR pages riêng — cùng đợt W3/W4).
+
+**Đã thi công trong PR này (chrome, W1+W2):**
+
+- **W1 (icon-rail):** `apps/web/app/components/app-shell.tsx` — `collapsible="icon"`, `SidebarRail`, `SidebarTrigger` hiện desktop, brand/back-link collapse-safe.
+- **W2 (phẳng hoá nav):** `apps/web/app/lib/office-nav.ts` — `resolveOfficeDeepNav` không còn bọc menu/orders/branches (module phẳng, không sub-route) trong một group 1-item trùng tên chính nó; trả `[]` — tab chính (tier1) đã là cửa duy nhất. `app-shell.tsx` bỏ `SidebarGroupLabel` "Mô-đun" (dư thừa khi rail đã hiện trực quan); nâng contrast tiêu đề sub-nav nhóm thật (finance/inventory nhiều nhóm) từ `text-sidebar-foreground/60` → `/70` (khớp default của `SidebarGroupLabel` primitive). Test `apps/web/tests/office-nav-resolvers.test.ts` + `apps/web/tests/nav-active-highlight.test.ts` cập nhật theo hợp đồng mới.
+
+**Consequences:** Mở rộng D019 (§ layout/padding) + D045 (giữ "một sidebar", chỉ đổi collapse-mode) + D050 (không đụng Operator plane mobile-first). `nav-active-highlight.test.ts` trước đây khoá "management shell must not reintroduce a rail layer" (từ thời trước D019 hợp nhất sidebar) — D063 đảo có chủ đích đúng đoạn này (rail cùng primitive, không phải cột rail thứ hai) nên assertion đã cập nhật, không xoá cả bài test. Width-tier + master-detail (mục 2/3) là việc của PR pages (W3/W4) riêng, chưa thi công ở đây. Đảo quyết định này (bỏ icon-rail, quay lại offcanvas-only, hoặc gộp lại group 1-item) phải sửa bản ghi này trước.
