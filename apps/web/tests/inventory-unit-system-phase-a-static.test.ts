@@ -13,12 +13,12 @@ const baseline = readRepo("supabase/migrations/00000000000000_baseline.sql");
 
 test("Phase A migration adds the two-tier unit schema additively", () => {
   for (const expected of [
-    "ADD COLUMN dimension text NULL",
-    "ADD COLUMN is_standard boolean NOT NULL DEFAULT false",
-    "ADD COLUMN standard_factor numeric(18,9) NULL",
+    "ADD COLUMN IF NOT EXISTS dimension text NULL",
+    "ADD COLUMN IF NOT EXISTS is_standard boolean NOT NULL DEFAULT false",
+    "ADD COLUMN IF NOT EXISTS standard_factor numeric(18,9) NULL",
     "CHECK (dimension IS NULL OR dimension IN ('mass', 'volume'))",
-    "ADD COLUMN anchor_unit_id bigint NULL REFERENCES public.units (id) ON DELETE RESTRICT",
-    "ADD COLUMN anchor_factor numeric(18,9) NULL",
+    "ADD COLUMN IF NOT EXISTS anchor_unit_id bigint NULL REFERENCES public.units (id) ON DELETE RESTRICT",
+    "ADD COLUMN IF NOT EXISTS anchor_factor numeric(18,9) NULL",
     "CHECK (anchor_factor IS NULL OR anchor_factor > 0)",
   ]) {
     assert.ok(migration.includes(expected), `expected ${expected}`);
@@ -68,7 +68,7 @@ test("Phase A migration backfills existing ingredient_units rows into the anchor
 test("inv_derive_to_base_factor is fail-closed and ACL-locked in the same migration", () => {
   assert.match(
     migration,
-    /CREATE FUNCTION public\.inv_derive_to_base_factor/,
+    /CREATE OR REPLACE FUNCTION public\.inv_derive_to_base_factor/,
   );
   for (const errorToken of [
     "base_unit_not_found",

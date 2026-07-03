@@ -11,39 +11,71 @@
 /* ─── 1. Schema: units registry gets dimension + standard-factor ─── */
 
 ALTER TABLE public.units
-  ADD COLUMN dimension text NULL,
-  ADD COLUMN is_standard boolean NOT NULL DEFAULT false,
-  ADD COLUMN standard_factor numeric(18,9) NULL;
+  ADD COLUMN IF NOT EXISTS dimension text NULL,
+  ADD COLUMN IF NOT EXISTS is_standard boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS standard_factor numeric(18,9) NULL;
 
-ALTER TABLE public.units
-  ADD CONSTRAINT units_dimension_check
-    CHECK (dimension IS NULL OR dimension IN ('mass', 'volume'));
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'units_dimension_check'
+      AND conrelid = 'public.units'::regclass
+  ) THEN
+    ALTER TABLE public.units
+      ADD CONSTRAINT units_dimension_check
+        CHECK (dimension IS NULL OR dimension IN ('mass', 'volume'));
+  END IF;
+END $$;
 
-ALTER TABLE public.units
-  ADD CONSTRAINT units_standard_factor_requires_dimension
-    CHECK (
-      (is_standard = false AND standard_factor IS NULL)
-      OR (is_standard = true AND dimension IS NOT NULL AND standard_factor > 0)
-    );
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'units_standard_factor_requires_dimension'
+      AND conrelid = 'public.units'::regclass
+  ) THEN
+    ALTER TABLE public.units
+      ADD CONSTRAINT units_standard_factor_requires_dimension
+        CHECK (
+          (is_standard = false AND standard_factor IS NULL)
+          OR (is_standard = true AND dimension IS NOT NULL AND standard_factor > 0)
+        );
+  END IF;
+END $$;
 
 /* ─── 2. Schema: ingredient_units gets packaging anchor columns ─── */
 
 ALTER TABLE public.ingredient_units
-  ADD COLUMN anchor_unit_id bigint NULL REFERENCES public.units (id) ON DELETE RESTRICT,
-  ADD COLUMN anchor_factor numeric(18,9) NULL;
+  ADD COLUMN IF NOT EXISTS anchor_unit_id bigint NULL REFERENCES public.units (id) ON DELETE RESTRICT,
+  ADD COLUMN IF NOT EXISTS anchor_factor numeric(18,9) NULL;
 
-ALTER TABLE public.ingredient_units
-  ADD CONSTRAINT ingredient_units_anchor_factor_positive
-    CHECK (anchor_factor IS NULL OR anchor_factor > 0);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'ingredient_units_anchor_factor_positive'
+      AND conrelid = 'public.ingredient_units'::regclass
+  ) THEN
+    ALTER TABLE public.ingredient_units
+      ADD CONSTRAINT ingredient_units_anchor_factor_positive
+        CHECK (anchor_factor IS NULL OR anchor_factor > 0);
+  END IF;
+END $$;
 
-ALTER TABLE public.ingredient_units
-  ADD CONSTRAINT ingredient_units_anchor_pair
-    CHECK (
-      (anchor_unit_id IS NULL AND anchor_factor IS NULL)
-      OR (anchor_unit_id IS NOT NULL AND anchor_factor IS NOT NULL)
-    );
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'ingredient_units_anchor_pair'
+      AND conrelid = 'public.ingredient_units'::regclass
+  ) THEN
+    ALTER TABLE public.ingredient_units
+      ADD CONSTRAINT ingredient_units_anchor_pair
+        CHECK (
+          (anchor_unit_id IS NULL AND anchor_factor IS NULL)
+          OR (anchor_unit_id IS NOT NULL AND anchor_factor IS NOT NULL)
+        );
+  END IF;
+END $$;
 
-CREATE INDEX ingredient_units_anchor_unit_idx
+CREATE INDEX IF NOT EXISTS ingredient_units_anchor_unit_idx
   ON public.ingredient_units USING btree (anchor_unit_id);
 
 /* ─── 3. Normalize existing packaging unit codes (idempotent) ───
@@ -149,7 +181,7 @@ WHERE base.ingredient_id = iu.ingredient_id
    into the RPC in the same change); it is additive, callable infrastructure
    for that follow-up. */
 
-CREATE FUNCTION public.inv_derive_to_base_factor(
+CREATE OR REPLACE FUNCTION public.inv_derive_to_base_factor(
   p_base_unit_id bigint,
   p_unit_id bigint,
   p_is_base boolean,
