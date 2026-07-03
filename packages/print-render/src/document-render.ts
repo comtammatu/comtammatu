@@ -38,15 +38,18 @@ import {
 
 export type RenderOp =
   | { kind: "line"; text: string; opts?: RenderOpts }
+  | { kind: "rule"; thickness?: number }
   | { kind: "blank"; height: number }
   | { kind: "qr"; content: string; dotSize: number };
 
 const ops: {
   line: (text: string, opts?: RenderOpts) => RenderOp;
+  rule: (thickness?: number) => RenderOp;
   blank: (height?: number) => RenderOp;
   qr: (content: string, dotSize?: number) => RenderOp;
 } = {
   line: (text, opts) => ({ kind: "line", text, opts }),
+  rule: (thickness = 2) => ({ kind: "rule", thickness }),
   blank: (height = LINE_HEIGHT_NORMAL) => ({ kind: "blank", height }),
   qr: (content, dotSize = 6) => ({ kind: "qr", content, dotSize }),
 };
@@ -119,21 +122,11 @@ function renderBillMeta(p: BillBase): RenderOp[] {
   return out;
 }
 
-// Receipt items table — 4 columns + 9 chars of separators sum to 48:
-//   Món(17) " | " SL(2) " | " Đơn giá(10) " | " Thành tiền(10)
-const RECEIPT_COL_NAME = 17;
-const RECEIPT_COL_QTY = 2;
-const RECEIPT_COL_UNIT = 10;
-const RECEIPT_COL_AMT = 10;
-
-const RECEIPT_TABLE_BORDER =
-  "-".repeat(RECEIPT_COL_NAME + 2) +
-  "+" +
-  "-".repeat(RECEIPT_COL_QTY + 2) +
-  "+" +
-  "-".repeat(RECEIPT_COL_UNIT + 2) +
-  "+" +
-  "-".repeat(RECEIPT_COL_AMT + 1);
+// Receipt items table — 4 open columns and 3 spaces sum to 48.
+const RECEIPT_COL_NAME = 22;
+const RECEIPT_COL_QTY = 3;
+const RECEIPT_COL_UNIT = 9;
+const RECEIPT_COL_AMT = 11;
 
 const receiptRow = (
   name: string,
@@ -141,7 +134,7 @@ const receiptRow = (
   unit: string,
   amt: string,
 ): string =>
-  `${padRight(name, RECEIPT_COL_NAME)} | ${padLeft(qty, RECEIPT_COL_QTY)} | ${padLeft(unit, RECEIPT_COL_UNIT)} | ${padLeft(amt, RECEIPT_COL_AMT)}`;
+  `${padRight(name, RECEIPT_COL_NAME)} ${padLeft(qty, RECEIPT_COL_QTY)} ${padLeft(unit, RECEIPT_COL_UNIT)} ${padLeft(amt, RECEIPT_COL_AMT)}`;
 
 type ReceiptItem = BillBase["items"][number];
 
@@ -178,6 +171,12 @@ function receiptLineTotals(item: ReceiptItem): {
   };
 }
 
+function categoryTotal(items: ReceiptItem[], category: "food" | "drink"): number {
+  return items
+    .filter((item) => lineCategory(item) === category)
+    .reduce((sum, item) => sum + receiptLineTotals(item).lineAmount, 0);
+}
+
 function renderReceiptItem(out: RenderOp[], it: ReceiptItem): void {
   const qty = String(it.quantity);
   const { baseUnit, baseAmount } = receiptLineTotals(it);
@@ -212,7 +211,7 @@ function renderReceiptItem(out: RenderOp[], it: ReceiptItem): void {
       const modPrice = m.price ?? 0;
       const modAmt = modPrice > 0 ? fmtMoney(modPrice * it.quantity) : "";
       const modUnit = modPrice > 0 ? fmtMoney(modPrice) : "";
-      const modChunks = wrapText(`+ ${m.name}`, RECEIPT_COL_NAME);
+      const modChunks = wrapText(`  + ${m.name}`, RECEIPT_COL_NAME);
       modChunks.forEach((chunk, i) => {
         out.push(
           ops.line(
@@ -240,7 +239,7 @@ function renderReceiptItem(out: RenderOp[], it: ReceiptItem): void {
         sidePrice > 0 && totalSideQty > 0
           ? fmtMoney(sidePrice * totalSideQty)
           : "";
-      const sideChunks = wrapText(`- ${sideName}`, RECEIPT_COL_NAME);
+      const sideChunks = wrapText(`  - ${sideName}`, RECEIPT_COL_NAME);
       sideChunks.forEach((chunk, i) => {
         out.push(
           ops.line(
@@ -263,52 +262,41 @@ function renderReceiptItem(out: RenderOp[], it: ReceiptItem): void {
  * ticket already showed it to the chef. */
 function renderItemsTable(p: BillBase, groupByCategory = false): RenderOp[] {
   const out: RenderOp[] = [];
-  out.push(ops.line(RECEIPT_TABLE_BORDER));
+  out.push(ops.rule());
   out.push(
     ops.line(receiptRow("Món", "SL", "Đơn giá", "Thành tiền"), { bold: true }),
   );
-  out.push(ops.line(RECEIPT_TABLE_BORDER));
+  out.push(ops.rule());
 
-  const groups = groupByCategory
-    ? [
-        {
-          label: "Đồ ăn",
-          items: p.items.filter((item) => lineCategory(item) === "food"),
-        },
-        {
-          label: "Nước uống",
-          items: p.items.filter((item) => lineCategory(item) === "drink"),
-        },
-      ].filter((group) => group.items.length > 0)
-    : [{ label: null, items: p.items }];
+  if (groupByCategory) {
+    const foodItems = p.items.filter((item) => lineCategory(item) === "food");
+    const drinkItems = p.items.filter((item) => lineCategory(item) === "drink");
 
-  groups.forEach((group, groupIndex) => {
-    if (groupIndex > 0) out.push(ops.line(RECEIPT_TABLE_BORDER));
-    if (group.label) {
-      out.push(ops.line(group.label, { bold: true }));
-      out.push(ops.line(RECEIPT_TABLE_BORDER));
-    }
-
-    group.items.forEach((it, idx) => {
-      if (idx > 0) out.push(ops.line(RECEIPT_TABLE_BORDER));
-      renderReceiptItem(out, it);
-    });
-
-    if (group.label) {
-      out.push(ops.line(RECEIPT_TABLE_BORDER));
-      const groupTotal = group.items.reduce(
-        (sum, item) => sum + receiptLineTotals(item).lineAmount,
-        0,
-      );
+    if (foodItems.length > 0) {
+      foodItems.forEach((it) => renderReceiptItem(out, it));
+      out.push(ops.rule());
       out.push(
-        ops.line(pair48(`Tổng ${group.label}`, fmtMoney(groupTotal)), {
+        ops.line(pair48("Tổng Đồ ăn", fmtMoney(categoryTotal(foodItems, "food"))), {
           bold: true,
         }),
       );
+      out.push(ops.rule());
     }
-  });
-
-  out.push(ops.line(RECEIPT_TABLE_BORDER));
+    if (drinkItems.length > 0) {
+      drinkItems.forEach((it) => renderReceiptItem(out, it));
+      out.push(ops.rule());
+      out.push(
+        ops.line(
+          pair48("Tổng Nước uống", fmtMoney(categoryTotal(drinkItems, "drink"))),
+          { bold: true },
+        ),
+      );
+      out.push(ops.rule());
+    }
+  } else {
+    p.items.forEach((it) => renderReceiptItem(out, it));
+    out.push(ops.rule());
+  }
   return out;
 }
 

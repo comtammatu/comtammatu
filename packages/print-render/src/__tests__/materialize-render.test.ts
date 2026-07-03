@@ -170,7 +170,12 @@ test("receipt fallback materializes default layout", () => {
     "missing paymentMethod block",
   );
   assert.ok(
-    blocks.some((b) => b.type === "itemsTable" && (b.items?.length ?? 0) === 2),
+    blocks.some(
+      (b) =>
+        b.type === "itemsTable" &&
+        (b.items?.length ?? 0) === 2 &&
+        b.group_by_category === true,
+    ),
     "missing itemsTable block",
   );
   assert.ok(
@@ -183,20 +188,53 @@ test("receipt fallback materializes default layout", () => {
   assertTextOrder(blocks, "HÓA ĐƠN THANH TOÁN", "Bàn 5 #087");
 });
 
-test("receipt render groups food and drink with unit price and always-on totals", () => {
+test("receipt render keeps compact item table with category total rows", () => {
   const ops = renderDocumentToOps(buildFallbackDocument(SAMPLE_PAYLOADS.receipt));
   const lines = ops.flatMap((op) => (op.kind === "line" ? [op.text] : []));
+  const tableRules = ops.filter((op) => op.kind === "rule");
 
   assert.ok(lines.some((line) => line.includes("Đơn giá")), "missing unit price header");
-  assert.ok(lines.includes("Đồ ăn"), "missing food section");
-  assert.ok(lines.includes("Nước uống"), "missing drink section");
   assert.ok(
-    lines.some((line) => line.includes("Tổng Đồ ăn") && line.includes("110.000đ")),
-    "missing food total",
+    lines.some((line) => line.includes("Cơm tấm")),
+    "missing food item",
   );
   assert.ok(
-    lines.some((line) => line.includes("Tổng Nước uống") && line.includes("20.000đ")),
-    "missing drink total",
+    lines.some((line) => line.includes("Nước sâm")),
+    "missing drink item",
+  );
+  assert.ok(!lines.includes("Đồ ăn"), "receipt should not add food section");
+  assert.ok(!lines.includes("Nước uống"), "receipt should not add drink section");
+  assert.ok(
+    lines.some(
+      (line) => line.includes("Tổng Đồ ăn") && line.includes("110.000đ"),
+    ),
+    "receipt should add food subtotal",
+  );
+  assert.ok(
+    lines.some(
+      (line) => line.includes("Tổng Nước uống") && line.includes("20.000đ"),
+    ),
+    "receipt should add drink subtotal",
+  );
+  const foodIndex = lines.findIndex((line) => line.includes("Cơm tấm"));
+  const foodTotalIndex = lines.findIndex((line) => line.includes("Tổng Đồ ăn"));
+  const drinkIndex = lines.findIndex((line) => line.includes("Nước sâm"));
+  const drinkTotalIndex = lines.findIndex((line) =>
+    line.includes("Tổng Nước uống"),
+  );
+  assert.ok(
+    foodIndex < foodTotalIndex &&
+      foodTotalIndex < drinkIndex &&
+      drinkIndex < drinkTotalIndex,
+    "receipt should subtotal each category before the next category",
+  );
+  assert.ok(
+    lines.every((line) => !line.includes(" | ")),
+    "receipt table should not use boxed column separators",
+  );
+  assert.ok(
+    tableRules.length >= 4,
+    "receipt table should use raster rules instead of text borders",
   );
   assert.ok(
     lines.some((line) => line.includes("Phí dịch vụ") && line.includes("0đ")),
@@ -261,7 +299,7 @@ test("provisional bill fallback", () => {
     blocks.some(
       (b) => b.type === "itemsTable" && b.group_by_category === true,
     ),
-    "provisional bill must group food and drink",
+    "provisional bill must keep category totals enabled",
   );
   assert.ok(
     blocks.some(
@@ -273,8 +311,19 @@ test("provisional bill fallback", () => {
 
   const ops = renderDocumentToOps(buildFallbackDocument(payload));
   const lines = ops.flatMap((op) => (op.kind === "line" ? [op.text] : []));
-  assert.ok(lines.includes("Đồ ăn"), "missing food section");
-  assert.ok(lines.includes("Nước uống"), "missing drink section");
+  assert.ok(!lines.includes("Đồ ăn"), "provisional bill should not add food section");
+  assert.ok(
+    !lines.includes("Nước uống"),
+    "provisional bill should not add drink section",
+  );
+  assert.ok(
+    lines.some((line) => line.includes("Tổng Đồ ăn")),
+    "provisional bill should add food subtotal",
+  );
+  assert.ok(
+    lines.some((line) => line.includes("Tổng Nước uống")),
+    "provisional bill should add drink subtotal",
+  );
   assert.ok(
     lines.some((line) => line.includes("Phí dịch vụ") && line.includes("0đ")),
     "service fee must stay visible when zero",

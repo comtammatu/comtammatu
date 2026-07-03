@@ -9,6 +9,7 @@ import {
   lineSpacingDefault,
   lineSpacingZero,
   renderLineRaster,
+  renderRuleRaster,
 } from "./render-bitmap";
 import type { PrintDocument } from "./print-document";
 import type { PrintPayload } from "./payloads";
@@ -66,6 +67,9 @@ export function encodeOpsToEscpos(opsList: RenderOp[]): Uint8Array {
     switch (op.kind) {
       case "line":
         parts.push(renderLineRaster(op.text, op.opts));
+        break;
+      case "rule":
+        parts.push(renderRuleRaster(op.thickness));
         break;
       case "blank":
         parts.push(blankLine(op.height));

@@ -15,6 +15,7 @@ import {
   DOTS_WIDTH,
   LINE_HEIGHT_NORMAL,
   drawLineBitmap,
+  drawRuleBitmap,
   ensureFontsLoaded,
 } from "./render-bitmap";
 import type { PrintDocument } from "./print-document";
@@ -37,6 +38,10 @@ function measure(op: RenderOp): Placed {
   switch (op.kind) {
     case "line": {
       const bitmap = drawLineBitmap(op.text, op.opts);
+      return { kind: "bitmap", bitmap, height: bitmap.height };
+    }
+    case "rule": {
+      const bitmap = drawRuleBitmap(op.thickness);
       return { kind: "bitmap", bitmap, height: bitmap.height };
     }
     case "blank":

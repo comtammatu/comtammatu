@@ -148,12 +148,29 @@ export const drawLineBitmap = (text: string, opts: RenderOpts = {}): Bitmap => {
   return img;
 };
 
+export const drawRuleBitmap = (thickness = 2): Bitmap => {
+  const img = new Bitmap(DOTS_WIDTH, LINE_HEIGHT_NORMAL);
+  const ctx = img.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, DOTS_WIDTH, LINE_HEIGHT_NORMAL);
+  ctx.fillStyle = "black";
+  const y = Math.floor((LINE_HEIGHT_NORMAL - thickness) / 2);
+  ctx.fillRect(0, y, DOTS_WIDTH, Math.max(1, thickness));
+  return img;
+};
+
 /** Render a single line as an ESC/POS raster command. */
 export const renderLineRaster = (
   text: string,
   opts: RenderOpts = {},
 ): Uint8Array => {
   const img = drawLineBitmap(text, opts);
+  return wrapRasterCommand(packPixels(img), img.height);
+};
+
+export const renderRuleRaster = (thickness = 2): Uint8Array => {
+  const img = drawRuleBitmap(thickness);
   return wrapRasterCommand(packPixels(img), img.height);
 };
 
