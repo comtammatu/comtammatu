@@ -30,6 +30,7 @@ export type ModuleKey =
   | "branch_team"
   | "employee"
   | "employee_checkout_approvals"
+  | "employee_leave_approvals"
   | "notifications";
 
 interface ModuleAcl {
@@ -193,6 +194,17 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/employee/checkout-approvals",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("employee_checkout_approvals"),
+  },
+  /**
+   * Branch-native leave-request approval (D059 §4). Backing reads/writes
+   * (`fetchLeaveRequests`, `approveLeaveRequest`, `rejectLeaveRequest`) still
+   * gate on `hr:approve_leave_request` + branch scope — this module key only
+   * fast-gates the route, matching `employee_checkout_approvals`.
+   */
+  employee_leave_approvals: {
+    path: "/br/*/shift/leave-approvals",
+    allowedRoles: ["owner", "branch_manager"],
+    label: getModuleLabelVi("employee_leave_approvals"),
   },
   notifications: {
     path: "/notifications",

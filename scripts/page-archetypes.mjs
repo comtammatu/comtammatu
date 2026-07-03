@@ -28,6 +28,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/tables/page.tsx": "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/leave/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/page.tsx": "EMBED-WRAPPER",

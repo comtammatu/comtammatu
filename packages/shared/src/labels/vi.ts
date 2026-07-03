@@ -24,6 +24,7 @@ export type ModuleLabelKey =
   | "branch_team"
   | "employee"
   | "employee_checkout_approvals"
+  | "employee_leave_approvals"
   | "notifications";
 
 type SiteLike = {
@@ -54,6 +55,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   branch_team: "Đội hôm nay",
   employee: "Ca của tôi",
   employee_checkout_approvals: "Duyệt kết ca",
+  employee_leave_approvals: "Duyệt nghỉ phép",
   notifications: "Thông báo",
 };
 

@@ -411,6 +411,9 @@ export const settings = {
     queueTitle: "Cần xử lý",
     queueCheckoutMeta: (count: number) =>
       `${count.toLocaleString("vi-VN")} nhân viên đang chờ`,
+    queueLeaveTitle: "Duyệt nghỉ phép",
+    queueLeaveMeta: (count: number) =>
+      `${count.toLocaleString("vi-VN")} yêu cầu chờ duyệt`,
     queueCountSlipsTitle: "Duyệt kiểm kê",
     queueCountSlipsMeta: (count: number) =>
       `${count.toLocaleString("vi-VN")} phiếu chờ duyệt`,

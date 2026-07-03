@@ -210,6 +210,21 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
+    // First-match: leave-approvals is re-keyed to its own module (D059 §4),
+    // so it MUST precede the broader operator-shift family or that
+    // less-specific prefix wins.
+    id: "operator-shift-leave-approvals",
+    label: MODULE_ACL.employee_leave_approvals.label,
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]/shift/leave-approvals",
+    matchPrefixes: ["/br/[branchId]/shift/leave-approvals"],
+    moduleKeys: ["employee_leave_approvals"],
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
     id: "operator-shift",
     label: MODULE_ACL.employee.label,
     surface: "branch_operation",

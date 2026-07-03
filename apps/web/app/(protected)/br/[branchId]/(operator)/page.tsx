@@ -1,6 +1,7 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator hub homepage displays inline vietnamese warning for clock-in gate */
 import {
   Briefcase,
+  CalendarCheck,
   ChartBar,
   ChefHat,
   CheckCircle,
@@ -70,6 +71,16 @@ function buildQueueRows(
       count: counts.pendingCheckouts,
     });
   }
+  if (counts.pendingLeaveRequests != null) {
+    rows.push({
+      key: "leave-approvals",
+      href: `${basePath}/shift/leave-approvals`,
+      icon: CalendarCheck,
+      title: branchCopy.queueLeaveTitle,
+      meta: branchCopy.queueLeaveMeta(counts.pendingLeaveRequests),
+      count: counts.pendingLeaveRequests,
+    });
+  }
   if (counts.pendingCountSlips != null) {
     rows.push({
       key: "count-slips",
@@ -105,6 +116,7 @@ function buildQueueRows(
 
 const ICONS = {
   Briefcase,
+  CalendarCheck,
   ChartBar,
   ChefHat,
   CheckCircle,
