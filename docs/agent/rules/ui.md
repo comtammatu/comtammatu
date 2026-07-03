@@ -2,8 +2,8 @@
 
 Use this file before changing UI, UX, route surfaces, styling, frontend copy, Má Tư DS components, or operational POS/KDS flows.
 
-Also read `docs/agent/rules/skills.md`. External design skills never override
-the Custom Theme contract below.
+Also read `docs/agent/rules/skills.md` for skill/tool routing. The Custom Theme
+contract below binds every external tool (Guardrails).
 
 ## Source Of Truth
 
@@ -42,8 +42,7 @@ token layer requires a design-system contract change first.
 - NEVER treat external UI scaffold output as authority to override the Custom Theme contract.
 - NEVER treat `globals.css`, app wrappers, regression notes, external skill files, or worklogs as competing UI authorities.
 - NEVER override the visual contract of core primitives through ad-hoc wrappers, custom themes, or parallel surface systems.
-- USE `apps/web/app/components/surface.tsx` for repeated app-level page/header/section/toolbar/empty/link-card patterns; domain wrappers must delegate to it instead of cloning layout/chrome.
-- NEVER use a separate visual-token layer or compatibility wrapper for app UI. Route reusable patterns through `apps/web/app/components/surface.tsx` and semantic token classes unless the design-system contract explicitly changes first.
+- USE `apps/web/app/components/surface.tsx` for repeated app-level page/header/section/toolbar/empty/link-card patterns; domain wrappers must delegate to it instead of cloning layout/chrome. No separate visual-token layer or compatibility wrapper for app UI.
 - REMOVE stale UI rules; keep only live hard rails, workflows, contracts, or guards.
 - BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked Custom Theme contract.
 - BEFORE building or changing any page, consult `docs/spec/page-archetypes.md` (archetype recipe + exemplar) and the Shared Component Registry in `docs/modules/ui.md` § Shared Component Registry. Answer "where is component X used" with `codegraph_explore` / `codegraph_callers` or `pnpm audit:ui-components` — NEVER by grep-guessing or by cloning a component you found once.
@@ -51,7 +50,7 @@ token layer requires a design-system contract change first.
 
 ## Typography Rules
 
-- Ma Tu Concept 01 typography is fixed: Geist for body/content and headings/titles, and Geist Mono for tabular operational data (D038 reverses D032).
+- Ma Tu Concept 01 typography is fixed: Geist for body/content and headings/titles, and Geist Mono for tabular operational data.
 - Runtime source is `apps/web/app/layout.tsx` (the `geist` package) plus `packages/ui/src/styles/globals.css`; use `font-sans`, `font-heading`, and `font-mono` instead of raw `font-family`.
 - NEVER add route-specific fonts, per-surface font variables, extra font families, or hardcoded fallback stacks.
 - NEVER reintroduce `Be Vietnam Pro`, `Inter`, `Montserrat`, `JetBrains Mono`, system-only typography, or route-specific font variables unless the design-system contract is explicitly changed first.

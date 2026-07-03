@@ -69,7 +69,6 @@ Two duplications are deliberate and machine-enforced — do NOT "de-duplicate" t
 ## Planning And Specs
 
 - Active work tracker: `tasks/todo.md`
-- Current technical status: `docs/CODEBASE_MAP.md`
 - Architecture decisions: `docs/plan/decisions.md`
 - Active ADRs: `docs/plan/adr/`
 - System architecture: `docs/spec/architecture.md`
@@ -86,7 +85,7 @@ Two duplications are deliberate and machine-enforced — do NOT "de-duplicate" t
 
 ## Business Domain
 
-- Reference index (canonical, full list of `docs/ref/` files): `docs/ref/README.md`
+- Reference index: `docs/ref/README.md`
 - Project vocabulary & naming SSoT: `docs/ref/glossary.md`
 - Domain knowledge encyclopedia for F&B, Finance, Tax/HKD, labor, and operational
   reasoning: `docs/ref/domain-encyclopedia.md`
@@ -99,20 +98,23 @@ that list.
 
 ## Meta-Learning
 
-- Regression rules: `tasks/regressions.md`
-- Lessons learned: `tasks/lessons.md`
-- Current tasks: `tasks/todo.md`
-- Skill/plugin routing rules: `docs/agent/rules/skills.md`
+The task tracker (`tasks/todo.md`, Planning And Specs above), skill/plugin routing
+(`docs/agent/rules/skills.md`, System Overview above), and the
+regressions/lessons stores (Memory Maintenance Rules below) own their own
+registration. Unique to this section:
+
 - Runbook index: `docs/runbooks/README.md`
 - Worklog index: `docs/worklog/README.md`
 
 ## Memory Maintenance Rules
 
-- Put durable policy in `AGENTS.md` or topic files under `docs/agent/rules/`.
-- Put durable skill/plugin routing in `docs/agent/rules/skills.md`. Agent
-  Workspace config may point to these rules, but must not become a second
-  source of truth.
-- Do not create separate agent-only docs such as `docs/llm-wiki/`; place durable content in the normal source-of-truth docs above.
+Which store each fact type lives in is routed by `AGENTS.md` → "Instruction
+memory and learning memory stay separate". This section owns how those stores
+are maintained.
+
+- No separate agent-only doc tree (`docs/llm-wiki/` and the like) — owned by
+  `engineering.md` → Core Constraints (`MIRROR:constraints`); place durable
+  content in the normal source-of-truth docs above.
 - Put incident-specific failure prevention in `tasks/regressions.md`.
 - Put retrospective explanations in `tasks/lessons.md`.
 - One fact lives in exactly one store. `tasks/lessons.md` and
@@ -143,6 +145,5 @@ that list.
   `.tmp/okf/` from the current Markdown authority files.
 - Generated OKF bundles must stay out of version control unless the owner
   explicitly approves a publishable artifact path.
-- Do not create `docs/llm-wiki/`, duplicate rule trees, or copy generated OKF
-  content back into source docs. Update the canonical source doc, then
-  regenerate the bundle.
+- Never copy generated OKF content back into source docs. Update the canonical
+  source doc, then regenerate the bundle.

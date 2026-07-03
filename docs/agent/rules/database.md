@@ -13,16 +13,15 @@ or agent memory.
 
 | Ref                    | What it is                                                                    | Agent rights                                                                                                  |
 | ---------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `iexwsuaqqenyjiskawoj` | **PRODUCTION** — the only comtammatu database; `.env.local` points here       | SELECT-only. NEVER apply migrations or write unless the owner explicitly delegates it in the current session. |
+| `iexwsuaqqenyjiskawoj` | **PRODUCTION** — the only comtammatu database                                | SELECT-only. NEVER apply migrations or write unless the owner explicitly delegates it in the current session. |
 | `dyksphedgzqsqjqgxzog` | `matu-platform` production — a separate codebase used as design reference only | Do not touch.                                                                                                  |
 
-- There is currently NO dev/test Supabase project (the former dev ref
-  `qsjjqjvtvuqveqmdiyxl` disappeared around 2026-06-10). Until the owner
-  provides a new one, the dev-apply allowance below is unsatisfiable: every
-  migration goes file → PR → owner applies.
-- Historical notes may label `iexwsuaqqenyjiskawoj` as "dev"
-  (e.g. `tasks/regressions.md` MCP-APPLY-VS-CLI-PUSH, written 2026-04-24 when it
-  was). Those labels are stale history.
+- There is currently NO persistent dev/test Supabase project. Non-prod
+  verification uses an on-demand Preview Branch instead — see §Preview
+  Branches (D047) below. Production migrations still go file → PR → owner
+  applies, except under Owner-Delegated Production Apply.
+- Historical notes may label `iexwsuaqqenyjiskawoj` as "dev"; those labels are
+  stale history. This registry is the SSoT.
 - The repo-scoped MCP server in `.mcp.json` points at production but is NOT
   read-only; it is gated by the deny-list plus the `guard-prod-db.mjs` hook.
   Only Codex's `.codex/config.toml` Supabase URL is pinned `read_only=true`.
@@ -40,22 +39,22 @@ or agent memory.
 
 ## Query Boundary
 
-- MUST use `supabase-js` for all queries. NEVER use Prisma.
+- The `supabase-js`/no-Prisma, Zod-validation, no-raw-`error.message`, and
+  multi-item-atomic-write-via-RPC constraints are owned by
+  `docs/agent/rules/engineering.md` → Core Constraints (`MIRROR:constraints`).
 - Import boundaries (barrel / client / middleware) are owned by
   `docs/agent/rules/engineering.md` → Import Boundaries.
 
 ## Server Actions
 
-- MUST validate all Server Action inputs with Zod schemas.
-- NEVER return raw Supabase/Postgres `error.message` to clients.
 - Treat blocked writes carefully: RLS may return `{ data: null, error: null }`.
-- For multi-item atomic writes, create and call a Postgres RPC function instead of issuing multiple independent client writes.
+- Build the multi-item atomic RPC rather than issuing multiple independent client writes.
 
 ## Migration Policy
 
 - Write the SQL migration file before applying it.
-- Agents MAY apply migrations directly on approved dev/test Supabase servers for verification.
-- Before applying to dev/test, verify the target ref against the Environment Registry above and confirm it is not production (currently no dev/test server exists — see the registry).
+- Agents MAY apply migrations directly on an approved dev/test Supabase server for verification. With no persistent dev/test project, spin up a Preview Branch (§Preview Branches (D047) below) for this.
+- Before applying to any non-prod ref, verify the target against the Environment Registry above and confirm it is not production.
 - NEVER apply migrations directly to production.
 - Production flow is migration-type aware. For additive migrations that dependent
   app code will call or read (new RPC, column, or RETURNS field), get production
@@ -103,14 +102,14 @@ session; never as a default. The mechanics that work in practice:
   to `main` (see
   decisions.md D031/D033, 2026-06-16).
 - `apply_migration` stamps the ledger `version` with the apply time, not the file
-  timestamp, so `schema_migrations.version` does not match the file name (464 ledger
-  rows as of 2026-06-15; of the 33 timestamp-named rows, 13 are version-drifted, the
-  rest are slug-named). The forward file chain stays the source of truth for
-  provisioning a fresh environment; the prod ledger only records what ran, keyed by
-  `name`. NEVER run file-based `supabase db push` / branch-replay against prod — it
-  keys on `version`, will not find the file timestamp, and will try to re-apply. A
-  full ledger re-baseline is owner-gated (see D020); until then apply via
-  `apply_migration` only.
+  timestamp, so `schema_migrations.version` does not match the file name. The
+  baseline (`00000000000000_baseline.sql`) plus the active forward chain is the
+  source of truth for provisioning a fresh environment (see
+  `supabase/migrations/README.md`); the prod ledger only records what ran,
+  keyed by `name`. NEVER run file-based `supabase db push` / branch-replay
+  against prod — it keys on `version`, will not find the file timestamp, and
+  will try to re-apply. A full ledger re-baseline is owner-gated (see D020);
+  until then apply via `apply_migration` only.
 
 ### Preview Branches (D047)
 
@@ -167,9 +166,7 @@ blocked (merging a branch into prod is a prod write). See
 
 ## Known Failure Patterns
 
-- `"use client"` plus `@comtammatu/database` barrel import causes build failures.
 - RLS can return no data and no error on blocked writes.
-- TypeScript 6 packages using `process.env` need `"types": ["node"]` in tsconfig.
 - Zod 4 uses `{ error: }`, not `{ message: }`; use `z.email()`, not `.email()`.
 - PL/pgSQL `IF record IS NOT NULL` is true only when every column is non-null. Check a guaranteed non-null column or use `FOUND`.
 - PostgREST resource embedding (`select=...,other(col)`) generates a join. If BOTH the base table and the embedded table have an RLS policy referencing a bare `branch_id` (e.g. `has_permission(branch_id, …)`), the generated query fails with `42702 column reference "branch_id" is ambiguous` and the whole SELECT errors. Qualifying the policy (`has_permission(tax_invoices.branch_id, …)`) does NOT fix it — Postgres canonicalizes the table-qualified ref back to bare `branch_id` when storing the policy. Fix at the query layer: drop the embed and fetch the related column in a second query (see `fetchTaxInvoicesPage`). Server Actions swallow the Supabase `error` into a generic message, so the only symptom is a silently empty list — surface `error` while debugging.

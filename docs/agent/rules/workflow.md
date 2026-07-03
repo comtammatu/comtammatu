@@ -79,10 +79,12 @@ For T3 changes, attach the synthesized contract to the PR description or to a wo
 
 ## Running A T2 Self-Review
 
-Before coding, write a short block in the task notes / PR body:
+Before coding, write a short block in the task notes / PR body — the skill-plan
+line (template owned by `docs/agent/rules/skills.md` → Skill Plan Gate) above the
+four perspectives:
 
 ```
-Skill plan: repo rules = …; external skills = …; runtime tools = …
+Skill plan: <per skills.md → Skill Plan Gate>
 PM:   scope = …, acceptance = …, priority = …
 BA:   rules = …, edge cases = …, data flow = …
 Dev:  approach = …, files = …, risk = …

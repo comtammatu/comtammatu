@@ -1,18 +1,23 @@
 import fs from "node:fs";
 import path from "node:path";
 
-// AGENTS.md intentionally duplicates the Commands / Constraints / Architecture
-// blocks from docs/agent/rules/engineering.md because some agents auto-load
-// only their entrypoint file. This check blocks silent drift between the two
-// copies: each mirrored block is delimited by HTML comment anchors
-// `<!-- MIRROR:<name>:begin ... -->` / `<!-- MIRROR:<name>:end -->` and must be
-// byte-identical (modulo surrounding whitespace) in both files.
+// Some rule files intentionally duplicate blocks from other rule files
+// because some agents auto-load only their entrypoint file. This check
+// blocks silent drift between the copies: each mirrored block is delimited
+// by HTML comment anchors `<!-- MIRROR:<name>:begin ... -->` /
+// `<!-- MIRROR:<name>:end -->` and must be byte-identical (modulo
+// surrounding whitespace) across every file in its pair.
 
 const REPO_ROOT = process.cwd();
 
-const FILE_A = "AGENTS.md";
-const FILE_B = "docs/agent/rules/engineering.md";
-const BLOCKS = ["commands", "constraints", "architecture"];
+// Each entry: two files that share a set of MIRROR-tagged blocks.
+const MIRROR_PAIRS = [
+  {
+    fileA: "AGENTS.md",
+    fileB: "docs/agent/rules/engineering.md",
+    blocks: ["commands", "constraints", "architecture"],
+  },
+];
 
 function extractBlock(text, name, file) {
   const beginTag = `<!-- MIRROR:${name}:begin`;
@@ -29,21 +34,26 @@ function extractBlock(text, name, file) {
   return text.slice(contentStart + 3, endIndex).trim();
 }
 
-const textA = fs.readFileSync(path.join(REPO_ROOT, FILE_A), "utf8");
-const textB = fs.readFileSync(path.join(REPO_ROOT, FILE_B), "utf8");
-
 const errors = [];
-for (const name of BLOCKS) {
-  try {
-    const blockA = extractBlock(textA, name, FILE_A);
-    const blockB = extractBlock(textB, name, FILE_B);
-    if (blockA !== blockB) {
-      errors.push(
-        `MIRROR:${name} drifted between ${FILE_A} and ${FILE_B}. The two copies are intentional duplicates — edit BOTH identically.`,
-      );
+let blockCount = 0;
+
+for (const { fileA, fileB, blocks } of MIRROR_PAIRS) {
+  const textA = fs.readFileSync(path.join(REPO_ROOT, fileA), "utf8");
+  const textB = fs.readFileSync(path.join(REPO_ROOT, fileB), "utf8");
+
+  for (const name of blocks) {
+    blockCount += 1;
+    try {
+      const blockA = extractBlock(textA, name, fileA);
+      const blockB = extractBlock(textB, name, fileB);
+      if (blockA !== blockB) {
+        errors.push(
+          `MIRROR:${name} drifted between ${fileA} and ${fileB}. The two copies are intentional duplicates — edit BOTH identically.`,
+        );
+      }
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
     }
-  } catch (error) {
-    errors.push(error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -52,6 +62,7 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
+const fileList = [...new Set(MIRROR_PAIRS.flatMap((p) => [p.fileA, p.fileB]))];
 console.log(
-  `[rules-mirror] ${BLOCKS.length} mirrored blocks in sync (${FILE_A} ↔ ${FILE_B})`,
+  `[rules-mirror] ${blockCount} mirrored blocks in sync (${fileList.join(" ↔ ")})`,
 );

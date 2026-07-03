@@ -22,13 +22,11 @@ This file does NOT own — point here, never restate:
 | Skill Plan Gate; Required Routing Matrix; per-domain skill rules; the `codex` / `cso` / `review` skill behavior; Subagents-Debate-Read-Delegation; the Agent Teams note | [`skills.md`](skills.md) |
 | Verification gates and the exact gate command; `corepack pnpm verify`; self-attestation; tier floor; CI; the learning-loop hygiene | [`workflow.md`](workflow.md) → Verification |
 | Promote-and-delete; memory store boundaries | [`references.md`](references.md) → Memory Maintenance Rules |
-| Core Constraints (`MIRROR:constraints`), Import Boundaries, URL/proxy/JWT, Git & Commit Conventions | [`engineering.md`](engineering.md) and the `MIRROR:*` blocks in [`AGENTS.md`](../../../AGENTS.md) |
+| Core Constraints (`MIRROR:constraints`), Import Boundaries, URL/proxy/JWT, Git And Commit Conventions | [`engineering.md`](engineering.md) and the `MIRROR:*` blocks in [`AGENTS.md`](../../../AGENTS.md) |
 | Environment Registry; prod ref SELECT-only; migration file → PR → owner-applies flow and its owner-delegated exception; RLS / ACL / RPC rules | [`database.md`](database.md) |
 | The prod-DB guard triad, the `MIRROR` blocks, their drift guards, and the per-runtime entrypoints / guard adapters | [`references.md`](references.md) → Agent Entrypoints Per IDE, Intentional Mirrors |
 | UI / design-system contract routing | [`ui.md`](ui.md) and [`AGENTS.md`](../../../AGENTS.md) → UI Authority |
 | The active work board | [`tasks/todo.md`](../../../tasks/todo.md) |
-
-One fact, one owner. If a role here needs a tier, it links to `workflow.md`; if it needs a skill, it links to the matrix in `skills.md`; if it needs a constraint, it links to `engineering.md` or `database.md`.
 
 ## Runtime Model
 
@@ -94,7 +92,7 @@ Standing commitments the team holds beyond any single request. The board [`tasks
 | Mission | Objective | Owning lens(es) | Definition of done | Tracked on |
 | --- | --- | --- | --- | --- |
 | **Keep the gate green** | The hard gate stays passing on every landed change. | Orchestrator | The hard gate in [`workflow.md`](workflow.md) → Verification passes and CI is green on the PR. | The PR / CI; standing — not a board row. |
-| **HRM per-shift correctness** | Two-shifts-per-day attendance, checklist-by-position, and `công = Σ ca/2` are correct and stay correct. | Data/DB & Migration steward + Senior Dev + QA | The HRM per-shift / redesign tracks reach their stated done-state with gates green and the per-shift contract honored; behavior-verify when a non-prod env is available. | The HRM per-shift and payroll rows on [`tasks/todo.md`](../../../tasks/todo.md); decisions in [`decisions.md`](../../plan/decisions.md) D026/D027/D031. |
+| **HRM per-shift correctness** | Two-shifts-per-day attendance, checklist-by-position, and the working-days formula ([`decisions.md`](../../plan/decisions.md) D027) are correct and stay correct. | Data/DB & Migration steward + Senior Dev + QA | The HRM per-shift / redesign tracks reach their stated done-state with gates green and the per-shift contract honored; behavior-verify when a non-prod env is available. | The HRM per-shift and payroll rows on [`tasks/todo.md`](../../../tasks/todo.md); decisions in [`decisions.md`](../../plan/decisions.md) D026/D027/D031. |
 | **Prod-DB safety & migration discipline** | No agent mutates prod by default; every migration is file → PR → owner; the guard triad stays wired. | Security & Prod-Guard + Data/DB steward | Migrations land as files only (owner-delegated apply is the sole exception, per [`database.md`](database.md)); `lint:guard-sync` passes; `db:types` run after the type-source schema is applied. | The owner-gated migration / dead-RPC / residual-grant rows on [`tasks/todo.md`](../../../tasks/todo.md). |
 | **HĐĐT / tax compliance** | Tax, payroll, and HĐĐT behavior stays legally correct for a HKD; no rule asserted from memory. | Domain / HKD-Tax | Every money/tax/HĐĐT/payroll change cites its văn bản via the [`skills.md`](skills.md) → HKD Domain routed docs, runs the full T3 debate, and flags doc↔code disagreement to the owner instead of silently reconciling. | The active HĐĐT rows on [`tasks/todo.md`](../../../tasks/todo.md); `docs/ref/legal-framework-2026.md`. |
 | **Doc SSoT hygiene** | One fact, one store; no parallel agent-doc tree; mirrors and guards stay synced. | Orchestrator | New durable facts land in their canonical doc ([`references.md`](references.md) → Memory Maintenance Rules); `lint:rules-mirror` + `lint:guard-sync` pass; staging files shrink as rules mature. | [`references.md`](references.md) → Memory Maintenance Rules; `tasks/lessons.md`, `tasks/regressions.md`. |
@@ -103,7 +101,7 @@ Standing commitments the team holds beyond any single request. The board [`tasks
 
 One task moves through nine stages. Each stage is a connector to the doc that owns its rules — the arrow is the only thing this file contributes. The loop is identical regardless of runtime or how many agents run it.
 
-For substantial Codex-led work, start with a short goal frame before stage 1:
+For substantial work (any runtime), start with a short goal frame before stage 1:
 `Goal` (measurable outcome), `Done` (gate / artifact / runtime proof),
 `Non-goals` (scope cuts), and `Safety` (prod / DB / money / auth guard). Skip
 this frame for T1 and small T2 work where the owner request already fits in one
@@ -158,7 +156,7 @@ The hat/mode table lives in Roles → Codex As A Co-Equal Runtime.
 
 ### Handoff Format
 
-Hand the second runtime the SAME structured context a T3 subagent gets — that context list is owned by [`workflow.md`](workflow.md) → Running A T3 Full Debate — in English ([`AGENTS.md`](../../../AGENTS.md) → Communication Protocol), so its pass is reproducible from the artifact alone. The minimum is: the task one-liner plus tier-and-why; the diff paths and key dependencies; the relevant `MIRROR:constraints` rows; the skill plan; the relevant `tasks/regressions.md` rows; and the ask (which mode + the specific question or pass/fail criteria). For money/tax/HĐĐT context, route the law citations through [`skills.md`](skills.md) → HKD Domain; never paste a rate or threshold from memory into the handoff.
+Hand the second runtime the SAME structured context a T3 subagent gets — that context list is owned by [`workflow.md`](workflow.md) → Running A T3 Full Debate — plus the ask (which mode + the specific question or pass/fail criteria), in English ([`AGENTS.md`](../../../AGENTS.md) → Communication Protocol), so its pass is reproducible from the artifact alone. For money/tax/HĐĐT context, route the law citations through [`skills.md`](skills.md) → HKD Domain; never paste a rate or threshold from memory into the handoff.
 
 ### Arbitration
 
@@ -193,7 +191,7 @@ so the owner can weigh it for high-risk changes.
 
 When more than one agent (or runtime) works the same tree:
 
-- **Atomic staging.** Stage and commit only the files your task owns; never `git add -A` across another agent's in-flight work. Commit conventions, authorship, and the `Verification:`/tier note in the commit body are owned by [`engineering.md`](engineering.md) → Git & Commit Conventions — this is only the pointer.
+- **Atomic staging.** Stage and commit only the files your task owns; never `git add -A` across another agent's in-flight work. Commit conventions, authorship, and the `Verification:`/tier note in the commit body are owned by [`engineering.md`](engineering.md) → Git And Commit Conventions — this is only the pointer.
 - **One PR per file for risky splits.** When a risky change (migration, RLS, money, `SECURITY DEFINER`) is split across agents, keep each agent's slice on its own PR/file boundary so the cross-runtime review and arbitration have a clean, attributable diff. Do not interleave two risky changes in one PR.
 - **[`tasks/todo.md`](../../../tasks/todo.md) is the single progress board.** Claim, update, and close work there — it is the one shared, runtime-neutral coordination surface (Claude, Codex, and any future runtime read it identically). Do not fork a parallel tracker, a gstack-side store, or a private-memory task list ([`skills.md`](skills.md) → Anti-Patterns; [`references.md`](references.md) → Memory Maintenance Rules). Regression rules go to `tasks/regressions.md`, durable lessons to `tasks/lessons.md`, architecture decisions to `docs/plan/decisions.md`, per the learning loop in [`workflow.md`](workflow.md). Worklogs (`docs/worklog/`) are per-task staging, not a second board.
 
