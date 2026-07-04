@@ -21,7 +21,9 @@ export interface InvoiceLineItem {
   discountAmount?: number;
 }
 
-export const BUYER_NOT_GET_INVOICE_NAME = "Người mua không lấy hóa đơn";
+// Mandated phrase for a consumer buyer with no name/MST/ID — NĐ 254/2026 Phụ lục
+// "Nội dung của hóa đơn" mục 4b (effective 01/07/2026). Do not translate/reword.
+export const BUYER_NOT_GET_INVOICE_NAME = "Bán cho người tiêu dùng";
 
 /**
  * Replacement context per TT78/2021 §7 (Path C). When present in

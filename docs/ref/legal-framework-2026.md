@@ -30,7 +30,8 @@
 
 | Văn bản | Hiệu lực | Nội dung | Áp dụng ở |
 | --- | --- | --- | --- |
-| NĐ 123/2020/NĐ-CP (sửa bởi NĐ 70/2025) | Máy tính tiền từ 01/06/2025 | HĐĐT khởi tạo từ máy tính tiền kết nối CQT; HKD doanh thu ≥ 1 tỷ/năm bán lẻ trực tiếp (gồm ăn uống) **bắt buộc** | `einvoice-tax.md` |
+| ~~NĐ 123/2020/NĐ-CP (sửa bởi NĐ 70/2025)~~ | **HẾT HIỆU LỰC 01/07/2026** (Điều 43.2 NĐ 254/2026) | HĐĐT khởi tạo từ máy tính tiền kết nối CQT; HKD doanh thu ≥ 1 tỷ/năm bán lẻ trực tiếp (gồm ăn uống) **bắt buộc** — nội dung này chuyển sang NĐ 254/2026 | `einvoice-tax.md` |
+| NĐ 254/2026/NĐ-CP | 01/07/2026 (thay NĐ 123/2020 + NĐ 70/2025) | Hướng dẫn Luật Quản lý thuế 108/2025/QH15 về HĐĐT/chứng từ điện tử. **Phụ lục mục 4b: khách lẻ không cung cấp tên/địa chỉ/số định danh → HĐ ghi "Bán cho người tiêu dùng"** (thay "Người mua không lấy hóa đơn"); HĐ không có thông tin người mua không dùng hạch toán chi phí/quyết toán thuế | `einvoice-tax.md` §3 |
 | TT 32/2025/TT-BTC | thay TT 78/2021 từ 01/06/2025 | Quy định HĐĐT | `einvoice-tax.md` |
 
 ## 4. Kế toán HKD

@@ -64,7 +64,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 
 **Bạn thấy (khi bỏ tick):** Form thông tin người mua mở rộng — nhập tên người mua / công ty / mã số thuế / địa chỉ.
 
-> 💡 Dù khách không lấy hóa đơn, hệ thống vẫn phát hành HĐĐT với người mua là "Người mua không lấy hóa đơn".
+> 💡 Dù khách không lấy hóa đơn, hệ thống vẫn phát hành HĐĐT với tên người mua là "Bán cho người tiêu dùng" (theo NĐ 254/2026, hiệu lực 01/07/2026).
 
 ### Bước 4 — Xác nhận thanh toán
 

@@ -587,7 +587,7 @@ test("createInvoice: sends buyerNotGetInvoice flag for no-buyer-info sales", asy
       sellerName: "Com Tam Ma Tu",
       sellerTaxCode: "0100109106-509",
       sellerAddress: "Sandbox",
-      buyerName: "Người mua không lấy hóa đơn",
+      buyerName: "Bán cho người tiêu dùng",
       buyerNotGetInvoice: true,
       items: [item("Com tam sandbox", 1, 100_000)],
       subtotal: 92_593,
@@ -631,7 +631,7 @@ test("createInvoice: sends buyerNotGetInvoice flag for no-buyer-info sales", asy
       };
     };
 
-    assert.equal(body.buyerInfo.buyerName, "Người mua không lấy hóa đơn");
+    assert.equal(body.buyerInfo.buyerName, "Bán cho người tiêu dùng");
     assert.equal(body.buyerInfo.buyerLegalName, null);
     assert.equal(body.buyerInfo.buyerTaxCode, null);
     assert.equal(body.buyerInfo.buyerNotGetInvoice, "1");
@@ -705,7 +705,7 @@ test("createInvoice: sends direct-sales line discount and discounted summary", a
       sellerName: "Com Tam Ma Tu",
       sellerTaxCode: "0100109106-509",
       sellerAddress: "Sandbox",
-      buyerName: "Người mua không lấy hóa đơn",
+      buyerName: "Bán cho người tiêu dùng",
       buyerNotGetInvoice: true,
       items: [item("Com tam discount", 1, 100_000, 10_000)],
       subtotal: 83_333,
@@ -793,7 +793,7 @@ test("createInvoice: preserves Viettel 400 message for operator follow-up", asyn
       sellerName: "Com Tam Ma Tu",
       sellerTaxCode: "0100109106-509",
       sellerAddress: "Sandbox",
-      buyerName: "Người mua không lấy hóa đơn",
+      buyerName: "Bán cho người tiêu dùng",
       buyerNotGetInvoice: true,
       items: [item("Com tam sandbox", 1, 100_000)],
       subtotal: 92_593,

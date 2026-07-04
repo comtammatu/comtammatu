@@ -122,7 +122,7 @@ trên doanh thu (NĐ 68/2026 + biểu ngành nghề pháp luật GTGT/TNCN):
 ```
 Payment thành công tại POS
   → Nếu khách cung cấp MST: cashier nhập thông tin người mua
-  → Nếu khách không lấy HĐ: POS dùng buyerName='Người mua không lấy hóa đơn',
+  → Nếu khách không lấy HĐ: POS dùng buyerName='Bán cho người tiêu dùng',
      MST trống, buyerNotGetInvoice=true
   → createTaxInvoice action gọi Viettel S-invoice API
   → INSERT tax_invoice (kind='per_order', status='signing'|'submitted'|'issued')
@@ -152,7 +152,7 @@ Cron 02:05 ICT mỗi ngày (HOẶC admin manual trigger /finance/summary)
           ↳ INSERT tax_invoice_orders junction rows (1 per order)
           ↳ Return { tax_invoice_id, line_items_for_provider, vat_breakdown }
       → RPC transition_tax_invoice_state_as_system(id, 'signing')
-      → Provider.createInvoice(line_items, buyerName='Người mua không lấy hóa đơn',
+      → Provider.createInvoice(line_items, buyerName='Bán cho người tiêu dùng',
          buyerNotGetInvoice=true)
       → RPC transition_tax_invoice_state_as_system(id, 'issued'|'submitted')
       → UPDATE summary_run_queue { status, finished_at }
@@ -171,8 +171,13 @@ backfill hoặc khi chủ trương vận hành chuyển sang template tổng h�
       qua `COMPANY_TAX_CODE` cho endpoint/API lookup
 - Tên, địa chỉ, MST người mua
     + Khách có MST: bắt buộc tên + MST hợp lệ
-    + Khách không lấy HĐ: ghi "Người mua không lấy hóa đơn", MST trống
-    + B2C summary backfill: ghi "Người mua không lấy hóa đơn", MST trống
+    + Khách không lấy HĐ: ghi "Bán cho người tiêu dùng", MST trống
+    + B2C summary backfill: ghi "Bán cho người tiêu dùng", MST trống
+    + Căn cứ: NĐ 254/2026/NĐ-CP (hiệu lực 01/07/2026) Phụ lục "Nội dung của hóa
+      đơn" mục 4b — khách lẻ không cung cấp tên/địa chỉ/số định danh thì HĐ ghi rõ
+      "Bán cho người tiêu dùng" (thay wording "Người mua không lấy hóa đơn" của NĐ
+      70/2025 đã hết hiệu lực). Text do app truyền (const `BUYER_NOT_GET_INVOICE_NAME`);
+      Viettel KHÔNG tự điền — xác minh sandbox 2026-07-04, XML `<NMua>` rỗng khi gửi rỗng.
 - Số thứ tự hóa đơn (do CQT cấp / provider cấp)
 - Ngày lập hóa đơn
 - Tên hàng hóa, đơn vị, số lượng, đơn giá
@@ -231,7 +236,7 @@ draft → not_required                       ← không được tạo mới
 | `replaced`     | Đã thay thế                           | Terminal              |
 | `not_required` | (Legacy D4) order không có MST        | Terminal              |
 
-> **D4 deprecation note**: `not_required` không được insert mới. Logic hiện tại: order không có MST vẫn gọi provider realtime với buyerName mặc định `Người mua không lấy hóa đơn`, MST trống, `buyerNotGetInvoice=true`. Legacy `not_required` rows vẫn tồn tại trong DB phục vụ audit và không chặn phát hành HĐ per-order mới cho cùng order.
+> **D4 deprecation note**: `not_required` không được insert mới. Logic hiện tại: order không có MST vẫn gọi provider realtime với buyerName mặc định `Bán cho người tiêu dùng`, MST trống, `buyerNotGetInvoice=true`. Legacy `not_required` rows vẫn tồn tại trong DB phục vụ audit và không chặn phát hành HĐ per-order mới cho cùng order.
 
 #### Allowed transitions (DB enforced)
 
