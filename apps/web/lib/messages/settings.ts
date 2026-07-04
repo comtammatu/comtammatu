@@ -261,6 +261,7 @@ export const settings = {
     stockOutcomePostingLabel: "Trừ tồn khi bán",
     stockOutcomePostingHelp:
       "Bật: mỗi đơn bán trừ kho theo định mức và món bị khóa khi hết tồn — nhập kho là mở lại. Món chưa có định mức không bị ảnh hưởng. Tắt: bán tự do, không đụng kho.",
+    stockOutcomePostingOwnerOnly: "Chỉ Chủ quán bật/tắt được.",
     stockOutcomePostingSaved: "Đã cập nhật cấu hình trừ kho",
     stockOutcomePostingFailed: "Không thể lưu cấu hình. Vui lòng thử lại.",
   },

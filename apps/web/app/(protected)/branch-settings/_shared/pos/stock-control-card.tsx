@@ -11,9 +11,11 @@ import { setBranchStockOutcomePosting } from "./actions";
 export function StockControlCard({
   branchId,
   initialPostingEnabled,
+  canToggle,
 }: {
   branchId: number;
   initialPostingEnabled: boolean;
+  canToggle: boolean;
 }) {
   const copy = messages.settings.pos;
   const [postingEnabled, setPostingEnabled] = useState(initialPostingEnabled);
@@ -42,11 +44,16 @@ export function StockControlCard({
             <p className="text-xs text-muted-foreground">
               {copy.stockOutcomePostingHelp}
             </p>
+            {!canToggle ? (
+              <p className="text-xs text-muted-foreground">
+                {copy.stockOutcomePostingOwnerOnly}
+              </p>
+            ) : null}
           </div>
           <Switch
             checked={postingEnabled}
             onCheckedChange={handlePostingChange}
-            disabled={isSaving}
+            disabled={isSaving || !canToggle}
           />
         </div>
       </div>
