@@ -113,3 +113,50 @@ until the owner's opening-balance GRN re-entry).
   office-plane stock grid; PWA manifest name says "Chi nhánh CN{id}" at central
   sites (cosmetic, flag to owner); warm-instance null-cache of
   `resolveCentralSiteHomeBranchId` after site reactivation (low priority).
+
+## Addendum 2026-07-04 — central-kitchen operator grants (D066 §7a executed)
+
+Owner resolved §7a/§7b same day. §7b landed as a follow-up commit on the
+context+homes PR (office_bridge tiles `kinds: ["branch"]`). §7a is a T3 slice
+(migration + SECURITY DEFINER function edits); condensed four-perspective
+debate:
+
+- **PM:** scope = head_chef/production_manager/central_kitchen_manager run the
+  Bếp TT daily loop (supplier GRN, stocktake, spoilage write-off, recipes).
+  Acceptance: prod head_chef user holds the 6 keys tenant-wide; future central
+  hires get them via template apply/sync without errors; recipes save. OUT:
+  po_create/po_approve (owner-held), supplier_return at Bếp TT, grn_amend,
+  central_supply_manager template (no such hire planned; note only).
+- **BA:** keys = procurement:grn_create/grn_confirm,
+  inventory:stocktake_create/complete/recount, inventory:writeoff — all scope
+  'branch' in the catalog, but central-site claims are tenant-level (branch_id
+  NULL, WF-10/D055 §1), so grants must be tenant-wide rows
+  (staff_permissions.branch_id NULL; has_permission matches NULL rows for any
+  branch). Recipe management needed NO new key — head_chef already holds
+  menu:read/menu:write; the real blocker was the action layer requiring
+  claims.branch_id, which is permanently NULL for central roles since WF-10.
+  Prod facts verified live: only 8 template rows; no
+  production_manager/central_kitchen_manager templates; 1 active head_chef
+  profile; dev seed mirror had drifted from prod on warehouse_manager
+  (count_approve/count_assign) — mirror fixed.
+- **Senior Dev:** migration 20260705180000 = template append (head_chef) +
+  template INSERT for the two bucket-sibling positions (mirror head_chef) +
+  explicit tenant-wide backfill for active central operators + CREATE OR
+  REPLACE of apply_template_to_user (branch-scoped key + NULL branch: raise →
+  tenant-wide grant when target bucket is warehouse/production_manager) and
+  sync_missing_permissions_from_template (silent CONTINUE → tenant-wide grant
+  for the same buckets). Action layer: new requireProductionAccess() in
+  production-shared.ts — pinned roles keep the central_kitchen branch check;
+  tenant-level central roles pass on an active-central-kitchen existence
+  check; RLS/RPC/DB trigger remain the fine-grained gate. 5 call sites swapped
+  (4 recipe, 1 order fetch); requireProductionBranch stays for target-branch
+  validation in create/confirm/cancel.
+- **QA:** security-definer-rpc-static guard satisfied (file carries
+  has_permission(/auth.uid() boundaries); lint:seed-permissions checks
+  catalog-vs-grants inside dev-tenant-seed.sql — all 6 keys pre-exist in its
+  catalog block; matrix doc cells flipped + provenance row added. Regression
+  watch: owner flows through apply_template unchanged (bucket lookup only
+  relaxes the NULL-branch raise for the two central buckets); branch_manager
+  template untouched. Deferred: SQL-level pgTAP for the two functions (repo
+  has no harness for them today); owner smoke = head_chef saves a recipe +
+  confirms a GRN after prod apply.
