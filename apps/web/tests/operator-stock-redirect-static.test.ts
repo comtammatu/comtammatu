@@ -1013,9 +1013,12 @@ test("operator production renders branch-native inside the central_kitchen opera
   );
 
   assert.match(route, /params: Promise<\{ branchId: string \}>/);
-  assert.match(route, /ProductionPageContent/);
-  assert.match(route, /routeBranchId=\{branchId\}/);
-  assert.match(route, /embedded/);
+  // D067 §1: the operator route forks presentation to a mobile-native client
+  // over the SAME data loader — no office ProductionPageContent embed, no
+  // redirect to the office plane.
+  assert.match(route, /ProductionOperatorClient/);
+  assert.match(route, /loadProductionSurfaceData\(\{ routeBranchId: branchId \}\)/);
+  assert.doesNotMatch(route, /ProductionPageContent/);
   assert.doesNotMatch(route, /redirect\(`\/inventory\/production/);
 
   assert.match(officePage, /export async function ProductionPageContent/);

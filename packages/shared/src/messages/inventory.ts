@@ -137,6 +137,12 @@ export const INVENTORY_VI = {
   supplier: "Nhà cung cấp",
   supplierSearchPlaceholder: "Tìm hoặc thêm nhà cung cấp",
   supplierNotFound: "Không tìm thấy nhà cung cấp",
+  productionOperatorDraftsTitle: "Lệnh nháp",
+  productionOperatorDoneTodayTitle: "Hoàn tất hôm nay",
+  productionOperatorEmpty: "Chưa có lệnh sản xuất hôm nay",
+  productionConfirmPrompt: (code: string) =>
+    `Xác nhận lệnh ${code}? Kho sẽ trừ nguyên liệu và nhập thành phẩm.`,
+  productionCancelPrompt: (code: string) => `Hủy lệnh ${code}?`,
   noPoNeededHint: "Không cần đơn đặt hàng (PO)",
   grnCreateSupplierInline: (name: string) => `Tạo NCC "${name}"`,
   grnCreateSupplierPending: "Đang tạo nhà cung cấp…",
