@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { InvoiceLineItem } from "../invoice";
+import { BUYER_NOT_GET_INVOICE_NAME, type InvoiceLineItem } from "../invoice";
 import {
   buildSinvoiceItemInfo,
   buildSinvoiceTransactionUuid,
@@ -587,7 +587,9 @@ test("createInvoice: sends buyerNotGetInvoice flag for no-buyer-info sales", asy
       sellerName: "Com Tam Ma Tu",
       sellerTaxCode: "0100109106-509",
       sellerAddress: "Sandbox",
-      buyerName: "Bán cho người tiêu dùng",
+      // Stale POS client bundle shipping the pre-NĐ254 phrase — server must
+      // override it with the current constant, not forward the client value.
+      buyerName: "Người mua không lấy hóa đơn",
       buyerNotGetInvoice: true,
       items: [item("Com tam sandbox", 1, 100_000)],
       subtotal: 92_593,
@@ -631,7 +633,8 @@ test("createInvoice: sends buyerNotGetInvoice flag for no-buyer-info sales", asy
       };
     };
 
-    assert.equal(body.buyerInfo.buyerName, "Bán cho người tiêu dùng");
+    // Server-controlled: the stale client value is replaced by the constant.
+    assert.equal(body.buyerInfo.buyerName, BUYER_NOT_GET_INVOICE_NAME);
     assert.equal(body.buyerInfo.buyerLegalName, null);
     assert.equal(body.buyerInfo.buyerTaxCode, null);
     assert.equal(body.buyerInfo.buyerNotGetInvoice, "1");

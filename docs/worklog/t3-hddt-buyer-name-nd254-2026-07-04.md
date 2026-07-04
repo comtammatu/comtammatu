@@ -176,3 +176,38 @@ paths all emit the new phrase; label decoupling coherent. Three LOW findings:
   backfill; renaming risks cross-doc inconsistency.
 - LOW-3 (verbatim-copy can rot) — no action; inherent to Postgres full-body
   replace, mitigation already documented.
+
+## Follow-up (same day) — server-controlled buyer name (T3)
+
+After deploy `e32344e5` went live (~17:04 ICT), prod invoices still emitted the
+OLD phrase intermittently — `buyer_name` flip-flopped across `C26MAA4544`→`4562`.
+
+Root cause (verified against prod rows + code + SW config): the buyer-name is
+**client-authored**. `invoice-form-section.tsx` is `"use client"`, bundles
+`BUYER_NOT_GET_INVOICE_NAME`, and ships `buyerName` in its payload
+(`buildInvoicePayload:61`); `payment-actions.ts:1185` forwards the client value
+straight to the provider. POS terminals run a Serwist-precached
+(`skipWaiting`/`clientsClaim`, `/_next/static` CacheFirst) long-lived tab, so a
+terminal not reloaded since before the deploy keeps its old in-memory bundle and
+sends the pre-NĐ254 string. The server deploy alone can't fix it.
+
+- **PM:** done = no-info invoices always carry the current legal phrase
+  regardless of client bundle age.
+- **BA:** rule — when `buyerNotGetInvoice` is true the buyer provided nothing, so
+  the phrase is a legal constant, not user data; the real-buyer path (flag false,
+  MST + name) is unchanged.
+- **Dev:** single choke point `viettel-sinvoice.ts:588` — invert to
+  `buyerNotGetInvoice ? BUYER_NOT_GET_INVOICE_NAME : (request.buyerName ?? "")`.
+  Covers POS + finance + B2C summary (all set the flag server-side). No schema/DB
+  change; no migration.
+- **QA:** the "sends buyerNotGetInvoice flag" test now passes a STALE client
+  `buyerName` and asserts the emitted value is the constant (locks the override);
+  38/38 shared provider tests green.
+
+Operational stopgap (owner): hard-reload each POS terminal once (content-hashed
+chunks + `skipWaiting` → one reload picks up the new bundle). After this fix
+deploys, the stopgap is no longer required for correctness.
+
+Regression rule added: `HDDT-LEGAL-BUYER-NAME-SERVER-CONTROLLED`
+(`tasks/regressions.md`). Learning: legally-mandated / trust-boundary invoice
+fields are server-determined, never client-authored.

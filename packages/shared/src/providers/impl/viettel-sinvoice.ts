@@ -585,9 +585,13 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
     }
 
     const buyerNotGetInvoice = request.buyerNotGetInvoice === true;
-    const buyerName =
-      request.buyerName ??
-      (buyerNotGetInvoice ? BUYER_NOT_GET_INVOICE_NAME : "");
+    // The no-buyer-info legal phrase is server-controlled: when buyerNotGetInvoice
+    // is set, always emit the server constant and ignore any client-sent buyerName.
+    // A stale POS client bundle ships an outdated constant; trusting it would put
+    // the wrong legally-mandated text (NĐ 254/2026) on the invoice.
+    const buyerName = buyerNotGetInvoice
+      ? BUYER_NOT_GET_INVOICE_NAME
+      : (request.buyerName ?? "");
 
     const body = {
       generalInvoiceInfo,
