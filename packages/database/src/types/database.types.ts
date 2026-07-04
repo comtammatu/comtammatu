@@ -9032,7 +9032,6 @@ export type Database = {
           p_note?: string
           p_photo_urls?: string[]
           p_quantity: number
-          p_unit: string
         }
         Returns: Json
       }
