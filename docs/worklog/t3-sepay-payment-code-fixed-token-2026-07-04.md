@@ -1,5 +1,7 @@
 # T3 — SePay payment code: fixed soundbox token + 12-char random match key
 
+> Reconciled-through 4fc28dda
+
 Date: 2026-07-04. Tier: T3 (money / SePay reconciliation match key, format-check
 constraint, receipt-print RPC). Owner-driven.
 
