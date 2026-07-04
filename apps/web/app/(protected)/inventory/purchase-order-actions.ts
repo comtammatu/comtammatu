@@ -235,7 +235,6 @@ const poWithLinesSchema = z.object({
         quantity: z.coerce
           .number()
           .positive({ error: "Số lượng phải lớn hơn 0" }),
-        unit: z.string().optional(),
         // Purchase-role unit the qty was entered in. NULL = already base unit;
         // the RPC converts to the ingredient base via inv_to_base().
         entryUnitId: z.coerce.number().int().positive().nullable().optional(),
@@ -354,7 +353,6 @@ const poLineSchema = z.object({
   poId: z.coerce.number().int().positive(),
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive({ error: "Số lượng phải lớn hơn 0" }),
-  unit: z.string().optional(),
   // Purchase-role unit the qty was entered in. NULL = already base.
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   unitPriceEst: z.union([z.number().min(0), z.null()]).optional(),

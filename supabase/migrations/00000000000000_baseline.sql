@@ -7367,7 +7367,7 @@ $$;
 -- Name: create_expiry_writeoff(bigint, bigint, bigint, numeric, text, bigint, text, text[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text, p_photo_urls text[] DEFAULT ARRAY[]::text[]) RETURNS jsonb
+CREATE FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_grn_item_id bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text, p_photo_urls text[] DEFAULT ARRAY[]::text[]) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
@@ -43120,12 +43120,12 @@ GRANT ALL ON FUNCTION public.count_unread_notifications() TO service_role;
 
 
 --
--- Name: FUNCTION create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint, p_note text, p_photo_urls text[]); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_grn_item_id bigint, p_note text, p_photo_urls text[]); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint, p_note text, p_photo_urls text[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint, p_note text, p_photo_urls text[]) TO authenticated;
-GRANT ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_unit text, p_grn_item_id bigint, p_note text, p_photo_urls text[]) TO service_role;
+REVOKE ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_grn_item_id bigint, p_note text, p_photo_urls text[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_grn_item_id bigint, p_note text, p_photo_urls text[]) TO authenticated;
+GRANT ALL ON FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_grn_item_id bigint, p_note text, p_photo_urls text[]) TO service_role;
 
 
 --

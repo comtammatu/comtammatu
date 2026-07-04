@@ -634,7 +634,6 @@ function AddIssueLineDialog({
       issueId,
       ingredientId: Number(values.ingredientId),
       quantity: Number(values.quantity),
-      unit: values.unit?.trim() ?? "",
       entryUnitId: values.entryUnitId ? Number(values.entryUnitId) : null,
       reason: values.reason.trim(),
     });

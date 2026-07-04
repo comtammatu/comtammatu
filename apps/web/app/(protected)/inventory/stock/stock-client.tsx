@@ -373,7 +373,6 @@ function QuickStockIssueDialog({
       issueId,
       ingredientId: target.ingredient.id,
       quantity: Number(values.quantity),
-      unit: selectedIssueUnit?.code ?? values.unit.trim(),
       entryUnitId: selectedIssueUnit?.unitId ?? null,
       reason: values.reason.trim(),
     });

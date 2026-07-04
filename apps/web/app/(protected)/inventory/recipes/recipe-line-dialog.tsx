@@ -137,7 +137,6 @@ export function RecipeLineDialog({
     const parsedLines = values.lines.map((row) => ({
       ingredientId: Number(row.ingredient_id),
       quantity: Number(row.quantity),
-      unit: row.unit?.trim() ?? "",
       entryUnitId: row.entry_unit_id ? Number(row.entry_unit_id) : null,
       yieldFactor: Number(row.yield_factor || "1"),
       note: row.note?.trim() ? row.note.trim() : null,

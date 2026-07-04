@@ -270,7 +270,6 @@ export function NewPoClient({
         lines: lines.map((l) => ({
           ingredientId: l.ingredientId,
           quantity: l.quantity,
-          unit: l.unit,
           entryUnitId: l.entryUnitId,
           unitPriceEst: l.unitPriceEst,
         })),

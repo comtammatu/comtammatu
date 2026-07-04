@@ -6,6 +6,7 @@ import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
 } from "../app/(protected)/inventory/_lib/purchase-units";
+import { getIngredientUnitDisplayName } from "../app/(protected)/inventory/_lib/unit-display";
 
 const repoRoot = resolve(process.cwd(), "../..");
 
@@ -167,6 +168,39 @@ test("getPurchaseUnitOptions includes every active ingredient unit regardless of
   );
 });
 
+test("inventory unit display uses the catalog name, not the unit code", () => {
+  const units = [
+    {
+      id: 1,
+      unit_id: 100,
+      unit_code: "kg",
+      unit_name: "kg",
+      to_base_factor: 1,
+      is_base: true,
+      is_active: true,
+      allow_purchase: true,
+      allow_issue: true,
+      allow_production: true,
+      sort_order: 0,
+    },
+    {
+      id: 2,
+      unit_id: 200,
+      unit_code: "bich",
+      unit_name: "bịch",
+      to_base_factor: 0.5,
+      is_base: false,
+      is_active: true,
+      allow_purchase: true,
+      allow_issue: true,
+      allow_production: true,
+      sort_order: 1,
+    },
+  ];
+
+  assert.equal(getIngredientUnitDisplayName(units, 200, "bich"), "bịch");
+});
+
 test("inventory unit option helpers are not role-gated by allow flags", () => {
   for (const path of [
     "apps/web/app/(protected)/inventory/_lib/purchase-units.ts",
@@ -200,16 +234,22 @@ test("GRN create-from-supplier saveLine threads the picked entryUnitId to upsert
   const source = readRepo(
     "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
   );
+  const callStart = source.indexOf("const lineRes = await upsertGrnLine({");
+  assert.ok(callStart >= 0, "upsertGrnLine call not found");
+  const saveCall = source.slice(
+    callStart,
+    source.indexOf("if (!lineRes.success)", callStart),
+  );
 
   assert.match(
-    source,
-    /upsertGrnLine\(\{[\s\S]*?entryUnitId:\s*edit\.entryUnitId/,
+    saveCall,
+    /entryUnitId:\s*edit\.entryUnitId/,
     "saveLine must forward the selected entryUnitId, not force the base unit",
   );
   assert.doesNotMatch(
-    source,
-    /unit:\s*edit\.ingredient\.unit,\n\s*unitCost/,
-    "saveLine must not hardcode unit to the ingredient's base unit",
+    saveCall,
+    /\bunit\s*:/,
+    "saveLine must not send unit text/code to the write action",
   );
 });
 

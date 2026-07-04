@@ -422,7 +422,6 @@ const grnLineSchema = z
     ingredientId: z.coerce.number().int().positive(),
     // "Số đã giao" (gross delivered). Stock impact = receivedQuantity − rejectedQuantity.
     receivedQuantity: z.coerce.number().min(0),
-    unit: z.string().optional(),
     // Purchase-role unit the qty was entered in. NULL = already base.
     entryUnitId: z.coerce.number().int().positive().nullable().optional(),
     unitCost: z.coerce.number().min(0),

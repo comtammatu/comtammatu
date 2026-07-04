@@ -29,7 +29,6 @@ const PRODUCTION_ORDER_PERMISSIONS = [
 const productionLineSchema = z.object({
   finishedGoodId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().optional(),
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
 });
 

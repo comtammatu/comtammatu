@@ -9,6 +9,24 @@ import { getAuthContextWithPermission } from "./_lib/auth";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 
+type ExpiryWriteoffRpcClient = {
+  rpc: (
+    fn: "create_expiry_writeoff",
+    args: {
+      p_branch_id: number;
+      p_location_id: number;
+      p_ingredient_id: number;
+      p_quantity: number;
+      p_grn_item_id?: number;
+      p_note?: string;
+      p_photo_urls?: string[];
+    },
+  ) => PromiseLike<{
+    data: unknown;
+    error: { code?: string; message?: string } | null;
+  }>;
+};
+
 /* ─── Waste entry (S11) ─── */
 
 const WASTE_REASON_CODES = [
@@ -38,7 +56,6 @@ const WASTE_SOURCE_TYPES = [
 const wasteItemSchema = z.object({
   ingredient_id: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().optional(),
   // Issue-role unit the qty was entered in. NULL = already base;
   // the writeoff decrement converts to base via inv_to_base().
   entry_unit_id: z.coerce.number().int().positive().nullable().optional(),
@@ -150,7 +167,6 @@ const createExpiryWriteoffSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().optional(),
   grnItemId: z.coerce.number().int().positive().optional(),
   note: z.string().max(500).optional(),
   photoUrls: z.array(z.string().url()).max(10).optional(),
@@ -202,12 +218,12 @@ export async function createExpiryWriteoff(
     };
   }
 
-  const { data, error } = await supabase.rpc("create_expiry_writeoff", {
+  const expiryRpc = supabase as unknown as ExpiryWriteoffRpcClient;
+  const { data, error } = await expiryRpc.rpc("create_expiry_writeoff", {
     p_branch_id: parsed.data.branchId,
-	    p_location_id: locationId,
-	    p_ingredient_id: parsed.data.ingredientId,
-	    p_quantity: parsed.data.quantity,
-	    p_unit: "",
+    p_location_id: locationId,
+    p_ingredient_id: parsed.data.ingredientId,
+    p_quantity: parsed.data.quantity,
     p_grn_item_id: parsed.data.grnItemId ?? undefined,
     p_note: parsed.data.note ?? undefined,
     p_photo_urls: parsed.data.photoUrls ?? undefined,

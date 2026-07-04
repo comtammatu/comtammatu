@@ -278,7 +278,6 @@ export function GrnCreateClient({
         grnId,
         ingredientId: edit.ingredient.id,
         receivedQuantity: edit.quantity,
-        unit: edit.unit,
         entryUnitId: edit.entryUnitId,
         unitCost: edit.unitCost,
         qualityStatus: "accepted",

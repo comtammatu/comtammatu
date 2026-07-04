@@ -168,14 +168,12 @@ export function CreateTransferForm({
     | {
         ingredientId: number;
         quantity: number;
-        unit: string;
         entryUnitId: number | null;
       }[]
     | undefined {
     const out: {
       ingredientId: number;
       quantity: number;
-      unit: string;
       entryUnitId: number | null;
     }[] = [];
     for (const line of lines) {
@@ -188,7 +186,6 @@ export function CreateTransferForm({
       out.push({
         ingredientId: line.ingredientId,
         quantity,
-        unit,
         entryUnitId: line.entryUnitId ? Number(line.entryUnitId) : null,
       });
     }

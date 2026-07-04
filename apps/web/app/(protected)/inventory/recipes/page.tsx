@@ -11,6 +11,7 @@ import {
   resolveRequestedBranchId,
 } from "../_lib/inventory-scope";
 import { formatDate } from "../_lib/format";
+import { getIngredientUnitDisplayName } from "../_lib/unit-display";
 import { RecipesClient } from "./recipes-client";
 import type { RecipeRow, RecipeItem } from "./recipes-client";
 import type { MenuItemOption, IngredientOption } from "./recipe-line-dialog";
@@ -65,6 +66,18 @@ export default async function RecipesPage({
   const stockCapacityByMenuItemId = (
     stockCapacityRes.success ? stockCapacityRes.data : {}
   ) as Record<string, number>;
+  const ingredientRows = ingredientsRes.success
+    ? (ingredientsRes.data as Array<{
+        id: number;
+        name: string;
+        unit: string;
+        purchase_unit?: string | null;
+        units?: IngredientUnitRow[];
+      }>)
+    : [];
+  const ingredientById = new Map(
+    ingredientRows.map((ingredient) => [ingredient.id, ingredient]),
+  );
 
   const recipes: RecipeRow[] = dbRows
     .filter((row) => (row.recipes ?? []).length > 0)
@@ -76,17 +89,24 @@ export default async function RecipesPage({
         const wac = wacMap[String(ingredientId)];
         const unitCost =
           wac != null ? wac : Number(line.ingredients?.unit_cost ?? 0);
+        const entryUnitId =
+          line.entry_unit_id == null ? null : Number(line.entry_unit_id);
+        const catalogIngredient = ingredientById.get(ingredientId);
+        const fallbackUnit =
+          line.unit ??
+          line.ingredients?.purchase_unit ??
+          line.ingredients?.unit ??
+          "";
         return {
           ingredientId,
           ingredientName: line.ingredients?.name ?? "—",
           qty,
-          unit:
-            line.unit ??
-            line.ingredients?.purchase_unit ??
-            line.ingredients?.unit ??
-            "",
-          entryUnitId:
-            line.entry_unit_id == null ? null : Number(line.entry_unit_id),
+          unit: getIngredientUnitDisplayName(
+            catalogIngredient?.units,
+            entryUnitId,
+            fallbackUnit,
+          ),
+          entryUnitId,
           yieldFactor: Number(line.yield_factor ?? 1),
           note: line.note ?? null,
           lineCost: qty * unitCost,
@@ -114,15 +134,7 @@ export default async function RecipesPage({
     : [];
 
   const ingredients: IngredientOption[] = ingredientsRes.success
-    ? (
-        ingredientsRes.data as Array<{
-          id: number;
-          name: string;
-          unit: string;
-          purchase_unit?: string | null;
-          units?: IngredientUnitRow[];
-        }>
-      ).map((i) => ({
+    ? ingredientRows.map((i) => ({
         id: i.id,
         name: i.name,
         unit: i.purchase_unit ?? i.unit,

@@ -65,6 +65,7 @@ export async function TransferDetailPageContent({
       unit_cost_at_ship: number | null;
       entry_unit_id: number | null;
       to_base_factor: number | null;
+      unit_label: string | null;
       ingredients: {
         id: number;
         name: string;
@@ -94,7 +95,7 @@ export async function TransferDetailPageContent({
       name: ing?.name ?? "—",
       sku: "",
       qty,
-      unit: l.unit ?? ing?.purchase_unit ?? ing?.unit ?? "",
+      unit: l.unit_label ?? l.unit ?? ing?.purchase_unit ?? ing?.unit ?? "",
       cost,
       total,
       received:

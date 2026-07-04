@@ -13,6 +13,22 @@ function escaped(pattern: string): RegExp {
   return new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 }
 
+function assertActionCallsDoNotSendUnit(
+  path: string,
+  callName: string,
+): void {
+  const source = read(path);
+  const calls = source.matchAll(
+    new RegExp(`${callName}\\(\\{[\\s\\S]*?\\}\\);`, "g"),
+  );
+  let count = 0;
+  for (const call of calls) {
+    count++;
+    assert.doesNotMatch(call[0], /\bunit\s*:/, `${path} ${callName}`);
+  }
+  assert.ok(count > 0, `${callName} not found in ${path}`);
+}
+
 test("inventory entry units are persisted inside atomic RPCs", () => {
   const sql = read(
     "supabase/migrations/_archive/20260629125621_persist_entry_unit_in_atomic_rpcs.sql",
@@ -79,6 +95,82 @@ test("server action payload keys match the RPC contract", () => {
   }
 });
 
+test("transaction write callers do not send unit text/code", () => {
+  for (const path of [
+    "apps/web/app/(protected)/inventory/grn-actions.ts",
+    "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
+    "apps/web/app/(protected)/inventory/issue-actions.ts",
+    "apps/web/app/(protected)/inventory/waste-actions.ts",
+    "apps/web/app/(protected)/inventory/production-order-actions.ts",
+    "apps/web/app/(protected)/inventory/transfer-actions.ts",
+    "apps/web/app/(protected)/inventory/recipe-actions.ts",
+    "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
+  ]) {
+    assert.doesNotMatch(
+      read(path),
+      /\bunit:\s*z\.string\(\)\.optional\(\)/,
+      path,
+    );
+  }
+
+  for (const [path, callName] of [
+    [
+      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
+      "upsertGrnLine",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/grn/[id]/_hooks/use-grn-line-actions.ts",
+      "upsertGrnLine",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
+      "upsertGrnLine",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx",
+      "createPurchaseOrderWithLines",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx",
+      "upsertPurchaseOrderLine",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/production-order-form.tsx",
+      "createProductionOrder",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/production-recipe-panel.tsx",
+      "upsertProductionRecipeLines",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx",
+      "upsertRecipeLines",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
+      "upsertStockIssueLine",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
+      "upsertStockIssueLine",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx",
+      "createWasteEntry",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx",
+      "createExpiryWriteoff",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
+      "createStockTransfer",
+    ],
+  ] as const) {
+    assertActionCallsDoNotSendUnit(path, callName);
+  }
+});
+
 test("server actions derive persisted unit text from the entry unit catalog", () => {
   const helper = read(
     "apps/web/app/(protected)/inventory/_lib/entry-unit-code.ts",
@@ -133,8 +225,30 @@ test("inventory RPCs derive persisted unit text from the unit catalog", () => {
 
   assert.doesNotMatch(
     read("apps/web/app/(protected)/inventory/waste-actions.ts"),
-    /p_unit:\s*parsed\.data\.unit/,
+    /\bp_unit:/,
   );
+});
+
+test("expiry writeoff RPC does not accept a unit text argument", () => {
+  const migration = read(
+    "supabase/migrations/20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql",
+  );
+  const baseline = read("supabase/migrations/00000000000000_baseline.sql");
+  const action = read("apps/web/app/(protected)/inventory/waste-actions.ts");
+
+  assert.match(
+    migration,
+    /DROP FUNCTION IF EXISTS public\.create_expiry_writeoff\([\s\S]*?text[\s\S]*?\);/,
+  );
+  assert.doesNotMatch(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.create_expiry_writeoff\([\s\S]*?p_unit text/,
+  );
+  assert.doesNotMatch(
+    baseline,
+    /CREATE FUNCTION public\.create_expiry_writeoff\([\s\S]*?p_unit text/,
+  );
+  assert.doesNotMatch(action, /\bp_unit:/);
 });
 
 test("production recipe bulk import stores catalog-derived units", () => {

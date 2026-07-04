@@ -36,7 +36,6 @@ const PRODUCTION_RECIPE_READ_PERMISSIONS = [
 const productionRecipeLineUpsertSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().optional(),
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   yieldFactor: z.coerce.number().positive().default(1),
   note: z.string().optional(),
@@ -85,7 +84,6 @@ const importProductionRecipeRowSchema = z.object({
   finishedGoodId: z.number().int().positive(),
   ingredientId: z.number().int().positive(),
   quantity: z.number().positive({ error: "Số lượng phải lớn hơn 0" }),
-  unit: z.string().optional(),
   entryUnitId: z.number().int().positive().nullable(),
   yieldFactor: z.number().positive({ error: "Yield phải lớn hơn 0" }),
   note: z.string().trim().optional(),
@@ -579,7 +577,6 @@ export async function importProductionRecipes(
       lines: Array<{
         ingredientId: number;
         quantity: number;
-        unit: string;
         entryUnitId: number | null;
         yieldFactor: number;
         note: string | null;
@@ -719,7 +716,6 @@ export async function importProductionRecipes(
       finishedGoodId: finishedGood.id,
       ingredientId: ingredient.id,
       quantity,
-      unit: entryUnit.unit_code,
       entryUnitId: entryUnit.unit_id,
       yieldFactor,
       note: readCell(raw, "Ghi chú", "note") || undefined,
@@ -740,7 +736,6 @@ export async function importProductionRecipes(
     group.lines.push({
       ingredientId: parsedRow.data.ingredientId,
       quantity: parsedRow.data.quantity,
-      unit: parsedRow.data.unit?.trim() ?? entryUnit.unit_code,
       entryUnitId: parsedRow.data.entryUnitId,
       yieldFactor: parsedRow.data.yieldFactor,
       note: parsedRow.data.note?.trim() ? parsedRow.data.note.trim() : null,
@@ -769,7 +764,6 @@ export async function importProductionRecipes(
         lines: group.lines.map((line) => ({
           ingredient_id: line.ingredientId,
           quantity: line.quantity,
-          unit: line.unit,
           entry_unit_id: line.entryUnitId,
           note: line.note,
           yield_factor: line.yieldFactor,

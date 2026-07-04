@@ -16,7 +16,6 @@ const branchIdSchema = z.coerce.number().int().positive();
 const recipeLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().optional(),
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   note: z.string().optional().nullable(),
   yieldFactor: z.coerce.number().positive().default(1.0),

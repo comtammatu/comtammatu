@@ -450,7 +450,6 @@ export function ProductionOrderForm({
       .map((line) => ({
         finishedGoodId: Number(line.finished_good_id),
         quantity: Number(line.quantity),
-        unit: line.unit?.trim() ?? "",
         entryUnitId: line.entry_unit_id ? Number(line.entry_unit_id) : null,
       }))
       .filter(

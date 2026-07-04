@@ -241,7 +241,6 @@ export function WasteCreateClient({
         items: lines.map((l) => ({
           ingredient_id: l.ingredientId!,
           quantity: Number(l.quantity),
-          unit: l.unit,
           entry_unit_id: l.entryUnitId ? Number(l.entryUnitId) : null,
           unit_cost: Number(l.unitCost),
           reason_code: l.reasonCode as never,

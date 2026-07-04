@@ -256,7 +256,6 @@ export function PODetailClient({
         poId: po.id,
         ingredientId: line.ingredientId,
         quantity: line.qty,
-        unit: line.unit.trim(),
         entryUnitId: line.entryUnitId,
         unitPriceEst: line.price,
       });
@@ -305,7 +304,6 @@ export function PODetailClient({
         poId: po.id,
         ingredientId,
         quantity: qty,
-        unit: addUnit.trim(),
         entryUnitId: addEntryUnitId,
         unitPriceEst: price,
       });

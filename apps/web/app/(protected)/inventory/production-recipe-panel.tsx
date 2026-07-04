@@ -507,7 +507,6 @@ export function ProductionRecipePanel({
       lines: values.lines.map((line) => ({
         ingredientId: Number(line.ingredient_id),
         quantity: Number(line.quantity),
-        unit: line.unit?.trim() ?? "",
         entryUnitId: line.entry_unit_id ? Number(line.entry_unit_id) : null,
         yieldFactor: Number(line.yield_factor),
         note: line.note?.trim() || undefined,

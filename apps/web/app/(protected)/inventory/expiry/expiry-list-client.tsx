@@ -236,7 +236,6 @@ export function ExpiryListClient({
       branchId: alert.branch_id,
       ingredientId: alert.ingredient_id,
       quantity: qty,
-      unit: alert.unit,
       grnItemId: alert.grn_item_id,
       note: `Hết hạn sử dụng — ${alert.ingredient_name}${lotPart}${expiryPart}${grnPart}`,
       photoUrls: values.photoUrl ? [values.photoUrl] : undefined,
