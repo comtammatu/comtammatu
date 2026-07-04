@@ -108,12 +108,13 @@ export function selectBranchScope(
 }
 
 /**
- * Operator scope diverges from inventory scope on purpose: only owner is
- * tenant-wide (office is not), and only branch_kind "branch" sites are
- * operable — except central-site roles (D055 §1 soft-routing): with
- * tenant-level claims (branch_id null) they operate the active sites whose
- * branch_kind matches their central domain. Inventory covers every active
- * branch kind for owner + office.
+ * Operator scope diverges from inventory scope on purpose: office has no
+ * operator scope, and every non-owner role operates a single site kind —
+ * branch roles operate branch_kind "branch" sites; central-site roles
+ * (D055 §1 soft-routing, tenant-level claims) operate the active sites
+ * whose branch_kind matches their central domain. Owner is tenant-wide
+ * across every active site kind (D059 §3 context picker) — station
+ * surfaces stay branch-only via the proxy gate, not here.
  */
 export function selectOperatorBranchScope(
   claims: JwtClaims,
@@ -124,9 +125,13 @@ export function selectOperatorBranchScope(
     claims.branch_id == null
       ? centralSiteBranchKindForRole(claims.user_role)
       : null;
+  const operableBranches =
+    claims.user_role === "owner"
+      ? [...branches]
+      : operatorBranches(branches, centralSiteKind ?? "branch");
   const scope = selectBranchScope(
     claims,
-    operatorBranches(branches, centralSiteKind ?? "branch"),
+    operableBranches,
     requestedBranchId,
     centralSiteKind
       ? [...OPERATOR_TENANT_WIDE_ROLES, claims.user_role]

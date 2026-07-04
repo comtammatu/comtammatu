@@ -16,6 +16,7 @@ import {
   Monitor,
   MonitorUp,
   Package,
+  Send,
   Settings,
   Truck,
   Undo2,
@@ -69,6 +70,7 @@ interface QueueRow {
 function buildQueueRows(
   basePath: string,
   counts: Awaited<ReturnType<typeof fetchBranchQueueCounts>>,
+  branchKind: BranchKind,
 ): QueueRow[] {
   const rows: QueueRow[] = [];
   if (counts.pendingCheckouts != null) {
@@ -111,7 +113,9 @@ function buildQueueRows(
       count: counts.pendingWaste,
     });
   }
-  if (counts.expiringItems != null) {
+  // Expiry queue is a branch-floor job (D066); central sites keep the
+  // expiry surface on the office plane only.
+  if (counts.expiringItems != null && branchKind === "branch") {
     rows.push({
       key: "expiry",
       href: `${basePath}/stock/expiry`,
@@ -187,6 +191,7 @@ const ICONS = {
   Monitor,
   MonitorUp,
   Package,
+  Send,
   Settings,
   Truck,
   Undo2,
@@ -216,14 +221,18 @@ export default async function OperatorHomePage({
   const context = await resolveBranchContext(supabase, claims, branchId);
   if (!context) notFound();
 
+  const branchKind = context.branch.branch_kind as BranchKind;
   const groups = resolveOperatorTiles(
     claims.user_role,
     context.branchId,
-    context.branch.branch_kind as BranchKind,
+    branchKind,
   );
   const basePath = `/br/${context.branchId}`;
   const showTodayCard = canAccess(claims.user_role, "employee");
-  const showOverview = canAccess(claims.user_role, "branch_dashboard");
+  // Sales KPIs and the branch-command door are branch-floor chrome — central
+  // sites keep their home to the curated job tiles (D066 no-hub-bloat).
+  const showOverview =
+    canAccess(claims.user_role, "branch_dashboard") && branchKind === "branch";
   const showManagementCard = !showTodayCard && showOverview;
 
   // Pre-clock-in gate for cashier/chef roles
@@ -245,7 +254,9 @@ export default async function OperatorHomePage({
       : Promise.resolve(null),
   ]);
   const unreadCount = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
-  const queueRows = queueCounts ? buildQueueRows(basePath, queueCounts) : [];
+  const queueRows = queueCounts
+    ? buildQueueRows(basePath, queueCounts, branchKind)
+    : [];
 
   const workState = await getTodayWorkState();
   const beforeClockIn = workState.status === "not_started";

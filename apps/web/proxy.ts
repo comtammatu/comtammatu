@@ -72,12 +72,13 @@ async function getBranchSurface(
 
 function branchSurfaceAllows(
   branchSurface: BranchSurfaceGate | null,
-  requiredBranchKind: string,
+  requiredBranchKind: string | null,
 ): boolean {
   return (
     branchSurface !== null &&
-    branchSurface.branchKind === requiredBranchKind &&
-    branchSurface.isActive === true
+    branchSurface.isActive === true &&
+    (requiredBranchKind === null ||
+      branchSurface.branchKind === requiredBranchKind)
   );
 }
 
@@ -320,11 +321,14 @@ export async function proxy(request: NextRequest) {
 
       if (needsBranchSurface) {
         // Stations (POS/KDS/runner) stay branch-kind "branch" — central sites
-        // have no POS. Central-site roles get their matching kind ONLY for
-        // the non-station /br/{id}/stock surfaces.
+        // have no POS. Owner enters any ACTIVE site's non-station surfaces
+        // (D059 §3 context picker); central-site roles get their matching
+        // kind ONLY for the non-station /br/{id}/stock surfaces.
         const requiredBranchKind = isStationRoute
           ? "branch"
-          : (centralSiteKind ?? "branch");
+          : allowCrossBranch
+            ? null
+            : (centralSiteKind ?? "branch");
         const branchSurface = await getBranchSurface(
           supabase,
           claims.tenant_id,

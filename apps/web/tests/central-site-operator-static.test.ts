@@ -81,16 +81,18 @@ test("proxy denies branch-scope mismatch unless the central kind matches an acti
     proxySource,
     /if \(!branchSurfaceAllows\(branchSurface, centralSiteKind\)\) \{\s*return redirectToAccessDenied\(\s*request,\s*response,\s*"branch-scope-mismatch",\s*\);/,
   );
+  // Inactive sites are always denied; only a null required kind (owner
+  // cross-branch) skips the kind match.
   assert.match(
     proxySource,
-    /branchSurface\.branchKind === requiredBranchKind &&\s*branchSurface\.isActive === true/,
+    /branchSurface\.isActive === true &&\s*\(requiredBranchKind === null \|\|\s*branchSurface\.branchKind === requiredBranchKind\)/,
   );
 });
 
-test("proxy keeps stations on branch-kind branch; central kind covers non-station stock only", () => {
+test("proxy keeps stations on branch-kind branch; owner enters any active non-station surface; central kind covers non-station stock only", () => {
   assert.match(
     proxySource,
-    /const requiredBranchKind = isStationRoute\s*\?\s*"branch"\s*:\s*\(centralSiteKind \?\? "branch"\)/,
+    /const requiredBranchKind = isStationRoute\s*\?\s*"branch"\s*:\s*allowCrossBranch\s*\?\s*null\s*:\s*\(centralSiteKind \?\? "branch"\)/,
   );
 });
 

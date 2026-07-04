@@ -2,13 +2,16 @@ import { notFound } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import {
   Building2 as IconBuilding2,
+  ChefHat as IconChefHat,
   LayoutDashboard as IconLayoutDashboard,
+  Warehouse as IconWarehouse,
 } from "lucide-react";
 import {
   canAccess,
   MODULE_ACL,
   OPERATOR_TILE_GROUP_TITLES,
 } from "@comtammatu/shared/auth";
+import { resolveSiteKind, type SiteKind } from "@comtammatu/shared/labels";
 import { createServiceClient } from "@comtammatu/database";
 import {
   AppEmptyState,
@@ -40,18 +43,29 @@ const getCachedOperatorBranches = unstable_cache(
       .select("id, name, branch_kind")
       .eq("tenant_id", tenantId)
       .eq("is_active", true)
-      .eq("branch_kind", "branch")
       .order("id");
 
     if (error) throw new Error(`fetchOperatorBranches: ${error.message}`);
     return (data ?? []) as OperatorBranchOption[];
   },
-  ["operator-branches"],
+  ["operator-branches-v2"],
   {
     revalidate: 300,
     tags: ["branches-list"],
   },
 );
+
+const SITE_KIND_ORDER: Record<SiteKind, number> = {
+  branch: 0,
+  central_kitchen: 1,
+  central_supply: 2,
+};
+
+function siteIcon(kind: SiteKind) {
+  if (kind === "central_kitchen") return <IconChefHat />;
+  if (kind === "central_supply") return <IconWarehouse />;
+  return <IconBuilding2 />;
+}
 
 export default async function BranchPickerPage() {
   const { claims } = await loadAuthState();
@@ -65,18 +79,23 @@ export default async function BranchPickerPage() {
 
   const { allowedBranches } = selectOperatorBranchScope(claims, data, null);
   const showOfficeCard = canAccess(claims.user_role, "dashboard");
+  const orderedSites = [...allowedBranches].sort(
+    (a, b) =>
+      SITE_KIND_ORDER[resolveSiteKind(a)] - SITE_KIND_ORDER[resolveSiteKind(b)] ||
+      a.id - b.id,
+  );
 
   return (
     <AppPage mobile density="compact" contentClassName="max-w-lg">
       <AppPageHeader title={MODULE_ACL.branches.label} />
-      {allowedBranches.length > 0 || showOfficeCard ? (
+      {orderedSites.length > 0 || showOfficeCard ? (
         <LinkCardGrid>
-          {allowedBranches.map((branch) => (
+          {orderedSites.map((site) => (
             <AppLinkCard
-              key={branch.id}
-              href={`/br/${branch.id}`}
-              title={branch.name}
-              icon={<IconBuilding2 />}
+              key={site.id}
+              href={`/br/${site.id}`}
+              title={site.name}
+              icon={siteIcon(resolveSiteKind(site))}
             />
           ))}
           {showOfficeCard ? (

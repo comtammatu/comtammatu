@@ -216,9 +216,11 @@ test("operator home overview KPIs are gated by branch_dashboard access", () => {
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
 
+  // Sales KPIs additionally require branch_kind "branch" — central sites
+  // keep their home to curated job tiles (D066).
   assert.match(
     home,
-    /showOverview = canAccess\(claims\.user_role, "branch_dashboard"\)/,
+    /showOverview =\s*canAccess\(claims\.user_role, "branch_dashboard"\) && branchKind === "branch"/,
   );
   assert.match(
     home,

@@ -28,12 +28,12 @@ function claims(
   };
 }
 
-test("selectOperatorBranchScope -> owner sees only operator branches and can switch", () => {
+test("selectOperatorBranchScope -> owner operates every active site kind (D059 §3)", () => {
   const selected = selectOperatorBranchScope(claims("owner", null), BRANCHES, null);
 
   assert.deepEqual(
     selected.allowedBranches.map((branch) => branch.id),
-    [1, 2],
+    [1, 2, 10, 20],
   );
   assert.equal(selected.currentBranchId, 1);
   assert.equal(selected.defaultBranchId, 1);
@@ -49,7 +49,12 @@ test("selectOperatorBranchScope -> requested branch wins only when allowed", () 
   assert.equal(
     selectOperatorBranchScope(claims("owner", null), BRANCHES, 10)
       .currentBranchId,
-    1,
+    10,
+  );
+  assert.equal(
+    selectOperatorBranchScope(claims("owner", null), BRANCHES, 20)
+      .currentBranchId,
+    20,
   );
   assert.equal(
     selectOperatorBranchScope(claims("cashier", 2), BRANCHES, 1)
