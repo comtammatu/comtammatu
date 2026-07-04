@@ -119,8 +119,16 @@ Matrix dưới đây là snapshot template (`role_templates.permission_keys`) m�
 
 - `20260423080000_auth_v2_bep_truong_template_fix.sql`
 - `20260505094000_inventory_rbac_template_contract_v2.sql`
+- `20260705180000_central_kitchen_operator_grants.sql`
 
 Edit template không tự propagate toàn cục. Khi sửa template, quyền của nhân viên cũ chỉ đổi qua thao tác apply/backfill rõ ràng; manual override được giữ lại.
+
+Ghi chú D066 §7a (2026-07-04): position `production_manager` và
+`central_kitchen_manager` có template riêng mirror đúng bộ key của
+`head_chef`; grant cho role trung tâm (claims tenant-level, `branch_id`
+NULL) được ghi thành row tenant-wide trong `staff_permissions` — cả
+`apply_template_to_user` lẫn `sync_missing_permissions_from_template` đã xử
+lý trường hợp này.
 
 | Permission key                 | owner bypass | branch_manager | warehouse_manager | thu_kho¹ | head_chef |
 | ------------------------------ | :----------: | :------------: | :---------------: | :------: | :-------: |
@@ -129,17 +137,17 @@ Edit template không tự propagate toàn cục. Khi sửa template, quyền c�
 | `inventory:transfer_create`    |      ✅      |      ✅\*      |     ✅     |   ❌    |     ✅     |
 | `inventory:transfer_ship`      |      ✅      |       ❌       |     ✅     |   ❌    |     ✅     |
 | `inventory:transfer_receive`   |      ✅      |      ✅\*      |     ✅     |   ✅    |     ✅     |
-| `inventory:stocktake_create`   |      ✅      |       ✅       |     ✅     |   ✅    |     ❌     |
-| `inventory:stocktake_complete` |      ✅      |       ✅       |     ✅     |   ✅    |     ❌     |
-| `inventory:writeoff`           |      ✅      |       ✅       |     ✅     |   ❌    |     ❌     |
+| `inventory:stocktake_create`   |      ✅      |       ✅       |     ✅     |   ✅    |     ✅     |
+| `inventory:stocktake_complete` |      ✅      |       ✅       |     ✅     |   ✅    |     ✅     |
+| `inventory:writeoff`           |      ✅      |       ✅       |     ✅     |   ❌    |     ✅     |
 | `inventory:production_create`  |      ✅      |       ❌       |     ❌     |   ❌    |     ✅     |
 | `inventory:production_confirm` |      ✅      |       ❌       |     ❌     |   ❌    |     ✅     |
 | `procurement:read`             |      ✅      |       ❌       |     ✅     |   ❌    |     ✅     |
 | `procurement:supplier_manage`  |      ✅      |       ❌       |     ✅     |   ❌    |     ❌     |
 | `procurement:po_create`        |      ✅      |       ❌       |     ✅     |   ❌    |     ❌     |
 | `procurement:po_approve`       |      ✅      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
-| `procurement:grn_create`       |      ✅      |       ❌       |     ✅     |   ❌    |     ❌     |
-| `procurement:grn_confirm`      |      ✅      |       ❌       |     ✅     |   ❌    |     ❌     |
+| `procurement:grn_create`       |      ✅      |       ❌       |     ✅     |   ❌    |     ✅     |
+| `procurement:grn_confirm`      |      ✅      |       ❌       |     ✅     |   ❌    |     ✅     |
 | `procurement:invoice_create`   |      ✅      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
 | `procurement:invoice_match`    |      ✅      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
 | `menu:read`                    |      ✅      |       ✅       |     ❌     |   ❌    |     ✅     |

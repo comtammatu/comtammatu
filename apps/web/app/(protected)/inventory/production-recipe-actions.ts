@@ -22,9 +22,8 @@ import {
 } from "@/_lib/spreadsheet";
 import {
   idSchema,
-  isProductionSiteScopedRole,
   PRODUCTION_ROLES,
-  requireProductionBranch,
+  requireProductionAccess,
   type RpcClient,
 } from "./_lib/production-shared";
 
@@ -218,18 +217,8 @@ export async function fetchProductionRecipes(): Promise<
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  if (isProductionSiteScopedRole(claims.user_role)) {
-    if (claims.branch_id == null) {
-      return {
-        success: false,
-        error: "Tài khoản chưa được gán Bếp Trung Tâm.",
-      };
-    }
-    const access = await requireProductionBranch(
-      supabase,
-      claims.tenant_id,
-      claims.branch_id,
-    );
+  {
+    const access = await requireProductionAccess(supabase, claims);
     if (!access.ok) {
       return { success: false, error: access.error };
     }
@@ -749,18 +738,8 @@ export const upsertProductionRecipeLines = withAction(
   },
   async (data, ctx) => {
     const { supabase, claims } = ctx;
-    if (isProductionSiteScopedRole(claims.user_role)) {
-      if (claims.branch_id == null) {
-        return {
-          success: false,
-          error: "Tài khoản chưa được gán Bếp Trung Tâm.",
-        };
-      }
-      const access = await requireProductionBranch(
-        supabase,
-        claims.tenant_id,
-        claims.branch_id,
-      );
+    {
+      const access = await requireProductionAccess(supabase, claims);
       if (!access.ok) {
         return { success: false, error: access.error };
       }
@@ -820,18 +799,8 @@ export async function deleteProductionRecipe(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  if (isProductionSiteScopedRole(claims.user_role)) {
-    if (claims.branch_id == null) {
-      return {
-        success: false,
-        error: "Tài khoản chưa được gán Bếp Trung Tâm.",
-      };
-    }
-    const access = await requireProductionBranch(
-      supabase,
-      claims.tenant_id,
-      claims.branch_id,
-    );
+  {
+    const access = await requireProductionAccess(supabase, claims);
     if (!access.ok) {
       return { success: false, error: access.error };
     }
@@ -863,18 +832,8 @@ export async function deleteProductionRecipeGroup(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  if (isProductionSiteScopedRole(claims.user_role)) {
-    if (claims.branch_id == null) {
-      return {
-        success: false,
-        error: "Tài khoản chưa được gán Bếp Trung Tâm.",
-      };
-    }
-    const access = await requireProductionBranch(
-      supabase,
-      claims.tenant_id,
-      claims.branch_id,
-    );
+  {
+    const access = await requireProductionAccess(supabase, claims);
     if (!access.ok) {
       return { success: false, error: access.error };
     }

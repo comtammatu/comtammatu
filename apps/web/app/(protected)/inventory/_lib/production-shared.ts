@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { StaffRole } from "@comtammatu/shared/auth";
 import {
   isProductionBranchScopedRole,
   PRODUCTION_OPERATOR_ROLES,
@@ -87,6 +88,84 @@ export async function requireProductionBranch(
       ok: false,
       error: "Chỉ Bếp Trung Tâm mới được phép tạo lệnh sản xuất.",
     };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Access gate for production surfaces from the acting claims. A site-scoped
+ * role with a branch pin must sit on a central_kitchen site; a tenant-level
+ * central role (D055 §1 — branch_id null) operates every active central
+ * kitchen, so the gate only verifies one exists. RLS and the production RPCs
+ * enforce fine-grained authz either way.
+ */
+export async function requireProductionAccess(
+  supabase: unknown,
+  claims: {
+    tenant_id: number;
+    branch_id: number | null;
+    user_role: StaffRole;
+  },
+) {
+  if (!isProductionSiteScopedRole(claims.user_role)) {
+    return { ok: true };
+  }
+
+  if (claims.branch_id != null) {
+    return requireProductionBranch(
+      supabase,
+      claims.tenant_id,
+      claims.branch_id,
+    );
+  }
+
+  const client = supabase as {
+    from: (table: "branches") => {
+      select: (columns: string) => {
+        eq: (
+          column: string,
+          value: unknown,
+        ) => {
+          eq: (
+            column: string,
+            value: unknown,
+          ) => {
+            eq: (
+              column: string,
+              value: unknown,
+            ) => {
+              limit: (count: number) => {
+                maybeSingle: () => PromiseLike<{
+                  data: { id: number } | null;
+                  error: { code?: string; message?: string } | null;
+                }>;
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+
+  const { data, error } = await client
+    .from("branches")
+    .select("id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_kind", "central_kitchen")
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      ok: false,
+      error: "Không thể kiểm tra quyền truy cập Bếp Trung Tâm.",
+    };
+  }
+
+  if (!data) {
+    return { ok: false, error: "Chưa có Bếp Trung Tâm đang hoạt động." };
   }
 
   return { ok: true };
