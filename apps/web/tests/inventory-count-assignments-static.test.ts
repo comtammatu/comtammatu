@@ -68,29 +68,35 @@ test("count assignment UI uses the branch warehouse checklist layout", () => {
     /contentClassName="pt-4"/,
     "Employee cards should not reserve extra top padding after removing the card header",
   );
+  // Copy moved to the message catalog (i18n sweep) — pin the ref in the
+  // component and the value in the catalog.
   assert.match(
     countAssignmentsClientSource,
-    /Nguyên liệu được giao \(\{selectedIds\.length\} thành phẩm\)/,
+    /INVENTORY_VI\.countAssignAssignedBadge\(selectedIds\.length\)/,
     "The assigned finished-good count should live in the assigned-ingredients label",
   );
   assert.match(
+    readWeb("../../packages/shared/src/messages/inventory.ts"),
+    /Nguyên liệu được giao \(/,
+  );
+  assert.match(
     countAssignmentsClientSource,
-    /Thêm phân công mới[\s\S]*<NewAssignmentDialog[\s\S]*employees=\{unassignedEmployees\}/,
+    /INVENTORY_VI\.countAssignAddAction[\s\S]*<NewAssignmentDialog[\s\S]*employees=\{unassignedEmployees\}/,
     "Managers should add new assignments from a header action using unassigned employees",
   );
   assert.match(
     countAssignmentsClientSource,
-    /<AppDialog[\s\S]*title="Thêm phân công mới"[\s\S]*<SelectValue placeholder="Chọn nhân viên" \/>/,
+    /<AppDialog[\s\S]*title=\{INVENTORY_VI\.countAssignAddAction\}[\s\S]*<SelectValue placeholder=\{INVENTORY_VI\.selectEmployeePlaceholder\} \/>/,
     "New assignments should open a titled dialog and choose an employee before selecting finished goods",
   );
   assert.match(
     countAssignmentsClientSource,
-    /<AssignmentChecklist[\s\S]*Xoá[\s\S]*Lưu/,
+    /<AssignmentChecklist[\s\S]*INVENTORY_VI\.countAssignRemoveAction[\s\S]*ACTIONS_VI\.save/,
     "Editing an employee assignment should use a dialog checklist with delete/save actions",
   );
   assert.match(
     countAssignmentsClientSource,
-    /const selectedCount = draftSet\.size;[\s\S]*Thành phẩm kiểm kê[\s\S]*\{selectedCount\}\/\{ingredients\.length\} đã chọn/,
+    /const selectedCount = draftSet\.size;[\s\S]*INVENTORY_VI\.countAssignChecklistTitle[\s\S]*INVENTORY_VI\.selectedRatio\(selectedCount, ingredients\.length\)/,
     "The checklist should show a compact selected-count summary instead of a dry bare list",
   );
   assert.match(

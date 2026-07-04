@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: supplier return detail keeps warehouse operator copy inline */
-
 import { StatusBadge } from "@/components/status-badge";
 import {
   Item,
@@ -17,24 +15,16 @@ import {
   type DataTableFooterRow,
 } from "@/components/data-table/data-table";
 import { AppSection } from "@/components/surface";
-
-const REASON_LABELS: Record<string, string> = {
-  damaged: "Hàng hỏng",
-  wrong_item: "Sai hàng",
-  expired: "Hết hạn",
-  quality_fail: "Không đạt chất lượng",
-  short_delivery_credit: "Thiếu hàng (ghi nhận)",
-  other: "Khác",
-};
-
-const RESOLUTION_LABELS: Record<string, string> = {
-  replacement: "Đổi hàng",
-  credit_note: "Ghi có",
-  cash_refund: "Hoàn tiền",
-};
+import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 
 import { formatVND as formatVndNumber } from "../../_lib/format";
 import { messages as inventoryMessages } from "@lib/messages";
+
+const RETURNS_VI = inventoryMessages.inventory.supplierReturns;
+
+const REASON_LABELS: Record<string, string> = RETURNS_VI.reasonLabels;
+
+const RESOLUTION_LABELS: Record<string, string> = RETURNS_VI.resolutionLabels;
 
 const formatReturnValue = (v: number | null | undefined) =>
   v == null
@@ -79,14 +69,14 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
   const columns: DataTableColumn<DetailLine>[] = [
     {
       key: "ingredient",
-      header: "Nguyên liệu",
+      header: PRODUCT_VI.rawIngredient,
       render: (line) => (
         <span className="font-medium">{line.ingredients?.name ?? "—"}</span>
       ),
     },
     {
       key: "quantity",
-      header: "Số lượng",
+      header: FORM_VI.quantity,
       className: "text-right",
       render: (line) => (
         <span className="font-mono">
@@ -99,7 +89,7 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
     },
     {
       key: "unit_cost",
-      header: "Đơn giá",
+      header: FORM_VI.unitPrice,
       className: "text-right",
       render: (line) => (
         <span className="font-mono">{formatReturnValue(line.unit_cost)}</span>
@@ -107,7 +97,7 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
     },
     {
       key: "line_total",
-      header: "Thành tiền",
+      header: FORM_VI.amount,
       className: "text-right",
       render: (line) => (
         <span className="font-mono">{formatReturnValue(line.line_total)}</span>
@@ -120,7 +110,12 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
           {
             key: "total",
             cells: [
-              { key: "label", content: "Tổng", colSpan: 3, className: "font-bold" },
+              {
+                key: "label",
+                content: FORM_VI.total,
+                colSpan: 3,
+                className: "font-bold",
+              },
               {
                 key: "value",
                 content: formatReturnValue(totalValue),
@@ -136,7 +131,7 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
       {/* Meta */}
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-md border p-3">
-          <p className="text-xs text-muted-foreground">Trạng thái</p>
+          <p className="text-xs text-muted-foreground">{FORM_VI.status}</p>
           <StatusBadge
             domain="inventory"
             value={header.status}
@@ -144,31 +139,33 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
           />
         </div>
         <div className="rounded-md border p-3">
-          <p className="text-xs text-muted-foreground">Lý do</p>
+          <p className="text-xs text-muted-foreground">{FORM_VI.reason}</p>
           <p className="mt-1 text-sm font-medium">
             {REASON_LABELS[header.reason] ?? header.reason}
           </p>
         </div>
         <div className="rounded-md border p-3">
-          <p className="text-xs text-muted-foreground">Xử lý</p>
+          <p className="text-xs text-muted-foreground">
+            {RETURNS_VI.resolutionLabel}
+          </p>
           <p className="mt-1 text-sm font-medium">
             {RESOLUTION_LABELS[header.resolution] ?? header.resolution}
           </p>
         </div>
       </div>
 
-      <AppSection title="Dòng trả hàng" contentFlush>
+      <AppSection title={RETURNS_VI.linesTitle} contentFlush>
         <DataTable
           columns={columns}
           data={lines}
           getRowKey={(line) => line.id}
-          emptyTitle="Chưa có dòng hàng"
+          emptyTitle={RETURNS_VI.emptyLines}
           emptyMode="no-data"
           desktopFooterRows={footerRows}
           mobileFooter={
             lines.length > 0 ? (
               <div className="flex justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm">
-                <span className="font-bold">Tổng</span>
+                <span className="font-bold">{FORM_VI.total}</span>
                 <span className="font-mono font-bold">
                   {formatReturnValue(totalValue)}
                 </span>
@@ -181,7 +178,7 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
 
       {header.notes && (
         <div className="rounded-md border p-3">
-          <p className="text-xs text-muted-foreground">Ghi chú</p>
+          <p className="text-xs text-muted-foreground">{FORM_VI.notes}</p>
           <p className="mt-1 text-sm">{header.notes}</p>
         </div>
       )}
@@ -197,8 +194,8 @@ function SupplierReturnLineItem({ line }: { line: DetailLine }) {
       </ItemHeader>
       <ItemContent>
         <ItemDescription>
-          {Number(line.quantity)} {line.ingredients?.unit ?? line.unit} · Đơn giá{" "}
-          {formatReturnValue(line.unit_cost)}
+          {Number(line.quantity)} {line.ingredients?.unit ?? line.unit} ·{" "}
+          {FORM_VI.unitPrice} {formatReturnValue(line.unit_cost)}
         </ItemDescription>
       </ItemContent>
       <ItemFooter>

@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: baseline inline Vietnamese copy in ingredient import/export dialog */
-
 import { useState, useTransition } from "react";
 import {
   Download as IconDownload,
@@ -122,25 +120,28 @@ function IngredientImportDialog({
       title={INVENTORY_VI.importIngredientsTitle}
       description={
         <>
-          Hỗ trợ .xlsx và .csv. Dòng trùng <strong>tên nguyên liệu</strong> sẽ
-          được cập nhật.
+          {INVENTORY_VI.importIngredientsHintPrefix}{" "}
+          <strong>{INVENTORY_VI.importIngredientsHintField}</strong>{" "}
+          {INVENTORY_VI.importIngredientsHintSuffix}
         </>
       }
       inputId="ing-import-file"
       chooseFileLabel={INVENTORY_VI.chooseFileLabel}
-      selectedFileLabel={(fileName) => `Đã chọn: ${fileName}`}
+      selectedFileLabel={(fileName) => INVENTORY_VI.importSelectedFile(fileName)}
       selectFileError={INVENTORY_VI.selectFile}
       resultTitle={INVENTORY_VI.importResultHeading}
       submitLabel="Import"
       closeLabel={ACTIONS_VI.close}
       importAction={importIngredients}
       successMessage={(summary) =>
-        `Đã import: +${summary.inserted} / ${summary.updated} cập nhật`
+        INVENTORY_VI.importIngredientsSuccess(summary.inserted, summary.updated)
       }
       renderSummary={(summary) =>
-        `Tạo mới ${summary.inserted} · Cập nhật ${summary.updated}`
+        INVENTORY_VI.importIngredientsSummary(summary.inserted, summary.updated)
       }
-      renderIssue={(issue) => `[dòng ${issue.row}] ${issue.message}`}
+      renderIssue={(issue) =>
+        INVENTORY_VI.importIssueLine(issue.row, issue.message)
+      }
       onImported={onImported}
     />
   );

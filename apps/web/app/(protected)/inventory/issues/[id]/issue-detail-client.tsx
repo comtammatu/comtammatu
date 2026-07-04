@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing inventory issue detail surface keeps localized JSX copy until message-catalog extraction */
-
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -72,7 +70,10 @@ import {
 } from "../../_lib/issue-units";
 import type { IngredientRow } from "../../page";
 
-import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+
+const ISSUES_VI = messages.inventory.issues;
+
 type IssueRecord = {
   id: number;
   issue_number: string;
@@ -106,18 +107,20 @@ type AddIssueLineDialogProps = {
 };
 
 const addIssueLineSchema = z.object({
-  ingredientId: z.string().min(1, { error: "Chọn nguyên liệu cần xuất." }),
+  ingredientId: z
+    .string()
+    .min(1, { error: ISSUES_VI.lineIngredientRequired }),
   quantity: z
     .string()
-    .min(1, { error: "Nhập số lượng xuất." })
+    .min(1, { error: ISSUES_VI.lineQuantityRequired })
     .refine((value) => Number(value) > 0, {
-      error: "Số lượng xuất phải lớn hơn 0.",
+      error: ISSUES_VI.lineQuantityPositive,
     }),
-  unit: z.string().trim().min(1, { error: "Đơn vị không được để trống." }),
+  unit: z.string().trim().min(1, { error: ISSUES_VI.lineUnitRequired }),
   // Issue-role unit id (as string) the qty was entered in; "" => free-text unit.
   entryUnitId: z.string().optional(),
   reason: z.string().trim().min(1, {
-    error: "Lý do xuất là bắt buộc để lưu vết.",
+    error: ISSUES_VI.lineReasonRequired,
   }),
 });
 
@@ -134,32 +137,14 @@ function getIssueSurface(
   void branchKind;
 
   if (issueType === "writeoff") {
-    return {
-      eyebrow: "Hủy hỏng",
-      label: "Phiếu hủy hỏng",
-      confirmTitle: "Xác nhận hủy hỏng?",
-      confirmAction: "Xác nhận hủy hỏng",
-      noteLabel: "Ghi chú phiếu hủy hỏng",
-    };
+    return ISSUES_VI.surface.writeoff;
   }
 
   if (issueType === "consumption") {
-    return {
-      eyebrow: "Tiêu hao",
-      label: "Phiếu tiêu hao",
-      confirmTitle: "Xác nhận tiêu hao?",
-      confirmAction: "Xác nhận tiêu hao",
-      noteLabel: "Ghi chú tiêu hao",
-    };
+    return ISSUES_VI.surface.consumption;
   }
 
-  return {
-    eyebrow: "Xuất kho",
-    label: "Phiếu xuất",
-    confirmTitle: "Xác nhận xuất kho?",
-    confirmAction: "Xác nhận xuất kho",
-    noteLabel: "Ghi chú phiếu xuất",
-  };
+  return ISSUES_VI.surface.other;
 }
 
 function getIssueSourceLabel(issue: IssueRecord) {
@@ -174,11 +159,11 @@ function getIssueSourceLabel(issue: IssueRecord) {
   ) {
     return typeof ref?.source_label === "string"
       ? ref.source_label
-      : "HRM - Tiêu hao bếp trong ngày";
+      : ISSUES_VI.hrmConsumptionSource;
   }
 
   return issue.source_type === "manual" || !issue.source_type
-    ? "Thủ công"
+    ? ISSUES_VI.manualSource
     : issue.source_type;
 }
 
@@ -221,7 +206,7 @@ export function IssueDetailClient({
   async function reload() {
     const res = await fetchStockIssueDetail(issueId);
     if (!res.success || !res.data) {
-      toast.error("Không thể tải lại phiếu xuất.");
+      toast.error(ISSUES_VI.reloadFailed);
       return;
     }
 
@@ -233,9 +218,9 @@ export function IssueDetailClient({
 
   async function handleDeleteLine(itemId: number) {
     const ok = await confirm({
-      title: "Xóa dòng nguyên liệu?",
-      description: "Dòng này sẽ bị xóa khỏi phiếu xuất nháp.",
-      confirmText: "Xóa dòng",
+      title: ISSUES_VI.deleteLineTitle,
+      description: ISSUES_VI.deleteLineDescription,
+      confirmText: ISSUES_VI.deleteLineAction,
       cancelText: ACTIONS_VI.back,
       variant: "destructive",
     });
@@ -248,11 +233,11 @@ export function IssueDetailClient({
         itemId,
       });
       if (!res.success) {
-        toast.error(res.error ?? "Không thể xóa dòng khỏi phiếu.");
+        toast.error(res.error ?? ISSUES_VI.deleteLineFailed);
         return;
       }
 
-      toast.success("Đã xóa dòng nguyên liệu.");
+      toast.success(ISSUES_VI.deleteLineOk);
       await reload();
     });
   }
@@ -260,7 +245,7 @@ export function IssueDetailClient({
   async function handleConfirmIssue() {
     const ok = await confirm({
       title: surface.confirmTitle,
-      description: `Thao tác này sẽ trừ tồn kho tại ${issue.branches?.name ?? "—"} và không thể hoàn tác.`,
+      description: ISSUES_VI.confirmDescription(issue.branches?.name ?? "—"),
       details: lines.map((line) => ({
         label: line.ingredients?.name ?? `#${line.ingredient_id}`,
         value: `${formatQty(Number(line.quantity ?? 0))} ${line.unit}`,
@@ -274,22 +259,21 @@ export function IssueDetailClient({
     startTransition(async () => {
       const res = await confirmStockIssue(issueId);
       if (!res.success) {
-        toast.error(res.error ?? "Không thể xác nhận phiếu xuất.");
+        toast.error(res.error ?? ISSUES_VI.confirmFailed);
         return;
       }
 
-      toast.success("Đã xác nhận xuất kho và trừ tồn.");
+      toast.success(ISSUES_VI.confirmOk);
       await reload();
     });
   }
 
   async function handleCancelIssue() {
     const ok = await confirm({
-      title: "Hủy phiếu xuất?",
-      description:
-        "Phiếu xuất sẽ chuyển sang trạng thái hủy và không thể xác nhận nữa.",
-      confirmText: "Xác nhận hủy",
-      cancelText: "Không hủy",
+      title: ISSUES_VI.cancelTitle,
+      description: ISSUES_VI.cancelDescription,
+      confirmText: ISSUES_VI.cancelConfirmAction,
+      cancelText: ISSUES_VI.cancelKeepAction,
       variant: "destructive",
     });
 
@@ -298,11 +282,11 @@ export function IssueDetailClient({
     startTransition(async () => {
       const res = await cancelStockIssue(issueId);
       if (!res.success) {
-        toast.error(res.error ?? "Không thể hủy phiếu xuất.");
+        toast.error(res.error ?? ISSUES_VI.cancelFailed);
         return;
       }
 
-      toast.success("Đã hủy phiếu xuất.");
+      toast.success(ISSUES_VI.cancelOk);
       await reload();
     });
   }
@@ -324,13 +308,13 @@ export function IssueDetailClient({
     },
     {
       key: "qty",
-      header: "Số lượng",
+      header: FORM_VI.quantity,
       className: "text-right font-semibold",
       render: (line) => formatQty(Number(line.quantity ?? 0)),
     },
     {
       key: "unit",
-      header: "Đơn vị",
+      header: FORM_VI.unit,
       render: (line) => (
         <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">
           {line.unit ?? line.ingredients?.unit ?? ""}
@@ -339,13 +323,13 @@ export function IssueDetailClient({
     },
     {
       key: "unitCost",
-      header: "Đơn giá (WAC)",
+      header: ISSUES_VI.unitCostWac,
       className: "text-right font-medium",
       render: (line) => formatVND(Number(line.unit_cost ?? 0)),
     },
     {
       key: "total",
-      header: "Thành tiền",
+      header: FORM_VI.amount,
       className: "text-right font-bold",
       render: (line) => formatVND(Number(line.total_cost ?? 0)),
     },
@@ -382,7 +366,11 @@ export function IssueDetailClient({
       <AppPageHeader
         eyebrow={surface.eyebrow}
         title={issue.issue_number}
-        description={`${surface.label} tại ${issue.branches?.name ?? `Chi nhánh #${issue.branch_id}`} • ${issue.issued_at ? formatDateTime(issue.issued_at) : "—"}`}
+        description={ISSUES_VI.headerMeta(
+          surface.label,
+          issue.branches?.name ?? ISSUES_VI.branchRef(issue.branch_id),
+          issue.issued_at ? formatDateTime(issue.issued_at) : "—",
+        )}
         badge={{
           children: statusBadge.label,
           variant: statusBadge.variant,
@@ -399,9 +387,17 @@ export function IssueDetailClient({
         tabs={
           <AppPageTabs
             items={[
-              { value: "overview", label: "Tổng quan" },
-              { value: "lines", label: "Dòng", count: lines.length },
-              { value: "history", label: "Lịch sử", count: auditLogs.length },
+              { value: "overview", label: ISSUES_VI.overviewTab },
+              {
+                value: "lines",
+                label: ISSUES_VI.linesTab,
+                count: lines.length,
+              },
+              {
+                value: "history",
+                label: ISSUES_VI.historyTab,
+                count: auditLogs.length,
+              },
             ]}
           >
             <TabsContent value="overview">
@@ -409,24 +405,25 @@ export function IssueDetailClient({
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
                   {[
                     {
-                      label: "Nghiep vu",
+                      label: ISSUES_VI.businessKindLabel,
                       value: surface.label,
                     },
                     {
-                      label: "Chi nhánh",
+                      label: BRANCH_VI.long,
                       value:
-                        issue.branches?.name ?? `Chi nhánh #${issue.branch_id}`,
+                        issue.branches?.name ??
+                        ISSUES_VI.branchRef(issue.branch_id),
                     },
                     {
-                      label: "Tổng số dòng",
+                      label: ISSUES_VI.totalLines,
                       value: String(lines.length).padStart(2, "0"),
                     },
                     {
-                      label: "Nguồn",
+                      label: ISSUES_VI.sourceLabel,
                       value: getIssueSourceLabel(issue),
                     },
                     {
-                      label: "Tổng giá trị",
+                      label: ISSUES_VI.totalValue,
                       value: formatVND(totalAmount),
                     },
                   ].map((item) => (
@@ -454,8 +451,8 @@ export function IssueDetailClient({
                   title={tTerm("ingredientsList")}
                   description={
                     isDraft
-                      ? "Phiếu nháp tự lưu khi thêm hoặc xóa dòng."
-                      : "Phiếu đã chốt, dữ liệu chỉ còn ở chế độ xem."
+                      ? ISSUES_VI.draftAutoSaveHint
+                      : ISSUES_VI.finalizedReadOnlyHint
                   }
                   action={
                     isDraft ? (
@@ -464,7 +461,9 @@ export function IssueDetailClient({
                         className="bg-success/10 text-success hover:bg-success/15 hover:text-success"
                       >
                         <IconCirclePlus className="size-4" />
-                        Thêm {tTerm("ingredient", "button").toLowerCase()}
+                        {ISSUES_VI.addLinePrefixed(
+                          tTerm("ingredient", "button").toLowerCase(),
+                        )}
                       </Button>
                     ) : canAdjustStock && lines.length > 0 ? (
                       <DocumentStockCorrectionDialog
@@ -476,7 +475,7 @@ export function IssueDetailClient({
                             id: issue.branch_id,
                             name:
                               issue.branches?.name ??
-                              `Chi nhánh #${issue.branch_id}`,
+                              ISSUES_VI.branchRef(issue.branch_id),
                           },
                         ]}
                         itemOptions={lines.map((line) => ({
@@ -494,13 +493,15 @@ export function IssueDetailClient({
                       mode="no-data"
                       title={
                         isDraft
-                          ? "Chưa có dòng nguyên liệu"
-                          : `${surface.label} chưa có dòng nguyên liệu`
+                          ? ISSUES_VI.emptyLinesDraftTitle
+                          : ISSUES_VI.emptyLinesTitle(surface.label)
                       }
                       description={
                         isDraft
-                          ? `Thêm ít nhất một dòng để ${surface.confirmAction.toLowerCase()}.`
-                          : "Danh sách nguyên liệu sẽ hiển thị ở đây nếu phiếu có dữ liệu."
+                          ? ISSUES_VI.emptyLinesDraftDescription(
+                              surface.confirmAction.toLowerCase(),
+                            )
+                          : ISSUES_VI.emptyLinesFinalizedDescription
                       }
                       compact
                     />
@@ -524,7 +525,7 @@ export function IssueDetailClient({
                     <div className="flex w-full max-w-sm flex-col gap-3">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">
-                          Tổng số dòng:
+                          {ISSUES_VI.totalLinesColon}
                         </span>
                         <span className="font-bold">
                           {String(lines.length).padStart(2, "0")}
@@ -532,14 +533,16 @@ export function IssueDetailClient({
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">
-                          Cộng tiền hàng:
+                          {ISSUES_VI.goodsSubtotalColon}
                         </span>
                         <span className="font-bold">
                           {formatVND(totalAmount)}
                         </span>
                       </div>
                       <div className="flex items-end justify-between border-t border-border pt-3">
-                        <span className="text-sm font-bold">TỔNG CỘNG</span>
+                        <span className="text-sm font-bold">
+                          {ISSUES_VI.grandTotalCaps}
+                        </span>
                         <div className="text-right">
                           <span className="block font-mono text-xl font-semibold leading-none tabular-nums text-primary">
                             {messages.inventory.common.currency(
@@ -562,11 +565,11 @@ export function IssueDetailClient({
                       disabled={isPending}
                     >
                       <IconX className="size-5" />
-                      Hủy phiếu
+                      {ISSUES_VI.cancelIssueAction}
                     </Button>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
                       <Button type="button" variant="secondary" disabled>
-                        Nháp tự lưu
+                        {ISSUES_VI.draftAutoSaved}
                       </Button>
                       <Button
                         type="button"
@@ -642,7 +645,7 @@ function AddIssueLineDialog({
     if (!res.success) {
       return {
         success: false,
-        error: res.error ?? "Không thể lưu dòng nguyên liệu.",
+        error: res.error ?? ISSUES_VI.saveLineFailed,
       };
     }
 
@@ -654,13 +657,13 @@ function AddIssueLineDialog({
     <FormDialog
       open={isOpen}
       onOpenChange={onOpenChange}
-      title="Thêm dòng nguyên liệu"
+      title={ISSUES_VI.addLineTitle}
       schema={addIssueLineSchema}
       defaultValues={defaultValues}
       entityKey={`issue-line-${issueId}`}
       onSubmit={handleSubmit}
-      successMessage="Đã lưu dòng nguyên liệu."
-      submitLabel="Lưu dòng"
+      successMessage={ISSUES_VI.saveLineOk}
+      submitLabel={ISSUES_VI.saveLineAction}
       cancelLabel={ACTIONS_VI.cancel}
     >
       {(form) => {
@@ -673,7 +676,7 @@ function AddIssueLineDialog({
         return (
           <>
             <Field data-invalid={!!ingredientError}>
-              <FieldLabel>Nguyên liệu *</FieldLabel>
+              <FieldLabel>{ISSUES_VI.ingredientLabel}</FieldLabel>
               <Combobox
                 value={form.watch("ingredientId")}
                 onValueChange={(value) => {
@@ -703,8 +706,8 @@ function AddIssueLineDialog({
                     hint: getWarehouseUnit(ingredient),
                     keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
                   }))}
-                placeholder="Chọn nguyên liệu"
-                searchPlaceholder="Tìm tên, SKU, danh mục..."
+                placeholder={ISSUES_VI.ingredientPlaceholder}
+                searchPlaceholder={ISSUES_VI.ingredientSearchPlaceholder}
               />
               {ingredientError ? (
                 <FieldError errors={[ingredientError]} />
@@ -715,7 +718,7 @@ function AddIssueLineDialog({
               <NumberField
                 control={form.control}
                 name="quantity"
-                label="Số lượng xuất"
+                label={ISSUES_VI.quantityLabel}
                 maxFractionDigits={3}
                 placeholder="0"
                 required
@@ -723,7 +726,9 @@ function AddIssueLineDialog({
 
               {issueUnitOptions.length > 0 ? (
                 <Field>
-                  <FieldLabel htmlFor="issue-line-unit">Đơn vị *</FieldLabel>
+                  <FieldLabel htmlFor="issue-line-unit">
+                    {ISSUES_VI.unitLabel}
+                  </FieldLabel>
                   <Select
                     value={entryUnitId ?? ""}
                     onValueChange={(value) => {
@@ -742,7 +747,7 @@ function AddIssueLineDialog({
                       id="issue-line-unit"
                       aria-label={form.watch("unit")}
                     >
-                      <SelectValue placeholder="Chọn đơn vị" />
+                      <SelectValue placeholder={ISSUES_VI.selectUnit} />
                     </SelectTrigger>
                     <SelectContent>
                       {issueUnitOptions.map((o) => (
@@ -757,7 +762,7 @@ function AddIssueLineDialog({
                 <TextField
                   control={form.control}
                   name="unit"
-                  label="Đơn vị"
+                  label={FORM_VI.unit}
                   readOnly
                   aria-readonly="true"
                   placeholder="kg"
@@ -767,15 +772,15 @@ function AddIssueLineDialog({
             </div>
 
             <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-              Đơn giá (WAC) tự áp dụng từ tồn kho tại thời điểm xác nhận phiếu.
+              {ISSUES_VI.wacAutoHint}
             </div>
 
             <TextareaField
               control={form.control}
               name="reason"
-              label="Lý do xuất"
+              label={ISSUES_VI.reasonLabel}
               rows={3}
-              placeholder="Ví dụ: cấp phát cho bếp chuẩn bị ca chiều"
+              placeholder={ISSUES_VI.reasonPlaceholder}
               required
             />
           </>
@@ -835,7 +840,7 @@ function IssueLineMobileCard({
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground">Đơn giá (WAC)</p>
+            <p className="text-muted-foreground">{ISSUES_VI.unitCostWac}</p>
             <p className="font-semibold">
               {formatVND(Number(item.unit_cost ?? 0))}
             </p>

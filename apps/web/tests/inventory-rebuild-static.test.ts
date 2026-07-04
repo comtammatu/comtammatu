@@ -191,7 +191,10 @@ test("consumption route is first-class while issues route remains compatible", (
   );
   assert.match(issuesClient, /\/inventory\/consumption/);
   assert.match(issueDetailClient, /\/inventory\/consumption/);
-  assert.match(issueDetailClient, /Phiếu tiêu hao/);
+  // Copy moved to the message catalog (i18n sweep) — pin the ref in the
+  // component and the value in the catalog.
+  assert.match(issueDetailClient, /ISSUES_VI\.surface\.consumption/);
+  assert.match(readWeb("lib/messages/inventory.ts"), /Phiếu tiêu hao/);
   assert.match(issuesPage, /\.from\("stock_movements"\)/);
   assert.match(issuesPage, /created_at, reason/);
   assert.match(issuesPage, /\.eq\("type", "consumption"\)/);
@@ -214,14 +217,14 @@ test("consumption route is first-class while issues route remains compatible", (
     "recorded consumption ledger should remove the 50-row cap when date-filtered",
   );
   assert.match(issuesClient, /recordedConsumptions/);
-  assert.match(issuesClient, /Tiêu hao đã ghi nhận/);
+  assert.match(issuesClient, /INVENTORY_VI\.recordedConsumptionTitle/);
   assert.match(issuesClient, /useSearchParams/);
   assert.match(issuesClient, /startDate/);
   assert.match(issuesClient, /endDate/);
   assert.match(issuesClient, /selectedRecordedBranchId/);
-  assert.match(issuesClient, /Tất cả chi nhánh/);
-  assert.match(issuesClient, /Tìm nguyên liệu, nguồn/);
-  assert.match(issuesClient, /Tổng thành tiền/);
+  assert.match(issuesClient, /BRANCH_VI\.selectAll/);
+  assert.match(issuesClient, /INVENTORY_VI\.recordedSearchPlaceholder/);
+  assert.match(issuesClient, /INVENTORY_VI\.totalAmountLabel/);
   assert.match(issuesClient, /sourceLabel/);
   assert.match(issuesClient, /tieu-hao-da-ghi-nhan/);
 });

@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory production order list keeps kitchen workflow copy inline */
-
 import { useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -45,7 +43,12 @@ import type {
 } from "./production-types";
 
 import { formatVND } from "@comtammatu/shared/format";
-import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  FORM_VI,
+  INVENTORY_VI,
+  PRODUCT_VI,
+} from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 interface ProductionOrderListProps {
   orders: ProductionOrderRow[];
@@ -83,13 +86,13 @@ export function ProductionOrderList({
             productionNumber,
             rows: result.meta.shortages as ProductionShortageRow[],
           });
-          toast.error(result.error ?? "Không đủ tồn kho");
+          toast.error(result.error ?? INVENTORY_VI.productionInsufficientStock);
           return;
         }
-        toast.error(result.error ?? "Không thể xác nhận");
+        toast.error(result.error ?? INVENTORY_VI.productionConfirmFailed);
         return;
       }
-      toast.success("Đã xác nhận lệnh sản xuất");
+      toast.success(INVENTORY_VI.productionOrderConfirmed);
       router.refresh();
     });
   }
@@ -98,10 +101,10 @@ export function ProductionOrderList({
     startTransition(async () => {
       const result = await cancelProductionOrder(orderId);
       if (!result.success) {
-        toast.error(result.error ?? "Không thể hủy");
+        toast.error(result.error ?? INVENTORY_VI.productionCancelFailed);
         return;
       }
-      toast.success("Đã hủy lệnh sản xuất");
+      toast.success(INVENTORY_VI.productionOrderCancelled);
       router.refresh();
     });
   }
@@ -141,7 +144,7 @@ export function ProductionOrderList({
           disabled={isPending}
         >
           <IconCircleCheck data-icon="inline-start" />
-          Xác nhận
+          {ACTIONS_VI.confirm}
         </Button>
         <Button
           type="button"
@@ -159,7 +162,7 @@ export function ProductionOrderList({
   const columns: DataTableColumn<ProductionOrderRow>[] = [
     {
       key: "production_number",
-      header: "Số lệnh",
+      header: INVENTORY_VI.productionNumber,
       render: (order) => (
         <div className="font-medium">
           <div>{order.production_number}</div>
@@ -171,7 +174,7 @@ export function ProductionOrderList({
     },
     {
       key: "branch",
-      header: "Bếp sản xuất",
+      header: INVENTORY_VI.productionBranch,
       render: (order) => order.branch_name,
     },
     {
@@ -190,7 +193,7 @@ export function ProductionOrderList({
     },
     {
       key: "total_cost",
-      header: "Tổng chi phí",
+      header: INVENTORY_VI.productionTotalCost,
       render: (order) => (
         <span className="font-mono tabular-nums">
           <ProductionOrderCost order={order} />
@@ -212,10 +215,10 @@ export function ProductionOrderList({
   return (
     <>
       <AppSection
-        title="Lệnh sản xuất"
+        title={INVENTORY_VI.productionOrdersTab}
         icon={<IconClipboardList />}
         badge={{
-          children: `${draftCount} lệnh nháp`,
+          children: INVENTORY_VI.productionDraftBadge(draftCount),
           variant: draftCount > 0 ? "warning" : "secondary",
         }}
         contentFlush
@@ -226,8 +229,8 @@ export function ProductionOrderList({
           columns={columns}
           data={orders}
           getRowKey={(order) => order.id}
-          emptyTitle="Chưa có lệnh sản xuất nào"
-          emptyDescription="Tạo lệnh mới khi BOM và nguyên liệu đã sẵn sàng tại Bếp Trung Tâm."
+          emptyTitle={INVENTORY_VI.productionOrdersEmptyTitle}
+          emptyDescription={INVENTORY_VI.productionOrdersEmptyDescription}
           emptyIcon={<IconClipboardList />}
           emptyMode="no-data"
           mobileCardRender={(order) => (
@@ -264,7 +267,7 @@ function ProductionOrderCost({ order }: { order: ProductionOrderRow }) {
       {formatVND(order.total_cost)}
       {order.status === "draft" ? (
         <span className="ml-1 text-xs font-normal text-muted-foreground">
-          (tạm tính)
+          {INVENTORY_VI.productionCostEstimateSuffix}
         </span>
       ) : null}
     </>
@@ -319,14 +322,14 @@ function ProductionShortageDialog({
   const columns: DataTableColumn<ProductionShortageRow>[] = [
     {
       key: "ingredient",
-      header: "Nguyên liệu",
+      header: PRODUCT_VI.rawIngredient,
       render: (row) => (
         <span className="font-medium">{row.ingredient_name}</span>
       ),
     },
     {
       key: "needed",
-      header: "Cần",
+      header: INVENTORY_VI.shortageNeeded,
       className: "text-right",
       render: (row) => (
         <span className="font-mono tabular-nums">
@@ -336,7 +339,7 @@ function ProductionShortageDialog({
     },
     {
       key: "on_hand",
-      header: "Tồn",
+      header: INVENTORY_VI.shortageOnHand,
       className: "text-right",
       render: (row) => (
         <span className="font-mono tabular-nums">
@@ -346,7 +349,7 @@ function ProductionShortageDialog({
     },
     {
       key: "missing",
-      header: "Thiếu",
+      header: INVENTORY_VI.shortageMissing,
       className: "text-right",
       render: (row) => (
         <span className="font-mono tabular-nums text-destructive">
@@ -356,7 +359,7 @@ function ProductionShortageDialog({
     },
     {
       key: "unit",
-      header: "Đơn vị",
+      header: FORM_VI.unit,
       className: "text-muted-foreground",
       render: (row) => row.unit,
     },
@@ -368,16 +371,16 @@ function ProductionShortageDialog({
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
-      title="Thiếu nguyên liệu để sản xuất"
+      title={INVENTORY_VI.productionShortageTitle}
       description={
         info
-          ? `Lệnh ${info.productionNumber} chưa đủ nguyên liệu tại Bếp Trung Tâm. Bổ sung tồn trong Bếp Trung Tâm trước khi xác nhận lại.`
+          ? INVENTORY_VI.productionShortageDescription(info.productionNumber)
           : ""
       }
       contentClassName="max-w-2xl"
       footer={
         <Button type="button" variant="outline" onClick={onClose}>
-          Đóng
+          {ACTIONS_VI.close}
         </Button>
       }
     >
@@ -385,7 +388,7 @@ function ProductionShortageDialog({
         columns={columns}
         data={info?.rows ?? []}
         getRowKey={(row) => row.ingredient_id}
-        emptyTitle="Không có dòng thiếu nguyên liệu"
+        emptyTitle={INVENTORY_VI.productionShortageEmptyTitle}
         emptyMode="no-data"
         mobileCardRender={(row) => <ProductionShortageItem row={row} />}
       />
@@ -399,13 +402,14 @@ function ProductionShortageItem({ row }: { row: ProductionShortageRow }) {
       <ItemHeader>
         <ItemTitle>{row.ingredient_name}</ItemTitle>
         <Badge variant="destructive">
-          Thiếu {formatShortageNumber(row.missing)} {row.unit}
+          {INVENTORY_VI.shortageMissing} {formatShortageNumber(row.missing)}{" "}
+          {row.unit}
         </Badge>
       </ItemHeader>
       <ItemContent>
         <ItemDescription>
-          Cần {formatShortageNumber(row.needed)} · Tồn{" "}
-          {formatShortageNumber(row.on_hand)}
+          {INVENTORY_VI.shortageNeeded} {formatShortageNumber(row.needed)} ·{" "}
+          {INVENTORY_VI.shortageOnHand} {formatShortageNumber(row.on_hand)}
         </ItemDescription>
       </ItemContent>
     </Item>

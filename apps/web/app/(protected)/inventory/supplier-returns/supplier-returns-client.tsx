@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: supplier returns list keeps warehouse operator copy inline */
-
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search as IconSearch } from "lucide-react";
@@ -31,12 +29,18 @@ import {
   AppPageHeader,
   AppToolbar,
 } from "@/components/surface";
-import { INVENTORY_VI } from "@comtammatu/shared/messages";
+import {
+  BRANCH_VI,
+  FORM_VI,
+  INVENTORY_VI,
+} from "@comtammatu/shared/messages";
 import type { SupplierReturnRow } from "./page";
 
 import { formatVND as formatVndNumber } from "../_lib/format";
 import { StatusBadge } from "@/components/status-badge";
 import { messages as inventoryMessages } from "@lib/messages";
+
+const RETURNS_VI = inventoryMessages.inventory.supplierReturns;
 
 const formatReturnValue = (v: number | null) =>
   v == null
@@ -73,29 +77,29 @@ export function SupplierReturnsClient({
   const columns: DataTableColumn<SupplierReturnRow>[] = [
     {
       key: "return_number",
-      header: "Số phiếu",
+      header: RETURNS_VI.returnNumber,
       render: (row) => <span className="font-medium">{row.return_number}</span>,
     },
     {
       key: "supplier",
-      header: "Nhà cung cấp",
+      header: INVENTORY_VI.supplier,
       render: (row) => row.suppliers?.name ?? "—",
     },
     {
       key: "branch",
-      header: "Chi nhánh",
+      header: BRANCH_VI.long,
       render: (row) => row.branches?.name ?? "—",
     },
     {
       key: "status",
-      header: "Trạng thái",
+      header: FORM_VI.status,
       render: (row) => (
         <StatusBadge domain="inventory" value={row.status} size="sm" />
       ),
     },
     {
       key: "value",
-      header: "Giá trị",
+      header: FORM_VI.value,
       className: "text-right",
       render: (row) => (
         <span className="font-mono">{formatReturnValue(row.total_value)}</span>
@@ -106,7 +110,7 @@ export function SupplierReturnsClient({
       header: "",
       render: (row) => (
         <Button variant="ghost" size={embedded ? "touch" : "sm"} asChild>
-          <Link href={`${basePath}/${row.id}`}>Chi tiết</Link>
+          <Link href={`${basePath}/${row.id}`}>{RETURNS_VI.viewDetail}</Link>
         </Button>
       ),
     },
@@ -135,7 +139,7 @@ export function SupplierReturnsClient({
                   <InputGroupInput
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Tìm theo số phiếu, nhà cung cấp hoặc chi nhánh"
+                    placeholder={RETURNS_VI.searchPlaceholder}
                   />
                 </InputGroup>
               }
@@ -146,9 +150,7 @@ export function SupplierReturnsClient({
             data={filteredReturns}
             getRowKey={(row) => row.id}
             emptyTitle={
-              showNoResults
-                ? "Không tìm thấy phiếu trả hàng phù hợp"
-                : "Chưa có phiếu trả hàng NCC"
+              showNoResults ? RETURNS_VI.emptyFiltered : RETURNS_VI.emptyNoData
             }
             emptyMode={showNoResults ? "no-results" : "no-data"}
             mobileCardRender={(row) => (
@@ -201,7 +203,7 @@ function SupplierReturnItem({
         </span>
         <ItemActions>
           <Button variant="ghost" size={embedded ? "touch" : "sm"} asChild>
-            <Link href={`${basePath}/${row.id}`}>Chi tiết</Link>
+            <Link href={`${basePath}/${row.id}`}>{RETURNS_VI.viewDetail}</Link>
           </Button>
         </ItemActions>
       </ItemFooter>

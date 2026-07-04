@@ -1,3 +1,4 @@
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import type {
   ProductionOrderRow,
   ProductionRecipeRow,
@@ -95,13 +96,13 @@ export function getProductionReadinessSummary({
 
   const readinessMessage =
     readinessState === "missing-production-branch"
-      ? "Chưa có Bếp Trung Tâm nào được cấu hình."
+      ? INVENTORY_VI.productionReadinessNoBranch
       : readinessState === "missing-finished-good"
-        ? "Chưa có thành phẩm nào được gắn `item_kind = finished_good`, nên chưa thể tạo lệnh sản xuất."
+        ? INVENTORY_VI.productionReadinessNoFinishedGood
         : readinessState === "missing-raw-material"
-          ? "Chưa có nguyên liệu nào được gắn `item_kind = raw_material`, nên chưa thể lập công thức."
+          ? INVENTORY_VI.productionReadinessNoRawMaterial
           : readinessState === "missing-recipe"
-            ? "Chưa có BOM sản xuất nào được cấu hình, nên chưa thể xác nhận lệnh."
+            ? INVENTORY_VI.productionReadinessNoRecipe
             : null;
 
   return {

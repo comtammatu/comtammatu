@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory production stats surface keeps operator copy inline */
-
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -18,6 +16,7 @@ import {
 } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { AppSection, KpiRow } from "@/components/surface";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import {
@@ -77,49 +76,52 @@ export function ProductionStats({
   const readinessReady = readinessState === null;
   const activeProductionBranchCopy =
     productionBranchCount > 0
-      ? `${productionBranchCount} bếp sản xuất đang hoạt động`
-      : "Chưa có Bếp Trung Tâm được cấu hình";
+      ? INVENTORY_VI.productionActiveBranches(productionBranchCount)
+      : INVENTORY_VI.productionNoBranchConfigured;
   const summaryItems = [
     {
-      label: "Lệnh nháp",
+      label: INVENTORY_VI.productionStatDraftLabel,
       value: totals.draft,
-      description: "Cần chốt để ghi tiêu hao",
+      description: INVENTORY_VI.productionStatDraftHint,
     },
     {
-      label: "Đã hoàn tất",
+      label: INVENTORY_VI.productionStatCompletedLabel,
       value: totals.completed,
-      description: "Đã nhập thành phẩm",
+      description: INVENTORY_VI.productionStatCompletedHint,
     },
     {
-      label: "Đã hủy",
+      label: INVENTORY_VI.productionStatCancelledLabel,
       value: totals.cancelled,
-      description: "Không ghi tồn kho",
+      description: INVENTORY_VI.productionStatCancelledHint,
     },
     {
-      label: "BOM thành phẩm",
+      label: INVENTORY_VI.productionRecipesMetricLabel,
       value: recipeFinishedGoodCount,
-      description: `${recipeLineCount} dòng nguyên liệu`,
+      description: INVENTORY_VI.ingredientLineCountBadge(recipeLineCount),
     },
     {
-      label: "Danh mục sẵn sàng",
+      label: INVENTORY_VI.productionStatCatalogLabel,
       value: finishedGoodCount + rawMaterialCount,
-      description: `${finishedGoodCount} TP / ${rawMaterialCount} NL`,
+      description: INVENTORY_VI.productionStatCatalogHint(
+        finishedGoodCount,
+        rawMaterialCount,
+      ),
     },
   ] as const;
 
   const recoveryMessage =
     readinessState === "missing-finished-good"
       ? canManageCatalog
-        ? "Tạo ít nhất một thành phẩm để mở BOM sản xuất, rồi quay lại lập lệnh."
-        : "Cần đội quản trị danh mục tạo ít nhất một thành phẩm trước khi lập BOM và lệnh sản xuất."
+        ? INVENTORY_VI.productionRecoveryMissingFinishedGood
+        : INVENTORY_VI.productionRecoveryMissingFinishedGoodNoPerm
       : readinessState === "missing-raw-material"
         ? canManageCatalog
-          ? "Tạo nguyên liệu đầu vào để hoàn thiện BOM trước khi xác nhận sản xuất."
-          : "Cần đội quản trị danh mục bổ sung nguyên liệu đầu vào trước khi hoàn thiện BOM sản xuất."
+          ? INVENTORY_VI.productionRecoveryMissingRawMaterial
+          : INVENTORY_VI.productionRecoveryMissingRawMaterialNoPerm
         : readinessState === "missing-recipe"
           ? canManageRecipes
-            ? "Cấu hình ít nhất một BOM sản xuất trước khi xác nhận lệnh."
-            : "Cần đội quản trị cấu hình BOM sản xuất trước khi chạy mẻ này."
+            ? INVENTORY_VI.productionRecoveryMissingRecipe
+            : INVENTORY_VI.productionRecoveryMissingRecipeNoPerm
           : null;
 
   function handleFinishedGoodCreated(_good: FinishedGoodOption) {
@@ -133,7 +135,7 @@ export function ProductionStats({
   return (
     <>
       <AppSection
-        title="Trạm điều phối sản xuất"
+        title={INVENTORY_VI.productionStatsTitle}
         icon={<IconFactory />}
         badge={{
           variant: readinessReady ? "success" : "warning",
@@ -144,7 +146,9 @@ export function ProductionStats({
               ) : (
                 <IconCircleAlert data-icon="inline-start" />
               )}
-              {readinessReady ? "Sẵn sàng" : "Cần cấu hình"}
+              {readinessReady
+                ? INVENTORY_VI.productionReadyBadge
+                : INVENTORY_VI.productionNeedsConfigBadge}
             </>
           ),
         }}
@@ -165,8 +169,7 @@ export function ProductionStats({
           <div className="flex min-w-0 flex-col gap-1">
             <p className="text-sm font-medium">{activeProductionBranchCopy}</p>
             <p className="text-xs text-muted-foreground">
-              Quy trình chuẩn: nhận nguyên liệu, chốt BOM, xác nhận lệnh để trừ
-              nguyên liệu và nhập thành phẩm.
+              {INVENTORY_VI.productionStandardFlowHint}
             </p>
           </div>
           <Badge variant="outline">BTT</Badge>
@@ -193,7 +196,7 @@ export function ProductionStats({
                 onClick={() => setQuickFinishedGoodDialogOpen(true)}
               >
                 <IconPlus data-icon="inline-start" />
-                Tạo thành phẩm
+                {INVENTORY_VI.createFinishedGood}
               </Button>
             ) : null}
             {canManageCatalog && readinessState === "missing-raw-material" ? (
@@ -203,7 +206,7 @@ export function ProductionStats({
                 onClick={() => setQuickRawIngredientDialogOpen(true)}
               >
                 <IconPlus data-icon="inline-start" />
-                Tạo nguyên liệu
+                {INVENTORY_VI.createRawIngredient}
               </Button>
             ) : null}
             {readinessState === "missing-recipe" && canManageRecipes ? (
@@ -213,11 +216,13 @@ export function ProductionStats({
                 variant="outline"
                 onClick={onOpenRecipes}
               >
-                Mở BOM sản xuất
+                {INVENTORY_VI.openProductionRecipes}
               </Button>
             ) : readinessState !== "missing-recipe" && canManageCatalog ? (
               <Button type="button" size="sm" variant="outline" asChild>
-                <Link href="/inventory/ingredients">Mở danh mục nguyên liệu</Link>
+                <Link href="/inventory/ingredients">
+                  {INVENTORY_VI.openIngredientCatalog}
+                </Link>
               </Button>
             ) : null}
           </div>

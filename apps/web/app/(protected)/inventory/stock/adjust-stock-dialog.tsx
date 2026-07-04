@@ -1,8 +1,7 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing inventory stock adjustment form keeps operational copy inline */
-
 import { z } from "zod";
+import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   FormDialog,
   NumberField,
@@ -12,8 +11,8 @@ import {
 import { adjustStock } from "../stock-actions";
 
 const ADJUST_TYPE_OPTIONS = [
-  { value: "adjustment", label: "Điều chỉnh thủ công" },
-  { value: "count_adjustment", label: "Kiểm kho" },
+  { value: "adjustment", label: INVENTORY_VI.adjustTypeManual },
+  { value: "count_adjustment", label: INVENTORY_VI.adjustTypeCount },
 ] as const;
 
 const adjustStockSchema = z.object({
@@ -21,13 +20,13 @@ const adjustStockSchema = z.object({
   quantity_change: z
     .string()
     .trim()
-    .min(1, { error: "Số lượng điều chỉnh không được trống" })
+    .min(1, { error: INVENTORY_VI.adjustQuantityRequired })
     .refine(
       (v) => {
         const n = Number(v);
         return Number.isFinite(n) && n !== 0;
       },
-      { error: "Số lượng điều chỉnh không được bằng 0" },
+      { error: INVENTORY_VI.adjustQuantityNonZero },
     ),
   reason: z.string().trim().optional(),
 });
@@ -81,10 +80,10 @@ export function AdjustStockDialog({
       schema={adjustStockSchema}
       defaultValues={DEFAULT_VALUES}
       entityKey={`adjust-${ingredientId}`}
-      title="Điều chỉnh tồn kho"
-      description={`Nguyên liệu: ${ingredientName}`}
-      submitLabel="Xác nhận"
-      successMessage={`Đã điều chỉnh tồn kho ${ingredientName}`}
+      title={INVENTORY_VI.adjustStockTitle}
+      description={INVENTORY_VI.adjustIngredientLine(ingredientName)}
+      submitLabel={ACTIONS_VI.confirm}
+      successMessage={INVENTORY_VI.adjustStockSuccess(ingredientName)}
       contentClassName="sm:max-w-sm"
       onSubmit={handleSubmit}
     >
@@ -93,25 +92,25 @@ export function AdjustStockDialog({
           <SelectField
             control={form.control}
             name="adjust_type"
-            label="Loại điều chỉnh"
+            label={INVENTORY_VI.adjustTypeLabel}
             options={ADJUST_TYPE_OPTIONS}
           />
 
           <NumberField
             control={form.control}
             name="quantity_change"
-            label={`Số lượng (${unit}) - dương = nhập, âm = xuất`}
+            label={INVENTORY_VI.adjustQuantityLabel(unit)}
             allowNegative
             maxFractionDigits={2}
-            placeholder="VD: 10 hoặc -5"
+            placeholder={INVENTORY_VI.adjustQuantityPlaceholder}
             required
           />
 
           <TextareaField
             control={form.control}
             name="reason"
-            label="Lý do (tùy chọn)"
-            placeholder="VD: Nhập hàng sáng, Hao hụt..."
+            label={INVENTORY_VI.adjustReasonLabel}
+            placeholder={INVENTORY_VI.adjustReasonPlaceholder}
             rows={3}
           />
         </>

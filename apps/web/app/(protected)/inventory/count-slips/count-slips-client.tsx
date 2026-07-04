@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: manager count-slip review surface keeps operational copy inline */
-
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -18,6 +16,11 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { cn } from "@comtammatu/ui";
+import {
+  ACTIONS_VI,
+  INVENTORY_VI,
+  STAFF_VI,
+} from "@comtammatu/shared/messages";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
@@ -95,10 +98,10 @@ export function CountSlipsClient({
     <>
       {!embedded ? (
         <AppPageHeader
-          title="Duyệt phiếu đếm tồn"
-          description="Đối chiếu số đếm với tồn hệ thống. Duyệt để ghi điều chỉnh kho, hoặc yêu cầu nhân viên đếm lại."
+          title={INVENTORY_VI.countSlipTitle}
+          description={INVENTORY_VI.countSlipDescription}
           badge={{
-            children: `${pending.length} chờ duyệt`,
+            children: INVENTORY_VI.countSlipPendingBadge(pending.length),
             variant: pending.length > 0 ? "warning" : "secondary",
           }}
         />
@@ -107,8 +110,8 @@ export function CountSlipsClient({
       {pending.length === 0 ? (
         <AppEmptyState
           compact
-          title="Không có phiếu đếm chờ duyệt"
-          description="Khi nhân viên gửi phiếu đếm tồn, phiếu sẽ xuất hiện tại đây."
+          title={INVENTORY_VI.countSlipEmptyTitle}
+          description={INVENTORY_VI.countSlipEmptyDescription}
           icon={<IconClipboardCheck />}
         />
       ) : (
@@ -129,7 +132,7 @@ export function CountSlipsClient({
       {history.length > 0 ? (
         <section className="flex flex-col gap-3">
           <h2 className="font-heading text-base font-semibold tracking-tight">
-            Đã xử lý gần đây
+            {INVENTORY_VI.countSlipHistoryTitle}
           </h2>
           <ItemGroup className="flex flex-col gap-3 p-0 rounded-none border-0">
             {history.map((row) => (
@@ -202,15 +205,17 @@ function CountSlipCard({
 
   async function handleApprove() {
     const ok = await confirm({
-      title: "Duyệt phiếu đếm tồn?",
-      description:
-        "Hệ thống sẽ ghi điều chỉnh kho theo số đếm và không thể hoàn tác từ màn này.",
+      title: INVENTORY_VI.countSlipApproveTitle,
+      description: INVENTORY_VI.countSlipApproveDescription,
       details: [
-        { label: "Nhân viên", value: row.employeeName },
-        { label: "Kho", value: row.locationName },
-        { label: "Số dòng", value: `${row.lines.length} nguyên liệu` },
+        { label: STAFF_VI.long, value: row.employeeName },
+        { label: INVENTORY_VI.warehouseShort, value: row.locationName },
+        {
+          label: INVENTORY_VI.lineCountLabel,
+          value: INVENTORY_VI.ingredientCountBadge(row.lines.length),
+        },
       ],
-      confirmText: "Duyệt",
+      confirmText: ACTIONS_VI.approve,
       variant: "destructive",
     });
     if (!ok) return;
@@ -220,13 +225,13 @@ function CountSlipCard({
       const res = await approveCountSlip({ slipId: row.id });
       setPendingAction(null);
       if (!res.success) {
-        toast.error(res.error ?? "Không duyệt được phiếu đếm.");
+        toast.error(res.error ?? INVENTORY_VI.countSlipApproveFailed);
         return;
       }
       toast.success(
         res.data && res.data.adjustedLines > 0
-          ? `Đã duyệt và điều chỉnh ${res.data.adjustedLines} dòng kho.`
-          : "Đã duyệt phiếu đếm tồn.",
+          ? INVENTORY_VI.countSlipApprovedAdjusted(res.data.adjustedLines)
+          : INVENTORY_VI.countSlipApproved,
       );
       onApproved?.();
       router.refresh();
@@ -235,7 +240,7 @@ function CountSlipCard({
 
   function handleRecount() {
     if (note.trim().length < 3) {
-      toast.error("Nhập lý do cần đếm lại.");
+      toast.error(INVENTORY_VI.recountReasonRequired);
       return;
     }
     setPendingAction("recount");
@@ -243,10 +248,10 @@ function CountSlipCard({
       const res = await requestCountRecount({ slipId: row.id, note });
       setPendingAction(null);
       if (!res.success) {
-        toast.error(res.error ?? "Không gửi được yêu cầu đếm lại.");
+        toast.error(res.error ?? INVENTORY_VI.recountRequestFailed);
         return;
       }
-      toast.success("Đã yêu cầu nhân viên đếm lại.");
+      toast.success(INVENTORY_VI.recountRequested);
       setRecounting(false);
       setNote("");
       onRecount?.();
@@ -276,9 +281,11 @@ function CountSlipCard({
               </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Ngày đếm {formatVNDate(row.countDate)}
+              {INVENTORY_VI.countDateAt(formatVNDate(row.countDate))}
               {row.submittedAt
-                ? ` • Gửi ${formatVNDateTime(row.submittedAt)}`
+                ? INVENTORY_VI.submittedAtSuffix(
+                    formatVNDateTime(row.submittedAt),
+                  )
                 : ""}
             </p>
           </div>
@@ -298,13 +305,13 @@ function CountSlipCard({
                     <div className="font-medium">{line.ingredientName}</div>
                     <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
                       <span>
-                        Tồn hệ thống:{" "}
+                        {INVENTORY_VI.systemStockColon}{" "}
                         <span className="font-mono tabular-nums text-foreground">
                           {formatQty(line.systemQuantity)} {line.systemUnit}
                         </span>
                       </span>
                       <span>
-                        Số đếm:{" "}
+                        {INVENTORY_VI.countedColon}{" "}
                         <span className="font-mono tabular-nums text-foreground">
                           {formatQty(line.countedQuantity)} {line.countedUnit}
                         </span>
@@ -312,7 +319,7 @@ function CountSlipCard({
                       {line.countedBaseQuantity !== null &&
                       line.countedUnit !== line.systemUnit ? (
                         <span>
-                          Quy đổi:{" "}
+                          {INVENTORY_VI.convertedColon}{" "}
                           <span className="font-mono tabular-nums text-foreground">
                             {formatQty(line.countedBaseQuantity)}{" "}
                             {line.systemUnit}
@@ -336,7 +343,9 @@ function CountSlipCard({
                       {formatVariance(line.variance)}
                       {line.variance !== null ? ` ${line.varianceUnit}` : ""}
                     </div>
-                    <div className="text-xs text-muted-foreground">Lệch</div>
+                    <div className="text-xs text-muted-foreground">
+                      {INVENTORY_VI.varianceShort}
+                    </div>
                   </div>
                 </div>
               </Item>
@@ -345,19 +354,19 @@ function CountSlipCard({
 
           {row.note ? (
             <p className="text-xs italic text-muted-foreground">
-              Ghi chú nhân viên: {row.note}
+              {INVENTORY_VI.employeeNoteLine(row.note)}
             </p>
           ) : null}
 
           {row.reviewNote ? (
             <p className="text-xs italic text-warning">
-              Lý do đếm lại: {row.reviewNote}
+              {INVENTORY_VI.recountReasonLine(row.reviewNote)}
             </p>
           ) : null}
 
           <div className="flex items-center justify-between gap-2 text-sm">
             <span className="text-muted-foreground">
-              {row.lines.length} dòng
+              {INVENTORY_VI.grnDraftLineCount(row.lines.length)}
             </span>
             <span
               className={cn(
@@ -366,8 +375,11 @@ function CountSlipCard({
               )}
             >
               {showTotalVariance
-                ? `Tổng lệch ${formatVariance(totalVariance)} ${totalVarianceUnit}`
-                : `${changedLineCount} dòng có lệch`}
+                ? INVENTORY_VI.totalVarianceSummary(
+                    formatVariance(totalVariance),
+                    totalVarianceUnit,
+                  )
+                : INVENTORY_VI.varianceLineCount(changedLineCount)}
             </span>
           </div>
 
@@ -375,13 +387,13 @@ function CountSlipCard({
             <>
               {recounting ? (
                 <div className="flex flex-col gap-2">
-                  <Label>Lý do cần đếm lại</Label>
+                  <Label>{INVENTORY_VI.recountReasonLabel}</Label>
                   <Textarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     disabled={pendingAction !== null}
                     rows={2}
-                    placeholder="Ví dụ: số sườn lệch nhiều so với tồn, cần đếm lại kho mát"
+                    placeholder={INVENTORY_VI.recountReasonPlaceholder}
                   />
                 </div>
               ) : null}
@@ -398,7 +410,7 @@ function CountSlipCard({
                       }}
                       disabled={pendingAction !== null}
                     >
-                      Hủy
+                      {ACTIONS_VI.cancel}
                     </Button>
                     <Button
                       size={embedded ? "touch" : "default"}
@@ -410,7 +422,7 @@ function CountSlipCard({
                       ) : (
                         <IconRecount data-icon="inline-start" />
                       )}
-                      Gửi yêu cầu đếm lại
+                      {INVENTORY_VI.sendRecountRequest}
                     </Button>
                   </>
                 ) : (
@@ -422,7 +434,7 @@ function CountSlipCard({
                       disabled={pendingAction !== null}
                     >
                       <IconRecount data-icon="inline-start" />
-                      Yêu cầu đếm lại
+                      {INVENTORY_VI.requestRecount}
                     </Button>
                     <Button
                       size={embedded ? "touch" : "default"}
@@ -434,7 +446,7 @@ function CountSlipCard({
                       ) : (
                         <IconCheck data-icon="inline-start" />
                       )}
-                      Duyệt
+                      {ACTIONS_VI.approve}
                     </Button>
                   </>
                 )}

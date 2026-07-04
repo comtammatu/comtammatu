@@ -349,7 +349,9 @@ test("HRM consumption history stays available but no longer gates Employee check
   assert.ok(
     issueActionsSrc.includes("source_type, source_ref") &&
       issueDetailSrc.includes("getIssueSourceLabel") &&
-      issueDetailSrc.includes("HRM - Tiêu hao bếp trong ngày") &&
+      // Copy moved to the message catalog (i18n sweep) — the source label is
+      // resolved via the hrmConsumptionSource key.
+      issueDetailSrc.includes("hrmConsumptionSource") &&
       documentCorrectionSrc.includes("readHrmConsumptionTrace") &&
       documentCorrectionSrc.includes("issue.source_ref"),
     "Inventory issue detail and correction flow must preserve HRM consumption trace",

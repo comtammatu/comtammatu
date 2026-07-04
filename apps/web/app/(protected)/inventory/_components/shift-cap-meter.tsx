@@ -90,7 +90,7 @@ export function ShiftCapMeter({
         </p>
       ) : pct >= 0.7 ? (
         <p className="text-warning-foreground">
-          Gần cap — thêm {formatVND(shiftCap - projected)} nữa sẽ cần duyệt
+          {INVENTORY_VI.shiftCapNearWarning(formatVND(shiftCap - projected))}
         </p>
       ) : null}
     </div>

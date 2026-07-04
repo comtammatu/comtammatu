@@ -31,9 +31,9 @@ export const INVENTORY_VI = {
   chooseFileLabel: "Chọn file (.xlsx, .csv)",
   importResultHeading: "Kết quả",
   importIngredientsTitle: "Import nguyên liệu từ file",
-  importBomTitle: "Import BOM sản xuất từ file",
+  importBomTitle: "Nhập công thức sản xuất từ file",
   importBomDescription:
-    "Hỗ trợ .xlsx và .csv. Mỗi thành phẩm xuất hiện trong file sẽ được thay thế toàn bộ dòng nguyên liệu trong BOM.",
+    "Hỗ trợ .xlsx và .csv. Mỗi thành phẩm trong file sẽ được thay toàn bộ dòng nguyên liệu.",
   importErrorDetailHeading: "Chi tiết dòng lỗi",
   createProductionOrder: "Tạo lệnh sản xuất",
   productionNumber: "Số lệnh",
@@ -47,7 +47,7 @@ export const INVENTORY_VI = {
   productionNoteePlaceholder:
     "Ghi chú lô sản xuất, ca làm việc, yêu cầu đóng gói...",
   productionTitle: "Sản xuất Bếp Trung Tâm",
-  productionDescription: "Lệnh sản xuất và BOM thành phẩm",
+  productionDescription: "Lệnh sản xuất và Công thức thành phẩm",
   productionOrdersTab: "Lệnh sản xuất",
   productionRecipesTab: "Công thức sản xuất",
   productionBackToHub: "Về trạm sản xuất",
@@ -57,8 +57,8 @@ export const INVENTORY_VI = {
   productionOpenOrders: "Mở lệnh sản xuất",
   productionDraftBadge: (count: number) => `${count} lệnh nháp`,
   productionRecipesCardDescription:
-    "Cấu hình BOM thành phẩm: nguyên liệu và định lượng cho từng mẻ sản xuất.",
-  productionRecipesMetricLabel: "BOM thành phẩm",
+    "Cấu hình Công thức thành phẩm: nguyên liệu và định lượng cho từng mẻ sản xuất.",
+  productionRecipesMetricLabel: "Công thức thành phẩm",
   productionOpenRecipes: "Mở công thức",
   productionCatalogCardTitle: "Danh mục nguyên liệu",
   productionCatalogCardDescription:
@@ -77,7 +77,7 @@ export const INVENTORY_VI = {
   yield: "Yield",
   yieldHint: "Yield mặc định 1.0 (không hao hụt). 0.85 = hao 15% khi chế biến.",
   recipeDescription:
-    "Lượng nguyên liệu cho 1 phần món trên menu (khác BOM sản xuất).",
+    "Lượng nguyên liệu cho 1 phần món trên menu (khác công thức sản xuất).",
   editRecipeTitle: "Sửa định mức món bán",
   createRecipeTitle: "Tạo định mức món bán",
   updateRecipeBtn: "Cập nhật định mức",
@@ -96,7 +96,7 @@ export const INVENTORY_VI = {
   shiftCapTier2Warn: "⚠ Phiếu này sẽ trigger tier 2 → QLV phải duyệt",
   loadingHistory15m: "Đang tải lịch sử 15 phút…",
   branchOverCapBanner:
-    "Đã vượt cap branch — mọi waste mới sẽ tự chuyển tier 2 (cần QLV duyệt). Cân nhắc báo QL trước khi submit.",
+    "Đã vượt cap chi nhánh — hao hụt mới tự chuyển mức 2 (cần QLV duyệt).",
   branchNearCapBanner:
     "Gần chạm cap branch — các phiếu waste tiếp theo có thể tự chuyển tier 2.",
   stocktakeModeQuickDesc:
@@ -154,14 +154,14 @@ export const INVENTORY_VI = {
   createSupplierReturnDescription: "Tạo phiếu trả hàng mới cho nhà cung cấp.",
   featureInDevelopmentTitle: "Tính năng đang phát triển",
   supplierReturnFromGrnHint:
-    "Tạo phiếu trả hàng từ GRN được thực hiện trực tiếp trong màn hình chi tiết GRN.",
+    "Tạo phiếu trả hàng trực tiếp trong màn chi tiết GRN.",
   supplierReturnsTitle: "Phiếu trả hàng NCC",
   supplierReturnsDescription: "Quản lý các phiếu trả hàng nhà cung cấp.",
   noSupplierReturns: "Chưa có phiếu trả hàng",
   createWasteTitle: "Tạo phiếu hao hụt",
   wasteFeatureDisabledTitle: "Chưa bật ghi nhận hao hụt",
   wasteFeatureDisabledBranchHint:
-    "Tính năng hao hụt chưa được bật cho chi nhánh này. Báo quản lý trước khi ghi nhận ngoài quy trình hiện tại.",
+    "Chi nhánh chưa bật ghi nhận hao hụt. Báo quản lý trước khi ghi ngoài quy trình.",
   branchRequiredTitle: "Cần chọn chi nhánh",
   branchRequiredWasteHint:
     "Chọn chi nhánh ở thanh điều hướng trước khi tạo phiếu hao hụt mới.",
@@ -183,6 +183,311 @@ export const INVENTORY_VI = {
   enterQuantityPlaceholder: "Nhập số lượng...",
   unitPlaceholder: "kg, lít...",
   selectUnit: "Chọn ĐV",
+  productionStatsTitle: "Trạm điều phối sản xuất",
+  productionReadyBadge: "Sẵn sàng",
+  productionNeedsConfigBadge: "Cần cấu hình",
+  productionActiveBranches: (count: number) =>
+    `${count} bếp sản xuất đang hoạt động`,
+  productionNoBranchConfigured: "Chưa có Bếp Trung Tâm được cấu hình",
+  productionStatDraftLabel: "Lệnh nháp",
+  productionStatDraftHint: "Cần chốt để ghi tiêu hao",
+  productionStatCompletedLabel: "Đã hoàn tất",
+  productionStatCompletedHint: "Đã nhập thành phẩm",
+  productionStatCancelledLabel: "Đã hủy",
+  productionStatCancelledHint: "Không ghi tồn kho",
+  productionStatCatalogLabel: "Danh mục sẵn sàng",
+  productionStatCatalogHint: (finishedGoods: number, rawMaterials: number) =>
+    `${finishedGoods} TP / ${rawMaterials} NL`,
+  productionStandardFlowHint:
+    "Quy trình chuẩn: nhận nguyên liệu, chốt công thức, xác nhận lệnh để trừ nguyên liệu và nhập thành phẩm.",
+  productionRecoveryMissingFinishedGood:
+    "Tạo ít nhất một thành phẩm để mở công thức sản xuất, rồi quay lại lập lệnh.",
+  productionRecoveryMissingFinishedGoodNoPerm:
+    "Cần đội quản trị danh mục tạo ít nhất một thành phẩm trước khi lập công thức và lệnh sản xuất.",
+  productionRecoveryMissingRawMaterial:
+    "Tạo nguyên liệu đầu vào để hoàn thiện công thức trước khi xác nhận sản xuất.",
+  productionRecoveryMissingRawMaterialNoPerm:
+    "Cần đội quản trị danh mục bổ sung nguyên liệu đầu vào trước khi hoàn thiện công thức sản xuất.",
+  productionRecoveryMissingRecipe:
+    "Cấu hình ít nhất một công thức sản xuất trước khi xác nhận lệnh.",
+  productionRecoveryMissingRecipeNoPerm:
+    "Cần đội quản trị cấu hình công thức sản xuất trước khi chạy mẻ này.",
+  productionReadinessNoBranch: "Chưa có Bếp Trung Tâm nào được cấu hình.",
+  productionReadinessNoFinishedGood:
+    "Chưa có thành phẩm nào được gắn `item_kind = finished_good`, nên chưa thể tạo lệnh sản xuất.",
+  productionReadinessNoRawMaterial:
+    "Chưa có nguyên liệu nào được gắn `item_kind = raw_material`, nên chưa thể lập công thức.",
+  productionReadinessNoRecipe:
+    "Chưa có công thức sản xuất nào được cấu hình, nên chưa thể xác nhận lệnh.",
+  createFinishedGood: "Tạo thành phẩm",
+  createFinishedGoodNew: "Tạo thành phẩm mới",
+  createRawIngredient: "Tạo nguyên liệu",
+  openProductionRecipes: "Mở công thức sản xuất",
+  openIngredientCatalog: "Mở danh mục nguyên liệu",
+  productionRecipeSelectIngredientRequired: "Vui lòng chọn nguyên liệu",
+  productionRecipeIngredientInvalid: "Nguyên liệu không hợp lệ",
+  productionRecipeSelectFinishedGoodRequired: "Vui lòng chọn thành phẩm",
+  productionRecipeFinishedGoodInvalid: "Thành phẩm không hợp lệ",
+  productionRecipeMinLines: "Cần ít nhất một nguyên liệu trong công thức.",
+  productionRecipeDuplicateIngredient:
+    "Nguyên liệu bị trùng trong công thức.",
+  productionRecipeDialogIntro:
+    "Chọn thành phẩm một lần, thêm nhiều nguyên liệu rồi lưu công thức.",
+  productionRecipeFinishedGoodLabel: "Thành phẩm *",
+  noFinishedGoodInCatalog: "Chưa có thành phẩm trong danh mục.",
+  noRawIngredientInCatalog: "Chưa có nguyên liệu đầu vào trong danh mục.",
+  productionRecipeLinesLabel: "Dòng công thức",
+  ingredientCountBadge: (count: number) => `${count} nguyên liệu`,
+  ingredientLineCountBadge: (count: number) => `${count} dòng nguyên liệu`,
+  finishedGoodsWithRecipeBadge: (count: number) =>
+    `${count} thành phẩm có công thức`,
+  productionRecipeSaveFailed: "Không thể lưu công thức sản xuất",
+  productionRecipeSavedToast: (count: number) =>
+    `Đã lưu ${count} nguyên liệu trong công thức`,
+  productionRecipeDeleteFailed: "Không thể xóa công thức",
+  productionRecipeDeleted: "Đã xóa công thức",
+  productionRecipeGroupDeleteTitle: "Xóa toàn bộ công thức?",
+  productionRecipeGroupDeleteDescription: (count: number, name: string) =>
+    `Thao tác này sẽ xóa toàn bộ ${count} dòng công thức của "${name}".`,
+  productionRecipeGroupDeleteConfirm: "Xóa toàn bộ công thức",
+  productionRecipeGroupDeleteFailed: "Không thể xóa công thức cũ",
+  productionRecipeGroupDeleted: "Đã xóa toàn bộ công thức cũ của thành phẩm",
+  productionRecipeUpdateAria: (name: string) => `Cập nhật công thức ${name}`,
+  productionRecipeUpdate: "Cập nhật công thức",
+  productionRecipeDeleteLineAria: (name: string) =>
+    `Xóa dòng công thức ${name}`,
+  productionRecipeDeleteLine: "Xóa dòng công thức",
+  productionRecipeCreate: "Nhập công thức",
+  productionRecipeCreateTitle: "Nhập công thức sản xuất",
+  productionRecipeSave: "Lưu công thức",
+  productionRecipeEmptyTitle: "Chưa có công thức nào",
+  productionRecipeEmptyDescription:
+    "Hãy thêm ít nhất một dòng nguyên liệu để bắt đầu cấu hình công thức cho thành phẩm.",
+  noNote: "Không ghi chú",
+  productionRecipeImportExport: "Import / Export công thức",
+  productionRecipeImportSuccess: (recipes: number, lines: number) =>
+    `Đã import ${recipes} công thức / ${lines} dòng`,
+  productionRecipeImportSummary: (recipes: number, lines: number) =>
+    `Đã cập nhật ${recipes} công thức sản xuất / ${lines} dòng nguyên liệu.`,
+  productionInsufficientStock: "Không đủ tồn kho",
+  productionConfirmFailed: "Không thể xác nhận",
+  productionOrderConfirmed: "Đã xác nhận lệnh sản xuất",
+  productionCancelFailed: "Không thể hủy",
+  productionOrderCancelled: "Đã hủy lệnh sản xuất",
+  productionTotalCost: "Tổng chi phí",
+  productionCostEstimateSuffix: "(tạm tính)",
+  productionOrdersEmptyTitle: "Chưa có lệnh sản xuất nào",
+  productionOrdersEmptyDescription:
+    "Tạo lệnh mới khi công thức và nguyên liệu đã sẵn sàng tại Bếp Trung Tâm.",
+  productionShortageTitle: "Thiếu nguyên liệu để sản xuất",
+  productionShortageDescription: (productionNumber: string) =>
+    `Lệnh ${productionNumber} chưa đủ nguyên liệu tại Bếp Trung Tâm. Bổ sung tồn trong Bếp Trung Tâm trước khi xác nhận lại.`,
+  productionShortageEmptyTitle: "Không có dòng thiếu nguyên liệu",
+  shortageNeeded: "Cần",
+  shortageOnHand: "Tồn",
+  shortageMissing: "Thiếu",
+  quickCreateNameRequired: "Tên không được trống",
+  storageTypeLabel: "Kiểu lưu trữ",
+  quickFinishedGoodTitle: "Thêm thành phẩm mới",
+  quickFinishedGoodIntro:
+    "Danh sách trong công thức sản xuất lấy từ danh mục nguyên liệu có loại Thành phẩm. Tạo mới ở đây để dùng ngay cho công thức.",
+  finishedGoodNameLabel: "Tên thành phẩm",
+  quickFinishedGoodNamePlaceholder: "VD: Sườn nướng sơ chế",
+  quickFinishedGoodUnitPlaceholder: "khay, kg, lít...",
+  quickFinishedGoodCategoryDefault: "Sản xuất",
+  quickFinishedGoodSuccess: "Đã thêm thành phẩm mới",
+  quickFinishedGoodError: "Không thể tạo thành phẩm",
+  quickFinishedGoodReadIdError:
+    "Đã tạo thành phẩm nhưng không đọc được mã mới.",
+  quickRawIngredientTitle: "Thêm nguyên liệu mới",
+  quickRawIngredientIntro:
+    "Tạo nhanh nguyên liệu đầu vào để hoàn thiện công thức và chuẩn bị cho lệnh sản xuất.",
+  rawIngredientNameLabel: "Tên nguyên liệu",
+  quickRawIngredientNamePlaceholder: "VD: Nước mắm pha",
+  quickRawIngredientUnitPlaceholder: "kg, lít, chai...",
+  quickRawIngredientCategoryDefault: "Nguyên liệu sản xuất",
+  quickRawIngredientSuccess: "Đã thêm nguyên liệu mới",
+  quickRawIngredientError: "Không thể tạo nguyên liệu",
+  quickRawIngredientReadIdError:
+    "Đã tạo nguyên liệu nhưng không đọc được mã mới.",
+  issueTypeConsumption: "Tiêu hao",
+  issueTypeWriteoff: "Hủy hỏng / thanh lý",
+  issueTypeOther: "Khác",
+  issueTypeFilterAll: "Tất cả loại xuất",
+  issueTypeLabel: "Loại xuất",
+  issueCode: "Mã phiếu",
+  createdDate: "Ngày tạo",
+  issueCreateDialogDescription:
+    "Chọn điểm vận hành, loại xuất và ghi chú trước khi tạo phiếu nháp.",
+  issueCreateBranchRequired: "Chọn chi nhánh để tạo phiếu xuất.",
+  rowCountRecent: (count: number) => `${count} dòng gần nhất`,
+  rowRatio: (visible: number, total: number) => `${visible}/${total} dòng`,
+  rowRatioRecent: (visible: number, total: number) =>
+    `${visible}/${total} dòng gần nhất`,
+  issueExportEmpty: "Không có dữ liệu để xuất báo cáo.",
+  issueExportSuccess: (count: number) => `Đã xuất ${count} phiếu xuất.`,
+  recordedExportEmpty: "Không có dữ liệu tiêu hao để xuất CSV.",
+  recordedAtLabel: "Thời điểm",
+  deductLocationLabel: "Kho trừ",
+  unitCostLabel: "Giá vốn",
+  sourceLabel: "Nguồn",
+  recordedExportSuccess: (count: number) => `Đã xuất ${count} dòng tiêu hao.`,
+  allStatusesOption: "Tất cả trạng thái",
+  issueSearchPlaceholder: "Tìm mã phiếu, chi nhánh...",
+  recordedSearchPlaceholder: "Tìm nguyên liệu, nguồn...",
+  createSlipAction: "Tạo phiếu",
+  exportReportAction: "Xuất báo cáo",
+  recordedConsumptionTitle: "Tiêu hao đã ghi nhận",
+  exportCsvAction: "Xuất CSV",
+  visibleRowsLabel: "Dòng hiển thị",
+  totalAmountLabel: "Tổng thành tiền",
+  scopeLabel: "Phạm vi",
+  recordedEmptyTitle: "Chưa có tiêu hao đã ghi nhận",
+  recordedEmptyDescription:
+    "Các báo cáo tiêu hao đã duyệt sẽ xuất hiện ở đây sau khi trừ kho.",
+  consumptionSlipsTitle: "Phiếu tiêu hao",
+  issueEmptyFiltered: "Không tìm thấy phiếu xuất phù hợp",
+  issueEmptyNoData: "Chưa có phiếu xuất kho nào",
+  issueEmptyDescription: "Điều chỉnh bộ lọc hoặc tạo phiếu xuất mới để bắt đầu.",
+  issueCreated: "Đã tạo phiếu xuất.",
+  issueNotesPlaceholder: "Nhập ghi chú cho phiếu xuất",
+  countSlipTitle: "Duyệt phiếu đếm tồn",
+  countSlipDescription:
+    "Đối chiếu số đếm với tồn hệ thống. Duyệt để ghi điều chỉnh kho, hoặc yêu cầu nhân viên đếm lại.",
+  countSlipPendingBadge: (count: number) => `${count} chờ duyệt`,
+  countSlipEmptyTitle: "Không có phiếu đếm chờ duyệt",
+  countSlipEmptyDescription:
+    "Khi nhân viên gửi phiếu đếm tồn, phiếu sẽ xuất hiện tại đây.",
+  countSlipHistoryTitle: "Đã xử lý gần đây",
+  countSlipApproveTitle: "Duyệt phiếu đếm tồn?",
+  countSlipApproveDescription:
+    "Hệ thống sẽ ghi điều chỉnh kho theo số đếm và không thể hoàn tác từ màn này.",
+  warehouseShort: "Kho",
+  lineCountLabel: "Số dòng",
+  countSlipApproveFailed: "Không duyệt được phiếu đếm.",
+  countSlipApprovedAdjusted: (count: number) =>
+    `Đã duyệt và điều chỉnh ${count} dòng kho.`,
+  countSlipApproved: "Đã duyệt phiếu đếm tồn.",
+  recountReasonRequired: "Nhập lý do cần đếm lại.",
+  recountRequestFailed: "Không gửi được yêu cầu đếm lại.",
+  recountRequested: "Đã yêu cầu nhân viên đếm lại.",
+  countDateAt: (date: string) => `Ngày đếm ${date}`,
+  submittedAtSuffix: (date: string) => ` • Gửi ${date}`,
+  systemStockColon: "Tồn hệ thống:",
+  countedColon: "Số đếm:",
+  convertedColon: "Quy đổi:",
+  varianceShort: "Lệch",
+  employeeNoteLine: (note: string) => `Ghi chú nhân viên: ${note}`,
+  recountReasonLine: (note: string) => `Lý do đếm lại: ${note}`,
+  totalVarianceSummary: (variance: string, unit: string) =>
+    `Tổng lệch ${variance} ${unit}`,
+  varianceLineCount: (count: number) => `${count} dòng có lệch`,
+  recountReasonLabel: "Lý do cần đếm lại",
+  recountReasonPlaceholder:
+    "Ví dụ: số sườn lệch nhiều so với tồn, cần đếm lại kho mát",
+  sendRecountRequest: "Gửi yêu cầu đếm lại",
+  requestRecount: "Yêu cầu đếm lại",
+  openCountScreen: "Mở màn đếm tồn",
+  countAssignAddAction: "Thêm phân công mới",
+  countAssignEyebrow: "Kiểm kê",
+  countAssignTitle: "Phân công đếm tồn",
+  countAssignDescription:
+    "Giao danh sách thành phẩm cần kiểm kê cho từng nhân viên tại kho chi nhánh hiện tại.",
+  countAssignNoWarehouseTitle: "Chưa có kho chi nhánh",
+  countAssignNoWarehouseDescription:
+    "Cần có kho chi nhánh đang hoạt động trước khi phân công kiểm kê.",
+  countAssignNoEmployeesTitle: "Chi nhánh chưa có nhân viên",
+  countAssignNoEmployeesDescription:
+    "Không có nhân viên đang hoạt động tại chi nhánh này để phân công.",
+  countAssignEmptyTitle: "Chưa có phân công",
+  countAssignEmptyDescription:
+    "Bấm Thêm phân công mới để giao thành phẩm cần kiểm kê cho nhân viên.",
+  countAssignEditAction: "Chỉnh sửa",
+  countAssignAssignedBadge: (count: number) =>
+    `Nguyên liệu được giao (${count} thành phẩm)`,
+  countAssignAddDescription:
+    "Chọn nhân viên và thành phẩm cần kiểm kê tại kho chi nhánh hiện tại.",
+  countAssignSaveFailed: "Không thể lưu phân công.",
+  countAssignSaved: (name: string, count: number) =>
+    `Đã lưu phân công cho ${name} (${count} thành phẩm)`,
+  countAssignRemoved: (name: string) => `Đã xoá phân công cho ${name}`,
+  countAssignAllAssigned: "Tất cả nhân viên đang có phân công.",
+  selectEmployeePlaceholder: "Chọn nhân viên",
+  countAssignNoFinishedGoods: "Chưa có thành phẩm đang hoạt động để phân công.",
+  countAssignChecklistTitle: "Thành phẩm kiểm kê",
+  selectedRatio: (selected: number, total: number) =>
+    `${selected}/${total} đã chọn`,
+  countAssignEditTitle: "Chỉnh sửa phân công",
+  countAssignEditDescription: (name: string) =>
+    `${name} kiểm kê các thành phẩm được chọn dưới đây.`,
+  countAssignRemoveAction: "Xoá",
+  countedQtyHeader: "Số đếm",
+  searchIngredientPlaceholder: "Tìm nguyên liệu…",
+  enteredCountBadge: (count: number) => `Đã nhập: ${count}`,
+  blindGridEmptyTitle: "Không có dòng nào khớp bộ lọc.",
+  needsRecheckBadge: "Cần kiểm tra",
+  recheckFilterOn: "Đang lọc: cần kiểm tra",
+  recheckFilterOff: "Chỉ xem cần kiểm tra",
+  submittingEllipsis: "Đang gửi…",
+  saveCountsAction: "Lưu số đếm",
+  adjustStockTitle: "Điều chỉnh tồn kho",
+  adjustTypeLabel: "Loại điều chỉnh",
+  adjustTypeManual: "Điều chỉnh thủ công",
+  adjustTypeCount: "Kiểm kho",
+  adjustQuantityLabel: (unit: string) =>
+    `Số lượng (${unit}) - dương = nhập, âm = xuất`,
+  adjustQuantityPlaceholder: "VD: 10 hoặc -5",
+  adjustQuantityRequired: "Số lượng điều chỉnh không được trống",
+  adjustQuantityNonZero: "Số lượng điều chỉnh không được bằng 0",
+  adjustReasonLabel: "Lý do (tùy chọn)",
+  adjustReasonPlaceholder: "VD: Nhập hàng sáng, Hao hụt...",
+  adjustIngredientLine: (name: string) => `Nguyên liệu: ${name}`,
+  adjustStockSuccess: (name: string) => `Đã điều chỉnh tồn kho ${name}`,
+  recipesPageTitle: "Định mức món bán",
+  recipeCreateAction: "Tạo định mức",
+  recipeEditAction: "Sửa định mức",
+  recipesEmptyTitle: "Chưa có định mức món bán nào",
+  recipesEmptyDescription:
+    'Định mức món bán là lượng nguyên liệu tiêu hao khi bán 1 phần menu item. Nhấn "Tạo định mức" để bắt đầu.',
+  recipesEmptyFiltered: "Không tìm thấy định mức phù hợp",
+  recipeSearchPlaceholder: "Tìm theo tên món hoặc nhóm",
+  recipeColMenuItem: "Món bán",
+  recipeColCategory: "Nhóm",
+  recipeColIngredientCount: "Số nguyên liệu",
+  recipeColUnitCost: "Giá vốn/phần",
+  recipeColStockCapacity: "Phần bán được",
+  recipeCardSummary: (count: number, cost: string) =>
+    `${count} nguyên liệu · ${cost} đ/phần`,
+  amountDong: (amount: string) => `${amount} đ`,
+  daysAgo: (days: number) => `${days} ngày trước`,
+  lineItemCount: (count: number) => `${count} mặt hàng`,
+  lockExpiresIn: (remaining: string) => `Hết hạn sau ${remaining}`,
+  rollingTierOneTrigger: (threshold: string) =>
+    `→ trigger tier 1 (ảnh bắt buộc, ≥${threshold})`,
+  rollingSlipCount: (count: number) => `• ${count} phiếu`,
+  shiftCapNearWarning: (remaining: string) =>
+    `Gần cap — thêm ${remaining} nữa sẽ cần duyệt`,
+  branchTodayUsage: (used: string, cap: string, percent: number) =>
+    `Branch hôm nay: ${used} / ${cap} (${percent}%)`,
+  importSelectedFile: (name: string) => `Đã chọn: ${name}`,
+  importIngredientsHintPrefix: "Hỗ trợ .xlsx và .csv. Dòng trùng",
+  importIngredientsHintField: "tên nguyên liệu",
+  importIngredientsHintSuffix: "sẽ được cập nhật.",
+  importIngredientsSuccess: (inserted: number, updated: number) =>
+    `Đã import: +${inserted} / ${updated} cập nhật`,
+  importIngredientsSummary: (inserted: number, updated: number) =>
+    `Tạo mới ${inserted} · Cập nhật ${updated}`,
+  importIssueLine: (row: number, message: string) =>
+    `[dòng ${row}] ${message}`,
+  dashboardSourceProcurementDescription:
+    "Theo dõi PO, GRN, hóa đơn NCC và lệch giá/số lượng trước khi hàng vào tồn.",
+  dashboardPendingPoLabel: "PO đang chờ",
+  dashboardPreparePoHint: "Chuẩn bị PO.",
+  dashboardGrnPriceReviewLabel: "GRN cần kiểm tra giá",
+  dashboardGrnPriceReviewTask: (count: number) =>
+    `${count} dòng GRN cần kiểm tra giá`,
+  dashboardGrnPriceVarianceHint:
+    "Giá nhập lệch lớn so với PO trong 30 ngày qua.",
 } as const;
 
 export type InventoryKey = keyof typeof INVENTORY_VI;

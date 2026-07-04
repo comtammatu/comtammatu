@@ -72,7 +72,7 @@ export function ProductionRecipeImportExportMenu({
             ) : (
               <IconFileSpreadsheet data-icon="inline-start" />
             )}
-            Import / Export BOM
+            {INVENTORY_VI.productionRecipeImportExport}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
@@ -133,10 +133,16 @@ function ProductionRecipeImportDialog({
       closeLabel={ACTIONS_VI.close}
       importAction={importProductionRecipes}
       successMessage={(summary) =>
-        `Đã import ${summary.recipes} BOM / ${summary.lines} dòng`
+        INVENTORY_VI.productionRecipeImportSuccess(
+          summary.recipes,
+          summary.lines,
+        )
       }
       renderSummary={(summary) =>
-        `Đã cập nhật ${summary.recipes} BOM sản xuất / ${summary.lines} dòng nguyên liệu.`
+        INVENTORY_VI.productionRecipeImportSummary(
+          summary.recipes,
+          summary.lines,
+        )
       }
       renderIssue={(issue) => `[dòng ${issue.row}] ${issue.message}`}
       onImported={onImported}

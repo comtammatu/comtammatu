@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory recipe list keeps kitchen workflow copy inline */
-
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -26,6 +24,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { matchesSearch } from "@lib/search";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   DataTable,
   type DataTableColumn,
@@ -127,12 +126,12 @@ export function RecipesClient({
   const columns: DataTableColumn<RecipeRow>[] = [
     {
       key: "name",
-      header: "Món bán",
+      header: INVENTORY_VI.recipeColMenuItem,
       render: (recipe) => <span className="font-semibold">{recipe.name}</span>,
     },
     {
       key: "category",
-      header: "Nhóm",
+      header: INVENTORY_VI.recipeColCategory,
       render: (recipe) =>
         recipe.category ? (
           <Badge variant="success">{recipe.category}</Badge>
@@ -142,19 +141,20 @@ export function RecipesClient({
     },
     {
       key: "ingredientCount",
-      header: "Số nguyên liệu",
+      header: INVENTORY_VI.recipeColIngredientCount,
       className: "font-mono",
       render: (recipe) => recipe.items.length,
     },
     {
       key: "cost",
-      header: "Giá vốn/phần",
+      header: INVENTORY_VI.recipeColUnitCost,
       className: "font-mono",
-      render: (recipe) => `${formatVND(recipe.estimatedCost)} đ`,
+      render: (recipe) =>
+        INVENTORY_VI.amountDong(formatVND(recipe.estimatedCost)),
     },
     {
       key: "stockCapacity",
-      header: "Phần bán được",
+      header: INVENTORY_VI.recipeColStockCapacity,
       className: "font-mono",
       render: (recipe) => {
         const capacity = stockCapacityByMenuItemId[String(recipe.menuItemId)];
@@ -178,7 +178,7 @@ export function RecipesClient({
             onClick={() => openEdit(recipe)}
           >
             <IconPencil className="size-4" />
-            Sửa định mức
+            {INVENTORY_VI.recipeEditAction}
           </Button>
         </div>
       ),
@@ -188,19 +188,19 @@ export function RecipesClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        title="Định mức món bán"
+        title={INVENTORY_VI.recipesPageTitle}
         actions={
           <Button type="button" onClick={openCreate}>
             <IconPlus data-icon="inline-start" />
-            Tạo định mức
+            {INVENTORY_VI.recipeCreateAction}
           </Button>
         }
       />
       {recipes.length === 0 ? (
         <AppEmptyState
           mode="no-data"
-          title="Chưa có định mức món bán nào"
-          description='Định mức món bán là lượng nguyên liệu tiêu hao khi bán 1 phần menu item. Nhấn "Tạo định mức" để bắt đầu.'
+          title={INVENTORY_VI.recipesEmptyTitle}
+          description={INVENTORY_VI.recipesEmptyDescription}
         />
       ) : (
         <>
@@ -213,7 +213,7 @@ export function RecipesClient({
                 <InputGroupInput
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Tìm theo tên món hoặc nhóm"
+                  placeholder={INVENTORY_VI.recipeSearchPlaceholder}
                 />
               </InputGroup>
             }
@@ -224,8 +224,8 @@ export function RecipesClient({
             getRowKey={(recipe) => recipe.id}
             emptyTitle={
               showNoResults
-                ? "Không tìm thấy định mức phù hợp"
-                : "Chưa có định mức món bán nào"
+                ? INVENTORY_VI.recipesEmptyFiltered
+                : INVENTORY_VI.recipesEmptyTitle
             }
             emptyMode={showNoResults ? "no-results" : "no-data"}
             mobileCardRender={(recipe) => (
@@ -274,10 +274,13 @@ function RecipeCard({
       </ItemHeader>
       <ItemContent>
         <ItemDescription>
-          {recipe.items.length} nguyên liệu · {formatVND(recipe.estimatedCost)} đ/phần
+          {INVENTORY_VI.recipeCardSummary(
+            recipe.items.length,
+            formatVND(recipe.estimatedCost),
+          )}
         </ItemDescription>
         <ItemDescription>
-          Phần bán được:{" "}
+          {INVENTORY_VI.recipeColStockCapacity}:{" "}
           {stockCapacity == null ? (
             <span className="text-muted-foreground">—</span>
           ) : (
@@ -294,7 +297,7 @@ function RecipeCard({
             onClick={() => onEdit(recipe)}
           >
             <IconPencil className="size-4" />
-            Sửa định mức
+            {INVENTORY_VI.recipeEditAction}
           </Button>
         </ItemActions>
       </ItemFooter>

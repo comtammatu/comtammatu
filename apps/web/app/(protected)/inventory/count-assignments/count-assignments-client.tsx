@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: count-assignment manager workflow copy stays inline */
-
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,6 +21,12 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  ACTIONS_VI,
+  FORM_VI,
+  INVENTORY_VI,
+  STAFF_VI,
+} from "@comtammatu/shared/messages";
 import { AppDialog } from "@/components/form";
 import {
   AppEmptyState,
@@ -121,7 +125,7 @@ export function CountAssignmentsClient({
         <Button asChild variant="outline" size={embedded ? "touch" : "default"}>
           <Link href={countHref}>
             <IconArrowRight className="size-4" />
-            Mở màn đếm tồn
+            {INVENTORY_VI.openCountScreen}
           </Link>
         </Button>
       ) : null}
@@ -132,7 +136,7 @@ export function CountAssignmentsClient({
         disabled={!scopeReady || unassignedEmployees.length === 0}
       >
         <IconPlus className="size-4" />
-        Thêm phân công mới
+        {INVENTORY_VI.countAssignAddAction}
       </Button>
     </div>
   );
@@ -143,9 +147,9 @@ export function CountAssignmentsClient({
         assignmentActions
       ) : (
         <AppPageHeader
-          eyebrow="Kiểm kê"
-          title="Phân công đếm tồn"
-          description="Giao danh sách thành phẩm cần kiểm kê cho từng nhân viên tại kho chi nhánh hiện tại."
+          eyebrow={INVENTORY_VI.countAssignEyebrow}
+          title={INVENTORY_VI.countAssignTitle}
+          description={INVENTORY_VI.countAssignDescription}
           actions={assignmentActions}
         />
       )}
@@ -153,24 +157,24 @@ export function CountAssignmentsClient({
       {!scopeReady && (
         <AppEmptyState
           mode="no-data"
-          title="Chưa có kho chi nhánh"
-          description="Cần có kho chi nhánh đang hoạt động trước khi phân công kiểm kê."
+          title={INVENTORY_VI.countAssignNoWarehouseTitle}
+          description={INVENTORY_VI.countAssignNoWarehouseDescription}
         />
       )}
 
       {scopeReady && employees.length === 0 && (
         <AppEmptyState
           mode="no-data"
-          title="Chi nhánh chưa có nhân viên"
-          description="Không có nhân viên đang hoạt động tại chi nhánh này để phân công."
+          title={INVENTORY_VI.countAssignNoEmployeesTitle}
+          description={INVENTORY_VI.countAssignNoEmployeesDescription}
         />
       )}
 
       {scopeReady && employees.length > 0 && assignedEmployees.length === 0 && (
         <AppEmptyState
           mode="no-data"
-          title="Chưa có phân công"
-          description="Bấm Thêm phân công mới để giao thành phẩm cần kiểm kê cho nhân viên."
+          title={INVENTORY_VI.countAssignEmptyTitle}
+          description={INVENTORY_VI.countAssignEmptyDescription}
         />
       )}
 
@@ -250,7 +254,7 @@ function EmployeeAssignmentCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
             <span className="text-xs font-medium text-muted-foreground">
-              Tên
+              {FORM_VI.name}
             </span>
             <span className="font-medium text-foreground">{employee.name}</span>
           </div>
@@ -261,13 +265,13 @@ function EmployeeAssignmentCard({
             onClick={() => setDialogOpen(true)}
           >
             <IconPencil className="size-3.5" />
-            Chỉnh sửa
+            {INVENTORY_VI.countAssignEditAction}
           </Button>
         </div>
 
         <div className="flex flex-col gap-2">
           <span className="text-xs font-medium text-muted-foreground">
-            Nguyên liệu được giao ({selectedIds.length} thành phẩm)
+            {INVENTORY_VI.countAssignAssignedBadge(selectedIds.length)}
           </span>
           <div className="flex flex-wrap gap-2">
             {selectedIds.map((id) => {
@@ -348,12 +352,12 @@ function NewAssignmentDialog({
         ingredientIds: draftIds,
       });
       if (!result.success) {
-        toast.error(result.error ?? "Không thể lưu phân công.");
+        toast.error(result.error ?? INVENTORY_VI.countAssignSaveFailed);
         return;
       }
       onSaved(selectedEmployee.id, draftIds);
       toast.success(
-        `Đã lưu phân công cho ${selectedEmployee.name} (${draftIds.length} thành phẩm)`,
+        INVENTORY_VI.countAssignSaved(selectedEmployee.name, draftIds.length),
       );
       onOpenChange(false);
       router.refresh();
@@ -364,8 +368,8 @@ function NewAssignmentDialog({
     <AppDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Thêm phân công mới"
-      description="Chọn nhân viên và thành phẩm cần kiểm kê tại kho chi nhánh hiện tại."
+      title={INVENTORY_VI.countAssignAddAction}
+      description={INVENTORY_VI.countAssignAddDescription}
       footer={
         <Button
           type="button"
@@ -378,25 +382,27 @@ function NewAssignmentDialog({
           }
         >
           {isPending && <Spinner />}
-          Lưu
+          {ACTIONS_VI.save}
         </Button>
       }
     >
       {employees.length === 0 ? (
         <p className="rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
-          Tất cả nhân viên đang có phân công.
+          {INVENTORY_VI.countAssignAllAssigned}
         </p>
       ) : (
         <>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="count-assignment-new-employee">Nhân viên</Label>
+            <Label htmlFor="count-assignment-new-employee">
+              {STAFF_VI.long}
+            </Label>
             <Select
               value={selectedEmployeeId}
               onValueChange={setSelectedEmployeeId}
               disabled={isPending}
             >
               <SelectTrigger id="count-assignment-new-employee">
-                <SelectValue placeholder="Chọn nhân viên" />
+                <SelectValue placeholder={INVENTORY_VI.selectEmployeePlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 {employees.map((employee) => (
@@ -439,7 +445,7 @@ function AssignmentChecklist({
   if (ingredients.length === 0) {
     return (
       <p className="rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
-        Chưa có thành phẩm đang hoạt động để phân công.
+        {INVENTORY_VI.countAssignNoFinishedGoods}
       </p>
     );
   }
@@ -447,9 +453,11 @@ function AssignmentChecklist({
   return (
     <div className="overflow-hidden rounded-md border bg-muted/30">
       <div className="flex items-center justify-between gap-3 border-b bg-card px-3 py-2">
-        <span className="text-sm font-medium">Thành phẩm kiểm kê</span>
+        <span className="text-sm font-medium">
+          {INVENTORY_VI.countAssignChecklistTitle}
+        </span>
         <Badge variant={selectedCount > 0 ? "success" : "outline"}>
-          {selectedCount}/{ingredients.length} đã chọn
+          {INVENTORY_VI.selectedRatio(selectedCount, ingredients.length)}
         </Badge>
       </div>
       <div className="flex max-h-72 flex-col gap-1 overflow-y-auto p-2">
@@ -537,14 +545,14 @@ function AssignmentEditDialog({
         ingredientIds: nextIds,
       });
       if (!result.success) {
-        toast.error(result.error ?? "Không thể lưu phân công.");
+        toast.error(result.error ?? INVENTORY_VI.countAssignSaveFailed);
         return;
       }
       onSaved(nextIds);
       toast.success(
         nextIds.length === 0
-          ? `Đã xoá phân công cho ${employee.name}`
-          : `Đã lưu phân công cho ${employee.name} (${nextIds.length} thành phẩm)`,
+          ? INVENTORY_VI.countAssignRemoved(employee.name)
+          : INVENTORY_VI.countAssignSaved(employee.name, nextIds.length),
       );
       onOpenChange(false);
       router.refresh();
@@ -555,8 +563,8 @@ function AssignmentEditDialog({
     <AppDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Chỉnh sửa phân công"
-      description={`${employee.name} kiểm kê các thành phẩm được chọn dưới đây.`}
+      title={INVENTORY_VI.countAssignEditTitle}
+      description={INVENTORY_VI.countAssignEditDescription(employee.name)}
       footerClassName="sm:justify-between"
       footer={
         <>
@@ -566,7 +574,7 @@ function AssignmentEditDialog({
             onClick={() => persist([])}
             disabled={isPending}
           >
-            Xoá
+            {INVENTORY_VI.countAssignRemoveAction}
           </Button>
           <Button
             type="button"
@@ -574,7 +582,7 @@ function AssignmentEditDialog({
             disabled={isPending || ingredients.length === 0}
           >
             {isPending && <Spinner />}
-            Lưu
+            {ACTIONS_VI.save}
           </Button>
         </>
       }
