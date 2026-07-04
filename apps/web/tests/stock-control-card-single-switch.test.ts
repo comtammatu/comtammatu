@@ -1,0 +1,49 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { test } from "node:test";
+
+const repoRoot = resolve(process.cwd(), "../..");
+const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+
+const STOCK_CONTROL_CARD =
+  "apps/web/app/(protected)/branch-settings/_shared/pos/stock-control-card.tsx";
+const ACTIONS =
+  "apps/web/app/(protected)/branch-settings/_shared/pos/actions.ts";
+const PAGE =
+  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx";
+const FEATURE_FLAGS = "apps/web/app/(protected)/inventory/_lib/feature-flags.ts";
+
+test("StockControlCard renders exactly one Switch, wired to the single posting flag", () => {
+  const source = read(STOCK_CONTROL_CARD);
+
+  const switchCount = (source.match(/<Switch\b/g) ?? []).length;
+  assert.equal(switchCount, 1, "expected exactly one <Switch> in the card");
+
+  assert.match(source, /setBranchStockOutcomePosting/);
+  assert.doesNotMatch(source, /setBranchStockAvailabilityGate/);
+  assert.doesNotMatch(source, /initialGateEnabled/);
+  assert.doesNotMatch(source, /stockAvailabilityGate/);
+
+  assert.match(source, /copy\.stockOutcomePostingLabel/);
+  assert.match(source, /copy\.stockOutcomePostingHelp/);
+});
+
+test("branch-settings pos actions: gate-flag action removed", () => {
+  const source = read(ACTIONS);
+  assert.doesNotMatch(source, /setBranchStockAvailabilityGate/);
+  assert.doesNotMatch(source, /POS_STOCK_AVAILABILITY_GATE/);
+});
+
+test("settings/pos page: gate-flag fetch removed", () => {
+  const source = read(PAGE);
+  assert.doesNotMatch(source, /POS_STOCK_AVAILABILITY_GATE/);
+  assert.doesNotMatch(source, /stockAvailabilityGateEnabled/);
+  assert.doesNotMatch(source, /initialGateEnabled/);
+});
+
+test("feature-flags registry: gate flag key removed", () => {
+  const source = read(FEATURE_FLAGS);
+  assert.doesNotMatch(source, /POS_STOCK_AVAILABILITY_GATE/);
+  assert.doesNotMatch(source, /pos_stock_availability_gate/);
+});

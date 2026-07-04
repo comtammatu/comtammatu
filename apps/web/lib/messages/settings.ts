@@ -258,18 +258,11 @@ export const settings = {
     deviceIdPlaceholder: "VD: tablet-thungan-01",
     terminalActive: "Hoạt động",
     stockControlTitle: "Kiểm soát bán theo tồn kho",
-    stockOutcomePostingLabel: "Trừ kho khi bán",
+    stockOutcomePostingLabel: "Trừ tồn khi bán",
     stockOutcomePostingHelp:
-      "Trừ tồn kho nguyên liệu khi món được thanh toán và bếp bắt đầu làm.",
+      "Bật: mỗi đơn bán trừ kho theo định mức và món bị khóa khi hết tồn — nhập kho là mở lại. Món chưa có định mức không bị ảnh hưởng. Tắt: bán tự do, không đụng kho.",
     stockOutcomePostingSaved: "Đã cập nhật cấu hình trừ kho",
     stockOutcomePostingFailed: "Không thể lưu cấu hình. Vui lòng thử lại.",
-    stockAvailabilityGateLabel: "Giới hạn bán theo tồn kho",
-    stockAvailabilityGateHelp:
-      "Chặn bán khi tồn kho nguyên liệu không đủ. Chỉ có hiệu lực khi \"Trừ kho khi bán\" đang bật.",
-    stockAvailabilityGateDisabledHelp:
-      "Bật \"Trừ kho khi bán\" trước để dùng giới hạn này.",
-    stockAvailabilityGateSaved: "Đã cập nhật cấu hình giới hạn bán",
-    stockAvailabilityGateFailed: "Không thể lưu cấu hình. Vui lòng thử lại.",
   },
   printers: {
     backPrinters: "Máy in",
