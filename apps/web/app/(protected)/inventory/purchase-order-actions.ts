@@ -255,24 +255,12 @@ export const createPurchaseOrderWithLines = withAction(
       return { success: false, error: "Bạn chỉ được tạo PO cho kho của mình." };
     }
 
-    const lines = [];
-    for (const line of data.lines) {
-      const resolvedUnit = await resolveEntryUnitCode(supabase, {
-        tenantId: claims.tenant_id,
-        ingredientId: line.ingredientId,
-        entryUnitId: line.entryUnitId,
-      });
-      if (!resolvedUnit.success) {
-        return { success: false, error: resolvedUnit.error };
-      }
-      lines.push({
+    const lines = data.lines.map((line) => ({
         ingredient_id: line.ingredientId,
         quantity: line.quantity,
-        unit: resolvedUnit.unit,
         entry_unit_id: line.entryUnitId ?? null,
         unit_price_est: line.unitPriceEst ?? null,
-      });
-    }
+      }));
 
     const { data: row, error } = await supabase.rpc(
       "create_purchase_order_with_lines",

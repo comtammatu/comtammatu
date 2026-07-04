@@ -113,8 +113,6 @@ const addIssueLineSchema = z.object({
     .refine((value) => Number(value) > 0, {
       error: ISSUES_VI.lineQuantityPositive,
     }),
-  unit: z.string().optional(),
-  // Issue-role unit id (as string) the qty was entered in; "" => free-text unit.
   entryUnitId: z.string().optional(),
   reason: z.string().trim().min(1, {
     error: ISSUES_VI.lineReasonRequired,
@@ -622,7 +620,6 @@ function AddIssueLineDialog({
     () => ({
       ingredientId: "",
       quantity: "",
-      unit: "",
       entryUnitId: "",
       reason: "",
     }),
@@ -684,12 +681,6 @@ function AddIssueLineDialog({
                   );
                   const defaultUnit = getDefaultIssueUnit(ingredient);
                   form.setValue(
-                    "unit",
-                    defaultUnit?.code ??
-                      (ingredient ? getWarehouseUnit(ingredient) : ""),
-                    { shouldValidate: true },
-                  );
-                  form.setValue(
                     "entryUnitId",
                     defaultUnit ? String(defaultUnit.unitId) : "",
                   );
@@ -732,16 +723,12 @@ function AddIssueLineDialog({
                       const opt = issueUnitOptions.find(
                         (o) => String(o.unitId) === value,
                       );
-                      if (opt) {
-                        form.setValue("unit", opt.code, {
-                          shouldValidate: true,
-                        });
-                      }
+                      if (!opt) form.setValue("entryUnitId", "");
                     }}
                   >
                     <SelectTrigger
                       id="issue-line-unit"
-                      aria-label={form.watch("unit")}
+                      aria-label={ISSUES_VI.unitLabel}
                     >
                       <SelectValue placeholder={ISSUES_VI.selectUnit} />
                     </SelectTrigger>

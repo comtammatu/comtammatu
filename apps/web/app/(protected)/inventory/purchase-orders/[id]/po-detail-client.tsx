@@ -163,12 +163,13 @@ export function PODetailClient({
     po.items.map((item) => {
       const ingredient = ingredientById.get(item.ingredientId);
       const matchedUnit = getPurchaseUnitOptions(ingredient).find(
-        (option) => option.code === item.unit,
+        (option) =>
+          option.unitId === item.entryUnitId || option.code === item.unit,
       );
       return {
         ...item,
         entryUnitId: item.entryUnitId ?? matchedUnit?.unitId ?? null,
-        unit: matchedUnit?.code ?? item.unit,
+        unit: matchedUnit?.label ?? item.unit,
         dirty: false,
       };
     }),
@@ -209,7 +210,7 @@ export function PODetailClient({
     const ingredient = ingredientById.get(Number(value));
     const defaultUnit = getDefaultPurchaseUnit(ingredient);
     setAddUnit(
-      defaultUnit?.code ?? ingredient?.purchase_unit ?? ingredient?.unit ?? "",
+      defaultUnit?.label ?? ingredient?.purchase_unit ?? ingredient?.unit ?? "",
     );
     setAddEntryUnitId(defaultUnit?.unitId ?? null);
     setAddPrice(
@@ -233,14 +234,14 @@ export function PODetailClient({
       (item) => String(item.unitId) === value,
     );
     if (!option) return;
-    patchLine(index, { entryUnitId: option.unitId, unit: option.code });
+    patchLine(index, { entryUnitId: option.unitId, unit: option.label });
   }
 
   function handleAddUnitChange(value: string) {
     const option = addUnitOptions.find((item) => String(item.unitId) === value);
     if (!option) return;
     setAddEntryUnitId(option.unitId);
-    setAddUnit(option.code);
+    setAddUnit(option.label);
   }
 
   function handleSaveLine(index: number) {
@@ -721,7 +722,10 @@ export function PODetailClient({
                           />
                         )}
                         mobileFooter={
-                          <div className="rounded-md border bg-muted/20 p-3 text-sm">
+                          <Item
+                            variant="outline"
+                            className="flex-col items-stretch gap-2 p-3 text-sm"
+                          >
                             <div className="flex items-center justify-between gap-3">
                               <span className="text-muted-foreground">
                                 {FORM_VI.totalAmount}
@@ -732,7 +736,7 @@ export function PODetailClient({
                                 )}
                               </span>
                             </div>
-                          </div>
+                          </Item>
                         }
                         desktopFooterRows={[
                           {
@@ -1004,7 +1008,7 @@ function PoLineMobileCard({
   onDeleteLine: (line: EditablePoLine) => void;
 }) {
   return (
-    <div className="rounded-md border bg-muted/20 p-4">
+    <Item variant="outline" className="flex-col items-stretch gap-4 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-bold">{item.name}</p>
@@ -1118,7 +1122,7 @@ function PoLineMobileCard({
           {poDetailCopy.saveLine}
         </Button>
       ) : null}
-    </div>
+    </Item>
   );
 }
 

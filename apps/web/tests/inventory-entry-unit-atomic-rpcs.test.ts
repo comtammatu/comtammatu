@@ -13,6 +13,15 @@ function escaped(pattern: string): RegExp {
   return new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 }
 
+function section(path: string, start: string, end: string): string {
+  const source = read(path);
+  const from = source.indexOf(start);
+  assert.ok(from >= 0, `${start} not found in ${path}`);
+  const to = source.indexOf(end, from);
+  assert.ok(to >= 0, `${end} not found in ${path}`);
+  return source.slice(from, to);
+}
+
 function assertActionCallsDoNotSendUnit(
   path: string,
   callName: string,
@@ -171,7 +180,7 @@ test("transaction write callers do not send unit text/code", () => {
   }
 });
 
-test("server actions derive persisted unit text from the entry unit catalog", () => {
+test("direct table writes derive persisted unit text from the entry unit catalog", () => {
   const helper = read(
     "apps/web/app/(protected)/inventory/_lib/entry-unit-code.ts",
   );
@@ -187,17 +196,35 @@ test("server actions derive persisted unit text from the entry unit catalog", ()
     "apps/web/app/(protected)/inventory/grn-actions.ts",
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
     "apps/web/app/(protected)/inventory/issue-actions.ts",
-    "apps/web/app/(protected)/inventory/waste-actions.ts",
-    "apps/web/app/(protected)/inventory/production-order-actions.ts",
-    "apps/web/app/(protected)/inventory/transfer-actions.ts",
-    "apps/web/app/(protected)/inventory/recipe-actions.ts",
-    "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
   ]) {
     const source = read(path);
     assert.match(source, /resolveEntryUnitCode/, path);
     assert.match(source, /unit:\s*resolvedUnit\.unit/, path);
     assert.doesNotMatch(source, /fallbackUnit/, path);
   }
+});
+
+test("RPC-backed inventory writes let the RPC derive persisted unit text", () => {
+  for (const path of [
+    "apps/web/app/(protected)/inventory/production-order-actions.ts",
+    "apps/web/app/(protected)/inventory/transfer-actions.ts",
+    "apps/web/app/(protected)/inventory/waste-actions.ts",
+    "apps/web/app/(protected)/inventory/recipe-actions.ts",
+    "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
+  ]) {
+    const source = read(path);
+    assert.doesNotMatch(source, /resolveEntryUnitCode/, path);
+    assert.doesNotMatch(source, /unit:\s*resolvedUnit\.unit/, path);
+  }
+
+  const createPo = section(
+    "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
+    "export const createPurchaseOrderWithLines",
+    "/* ─── fetchPurchaseOrderDetail",
+  );
+  assert.doesNotMatch(createPo, /resolveEntryUnitCode/);
+  assert.doesNotMatch(createPo, /\bunit\s*:/);
+  assert.match(createPo, /entry_unit_id:\s*line\.entryUnitId \?\? null/);
 });
 
 test("inventory RPCs derive persisted unit text from the unit catalog", () => {
@@ -233,6 +260,9 @@ test("expiry writeoff RPC does not accept a unit text argument", () => {
   const migration = read(
     "supabase/migrations/20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql",
   );
+  const bridge = read(
+    "supabase/migrations/20260704214448_inventory_expiry_writeoff_optional_unit_bridge.sql",
+  );
   const baseline = read("supabase/migrations/00000000000000_baseline.sql");
   const action = read("apps/web/app/(protected)/inventory/waste-actions.ts");
 
@@ -249,6 +279,9 @@ test("expiry writeoff RPC does not accept a unit text argument", () => {
     /CREATE FUNCTION public\.create_expiry_writeoff\([\s\S]*?p_unit text/,
   );
   assert.doesNotMatch(action, /\bp_unit:/);
+  assert.match(bridge, /to_regprocedure\(/);
+  assert.match(bridge, /p_unit text DEFAULT NULL::text/);
+  assert.match(bridge, /RETURN;/);
 });
 
 test("production recipe bulk import stores catalog-derived units", () => {

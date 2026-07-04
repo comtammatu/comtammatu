@@ -120,7 +120,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
       return {
         ingredient_id: id,
         quantity: "",
-        unit: defaultUnit?.code ?? ing?.unit ?? "",
+        unit: defaultUnit?.label ?? ing?.unit ?? "",
         entry_unit_id: defaultUnit ? String(defaultUnit.unitId) : "",
         yield_factor: "1",
         note: "",
@@ -148,7 +148,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
     const entryUnitPath = `${name}.${index}.entry_unit_id` as Path<T>;
     const defaultUnit = getDefaultProductionUnit(ing);
     if (unitEditable) {
-      setValue(unitPath, (defaultUnit?.code ?? ing.unit) as never, {
+      setValue(unitPath, (defaultUnit?.label ?? ing.unit) as never, {
         shouldDirty: true,
         shouldValidate: true,
       });
@@ -160,7 +160,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
     } else {
       const currentUnit = getValues(unitPath);
       if (!currentUnit) {
-        setValue(unitPath, (defaultUnit?.code ?? ing.unit) as never);
+        setValue(unitPath, (defaultUnit?.label ?? ing.unit) as never);
         setValue(
           entryUnitPath,
           (defaultUnit ? String(defaultUnit.unitId) : "") as never,
@@ -174,12 +174,12 @@ export function RecipeLinesEditor<T extends FieldValues>({
       <div className="flex items-center justify-end gap-2">
         {bulkAdd ? (
           <MultiSelectCombobox
-            options={ingredients.map((ing) => ({
-              value: String(ing.id),
-              label: ing.name,
-              hint: ing.unit,
-              alreadySelected: alreadySelectedIds.has(String(ing.id)),
-            }))}
+                options={ingredients.map((ing) => ({
+                  value: String(ing.id),
+                  label: ing.name,
+                  hint: getDefaultProductionUnit(ing)?.label ?? ing.unit,
+                  alreadySelected: alreadySelectedIds.has(String(ing.id)),
+                }))}
             onConfirm={handleBulkAdd}
             triggerLabel={INVENTORY_VI.selectMultipleIngredients}
             confirmLabel={(n) =>
@@ -293,7 +293,7 @@ function RecipeLineRow<T extends FieldValues>({
                 options={ingredients.map((ing) => ({
                   value: String(ing.id),
                   label: ing.name,
-                  hint: ing.unit,
+                  hint: getDefaultProductionUnit(ing)?.label ?? ing.unit,
                 }))}
                 placeholder={INVENTORY_VI.selectIngredientPlaceholder}
                 searchPlaceholder={INVENTORY_VI.searchByName}
@@ -344,7 +344,7 @@ function RecipeLineRow<T extends FieldValues>({
                       (o) => String(o.unitId) === value,
                     );
                     if (opt) {
-                      setValue(unitName, opt.code as never, {
+                      setValue(unitName, opt.label as never, {
                         shouldDirty: true,
                         shouldValidate: true,
                       });

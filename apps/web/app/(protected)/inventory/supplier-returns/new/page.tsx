@@ -1,6 +1,10 @@
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 
-import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPageHeader,
+  DocumentFormFrame,
+} from "@/components/surface";
 
 interface SupplierReturnNewPageContentProps {
   embedded?: boolean;
@@ -9,26 +13,27 @@ interface SupplierReturnNewPageContentProps {
 export function SupplierReturnNewPageContent({
   embedded = false,
 }: SupplierReturnNewPageContentProps = {}) {
+  const header = (
+    <AppPageHeader
+      eyebrow={INVENTORY_VI.warehouse}
+      title={INVENTORY_VI.createSupplierReturnTitle}
+      description={INVENTORY_VI.createSupplierReturnDescription}
+    />
+  );
+
   const content = (
-    <>
-      <AppPageHeader
-        eyebrow={embedded ? undefined : INVENTORY_VI.warehouse}
-        title={INVENTORY_VI.createSupplierReturnTitle}
-        description={INVENTORY_VI.createSupplierReturnDescription}
-      />
-      <AppEmptyState
-        mode="no-data"
-        title={INVENTORY_VI.featureInDevelopmentTitle}
-        description={INVENTORY_VI.supplierReturnFromGrnHint}
-      />
-    </>
+    <AppEmptyState
+      mode="no-data"
+      title={INVENTORY_VI.featureInDevelopmentTitle}
+      description={INVENTORY_VI.supplierReturnFromGrnHint}
+    />
   );
 
   if (embedded) {
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
-  return <AppPage>{content}</AppPage>;
+  return <DocumentFormFrame header={header}>{content}</DocumentFormFrame>;
 }
 
 export default function NewSupplierReturnPage() {

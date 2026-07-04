@@ -6,7 +6,6 @@ import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "./_lib/auth";
-import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 
 type ExpiryWriteoffRpcClient = {
@@ -106,20 +105,7 @@ export async function createWasteEntry(
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
   );
   if (!ctx) return { success: false, error: "Không có quyền tạo phiếu hủy" };
-  const { supabase, claims } = ctx;
-
-  const items = [];
-  for (const item of parsed.data.items) {
-    const resolvedUnit = await resolveEntryUnitCode(supabase, {
-      tenantId: claims.tenant_id,
-      ingredientId: item.ingredient_id,
-      entryUnitId: item.entry_unit_id,
-    });
-    if (!resolvedUnit.success) {
-      return { success: false, error: resolvedUnit.error };
-    }
-    items.push({ ...item, unit: resolvedUnit.unit });
-  }
+  const { supabase } = ctx;
 
   // Each item carries entry_unit_id (the issue-role unit the qty was entered in);
   // create_waste_entry stores it on stock_issue_items so the writeoff decrement
@@ -127,7 +113,7 @@ export async function createWasteEntry(
   const { data, error } = await supabase.rpc("create_waste_entry", {
     p_branch_id: parsed.data.branchId,
     p_location_id: parsed.data.locationId,
-    p_items: items,
+    p_items: parsed.data.items,
     p_source_type: parsed.data.sourceType,
     p_source_ref: (parsed.data.sourceRef ?? undefined) as never,
     p_notes: parsed.data.notes ?? undefined,

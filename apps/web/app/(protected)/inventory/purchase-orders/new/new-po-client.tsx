@@ -75,7 +75,6 @@ interface LocalLine {
   ingredientName: string;
   quantity: number;
   unit: string;
-  // Purchase-role unit id the qty was entered in. NULL = free-text unit.
   entryUnitId: number | null;
   unitPriceEst: number | null;
 }
@@ -201,7 +200,7 @@ export function NewPoClient({
         ingredientId: s.ingredient_id,
         ingredientName: s.ingredient_name,
         quantity: s.suggested_qty,
-        unit: defaultUnit?.code ?? s.unit,
+        unit: defaultUnit?.label ?? s.unit,
         entryUnitId: defaultUnit?.unitId ?? null,
         unitPriceEst: ing?.unit_cost ?? null,
       },
@@ -226,7 +225,7 @@ export function NewPoClient({
           ingredientId: s.ingredient_id,
           ingredientName: s.ingredient_name,
           quantity: s.suggested_qty,
-          unit: defaultUnit?.code ?? s.unit,
+          unit: defaultUnit?.label ?? s.unit,
           entryUnitId: defaultUnit?.unitId ?? null,
           unitPriceEst: ing?.unit_cost ?? null,
         };
@@ -686,7 +685,7 @@ function LineItemsSection({
     setAddRowDeviation(null);
     const ing = ingredients.find((x) => String(x.id) === val);
     const defaultUnit = getDefaultPurchaseUnit(ing);
-    setUnit(defaultUnit?.code ?? ing?.purchase_unit ?? ing?.unit ?? "");
+    setUnit(defaultUnit?.label ?? ing?.purchase_unit ?? ing?.unit ?? "");
     setEntryUnitId(defaultUnit?.unitId ?? null);
     setTimeout(() => qtyRef.current?.focus(), 0);
   }
@@ -696,7 +695,7 @@ function LineItemsSection({
     const opt = purchaseUnitOptions.find(
       (o) => String(o.unitId) === unitIdValue,
     );
-    if (opt) setUnit(opt.code);
+    if (opt) setUnit(opt.label);
   }
 
   function handleAddLine(e: React.FormEvent<HTMLFormElement>) {
@@ -928,12 +927,12 @@ function LineItemsSection({
           <Combobox
             value={ingredientId}
             onValueChange={handleIngredientChange}
-            options={ingredients.map((i) => ({
-              value: String(i.id),
-              label: i.name,
-              hint: i.purchase_unit ?? i.unit,
-              keywords: [i.sku ?? "", i.category ?? ""],
-            }))}
+              options={ingredients.map((i) => ({
+                value: String(i.id),
+                label: i.name,
+                hint: getDefaultPurchaseUnit(i)?.label ?? i.purchase_unit ?? i.unit,
+                keywords: [i.sku ?? "", i.category ?? ""],
+              }))}
             placeholder={messages.inventory.po.ingredientPlaceholder}
             searchPlaceholder={
               messages.inventory.po.ingredientSearchPlaceholder

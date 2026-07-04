@@ -84,9 +84,9 @@ function QuickCreateDialog<TCreated>({
       return { success: false, error: config.readIdError };
     }
 
-    onCreated?.(
-      mapCreated({ id: createdId, name: values.name, unit: values.unit }),
-    );
+    const unitLabel =
+      unitOptions.find((unit) => unit.code === values.unit)?.name ?? values.unit;
+    onCreated?.(mapCreated({ id: createdId, name: values.name, unit: unitLabel }));
     return result;
   }
 

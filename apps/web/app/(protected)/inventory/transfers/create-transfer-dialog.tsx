@@ -41,7 +41,6 @@ type DraftLine = {
   name: string;
   quantity: string;
   unit: string;
-  // Issue-role unit id (as string) the qty is entered in; "" => free-text unit.
   entryUnitId: string;
 };
 
@@ -144,7 +143,7 @@ export function CreateTransferForm({
         ingredientId: ingredient.id,
         name: ingredient.name,
         quantity: "",
-        unit: defaultUnit?.code ?? getWarehouseUnit(ingredient),
+        unit: defaultUnit?.label ?? getWarehouseUnit(ingredient),
         entryUnitId: defaultUnit ? String(defaultUnit.unitId) : "",
       },
     ]);
@@ -412,7 +411,7 @@ export function CreateTransferForm({
                         );
                         updateLine(line.key, {
                           entryUnitId: value,
-                          unit: opt?.code ?? line.unit,
+                          unit: opt?.label ?? line.unit,
                         });
                       }}
                     >

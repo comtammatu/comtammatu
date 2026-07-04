@@ -5,7 +5,6 @@ import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
-import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 
 const ROLES = PROCUREMENT_ROLES;
 
@@ -148,26 +147,14 @@ export const upsertRecipeLines = withAction(
     schema: recipeBatchSchema,
     permission: PERMISSION_KEYS.MENU_WRITE,
   },
-  async (data, { supabase, claims }) => {
-    const lines = [];
-    for (const line of data.lines) {
-      const resolvedUnit = await resolveEntryUnitCode(supabase, {
-        tenantId: claims.tenant_id,
-        ingredientId: line.ingredientId,
-        entryUnitId: line.entryUnitId,
-      });
-      if (!resolvedUnit.success) {
-        return { success: false, error: resolvedUnit.error };
-      }
-      lines.push({
+  async (data, { supabase }) => {
+    const lines = data.lines.map((line) => ({
         ingredient_id: line.ingredientId,
         quantity: line.quantity,
-        unit: resolvedUnit.unit,
         entry_unit_id: line.entryUnitId ?? null,
         note: line.note ?? null,
         yield_factor: line.yieldFactor,
-      });
-    }
+      }));
 
     const { error } = await supabase.rpc("upsert_recipe_lines", {
       p_menu_item_id: data.menuItemId,
