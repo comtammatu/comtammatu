@@ -763,7 +763,7 @@ test("operator stocktake routes use branch stocktake, not employee count", () =>
   assert.match(stocktakeNewClient, /routeBase = "\/inventory\/stocktake"/);
   assert.match(
     stocktakeNewClient,
-    /<AppPage scroll>\s*\{content\}\s*<\/AppPage>/,
+    /<DocumentFormFrame header=\{header\} scroll>\s*\{content\}\s*<\/DocumentFormFrame>/,
   );
   assert.doesNotMatch(stocktakeNewClient, /InventoryPageContent/);
   assert.match(
@@ -777,7 +777,7 @@ test("operator stocktake routes use branch stocktake, not employee count", () =>
   assert.match(stocktakeCountClient, /routeBase = "\/inventory\/stocktake"/);
   assert.match(
     stocktakeCountClient,
-    /<AppPage scroll>\s*\{content\}\s*<\/AppPage>/,
+    /<DocumentFormFrame header=\{header\} scroll>\s*\{content\}\s*<\/DocumentFormFrame>/,
   );
   assert.doesNotMatch(stocktakeCountClient, /InventoryPageContent/);
   assert.match(

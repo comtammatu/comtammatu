@@ -233,13 +233,11 @@ component — the same branch benefits both planes, and the office plane
   contract's Sticky CTA rung.
 - Status/money/date: per § 1.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
-- **Baseline note:** only 1 of the repo's 9 current DOC-WORKFLOW pages
-  (`transfers/new`) uses `DocumentFormFrame` today. The other 8
-  (`grn/new`, `grn/new/[supplierId]`, `transfers/[id]/receive`,
-  `stocktake/new`, `stocktake/[id]/count`, `purchase-orders/new`,
-  `supplier-returns/new`, `waste/new`) hand-roll header+body+footer and are
-  frozen as the migration baseline in the gate (§ 4) — the baseline only
-  shrinks as they migrate, it never grows.
+- **Baseline note:** the DOC-WORKFLOW gate accepts `DocumentFormFrame` in the
+  route page or its direct client owner, because embedded operator routes must
+  short-circuit before the office frame. Inventory DOC-WORKFLOW pages now use
+  `DocumentFormFrame`; the remaining hand-rolled baseline is outside Inventory
+  and only shrinks as it migrates.
 - `employee/count` folds FORM-PAGE into this archetype: it collects a
   line-array count slip and is DOC-WORKFLOW in shape even though it does not
   yet use `DocumentFormFrame`.

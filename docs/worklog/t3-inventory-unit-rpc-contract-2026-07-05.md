@@ -51,15 +51,15 @@ Legend: `ok` means route is already backed by approved primitives or delegates t
 | `/inventory/count-slips` | count slips | `AppPage`, `AppPageHeader`, item primitives | ok |
 | `/inventory/expiry` | expiry alerts | `AppPage`, `AppPageHeader`, `DataTable`, `FormDialog` | ok |
 | `/inventory/grn` | GRN list | `AppPage`, `AppPageHeader`, `DataTable`, `AppPageTabs` | ok |
-| `/inventory/grn/new` | GRN entry selector | `AppPage`, `AppPageHeader` | ok |
-| `/inventory/grn/new/[supplierId]` | GRN form | `DocumentFormFrame`, `AppPageHeader`, `AppSection` | watch |
+| `/inventory/grn/new` | GRN entry selector | `DocumentFormFrame`, `AppPageHeader` | ok |
+| `/inventory/grn/new/[supplierId]` | GRN form | `DocumentFormFrame`, `AppPageHeader`, `AppSection` | ok |
 | `/inventory/grn/[id]` | GRN detail | `AppPage`, `AppPageHeader`, `AppSection`, `AppDetailFooter`, `AppPageTabs` | watch |
 | `/inventory/ingredients` | catalog | `AppPage`, `AppPageHeader`, `DataTable`, `FormDialog` | ok |
 | `/inventory/issues` | issue list | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `FormDialog` | ok |
 | `/inventory/issues/[id]` | issue detail | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `FormDialog`, `AppPageTabs` | ok |
 | `/inventory/production` | production hub | `ProductionHubClient` uses `AppPage`, `AppPageHeader` | ok |
 | `/inventory/purchase-orders` | PO list | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable` | ok |
-| `/inventory/purchase-orders/new` | PO form | `DocumentFormFrame`, `AppPageHeader`, `AppSection`, `DataTable` | watch |
+| `/inventory/purchase-orders/new` | PO form | `DocumentFormFrame`, `AppPageHeader`, `AppSection`, `DataTable` | ok |
 | `/inventory/purchase-orders/[id]` | PO detail | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `AppDetailFooter`, `AppPageTabs` | watch |
 | `/inventory/recipes` | menu recipes | `AppPage`, `AppPageHeader`, `DataTable`, `FormDialog` | ok |
 | `/inventory/reports` | reporting | `AppPage`, `AppPageHeader`, `AppSection` | ok |
@@ -72,18 +72,36 @@ Legend: `ok` means route is already backed by approved primitives or delegates t
 | `/inventory/stock` | stock list | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `FormDialog` | ok |
 | `/inventory/stock/[ingredientId]` | stock detail | `AppPage`, `AppPageHeader`, `AppSection` | ok |
 | `/inventory/stocktake` | stocktake list | `AppPage`, `AppPageHeader`, `DataTable`, `FormDialog` | ok |
-| `/inventory/stocktake/new` | stocktake form | `AppPage`, `AppPageHeader`, `AppSection` | ok |
+| `/inventory/stocktake/new` | stocktake form | `DocumentFormFrame`, `AppPageHeader`, `AppSection` | ok |
 | `/inventory/stocktake/[id]` | stocktake detail | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `AppPageTabs` | ok |
-| `/inventory/stocktake/[id]/count` | count surface | `AppPage`, `AppPageHeader`, `AppSection` | ok |
+| `/inventory/stocktake/[id]/count` | count surface | `DocumentFormFrame`, `AppPageHeader`, `AppSection` | ok |
 | `/inventory/supplier-invoices` | invoices | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `FormDialog` | ok |
 | `/inventory/supplier-returns` | returns list | `AppPage`, `AppPageHeader`, `DataTable` | ok |
-| `/inventory/supplier-returns/new` | return form | `AppPage`, `AppPageHeader` | ok |
+| `/inventory/supplier-returns/new` | return form | `DocumentFormFrame`, `AppPageHeader` | ok |
 | `/inventory/supplier-returns/[id]` | return detail | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `AppPageTabs` | ok |
 | `/inventory/suppliers` | supplier catalog | `AppPage`, `AppPageHeader`, `DataTable`, `FormDialog` | ok |
 | `/inventory/transfers` | transfer list | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable` | ok |
 | `/inventory/transfers/new` | transfer form | `DocumentFormFrame`, `AppPageHeader` | ok |
 | `/inventory/transfers/[id]` | transfer detail | `AppPage`, `AppPageHeader`, `AppSection`, `DataTable`, `AppDetailFooter`, `AppPageTabs` | watch |
 | `/inventory/waste/approvals` | waste approvals | `AppPage`, `AppPageHeader`, item primitives | ok |
-| `/inventory/waste/new` | waste form | `AppPage`, `AppPageHeader`, `AppSection` | ok |
+| `/inventory/waste/new` | waste form | `DocumentFormFrame`, `AppPageHeader`, `AppSection` | ok |
 
 Current shell drift is concentrated in rich detail/form surfaces (`GRN detail`, `PO detail`, `Transfer detail`, `GRN supplier form`, `PO new form`). They use approved page primitives but still carry custom local row/card/detail composition. No replacement wrapper should be added; trim only when an existing primitive can replace repeated local structure.
+
+## Shell Closeout Delta
+
+- Shrank the DOC-WORKFLOW frame baseline for `/inventory/grn/new/[supplierId]`
+  and `/inventory/purchase-orders/new`. Both already render the office plane
+  through `DocumentFormFrame` in the direct client owner while preserving the
+  embedded operator branch as a bare flex container.
+- Migrated `/inventory/stocktake/new`, `/inventory/stocktake/[id]/count`, and
+  `/inventory/waste/new` to the same contract: office renders through
+  `DocumentFormFrame`, embedded returns the shared body without a nested
+  `AppPageHeader`.
+- Migrated `/inventory/grn/new` and `/inventory/supplier-returns/new` to
+  `DocumentFormFrame`, bringing the Inventory DOC-WORKFLOW frame baseline to
+  zero. The only remaining baseline entry is `employee/count`, outside this
+  Inventory goal.
+- Updated the page-archetype guard to accept `DocumentFormFrame` in a route's
+  direct client owner, so the guard tracks the real office/embedded split
+  instead of forcing fake imports into `page.tsx`.

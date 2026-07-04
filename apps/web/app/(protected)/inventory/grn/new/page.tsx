@@ -16,7 +16,7 @@ import {
   formatVNDate,
   getVNDateString,
 } from "@comtammatu/shared/time";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPageHeader, DocumentFormFrame } from "@/components/surface";
 import {
   fetchOpenPurchaseOrdersForReceiving,
   type OpenPurchaseOrderRow,
@@ -178,24 +178,26 @@ export async function GrnNewPageContent({
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
+  const header = (
+    <AppPageHeader
+      breadcrumb={
+        <Link
+          href={grnListBasePath}
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+        >
+          <IconArrowLeft className="size-4" /> {INVENTORY_VI.grnListBackLabel}
+        </Link>
+      }
+      eyebrow={INVENTORY_VI.receivingEyebrow}
+      title={INVENTORY_VI.chooseSourceTitle}
+      description={INVENTORY_VI.chooseSourceDescription}
+    />
+  );
+
   return (
-    <AppPage width="wide">
-      <AppPageHeader
-        breadcrumb={
-          <Link
-            href={grnListBasePath}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-          >
-            <IconArrowLeft className="size-4" />{" "}
-            {INVENTORY_VI.grnListBackLabel}
-          </Link>
-        }
-        eyebrow={INVENTORY_VI.receivingEyebrow}
-        title={INVENTORY_VI.chooseSourceTitle}
-        description={INVENTORY_VI.chooseSourceDescription}
-      />
+    <DocumentFormFrame header={header} width="wide">
       {content}
-    </AppPage>
+    </DocumentFormFrame>
   );
 }
 

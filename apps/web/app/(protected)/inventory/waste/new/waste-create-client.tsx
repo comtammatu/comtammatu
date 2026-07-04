@@ -33,7 +33,11 @@ import { createWasteEntry } from "@/(protected)/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";
 import { FormattedNumberInput } from "@/components/form";
 import { messages } from "@lib/messages";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  AppPageHeader,
+  AppSection,
+  DocumentFormFrame,
+} from "@/components/surface";
 
 /* ─── Context shape from server component ─── */
 
@@ -260,24 +264,24 @@ export function WasteCreateClient({
     });
   }
 
+  const header = (
+    <AppPageHeader
+      eyebrow="Kho hàng"
+      title={messages.inventory.waste.title}
+      description={
+        <>
+          {context.branch.name}{" "}
+          <Badge variant="outline" className="ml-1 text-xs">
+            {messages.inventory.waste.shiftPrefix}{" "}
+            {context.capStatus.shiftKey || "?"}
+          </Badge>
+        </>
+      }
+    />
+  );
+
   const content = (
     <>
-      {!embedded ? (
-        <AppPageHeader
-          eyebrow="Kho hàng"
-          title={messages.inventory.waste.title}
-          description={
-            <>
-              {context.branch.name}{" "}
-              <Badge variant="outline" className="ml-1 text-xs">
-                {messages.inventory.waste.shiftPrefix}{" "}
-                {context.capStatus.shiftKey || "?"}
-              </Badge>
-            </>
-          }
-        />
-      ) : null}
-
       <BranchDailyCapBanner
         branchToday={context.capStatus.branchToday}
         branchCap={context.capStatus.branchCap}
@@ -567,8 +571,8 @@ export function WasteCreateClient({
   }
 
   return (
-    <AppPage width="wide" density="compact">
+    <DocumentFormFrame header={header} width="wide" density="compact">
       {content}
-    </AppPage>
+    </DocumentFormFrame>
   );
 }
