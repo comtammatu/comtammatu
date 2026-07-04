@@ -1047,6 +1047,39 @@ test("operator production renders branch-native inside the central_kitchen opera
   );
   assert.match(clientSource, embeddedContentWrapperPattern);
 
+  // HUB archetype (docs/spec/page-archetypes.md § HUB): the office landing is
+  // AppPage width="wide" wrapping a LinkCardGrid of AppLinkCard tiles into the
+  // production sub-surfaces — never a data table on the landing itself. The
+  // order list and recipe panel move behind a ?view= query-param sub-view, so
+  // the landing shows KPIs + link cards only.
+  assert.match(clientSource, /<AppPage width="wide">\{content\}<\/AppPage>/);
+  assert.match(clientSource, /<LinkCardGrid>/);
+  assert.match(
+    clientSource,
+    /import \{[^}]*\buseSearchParams\b[^}]*\} from "next\/navigation"/,
+  );
+  assert.match(clientSource, /const view = searchParams\.get\("view"\)/);
+  assert.match(
+    clientSource,
+    /href=\{buildViewHref\(PRODUCTION_ORDERS_VIEW\)\}/,
+  );
+  assert.match(
+    clientSource,
+    /href=\{buildViewHref\(PRODUCTION_RECIPES_VIEW\)\}/,
+  );
+  // Negative: the order list DataTable must NOT render on the hub landing. It
+  // is only reachable inside the orders sub-view (view === orders), so the
+  // sole <ProductionOrderList render must sit behind that guard.
+  assert.match(
+    clientSource,
+    /view === PRODUCTION_ORDERS_VIEW[\s\S]*<ProductionOrderList/,
+  );
+  assert.equal(
+    (clientSource.match(/<ProductionOrderList/g) ?? []).length,
+    1,
+    "ProductionOrderList must render once, behind the orders sub-view",
+  );
+
   // Native production tile is gated to branch_kind central_kitchen only —
   // must never render at central_supply or retail branches.
   assert.match(

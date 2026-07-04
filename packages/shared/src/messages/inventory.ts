@@ -50,6 +50,21 @@ export const INVENTORY_VI = {
   productionDescription: "Lệnh sản xuất và BOM thành phẩm",
   productionOrdersTab: "Lệnh sản xuất",
   productionRecipesTab: "Công thức sản xuất",
+  productionBackToHub: "Về trạm sản xuất",
+  productionOrdersCardDescription:
+    "Lập, xác nhận và điều chỉnh lệnh sản xuất để trừ nguyên liệu và nhập thành phẩm.",
+  productionOrdersMetricLabel: "lệnh",
+  productionOpenOrders: "Mở lệnh sản xuất",
+  productionDraftBadge: (count: number) => `${count} lệnh nháp`,
+  productionRecipesCardDescription:
+    "Cấu hình BOM thành phẩm: nguyên liệu và định lượng cho từng mẻ sản xuất.",
+  productionRecipesMetricLabel: "BOM thành phẩm",
+  productionOpenRecipes: "Mở công thức",
+  productionCatalogCardTitle: "Danh mục nguyên liệu",
+  productionCatalogCardDescription:
+    "Quản lý thành phẩm và nguyên liệu đầu vào dùng cho nhập kho và sản xuất.",
+  productionCatalogMetricLabel: "danh mục",
+  productionOpenCatalog: "Mở danh mục",
   selectIngredient: "Chọn nguyên liệu",
   selectIngredientPlaceholder: "Chọn nguyên liệu...",
   searchByName: "Tìm theo tên...",
