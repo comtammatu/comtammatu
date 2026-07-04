@@ -1,6 +1,6 @@
 # Inventory UI — redesign về chuẩn (2026-07-03)
 
-> Reconciled-through a7a5d9e6
+> Reconciled-through b7380bc6
 > Owner: Inventory UI "tự custom Components quá nhiều, bể layout, chữ đè, không theo khung nào, loạn".
 > Không design system mới — ép mọi surface Inventory về chuẩn sẵn có: `docs/spec/page-archetypes.md`
 > recipes + `surface.tsx` adapters + Operator Embedded Contract (D058/D059, one-implementation-two-roots).
@@ -37,21 +37,31 @@ B và C cùng gốc: **tự chế surface thay vì dùng adapter.** Route qua ad
 - Gỡ double/triple-nested AppPage: `settings/qc/{page,qc-settings-client}.tsx` + `settings/expiry/page.tsx`
   → page own AppPageHeader, client render embedded/headerless (khớp categories/units/thresholds).
 
-**Wave 2 — pin 1 width tier + normalize mọi LIST shell (Pattern A, systemic).** Sửa `page-archetypes.md
-§3 LIST` pin width (đề xuất `xwide` theo exemplar purchase-orders), rồi normalize freelancer. LEVERAGE
-điểm cao nhất — kill "no framework" feeling nhất. Safe cho LIST non-catalog; `ingredients-client.tsx`
-đụng A2 → sequence sau Phase A. Sau đó thêm width-signature check vào gate để drift không tái nhập.
+**Wave 2 — pin 1 width tier + normalize mọi LIST shell (Pattern A, systemic).** DONE (this PR).
+`page-archetypes.md §3 LIST` pin `width="xwide"` (owner decision 1). Normalize freelancer về xwide:
+`issues`, `supplier-invoices`, `supplier-returns`, `recipes`, `waste/approvals`, `ingredients`
+(gỡ bespoke `contentClassName="max-md:max-w-2xl"` → `width="xwide"`, giữ `max-md:pb-28`). Đã-xwide
+để nguyên: `purchase-orders`, `grn`, `stocktake`, `transfers`. Gate mới `list-width-tier` trong
+`check-ui-contract.mjs` đọc width off page shell của 9 inventory LIST pinned → fail nếu != xwide, chặn
+drift tái nhập. `suppliers`/`stock` dùng `InventoryPageContent` (width union `"wide" | "narrow"`) → chưa
+pin được (cần adapter thêm tier `xwide` trước); `expiry` không nằm trong set normalize → để ngoài gate.
 
-**Wave 3 — 6 LIST body-freelance về recipe (Pattern B).**
-- Migrate AppToolbar+DataTable: `recipes`, `supplier-returns`, `transfers`.
-- 3 queue non-tabular (`count-slips`, `count-assignments`, `waste/approvals`): **owner quyết** migrate DataTable
-  vs thêm vào §4 Named Exceptions (sanctioned). `production`/`recipes` đụng Phase A/B → chờ.
+**Wave 3 — LIST body-freelance về recipe (Pattern B).** DONE (this PR).
+- Migrate AppToolbar+DataTable: `recipes` (thêm AppToolbar search, đã có DataTable), `supplier-returns`
+  (thêm AppToolbar search), `transfers` (gộp InputGroup + Tabs freelance thành 1 AppToolbar: search slot
+  + job-filter Tabs vào filters slot).
+- 3 queue non-tabular (`count-slips`, `count-assignments`, `waste/approvals`): **owner quyết = §4 Named
+  Exceptions (sanctioned), KHÔNG migrate DataTable** (owner decision 2). Thêm vào `page-archetypes.md §4`
+  (entries 9–11) + `check-ui-contract.mjs` skip khỏi gate `list-width-tier`; code giữ nguyên card/ItemGroup.
 
-**Wave 4 — 2 archetype declare sai + tiếp DOC-WORKFLOW.**
-- `check-ui-contract.mjs`: `drafts/page.tsx` LIST→REDIRECT-SHIM (là redirect); `production/page.tsx`
-  declare HUB nhưng render table → rebuild HUB recipe hoặc re-declare + §4 exception (**owner quyết**).
+**Wave 4 — archetype declare sai + tiếp DOC-WORKFLOW.**
+- DONE (this PR): `drafts/page.tsx` LIST→REDIRECT-SHIM (là pure `redirect('/inventory/grn?tab=drafts')`)
+  trong `page-archetypes.mjs` + register `/inventory/drafts` vào `ROUTE_MANIFEST_SHIM_ROUTES`.
+- `production/page.tsx` (declare HUB nhưng render table): **owner quyết = production rebuild tách PR riêng**
+  (owner decision 3) → không đụng trong PR này.
 - Migrate `purchase-orders/new` + `grn/new/[supplierId]` sang DocumentFormFrame (giết luôn twin-tree
-  `md:hidden` ratchet). **Chờ Phase B** (rewrite unit dropdown cùng file).
+  `md:hidden` ratchet). **Chờ Phase B** (rewrite unit dropdown cùng file). `grn/new/[supplierId]` đã
+  migrate ở PR #235.
 
 ## Collision với unit-system Phase A/B + reset
 
@@ -59,7 +69,8 @@ B và C cùng gốc: **tự chế surface thay vì dùng adapter.** Route qua ad
   shell (A2 rewrite ingredient form), recipes/production body (Phase A/B scope).
 - **SAFE NOW**: toàn bộ Wave 1/1b, Wave 2 cho LIST non-catalog, settings double-nest, 2 archetype re-mapping.
 
-## Owner quyết
-1. Wave 2 width tier: `xwide` hay `wide`?
-2. Wave 3: 3 queue page → migrate DataTable hay sanctioned §4 exception?
-3. Wave 4: `production` → rebuild HUB hay re-declare archetype thật?
+## Owner quyết (resolved 2026-07-04)
+1. Wave 2 width tier → **`xwide`**. Pin trong `page-archetypes.md §3 LIST` + gate `list-width-tier`.
+2. Wave 3: 3 queue page (`count-slips`, `count-assignments`, `waste/approvals`) → **sanctioned §4 exception**,
+   KHÔNG migrate DataTable (card/ItemGroup là đúng cho approval/assignment queue non-tabular).
+3. Wave 4: `production` → **rebuild tách PR riêng** (không re-declare + không đụng trong PR conformance này).

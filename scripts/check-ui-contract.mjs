@@ -1098,6 +1098,7 @@ const ROUTE_MANIFEST_SHIM_ROUTES = new Set([
   "/admin/reports",
   "/admin/reports/stock-movement",
   "/admin/reports/inventory-value",
+  "/inventory/drafts",
 ]);
 // ACL family roots without a landing page still resolve through shared ACL.
 const ROUTE_MANIFEST_NO_PAGE_ACL = new Set(["/admin/inventory"]);
@@ -1306,6 +1307,81 @@ for (const file of allPageFiles) {
   if (content.includes("return (") || content.includes("return <")) {
     failures.push(
       `page-archetype: ${file} is a REDIRECT-SHIM that renders JSX. REDIRECT-SHIM is redirect()-only (docs/spec/page-archetypes.md § REDIRECT-SHIM).`,
+    );
+  }
+}
+
+// list-width-tier (page-archetypes.md § 3 LIST / § 4): the LIST recipe pins the
+// single dense-data width tier `xwide` (design-system.md § Rhythm Contract). A
+// LIST-declared page whose page shell renders on a narrower tier is drift, so
+// this reads the width prop off the page's own AppPage/InventoryPageContent
+// shell and fails anything but `xwide`. Scoped to the inventory LIST pages the
+// owner pinned (2026-07-04): the co-located client owns an `AppPage width` prop
+// this gate can read statically. The three inventory approval/assignment queue
+// pages are § 4 Named Exceptions (card/ItemGroup, no DataTable, no LIST width
+// tier) and are excluded. Widening this set to a page whose shell is an
+// InventoryPageContent (width union is "wide" | "narrow") needs that adapter to
+// gain the `xwide` tier first.
+const LIST_WIDTH_TIER_QUEUE_EXCEPTIONS = new Set([
+  "apps/web/app/(protected)/inventory/count-slips/page.tsx",
+  "apps/web/app/(protected)/inventory/count-assignments/page.tsx",
+  "apps/web/app/(protected)/inventory/waste/approvals/page.tsx",
+]);
+const LIST_WIDTH_TIER_PINNED_PAGES = [
+  "apps/web/app/(protected)/inventory/grn/page.tsx",
+  "apps/web/app/(protected)/inventory/ingredients/page.tsx",
+  "apps/web/app/(protected)/inventory/issues/page.tsx",
+  "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
+  "apps/web/app/(protected)/inventory/recipes/page.tsx",
+  "apps/web/app/(protected)/inventory/stocktake/page.tsx",
+  "apps/web/app/(protected)/inventory/supplier-invoices/page.tsx",
+  "apps/web/app/(protected)/inventory/supplier-returns/page.tsx",
+  "apps/web/app/(protected)/inventory/transfers/page.tsx",
+];
+
+// Read the width tier declared on the non-embedded page shell for a LIST page.
+// The shell (AppPage / InventoryPageContent) lives in a client co-located in the
+// page's own directory; the `embedded` return path is a bare <div>, so any shell
+// opening tag in that directory is the office-plane LIST shell. Returns the set
+// of tiers seen ("(default)" for a shell with no explicit width prop) so the
+// gate can flag any tier that is not exactly `xwide`.
+function readListShellWidthTiers(pageFile) {
+  const dir = path.dirname(path.join(REPO_ROOT, pageFile));
+  const tiers = new Set();
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".tsx")) continue;
+    const content = fs.readFileSync(path.join(dir, entry.name), "utf8");
+    for (const shell of ["AppPage", "InventoryPageContent"]) {
+      for (const tag of extractJsxOpeningTags(content, shell)) {
+        const match = /\bwidth=["']([a-z]+)["']/.exec(tag);
+        tiers.add(match ? match[1] : "(default)");
+      }
+    }
+  }
+  return tiers;
+}
+
+for (const file of LIST_WIDTH_TIER_PINNED_PAGES) {
+  if (PAGE_ARCHETYPES[file] !== "LIST") {
+    failures.push(
+      `list-width-tier: LIST_WIDTH_TIER_PINNED_PAGES has a stale entry for ${file}, which is no longer LIST. Remove it or re-pin its width (page-archetypes.md § 3 LIST).`,
+    );
+    continue;
+  }
+  if (LIST_WIDTH_TIER_QUEUE_EXCEPTIONS.has(file)) continue;
+  const tiers = readListShellWidthTiers(file);
+  if (tiers.size === 0) {
+    failures.push(
+      `list-width-tier: ${file} has no AppPage/InventoryPageContent shell in its directory to read a width tier from. The LIST recipe pins width="xwide" (page-archetypes.md § 3 LIST).`,
+    );
+    continue;
+  }
+  const offTier = [...tiers].filter((tier) => tier !== "xwide");
+  if (offTier.length > 0) {
+    failures.push(
+      `list-width-tier: ${file} declares LIST width tier(s) ${offTier
+        .map((tier) => `"${tier}"`)
+        .join(", ")}, but the LIST recipe pins width="xwide" (page-archetypes.md § 3 LIST / design-system.md § Rhythm Contract).`,
     );
   }
 }

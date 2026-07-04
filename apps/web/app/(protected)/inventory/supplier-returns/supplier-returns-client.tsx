@@ -2,8 +2,15 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: supplier returns list keeps warehouse operator copy inline */
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Search as IconSearch } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import {
   Item,
   ItemActions,
@@ -13,11 +20,17 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { matchesSearch } from "@lib/search";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppToolbar,
+} from "@/components/surface";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import type { SupplierReturnRow } from "./page";
 
@@ -41,6 +54,22 @@ export function SupplierReturnsClient({
   basePath = "/inventory/supplier-returns",
   embedded = false,
 }: Props) {
+  const [search, setSearch] = useState("");
+
+  const filteredReturns = useMemo(() => {
+    const query = search.trim();
+    if (!query) return initialReturns;
+    return initialReturns.filter((row) =>
+      matchesSearch(
+        [row.return_number, row.suppliers?.name, row.branches?.name],
+        query,
+      ),
+    );
+  }, [initialReturns, search]);
+
+  const showNoResults =
+    filteredReturns.length === 0 && search.trim().length > 0;
+
   const columns: DataTableColumn<SupplierReturnRow>[] = [
     {
       key: "return_number",
@@ -95,16 +124,42 @@ export function SupplierReturnsClient({
       {initialReturns.length === 0 ? (
         <AppEmptyState mode="no-data" title={INVENTORY_VI.noSupplierReturns} />
       ) : (
-        <DataTable
-          columns={columns}
-          data={initialReturns}
-          getRowKey={(row) => row.id}
-          emptyTitle="Chưa có phiếu trả hàng NCC"
-          emptyMode="no-data"
-          mobileCardRender={(row) => (
-            <SupplierReturnItem row={row} basePath={basePath} embedded={embedded} />
-          )}
-        />
+        <>
+          {!embedded ? (
+            <AppToolbar
+              search={
+                <InputGroup className="min-w-0 flex-1">
+                  <InputGroupAddon>
+                    <IconSearch />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Tìm theo số phiếu, nhà cung cấp hoặc chi nhánh"
+                  />
+                </InputGroup>
+              }
+            />
+          ) : null}
+          <DataTable
+            columns={columns}
+            data={filteredReturns}
+            getRowKey={(row) => row.id}
+            emptyTitle={
+              showNoResults
+                ? "Không tìm thấy phiếu trả hàng phù hợp"
+                : "Chưa có phiếu trả hàng NCC"
+            }
+            emptyMode={showNoResults ? "no-results" : "no-data"}
+            mobileCardRender={(row) => (
+              <SupplierReturnItem
+                row={row}
+                basePath={basePath}
+                embedded={embedded}
+              />
+            )}
+          />
+        </>
       )}
     </>
   );
@@ -114,7 +169,7 @@ export function SupplierReturnsClient({
   }
 
   return (
-    <AppPage width="wide" density="compact">
+    <AppPage width="xwide" density="compact">
       {content}
     </AppPage>
   );

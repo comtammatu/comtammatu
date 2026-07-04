@@ -102,7 +102,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/count-assignments/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/count-slips/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/dashboard/page.tsx": "REDIRECT-SHIM",
-  "apps/web/app/(protected)/inventory/drafts/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/drafts/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/expiry/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/grn/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx": "DOC-WORKFLOW",

@@ -4,9 +4,18 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil as IconPencil, Plus as IconPlus } from "lucide-react";
+import {
+  Pencil as IconPencil,
+  Plus as IconPlus,
+  Search as IconSearch,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import {
   Item,
   ItemActions,
@@ -16,11 +25,17 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { matchesSearch } from "@lib/search";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
+import {
+  AppPage,
+  AppPageHeader,
+  AppEmptyState,
+  AppToolbar,
+} from "@/components/surface";
 import { formatVND } from "../_lib/format";
 import { RecipeLineDialog } from "./recipe-line-dialog";
 import type {
@@ -67,11 +82,22 @@ export function RecipesClient({
     number | undefined
   >();
   const [editingLines, setEditingLines] = useState<RecipeLineDraft[]>([]);
+  const [search, setSearch] = useState("");
 
   const existingMenuItemIds = useMemo(
     () => recipes.map((r) => r.menuItemId),
     [recipes],
   );
+
+  const filteredRecipes = useMemo(() => {
+    const query = search.trim();
+    if (!query) return recipes;
+    return recipes.filter((recipe) =>
+      matchesSearch([recipe.name, recipe.category], query),
+    );
+  }, [recipes, search]);
+
+  const showNoResults = filteredRecipes.length === 0 && search.trim().length > 0;
 
   function openCreate() {
     setEditingMenuItemId(undefined);
@@ -160,7 +186,7 @@ export function RecipesClient({
   ];
 
   return (
-    <AppPage width="wide" density="compact">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title="Định mức món bán"
         actions={
@@ -177,18 +203,42 @@ export function RecipesClient({
           description='Định mức món bán là lượng nguyên liệu tiêu hao khi bán 1 phần menu item. Nhấn "Tạo định mức" để bắt đầu.'
         />
       ) : (
-        <DataTable
-          columns={columns}
-          data={recipes}
-          getRowKey={(recipe) => recipe.id}
-          mobileCardRender={(recipe) => (
-            <RecipeCard
-              recipe={recipe}
-              stockCapacity={stockCapacityByMenuItemId[String(recipe.menuItemId)]}
-              onEdit={openEdit}
-            />
-          )}
-        />
+        <>
+          <AppToolbar
+            search={
+              <InputGroup className="min-w-0 flex-1">
+                <InputGroupAddon>
+                  <IconSearch />
+                </InputGroupAddon>
+                <InputGroupInput
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Tìm theo tên món hoặc nhóm"
+                />
+              </InputGroup>
+            }
+          />
+          <DataTable
+            columns={columns}
+            data={filteredRecipes}
+            getRowKey={(recipe) => recipe.id}
+            emptyTitle={
+              showNoResults
+                ? "Không tìm thấy định mức phù hợp"
+                : "Chưa có định mức món bán nào"
+            }
+            emptyMode={showNoResults ? "no-results" : "no-data"}
+            mobileCardRender={(recipe) => (
+              <RecipeCard
+                recipe={recipe}
+                stockCapacity={
+                  stockCapacityByMenuItemId[String(recipe.menuItemId)]
+                }
+                onEdit={openEdit}
+              />
+            )}
+          />
+        </>
       )}
 
       <RecipeLineDialog
