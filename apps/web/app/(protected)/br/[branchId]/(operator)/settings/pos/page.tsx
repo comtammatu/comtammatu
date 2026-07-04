@@ -65,6 +65,7 @@ export default async function BranchPosSettingsPage({
       <StockControlCard
         branchId={branchId}
         initialPostingEnabled={stockOutcomePostingEnabled}
+        canToggle={claims.user_role === "owner"}
       />
     </EmployeePage>
   );

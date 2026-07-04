@@ -17,6 +17,7 @@ import { INVENTORY_FEATURE_FLAGS } from "@/(protected)/inventory/_lib/feature-fl
 import { canOperateBranch, verifyBranchOwnership } from "../branch-guards";
 
 const SETTINGS_ROLES: readonly StaffRole[] = BRANCH_FLOOR_SETTINGS_ROLES;
+const OWNER_ONLY_ROLES: readonly StaffRole[] = ["owner"];
 
 /* ─── Helpers ─── */
 
@@ -200,7 +201,7 @@ function upsertBranchFeatureFlag(
 
 export const setBranchStockOutcomePosting = withActionPositional(
   {
-    roles: SETTINGS_ROLES,
+    roles: OWNER_ONLY_ROLES,
     schema: featureFlagSchema,
     permission: PERMISSION_KEYS.SETTINGS_BRANCH,
     permissionBranchId: (data) => data.branchId,
