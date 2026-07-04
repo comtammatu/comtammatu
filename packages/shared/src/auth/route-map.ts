@@ -187,7 +187,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     label: MODULE_ACL.operator_home.label,
     surface: "branch_operation",
     entryPath: "/br/[branchId]",
-    matchPrefixes: ["/br/[branchId]"],
+    matchPrefixes: ["/br/[branchId]", "/br/[branchId]/more"],
     moduleKeys: ["operator_home"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",

@@ -2,6 +2,7 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
   INVENTORY_OPS_ROLES,
   PERMISSION_KEYS,
+  type BranchKind,
   type JwtClaims,
 } from "@comtammatu/shared/auth";
 import { getRegisteredMethods } from "@comtammatu/shared/providers";
@@ -199,6 +200,10 @@ export interface BranchQueueCounts {
   pendingCountSlips: number | null;
   pendingWaste: number | null;
   expiringItems: number | null;
+  draftGrns: number | null;
+  openPurchaseOrders: number | null;
+  draftProductionOrders: number | null;
+  inboundTransfers: number | null;
 }
 
 /**
@@ -212,32 +217,76 @@ export async function fetchBranchQueueCounts(
   supabase: ServerClient,
   claims: JwtClaims,
   branchId: number,
+  branchKind: BranchKind = "branch",
 ): Promise<BranchQueueCounts> {
   const service = createServiceClient();
+  const isCentralSupply = branchKind === "central_supply";
+  const isCentralKitchen = branchKind === "central_kitchen";
 
-  const [checkoutPermission, leavePermission, countPermission, wastePermission] =
-    await Promise.all([
-      supabase.rpc("has_permission", {
-        p_branch_id: branchId,
-        p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-      }),
-      supabase.rpc("has_permission", {
-        p_branch_id: branchId,
-        p_key: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
-      }),
-      supabase.rpc("has_permission", {
-        p_branch_id: branchId,
-        p_key: PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
-      }),
-      supabase.rpc("has_permission", {
-        p_branch_id: branchId,
-        p_key: PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
-      }),
-    ]);
+  const [
+    checkoutPermission,
+    leavePermission,
+    countPermission,
+    wastePermission,
+    grnPermission,
+    poPermission,
+    productionPermission,
+    transferPermission,
+  ] = await Promise.all([
+    supabase.rpc("has_permission", {
+      p_branch_id: branchId,
+      p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+    }),
+    supabase.rpc("has_permission", {
+      p_branch_id: branchId,
+      p_key: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
+    }),
+    supabase.rpc("has_permission", {
+      p_branch_id: branchId,
+      p_key: PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
+    }),
+    supabase.rpc("has_permission", {
+      p_branch_id: branchId,
+      p_key: PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
+    }),
+    isCentralSupply
+      ? supabase.rpc("has_permission", {
+          p_branch_id: branchId,
+          p_key: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+        })
+      : Promise.resolve({ data: false }),
+    isCentralSupply
+      ? supabase.rpc("has_permission", {
+          p_branch_id: branchId,
+          p_key: PERMISSION_KEYS.PROCUREMENT_READ,
+        })
+      : Promise.resolve({ data: false }),
+    isCentralKitchen
+      ? supabase.rpc("has_permission", {
+          p_branch_id: branchId,
+          p_key: PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
+        })
+      : Promise.resolve({ data: false }),
+    isCentralKitchen
+      ? supabase.rpc("has_permission", {
+          p_branch_id: branchId,
+          p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE,
+        })
+      : Promise.resolve({ data: false }),
+  ]);
   const showExpiring = INVENTORY_OPS_ROLES.includes(claims.user_role);
 
-  const [checkoutRes, leaveRes, countRes, wasteRes, expiryRes] =
-    await Promise.all([
+  const [
+    checkoutRes,
+    leaveRes,
+    countRes,
+    wasteRes,
+    expiryRes,
+    draftGrnRes,
+    openPoRes,
+    draftProductionRes,
+    inboundTransferRes,
+  ] = await Promise.all([
       checkoutPermission.data === true
         ? service
             .from("attendance_records")
@@ -273,6 +322,38 @@ export async function fetchBranchQueueCounts(
             .eq("approval_status", "pending")
         : Promise.resolve(null),
       showExpiring ? fetchExpiryAlerts(branchId) : Promise.resolve(null),
+      grnPermission.data === true
+        ? supabase
+            .from("goods_received_notes")
+            .select("id", { count: "exact", head: true })
+            .eq("tenant_id", claims.tenant_id)
+            .eq("branch_id", branchId)
+            .eq("status", "draft")
+        : Promise.resolve(null),
+      poPermission.data === true
+        ? supabase
+            .from("purchase_orders")
+            .select("id", { count: "exact", head: true })
+            .eq("tenant_id", claims.tenant_id)
+            .eq("branch_id", branchId)
+            .in("status", ["sent", "partially_received"])
+        : Promise.resolve(null),
+      productionPermission.data === true
+        ? supabase
+            .from("production_orders")
+            .select("id", { count: "exact", head: true })
+            .eq("tenant_id", claims.tenant_id)
+            .eq("branch_id", branchId)
+            .eq("status", "draft")
+        : Promise.resolve(null),
+      transferPermission.data === true
+        ? supabase
+            .from("stock_transfers")
+            .select("id", { count: "exact", head: true })
+            .eq("tenant_id", claims.tenant_id)
+            .eq("to_branch_id", branchId)
+            .in("status", ["confirmed_ship", "in_transit"])
+        : Promise.resolve(null),
     ]);
 
   const expiringItems =
@@ -290,5 +371,13 @@ export async function fetchBranchQueueCounts(
     pendingCountSlips: countRes ? (countRes.count ?? 0) : null,
     pendingWaste: wasteRes ? (wasteRes.count ?? 0) : null,
     expiringItems,
+    draftGrns: draftGrnRes ? (draftGrnRes.count ?? 0) : null,
+    openPurchaseOrders: openPoRes ? (openPoRes.count ?? 0) : null,
+    draftProductionOrders: draftProductionRes
+      ? (draftProductionRes.count ?? 0)
+      : null,
+    inboundTransfers: inboundTransferRes
+      ? (inboundTransferRes.count ?? 0)
+      : null,
   };
 }
