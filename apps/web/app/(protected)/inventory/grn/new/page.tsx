@@ -1,17 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import {
-  ArrowLeft as IconArrowLeft,
-  ChevronRight as IconChevronRight,
-  Phone as IconPhone,
-  Receipt as IconReceipt,
-  Users as IconUsers,
-} from "lucide-react";
+import { ArrowLeft as IconArrowLeft, Info as IconInfo } from "lucide-react";
 import { loadAuthState } from "@/_lib/auth";
+import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { resolveInventoryListScope } from "../../_lib/inventory-scope";
 import type { TenantSupabase } from "../../_lib/types";
 import {
   canAccess,
+  PERMISSION_KEYS,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
@@ -20,13 +16,13 @@ import {
   formatVNDate,
   getVNDateString,
 } from "@comtammatu/shared/time";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import {
   fetchOpenPurchaseOrdersForReceiving,
   type OpenPurchaseOrderRow,
 } from "../../purchase-order-actions";
 import { GrnFromPoList } from "./grn-from-po-list";
+import { SupplierPicker } from "./supplier-picker";
 
 type SupplierRow = {
   id: number;
@@ -144,68 +140,37 @@ export async function GrnNewPageContent({
     ? (openPosRes.data ?? [])
     : [];
 
+  const canCreateSupplier = await currentUserHasAnyPermissionAny([
+    PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,
+  ]);
+
+  const pickerSuppliers = suppliers.map((supplier) => ({
+    id: supplier.id,
+    name: supplier.name,
+    phone: supplier.phone,
+    recentLabel:
+      supplier.recent_grn_count > 0
+        ? formatRecentGrnCount(supplier.recent_grn_count)
+        : null,
+    lastLabel: formatLastGrn(supplier.last_grn_at),
+  }));
+
   const content = (
     <>
       {openPos.length > 0 ? (
         <GrnFromPoList openPos={openPos} grnBasePath={grnListBasePath} />
       ) : null}
 
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between px-1">
-          <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-            {INVENTORY_VI.adhocBySupplierHeading}
-          </p>
-        </div>
-        {suppliers.length === 0 ? (
-          <AppEmptyState
-            compact
-            icon={<IconUsers />}
-            title={INVENTORY_VI.noSupplierTitle}
-            description={INVENTORY_VI.noSupplierDescription}
-          />
-        ) : (
-          suppliers.map((supplier) => {
-            const initials = supplier.name.slice(0, 2).toUpperCase();
-            const lastLabel = formatLastGrn(supplier.last_grn_at);
-            return (
-              <InteractiveCard
-                key={supplier.id}
-                asChild
-                minHeight="mobile"
-                padding="default"
-                className="h-auto"
-              >
-                <Link href={`${basePath}/${supplier.id}`}>
-                  <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold uppercase text-muted-foreground">
-                    {initials}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-base font-semibold leading-tight">
-                      {supplier.name}
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                      {supplier.phone ? (
-                        <span className="inline-flex items-center gap-1">
-                          <IconPhone className="size-3" />
-                          {supplier.phone}
-                        </span>
-                      ) : null}
-                      {supplier.recent_grn_count > 0 ? (
-                        <span className="inline-flex items-center gap-1">
-                          <IconReceipt className="size-3" />
-                          {formatRecentGrnCount(supplier.recent_grn_count)}
-                        </span>
-                      ) : null}
-                      {lastLabel ? <span>{lastLabel}</span> : null}
-                    </div>
-                  </div>
-                  <IconChevronRight className="size-5 shrink-0 text-muted-foreground" />
-                </Link>
-              </InteractiveCard>
-            );
-          })
-        )}
-      </section>
+      <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+        <IconInfo className="size-4 shrink-0" />
+        {INVENTORY_VI.noPoNeededHint}
+      </div>
+
+      <SupplierPicker
+        suppliers={pickerSuppliers}
+        basePath={basePath}
+        canCreate={canCreateSupplier}
+      />
     </>
   );
 
