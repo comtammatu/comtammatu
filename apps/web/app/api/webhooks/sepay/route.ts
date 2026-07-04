@@ -6,7 +6,8 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 
 const SEPAY_WEBHOOK_SECRET = process.env.SEPAY_WEBHOOK_SECRET ?? "";
 const SIGNATURE_TOLERANCE_SECONDS = 300;
-const SEPAY_PAYMENT_CODE_RE = /\b(?:VQRLOAMB\d{17}|DH[A-Z0-9]{3,12})\b/gi;
+const SEPAY_PAYMENT_CODE_RE =
+  /\bVQRLOAMB20260626100157757 [A-Z0-9]{12}\b|\bDH[A-Z0-9]{3,12}\b/gi;
 const LEGACY_PAYMENT_CODE_RE = /\bDH\s+\d{6}\s+[A-Z0-9]{5}\b/gi;
 
 const sepayAcceptedResponse = () => NextResponse.json({ success: true });

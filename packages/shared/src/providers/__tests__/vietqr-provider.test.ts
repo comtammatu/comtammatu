@@ -18,7 +18,10 @@ test("VietQRProvider uses MB speaker payment code as transfer memo", async () =>
   });
 
   assert.equal(result.status, "pending");
-  assert.match(result.providerRef ?? "", /^VQRLOAMB\d{17}$/);
+  assert.match(
+    result.providerRef ?? "",
+    /^VQRLOAMB20260626100157757 [A-Z0-9]{12}$/,
+  );
   assert.equal(result.providerData?.description, result.providerRef);
   assert.equal(result.providerData?.bankBin, "970407");
 
@@ -26,7 +29,7 @@ test("VietQRProvider uses MB speaker payment code as transfer memo", async () =>
   assert.doesNotMatch(result.qrData ?? "", /^https?:\/\//);
   assert.match(result.qrData ?? "", /970407/);
   assert.match(result.qrData ?? "", /125000/);
-  assert.match(result.qrData ?? "", /VQRLOAMB\d{17}/);
+  assert.match(result.qrData ?? "", /VQRLOAMB20260626100157757 [A-Z0-9]{12}/);
 });
 
 test("resolveBankBin covers current VietQR transfer bank codes used by POS", () => {

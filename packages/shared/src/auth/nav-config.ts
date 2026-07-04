@@ -348,6 +348,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "office_bridge",
     hrefTemplate: "/menu",
     label: "Thực đơn",
+    kinds: ["branch"],
   },
   {
     moduleKey: "hr",
@@ -355,6 +356,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "office_bridge",
     hrefTemplate: "/hr",
     label: APP_COPY_VI.hrWorkspace,
+    kinds: ["branch"],
   },
   {
     moduleKey: "inventory",
@@ -362,5 +364,6 @@ export const OPERATOR_TILE_ITEMS = [
     group: "office_bridge",
     hrefTemplate: "/inventory",
     label: "Kho văn phòng",
+    kinds: ["branch"],
   },
 ] satisfies readonly OperatorTileConfig[];

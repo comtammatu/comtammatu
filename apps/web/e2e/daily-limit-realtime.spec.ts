@@ -83,7 +83,12 @@ test.describe("Daily limit — realtime + enforcement", () => {
       const mutator = createClient(url, key, {
         auth: { persistSession: false, autoRefreshToken: false },
       });
-      const today = new Date().toISOString().slice(0, 10);
+      // Business date must match the server-side Asia/Ho_Chi_Minh keying used
+      // by the daily-limit trigger and availability RPC — a UTC date drifts
+      // one day past UTC-midnight on a UTC+7 machine and reads the wrong row.
+      const today = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Ho_Chi_Minh",
+      }).format(new Date());
       const { error: updateErr } = await mutator
         .from("branch_menu_item_daily_limits")
         .update({ sold_today: 3 })
