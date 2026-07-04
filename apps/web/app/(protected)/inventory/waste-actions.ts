@@ -8,24 +8,6 @@ import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 
-type ExpiryWriteoffRpcClient = {
-  rpc: (
-    fn: "create_expiry_writeoff",
-    args: {
-      p_branch_id: number;
-      p_location_id: number;
-      p_ingredient_id: number;
-      p_quantity: number;
-      p_grn_item_id?: number;
-      p_note?: string;
-      p_photo_urls?: string[];
-    },
-  ) => PromiseLike<{
-    data: unknown;
-    error: { code?: string; message?: string } | null;
-  }>;
-};
-
 /* ─── Waste entry (S11) ─── */
 
 const WASTE_REASON_CODES = [
@@ -204,8 +186,7 @@ export async function createExpiryWriteoff(
     };
   }
 
-  const expiryRpc = supabase as unknown as ExpiryWriteoffRpcClient;
-  const { data, error } = await expiryRpc.rpc("create_expiry_writeoff", {
+  const { data, error } = await supabase.rpc("create_expiry_writeoff", {
     p_branch_id: parsed.data.branchId,
     p_location_id: locationId,
     p_ingredient_id: parsed.data.ingredientId,
