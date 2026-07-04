@@ -82,7 +82,7 @@ export function SupplierPicker({
 
   return (
     <div className="flex flex-col gap-3">
-      <InputGroup className="h-12 rounded-lg">
+      <InputGroup className="h-12">
         <InputGroupAddon>
           <IconSearch />
         </InputGroupAddon>
@@ -134,6 +134,12 @@ export function SupplierPicker({
           icon={<IconUsers />}
           title={INVENTORY_VI.noSupplierTitle}
           description={INVENTORY_VI.noSupplierDescription}
+        />
+      ) : filtered.length === 0 && !canCreate ? (
+        <AppEmptyState
+          compact
+          icon={<IconSearch />}
+          title={INVENTORY_VI.supplierNotFound}
         />
       ) : (
         filtered.map((supplier) => {

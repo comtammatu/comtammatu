@@ -44,12 +44,17 @@ function centralNavItems(branchId: number, branchKind: BranchKind) {
     exact: false,
     matchPrefixes: [`${base}/stock/count-slips`, `${base}/stock/count`],
   };
-  const more = {
-    href: `${base}/more`,
-    label: branchCopy.centralNavMore,
-    icon: Ellipsis,
-    exact: false,
-  };
+  // Overflow routes reachable only via /more light the More tab so the
+  // bottom nav never loses its active indicator (review PR #249).
+  const moreOverflow = [
+    `${base}/stock/waste`,
+    `${base}/stock/supplier-returns`,
+    `${base}/stock/transfer`,
+    `${base}/shift`,
+    `${base}/team`,
+    `${base}/settings`,
+    `${base}/profile`,
+  ];
   if (branchKind === "central_supply") {
     return [
       home,
@@ -62,7 +67,13 @@ function centralNavItems(branchId: number, branchKind: BranchKind) {
       },
       stock,
       stocktake,
-      more,
+      {
+        href: `${base}/more`,
+        label: branchCopy.centralNavMore,
+        icon: Ellipsis,
+        exact: false,
+        matchPrefixes: moreOverflow,
+      },
     ];
   }
   return [
@@ -81,7 +92,13 @@ function centralNavItems(branchId: number, branchKind: BranchKind) {
       exact: false,
       matchPrefixes: [`${base}/stock/grn`],
     },
-    more,
+    {
+      href: `${base}/more`,
+      label: branchCopy.centralNavMore,
+      icon: Ellipsis,
+      exact: false,
+      matchPrefixes: [...moreOverflow, `${base}/stock/purchase-orders`, `${base}/stock/stocktake`, `${base}/stock/count-slips`],
+    },
   ];
 }
 

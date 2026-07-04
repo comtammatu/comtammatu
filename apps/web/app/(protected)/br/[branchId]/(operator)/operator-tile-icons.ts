@@ -18,6 +18,7 @@ import {
   Settings,
   Truck,
   Undo2,
+  Users,
   Utensils,
 } from "lucide-react";
 
@@ -41,6 +42,7 @@ const ICONS = {
   Settings,
   Truck,
   Undo2,
+  Users,
   Utensils,
 } as const;
 

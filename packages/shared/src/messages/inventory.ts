@@ -136,6 +136,7 @@ export const INVENTORY_VI = {
     "Thêm nhà cung cấp ở mục Quản lý trước khi tạo phiếu nhập.",
   supplier: "Nhà cung cấp",
   supplierSearchPlaceholder: "Tìm hoặc thêm nhà cung cấp",
+  supplierNotFound: "Không tìm thấy nhà cung cấp",
   noPoNeededHint: "Không cần đơn đặt hàng (PO)",
   grnCreateSupplierInline: (name: string) => `Tạo NCC "${name}"`,
   grnCreateSupplierPending: "Đang tạo nhà cung cấp…",
