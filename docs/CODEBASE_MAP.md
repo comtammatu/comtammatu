@@ -202,7 +202,7 @@ sequenceDiagram
     H->>S: JWT + {tenant_id, branch_id, user_role}
     S->>A: Session + JWT
     A->>B: Redirect to post-login target
-    B->>P: GET /admin/dashboard or /employee
+    B->>P: GET /finance or /employee
     P->>P: extractClaims → canAccess(module)
     P->>B: Target page
 ```
@@ -237,4 +237,4 @@ Opening `/` after authentication follows the same shared default resolver.
 Inventory route ownership note:
 
 - `/inventory` is the canonical Inventory surface.
-- `/admin/inventory/*` is unsupported and blocked by the `inventory_admin` ACL bucket with `allowedRoles: []`. Do not wire new Inventory features there.
+- Route new Inventory features only under `/inventory/*` or approved branch-scoped wrappers.

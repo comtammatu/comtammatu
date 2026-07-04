@@ -321,7 +321,7 @@ export function CountSlipClient({
                                     key={unit.unitId}
                                     value={String(unit.unitId)}
                                   >
-                                    {unit.code}
+                                    {unit.label}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

@@ -133,12 +133,7 @@ export default async function FinancePage({
 
   return (
     <AppPage width="wide" density="compact">
-      <AppPageHeader
-        eyebrow={powerLiteCopy.eyebrow}
-        title={powerLiteCopy.title}
-        description={powerLiteCopy.description}
-        meta={financeCopy.basic.periodMeta(resolved.start, resolved.end)}
-      />
+      <AppPageHeader title={powerLiteCopy.title} />
 
       <FilterBar
         params={params}
@@ -146,6 +141,7 @@ export default async function FinancePage({
         basePath="/finance"
         ranges={HKD_RANGES}
         hide={["granularity", "compare", "payment"]}
+        compact
       />
 
       <CashPanel

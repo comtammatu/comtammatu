@@ -63,7 +63,6 @@ export function FinanceShell({
       defaultPageTitle={financeCopy.shell.defaultPageTitle}
       pageHeader={{
         crumbLabel: financeCopy.shell.crumbLabel,
-        description: financeCopy.shell.description,
         actions: (
           <Button asChild variant="outline" size="sm">
             <Link href={homeLink.href}>{homeLink.label}</Link>

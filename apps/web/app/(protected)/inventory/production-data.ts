@@ -6,7 +6,7 @@ import {
   type JwtClaims,
   type PermissionKey,
 } from "@comtammatu/shared/auth";
-import { fetchIngredients } from "./ingredient-actions";
+import { fetchIngredients, fetchUnitOptions } from "./ingredient-actions";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import {
   canAccessProductionSurface,
@@ -19,7 +19,7 @@ import {
   type ProductionOrderRow,
   type ProductionRecipeRow,
 } from "./production-actions";
-import type { IngredientUnitRow } from "./_lib/types";
+import type { IngredientUnitRow, UnitOption } from "./_lib/types";
 import type {
   BranchOption,
   FinishedGoodOption,
@@ -60,6 +60,7 @@ export interface ProductionSurfaceData {
   canConfirmProduction: boolean;
   canAdjustStock: boolean;
   productionBranches: BranchOption[];
+  unitOptions: UnitOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
   orders: ProductionOrderRow[];
@@ -173,7 +174,7 @@ export async function loadProductionSurfaceData({
         data: [] as ProductionRecipeRow[],
       });
 
-  const [branchesRes, ingredientsRes, ordersRes, recipesRes] =
+  const [branchesRes, ingredientsRes, ordersRes, recipesRes, unitOptionsRes] =
     await Promise.all([
       supabase
         .from("branches")
@@ -184,6 +185,7 @@ export async function loadProductionSurfaceData({
       fetchIngredients(),
       fetchProductionOrders(),
       recipesPromise,
+      fetchUnitOptions(),
     ]);
 
   const branches = (branchesRes.data ?? []) as BranchPreviewRow[];
@@ -231,6 +233,7 @@ export async function loadProductionSurfaceData({
     canConfirmProduction,
     canAdjustStock,
     productionBranches,
+    unitOptions: unitOptionsRes.success ? (unitOptionsRes.data ?? []) : [],
     ingredients,
     finishedGoods,
     orders: ordersRes.success ? (ordersRes.data ?? []) : [],

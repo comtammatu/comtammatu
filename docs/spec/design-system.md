@@ -673,9 +673,7 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
   `docs/spec/role-route-matrix.md`. A second page rendering another family's
   client is drift (e.g. a `/br/[branchId]/settings/*` page importing an
   `/admin/settings/*` client, or a duplicate periods page).
-- A route that loses its single home becomes a redirect shim to the canonical
-  home (the pattern already used for `/admin/finance` -> `/finance`), never a
-  parallel copy or stub.
+- A route that loses its single home must not keep a parallel copy or stub.
 - Every `(protected)/**/page.tsx` MUST resolve to exactly one route family and
   be reachable from at least one navigation entry. Orphan routes (live page,
   zero inbound link) are drift; triage to either wire nav or delete, after

@@ -242,7 +242,7 @@
 
 **Decision (owner):** Gỡ toàn bộ lớp UI/route accounting:
 
-- Xoá route `/admin/accounting/*` + redirect `/admin/finance/[[...slug]]` (redirect `/admin/finance → /finance` giữ ở middleware).
+- Xoá toàn bộ route accounting UI.
 - Xoá chain period-close UI (`period-close-card.tsx` barrel + inventory + actions `closePeriodSoft/Hard/reopenPeriod`).
 - Gỡ ModuleKey `accounting` khỏi `module-acl.ts`/`labels/vi.ts`/`route-map.ts`/`route-resolution.ts`/`shell-primitives.ts`; gỡ copy `finance.periodsAdmin`.
 
@@ -468,13 +468,13 @@ Runbook: `docs/runbooks/db/preview-branch-setup.md`.
 
 **Decision:** Gộp IA theo `docs/plan/task3-mgmt-ia-consolidation.md`, chia 5 lát (S0 additive → S4):
 
-- **Người:** gộp `/admin/staff/*` vào `/hr` (đổi nhãn "Nhân sự"), giữ URL cũ qua redirect (`resolveLegacyRouteRedirectPath`). **Giữ `staff` ACL key tách biệt** (account/role/permission owner-only, lồng trong `/hr` = owner+branch_manager) — ranh giới quyền là rule thật.
+- **Người:** gộp staff administration vào `/hr/staff` (đổi nhãn "Nhân sự"). **Giữ `staff` ACL key tách biệt** (account/role/permission owner-only, lồng trong `/hr` = owner+branch_manager) — ranh giới quyền là rule thật.
 - **Chi nhánh:** list `/admin/settings/(tenant)/branches` → `/branches` (module key mới `branches`, owner-only); `menu-limits` → `/br/[branchId]/settings/menu-limits` trong hub, **siết quyền về owner/branch_manager** (cashier/chef KHÔNG còn vào trang quản lý giới hạn — vẫn 86 món qua KDS `mark_kds_item_out_of_stock`, đường riêng không đổi).
 - **Branch switcher** mới trong `AppShell`: hiện cho mọi role đa-chi-nhánh, **ẩn khi ≤1 CN**.
 - **Search**: list Người + Chi nhánh (reuse `InputGroup`+`matchesSearch`).
 - **Chrome:** KHÔNG gộp 2 shell (đã cùng `AppShell`; gộp phức tạp hơn) — chỉ tách brand/breadcrumb dùng chung.
 
-**Consistency mỗi lát đụng route:** `module-acl.ts` + `route-resolution.ts` (resolveModuleFromPath + prefix + legacy redirect) + `route-map.ts` (ROUTE_FAMILY_CONTRACTS first-match → thứ tự) + nav (`nav-config.ts`/`office-nav.ts`) + gate `protected-route-module-coverage.test.ts`.
+**Consistency mỗi lát đụng route:** `module-acl.ts` + `route-resolution.ts` (resolveModuleFromPath + prefix) + `route-map.ts` (ROUTE_FAMILY_CONTRACTS first-match → thứ tự) + nav (`nav-config.ts`/`office-nav.ts`) + gate `protected-route-module-coverage.test.ts`.
 
 **Không chọn:** `/admin/people` mới; gộp 2 shell về 1.
 
@@ -536,7 +536,7 @@ test) chỉ build sau khi types regen.
 **Decision (owner):**
 
 1. **Hai mặt phẳng = 2 họ chrome D019, không thêm họ thứ 3.** Operator plane = họ "Vận hành" làm chín (mobile/tablet, gốc `/br/[branchId]/*`); Office plane = họ "Quản trị" (`AppShell` desktop: `/admin` owner-only + domain workspaces độc lập + `/branches`).
-2. **Dồn route operator-facing về `/br/[branchId]/*`** (D009). Move thật: `/employee/*` → `/br/[id]/shift/*`; slice sàn Kho → `/br/[id]/stock/*`. branchId trên URL = SSoT; staff pin thì Branch Hub tự điền (không picker). Giữ URL cũ sống qua redirect (`resolveLegacyRouteRedirectPath`).
+2. **Dồn route operator-facing về `/br/[branchId]/*`** (D009). Move thật: `/employee/*` → `/br/[id]/shift/*`; slice sàn Kho → `/br/[id]/stock/*`. branchId trên URL = SSoT; staff pin thì Branch Hub tự điền (không picker).
 3. **Amendment D019.1 + D017.3:** branch dashboard + control + **setup** (tables/pos/kds/printers/pos-sessions) chuyển TỪ họ "Quản trị" SANG Operator plane (full mobile — owner chốt "chuyển hết"). Office plane còn `/admin` + domain workspaces + `/branches` list.
 4. **Branch-context = 1 provider** `resolveBranchContext()` (cache, tổng quát hóa `resolveInventoryBranchScope`) thay 3 cơ chế. Proxy + RLS + `MODULE_ACL` + `has_permission` GIỮ NGUYÊN làm cổng gác; context chỉ là lớp đọc.
 5. **Branch Hub = entry device-aware** (nâng cấp `resolvePostLoginRedirect`): station PWA → vào thẳng station; desktop + owner/office → Office; còn lại → Operator (picker nếu >1 CN). Owner landing theo thiết bị (desktop→Office, phone→Operator Overview). Không phá route-home matrix.
@@ -715,7 +715,7 @@ liệt kê trong báo cáo (mục 7).
 1. **Hướng IA khóa:** giữ 2 route plane (Office/Management + Branch Operator theo D019/D050/D055) + station chrome; hợp nhất TOÀN BỘ chrome primitives (1 `AppHeader` — extract mới, 1 `AppBottomNav`, 1 `PwaToolbar`); mỗi việc đúng 1 cửa được quảng bá per role (cửa thua = redirect); cầu nối 2 chiều tường minh. Đây là HOÀN TẤT D050, không phải đảo. Từ chối: single responsive shell (B) và operator-first pseudo-site (C).
 2. **Ratify nav đã ship (amend D050 §6):** bottom-nav operator chính thức là `Hôm nay · Ca · Lịch · Tôi` như code hiện tại; bản ghi D050 hết hiệu lực ở điểm label.
 3. **Role `office`:** thêm quyền read `/finance`; home giữ `/employee` tới khi có workspace riêng. Phase 6 (khai tử `/employee`) mở khóa sau khi thi công điểm này.
-4. **Nhà báo cáo = `/finance`.** `/admin/reports` hub xóa (redirect); stock-movement về 1 cửa; operator giữ tối đa 1 wrapper read-only branch-scoped.
+4. **Nhà báo cáo = `/finance`.** Stock-movement về 1 cửa; operator giữ tối đa 1 wrapper read-only branch-scoped.
 5. **Approvals canonical = bản `/br/*`** (checkout: `/br/[id]/shift/checkout-approvals`, waste: `/br/[id]/stock/waste-approvals`); cửa office là oversight cross-branch có nhãn, không phải hàng đợi thứ hai; re-key route `/br/*/shift/checkout-approvals` về `employee_checkout_approvals` (vá lỗ cashier/chef qua route gate).
 6. **Bridge "Văn phòng" trên operator hub:** nhóm tile capability-gated, cap ≤6, chỉ link sang office plane, không nhân đôi nhà.
 7. **Floor-slice:** `/br/[id]/stock/purchase-orders` + `/stock/reports` GIỮ nhưng gate theo `inventory_procurement`/site-kind (phục vụ central-site); tile hub sinh từ `branch_kind × role`, không role-only.

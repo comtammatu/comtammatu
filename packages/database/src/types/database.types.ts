@@ -9675,6 +9675,14 @@ export type Database = {
         }
         Returns: number
       }
+      inventory_entry_unit_code: {
+        Args: {
+          p_entry_unit_id?: number
+          p_ingredient_id: number
+          p_tenant_id: number
+        }
+        Returns: string
+      }
       inventory_requires_manual_review: {
         Args: { p_ingredient_id: number }
         Returns: boolean

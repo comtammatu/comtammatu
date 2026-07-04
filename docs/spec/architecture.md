@@ -18,8 +18,8 @@ Tenant (L0, single row: Hộ kinh doanh Cơm Tấm Má Tư)
 │  │ /admin/* │ │/inventory│ │ /finance │ │ /hr      │ │/notifs.  │        │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘        │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
-│  │ Orders   │ │ POS      │ │ KDS      │ │ Br Settings/Menu Limits        │
-│  │ /orders  │ │ /br/*/pos│ │ /br/*/kds│ │ /br/[id]/{settings,menu-limits}│
+│  │ Orders   │ │ POS      │ │ KDS      │ │ Br Settings                    │
+│  │ /orders  │ │ /br/*/pos│ │ /br/*/kds│ │ /br/[id]/settings/*           │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ ┌──────────┐        │
 │                                                       │Employee  │        │
 │                                                       │/employee │        │
@@ -62,7 +62,7 @@ Defined in `getDefaultRedirect(claims)` (`packages/shared/src/auth/scope.ts`).
 
 | Role                  | Route              |
 | --------------------- | ------------------ |
-| `ADMIN_ROLES` = owner | `/admin/dashboard` |
+| `ADMIN_ROLES` = owner | `/finance` |
 | All non-admin staff   | `/employee`        |
 
 Root `/` delegates to this same resolver. It does not render a separate hub.
@@ -157,7 +157,7 @@ Top-level surfaces (see `module-acl.ts` for canonical role lists):
 | KDS                | `/br/[branchId]/kds`         | owner, chef, branch_manager                                  |
 | Branch dashboard   | `/br/[branchId]/dashboard`   | owner, branch_manager                                        |
 | Branch settings    | `/br/[branchId]/settings/*`  | owner, branch_manager                                        |
-| Branch menu limits | `/br/[branchId]/menu-limits` | owner, branch_manager, cashier, chef                         |
+| Branch menu limits | `/br/[branchId]/settings/menu-limits` | owner, branch_manager                              |
 | Employee           | `/employee/*`                | all staff                                                    |
 | Access denied      | `/access-denied`             | public (rendered with reason copy from `blocked-state.ts`)   |
 | Payment return     | `/payment/momo/return`       | public (Momo redirect target)                                |

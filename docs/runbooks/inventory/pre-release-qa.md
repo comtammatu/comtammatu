@@ -49,7 +49,6 @@ Các route phải mở đúng theo ACL và nav:
 - `/inventory/reports`
 - procurement: `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/supplier-invoices`, `/inventory/suppliers`
 - production: `/inventory/production` khi site là `central_kitchen`
-- `/admin/inventory*` phải bị deny, không render như surface live
 
 ## 3. ACL smoke
 

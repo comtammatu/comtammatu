@@ -173,7 +173,7 @@ export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
   const { data, error } = await supabase
     .from("ingredients")
     .select(
-      "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code))",
+      "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("name")
@@ -190,6 +190,7 @@ export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
         id: u.id,
         unit_id: u.unit_id,
         unit_code: u.units?.code ?? "",
+        unit_name: u.units?.name ?? u.units?.code ?? "",
         to_base_factor: Number(u.to_base_factor ?? 1),
         is_base: u.is_base,
         is_active: u.is_active,
@@ -257,7 +258,7 @@ export const createIngredient = withAction<
   },
 );
 
-/* ─── quickCreateIngredient (free-text unit/category from production BOM) ─── */
+/* ─── quickCreateIngredient (catalog unit from production BOM) ─── */
 
 const quickCreateSchema = z.object({
   name: z
@@ -292,25 +293,10 @@ export const quickCreateIngredient = withAction<
       .eq("code", unitCode)
       .maybeSingle();
 
-    let unitId: number;
-    if (existingUnit) {
-      unitId = existingUnit.id;
-    } else {
-      const { data: insertedUnit, error: unitErr } = await supabase
-        .from("units")
-        .insert({
-          tenant_id: claims.tenant_id,
-          code: unitCode,
-          name: unitCode,
-          is_active: true,
-        })
-        .select("id")
-        .single();
-      if (unitErr || !insertedUnit) {
-        return { success: false, error: "Không thể tạo đơn vị mới." };
-      }
-      unitId = insertedUnit.id;
+    if (!existingUnit) {
+      return { success: false, error: "Đơn vị không có trong danh mục." };
     }
+    const unitId = existingUnit.id;
 
     let categoryId: number | null = null;
     const categoryName = data.category?.trim();
@@ -543,7 +529,7 @@ export async function exportIngredients(
   const { data, error } = await supabase
     .from("ingredients")
     .select(
-      "name, sku, purchase_unit, measure_unit, purchase_to_measure_factor, category, item_kind, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code))",
+      "name, sku, purchase_unit, measure_unit, purchase_to_measure_factor, category, item_kind, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(to_base_factor, is_base, allow_purchase, allow_issue, allow_production, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("name");

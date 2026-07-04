@@ -24,6 +24,7 @@ export type GRNDetailItem = {
   requiresReview: boolean;
   shortDeliveryAction: "accept_and_close" | "wait_backorder" | null;
   unit: string;
+  entryUnitId: number | null;
   cost: number;
   lot: string;
   expiry: string;

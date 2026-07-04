@@ -35,8 +35,7 @@ export type OperatorTileGroupId =
   | "my_shift"
   | "approvals"
   | "sales_kitchen"
-  | "stock"
-  | "office_bridge";
+  | "stock";
 
 export interface OperatorTileConfig extends BranchScopedNavItemConfig {
   group: OperatorTileGroupId;
@@ -48,18 +47,8 @@ export interface OperatorTileConfig extends BranchScopedNavItemConfig {
   kinds?: readonly BranchKind[];
 }
 
-/** Admin sidebar nav groups — only admin-scoped modules */
+/** Admin-scoped settings. Domain work lives in the workspace modules below. */
 export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
-  {
-    title: NAV_GROUP_LABELS_VI.operations,
-    items: [
-      {
-        moduleKey: "dashboard",
-        icon: "LayoutDashboard",
-        label: APP_COPY_VI.ownerHome,
-      },
-    ],
-  },
   {
     title: NAV_GROUP_LABELS_VI.foundation,
     items: [
@@ -128,7 +117,6 @@ export const OPERATOR_TILE_GROUP_TITLES: Record<OperatorTileGroupId, string> = {
   approvals: "Duyệt",
   sales_kitchen: "Bán hàng",
   stock: "Kho hàng",
-  office_bridge: "Văn phòng",
 };
 
 export const OPERATOR_TILE_GROUP_ORDER: readonly OperatorTileGroupId[] = [
@@ -136,7 +124,6 @@ export const OPERATOR_TILE_GROUP_ORDER: readonly OperatorTileGroupId[] = [
   "my_shift",
   "approvals",
   "stock",
-  "office_bridge",
 ] as const;
 
 export const OPERATOR_TILE_ITEMS = [
@@ -340,30 +327,6 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/reports",
     label: "Báo cáo",
-    kinds: ["branch"],
-  },
-  {
-    moduleKey: "menu",
-    icon: "Utensils",
-    group: "office_bridge",
-    hrefTemplate: "/menu",
-    label: "Thực đơn",
-    kinds: ["branch"],
-  },
-  {
-    moduleKey: "hr",
-    icon: "Briefcase",
-    group: "office_bridge",
-    hrefTemplate: "/hr",
-    label: APP_COPY_VI.hrWorkspace,
-    kinds: ["branch"],
-  },
-  {
-    moduleKey: "inventory",
-    icon: "Package",
-    group: "office_bridge",
-    hrefTemplate: "/inventory",
-    label: "Kho văn phòng",
     kinds: ["branch"],
   },
 ] satisfies readonly OperatorTileConfig[];

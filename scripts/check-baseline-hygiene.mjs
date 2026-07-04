@@ -37,14 +37,6 @@ const CLASSIFIED_FILES = new Map([
     "i18n baseline tooling vocabulary; describes the inline-Vietnamese baseline mechanism.",
   ],
   [
-    "packages/shared/src/auth/scope.ts",
-    "resolveLegacyRouteRedirectPath — live URL canonicalization for old route shapes (/admin/finance → /finance), not cruft.",
-  ],
-  [
-    "packages/shared/src/auth/__tests__/scope.test.ts",
-    "Test description vocabulary for resolveLegacyRouteRedirectPath URL canonicalization cases.",
-  ],
-  [
     "packages/shared/src/auth/types.ts",
     "JwtClaims.user_role doc comment; user_role is the compatibility claim derived from positions.code via the role-bridge mapper.",
   ],

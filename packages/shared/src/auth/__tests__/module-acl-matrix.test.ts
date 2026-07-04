@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { canAccess, MODULE_ACL, type ModuleKey } from "../module-acl";
-import { STAFF_ROLES, type StaffRole } from "../types";
+import type { StaffRole } from "../types";
 
 // Locks the MODULE_ACL access matrix per role. MODULE_ACL is the single source
 // of truth for route access (middleware + sidebar); this snapshot pins exactly
@@ -24,7 +24,6 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "branch_settings",
     "branch_team",
     "branches",
-    "dashboard",
     "employee_checkout_approvals",
     "employee_leave_approvals",
     "finance",
@@ -98,20 +97,10 @@ for (const [role, expected] of Object.entries(EXPECTED_MATRIX)) {
   });
 }
 
-test("inventory_admin is reachable by no role (retired surface)", () => {
-  for (const role of STAFF_ROLES) {
-    assert.equal(
-      canAccess(role, "inventory_admin"),
-      false,
-      `${role} must not reach the retired inventory_admin surface`,
-    );
-  }
-});
-
-test("owner reaches every module except inventory_admin and the staff-only employee surface", () => {
+test("owner reaches every module except the staff-only employee surface", () => {
   const ownerModules = new Set(accessibleModules("owner"));
   for (const key of ALL_MODULE_KEYS) {
-    if (key === "inventory_admin" || key === "employee") {
+    if (key === "employee") {
       assert.equal(ownerModules.has(key), false);
     } else {
       assert.equal(

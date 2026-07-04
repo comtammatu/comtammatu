@@ -21,7 +21,7 @@ function isAdminRole(role: JwtClaims["user_role"]): boolean {
 
 /** Determine the default redirect path for a role after login */
 export function getDefaultRedirect(claims: JwtClaims): string {
-  return isAdminRole(claims.user_role) ? "/admin/dashboard" : "/employee";
+  return isAdminRole(claims.user_role) ? "/finance" : "/employee";
 }
 
 export function resolveBranchHubDestination(

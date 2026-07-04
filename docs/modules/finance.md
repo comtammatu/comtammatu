@@ -96,7 +96,7 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 | -------------------------------- | ---------------------------- | --------------------------------------------------------------------- |
 | `/finance`                       | Four-metric basic landing    | Should show revenue, inventory value, operating expense, gross profit |
 | `/finance/revenue`               | Revenue analytics            | Keep, but do not make it the only money-control entry                 |
-| `/admin/reports/inventory-value` | Inventory value drilldown    | Link from Finance Basic, implemented under reporting/inventory        |
+| `/finance/inventory-value`       | Inventory value drilldown    | Link from Finance Basic, implemented in Finance                       |
 | `/finance/food-cost`             | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                  |
 | `/finance/invoices`              | HĐĐT queue                   | Keep as support workflow                                              |
 | `/finance/summary`               | HĐĐT summary trigger         | Keep admin-only by action permission                                  |

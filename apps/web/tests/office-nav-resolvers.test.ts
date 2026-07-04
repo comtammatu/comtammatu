@@ -22,14 +22,15 @@ import {
 // from MODULE_ACL membership so the primary sidebar tabs stay single-sourced.
 
 // Candidate modules the office sidebar can surface, in composition order:
-// one admin tab + cross-workspace modules. Branch-scoped routes live in Branch Hub.
-const ADMIN_TAB_MODULE: ModuleKey = "dashboard";
+// one settings tab + cross-workspace modules. Branch-scoped routes live in Branch Hub.
+const SETTINGS_TAB_MODULE: ModuleKey = "settings";
 const WORKSPACE_TAB_MODULES: ModuleKey[] = [
   "menu",
   "orders",
   "inventory",
   "finance",
   "hr",
+  "branches",
 ];
 
 const RESTRICTED_ROLES: StaffRole[] = [
@@ -74,16 +75,16 @@ function assertUniqueTabs(items: ShellNavItem[], label: string): void {
 
 // Expected hrefs for the non-branch (admin + workspace) primary tabs.
 function expectedTenantHrefs(role: StaffRole): string[] {
-  return [ADMIN_TAB_MODULE, ...WORKSPACE_TAB_MODULES]
+  return [SETTINGS_TAB_MODULE, ...WORKSPACE_TAB_MODULES]
     .filter((key) => canAccess(role, key))
     .map((key) => MODULE_ACL[key].path);
 }
 
-test("owner sidebar tabs include admin + all tenant workspaces", () => {
+test("owner sidebar tabs include settings + all tenant workspaces", () => {
   const items = resolveOfficePrimaryTabs("owner", BRANCH_ID);
   const hrefs = hrefSet(items);
 
-  for (const key of [ADMIN_TAB_MODULE, ...WORKSPACE_TAB_MODULES]) {
+  for (const key of [SETTINGS_TAB_MODULE, ...WORKSPACE_TAB_MODULES]) {
     assert.equal(
       hrefs.has(MODULE_ACL[key].path),
       true,
@@ -91,13 +92,11 @@ test("owner sidebar tabs include admin + all tenant workspaces", () => {
     );
   }
 
-  for (const key of ["settings"] as ModuleKey[]) {
-    assert.equal(
-      hrefs.has(MODULE_ACL[key].path),
-      false,
-      `${key} must stay inside the admin sub-nav, not the primary tabs`,
-    );
-  }
+  assert.equal(
+    hrefs.has("/admin/dashboard"),
+    false,
+    "admin dashboard must not surface as an office primary tab",
+  );
 
   // `staff` now lives under the HR workspace (D048) — its /hr/staff path must
   // not surface as a standalone primary tab.
@@ -140,7 +139,7 @@ for (const role of RESTRICTED_ROLES) {
     );
 
     // A restricted role must never see an admin-only module it cannot access.
-    for (const key of [ADMIN_TAB_MODULE, ...WORKSPACE_TAB_MODULES]) {
+    for (const key of [SETTINGS_TAB_MODULE, ...WORKSPACE_TAB_MODULES]) {
       if (!canAccess(role, key)) {
         assert.equal(
           hrefs.includes(MODULE_ACL[key].path),
@@ -180,12 +179,9 @@ test("deep-nav hrefs and labels are deduplicated", () => {
 
 test("findActivePrimaryNavItem matches the primary tab for the current path", () => {
   const items = resolveOfficePrimaryTabs("owner", BRANCH_ID);
-  // /admin/reports now redirects to /finance (D058 §4), but the path still
-  // falls under the /admin primary tab prefix anchored on dashboard.
-  const reportsHref = "/admin/reports";
-  const active = findActivePrimaryNavItem(items, reportsHref);
-  assert.ok(active, "an active sidebar tab must be found for the reports path");
-  assert.equal(active?.href, MODULE_ACL.dashboard.path);
+  const active = findActivePrimaryNavItem(items, "/admin/settings/payments");
+  assert.ok(active, "an active sidebar tab must be found for settings");
+  assert.equal(active?.href, MODULE_ACL.settings.path);
 });
 
 test("findActivePrimaryNavItem returns undefined for an unmatched path", () => {
@@ -196,12 +192,15 @@ test("findActivePrimaryNavItem returns undefined for an unmatched path", () => {
   );
 });
 
-test("resolveOfficeDeepNav returns admin command groups for the admin surface", () => {
+test("resolveOfficeDeepNav returns settings sub-pages for the admin surface", () => {
   const groups = resolveOfficeDeepNav("owner", "admin");
   assert.ok(Array.isArray(groups));
-  assert.ok(groups.length > 0, "admin deep nav must expose command groups");
-  const totalItems = groups.reduce((sum, group) => sum + group.items.length, 0);
-  assert.ok(totalItems > 0, "admin deep nav groups must contain items");
+  const hrefs = hrefList(flattenGroups(groups));
+  assert.deepEqual(hrefs, [
+    "/admin/settings/general",
+    "/admin/settings/payments",
+    "/admin/settings/printers",
+  ]);
 });
 
 for (const surface of ["menu", "orders", "branches"] as const) {

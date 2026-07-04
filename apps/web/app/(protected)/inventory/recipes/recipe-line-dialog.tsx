@@ -48,7 +48,7 @@ const recipeLineRowSchema = z.object({
     .string()
     .min(1, { error: INVENTORY_VI.enterQuantity })
     .refine((v) => Number(v) > 0, { error: INVENTORY_VI.quantityPositive }),
-  unit: z.string().trim().min(1, { error: INVENTORY_VI.unitRequired }),
+  unit: z.string().optional(),
   entry_unit_id: z.string().optional(),
   yield_factor: z
     .string()
@@ -137,7 +137,6 @@ export function RecipeLineDialog({
     const parsedLines = values.lines.map((row) => ({
       ingredientId: Number(row.ingredient_id),
       quantity: Number(row.quantity),
-      unit: row.unit.trim(),
       entryUnitId: row.entry_unit_id ? Number(row.entry_unit_id) : null,
       yieldFactor: Number(row.yield_factor || "1"),
       note: row.note?.trim() ? row.note.trim() : null,

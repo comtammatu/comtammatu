@@ -6,6 +6,7 @@ import { fetchIngredients } from "../../ingredient-actions";
 import { fetchGrnDetail } from "../../procurement-actions";
 import { fetchQcSettings, type QcSettings } from "../../_lib/qc-settings";
 import { formatDate } from "../../_lib/format";
+import { getIngredientUnitDisplayName } from "../../_lib/unit-display";
 import { fetchEntityAuditLogs } from "@/_lib/audit";
 import { GRNDetailClient } from "./grn-detail-client";
 import type { GRNDetail } from "./grn-detail-client";
@@ -73,6 +74,7 @@ export async function GRNDetailPageContent({
       requires_review: boolean | null;
       short_delivery_action: string | null;
       unit: string;
+      entry_unit_id: number | null;
       unit_cost: number;
       total_cost: number;
       quality_status: string;
@@ -96,6 +98,12 @@ export async function GRNDetailPageContent({
     id: number;
     po_number: string;
   } | null;
+  const catalogIngredients = ingredientsRes.success
+    ? ((ingredientsRes.data ?? []) as IngredientRow[])
+    : [];
+  const ingredientById = new Map(
+    catalogIngredients.map((ingredient) => [ingredient.id, ingredient]),
+  );
 
   const items: GRNDetail["items"] = (d.lines ?? []).map((l) => {
     const ing = l.ingredients as {
@@ -113,6 +121,9 @@ export async function GRNDetailPageContent({
 
     const delivered = Number(l.received_quantity ?? 0);
     const rejected = Number(l.rejected_quantity ?? 0);
+    const entryUnitId = l.entry_unit_id ?? null;
+    const catalogIngredient = ingredientById.get(l.ingredient_id ?? ing?.id ?? 0);
+    const fallbackUnit = l.unit || ing?.purchase_unit || ing?.unit || "";
 
     return {
       lineId: l.id,
@@ -137,7 +148,12 @@ export async function GRNDetailPageContent({
         l.short_delivery_action === "wait_backorder"
           ? l.short_delivery_action
           : null,
-      unit: ing?.purchase_unit || l.unit || ing?.unit || "",
+      unit: getIngredientUnitDisplayName(
+        catalogIngredient?.units,
+        entryUnitId,
+        fallbackUnit,
+      ),
+      entryUnitId,
       cost: Number(l.unit_cost ?? 0),
       lot: l.batch_number ?? "",
       expiry: l.expiry_date ?? "",
@@ -176,9 +192,6 @@ export async function GRNDetailPageContent({
     },
   };
 
-  const ingredients: IngredientRow[] = ingredientsRes.success
-    ? ((ingredientsRes.data ?? []) as IngredientRow[])
-    : [];
   const canAdjustStock = await currentUserHasPermission(
     d.grn.branch_id,
     PERMISSION_KEYS.INVENTORY_WRITE,
@@ -191,7 +204,7 @@ export async function GRNDetailPageContent({
   return (
     <GRNDetailClient
       grn={grn}
-      ingredients={ingredients}
+      ingredients={catalogIngredients}
       canAdjustStock={canAdjustStock}
       canAmendConfirmed={canAmendConfirmed}
       auditLogs={auditLogs}

@@ -73,7 +73,7 @@ test("resolveOperatorTiles -> domain groups render Bán hàng, Nhân sự, Kho h
   const groups = resolveOperatorTiles("branch_manager", 3);
   const groupIds = groups.map((group) => group.id);
 
-  assert.deepEqual(groupIds, ["sales_kitchen", "my_shift", "stock", "office_bridge"]);
+  assert.deepEqual(groupIds, ["sales_kitchen", "my_shift", "stock"]);
   assert.equal(
     groups.find((group) => group.id === "sales_kitchen")?.title,
     "Bán hàng",
@@ -163,33 +163,24 @@ test("resolveOperatorTiles -> default branchKind ('branch') keeps sales_kitchen 
   );
 });
 
-test("resolveOperatorTiles -> office_bridge tiles carry absolute office hrefs", () => {
+test("resolveOperatorTiles -> operator hub does not duplicate office workspace links", () => {
   const groups = resolveOperatorTiles("owner", 3);
-  const officeBridge = groups.find((group) => group.id === "office_bridge");
+  const groupIds = groups.map((group) => String(group.id));
+  const hrefs = groups.flatMap((group) => group.tiles.map((tile) => tile.href));
 
-  assert.ok(officeBridge, "owner must see the office_bridge group");
-  assert.ok((officeBridge?.tiles.length ?? 0) <= 6);
-
-  const hrefs = officeBridge?.tiles.map((tile) => tile.href) ?? [];
-  assert.ok(hrefs.includes("/menu"));
-  assert.ok(hrefs.includes("/hr"));
-  assert.ok(hrefs.includes("/inventory"));
-  // The office_bridge "Sản xuất" tile is retired (D059 §2 shrink-to-zero) —
-  // production now has a native central_kitchen tile instead.
+  assert.equal(groupIds.includes("office_bridge"), false);
+  assert.equal(hrefs.includes("/menu"), false);
+  assert.equal(hrefs.includes("/hr"), false);
+  assert.equal(hrefs.includes("/inventory"), false);
   assert.equal(hrefs.includes("/inventory/production"), false);
-  for (const href of hrefs) {
-    assert.doesNotMatch(href, /\{branchId\}/, href);
-    assert.doesNotMatch(href, /^\/br\//, href);
-  }
 });
 
 test("resolveOperatorTiles -> production tile is native under stock at central_kitchen, not office_bridge", () => {
   const groups = resolveOperatorTiles("production_manager", 15, "central_kitchen");
-  const officeBridge = groups.find((group) => group.id === "office_bridge");
+  const groupIds = groups.map((group) => String(group.id));
   const stock = groups.find((group) => group.id === "stock");
 
-  const officeBridgeHrefs = officeBridge?.tiles.map((tile) => tile.href) ?? [];
-  assert.equal(officeBridgeHrefs.includes("/inventory/production"), false);
+  assert.equal(groupIds.includes("office_bridge"), false);
 
   const productionTile = stock?.tiles.find(
     (tile) => tile.href === "/br/15/stock/production",
@@ -252,18 +243,18 @@ test("resolveOperatorTiles -> central-site stock groups are curated whitelists (
   );
 });
 
-test("resolveOperatorTiles -> office_bridge group is branch-only (D066 §7b)", () => {
+test("resolveOperatorTiles -> office_bridge group is retired", () => {
   for (const branchKind of ["central_supply", "central_kitchen"] as const) {
     const groupIds = resolveOperatorTiles("owner", 15, branchKind).map(
-      (group) => group.id,
+      (group) => String(group.id),
     );
     assert.equal(groupIds.includes("office_bridge"), false, branchKind);
   }
 
   const branchGroupIds = resolveOperatorTiles("owner", 3, "branch").map(
-    (group) => group.id,
+    (group) => String(group.id),
   );
-  assert.ok(branchGroupIds.includes("office_bridge"));
+  assert.equal(branchGroupIds.includes("office_bridge"), false);
 });
 
 test("resolveOperatorTiles -> transfer tile reads as dispatch at central sites, request at branches", () => {
@@ -292,12 +283,10 @@ test("resolveOperatorTiles -> transfer tile reads as dispatch at central sites, 
 
 test("resolveOperatorTiles -> orders tile is branch-native under sales_kitchen, not office_bridge", () => {
   const groups = resolveOperatorTiles("owner", 3);
-  const officeBridge = groups.find((group) => group.id === "office_bridge");
+  const groupIds = groups.map((group) => String(group.id));
   const salesKitchen = groups.find((group) => group.id === "sales_kitchen");
 
-  const officeBridgeHrefs =
-    officeBridge?.tiles.map((tile) => tile.href) ?? [];
-  assert.equal(officeBridgeHrefs.includes("/orders"), false);
+  assert.equal(groupIds.includes("office_bridge"), false);
 
   const ordersTile = salesKitchen?.tiles.find(
     (tile) => tile.moduleKey === "orders",

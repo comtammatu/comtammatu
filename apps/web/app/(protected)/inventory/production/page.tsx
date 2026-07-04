@@ -26,6 +26,7 @@ export async function ProductionPageContent({
     canConfirmProduction,
     canAdjustStock,
     productionBranches,
+    unitOptions,
     ingredients,
     finishedGoods,
     orders,
@@ -40,6 +41,7 @@ export async function ProductionPageContent({
       canConfirmProduction={canConfirmProduction}
       canAdjustStock={canAdjustStock}
       productionBranches={productionBranches}
+      unitOptions={unitOptions}
       ingredients={ingredients}
       finishedGoods={finishedGoods}
       orders={orders}

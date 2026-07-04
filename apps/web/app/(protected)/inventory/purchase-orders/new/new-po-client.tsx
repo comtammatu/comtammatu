@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
 import {
   Item,
   ItemActions,
@@ -271,7 +270,6 @@ export function NewPoClient({
         lines: lines.map((l) => ({
           ingredientId: l.ingredientId,
           quantity: l.quantity,
-          unit: l.unit,
           entryUnitId: l.entryUnitId,
           unitPriceEst: l.unitPriceEst,
         })),
@@ -937,7 +935,9 @@ function LineItemsSection({
               keywords: [i.sku ?? "", i.category ?? ""],
             }))}
             placeholder={messages.inventory.po.ingredientPlaceholder}
-            searchPlaceholder={messages.inventory.po.ingredientSearchPlaceholder}
+            searchPlaceholder={
+              messages.inventory.po.ingredientSearchPlaceholder
+            }
             triggerClassName="border-dashed"
           />
         </div>
@@ -958,7 +958,6 @@ function LineItemsSection({
             entryUnitId={entryUnitId}
             unit={unit}
             onUnitChange={handleUnitChange}
-            onFreeTextChange={setUnit}
           />
         </div>
         <div className="lg:col-span-2">
@@ -996,31 +995,27 @@ function LineItemsSection({
 }
 
 // ---------------------------------------------------------------------------
-// UnitField — purchase-role unit dropdown; falls back to free-text when the
-// selected ingredient carries no purchase units.
+// UnitField — unit dropdown.
 // ---------------------------------------------------------------------------
 function UnitField({
   options,
   entryUnitId,
   unit,
   onUnitChange,
-  onFreeTextChange,
 }: {
   options: PurchaseUnitOption[];
   entryUnitId: number | null;
   unit: string;
   onUnitChange: (unitId: string) => void;
-  onFreeTextChange: (value: string) => void;
 }) {
   if (options.length === 0) {
     return (
-      <Input
-        name="unit"
-        placeholder={messages.inventory.po.unitShort}
-        value={unit}
-        onChange={(e) => onFreeTextChange(e.target.value)}
-        required
-      />
+      <Select disabled value="">
+        <SelectTrigger className="w-full" aria-label={unit}>
+          <SelectValue placeholder={messages.inventory.po.selectUnit} />
+        </SelectTrigger>
+        <SelectContent />
+      </Select>
     );
   }
   return (
@@ -1034,7 +1029,7 @@ function UnitField({
       <SelectContent>
         {options.map((o) => (
           <SelectItem key={o.unitId} value={String(o.unitId)}>
-            {o.code}
+            {o.label}
           </SelectItem>
         ))}
       </SelectContent>

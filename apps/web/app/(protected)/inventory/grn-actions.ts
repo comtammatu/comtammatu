@@ -7,6 +7,7 @@ import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
+import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 import { dispatchNotificationOutbox } from "./notifications-actions";
 
@@ -421,7 +422,6 @@ const grnLineSchema = z
     ingredientId: z.coerce.number().int().positive(),
     // "Số đã giao" (gross delivered). Stock impact = receivedQuantity − rejectedQuantity.
     receivedQuantity: z.coerce.number().min(0),
-    unit: z.string().min(1),
     // Purchase-role unit the qty was entered in. NULL = already base.
     entryUnitId: z.coerce.number().int().positive().nullable().optional(),
     unitCost: z.coerce.number().min(0),
@@ -491,6 +491,15 @@ export const upsertGrnLine = withAction(
       };
     }
 
+    const resolvedUnit = await resolveEntryUnitCode(supabase, {
+      tenantId: claims.tenant_id,
+      ingredientId: data.ingredientId,
+      entryUnitId: data.entryUnitId,
+    });
+    if (!resolvedUnit.success) {
+      return { success: false, error: resolvedUnit.error };
+    }
+
     const totalCost = data.receivedQuantity * data.unitCost;
     const { data: row, error } = await supabase
       .from("grn_items")
@@ -500,7 +509,7 @@ export const upsertGrnLine = withAction(
           grn_id: data.grnId,
           ingredient_id: data.ingredientId,
           received_quantity: data.receivedQuantity,
-          unit: data.unit,
+          unit: resolvedUnit.unit,
           entry_unit_id: data.entryUnitId ?? null,
           unit_cost: data.unitCost,
           total_cost: totalCost,

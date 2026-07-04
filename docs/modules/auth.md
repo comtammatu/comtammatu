@@ -21,7 +21,7 @@ navigation, and default-landing changes must keep the spec, `module-acl.ts`,
 | `packages/shared/src/auth/module-acl.ts`                 | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | Route-level ACL (legacy)  |
 | `packages/shared/src/auth/permissions.ts`                | `PERMISSION_KEYS` (83 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth authz**         | Permission catalog        |
 | `packages/shared/src/auth/scope.ts`                      | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction      |
-| `packages/shared/src/auth/route-resolution.ts`           | Public/legacy/beta route helpers + URL → `ModuleKey` mapping                                   | Proxy route mapping       |
+| `packages/shared/src/auth/route-resolution.ts`           | Public route helpers + URL → `ModuleKey` mapping                                               | Proxy route mapping       |
 | `packages/shared/src/auth/route-map.ts`                  | Route family contract: surface, entry point, chrome, back behavior, breadcrumb root            | Navigation contract       |
 | `packages/shared/src/auth/nav-config.ts`                 | Admin sidebar navigation groups filtered by role                                               | UI navigation             |
 | `packages/shared/src/auth/app-discovery.ts`              | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract  |
@@ -32,7 +32,7 @@ navigation, and default-landing changes must keep the spec, `module-acl.ts`,
 | `supabase/migrations/00000000000000_baseline.sql`        | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
 | `supabase/migrations/00000000000000_baseline.sql`        | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
 | `supabase/migrations/00000000000000_baseline.sql`        | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
-| `apps/web/app/(protected)/admin/staff/[id]/permissions/` | Admin UI for grant/revoke + audit (page + client + actions)                                    | Permission admin UI       |
+| `apps/web/app/(protected)/hr/staff/[id]/permissions/`    | HR UI for grant/revoke + audit (page + client + actions)                                       | Permission admin UI       |
 | `apps/web/app/_lib/permissions.ts`                       | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
 
 Discovery invariant: `MODULE_ACL.hr_payroll` still gates `/hr/payroll/*` for
@@ -114,11 +114,9 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 
 | Module                                                  | owner | branch_mgr | wh_mgr | prod_mgr | cashier | chef | office |
 | ------------------------------------------------------- | ----- | ---------- | ------ | -------- | ------- | ---- | ------ |
-| dashboard                                               | ✓     |            |        |          |         |      |        |
 | menu                                                    | ✓     | ✓          |        |          |         |      |        |
 | inventory                                               | ✓     | ✓          | ✓      | ✓        |         |      |        |
 | inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức) | ✓     |            | ✓      | ✓        |         |      |        |
-| inventory_admin (blocked; empty allowed_roles)          |       |            |        |          |         |      |        |
 | orders                                                  | ✓     | ✓          |        |          | ✓       |      |        |
 | staff                                                   | ✓     |            |        |          |         |      |        |
 | hr                                                      | ✓     | ✓          |        |          |         |      |        |
@@ -144,7 +142,7 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 
 **Owner:** beyond the admin / monitoring modules, can also enter `orders` and `inventory` to directly inspect tenant-level operations. However, the owner is not treated as a daily operator in inventory docs/UI; the Inventory surfaces are currently optimized for `branch_manager`, `warehouse_manager`, `production_manager`.
 
-**Inventory sub-route ACL:** `inventory` allows `owner`, `branch_manager`, `warehouse_manager`, `production_manager` for stock on hand, real transfers, consumption, stocktake, expiry, reports, and branch operations. `inventory_procurement`: `owner`, `warehouse_manager`, `production_manager` access `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, and `receiving` per `route-resolution.ts`; the receiving site can be `branch`, `central_supply`, or `central_kitchen`. `inventory_admin` (`/admin/inventory/*`) always has `allowedRoles: []` so the proxy blocks it via the standard ACL. `production` does not use its own module; Server Actions and DB/RPC/RLS hard-deny `branch_manager` even with a manual production/menu grant. The production operator is `production_manager` at the Central Kitchen (Bếp Trung Tâm); `owner` has inspection/emergency access but is not led through the UX as a daily operator. `branch_manager` should therefore only see the branch-ops rhythm: receive inbound transfers, approve consumption, stocktake, adjustment/write-off.
+**Inventory sub-route ACL:** `inventory` allows `owner`, `branch_manager`, `warehouse_manager`, `production_manager` for stock on hand, real transfers, consumption, stocktake, expiry, reports, and branch operations. `inventory_procurement`: `owner`, `warehouse_manager`, `production_manager` access `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, and `receiving` per `route-resolution.ts`; the receiving site can be `branch`, `central_supply`, or `central_kitchen`. `production` does not use its own module; Server Actions and DB/RPC/RLS hard-deny `branch_manager` even with a manual production/menu grant. The production operator is `production_manager` at the Central Kitchen (Bếp Trung Tâm); `owner` has inspection/emergency access but is not led through the UX as a daily operator. `branch_manager` should therefore only see the branch-ops rhythm: receive inbound transfers, approve consumption, stocktake, adjustment/write-off.
 
 **Important UX boundary:** nav can be narrower than the module-level ACL to reduce operational noise. For example `branch_manager` can still reach `/inventory/transfers` to receive goods, but the UI should not promote the create-inter-site-transfer action as a default task for this role.
 
@@ -152,7 +150,7 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 `route-map.ts` answers "which surface this URL belongs to and which chrome/back
 behavior it uses". Do not use route-map to grant permission. Do not use local
 shell/nav to bypass `MODULE_ACL`. A route leaving the workspace must use
-`resolveRoleHomeLink(role, branchId?)` instead of hardcoding `/admin/dashboard`,
+`resolveRoleHomeLink(role, branchId?)` instead of hardcoding `/finance`,
 because non-admin roles get sent by the proxy to a different default.
 The Inventory route contract uses a list of active prefixes; an unknown Inventory
 URL must not be kept in the post-login `returnTo`.
@@ -174,12 +172,11 @@ use `branch_dashboard` / `branch_settings` route families.
 The `proxy(request)` function evaluates in order:
 
 1. **Public paths bypass auth:** `/api/health`, `/api/webhooks`, `/sw.js`, `/access-denied`, `/payment/momo/*`, and exact `/br/[branchId]/runner` (`route-resolution.ts:isPublicAppPath`). The access-denied page is public so a blocked-but-authenticated user can read the copy without re-entering the ACL loop.
-2. **Legacy canonical redirects:** `/admin/finance/*` redirects to `/finance/*` through `resolveLegacyRouteRedirectPath()` before module ACL. The same helper is used by post-login `returnTo` resolution.
-3. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo)`; unauthenticated users see the form.
-4. **Unauthenticated → `/login?returnTo=<current-url>`**.
-5. **Claims extraction:** if `extractClaims()` returns null, proxy redirects to `/access-denied?reason=missing-auth-context&from=<path>`. Proxy **does not** fabricate claims.
-6. **Module ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`, except disallowed Admin URLs and admin-level `/employee/*` visits redirect to the role's Admin default route.
-7. **Branch-scope for POS/KDS/branch settings/menu limits:** if a protected branch-scoped URL is not reachable for the user's branch assignment → `/access-denied?reason=branch-scope-mismatch`. POS/KDS and future protected Runner child routes reject missing, inactive, or non-operational branches in proxy. The exact public Runner display rejects invalid/non-operational branches inside the page because it has no staff claims.
+2. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo)`; unauthenticated users see the form.
+3. **Unauthenticated → `/login?returnTo=<current-url>`**.
+4. **Claims extraction:** if `extractClaims()` returns null, proxy redirects to `/access-denied?reason=missing-auth-context&from=<path>`. Proxy **does not** fabricate claims.
+5. **Module ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`, except disallowed Admin URLs and admin-level `/employee/*` visits redirect to the role's Admin default route.
+6. **Branch-scope for POS/KDS/branch settings/menu limits:** if a protected branch-scoped URL is not reachable for the user's branch assignment → `/access-denied?reason=branch-scope-mismatch`. POS/KDS and future protected Runner child routes reject missing, inactive, or non-operational branches in proxy. The exact public Runner display rejects invalid/non-operational branches inside the page because it has no staff claims.
 
 The resolver `resolvePostLoginRedirect(claims, returnTo)` (`packages/shared/src/auth/scope.ts`) is the **single** post-login destination function. The underlying ACL + branch-scope rules are shared. Unit tests live in `packages/shared/src/auth/__tests__/scope.test.ts` (run `pnpm --filter @comtammatu/shared test`).
 

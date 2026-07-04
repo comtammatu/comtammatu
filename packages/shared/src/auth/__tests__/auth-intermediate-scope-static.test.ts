@@ -90,7 +90,6 @@ test("access buckets and route ACL do not include retired intermediate scope", (
   assert.equal(STAFF_ROLES.includes(retiredRole as AccessBucket), false);
 
   for (const moduleKey of [
-    "dashboard",
     "inventory",
     "staff",
     "settings",

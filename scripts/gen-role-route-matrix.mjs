@@ -343,7 +343,7 @@ function derivePostLoginHomes(accessBuckets, adminRoles, centralSiteKinds) {
     if (role === "owner") {
       rows.push({
         role,
-        desktop: "/admin/dashboard (Office plane, Tenant Command)",
+        desktop: "/finance (Office plane)",
         phone: "/br (Operator plane branch picker, >1 branch) or /br/{branchId} directly",
         note: "Device-aware split (D050 §5): desktop/office context -> Office; phone -> Operator. Owner may also open any active branch POS/KDS/Runner to cover a shift.",
       });

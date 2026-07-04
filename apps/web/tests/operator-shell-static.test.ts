@@ -125,6 +125,7 @@ test("operator hub owns branch workflow entry tiles", () => {
   assert.match(navConfig, /approvals: "Duyệt"/);
   assert.match(navConfig, /sales_kitchen: "Bán hàng"/);
   assert.match(navConfig, /stock: "Kho hàng"/);
+  assert.doesNotMatch(navConfig, /office_bridge/);
   assert.match(
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/shift\/clock"/,
@@ -175,6 +176,7 @@ test("operator hub owns branch workflow entry tiles", () => {
   assert.doesNotMatch(operatorTiles, /hrefTemplate: "\/inventory\/stocktake"/);
   assert.doesNotMatch(operatorTiles, /hrefTemplate: "\/inventory\/transfers"/);
   assert.doesNotMatch(operatorTiles, /hrefTemplate: "\/inventory\/waste/);
+  assert.doesNotMatch(operatorTiles, /hrefTemplate: "\/(menu|hr|inventory)"/);
   assert.match(operatorTiles, /moduleKey: "branch_menu_limits"/);
   assert.match(
     operatorTiles,

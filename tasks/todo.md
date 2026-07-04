@@ -19,24 +19,6 @@ Verify the live checkout with `git status` before acting on any in-flight notes;
 do not reopen plan rows that are already represented by code in the current
 checkout.
 
-## Now — Menu limit / stock-deduction semantics redesign (owner-directed 2026-07-04)
-
-- [~] **T3 debate DONE → D064 recorded (all owner decisions in), PR-1 IN FLIGHT.**
-  Contract: `docs/worklog/t3-menu-limit-stock-debate-2026-07-04.md`. Root
-  defects: posting+gating fused in UI-less `pos_stock_outcome_posting`;
-  capacity NULL→0 blocks no-recipe items; Giới hạn bán page renders COALESCE
-  blend as manual limit (limit-ratchet paradox, owner-reported); Path 2
-  `consume_stock_for_order` flag-free + double-deduct hole. Owner chốt
-  2026-07-04 (D064): two switches (`GATE_eff = GATE AND DED`), NULL=unlimited
-  fail-open, manual limit decoupled from capacity, advisory gate (no new hard
-  trigger), refund first-ready quota boundary, "Còn N phần" on POS cards,
-  ingredient-gate `pos_ingredient_stock_block` REMOVE FULLY. PR-1 (this
-  branch): TS truth/collapse + two switches + "Còn N phần" + migration M2
-  `20260704120000_menu_manual_limit_decouple.sql` (owner applies BEFORE
-  deploy). NEXT: PR-2 migrations M1+M3 (M3 REQUIRED before posting
-  re-enable) → PR-3 slim fields + full ingredient-gate removal; M4
-  refund-quota per D064 §5.
-
 ## Now — IA Unification Program (D058)
 
 > Direction locked 2026-07-03: "Hai plane — Một chrome — Một cửa mỗi việc".
@@ -90,28 +72,153 @@ checkout.
   −29.4%: 579.6→409.1 kB), bounded PO/hr-staff fetches. `use cache` expansion
   deferred as slice 2.
 
+## Now — Kho Tổng native hub (D067, owner-directed 2026-07-04)
+
+> Plan: `docs/plan/kho-tong-hub-native-2026-07-04.md`. Design contract (build
+> must match): `docs/plan/kho-tong-hub-mockup-2026-07-04.html`. Decision: D067
+> (supersedes D066 §5–6: native rewrite, not enhance-embedded). Owner pain =
+> central-site operator pages reuse Office desktop `*PageContent` (dense) inside
+> the mobile hub → rewrite the guts to native mobile, fork presentation only
+> (shared server actions/loaders). Verified 2026-07-04: all `(operator)/stock/*`
+> routes already exist (work = rewrite bodies, no new routes); PROD
+> `warehouse_manager` already has all perms (`inventory:write`,
+> `inventory:units_master`, `procurement:supplier_manage`, GRN/PO) → 0 migration,
+> 0 grant, 0 schema → **T2 front-end**. Kho Tổng (branch 15) first; Bếp TT
+> (branch 16) is Wave E. Waves: A GRN native + inline supplier quick-create
+> (F-018 closed) + Tồn kho card-grid → B home "Hôm nay" spine + curated
+> bottom-nav + Danh mục surface (reuse CRUD actions; ingredient "delete" =
+> soft-archive) + `nav-config` Danh mục tile → C stocktake(+number-pad)/count
+> approvals/waste/transfer-receive → D supplier-returns + PO(reorder→draft). One
+> route family per PR, 3-viewport QA vs mockup, fresh full gate. No shell/schema
+> change; POS/KDS/Runner untouched. Feed on home = draft GRN · open PO · approve
+> count · approve waste (NO low-stock / expiry alerts — D066 §3/§4 + D060 §3,
+> warehouse reset 2026-07-03 awaiting opening stock). Wave A IN PROGRESS
+> (worktree feat/kho-tong-hub).
+
+## Now — Master execution plan (owner-directed 2026-07-03)
+
+> `docs/plan/master-execution-plan-2026-07-03.md` is the umbrella sequencer
+> for EVERYTHING open: Wave 0 unlock (CSP, RT-PR1, ratchets, kill
+> full-reloads, 13 owner decisions, missing prod migration) → Wave 1
+> foundation (G-pillar, RT bus+mounts, U0a/U0c core) → Wave 2 family-wide
+> (U0b+U1, W4, RT inventory, sweeps) → Wave 3 capability (D059 extraction,
+> cron alerts, palette, PWA-1) → Wave 4 residual. Definition of done +
+> discipline rules live there. Child plans: UI Trinity + Realtime below.
+
+## Now — UI Trinity program (G·E·U, owner-directed 2026-07-03)
+
+> Plan: `docs/plan/ui-trinity-program-2026-07-03.md`. T3 contract:
+> `docs/worklog/t3-ui-trinity-debate-2026-07-03.md`. Three pillars: G =
+> HIG-style guidance layer (registry when-to-use columns, Interaction
+> Patterns section, registry-coverage gate), E = enforcement (CSP fix,
+> input+motion ratchets, reachability test, visual lane nightly,
+> route-health sweep, judge loop), U = usability execution (U0a office
+> chrome diet + U0c perceived-perf (kill 4 full-reload sites, loading.tsx
+> skeletons 15/145, pending-state contract, default/sm press feedback) +
+> U0b job-first composition — owner priority #1 2026-07-03;
+> D063 W3/W4, Hub Today-spine, D059 §4 extraction queue, office mobile
+> nav). PR order
+> and owner decision points (8, with proposed defaults) live in the plan
+> doc. HARD RULE: no ratchet `--write` / baseline generation until the
+> in-flight 17-file desktop-pages WIP lands (PR-0).
+
+## Now — Menu limit / stock-deduction semantics redesign (owner-directed 2026-07-04)
+
+- [x] **D064 program COMPLETE 2026-07-04** — PR-1 #231, PR-2 #233, PR-3 #234
+  all merged (CI green each: gates + baseline-replay + e2e-smoke) and all six
+  migrations applied to prod owner-delegated (`menu_manual_limit_decouple`,
+  `menu_availability_gate_split`, `path2_lockdown_posting_idempotency`,
+  `refund_quota_first_ready_boundary`, `ingredient_gate_removal`,
+  `menu_availability_slim_fields`; post-apply probes green each round,
+  advisors no new findings). Contract:
+  `docs/worklog/t3-menu-limit-stock-debate-2026-07-04.md`. End state: honest
+  Giới hạn bán page (raw manual limit, clear, Còn lại = available_to_sell);
+  POS single-formula gating (limit_ratchet pinned) + "Còn N phần" + reason
+  badges; two owner switches (`pos_stock_outcome_posting` posting-only +
+  `pos_stock_availability_gate`, GATE_eff = AND); capacity NULL = unlimited
+  everywhere; own-hold exclusion; Path-2 REVOKEd + sale-shaped idempotency;
+  refund first-ready quota boundary live; kitchen ingredient gate fully
+  removed (trigger/fns/flag rows dropped); RPC shape slimmed + capacity
+  refresh triggers dropped (no more auto-created limit rows). NOTE: owner
+  2026-07-04 (PR #232) keeps deduction OFF and cancelled GRN re-entry — both
+  switches stay dormant-but-ready; runbook in contract §Re-enable applies
+  whenever that changes. **D065 addendum (owner 2026-07-04, PR-4 #238
+  merged + `single_switch_hard_stock_gate` applied to prod):** owner
+  rejected the two-switch model after explanation — ONE switch "Trừ tồn
+  khi bán": ON = deduct + HARD DB gate at zero warehouse stock (new
+  trigger `trg_enforce_stock_availability`, same pool/rounding/explosion
+  as posting, FOR UPDATE serialized, missing-unit-config items fail-open),
+  never negative; OFF = unlimited. `pos_stock_availability_gate` flag
+  removed everywhere; posting shortage no longer raises (payment never
+  fails on stock — `insufficient_stock_at_posting` + WARNING, stocktake
+  catches drift). Trigger inert while flag OFF (all branches, per #232).
+  Tail follow-ups: **#1 db:types — DONE** (verified 2026-07-04: the three
+  menu RPC type blocks in `database.types.ts` match the prod-generated
+  types byte-for-byte; hand-edits were correct, nothing to regen).
+  **#2 e2e tz — DONE** (PR #245: `daily-limit-realtime.spec.ts` business
+  date now keyed to Asia/Ho_Chi_Minh). **#3 refund-restore — owner
+  decision pending** (see below).
+- [x] **#3 refund stock-restore dead path — REMOVED (A), owner-approved
+  2026-07-04.** PR #246 merged + migration `drop_dead_refund_restore`
+  APPLIED TO PROD (verified: `restore_stock_for_order` dropped, both
+  `refund_paid_order` + `reverse_payment_and_post` clean of the restore
+  branch and the column read, column `stock_consumed_status` kept for
+  historical audit, grants preserved). Correction from investigation: the
+  real column is `payments.stock_consumed_status` (not `n` — that was a
+  baseline-dump misread); it has 3153 'ok' + 62 'out_of_stock' + 4229 NULL
+  rows (historical pre-D016 2026-05, no writer since). The restore path was
+  not just dead — with the warehouse wiped 2026-07-03 it was a latent bug
+  (refunding a pre-D016 order would post phantom positive stock). Caught a
+  second caller (`refund_paid_order`) the first pass missed. **(B) deferred
+  by design:** when deduction is actually enabled, build refund-restore
+  movement-based — reverse the order's `sale_consumption` rows with positive
+  `refund_restore` movements, idempotent, driven by movement existence NOT
+  the `stock_consumed_status` flag (that column is the wrong, retired
+  mechanism). T3 slice, do it in the same batch as enabling deduction.
+
+## Now — Realtime & Data-Sync program (owner-directed 2026-07-03)
+
+- [x] **Research + proposal: cross-device data freshness & sync stability**
+  — DONE 2026-07-03: plan at `docs/plan/realtime-sync-program-2026-07-03.md`.
+  Root cause = surfaces with NO sync mechanism (entire inventory module,
+  orders list, 4 approval queues, Hub counts), not broken websockets — the
+  POS/KDS realtime stack is mature. Target: hybrid — keep 9-table
+  postgres_changes, add Broadcast-from-Database "branch ops bus"
+  (`branch:{id}:ops`, thin `{domain,table,op,id,at}` payloads) + one wrapper
+  hook over `use-realtime-channel.ts` + coalesced `router.refresh`. Live P1s:
+  `webhook_events` subscribed but NOT in publication (finance listener
+  silently dead); `notification-popups` unfiltered + bare subscribe;
+  inventory/orders-list zero-sync. RT-4 proliferation NOT confirmed.
+- [ ] **Realtime PR1 — client hardening (no schema, T2):** wrapper hook with
+  reconnect-backoff/visibility/poll defaults + fix bare-subscribe F4
+  (`orders/order-detail-sheet.tsx:156`) + F5
+  (`use-foreground-notifications.ts:98` + tenant/branch filter) + KDS insert
+  dedupe (F7).
+- [ ] **Realtime PR2 — ops-bus migration (T3, file → PR → owner apply):**
+  generic AFTER trigger + `realtime.messages` RLS policy + fix RT-01
+  (`webhook_events` publication or move finance signal to bus).
+- [ ] **Realtime PR3–PR6:** mount on approvals/orders/Hub counts → inventory
+  + delta fetches → freshness stamps + cron run-log/alert → POS menu sync
+  (last, alone). Owner decisions pending (plan §5): transport A2-vs-A1,
+  stock page live-vs-MV, Supabase plan tier.
+
 ## Now — Branch Hub Runtime QA + Gap Audit (owner-requested 2026-07-03)
 
 - [~] **QA sweep `/br/[branchId]/*` per role** (report-only): DONE for
-  branch_manager @ branch 1 × 3 viewports on the local e2e stack — hub, tile
-  groups (incl. Văn phòng bridge), GRN/consumption wrappers, shift, dashboard,
-  settings all render + route correctly; findings QA-1 (hub density on
-  tablet/desktop) and the CSP `connect-src` 127.0.0.1:54321 hardcode (breaks
-  auth-refresh/realtime on non-default local ports — next.config.ts should
-  derive it from NEXT_PUBLIC_SUPABASE_URL). REMAINING: cashier/chef/
-  warehouse/production role sweeps + interaction-depth passes (forms,
-  approvals flows). Env restored to prod after the session; re-enter QA mode
-  with `node scripts/supabase-e2e-bringup.mjs` + `pnpm dev`.
-- [~] **Gap audit v2**: report at `docs/worklog/branch-hub-gap-audit-2026-07-03.md`
-  (in progress). QA runtime findings so far (local e2e stack, branch_manager @
-  branch 1, 3 viewports): hub + all 4 tile groups incl. new "Văn phòng" render
-  correctly; W1 GRN wrapper works end-to-end with V1 brand empty state; auth
-  landing correct. **FINDING QA-1 (density):** operator hub content is capped at
-  `max-w-3xl` (768px) with 2-col tiles — on tablet (768) and desktop (1280) it
-  stays a narrow centered column, wastes 40-60% horizontal space, forces extra
-  scroll. Desktop/tablet should add tile-grid density (3-4 col at lg/xl, wider
-  max-width) per design-system "desktop adds density" clause. Owner "optimize
-  mobile+tablet+desktop" target.
+  branch_manager @ branch 1 × 3 viewports on the local e2e stack. QA-1
+  (hub density) FIXED in `4758d566` (lg:max-w-4xl xl:max-w-6xl +
+  lg:grid-cols-3 xl:grid-cols-4). CSP `connect-src` hardcode fix moved to
+  UI Trinity PR-1. REMAINING: cashier/chef/warehouse/production role sweeps +
+  interaction-depth passes (forms, approvals flows) — blocked on Docker
+  daemon locally; re-enter QA mode with `node scripts/supabase-e2e-bringup.mjs`
+  + `pnpm dev`.
+- [x] **Gap audit v2**: report at `docs/worklog/branch-hub-gap-audit-2026-07-03.md`.
+  All 4 (a)-class TILE-MISSING quick wins shipped in `4758d566`
+  (waste-approvals persistent tile, stock/issues, stock/expiry, stock/reports);
+  REFACTOR-FIRST parity items are the D059 §4 extraction queue (tracked under
+  UI Trinity U-lane). Note for owner: stock/reports tile was wired despite the
+  report's D058 §4 consolidation caveat — conscious keep or prune when the
+  stock-movement 3→1 consolidation lands.
 
 ## Now — Workflow Reset
 

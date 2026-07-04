@@ -7,11 +7,9 @@ import { getModuleLabelVi } from "../labels";
  */
 
 export type ModuleKey =
-  | "dashboard"
   | "menu"
   | "inventory"
   | "inventory_procurement"
-  | "inventory_admin"
   | "orders"
   | "staff"
   | "hr"
@@ -44,11 +42,6 @@ const EMPLOYEE_PORTAL_ROLES: readonly StaffRole[] = STAFF_ROLES.filter(
 );
 
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
-  dashboard: {
-    path: "/admin/dashboard",
-    allowedRoles: ["owner"],
-    label: getModuleLabelVi("dashboard"),
-  },
   menu: {
     path: "/menu",
     allowedRoles: ["owner", "branch_manager"],
@@ -73,16 +66,6 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
       "production_manager",
     ],
     label: getModuleLabelVi("inventory_procurement"),
-  },
-  /**
-   * Retired Inventory admin surface. Runtime Inventory work is canonical
-   * under `/inventory/*`; keep the module key only so old URLs resolve through
-   * the shared ACL instead of becoming an unclassified admin route.
-   */
-  inventory_admin: {
-    path: "/admin/inventory",
-    allowedRoles: [],
-    label: getModuleLabelVi("inventory_admin"),
   },
   orders: {
     path: "/orders",

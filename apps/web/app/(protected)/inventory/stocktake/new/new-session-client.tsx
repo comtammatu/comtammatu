@@ -13,8 +13,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppPageHeader, AppSection } from "@/components/surface";
-import { InventoryPageContent } from "../../_components/inventory-page-layout";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import {
   StocktakeModeSelector,
   getModeMeta,
@@ -240,9 +239,5 @@ export function NewStocktakeSessionClient({
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
-  return (
-    <InventoryPageContent>
-      {content}
-    </InventoryPageContent>
-  );
+  return <AppPage scroll>{content}</AppPage>;
 }
