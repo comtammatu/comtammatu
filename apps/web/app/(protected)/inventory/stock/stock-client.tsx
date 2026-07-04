@@ -55,6 +55,7 @@ import { formatQty, formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
+import { StockMobileGrid } from "./stock-mobile-grid";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
@@ -1170,25 +1171,32 @@ export function StockClient({
           ) : null}
         </AppEmptyState>
       ) : isCompactLayout ? (
-        <div className="flex flex-col gap-2">
-          {filtered.length === 0 ? (
-            <AppEmptyState
-              compact
-              title={
-                searchQuery.trim()
-                  ? stockCopy.empty.search
-                  : stockCopy.empty.noData
-              }
-              description={
-                searchQuery.trim()
-                  ? stockCopy.empty.searchDescription
-                  : stockCopy.empty.noDataDescription
-              }
-            />
-          ) : (
-            filtered.map((item) => renderStockMobileCard(item))
-          )}
-        </div>
+        embedded ? (
+          <StockMobileGrid
+            ingredients={filtered}
+            stockDetailHref={stockDetailHref}
+          />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {filtered.length === 0 ? (
+              <AppEmptyState
+                compact
+                title={
+                  searchQuery.trim()
+                    ? stockCopy.empty.search
+                    : stockCopy.empty.noData
+                }
+                description={
+                  searchQuery.trim()
+                    ? stockCopy.empty.searchDescription
+                    : stockCopy.empty.noDataDescription
+                }
+              />
+            ) : (
+              filtered.map((item) => renderStockMobileCard(item))
+            )}
+          </div>
+        )
       ) : (
         <AppSection className="overflow-hidden" contentFlush>
           <DataTable

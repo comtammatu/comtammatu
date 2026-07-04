@@ -385,6 +385,7 @@ export const inventory = {
       valueDesc: "Giá trị cao trước",
       categoryPlaceholder: "Danh mục",
       allCategories: "Tất cả danh mục",
+      noCategory: "Chưa phân loại",
       statusPlaceholder: "Trạng thái",
       riskPlaceholder: "Rủi ro",
       sortPlaceholder: "Sắp xếp",
