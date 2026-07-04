@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory ingredients management surface keeps operational copy inline */
-
 import { useMemo, useState, useTransition } from "react";
 import {
   Ellipsis as IconDots,
@@ -52,26 +50,32 @@ import type {
 } from "../_lib/types";
 import { IngredientImportExportMenu } from "./import-export-menu";
 
-import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  FORM_VI,
+  INVENTORY_VI,
+  PRODUCT_VI,
+} from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 
 const ingredientFormCopy = messages.inventoryMaster.ingredientForm;
+const ingredientListCopy = messages.inventory.ingredients.list;
 const preservationOptions = [
-  { value: "all", label: "Mọi bảo quản" },
-  { value: "refrigerated", label: "Mát" },
-  { value: "frozen", label: "Đông lạnh" },
-  { value: "ambient", label: "Khô" },
+  { value: "all", label: ingredientListCopy.preservationAll },
+  { value: "refrigerated", label: ingredientListCopy.preservationRefrigerated },
+  { value: "frozen", label: ingredientListCopy.preservationFrozen },
+  { value: "ambient", label: ingredientListCopy.preservationAmbient },
 ];
 
 const activeOptions = [
-  { value: "active", label: "Đang dùng" },
-  { value: "all", label: "Hiện cả đã ẩn" },
+  { value: "active", label: ingredientListCopy.activeOnly },
+  { value: "all", label: ingredientListCopy.includeHidden },
 ];
 
 function storageLabel(type: string | null): string {
   if (type === "refrigerated") return "0–4°C";
   if (type === "frozen") return "−18°C";
-  return "Nhiệt độ phòng";
+  return ingredientListCopy.storageAmbient;
 }
 
 const conversionNumberFormatter = new Intl.NumberFormat("vi-VN", {
@@ -179,7 +183,9 @@ function IngredientMobileCard({
             variant="ghost"
             onClick={() => onToggleActive(item)}
             aria-label={
-              item.is_active ? `Ẩn ${item.name}` : `Hiện lại ${item.name}`
+              item.is_active
+                ? ingredientListCopy.hideAria(item.name)
+                : ingredientListCopy.showAria(item.name)
             }
             disabled={isPending}
           >
@@ -194,7 +200,7 @@ function IngredientMobileCard({
             size="sm"
             variant="ghost"
             onClick={() => onEdit(item)}
-            aria-label={`Sửa ${item.name}`}
+            aria-label={ingredientListCopy.editAria(item.name)}
           >
             <IconPencil className="size-4" />
             <span className="ml-1">{ACTIONS_VI.edit}</span>
@@ -268,9 +274,9 @@ export function IngredientsClient({
         setRows((response.data ?? []) as IngredientRow[]);
         return;
       }
-      toast.error(response.error ?? "Không thể tải lại danh sách nguyên liệu.");
+      toast.error(response.error ?? ingredientListCopy.reloadFailed);
     } catch {
-      toast.error("Không thể tải lại danh sách nguyên liệu.");
+      toast.error(ingredientListCopy.reloadFailed);
     }
   }
 
@@ -288,7 +294,7 @@ export function IngredientsClient({
     startTransition(async () => {
       const result = await toggleIngredientActive({ id: item.id });
       if (!result.success) {
-        toast.error(result.error ?? "Không thể đổi trạng thái nguyên liệu.");
+        toast.error(result.error ?? ingredientListCopy.toggleFailed);
         return;
       }
       setRows((prev) =>
@@ -298,8 +304,8 @@ export function IngredientsClient({
       );
       toast.success(
         item.is_active
-          ? `Đã ẩn "${item.name}".`
-          : `Đã hiện lại "${item.name}".`,
+          ? ingredientListCopy.hiddenToast(item.name)
+          : ingredientListCopy.shownToast(item.name),
       );
     });
   }
@@ -313,7 +319,7 @@ export function IngredientsClient({
         <InputGroupInput
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Tìm theo tên hoặc SKU"
+          placeholder={ingredientListCopy.searchPlaceholder}
         />
       </InputGroup>
 
@@ -332,7 +338,7 @@ export function IngredientsClient({
 
       <Select value={preservation} onValueChange={setPreservation}>
         <SelectTrigger className="w-40">
-          <SelectValue placeholder="Mọi bảo quản" />
+          <SelectValue placeholder={ingredientListCopy.preservationAll} />
         </SelectTrigger>
         <SelectContent>
           {preservationOptions.map((option) => (
@@ -360,7 +366,7 @@ export function IngredientsClient({
       </Select>
 
       <Badge variant="outline">
-        {filtered.length} / {rows.length} nguyên liệu
+        {ingredientListCopy.countSummary(filtered.length, rows.length)}
       </Badge>
     </AppToolbar>
   );
@@ -408,13 +414,13 @@ export function IngredientsClient({
     },
     {
       key: "storage",
-      header: "Bảo quản",
+      header: ingredientListCopy.colStorage,
       className: "min-w-36",
       render: (item) => storageLabel(item.storage_type),
     },
     {
       key: "unit_cost",
-      header: "Giá tham chiếu",
+      header: ingredientListCopy.colReferenceCost,
       className: "min-w-32",
       render: (item) => (
         <span className="font-mono">
@@ -424,7 +430,7 @@ export function IngredientsClient({
     },
     {
       key: "thresholds",
-      header: "Ngưỡng tồn",
+      header: ingredientListCopy.colThresholds,
       className: "min-w-44",
       render: (item) => <ThresholdBadges item={item} />,
     },
@@ -450,7 +456,7 @@ export function IngredientsClient({
               type="button"
               size="icon"
               variant="ghost"
-              aria-label={`Tác vụ cho ${item.name}`}
+              aria-label={ingredientListCopy.rowActionsAria(item.name)}
               disabled={isPending}
             >
               <IconDots className="size-4" />
@@ -466,12 +472,12 @@ export function IngredientsClient({
               {item.is_active ? (
                 <>
                   <IconEyeOff className="mr-2 size-4" />
-                  Ẩn nguyên liệu
+                  {ingredientListCopy.hideAction}
                 </>
               ) : (
                 <>
                   <IconEye className="mr-2 size-4" />
-                  Hiện lại
+                  {ingredientListCopy.showAction}
                 </>
               )}
             </DropdownMenuItem>
@@ -484,12 +490,12 @@ export function IngredientsClient({
   return (
     <AppPage width="xwide" scroll className="max-md:pb-28">
       <AppPageHeader
-        title="Nguyên liệu"
+        title={PRODUCT_VI.rawIngredient}
         actions={
           <div className="flex items-center gap-2">
             <IngredientImportExportMenu onImported={reload} />
             <Button type="button" onClick={openCreate}>
-              Tạo nguyên liệu
+              {INVENTORY_VI.createRawIngredient}
             </Button>
           </div>
         }
@@ -502,13 +508,13 @@ export function IngredientsClient({
         getRowKey={(item) => item.id}
         emptyTitle={
           searchQuery.trim()
-            ? "Không tìm thấy nguyên liệu phù hợp"
-            : "Chưa có nguyên liệu"
+            ? ingredientListCopy.emptyFiltered
+            : ingredientListCopy.emptyTitle
         }
         emptyDescription={
           searchQuery.trim()
-            ? "Thử bộ lọc hoặc từ khóa khác."
-            : 'Nhấn "Tạo nguyên liệu" để bắt đầu danh mục.'
+            ? ingredientListCopy.emptyFilteredDescription
+            : ingredientListCopy.emptyDescription
         }
         emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
         mobileCardRender={(item) => (

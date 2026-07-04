@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing inventory issue surface keeps localized JSX copy until message-catalog extraction */
-
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -51,7 +49,13 @@ import { formatVND } from "../_lib/format";
 import { tNav } from "../_lib/dictionary";
 import { createStockIssueDraft } from "../issue-actions";
 
-import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  BRANCH_VI,
+  FORM_VI,
+  INVENTORY_VI,
+  PRODUCT_VI,
+} from "@comtammatu/shared/messages";
 export type IssueRow = {
   id: number;
   code: string;
@@ -84,9 +88,9 @@ export type RecordedConsumptionRow = {
 };
 
 const ISSUE_TYPES = [
-  { value: "consumption", label: "Tiêu hao" },
-  { value: "writeoff", label: "Hủy hỏng / thanh lý" },
-  { value: "other", label: "Khác" },
+  { value: "consumption", label: INVENTORY_VI.issueTypeConsumption },
+  { value: "writeoff", label: INVENTORY_VI.issueTypeWriteoff },
+  { value: "other", label: INVENTORY_VI.issueTypeOther },
 ] as const;
 
 function issueTypeLabel(type: string, branchKind: string | null): string {
@@ -103,17 +107,16 @@ const STATE_FILTER_OPTIONS = ["draft", "confirmed", "cancelled"].map(
 
 // Filter options show generic labels (no branch context at the filter level).
 const TYPE_FILTER_OPTIONS = [
-  { value: "all", label: "Tất cả loại xuất" },
-  { value: "consumption", label: "Tiêu hao" },
-  { value: "writeoff", label: "Hủy hỏng / thanh lý" },
-  { value: "other", label: "Khác" },
+  { value: "all", label: INVENTORY_VI.issueTypeFilterAll },
+  { value: "consumption", label: INVENTORY_VI.issueTypeConsumption },
+  { value: "writeoff", label: INVENTORY_VI.issueTypeWriteoff },
+  { value: "other", label: INVENTORY_VI.issueTypeOther },
 ];
 
-const CREATE_ISSUE_DIALOG_DESCRIPTION =
-  "Chọn điểm vận hành, loại xuất và ghi chú trước khi tạo phiếu nháp.";
-
 const createIssueSchema = z.object({
-  branchId: z.string().min(1, { error: "Chọn chi nhánh để tạo phiếu xuất." }),
+  branchId: z
+    .string()
+    .min(1, { error: INVENTORY_VI.issueCreateBranchRequired }),
   issueType: z.enum(["consumption", "writeoff", "other"]),
   notes: z.string().trim().optional(),
 });
@@ -213,8 +216,8 @@ export function IssuesClient({
   const hasRecordedServerFilter =
     hasRecordedDateFilter || initialRecordedBranchId !== null;
   const recordedConsumptionHeaderHint = recordedIsLimited
-    ? `${recordedConsumptions.length} dòng gần nhất`
-    : `${recordedConsumptions.length} dòng`;
+    ? INVENTORY_VI.rowCountRecent(recordedConsumptions.length)
+    : INVENTORY_VI.grnDraftLineCount(recordedConsumptions.length);
   const recordedBranchOptions = branches.filter(
     (branch) => branch.branchKind === "branch",
   );
@@ -285,21 +288,27 @@ export function IssuesClient({
     0,
   );
   const visibleRecordedConsumptionHint = recordedIsLimited
-    ? `${visibleRecordedConsumptions.length}/${recordedConsumptions.length} dòng gần nhất`
-    : `${visibleRecordedConsumptions.length}/${recordedConsumptions.length} dòng`;
+    ? INVENTORY_VI.rowRatioRecent(
+        visibleRecordedConsumptions.length,
+        recordedConsumptions.length,
+      )
+    : INVENTORY_VI.rowRatio(
+        visibleRecordedConsumptions.length,
+        recordedConsumptions.length,
+      );
 
   function handleExportIssuesCsv() {
     if (filtered.length === 0) {
-      toast.error("Không có dữ liệu để xuất báo cáo.");
+      toast.error(INVENTORY_VI.issueExportEmpty);
       return;
     }
 
     const header = [
-      "Mã phiếu",
-      "Loại xuất",
-      "Chi nhánh",
-      "Ngày tạo",
-      "Trạng thái",
+      INVENTORY_VI.issueCode,
+      INVENTORY_VI.issueTypeLabel,
+      BRANCH_VI.long,
+      INVENTORY_VI.createdDate,
+      FORM_VI.status,
     ];
     const rows = filtered.map((row) => [
       row.code,
@@ -321,24 +330,24 @@ export function IssuesClient({
       .replace("T", "-");
 
     downloadCsv(toUtf8Base64(csv), `phieu-xuat-kho-${stamp}.csv`);
-    toast.success(`Đã xuất ${String(filtered.length)} phiếu xuất.`);
+    toast.success(INVENTORY_VI.issueExportSuccess(filtered.length));
   }
 
   function handleExportRecordedCsv() {
     if (visibleRecordedConsumptions.length === 0) {
-      toast.error("Không có dữ liệu tiêu hao để xuất CSV.");
+      toast.error(INVENTORY_VI.recordedExportEmpty);
       return;
     }
 
     const header = [
-      "Thời điểm",
-      "Nguyên liệu",
+      INVENTORY_VI.recordedAtLabel,
+      PRODUCT_VI.rawIngredient,
       BRANCH_VI.long,
-      "Kho trừ",
+      INVENTORY_VI.deductLocationLabel,
       FORM_VI.quantity,
-      "Giá vốn",
-      "Thành tiền",
-      "Nguồn",
+      INVENTORY_VI.unitCostLabel,
+      FORM_VI.amount,
+      INVENTORY_VI.sourceLabel,
     ];
     const rows = visibleRecordedConsumptions.map((row) => [
       row.recordedAt,
@@ -362,7 +371,7 @@ export function IssuesClient({
 
     downloadCsv(toUtf8Base64(csv), `tieu-hao-da-ghi-nhan-${stamp}.csv`);
     toast.success(
-      `Đã xuất ${String(visibleRecordedConsumptions.length)} dòng tiêu hao.`,
+      INVENTORY_VI.recordedExportSuccess(visibleRecordedConsumptions.length),
     );
   }
 
@@ -406,10 +415,10 @@ export function IssuesClient({
             size={embedded ? "touch" : "default"}
             className={embedded ? "w-full" : "w-48"}
           >
-            <SelectValue placeholder="Tất cả trạng thái" />
+            <SelectValue placeholder={INVENTORY_VI.allStatusesOption} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tất cả trạng thái</SelectItem>
+            <SelectItem value="all">{INVENTORY_VI.allStatusesOption}</SelectItem>
             {STATE_FILTER_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
@@ -423,7 +432,7 @@ export function IssuesClient({
             size={embedded ? "touch" : "default"}
             className={embedded ? "w-full" : "w-48"}
           >
-            <SelectValue placeholder="Tất cả loại xuất" />
+            <SelectValue placeholder={INVENTORY_VI.issueTypeFilterAll} />
           </SelectTrigger>
           <SelectContent>
             {allowedTypeFilterOptions.map((opt) => (
@@ -441,7 +450,7 @@ export function IssuesClient({
           <InputGroupInput
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm mã phiếu, chi nhánh..."
+            placeholder={INVENTORY_VI.issueSearchPlaceholder}
             inputMode="search"
           />
         </InputGroup>
@@ -463,7 +472,7 @@ export function IssuesClient({
             }}
           >
             <IconFilterX className="mr-1 size-4" />
-            Xóa lọc
+            {ACTIONS_VI.clearFilter}
           </Button>
         )}
       </div>
@@ -485,7 +494,7 @@ export function IssuesClient({
           </SelectTrigger>
           <SelectContent>
             {canSelectAllRecordedBranches ? (
-              <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+              <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
             ) : null}
             {visibleRecordedBranchOptions.map((branch) => (
               <SelectItem key={branch.id} value={String(branch.id)}>
@@ -504,7 +513,7 @@ export function IssuesClient({
             htmlFor="recorded-start-date"
             className="text-xs font-medium text-muted-foreground font-normal"
           >
-            Từ ngày
+            {FORM_VI.fromDate}
           </Label>
           <Input
             id="recorded-start-date"
@@ -527,7 +536,7 @@ export function IssuesClient({
             htmlFor="recorded-end-date"
             className="text-xs font-medium text-muted-foreground font-normal"
           >
-            Đến ngày
+            {FORM_VI.toDate}
           </Label>
           <Input
             id="recorded-end-date"
@@ -547,7 +556,7 @@ export function IssuesClient({
           className={embedded ? "w-full sm:w-auto" : undefined}
           onClick={applyRecordedDateFilter}
         >
-          Lọc
+          {ACTIONS_VI.filter}
         </Button>
         <InputGroup
           className={cn(
@@ -561,7 +570,7 @@ export function IssuesClient({
           <InputGroupInput
             value={recordedSearch}
             onChange={(event) => setRecordedSearch(event.target.value)}
-            placeholder="Tìm nguyên liệu, nguồn..."
+            placeholder={INVENTORY_VI.recordedSearchPlaceholder}
             inputMode="search"
           />
         </InputGroup>
@@ -575,7 +584,7 @@ export function IssuesClient({
           onClick={clearRecordedDateFilter}
         >
           <IconFilterX className="mr-1 size-4" />
-          Xóa lọc
+          {ACTIONS_VI.clearFilter}
         </Button>
       ) : null}
     </AppToolbar>
@@ -584,7 +593,7 @@ export function IssuesClient({
   const issueColumns: DataTableColumn<IssueRow>[] = [
     {
       key: "code",
-      header: "Mã phiếu",
+      header: INVENTORY_VI.issueCode,
       render: (item) => (
         <Link
           href={`${listBasePath}/${item.id}`}
@@ -596,7 +605,7 @@ export function IssuesClient({
     },
     {
       key: "type",
-      header: "Loại xuất",
+      header: INVENTORY_VI.issueTypeLabel,
       render: (item) => (
         <span className="text-sm font-medium">
           {issueTypeLabel(item.type, item.branchKind)}
@@ -612,7 +621,7 @@ export function IssuesClient({
     },
     {
       key: "date",
-      header: "Ngày tạo",
+      header: INVENTORY_VI.createdDate,
       render: (item) => (
         <span className="text-sm text-muted-foreground">{item.date}</span>
       ),
@@ -642,7 +651,7 @@ export function IssuesClient({
     [
       {
         key: "recordedAt",
-        header: "Thời điểm",
+        header: INVENTORY_VI.recordedAtLabel,
         render: (item) => (
           <span className="text-sm text-muted-foreground">
             {item.recordedAt}
@@ -651,7 +660,7 @@ export function IssuesClient({
       },
       {
         key: "ingredientName",
-        header: "Nguyên liệu",
+        header: PRODUCT_VI.rawIngredient,
         render: (item) => (
           <span className="text-sm font-medium">{item.ingredientName}</span>
         ),
@@ -667,7 +676,7 @@ export function IssuesClient({
       },
       {
         key: "locationName",
-        header: "Kho trừ",
+        header: INVENTORY_VI.deductLocationLabel,
         render: (item) => (
           <span className="text-sm text-muted-foreground">
             {item.locationName}
@@ -683,14 +692,14 @@ export function IssuesClient({
       },
       {
         key: "unitCost",
-        header: "Giá vốn",
+        header: INVENTORY_VI.unitCostLabel,
         render: (item) => (
           <span className="font-mono text-sm">{item.unitCost}</span>
         ),
       },
       {
         key: "totalCost",
-        header: "Thành tiền",
+        header: FORM_VI.amount,
         className: "text-right",
         render: (item) => (
           <span className="font-mono text-sm font-medium">
@@ -700,7 +709,7 @@ export function IssuesClient({
       },
       {
         key: "sourceLabel",
-        header: "Nguồn",
+        header: INVENTORY_VI.sourceLabel,
         className: "min-w-44",
         render: (item) => (
           <span className="text-sm text-muted-foreground">
@@ -758,7 +767,7 @@ export function IssuesClient({
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" size="touch" onClick={() => setCreateOpen(true)}>
             <IconPlus className="size-4" />
-            Tạo phiếu
+            {INVENTORY_VI.createSlipAction}
           </Button>
           {showExportAction && (
             <Button
@@ -768,19 +777,19 @@ export function IssuesClient({
               onClick={handleExportIssuesCsv}
             >
               <IconFileDownload className="size-4" />
-              Xuất báo cáo
+              {INVENTORY_VI.exportReportAction}
             </Button>
           )}
         </div>
       ) : (
         <AppPageHeader
-          eyebrow="Kho hàng"
+          eyebrow={INVENTORY_VI.warehouse}
           title={pageTitle ?? tNav("consumption", "navigation")}
           actions={
             <>
               <Button type="button" onClick={() => setCreateOpen(true)}>
                 <IconPlus className="size-4" />
-                Tạo phiếu
+                {INVENTORY_VI.createSlipAction}
               </Button>
               {showExportAction && (
                 <Button
@@ -789,7 +798,7 @@ export function IssuesClient({
                   onClick={handleExportIssuesCsv}
                 >
                   <IconFileDownload className="size-4" />
-                  Xuất báo cáo
+                  {INVENTORY_VI.exportReportAction}
                 </Button>
               )}
             </>
@@ -799,7 +808,7 @@ export function IssuesClient({
 
       {recordedConsumptions.length > 0 && (
         <AppSection
-          title="Tiêu hao đã ghi nhận"
+          title={INVENTORY_VI.recordedConsumptionTitle}
           headerHint={visibleRecordedConsumptionHint}
           action={
             <Button
@@ -809,7 +818,7 @@ export function IssuesClient({
               onClick={handleExportRecordedCsv}
             >
               <IconFileDownload className="size-4" />
-              Xuất CSV
+              {INVENTORY_VI.exportCsvAction}
             </Button>
           }
           contentFlush
@@ -821,7 +830,7 @@ export function IssuesClient({
           <div className="grid gap-3 border-b p-3 sm:grid-cols-3">
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">
-                Dòng hiển thị
+                {INVENTORY_VI.visibleRowsLabel}
               </span>
               <span className="font-mono text-sm font-semibold">
                 {visibleRecordedConsumptions.length}/
@@ -830,14 +839,16 @@ export function IssuesClient({
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">
-                Tổng thành tiền
+                {INVENTORY_VI.totalAmountLabel}
               </span>
               <span className="font-mono text-sm font-semibold">
                 {formatVND(visibleRecordedConsumptionTotal)}
               </span>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Phạm vi</span>
+              <span className="text-xs text-muted-foreground">
+                {INVENTORY_VI.scopeLabel}
+              </span>
               <span className="text-sm font-medium">
                 {recordedConsumptionHeaderHint}
               </span>
@@ -847,15 +858,15 @@ export function IssuesClient({
             columns={recordedConsumptionColumns}
             data={visibleRecordedConsumptions}
             getRowKey={(item) => item.id}
-            emptyTitle="Chưa có tiêu hao đã ghi nhận"
-            emptyDescription="Các báo cáo tiêu hao đã duyệt sẽ xuất hiện ở đây sau khi trừ kho."
+            emptyTitle={INVENTORY_VI.recordedEmptyTitle}
+            emptyDescription={INVENTORY_VI.recordedEmptyDescription}
             emptyMode="no-data"
             mobileCardRender={renderRecordedConsumptionCard}
           />
         </AppSection>
       )}
 
-      <AppSection title={pageTitle ?? "Phiếu tiêu hao"} contentFlush>
+      <AppSection title={pageTitle ?? INVENTORY_VI.consumptionSlipsTitle} contentFlush>
         {filterBar}
         <DataTable
           columns={issueColumns}
@@ -863,10 +874,10 @@ export function IssuesClient({
           getRowKey={(item) => item.id}
           emptyTitle={
             hasActiveFilters
-              ? "Không tìm thấy phiếu xuất phù hợp"
-              : "Chưa có phiếu xuất kho nào"
+              ? INVENTORY_VI.issueEmptyFiltered
+              : INVENTORY_VI.issueEmptyNoData
           }
-          emptyDescription="Điều chỉnh bộ lọc hoặc tạo phiếu xuất mới để bắt đầu."
+          emptyDescription={INVENTORY_VI.issueEmptyDescription}
           emptyMode={hasActiveFilters ? "no-results" : "no-data"}
           mobileCardRender={renderIssueCard}
         />
@@ -875,14 +886,14 @@ export function IssuesClient({
       <FormDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        title="Tạo phiếu"
-        description={CREATE_ISSUE_DIALOG_DESCRIPTION}
+        title={INVENTORY_VI.createSlipAction}
+        description={INVENTORY_VI.issueCreateDialogDescription}
         schema={createIssueSchema}
         defaultValues={createIssueDefaultValues}
         entityKey={defaultBranchId ?? "new-issue"}
         onSubmit={handleCreate}
-        successMessage="Đã tạo phiếu xuất."
-        submitLabel="Tạo phiếu"
+        successMessage={INVENTORY_VI.issueCreated}
+        submitLabel={INVENTORY_VI.createSlipAction}
         cancelLabel={ACTIONS_VI.cancel}
       >
         {(form) => {
@@ -906,7 +917,7 @@ export function IssuesClient({
               <SelectField
                 control={form.control}
                 name="issueType"
-                label="Loại xuất"
+                label={INVENTORY_VI.issueTypeLabel}
                 options={allowedCreateIssueTypes.map((option) => ({
                   value: option.value,
                   label:
@@ -921,7 +932,7 @@ export function IssuesClient({
                 name="notes"
                 label={FORM_VI.notes}
                 rows={3}
-                placeholder="Nhập ghi chú cho phiếu xuất"
+                placeholder={INVENTORY_VI.issueNotesPlaceholder}
               />
             </>
           );

@@ -1,6 +1,7 @@
 "use client";
 
 import { z } from "zod";
+import { FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import { FormDialog, SelectField, TextField } from "@/components/form";
 import { quickCreateIngredient } from "./ingredient-actions";
 import type {
@@ -12,8 +13,8 @@ import { STORAGE_OPTIONS } from "./_lib/constants";
 type StorageType = "ambient" | "refrigerated" | "frozen";
 
 const quickCreateSchema = z.object({
-  name: z.string().trim().min(1, { error: "Tên không được trống" }),
-  unit: z.string().trim().min(1, { error: "Đơn vị không được trống" }),
+  name: z.string().trim().min(1, { error: INVENTORY_VI.quickCreateNameRequired }),
+  unit: z.string().trim().min(1, { error: INVENTORY_VI.unitRequired }),
   category: z.string().trim().optional(),
   storage_type: z.enum(["ambient", "refrigerated", "frozen"]),
 });
@@ -126,7 +127,7 @@ function QuickCreateDialog<TCreated>({
             <SelectField
               control={form.control}
               name="storage_type"
-              label="Kiểu lưu trữ"
+              label={INVENTORY_VI.storageTypeLabel}
               options={STORAGE_OPTIONS}
             />
           </div>
@@ -137,39 +138,37 @@ function QuickCreateDialog<TCreated>({
 }
 
 const FINISHED_GOOD_CONFIG: QuickCreateDialogConfig = {
-  title: "Thêm thành phẩm mới",
-  intro:
-    "Danh sách trong BOM sản xuất lấy từ danh mục nguyên liệu có loại Thành phẩm. Tạo mới ở đây để dùng ngay cho công thức.",
-  nameLabel: "Tên thành phẩm",
-  namePlaceholder: "VD: Sườn nướng sơ chế",
-  unitLabel: "Đơn vị",
-  unitPlaceholder: "khay, kg, lít...",
-  categoryLabel: "Danh mục",
-  categoryDefault: "Sản xuất",
-  categoryPlaceholder: "Sản xuất",
+  title: INVENTORY_VI.quickFinishedGoodTitle,
+  intro: INVENTORY_VI.quickFinishedGoodIntro,
+  nameLabel: INVENTORY_VI.finishedGoodNameLabel,
+  namePlaceholder: INVENTORY_VI.quickFinishedGoodNamePlaceholder,
+  unitLabel: FORM_VI.unit,
+  unitPlaceholder: INVENTORY_VI.quickFinishedGoodUnitPlaceholder,
+  categoryLabel: FORM_VI.category,
+  categoryDefault: INVENTORY_VI.quickFinishedGoodCategoryDefault,
+  categoryPlaceholder: INVENTORY_VI.quickFinishedGoodCategoryDefault,
   itemKind: "finished_good",
-  submitLabel: "Tạo thành phẩm",
-  successMessage: "Đã thêm thành phẩm mới",
-  errorFallback: "Không thể tạo thành phẩm",
-  readIdError: "Đã tạo thành phẩm nhưng không đọc được mã mới.",
+  submitLabel: INVENTORY_VI.createFinishedGood,
+  successMessage: INVENTORY_VI.quickFinishedGoodSuccess,
+  errorFallback: INVENTORY_VI.quickFinishedGoodError,
+  readIdError: INVENTORY_VI.quickFinishedGoodReadIdError,
 };
 
 const RAW_INGREDIENT_CONFIG: QuickCreateDialogConfig = {
-  title: "Thêm nguyên liệu mới",
-  intro:
-    "Tạo nhanh nguyên liệu đầu vào để hoàn thiện BOM và chuẩn bị cho lệnh sản xuất.",
-  nameLabel: "Tên nguyên liệu",
-  namePlaceholder: "VD: Nước mắm pha",
-  unitLabel: "Đơn vị",
-  unitPlaceholder: "kg, lít, chai...",
-  categoryLabel: "Danh mục",
-  categoryDefault: "Nguyên liệu sản xuất",
-  categoryPlaceholder: "Nguyên liệu sản xuất",
+  title: INVENTORY_VI.quickRawIngredientTitle,
+  intro: INVENTORY_VI.quickRawIngredientIntro,
+  nameLabel: INVENTORY_VI.rawIngredientNameLabel,
+  namePlaceholder: INVENTORY_VI.quickRawIngredientNamePlaceholder,
+  unitLabel: FORM_VI.unit,
+  unitPlaceholder: INVENTORY_VI.quickRawIngredientUnitPlaceholder,
+  categoryLabel: FORM_VI.category,
+  categoryDefault: INVENTORY_VI.quickRawIngredientCategoryDefault,
+  categoryPlaceholder: INVENTORY_VI.quickRawIngredientCategoryDefault,
   itemKind: "raw_material",
-  submitLabel: "Tạo nguyên liệu",
-  successMessage: "Đã thêm nguyên liệu mới",
-  errorFallback: "Không thể tạo nguyên liệu",
-  readIdError: "Đã tạo nguyên liệu nhưng không đọc được mã mới.",
+  submitLabel: INVENTORY_VI.createRawIngredient,
+  successMessage: INVENTORY_VI.quickRawIngredientSuccess,
+  errorFallback: INVENTORY_VI.quickRawIngredientError,
+  readIdError: INVENTORY_VI.quickRawIngredientReadIdError,
 };
 
 interface QuickFinishedGoodDialogProps {

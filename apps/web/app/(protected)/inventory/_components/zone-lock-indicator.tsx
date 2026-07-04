@@ -188,7 +188,7 @@ export function ZoneLockIndicator({
             {INVENTORY_VI.holdingLock}
           </Badge>
           <span className="tabular-nums text-muted-foreground">
-            Hết hạn sau {formatRemaining(state.expiresAt, now)}
+            {INVENTORY_VI.lockExpiresIn(formatRemaining(state.expiresAt, now))}
           </span>
           <Button
             type="button"

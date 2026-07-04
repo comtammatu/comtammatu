@@ -40,7 +40,7 @@ import { messages } from "@lib/messages";
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 type DashboardSiteKind = "branch" | "central_supply" | "central_kitchen";
 
 export type DashboardProps = {
@@ -136,55 +136,73 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     return [
       {
         key: "oversight-stock",
-        title: "1. Tình hình tồn",
-        description:
-          "Xem giá trị tồn, tồn thấp và các điểm cần quản lý theo phạm vi được phân quyền.",
+        title: messages.inventory.dashboard.oversightStockTitle,
+        description: messages.inventory.dashboard.oversightStockDescription,
         href: paths.stock,
         icon: IconClipboardList,
         metric: String(exceptionCount),
-        metricLabel: "điểm cần xem",
-        statusLabel: `${props.reorderAlerts.length} tồn thấp / ${props.expiryAlerts.length} hạn dùng`,
+        metricLabel: messages.inventory.dashboard.oversightStockMetricLabel,
+        statusLabel: messages.inventory.dashboard.lowStockExpiryStatus(
+          props.reorderAlerts.length,
+          props.expiryAlerts.length,
+        ),
         tone:
           props.expiryAlerts.length > 0 || props.reorderAlerts.length > 0
             ? "warning"
             : "default",
         actions: [
-          { label: "Xem tồn", href: paths.stock, primary: true },
+          {
+            label: messages.inventory.dashboard.viewStockAction,
+            href: paths.stock,
+            primary: true,
+          },
           { label: tNav("reports", "navigation"), href: paths.reports },
         ],
       },
       {
         key: "oversight-alerts",
-        title: "2. Cảnh báo ưu tiên",
-        description:
-          "Theo dõi lô cận hạn, tồn thấp và điểm lệch cần quản lý xử lý tiếp.",
+        title: messages.inventory.dashboard.oversightAlertsTitle,
+        description: messages.inventory.dashboard.oversightAlertsDescription,
         href: paths.expiry,
         icon: IconHourglass,
         metric: String(props.expiryAlerts.length + props.reorderAlerts.length),
-        metricLabel: "cảnh báo",
-        statusLabel: `${props.expiryAlerts.length} hạn dùng / ${props.reorderAlerts.length} tồn thấp`,
+        metricLabel: messages.inventory.dashboard.alertsMetricLabel,
+        statusLabel: messages.inventory.dashboard.expiryLowStockStatus(
+          props.expiryAlerts.length,
+          props.reorderAlerts.length,
+        ),
         tone:
           props.expiryAlerts.length > 0 || props.reorderAlerts.length > 0
             ? "warning"
             : "default",
         actions: [
-          { label: "Xem cảnh báo", href: paths.expiry, primary: true },
+          {
+            label: messages.inventory.dashboard.viewAlertsAction,
+            href: paths.expiry,
+            primary: true,
+          },
           { label: tNav("reports", "navigation"), href: paths.reports },
         ],
       },
       {
         key: "oversight-movement",
-        title: "3. Luồng đang xử lý",
-        description:
-          "Theo dõi phiếu đang chạy giữa các điểm vận hành mà không mở hành động thao tác trực tiếp.",
+        title: messages.inventory.dashboard.oversightMovementTitle,
+        description: messages.inventory.dashboard.oversightMovementDescription,
         href: paths.transfers,
         icon: IconArrowLeftRight,
         metric: String(props.activeTransfers),
-        metricLabel: "phiếu đang chạy",
-        statusLabel: `${inbound.length} đến / ${outbound.length} đi`,
+        metricLabel: messages.inventory.dashboard.runningSlipsMetricLabel,
+        statusLabel: messages.inventory.dashboard.inboundOutboundStatus(
+          inbound.length,
+          outbound.length,
+        ),
         tone: props.activeTransfers > 0 ? "info" : "default",
         actions: [
-          { label: "Theo dõi", href: paths.transfers, primary: true },
+          {
+            label: messages.inventory.dashboard.trackAction,
+            href: paths.transfers,
+            primary: true,
+          },
           { label: tNav("reports", "navigation"), href: paths.reports },
         ],
       },
@@ -201,7 +219,11 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
         { label: tNav("grn", "navigation"), href: paths.grn },
       ]
     : [
-        { label: "Phiếu đến", href: paths.transfers, primary: true },
+        {
+          label: messages.inventory.dashboard.inboundSlipsAction,
+          href: paths.transfers,
+          primary: true,
+        },
         { label: tNav("stock", "navigation"), href: paths.stock },
       ];
 
@@ -209,7 +231,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     {
       label:
         props.siteKind === "branch"
-          ? "Nhận/điều chuyển hàng"
+          ? messages.inventory.dashboard.receiveTransferAction
           : tNav("transfers", "navigation"),
       href: paths.transfers,
       primary: !props.showProduction,
@@ -226,7 +248,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
 
   if (props.siteKind === "branch") {
     movementActions.push({
-      label: "Tiêu hao",
+      label: messages.inventory.dashboard.consumptionAction,
       href: paths.consumption,
     });
   }
@@ -235,13 +257,15 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     {
       key: "control",
       title: "1. Tồn kho",
-      description:
-        "Nắm tồn hiện tại, kiểm kê, hạn dùng, tồn thấp và các lệch số cần xử lý trong ngày.",
+      description: messages.inventory.dashboard.controlDescription,
       href: paths.stocktake,
       icon: IconClipboardList,
       metric: String(exceptionCount),
-      metricLabel: "điểm cần kiểm soát",
-      statusLabel: `${props.activeStocktakes} kiểm kê / ${props.expiryAlerts.length} hạn dùng`,
+      metricLabel: messages.inventory.dashboard.controlMetricLabel,
+      statusLabel: messages.inventory.dashboard.stocktakeExpiryStatus(
+        props.activeStocktakes,
+        props.expiryAlerts.length,
+      ),
       tone:
         props.expiryAlerts.length > 0 || props.reorderAlerts.length > 0
           ? "warning"
@@ -263,15 +287,21 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
       key: "source",
       title: "2. Nhập hàng / NCC",
       description: props.showProcurement
-        ? "Theo dõi PO, GRN, hóa đơn NCC và lệch giá/số lượng trước khi hàng vào tồn."
-        : "Chi nhánh nhận hàng qua điều chuyển nội bộ và đối soát số thực nhận.",
+        ? INVENTORY_VI.dashboardSourceProcurementDescription
+        : messages.inventory.dashboard.sourceBranchDescription,
       href: props.showProcurement ? paths.purchaseOrders : paths.transfers,
       icon: props.showProcurement ? IconShoppingCart : IconTruck,
       metric: String(props.showProcurement ? props.pendingPO : inbound.length),
-      metricLabel: props.showProcurement ? "PO đang chờ" : "phiếu đến",
+      metricLabel: props.showProcurement
+        ? INVENTORY_VI.dashboardPendingPoLabel
+        : messages.inventory.dashboard.inboundSlipsMetricLabel,
       statusLabel: props.showProcurement
-        ? `${props.priceReviewCount} dòng cần đối soát`
-        : `${inbound.length} phiếu cần nhận`,
+        ? messages.inventory.dashboard.priceReviewLinesStatus(
+            props.priceReviewCount,
+          )
+        : messages.inventory.dashboard.inboundNeedReceiveStatus(
+            inbound.length,
+          ),
       tone:
         (props.showProcurement && props.pendingPO > 0) || inbound.length > 0
           ? "info"
@@ -281,13 +311,12 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     {
       key: "catalog",
       title: "3. Danh mục",
-      description:
-        "Sửa nguyên liệu, đơn vị tính, nhà cung cấp và công thức dùng cho nhập kho và sản xuất.",
+      description: messages.inventory.dashboard.catalogDescription,
       href: paths.ingredients,
       icon: IconSettings,
       metric: "4",
-      metricLabel: "mục chính",
-      statusLabel: "Nguyên liệu / ĐVT / NCC / Công thức",
+      metricLabel: messages.inventory.dashboard.catalogMetricLabel,
+      statusLabel: messages.inventory.dashboard.catalogStatusLabel,
       tone: "default",
       actions: [
         {
@@ -295,7 +324,10 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
           href: paths.ingredients,
           primary: true,
         },
-        { label: "Đơn vị tính", href: paths.units },
+        {
+          label: messages.inventory.dashboard.unitsAction,
+          href: paths.units,
+        },
         { label: tNav("suppliers", "navigation"), href: paths.suppliers },
         { label: tNav("recipes", "navigation"), href: paths.recipes },
       ],
@@ -303,13 +335,15 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     {
       key: "production",
       title: "4. Sản xuất / điều phối",
-      description:
-        "Theo dõi phiếu hàng còn giữ tồn sau khi nhận và lệnh sản xuất trung tâm.",
+      description: messages.inventory.dashboard.productionFlowDescription,
       href: props.showProduction ? paths.production : paths.transfers,
       icon: props.showProduction ? IconBuildingFactory : IconArrowLeftRight,
       metric: String(props.activeTransfers),
-      metricLabel: "phiếu đang chạy",
-      statusLabel: `${inbound.length} đến / ${outbound.length} đi`,
+      metricLabel: messages.inventory.dashboard.runningSlipsMetricLabel,
+      statusLabel: messages.inventory.dashboard.inboundOutboundStatus(
+        inbound.length,
+        outbound.length,
+      ),
       tone: props.activeTransfers > 0 ? "info" : "default",
       actions: movementActions,
     },
@@ -357,11 +391,26 @@ const taskBadge: Record<
     variant: NonNullable<AppLinkCardProps["badgeVariant"]>;
   }
 > = {
-  destructive: { label: "Ưu tiên", variant: "destructive" },
-  warning: { label: "Cần xử lý", variant: "warning" },
-  info: { label: "Theo dõi", variant: "info" },
-  success: { label: "Đang mở", variant: "success" },
-  primary: { label: "Tiếp tục", variant: "default" },
+  destructive: {
+    label: messages.inventory.dashboard.taskBadgePriority,
+    variant: "destructive",
+  },
+  warning: {
+    label: messages.inventory.dashboard.taskBadgePending,
+    variant: "warning",
+  },
+  info: {
+    label: messages.inventory.dashboard.taskBadgeWatch,
+    variant: "info",
+  },
+  success: {
+    label: messages.inventory.dashboard.taskBadgeOpen,
+    variant: "success",
+  },
+  primary: {
+    label: messages.inventory.dashboard.taskBadgeContinue,
+    variant: "default",
+  },
 };
 
 const flowTone: Record<
@@ -410,8 +459,8 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     if (activeTransfers > 0)
       items.push({
         key: "oversight-flow",
-        title: `${activeTransfers} luồng đang chờ theo dõi`,
-        description: "Theo dõi trạng thái giữa các điểm vận hành.",
+        title: messages.inventory.dashboard.flowsAwaitingWatch(activeTransfers),
+        description: messages.inventory.dashboard.watchBetweenSites,
         href: paths.transfers,
         icon: <IconArrowLeftRight className="size-4" />,
         severity: "info",
@@ -419,8 +468,10 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     if (props.activeStocktakes > 0)
       items.push({
         key: "oversight-count",
-        title: `${props.activeStocktakes} phiên đối soát tồn đang mở`,
-        description: "Theo dõi tiến độ trước khi khóa chênh lệch.",
+        title: messages.inventory.dashboard.reconcileSessionsOpen(
+          props.activeStocktakes,
+        ),
+        description: messages.inventory.dashboard.watchProgressBeforeLock,
         href: paths.stocktake,
         icon: <IconClipboardList className="size-4" />,
         severity: "success",
@@ -428,8 +479,8 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     if (expiryAlerts.length > 0)
       items.push({
         key: "oversight-exp",
-        title: `${expiryAlerts.length} lô cần xử lý hạn dùng`,
-        description: "Ưu tiên theo dõi các lô cận hạn.",
+        title: messages.inventory.dashboard.expiryLotsTask(expiryAlerts.length),
+        description: messages.inventory.dashboard.watchNearExpiryLots,
         href: paths.expiry,
         icon: <IconHourglass className="size-4" />,
         severity: "warning",
@@ -437,8 +488,10 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     if (reorderAlerts.length > 0)
       items.push({
         key: "oversight-reorder",
-        title: `${reorderAlerts.length} nguyên liệu chạm ngưỡng`,
-        description: "Theo dõi điểm cần bổ sung hoặc điều chỉnh kế hoạch.",
+        title: messages.inventory.dashboard.reorderThresholdTask(
+          reorderAlerts.length,
+        ),
+        description: messages.inventory.dashboard.watchReplenishPoints,
         href: paths.stock,
         icon: <IconShoppingCart className="size-4" />,
         severity: "destructive",
@@ -451,7 +504,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
       items.push({
         key: "count-slips",
         title: `${pendingCountSlips} phiếu đếm tồn chờ duyệt`,
-        description: "Đối chiếu số đếm với tồn hệ thống.",
+        description: messages.inventory.dashboard.countSlipsReviewHint,
         href: paths.countSlips,
         icon: <IconClipboardCheck className="size-4" />,
         severity: "primary",
@@ -459,16 +512,16 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     if (inbound.length > 0)
       items.push({
         key: "recv",
-        title: `${inbound.length} phiếu đến cần xác nhận`,
-        description: "Nhận hàng nội bộ.",
+        title: messages.inventory.dashboard.inboundConfirmTask(inbound.length),
+        description: messages.inventory.dashboard.inboundReceiveHint,
         href: paths.transfers,
         icon: <IconTruck className="size-4" />,
         severity: "primary",
       });
     items.push({
       key: "issues",
-      title: "Tiêu hao trong ngày",
-      description: "Duyệt nguyên liệu đã dùng để ghi giá vốn thực tế.",
+      title: messages.inventory.dashboard.dailyConsumptionTask,
+      description: messages.inventory.dashboard.dailyConsumptionHint,
       href: paths.consumption,
       icon: <IconSquareCheck className="size-4" />,
       severity: "info",
@@ -478,8 +531,10 @@ function buildTasks(props: DashboardProps): TaskItem[] {
   if (props.activeStocktakes > 0)
     items.push({
       key: "st",
-      title: `${props.activeStocktakes} phiên kiểm kê đang mở`,
-      description: "Hoàn tất để khóa chênh lệch.",
+      title: messages.inventory.dashboard.stocktakeOpenTask(
+        props.activeStocktakes,
+      ),
+      description: messages.inventory.dashboard.stocktakeFinishHint,
       href: paths.stocktake,
       icon: <IconClipboardList className="size-4" />,
       severity: "success",
@@ -487,8 +542,8 @@ function buildTasks(props: DashboardProps): TaskItem[] {
   if (expiryAlerts.length > 0)
     items.push({
       key: "exp",
-      title: `${expiryAlerts.length} lô cần xử lý hạn dùng`,
-      description: "Ưu tiên xuất các lô cận hạn.",
+      title: messages.inventory.dashboard.expiryLotsTask(expiryAlerts.length),
+      description: messages.inventory.dashboard.issueNearExpiryLots,
       href: paths.expiry,
       icon: <IconHourglass className="size-4" />,
       severity: "warning",
@@ -496,8 +551,10 @@ function buildTasks(props: DashboardProps): TaskItem[] {
   if (showProcurement && reorderAlerts.length > 0)
     items.push({
       key: "reorder",
-      title: `${reorderAlerts.length} nguyên liệu chạm ngưỡng`,
-      description: "Chuẩn bị PO.",
+      title: messages.inventory.dashboard.reorderThresholdTask(
+        reorderAlerts.length,
+      ),
+      description: INVENTORY_VI.dashboardPreparePoHint,
       href: paths.purchaseOrders,
       icon: <IconShoppingCart className="size-4" />,
       severity: "destructive",
@@ -505,8 +562,8 @@ function buildTasks(props: DashboardProps): TaskItem[] {
   if (showProcurement && props.priceReviewCount > 0)
     items.push({
       key: "price-review",
-      title: `${props.priceReviewCount} dòng GRN cần kiểm tra giá`,
-      description: "Giá nhập lệch lớn so với PO trong 30 ngày qua.",
+      title: INVENTORY_VI.dashboardGrnPriceReviewTask(props.priceReviewCount),
+      description: INVENTORY_VI.dashboardGrnPriceVarianceHint,
       href: paths.grn,
       icon: <IconReceipt className="size-4" />,
       severity: "warning",
@@ -569,36 +626,39 @@ export function DashboardClient(props: DashboardProps) {
     activeStocktakeList.length > 0;
 
   const siteKindLabel = getInventorySiteKindLabelVi(props.siteKind);
-  const stockValueLabel = "Giá trị tồn kho";
+  const stockValueLabel = messages.inventory.value.inventoryValue;
   const dashboardKpis = [
     {
       label: showProcurement
-        ? "PO đang chờ"
+        ? INVENTORY_VI.dashboardPendingPoLabel
         : isOversight
-          ? "Hồ sơ nhập đang chờ"
-          : "Phiếu đến cần nhận",
+          ? messages.inventory.dashboard.kpiInboundDocsPending
+          : messages.inventory.dashboard.kpiInboundSlipsPending,
       value: String(
         showProcurement || isOversight ? pendingPO : inboundTransferCount,
       ),
       hint: showProcurement
-        ? "Nhập/Nhận/Đối soát"
-        : "Điều phối/Sản xuất",
+        ? messages.inventory.dashboard.kpiSourceHint
+        : messages.inventory.dashboard.kpiMovementHint,
       tone: "neutral" as const,
       href: showProcurement ? paths.purchaseOrders : paths.transfers,
       icon: <IconShoppingCart className="size-4" />,
     },
     {
-      label: "Luồng đang xử lý",
+      label: messages.inventory.dashboard.activeFlowsTitle,
       value: String(activeTransfers),
-      hint: `${inboundTransferCount} đến / ${outboundTransferCount} đi`,
+      hint: messages.inventory.dashboard.inboundOutboundStatus(
+        inboundTransferCount,
+        outboundTransferCount,
+      ),
       tone: activeTransfers > 0 ? ("primary" as const) : ("neutral" as const),
       href: paths.transfers,
       icon: <IconArrowLeftRight className="size-4" />,
     },
     {
-      label: "Cảnh báo hạn dùng",
+      label: messages.inventory.dashboard.kpiExpiryAlertsLabel,
       value: String(expiryAlerts.length),
-      hint: "Kiểm soát tồn",
+      hint: messages.inventory.dashboard.kpiStockControlHint,
       tone: expiryAlerts.length > 0 ? ("warning" as const) : ("neutral" as const),
       href: paths.expiry,
       icon: <IconHourglass className="size-4" />,
@@ -606,9 +666,9 @@ export function DashboardClient(props: DashboardProps) {
     ...(showProcurement
       ? [
           {
-            label: "GRN cần kiểm tra giá",
+            label: INVENTORY_VI.dashboardGrnPriceReviewLabel,
             value: String(props.priceReviewCount),
-            hint: "30 ngày gần nhất",
+            hint: messages.inventory.dashboard.kpiLast30Days,
             tone:
               props.priceReviewCount > 0
                 ? ("destructive" as const)
@@ -623,11 +683,11 @@ export function DashboardClient(props: DashboardProps) {
   return (
     <AppPage width="full" density="compact">
       <AppPageHeader
-        eyebrow={`Kho hàng · ${siteKindLabel}`}
+        eyebrow={messages.inventory.dashboard.headerEyebrow(siteKindLabel)}
         title={siteName}
         description={
           isOversight
-            ? "Giám sát tồn, cảnh báo và luồng đang chạy."
+            ? messages.inventory.dashboard.oversightTagline
             : messages.inventory.dashboard.headerTagline
         }
         meta={
@@ -651,7 +711,7 @@ export function DashboardClient(props: DashboardProps) {
             </p>
             <p className="text-sm text-muted-foreground">
               {isOversight
-                ? "Không có cảnh báo hoặc luồng đang chờ theo dõi."
+                ? messages.inventory.dashboard.oversightAllClearHint
                 : messages.inventory.dashboard.allClearHint}
             </p>
           </div>
@@ -692,7 +752,7 @@ export function DashboardClient(props: DashboardProps) {
                       tone={taskLinkTone[task.severity]}
                       badge={badge.label}
                       badgeVariant={badge.variant}
-                      ctaLabel="Mở xử lý"
+                      ctaLabel={messages.inventory.dashboard.openActionCta}
                     />
                   );
                 })}
@@ -726,7 +786,7 @@ export function DashboardClient(props: DashboardProps) {
                   tone="warning"
                   badge={messages.inventory.dashboard.reorder}
                   badgeVariant="destructive"
-                  ctaLabel="Mở xử lý"
+                  ctaLabel={messages.inventory.dashboard.openActionCta}
                 />
               ))}
               {expiryAlerts.slice(0, 3).map((item) => (
@@ -753,7 +813,7 @@ export function DashboardClient(props: DashboardProps) {
                   badgeVariant={
                     item.urgency === "critical" ? "destructive" : "warning"
                   }
-                  ctaLabel="Mở hạn dùng"
+                  ctaLabel={messages.inventory.dashboard.openExpiryCta}
                 />
               ))}
               {reorderAlerts.length === 0 && expiryAlerts.length === 0 && (
@@ -801,7 +861,10 @@ export function DashboardClient(props: DashboardProps) {
                   badge={flow.statusLabel}
                   badgeVariant={flowBadgeVariant[flow.tone]}
                   metric={{ value: flow.metric, label: flow.metricLabel }}
-                  ctaLabel={primaryAction?.label ?? "Mở xử lý"}
+                  ctaLabel={
+                    primaryAction?.label ??
+                    messages.inventory.dashboard.openActionCta
+                  }
                 />
                 {secondaryActions.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
@@ -856,7 +919,7 @@ export function DashboardClient(props: DashboardProps) {
           <AppSection
             title={
               isOversight
-                ? "Luồng đang xử lý"
+                ? messages.inventory.dashboard.activeFlowsTitle
                 : messages.inventory.dashboard.transferTrackingTitle
             }
             description={messages.inventory.dashboard.activeTransfers(
@@ -889,7 +952,7 @@ export function DashboardClient(props: DashboardProps) {
                     tone="info"
                     badge={tStatus(t.status, "badge")}
                     badgeVariant="info"
-                    ctaLabel="Mở phiếu"
+                    ctaLabel={messages.inventory.dashboard.openSlipCta}
                   />
                 ))}
               </div>
@@ -899,16 +962,12 @@ export function DashboardClient(props: DashboardProps) {
           <AppSection
             title={
               isOversight
-                ? "Tiến độ đối soát tồn"
+                ? messages.inventory.dashboard.oversightStocktakeProgressTitle
                 : messages.inventory.dashboard.stocktakeProgress
             }
-            description={
-              isOversight
-                ? `${activeStocktakeList.length} phiên đang thực hiện`
-                : messages.inventory.dashboard.activeStocktakes(
-                    activeStocktakeList.length,
-                  )
-            }
+            description={messages.inventory.dashboard.activeStocktakes(
+              activeStocktakeList.length,
+            )}
             size="sm"
             action={
               <Button variant="ghost" size="sm" asChild>
@@ -924,7 +983,7 @@ export function DashboardClient(props: DashboardProps) {
                 icon={<IconClipboardList />}
                 title={
                   isOversight
-                    ? "Không có phiên đối soát tồn đang thực hiện"
+                    ? messages.inventory.dashboard.oversightNoActiveStocktakes
                     : messages.inventory.dashboard.noActiveStocktakes
                 }
               />
@@ -940,8 +999,11 @@ export function DashboardClient(props: DashboardProps) {
                     tone="success"
                     badge={tStatus(s.status, "badge")}
                     badgeVariant="success"
-                    metric={{ value: `${s.progress}%`, label: "tiến độ" }}
-                    ctaLabel="Mở phiên"
+                    metric={{
+                      value: `${s.progress}%`,
+                      label: messages.inventory.dashboard.progressMetricLabel,
+                    }}
+                    ctaLabel={messages.inventory.dashboard.openSessionCta}
                   />
                 ))}
               </div>

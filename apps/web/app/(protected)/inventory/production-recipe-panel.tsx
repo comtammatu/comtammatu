@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory production recipe panel keeps kitchen workflow copy inline */
-
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, useFieldArray, type UseFormReturn } from "react-hook-form";
@@ -63,22 +61,29 @@ import type { ActionResult } from "@comtammatu/shared/types";
 
 /* ─── Schema ─── */
 
-import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  FORM_VI,
+  INVENTORY_VI,
+  PRODUCT_VI,
+} from "@comtammatu/shared/messages";
 const recipeLineItemSchema = z.object({
   ingredient_id: z
     .string()
-    .min(1, { error: "Vui lòng chọn nguyên liệu" })
-    .refine((v) => Number(v) > 0, { error: "Nguyên liệu không hợp lệ" }),
+    .min(1, { error: INVENTORY_VI.productionRecipeSelectIngredientRequired })
+    .refine((v) => Number(v) > 0, {
+      error: INVENTORY_VI.productionRecipeIngredientInvalid,
+    }),
   quantity: z
     .string()
-    .min(1, { error: "Nhập số lượng" })
-    .refine((v) => Number(v) > 0, { error: "Số lượng phải > 0" }),
-  unit: z.string().trim().min(1, { error: "Đơn vị không được trống" }),
+    .min(1, { error: INVENTORY_VI.enterQuantity })
+    .refine((v) => Number(v) > 0, { error: INVENTORY_VI.quantityPositive }),
+  unit: z.string().trim().min(1, { error: INVENTORY_VI.unitRequired }),
   entry_unit_id: z.string().optional(),
   yield_factor: z
     .string()
-    .min(1, { error: "Nhập yield" })
-    .refine((v) => Number(v) > 0, { error: "Yield phải > 0" }),
+    .min(1, { error: INVENTORY_VI.enterYield })
+    .refine((v) => Number(v) > 0, { error: INVENTORY_VI.yieldPositive }),
   note: z.string().optional(),
 });
 
@@ -86,10 +91,12 @@ const recipeFormSchema = z
   .object({
     finished_good_id: z
       .string()
-      .min(1, { error: "Vui lòng chọn thành phẩm" })
-      .refine((v) => Number(v) > 0, { error: "Thành phẩm không hợp lệ" }),
+      .min(1, { error: INVENTORY_VI.productionRecipeSelectFinishedGoodRequired })
+      .refine((v) => Number(v) > 0, {
+        error: INVENTORY_VI.productionRecipeFinishedGoodInvalid,
+      }),
     lines: z.array(recipeLineItemSchema).min(1, {
-      error: "Cần ít nhất một nguyên liệu trong BOM.",
+      error: INVENTORY_VI.productionRecipeMinLines,
     }),
   })
   .superRefine((value, ctx) => {
@@ -100,7 +107,7 @@ const recipeFormSchema = z
         ctx.addIssue({
           code: "custom",
           path: ["lines", index, "ingredient_id"],
-          message: "Nguyên liệu bị trùng trong BOM.",
+          message: INVENTORY_VI.productionRecipeDuplicateIngredient,
         });
       }
       seen.add(line.ingredient_id);
@@ -237,7 +244,7 @@ function RecipeDialogFields({
   return (
     <>
       <p className="text-sm text-muted-foreground">
-        Chọn thành phẩm một lần, thêm nhiều nguyên liệu rồi lưu BOM.
+        {INVENTORY_VI.productionRecipeDialogIntro}
       </p>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -248,14 +255,14 @@ function RecipeDialogFields({
             render={({ field, fieldState }) => (
               <Field data-invalid={!!fieldState.error}>
                 <FieldLabel htmlFor="recipe-finished-good">
-                  Thành phẩm *
+                  {INVENTORY_VI.productionRecipeFinishedGoodLabel}
                 </FieldLabel>
                 <Combobox
                   id="recipe-finished-good"
                   value={field.value ?? ""}
                   options={finishedGoodOptions}
-                  placeholder="Chọn thành phẩm"
-                  searchPlaceholder="Tìm thành phẩm..."
+                  placeholder={INVENTORY_VI.selectFinishedGood}
+                  searchPlaceholder={INVENTORY_VI.searchFinishedGood}
                   disabled={finishedGoodLocked}
                   aria-invalid={!!fieldState.error}
                   onValueChange={(nextValue) => {
@@ -278,23 +285,25 @@ function RecipeDialogFields({
               onClick={() => setQuickFinishedGoodDialogOpen(true)}
             >
               <IconPlus data-icon="inline-start" />
-              Tạo thành phẩm mới
+              {INVENTORY_VI.createFinishedGoodNew}
             </Button>
           ) : null}
           {!finishedGoodLocked &&
           !canManageCatalog &&
           finishedGoodsOptions.length === 0 ? (
             <p className="text-xs text-muted-foreground">
-              Chưa có thành phẩm trong danh mục.
+              {INVENTORY_VI.noFinishedGoodInCatalog}
             </p>
           ) : null}
         </div>
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Dòng BOM</span>
+              <span className="text-sm font-medium">
+                {INVENTORY_VI.productionRecipeLinesLabel}
+              </span>
               <span className="text-xs text-muted-foreground">
-                {recipeLineFields.length} nguyên liệu
+                {INVENTORY_VI.ingredientCountBadge(recipeLineFields.length)}
               </span>
             </div>
             {canManageCatalog ? (
@@ -305,13 +314,13 @@ function RecipeDialogFields({
                 onClick={() => setQuickRawIngredientDialogOpen(true)}
               >
                 <IconPlus data-icon="inline-start" />
-                Tạo nguyên liệu
+                {INVENTORY_VI.createRawIngredient}
               </Button>
             ) : null}
           </div>
           {!canManageCatalog && rawIngredientsOptions.length === 0 ? (
             <p className="text-xs text-muted-foreground">
-              Chưa có nguyên liệu đầu vào trong danh mục.
+              {INVENTORY_VI.noRawIngredientInCatalog}
             </p>
           ) : null}
         </div>
@@ -497,13 +506,13 @@ export function ProductionRecipePanel({
     });
 
     if (!result.success && !result.error) {
-      return { success: false, error: "Không thể lưu BOM sản xuất" };
+      return { success: false, error: INVENTORY_VI.productionRecipeSaveFailed };
     }
     return result;
   }
 
   function handleRecipeSaved(_result: ActionResult, values: RecipeFormValues) {
-    toast.success(`Đã lưu ${values.lines.length} nguyên liệu trong BOM`);
+    toast.success(INVENTORY_VI.productionRecipeSavedToast(values.lines.length));
     router.refresh();
   }
 
@@ -511,19 +520,22 @@ export function ProductionRecipePanel({
     startTransition(async () => {
       const result = await deleteProductionRecipe(recipeId);
       if (!result.success) {
-        toast.error(result.error ?? "Không thể xóa công thức");
+        toast.error(result.error ?? INVENTORY_VI.productionRecipeDeleteFailed);
         return;
       }
-      toast.success("Đã xóa công thức");
+      toast.success(INVENTORY_VI.productionRecipeDeleted);
       router.refresh();
     });
   }
 
   async function handleRecipeGroupDelete(group: ProductionRecipeGroup) {
     const ok = await confirm({
-      title: "Xóa toàn bộ BOM?",
-      description: `Thao tác này sẽ xóa toàn bộ ${group.lines.length} dòng BOM của "${group.finishedGoodName}".`,
-      confirmText: "Xóa toàn bộ BOM",
+      title: INVENTORY_VI.productionRecipeGroupDeleteTitle,
+      description: INVENTORY_VI.productionRecipeGroupDeleteDescription(
+        group.lines.length,
+        group.finishedGoodName,
+      ),
+      confirmText: INVENTORY_VI.productionRecipeGroupDeleteConfirm,
       cancelText: ACTIONS_VI.cancel,
       variant: "destructive",
     });
@@ -533,10 +545,12 @@ export function ProductionRecipePanel({
     startTransition(async () => {
       const result = await deleteProductionRecipeGroup(group.finishedGoodId);
       if (!result.success) {
-        toast.error(result.error ?? "Không thể xóa công thức cũ");
+        toast.error(
+          result.error ?? INVENTORY_VI.productionRecipeGroupDeleteFailed,
+        );
         return;
       }
-      toast.success("Đã xóa toàn bộ công thức cũ của thành phẩm");
+      toast.success(INVENTORY_VI.productionRecipeGroupDeleted);
       router.refresh();
     });
   }
@@ -589,8 +603,10 @@ export function ProductionRecipePanel({
                   variant="ghost"
                   size="icon"
                   onClick={() => handleEditClick(recipe)}
-                  aria-label={`Cập nhật BOM ${recipe.finished_good_name}`}
-                  title="Cập nhật BOM"
+                  aria-label={INVENTORY_VI.productionRecipeUpdateAria(
+                    recipe.finished_good_name,
+                  )}
+                  title={INVENTORY_VI.productionRecipeUpdate}
                 >
                   <IconPencil />
                 </Button>
@@ -599,8 +615,10 @@ export function ProductionRecipePanel({
                   variant="ghost"
                   size="icon"
                   onClick={() => handleRecipeDelete(recipe.id)}
-                  aria-label={`Xóa dòng BOM ${recipe.ingredient_name}`}
-                  title="Xóa dòng BOM"
+                  aria-label={INVENTORY_VI.productionRecipeDeleteLineAria(
+                    recipe.ingredient_name,
+                  )}
+                  title={INVENTORY_VI.productionRecipeDeleteLine}
                 >
                   <IconTrash />
                 </Button>
@@ -614,7 +632,7 @@ export function ProductionRecipePanel({
   return (
     <section className="flex flex-col gap-3">
       <AppSection
-        title="Công thức sản xuất"
+        title={INVENTORY_VI.productionRecipesTab}
         icon={<IconClipboardList />}
         action={
           canManageRecipes ? (
@@ -628,7 +646,7 @@ export function ProductionRecipePanel({
                 onClick={() => openRecipeDialog()}
               >
                 <IconPlus data-icon="inline-start" />
-                Nhập BOM
+                {INVENTORY_VI.productionRecipeCreate}
               </Button>
             </>
           ) : null
@@ -636,10 +654,10 @@ export function ProductionRecipePanel({
       >
         <div className="flex flex-wrap gap-2">
           <Badge variant={badgeVariantFromTone("neutral")}>
-            {groupedRecipes.length} thành phẩm có BOM
+            {INVENTORY_VI.finishedGoodsWithRecipeBadge(groupedRecipes.length)}
           </Badge>
           <Badge variant={badgeVariantFromTone("neutral")}>
-            {recipes.length} dòng nguyên liệu
+            {INVENTORY_VI.ingredientLineCountBadge(recipes.length)}
           </Badge>
         </div>
       </AppSection>
@@ -647,14 +665,18 @@ export function ProductionRecipePanel({
       <FormDialog
         open={recipeDialogOpen}
         onOpenChange={handleRecipeDialogOpenChange}
-        title={finishedGoodLocked ? "Cập nhật BOM" : "Nhập BOM sản xuất"}
-        description="Chọn thành phẩm một lần, thêm nhiều nguyên liệu rồi lưu BOM."
+        title={
+          finishedGoodLocked
+            ? INVENTORY_VI.productionRecipeUpdate
+            : INVENTORY_VI.productionRecipeCreateTitle
+        }
+        description={INVENTORY_VI.productionRecipeDialogIntro}
         schema={recipeFormSchema}
         defaultValues={formDefaults}
         entityKey={formDefaults.finished_good_id || "new"}
         onSubmit={submitRecipe}
         onSuccess={handleRecipeSaved}
-        submitLabel="Lưu BOM"
+        submitLabel={INVENTORY_VI.productionRecipeSave}
         cancelLabel={ACTIONS_VI.cancel}
         contentClassName="sm:max-w-5xl"
       >
@@ -677,8 +699,8 @@ export function ProductionRecipePanel({
       {groupedRecipes.length === 0 ? (
         <AppEmptyState
           mode="no-data"
-          title="Chưa có BOM nào"
-          description="Hãy thêm ít nhất một dòng nguyên liệu để bắt đầu cấu hình công thức cho thành phẩm."
+          title={INVENTORY_VI.productionRecipeEmptyTitle}
+          description={INVENTORY_VI.productionRecipeEmptyDescription}
           icon={<IconClipboardList className="size-5" />}
         />
       ) : (
@@ -688,7 +710,7 @@ export function ProductionRecipePanel({
               key={group.finishedGoodId}
               title={group.finishedGoodName}
               badge={{
-                children: `${group.lines.length} nguyên liệu`,
+                children: INVENTORY_VI.ingredientCountBadge(group.lines.length),
                 variant: badgeVariantFromTone("neutral"),
               }}
               action={
@@ -701,7 +723,7 @@ export function ProductionRecipePanel({
                       onClick={() => openRecipeDialog(group.finishedGoodId)}
                     >
                       <IconPencil data-icon="inline-start" />
-                      Cập nhật BOM
+                      {INVENTORY_VI.productionRecipeUpdate}
                     </Button>
                     <Button
                       type="button"
@@ -710,7 +732,7 @@ export function ProductionRecipePanel({
                       onClick={() => handleRecipeGroupDelete(group)}
                     >
                       <IconTrash data-icon="inline-start" />
-                      Xóa toàn bộ BOM
+                      {INVENTORY_VI.productionRecipeGroupDeleteConfirm}
                     </Button>
                   </>
                 ) : null
@@ -759,7 +781,7 @@ function RecipeLineItemCard({
       </ItemHeader>
       <ItemContent>
         <ItemDescription>
-          Yield {recipe.yield_factor} · {recipe.note ?? "Không ghi chú"}
+          Yield {recipe.yield_factor} · {recipe.note ?? INVENTORY_VI.noNote}
         </ItemDescription>
       </ItemContent>
       {canManageRecipes ? (
@@ -772,7 +794,7 @@ function RecipeLineItemCard({
               onClick={() => onEdit(recipe)}
             >
               <IconPencil data-icon="inline-start" />
-              Cập nhật
+              {ACTIONS_VI.update}
             </Button>
             <Button
               type="button"
@@ -781,7 +803,7 @@ function RecipeLineItemCard({
               onClick={() => onDelete(recipe.id)}
             >
               <IconTrash data-icon="inline-start" />
-              Xóa
+              {ACTIONS_VI.delete}
             </Button>
           </ItemActions>
         </ItemFooter>

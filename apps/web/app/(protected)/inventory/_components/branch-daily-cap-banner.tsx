@@ -58,8 +58,11 @@ export function BranchDailyCapBanner({
       <IconAlertTriangle className="size-4" />
       <AlertDescription>
         <strong className="block">
-          Branch hôm nay: {formatVND(projected)} / {formatVND(branchCap)} (
-          {Math.round(pct * 100)}%)
+          {INVENTORY_VI.branchTodayUsage(
+            formatVND(projected),
+            formatVND(branchCap),
+            Math.round(pct * 100),
+          )}
         </strong>
         {willExceed
           ? INVENTORY_VI.branchOverCapBanner

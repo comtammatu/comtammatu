@@ -3,7 +3,7 @@ export const TOAST_VI = {
   enterValidQuantity: "Nhập số lượng hợp lệ",
   writeOffFailed: "Không thể xóa sổ.",
   exported: "Đã xuất file",
-  exportedBom: "Đã xuất file BOM sản xuất",
+  exportedBom: "Đã xuất file công thức sản xuất",
   imageUploaded: "Đã tải ảnh lên.",
   productionOrderCreated: "Đã tạo lệnh sản xuất",
   createGrnFromPoFailed: "Không thể tạo phiếu nhập từ PO.",

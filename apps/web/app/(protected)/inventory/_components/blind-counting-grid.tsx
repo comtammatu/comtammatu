@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory blind-counting grid keeps operator copy inline */
-
 import { useMemo, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -38,7 +36,12 @@ import type { StocktakeLineBlind } from "../stocktake-actions";
 import type { CountUnitOption } from "../_lib/count-units";
 import type { DraftCounts } from "./stocktake-draft-saver";
 
-import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import {
+  FORM_VI,
+  INVENTORY_VI,
+  PRODUCT_VI,
+} from "@comtammatu/shared/messages";
+
 interface BlindCountingGridProps {
   lines: StocktakeLineBlind[];
   counts: DraftCounts;
@@ -139,7 +142,7 @@ export function BlindCountingGrid({
     },
     {
       key: "count",
-      header: "Số đếm",
+      header: INVENTORY_VI.countedQtyHeader,
       className: "text-right",
       render: (line) => (
         <FormattedNumberInput
@@ -177,16 +180,16 @@ export function BlindCountingGrid({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm nguyên liệu…"
+            placeholder={INVENTORY_VI.searchIngredientPlaceholder}
             className="pl-8"
             data-slot="blind-counting-grid-search"
           />
         </div>
         <Badge variant="outline" className="gap-1">
-          {filtered.length}/{lines.length} dòng
+          {INVENTORY_VI.rowRatio(filtered.length, lines.length)}
         </Badge>
         <Badge variant="outline" className="gap-1">
-          Đã nhập: {totalEntered}
+          {INVENTORY_VI.enteredCountBadge(totalEntered)}
         </Badge>
         {blindMode ? (
           <Badge
@@ -202,7 +205,7 @@ export function BlindCountingGrid({
         columns={columns}
         data={filtered}
         getRowKey={(line) => line.lineId}
-        emptyTitle="Không có dòng nào khớp bộ lọc."
+        emptyTitle={INVENTORY_VI.blindGridEmptyTitle}
         emptyMode={query.trim() ? "no-results" : "no-data"}
         getRowDataState={(line) =>
           line.isFinal ? "final" : line.needsRecount ? "needs-recount" : "open"
@@ -353,7 +356,7 @@ function CountStatusBadge({ line }: { line: StocktakeLineBlind }) {
         variant="outline"
         className="gap-1 border-tier-note/40 text-tier-note-foreground"
       >
-        <IconFlag3 className="size-3.5" /> Cần kiểm tra
+        <IconFlag3 className="size-3.5" /> {INVENTORY_VI.needsRecheckBadge}
       </Badge>
     );
   }
@@ -392,7 +395,9 @@ export function BlindCountingGridToolbar({
             variant={onlyRecount ? "default" : "outline"}
             onClick={onToggleOnlyRecount}
           >
-            {onlyRecount ? "Đang lọc: cần kiểm tra" : "Chỉ xem cần kiểm tra"}
+            {onlyRecount
+              ? INVENTORY_VI.recheckFilterOn
+              : INVENTORY_VI.recheckFilterOff}
           </Button>
         ) : null}
         {children}
@@ -402,7 +407,9 @@ export function BlindCountingGridToolbar({
         onClick={onSubmit}
         disabled={!canSubmit || submitting}
       >
-        {submitting ? "Đang gửi…" : "Lưu số đếm"}
+        {submitting
+          ? INVENTORY_VI.submittingEllipsis
+          : INVENTORY_VI.saveCountsAction}
       </Button>
     </div>
   );

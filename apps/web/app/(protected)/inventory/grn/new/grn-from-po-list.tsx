@@ -38,7 +38,7 @@ function formatOrderedAt(iso: string | null): string {
   const days = diffVNDateDays(getVNDateString(iso), getVNDateString());
   if (days <= 0) return INVENTORY_VI.today;
   if (days === 1) return INVENTORY_VI.yesterday;
-  if (days < 7) return `${days} ngày trước`;
+  if (days < 7) return INVENTORY_VI.daysAgo(days);
   return formatVNDate(iso);
 }
 
@@ -106,9 +106,9 @@ export function GrnFromPoList({ openPos, grnBasePath = "/inventory/grn" }: Props
                   {po.supplier_name}
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <span>{po.line_count} mặt hàng</span>
+                  <span>{INVENTORY_VI.lineItemCount(po.line_count)}</span>
                   {po.total_est != null ? (
-                    <span>~{formatVND(po.total_est)} đ</span>
+                    <span>~{INVENTORY_VI.amountDong(formatVND(po.total_est))}</span>
                   ) : null}
                   <span>{formatOrderedAt(po.ordered_at)}</span>
                 </div>

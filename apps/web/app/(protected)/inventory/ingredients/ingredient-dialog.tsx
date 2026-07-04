@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing inventory ingredient form keeps operational copy inline until message-catalog extraction */
-
 import { useMemo } from "react";
 import {
   Controller,
@@ -37,10 +35,11 @@ import { createIngredient, updateIngredient } from "../ingredient-actions";
 import type { CategoryOption, IngredientRow, UnitOption } from "../_lib/types";
 import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "../_lib/constants";
 import { parseOptionalNumber } from "../_lib/format";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 
 const copy = messages.inventoryMaster.ingredientForm;
+const dialogCopy = messages.inventory.ingredients.dialog;
 
 const NO_CATEGORY = "none";
 
@@ -68,7 +67,7 @@ const ingredientSchema = z
     name: z
       .string()
       .trim()
-      .min(1, { error: "Tên nguyên liệu không được trống" }),
+      .min(1, { error: dialogCopy.nameRequired }),
     sku: z.string().trim().optional(),
     category_id: z.string().trim().optional(),
     unit_cost: z.string().optional(),
@@ -466,14 +465,14 @@ export function IngredientDialog({
         try {
           await onSaved();
         } catch {
-          toast.error("Đã lưu nhưng chưa tải lại được danh sách nguyên liệu.");
+          toast.error(dialogCopy.reloadAfterSaveFailed);
         }
       }
       return result;
     } catch {
       return {
         success: false,
-        error: "Không thể lưu nguyên liệu. Vui lòng thử lại.",
+        error: dialogCopy.saveFailed,
       };
     }
   }
@@ -485,11 +484,9 @@ export function IngredientDialog({
       schema={ingredientSchema}
       defaultValues={defaultValues}
       entityKey={ingredient?.id ?? "new-ingredient"}
-      title={isEdit ? "Chỉnh sửa nguyên liệu" : "Thêm nguyên liệu mới"}
+      title={isEdit ? dialogCopy.editTitle : dialogCopy.addTitle}
       submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
-      successMessage={
-        isEdit ? "Đã cập nhật nguyên liệu" : "Đã thêm nguyên liệu mới"
-      }
+      successMessage={isEdit ? dialogCopy.editSuccess : dialogCopy.addSuccess}
       contentClassName="sm:max-w-3xl"
       onSubmit={handleSubmit}
     >
@@ -499,14 +496,14 @@ export function IngredientDialog({
             <TextField
               control={form.control}
               name="name"
-              label="Tên nguyên liệu"
-              placeholder="VD: Sườn cốt lết"
+              label={dialogCopy.nameLabel}
+              placeholder={dialogCopy.namePlaceholder}
               required
             />
             <TextField
               control={form.control}
               name="sku"
-              label="Mã SKU"
+              label={dialogCopy.skuLabel}
               placeholder="SKU-001"
             />
           </div>
@@ -522,7 +519,7 @@ export function IngredientDialog({
             <MoneyVndField
               control={form.control}
               name="unit_cost"
-              label="Giá nhập tham chiếu (VND)"
+              label={dialogCopy.referenceCostLabel}
               placeholder="0"
             />
           </div>
@@ -540,13 +537,13 @@ export function IngredientDialog({
             <SelectField
               control={form.control}
               name="storage_type"
-              label="Kiểu lưu trữ"
+              label={INVENTORY_VI.storageTypeLabel}
               options={STORAGE_OPTIONS}
             />
             <SelectField
               control={form.control}
               name="item_kind"
-              label="Loại hàng"
+              label={dialogCopy.itemKindLabel}
               options={ITEM_KIND_OPTIONS}
             />
           </div>
@@ -555,19 +552,19 @@ export function IngredientDialog({
             <QuantityField
               control={form.control}
               name="min_stock_level"
-              label="Tồn tối thiểu"
+              label={dialogCopy.minStockLabel}
               maxFractionDigits={2}
             />
             <QuantityField
               control={form.control}
               name="max_stock_level"
-              label="Tồn tối đa"
+              label={dialogCopy.maxStockLabel}
               maxFractionDigits={2}
             />
             <QuantityField
               control={form.control}
               name="reorder_point"
-              label="Điểm đặt hàng"
+              label={dialogCopy.reorderPointLabel}
               maxFractionDigits={2}
             />
           </div>
@@ -575,9 +572,9 @@ export function IngredientDialog({
           <NumberField
             control={form.control}
             name="shelf_life_days"
-            label="Hạn sử dụng (ngày)"
+            label={dialogCopy.shelfLifeLabel}
             maxFractionDigits={0}
-            placeholder="VD: 7"
+            placeholder={dialogCopy.shelfLifePlaceholder}
           />
         </>
       )}

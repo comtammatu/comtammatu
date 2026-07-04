@@ -8,7 +8,12 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Trash as IconTrash, Upload as IconUpload } from "lucide-react";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { INVENTORY_VI, TOAST_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  INVENTORY_VI,
+  STATES_VI,
+  TOAST_VI,
+} from "@comtammatu/shared/messages";
 
 const DEFAULT_BUCKET = "inventory-attachments";
 
@@ -133,7 +138,7 @@ export function PhotoUploadInput({
               variant="ghost"
               className="text-destructive"
               onClick={handleRemove}
-              aria-label="Xóa"
+              aria-label={ACTIONS_VI.delete}
             >
               <IconTrash className="size-4" />
             </Button>
@@ -165,7 +170,7 @@ export function PhotoUploadInput({
               onClick={() => inputRef.current?.click()}
             >
               {uploading ? <Spinner /> : <IconUpload className="size-4" />}
-              {uploading ? "Đang tải…" : INVENTORY_VI.uploadImagePdf}
+              {uploading ? STATES_VI.loading : INVENTORY_VI.uploadImagePdf}
             </Button>
             {allowPaste ? (
               <Button

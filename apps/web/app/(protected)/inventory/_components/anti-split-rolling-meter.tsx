@@ -102,11 +102,15 @@ export function AntiSplitRollingMeter({
       ) : null}
       {willTriggerPhoto ? (
         <span className="ml-1">
-          → trigger tier 1 (ảnh bắt buộc, ≥{formatVND(status.tierOneThreshold)})
+          {INVENTORY_VI.rollingTierOneTrigger(
+            formatVND(status.tierOneThreshold),
+          )}
         </span>
       ) : null}
       {status.lineCount > 1 ? (
-        <span className="ml-1">• {status.lineCount} phiếu</span>
+        <span className="ml-1">
+          {INVENTORY_VI.rollingSlipCount(status.lineCount)}
+        </span>
       ) : null}
     </div>
   );
