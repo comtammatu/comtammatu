@@ -252,6 +252,20 @@ test("resolveOperatorTiles -> central-site stock groups are curated whitelists (
   );
 });
 
+test("resolveOperatorTiles -> office_bridge group is branch-only (D066 §7b)", () => {
+  for (const branchKind of ["central_supply", "central_kitchen"] as const) {
+    const groupIds = resolveOperatorTiles("owner", 15, branchKind).map(
+      (group) => group.id,
+    );
+    assert.equal(groupIds.includes("office_bridge"), false, branchKind);
+  }
+
+  const branchGroupIds = resolveOperatorTiles("owner", 3, "branch").map(
+    (group) => group.id,
+  );
+  assert.ok(branchGroupIds.includes("office_bridge"));
+});
+
 test("resolveOperatorTiles -> transfer tile reads as dispatch at central sites, request at branches", () => {
   const branchStock = resolveOperatorTiles("branch_manager", 3, "branch").find(
     (group) => group.id === "stock",
