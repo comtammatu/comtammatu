@@ -6,6 +6,13 @@
 
 ## 0. Nguyên tắc (khoá)
 
+- **"Nhìn là thấy, chạm là biết làm gì tiếp" (owner 2026-07-04, sau khi xem
+  `/br/16/stock/production`):** mọi màn operator tuyên bố primary job; viewport-1
+  = next action + hàng đợi sống. CẤM dashboard thẻ KPI trên surface operator
+  (số đếm chỉ làm badge trên section/filter chip); một trạng thái nói đúng MỘT
+  chỗ (không badge + banner + nút cùng nói "chưa cấu hình"); không block văn
+  xuôi giải thích quy trình. Nghiệm thu mỗi lát: mở màn 3 giây biết bấm gì
+  tiếp. Promote rule này vào `docs/agent/rules/ui.md` trong PR đầu của program.
 - **Fork lớp hiển thị, giữ chung lớp dữ liệu.** Server action + data loader trong
   `apps/web/app/(protected)/inventory/*-actions.ts` dùng lại nguyên; chỉ viết
   component **mobile-native mới** cho route operator. Office desktop (oversight,
@@ -19,8 +26,10 @@
 - **Mỗi lát = 1 route family, 1 PR, 1 worktree**, full gate fresh
   (`typecheck && lint && build` + test) trước merge; QA 3 viewport
   (phone/tablet/desktop) khớp mockup. Không đụng POS/KDS/Runner.
-- Áp cho `central_supply` (branch 15). Bếp TT (`central_kitchen`, branch 16) =
-  Wave E, perms khác → chốt riêng.
+- Áp cho `central_supply` (branch 15). Bếp TT (`central_kitchen`, branch 16)
+  phần lớn = Wave E, **TRỪ màn Sản xuất `stock/production` — owner chỉ đích danh
+  2026-07-04 (ảnh chụp) → kéo lên Wave A′ làm ngay**; perms Bếp khác → bộ danh
+  mục Bếp vẫn chốt ở đợt E.
 
 ## 1. Bản đồ route → việc native (đều đã tồn tại)
 
@@ -28,6 +37,7 @@
 |---|---|---|---|
 | `stock/grn/*` (`page`,`new`,`new/[supplierId]`,`[id]`) | `GRNListPageContent`+`GrnNewPageContent`+`GrnCreateClient` embed | Nhận hàng: NCC-first, banner "không cần PO", tạo NCC inline, nhập dòng cho ngón tay, chụp ảnh, xác nhận + tổng | **A** |
 | `stock/page.tsx` | `StockPageContent` embed | Tồn kho: chip lọc nhóm + tìm + grid card 2 cột, số `font-mono`, tap → on-hand; qty 0 trung tính (D066 §5) | **A** |
+| `stock/production` (Bếp TT) | `ProductionPageContent` embed — dashboard-of-zeros (ảnh owner 2026-07-04) | Sản xuất job-first: CTA "Tạo lệnh" + danh sách lệnh sống theo trạng thái; bỏ 5 thẻ KPI; trạng thái "chưa có công thức" nói 1 chỗ | **A′** |
 | `page.tsx` (home) | tile grid + queue + KPI | Home "Hôm nay" Kho: CTA "Nhận hàng" + feed duyệt + lưới tile (chỉ nhánh `central_supply`) | **B** |
 | `operator-bottom-nav.tsx` | Home/Shift/Management | Curated Kho: Hôm nay · Nhận · Tồn · Kiểm · Thêm | **B** |
 | `stock/catalog/*` (**mới**) | — | Danh mục: Nhóm NL · Nguyên liệu · Đơn vị · Ngưỡng · NCC + thêm/sửa/xoá | **B** |
@@ -74,13 +84,46 @@
   không-KPI, không-Today-spine-đầy-đủ cho site trung tâm (D066 §4).
 - Bottom-nav curated cho `central_supply` (D067 §6).
 
-## 5. Thứ tự wave (Kho trước, GRN đầu tiên)
+## 5. Án audit toàn diện 2026-07-05 (9 family, cả 2 site) + thứ tự wave mới
 
-- **Wave A** — GRN native + inline NCC + Tồn kho card-grid. (owner focus)
-- **Wave B** — Home spine + bottom-nav + Danh mục surface + tile Danh mục.
-- **Wave C** — Kiểm kê(+bấm số) · Duyệt kiểm kê · Báo/Duyệt hao hụt · Chuyển/Nhận.
-- **Wave D** — Trả NCC · Đơn đặt hàng (reorder→PO nháp).
-- **Wave E** (sau) — Bếp Trung Tâm cùng khuôn (perms + job-set riêng, chốt riêng).
+Full-audit theo rubric §0 (block census · taps · desktop-ism · nhãn lệch).
+Verdict từng màn — REBUILD = layout sai job, TRIM = giết filler giữ khung,
+KEEP = đạt:
+
+| Màn | Án | Lỗi chính |
+|---|---|---|
+| Home `/br/[id]` (2 kind) | **REBUILD** | Kind trung tâm KHÔNG có queue domain (bếp không thấy lệnh, kho không thấy PO/chờ nhận); banner chấm công văn xuôi; PWA banner chen viewport-1 |
+| `stock/production` (Bếp) | **REBUILD** | 5 KPI-card, config-state nói 4 chỗ, banner quy trình, list lệnh chôn (chẩn đoán 2026-07-04) |
+| `stock/grn/[id]` (draft review) | **REBUILD** | 4 KPI QC stat-card, "Yêu cầu xem xét" nói 2 chỗ, tabs desktop, confirm bị chôn |
+| `stock/receive/[id]` | **REBUILD** | Nhận 10 dòng = 33+ chạm (input inline từng dòng) → NumberPadSheet ≈20; KPI grid + stepper filler |
+| `stocktake/[id]/count` (màn đếm) | **REBUILD** | Màn cần tap-optimized NHẤT lại là DataTable + search không sticky; cần stack card + auto-advance |
+| `stocktake/[id]` (kết quả) | **REBUILD** | Bảng kết quả desktop không có mobile card; "—" không phân biệt chưa-đếm vs đếm-0 |
+| `stock/purchase-orders/[id]` | **REBUILD** | `variance` hardcode 0 (noise mọi dòng); supplier info toàn "—"; timeline+summary+tabs bloat |
+| GRN list / picker / stock list+detail / PO list+new / transfer+receive list / stocktake new / count-slips / waste+approvals / returns list+detail | **TRIM** (13 màn) | Filler blocks, bảng nhiều cột, tab thừa (transfer hiện cả 3 tab ở route chuyên dụng), meter×3 ở waste, sidebar desktop |
+| GRN create `[supplierId]` · transfer/new · stocktake list · count-assignments · employee/count · adjust/quick-issue dialogs · GRN confirmed detail | **KEEP** (9) | Đã đạt job-first |
+
+Phát hiện nghiêm trọng kèm theo:
+- **Operator không mở lại được nháp GRN của mình** (`showDrafts=false` ở
+  wrapper operator, drafts tab chỉ có ở office) — sửa trong lát GRN.
+- Banner "Không cần đơn đặt hàng (PO)" (slice 1 vừa thêm) chính là
+  process-prose vi phạm §0 → GỠ trong lát TRIM GRN; PO-optional truyền đạt
+  bằng cấu trúc (NCC-first, PO là hàng quick-pick phụ).
+- `supplier-returns/new` là placeholder "đang phát triển" (scaffold đã xóa
+  theo D031 E4) — không đếm vào chương trình này.
+- Copy hệ thống: "phiếu" quá tải 6 loại chứng từ; "4 TP / 58 NL" đọc không
+  hiểu; eyebrow+title lặp; CTA verb loạn (Lưu/Cập nhật/Gửi/Duyệt/Xác nhận).
+
+**Wave mới (job-critical trước):**
+- **Wave 1 — REBUILD các flow nhiều thao tác:** Home spine 2 kind +
+  bottom-nav curated → Sản xuất → GRN draft-review (+ mở lại drafts operator)
+  → Receive per-line bấm số → màn Đếm + kết quả kiểm kê → PO detail.
+  Mỗi màn: mockup trước → owner duyệt → build khớp.
+- **Wave 2 — TRIM 13 màn** theo family (giết filler, mobile card, đơn-tab
+  transfer/receive, gộp meter waste, trim stock list/detail).
+- **Wave 3 — Copy pass một PR:** bảng nhãn canonical (phiếu/lệnh/kiểm kê/
+  TP-NL/CTA verb) trong `messages` + regen i18n baseline.
+- **Wave 4 — Danh mục surface** (`stock/catalog`, giữ nguyên kế §3) + tile.
+- Đã ship: GRN inline NCC (slice 1). KEEP screens không đụng.
 
 ## 6. Nghiệm thu (mỗi lát)
 
