@@ -163,12 +163,13 @@ export function PODetailClient({
     po.items.map((item) => {
       const ingredient = ingredientById.get(item.ingredientId);
       const matchedUnit = getPurchaseUnitOptions(ingredient).find(
-        (option) => option.code === item.unit,
+        (option) =>
+          option.unitId === item.entryUnitId || option.code === item.unit,
       );
       return {
         ...item,
         entryUnitId: item.entryUnitId ?? matchedUnit?.unitId ?? null,
-        unit: matchedUnit?.code ?? item.unit,
+        unit: matchedUnit?.label ?? item.unit,
         dirty: false,
       };
     }),
@@ -209,7 +210,7 @@ export function PODetailClient({
     const ingredient = ingredientById.get(Number(value));
     const defaultUnit = getDefaultPurchaseUnit(ingredient);
     setAddUnit(
-      defaultUnit?.code ?? ingredient?.purchase_unit ?? ingredient?.unit ?? "",
+      defaultUnit?.label ?? ingredient?.purchase_unit ?? ingredient?.unit ?? "",
     );
     setAddEntryUnitId(defaultUnit?.unitId ?? null);
     setAddPrice(
@@ -233,14 +234,14 @@ export function PODetailClient({
       (item) => String(item.unitId) === value,
     );
     if (!option) return;
-    patchLine(index, { entryUnitId: option.unitId, unit: option.code });
+    patchLine(index, { entryUnitId: option.unitId, unit: option.label });
   }
 
   function handleAddUnitChange(value: string) {
     const option = addUnitOptions.find((item) => String(item.unitId) === value);
     if (!option) return;
     setAddEntryUnitId(option.unitId);
-    setAddUnit(option.code);
+    setAddUnit(option.label);
   }
 
   function handleSaveLine(index: number) {

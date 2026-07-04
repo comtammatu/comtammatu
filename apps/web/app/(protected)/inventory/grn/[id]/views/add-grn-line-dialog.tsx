@@ -82,7 +82,7 @@ export function AddGrnLineDialog({
     const ingredient = ingredients.find((item) => item.id === Number(value));
     const defaultUnit = getDefaultPurchaseUnit(ingredient);
     setUnit(
-      defaultUnit?.code ?? ingredient?.purchase_unit ?? ingredient?.unit ?? "",
+      defaultUnit?.label ?? ingredient?.purchase_unit ?? ingredient?.unit ?? "",
     );
     setEntryUnitId(defaultUnit?.unitId ?? null);
     setUnitCost(
@@ -95,7 +95,7 @@ export function AddGrnLineDialog({
     const opt = purchaseUnitOptions.find(
       (o) => String(o.unitId) === unitIdValue,
     );
-    if (opt) setUnit(opt.code);
+    if (opt) setUnit(opt.label);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -208,7 +208,10 @@ export function AddGrnLineDialog({
                 .map((ingredient) => ({
                   value: String(ingredient.id),
                   label: ingredient.name,
-                  hint: ingredient.purchase_unit ?? ingredient.unit,
+                  hint:
+                    getDefaultPurchaseUnit(ingredient)?.label ??
+                    ingredient.purchase_unit ??
+                    ingredient.unit,
                   keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
                 }))}
               placeholder={grnCopy.addDialog.ingredientPlaceholder}

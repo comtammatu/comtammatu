@@ -93,7 +93,6 @@ type LineState = {
   uid: string;
   ingredientId: number | null;
   unit: string;
-  // Issue-role unit id (as string) the qty is entered in; "" => free-text unit.
   entryUnitId: string;
   unitCost: string; // input string
   quantity: string; // input string
@@ -186,7 +185,7 @@ export function WasteCreateClient({
       ing.issueUnits.find((u) => u.isBase) ?? ing.issueUnits[0] ?? null;
     updateLine(uid, {
       ingredientId: id,
-      unit: defaultUnit?.code ?? ing.unit,
+      unit: defaultUnit?.label ?? ing.unit,
       entryUnitId: defaultUnit ? String(defaultUnit.unitId) : "",
       unitCost: ing.unitCost !== null ? String(ing.unitCost) : "",
     });
@@ -406,7 +405,7 @@ export function WasteCreateClient({
                         );
                         updateLine(line.uid, {
                           entryUnitId: v,
-                          unit: opt?.code ?? line.unit,
+                          unit: opt?.label ?? line.unit,
                         });
                       }}
                       disabled={isSubmitting}

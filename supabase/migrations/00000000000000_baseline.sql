@@ -7364,7 +7364,7 @@ $$;
 
 
 --
--- Name: create_expiry_writeoff(bigint, bigint, bigint, numeric, text, bigint, text, text[]); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_expiry_writeoff(bigint, bigint, bigint, numeric, bigint, text, text[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.create_expiry_writeoff(p_branch_id bigint, p_location_id bigint, p_ingredient_id bigint, p_quantity numeric, p_grn_item_id bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text, p_photo_urls text[] DEFAULT ARRAY[]::text[]) RETURNS jsonb

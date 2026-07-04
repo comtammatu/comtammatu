@@ -119,14 +119,25 @@ export async function fetchProductionOrders(): Promise<
       created_at,
       branches!inner ( id, name, branch_kind ),
       production_order_items (
-        id,
-        finished_good_id,
-        quantity,
-        unit,
-        unit_cost_at_production,
-        ingredients ( id, name, unit )
-      )
-    `,
+	        id,
+	        finished_good_id,
+	        quantity,
+	        unit,
+	        entry_unit_id,
+	        unit_cost_at_production,
+	        ingredients (
+	          id,
+	          name,
+	          unit,
+	          ingredient_units!ingredient_units_ingredient_tenant_fkey (
+	            unit_id,
+	            is_base,
+	            is_active,
+	            units!ingredient_units_unit_tenant_fkey ( name )
+	          )
+	        )
+	      )
+	    `,
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("branches.branch_kind", "central_kitchen")
@@ -149,23 +160,36 @@ export async function fetchProductionOrders(): Promise<
 
   const rows: ProductionOrderRow[] = (data ?? []).map((row) => {
     const items = (row.production_order_items ?? []).map((item) => {
-      const ingredient = item.ingredients as {
-        id: number;
-        name: string;
-        unit: string;
-      } | null;
-      const unitCost =
-        item.unit_cost_at_production == null
-          ? null
+	      const ingredient = item.ingredients as {
+	        id: number;
+	        name: string;
+	        unit: string;
+	        ingredient_units?: Array<{
+	          unit_id: number;
+	          is_base: boolean;
+	          is_active: boolean;
+	          units: { name: string | null } | null;
+	        }> | null;
+	      } | null;
+	      const entryUnitId = item.entry_unit_id ?? null;
+	      const activeUnits =
+	        ingredient?.ingredient_units?.filter((unit) => unit.is_active) ?? [];
+	      const selectedUnit =
+	        entryUnitId != null
+	          ? activeUnits.find((unit) => unit.unit_id === entryUnitId)
+	          : activeUnits.find((unit) => unit.is_base);
+	      const unitCost =
+	        item.unit_cost_at_production == null
+	          ? null
           : Number(item.unit_cost_at_production);
       return {
         id: item.id,
-        finished_good_id: item.finished_good_id,
-        finished_good_name: ingredient?.name ?? "Thành phẩm",
-        quantity: Number(item.quantity),
-        unit: item.unit ?? ingredient?.unit ?? "",
-        unit_cost_at_production: unitCost,
-      };
+	        finished_good_id: item.finished_good_id,
+	        finished_good_name: ingredient?.name ?? "Thành phẩm",
+	        quantity: Number(item.quantity),
+	        unit: selectedUnit?.units?.name?.trim() || item.unit || ingredient?.unit || "",
+	        unit_cost_at_production: unitCost,
+	      };
     });
 
     return {

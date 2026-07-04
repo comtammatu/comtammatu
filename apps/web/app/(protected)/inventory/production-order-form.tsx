@@ -78,7 +78,7 @@ function buildEmptyRow(fallback?: FinishedGoodOption): ProductionLineRow {
   return {
     finished_good_id: fallback?.id ? String(fallback.id) : "",
     quantity: "1",
-    unit: defaultUnit?.code ?? fallback?.unit ?? "",
+    unit: defaultUnit?.label ?? fallback?.unit ?? "",
     entry_unit_id: defaultUnit ? String(defaultUnit.unitId) : "",
   };
 }
@@ -116,7 +116,7 @@ function LineRowCells({
   onRemove: () => void;
   canRemove: boolean;
   onFinishedGoodChange: (value: string) => void;
-  onUnitChange: (unitCode: string) => void;
+  onUnitChange: (unitLabel: string) => void;
 }) {
   const rowError = errors.lines?.[index];
   const selectedFinishedGoodId = useWatch({
@@ -186,7 +186,7 @@ function LineRowCells({
                   const option = unitOptions.find(
                     (item) => String(item.unitId) === value,
                   );
-                  if (option) onUnitChange(option.code);
+                  if (option) onUnitChange(option.label);
                 }}
               >
                 <SelectTrigger
@@ -285,7 +285,7 @@ function ProductionOrderFields({
       const good = finishedGoodsMap.get(Number(value));
       if (good) {
         const defaultUnit = getDefaultAnyUnit(good);
-        form.setValue(`lines.${rowIndex}.unit`, defaultUnit?.code ?? good.unit);
+        form.setValue(`lines.${rowIndex}.unit`, defaultUnit?.label ?? good.unit);
         form.setValue(
           `lines.${rowIndex}.entry_unit_id`,
           defaultUnit ? String(defaultUnit.unitId) : "",
@@ -395,8 +395,8 @@ function ProductionOrderFields({
               onRemove={() => remove(index)}
               canRemove={fields.length > 1}
               onFinishedGoodChange={handleFinishedGoodChangeFactory(index)}
-              onUnitChange={(unitCode) =>
-                form.setValue(`lines.${index}.unit`, unitCode, {
+              onUnitChange={(unitLabel) =>
+                form.setValue(`lines.${index}.unit`, unitLabel, {
                   shouldDirty: true,
                   shouldValidate: true,
                 })

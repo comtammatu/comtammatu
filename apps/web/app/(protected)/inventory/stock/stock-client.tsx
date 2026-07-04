@@ -167,10 +167,6 @@ function createQuickIssueSchema(maxQuantity: number) {
       .refine((value) => Number(value) <= maxQuantity, {
         error: stockCopy.quickIssue.quantityExceedsStock,
       }),
-    unit: z
-      .string()
-      .trim()
-      .min(1, { error: stockCopy.quickIssue.unitRequired }),
     entryUnitId: z.string().optional(),
     reason: z
       .string()
@@ -341,11 +337,10 @@ function QuickStockIssueDialog({
     () => ({
       issueType: target.issueType,
       quantity: "",
-      unit: defaultIssueUnit?.code ?? target.ingredient.unit,
       entryUnitId: defaultIssueUnit ? String(defaultIssueUnit.unitId) : "",
       reason: "",
     }),
-    [defaultIssueUnit, target.ingredient.unit, target.issueType],
+    [defaultIssueUnit, target.issueType],
   );
   const title =
     target.issueType === "writeoff"

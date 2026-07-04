@@ -6,6 +6,7 @@ import { fetchProcurementBranches } from "../../../_lib/procurement-branches";
 import { fetchGrnDetail, loadActiveGrnDraft } from "../../../grn-actions";
 import type { GrnDraftLine } from "../../../_lib/grn-draft";
 import type { IngredientUnitRow } from "../../../_lib/types";
+import { getIngredientUnitDisplayName } from "../../../_lib/unit-display";
 import { GrnCreateClient } from "./grn-create-client";
 
 type IngredientUnitJoinRow = {
@@ -157,7 +158,12 @@ export async function GrnCreatePageContent({
           lineId: l.id,
           ingredientId: l.ingredient_id,
           ingredientName: l.ingredients?.name ?? "",
-          unit: l.unit,
+          unit: getIngredientUnitDisplayName(
+            ingredients.find((ingredient) => ingredient.id === l.ingredient_id)
+              ?.units,
+            l.entry_unit_id,
+            l.unit,
+          ),
           entryUnitId: l.entry_unit_id,
           quantity: Number(l.received_quantity ?? 0),
           unitCost: Number(l.unit_cost ?? 0),

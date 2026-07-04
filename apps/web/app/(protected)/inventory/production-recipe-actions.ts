@@ -231,7 +231,16 @@ type ProductionRecipeQueryRow = {
   yield_factor: number | string | null;
   note: string | null;
   finished_good: { id: number; name: string } | null;
-  ingredient: { id: number; name: string } | null;
+  ingredient: {
+    id: number;
+    name: string;
+    ingredient_units?: Array<{
+      unit_id: number;
+      is_base: boolean;
+      is_active: boolean;
+      units: { name: string | null } | null;
+    }> | null;
+  } | null;
 };
 
 type ProductionRecipeQueryClient = {
@@ -288,7 +297,16 @@ export async function fetchProductionRecipes(): Promise<
       yield_factor,
       note,
       finished_good:ingredients!production_recipes_finished_good_id_fkey ( id, name ),
-      ingredient:ingredients!production_recipes_ingredient_id_fkey ( id, name )
+      ingredient:ingredients!production_recipes_ingredient_id_fkey (
+        id,
+        name,
+        ingredient_units!ingredient_units_ingredient_tenant_fkey (
+          unit_id,
+          is_base,
+          is_active,
+          units!ingredient_units_unit_tenant_fkey ( name )
+        )
+      )
     `,
     )
     .eq("tenant_id", claims.tenant_id)
@@ -310,15 +328,27 @@ export async function fetchProductionRecipes(): Promise<
         const ingredient = row.ingredient as {
           id: number;
           name: string;
+          ingredient_units?: Array<{
+            unit_id: number;
+            is_base: boolean;
+            is_active: boolean;
+            units: { name: string | null } | null;
+          }> | null;
         } | null;
-        return {
-          id: row.id,
-          finished_good_id: row.finished_good_id,
-          finished_good_name: finishedGood?.name ?? "Thành phẩm",
-          ingredient_id: row.ingredient_id,
-          ingredient_name: ingredient?.name ?? "Nguyên liệu",
-          quantity: Number(row.quantity),
-          unit: row.unit,
+        const activeUnits =
+          ingredient?.ingredient_units?.filter((unit) => unit.is_active) ?? [];
+        const selectedUnit =
+          row.entry_unit_id != null
+            ? activeUnits.find((unit) => unit.unit_id === row.entry_unit_id)
+            : activeUnits.find((unit) => unit.is_base);
+	        return {
+	          id: row.id,
+	          finished_good_id: row.finished_good_id,
+	          finished_good_name: finishedGood?.name ?? "Thành phẩm",
+	          ingredient_id: row.ingredient_id,
+	          ingredient_name: ingredient?.name ?? "Nguyên liệu",
+	          quantity: Number(row.quantity),
+	          unit: selectedUnit?.units?.name?.trim() || row.unit,
           entry_unit_id: row.entry_unit_id ?? null,
           yield_factor: Number(row.yield_factor ?? 1),
           note: row.note ?? null,

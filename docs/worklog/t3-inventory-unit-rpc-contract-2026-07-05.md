@@ -1,6 +1,6 @@
 # T3 Inventory Unit RPC Contract - 2026-07-05
 
-> Reconciled-through 8c9631a2 plus the 2026-07-05 closeout patch.
+> Reconciled-through 9beaea23 plus the 2026-07-05 follow-up cleanup.
 
 ## Scope
 
@@ -31,7 +31,7 @@ Implement a new migration plus baseline mirror for the helper and affected RPC b
 
 - Removed `unit` from transaction write schemas: PO, GRN, stock issue, waste, transfer, menu recipe, production order, production recipe.
 - Removed client payload `unit` from transaction callers, including expiry writeoff and quick stock issue.
-- Kept UI-local `unit` state only where it drives picker display/draft row rendering.
+- Kept UI-local `unit` state only where it drives picker display/draft row rendering; those values now use catalog labels (`unit_name`) rather than unit codes when a catalog option exists.
 - Added static tests that reject legacy `unit` in transaction action schemas/callers.
 - Added migration `20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql` and baseline mirror to drop `create_expiry_writeoff(..., p_unit text, ...)`.
 

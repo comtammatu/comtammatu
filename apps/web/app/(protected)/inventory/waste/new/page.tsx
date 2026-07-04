@@ -145,7 +145,12 @@ export async function WasteNewPageContent({
       return {
         id: i.id,
         name: i.name,
-        unit: i.purchase_unit ?? i.unit ?? "kg",
+        unit:
+          issueUnits.find((unit) => unit.isBase)?.label ??
+          issueUnits[0]?.label ??
+          i.purchase_unit ??
+          i.unit ??
+          "kg",
         unitCost: i.unit_cost === null ? null : Number(i.unit_cost),
         issueUnits,
       };

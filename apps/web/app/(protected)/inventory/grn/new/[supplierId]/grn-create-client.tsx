@@ -131,7 +131,6 @@ type EditState = {
   line: GrnDraftLine | null;
   quantity: number;
   unit: string;
-  // Purchase-role unit the qty is entered in. NULL = free-text/base unit.
   entryUnitId: number | null;
   unitCost: number;
   note: string;
@@ -253,7 +252,7 @@ export function GrnCreateClient({
       ingredient,
       line: existing ?? null,
       quantity: existing?.quantity ?? 0,
-      unit: existing?.unit ?? defaultUnit?.code ?? ingredient.unit,
+      unit: existing?.unit ?? defaultUnit?.label ?? ingredient.unit,
       entryUnitId: existing
         ? (existing.entryUnitId ?? null)
         : (defaultUnit?.unitId ?? null),
@@ -697,8 +696,8 @@ function LineEditFields({
         options={getPurchaseUnitOptions(edit.ingredient)}
         entryUnitId={edit.entryUnitId}
         unit={edit.unit}
-        onUnitChange={(unitId, code) =>
-          onPatch({ entryUnitId: unitId, unit: code })
+        onUnitChange={(unitId, label) =>
+          onPatch({ entryUnitId: unitId, unit: label })
         }
       />
       <div className="grid grid-cols-2 gap-3">
@@ -980,7 +979,7 @@ function UnitField({
   options: PurchaseUnitOption[];
   entryUnitId: number | null;
   unit: string;
-  onUnitChange: (unitId: number, code: string) => void;
+  onUnitChange: (unitId: number, label: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -992,7 +991,7 @@ function UnitField({
           value={entryUnitId != null ? String(entryUnitId) : ""}
           onValueChange={(value) => {
             const opt = options.find((o) => String(o.unitId) === value);
-            if (opt) onUnitChange(opt.unitId, opt.code);
+            if (opt) onUnitChange(opt.unitId, opt.label);
           }}
         >
           <SelectTrigger className="h-9 w-full text-sm" aria-label={unit}>
