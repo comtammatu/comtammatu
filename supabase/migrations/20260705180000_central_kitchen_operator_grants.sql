@@ -301,3 +301,8 @@ BEGIN
   RETURN QUERY SELECT v_added;
 END;
 $$;
+
+-- Re-state the baseline execution posture: the sync backfill has no in-body
+-- auth boundary and must stay service-role only.
+REVOKE ALL ON FUNCTION public.sync_missing_permissions_from_template() FROM PUBLIC, anon, authenticated;
+GRANT ALL ON FUNCTION public.sync_missing_permissions_from_template() TO service_role;

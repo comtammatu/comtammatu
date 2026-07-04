@@ -74,6 +74,18 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
+    "@comtammatu/shared#test": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/supabase/**",
+        "$TURBO_ROOT$/scripts/**",
+        "$TURBO_ROOT$/apps/web/**",
+        "$TURBO_ROOT$/docs/**",
+        "$TURBO_ROOT$/tasks/**"
+      ],
+      "outputs": []
+    },
     "@comtammatu/web#test": {
       "dependsOn": ["^build"],
       "inputs": [
