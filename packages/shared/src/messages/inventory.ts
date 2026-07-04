@@ -139,6 +139,8 @@ export const INVENTORY_VI = {
   supplierNotFound: "Không tìm thấy nhà cung cấp",
   productionOperatorDraftsTitle: "Lệnh nháp",
   productionOperatorDoneTodayTitle: "Hoàn tất hôm nay",
+  productionOperatorRecipesLink: "Công thức",
+  productionOperatorConfigLink: "Cấu hình",
   productionOperatorEmpty: "Chưa có lệnh sản xuất hôm nay",
   productionConfirmPrompt: (code: string) =>
     `Xác nhận lệnh ${code}? Kho sẽ trừ nguyên liệu và nhập thành phẩm.`,

@@ -14,6 +14,7 @@ export default async function OperatorProductionPage({ params }: PageProps) {
   const {
     canCreateProduction,
     canConfirmProduction,
+    canManageRecipes,
     productionBranches,
     ingredients,
     finishedGoods,
@@ -30,6 +31,8 @@ export default async function OperatorProductionPage({ params }: PageProps) {
       recipes={recipes}
       canCreateProduction={canCreateProduction}
       canConfirmProduction={canConfirmProduction}
+      canManageRecipes={canManageRecipes}
+      recipesHref={`/br/${branchId}/stock/production/recipes`}
     />
   );
 }

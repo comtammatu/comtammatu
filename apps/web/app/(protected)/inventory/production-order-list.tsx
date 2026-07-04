@@ -314,7 +314,7 @@ interface ProductionShortageDialogProps {
   onClose: () => void;
 }
 
-function ProductionShortageDialog({
+export function ProductionShortageDialog({
   info,
   onClose,
 }: ProductionShortageDialogProps) {

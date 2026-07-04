@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TriangleAlert as IconAlertTriangle } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -23,13 +24,18 @@ import {
   confirmProductionOrder,
 } from "@/(protected)/inventory/production-actions";
 import { ProductionOrderForm } from "@/(protected)/inventory/production-order-form";
-import { getProductionReadinessSummary } from "@/(protected)/inventory/production-types";
+import { ProductionShortageDialog } from "@/(protected)/inventory/production-order-list";
+import {
+  getProductionReadinessSummary,
+  PRODUCTION_ERROR_CODES,
+} from "@/(protected)/inventory/production-types";
 import type {
   BranchOption,
   FinishedGoodOption,
   IngredientOption,
   ProductionOrderRow,
   ProductionRecipeRow,
+  ProductionShortageRow,
 } from "@/(protected)/inventory/production-types";
 
 interface ProductionOperatorClientProps {
@@ -40,7 +46,11 @@ interface ProductionOperatorClientProps {
   recipes: ProductionRecipeRow[];
   canCreateProduction: boolean;
   canConfirmProduction: boolean;
+  canManageRecipes: boolean;
+  recipesHref: string;
 }
+
+type PendingAction = { id: number; action: "confirm" | "cancel" } | null;
 
 function orderItemsSummary(order: ProductionOrderRow): string {
   return order.items
@@ -56,9 +66,15 @@ export function ProductionOperatorClient({
   recipes,
   canCreateProduction,
   canConfirmProduction,
+  canManageRecipes,
+  recipesHref,
 }: ProductionOperatorClientProps) {
   const router = useRouter();
-  const [pendingId, setPendingId] = React.useState<number | null>(null);
+  const [pending, setPending] = React.useState<PendingAction>(null);
+  const [shortageInfo, setShortageInfo] = React.useState<{
+    productionNumber: string;
+    rows: ProductionShortageRow[];
+  } | null>(null);
 
   const { sortedFinishedGoods, readinessState, readinessMessage, actionsEnabled } =
     React.useMemo(
@@ -98,19 +114,40 @@ export function ProductionOperatorClient({
       variant: action === "cancel" ? "destructive" : "default",
     });
     if (!ok) return;
-    setPendingId(order.id);
+    setPending({ id: order.id, action });
     try {
-      const res =
-        action === "confirm"
-          ? await confirmProductionOrder(order.id)
-          : await cancelProductionOrder(order.id);
-      if (!res.success) {
-        toast.error(res.error ?? ACTIONS_VI.confirm);
-        return;
+      if (action === "confirm") {
+        const result = await confirmProductionOrder(order.id);
+        if (!result.success) {
+          if (
+            result.errorCode === PRODUCTION_ERROR_CODES.INSUFFICIENT_STOCK &&
+            Array.isArray(result.meta?.shortages) &&
+            result.meta.shortages.length > 0
+          ) {
+            setShortageInfo({
+              productionNumber: order.production_number,
+              rows: result.meta.shortages as ProductionShortageRow[],
+            });
+            toast.error(
+              result.error ?? INVENTORY_VI.productionInsufficientStock,
+            );
+            return;
+          }
+          toast.error(result.error ?? INVENTORY_VI.productionConfirmFailed);
+          return;
+        }
+        toast.success(INVENTORY_VI.productionOrderConfirmed);
+      } else {
+        const result = await cancelProductionOrder(order.id);
+        if (!result.success) {
+          toast.error(result.error ?? INVENTORY_VI.productionCancelFailed);
+          return;
+        }
+        toast.success(INVENTORY_VI.productionOrderCancelled);
       }
       router.refresh();
     } finally {
-      setPendingId(null);
+      setPending(null);
     }
   }
 
@@ -128,6 +165,14 @@ export function ProductionOperatorClient({
         <div className="flex items-center gap-2 rounded-md bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
           <IconAlertTriangle className="size-4 shrink-0 text-warning" />
           <span className="min-w-0 flex-1">{readinessMessage}</span>
+          {canManageRecipes && readinessState === "missing-recipe" ? (
+            <Link
+              href={recipesHref}
+              className="shrink-0 font-medium underline underline-offset-4"
+            >
+              {INVENTORY_VI.productionOperatorConfigLink}
+            </Link>
+          ) : null}
         </div>
       ) : null}
 
@@ -144,54 +189,58 @@ export function ProductionOperatorClient({
             <Badge variant="warning">{drafts.length}</Badge>
           </div>
           <ItemGroup className="gap-2">
-            {drafts.map((order) => (
-              <Item
-                key={order.id}
-                variant="outline"
-                size="sm"
-                className="flex-col items-stretch gap-2 bg-card"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-sm font-semibold">
-                    {order.production_number}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatVNTime(order.created_at)}
-                  </span>
-                </div>
-                <p className="text-sm leading-snug">
-                  {orderItemsSummary(order)}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    size="touch"
-                    className="flex-1"
-                    disabled={
-                      !canConfirmProduction ||
-                      !actionsEnabled ||
-                      pendingId === order.id
-                    }
-                    onClick={() => runOrderAction(order, "confirm")}
-                  >
-                    {pendingId === order.id ? (
-                      <Spinner className="size-4" />
-                    ) : null}
-                    {ACTIONS_VI.confirm}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="touch"
-                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    disabled={pendingId === order.id}
-                    onClick={() => runOrderAction(order, "cancel")}
-                  >
-                    {ACTIONS_VI.cancel}
-                  </Button>
-                </div>
-              </Item>
-            ))}
+            {drafts.map((order) => {
+              const isPendingConfirm =
+                pending?.id === order.id && pending.action === "confirm";
+              const isPendingCancel =
+                pending?.id === order.id && pending.action === "cancel";
+              const orderBusy = pending?.id === order.id;
+              return (
+                <Item
+                  key={order.id}
+                  variant="outline"
+                  size="sm"
+                  className="flex-col items-stretch gap-2 bg-card"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-sm font-semibold">
+                      {order.production_number}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatVNTime(order.created_at)}
+                    </span>
+                  </div>
+                  <p className="text-sm leading-snug">
+                    {orderItemsSummary(order)}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="touch"
+                      className="flex-1"
+                      disabled={
+                        !canConfirmProduction || !actionsEnabled || orderBusy
+                      }
+                      onClick={() => runOrderAction(order, "confirm")}
+                    >
+                      {isPendingConfirm ? <Spinner className="size-4" /> : null}
+                      {ACTIONS_VI.confirm}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="touch"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      disabled={orderBusy}
+                      onClick={() => runOrderAction(order, "cancel")}
+                    >
+                      {isPendingCancel ? <Spinner className="size-4" /> : null}
+                      {ACTIONS_VI.cancel}
+                    </Button>
+                  </div>
+                </Item>
+              );
+            })}
           </ItemGroup>
         </>
       ) : null}
@@ -220,6 +269,22 @@ export function ProductionOperatorClient({
           </ItemGroup>
         </>
       ) : null}
+
+      {canManageRecipes ? (
+        <div className="flex items-center justify-center">
+          <Link
+            href={recipesHref}
+            className="text-sm text-muted-foreground underline underline-offset-4"
+          >
+            {INVENTORY_VI.productionOperatorRecipesLink}
+          </Link>
+        </div>
+      ) : null}
+
+      <ProductionShortageDialog
+        info={shortageInfo}
+        onClose={() => setShortageInfo(null)}
+      />
     </div>
   );
 }
