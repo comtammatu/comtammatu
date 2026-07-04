@@ -40,7 +40,12 @@ import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { MoneyVndInput, NumberPadSheet, QuantityInput } from "@/components/form";
 import { matchesSearch } from "@lib/search";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { AppEmptyState, AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPageHeader,
+  AppSection,
+  DocumentFormFrame,
+} from "@/components/surface";
 import {
   draftTotal,
   type GrnDraft,
@@ -503,61 +508,41 @@ export function GrnCreateClient({
           <AlertDescription>{submitError}</AlertDescription>
         </Alert>
       ) : null}
-
-      <div className="sticky chrome-safe-bottom z-10 lg:static">
-        <Button
-          type="button"
-          size="touch-lg"
-          className="w-full"
-          onClick={submit}
-          disabled={!canSubmit}
-        >
-          {submitting ? (
-            <>
-              <Spinner className="size-5" />
-              {STATES_VI.saving}
-            </>
-          ) : lineCount === 0 ? (
-            GRN_CREATE_COPY.addItemToContinue
-          ) : (
-            GRN_CREATE_COPY.saveDraft(lineCount, total)
-          )}
-        </Button>
-      </div>
     </>
   );
 
-  const content = (
-    <>
-      <AppPageHeader
-        breadcrumb={
-          <Link
-            href={basePath}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+  const header = (
+    <AppPageHeader
+      breadcrumb={
+        <Link
+          href={basePath}
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+        >
+          <IconArrowLeft className="size-4" /> {GRN_CREATE_COPY.changeSupplier}
+        </Link>
+      }
+      eyebrow={GRN_CREATE_COPY.newReceiptEyebrow}
+      title={supplier.name}
+      description={GRN_CREATE_COPY.newReceiptDescription}
+      actions={
+        lineCount > 0 ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={discardDraft}
           >
-            <IconArrowLeft className="size-4" />{" "}
-            {GRN_CREATE_COPY.changeSupplier}
-          </Link>
-        }
-        eyebrow={GRN_CREATE_COPY.newReceiptEyebrow}
-        title={supplier.name}
-        description={GRN_CREATE_COPY.newReceiptDescription}
-        actions={
-          lineCount > 0 ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={discardDraft}
-            >
-              <IconTrash className="size-4" />
-              {GRN_CREATE_COPY.discardDraft}
-            </Button>
-          ) : undefined
-        }
-      />
+            <IconTrash className="size-4" />
+            {GRN_CREATE_COPY.discardDraft}
+          </Button>
+        ) : undefined
+      }
+    />
+  );
 
+  const body = (
+    <>
       {/* Desktop (lg+, non-embedded office surface): ingredient/line list +
           line-edit panel side by side. The embedded branch root and smaller
           viewports stay single-column, editing a line through LineEditSheet. */}
@@ -630,11 +615,46 @@ export function GrnCreateClient({
     </>
   );
 
+  const footer = (
+    <div className="sticky chrome-safe-bottom z-10 w-full lg:static">
+      <Button
+        type="button"
+        size="touch-lg"
+        className="w-full"
+        onClick={submit}
+        disabled={!canSubmit}
+      >
+        {submitting ? (
+          <>
+            <Spinner className="size-5" />
+            {STATES_VI.saving}
+          </>
+        ) : lineCount === 0 ? (
+          GRN_CREATE_COPY.addItemToContinue
+        ) : (
+          GRN_CREATE_COPY.saveDraft(lineCount, total)
+        )}
+      </Button>
+    </div>
+  );
+
+  const content = (
+    <>
+      {header}
+      {body}
+      {footer}
+    </>
+  );
+
   if (embedded) {
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
-  return <AppPage width="wide">{content}</AppPage>;
+  return (
+    <DocumentFormFrame header={header} width="wide" footer={footer}>
+      {body}
+    </DocumentFormFrame>
+  );
 }
 
 type LineEditSheetProps = {
