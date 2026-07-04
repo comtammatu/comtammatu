@@ -15,17 +15,18 @@ Remove Inventory RPC dependence on client-supplied unit text/code. Transaction w
 
 ## Decision
 
-Implement a new migration plus baseline mirror for the helper and affected RPC bodies. The first helper/RPC migration has already been applied and typed; the closeout migration removes the remaining expiry-writeoff `p_unit` argument and needs apply + `db:types` before the goal is fully closed.
+Implement a new migration plus baseline mirror for the helper and affected RPC bodies. The first helper/RPC migration has already been applied and typed. The closeout path uses a short optional-argument bridge for the deployment window, then removes the remaining expiry-writeoff `p_unit` argument and needs apply + `db:types` before the goal is fully closed.
 
 ## Apply And Verification State
 
 - `written`: yes. `supabase/migrations/20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql` drops the old `create_expiry_writeoff(..., p_unit text, ...)` signature and recreates the RPC without the unit argument.
+- `deployment bridge`: written. `supabase/migrations/20260704214448_inventory_expiry_writeoff_optional_unit_bridge.sql` makes the old `p_unit` argument optional only when that old signature still exists, so old and new callers both work during deploy; fresh schemas that already have the no-`p_unit` function no-op through it.
 - `baseline mirrored`: yes. `00000000000000_baseline.sql` now contains the no-`p_unit` signature for fresh installs.
 - `prod-applied`: no. SELECT-only production evidence on `iexwsuaqqenyjiskawoj` still shows `create_expiry_writeoff(bigint,bigint,bigint,numeric,text,bigint,text,text[])`, and `supabase_migrations.schema_migrations` has no `inventory_drop_expiry_writeoff_unit_arg` row.
 - `types generated`: no. `packages/database/src/types/database.types.ts` still reflects the production schema with `create_expiry_writeoff.Args.p_unit`. `waste-actions.ts` uses a temporary narrow RPC client type until the migration is applied to the type-source schema and `corepack pnpm db:types` can remove that shim.
 - `local baseline replay`: blocked by local Docker availability (`Cannot connect to the Docker daemon at unix:///Users/luongthebinh/.docker/run/docker.sock`).
 - `preview branch replay`: attempted on branch `inventory-unit-contract-closeout-20260705` (`xvuurourqhiaunigdjof`) after cost confirmation `$0.01344/hour`; Supabase branch replay ended `MIGRATIONS_FAILED` before the helper/RPC existed, so it could not validate this closeout migration. The branch was deleted.
-- `prod apply order`: destructive cleanup must be applied only after the deployed code path no longer sends `p_unit`; otherwise old deployed callers can break. The safe order is code deploy first, then owner-delegated/apply migration, then `corepack pnpm db:types`, then remove the temporary type shim.
+- `prod apply order`: apply the optional-argument bridge first, then merge/deploy code that no longer sends `p_unit`, then apply the destructive drop migration, then `corepack pnpm db:types`, then remove the temporary type shim.
 
 ## Closeout Delta
 

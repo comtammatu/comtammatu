@@ -260,6 +260,9 @@ test("expiry writeoff RPC does not accept a unit text argument", () => {
   const migration = read(
     "supabase/migrations/20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql",
   );
+  const bridge = read(
+    "supabase/migrations/20260704214448_inventory_expiry_writeoff_optional_unit_bridge.sql",
+  );
   const baseline = read("supabase/migrations/00000000000000_baseline.sql");
   const action = read("apps/web/app/(protected)/inventory/waste-actions.ts");
 
@@ -276,6 +279,9 @@ test("expiry writeoff RPC does not accept a unit text argument", () => {
     /CREATE FUNCTION public\.create_expiry_writeoff\([\s\S]*?p_unit text/,
   );
   assert.doesNotMatch(action, /\bp_unit:/);
+  assert.match(bridge, /to_regprocedure\(/);
+  assert.match(bridge, /p_unit text DEFAULT NULL::text/);
+  assert.match(bridge, /RETURN;/);
 });
 
 test("production recipe bulk import stores catalog-derived units", () => {
