@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import {
+  PauseCircle as IconPause,
   Pencil as IconPencil,
   Plus as IconPlus,
   Trash2 as IconTrash,
@@ -21,7 +22,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
-import { AppToolbar } from "@/components/surface";
+import { AppSection, AppToolbar } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -32,6 +33,7 @@ import {
   createUnit,
   deleteUnit,
   updateUnit,
+  type UnitDimension,
   type UnitRow,
 } from "./units-actions";
 
@@ -49,11 +51,40 @@ const NEW_UNIT_DEFAULTS: UnitFormValues = {
   is_active: true,
 };
 
+const STANDARD_DIMENSION_ORDER: UnitDimension[] = ["mass", "volume"];
+
+const STANDARD_DIMENSION_LABEL: Record<UnitDimension, string> = {
+  mass: copy.standard.mass,
+  volume: copy.standard.volume,
+};
+
 export function UnitsClient({ rows }: { rows: UnitRow[] }) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRow, setEditRow] = useState<UnitRow | null>(null);
-  const [, startDelete] = useTransition();
+  const [showInactive, setShowInactive] = useState(false);
+  const [, startMutation] = useTransition();
+
+  const standardByDimension = useMemo(() => {
+    const grouped = new Map<UnitDimension, UnitRow[]>();
+    for (const dimension of STANDARD_DIMENSION_ORDER) grouped.set(dimension, []);
+    for (const row of rows) {
+      if (!row.is_standard || row.dimension === null) continue;
+      grouped.get(row.dimension)?.push(row);
+    }
+    for (const list of grouped.values()) {
+      list.sort((a, b) => (a.standard_factor ?? 0) - (b.standard_factor ?? 0));
+    }
+    return grouped;
+  }, [rows]);
+
+  const packagingRows = useMemo(
+    () =>
+      rows.filter(
+        (row) => !row.is_standard && (showInactive || row.is_active),
+      ),
+    [rows, showInactive],
+  );
 
   function openCreate() {
     setEditRow(null);
@@ -73,6 +104,22 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
     return result;
   }
 
+  async function handleDeactivate(row: UnitRow) {
+    startMutation(async () => {
+      const res = await updateUnit({
+        id: row.id,
+        code: row.code,
+        is_active: false,
+      });
+      if (!res.success) {
+        toast.error(res.error ?? copy.deactivate.failed);
+        return;
+      }
+      toast.success(copy.deactivate.success);
+      router.refresh();
+    });
+  }
+
   async function handleDelete(row: UnitRow) {
     const ok = await confirm({
       title: copy.delete.title,
@@ -82,7 +129,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
       variant: "destructive",
     });
     if (!ok) return;
-    startDelete(async () => {
+    startMutation(async () => {
       const res = await deleteUnit({ id: row.id });
       if (!res.success) {
         toast.error(res.error ?? copy.delete.failed);
@@ -100,17 +147,50 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
       }
     : NEW_UNIT_DEFAULTS;
 
+  function StatusBadges({ row }: { row: UnitRow }) {
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        <Badge variant={row.is_active ? "success" : "secondary"}>
+          {row.is_active ? copy.status.active : copy.status.inactive}
+        </Badge>
+        {row.inUse ? (
+          <Badge variant="outline">{copy.status.inUse}</Badge>
+        ) : null}
+      </div>
+    );
+  }
+
   function RowActions({ row }: { row: UnitRow }) {
     return (
       <div className="flex items-center justify-end gap-1">
-        <Button variant="ghost" size="icon" onClick={() => openEdit(row)}>
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          onClick={() => openEdit(row)}
+        >
           <IconPencil className="size-4" />
           <span className="sr-only">{copy.edit}</span>
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => handleDelete(row)}>
-          <IconTrash className="size-4 text-destructive" />
-          <span className="sr-only">{copy.delete.action}</span>
-        </Button>
+        {row.inUse ? (
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            disabled={!row.is_active}
+            onClick={() => handleDeactivate(row)}
+          >
+            <IconPause className="size-4 text-warning" />
+            <span className="sr-only">{copy.deactivate.action}</span>
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            onClick={() => handleDelete(row)}
+          >
+            <IconTrash className="size-4 text-destructive" />
+            <span className="sr-only">{copy.delete.action}</span>
+          </Button>
+        )}
       </div>
     );
   }
@@ -123,67 +203,116 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
       render: (row) => row.code,
     },
     {
-      key: "name",
-      header: copy.cols.name,
-      render: (row) => row.name,
-    },
-    {
       key: "status",
       header: copy.cols.status,
-      className: "w-32 text-center",
-      render: (row) => (
-        <Badge variant={row.is_active ? "success" : "secondary"}>
-          {row.is_active ? copy.status.active : copy.status.inactive}
-        </Badge>
-      ),
+      className: "w-56",
+      render: (row) => <StatusBadges row={row} />,
     },
     {
       key: "actions",
       header: "",
-      className: "w-24",
+      className: "w-28",
       render: (row) => <RowActions row={row} />,
     },
   ];
 
   return (
-    <div className="flex flex-col">
-      <AppToolbar
-        variant="inline"
-        actions={
-          <Button onClick={openCreate}>
-            <IconPlus data-icon="inline-start" />
-            {copy.add}
-          </Button>
-        }
-      />
-
-      <DataTable
-        columns={columns}
-        data={rows}
-        getRowKey={(row) => row.id}
-        emptyTitle={copy.empty}
-        emptyMode="no-data"
-        mobileCardRender={(row) => (
-          <Item variant="outline">
-            <ItemContent className="min-w-0">
-              <ItemTitle className="font-mono text-sm font-semibold">
-                {row.code}
-              </ItemTitle>
-              <ItemDescription className="text-sm leading-6">
-                {row.name}
-              </ItemDescription>
-              <div>
-                <Badge variant={row.is_active ? "success" : "secondary"}>
-                  {row.is_active ? copy.status.active : copy.status.inactive}
-                </Badge>
+    <div className="flex flex-col gap-4">
+      <AppSection
+        title={copy.standard.title}
+        description={copy.standard.description}
+        contentFlush
+      >
+        <div className="flex flex-col divide-y divide-border/60">
+          {STANDARD_DIMENSION_ORDER.map((dimension) => {
+            const dimensionRows = standardByDimension.get(dimension) ?? [];
+            if (dimensionRows.length === 0) return null;
+            return (
+              <div
+                key={dimension}
+                className="flex flex-col gap-2 px-4 py-3"
+              >
+                <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  {STANDARD_DIMENSION_LABEL[dimension]}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {dimensionRows.map((row) => (
+                    <div
+                      key={row.id}
+                      className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1.5"
+                    >
+                      <span className="font-mono text-sm font-medium">
+                        {row.code}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {copy.standard.factor(
+                          `${row.standard_factor ?? 1} ${
+                            dimension === "mass" ? "g" : "ml"
+                          }`,
+                        )}
+                      </span>
+                      {row.inUse ? (
+                        <Badge variant="outline">{copy.status.inUse}</Badge>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </ItemContent>
-            <ItemActions className="self-center">
-              <RowActions row={row} />
-            </ItemActions>
-          </Item>
-        )}
-      />
+            );
+          })}
+        </div>
+      </AppSection>
+
+      <AppSection
+        title={copy.packaging.title}
+        description={copy.packaging.description}
+        contentFlush
+      >
+        <AppToolbar
+          variant="inline"
+          actions={
+            <div className="flex flex-wrap items-center gap-3">
+              <Field orientation="horizontal" className="w-auto">
+                <FieldLabel htmlFor="units-show-inactive">
+                  {copy.showInactive}
+                </FieldLabel>
+                <Switch
+                  id="units-show-inactive"
+                  checked={showInactive}
+                  onCheckedChange={setShowInactive}
+                />
+              </Field>
+              <Button size="touch" onClick={openCreate}>
+                <IconPlus data-icon="inline-start" />
+                {copy.add}
+              </Button>
+            </div>
+          }
+        />
+
+        <DataTable
+          columns={columns}
+          data={packagingRows}
+          getRowKey={(row) => row.id}
+          emptyTitle={copy.emptyPackaging}
+          emptyMode="no-data"
+          mobileCardRender={(row) => (
+            <Item variant="outline">
+              <ItemContent className="min-w-0">
+                <ItemTitle className="font-mono text-sm font-semibold">
+                  {row.code}
+                </ItemTitle>
+                <ItemDescription className="text-sm leading-6">
+                  <StatusBadges row={row} />
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions className="self-center">
+                <RowActions row={row} />
+              </ItemActions>
+            </Item>
+          )}
+        />
+      </AppSection>
 
       <FormDialog
         open={dialogOpen}

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { AppPageHeader, AppSection } from "@/components/surface";
+import { AppPageHeader } from "@/components/surface";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { UNITS_MASTER_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { messages } from "@lib/messages";
@@ -28,9 +28,7 @@ export default async function InventoryUnitsPage() {
         description={copy.page.description}
       />
 
-      <AppSection contentFlush>
-        <UnitsClient rows={rows} />
-      </AppSection>
+      <UnitsClient rows={rows} />
     </div>
   );
 }

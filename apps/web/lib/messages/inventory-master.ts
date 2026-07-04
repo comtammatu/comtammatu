@@ -7,6 +7,21 @@ export const UNITS_VI = {
   },
   add: "Thêm đơn vị",
   empty: "Chưa có đơn vị nào. Thêm đơn vị đầu tiên để bắt đầu.",
+  emptyPackaging: "Chưa có đơn vị đóng gói nào. Thêm đơn vị đầu tiên để bắt đầu.",
+  showInactive: "Hiện đơn vị đã ngừng dùng",
+  standard: {
+    title: "Đơn vị chuẩn",
+    description:
+      "Đơn vị đo hệ thống (khối lượng và thể tích). Hệ số quy đổi cố định, không thể chỉnh sửa.",
+    mass: "Khối lượng",
+    volume: "Thể tích",
+    factor: (unit: string) => `1 = ${unit}`,
+  },
+  packaging: {
+    title: "Đơn vị đóng gói",
+    description:
+      "Đơn vị nhập và đóng gói do cửa hàng tự khai báo. Có thể thêm, sửa, ngừng dùng hoặc xoá.",
+  },
   cols: {
     code: "Mã",
     name: "Tên",
@@ -15,6 +30,12 @@ export const UNITS_VI = {
   status: {
     active: "Đang dùng",
     inactive: "Ngừng dùng",
+    inUse: "Đang gán nguyên liệu",
+  },
+  deactivate: {
+    action: "Ngừng dùng",
+    success: "Đã ngừng dùng đơn vị",
+    failed: "Không thể ngừng dùng đơn vị",
   },
   form: {
     addTitle: "Thêm đơn vị",
