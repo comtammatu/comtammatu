@@ -7,6 +7,7 @@ import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
+import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
@@ -29,7 +30,7 @@ const issueLineSchema = z.object({
   issueId: z.coerce.number().int().positive(),
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().min(1),
+  unit: z.string().optional(),
   // Issue-role unit the qty was entered in. NULL = already base;
   // confirm_stock_issue converts to the ingredient base via inv_to_base().
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
@@ -204,6 +205,14 @@ export async function fetchStockIssueDetail(
 export const upsertStockIssueLine = withAction(
   { roles: ROLES, schema: issueLineSchema, requireBranchScope: true },
   async (d, { supabase, claims }) => {
+    const resolvedUnit = await resolveEntryUnitCode(supabase, {
+      tenantId: claims.tenant_id,
+      ingredientId: d.ingredientId,
+      entryUnitId: d.entryUnitId,
+    });
+    if (!resolvedUnit.success) {
+      return { success: false, error: resolvedUnit.error };
+    }
     // unit_cost is populated by confirm_stock_issue RPC from WAC at confirm
     // time; DEFAULT 0 applies on this draft-only INSERT.
     const { error } = await supabase.from("stock_issue_items").upsert(
@@ -212,7 +221,7 @@ export const upsertStockIssueLine = withAction(
         issue_id: d.issueId,
         ingredient_id: d.ingredientId,
         quantity: d.quantity,
-        unit: d.unit,
+        unit: resolvedUnit.unit,
         entry_unit_id: d.entryUnitId ?? null,
         reason: d.reason ?? null,
       },

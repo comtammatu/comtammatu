@@ -18,12 +18,12 @@ import { currentUserHasPermission } from "@/_lib/permissions";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
   AppEmptyState,
+  AppPage,
   AppPageHeader,
   AppSection,
   DescriptionList,
 } from "@/components/surface";
 import { messages } from "@lib/messages";
-import { InventoryPageContent } from "../../_components/inventory-page-layout";
 import {
   formatDate,
   formatDateTime,
@@ -706,9 +706,9 @@ export async function StockIngredientDetailPageContent({
   }
 
   return (
-    <InventoryPageContent width="wide" scroll>
+    <AppPage width="wide" scroll>
       {content}
-    </InventoryPageContent>
+    </AppPage>
   );
 }
 

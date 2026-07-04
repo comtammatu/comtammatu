@@ -8,12 +8,16 @@ import type {
   FinishedGoodOption,
   RawIngredientOption,
 } from "./production-types";
+import type { UnitOption } from "./_lib/types";
 import { STORAGE_OPTIONS } from "./_lib/constants";
 
 type StorageType = "ambient" | "refrigerated" | "frozen";
 
 const quickCreateSchema = z.object({
-  name: z.string().trim().min(1, { error: INVENTORY_VI.quickCreateNameRequired }),
+  name: z
+    .string()
+    .trim()
+    .min(1, { error: INVENTORY_VI.quickCreateNameRequired }),
   unit: z.string().trim().min(1, { error: INVENTORY_VI.unitRequired }),
   category: z.string().trim().optional(),
   storage_type: z.enum(["ambient", "refrigerated", "frozen"]),
@@ -42,12 +46,14 @@ function QuickCreateDialog<TCreated>({
   open,
   onOpenChange,
   config,
+  unitOptions,
   onCreated,
   mapCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   config: QuickCreateDialogConfig;
+  unitOptions: UnitOption[];
   onCreated?: (value: TCreated) => void;
   mapCreated: (input: { id: number; name: string; unit: string }) => TCreated;
 }) {
@@ -108,11 +114,15 @@ function QuickCreateDialog<TCreated>({
               placeholder={config.namePlaceholder}
               required
             />
-            <TextField
+            <SelectField
               control={form.control}
               name="unit"
               label={config.unitLabel}
               placeholder={config.unitPlaceholder}
+              options={unitOptions.map((unit) => ({
+                value: unit.code,
+                label: unit.name,
+              }))}
               required
             />
           </div>
@@ -174,12 +184,14 @@ const RAW_INGREDIENT_CONFIG: QuickCreateDialogConfig = {
 interface QuickFinishedGoodDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  unitOptions: UnitOption[];
   onCreated?: (good: FinishedGoodOption) => void;
 }
 
 export function QuickFinishedGoodDialog({
   open,
   onOpenChange,
+  unitOptions,
   onCreated,
 }: QuickFinishedGoodDialogProps) {
   return (
@@ -187,6 +199,7 @@ export function QuickFinishedGoodDialog({
       open={open}
       onOpenChange={onOpenChange}
       config={FINISHED_GOOD_CONFIG}
+      unitOptions={unitOptions}
       onCreated={onCreated}
       mapCreated={({ id, name, unit }) => ({ id, name, unit })}
     />
@@ -196,12 +209,14 @@ export function QuickFinishedGoodDialog({
 interface QuickRawIngredientDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  unitOptions: UnitOption[];
   onCreated?: (ingredient: RawIngredientOption) => void;
 }
 
 export function QuickRawIngredientDialog({
   open,
   onOpenChange,
+  unitOptions,
   onCreated,
 }: QuickRawIngredientDialogProps) {
   return (
@@ -209,6 +224,7 @@ export function QuickRawIngredientDialog({
       open={open}
       onOpenChange={onOpenChange}
       config={RAW_INGREDIENT_CONFIG}
+      unitOptions={unitOptions}
       onCreated={onCreated}
       mapCreated={({ id, name, unit }) => ({ id, name, unit })}
     />

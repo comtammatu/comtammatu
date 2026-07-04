@@ -6,6 +6,7 @@ import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "./_lib/auth";
+import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 
 /* ─── Waste entry (S11) ─── */
@@ -37,7 +38,7 @@ const WASTE_SOURCE_TYPES = [
 const wasteItemSchema = z.object({
   ingredient_id: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().min(1),
+  unit: z.string().optional(),
   // Issue-role unit the qty was entered in. NULL = already base;
   // the writeoff decrement converts to base via inv_to_base().
   entry_unit_id: z.coerce.number().int().positive().nullable().optional(),
@@ -88,7 +89,20 @@ export async function createWasteEntry(
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
   );
   if (!ctx) return { success: false, error: "Không có quyền tạo phiếu hủy" };
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+
+  const items = [];
+  for (const item of parsed.data.items) {
+    const resolvedUnit = await resolveEntryUnitCode(supabase, {
+      tenantId: claims.tenant_id,
+      ingredientId: item.ingredient_id,
+      entryUnitId: item.entry_unit_id,
+    });
+    if (!resolvedUnit.success) {
+      return { success: false, error: resolvedUnit.error };
+    }
+    items.push({ ...item, unit: resolvedUnit.unit });
+  }
 
   // Each item carries entry_unit_id (the issue-role unit the qty was entered in);
   // create_waste_entry stores it on stock_issue_items so the writeoff decrement
@@ -96,7 +110,7 @@ export async function createWasteEntry(
   const { data, error } = await supabase.rpc("create_waste_entry", {
     p_branch_id: parsed.data.branchId,
     p_location_id: parsed.data.locationId,
-    p_items: parsed.data.items,
+    p_items: items,
     p_source_type: parsed.data.sourceType,
     p_source_ref: (parsed.data.sourceRef ?? undefined) as never,
     p_notes: parsed.data.notes ?? undefined,
@@ -136,7 +150,7 @@ const createExpiryWriteoffSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().min(1),
+  unit: z.string().optional(),
   grnItemId: z.coerce.number().int().positive().optional(),
   note: z.string().max(500).optional(),
   photoUrls: z.array(z.string().url()).max(10).optional(),
@@ -190,10 +204,10 @@ export async function createExpiryWriteoff(
 
   const { data, error } = await supabase.rpc("create_expiry_writeoff", {
     p_branch_id: parsed.data.branchId,
-    p_location_id: locationId,
-    p_ingredient_id: parsed.data.ingredientId,
-    p_quantity: parsed.data.quantity,
-    p_unit: parsed.data.unit,
+	    p_location_id: locationId,
+	    p_ingredient_id: parsed.data.ingredientId,
+	    p_quantity: parsed.data.quantity,
+	    p_unit: "",
     p_grn_item_id: parsed.data.grnItemId ?? undefined,
     p_note: parsed.data.note ?? undefined,
     p_photo_urls: parsed.data.photoUrls ?? undefined,
@@ -201,21 +215,31 @@ export async function createExpiryWriteoff(
 
   if (error) {
     if (error.code === "42501") {
-      return { success: false, error: "Không có quyền xóa sổ tại chi nhánh này." };
+      return {
+        success: false,
+        error: "Không có quyền xóa sổ tại chi nhánh này.",
+      };
     }
     if (error.code === "22023") {
       const msg = error.message ?? "";
       if (msg.includes("photo")) {
-        return { success: false, error: "Cần chụp ảnh bằng chứng để xóa sổ lô này." };
+        return {
+          success: false,
+          error: "Cần chụp ảnh bằng chứng để xóa sổ lô này.",
+        };
       }
       if (msg.includes("wac_not_ready")) {
         return {
           success: false,
-          error: "Chưa có giá vốn cho nguyên liệu tại kho. Cần nhập/định giá trước.",
+          error:
+            "Chưa có giá vốn cho nguyên liệu tại kho. Cần nhập/định giá trước.",
         };
       }
       if (msg.includes("insufficient_stock")) {
-        return { success: false, error: "Tồn kho tại kho không đủ để xóa sổ số lượng này." };
+        return {
+          success: false,
+          error: "Tồn kho tại kho không đủ để xóa sổ số lượng này.",
+        };
       }
       return { success: false, error: "Dữ liệu xóa sổ không hợp lệ." };
     }

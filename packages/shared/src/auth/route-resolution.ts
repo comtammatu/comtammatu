@@ -65,73 +65,11 @@ export function isAdminRoutePath(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
-export function resolveLegacyRouteRedirectPath(
-  pathname: string,
-): string | null {
-  if (pathname === "/admin/finance" || pathname.startsWith("/admin/finance/")) {
-    const suffix = pathname.slice("/admin/finance".length);
-    return `/finance${suffix}`;
-  }
-
-  if (pathname === "/admin/staff" || pathname.startsWith("/admin/staff/")) {
-    const suffix = pathname.slice("/admin/staff".length);
-    return `/hr/staff${suffix}`;
-  }
-
-  // Reports one-door (D058 §4): the hub and inventory-value drill go to
-  // /finance; stock-movement's canonical home is /inventory/reports. Order
-  // matters — check the two-segment sub-paths before the broader hub prefix.
-  if (
-    pathname === "/admin/reports/stock-movement" ||
-    pathname.startsWith("/admin/reports/stock-movement/")
-  ) {
-    const suffix = pathname.slice("/admin/reports/stock-movement".length);
-    return `/inventory/reports${suffix}`;
-  }
-
-  if (
-    pathname === "/admin/reports/inventory-value" ||
-    pathname.startsWith("/admin/reports/inventory-value/")
-  ) {
-    const suffix = pathname.slice("/admin/reports/inventory-value".length);
-    return `/finance/inventory-value${suffix}`;
-  }
-
-  if (pathname === "/admin/reports" || pathname.startsWith("/admin/reports/")) {
-    const suffix = pathname.slice("/admin/reports".length);
-    return `/finance${suffix}`;
-  }
-
-  if (
-    pathname === "/admin/settings/branches" ||
-    pathname.startsWith("/admin/settings/branches/")
-  ) {
-    const suffix = pathname.slice("/admin/settings/branches".length);
-    return `/branches${suffix}`;
-  }
-
-  const branchMenuLimitsMatch = pathname.match(
-    /^\/br\/(\d+)\/menu-limits(\/.*|$)/,
-  );
-  if (branchMenuLimitsMatch) {
-    const branchId = branchMenuLimitsMatch[1];
-    const suffix = branchMenuLimitsMatch[2] ?? "";
-    return `/br/${branchId}/settings/menu-limits${suffix}`;
-  }
-
-  return null;
-}
-
 export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (pathname === "/admin" || pathname === "/admin/") {
-    return "dashboard";
+    return "settings";
   }
-  if (pathname.startsWith("/admin/dashboard")) return "dashboard";
   if (pathname.startsWith("/admin/settings")) return "settings";
-  // /admin/inventory/* RETIRED: pages removed; module ACL has empty allowedRoles.
-  // Mapping kept so URL space resolves to access-denied via standard ACL flow
-  // instead of falling through to admin-route landing redirect. See module-acl.ts.
-  if (pathname.startsWith("/admin/inventory")) return "inventory_admin";
 
   for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
     if (matchesPathPrefix(pathname, prefix)) {

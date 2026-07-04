@@ -120,7 +120,6 @@ export {
   isAdminRoutePath,
   isPublicAppPath,
   isRunnerPublicDisplayPath,
-  resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
 } from "./route-resolution";
 export type {

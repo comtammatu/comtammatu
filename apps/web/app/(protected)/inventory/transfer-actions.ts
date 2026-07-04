@@ -12,6 +12,7 @@ import {
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import type { TenantSupabase } from "./_lib/types";
+import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { PG_ERR } from "./_lib/constants";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
@@ -312,7 +313,7 @@ export async function fetchStockTransfers(
 const transferLineInputSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().min(1),
+  unit: z.string().optional(),
   // Issue-role unit the qty was entered in. NULL = already base;
   // stock_transfer_confirm_ship converts to base via inv_to_base().
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
@@ -467,12 +468,23 @@ export async function createStockTransfer(
     };
   }
 
-  const transferLines = (parsed.data.lines ?? []).map((line) => ({
-    ingredientId: line.ingredientId,
-    quantity: line.quantity,
-    unit: line.unit,
-    entryUnitId: line.entryUnitId ?? null,
-  }));
+  const transferLines = [];
+  for (const line of parsed.data.lines ?? []) {
+    const resolvedUnit = await resolveEntryUnitCode(supabase, {
+      tenantId: claims.tenant_id,
+      ingredientId: line.ingredientId,
+      entryUnitId: line.entryUnitId,
+    });
+    if (!resolvedUnit.success) {
+      return { success: false, error: resolvedUnit.error };
+    }
+    transferLines.push({
+      ingredientId: line.ingredientId,
+      quantity: line.quantity,
+      unit: resolvedUnit.unit,
+      entryUnitId: line.entryUnitId ?? null,
+    });
+  }
 
   const { data, error } = await supabase.rpc("create_stock_transfer_draft", {
     p_from_branch_id: fromBranchId,

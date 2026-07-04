@@ -5,6 +5,7 @@ import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction, withActionPositional } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
+import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 
 const ROLES = PROCUREMENT_ROLES;
@@ -234,7 +235,7 @@ const poWithLinesSchema = z.object({
         quantity: z.coerce
           .number()
           .positive({ error: "Số lượng phải lớn hơn 0" }),
-        unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
+        unit: z.string().optional(),
         // Purchase-role unit the qty was entered in. NULL = already base unit;
         // the RPC converts to the ingredient base via inv_to_base().
         entryUnitId: z.coerce.number().int().positive().nullable().optional(),
@@ -255,19 +256,32 @@ export const createPurchaseOrderWithLines = withAction(
       return { success: false, error: "Bạn chỉ được tạo PO cho kho của mình." };
     }
 
+    const lines = [];
+    for (const line of data.lines) {
+      const resolvedUnit = await resolveEntryUnitCode(supabase, {
+        tenantId: claims.tenant_id,
+        ingredientId: line.ingredientId,
+        entryUnitId: line.entryUnitId,
+      });
+      if (!resolvedUnit.success) {
+        return { success: false, error: resolvedUnit.error };
+      }
+      lines.push({
+        ingredient_id: line.ingredientId,
+        quantity: line.quantity,
+        unit: resolvedUnit.unit,
+        entry_unit_id: line.entryUnitId ?? null,
+        unit_price_est: line.unitPriceEst ?? null,
+      });
+    }
+
     const { data: row, error } = await supabase.rpc(
       "create_purchase_order_with_lines",
       {
         p_supplier_id: data.supplierId,
         p_branch_id: data.branchId,
         p_notes: data.notes ?? "",
-        p_lines: data.lines.map((l) => ({
-          ingredient_id: l.ingredientId,
-          quantity: l.quantity,
-          unit: l.unit,
-          entry_unit_id: l.entryUnitId ?? null,
-          unit_price_est: l.unitPriceEst ?? null,
-        })),
+        p_lines: lines,
       },
     );
 
@@ -340,7 +354,7 @@ const poLineSchema = z.object({
   poId: z.coerce.number().int().positive(),
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive({ error: "Số lượng phải lớn hơn 0" }),
-  unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
+  unit: z.string().optional(),
   // Purchase-role unit the qty was entered in. NULL = already base.
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   unitPriceEst: z.union([z.number().min(0), z.null()]).optional(),
@@ -387,6 +401,14 @@ export const upsertPurchaseOrderLine = withAction(
     const unitPrice = data.unitPriceEst ?? null;
     const lineTotal =
       unitPrice != null ? Number((data.quantity * unitPrice).toFixed(2)) : null;
+    const resolvedUnit = await resolveEntryUnitCode(supabase, {
+      tenantId: claims.tenant_id,
+      ingredientId: data.ingredientId,
+      entryUnitId: data.entryUnitId,
+    });
+    if (!resolvedUnit.success) {
+      return { success: false, error: resolvedUnit.error };
+    }
     const { data: row, error } = await supabase
       .from("purchase_order_items")
       .upsert(
@@ -395,7 +417,7 @@ export const upsertPurchaseOrderLine = withAction(
           po_id: data.poId,
           ingredient_id: data.ingredientId,
           quantity: data.quantity,
-          unit: data.unit,
+          unit: resolvedUnit.unit,
           entry_unit_id: data.entryUnitId ?? null,
           unit_price_est: unitPrice,
           line_total: lineTotal,

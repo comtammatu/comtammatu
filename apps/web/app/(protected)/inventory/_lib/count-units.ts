@@ -3,6 +3,7 @@ import type { IngredientRow, IngredientUnitRow } from "./types";
 export interface CountUnitOption {
   unitId: number;
   code: string;
+  label: string;
   isBase: boolean;
 }
 
@@ -10,20 +11,24 @@ export interface CountUnitOption {
  * Selectable counting units for an ingredient: every active ingredient_units
  * row, base unit first. Counting physical stock can be done in any of the
  * ingredient's units, so this is NOT filtered by role (allow_purchase/issue/
- * production). Returns [] when the ingredient carries no units[] so callers can
- * fall back to a free-text / base unit input.
+ * production).
  */
 export function getCountUnitOptions(
   ingredient: IngredientRow | undefined,
 ): CountUnitOption[] {
   const units = ingredient?.units ?? [];
   return units
-    .filter((u: IngredientUnitRow) => u.unit_code !== "")
+    .filter((u: IngredientUnitRow) => u.is_active && u.unit_code !== "")
     .sort((a, b) => {
       if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
       return a.sort_order - b.sort_order;
     })
-    .map((u) => ({ unitId: u.unit_id, code: u.unit_code, isBase: u.is_base }));
+    .map((u) => ({
+      unitId: u.unit_id,
+      code: u.unit_code,
+      label: u.unit_name?.trim() || u.unit_code,
+      isBase: u.is_base,
+    }));
 }
 
 /**

@@ -34,10 +34,10 @@ export function resolveRoleHomeLink(
   role: StaffRole,
   branchId?: number | null,
 ): ResolvedHomeLink {
-  if (canAccess(role, "dashboard")) {
+  if (role === "owner") {
     return {
-      label: APP_COPY_VI.adminSurface,
-      href: MODULE_ACL.dashboard.path,
+      label: MODULE_ACL.finance.label,
+      href: MODULE_ACL.finance.path,
     };
   }
 

@@ -194,7 +194,10 @@ export function AddGrnLineDialog({
         <SheetHeader>
           <SheetTitle>{grnCopy.addDialog.title}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 p-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-1 flex-col gap-4 p-4"
+        >
           <div className="flex flex-col gap-1.5">
             <Label>{grnCopy.addDialog.ingredientLabel}</Label>
             <Combobox
@@ -236,14 +239,12 @@ export function AddGrnLineDialog({
                   onValueChange={handleUnitChange}
                 >
                   <SelectTrigger id="grn-line-unit" aria-label={unit}>
-                    <SelectValue
-                      placeholder={grnCopy.addDialog.selectUnit}
-                    />
+                    <SelectValue placeholder={grnCopy.addDialog.selectUnit} />
                   </SelectTrigger>
                   <SelectContent>
                     {purchaseUnitOptions.map((o) => (
                       <SelectItem key={o.unitId} value={String(o.unitId)}>
-                        {o.code}
+                        {o.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -252,7 +253,8 @@ export function AddGrnLineDialog({
                 <Input
                   id="grn-line-unit"
                   value={unit}
-                  onChange={(event) => setUnit(event.target.value)}
+                  readOnly
+                  aria-readonly="true"
                   placeholder="kg"
                 />
               )}

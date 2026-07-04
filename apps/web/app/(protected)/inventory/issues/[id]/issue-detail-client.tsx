@@ -35,7 +35,6 @@ import {
   FormDialog,
   NumberField,
   TextareaField,
-  TextField,
 } from "@/components/form";
 import {
   DataTable,
@@ -107,16 +106,14 @@ type AddIssueLineDialogProps = {
 };
 
 const addIssueLineSchema = z.object({
-  ingredientId: z
-    .string()
-    .min(1, { error: ISSUES_VI.lineIngredientRequired }),
+  ingredientId: z.string().min(1, { error: ISSUES_VI.lineIngredientRequired }),
   quantity: z
     .string()
     .min(1, { error: ISSUES_VI.lineQuantityRequired })
     .refine((value) => Number(value) > 0, {
       error: ISSUES_VI.lineQuantityPositive,
     }),
-  unit: z.string().trim().min(1, { error: ISSUES_VI.lineUnitRequired }),
+  unit: z.string().optional(),
   // Issue-role unit id (as string) the qty was entered in; "" => free-text unit.
   entryUnitId: z.string().optional(),
   reason: z.string().trim().min(1, {
@@ -637,7 +634,7 @@ function AddIssueLineDialog({
       issueId,
       ingredientId: Number(values.ingredientId),
       quantity: Number(values.quantity),
-      unit: values.unit.trim(),
+      unit: values.unit?.trim() ?? "",
       entryUnitId: values.entryUnitId ? Number(values.entryUnitId) : null,
       reason: values.reason.trim(),
     });
@@ -752,22 +749,24 @@ function AddIssueLineDialog({
                     <SelectContent>
                       {issueUnitOptions.map((o) => (
                         <SelectItem key={o.unitId} value={String(o.unitId)}>
-                          {o.code}
+                          {o.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </Field>
               ) : (
-                <TextField
-                  control={form.control}
-                  name="unit"
-                  label={FORM_VI.unit}
-                  readOnly
-                  aria-readonly="true"
-                  placeholder="kg"
-                  required
-                />
+                <Field>
+                  <FieldLabel htmlFor="issue-line-unit-missing">
+                    {ISSUES_VI.unitLabel}
+                  </FieldLabel>
+                  <Select disabled value="">
+                    <SelectTrigger id="issue-line-unit-missing">
+                      <SelectValue placeholder={ISSUES_VI.selectUnit} />
+                    </SelectTrigger>
+                    <SelectContent />
+                  </Select>
+                </Field>
               )}
             </div>
 

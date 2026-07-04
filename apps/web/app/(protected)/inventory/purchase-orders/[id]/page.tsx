@@ -55,6 +55,7 @@ export async function PODetailPageContent({
       ingredient_id: number;
       quantity: number;
       unit: string;
+      entry_unit_id: number | null;
       unit_price_est: number | null;
       line_total: number | null;
       ingredients: {
@@ -90,7 +91,8 @@ export async function PODetailPageContent({
       name: ing?.name ?? "—",
       sku: "",
       qty: Number(l.quantity ?? 0),
-      unit: ing?.purchase_unit || l.unit || ing?.unit || "",
+      unit: l.unit || ing?.purchase_unit || ing?.unit || "",
+      entryUnitId: l.entry_unit_id ?? null,
       price,
       total,
       variance: 0,

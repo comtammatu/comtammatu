@@ -1,10 +1,6 @@
 import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
 import { MODULE_ACL, type ModuleKey } from "./module-acl";
-import {
-  isPublicAppPath,
-  resolveLegacyRouteRedirectPath,
-  resolveModuleFromPath,
-} from "./route-resolution";
+import { isPublicAppPath, resolveModuleFromPath } from "./route-resolution";
 
 export type RouteSurface =
   | "admin"
@@ -73,14 +69,14 @@ export const ROUTE_FAMILY_CONTRACTS = [
   },
   {
     id: "admin",
-    label: APP_COPY_VI.adminSurface,
+    label: APP_COPY_VI.settingsLabel,
     surface: "admin",
-    entryPath: MODULE_ACL.dashboard.path,
+    entryPath: MODULE_ACL.settings.path,
     matchPrefixes: ["/admin"],
-    moduleKeys: ["dashboard", "settings"],
+    moduleKeys: ["settings"],
     primaryNav: "admin-sidebar",
     backBehavior: "none",
-    breadcrumbRoot: APP_COPY_VI.adminSurface,
+    breadcrumbRoot: APP_COPY_VI.settingsLabel,
     requiresBranchId: false,
   },
   {
@@ -361,9 +357,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
 ] as const satisfies readonly RouteFamilyContract[];
 
 function normalizeRoutePath(pathname: string): string {
-  const pathOnly = pathname.split(/[?#]/, 1)[0] || "/";
-  const legacyRedirectPath = resolveLegacyRouteRedirectPath(pathOnly);
-  return legacyRedirectPath ?? pathOnly;
+  return pathname.split(/[?#]/, 1)[0] || "/";
 }
 
 function escapeRegex(input: string): string {

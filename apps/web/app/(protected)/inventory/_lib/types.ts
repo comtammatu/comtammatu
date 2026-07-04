@@ -6,6 +6,7 @@ export interface IngredientUnitRow {
   id: number;
   unit_id: number;
   unit_code: string;
+  unit_name?: string | null;
   to_base_factor: number;
   is_base: boolean;
   is_active: boolean;

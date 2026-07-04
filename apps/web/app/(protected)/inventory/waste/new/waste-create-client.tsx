@@ -47,7 +47,12 @@ export interface WasteFormContext {
     name: string;
     unit: string;
     unitCost: number | null;
-    issueUnits: Array<{ unitId: number; code: string; isBase: boolean }>;
+    issueUnits: Array<{
+      unitId: number;
+      code: string;
+      label: string;
+      isBase: boolean;
+    }>;
   }>;
   capStatus: {
     shiftKey: string;
@@ -292,41 +297,39 @@ export function WasteCreateClient({
         title={messages.inventory.waste.generalInfoTitle}
         description={messages.inventory.waste.generalInfoDescription}
       >
-          <div>
-            <Label htmlFor="waste-loc">
-              {messages.inventory.waste.location}
-            </Label>
-            <Select
-              value={locationId !== null ? String(locationId) : ""}
-              onValueChange={(v) => setLocationId(Number(v))}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger id="waste-loc">
-                <SelectValue
-                  placeholder={messages.inventory.waste.chooseLocation}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {context.locations.map((l) => (
-                  <SelectItem key={l.id} value={String(l.id)}>
-                    {l.name} ({l.kind})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="waste-form-notes">
-              {messages.inventory.waste.generalNotes}
-            </Label>
-            <Textarea
-              id="waste-form-notes"
-              value={formNotes}
-              onChange={(e) => setFormNotes(e.target.value)}
-              disabled={isSubmitting}
-              rows={2}
-            />
-          </div>
+        <div>
+          <Label htmlFor="waste-loc">{messages.inventory.waste.location}</Label>
+          <Select
+            value={locationId !== null ? String(locationId) : ""}
+            onValueChange={(v) => setLocationId(Number(v))}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger id="waste-loc">
+              <SelectValue
+                placeholder={messages.inventory.waste.chooseLocation}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {context.locations.map((l) => (
+                <SelectItem key={l.id} value={String(l.id)}>
+                  {l.name} ({l.kind})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="waste-form-notes">
+            {messages.inventory.waste.generalNotes}
+          </Label>
+          <Textarea
+            id="waste-form-notes"
+            value={formNotes}
+            onChange={(e) => setFormNotes(e.target.value)}
+            disabled={isSubmitting}
+            rows={2}
+          />
+        </div>
       </AppSection>
 
       <ItemGroup className="flex flex-col gap-3 p-0 rounded-none border-0">
@@ -351,176 +354,174 @@ export function WasteCreateClient({
               variant="outline"
               className="rounded-lg border bg-card p-0 flex flex-col items-stretch"
             >
-                <div className="p-4 pb-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-heading text-sm font-semibold">
-                      {messages.inventory.waste.lineTitle(idx + 1)}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <WasteTierBadge
-                        tier={preview.tier}
-                        photoRequired={preview.photoRequired}
-                        approvalRequired={preview.approvalRequired}
-                      />
-                      {lines.length > 1 ? (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          type="button"
-                          onClick={() => removeLine(line.uid)}
-                          disabled={isSubmitting}
-                          aria-label={messages.inventory.waste.removeLineAria}
-                          className="text-destructive"
-                        >
-                          <IconTrash className="size-4" />
-                        </Button>
-                      ) : null}
-                    </div>
+              <div className="p-4 pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-heading text-sm font-semibold">
+                    {messages.inventory.waste.lineTitle(idx + 1)}
                   </div>
-                </div>
-                <div className="flex flex-col gap-3 p-4 pt-0">
-                  <div>
-                    <Label>{PRODUCT_VI.rawIngredient}</Label>
-                    <SearchableSelect
-                      options={ingredientOptions}
-                      value={
-                        line.ingredientId !== null
-                          ? String(line.ingredientId)
-                          : ""
-                      }
-                      onValueChange={(v) => handleIngredientChange(line.uid, v)}
-                      placeholder={messages.inventory.waste.chooseIngredient}
+                  <div className="flex items-center gap-2">
+                    <WasteTierBadge
+                      tier={preview.tier}
+                      photoRequired={preview.photoRequired}
+                      approvalRequired={preview.approvalRequired}
                     />
-                  </div>
-
-                  {lineIssueUnits.length > 0 ? (
-                    <div>
-                      <Label htmlFor={`unit-${line.uid}`}>{FORM_VI.unit}</Label>
-                      <Select
-                        value={line.entryUnitId}
-                        onValueChange={(v) => {
-                          const opt = lineIssueUnits.find(
-                            (u) => String(u.unitId) === v,
-                          );
-                          updateLine(line.uid, {
-                            entryUnitId: v,
-                            unit: opt?.code ?? line.unit,
-                          });
-                        }}
+                    {lines.length > 1 ? (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        type="button"
+                        onClick={() => removeLine(line.uid)}
                         disabled={isSubmitting}
+                        aria-label={messages.inventory.waste.removeLineAria}
+                        className="text-destructive"
                       >
-                        <SelectTrigger id={`unit-${line.uid}`}>
-                          <SelectValue
-                            placeholder={messages.inventory.transfer.selectUnit}
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {lineIssueUnits.map((u) => (
-                            <SelectItem key={u.unitId} value={String(u.unitId)}>
-                              {u.code}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ) : null}
-
-                  <AntiSplitRollingMeter
-                    branchId={context.branch.id}
-                    ingredientId={line.ingredientId}
-                    pendingDelta={value}
-                    ingredientName={
-                      line.ingredientId
-                        ? ingredientById.get(line.ingredientId)?.name
-                        : undefined
-                    }
-                  />
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor={`qty-${line.uid}`}>
-                        {FORM_VI.quantity}
-                      </Label>
-                      <FormattedNumberInput
-                        id={`qty-${line.uid}`}
-                        maxFractionDigits={3}
-                        value={line.quantity}
-                        onValueChange={(value) =>
-                          updateLine(line.uid, { quantity: value })
-                        }
-                        disabled={isSubmitting}
-                        placeholder="0"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`cost-${line.uid}`}>
-                        {messages.inventory.waste.unitCostLabel(line.unit)}
-                      </Label>
-                      <FormattedNumberInput
-                        id={`cost-${line.uid}`}
-                        maxFractionDigits={0}
-                        value={line.unitCost}
-                        onValueChange={(value) =>
-                          updateLine(line.uid, { unitCost: value })
-                        }
-                        disabled={isSubmitting}
-                        placeholder="0"
-                      />
-                      <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                        {messages.inventory.waste.value(formatVND(value))}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor={`reason-${line.uid}`}>
-                      {FORM_VI.reason}
-                    </Label>
-                    <WasteReasonDropdown
-                      id={`reason-${line.uid}`}
-                      value={line.reasonCode as never}
-                      onChange={(v) => updateLine(line.uid, { reasonCode: v })}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-
-                  {preview.photoRequired ? (
-                    <div>
-                      <Label>
-                        {messages.inventory.waste.proofPhotoLabel(preview.tier)}
-                      </Label>
-                      <WastePhotoUpload
-                        tenantId={context.tenantId}
-                        issueId={`draft-${line.uid}`}
-                        value={line.photoUrls[0] ?? null}
-                        onChange={(url) =>
-                          updateLine(line.uid, {
-                            photoUrls: url ? [url] : [],
-                          })
-                        }
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                  ) : null}
-
-                  <div>
-                    <Label htmlFor={`note-${line.uid}`}>
-                      {messages.inventory.waste.lineNotes}
-                    </Label>
-                    <Textarea
-                      id={`note-${line.uid}`}
-                      value={line.note}
-                      onChange={(e) =>
-                        updateLine(line.uid, { note: e.target.value })
-                      }
-                      disabled={isSubmitting}
-                      rows={2}
-                    />
+                        <IconTrash className="size-4" />
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
-              </Item>
-            );
-          })}
+              </div>
+              <div className="flex flex-col gap-3 p-4 pt-0">
+                <div>
+                  <Label>{PRODUCT_VI.rawIngredient}</Label>
+                  <SearchableSelect
+                    options={ingredientOptions}
+                    value={
+                      line.ingredientId !== null
+                        ? String(line.ingredientId)
+                        : ""
+                    }
+                    onValueChange={(v) => handleIngredientChange(line.uid, v)}
+                    placeholder={messages.inventory.waste.chooseIngredient}
+                  />
+                </div>
+
+                {lineIssueUnits.length > 0 ? (
+                  <div>
+                    <Label htmlFor={`unit-${line.uid}`}>{FORM_VI.unit}</Label>
+                    <Select
+                      value={line.entryUnitId}
+                      onValueChange={(v) => {
+                        const opt = lineIssueUnits.find(
+                          (u) => String(u.unitId) === v,
+                        );
+                        updateLine(line.uid, {
+                          entryUnitId: v,
+                          unit: opt?.code ?? line.unit,
+                        });
+                      }}
+                      disabled={isSubmitting}
+                    >
+                      <SelectTrigger id={`unit-${line.uid}`}>
+                        <SelectValue
+                          placeholder={messages.inventory.transfer.selectUnit}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lineIssueUnits.map((u) => (
+                          <SelectItem key={u.unitId} value={String(u.unitId)}>
+                            {u.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
+
+                <AntiSplitRollingMeter
+                  branchId={context.branch.id}
+                  ingredientId={line.ingredientId}
+                  pendingDelta={value}
+                  ingredientName={
+                    line.ingredientId
+                      ? ingredientById.get(line.ingredientId)?.name
+                      : undefined
+                  }
+                />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor={`qty-${line.uid}`}>
+                      {FORM_VI.quantity}
+                    </Label>
+                    <FormattedNumberInput
+                      id={`qty-${line.uid}`}
+                      maxFractionDigits={3}
+                      value={line.quantity}
+                      onValueChange={(value) =>
+                        updateLine(line.uid, { quantity: value })
+                      }
+                      disabled={isSubmitting}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`cost-${line.uid}`}>
+                      {messages.inventory.waste.unitCostLabel(line.unit)}
+                    </Label>
+                    <FormattedNumberInput
+                      id={`cost-${line.uid}`}
+                      maxFractionDigits={0}
+                      value={line.unitCost}
+                      onValueChange={(value) =>
+                        updateLine(line.uid, { unitCost: value })
+                      }
+                      disabled={isSubmitting}
+                      placeholder="0"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                      {messages.inventory.waste.value(formatVND(value))}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor={`reason-${line.uid}`}>{FORM_VI.reason}</Label>
+                  <WasteReasonDropdown
+                    id={`reason-${line.uid}`}
+                    value={line.reasonCode as never}
+                    onChange={(v) => updateLine(line.uid, { reasonCode: v })}
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                {preview.photoRequired ? (
+                  <div>
+                    <Label>
+                      {messages.inventory.waste.proofPhotoLabel(preview.tier)}
+                    </Label>
+                    <WastePhotoUpload
+                      tenantId={context.tenantId}
+                      issueId={`draft-${line.uid}`}
+                      value={line.photoUrls[0] ?? null}
+                      onChange={(url) =>
+                        updateLine(line.uid, {
+                          photoUrls: url ? [url] : [],
+                        })
+                      }
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                ) : null}
+
+                <div>
+                  <Label htmlFor={`note-${line.uid}`}>
+                    {messages.inventory.waste.lineNotes}
+                  </Label>
+                  <Textarea
+                    id={`note-${line.uid}`}
+                    value={line.note}
+                    onChange={(e) =>
+                      updateLine(line.uid, { note: e.target.value })
+                    }
+                    disabled={isSubmitting}
+                    rows={2}
+                  />
+                </div>
+              </div>
+            </Item>
+          );
+        })}
       </ItemGroup>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

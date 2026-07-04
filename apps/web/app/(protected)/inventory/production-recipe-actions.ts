@@ -10,6 +10,7 @@ import {
   getAuthContextWithPermission,
 } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
+import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { PG_ERR } from "./_lib/constants";
 import {
   buildCsv,
@@ -35,7 +36,7 @@ const PRODUCTION_RECIPE_READ_PERMISSIONS = [
 const productionRecipeLineUpsertSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
+  unit: z.string().optional(),
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   yieldFactor: z.coerce.number().positive().default(1),
   note: z.string().optional(),
@@ -84,7 +85,8 @@ const importProductionRecipeRowSchema = z.object({
   finishedGoodId: z.number().int().positive(),
   ingredientId: z.number().int().positive(),
   quantity: z.number().positive({ error: "Số lượng phải lớn hơn 0" }),
-  unit: z.string().trim().min(1, { error: "Thiếu đơn vị" }),
+  unit: z.string().optional(),
+  entryUnitId: z.number().int().positive().nullable(),
   yieldFactor: z.number().positive({ error: "Yield phải lớn hơn 0" }),
   note: z.string().trim().optional(),
 });
@@ -155,7 +157,58 @@ type IngredientLookupRow = {
   measure_unit: string;
   item_kind: string;
   is_active: boolean;
+  units: Array<{
+    unit_id: number;
+    unit_code: string;
+    unit_name: string;
+    is_base: boolean;
+    is_active: boolean;
+    sort_order: number;
+  }>;
 };
+
+type IngredientLookupQueryRow = Omit<IngredientLookupRow, "units"> & {
+  ingredient_units?: Array<{
+    unit_id: number;
+    is_base: boolean;
+    is_active: boolean;
+    sort_order: number;
+    units: { code: string | null; name: string | null } | null;
+  }> | null;
+};
+
+function normalizeUnitKey(value: string): string {
+  return value.trim().toLocaleLowerCase("vi-VN");
+}
+
+function getDefaultImportEntryUnit(
+  ingredient: IngredientLookupRow,
+): IngredientLookupRow["units"][number] | null {
+  const activeUnits = ingredient.units
+    .filter((unit) => unit.is_active && unit.unit_code)
+    .sort((a, b) => {
+      if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
+      return a.sort_order - b.sort_order;
+    });
+  return activeUnits.find((unit) => unit.is_base) ?? activeUnits[0] ?? null;
+}
+
+function resolveImportEntryUnit(
+  ingredient: IngredientLookupRow,
+  unitText: string,
+): IngredientLookupRow["units"][number] | null {
+  const needle = normalizeUnitKey(unitText);
+  if (!needle) return getDefaultImportEntryUnit(ingredient);
+
+  const matches = ingredient.units.filter((unit) => {
+    if (!unit.is_active) return false;
+    return [unit.unit_code, unit.unit_name].some(
+      (candidate) => normalizeUnitKey(candidate) === needle,
+    );
+  });
+
+  return matches.length === 1 ? (matches[0] ?? null) : null;
+}
 
 export interface ProductionRecipeRow {
   id: number;
@@ -482,16 +535,30 @@ export async function importProductionRecipes(
   const { supabase, claims } = ctx;
   const { data, error } = await supabase
     .from("ingredients")
-    .select("id, name, unit, measure_unit, item_kind, is_active")
+    .select(
+      "id, name, unit, measure_unit, item_kind, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+    )
     .eq("tenant_id", claims.tenant_id);
 
   if (error) {
     return { success: false, error: "Không thể tải dữ liệu đối chiếu." };
   }
 
-  const ingredients = ((data ?? []) as IngredientLookupRow[]).filter(
-    (ingredient) => ingredient.is_active !== false,
-  );
+  const ingredients = ((data ?? []) as IngredientLookupQueryRow[])
+    .filter((ingredient) => ingredient.is_active !== false)
+    .map(({ ingredient_units, ...ingredient }) => ({
+      ...ingredient,
+      units: (ingredient_units ?? [])
+        .map((unit) => ({
+          unit_id: unit.unit_id,
+          unit_code: unit.units?.code ?? "",
+          unit_name: unit.units?.name ?? unit.units?.code ?? "",
+          is_base: unit.is_base,
+          is_active: unit.is_active,
+          sort_order: unit.sort_order,
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order),
+    }));
   const ingredientById = new Map(ingredients.map((item) => [item.id, item]));
   const finishedGoodByName = new Map<string, IngredientLookupRow[]>();
   const rawIngredientByName = new Map<string, IngredientLookupRow[]>();
@@ -513,6 +580,7 @@ export async function importProductionRecipes(
         ingredientId: number;
         quantity: number;
         unit: string;
+        entryUnitId: number | null;
         yieldFactor: number;
         note: string | null;
       }>;
@@ -636,15 +704,23 @@ export async function importProductionRecipes(
       return;
     }
 
-    const unit =
-      readCell(raw, "Đơn vị", "unit") ||
-      ingredient.measure_unit ||
-      ingredient.unit;
+    const unitRaw = readCell(raw, "Đơn vị", "unit");
+    const entryUnit = resolveImportEntryUnit(ingredient, unitRaw);
+    if (!entryUnit) {
+      issues.push({
+        row: rowNumber,
+        field: "Đơn vị",
+        message: "Đơn vị không thuộc nguyên liệu trong danh mục.",
+      });
+      return;
+    }
+
     const parsedRow = importProductionRecipeRowSchema.safeParse({
       finishedGoodId: finishedGood.id,
       ingredientId: ingredient.id,
       quantity,
-      unit,
+      unit: entryUnit.unit_code,
+      entryUnitId: entryUnit.unit_id,
       yieldFactor,
       note: readCell(raw, "Ghi chú", "note") || undefined,
     });
@@ -664,7 +740,8 @@ export async function importProductionRecipes(
     group.lines.push({
       ingredientId: parsedRow.data.ingredientId,
       quantity: parsedRow.data.quantity,
-      unit: parsedRow.data.unit.trim(),
+      unit: parsedRow.data.unit?.trim() ?? entryUnit.unit_code,
+      entryUnitId: parsedRow.data.entryUnitId,
       yieldFactor: parsedRow.data.yieldFactor,
       note: parsedRow.data.note?.trim() ? parsedRow.data.note.trim() : null,
     });
@@ -693,6 +770,7 @@ export async function importProductionRecipes(
           ingredient_id: line.ingredientId,
           quantity: line.quantity,
           unit: line.unit,
+          entry_unit_id: line.entryUnitId,
           note: line.note,
           yield_factor: line.yieldFactor,
         })),
@@ -745,17 +823,30 @@ export const upsertProductionRecipeLines = withAction(
       }
     }
 
-    const sb = supabase as unknown as RpcClient;
-    const { error } = await sb.rpc("upsert_production_recipe_lines", {
-      p_finished_good_id: data.finishedGoodId,
-      p_lines: data.lines.map((line) => ({
+    const lines = [];
+    for (const line of data.lines) {
+      const resolvedUnit = await resolveEntryUnitCode(supabase, {
+        tenantId: claims.tenant_id,
+        ingredientId: line.ingredientId,
+        entryUnitId: line.entryUnitId,
+      });
+      if (!resolvedUnit.success) {
+        return { success: false, error: resolvedUnit.error };
+      }
+      lines.push({
         ingredient_id: line.ingredientId,
         quantity: line.quantity,
-        unit: line.unit.trim(),
+        unit: resolvedUnit.unit,
         entry_unit_id: line.entryUnitId ?? null,
         note: line.note?.trim() ? line.note.trim() : null,
         yield_factor: line.yieldFactor,
-      })),
+      });
+    }
+
+    const sb = supabase as unknown as RpcClient;
+    const { error } = await sb.rpc("upsert_production_recipe_lines", {
+      p_finished_good_id: data.finishedGoodId,
+      p_lines: lines,
     });
 
     if (error) {
@@ -764,7 +855,10 @@ export const upsertProductionRecipeLines = withAction(
         error.code === PG_ERR.UNIQUE_VIOLATION ||
         message.includes("duplicate_ingredient")
       ) {
-        return { success: false, error: "Nguyên liệu bị trùng trong công thức." };
+        return {
+          success: false,
+          error: "Nguyên liệu bị trùng trong công thức.",
+        };
       }
       if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
         return {

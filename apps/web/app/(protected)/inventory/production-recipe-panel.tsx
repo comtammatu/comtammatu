@@ -13,11 +13,7 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import {
-  Field,
-  FieldError,
-  FieldLabel,
-} from "@comtammatu/ui/components/field";
+import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import {
   Item,
   ItemActions,
@@ -57,6 +53,7 @@ import type {
   ProductionRecipeRow,
   RawIngredientOption,
 } from "./production-types";
+import type { UnitOption } from "./_lib/types";
 import type { ActionResult } from "@comtammatu/shared/types";
 
 /* ─── Schema ─── */
@@ -78,7 +75,7 @@ const recipeLineItemSchema = z.object({
     .string()
     .min(1, { error: INVENTORY_VI.enterQuantity })
     .refine((v) => Number(v) > 0, { error: INVENTORY_VI.quantityPositive }),
-  unit: z.string().trim().min(1, { error: INVENTORY_VI.unitRequired }),
+  unit: z.string().optional(),
   entry_unit_id: z.string().optional(),
   yield_factor: z
     .string()
@@ -91,7 +88,9 @@ const recipeFormSchema = z
   .object({
     finished_good_id: z
       .string()
-      .min(1, { error: INVENTORY_VI.productionRecipeSelectFinishedGoodRequired })
+      .min(1, {
+        error: INVENTORY_VI.productionRecipeSelectFinishedGoodRequired,
+      })
       .refine((v) => Number(v) > 0, {
         error: INVENTORY_VI.productionRecipeFinishedGoodInvalid,
       }),
@@ -135,7 +134,8 @@ function recipeToLineFormValue(
     ingredient_id: String(recipe.ingredient_id),
     quantity: String(recipe.quantity),
     unit: recipe.unit,
-    entry_unit_id: recipe.entry_unit_id != null ? String(recipe.entry_unit_id) : "",
+    entry_unit_id:
+      recipe.entry_unit_id != null ? String(recipe.entry_unit_id) : "",
     yield_factor: String(recipe.yield_factor),
     note: recipe.note ?? "",
   };
@@ -167,6 +167,7 @@ interface ProductionRecipePanelProps {
   canManageCatalog: boolean;
   canManageRecipes: boolean;
   finishedGoods: FinishedGoodOption[];
+  unitOptions: UnitOption[];
   ingredients: IngredientOption[];
   recipes: ProductionRecipeRow[];
 }
@@ -177,6 +178,7 @@ function RecipeDialogFields({
   finishedGoodLocked,
   finishedGoodOptions,
   finishedGoodsOptions,
+  unitOptions,
   groupedRecipes,
   recipeLinesEditorIngredients,
   rawIngredientsOptions,
@@ -188,6 +190,7 @@ function RecipeDialogFields({
   finishedGoodLocked: boolean;
   finishedGoodOptions: { value: string; label: string }[];
   finishedGoodsOptions: FinishedGoodOption[];
+  unitOptions: UnitOption[];
   groupedRecipes: ProductionRecipeGroup[];
   recipeLinesEditorIngredients: RawIngredientOption[];
   rawIngredientsOptions: RawIngredientOption[];
@@ -236,7 +239,10 @@ function RecipeDialogFields({
         unit: ingredient.unit,
       });
     } else {
-      form.setValue(`lines.${targetIndex}.ingredient_id`, String(ingredient.id));
+      form.setValue(
+        `lines.${targetIndex}.ingredient_id`,
+        String(ingredient.id),
+      );
       form.setValue(`lines.${targetIndex}.unit`, ingredient.unit);
     }
   }
@@ -338,11 +344,13 @@ function RecipeDialogFields({
       <QuickFinishedGoodDialog
         open={quickFinishedGoodDialogOpen}
         onOpenChange={setQuickFinishedGoodDialogOpen}
+        unitOptions={unitOptions}
         onCreated={handleFinishedGoodCreated}
       />
       <QuickRawIngredientDialog
         open={quickRawIngredientDialogOpen}
         onOpenChange={setQuickRawIngredientDialogOpen}
+        unitOptions={unitOptions}
         onCreated={handleRawIngredientCreated}
       />
     </>
@@ -353,6 +361,7 @@ export function ProductionRecipePanel({
   canManageCatalog,
   canManageRecipes,
   finishedGoods,
+  unitOptions,
   ingredients,
   recipes,
 }: ProductionRecipePanelProps) {
@@ -498,7 +507,7 @@ export function ProductionRecipePanel({
       lines: values.lines.map((line) => ({
         ingredientId: Number(line.ingredient_id),
         quantity: Number(line.quantity),
-        unit: line.unit.trim(),
+        unit: line.unit?.trim() ?? "",
         entryUnitId: line.entry_unit_id ? Number(line.entry_unit_id) : null,
         yieldFactor: Number(line.yield_factor),
         note: line.note?.trim() || undefined,
@@ -687,6 +696,7 @@ export function ProductionRecipePanel({
             finishedGoodLocked={finishedGoodLocked}
             finishedGoodOptions={finishedGoodOptions}
             finishedGoodsOptions={finishedGoodsOptions}
+            unitOptions={unitOptions}
             groupedRecipes={groupedRecipes}
             recipeLinesEditorIngredients={recipeLinesEditorIngredients}
             rawIngredientsOptions={rawIngredientsOptions}

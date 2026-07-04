@@ -29,6 +29,7 @@ import type {
   ProductionOrderRow,
   ProductionRecipeRow,
 } from "./production-types";
+import type { UnitOption } from "./_lib/types";
 
 const PRODUCTION_ORDERS_VIEW = "orders";
 const PRODUCTION_RECIPES_VIEW = "recipes";
@@ -40,6 +41,7 @@ interface ProductionHubClientProps {
   canConfirmProduction: boolean;
   canAdjustStock: boolean;
   productionBranches: BranchOption[];
+  unitOptions: UnitOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
   orders: ProductionOrderRow[];
@@ -54,6 +56,7 @@ export function ProductionHubClient({
   canConfirmProduction,
   canAdjustStock,
   productionBranches,
+  unitOptions,
   ingredients,
   finishedGoods,
   orders,
@@ -158,6 +161,7 @@ export function ProductionHubClient({
           canManageCatalog={canManageCatalog}
           canManageRecipes={canManageRecipes}
           finishedGoods={finishedGoods}
+          unitOptions={unitOptions}
           ingredients={ingredients}
           recipes={recipes}
         />
@@ -175,6 +179,7 @@ export function ProductionHubClient({
           rawMaterialCount={rawMaterialCount}
           recipeFinishedGoodCount={recipeFinishedGoodCount}
           recipeLineCount={recipes.length}
+          unitOptions={unitOptions}
           canManageCatalog={canManageCatalog}
           canManageRecipes={canManageRecipes}
           onOpenRecipes={handleOpenRecipes}

@@ -3,6 +3,7 @@ import type { IngredientUnitRow } from "./types";
 export interface ProductionUnitOption {
   unitId: number;
   code: string;
+  label: string;
   isBase: boolean;
 }
 
@@ -10,27 +11,30 @@ export interface ProductionUnitOption {
 type HasUnits = { units?: IngredientUnitRow[] };
 
 /**
- * Selectable production-role units for an ingredient: its ingredient_units rows
- * where allow_production is true, base unit first. Returns [] when the
- * ingredient carries no units[] so callers can fall back to a free-text unit
- * input.
+ * Selectable production units for an ingredient: every active ingredient_units
+ * row, base unit first.
  */
 export function getProductionUnitOptions(
   ingredient: HasUnits | undefined,
 ): ProductionUnitOption[] {
   const units = ingredient?.units ?? [];
   return units
-    .filter((u: IngredientUnitRow) => u.allow_production && u.unit_code !== "")
+    .filter((u: IngredientUnitRow) => u.is_active && u.unit_code !== "")
     .sort((a, b) => {
       if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
       return a.sort_order - b.sort_order;
     })
-    .map((u) => ({ unitId: u.unit_id, code: u.unit_code, isBase: u.is_base }));
+    .map((u) => ({
+      unitId: u.unit_id,
+      code: u.unit_code,
+      label: u.unit_name?.trim() || u.unit_code,
+      isBase: u.is_base,
+    }));
 }
 
 /**
- * Default production unit for an ingredient: the base production unit when
- * present, else the first production-role unit, else null.
+ * Default production unit for an ingredient: the base unit when present, else
+ * the first active unit, else null.
  */
 export function getDefaultProductionUnit(
   ingredient: HasUnits | undefined,
@@ -42,25 +46,29 @@ export function getDefaultProductionUnit(
 /**
  * Selectable units for an ingredient regardless of role (any active unit), base
  * unit first. Used for production-order finished-good output, where the output
- * is expressed in the finished good's own unit. Returns [] when the ingredient
- * carries no units[] so callers can fall back to a free-text unit input.
+ * is expressed in the finished good's own unit.
  */
 export function getAnyUnitOptions(
   ingredient: HasUnits | undefined,
 ): ProductionUnitOption[] {
   const units = ingredient?.units ?? [];
   return units
-    .filter((u: IngredientUnitRow) => u.unit_code !== "")
+    .filter((u: IngredientUnitRow) => u.is_active && u.unit_code !== "")
     .sort((a, b) => {
       if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
       return a.sort_order - b.sort_order;
     })
-    .map((u) => ({ unitId: u.unit_id, code: u.unit_code, isBase: u.is_base }));
+    .map((u) => ({
+      unitId: u.unit_id,
+      code: u.unit_code,
+      label: u.unit_name?.trim() || u.unit_code,
+      isBase: u.is_base,
+    }));
 }
 
 /**
- * Default unit (any active role) for an ingredient: the base unit when present,
- * else the first unit, else null.
+ * Default unit for an ingredient: the base unit when present, else the first
+ * active unit, else null.
  */
 export function getDefaultAnyUnit(
   ingredient: HasUnits | undefined,

@@ -280,7 +280,7 @@ component — the same branch benefits both planes, and the office plane
 
 ### DASHBOARD
 
-**Exemplar:** `apps/web/app/(protected)/admin/dashboard/page.tsx`.
+**Exemplar:** `apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx`.
 
 - Skeleton: `AppPage` → `KpiRow` of `KpiCard` (`{label, value, delta, hint,
   icon, href}` — `href` drill-down is mandatory per the owner Q-spec) →

@@ -15,6 +15,13 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -51,6 +58,11 @@ import {
   updatePurchaseOrderStatus,
   upsertPurchaseOrderLine,
 } from "../../procurement-actions";
+import {
+  getDefaultPurchaseUnit,
+  getPurchaseUnitOptions,
+  type PurchaseUnitOption,
+} from "../../_lib/purchase-units";
 import type { IngredientRow } from "../../page";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
@@ -77,6 +89,7 @@ export type PODetail = {
     sku: string;
     qty: number;
     unit: string;
+    entryUnitId: number | null;
     price: number | null;
     total: number;
     variance: number;
@@ -141,13 +154,34 @@ export function PODetailClient({
   const canCreateGrn =
     po.status === "sent" || po.status === "partially_received";
   const statusBadge = getStatusBadgeMeta("inventory", po.status);
+  const ingredientById = useMemo(() => {
+    const map = new Map<number, IngredientRow>();
+    for (const ingredient of ingredients) map.set(ingredient.id, ingredient);
+    return map;
+  }, [ingredients]);
   const [lines, setLines] = useState<EditablePoLine[]>(() =>
-    po.items.map((item) => ({ ...item, dirty: false })),
+    po.items.map((item) => {
+      const ingredient = ingredientById.get(item.ingredientId);
+      const matchedUnit = getPurchaseUnitOptions(ingredient).find(
+        (option) => option.code === item.unit,
+      );
+      return {
+        ...item,
+        entryUnitId: item.entryUnitId ?? matchedUnit?.unitId ?? null,
+        unit: matchedUnit?.code ?? item.unit,
+        dirty: false,
+      };
+    }),
   );
   const [addIngredientId, setAddIngredientId] = useState("");
   const [addQty, setAddQty] = useState("");
   const [addUnit, setAddUnit] = useState("");
+  const [addEntryUnitId, setAddEntryUnitId] = useState<number | null>(null);
   const [addPrice, setAddPrice] = useState("");
+  const addIngredient = addIngredientId
+    ? ingredientById.get(Number(addIngredientId))
+    : undefined;
+  const addUnitOptions = getPurchaseUnitOptions(addIngredient);
   const totalAmount = useMemo(
     () => lines.reduce((sum, item) => sum + computePoLineTotal(item), 0),
     [lines],
@@ -172,8 +206,12 @@ export function PODetailClient({
 
   function handleAddIngredientChange(value: string) {
     setAddIngredientId(value);
-    const ingredient = ingredients.find((item) => item.id === Number(value));
-    setAddUnit(ingredient?.purchase_unit ?? ingredient?.unit ?? "");
+    const ingredient = ingredientById.get(Number(value));
+    const defaultUnit = getDefaultPurchaseUnit(ingredient);
+    setAddUnit(
+      defaultUnit?.code ?? ingredient?.purchase_unit ?? ingredient?.unit ?? "",
+    );
+    setAddEntryUnitId(defaultUnit?.unitId ?? null);
     setAddPrice(
       ingredient?.unit_cost != null ? String(Number(ingredient.unit_cost)) : "",
     );
@@ -183,7 +221,26 @@ export function PODetailClient({
     setAddIngredientId("");
     setAddQty("");
     setAddUnit("");
+    setAddEntryUnitId(null);
     setAddPrice("");
+  }
+
+  function handleLineUnitChange(index: number, value: string) {
+    const line = lines[index];
+    if (!line) return;
+    const ingredient = ingredientById.get(line.ingredientId);
+    const option = getPurchaseUnitOptions(ingredient).find(
+      (item) => String(item.unitId) === value,
+    );
+    if (!option) return;
+    patchLine(index, { entryUnitId: option.unitId, unit: option.code });
+  }
+
+  function handleAddUnitChange(value: string) {
+    const option = addUnitOptions.find((item) => String(item.unitId) === value);
+    if (!option) return;
+    setAddEntryUnitId(option.unitId);
+    setAddUnit(option.code);
   }
 
   function handleSaveLine(index: number) {
@@ -200,6 +257,7 @@ export function PODetailClient({
         ingredientId: line.ingredientId,
         quantity: line.qty,
         unit: line.unit.trim(),
+        entryUnitId: line.entryUnitId,
         unitPriceEst: line.price,
       });
       if (!res.success) {
@@ -248,6 +306,7 @@ export function PODetailClient({
         ingredientId,
         quantity: qty,
         unit: addUnit.trim(),
+        entryUnitId: addEntryUnitId,
         unitPriceEst: price,
       });
       if (!res.success || !res.data) {
@@ -263,6 +322,7 @@ export function PODetailClient({
         sku: ingredient.sku ?? "",
         qty,
         unit: addUnit.trim(),
+        entryUnitId: addEntryUnitId,
         price,
         total: computePoLineTotal({ qty, price }),
         variance: 0,
@@ -314,21 +374,52 @@ export function PODetailClient({
     {
       key: "item",
       header: poDetailCopy.item,
-      render: (item) => (
-        <div className="flex flex-col">
-          <span className="font-bold">{item.name}</span>
-          <span className="text-xs text-muted-foreground">{item.sku}</span>
-          {canEditLines ? (
-            <Input
-              value={item.unit}
-              readOnly
-              aria-readonly="true"
-              className="mt-2 h-8 max-w-24"
-              aria-label={FORM_VI.unit}
-            />
-          ) : null}
-        </div>
-      ),
+      render: (item, index) => {
+        const unitOptions = getPurchaseUnitOptions(
+          ingredientById.get(item.ingredientId),
+        );
+        return (
+          <div className="flex flex-col">
+            <span className="font-bold">{item.name}</span>
+            <span className="text-xs text-muted-foreground">{item.sku}</span>
+            {canEditLines ? (
+              unitOptions.length > 0 ? (
+                <Select
+                  value={
+                    item.entryUnitId != null ? String(item.entryUnitId) : ""
+                  }
+                  onValueChange={(value) => handleLineUnitChange(index, value)}
+                >
+                  <SelectTrigger
+                    className="mt-2 h-8 max-w-28"
+                    aria-label={FORM_VI.unit}
+                  >
+                    <SelectValue placeholder={FORM_VI.unit} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unitOptions.map((option) => (
+                      <SelectItem
+                        key={option.unitId}
+                        value={String(option.unitId)}
+                      >
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={item.unit}
+                  readOnly
+                  aria-readonly="true"
+                  className="mt-2 h-8 max-w-24"
+                  aria-label={FORM_VI.unit}
+                />
+              )
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       key: "qty",
@@ -622,7 +713,11 @@ export function PODetailClient({
                             index={index}
                             canEditLines={canEditLines}
                             isPending={isPending}
+                            unitOptions={getPurchaseUnitOptions(
+                              ingredientById.get(item.ingredientId),
+                            )}
                             patchLine={patchLine}
+                            onUnitChange={handleLineUnitChange}
                             onSaveLine={handleSaveLine}
                             onDeleteLine={(line) => void handleDeleteLine(line)}
                           />
@@ -743,14 +838,42 @@ export function PODetailClient({
                             className="h-9"
                             required
                           />
-                          <Input
-                            value={addUnit}
-                            readOnly
-                            aria-readonly="true"
-                            placeholder={poCopy.unitShort}
-                            className="h-9"
-                            required
-                          />
+                          {addUnitOptions.length > 0 ? (
+                            <Select
+                              value={
+                                addEntryUnitId != null
+                                  ? String(addEntryUnitId)
+                                  : ""
+                              }
+                              onValueChange={handleAddUnitChange}
+                            >
+                              <SelectTrigger
+                                className="h-9"
+                                aria-label={FORM_VI.unit}
+                              >
+                                <SelectValue placeholder={poCopy.unitShort} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {addUnitOptions.map((option) => (
+                                  <SelectItem
+                                    key={option.unitId}
+                                    value={String(option.unitId)}
+                                  >
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              value={addUnit}
+                              readOnly
+                              aria-readonly="true"
+                              placeholder={poCopy.unitShort}
+                              className="h-9"
+                              required
+                            />
+                          )}
                           <FormattedNumberInput
                             value={addPrice}
                             onValueChange={setAddPrice}
@@ -866,7 +989,9 @@ function PoLineMobileCard({
   index,
   canEditLines,
   isPending,
+  unitOptions,
   patchLine,
+  onUnitChange,
   onSaveLine,
   onDeleteLine,
 }: {
@@ -874,7 +999,9 @@ function PoLineMobileCard({
   index: number;
   canEditLines: boolean;
   isPending: boolean;
+  unitOptions: PurchaseUnitOption[];
   patchLine: (index: number, patch: Partial<EditablePoLine>) => void;
+  onUnitChange: (index: number, value: string) => void;
   onSaveLine: (index: number) => void;
   onDeleteLine: (line: EditablePoLine) => void;
 }) {
@@ -942,12 +1069,33 @@ function PoLineMobileCard({
         {canEditLines ? (
           <div className="col-span-2">
             <p className="text-muted-foreground">{FORM_VI.unit}</p>
-            <Input
-              value={item.unit}
-              readOnly
-              aria-readonly="true"
-              className="h-9"
-            />
+            {unitOptions.length > 0 ? (
+              <Select
+                value={item.entryUnitId != null ? String(item.entryUnitId) : ""}
+                onValueChange={(value) => onUnitChange(index, value)}
+              >
+                <SelectTrigger className="h-9" aria-label={FORM_VI.unit}>
+                  <SelectValue placeholder={FORM_VI.unit} />
+                </SelectTrigger>
+                <SelectContent>
+                  {unitOptions.map((option) => (
+                    <SelectItem
+                      key={option.unitId}
+                      value={String(option.unitId)}
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                value={item.unit}
+                readOnly
+                aria-readonly="true"
+                className="h-9"
+              />
+            )}
           </div>
         ) : null}
         <div className="col-span-2">

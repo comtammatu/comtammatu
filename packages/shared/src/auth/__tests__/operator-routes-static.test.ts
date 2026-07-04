@@ -126,7 +126,7 @@ test("post-login hub fallback is device and branch aware", () => {
   );
   assert.equal(
     resolvePostLoginRedirect(claims("owner", null), null, desktop),
-    "/admin/dashboard",
+    "/finance",
   );
   assert.equal(
     resolvePostLoginRedirect(claims("cashier", 7), null, phone),

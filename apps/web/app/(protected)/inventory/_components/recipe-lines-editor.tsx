@@ -225,7 +225,6 @@ export function RecipeLinesEditor<T extends FieldValues>({
               ingredients={ingredients}
               ingredientMap={ingredientMap}
               rowError={lineErrors?.[index]}
-              unitEditable={unitEditable}
               canRemove={rows.length > 1}
               onRemove={() => remove(index)}
               onIngredientChange={(value) =>
@@ -247,7 +246,6 @@ function RecipeLineRow<T extends FieldValues>({
   ingredients,
   ingredientMap,
   rowError,
-  unitEditable,
   canRemove,
   onRemove,
   onIngredientChange,
@@ -259,7 +257,6 @@ function RecipeLineRow<T extends FieldValues>({
   ingredients: RecipeLineIngredient[];
   ingredientMap: Map<number, RecipeLineIngredient>;
   rowError: FieldErrors<RecipeLineRowValue> | undefined;
-  unitEditable: boolean;
   canRemove: boolean;
   onRemove: () => void;
   onIngredientChange: (value: string) => void;
@@ -324,7 +321,10 @@ function RecipeLineRow<T extends FieldValues>({
                 name={field.name}
                 maxFractionDigits={3}
                 aria-invalid={!!rowError?.quantity}
-                className={cn("h-9", rowError?.quantity && "border-destructive")}
+                className={cn(
+                  "h-9",
+                  rowError?.quantity && "border-destructive",
+                )}
               />
             )}
           />
@@ -352,7 +352,10 @@ function RecipeLineRow<T extends FieldValues>({
                   }}
                 >
                   <SelectTrigger
-                    className={cn("h-9", rowError?.unit && "border-destructive")}
+                    className={cn(
+                      "h-9",
+                      rowError?.unit && "border-destructive",
+                    )}
                     aria-invalid={!!rowError?.unit}
                     aria-label={FORM_VI.unit}
                   >
@@ -361,7 +364,7 @@ function RecipeLineRow<T extends FieldValues>({
                   <SelectContent>
                     {unitOptions.map((opt) => (
                       <SelectItem key={opt.unitId} value={String(opt.unitId)}>
-                        {opt.code}
+                        {opt.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -377,11 +380,12 @@ function RecipeLineRow<T extends FieldValues>({
                   placeholder={INVENTORY_VI.unitPlaceholder}
                   {...field}
                   value={field.value ?? ""}
-                  readOnly={!unitEditable}
+                  readOnly
+                  aria-readonly="true"
                   aria-invalid={!!rowError?.unit}
                   className={cn(
                     "h-9",
-                    !unitEditable && "bg-muted/40",
+                    "bg-muted/40",
                     rowError?.unit && "border-destructive",
                   )}
                 />

@@ -1094,14 +1094,10 @@ const ACL_PATHS = [
 // Redirect shims legitimately resolve to no family (they only call redirect()).
 const ROUTE_MANIFEST_SHIM_ROUTES = new Set([
   "/admin",
-  "/admin/finance/[[...slug]]",
-  "/admin/reports",
-  "/admin/reports/stock-movement",
-  "/admin/reports/inventory-value",
   "/inventory/drafts",
 ]);
 // ACL family roots without a landing page still resolve through shared ACL.
-const ROUTE_MANIFEST_NO_PAGE_ACL = new Set(["/admin/inventory"]);
+const ROUTE_MANIFEST_NO_PAGE_ACL = new Set();
 
 function routePathFromPageFile(normalizedFile) {
   const segments = normalizedFile

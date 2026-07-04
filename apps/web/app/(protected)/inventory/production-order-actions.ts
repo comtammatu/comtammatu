@@ -8,6 +8,7 @@ import {
   getAuthContextWithPermission,
 } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
+import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { PG_ERR } from "./_lib/constants";
 import { PRODUCTION_ERROR_CODES } from "./production-types";
 import type { ProductionShortageRow } from "./production-types";
@@ -28,7 +29,7 @@ const PRODUCTION_ORDER_PERMISSIONS = [
 const productionLineSchema = z.object({
   finishedGoodId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
+  unit: z.string().optional(),
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
 });
 
@@ -306,17 +307,30 @@ export const createProductionOrder = withAction(
       return { success: false, error: access.error };
     }
 
+    const items = [];
+    for (const item of data.items) {
+      const resolvedUnit = await resolveEntryUnitCode(supabase, {
+        tenantId: claims.tenant_id,
+        ingredientId: item.finishedGoodId,
+        entryUnitId: item.entryUnitId,
+      });
+      if (!resolvedUnit.success) {
+        return { success: false, error: resolvedUnit.error };
+      }
+      items.push({
+        finishedGoodId: item.finishedGoodId,
+        quantity: item.quantity,
+        unit: resolvedUnit.unit,
+        entryUnitId: item.entryUnitId ?? null,
+      });
+    }
+
     const sb = supabase as unknown as RpcClient;
     const { error } = await sb.rpc("create_production_order", {
       p_branch_id: data.branchId,
       p_production_number: data.productionNumber,
       p_notes: data.notes ?? null,
-      p_items: data.items.map((item) => ({
-        finishedGoodId: item.finishedGoodId,
-        quantity: item.quantity,
-        unit: item.unit,
-        entryUnitId: item.entryUnitId ?? null,
-      })),
+      p_items: items,
     });
 
     if (error) {
@@ -341,7 +355,6 @@ export const createProductionOrder = withAction(
     return { success: true };
   },
 );
-
 
 export async function confirmProductionOrder(
   orderId: number,

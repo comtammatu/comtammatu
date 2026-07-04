@@ -29,6 +29,7 @@ import type {
   ProductionReadinessState,
   RawIngredientOption,
 } from "./production-types";
+import type { UnitOption } from "./_lib/types";
 
 interface ProductionStatsProps {
   orders: ProductionOrderRow[];
@@ -39,6 +40,7 @@ interface ProductionStatsProps {
   rawMaterialCount: number;
   recipeFinishedGoodCount: number;
   recipeLineCount: number;
+  unitOptions: UnitOption[];
   canManageCatalog: boolean;
   canManageRecipes: boolean;
   onOpenRecipes: () => void;
@@ -53,6 +55,7 @@ export function ProductionStats({
   rawMaterialCount,
   recipeFinishedGoodCount,
   recipeLineCount,
+  unitOptions,
   canManageCatalog,
   canManageRecipes,
   onOpenRecipes,
@@ -231,11 +234,13 @@ export function ProductionStats({
       <QuickFinishedGoodDialog
         open={quickFinishedGoodDialogOpen}
         onOpenChange={setQuickFinishedGoodDialogOpen}
+        unitOptions={unitOptions}
         onCreated={handleFinishedGoodCreated}
       />
       <QuickRawIngredientDialog
         open={quickRawIngredientDialogOpen}
         onOpenChange={setQuickRawIngredientDialogOpen}
+        unitOptions={unitOptions}
         onCreated={handleRawIngredientCreated}
       />
     </>

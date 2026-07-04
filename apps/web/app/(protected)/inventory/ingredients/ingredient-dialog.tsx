@@ -64,10 +64,7 @@ const unitRowSchema = z.object({
 
 const ingredientSchema = z
   .object({
-    name: z
-      .string()
-      .trim()
-      .min(1, { error: dialogCopy.nameRequired }),
+    name: z.string().trim().min(1, { error: dialogCopy.nameRequired }),
     sku: z.string().trim().optional(),
     category_id: z.string().trim().optional(),
     unit_cost: z.string().optional(),
@@ -300,7 +297,7 @@ function UnitRowCells({
               <SelectContent>
                 {unitOptions.map((u) => (
                   <SelectItem key={u.id} value={String(u.id)}>
-                    {u.code} — {u.name}
+                    {u.name}
                   </SelectItem>
                 ))}
               </SelectContent>

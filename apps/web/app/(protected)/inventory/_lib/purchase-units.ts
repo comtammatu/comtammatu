@@ -3,6 +3,7 @@ import type { IngredientUnitRow } from "./types";
 export interface PurchaseUnitOption {
   unitId: number;
   code: string;
+  label: string;
   isBase: boolean;
 }
 
@@ -11,31 +12,30 @@ export interface PurchaseUnitOption {
 type IngredientWithUnits = { units?: IngredientUnitRow[] };
 
 /**
- * Selectable purchase-role units for an ingredient: its ingredient_units rows
- * where allow_purchase AND is_active are true, base unit first. inv_to_base
- * rejects a unit row that is not is_active (23503), so the picker must never
- * offer one. Returns [] when the ingredient carries no units[] so callers can
- * fall back to a free-text unit input.
+ * Selectable purchase units for an ingredient: every active ingredient_units
+ * row, base unit first.
  */
 export function getPurchaseUnitOptions(
   ingredient: IngredientWithUnits | undefined,
 ): PurchaseUnitOption[] {
   const units = ingredient?.units ?? [];
   return units
-    .filter(
-      (u: IngredientUnitRow) =>
-        u.allow_purchase && u.is_active && u.unit_code !== "",
-    )
+    .filter((u: IngredientUnitRow) => u.is_active && u.unit_code !== "")
     .sort((a, b) => {
       if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
       return a.sort_order - b.sort_order;
     })
-    .map((u) => ({ unitId: u.unit_id, code: u.unit_code, isBase: u.is_base }));
+    .map((u) => ({
+      unitId: u.unit_id,
+      code: u.unit_code,
+      label: u.unit_name?.trim() || u.unit_code,
+      isBase: u.is_base,
+    }));
 }
 
 /**
- * Default purchase unit for an ingredient: the base purchase unit when present,
- * else the first purchase-role unit, else null.
+ * Default purchase unit for an ingredient: the base unit when present, else the
+ * first active unit, else null.
  */
 export function getDefaultPurchaseUnit(
   ingredient: IngredientWithUnits | undefined,

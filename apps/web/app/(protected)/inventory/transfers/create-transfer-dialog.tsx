@@ -431,7 +431,7 @@ export function CreateTransferForm({
                         <SelectGroup>
                           {lineUnitOptions.map((o) => (
                             <SelectItem key={o.unitId} value={String(o.unitId)}>
-                              {o.code}
+                              {o.label}
                             </SelectItem>
                           ))}
                         </SelectGroup>
@@ -441,9 +441,8 @@ export function CreateTransferForm({
                     <Input
                       className="h-8 w-16"
                       value={line.unit}
-                      onChange={(event) =>
-                        updateLine(line.key, { unit: event.target.value })
-                      }
+                      readOnly
+                      aria-readonly="true"
                       required
                     />
                   )}

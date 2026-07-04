@@ -36,11 +36,7 @@ import type { StocktakeLineBlind } from "../stocktake-actions";
 import type { CountUnitOption } from "../_lib/count-units";
 import type { DraftCounts } from "./stocktake-draft-saver";
 
-import {
-  FORM_VI,
-  INVENTORY_VI,
-  PRODUCT_VI,
-} from "@comtammatu/shared/messages";
+import { FORM_VI, INVENTORY_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 
 interface BlindCountingGridProps {
   lines: StocktakeLineBlind[];
@@ -119,12 +115,16 @@ export function BlindCountingGrid({
     {
       key: "ingredient",
       header: PRODUCT_VI.rawIngredient,
-      render: (line) => <div className="font-medium">{line.ingredientName}</div>,
+      render: (line) => (
+        <div className="font-medium">{line.ingredientName}</div>
+      ),
     },
     {
       key: "abc",
       header: "ABC",
-      render: (line) => <AbcClassChip class_={line.abcClass} compact withTooltip />,
+      render: (line) => (
+        <AbcClassChip class_={line.abcClass} compact withTooltip />
+      ),
     },
     {
       key: "unit",
@@ -333,7 +333,7 @@ function CountUnitSelect({
       <SelectContent>
         {options.map((option) => (
           <SelectItem key={option.unitId} value={String(option.unitId)}>
-            {option.code}
+            {option.label}
           </SelectItem>
         ))}
       </SelectContent>

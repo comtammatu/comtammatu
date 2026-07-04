@@ -6,6 +6,7 @@ import { CircleOff as IconCircleOff, Plus as IconPlus } from "lucide-react";
 import {
   Controller,
   useFieldArray,
+  useWatch,
   type Control,
   type FieldErrors,
   type UseFormReturn,
@@ -26,6 +27,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Combobox, FormDialog } from "@/components/form";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormattedNumberInput } from "./_components/formatted-number-input";
+import { getAnyUnitOptions, getDefaultAnyUnit } from "./_lib/production-units";
 import { createProductionOrder } from "./production-actions";
 import { defaultProductionNumber } from "./production-types";
 import type { BranchOption, FinishedGoodOption } from "./production-types";
@@ -33,7 +35,14 @@ import type { ActionResult } from "@comtammatu/shared/types";
 
 /* ─── Schema ─── */
 
-import { ACTIONS_VI, BRANCH_VI, FORM_VI, INVENTORY_VI, PRODUCT_VI, TOAST_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  BRANCH_VI,
+  FORM_VI,
+  INVENTORY_VI,
+  PRODUCT_VI,
+  TOAST_VI,
+} from "@comtammatu/shared/messages";
 const productionLineRowSchema = z.object({
   finished_good_id: z
     .string()
@@ -43,11 +52,14 @@ const productionLineRowSchema = z.object({
     .string()
     .min(1, { error: INVENTORY_VI.enterQuantity })
     .refine((v) => Number(v) > 0, { error: INVENTORY_VI.quantityPositive }),
-  unit: z.string().trim().min(1, { error: INVENTORY_VI.unitRequired }),
+  unit: z.string().optional(),
+  entry_unit_id: z.string().optional(),
 });
 
 const productionOrderSchema = z.object({
-  branch_id: z.string().min(1, { error: INVENTORY_VI.productionBranchRequired }),
+  branch_id: z
+    .string()
+    .min(1, { error: INVENTORY_VI.productionBranchRequired }),
   production_number: z
     .string()
     .trim()
@@ -62,10 +74,12 @@ type ProductionOrderFormValues = z.infer<typeof productionOrderSchema>;
 type ProductionLineRow = z.infer<typeof productionLineRowSchema>;
 
 function buildEmptyRow(fallback?: FinishedGoodOption): ProductionLineRow {
+  const defaultUnit = getDefaultAnyUnit(fallback);
   return {
     finished_good_id: fallback?.id ? String(fallback.id) : "",
     quantity: "1",
-    unit: fallback?.unit ?? "",
+    unit: defaultUnit?.code ?? fallback?.unit ?? "",
+    entry_unit_id: defaultUnit ? String(defaultUnit.unitId) : "",
   };
 }
 
@@ -88,19 +102,31 @@ function LineRowCells({
   index,
   finishedGoods,
   errors,
+  finishedGoodsMap,
   onRemove,
   canRemove,
   onFinishedGoodChange,
+  onUnitChange,
 }: {
   control: Control<ProductionOrderFormValues>;
   index: number;
   finishedGoods: FinishedGoodOption[];
   errors: FieldErrors<ProductionOrderFormValues>;
+  finishedGoodsMap: Map<number, FinishedGoodOption>;
   onRemove: () => void;
   canRemove: boolean;
   onFinishedGoodChange: (value: string) => void;
+  onUnitChange: (unitCode: string) => void;
 }) {
   const rowError = errors.lines?.[index];
+  const selectedFinishedGoodId = useWatch({
+    control,
+    name: `lines.${index}.finished_good_id`,
+  });
+  const selectedGood = selectedFinishedGoodId
+    ? finishedGoodsMap.get(Number(selectedFinishedGoodId))
+    : undefined;
+  const unitOptions = getAnyUnitOptions(selectedGood);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -118,7 +144,7 @@ function LineRowCells({
               options={finishedGoods.map((good) => ({
                 value: String(good.id),
                 label: good.name,
-                hint: good.unit,
+                hint: getDefaultAnyUnit(good)?.label ?? good.unit,
               }))}
               placeholder={INVENTORY_VI.selectFinishedGood}
               searchPlaceholder={INVENTORY_VI.searchFinishedGood}
@@ -148,19 +174,56 @@ function LineRowCells({
           )}
         />
 
-        <Controller
-          control={control}
-          name={`lines.${index}.unit`}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value ?? ""}
-              placeholder={INVENTORY_VI.unitAbbrev}
+        {unitOptions.length > 0 ? (
+          <Controller
+            control={control}
+            name={`lines.${index}.entry_unit_id`}
+            render={({ field }) => (
+              <Select
+                value={field.value ?? ""}
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  const option = unitOptions.find(
+                    (item) => String(item.unitId) === value,
+                  );
+                  if (option) onUnitChange(option.code);
+                }}
+              >
+                <SelectTrigger
+                  aria-label={FORM_VI.unit}
+                  aria-invalid={!!rowError?.unit}
+                  className={cn(
+                    "w-full",
+                    rowError?.unit && "border-destructive",
+                  )}
+                >
+                  <SelectValue placeholder={INVENTORY_VI.selectUnit} />
+                </SelectTrigger>
+                <SelectContent>
+                  {unitOptions.map((option) => (
+                    <SelectItem
+                      key={option.unitId}
+                      value={String(option.unitId)}
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        ) : (
+          <Select disabled value="">
+            <SelectTrigger
+              aria-label={FORM_VI.unit}
               aria-invalid={!!rowError?.unit}
-              className={cn(rowError?.unit && "border-destructive")}
-            />
-          )}
-        />
+              className={cn("w-full", rowError?.unit && "border-destructive")}
+            >
+              <SelectValue placeholder={INVENTORY_VI.selectUnit} />
+            </SelectTrigger>
+            <SelectContent />
+          </Select>
+        )}
 
         <Button
           type="button"
@@ -221,7 +284,12 @@ function ProductionOrderFields({
     return (value: string) => {
       const good = finishedGoodsMap.get(Number(value));
       if (good) {
-        form.setValue(`lines.${rowIndex}.unit`, good.unit);
+        const defaultUnit = getDefaultAnyUnit(good);
+        form.setValue(`lines.${rowIndex}.unit`, defaultUnit?.code ?? good.unit);
+        form.setValue(
+          `lines.${rowIndex}.entry_unit_id`,
+          defaultUnit ? String(defaultUnit.unitId) : "",
+        );
       }
     };
   }
@@ -230,7 +298,9 @@ function ProductionOrderFields({
     <>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="productionNumber">{INVENTORY_VI.productionNumber}</Label>
+          <Label htmlFor="productionNumber">
+            {INVENTORY_VI.productionNumber}
+          </Label>
           <Controller
             control={form.control}
             name="production_number"
@@ -241,9 +311,7 @@ function ProductionOrderFields({
                 value={field.value ?? ""}
                 placeholder="PRD-20260414-001"
                 aria-invalid={!!errors.production_number}
-                className={cn(
-                  errors.production_number && "border-destructive",
-                )}
+                className={cn(errors.production_number && "border-destructive")}
               />
             )}
           />
@@ -323,9 +391,16 @@ function ProductionOrderFields({
               index={index}
               finishedGoods={finishedGoodsOptions}
               errors={errors}
+              finishedGoodsMap={finishedGoodsMap}
               onRemove={() => remove(index)}
               canRemove={fields.length > 1}
               onFinishedGoodChange={handleFinishedGoodChangeFactory(index)}
+              onUnitChange={(unitCode) =>
+                form.setValue(`lines.${index}.unit`, unitCode, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
             />
           ))}
         </div>
@@ -375,15 +450,15 @@ export function ProductionOrderForm({
       .map((line) => ({
         finishedGoodId: Number(line.finished_good_id),
         quantity: Number(line.quantity),
-        unit: line.unit.trim(),
+        unit: line.unit?.trim() ?? "",
+        entryUnitId: line.entry_unit_id ? Number(line.entry_unit_id) : null,
       }))
       .filter(
         (line) =>
           Number.isFinite(line.finishedGoodId) &&
           line.finishedGoodId > 0 &&
           Number.isFinite(line.quantity) &&
-          line.quantity > 0 &&
-          line.unit.length > 0,
+          line.quantity > 0,
       );
 
     if (payloadLines.length === 0) {

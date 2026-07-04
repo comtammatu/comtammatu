@@ -19,7 +19,6 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -37,7 +36,11 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
-import { MoneyVndInput, NumberPadSheet, QuantityInput } from "@/components/form";
+import {
+  MoneyVndInput,
+  NumberPadSheet,
+  QuantityInput,
+} from "@/components/form";
 import { matchesSearch } from "@lib/search";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
@@ -968,12 +971,7 @@ function LineValueField({
   );
 }
 
-// Purchase-role unit picker for the GRN line, matching the PO create flow's
-// UnitField (new-po-client.tsx): dropdown when the ingredient carries
-// purchase-role ingredient_units. No allow_purchase+is_active unit means
-// entryUnitId stays null (qty is already base per inv_to_base), so the field
-// shows the ingredient's own base/measure unit code read-only instead of a
-// free-text input the user could set to a unit inv_to_base doesn't recognize.
+// Unit picker for the GRN line, matching the PO create flow's UnitField.
 function UnitField({
   options,
   entryUnitId,
@@ -1006,13 +1004,20 @@ function UnitField({
           <SelectContent>
             {options.map((o) => (
               <SelectItem key={o.unitId} value={String(o.unitId)}>
-                {o.code}
+                {o.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       ) : (
-        <Input value={unit} readOnly disabled className="h-9 text-sm" />
+        <Select disabled value="">
+          <SelectTrigger className="h-9 w-full text-sm" aria-label={unit}>
+            <SelectValue
+              placeholder={messages.inventory.grn.addDialog.selectUnit}
+            />
+          </SelectTrigger>
+          <SelectContent />
+        </Select>
       )}
     </div>
   );

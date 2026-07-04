@@ -18,7 +18,7 @@ source of truth. Khi kết luận, đối chiếu theo nhóm authority này:
 - UI implementation guide: [docs/modules/ui.md](../../modules/ui.md)
 - Canonical Inventory context: [docs/ref/inventory.md](../../ref/inventory.md), [docs/ref/inventory-sop.md](../../ref/inventory-sop.md), and [docs/modules/web-app.md](../../modules/web-app.md)
 
-Live route map (mọi route nằm dưới `apps/web/app/(protected)/inventory/*`; `/admin/inventory*` bị chặn bởi `inventory_admin` với `allowedRoles: []`):
+Live route map (mọi route nằm dưới `apps/web/app/(protected)/inventory/*`):
 
 - Tổng quan / điều hướng: `/inventory`, `/inventory/dashboard`, `/inventory/stock`, `/inventory/reports`, `/inventory/settings` (+ `expiry`, `qc`, `thresholds`).
 - Danh mục: `/inventory/ingredients`, `/inventory/recipes`.

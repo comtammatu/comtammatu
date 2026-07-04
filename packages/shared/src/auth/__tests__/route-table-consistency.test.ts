@@ -31,7 +31,7 @@ const BRANCH_ID = "7";
 // own explicit sub-prefixes — an arbitrary child would fall through to
 // null and is not representative of the family's real route space).
 const DEEPER_SUBPATH_BY_PREFIX: Record<string, string> = {
-  "/admin": "/admin/dashboard",
+  "/admin": "/admin/settings/general",
   "/menu": "/menu/categories",
   "/orders": "/orders/history",
   "/inventory": "/inventory/stock",
