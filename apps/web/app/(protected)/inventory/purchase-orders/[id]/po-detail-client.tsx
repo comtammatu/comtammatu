@@ -722,7 +722,10 @@ export function PODetailClient({
                           />
                         )}
                         mobileFooter={
-                          <div className="rounded-md border bg-muted/20 p-3 text-sm">
+                          <Item
+                            variant="outline"
+                            className="flex-col items-stretch gap-2 p-3 text-sm"
+                          >
                             <div className="flex items-center justify-between gap-3">
                               <span className="text-muted-foreground">
                                 {FORM_VI.totalAmount}
@@ -733,7 +736,7 @@ export function PODetailClient({
                                 )}
                               </span>
                             </div>
-                          </div>
+                          </Item>
                         }
                         desktopFooterRows={[
                           {
@@ -1005,7 +1008,7 @@ function PoLineMobileCard({
   onDeleteLine: (line: EditablePoLine) => void;
 }) {
   return (
-    <div className="rounded-md border bg-muted/20 p-4">
+    <Item variant="outline" className="flex-col items-stretch gap-4 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-bold">{item.name}</p>
@@ -1119,7 +1122,7 @@ function PoLineMobileCard({
           {poDetailCopy.saveLine}
         </Button>
       ) : null}
-    </div>
+    </Item>
   );
 }
 

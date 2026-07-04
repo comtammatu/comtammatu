@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { FormEvent, TransitionStartFunction } from "react";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
+import { Item } from "@comtammatu/ui/components/item";
 import {
   Sheet,
   SheetContent,
@@ -121,7 +122,7 @@ export function AmendOwnerDialog({
               <AlertDescription>{grnCopy.amend.warning}</AlertDescription>
             </Alert>
 
-            <div className="rounded-md border bg-muted/30 p-3 text-sm">
+            <Item variant="outline" className="flex-col items-stretch gap-1 p-3">
               <p className="font-bold">{line.name}</p>
               <p className="text-xs text-muted-foreground">
                 {grnCopy.amend.current(
@@ -130,7 +131,7 @@ export function AmendOwnerDialog({
                   line.cost.toLocaleString("vi-VN"),
                 )}
               </p>
-            </div>
+            </Item>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
