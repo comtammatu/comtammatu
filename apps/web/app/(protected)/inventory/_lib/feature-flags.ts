@@ -9,7 +9,6 @@ export const INVENTORY_FEATURE_FLAGS = {
   S11_WASTE_TIER: "inv_s11_waste_tier",
   INVENTORY_STOCKTAKE_REDESIGNED: "inv_stocktake_redesigned",
   POS_STOCK_OUTCOME_POSTING: "pos_stock_outcome_posting",
-  POS_STOCK_AVAILABILITY_GATE: "pos_stock_availability_gate",
 } as const;
 
 export type InventoryFeatureFlag =

@@ -29,35 +29,26 @@ export default async function BranchPosSettingsPage({
     redirect(`/br/${branchId}/settings`);
   }
 
-  const [
-    branchRes,
-    terminalsRes,
-    stockOutcomePostingEnabled,
-    stockAvailabilityGateEnabled,
-  ] = await Promise.all([
-    supabase
-      .from("branches")
-      .select("id, name, is_active")
-      .eq("id", branchId)
-      .eq("tenant_id", claims.tenant_id)
-      .eq("is_active", true)
-      .maybeSingle(),
-    supabase
-      .from("pos_terminals")
-      .select("id, name, branch_id, device_id, is_active")
-      .eq("branch_id", branchId)
-      .order("name"),
-    isFeatureEnabledForBranch(
-      supabase,
-      branchId,
-      INVENTORY_FEATURE_FLAGS.POS_STOCK_OUTCOME_POSTING,
-    ),
-    isFeatureEnabledForBranch(
-      supabase,
-      branchId,
-      INVENTORY_FEATURE_FLAGS.POS_STOCK_AVAILABILITY_GATE,
-    ),
-  ]);
+  const [branchRes, terminalsRes, stockOutcomePostingEnabled] =
+    await Promise.all([
+      supabase
+        .from("branches")
+        .select("id, name, is_active")
+        .eq("id", branchId)
+        .eq("tenant_id", claims.tenant_id)
+        .eq("is_active", true)
+        .maybeSingle(),
+      supabase
+        .from("pos_terminals")
+        .select("id, name, branch_id, device_id, is_active")
+        .eq("branch_id", branchId)
+        .order("name"),
+      isFeatureEnabledForBranch(
+        supabase,
+        branchId,
+        INVENTORY_FEATURE_FLAGS.POS_STOCK_OUTCOME_POSTING,
+      ),
+    ]);
 
   if (branchRes.error || !branchRes.data) notFound();
   if (terminalsRes.error) throw new Error("Không thể tải máy POS");
@@ -74,7 +65,6 @@ export default async function BranchPosSettingsPage({
       <StockControlCard
         branchId={branchId}
         initialPostingEnabled={stockOutcomePostingEnabled}
-        initialGateEnabled={stockAvailabilityGateEnabled}
       />
     </EmployeePage>
   );
