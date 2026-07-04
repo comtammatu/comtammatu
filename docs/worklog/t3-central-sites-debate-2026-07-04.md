@@ -1,5 +1,7 @@
 # T3 Debate — Central sites (Kho Tổng / Bếp Trung Tâm) as first-class contexts + dedicated mobile surfaces (2026-07-04)
 
+> Reconciled-through 4fc28dda
+
 Owner directive 2026-07-04: the two central sites must be selectable at the
 `/br` screen-selection step (owner sees Chi nhánh · Văn Phòng · Bếp Trung Tâm ·
 Kho Tổng), each site gets its OWN mobile-first feature set (large touch

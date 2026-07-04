@@ -126,24 +126,23 @@ const BANK_BINS: Record<string, string> = {
   WVN: "970457",
 };
 
-const MB_SPEAKER_PAYMENT_PREFIX = "VQRLOAMB";
-const VIETNAM_TIME_OFFSET_MS = 7 * 60 * 60 * 1000;
+// Fixed MB soundbox recognition token, NOT a live timestamp; mirrors the
+// literal in generate_order_payment_code (SQL). The transfer memo is this token
+// plus a 12-char CSPRNG suffix; SePay reconciles on the full string.
+const MB_SPEAKER_FIXED_TOKEN = "VQRLOAMB20260626100157757";
+const PAYMENT_CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-function randomPaymentDigits(length: number): string {
+function randomPaymentAlnum(length: number): string {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
   return Array.from(
     bytes,
-    (byte) => String(byte % 10),
+    (byte) => PAYMENT_CODE_ALPHABET[byte % PAYMENT_CODE_ALPHABET.length] ?? "",
   ).join("");
 }
 
 function generateVietQrPaymentCode(): string {
-  const vietnamIso = new Date(
-    Date.now() + VIETNAM_TIME_OFFSET_MS,
-  ).toISOString();
-  const timestamp = vietnamIso.replace(/\D/g, "").slice(0, 14);
-  return `${MB_SPEAKER_PAYMENT_PREFIX}${timestamp}${randomPaymentDigits(3)}`;
+  return `${MB_SPEAKER_FIXED_TOKEN} ${randomPaymentAlnum(12)}`;
 }
 
 export class VietQRProvider implements PaymentProvider {
@@ -170,7 +169,7 @@ export class VietQRProvider implements PaymentProvider {
     const bin = resolveBankBin(this.bankCode);
     const amount = Math.round(request.amount).toString();
     const description = request.description ?? providerRef;
-    const truncDesc = sanitizeAscii(description, 25);
+    const truncDesc = sanitizeAscii(description, 50);
     const qrData = buildVietQrEmvco({
       bankCode: this.bankCode,
       accountNo: this.bankAccount,
@@ -281,7 +280,7 @@ export function buildVietQrEmvco(input: {
   const bin = resolveBankBin(input.bankCode);
   if (!/^\d{6}$/.test(bin)) return null;
   const amount = Math.round(input.amount).toString();
-  const description = sanitizeAscii(input.description ?? "", 25);
+  const description = sanitizeAscii(input.description ?? "", 50);
   const merchantName = sanitizeAscii(input.accountName ?? "", 25) || "MERCHANT";
 
   const beneficiary = tlv("00", bin) + tlv("01", input.accountNo);

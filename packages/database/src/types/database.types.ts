@@ -10060,10 +10060,6 @@ export type Database = {
         }
         Returns: Json
       }
-      restore_stock_for_order: {
-        Args: { p_actor_id: string; p_order_id: number }
-        Returns: number
-      }
       retry_print_job: { Args: { p_job_id: number }; Returns: boolean }
       reverse_payment_and_post: { Args: { p_refund_id: number }; Returns: Json }
       revoke_permission: {
