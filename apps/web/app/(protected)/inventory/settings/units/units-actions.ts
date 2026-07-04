@@ -12,11 +12,17 @@ import { PG_ERR } from "../../_lib/constants";
 
 const UNITS_PATH = "/inventory/settings/units";
 
+export type UnitDimension = "mass" | "volume";
+
 export interface UnitRow {
   id: number;
   code: string;
   name: string;
   is_active: boolean;
+  dimension: UnitDimension | null;
+  is_standard: boolean;
+  standard_factor: number | null;
+  inUse: boolean;
 }
 
 const unitCode = z
@@ -49,17 +55,42 @@ export async function fetchUnits(): Promise<ActionResult<UnitRow[]>> {
 
   const { supabase, claims } = ctx;
 
-  const { data, error } = await supabase
-    .from("units")
-    .select("id, code, name, is_active")
-    .eq("tenant_id", claims.tenant_id)
-    .order("code");
+  const [unitsResult, mappingsResult] = await Promise.all([
+    supabase
+      .from("units")
+      .select("id, code, name, is_active, dimension, is_standard, standard_factor")
+      .eq("tenant_id", claims.tenant_id)
+      .order("code"),
+    supabase
+      .from("ingredient_units")
+      .select("unit_id, anchor_unit_id")
+      .eq("tenant_id", claims.tenant_id),
+  ]);
 
-  if (error) {
+  if (unitsResult.error || mappingsResult.error) {
     return { success: false, error: "Không thể tải danh sách đơn vị." };
   }
 
-  return { success: true, data: data ?? [] };
+  const referencedUnitIds = new Set<number>();
+  for (const mapping of mappingsResult.data ?? []) {
+    referencedUnitIds.add(mapping.unit_id);
+    if (mapping.anchor_unit_id != null) {
+      referencedUnitIds.add(mapping.anchor_unit_id);
+    }
+  }
+
+  const rows: UnitRow[] = (unitsResult.data ?? []).map((unit) => ({
+    id: unit.id,
+    code: unit.code,
+    name: unit.name,
+    is_active: unit.is_active,
+    dimension: unit.dimension as UnitDimension | null,
+    is_standard: unit.is_standard,
+    standard_factor: unit.standard_factor,
+    inUse: referencedUnitIds.has(unit.id),
+  }));
+
+  return { success: true, data: rows };
 }
 
 export const createUnit = withAction(
