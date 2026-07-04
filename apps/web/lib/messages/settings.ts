@@ -424,6 +424,29 @@ export const settings = {
     queueExpiryTitle: "Hạn dùng",
     queueExpiryMeta: (count: number) =>
       `${count.toLocaleString("vi-VN")} mặt hàng sắp hết hạn`,
+    queueDraftGrnsTitle: "Phiếu nhập dở",
+    queueDraftGrnsMeta: (count: number) =>
+      `${count.toLocaleString("vi-VN")} phiếu nhập chưa xong`,
+    queueOpenPosTitle: "Đơn chờ nhận",
+    queueOpenPosMeta: (count: number) =>
+      `${count.toLocaleString("vi-VN")} đơn đặt hàng chờ giao`,
+    queueDraftProductionTitle: "Lệnh nháp cần chốt",
+    queueDraftProductionMeta: (count: number) =>
+      `${count.toLocaleString("vi-VN")} lệnh sản xuất nháp`,
+    queueInboundTransfersTitle: "Chờ nhận nguyên liệu",
+    queueInboundTransfersMeta: (count: number) =>
+      `${count.toLocaleString("vi-VN")} chuyến hàng đang đến`,
+    centralSupplyTilesTitle: "Việc kho",
+    centralKitchenTilesTitle: "Việc bếp",
+    centralReceiveCta: "Nhận hàng",
+    centralProductionCta: "Tạo lệnh sản xuất",
+    centralNavReceive: "Nhận",
+    centralNavStock: "Tồn",
+    centralNavStocktake: "Kiểm",
+    centralNavProduction: "Sản xuất",
+    centralNavMore: "Thêm",
+    centralMoreTitle: "Thêm",
+    centralClockLink: "Chấm công",
     queueEmpty: "Không có việc cần xử lý",
     settingsBack: "Thiết lập",
     posBack: "Về POS",

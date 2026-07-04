@@ -3,7 +3,11 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Bell as IconBell, User as IconUser } from "lucide-react";
-import { canAccess, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
+import {
+  canAccess,
+  ROLE_LABEL_VI,
+  type BranchKind,
+} from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage } from "@/components/surface";
 import { AppHeader } from "@/components/app-header";
@@ -116,6 +120,7 @@ export default async function OperatorLayout({
           branchId={context.branchId}
           showEmployeeLinks={canUseEmployeePortal}
           showBranchManagement={canManageBranch}
+          branchKind={context.branch.branch_kind as BranchKind}
         />
       </div>
     </PwaRuntimeProvider>

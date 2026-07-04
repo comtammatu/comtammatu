@@ -1,26 +1,15 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator hub homepage displays inline vietnamese warning for clock-in gate */
 import {
-  Briefcase,
   CalendarCheck,
-  ChartBar,
   ChefHat,
   CheckCircle,
   ChevronRight,
   ClipboardCheck,
-  ClipboardList,
-  Clock,
   FileText,
   Hourglass,
   LayoutDashboard,
-  ListChecks,
-  Monitor,
-  MonitorUp,
   Package,
-  Send,
-  Settings,
   Truck,
-  Undo2,
-  Utensils,
 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -55,6 +44,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
 import { fetchBranchDayStatus, fetchBranchQueueCounts } from "./dashboard/data";
+import { resolveOperatorTileIcon } from "./operator-tile-icons";
 
 const branchCopy = messages.settings.branch;
 
@@ -73,6 +63,48 @@ function buildQueueRows(
   branchKind: BranchKind,
 ): QueueRow[] {
   const rows: QueueRow[] = [];
+  // Central-kind domain rows lead the feed (design contract screens 1+4):
+  // the site's own work queue comes before the shared approval rows.
+  if (counts.draftGrns != null) {
+    rows.push({
+      key: "draft-grns",
+      href: `${basePath}/stock/grn`,
+      icon: FileText,
+      title: branchCopy.queueDraftGrnsTitle,
+      meta: branchCopy.queueDraftGrnsMeta(counts.draftGrns),
+      count: counts.draftGrns,
+    });
+  }
+  if (counts.openPurchaseOrders != null) {
+    rows.push({
+      key: "open-pos",
+      href: `${basePath}/stock/purchase-orders`,
+      icon: Package,
+      title: branchCopy.queueOpenPosTitle,
+      meta: branchCopy.queueOpenPosMeta(counts.openPurchaseOrders),
+      count: counts.openPurchaseOrders,
+    });
+  }
+  if (counts.draftProductionOrders != null) {
+    rows.push({
+      key: "draft-production",
+      href: `${basePath}/stock/production`,
+      icon: ChefHat,
+      title: branchCopy.queueDraftProductionTitle,
+      meta: branchCopy.queueDraftProductionMeta(counts.draftProductionOrders),
+      count: counts.draftProductionOrders,
+    });
+  }
+  if (counts.inboundTransfers != null) {
+    rows.push({
+      key: "inbound-transfers",
+      href: `${basePath}/stock/receive`,
+      icon: Truck,
+      title: branchCopy.queueInboundTransfersTitle,
+      meta: branchCopy.queueInboundTransfersMeta(counts.inboundTransfers),
+      count: counts.inboundTransfers,
+    });
+  }
   if (counts.pendingCheckouts != null) {
     rows.push({
       key: "checkout-approvals",
@@ -175,37 +207,28 @@ function CompactQueueSection({ rows }: { rows: QueueRow[] }) {
   );
 }
 
-const ICONS = {
-  Briefcase,
-  CalendarCheck,
-  ChartBar,
-  ChefHat,
-  CheckCircle,
-  ClipboardCheck,
-  ClipboardList,
-  Clock,
-  FileText,
-  Hourglass,
-  LayoutDashboard,
-  ListChecks,
-  Monitor,
-  MonitorUp,
-  Package,
-  Send,
-  Settings,
-  Truck,
-  Undo2,
-  Utensils,
-} as const;
-
 function parseBranchId(raw: string): number | null {
   const branchId = Number(raw);
   return Number.isInteger(branchId) && branchId > 0 ? branchId : null;
 }
 
-function resolveIcon(icon: string) {
-  return ICONS[icon as keyof typeof ICONS] ?? Monitor;
-}
+// Approved home tile curation per central kind (design contract screens 1+4):
+// four job tiles; every other job stays reachable via the CTA, the queue feed,
+// the bottom nav, and /more. Suffixes are matched against tile hrefs.
+const CENTRAL_TILE_SUFFIXES: Record<string, readonly string[]> = {
+  central_supply: [
+    "/stock",
+    "/stock/stocktake",
+    "/stock/transfer",
+    "/stock/supplier-returns",
+  ],
+  central_kitchen: [
+    "/stock",
+    "/stock/grn",
+    "/stock/transfer",
+    "/stock/stocktake",
+  ],
+};
 
 export default async function OperatorHomePage({
   params,
@@ -222,7 +245,7 @@ export default async function OperatorHomePage({
   if (!context) notFound();
 
   const branchKind = context.branch.branch_kind as BranchKind;
-  const groups = resolveOperatorTiles(
+  const rawGroups = resolveOperatorTiles(
     claims.user_role,
     context.branchId,
     branchKind,
@@ -250,7 +273,7 @@ export default async function OperatorHomePage({
       : Promise.resolve(null),
     showOverview ? getUnreadCount().catch(() => null) : Promise.resolve(null),
     showQueue
-      ? fetchBranchQueueCounts(supabase, claims, context.branchId)
+      ? fetchBranchQueueCounts(supabase, claims, context.branchId, branchKind)
       : Promise.resolve(null),
   ]);
   const unreadCount = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
@@ -268,6 +291,38 @@ export default async function OperatorHomePage({
   const tilesLockedBeforeClockIn = isFloorRole && beforeClockIn;
 
   const queuePendingTotal = queueRows.reduce((sum, row) => sum + row.count, 0);
+
+  const isCentral = branchKind !== "branch";
+  const isCentralSupply = branchKind === "central_supply";
+  const centralSuffixes = CENTRAL_TILE_SUFFIXES[branchKind] ?? null;
+  // Central homes render one curated job-tile group; the full tile directory
+  // lives on /more (design contract screens 1+4).
+  const groups =
+    isCentral && centralSuffixes
+      ? (() => {
+          const stockTiles = rawGroups
+            .flatMap((group) => (group.id === "stock" ? group.tiles : []))
+            .filter((tile) =>
+              centralSuffixes.some((suffix) => tile.href.endsWith(suffix)),
+            )
+            .sort(
+              (a, b) =>
+                centralSuffixes.findIndex((s) => a.href.endsWith(s)) -
+                centralSuffixes.findIndex((s) => b.href.endsWith(s)),
+            );
+          return stockTiles.length > 0
+            ? [
+                {
+                  id: "central-jobs",
+                  title: isCentralSupply
+                    ? branchCopy.centralSupplyTilesTitle
+                    : branchCopy.centralKitchenTilesTitle,
+                  tiles: stockTiles,
+                },
+              ]
+            : [];
+        })()
+      : rawGroups;
 
   return (
     <EmployeePage title={APP_COPY_VI.operatorHome} hideHeaderOnMobile>
@@ -302,7 +357,28 @@ export default async function OperatorHomePage({
         </EmployeePanel>
       ) : null}
 
-      {queueRows.length > 0 ? (
+      {isCentral ? (
+        <Button asChild size="touch-lg" className="w-full">
+          <Link
+            href={
+              isCentralSupply
+                ? `${basePath}/stock/grn/new`
+                : `${basePath}/stock/production`
+            }
+          >
+            {isCentralSupply ? (
+              <Truck data-icon="inline-start" />
+            ) : (
+              <ChefHat data-icon="inline-start" />
+            )}
+            {isCentralSupply
+              ? branchCopy.centralReceiveCta
+              : branchCopy.centralProductionCta}
+          </Link>
+        </Button>
+      ) : null}
+
+      {queueRows.length > 0 || isCentral ? (
         <EmployeePanel
           title={branchCopy.queueTitle}
           icon={ClipboardCheck}
@@ -332,7 +408,7 @@ export default async function OperatorHomePage({
           links={group.tiles.map((tile) => ({
             key: `${group.id}-${tile.moduleKey}-${tile.href}`,
             href: tile.href,
-            icon: resolveIcon(tile.icon),
+            icon: resolveOperatorTileIcon(tile.icon),
             title: tile.label,
             disabled: tilesLockedBeforeClockIn && lockedGroupIds.has(group.id),
           }))}
@@ -341,6 +417,23 @@ export default async function OperatorHomePage({
           wideColumns
         />
       ))}
+
+      {isCentral ? (
+        <div className="flex items-center justify-center gap-4">
+          <Link
+            href={`${basePath}/shift/clock`}
+            className="text-sm text-muted-foreground underline underline-offset-4"
+          >
+            {branchCopy.centralClockLink}
+          </Link>
+          <Link
+            href={`${basePath}/more`}
+            className="text-sm text-muted-foreground underline underline-offset-4"
+          >
+            {branchCopy.centralMoreTitle}
+          </Link>
+        </div>
+      ) : null}
 
       {showOverview && day ? (
         <EmployeePanel title={messages.settings.branch.hubOverviewTitle} size="sm">

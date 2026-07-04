@@ -149,7 +149,7 @@ declared before their broader siblings.
 | `hr` | workspace | `/hr` | `/hr` | `hr`, `hr_payroll`, `staff` | no |
 | `notifications` | workspace | `/notifications` | `/notifications` | `notifications` | no |
 | `branch-picker` | branch_operation | `/br` | `/br` | `branch_picker` | no |
-| `operator-home` | branch_operation | `/br/[branchId]` | `/br/[branchId]` | `operator_home` | yes |
+| `operator-home` | branch_operation | `/br/[branchId]` | `/br/[branchId]`, `/br/[branchId]/more` | `operator_home` | yes |
 | `operator-shift-checkout-approvals` | branch_operation | `/br/[branchId]/shift/checkout-approvals` | `/br/[branchId]/shift/checkout-approvals` | `employee_checkout_approvals` | yes |
 | `operator-shift-leave-approvals` | branch_operation | `/br/[branchId]/shift/leave-approvals` | `/br/[branchId]/shift/leave-approvals` | `employee_leave_approvals` | yes |
 | `operator-shift` | branch_operation | `/br/[branchId]/shift` | `/br/[branchId]/shift` | `operator_home` | yes |
@@ -201,7 +201,7 @@ separate gates (route bucket here, permission key at the mutation site).
 | hr | `/hr` | branch_manager/owner | `hr:approve_checkout`, `hr:approve_leave_request`, `hr:manage_employee`, `hr:request_leave`, `hr:view_employee`, `staff:assign_permission`, `staff:assign_position`, `staff:manage`, `staff:view` |
 | notifications | `/notifications` | branch_manager/cashier/chef/office/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-picker | `/br` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
-| operator-home | `/br/[branchId]` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
+| operator-home | `/br/[branchId]`, `/br/[branchId]/more` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-shift-checkout-approvals | `/br/[branchId]/shift/checkout-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-shift-leave-approvals | `/br/[branchId]/shift/leave-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | operator-shift | `/br/[branchId]/shift` | branch_manager/cashier/chef/owner/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |

@@ -15,6 +15,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/admin/settings/printers/page.tsx": "HUB",
   "apps/web/app/(protected)/admin/settings/printers/templates/page.tsx": "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx": "DASHBOARD",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/more/page.tsx": "HUB",
   "apps/web/app/(protected)/br/[branchId]/(operator)/orders/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx": "HUB",
   "apps/web/app/(protected)/br/[branchId]/(operator)/profile/page.tsx": "EMBED-WRAPPER",
