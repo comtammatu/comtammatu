@@ -10,7 +10,6 @@ import {
   getAuthContextWithPermission,
 } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
-import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { PG_ERR } from "./_lib/constants";
 import {
   buildCsv,
@@ -847,25 +846,13 @@ export const upsertProductionRecipeLines = withAction(
       }
     }
 
-    const lines = [];
-    for (const line of data.lines) {
-      const resolvedUnit = await resolveEntryUnitCode(supabase, {
-        tenantId: claims.tenant_id,
-        ingredientId: line.ingredientId,
-        entryUnitId: line.entryUnitId,
-      });
-      if (!resolvedUnit.success) {
-        return { success: false, error: resolvedUnit.error };
-      }
-      lines.push({
+    const lines = data.lines.map((line) => ({
         ingredient_id: line.ingredientId,
         quantity: line.quantity,
-        unit: resolvedUnit.unit,
         entry_unit_id: line.entryUnitId ?? null,
         note: line.note?.trim() ? line.note.trim() : null,
         yield_factor: line.yieldFactor,
-      });
-    }
+      }));
 
     const sb = supabase as unknown as RpcClient;
     const { error } = await sb.rpc("upsert_production_recipe_lines", {

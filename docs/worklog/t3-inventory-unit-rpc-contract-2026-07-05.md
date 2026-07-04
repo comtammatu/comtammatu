@@ -32,6 +32,7 @@ Implement a new migration plus baseline mirror for the helper and affected RPC b
 - Removed `unit` from transaction write schemas: PO, GRN, stock issue, waste, transfer, menu recipe, production order, production recipe.
 - Removed client payload `unit` from transaction callers, including expiry writeoff and quick stock issue.
 - Kept UI-local `unit` state only where it drives picker display/draft row rendering; those values now use catalog labels (`unit_name`) rather than unit codes when a catalog option exists.
+- Removed leftover action-side `unit` derivation from RPC-backed writes whose SQL now calls `inventory_entry_unit_code`: PO create, transfer create, waste create, production order, menu recipes, and production recipes. Direct table writes still derive `unit` in the server action until the legacy columns are removed.
 - Added static tests that reject legacy `unit` in transaction action schemas/callers.
 - Added migration `20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql` and baseline mirror to drop `create_expiry_writeoff(..., p_unit text, ...)`.
 

@@ -12,7 +12,6 @@ import {
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import type { TenantSupabase } from "./_lib/types";
-import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { PG_ERR } from "./_lib/constants";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
@@ -484,23 +483,11 @@ export async function createStockTransfer(
     };
   }
 
-  const transferLines = [];
-  for (const line of parsed.data.lines ?? []) {
-    const resolvedUnit = await resolveEntryUnitCode(supabase, {
-      tenantId: claims.tenant_id,
-      ingredientId: line.ingredientId,
-      entryUnitId: line.entryUnitId,
-    });
-    if (!resolvedUnit.success) {
-      return { success: false, error: resolvedUnit.error };
-    }
-    transferLines.push({
+  const transferLines = (parsed.data.lines ?? []).map((line) => ({
       ingredientId: line.ingredientId,
       quantity: line.quantity,
-      unit: resolvedUnit.unit,
       entryUnitId: line.entryUnitId ?? null,
-    });
-  }
+    }));
 
   const { data, error } = await supabase.rpc("create_stock_transfer_draft", {
     p_from_branch_id: fromBranchId,
