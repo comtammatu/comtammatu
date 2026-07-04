@@ -108,9 +108,10 @@ Approved project utilities:
   shell chrome affected by mobile safe areas.
 - `no-scrollbar` hides scrollbars on horizontally scrolling chrome rails
   (sidebar, command list, bottom-nav, filter rails) without disabling scroll.
-- `mascot-cotlet` + `animate-cotlet-idle` render the Cốt Lết sprite-sheet idle
-  loop; limited to the runner idle board (the documented § G full-screen idle
-  exception) and always gated with `motion-safe:`.
+- `mascot-cotlet` + `animate-cotlet-idle` / `animate-cotlet-waiting` /
+  `animate-cotlet-waving` render the Cốt Lết sprite-sheet status loops; limited
+  to the runner idle board (the documented § G full-screen idle exception) and
+  always gated with `motion-safe:`.
 - `shadow-effect-*` (popover / dialog / drawer / tooltip / card-hover),
   `bg-effect-scrim`, and `drawer-scrim` are the Má Tư DS depth utilities backed by
   the `--effect-*` token family (see § Elevation). The `--motion-*` / `--ease-*`
@@ -322,7 +323,7 @@ Arbitrary `duration-[…]` is NOT allowed in app code.
 
 **Easing.** Use Tailwind defaults: bare `transition*` (default ease), `ease-out` for enter, `ease-linear` only for continuous indicators (spinner, progress). Arbitrary `ease-[cubic-bezier(…)]` is reserved for the shared primitive layer and is not allowed in app surfaces.
 
-**Allowed animations.** `animate-spin` (only via `Spinner`), `animate-pulse` (skeleton / loading placeholders), `animate-in` / `animate-out` and `animate-accordion-*` (Radix-driven, via primitives), `animate-caret-blink` (input caret), `motion-safe:animate-cotlet-idle` (runner idle mascot only — the § G full-screen idle exception). No custom `@keyframes` outside `globals.css`.
+**Allowed animations.** `animate-spin` (only via `Spinner`), `animate-pulse` (skeleton / loading placeholders), `animate-in` / `animate-out` and `animate-accordion-*` (Radix-driven, via primitives), `animate-caret-blink` (input caret), `motion-safe:animate-cotlet-idle` / `motion-safe:animate-cotlet-waiting` / `motion-safe:animate-cotlet-waving` (runner idle mascot only — the § G full-screen idle exception). No custom `@keyframes` outside `globals.css`.
 
 **Press feedback.** `active:scale-[…]` (≥ `0.97`) is allowed on tap targets for tactile press feedback. `hover:scale-*` grow/shrink on hover is forbidden on ERP surfaces — it reads as decorative.
 
@@ -501,12 +502,12 @@ Forbidden wrappers:
 primitives. Existing direct app imports are a frozen per-file baseline, not a
 license to spread the pattern. New app code must pick the owning adapter first:
 
-| Primitive import                         | Default route for new app code                                                      |
-| ---------------------------------------- | ----------------------------------------------------------------------------------- |
+| Primitive import                         | Default route for new app code                                                                                                               |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@comtammatu/ui/components/card`         | App card role: `AppSection`, `AppLinkCard`, `KpiCard` for metrics only, `InteractiveCard`, `OperationalBoardCard`, or a route-scoped adapter |
-| `@comtammatu/ui/components/table`        | `DataTable`, `TableEmptyStateRow`, or a documented document/line-sheet adapter      |
-| `@comtammatu/ui/components/dialog`       | `FormDialog`, `Sheet`, Page flow, or an approved short contextual dialog            |
-| `@comtammatu/ui/components/alert-dialog` | shared `confirm()`, `FormDialog` with reason input, or an approved destructive flow |
+| `@comtammatu/ui/components/table`        | `DataTable`, `TableEmptyStateRow`, or a documented document/line-sheet adapter                                                               |
+| `@comtammatu/ui/components/dialog`       | `FormDialog`, `Sheet`, Page flow, or an approved short contextual dialog                                                                     |
+| `@comtammatu/ui/components/alert-dialog` | shared `confirm()`, `FormDialog` with reason input, or an approved destructive flow                                                          |
 
 `scripts/check-ui-contract.mjs` enforces this with the
 `raw-*-import-file-baseline` gates. The baseline only shrinks. Expanding a file's

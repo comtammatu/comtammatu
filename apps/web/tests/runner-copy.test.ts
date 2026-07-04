@@ -3,10 +3,18 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
-const runnerPageSource = readFileSync(
+const runnerPageOnlySource = readFileSync(
   join(process.cwd(), "app/(protected)/br/[branchId]/runner/page.tsx"),
   "utf8",
 );
+const runnerOrderBoardSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/runner/runner-order-board-client.tsx",
+  ),
+  "utf8",
+);
+const runnerPageSource = `${runnerPageOnlySource}\n${runnerOrderBoardSource}`;
 const runnerWaitTimeSource = readFileSync(
   join(
     process.cwd(),
@@ -38,7 +46,10 @@ test("Runner page follows the KDS order-list vocabulary", () => {
     runnerPageSource,
     /import \{ createServiceClient \} from "@comtammatu\/database\/supabase\/service";/,
   );
-  assert.match(runnerPageSource, /import \{ notFound \} from "next\/navigation";/);
+  assert.match(
+    runnerPageSource,
+    /import \{ notFound \} from "next\/navigation";/,
+  );
   assert.match(
     runnerPageSource,
     /type RunnerSupabase = ReturnType<typeof createServiceClient>;/,
@@ -59,14 +70,14 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.doesNotMatch(runnerPageSource, /@\/_lib\/auth/);
   assert.doesNotMatch(runnerPageSource, /claims\.tenant_id/);
   assert.match(runnerPageSource, /eyebrow: MODULE_LABELS_VI\.runner/);
-  assert.match(runnerPageSource, /idleEmptyTitle: "Đang chờ món mới\."/);
+  assert.match(runnerPageSource, /idleEmptyTitle: "Chưa có món cần phục vụ\."/);
   assert.match(
     runnerPageSource,
-    /idleDoneTitle: "Các món đã được phục vụ đầy đủ\."/,
+    /idleDoneTitle: "Đã phục vụ hết món đang chờ\."/,
   );
   assert.match(
     runnerPageSource,
-    /idleBrandLine: "Thịt tươi 100% - chúc quý khách dùng bữa ngon miệng\."/,
+    /idleBrandLine: "Món mới sẽ hiện ngay khi bếp gọi phục vụ\."/,
   );
   assert.match(runnerPageSource, /wifi: "WiFi: Má Tư"/);
   assert.match(runnerPageSource, /password: "Mật khẩu: xincamon"/);
@@ -88,7 +99,10 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /\.in\("status", RUNNER_ACTIVE_STATUSES\)/);
   assert.match(runnerPageSource, /const RUNNER_ROW_LIMIT_BASE = 4;/);
   assert.match(runnerPageSource, /const RUNNER_ROW_LIMIT_XL = 6;/);
-  assert.match(runnerPageSource, /rows\.slice\(0, RUNNER_ROW_LIMIT_XL\)/);
+  assert.match(
+    runnerPageSource,
+    /displayRows\.slice\(0, RUNNER_ROW_LIMIT_XL\)/,
+  );
   assert.match(runnerPageSource, /hiddenBelowXl && "hidden xl:grid"/);
   assert.match(
     runnerPageSource,
@@ -112,11 +126,23 @@ test("Runner page follows the KDS order-list vocabulary", () => {
     runnerPageSource,
     /aria-current=\{featured \? "true" : undefined\}/,
   );
+  assert.match(runnerPageSource, /const RUNNER_EXIT_MS = 320;/);
+  assert.match(runnerPageSource, /setDisplayRows/);
+  assert.match(runnerPageSource, /window\.setTimeout/);
+  assert.match(
+    runnerPageSource,
+    /data-runner-exiting=\{row\.exiting \? "true" : undefined\}/,
+  );
+  assert.match(runnerPageSource, /motion-safe:duration-300/);
+  assert.match(runnerPageSource, /-translate-x-full opacity-0/);
   assert.match(
     runnerPageSource,
     /data-runner-featured=\{featured \? "true" : undefined\}/,
   );
-  assert.match(runnerPageSource, /flex-1 grid-rows-4 overflow-hidden xl:grid-rows-6/);
+  assert.match(
+    runnerPageSource,
+    /flex-1 grid-rows-4 overflow-hidden xl:grid-rows-6/,
+  );
   assert.match(runnerPageSource, /text-runner-header/);
   assert.match(runnerPageSource, /text-runner-board/);
   assert.match(runnerPageSource, /text-runner-empty-secondary/);
@@ -133,7 +159,11 @@ test("Runner page follows the KDS order-list vocabulary", () => {
     runnerPageSource,
     /idleState = todayTicketCountResult\.count > 0 \? "done" : "empty";/,
   );
-  assert.match(runnerPageSource, /if \(rows\.length === 0\)/);
+  assert.match(runnerPageSource, /if \(displayRows\.length === 0\)/);
+  assert.match(
+    runnerPageSource,
+    /<RunnerOrderBoardClient rows=\{rows\} nowMs=\{nowMs\} idleState=\{idleState\} \/>/,
+  );
   assert.match(
     runnerPageSource,
     /<RunnerIdleVisual state=\{resolvedIdleState\} \/>/,
@@ -144,15 +174,15 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   );
   assert.match(runnerPageSource, /function RunnerIdleAtmosphere/);
   assert.match(runnerPageSource, /data-runner-idle-atmosphere=\{state\}/);
-  assert.match(runnerPageSource, /bg-gradient-to-t from-warning\/20/);
-  assert.match(runnerPageSource, /grid grid-cols-12 gap-2 opacity-80/);
-  assert.match(runnerPageSource, /h-28 w-1 rounded-full bg-warning\/25/);
+  assert.match(runnerPageSource, /from-success\/15 via-success\/5/);
+  assert.match(runnerPageSource, /from-warning\/15 via-warning\/5/);
+  assert.match(runnerPageSource, /border-t border-border\/80 bg-muted\/30/);
   assert.match(runnerPageSource, /RunnerFooter/);
   assert.match(
     runnerPageSource,
-    /relative flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden bg-background px-4 text-center xl:px-8/,
+    /relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden bg-background px-4 py-4 text-center/,
   );
-  assert.match(runnerPageSource, /flex max-w-full flex-col items-center gap-3/);
+  assert.match(runnerPageSource, /flex max-w-full flex-col items-center gap-2/);
   assert.match(
     runnerPageSource,
     /<RunnerOrderCell span=\{RUNNER_COLUMN_SPAN\.status\} mono>\s*\{statusLabel\}\s*<\/RunnerOrderCell>/,
@@ -180,19 +210,20 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   );
   assert.match(
     runnerPageSource,
-    /<RunnerWaitTime startIso=\{row\.item\.sortAt\} initialNowMs=\{nowMs\} \/>/,
+    /<RunnerWaitTime startIso=\{row\.sortAt\} initialNowMs=\{nowMs\} \/>/,
+  );
+  assert.match(runnerPageSource, /sortAt: item\.sortAt/);
+  assert.match(
+    runnerPageSource,
+    /<RunnerColumnHeader span=\{RUNNER_COLUMN_SPAN\.order\}>\s*\{RUNNER_BOARD_COPY\.tableHeaders\.order\}\s*<\/RunnerColumnHeader>/,
   );
   assert.match(
     runnerPageSource,
-    /<RunnerColumnHeader span=\{RUNNER_COLUMN_SPAN\.order\}>\s*\{RUNNER_COPY\.tableHeaders\.order\}\s*<\/RunnerColumnHeader>/,
+    /<RunnerColumnHeader span=\{RUNNER_COLUMN_SPAN\.quantity\}>\s*\{RUNNER_BOARD_COPY\.tableHeaders\.quantity\}\s*<\/RunnerColumnHeader>/,
   );
   assert.match(
     runnerPageSource,
-    /<RunnerColumnHeader span=\{RUNNER_COLUMN_SPAN\.quantity\}>\s*\{RUNNER_COPY\.tableHeaders\.quantity\}\s*<\/RunnerColumnHeader>/,
-  );
-  assert.match(
-    runnerPageSource,
-    /<RunnerColumnHeader span=\{RUNNER_COLUMN_SPAN\.status\}>\s*\{RUNNER_COPY\.tableHeaders\.status\}\s*<\/RunnerColumnHeader>/,
+    /<RunnerColumnHeader span=\{RUNNER_COLUMN_SPAN\.status\}>\s*\{RUNNER_BOARD_COPY\.tableHeaders\.status\}\s*<\/RunnerColumnHeader>/,
   );
   assert.match(
     runnerPageSource,
@@ -204,7 +235,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   );
   assert.match(
     runnerPageSource,
-    /<RunnerOrderCell span=\{RUNNER_COLUMN_SPAN\.quantity\} mono>\s*\{formatItemQuantity\(row\.itemQuantity\)\} \{RUNNER_COPY\.itemUnit\}\s*<\/RunnerOrderCell>/,
+    /<RunnerOrderCell span=\{RUNNER_COLUMN_SPAN\.quantity\} mono>\s*\{formatCount\(row\.itemQuantity\)\} \{RUNNER_BOARD_COPY\.itemUnit\}\s*<\/RunnerOrderCell>/,
   );
   assert.doesNotMatch(
     runnerPageSource,
@@ -245,7 +276,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.doesNotMatch(runnerPageSource, /eyebrow: "Runner"/);
   assert.doesNotMatch(runnerPageSource, /Chưa có đơn Runner/);
   assert.doesNotMatch(runnerPageSource, /Đã phục vụ các toàn bộ đơn/);
-  assert.doesNotMatch(runnerPageSource, /Chúc quý khách ngon miệng/);
+  assert.doesNotMatch(runnerPageSource, /chúc quý khách dùng bữa ngon miệng/);
   assert.doesNotMatch(runnerPageSource, /Mời nhận món/);
   assert.doesNotMatch(runnerPageSource, /Đang mời/);
   assert.doesNotMatch(runnerPageSource, /Đang làm/);
@@ -267,7 +298,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
 test("Runner public board uses polling, not raw Realtime changes", () => {
   assert.match(runnerPageSource, /<RunnerRealtimeRefresh \/>/);
   assert.match(runnerRealtimeRefreshSource, /"use client";/);
-  assert.match(runnerRealtimeRefreshSource, /const POLL_INTERVAL_MS = 15_000;/);
+  assert.match(runnerRealtimeRefreshSource, /const POLL_INTERVAL_MS = 3_000;/);
   assert.match(runnerRealtimeRefreshSource, /router\.refresh\(\)/);
   assert.match(runnerRealtimeRefreshSource, /window\.setInterval/);
   assert.match(runnerRealtimeRefreshSource, /visibilitychange/);
@@ -276,8 +307,8 @@ test("Runner public board uses polling, not raw Realtime changes", () => {
   assert.doesNotMatch(runnerRealtimeRefreshSource, /\.channel\(/);
 });
 
-test("Runner idle visual animates the Cot Let sprite atlas with a static fallback", () => {
-  assert.match(runnerIdleVisualSource, /"use client";/);
+test("Runner idle visual renders the shared animated Cot Let status mascot", () => {
+  assert.doesNotMatch(runnerIdleVisualSource, /"use client";/);
   assert.match(
     runnerIdleVisualSource,
     /export type RunnerIdleState = "empty" \| "done";/,
@@ -290,47 +321,51 @@ test("Runner idle visual animates the Cot Let sprite atlas with a static fallbac
   );
   assert.doesNotMatch(runnerIdleVisualSource, /\/brand\/mascot\/cotlet\.png/);
   assert.doesNotMatch(runnerIdleVisualSource, /next\/image/);
+  assert.match(runnerIdleVisualSource, /<BrandMascot/);
+  assert.match(runnerIdleVisualSource, /animated/);
   assert.match(
     runnerIdleVisualSource,
-    /window\.matchMedia\("\(prefers-reduced-motion: no-preference\)"\)/,
+    /state === "done" \? "waving" : "waiting"/,
   );
-  assert.match(runnerIdleVisualSource, /<BrandMascot/);
-  assert.match(runnerIdleVisualSource, /animated=\{canAnimate\}/);
+  assert.match(runnerIdleVisualSource, /mood=\{mascotMood\}/);
+  assert.match(runnerIdleVisualSource, /scale-75/);
   assert.match(runnerIdleVisualSource, /priority/);
   assert.match(runnerIdleVisualSource, /bg-warning\/15/);
-  assert.match(runnerIdleVisualSource, /bg-warning\/25/);
+  assert.match(runnerIdleVisualSource, /bg-warning\/10/);
   assert.match(runnerIdleVisualSource, /data-runner-idle-state=\{state\}/);
   assert.doesNotMatch(runnerIdleVisualSource, /DotLottie/);
   assert.doesNotMatch(runnerIdleVisualSource, /@lottiefiles/);
   assert.doesNotMatch(runnerIdleVisualSource, /be-suon-tuoi/);
   assert.doesNotMatch(runnerIdleVisualSource, /https?:\/\//);
 
-  // BrandMascot (single source for the mascot asset/animation) still consumes
-  // the Codex Pet Atlas sprite via globals utilities.
+  // BrandMascot remains the single source for the mascot asset.
   const brandSource = readFileSync(
     join(process.cwd(), "app/components/brand.tsx"),
     "utf8",
   );
   assert.match(brandSource, /src: "\/brand\/mascot\/cotlet\.png"/);
+  assert.match(brandSource, /motion-safe:animate-cotlet-idle/);
+  assert.match(brandSource, /motion-safe:animate-cotlet-waiting/);
+  assert.match(brandSource, /motion-safe:animate-cotlet-waving/);
   assert.match(brandSource, /width: 384/);
   assert.match(brandSource, /height: 512/);
-  assert.match(brandSource, /mascot-cotlet/);
-  assert.match(brandSource, /motion-safe:animate-cotlet-idle/);
-
-  // Sprite runtime is single-sourced in globals.css: Codex Pet Atlas =
-  // 8 cols × 9 rows, 192×208 per frame, row 0 = idle (8-frame steps loop).
+  assert.match(
+    uiGlobalsSource,
+    /--animate-cotlet-idle: cotlet-idle 1s steps\(6\) infinite;/,
+  );
+  assert.match(
+    uiGlobalsSource,
+    /--animate-cotlet-waiting: cotlet-waiting 1\.1s steps\(6\) infinite;/,
+  );
+  assert.match(
+    uiGlobalsSource,
+    /--animate-cotlet-waving: cotlet-waving 800ms steps\(4\) infinite;/,
+  );
+  assert.doesNotMatch(uiGlobalsSource, /steps\(8\) infinite/);
+  assert.match(uiGlobalsSource, /\/brand\/mascot\/cotlet\.spritesheet\.webp/);
   assert.match(uiGlobalsSource, /@utility mascot-cotlet/);
-  assert.match(
-    uiGlobalsSource,
-    /background-image: url\("\/brand\/mascot\/cotlet\.spritesheet\.webp"\)/,
-  );
-  assert.match(uiGlobalsSource, /background-size: 1536px 1872px;/);
-  assert.match(
-    uiGlobalsSource,
-    /--animate-cotlet-idle: cotlet-idle 1s steps\(8\) infinite;/,
-  );
-  assert.match(uiGlobalsSource, /@keyframes cotlet-idle/);
-  assert.match(uiGlobalsSource, /background-position: -1536px 0;/);
+  assert.match(uiGlobalsSource, /@utility mascot-cotlet-waiting/);
+  assert.match(uiGlobalsSource, /@utility mascot-cotlet-waving/);
 });
 
 test("Runner board uses responsive design-system text and Tailwind grid tokens", () => {
@@ -371,13 +406,15 @@ test("Runner board uses responsive design-system text and Tailwind grid tokens",
     /grid-template-columns: 35% 20% 25% 20%;/,
   );
   assert.match(runnerPageSource, /span === RUNNER_COLUMN_SPAN\.wait/);
-  assert.match(runnerPageSource, /"px-2 xl:px-4" : "px-4 xl:px-8"/);
+  assert.match(runnerPageSource, /"px-2 xl:px-4" : "px-4"/);
   assert.match(runnerPageSource, /return "col-span-4"/);
   assert.match(runnerPageSource, /return "col-span-1"/);
   assert.match(
     runnerPageSource,
     /text-runner-footer font-semibold text-foreground xl:gap-x-16 xl:px-8 xl:py-4/,
   );
+  assert.doesNotMatch(runnerPageSource, /brand-pattern-vong-to/);
+  assert.doesNotMatch(runnerPageSource, /brand-strip brand-pattern-vong-to/);
   assert.doesNotMatch(
     runnerPageSource,
     /px-8 py-4 font-heading text-runner-header/,

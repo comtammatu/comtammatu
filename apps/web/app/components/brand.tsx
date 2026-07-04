@@ -64,6 +64,7 @@ const BRAND_MASCOT_ASSETS = {
 type BrandAssetVariant = keyof typeof BRAND_ASSETS;
 export type BrandSymbolVariant = keyof typeof BRAND_SYMBOL_ASSETS;
 type BrandMascotVariant = keyof typeof BRAND_MASCOT_ASSETS;
+type BrandMascotMood = "idle" | "waiting" | "waving";
 export type BrandMarkVariant = Extract<BrandAssetVariant, "seal">;
 export type BrandLockupVariant = Extract<
   BrandAssetVariant,
@@ -105,6 +106,11 @@ const mascotSizeClass = {
   md: "h-32 w-auto",
   lg: "h-44 w-auto",
 } as const;
+const mascotMoodClass: Record<BrandMascotMood, string> = {
+  idle: "mascot-cotlet-idle motion-safe:animate-cotlet-idle",
+  waiting: "mascot-cotlet-waiting motion-safe:animate-cotlet-waiting",
+  waving: "mascot-cotlet-waving motion-safe:animate-cotlet-waving",
+};
 
 export function BrandMark({
   variant = "seal",
@@ -224,6 +230,7 @@ export function BrandMascot({
   variant = "cotlet",
   size = "md",
   animated = false,
+  mood = "idle",
   alt,
   decorative = true,
   className,
@@ -232,6 +239,7 @@ export function BrandMascot({
   variant?: BrandMascotVariant;
   size?: keyof typeof mascotSizeClass;
   animated?: boolean;
+  mood?: BrandMascotMood;
 }) {
   const asset = BRAND_MASCOT_ASSETS[variant];
 
@@ -241,10 +249,7 @@ export function BrandMascot({
         aria-hidden={decorative ? true : imageProps["aria-hidden"]}
         role={decorative ? undefined : "img"}
         aria-label={decorative ? undefined : (alt ?? "Cốt Lết")}
-        className={cn(
-          "block mascot-cotlet motion-safe:animate-cotlet-idle",
-          className,
-        )}
+        className={cn("block mascot-cotlet", mascotMoodClass[mood], className)}
       />
     );
   }

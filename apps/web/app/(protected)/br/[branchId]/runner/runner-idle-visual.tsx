@@ -1,69 +1,37 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { BrandMascot } from "@/components/brand";
 
 export type RunnerIdleState = "empty" | "done";
 
 export function RunnerIdleVisual({ state }: { state: RunnerIdleState }) {
-  const canAnimate = usePrefersMotion();
+  const mascotMood = state === "done" ? "waving" : "waiting";
 
   return (
     <div
       aria-hidden="true"
-      className="relative flex h-64 w-64 shrink-0 items-center justify-center md:h-72 md:w-72"
+      className="relative flex h-48 w-48 shrink-0 items-center justify-center sm:h-56 sm:w-56 xl:h-64 xl:w-64"
       data-runner-idle-state={state}
     >
-      {canAnimate ? (
-        <>
-          <span
-            className={cn(
-              "absolute inset-6 rounded-full blur-2xl motion-safe:animate-pulse",
-              state === "done" ? "bg-warning/10" : "bg-warning/15",
-            )}
-          />
-          <span className="absolute bottom-4 h-20 w-40 rounded-full bg-warning/10 blur-xl" />
-          <span className="absolute bottom-24 left-20 h-20 w-2 rounded-full bg-warning/25 blur-sm motion-safe:animate-pulse" />
-          <span className="absolute bottom-28 h-20 w-2 rounded-full bg-warning/20 blur-sm motion-safe:animate-pulse" />
-          <span className="absolute right-20 bottom-24 h-20 w-2 rounded-full bg-warning/25 blur-sm motion-safe:animate-pulse" />
-        </>
-      ) : null}
+      <span
+        className={cn(
+          "absolute inset-6 rounded-full blur-2xl",
+          state === "done" ? "bg-warning/10" : "bg-warning/15",
+        )}
+      />
+      <span className="absolute bottom-4 h-16 w-36 rounded-full bg-warning/10 blur-xl" />
 
       <div
-        className="relative z-10 flex h-56 w-44 items-center justify-center md:h-64 md:w-48"
+        className="relative z-10 flex h-40 w-32 items-center justify-center sm:h-48 sm:w-36 xl:h-56 xl:w-44"
         data-runner-idle-state={state}
       >
         <BrandMascot
-          animated={canAnimate}
+          animated
           decorative
+          mood={mascotMood}
           priority
-          className={cn(
-            "shrink-0 drop-shadow-lg",
-            canAnimate ? undefined : "h-full w-auto",
-          )}
+          className="shrink-0 scale-75 drop-shadow-lg sm:scale-90 xl:scale-100"
         />
       </div>
     </div>
   );
-}
-
-function usePrefersMotion(): boolean {
-  const [canAnimate, setCanAnimate] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: no-preference)");
-    const syncMotionPreference = () => {
-      setCanAnimate(query.matches);
-    };
-
-    syncMotionPreference();
-    query.addEventListener("change", syncMotionPreference);
-
-    return () => {
-      query.removeEventListener("change", syncMotionPreference);
-    };
-  }, []);
-
-  return canAnimate;
 }

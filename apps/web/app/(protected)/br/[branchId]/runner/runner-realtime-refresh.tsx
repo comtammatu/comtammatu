@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 
-const POLL_INTERVAL_MS = 15_000;
+const POLL_INTERVAL_MS = 3_000;
 
 export function RunnerRealtimeRefresh() {
   const router = useRouter();
