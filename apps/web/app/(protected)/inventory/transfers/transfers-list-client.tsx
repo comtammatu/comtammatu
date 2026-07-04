@@ -29,7 +29,7 @@ import {
 } from "@/components/data-table/data-table";
 import { matchesSearch } from "@lib/search";
 import type { BranchForTransfer } from "./create-transfer-dialog";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
 import { messages } from "@lib/messages";
@@ -334,42 +334,48 @@ export function TransfersListClient({
           }
         />
       )}
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => setActiveTab(value as TransferTab)}
-      >
-        <TabsList variant="toolbar" className="p-1">
-          {(Object.keys(tabLabels) as TransferTab[]).map((tab) => {
-            return (
-              <TabsTrigger key={tab} value={tab} className="min-h-9 min-w-0">
-                {tabLabels[tab]}
-                {tabCounts[tab] > 0 && (
-                  <Badge variant="secondary" className="ml-1.5 font-mono">
-                    {tabCounts[tab]}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
-      </Tabs>
-
-      <InputGroup className="h-10">
-        <InputGroupAddon>
-          <IconSearch />
-        </InputGroupAddon>
-        <InputGroupInput
-          type="search"
-          placeholder={copy.list.searchPlaceholder}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <InputGroupAddon align="inline-end">
-          <InputGroupText>
-            {searchFiltered.length} / {rows.length}
-          </InputGroupText>
-        </InputGroupAddon>
-      </InputGroup>
+      <AppToolbar
+        className="items-stretch sm:items-center"
+        search={
+          <InputGroup className="min-h-10 w-full sm:h-10 sm:flex-1">
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              placeholder={copy.list.searchPlaceholder}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <InputGroupAddon align="inline-end">
+              <InputGroupText>
+                {searchFiltered.length} / {rows.length}
+              </InputGroupText>
+            </InputGroupAddon>
+          </InputGroup>
+        }
+        filters={
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as TransferTab)}
+          >
+            <TabsList variant="toolbar" className="p-1">
+              {(Object.keys(tabLabels) as TransferTab[]).map((tab) => {
+                return (
+                  <TabsTrigger key={tab} value={tab} className="min-h-9 min-w-0">
+                    {tabLabels[tab]}
+                    {tabCounts[tab] > 0 && (
+                      <Badge variant="secondary" className="ml-1.5 font-mono">
+                        {tabCounts[tab]}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </Tabs>
+        }
+      />
 
       <DataTable
         className="md:rounded-md md:border"

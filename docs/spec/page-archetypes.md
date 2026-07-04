@@ -105,9 +105,13 @@ rather than staying a near-empty category.
 **Exemplar:** `apps/web/app/(protected)/inventory/purchase-orders/page.tsx` +
 `purchase-orders-client.tsx`.
 
-- Skeleton: `AppPage` → `AppPageHeader` (eyebrow = module name, `actions` =
-  primary create CTA) → `AppToolbar` (search + status-count filter chips +
-  branch filter live together, one toolbar) → `DataTable`.
+- Skeleton: `AppPage width="xwide"` → `AppPageHeader` (eyebrow = module name,
+  `actions` = primary create CTA) → `AppToolbar` (search + status-count filter
+  chips + branch filter live together, one toolbar) → `DataTable`. Every LIST
+  page pins the one dense-data width tier `xwide` (`design-system.md` § Rhythm
+  Contract — the single capped 1600px tier); a LIST on any other tier is drift.
+  `scripts/check-ui-contract.mjs` enforces this against the `PAGE_ARCHETYPES`
+  LIST entries so a page cannot re-enter on a narrower tier.
 - Data display: `DataTable` with `mobileCardRender` for the phone card list
   and the `Table` primitive for desktop — same fields, status colors, and
   actions at both breakpoints. Cursor pagination through the shared
@@ -328,7 +332,7 @@ component — the same branch benefits both planes, and the office plane
 
 ## 4. Named Exceptions
 
-These 8 pages do not fit a single archetype cleanly. They are an explicit
+These 11 pages do not fit a single archetype cleanly. They are an explicit
 allowlist, not a precedent for stretching another archetype's definition:
 
 1. `apps/web/app/(protected)/employee/page.tsx` — portal home; a HUB/DASHBOARD
@@ -351,6 +355,24 @@ allowlist, not a precedent for stretching another archetype's definition:
 8. `apps/web/app/(protected)/admin/settings/printers/jobs/page.tsx` — a LIST
    living inside the printers SETTINGS-PANEL family with an added `KpiRow`
    summary. Classified **LIST**.
+9. `apps/web/app/(protected)/inventory/count-slips/page.tsx` — manager review
+   queue for submitted count slips. A per-slip approve / request-recount card
+   with a nested line-variance `ItemGroup` and an inline review-note field; the
+   decision surface is the card body, not a row. A `DataTable` cannot carry the
+   nested lines + per-card actions, so the card/`ItemGroup` layout is correct.
+   Classified **LIST** (queue variant); exempt from the LIST `DataTable` /
+   `width="xwide"` gate.
+10. `apps/web/app/(protected)/inventory/count-assignments/page.tsx` —
+    per-employee ingredient-assignment editor (checkbox selection grouped by
+    employee inside `AppSection`s), not a browsable collection of records. It
+    edits a mapping, not a row list, so it has no tabular shape. Classified
+    **LIST** (assignment variant); exempt from the LIST `DataTable` /
+    `width="xwide"` gate.
+11. `apps/web/app/(protected)/inventory/waste/approvals/page.tsx` — 4-eye waste
+    approval queue. A per-issue approve / reject card with a nested waste-line
+    `ItemGroup`, tier badges, photo links, and an inline review-note field; the
+    decision surface is the card, not a row. Classified **LIST** (queue
+    variant); exempt from the LIST `DataTable` / `width="xwide"` gate.
 
 ## 5. Agent Lookup Flow
 

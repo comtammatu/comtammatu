@@ -97,7 +97,7 @@ export function WasteApprovalsClient({
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
-  return <AppPage width="default">{content}</AppPage>;
+  return <AppPage width="xwide">{content}</AppPage>;
 }
 
 function WasteApprovalCard({

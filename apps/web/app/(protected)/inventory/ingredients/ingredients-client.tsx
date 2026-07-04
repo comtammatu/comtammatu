@@ -482,7 +482,7 @@ export function IngredientsClient({
   ];
 
   return (
-    <AppPage scroll className="max-md:pb-28" contentClassName="max-md:max-w-2xl">
+    <AppPage width="xwide" scroll className="max-md:pb-28">
       <AppPageHeader
         title="Nguyên liệu"
         actions={
