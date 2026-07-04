@@ -53,7 +53,7 @@ test("SePay webhook claims idempotency before payment settlement RPC", () => {
   );
   assert.ok(
     source.includes(
-      "const SEPAY_PAYMENT_CODE_RE = /\\b(?:VQRLOAMB\\d{17}|DH[A-Z0-9]{3,12})\\b/gi;",
+      "/\\bVQRLOAMB20260626100157757 [A-Z0-9]{12}\\b|\\bDH[A-Z0-9]{3,12}\\b/gi;",
     ),
   );
   assert.ok(
@@ -437,7 +437,7 @@ test("POS VietQR uses locally generated EMVCo payloads, not VietQR image URLs", 
   assert.match(provider, /const qrData = buildVietQrEmvco\(/);
   assert.match(
     provider,
-    /return `\$\{MB_SPEAKER_PAYMENT_PREFIX\}\$\{timestamp\}\$\{randomPaymentDigits\(3\)\}`/,
+    /return `\$\{MB_SPEAKER_FIXED_TOKEN\} \$\{randomPaymentAlnum\(12\)\}`/,
   );
   assert.match(bill, /<PaymentQrCode[\s\S]*value=\{remoteQrValue\}/);
   assert.doesNotMatch(bill, /preferImage=\{selectedMethod === "vietqr"\}/);
