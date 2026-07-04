@@ -40,11 +40,37 @@ const projectId =
   DEV_PROJECT_ID;
 const outPath = "packages/database/src/types/database.types.ts";
 
+// Newer CLI builds append PostHog telemetry JSON to STDOUT (e.g.
+// {"_tag":"Error",...,"Timeout while shutting down PostHog"...}) and exit 1
+// on a telemetry shutdown timeout even though the generated types above it
+// are complete. Strip machine lines; never let them into the types file.
+function sanitizeTypes(raw) {
+  return String(raw)
+    .split("\n")
+    .filter((line) => !line.startsWith('{"_tag":'))
+    .join("\n");
+}
+
+function isValidTypes(text) {
+  return text.trimStart().startsWith("export type Json =");
+}
+
 function runTypegen(command, args) {
-  return execFileSync(command, args, {
-    encoding: "utf-8",
-    stdio: ["ignore", "pipe", "inherit"],
-  });
+  try {
+    return execFileSync(command, args, {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "inherit"],
+    });
+  } catch (error) {
+    // Nonzero exit with a complete types payload on stdout = telemetry
+    // failure, not a typegen failure — salvage the output.
+    const stdout =
+      error && typeof error === "object" && "stdout" in error
+        ? String(error.stdout ?? "")
+        : "";
+    if (isValidTypes(sanitizeTypes(stdout))) return stdout;
+    throw error;
+  }
 }
 
 let types;
@@ -70,6 +96,12 @@ try {
     "--project-id",
     projectId,
   ]);
+}
+
+types = sanitizeTypes(types);
+if (!isValidTypes(types)) {
+  console.error("gen-types: CLI output is not a TypeScript types payload — refusing to write.");
+  process.exit(1);
 }
 
 writeFileSync(outPath, types);
