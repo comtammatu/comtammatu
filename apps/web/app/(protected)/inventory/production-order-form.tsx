@@ -191,6 +191,8 @@ interface ProductionOrderFormProps {
   productionBranches: BranchOption[];
   finishedGoodsOptions: FinishedGoodOption[];
   actionsEnabled: boolean;
+  triggerSize?: React.ComponentProps<typeof Button>["size"];
+  triggerClassName?: string;
 }
 
 function ProductionOrderFields({
@@ -342,6 +344,8 @@ export function ProductionOrderForm({
   productionBranches,
   finishedGoodsOptions,
   actionsEnabled,
+  triggerSize,
+  triggerClassName,
 }: ProductionOrderFormProps) {
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -413,7 +417,12 @@ export function ProductionOrderForm({
 
   return (
     <>
-      <Button disabled={!actionsEnabled} onClick={openCreateDialog}>
+      <Button
+        disabled={!actionsEnabled}
+        onClick={openCreateDialog}
+        size={triggerSize}
+        className={triggerClassName}
+      >
         <IconPlus className="mr-2 size-4" />
         {INVENTORY_VI.createProductionOrder}
       </Button>
