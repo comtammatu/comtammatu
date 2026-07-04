@@ -22,32 +22,6 @@ export interface ResolvedOperatorTileGroup {
   tiles: ResolvedOperatorTile[];
 }
 
-/** Native stock-group tile for the existing branch-scoped PO wrapper page. */
-const CENTRAL_STOCK_PURCHASE_ORDERS_TILE = {
-  moduleKey: "inventory_procurement",
-  icon: "FileText",
-  group: "stock",
-  hrefTemplate: "/br/{branchId}/stock/purchase-orders",
-  label: "Đơn đặt hàng",
-} satisfies OperatorTileConfig;
-
-/**
- * Native production tile — only the central_kitchen site runs production
- * orders/BOM (D055 §1, D059 §4); central_supply and branch sites must never
- * show it, so it is gated on branch_kind directly rather than the broader
- * `isCentralSite` check the PO tile uses.
- */
-const CENTRAL_KITCHEN_PRODUCTION_TILE = {
-  moduleKey: "inventory_procurement",
-  icon: "ChefHat",
-  group: "stock",
-  hrefTemplate: "/br/{branchId}/stock/production",
-  label: "Sản xuất",
-} satisfies OperatorTileConfig;
-
-/** Groups that only make sense at a live sales branch, not a central site. */
-const BRANCH_ONLY_GROUPS = new Set<OperatorTileGroupId>(["sales_kitchen"]);
-
 /**
  * Domain tile rows rendered below the "Cần xử lý" queue. `approvals` is
  * excluded here — its tiles are surfaced exclusively as queue rows (V2
@@ -61,17 +35,11 @@ function resolveVisibleTiles(
   branchId: number,
   branchKind: BranchKind,
 ): ResolvedOperatorTile[] {
-  const isCentralSite = branchKind !== "branch";
-  const tileSource = isCentralSite
-    ? [...OPERATOR_TILE_ITEMS, CENTRAL_STOCK_PURCHASE_ORDERS_TILE]
-    : OPERATOR_TILE_ITEMS;
-  const withProductionTile =
-    branchKind === "central_kitchen"
-      ? [...tileSource, CENTRAL_KITCHEN_PRODUCTION_TILE]
-      : tileSource;
-
-  return withProductionTile
-    .filter((tile) => !(isCentralSite && BRANCH_ONLY_GROUPS.has(tile.group)))
+  const tiles: readonly OperatorTileConfig[] = OPERATOR_TILE_ITEMS;
+  return tiles
+    .filter(
+      (tile) => tile.kinds === undefined || tile.kinds.includes(branchKind),
+    )
     .filter((tile) => canAccess(role, tile.moduleKey))
     .map((tile) => ({
       moduleKey: tile.moduleKey,

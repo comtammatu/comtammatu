@@ -1081,14 +1081,15 @@ test("operator production renders branch-native inside the central_kitchen opera
   );
 
   // Native production tile is gated to branch_kind central_kitchen only —
-  // must never render at central_supply or retail branches.
+  // must never render at central_supply or retail branches. Curation is
+  // declarative: nav-config `kinds` + the operator-capabilities kind filter.
   assert.match(
-    operatorCapabilities,
-    /CENTRAL_KITCHEN_PRODUCTION_TILE[\s\S]*hrefTemplate: "\/br\/\{branchId\}\/stock\/production"/,
+    navConfig,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/production",\s*label: "Sản xuất",\s*kinds: \["central_kitchen"\]/,
   );
   assert.match(
     operatorCapabilities,
-    /branchKind === "central_kitchen"\s*\?\s*\[\.\.\.tileSource, CENTRAL_KITCHEN_PRODUCTION_TILE\]/,
+    /tile\.kinds === undefined \|\| tile\.kinds\.includes\(branchKind\)/,
   );
 
   // The office_bridge "Sản xuất" tile is retired now that the native
@@ -1096,7 +1097,7 @@ test("operator production renders branch-native inside the central_kitchen opera
   assert.doesNotMatch(navConfig, /hrefTemplate: "\/inventory\/production"/);
 
   assert.match(
-    operatorCapabilities,
-    /moduleKey: "inventory_procurement",\s*icon: "FileText",\s*group: "stock",\s*hrefTemplate: "\/br\/\{branchId\}\/stock\/purchase-orders"/,
+    navConfig,
+    /moduleKey: "inventory_procurement",\s*icon: "FileText",\s*group: "stock",\s*hrefTemplate: "\/br\/\{branchId\}\/stock\/purchase-orders",\s*label: "Đơn đặt hàng",\s*kinds: \["central_supply", "central_kitchen"\]/,
   );
 });

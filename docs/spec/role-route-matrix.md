@@ -105,7 +105,7 @@ by direct URL or as a redirect target.
 | `dashboard` | `/admin/dashboard` | Chủ sở hữu | Admin sidebar |
 | `menu` | `/menu` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (office_bridge); Workspace nav |
 | `inventory` | `/inventory` | Chủ sở hữu, Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm | Operator tile (approvals); Operator tile (stock); Workspace nav |
-| `inventory_procurement` | `/inventory/suppliers` | Chủ sở hữu, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm | (not advertised in nav — direct URL / redirect target only) |
+| `inventory_procurement` | `/inventory/suppliers` | Chủ sở hữu, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm | Operator tile (stock) |
 | `inventory_admin` | `/admin/inventory` | (none — retired) | (not advertised in nav — direct URL / redirect target only) |
 | `orders` | `/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân | Operator tile (sales_kitchen); Workspace nav |
 | `staff` | `/hr/staff` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |

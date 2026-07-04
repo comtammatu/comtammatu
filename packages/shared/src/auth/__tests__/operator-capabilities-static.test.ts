@@ -214,6 +214,82 @@ test("resolveOperatorTiles -> production tile never renders outside central_kitc
   }
 });
 
+test("resolveOperatorTiles -> central-site stock groups are curated whitelists (D066)", () => {
+  const supplyStock = resolveOperatorTiles("owner", 15, "central_supply").find(
+    (group) => group.id === "stock",
+  );
+  assert.deepEqual(
+    supplyStock?.tiles.map((tile) => tile.label),
+    [
+      "Tồn kho",
+      "Nhận hàng",
+      "Chuyển hàng",
+      "Kiểm kê",
+      "Báo hao hụt",
+      "Trả hàng NCC",
+      "Phiếu nhập",
+      "Đơn đặt hàng",
+    ],
+  );
+
+  const kitchenStock = resolveOperatorTiles(
+    "owner",
+    15,
+    "central_kitchen",
+  ).find((group) => group.id === "stock");
+  assert.deepEqual(
+    kitchenStock?.tiles.map((tile) => tile.label),
+    [
+      "Sản xuất",
+      "Tồn kho",
+      "Nhận hàng",
+      "Chuyển hàng",
+      "Kiểm kê",
+      "Báo hao hụt",
+      "Phiếu nhập",
+      "Đơn đặt hàng",
+    ],
+  );
+});
+
+test("resolveOperatorTiles -> office_bridge group is branch-only (D066 §7b)", () => {
+  for (const branchKind of ["central_supply", "central_kitchen"] as const) {
+    const groupIds = resolveOperatorTiles("owner", 15, branchKind).map(
+      (group) => group.id,
+    );
+    assert.equal(groupIds.includes("office_bridge"), false, branchKind);
+  }
+
+  const branchGroupIds = resolveOperatorTiles("owner", 3, "branch").map(
+    (group) => group.id,
+  );
+  assert.ok(branchGroupIds.includes("office_bridge"));
+});
+
+test("resolveOperatorTiles -> transfer tile reads as dispatch at central sites, request at branches", () => {
+  const branchStock = resolveOperatorTiles("branch_manager", 3, "branch").find(
+    (group) => group.id === "stock",
+  );
+  assert.deepEqual(
+    branchStock?.tiles
+      .filter((tile) => tile.href === "/br/3/stock/transfer")
+      .map((tile) => tile.label),
+    ["Yêu cầu hàng"],
+  );
+
+  const supplyStock = resolveOperatorTiles(
+    "warehouse_manager",
+    15,
+    "central_supply",
+  ).find((group) => group.id === "stock");
+  assert.deepEqual(
+    supplyStock?.tiles
+      .filter((tile) => tile.href === "/br/15/stock/transfer")
+      .map((tile) => tile.label),
+    ["Chuyển hàng"],
+  );
+});
+
 test("resolveOperatorTiles -> orders tile is branch-native under sales_kitchen, not office_bridge", () => {
   const groups = resolveOperatorTiles("owner", 3);
   const officeBridge = groups.find((group) => group.id === "office_bridge");

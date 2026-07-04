@@ -1,4 +1,5 @@
 import type { ModuleKey } from "./module-acl";
+import type { BranchKind } from "./types";
 import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
 
 /**
@@ -39,6 +40,12 @@ export type OperatorTileGroupId =
 
 export interface OperatorTileConfig extends BranchScopedNavItemConfig {
   group: OperatorTileGroupId;
+  /**
+   * Site kinds the tile renders for (D058 §7 kind × role). Omitted = every
+   * kind. Central-site tile sets are curated whitelists (D066) — a tile
+   * missing a kind here is intentional, not an oversight.
+   */
+  kinds?: readonly BranchKind[];
 }
 
 /** Admin sidebar nav groups — only admin-scoped modules */
@@ -187,6 +194,7 @@ export const OPERATOR_TILE_ITEMS = [
     icon: "Monitor",
     group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/pos",
+    kinds: ["branch"],
   },
   {
     moduleKey: "runner",
@@ -194,6 +202,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/runner",
     label: APP_COPY_VI.branchOperationsRunner,
+    kinds: ["branch"],
   },
   {
     moduleKey: "kds",
@@ -201,12 +210,14 @@ export const OPERATOR_TILE_ITEMS = [
     group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/kds",
     label: APP_COPY_VI.branchOperationsKds,
+    kinds: ["branch"],
   },
   {
     moduleKey: "branch_menu_limits",
     icon: "Utensils",
     group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/settings/menu-limits",
+    kinds: ["branch"],
   },
   {
     moduleKey: "orders",
@@ -214,6 +225,15 @@ export const OPERATOR_TILE_ITEMS = [
     group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/orders",
     label: "Đơn hàng",
+    kinds: ["branch"],
+  },
+  {
+    moduleKey: "inventory_procurement",
+    icon: "ChefHat",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/production",
+    label: "Sản xuất",
+    kinds: ["central_kitchen"],
   },
   {
     moduleKey: "inventory",
@@ -235,6 +255,15 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/transfer",
     label: "Yêu cầu hàng",
+    kinds: ["branch"],
+  },
+  {
+    moduleKey: "inventory",
+    icon: "Send",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/transfer",
+    label: "Chuyển hàng",
+    kinds: ["central_supply", "central_kitchen"],
   },
   {
     moduleKey: "inventory",
@@ -249,6 +278,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/count-assignments",
     label: "Phân công đếm tồn",
+    kinds: ["branch"],
   },
   {
     moduleKey: "inventory",
@@ -263,6 +293,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/supplier-returns",
     label: "Trả hàng NCC",
+    kinds: ["branch", "central_supply"],
   },
   {
     moduleKey: "inventory",
@@ -272,11 +303,20 @@ export const OPERATOR_TILE_ITEMS = [
     label: "Phiếu nhập",
   },
   {
+    moduleKey: "inventory_procurement",
+    icon: "FileText",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/purchase-orders",
+    label: "Đơn đặt hàng",
+    kinds: ["central_supply", "central_kitchen"],
+  },
+  {
     moduleKey: "inventory",
     icon: "ClipboardList",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/consumption",
     label: "Tiêu hao",
+    kinds: ["branch"],
   },
   {
     moduleKey: "inventory",
@@ -284,6 +324,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/issues",
     label: "Xuất kho",
+    kinds: ["branch"],
   },
   {
     moduleKey: "inventory",
@@ -291,6 +332,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/expiry",
     label: "Hạn dùng",
+    kinds: ["branch"],
   },
   {
     moduleKey: "inventory",
@@ -298,6 +340,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/reports",
     label: "Báo cáo",
+    kinds: ["branch"],
   },
   {
     moduleKey: "menu",
@@ -305,6 +348,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "office_bridge",
     hrefTemplate: "/menu",
     label: "Thực đơn",
+    kinds: ["branch"],
   },
   {
     moduleKey: "hr",
@@ -312,6 +356,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "office_bridge",
     hrefTemplate: "/hr",
     label: APP_COPY_VI.hrWorkspace,
+    kinds: ["branch"],
   },
   {
     moduleKey: "inventory",
@@ -319,5 +364,6 @@ export const OPERATOR_TILE_ITEMS = [
     group: "office_bridge",
     hrefTemplate: "/inventory",
     label: "Kho văn phòng",
+    kinds: ["branch"],
   },
 ] satisfies readonly OperatorTileConfig[];
