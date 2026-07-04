@@ -1,5 +1,7 @@
 # T3 — HĐĐT buyer-name per NĐ 254/2026 (2026-07-04)
 
+> Reconciled-through `6557f2c8`
+
 REVIEW_TIER: T3 (money / HĐĐT wire value + prod RPC + SECURITY DEFINER migration).
 
 ## Trigger

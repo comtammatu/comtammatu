@@ -1,5 +1,7 @@
 # Kế hoạch thi công — Hub Kho Tổng native mobile (2026-07-04)
 
+> Reconciled-through `6557f2c8`
+>
 > Nguồn: D067 (`docs/plan/decisions.md`). Hợp đồng thiết kế:
 > `docs/plan/kho-tong-hub-mockup-2026-07-04.html` — build phải khớp mockup.
 > Xác minh code + PROD 2026-07-04 (SELECT-only). Mọi định danh giữ nguyên văn.
