@@ -34,7 +34,7 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
 import { messages } from "@lib/messages";
 
-import { FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 export type { BranchForTransfer };
 
 export interface TransferListRow {
@@ -120,6 +120,7 @@ export function TransfersListClient({
   userRole,
   basePath = "/inventory/transfers",
   createBasePath,
+  supplierGrnBasePath,
   createEnabled = true,
   initialTab = "receive",
   pageTitle: pageTitleOverride,
@@ -131,6 +132,7 @@ export function TransfersListClient({
   userRole: StaffRole;
   basePath?: string;
   createBasePath?: string;
+  supplierGrnBasePath?: string;
   createEnabled?: boolean;
   initialTab?: TransferTab;
   pageTitle?: string;
@@ -173,6 +175,18 @@ export function TransfersListClient({
     userBranchId == null
       ? `${createPathBase}/new`
       : `${createPathBase}/new?branchId=${userBranchId}`;
+
+  // Branch operators receive directly from a supplier (GRN) in addition to
+  // requesting stock from a central site (D068). Surfaced only when the route
+  // provides the GRN base path (the branch "Nhận hàng" hub).
+  const canReceiveSupplier =
+    isBranchManager &&
+    userBranchKind === "branch" &&
+    supplierGrnBasePath != null;
+  const supplierGrnHref =
+    userBranchId == null
+      ? `${supplierGrnBasePath}/new`
+      : `${supplierGrnBasePath}/new?branchId=${userBranchId}`;
 
   const tabGroups = useMemo(() => {
     const groups: Record<TransferTab, TransferListRow[]> = {
@@ -308,14 +322,28 @@ export function TransfersListClient({
   const content = (
     <>
       {embedded ? (
-        canCreate ? (
-          <div className="flex justify-end">
-            <Button size="touch" asChild>
-              <Link href={createHref}>
-                <IconPlus data-icon="inline-start" />
-                {createLabel}
-              </Link>
-            </Button>
+        canReceiveSupplier || canCreate ? (
+          <div className="flex justify-end gap-2">
+            {canReceiveSupplier ? (
+              <Button size="touch" asChild>
+                <Link href={supplierGrnHref}>
+                  <IconPackageImport data-icon="inline-start" />
+                  {INVENTORY_VI.receivingEyebrow}
+                </Link>
+              </Button>
+            ) : null}
+            {canCreate ? (
+              <Button
+                size="touch"
+                variant={canReceiveSupplier ? "outline" : "default"}
+                asChild
+              >
+                <Link href={createHref}>
+                  <IconPlus data-icon="inline-start" />
+                  {createLabel}
+                </Link>
+              </Button>
+            ) : null}
           </div>
         ) : null
       ) : (

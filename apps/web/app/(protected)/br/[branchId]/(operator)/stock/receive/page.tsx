@@ -15,6 +15,7 @@ export default async function OperatorStockReceivePage({ params }: PageProps) {
       routeBranchId={branchId}
       basePath={`/br/${branchId}/stock/receive`}
       createBasePath={`/br/${branchId}/stock/transfer`}
+      supplierGrnBasePath={`/br/${branchId}/stock/grn`}
       initialTab="receive"
       pageTitle="Nhận hàng"
       embedded
