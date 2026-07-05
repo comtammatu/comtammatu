@@ -27,6 +27,12 @@
   chỗ (không badge + banner + nút cùng nói "chưa cấu hình"); không block văn
   xuôi giải thích quy trình. Nghiệm thu mỗi lát: mở màn 3 giây biết bấm gì
   tiếp. Promote rule này vào `docs/agent/rules/ui.md` trong PR đầu của program.
+- **Nhập số = Drawer cho màn LIST, inline cho một-món-một-màn (owner 2026-07-05,
+  sau khi xem local):** màn danh sách nhiều dòng (Nhận chuyển, GRN) → numpad là
+  bottom sheet (`NumberPadSheet`), chạm dòng → sheet trượt lên tầm ngón cái, list
+  **giữ nguyên vị trí** (không kéo xuống pad cố định ở đáy). Màn "một món một màn"
+  (Kiểm kê đếm mù) → numpad **inline** luôn hiện (không có list để kéo; drawer chỉ
+  thêm 1 chạm thừa). Mockup screen 7 đã cập nhật theo drawer.
 - **Fork lớp hiển thị, giữ chung lớp dữ liệu.** Server action + data loader trong
   `apps/web/app/(protected)/inventory/*-actions.ts` dùng lại nguyên; chỉ viết
   component **mobile-native mới** cho route operator. Office desktop (oversight,

@@ -15,11 +15,7 @@ import { cn } from "@comtammatu/ui";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppEmptyState } from "@/components/surface";
-import {
-  NumberPadGrid,
-  appendNumpadKey,
-  type NumpadKey,
-} from "@/components/form/number-pad-grid";
+import { NumberPadSheet } from "@/components/form";
 import { transferReceive } from "@/(protected)/inventory/transfer-actions";
 import type { TransferDetail } from "@/(protected)/inventory/transfers/[id]/transfer-detail-client";
 import { messages } from "@lib/messages";
@@ -41,77 +37,52 @@ export function TransferReceiveClient({
   const items = transfer.items;
   const total = items.length;
 
-  const [values, setValues] = useState<Record<number, string>>(() => {
-    const initial: Record<number, string> = {};
+  // Received quantity per line, defaulting to the sent quantity (the common
+  // case is received == sent, so an unopened line already carries a valid value).
+  const [values, setValues] = useState<Record<number, number>>(() => {
+    const initial: Record<number, number> = {};
     for (const item of items) {
-      initial[item.ingredientId] = String(item.qty);
+      initial[item.ingredientId] = item.qty;
     }
     return initial;
   });
   const [confirmed, setConfirmed] = useState<Set<number>>(() => new Set());
-  const [activeId, setActiveId] = useState<number | null>(
-    items[0]?.ingredientId ?? null,
-  );
+  // The line whose number-pad drawer is open (null = closed). The pad is a
+  // bottom sheet so the line list stays scrollable and the keypad rises to the
+  // thumb on tap — no scrolling to a fixed inline pad.
+  const [sheetId, setSheetId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const isReceiveMode = transfer.status === "confirmed_receive";
   const remaining = total - confirmed.size;
   const progress = total === 0 ? 0 : confirmed.size / total;
 
-  const activeItem = useMemo(
-    () => items.find((item) => item.ingredientId === activeId) ?? null,
-    [items, activeId],
+  const sheetItem = useMemo(
+    () => items.find((item) => item.ingredientId === sheetId) ?? null,
+    [items, sheetId],
   );
 
-  function handleKey(key: NumpadKey) {
-    if (activeId == null) return;
-    setValues((current) => ({
-      ...current,
-      [activeId]: appendNumpadKey(current[activeId] ?? "", key, true),
-    }));
-  }
-
-  function nextUnconfirmedId(justConfirmed: number): number | null {
-    for (const item of items) {
-      if (item.ingredientId === justConfirmed) continue;
-      if (!confirmed.has(item.ingredientId)) return item.ingredientId;
-    }
-    return null;
-  }
-
-  function handleNextLine() {
-    if (activeItem == null) return;
-    const raw = values[activeItem.ingredientId] ?? "";
-    const qty = Number(raw);
-    if (raw.length === 0 || !Number.isFinite(qty) || qty < 0) {
+  function handleSheetConfirm(value: number) {
+    if (sheetItem == null) return;
+    if (!Number.isFinite(value) || value < 0) {
       toast.error(receiveCopy.receiveInvalidQty);
       return;
     }
-    if (qty > activeItem.qty) {
+    if (value > sheetItem.qty) {
       toast.error(receiveCopy.receiveExceedsSent);
       return;
     }
-    const nextId = nextUnconfirmedId(activeItem.ingredientId);
-    setConfirmed((current) => {
-      const next = new Set(current);
-      next.add(activeItem.ingredientId);
-      return next;
-    });
-    setActiveId(nextId);
+    const id = sheetItem.ingredientId;
+    setValues((current) => ({ ...current, [id]: value }));
+    setConfirmed((current) => new Set(current).add(id));
   }
 
   function handleConfirm() {
     const payload: Record<string, { qty: number }> = {};
     for (const item of items) {
-      const raw = values[item.ingredientId] ?? "";
-      const qty = Number(raw);
-      if (raw.length === 0 || !Number.isFinite(qty) || qty < 0) {
-        setActiveId(item.ingredientId);
-        toast.error(receiveCopy.receiveInvalidQty);
-        return;
-      }
-      if (qty > item.qty) {
-        setActiveId(item.ingredientId);
+      const qty = values[item.ingredientId] ?? item.qty;
+      if (!Number.isFinite(qty) || qty < 0 || qty > item.qty) {
+        setSheetId(item.ingredientId);
         toast.error(receiveCopy.receiveExceedsSent);
         return;
       }
@@ -189,8 +160,7 @@ export function TransferReceiveClient({
       <div className="flex flex-col gap-2">
         {items.map((item) => {
           const isConfirmed = confirmed.has(item.ingredientId);
-          const isActive = item.ingredientId === activeId;
-          const value = values[item.ingredientId] ?? String(item.qty);
+          const value = values[item.ingredientId] ?? item.qty;
           return (
             <InteractiveCard
               key={item.ingredientId}
@@ -200,11 +170,8 @@ export function TransferReceiveClient({
             >
               <button
                 type="button"
-                onClick={() => setActiveId(item.ingredientId)}
-                className={cn(
-                  "w-full text-left",
-                  isActive && "border-primary/50 ring-2 ring-primary/40",
-                )}
+                onClick={() => setSheetId(item.ingredientId)}
+                className="w-full text-left"
               >
                 {isConfirmed ? (
                   <IconCheckCircle className="size-5 shrink-0 text-primary" />
@@ -221,8 +188,10 @@ export function TransferReceiveClient({
                 </div>
                 <span
                   className={cn(
-                    "shrink-0 font-mono text-sm font-semibold tabular-nums",
-                    isActive && "rounded-md bg-primary/10 px-3 py-1 text-primary",
+                    "shrink-0 rounded-md px-3 py-1 font-mono text-sm font-semibold tabular-nums",
+                    isConfirmed
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground",
                   )}
                 >
                   {value}
@@ -232,18 +201,6 @@ export function TransferReceiveClient({
           );
         })}
       </div>
-
-      <NumberPadGrid onKey={handleKey} allowDecimal />
-      <Button
-        type="button"
-        variant="secondary"
-        size="touch"
-        className="w-full"
-        onClick={handleNextLine}
-        disabled={activeId == null}
-      >
-        {receiveCopy.receiveNextLine}
-      </Button>
 
       <div className="sticky chrome-safe-bottom z-10 flex w-full flex-col gap-2">
         <Button
@@ -260,6 +217,22 @@ export function TransferReceiveClient({
             : receiveCopy.receiveConfirmAll}
         </Button>
       </div>
+
+      <NumberPadSheet
+        open={sheetItem != null}
+        onOpenChange={(next) => {
+          if (!next) setSheetId(null);
+        }}
+        title={
+          sheetItem
+            ? `${sheetItem.name} · ${receiveCopy.receiveSent(String(sheetItem.qty), sheetItem.unit)}`
+            : ""
+        }
+        suffix={sheetItem?.unit}
+        initialValue={sheetItem ? (values[sheetItem.ingredientId] ?? sheetItem.qty) : 0}
+        onConfirm={handleSheetConfirm}
+        allowDecimal
+      />
     </div>
   );
 }
