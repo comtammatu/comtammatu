@@ -21,6 +21,7 @@ import {
   type DraftCounts,
 } from "../../../_components/stocktake-draft-saver";
 import { ZoneLockIndicator } from "../../../_components/zone-lock-indicator";
+import { StocktakeCountWizard } from "./stocktake-count-wizard";
 import { messages } from "@lib/messages";
 import {
   submitCountRound,
@@ -94,6 +95,22 @@ export function StocktakeCountClient({
     [currentRound, lines],
   );
 
+  // Label of the unit each count is actually recorded in (entry_unit_id), so the
+  // native wizard displays the SAME unit it submits — never the purchase unit
+  // while recording the base unit.
+  const unitLabelByIngredient = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const [idStr, options] of Object.entries(unitOptionsByIngredient)) {
+      const id = Number(idStr);
+      const selected =
+        options.find((o) => o.unitId === unitByIngredient[id]) ??
+        options.find((o) => o.isBase) ??
+        options[0];
+      if (selected) map[id] = selected.label;
+    }
+    return map;
+  }, [unitOptionsByIngredient, unitByIngredient]);
+
   function onCountChange(ingredientId: number, qty: number | null) {
     setCounts((prev) => {
       const next = { ...prev };
@@ -151,7 +168,10 @@ export function StocktakeCountClient({
     />
   );
 
-  const content = (
+  // Safety chrome shared by both planes: draft-saver status + zone-lock
+  // lifecycle. The lock indicator self-manages acquire/heartbeat/release and
+  // gates `editable` through onStateChange; onLost flips it out of "held".
+  const safetyChrome = (
     <>
       <div className="flex flex-wrap items-center gap-3">
         <StocktakeDraftSaverBadge
@@ -170,6 +190,12 @@ export function StocktakeCountClient({
           }}
         />
       ) : null}
+    </>
+  );
+
+  const content = (
+    <>
+      {safetyChrome}
 
       <AppSection
         title={
@@ -220,7 +246,19 @@ export function StocktakeCountClient({
   );
 
   if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
+    return (
+      <StocktakeCountWizard
+        lines={currentRoundLines}
+        counts={counts}
+        onCountChange={onCountChange}
+        onSubmit={submit}
+        submitting={pending}
+        editable={editable}
+        currentRound={currentRound}
+        unitLabelByIngredient={unitLabelByIngredient}
+        chrome={safetyChrome}
+      />
+    );
   }
 
   return (
