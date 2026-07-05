@@ -34,7 +34,9 @@ export async function GRNListPageContent({
   const branchId = scope.selectedBranchId;
   const [res, draftsRes] = await Promise.all([
     fetchGrns(branchId ?? undefined),
-    showDrafts ? listMyGrnDrafts() : Promise.resolve(null),
+    // Scope drafts by the hard operator route branch only — the office plane
+    // (routeBranchId undefined) keeps its cross-branch drafts view.
+    showDrafts ? listMyGrnDrafts(routeBranchId) : Promise.resolve(null),
   ]);
   const dbRows = res.success
     ? (res.data as Array<Record<string, unknown>>)

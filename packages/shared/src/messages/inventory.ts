@@ -137,6 +137,11 @@ export const INVENTORY_VI = {
   supplier: "Nhà cung cấp",
   supplierSearchPlaceholder: "Tìm hoặc thêm nhà cung cấp",
   supplierNotFound: "Không tìm thấy nhà cung cấp",
+  grnReviewLinesHint: "Kiểm từng dòng — chạm để sửa",
+  grnReviewSummary: (count: number, rejected: number) =>
+    rejected > 0
+      ? `${count} mặt hàng · ${rejected} từ chối`
+      : `${count} mặt hàng`,
   productionOperatorDraftsTitle: "Lệnh nháp",
   productionOperatorDoneTodayTitle: "Hoàn tất hôm nay",
   productionOperatorRecipesLink: "Công thức",
