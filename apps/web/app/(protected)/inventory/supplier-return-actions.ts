@@ -7,6 +7,7 @@ import {
   SUPPLIER_RETURN_ROLES,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "./_lib/auth";
 
 const ROLES = SUPPLIER_RETURN_ROLES;
@@ -216,7 +217,25 @@ export async function createSupplierReturnFromGrn(
     PERMISSION_KEYS.SUPPLIER_RETURN_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+
+  // ponytail: pre-check covers human-speed re-submit (back-nav / multi-tab).
+  // A concurrent double-submit or direct-RPC call still needs a partial-unique
+  // index on grn_id (status <> 'cancelled') — follow-up migration.
+  const { data: existing } = await supabase
+    .from("supplier_returns")
+    .select("id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("grn_id", parsed.data.grnId)
+    .neq("status", "cancelled")
+    .limit(1)
+    .maybeSingle();
+  if (existing) {
+    return {
+      success: false,
+      error: messages.inventory.supplierReturns.create.duplicateGrn,
+    };
+  }
 
   const { data, error } = await supabase.rpc("create_supplier_return_from_grn", {
     p_grn_id: parsed.data.grnId,
@@ -224,83 +243,6 @@ export async function createSupplierReturnFromGrn(
     p_reason: parsed.data.reason,
     p_notes: parsed.data.notes ?? undefined,
   });
-  if (error) {
-    return {
-      success: false,
-      error: mapRpcError(error.message, "Không thể tạo phiếu trả hàng."),
-    };
-  }
-
-  const result = z
-    .object({ return_id: z.coerce.number().int().positive() })
-    .safeParse(data);
-  if (!result.success) {
-    return { success: false, error: "Phản hồi không hợp lệ từ máy chủ." };
-  }
-
-  revalidatePath("/inventory/supplier-returns");
-  return { success: true, data: { id: result.data.return_id } };
-}
-
-/* ─── createSupplierReturnFromStock ───
- * RPC `create_supplier_return_from_stock` builds a draft supplier_return
- * (source=post_receipt) from operator-entered lines. Gate: supplier_return:create.
- */
-
-const createFromStockSchema = z.object({
-  branchId: z.coerce.number().int().positive(),
-  supplierId: z.coerce.number().int().positive(),
-  resolution: z.enum(["replacement", "credit_note", "cash_refund"]),
-  reason: z.enum([
-    "damaged",
-    "wrong_item",
-    "expired",
-    "quality_fail",
-    "short_delivery_credit",
-    "other",
-  ]),
-  notes: z.string().trim().max(500).optional(),
-  lines: z
-    .array(
-      z.object({
-        ingredient_id: z.coerce.number().int().positive(),
-        quantity: z.coerce.number().positive(),
-        unit_cost: z.coerce.number().min(0),
-        reason_detail: z.string().trim().max(300).optional(),
-      }),
-    )
-    .min(1, { message: "Cần ít nhất một dòng hàng." }),
-});
-
-export async function createSupplierReturnFromStock(
-  input: z.infer<typeof createFromStockSchema>,
-): Promise<ActionResult<{ id: number }>> {
-  const parsed = createFromStockSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.SUPPLIER_RETURN_CREATE,
-    parsed.data.branchId,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase } = ctx;
-
-  const { data, error } = await supabase.rpc(
-    "create_supplier_return_from_stock",
-    {
-      p_branch_id: parsed.data.branchId,
-      p_supplier_id: parsed.data.supplierId,
-      p_resolution: parsed.data.resolution,
-      p_reason: parsed.data.reason,
-      p_notes: parsed.data.notes ?? "",
-      p_lines: parsed.data.lines,
-    },
-  );
   if (error) {
     return {
       success: false,

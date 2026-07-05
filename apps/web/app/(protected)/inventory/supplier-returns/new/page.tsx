@@ -66,40 +66,12 @@ export async function SupplierReturnNewPageContent({
     return <DocumentFormFrame header={header}>{missing}</DocumentFormFrame>;
   }
 
-  const [grnsRes, suppliersRes, ingredientsRes] = await Promise.all([
-    fetchReturnableGrns(branchId),
-    supabase
-      .from("suppliers")
-      .select("id, name")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("is_active", true)
-      .order("name"),
-    supabase
-      .from("ingredients")
-      .select("id, name, unit, purchase_unit, unit_cost")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("is_active", true)
-      .order("name"),
-  ]);
-
+  const grnsRes = await fetchReturnableGrns(branchId);
   const returnableGrns = grnsRes.success ? (grnsRes.data ?? []) : [];
-  const suppliers = (suppliersRes.data ?? []).map((s) => ({
-    id: s.id,
-    name: s.name,
-  }));
-  const ingredients = (ingredientsRes.data ?? []).map((i) => ({
-    id: i.id,
-    name: i.name,
-    unit: i.purchase_unit ?? i.unit ?? "kg",
-    unitCost: i.unit_cost === null ? null : Number(i.unit_cost),
-  }));
 
   const client = (
     <SupplierReturnCreateClient
       returnableGrns={returnableGrns}
-      suppliers={suppliers}
-      ingredients={ingredients}
-      branchId={branchId}
       detailBasePath={basePath}
       successBasePath={basePath}
     />

@@ -813,6 +813,7 @@ export const inventory = {
       needSupplier: "Chọn nhà cung cấp trước khi thêm mặt hàng.",
       createdOk: "Đã tạo phiếu trả hàng.",
       createFailed: "Không thể tạo phiếu trả hàng.",
+      duplicateGrn: "Phiếu nhập này đã có phiếu trả đang xử lý.",
       branchRequired: "Chưa xác định chi nhánh cho phiếu trả.",
     },
     detail: {
