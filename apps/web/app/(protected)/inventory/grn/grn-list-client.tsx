@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  ClipboardList as IconClipboardList,
   EllipsisVertical as IconDotsVertical,
   FileText as IconFileText,
   Pencil as IconPencil,
@@ -254,12 +255,20 @@ export function GrnListClient({
           eyebrow={INVENTORY_VI.warehouse}
           title={tNav("grn", "navigation")}
           actions={
-            <Button asChild size={embedded ? "touch" : "sm"}>
-              <Link href={purchaseOrdersPath}>
-                <IconPlus className="size-4" />
-                {INVENTORY_VI.choosePoToCreateGrn}
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button asChild size="sm" variant="outline">
+                <Link href={purchaseOrdersPath}>
+                  <IconClipboardList className="size-4" />
+                  {INVENTORY_VI.choosePoToCreateGrn}
+                </Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href={`${basePath}/new`}>
+                  <IconPlus className="size-4" />
+                  {INVENTORY_VI.newGrn}
+                </Link>
+              </Button>
+            </div>
           }
           tabs={
             drafts ? (
