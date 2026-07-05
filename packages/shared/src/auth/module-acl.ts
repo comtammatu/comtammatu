@@ -174,12 +174,12 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     label: getModuleLabelVi("branch_team"),
   },
   employee: {
-    path: "/employee",
+    path: "/br/*/shift",
     allowedRoles: EMPLOYEE_PORTAL_ROLES,
     label: getModuleLabelVi("employee"),
   },
   employee_checkout_approvals: {
-    path: "/employee/checkout-approvals",
+    path: "/br/*/shift/checkout-approvals",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("employee_checkout_approvals"),
   },

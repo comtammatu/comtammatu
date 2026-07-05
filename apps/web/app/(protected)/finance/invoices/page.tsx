@@ -3,7 +3,11 @@ import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
-import { fetchTaxInvoicesPage } from "../actions";
+import {
+  canIssueManualInvoice,
+  fetchAccessibleBranches,
+  fetchTaxInvoicesPage,
+} from "../actions";
 import type { TaxInvoiceCursor } from "../actions";
 import type { InvoiceRow } from "../_lib/finance-types";
 import { parseFinanceParams } from "../_lib/finance-params";
@@ -28,13 +32,21 @@ export default async function InvoicesPage({
       ? ("attention" as const)
       : undefined;
 
-  const [res, canManageInvoices] = await Promise.all([
-    fetchTaxInvoicesPage({ branchId, queue }),
-    currentUserHasAnyPermissionAny([
-      PERMISSION_KEYS.SETTINGS_TENANT,
-      PERMISSION_KEYS.ORDERS_REFUND_APPROVE,
-    ]),
-  ]);
+  const [res, canManageInvoices, canIssueInvoices, branchesRes] =
+    await Promise.all([
+      fetchTaxInvoicesPage({ branchId, queue }),
+      currentUserHasAnyPermissionAny([
+        PERMISSION_KEYS.SETTINGS_TENANT,
+        PERMISSION_KEYS.ORDERS_REFUND_APPROVE,
+      ]),
+      // Same predicate createTaxInvoice enforces — gates the "issue for a past
+      // order" button so button-visible ⊆ action-authorized (no click-then-403).
+      canIssueManualInvoice(),
+      fetchAccessibleBranches(),
+    ]);
+  const branches = (
+    branchesRes.success ? (branchesRes.data ?? []) : []
+  ) as { id: number; name: string }[];
 
   return (
     <AppPage>
@@ -53,6 +65,8 @@ export default async function InvoicesPage({
           branchId={branchId}
           queue={queue}
           canManageInvoices={canManageInvoices}
+          canIssueInvoices={canIssueInvoices}
+          branches={branches}
         />
       ) : (
         <AppEmptyState

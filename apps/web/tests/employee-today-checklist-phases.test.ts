@@ -7,14 +7,12 @@ function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-const todayWorkStateSource = readWeb(
-  "app/(protected)/employee/_lib/today-work-state.ts",
-);
+const todayWorkStateSource = readWeb("lib/employee/_lib/today-work-state.ts");
 const employeeTasksClientSource = readWeb(
-  "app/(protected)/employee/tasks/tasks-client.tsx",
+  "lib/employee/tasks/tasks-client.tsx",
 );
-const employeeTasksPageSource = readWeb("app/(protected)/employee/tasks/page.tsx");
-const employeeCountPageSource = readWeb("app/(protected)/employee/count/page.tsx");
+const employeeTasksPageSource = readWeb("lib/employee/tasks/page.tsx");
+const employeeCountPageSource = readWeb("lib/employee/count/page.tsx");
 const employeeMessagesSource = readWeb("lib/messages/employee.ts");
 
 test("today work state preserves inventory count and groups start/end phases", () => {
@@ -96,8 +94,8 @@ test("employee task UI renders inventory count as a count link, not a checkbox",
   );
   assert.match(
     employeeTasksClientSource,
-    /countHref = "\/employee\/count"/,
-    "Inventory count task should default to the blind count route",
+    /countHref = "\/br"/,
+    "Inventory count task should default to Branch Hub when no route override is supplied",
   );
   assert.match(
     employeeTasksClientSource,

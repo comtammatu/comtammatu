@@ -70,11 +70,6 @@ export async function NewTransferPageContent({
   if (embedded) {
     return (
       <div className="flex w-full flex-col gap-3">
-        <AppPageHeader
-          title={title}
-          description={messages.inventory.transfer.transferDescription}
-          actions={backAction}
-        />
         <CreateTransferForm
           branches={branches}
           ingredients={ingredients}

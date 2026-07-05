@@ -74,11 +74,6 @@ const OFFICE_MODULE_CHROME: Record<OfficeModuleId, ModuleChrome> = {
     crumbLabel: APP_COPY_VI.storeManagement,
     showBackLink: false,
     breadcrumbFromNav: true,
-    action: {
-      href: "/employee",
-      label: MODULE_LABELS_VI.employee,
-      gateModule: "employee",
-    },
   },
   hr: {
     icon: IconBriefcase,

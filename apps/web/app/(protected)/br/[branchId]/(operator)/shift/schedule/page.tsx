@@ -1,4 +1,4 @@
-import { SchedulePageContent } from "@/(protected)/employee/schedule/page";
+import { SchedulePageContent } from "@lib/employee/schedule/page";
 
 export default async function OperatorShiftSchedulePage({
   params,
@@ -8,6 +8,9 @@ export default async function OperatorShiftSchedulePage({
   const { branchId } = await params;
 
   return (
-    <SchedulePageContent leaveHref={`/br/${branchId}/shift/schedule/leave`} />
+    <SchedulePageContent
+      leaveHref={`/br/${branchId}/shift/schedule/leave`}
+      profileHref={`/br/${branchId}/profile`}
+    />
   );
 }

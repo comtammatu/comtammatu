@@ -275,7 +275,10 @@ export function CreateTransferForm({
     draftLines.length === 0;
 
   return (
-    <form onSubmit={submit} className="flex min-w-0 flex-col gap-4">
+    <form
+      onSubmit={submit}
+      className={`flex min-w-0 flex-col ${embedded ? "gap-3" : "gap-4"}`}
+    >
       <AppSection title={messages.inventory.transfer.createTransferTitle}>
         {canCreateInboundRequest ? (
           <div className="flex flex-col gap-3">

@@ -16,17 +16,19 @@ function around(source: string, needle: string) {
 }
 
 test("count-slip RPCs emit durable notifications with review links", () => {
-  const submitApproveSql = readRepoFile(
-    "supabase/migrations/_archive/20260629130000_inventory_multiunit_stocktake_count.sql",
-  );
-  const recountSql = readRepoFile(
-    "supabase/migrations/_archive/20260627201823_inventory_per_employee_count_slips.sql",
+  const baselineSql = readRepoFile(
+    "supabase/migrations/00000000000000_baseline.sql",
   );
   const messageSrc = readRepoFile("apps/web/lib/messages/notifications.ts");
-  const itemSrc = readRepoFile("apps/web/app/_components/notification-item.tsx");
-  const submittedBlock = around(submitApproveSql, "'inventory.count_slip_submitted'");
-  const approvedBlock = around(submitApproveSql, "'inventory.count_slip_approved'");
-  const recountBlock = around(recountSql, "'inventory.count_slip_recount'");
+  const itemSrc = readRepoFile(
+    "apps/web/app/_components/notification-item.tsx",
+  );
+  const submittedBlock = around(
+    baselineSql,
+    "'inventory.count_slip_submitted'",
+  );
+  const approvedBlock = around(baselineSql, "'inventory.count_slip_approved'");
+  const recountBlock = around(baselineSql, "'inventory.count_slip_recount'");
 
   assert.match(
     submittedBlock,
@@ -35,13 +37,13 @@ test("count-slip RPCs emit durable notifications with review links", () => {
   );
   assert.match(
     approvedBlock,
-    /'inventory\.count_slip_approved'[\s\S]*'\/employee\/count'[\s\S]*format\('inventory\.count_slip:%s:approved', p_slip_id\)/,
-    "approved count slips must notify the employee count page",
+    /'inventory\.count_slip_approved'[\s\S]*format\('\/br\/%s\/stock\/count', v_slip\.branch_id\)[\s\S]*format\('inventory\.count_slip:%s:approved', p_slip_id\)/,
+    "approved count slips must notify the Branch Hub count page",
   );
   assert.match(
     recountBlock,
-    /'inventory\.count_slip_recount'[\s\S]*'\/employee\/count'[\s\S]*format\('inventory\.count_slip:%s:recount', p_slip_id\)/,
-    "recount requests must notify the employee count page",
+    /'inventory\.count_slip_recount'[\s\S]*format\('\/br\/%s\/stock\/count', v_slip\.branch_id\)[\s\S]*format\('inventory\.count_slip:%s:recount', p_slip_id\)/,
+    "recount requests must notify the Branch Hub count page",
   );
 
   for (const kind of [
@@ -50,6 +52,10 @@ test("count-slip RPCs emit durable notifications with review links", () => {
     "inventory.count_slip_recount",
   ]) {
     assert.match(messageSrc, new RegExp(`"${kind}"`), `${kind} needs a label`);
-    assert.match(itemSrc, new RegExp(`case "${kind}"`), `${kind} needs an icon`);
+    assert.match(
+      itemSrc,
+      new RegExp(`case "${kind}"`),
+      `${kind} needs an icon`,
+    );
   }
 });

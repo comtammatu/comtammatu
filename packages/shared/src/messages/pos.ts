@@ -64,7 +64,7 @@ export const POS_VI = {
   orderDiscountLabel: "Chiết khấu đơn",
   options: "Tuỳ chọn",
   sides: "Ăn kèm",
-  buyerNoInvoice: "Người mua không lấy hóa đơn",
+  buyerNoInvoice: "Khách không lấy hóa đơn (vẫn xuất HĐĐT)",
   buyerNameLabel: "Tên người mua / công ty",
   buyerNamePlaceholder: "Tên khách / công ty",
   taxCodeLabel: "Mã số thuế",

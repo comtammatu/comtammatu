@@ -53,7 +53,10 @@ export function BoardHeader({
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2 px-2 py-2 md:flex-nowrap md:px-3">
       <div className="flex shrink-0 items-center gap-1.5">
-        <EmployeePortalBackControl className="h-8 px-2 text-sm" />
+        <EmployeePortalBackControl
+          branchId={branchId}
+          className="h-8 px-2 text-sm"
+        />
         <span className="font-heading text-base font-semibold text-foreground">
           KDS
         </span>

@@ -147,6 +147,10 @@ export function resolvePostLoginRedirect(
     return fallback;
   }
 
+  if (targetUrl.pathname.startsWith("/employee")) {
+    return fallback;
+  }
+
   if (isRunnerPublicDisplayPath(targetUrl.pathname)) {
     return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
   }

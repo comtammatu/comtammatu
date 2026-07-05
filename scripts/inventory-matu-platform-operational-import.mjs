@@ -44,6 +44,7 @@ function parseArgs(argv) {
       process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "",
     writeResetSql: null,
     writeDeltaSql: null,
+    writeRecipesSql: null,
     writeSql: null,
   };
 
@@ -64,6 +65,8 @@ function parseArgs(argv) {
     else if (arg === "--target-key") out.targetKey = argv[++i] ?? "";
     else if (arg === "--write-delta-sql") out.writeDeltaSql = argv[++i] ?? null;
     else if (arg === "--write-reset-sql") out.writeResetSql = argv[++i] ?? null;
+    else if (arg === "--write-recipes-sql")
+      out.writeRecipesSql = argv[++i] ?? null;
     else if (arg === "--write-sql") out.writeSql = argv[++i] ?? null;
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -78,6 +81,7 @@ function printHelp() {
   pnpm inventory:matu-platform:operational -- --write-sql /tmp/import.sql --allow-manual-review-skip
   pnpm inventory:matu-platform:operational -- --delta-cutoff 2026-06-24T00:00:00+07:00 --write-delta-sql /tmp/delta.sql
   pnpm inventory:matu-platform:operational -- --write-reset-sql /tmp/reset.sql
+  pnpm inventory:matu-platform:operational -- --write-recipes-sql /tmp/recipes.sql
 
 Builds the operational Inventory import plan:
   - real stock-bearing transfers
@@ -267,6 +271,7 @@ async function loadTarget(ctx) {
     levels,
     issues,
     stocktakes,
+    productionRecipes,
   ] = await Promise.all([
     fetchAll({ ...ctx, table: "tenants", select: "id,slug,name" }),
     fetchAll({
@@ -283,7 +288,7 @@ async function loadTarget(ctx) {
     fetchAll({
       ...ctx,
       table: "ingredients",
-      select: "id,tenant_id,sku,name,unit,unit_cost,is_active",
+      select: "id,tenant_id,sku,name,unit,unit_cost,is_active,item_kind",
     }),
     fetchAll({
       ...ctx,
@@ -304,6 +309,7 @@ async function loadTarget(ctx) {
     fetchAll({ ...ctx, table: "stock_levels", select: "id" }),
     fetchAll({ ...ctx, table: "stock_issues", select: "id" }),
     fetchAll({ ...ctx, table: "stocktake_sessions", select: "id" }),
+    fetchAll({ ...ctx, table: "production_recipes", select: "id" }),
   ]);
 
   return {
@@ -313,6 +319,7 @@ async function loadTarget(ctx) {
     levels,
     locations,
     movements,
+    productionRecipes,
     profiles,
     stocktakes,
     tenants,
@@ -1253,6 +1260,7 @@ function buildPlan(source, target, options = {}) {
     transferItems,
     transfers: realTransfers,
   };
+  const recipePlan = buildRecipePlan(source, target, options);
   const report = {
     generatedAt: new Date().toISOString(),
     mode: "dry-run",
@@ -1351,6 +1359,17 @@ function buildPlan(source, target, options = {}) {
       movementRows: movementRows.length,
     },
     reset: buildResetPlan(target),
+    recipes: {
+      blockers: recipePlan.blockers,
+      canWrite: recipePlan.blockers.length === 0,
+      lines: recipePlan.summary.lines,
+      recipes: recipePlan.summary.recipes,
+      manualReview: recipePlan.manualReview.length,
+      missingRows: {
+        count: recipePlan.missingRows.length,
+        samples: recipePlan.missingRows.slice(0, 30),
+      },
+    },
     target: {
       branches: target.branches.length,
       ingredients: target.ingredients.length,
@@ -1364,7 +1383,7 @@ function buildPlan(source, target, options = {}) {
     },
   };
   if (options.includeRows) report.plannedRows = sqlRows;
-  return { report, sqlRows };
+  return { recipePlan, report, sqlRows };
 }
 
 function isImportReason(row) {
@@ -1425,6 +1444,112 @@ function buildResetPlan(target) {
       nonImportStockTransferItems: nonImportTransferItems.length,
       nonImportStockTransfers: nonImportTransfers.length,
     },
+  };
+}
+
+// numeric(5,3): max representable magnitude is 99.999.
+const YIELD_FACTOR_MAX = 99.999;
+
+function roundYieldFactor(value) {
+  return Math.round(value * 1000) / 1000;
+}
+
+function buildRecipePlan(source, target, options = {}) {
+  const tenant = getTargetTenant(target);
+  const targetIndex = makeTargetIndex(target, tenant.id);
+  const materialById = new Map(
+    (source.materials ?? []).map((material) => [material.id, material]),
+  );
+  const recipeItemsByRecipe = indexBy(
+    source.recipeItems ?? [],
+    (item) => item.recipe_id,
+  );
+
+  const missingRows = [];
+  const manualReview = [];
+  const recipeRows = [];
+  const emittedPairs = new Set();
+
+  for (const recipe of source.recipes ?? []) {
+    const outputMaterial = materialById.get(recipe.output_material_id);
+    const finishedIngredient = targetIngredientForMaterial(
+      outputMaterial,
+      targetIndex,
+    );
+    if (!outputMaterial || !finishedIngredient) {
+      addMissingMaterialRow(missingRows, outputMaterial, recipe.output_material_id);
+      continue;
+    }
+
+    const rawYieldFactor = numberValue(recipe.output_quantity) || 1;
+    const yieldFactor = roundYieldFactor(rawYieldFactor);
+    if (yieldFactor <= 0 || yieldFactor > YIELD_FACTOR_MAX) {
+      manualReview.push({
+        class: "manual_review_recipe_yield_out_of_range",
+        finishedGoodId: finishedIngredient.id,
+        recipeId: recipe.id,
+        yieldFactor: rawYieldFactor,
+      });
+      continue;
+    }
+
+    for (const item of recipeItemsByRecipe.get(recipe.id) ?? []) {
+      const material = materialById.get(item.material_id);
+      const ingredient = targetIngredientForMaterial(material, targetIndex);
+      if (!material || !ingredient) {
+        addMissingMaterialRow(missingRows, material, item.material_id);
+        continue;
+      }
+      if (ingredient.item_kind !== "raw_material" || ingredient.is_active === false) {
+        manualReview.push({
+          class: "manual_review_recipe_component_not_raw_material",
+          finishedGoodId: finishedIngredient.id,
+          ingredientId: ingredient.id,
+          itemKind: ingredient.item_kind ?? null,
+          recipeId: recipe.id,
+        });
+        continue;
+      }
+      const quantity = numberValue(item.quantity);
+      if (quantity <= 0) continue;
+
+      const pairKey = `${finishedIngredient.id}:${ingredient.id}`;
+      if (emittedPairs.has(pairKey)) {
+        manualReview.push({
+          class: "manual_review_recipe_duplicate_line",
+          finishedGoodId: finishedIngredient.id,
+          ingredientId: ingredient.id,
+          recipeId: recipe.id,
+        });
+        continue;
+      }
+      emittedPairs.add(pairKey);
+      recipeRows.push({
+        tenant_id: tenant.id,
+        finished_good_id: finishedIngredient.id,
+        ingredient_id: ingredient.id,
+        quantity,
+        yield_factor: yieldFactor,
+      });
+    }
+  }
+
+  const blockers = [];
+  if ((target.productionRecipes ?? []).length > 0)
+    blockers.push("target production_recipes not empty");
+  if (missingRows.length > 0) blockers.push("missing target mapping rows");
+  if (manualReview.length > 0 && !options.allowManualReviewSkip)
+    blockers.push("manual review rows require owner decision");
+
+  const distinctFinishedGoods = new Set(
+    recipeRows.map((row) => row.finished_good_id),
+  );
+  return {
+    recipeRows,
+    missingRows,
+    manualReview,
+    blockers,
+    summary: { recipes: distinctFinishedGoods.size, lines: recipeRows.length },
   };
 }
 
@@ -1507,6 +1632,53 @@ DELETE FROM public.stock_transfers
 WHERE notes LIKE 'matu-platform import:%';
 
 ALTER TABLE public.stock_movements ENABLE TRIGGER trg_stock_movement_update_levels;
+
+COMMIT;
+`;
+}
+
+function generateRecipesSql(rows) {
+  return `BEGIN;
+
+DO $guard$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.production_recipes) THEN
+    RAISE EXCEPTION 'target_production_recipes_not_empty';
+  END IF;
+END
+$guard$;
+
+CREATE TEMP TABLE tmp_matu_platform_recipes ON COMMIT DROP AS
+SELECT *
+FROM jsonb_to_recordset(${jsonSql("matu_recipes", rows)}) AS x(
+  tenant_id bigint,
+  finished_good_id bigint,
+  ingredient_id bigint,
+  quantity numeric,
+  yield_factor numeric
+);
+
+INSERT INTO public.production_recipes (
+  tenant_id,
+  finished_good_id,
+  ingredient_id,
+  quantity,
+  unit,
+  entry_unit_id,
+  note,
+  yield_factor
+)
+SELECT
+  tenant_id,
+  finished_good_id,
+  ingredient_id,
+  quantity,
+  public.inventory_entry_unit_code(tenant_id, ingredient_id, NULL),
+  NULL,
+  NULL,
+  yield_factor
+FROM tmp_matu_platform_recipes
+ORDER BY finished_good_id, ingredient_id;
 
 COMMIT;
 `;
@@ -2229,6 +2401,20 @@ function selfTest() {
         cost_per_unit: 20.119,
         base_unit: "kg",
       },
+      {
+        id: "fg1",
+        sku: "FG001",
+        name: "Com Tam Suon",
+        cost_per_unit: 45,
+        base_unit: "phan",
+      },
+      {
+        id: "mx",
+        sku: "X999",
+        name: "Unmapped Spice",
+        cost_per_unit: 5,
+        base_unit: "kg",
+      },
     ],
     stockItems: [
       { warehouse_id: "kho-tong", material_id: "m1", quantity: 6 },
@@ -2294,8 +2480,21 @@ function selfTest() {
         output_quantity: 1,
         output_unit: "kg",
       },
+      {
+        id: "r2",
+        name: "Com Tam Suon",
+        output_material_id: "fg1",
+        output_quantity: 2,
+        output_unit: "phan",
+      },
     ],
-    recipeItems: [{ recipe_id: "r1", material_id: "m1", quantity: 2 }],
+    recipeItems: [
+      { recipe_id: "r1", material_id: "m1", quantity: 2 },
+      { recipe_id: "r2", material_id: "m1", quantity: 3 },
+      { recipe_id: "r2", material_id: "m2", quantity: 2 },
+      { recipe_id: "r2", material_id: "mx", quantity: 1 },
+      { recipe_id: "r2", material_id: "m1", quantity: 5 },
+    ],
     transfers: [
       {
         id: "t1",
@@ -2434,6 +2633,7 @@ function selfTest() {
         name: "Rice",
         unit: "kg",
         unit_cost: 10,
+        item_kind: "raw_material",
       },
       {
         id: 200,
@@ -2442,8 +2642,19 @@ function selfTest() {
         name: "Pork",
         unit: "kg",
         unit_cost: 20.119,
+        item_kind: "raw_material",
+      },
+      {
+        id: 300,
+        tenant_id: 1,
+        sku: "FG001",
+        name: "Com Tam Suon",
+        unit: "phan",
+        unit_cost: 45,
+        item_kind: "finished_good",
       },
     ],
+    productionRecipes: [],
     movements: [],
     profiles: [
       {
@@ -2507,6 +2718,46 @@ function selfTest() {
   assert.match(sql, /production_output/);
   assert.match(sql, /sale_consumption/);
   assert.match(sql, /balance_adjustment/);
+
+  const recipePlan = buildRecipePlan(source, target, {
+    allowManualReviewSkip: true,
+  });
+  const recipeR2Rows = recipePlan.recipeRows.filter(
+    (row) => row.finished_good_id === 300,
+  );
+  assert.equal(recipeR2Rows.length, 2);
+  assert.deepEqual(
+    recipeR2Rows.map((row) => row.ingredient_id).sort(),
+    [100, 200],
+  );
+  assert.ok(recipeR2Rows.every((row) => row.yield_factor === 2));
+  const recipePairs = recipePlan.recipeRows.map(
+    (row) => `${row.finished_good_id}:${row.ingredient_id}`,
+  );
+  assert.equal(new Set(recipePairs).size, recipePairs.length);
+  assert.ok(
+    recipePlan.missingRows.some((row) => row.materialSku === "X999"),
+  );
+  assert.ok(
+    !recipePlan.recipeRows.some((row) => row.ingredient_id == null),
+  );
+  assert.equal(
+    recipePlan.manualReview.filter(
+      (row) => row.class === "manual_review_recipe_duplicate_line",
+    ).length,
+    1,
+  );
+  assert.deepEqual(recipePlan.blockers, ["missing target mapping rows"]);
+  const recipesSql = generateRecipesSql(recipePlan.recipeRows);
+  assert.match(recipesSql, /INSERT INTO public.production_recipes/);
+  assert.match(recipesSql, /inventory_entry_unit_code/);
+  assert.match(recipesSql, /target_production_recipes_not_empty/);
+  assert.equal(
+    buildRecipePlan(source, { ...target, productionRecipes: [{ id: 1 }] }, {
+      allowManualReviewSkip: true,
+    }).blockers.includes("target production_recipes not empty"),
+    true,
+  );
 
   const { report: deltaReport, sqlRows: deltaRows } = buildDeltaPlan(
     sqlRows,
@@ -2587,6 +2838,7 @@ if (args.help) {
     args.writeSql,
     args.writeResetSql,
     args.writeDeltaSql,
+    args.writeRecipesSql,
   ].filter(Boolean);
   if (writeModes.length > 1) {
     throw new Error("Choose only one SQL output flag");
@@ -2598,7 +2850,7 @@ if (args.help) {
     loadSource({ baseUrl: args.sourceUrl, key: args.sourceKey }),
     loadTarget({ baseUrl: args.targetUrl, key: args.targetKey }),
   ]);
-  const { report, sqlRows } = buildPlan(source, target, args);
+  const { recipePlan, report, sqlRows } = buildPlan(source, target, args);
   if (args.deltaCutoff || args.writeDeltaSql) {
     const { report: deltaReport, sqlRows: deltaRows } = buildDeltaPlan(
       sqlRows,
@@ -2635,6 +2887,15 @@ if (args.help) {
     }
     writeFileSync(args.writeSql, generateSql(sqlRows));
     report.sql.writtenTo = args.writeSql;
+  }
+  if (args.writeRecipesSql) {
+    if (recipePlan.blockers.length > 0) {
+      throw new Error(
+        `Cannot write recipes SQL while blockers remain: ${recipePlan.blockers.join("; ")}`,
+      );
+    }
+    writeFileSync(args.writeRecipesSql, generateRecipesSql(recipePlan.recipeRows));
+    report.recipes.writtenTo = args.writeRecipesSql;
   }
 
   if (args.json) console.log(JSON.stringify(report, null, 2));

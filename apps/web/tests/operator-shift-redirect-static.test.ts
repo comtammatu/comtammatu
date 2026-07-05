@@ -32,7 +32,7 @@ test("operator shift schedule renders inside the branch operator shell", () => {
   const source = read(path);
   assert.ok(
     source.includes(
-      'import { SchedulePageContent } from "@/(protected)/employee/schedule/page"',
+      'import { SchedulePageContent } from "@lib/employee/schedule/page"',
     ),
     path,
   );
@@ -55,7 +55,7 @@ test("operator shift leave renders inside the schedule route family", () => {
   const source = read(path);
   assert.ok(
     source.includes(
-      'import { EmployeeLeavePageContent } from "@/(protected)/employee/leave/page"',
+      'import { EmployeeLeavePageContent } from "@lib/employee/leave/page"',
     ),
     path,
   );
@@ -77,7 +77,7 @@ test("operator payslip renders inside the profile route family", () => {
   const source = read(path);
   assert.ok(
     source.includes(
-      'import { PayslipPageContent } from "@/(protected)/employee/payslip/page"',
+      'import { PayslipPageContent } from "@lib/employee/payslip/page"',
     ),
     path,
   );
@@ -93,12 +93,12 @@ test("operator checkout approvals render inside the branch operator shell", () =
 
   const source = read(path);
   const employeeSource = read(
-    "apps/web/app/(protected)/employee/checkout-approvals/page.tsx",
+    "apps/web/lib/employee/checkout-approvals/page.tsx",
   );
 
   assert.ok(
     source.includes(
-      'import { CheckoutApprovalsPageContent } from "@/(protected)/employee/checkout-approvals/page"',
+      'import { CheckoutApprovalsPageContent } from "@lib/employee/checkout-approvals/page"',
     ),
     path,
   );
@@ -117,7 +117,7 @@ test("operator stock count renders employee count inside the branch operator she
   const source = read(path);
   assert.ok(
     source.includes(
-      'import { EmployeeCountPageContent } from "@/(protected)/employee/count/page"',
+      'import { EmployeeCountPageContent } from "@lib/employee/count/page"',
     ),
     path,
   );
@@ -127,18 +127,16 @@ test("operator stock count renders employee count inside the branch operator she
 });
 
 test("employee count client keeps location changes on the current route", () => {
-  const source = read(
-    "apps/web/app/(protected)/employee/count/count-client.tsx",
-  );
+  const source = read("apps/web/lib/employee/count/count-client.tsx");
 
-  assert.ok(source.includes('baseHref = "/employee/count"'));
+  assert.ok(source.includes('baseHref = "/br"'));
   assert.ok(
     source.includes("router.replace(`${baseHref}?${params.toString()}`)"),
   );
 });
 
 test("employee count page takes visible copy from employee messages", () => {
-  const source = read("apps/web/app/(protected)/employee/count/page.tsx");
+  const source = read("apps/web/lib/employee/count/page.tsx");
 
   assert.ok(source.includes("const copy = messages.employee.count"), source);
   for (const hardcoded of [
@@ -160,7 +158,7 @@ test("operator shift clock renders inside the branch operator shell", () => {
   const source = read(path);
   assert.ok(
     source.includes(
-      'import { ClockPageContent } from "@/(protected)/employee/clock/page"',
+      'import { ClockPageContent } from "@lib/employee/clock/page"',
     ),
     path,
   );
@@ -184,10 +182,7 @@ test("operator profile renders inside the branch operator shell", () => {
   assert.equal(exists(path), true, path);
 
   const source = read(path);
-  assert.ok(
-    source.includes('from "@/(protected)/employee/profile/page"'),
-    path,
-  );
+  assert.ok(source.includes('from "@lib/employee/profile/page"'), path);
   assert.ok(source.includes("PERSONAL_LINKS"), path);
   assert.ok(source.includes("ProfilePageContent"), path);
   assert.ok(source.includes("href: `/br/${branchId}/profile/payslip`"), path);
@@ -230,7 +225,7 @@ test("operator shift landing renders the shared cockpit with branch-scoped route
 });
 
 test("employee daily cockpit does not own profile or leave self-service", () => {
-  const source = read("apps/web/app/(protected)/employee/page.tsx");
+  const source = read("apps/web/lib/employee/page.tsx");
 
   assert.match(source, /mode = "full"/);
   assert.match(source, /mode\?: "full" \| "today-card"/);

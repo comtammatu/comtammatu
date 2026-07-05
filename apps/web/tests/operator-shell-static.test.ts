@@ -55,7 +55,12 @@ test("operator header keeps profile and notifications in chrome", () => {
   const layout = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
   );
+  const appHeader = read("apps/web/app/components/app-header.tsx");
 
+  assert.match(layout, /homeHref=\{`\/br\/\$\{context\.branchId\}`\}/);
+  assert.match(layout, /homeAriaLabel=\{APP_COPY_VI\.operatorHome\}/);
+  assert.match(appHeader, /homeHref\?: string/);
+  assert.match(appHeader, /<Link[\s\S]*href=\{href\}/);
   assert.match(layout, /IconUser/);
   assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/profile`\}/);
   assert.match(layout, /aria-label=\{messages\.employee\.nav\.profileShort\}/);
@@ -104,11 +109,21 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /count: `\$\{basePath\}\/stock\/count`/);
   assert.match(home, /EmployeeActionSection/);
   assert.match(home, /groups\.map/);
+  assert.match(home, /branchTodayGroup/);
+  assert.match(home, /group\.id === "sales_kitchen"/);
+  assert.match(
+    home,
+    /tiles: branchTodayGroup\.tiles\.slice\(0, branchTodayTileLimit\)/,
+  );
+  assert.match(home, /showMoreLink/);
   assert.match(
     home,
     /key: `\$\{group\.id\}-\$\{tile\.moduleKey\}-\$\{tile\.href\}`/,
   );
-  assert.match(home, /mobileColumns=\{group\.id === "sales_kitchen" \? 1 : 2\}/);
+  assert.match(
+    home,
+    /mobileColumns=\{group\.id === "sales_kitchen" \? 1 : 2\}/,
+  );
   assert.doesNotMatch(home, /operatorRuntimeActions/);
   assert.doesNotMatch(home, /operatorOpsActions/);
   assert.doesNotMatch(home, /EmployeeStatusStrip/);
@@ -259,8 +274,43 @@ test("operator home renders the unified Cần xử lý queue before domain tile 
   );
 });
 
+test("operator today shift and profile screens use responsive branch layout", () => {
+  const layout = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
+  );
+  const home = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
+  );
+  const employeeHome = read("apps/web/lib/employee/page.tsx");
+  const profile = read("apps/web/lib/employee/profile/page.tsx");
+  const operatorProfile = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/profile/page.tsx",
+  );
+  const bottomNav = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
+  );
+
+  assert.match(layout, /md:max-w-3xl lg:max-w-5xl xl:max-w-6xl/);
+  assert.doesNotMatch(layout, /\s+mobile\s+contentClassName=/);
+  assert.equal(
+    (bottomNav.match(/className="static shrink-0"/g) ?? []).length,
+    2,
+  );
+  assert.match(home, /lg:grid-cols-3/);
+  assert.match(home, /lg:col-start-3 lg:row-span-6 lg:row-start-1/);
+  assert.match(employeeHome, /workflowLayout === "stepper"/);
+  assert.match(employeeHome, /lg:grid-cols-5/);
+  assert.match(operatorProfile, /link\.key === "payslip"/);
+  assert.doesNotMatch(operatorProfile, /permissions/);
+  assert.match(operatorProfile, /showWorkspaceLinks=\{false\}/);
+  assert.match(profile, /showWorkspaceLinks = true/);
+  assert.match(profile, /showWorkspaceLinks && workspaceLinks\.length > 0/);
+  assert.match(profile, /lg:grid-cols-3/);
+  assert.match(profile, /columns=\{2\}/);
+});
+
 test("manager smart card counts pending waste approvals with checkouts", () => {
-  const home = read("apps/web/app/(protected)/employee/page.tsx");
+  const home = read("apps/web/lib/employee/page.tsx");
 
   assert.match(home, /\.eq\("issue_type", "writeoff"\)/);
   assert.match(home, /\.eq\("approval_status", "pending"\)/);

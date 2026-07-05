@@ -97,7 +97,7 @@ Sau khi cashier chạm "Đã thanh toán" (POS-05), toast hiện trong **1 trong
 
 #### ✅ "Đã thanh toán — không xuất HĐĐT" (xanh)
 
-**Ý nghĩa:** Khách KHÔNG yêu cầu ghi thông tin người mua (giữ tick "Người mua không lấy hóa đơn"). Tiền vào DB.
+**Ý nghĩa:** Khách KHÔNG yêu cầu ghi thông tin người mua (giữ tick "Khách không lấy hóa đơn (vẫn xuất HĐĐT)"). Tiền vào DB.
 
 **Bạn làm:** Không cần làm gì. Bình thường.
 

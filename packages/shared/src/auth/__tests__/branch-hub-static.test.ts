@@ -68,14 +68,14 @@ test("resolveBranchHubDestination -> central-site roles land on their resolved h
   }
 });
 
-test("resolveBranchHubDestination -> central-site roles without a home site keep /employee", () => {
+test("resolveBranchHubDestination -> central-site roles without a home site stop before old employee URLs", () => {
   for (const role of ["warehouse_manager", "production_manager"] as const) {
     assert.equal(
       resolveBranchHubDestination(claims(role, null), {
         standaloneStation: null,
         isDesktop: false,
       }),
-      "/employee",
+      "/access-denied?reason=branch-scope-mismatch",
       role,
     );
     assert.equal(
@@ -84,7 +84,7 @@ test("resolveBranchHubDestination -> central-site roles without a home site keep
         isDesktop: false,
         homeBranchId: null,
       }),
-      "/employee",
+      "/access-denied?reason=branch-scope-mismatch",
       role,
     );
   }
@@ -111,21 +111,21 @@ test("resolveBranchHubDestination -> owner phone without branch lands on picker"
   );
 });
 
-test("resolveBranchHubDestination -> office phone keeps current role fallback", () => {
+test("resolveBranchHubDestination -> office phone lands on finance", () => {
   assert.equal(
     resolveBranchHubDestination(claims("office", null), {
       standaloneStation: null,
       isDesktop: false,
     }),
-    "/employee",
+    "/finance",
   );
-  // Office stays home on /employee even when a caller passes a home site.
+  // Office has no operator hub; a stray home site must not move it.
   assert.equal(
     resolveBranchHubDestination(claims("office", null), {
       standaloneStation: null,
       isDesktop: false,
       homeBranchId: 9,
     }),
-    "/employee",
+    "/finance",
   );
 });

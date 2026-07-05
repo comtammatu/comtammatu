@@ -118,6 +118,7 @@ export function OperatorBottomNav({
     return (
       <AppBottomNav
         ariaLabel={APP_COPY_VI.operatorAriaLabel}
+        className="static shrink-0"
         items={centralNavItems(branchId, branchKind).map((item) => ({
           href: item.href,
           label: item.label,
@@ -174,6 +175,7 @@ export function OperatorBottomNav({
   return (
     <AppBottomNav
       ariaLabel={APP_COPY_VI.operatorAriaLabel}
+      className="static shrink-0"
       items={items.map((item) => ({
         href: item.href,
         label: item.label,

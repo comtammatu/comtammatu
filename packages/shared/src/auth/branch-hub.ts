@@ -21,7 +21,15 @@ function isAdminRole(role: JwtClaims["user_role"]): boolean {
 
 /** Determine the default redirect path for a role after login */
 export function getDefaultRedirect(claims: JwtClaims): string {
-  return isAdminRole(claims.user_role) ? "/finance" : "/employee";
+  if (isAdminRole(claims.user_role) || claims.user_role === "office") {
+    return "/finance";
+  }
+
+  if (canAccess(claims.user_role, "operator_home")) {
+    return claims.branch_id != null ? `/br/${claims.branch_id}` : "/br";
+  }
+
+  return "/finance";
 }
 
 export function resolveBranchHubDestination(
@@ -51,6 +59,10 @@ export function resolveBranchHubDestination(
 
   if (isAdminRole(claims.user_role)) {
     return "/br";
+  }
+
+  if (canAccess(claims.user_role, "operator_home")) {
+    return "/access-denied?reason=branch-scope-mismatch";
   }
 
   return getDefaultRedirect(claims);

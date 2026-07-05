@@ -81,18 +81,13 @@ test("Employee leave permission and generated type mirrors are wired", () => {
 });
 
 test("Cổng nhân viên exposes leave request self-service from Schedule", () => {
-  const schedule = read("apps/web/app/(protected)/employee/schedule/page.tsx");
-  const page = read("apps/web/app/(protected)/employee/leave/page.tsx");
-  const client = read(
-    "apps/web/app/(protected)/employee/leave/leave-client.tsx",
-  );
-  const actions = read("apps/web/app/(protected)/employee/leave/actions.ts");
+  const schedule = read("apps/web/lib/employee/schedule/page.tsx");
+  const page = read("apps/web/lib/employee/leave/page.tsx");
+  const client = read("apps/web/lib/employee/leave/leave-client.tsx");
+  const actions = read("apps/web/lib/employee/leave/actions.ts");
   const messages = read("apps/web/lib/messages/employee.ts");
 
-  for (const expected of [
-    'leaveHref = "/employee/leave"',
-    '.from("leave_requests")',
-  ]) {
+  for (const expected of ['leaveHref = "/br"', '.from("leave_requests")']) {
     assert.ok(schedule.includes(expected), `expected schedule ${expected}`);
   }
 

@@ -7,14 +7,12 @@ export type RouteSurface =
   | "workspace"
   | "branch_management"
   | "branch_operation"
-  | "employee"
   | "public";
 
 export type RoutePrimaryNav =
   | "admin-sidebar"
   | "workspace-sidebar"
   | "management-sidebar"
-  | "employee-bottom-nav"
   | "operator-bottom-nav"
   | "operational-chrome"
   | "none";
@@ -53,18 +51,6 @@ export const ROUTE_FAMILY_CONTRACTS = [
     primaryNav: "none",
     backBehavior: "none",
     breadcrumbRoot: null,
-    requiresBranchId: false,
-  },
-  {
-    id: "employee",
-    label: MODULE_ACL.employee.label,
-    surface: "employee",
-    entryPath: MODULE_ACL.employee.path,
-    matchPrefixes: [MODULE_ACL.employee.path],
-    moduleKeys: ["employee"],
-    primaryNav: "employee-bottom-nav",
-    backBehavior: "in-flow",
-    breadcrumbRoot: MODULE_ACL.employee.label,
     requiresBranchId: false,
   },
   {

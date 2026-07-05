@@ -50,9 +50,9 @@ test("Employee Daily Work migration hardens attendance and adds checklist RPCs",
 });
 
 test("Employee clock client and actions no longer use GPS for clock-in/out", () => {
-  const actionSrc = read("apps/web/app/(protected)/employee/clock/actions.ts");
+  const actionSrc = read("apps/web/lib/employee/clock/actions.ts");
   const clientSrc = read(
-    "apps/web/app/(protected)/employee/clock/clock-client.tsx",
+    "apps/web/lib/employee/clock/clock-client.tsx",
   );
 
   assert.ok(
@@ -108,7 +108,7 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
   const migration = read(
     "supabase/migrations/_archive/20260610170000_hr_checklist_template_library.sql",
   );
-  const actionSrc = read("apps/web/app/(protected)/employee/clock/actions.ts");
+  const actionSrc = read("apps/web/lib/employee/clock/actions.ts");
   const positionTasksActionSrc = read(
     "apps/web/app/(protected)/hr/position-tasks-actions.ts",
   );
@@ -226,16 +226,16 @@ test("HRM consumption history stays available but no longer gates Employee check
     "supabase/migrations/_archive/20260619042223_employee_consumption_task_kind.sql",
   );
   const actionsSrc = read(
-    "apps/web/app/(protected)/employee/consumption-actions.ts",
+    "apps/web/lib/employee/consumption-actions.ts",
   );
   const clockActionsSrc = read(
-    "apps/web/app/(protected)/employee/clock/actions.ts",
+    "apps/web/lib/employee/clock/actions.ts",
   );
   const tasksClientSrc = read(
-    "apps/web/app/(protected)/employee/tasks/tasks-client.tsx",
+    "apps/web/lib/employee/tasks/tasks-client.tsx",
   );
   const approvalsClientSrc = read(
-    "apps/web/app/(protected)/employee/checkout-approvals/checkout-approvals-client.tsx",
+    "apps/web/lib/employee/checkout-approvals/checkout-approvals-client.tsx",
   );
   const issueActionsSrc = read(
     "apps/web/app/(protected)/inventory/issue-actions.ts",
@@ -374,16 +374,16 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
   const grantMigration = read(
     "supabase/migrations/_archive/20260609132012_grant_private_schema_usage_to_service_role.sql",
   );
-  const actionSrc = read("apps/web/app/(protected)/employee/clock/actions.ts");
+  const actionSrc = read("apps/web/lib/employee/clock/actions.ts");
   const workStateSrc = read(
-    "apps/web/app/(protected)/employee/_lib/today-work-state.ts",
+    "apps/web/lib/employee/_lib/today-work-state.ts",
   );
   const baselineSrc = read("supabase/migrations/00000000000000_baseline.sql");
   const countGateMigrationSrc = read(
     "supabase/migrations/_archive/20260629183853_require_inventory_count_checkout_gate.sql",
   );
   const approvalsPageSrc = read(
-    "apps/web/app/(protected)/employee/checkout-approvals/page.tsx",
+    "apps/web/lib/employee/checkout-approvals/page.tsx",
   );
 
   for (const expected of [

@@ -41,27 +41,21 @@ test("getDefaultRedirect → owner lands on finance workspace", () => {
   assert.equal(getDefaultRedirect(makeClaims("owner")), "/finance");
 });
 
-test("getDefaultRedirect → branch_manager lands on /employee", () => {
-  assert.equal(
-    getDefaultRedirect(makeClaims("branch_manager", 3)),
-    "/employee",
-  );
-  assert.equal(
-    getDefaultRedirect(makeClaims("branch_manager", null)),
-    "/employee",
-  );
+test("getDefaultRedirect → branch_manager lands on Branch Hub", () => {
+  assert.equal(getDefaultRedirect(makeClaims("branch_manager", 3)), "/br/3");
+  assert.equal(getDefaultRedirect(makeClaims("branch_manager", null)), "/br");
 });
 
-test("getDefaultRedirect → other non-admin roles land on /employee", () => {
+test("getDefaultRedirect → non-admin roles land on their role home", () => {
   for (const role of [
     "warehouse_manager",
     "production_manager",
     "cashier",
     "chef",
-    "office",
   ] as const) {
-    assert.equal(getDefaultRedirect(makeClaims(role)), "/employee");
+    assert.equal(getDefaultRedirect(makeClaims(role)), "/br");
   }
+  assert.equal(getDefaultRedirect(makeClaims("office")), "/finance");
 });
 
 test("resolveRoleHomeLink → shell home link follows role-accessible landing", () => {
@@ -75,8 +69,8 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     href: "/finance",
   });
   assert.deepEqual(resolveRoleHomeLink("branch_manager"), {
-    label: "Ca của tôi",
-    href: "/employee",
+    label: "Hôm nay",
+    href: "/br",
   });
 
   // Operator-plane roles with a branch in scope go home to the operator hub.
@@ -95,8 +89,8 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
 
   // Office has no operator hub; a stray branch id must not move it.
   assert.deepEqual(resolveRoleHomeLink("office", 3), {
-    label: "Ca của tôi",
-    href: "/employee",
+    label: "Tài chính",
+    href: "/finance",
   });
 
   for (const role of [
@@ -104,13 +98,16 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     "production_manager",
     "cashier",
     "chef",
-    "office",
   ] as const) {
     assert.deepEqual(resolveRoleHomeLink(role), {
-      label: "Ca của tôi",
-      href: "/employee",
+      label: "Hôm nay",
+      href: "/br",
     });
   }
+  assert.deepEqual(resolveRoleHomeLink("office"), {
+    label: "Tài chính",
+    href: "/finance",
+  });
 });
 
 test("resolveRouteFamilyContract → classifies active app surfaces", () => {
@@ -162,10 +159,7 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
     resolveRouteFamilyContract("/inventory/grn/123")?.id,
     "inventory",
   );
-  assert.equal(
-    resolveRouteFamilyContract("/employee/tasks")?.primaryNav,
-    "employee-bottom-nav",
-  );
+  assert.equal(resolveRouteFamilyContract("/employee/tasks"), null);
 
   const posFamily = resolveRouteFamilyContract("/br/3/pos");
   assert.equal(posFamily?.id, "pos");
@@ -182,27 +176,21 @@ test("unknown inventory paths are not active route contracts", () => {
     assert.equal(resolveRouteFamilyContract(pathname), null);
     assert.equal(
       resolvePostLoginRedirect(makeClaims("warehouse_manager"), pathname),
-      "/employee",
+      "/br",
     );
   }
 });
 
 test("resolvePostLoginRedirect → null returnTo → default", () => {
-  assert.equal(
-    resolvePostLoginRedirect(makeClaims("owner"), null),
-    "/finance",
-  );
+  assert.equal(resolvePostLoginRedirect(makeClaims("owner"), null), "/finance");
   assert.equal(
     resolvePostLoginRedirect(makeClaims("branch_manager", 3), null),
-    "/employee",
+    "/br/3",
   );
 });
 
 test("resolvePostLoginRedirect → empty returnTo → default", () => {
-  assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), ""),
-    "/employee",
-  );
+  assert.equal(resolvePostLoginRedirect(makeClaims("cashier", 3), ""), "/br/3");
 });
 
 test("resolvePostLoginRedirect → valid returnTo for accessible module → keeps it", () => {
@@ -228,7 +216,7 @@ test("resolvePostLoginRedirect → removed admin aliases fall back", () => {
     );
     assert.equal(
       resolvePostLoginRedirect(makeClaims("cashier", 3), returnTo),
-      "/employee",
+      "/br/3",
     );
   }
 });
@@ -246,14 +234,14 @@ test("resolvePostLoginRedirect → admin returnTo to employee portal falls back 
   }
 });
 
-test("resolvePostLoginRedirect → admin returnTo to checkout approvals is preserved", () => {
+test("resolvePostLoginRedirect → admin returnTo to old checkout approvals falls back", () => {
   for (const role of ADMIN_ROLES) {
     assert.equal(
       resolvePostLoginRedirect(
         makeClaims(role),
         "/employee/checkout-approvals",
       ),
-      "/employee/checkout-approvals",
+      "/finance",
     );
   }
 });
@@ -276,7 +264,7 @@ test("resolvePostLoginRedirect → branch_manager cannot keep admin returnTo", (
   for (const returnTo of ["/admin/dashboard", "/admin", "/admin/unknown"]) {
     assert.equal(
       resolvePostLoginRedirect(makeClaims("branch_manager", 3), returnTo),
-      "/employee",
+      "/br/3",
     );
   }
 });
@@ -286,7 +274,7 @@ test("resolvePostLoginRedirect → non-branch former admin roles cannot keep adm
     for (const returnTo of ["/admin/dashboard", "/admin", "/admin/unknown"]) {
       assert.equal(
         resolvePostLoginRedirect(makeClaims(role, 3), returnTo),
-        "/employee",
+        "/br/3",
       );
     }
   }
@@ -302,14 +290,14 @@ test("resolvePostLoginRedirect → cashier accessing own-branch POS → allowed"
 test("resolvePostLoginRedirect → cashier on wrong branch → fallback", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/7/pos"),
-    "/employee",
+    "/br/3",
   );
 });
 
 test("resolvePostLoginRedirect → cashier with null branch_id visiting POS → fallback", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("cashier", null), "/br/3/pos"),
-    "/employee",
+    "/br",
   );
 });
 
@@ -344,14 +332,14 @@ test("resolvePostLoginRedirect → external URL is rejected", () => {
 test("resolvePostLoginRedirect → office role cannot access hr", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("office"), "/hr"),
-    "/employee",
+    "/finance",
   );
 });
 
 test("resolvePostLoginRedirect → office role cannot access inventory", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("office"), "/inventory"),
-    "/employee",
+    "/finance",
   );
 });
 
@@ -393,7 +381,7 @@ test("resolvePostLoginRedirect → public Runner display bypasses branch auth re
 test("resolvePostLoginRedirect → chef on wrong KDS branch → fallback", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("chef", 5), "/br/7/kds"),
-    "/employee",
+    "/br/5",
   );
 });
 
@@ -462,7 +450,7 @@ test("resolvePostLoginRedirect → branch_manager can enter HR shifts but not pa
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/hr/payroll"),
-    "/employee",
+    "/br/3",
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "/hr/payroll"),
@@ -503,11 +491,8 @@ test("resolveModuleFromPath → branch menu limits and finance workspace map to 
     "branch_menu_limits",
   );
   assert.equal(resolveModuleFromPath("/br/3/runner"), "runner");
-  assert.equal(
-    resolveModuleFromPath("/employee/checkout-approvals"),
-    "employee_checkout_approvals",
-  );
-  assert.equal(resolveModuleFromPath("/employee/clock"), "employee");
+  assert.equal(resolveModuleFromPath("/employee/checkout-approvals"), null);
+  assert.equal(resolveModuleFromPath("/employee/clock"), null);
 });
 
 test("resolvePostLoginRedirect → branch settings follows branch scope", () => {
@@ -517,7 +502,7 @@ test("resolvePostLoginRedirect → branch settings follows branch scope", () => 
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/br/7/settings"),
-    "/employee",
+    "/br/3",
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "/br/7/settings"),
@@ -531,7 +516,7 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
       makeClaims("branch_manager", 3),
       "/br/3/menu-limits",
     ),
-    "/employee",
+    "/br/3",
   );
   assert.equal(
     resolvePostLoginRedirect(
@@ -545,7 +530,7 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
       makeClaims("branch_manager", 3),
       "/br/7/settings/menu-limits",
     ),
-    "/employee",
+    "/br/3",
   );
   // Cashier no longer reaches the menu-limits management surface (D048):
   // access is tightened to owner + branch_manager, so it falls back home.
@@ -554,7 +539,7 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
       makeClaims("cashier", 3),
       "/br/3/settings/menu-limits",
     ),
-    "/employee",
+    "/br/3",
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "/br/7/settings/menu-limits"),

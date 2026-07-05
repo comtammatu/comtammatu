@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { EmployeeCountPageContent } from "@/(protected)/employee/count/page";
+import { EmployeeCountPageContent } from "@lib/employee/count/page";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
@@ -18,6 +18,7 @@ export default async function OperatorStockCountPage({
     <EmployeeCountPageContent
       searchParams={searchParams}
       routeBranchId={branchId}
+      profileHref={`/br/${branchId}/profile`}
       hideHeaderOnMobile
     />
   );

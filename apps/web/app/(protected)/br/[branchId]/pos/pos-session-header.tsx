@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { memo } from "react";
 import { Button } from "@comtammatu/ui/components/button";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { messages } from "@lib/messages";
 import {
   DropdownMenu,
@@ -82,6 +83,7 @@ function PosSessionHeaderComponent({
         <div className="flex shrink-0 items-center gap-1">
           <PrinterStatusBadge branchId={branchId} />
           <PosMoreMenu
+            branchId={branchId}
             canCloseShift={canCloseShift}
             onShowCloseSession={onShowCloseSession}
           />
@@ -92,9 +94,11 @@ function PosSessionHeaderComponent({
 }
 
 function PosMoreMenu({
+  branchId,
   canCloseShift,
   onShowCloseSession,
 }: {
+  branchId: number;
   canCloseShift: boolean;
   onShowCloseSession: () => void;
 }) {
@@ -115,9 +119,9 @@ function PosMoreMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuItem asChild>
-          <Link href="/employee">
+          <Link href={`/br/${branchId}`}>
             <IconDoorEnter />
-            {messages.pos.sessionHeader.employeePortal}
+            {APP_COPY_VI.operatorHome}
           </Link>
         </DropdownMenuItem>
 

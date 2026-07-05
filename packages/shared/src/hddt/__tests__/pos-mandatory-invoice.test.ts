@@ -26,8 +26,8 @@ test("POS invoice form defaults to buyer-not-get-invoice instead of opting out",
   );
   assert.ok(
     src.includes("POS_VI.buyerNoInvoice") &&
-      POS_VI.buyerNoInvoice === "Người mua không lấy hóa đơn",
-    "checkbox copy must match Viettel S-Invoice buyer-not-get-invoice mode",
+      POS_VI.buyerNoInvoice === "Khách không lấy hóa đơn (vẫn xuất HĐĐT)",
+    "checkbox copy must state an HĐĐT still issues (NĐ 254/2026), without embedding the server-owned legal buyerName",
   );
 });
 

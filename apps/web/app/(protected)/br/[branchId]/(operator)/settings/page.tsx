@@ -12,7 +12,7 @@ import {
 import {
   EmployeeActionSection,
   EmployeePage,
-} from "@/(protected)/employee/components/employee-page";
+} from "@lib/employee/components/employee-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { buildHubTiles } from "./_lib/hub-tiles";

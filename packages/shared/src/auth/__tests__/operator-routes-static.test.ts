@@ -85,18 +85,12 @@ test("operator home excludes office but includes every site-attached role", () =
 });
 
 test("central-site role positions keep tenant-level branch claims", () => {
-  assert.equal(
-    requiredBranchKindForPositionCode("warehouse_manager"),
-    null,
-  );
+  assert.equal(requiredBranchKindForPositionCode("warehouse_manager"), null);
   assert.equal(
     requiredBranchKindForPositionCode("central_supply_manager"),
     null,
   );
-  assert.equal(
-    requiredBranchKindForPositionCode("production_manager"),
-    null,
-  );
+  assert.equal(requiredBranchKindForPositionCode("production_manager"), null);
   assert.equal(
     requiredBranchKindForPositionCode("central_kitchen_manager"),
     null,
@@ -134,7 +128,7 @@ test("post-login hub fallback is device and branch aware", () => {
   );
   assert.equal(
     resolvePostLoginRedirect(claims("office", null), null, phone),
-    "/employee",
+    "/finance",
   );
 });
 
@@ -149,15 +143,15 @@ test("post-login returnTo cannot cross branch-scoped operator routes", () => {
     resolvePostLoginRedirect(claims("cashier", 7), "/br/8/shift", phone),
     "/br/7",
   );
-  // Central-site role without a resolved home site: cross-site returnTo
-  // falls back to /employee (claims stay tenant-level, D055 §1).
+  // Central-site role without a resolved home site stops before the retired
+  // employee shell (claims stay tenant-level, D055 §1).
   assert.equal(
     resolvePostLoginRedirect(
       claims("warehouse_manager", null),
       "/br/8/stock",
       phone,
     ),
-    "/employee",
+    "/access-denied?reason=branch-scope-mismatch",
   );
   // With a resolved central home site, the fallback is that site's hub.
   assert.equal(

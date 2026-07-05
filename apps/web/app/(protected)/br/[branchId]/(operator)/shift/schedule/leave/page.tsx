@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { EmployeeLeavePageContent } from "@/(protected)/employee/leave/page";
+import { EmployeeLeavePageContent } from "@lib/employee/leave/page";
 
 export default async function OperatorShiftScheduleLeavePage({
   params,
@@ -14,6 +14,7 @@ export default async function OperatorShiftScheduleLeavePage({
     <EmployeeLeavePageContent
       returnHref={`/br/${branchId}/shift/schedule`}
       routeBranchId={branchId}
+      profileHref={`/br/${branchId}/profile`}
       hideHeaderOnMobile
     />
   );

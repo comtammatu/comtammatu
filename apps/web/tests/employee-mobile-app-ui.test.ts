@@ -1,608 +1,104 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { test } from "node:test";
 
-function readWebSource(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
-}
+const repoRoot = resolve(process.cwd(), "../..");
+const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const exists = (path: string) => existsSync(resolve(repoRoot, path));
 
-function listWebSources(dir: string): string[] {
-  return readdirSync(join(process.cwd(), dir), { withFileTypes: true }).flatMap(
-    (entry) => {
-      const path = `${dir}/${entry.name}`;
-      if (entry.isDirectory()) return listWebSources(path);
-      if (entry.isFile() && path.endsWith(".tsx")) return [path];
-      return [];
-    },
-  );
-}
+test("retired employee app no longer exists as an App Router surface", () => {
+  assert.equal(exists("apps/web/app/(protected)/employee"), false);
 
-const employeeUiSourcePaths = listWebSources("app/(protected)/employee");
-const employeeContentSourcePaths = employeeUiSourcePaths.filter(
-  (path) =>
-    !path.endsWith("/layout.tsx") &&
-    !path.endsWith("/loading.tsx") &&
-    !path.endsWith("/error.tsx") &&
-    !path.endsWith("/components/employee-page.tsx") &&
-    !path.endsWith("/components/mobile-header.tsx") &&
-    !path.endsWith("/components/bottom-nav.tsx") &&
-    !path.endsWith("/components/employee-pwa-toolbar.tsx"),
-);
-
-const employeeLayoutSource = readWebSource(
-  "app/(protected)/employee/layout.tsx",
-);
-const pwaRuntimeSource = readWebSource("app/components/pwa-runtime.tsx");
-const pwaInstallHelpDialogSource = readWebSource(
-  "app/components/pwa-install-help-dialog.tsx",
-);
-const employeePwaToolbarSource = readWebSource(
-  "app/(protected)/employee/components/employee-pwa-toolbar.tsx",
-);
-const pwaToolbarSource = readWebSource("app/components/pwa-toolbar.tsx");
-const appHeaderSource = readWebSource("app/components/app-header.tsx");
-const employeeHeaderSource = readWebSource(
-  "app/(protected)/employee/components/mobile-header.tsx",
-);
-const employeeBottomNavSource = readWebSource(
-  "app/(protected)/employee/components/bottom-nav.tsx",
-);
-const appBottomNavSource = readWebSource("app/components/app-bottom-nav.tsx");
-const employeePageShellSource = readWebSource(
-  "app/(protected)/employee/components/employee-page.tsx",
-);
-const employeeHomeSource = readWebSource("app/(protected)/employee/page.tsx");
-const employeeTasksSource = readWebSource(
-  "app/(protected)/employee/tasks/tasks-client.tsx",
-);
-const employeeTasksPageSource = readWebSource(
-  "app/(protected)/employee/tasks/page.tsx",
-);
-const employeeClockSource = readWebSource(
-  "app/(protected)/employee/clock/clock-client.tsx",
-);
-const employeeSchedulePageSource = readWebSource(
-  "app/(protected)/employee/schedule/page.tsx",
-);
-const employeeScheduleClientSource = readWebSource(
-  "app/(protected)/employee/schedule/schedule-client.tsx",
-);
-const employeeProfileSource = readWebSource(
-  "app/(protected)/employee/profile/page.tsx",
-);
-const employeeLeaveClientSource = readWebSource(
-  "app/(protected)/employee/leave/leave-client.tsx",
-);
-const employeePayslipYearPickerSource = readWebSource(
-  "app/(protected)/employee/payslip/year-picker.tsx",
-);
-const employeePermissionsSource = readWebSource(
-  "app/(protected)/employee/permissions/page.tsx",
-);
-const employeeMessagesSource = readWebSource("lib/messages/employee.ts");
-
-test("Employee shell is phone-first and touch-safe", () => {
-  assert.match(
-    employeeLayoutSource,
-    /bg-muted\/30/,
-    "Employee portal should sit on an app-like surface background",
-  );
-  assert.match(
-    employeeLayoutSource,
-    /contentClassName="max-w-lg lg:max-w-3xl"/,
-    "Employee content should stay phone-first instead of stretching like a dashboard",
-  );
-  assert.match(
-    employeeLayoutSource,
-    /<PwaRuntimeProvider>[\s\S]*<EmployeePwaToolbar \/>/,
-    "Employee layout should mount the PWA runtime and install/offline toolbar inside the shell",
-  );
-  assert.match(
-    employeeLayoutSource,
-    /title: "Má Tư NV"/,
-    "Employee installed app chrome should have a clear staff-facing title",
-  );
-  assert.match(
-    employeeHeaderSource,
-    /size="touch"[\s\S]*className="relative min-w-12 px-0"/,
-    "Header notification control must stay touch-sized",
-  );
-  assert.match(
-    employeeHeaderSource,
-    /size="touch"[\s\S]*aria-label=\{copy\.profileAria\}[\s\S]*className="min-w-12 px-0"/,
-    "Header profile control must stay touch-sized",
-  );
-  assert.match(
-    employeeHeaderSource,
-    /subtitleHiddenOnMobile/,
-    "Mobile header should hide the subtitle/position line on narrow screens via the shared AppHeader",
-  );
-  assert.match(
-    appHeaderSource,
-    /truncate text-xs text-muted-foreground[\s\S]*subtitleHiddenOnMobile && "hidden sm:block"/,
-    "Shared AppHeader should hide its subtitle line on narrow screens when requested",
-  );
-  assert.equal(
-    (employeeBottomNavSource.match(/href: "\/employee/g) ?? []).length,
-    4,
-    "Employee bottom nav must stay at exactly four items",
-  );
-  assert.match(
-    employeeBottomNavSource,
-    /AppBottomNav/,
-    "Employee bottom nav must delegate to the shared AppBottomNav primitive",
-  );
-  assert.match(
-    appBottomNavSource,
-    /size="touch"/,
-    "AppBottomNav items must stay touch-sized",
-  );
-  assert.match(
-    appBottomNavSource,
-    /data-active=\{item\.active \? "true" : undefined\}/,
-    "AppBottomNav must expose a clear active state for app-like feedback",
-  );
-  assert.doesNotMatch(
-    appBottomNavSource,
-    /active:translate-y-px|motion-safe:/,
-    "AppBottomNav must not hand-roll motion tokens (design-system §313: animate-in only via Radix primitives)",
-  );
-});
-
-test("Employee PWA shell explains install and offline state without persisted workflow storage", () => {
-  assert.match(
-    pwaRuntimeSource,
-    /const \[isOnline, setIsOnline\] = useState\(true\)/,
-    "PWA online state should stay hydration-safe on first paint",
-  );
-  assert.match(
-    pwaRuntimeSource,
-    /beforeinstallprompt/,
-    "PWA runtime should capture the browser install prompt",
-  );
-  assert.match(
-    pwaToolbarSource,
-    /useIsOnline[\s\S]*useIsStandalone[\s\S]*useInstallPrompt/,
-    "Shared PWA toolbar should read online, standalone, and install state from the runtime",
-  );
-  assert.match(
-    pwaToolbarSource,
-    /role="alert"[\s\S]*copy\.offline/,
-    "Offline state should be visible in the Employee shell",
-  );
-  assert.match(
-    pwaToolbarSource,
-    /setHelpMode\(isIosPwaInstall \? "ios" : "browser"\)/,
-    "Install action should fall back to clear platform instructions when no browser prompt is available",
-  );
-  assert.match(
-    pwaToolbarSource,
-    /<PwaInstallHelpDialog[\s\S]*title=\{helpCopy\.title\}/,
-    "Install instructions should delegate title copy to the shared PWA help dialog",
-  );
-  assert.match(
-    pwaInstallHelpDialogSource,
-    /<DialogTitle>\{title\}<\/DialogTitle>/,
-    "Shared PWA help dialog should keep an accessible Dialog title",
-  );
-  assert.doesNotMatch(
-    employeePwaToolbarSource,
-    /localStorage|sessionStorage/,
-    "Employee PWA toolbar wrapper must not persist scope or workflow state in browser storage",
-  );
-  assert.doesNotMatch(
-    employeePwaToolbarSource,
-    /dismissStorageKey=/,
-    "Employee PWA toolbar must not opt into install-dismiss persistence",
-  );
-  assert.match(
-    employeeMessagesSource,
-    /pwa:\s*\{[\s\S]*installHint: "Cài app nhân viên để mở nhanh mỗi ca\."/,
-    "Employee copy should name the staff app and explain the install job directly",
-  );
-});
-
-test("Employee workflow surfaces keep one strong mobile action and list feedback", () => {
-  assert.doesNotMatch(
-    employeePageShellSource,
-    /motion-safe:|animate-in/,
-    "Employee shell must not hand-roll motion (design-system §313: animate-in only via Radix primitives)",
-  );
-  assert.match(
-    employeePageShellSource,
-    /EmployeePanel[\s\S]*className=\{cn\(/,
-    "EmployeePanel must accept a className prop for caller-side customisation",
-  );
-  assert.match(
-    employeePageShellSource,
-    /EmployeeStatusStrip/,
-    "EmployeeStatusStrip must remain defined in the employee-page shell",
-  );
-  assert.match(
-    employeePageShellSource,
-    /hideHeaderOnMobile[\s\S]*sr-only sm:not-sr-only/,
-    "Employee pages should be able to remove duplicate mobile page headers",
-  );
-  assert.match(
-    employeePageShellSource,
-    /group\/employee-action/,
-    "Shared Employee action rows must carry the group/employee-action marker",
-  );
-  assert.match(
-    employeeHomeSource,
-    /const primaryActionClassName =\s*"w-full sm:w-fit sm:min-w-44";/,
-    "Home next action should keep a clear mobile-first hit area (motion tokens removed per design-system §313)",
-  );
-  assert.match(
-    employeeHomeSource,
-    /<Progress[\s\S]*className="h-2/,
-    "Home progress bar must keep its h-2 size class",
-  );
-  assert.match(
-    employeeHomeSource,
-    /size="touch-lg"/,
-    "Home next action should use the larger touch button size",
-  );
-  assert.match(
-    employeeHomeSource,
-    /hideHeaderOnMobile/,
-    "Employee home should hide the repeated page header on mobile",
-  );
-  assert.match(
-    employeeHomeSource,
-    /EmployeeStatusStrip items=\{todaySummaryItems\}/,
-    "Employee home should collapse metrics into a shared compact strip",
-  );
-  assert.doesNotMatch(
-    employeeHomeSource,
-    /WorkStepRail|workflowSteps/,
-    "Employee home should not repeat the same state through a separate workflow rail",
-  );
-  assert.match(
-    employeeTasksSource,
-    /items-start bg-card/,
-    "Checklist rows must keep their card surface and top-aligned content",
-  );
-  assert.match(
-    employeeTasksSource,
-    /function sortPhaseItems[\s\S]*left\.done !== right\.done[\s\S]*left\.isRequired !== right\.isRequired[\s\S]*left\.sortOrder - right\.sortOrder/,
-    "Checklist phase rows should keep unfinished and required work first while preserving template order",
-  );
-  assert.match(
-    employeeTasksSource,
-    /phaseRequiredRemaining[\s\S]*taskCopy\.requiredRemaining/,
-    "Checklist phase headers should show required remaining work",
-  );
-  assert.match(
-    employeeTasksSource,
-    /border-success\/30 bg-success\/5/,
-    "Completed checklist rows should read as done without changing the binary model",
-  );
-  assert.match(
-    employeeTasksSource,
-    /const router = useRouter\(\);[\s\S]*toggleChecklistItem[\s\S]*router\.refresh\(\);/,
-    "Checklist toggles should refresh the server parent so the checkout CTA unlocks immediately",
-  );
-  assert.match(
-    employeeTasksPageSource,
-    /<EmployeePage title=\{copy\.shiftTasks\} hideHeaderOnMobile>/,
-    "Tasks should avoid repeating the tab title in a mobile page header",
-  );
-  assert.doesNotMatch(
-    employeeTasksPageSource,
-    /fetchConsumptionReportForAttendance|fetchConsumptionIngredients/,
-    "Tasks page should not load the consumption report form data",
-  );
-  assert.doesNotMatch(
-    employeeTasksSource,
-    /submitConsumptionReport|consumptionCopy|ConsumptionReportPanel/,
-    "Tasks client should not render the consumption report panel",
-  );
-  assert.doesNotMatch(
-    employeeTasksSource,
-    /eslint-disable i18n\/no-inline-vietnamese/,
-    "Tasks client should not carry a local i18n hardcode exemption",
-  );
-  for (const hardcoded of [
-    "Báo cáo tiêu hao bếp",
-    "Nhập ít nhất một dòng tiêu hao.",
-    "Không phát sinh tiêu hao trong ca này.",
-    "Gửi báo cáo tiêu hao",
+  for (const retiredShellFile of [
+    "apps/web/lib/employee/layout.tsx",
+    "apps/web/lib/employee/loading.tsx",
+    "apps/web/lib/employee/error.tsx",
+    "apps/web/lib/employee/attendance/page.tsx",
+    "apps/web/lib/employee/components/bottom-nav.tsx",
+    "apps/web/lib/employee/components/mobile-header.tsx",
+    "apps/web/lib/employee/components/employee-pwa-toolbar.tsx",
   ]) {
-    assert.doesNotMatch(
-      employeeTasksSource,
-      new RegExp(`"${hardcoded}"`),
-      hardcoded,
-    );
+    assert.equal(exists(retiredShellFile), false, retiredShellFile);
   }
-  assert.doesNotMatch(
-    employeeTasksPageSource,
-    /<EmployeePage[\s\S]*action=\{/,
-    "Tasks primary actions should live inside the checklist panel, not the page header",
-  );
-  assert.match(
-    employeeClockSource,
-    /photo \? \([\s\S]*clockCopy\.clockInButton[\s\S]*\) : cameraState === "starting"/,
-    "Clock-in submit action should render only after a photo exists",
-  );
-  assert.match(
-    employeeClockSource,
-    /type="file"[\s\S]*accept=\{UPLOAD_PHOTO_ACCEPT\}[\s\S]*aria-label=\{clockCopy\.uploadPhoto\}/,
-    "Clock-in should offer a file upload fallback when camera capture is unavailable",
-  );
-  assert.match(
-    employeeClockSource,
-    /FormData\(\)[\s\S]*formData\.set\("photo", photo\)[\s\S]*clockInWithPhoto/,
-    "Clock-in should submit uploaded or captured photos through the existing server action",
-  );
-  assert.match(
-    employeeMessagesSource,
-    /uploadPhoto: "Tải ảnh lên"[\s\S]*uploadUnsupported: "Ảnh chấm công chỉ nhận JPG, PNG hoặc WebP\."/,
-    "Employee clock upload fallback copy should live in the employee message registry",
-  );
-  assert.match(
-    employeeClockSource,
-    /cameraActive \? \(/,
-    "Clock camera frame must be conditionally rendered when camera is active",
-  );
-  assert.match(
-    employeeClockSource,
-    /setCameraState\("starting"\);[\s\S]*waitForNextAnimationFrame\(\);[\s\S]*const video = videoRef\.current;[\s\S]*navigator\.mediaDevices\.getUserMedia/,
-    "Clock camera startup should mount the video element before requesting a camera stream",
-  );
-  assert.match(
-    employeeClockSource,
-    /previewUrl/,
-    "Clock photo preview must be conditionally rendered when a preview URL exists",
-  );
-  assert.doesNotMatch(
-    employeeClockSource,
-    /disabled=\{[\s\S]*!photo[\s\S]*clockCopy\.clockInButton/,
-    "Clock flow should not show a disabled Chấm công vào button before a photo exists",
-  );
-  assert.match(
-    employeeClockSource,
-    /const attendanceId = state\.attendance\?\.id;[\s\S]*requestCheckoutApproval\(\{ attendanceId \}\)/,
-    "Clock checkout must target the current attendance record",
-  );
-  assert.match(
-    employeeSchedulePageSource,
-    /<EmployeePage title=\{copy\.scheduleTitle\} hideHeaderOnMobile>/,
-    "Schedule should avoid a duplicate mobile page header",
-  );
-  assert.doesNotMatch(
-    employeeScheduleClientSource,
-    /copy\.monthPanelTitle|copy\.monthListTitle/,
-    "Schedule should not split month controls and the calendar into two panels",
-  );
-  assert.match(
-    employeeScheduleClientSource,
-    /<EmployeeControlBar>[\s\S]*\{formatMonthTitle\(monthStart\)\}[\s\S]*!isCurrentMonth[\s\S]*copy\.currentMonth/,
-    "Schedule should use the viewed month inside the month switcher, with Tháng này only as a return action",
-  );
-  assert.doesNotMatch(
-    employeeScheduleClientSource,
-    /calendarAxisLabel|monthRangeLabel/,
-    "Schedule should not render a vague Lịch label or a separate date-range header above the calendar",
-  );
-  assert.match(
-    employeeScheduleClientSource,
-    /function getDefaultSelectedDate[\s\S]*const \[selectedDate, setSelectedDate\]/,
-    "Schedule should default the selected day from today or the first active day",
-  );
-  assert.match(
-    employeeScheduleClientSource,
-    /function SelectedDayDetail[\s\S]*\{formatDate\(dateStr\)\}[\s\S]*const timeText = hasClock[\s\S]*\{timeText\}/,
-    "Schedule selected-day detail should stay compact on mobile: date header plus one row per shift",
-  );
-  assert.doesNotMatch(
-    employeeScheduleClientSource,
-    /copy\.selectedDayTitle|EmployeeDetailList|copy\.timeRange|copy\.clockRange/,
-    "Schedule selected-day detail should not reintroduce verbose labels for every shift",
-  );
-  const calendarCellSource =
-    employeeScheduleClientSource.match(
-      /function CalendarCellContent[\s\S]*function ScheduleMonthCalendarTable/,
-    )?.[0] ?? "";
-  assert.doesNotMatch(
-    calendarCellSource,
-    /copy\.rest/,
-    "Mobile calendar cells should not render Nghỉ text in every empty day",
-  );
-  assert.match(
-    calendarCellSource,
-    /aria-pressed=\{selected\}/,
-    "Calendar cells should be tappable and expose the selected day state",
-  );
-  assert.match(
-    calendarCellSource,
-    /selected &&[\s\S]*shadow-sm/,
-    "Selected calendar day should provide clear visual feedback via shadow",
-  );
-  assert.match(
-    employeeScheduleClientSource,
-    /<SelectedDayDetail[\s\S]*key=\{selectedDate\}/,
-    "Selected-day detail should remount cleanly when the user taps another day",
-  );
-  assert.match(
-    employeeScheduleClientSource,
-    /function SelectedDayDetail[\s\S]*<EmployeeFrame pad="sm"/,
-    "Selected-day detail should use the shared Employee frame instead of a hand-rolled card",
-  );
-  assert.match(
-    employeeScheduleClientSource,
-    /summaryWorkdays[\s\S]*summaryEstimatedDays[\s\S]*summaryLeaveDays/,
-    "Schedule summary should focus on Ngày công, Tạm tính, and Ngày phép",
-  );
-  assert.match(
-    employeeScheduleClientSource,
-    /const hasMonthlySalary = monthlySalary > 0;/,
-    "Schedule Tạm tính should detect whether base salary is available",
-  );
-  assert.match(
-    employeeScheduleClientSource,
-    /const estimatedPay = hasMonthlySalary[\s\S]*\(workdaysCount \* monthlySalary\) \/ 27[\s\S]*: null;/,
-    "Schedule Tạm tính should use ngày công * tiền lương / 27",
-  );
-  assert.match(
-    employeeScheduleClientSource,
-    /value: estimatedPay == null \? "—" : formatVND\(estimatedPay\)/,
-    "Schedule Tạm tính should render as VND only when salary exists",
-  );
-  assert.match(
-    employeeSchedulePageSource,
-    /select\("base_salary"\)[\s\S]*monthlySalary=\{employeeResult\.data\?\.base_salary \?\? 0\}/,
-    "Schedule page should pass employee base salary into the estimate",
-  );
-  assert.doesNotMatch(
-    employeeScheduleClientSource,
-    /summaryOpenShifts/,
-    "Schedule summary should not spend top-level space on open shift count",
-  );
-  assert.match(
-    employeeScheduleClientSource,
-    /leaveHref = "\/employee\/leave"/,
-    "Schedule should keep the old employee leave route as the default leave action",
-  );
-  assert.match(
-    employeeScheduleClientSource,
-    /href=\{leaveHref\}/,
-    "Schedule should expose leave request as a secondary in-panel action",
-  );
-  assert.doesNotMatch(
-    employeeScheduleClientSource,
-    /shift-register/,
-    "Shift registration flow was removed — schedule must not link to it",
-  );
-  assert.match(
-    employeeScheduleClientSource,
-    /Alert variant="destructive"[\s\S]*<AlertTitle>\{copy\.loadError\}<\/AlertTitle>/,
-    "Schedule load errors should use the shared Alert primitive",
-  );
-  assert.match(
-    employeeProfileSource,
-    /<EmployeePage[\s\S]*hideHeaderOnMobile/,
-    "Profile should use the app shell instead of a repeated mobile page header",
-  );
-  assert.match(
-    employeeProfileSource,
-    /title=\{copy\.workspaceLauncherTitle\}[\s\S]*links=\{workspaceLinks\}/,
-    "Profile should surface the ACL-driven workspace launcher via EmployeeActionSection",
-  );
-  assert.doesNotMatch(
-    employeeProfileSource,
-    /ManagerToolsSheet|MANAGER_LINKS/,
-    "Profile should no longer use the hand-maintained manager-tools sheet",
-  );
-  assert.doesNotMatch(
-    employeeProfileSource,
-    /key: "leave"/,
-    "Leave belongs to Schedule, not Profile personal tools",
-  );
-  assert.match(
-    employeeProfileSource,
-    /key: "payslip"/,
-    "Payslip should stay in Profile personal tools",
+});
+
+test("root PWA manifest opens Branch Hub, not the retired employee app", () => {
+  const manifest = JSON.parse(read("apps/web/public/manifest.webmanifest")) as {
+    id?: unknown;
+    name?: unknown;
+    scope?: unknown;
+    short_name?: unknown;
+    start_url?: unknown;
+    shortcuts?: Array<{ url?: unknown }>;
+  };
+
+  assert.equal(manifest.id, "/br");
+  assert.equal(manifest.name, "Cơm Tấm Má Tư - Chi nhánh");
+  assert.equal(manifest.short_name, "Má Tư CN");
+  assert.equal(manifest.start_url, "/br");
+  assert.equal(manifest.scope, "/");
+  assert.deepEqual(
+    manifest.shortcuts?.map((shortcut) => shortcut.url),
+    ["/br", "/br", "/br", "/br"],
   );
 });
 
-test("Employee route family uses shared surface primitives instead of raw UI fragments", () => {
-  assert.match(
-    employeePageShellSource,
-    /function EmployeeFrame[\s\S]*data-employee-frame/,
-    "Employee surfaces should centralize framed content through EmployeeFrame",
+test("Branch Hub owns the mobile shell and keeps bottom nav outside scroll content", () => {
+  const layout = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
   );
-  assert.match(
-    employeePageShellSource,
-    /function EmployeeInlineState[\s\S]*<Item[\s\S]*variant=\{tone === "default" \? "muted" : "outline"\}/,
-    "Small Employee state rows should delegate to the shared Item primitive",
-  );
-  assert.match(
-    employeePageShellSource,
-    /function EmployeeActionBar[\s\S]*data-employee-action-bar/,
-    "Employee CTA rows should share one action bar rhythm",
-  );
-  assert.match(
-    employeePageShellSource,
-    /function EmployeeBadgeList[\s\S]*data-employee-badge-list/,
-    "Employee badge clouds should share one grouping primitive",
+  const bottomNav = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
   );
 
-  for (const path of employeeUiSourcePaths) {
-    const source = readWebSource(path);
-    assert.doesNotMatch(
-      source,
-      /space-y-/,
-      `${path} should use explicit flex/grid gap instead of space-y shortcuts`,
-    );
-    assert.doesNotMatch(
-      source,
-      /@comtammatu\/ui\/components\/empty|<Empty/,
-      `${path} should use AppEmptyState or EmployeeMissingProfileEmpty, not raw Empty primitives`,
-    );
-    assert.doesNotMatch(
-      source,
-      /<Spinner className=/,
-      `${path} should use Spinner data-icon placement instead of margin utility classes`,
-    );
+  assert.match(layout, /homeHref=\{`\/br\/\$\{context\.branchId\}`\}/);
+  assert.match(layout, /homeAriaLabel=\{APP_COPY_VI\.operatorHome\}/);
+  assert.match(layout, /id="main-content"[\s\S]*overflow-y-auto/);
+  assert.match(
+    layout,
+    /contentClassName="max-w-lg md:max-w-3xl lg:max-w-5xl xl:max-w-6xl"/,
+  );
+  assert.match(bottomNav, /className="static shrink-0"/);
+  assert.match(bottomNav, /`\/br\/\$\{branchId\}\/shift`/);
+  assert.match(bottomNav, /`\/br\/\$\{branchId\}\/shift\/schedule`/);
+  assert.doesNotMatch(bottomNav, /\/employee/);
+});
+
+test("old employee URLs are redirect-only compatibility, before module ACL", () => {
+  const proxy = read("apps/web/proxy.ts");
+  const redirectMap = read(
+    "apps/web/lib/employee/_lib/branch-runtime-redirect.ts",
+  );
+
+  assert.match(proxy, /pathname\.startsWith\("\/employee"\)/);
+  assert.ok(
+    proxy.indexOf('if (pathname.startsWith("/employee"))') <
+      proxy.indexOf("resolveModuleFromPath(pathname)"),
+    "retired /employee URLs must redirect before module ACL",
+  );
+  assert.match(redirectMap, /"\/employee": "home"/);
+  assert.match(redirectMap, /"\/employee\/permissions": "profile"/);
+});
+
+test("Branch wrappers pass profile fallbacks into shared shift content", () => {
+  const clock = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx",
+  );
+  const schedule = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/page.tsx",
+  );
+  const leave = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/leave/page.tsx",
+  );
+  const count = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx",
+  );
+  const payslip = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/profile/payslip/page.tsx",
+  );
+
+  for (const source of [clock, schedule, leave, count, payslip]) {
+    assert.match(source, /\/br\/\$\{branchId\}\/profile/);
   }
-
-  for (const path of employeeContentSourcePaths) {
-    const source = readWebSource(path);
-    assert.doesNotMatch(
-      source,
-      /rounded-(md|lg|xl|2xl)\s+border|bg-card\s+p-\d|bg-muted\/40\s+p-\d/,
-      `${path} should not hand-roll card/frame surfaces inside Employee content routes`,
-    );
-  }
-
-  assert.match(
-    employeeTasksSource,
-    /<section[\s\S]*aria-labelledby=\{headingId\}/,
-    "Checklist phases should be semantic sections with explicit gap rhythm",
-  );
-  assert.match(
-    employeeClockSource,
-    /<EmployeeFrame className="overflow-hidden bg-muted\/40">/,
-    "Clock camera preview should use EmployeeFrame instead of raw rounded borders",
-  );
-  assert.match(
-    employeeClockSource,
-    /<EmployeeInlineState[\s\S]*title=\{clockCopy\.photoReadyTitle\}/,
-    "Clock photo confirmation should use EmployeeInlineState",
-  );
-  assert.match(
-    employeeScheduleClientSource,
-    /function ScheduleMonthCalendarTable[\s\S]*<EmployeeFrame className="overflow-hidden">/,
-    "Schedule calendar frame should be centralized through EmployeeFrame",
-  );
-  assert.match(
-    employeeLeaveClientSource,
-    /<EmployeeActionBar>[\s\S]*copy\.newRequestButton/,
-    "Leave request CTA should use the shared Employee action bar",
-  );
-  assert.match(
-    employeePayslipYearPickerSource,
-    /<EmployeeControlBar>[\s\S]*copy\.currentYear/,
-    "Payslip year controls should use the shared Employee control bar",
-  );
-  assert.match(
-    employeePermissionsSource,
-    /<EmployeeBadgeList/,
-    "Permissions badge groups should use the shared Employee badge list",
-  );
-  const checkoutApprovalsSource = readWebSource(
-    "app/(protected)/employee/checkout-approvals/checkout-approvals-client.tsx",
-  );
-  assert.doesNotMatch(
-    checkoutApprovalsSource,
-    /approveConsumption|requiresConsumptionReport|getCheckoutBlockLabel|Duyệt và áp Inventory/,
-    "Checkout approval UI should not block kết ca behind consumption review",
-  );
-  assert.match(
-    checkoutApprovalsSource,
-    /Duyệt kết ca/,
-    "Checkout approval primary action should name the final checkout approval step",
-  );
 });

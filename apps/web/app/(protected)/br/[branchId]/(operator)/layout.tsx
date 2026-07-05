@@ -8,6 +8,7 @@ import {
   ROLE_LABEL_VI,
   type BranchKind,
 } from "@comtammatu/shared/auth";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage } from "@/components/surface";
 import { AppHeader } from "@/components/app-header";
@@ -70,6 +71,8 @@ export default async function OperatorLayout({
         <AppHeader
           title={context.branch.name}
           subtitle={ROLE_LABEL_VI[claims.user_role]}
+          homeHref={`/br/${context.branchId}`}
+          homeAriaLabel={APP_COPY_VI.operatorHome}
           actions={
             <>
               <Button
@@ -105,8 +108,7 @@ export default async function OperatorLayout({
         >
           <AppPage
             density="compact"
-            mobile
-            contentClassName="max-w-lg lg:max-w-4xl xl:max-w-6xl"
+            contentClassName="max-w-lg md:max-w-3xl lg:max-w-5xl xl:max-w-6xl"
           >
             {children}
           </AppPage>

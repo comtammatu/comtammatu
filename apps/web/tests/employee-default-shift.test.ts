@@ -3,7 +3,7 @@ import { test } from "node:test";
 import {
   resolveDefaultShiftId,
   type BranchShiftWindow,
-} from "../app/(protected)/employee/_lib/default-shift";
+} from "../lib/employee/_lib/default-shift";
 
 // Real prod shift schedules: Đất Đỏ (morning 05–13, evening 15–22, with a
 // 13–15 gap) and Phước Hải (morning 05–13, evening 13–21, contiguous).

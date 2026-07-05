@@ -1,22 +1,22 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * Employee surface visual regression — every Employee screen, mobile + desktop.
+ * Branch Hub staff visual regression — mobile + desktop.
  *
- * Why this exists: the Employee surface drifted from the design-system contract
+ * Why this exists: the staff surface drifted from the design-system contract
  * (decorative entrance motion, duration-200 in app code, ad-hoc heights/grids)
  * because the deterministic gate could not see review-level drift. This spec is
  * the visual backstop: once a clean baseline is committed, any future layout
  * break or motion/spacing regression on these routes fails CI.
  *
- * Primary viewport is mobile 390px — the Employee surface is a mobile-first PWA
- * (header + bottom-nav). Desktop is captured too to guard the density variant.
+ * Primary viewport is mobile 390px — Branch Hub is a mobile-first PWA
+ * (header + bottom-nav). Desktop/tablet widths are captured too to guard the
+ * responsive density variant.
  *
  * Prerequisites (same as the other e2e specs — see playwright.config.ts):
  *   1. A running app: `pnpm dev` (CI auto-starts it).
  *   2. `.env.test.local` with E2E_CASHIER_EMAIL / E2E_CASHIER_PASSWORD and the
- *      Supabase env. The account must be able to open /employee/* (any
- *      authenticated staff member can).
+ *      Supabase env. The account must be able to open Branch Hub for branch 1.
  *   3. A SAFE Supabase target — never point this at the production DB.
  *
  * Bootstrap baselines (first run), then verify:
@@ -26,16 +26,18 @@ import { test, expect } from "@playwright/test";
  */
 
 const ROUTES: ReadonlyArray<{ name: string; path: string }> = [
-  { name: "employee-portal", path: "/employee" },
-  { name: "employee-attendance", path: "/employee/attendance" },
-  { name: "employee-schedule", path: "/employee/schedule" },
-  { name: "employee-tasks", path: "/employee/tasks" },
-  { name: "employee-checkout-approvals", path: "/employee/checkout-approvals" },
-  { name: "employee-payslip", path: "/employee/payslip" },
-  { name: "employee-permissions", path: "/employee/permissions" },
-  { name: "employee-profile", path: "/employee/profile" },
-  { name: "employee-leave", path: "/employee/leave" },
-  { name: "employee-clock", path: "/employee/clock" },
+  { name: "branch-hub-today", path: "/br/1" },
+  { name: "branch-hub-shift", path: "/br/1/shift" },
+  { name: "branch-hub-schedule", path: "/br/1/shift/schedule" },
+  {
+    name: "branch-hub-checkout-approvals",
+    path: "/br/1/shift/checkout-approvals",
+  },
+  { name: "branch-hub-count", path: "/br/1/stock/count" },
+  { name: "branch-hub-payslip", path: "/br/1/profile/payslip" },
+  { name: "branch-hub-profile", path: "/br/1/profile" },
+  { name: "branch-hub-leave", path: "/br/1/shift/schedule/leave" },
+  { name: "branch-hub-clock", path: "/br/1/shift/clock" },
 ];
 
 const VIEWPORTS: ReadonlyArray<{
@@ -53,7 +55,7 @@ const MASK_VOLATILE = (page: import("@playwright/test").Page) => [
   page.locator("time"),
 ];
 
-test.describe("Employee surface — visual baseline (light mode)", () => {
+test.describe("Branch Hub staff surface — visual baseline (light mode)", () => {
   test.use({ colorScheme: "light" });
 
   for (const vp of VIEWPORTS) {
@@ -66,14 +68,11 @@ test.describe("Employee surface — visual baseline (light mode)", () => {
           await page.waitForLoadState("networkidle");
           // Settle async RSC-streamed data that finishes post-networkidle.
           await page.waitForTimeout(800);
-          await expect(page).toHaveScreenshot(
-            `${route.name}-${vp.name}.png`,
-            {
-              fullPage: true,
-              animations: "disabled",
-              mask: MASK_VOLATILE(page),
-            },
-          );
+          await expect(page).toHaveScreenshot(`${route.name}-${vp.name}.png`, {
+            fullPage: true,
+            animations: "disabled",
+            mask: MASK_VOLATILE(page),
+          });
         });
       }
     });

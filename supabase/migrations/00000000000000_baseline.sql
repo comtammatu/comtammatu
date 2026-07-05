@@ -2583,7 +2583,7 @@ BEGIN
     'Phiếu đếm tồn của bạn đã được duyệt và điều chỉnh kho.',
     'inventory_count_slip',
     p_slip_id,
-    '/employee/count',
+    format('/br/%s/stock/count', v_slip.branch_id),
     jsonb_build_object(
       'slip_id', p_slip_id, 'employee_id', v_slip.employee_id,
       'branch_id', v_slip.branch_id, 'result', 'approved', 'adjusted_lines', v_adjusted
@@ -2770,7 +2770,7 @@ BEGIN
     ),
     'leave_request',
     p_request_id,
-    '/employee/leave',
+    format('/br/%s/shift/schedule/leave', v_request.branch_id),
     jsonb_build_object(
       'leave_request_id', p_request_id,
       'employee_id', v_request.employee_id,
@@ -9523,7 +9523,7 @@ BEGIN
     ),
     'attendance_record',
     p_attendance_id,
-    '/employee/checkout-approvals',
+    format('/br/%s/shift/checkout-approvals', v_record.branch_id),
     jsonb_build_object(
       'attendance_id', p_attendance_id,
       'employee_id', p_employee_id,
@@ -19585,7 +19585,7 @@ BEGIN
     ),
     'leave_request',
     p_request_id,
-    '/employee/leave',
+    format('/br/%s/shift/schedule/leave', v_request.branch_id),
     jsonb_build_object(
       'leave_request_id', p_request_id,
       'employee_id', v_request.employee_id,
@@ -19968,7 +19968,7 @@ BEGIN
     COALESCE(format('Quản lý yêu cầu đếm lại: %s', v_note), 'Quản lý yêu cầu đếm lại phiếu đếm tồn của bạn.'),
     'inventory_count_slip',
     p_slip_id,
-    '/employee/count',
+    format('/br/%s/stock/count', v_slip.branch_id),
     jsonb_build_object(
       'slip_id', p_slip_id, 'employee_id', v_slip.employee_id,
       'branch_id', v_slip.branch_id, 'result', 'needs_changes'
@@ -40214,7 +40214,7 @@ CREATE POLICY employees_select_self ON public.employees FOR SELECT TO authentica
 -- Name: POLICY employees_select_self ON employees; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON POLICY employees_select_self ON public.employees IS 'Self-read regression fix: every authenticated user can read their own employees row even without hr:view_employee. Required for /employee/* portal (clock, schedule, attendance, payslip, shift-register).';
+COMMENT ON POLICY employees_select_self ON public.employees IS 'Self-read regression fix: every authenticated user can read their own employees row even without hr:view_employee. Required for Branch Hub staff workflows (clock, schedule, payslip, shift-register).';
 
 
 --

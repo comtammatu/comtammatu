@@ -3,7 +3,7 @@ import { canAccess } from "@comtammatu/shared/auth";
 import { formatVND } from "@comtammatu/shared/format";
 import { AppSection, KpiRow } from "@/components/surface";
 import { KpiCard } from "@/components/kpi/kpi-card";
-import { EmployeePage } from "@/(protected)/employee/components/employee-page";
+import { EmployeePage } from "@lib/employee/components/employee-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { fetchBranchDayStatus } from "./data";

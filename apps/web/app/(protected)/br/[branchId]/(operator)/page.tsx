@@ -37,9 +37,9 @@ import {
   EmployeeActionSection,
   EmployeePanel,
   EmployeePage,
-} from "@/(protected)/employee/components/employee-page";
-import { EmployeeHomePageContent } from "@/(protected)/employee/page";
-import { getTodayWorkState } from "@/(protected)/employee/_lib/today-work-state";
+} from "@lib/employee/components/employee-page";
+import { EmployeeHomePageContent } from "@lib/employee/page";
+import { getTodayWorkState } from "@lib/employee/_lib/today-work-state";
 import { getUnreadCount } from "@/(protected)/notifications/actions";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
@@ -273,7 +273,9 @@ export default async function OperatorHomePage({
       ? fetchBranchQueueCounts(supabase, claims, context.branchId, branchKind)
       : Promise.resolve(null),
   ]);
-  const unreadCount = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
+  const unreadCount = unreadResult?.success
+    ? (unreadResult.data?.count ?? 0)
+    : 0;
   const queueRows = queueCounts
     ? buildQueueRows(basePath, queueCounts, branchKind)
     : [];
@@ -294,7 +296,7 @@ export default async function OperatorHomePage({
   const centralSuffixes = CENTRAL_TILE_SUFFIXES[branchKind] ?? null;
   // Central homes render one curated job-tile group; the full tile directory
   // lives on /more (design contract screens 1+4).
-  const groups =
+  const centralGroups =
     isCentral && centralSuffixes
       ? (() => {
           const stockTiles = rawGroups
@@ -320,137 +322,191 @@ export default async function OperatorHomePage({
             : [];
         })()
       : rawGroups;
+  const branchTodayGroup =
+    rawGroups.find((group) => group.id === "sales_kitchen") ??
+    rawGroups.find((group) => group.id === "stock") ??
+    null;
+  const branchTodayTileLimit = branchTodayGroup?.id === "sales_kitchen" ? 3 : 4;
+  const branchTodayTileCount = branchTodayGroup?.tiles.length ?? 0;
+  const branchTodayGroups = branchTodayGroup
+    ? [
+        {
+          ...branchTodayGroup,
+          tiles: branchTodayGroup.tiles.slice(0, branchTodayTileLimit),
+        },
+      ].filter((group) => group.tiles.length > 0)
+    : [];
+  const groups = isCentral ? centralGroups : branchTodayGroups;
+  const showMoreLink =
+    !isCentral &&
+    rawGroups.some((group) =>
+      group.id !== branchTodayGroup?.id
+        ? group.tiles.length > 0
+        : branchTodayTileCount > branchTodayTileLimit,
+    );
+
+  const todayStatusSection = showTodayCard ? (
+    <EmployeeHomePageContent
+      authState={authState}
+      mode="compact-status"
+      routes={{
+        clock: `${basePath}/shift/clock`,
+        tasks: `${basePath}/shift`,
+        schedule: `${basePath}/shift/schedule`,
+        profile: `${basePath}/profile`,
+        checkoutApprovals: `${basePath}/shift/checkout-approvals`,
+        count: `${basePath}/stock/count`,
+        wasteApprovals: `${basePath}/stock/waste-approvals`,
+      }}
+      showNotificationControl={false}
+    />
+  ) : showManagementCard ? (
+    <EmployeePanel
+      title={APP_COPY_VI.branchCommand}
+      description={context.branch.name}
+      tone="info"
+      size="sm"
+    >
+      <Button asChild size="touch-lg" className="w-full sm:w-fit">
+        <Link href={`${basePath}/dashboard`}>
+          <LayoutDashboard data-icon="inline-start" />
+          {APP_COPY_VI.branchCommand}
+        </Link>
+      </Button>
+    </EmployeePanel>
+  ) : null;
+
+  const centralAction = isCentral ? (
+    <Button asChild size="touch-lg" className="w-full">
+      <Link
+        href={
+          isCentralSupply
+            ? `${basePath}/stock/grn/new`
+            : `${basePath}/stock/production`
+        }
+      >
+        {isCentralSupply ? (
+          <Truck data-icon="inline-start" />
+        ) : (
+          <ChefHat data-icon="inline-start" />
+        )}
+        {isCentralSupply
+          ? branchCopy.centralReceiveCta
+          : branchCopy.centralProductionCta}
+      </Link>
+    </Button>
+  ) : null;
+
+  const queueSection =
+    queueRows.length > 0 || isCentral ? (
+      <EmployeePanel
+        title={branchCopy.queueTitle}
+        icon={ClipboardCheck}
+        tone="warning"
+        size="sm"
+        badge={
+          queuePendingTotal > 0
+            ? { children: String(queuePendingTotal), variant: "warning" }
+            : undefined
+        }
+      >
+        <CompactQueueSection rows={queueRows} />
+      </EmployeePanel>
+    ) : null;
+
+  const overviewSection =
+    showOverview && day ? (
+      <EmployeePanel
+        title={messages.settings.branch.hubOverviewTitle}
+        size="sm"
+      >
+        <div className="grid grid-cols-2 gap-2">
+          <KpiCard
+            label={messages.settings.branch.dayRevenueLabel}
+            value={formatVND(day.todayRevenue)}
+            density="compact"
+            href={`${basePath}/dashboard`}
+          />
+          <KpiCard
+            label={messages.settings.branch.hubOverviewUnreadLabel}
+            value={String(unreadCount)}
+            density="compact"
+            tone={unreadCount > 0 ? "warning" : "neutral"}
+            href="/notifications"
+          />
+        </div>
+      </EmployeePanel>
+    ) : null;
+
+  const clockGateSection =
+    isFloorRole && beforeClockIn ? (
+      <NoteCallout tone="warning">
+        Bạn cần <strong>chấm công vào ca</strong> để mở khóa các chức năng Bán
+        hàng, Bếp và Kho chi nhánh.
+      </NoteCallout>
+    ) : null;
+
+  const secondaryLinksSection = isCentral || showMoreLink ? (
+    <div className="flex items-center justify-center gap-4">
+      {isCentral ? (
+        <Link
+          href={`${basePath}/shift/clock`}
+          className="text-sm text-muted-foreground underline underline-offset-4"
+        >
+          {branchCopy.centralClockLink}
+        </Link>
+      ) : null}
+      <Link
+        href={`${basePath}/more`}
+        className="text-sm text-muted-foreground underline underline-offset-4"
+      >
+        {branchCopy.centralMoreTitle}
+      </Link>
+    </div>
+  ) : null;
+  const mainColumnClassName =
+    queueSection || overviewSection ? "lg:col-span-2" : "lg:col-span-3";
 
   return (
     <EmployeePage title={APP_COPY_VI.operatorHome} hideHeaderOnMobile>
-      {showTodayCard ? (
-        <EmployeeHomePageContent
-          authState={authState}
-          mode="compact-status"
-          routes={{
-            clock: `${basePath}/shift/clock`,
-            tasks: `${basePath}/shift`,
-            schedule: `${basePath}/shift/schedule`,
-            profile: `${basePath}/profile`,
-            checkoutApprovals: `${basePath}/shift/checkout-approvals`,
-            count: `${basePath}/stock/count`,
-            wasteApprovals: `${basePath}/stock/waste-approvals`,
-          }}
-          showNotificationControl={false}
-        />
-      ) : showManagementCard ? (
-        <EmployeePanel
-          title={APP_COPY_VI.branchCommand}
-          description={context.branch.name}
-          tone="info"
-          size="sm"
-        >
-          <Button asChild size="touch-lg" className="w-full sm:w-fit">
-            <Link href={`${basePath}/dashboard`}>
-              <LayoutDashboard data-icon="inline-start" />
-              {APP_COPY_VI.branchCommand}
-            </Link>
-          </Button>
-        </EmployeePanel>
-      ) : null}
-
-      {isCentral ? (
-        <Button asChild size="touch-lg" className="w-full">
-          <Link
-            href={
-              isCentralSupply
-                ? `${basePath}/stock/grn/new`
-                : `${basePath}/stock/production`
-            }
-          >
-            {isCentralSupply ? (
-              <Truck data-icon="inline-start" />
-            ) : (
-              <ChefHat data-icon="inline-start" />
-            )}
-            {isCentralSupply
-              ? branchCopy.centralReceiveCta
-              : branchCopy.centralProductionCta}
-          </Link>
-        </Button>
-      ) : null}
-
-      {queueRows.length > 0 || isCentral ? (
-        <EmployeePanel
-          title={branchCopy.queueTitle}
-          icon={ClipboardCheck}
-          tone="warning"
-          size="sm"
-          badge={
-            queuePendingTotal > 0
-              ? { children: String(queuePendingTotal), variant: "warning" }
-              : undefined
-          }
-        >
-          <CompactQueueSection rows={queueRows} />
-        </EmployeePanel>
-      ) : null}
-
-      {isFloorRole && beforeClockIn && (
-        <NoteCallout tone="warning">
-          Bạn cần <strong>chấm công vào ca</strong> để mở khóa các chức năng Bán
-          hàng, Bếp và Kho chi nhánh.
-        </NoteCallout>
-      )}
-
-      {groups.map((group) => (
-        <EmployeeActionSection
-          key={group.id}
-          title={group.title}
-          links={group.tiles.map((tile) => ({
-            key: `${group.id}-${tile.moduleKey}-${tile.href}`,
-            href: tile.href,
-            icon: resolveOperatorTileIcon(tile.icon),
-            title: tile.label,
-            disabled: tilesLockedBeforeClockIn && lockedGroupIds.has(group.id),
-          }))}
-          columns={2}
-          mobileColumns={group.id === "sales_kitchen" ? 1 : 2}
-          wideColumns
-        />
-      ))}
-
-      {isCentral ? (
-        <div className="flex items-center justify-center gap-4">
-          <Link
-            href={`${basePath}/shift/clock`}
-            className="text-sm text-muted-foreground underline underline-offset-4"
-          >
-            {branchCopy.centralClockLink}
-          </Link>
-          <Link
-            href={`${basePath}/more`}
-            className="text-sm text-muted-foreground underline underline-offset-4"
-          >
-            {branchCopy.centralMoreTitle}
-          </Link>
-        </div>
-      ) : null}
-
-      {showOverview && day ? (
-        <EmployeePanel title={messages.settings.branch.hubOverviewTitle} size="sm">
-          <div className="grid grid-cols-2 gap-2">
-            <KpiCard
-              label={messages.settings.branch.dayRevenueLabel}
-              value={formatVND(day.todayRevenue)}
-              density="compact"
-              href={`${basePath}/dashboard`}
-            />
-            <KpiCard
-              label={messages.settings.branch.hubOverviewUnreadLabel}
-              value={String(unreadCount)}
-              density="compact"
-              tone={unreadCount > 0 ? "warning" : "neutral"}
-              href="/notifications"
+      <div className="grid gap-3 lg:grid-cols-3 lg:items-start">
+        {todayStatusSection ? (
+          <div className={mainColumnClassName}>{todayStatusSection}</div>
+        ) : null}
+        {centralAction ? (
+          <div className={mainColumnClassName}>{centralAction}</div>
+        ) : null}
+        {queueSection || overviewSection ? (
+          <div className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-3 lg:col-start-3 lg:row-span-6 lg:row-start-1">
+            {queueSection}
+            {overviewSection}
+          </div>
+        ) : null}
+        {clockGateSection ? (
+          <div className={mainColumnClassName}>{clockGateSection}</div>
+        ) : null}
+        {groups.map((group) => (
+          <div key={group.id} className={mainColumnClassName}>
+            <EmployeeActionSection
+              title={group.title}
+              links={group.tiles.map((tile) => ({
+                key: `${group.id}-${tile.moduleKey}-${tile.href}`,
+                href: tile.href,
+                icon: resolveOperatorTileIcon(tile.icon),
+                title: tile.label,
+                disabled:
+                  tilesLockedBeforeClockIn && lockedGroupIds.has(group.id),
+              }))}
+              columns={2}
+              mobileColumns={group.id === "sales_kitchen" ? 1 : 2}
+              wideColumns
             />
           </div>
-        </EmployeePanel>
-      ) : null}
+        ))}
+        {secondaryLinksSection ? (
+          <div className={mainColumnClassName}>{secondaryLinksSection}</div>
+        ) : null}
+      </div>
     </EmployeePage>
   );
 }

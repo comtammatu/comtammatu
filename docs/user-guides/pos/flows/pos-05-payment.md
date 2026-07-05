@@ -35,7 +35,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 - Ô "Tổng nhận" (mặc định = tổng tiền — tức khách trả đúng).
 - Tối đa 6 chip mệnh giá nhanh tự tính theo tổng (tờ tiền chẵn gần nhất ≥ tổng).
 - "Tiền trả khách": 0đ (tự cộng nếu khách đưa thừa).
-- Checkbox "Người mua không lấy hóa đơn" (mặc định TICK — không nhập thông tin người mua).
+- Checkbox "Khách không lấy hóa đơn (vẫn xuất HĐĐT)" (mặc định TICK — không nhập thông tin người mua; HĐĐT vẫn phát hành với tên "Bán cho người tiêu dùng").
 - 3 nút bottom: **Hủy**, **Đã thanh toán** (đỏ, lớn), **In tạm tính**.
 
 ### Bước 2 — Nhập tiền khách đưa (cho tiền mặt)
@@ -60,7 +60,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 
 ![Bước 3 - Invoice toggle](../mockups/pos-05/pos-05-step-03-invoice-toggle.png)
 
-**Bạn làm:** Hỏi khách có lấy hóa đơn ghi thông tin/MST không. Nếu không lấy → giữ tick **Người mua không lấy hóa đơn**. Nếu khách cần ghi thông tin → bỏ tick và nhập tên người mua / công ty / mã số thuế.
+**Bạn làm:** Hỏi khách có lấy hóa đơn ghi thông tin/MST không. Nếu không lấy → giữ tick **Khách không lấy hóa đơn (vẫn xuất HĐĐT)**. Nếu khách cần ghi thông tin → bỏ tick và nhập tên người mua / công ty / mã số thuế.
 
 **Bạn thấy (khi bỏ tick):** Form thông tin người mua mở rộng — nhập tên người mua / công ty / mã số thuế / địa chỉ.
 

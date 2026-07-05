@@ -105,13 +105,11 @@ export function TransferReceiveClient({
     return (
       <>
         <div className="flex items-center gap-2">
-          <Link
-            href={backHref}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-            aria-label={ACTIONS_VI.back}
-          >
-            <IconArrowLeft className="size-4" />
-          </Link>
+          <Button asChild variant="ghost" size="icon" className="shrink-0">
+            <Link href={backHref} aria-label={ACTIONS_VI.back}>
+              <IconArrowLeft className="size-4" />
+            </Link>
+          </Button>
           <span className="min-w-0 flex-1 truncate font-mono text-sm font-semibold">
             {transfer.code}
           </span>
@@ -133,13 +131,11 @@ export function TransferReceiveClient({
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex items-center gap-2">
-        <Link
-          href={backHref}
-          className="inline-flex items-center gap-1 text-muted-foreground hover:underline"
-          aria-label={ACTIONS_VI.back}
-        >
-          <IconArrowLeft className="size-4" />
-        </Link>
+        <Button asChild variant="ghost" size="icon" className="shrink-0">
+          <Link href={backHref} aria-label={ACTIONS_VI.back}>
+            <IconArrowLeft className="size-4" />
+          </Link>
+        </Button>
         <span className="font-mono text-sm font-semibold">{transfer.code}</span>
         <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
           {receiveCopy.receiveFrom(transfer.fromBranch)}
@@ -203,7 +199,7 @@ export function TransferReceiveClient({
         })}
       </ItemGroup>
 
-      <div className="sticky chrome-safe-bottom z-10 flex w-full flex-col gap-2">
+      <div className="sticky chrome-safe-bottom z-10 flex w-full flex-col gap-2 border-t bg-background/95 p-2 backdrop-blur">
         <Button
           type="button"
           size="touch-lg"
@@ -230,7 +226,13 @@ export function TransferReceiveClient({
             : ""
         }
         suffix={sheetItem?.unit}
-        initialValue={sheetItem ? (values[sheetItem.ingredientId] ?? sheetItem.qty) : 0}
+        initialValue={
+          sheetItem
+            ? confirmed.has(sheetItem.ingredientId)
+              ? (values[sheetItem.ingredientId] ?? sheetItem.qty)
+              : null
+            : null
+        }
         onConfirm={handleSheetConfirm}
         allowDecimal
       />

@@ -6,7 +6,7 @@ import {
 import {
   EmployeeActionSection,
   EmployeePage,
-} from "@/(protected)/employee/components/employee-page";
+} from "@lib/employee/components/employee-page";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";

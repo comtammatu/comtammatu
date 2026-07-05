@@ -258,13 +258,13 @@ export function GrnListClient({
           title={tNav("grn", "navigation")}
           actions={
             <div className="flex items-center gap-2">
-              <Button asChild size={embedded ? "touch" : "sm"} variant="outline">
+              <Button asChild variant="outline">
                 <Link href={purchaseOrdersPath}>
                   <IconClipboardList className="size-4" />
                   {INVENTORY_VI.choosePoToCreateGrn}
                 </Link>
               </Button>
-              <Button asChild size={embedded ? "touch" : "sm"}>
+              <Button asChild>
                 <Link href={`${basePath}/new`}>
                   <IconPlus className="size-4" />
                   {INVENTORY_VI.newGrn}

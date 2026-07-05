@@ -42,7 +42,9 @@ const AUTHED_NAV_PREFIXES = [
   "/payment",
 ];
 const isAuthedPath = (pathname: string) =>
-  AUTHED_NAV_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  AUTHED_NAV_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
 
 // Branch Operator Hub only (PWA-2, D062) — the operator plane's own routes
 // under `/br/{branchId}` (dashboard/orders/profile/settings/shift/stock/
@@ -53,7 +55,9 @@ const isHubPath = (pathname: string) => {
   if (!pathname.startsWith("/br/")) return false;
   const segments = pathname.split("/").filter(Boolean);
   const stationSegment = segments[2];
-  return stationSegment == null || !BRANCH_STATION_SEGMENTS.includes(stationSegment);
+  return (
+    stationSegment == null || !BRANCH_STATION_SEGMENTS.includes(stationSegment)
+  );
 };
 
 // Assigned once below, after `runtimeCaching` is built. `hubOfflineFallback`
@@ -127,10 +131,10 @@ const runtimeCaching: RuntimeCaching[] = [
       request.mode === "navigate" && isHubPath(url.pathname),
     handler: new NetworkOnly({ plugins: [hubOfflineFallback] }),
   },
-  // 8. Remaining authed navigations (POS/KDS/Runner stations, admin,
-  //    employee, etc.): never cache, no offline fallback — unchanged from
-  //    before PWA-2. Protected shells embed user identity in the SSR'd HTML,
-  //    so the service worker must never persist a navigation response.
+  // 8. Remaining authed navigations (POS/KDS/Runner stations, admin, and
+  //    retired `/employee` redirects): never cache, no offline fallback.
+  //    Protected shells embed user identity in the SSR'd HTML, so the service
+  //    worker must never persist a navigation response.
   {
     matcher: ({ request, url }) =>
       request.mode === "navigate" && isAuthedPath(url.pathname),

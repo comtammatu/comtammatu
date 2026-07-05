@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import type { JwtClaims } from "@comtammatu/shared/auth";
-import { resolveLegacyEmployeeBranchRuntimePath } from "../app/(protected)/employee/_lib/branch-runtime-redirect";
+import { resolveLegacyEmployeeBranchRuntimePath } from "../lib/employee/_lib/branch-runtime-redirect";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
@@ -97,11 +97,15 @@ test("employee runtime redirect resolves the central-site home (D055 §1)", () =
       role,
     );
     assert.equal(
-      resolveLegacyEmployeeBranchRuntimePath(claims(role, null), "/employee", 9),
+      resolveLegacyEmployeeBranchRuntimePath(
+        claims(role, null),
+        "/employee",
+        9,
+      ),
       "/br/9",
       role,
     );
-    // Without a resolved home site they stay on /employee.
+    // Without a resolved home site the proxy falls back to access-denied.
     assert.equal(
       resolveLegacyEmployeeBranchRuntimePath(
         claims(role, null),
@@ -114,14 +118,14 @@ test("employee runtime redirect resolves the central-site home (D055 §1)", () =
   }
 });
 
-test("employee runtime redirect never moves office off /employee", () => {
+test("employee runtime redirect sends office to finance", () => {
   assert.equal(
     resolveLegacyEmployeeBranchRuntimePath(
       claims("office", null),
       "/employee/clock",
       9,
     ),
-    null,
+    "/finance",
   );
 });
 
@@ -144,7 +148,11 @@ test("proxy redirects old /employee entrypoints to branch runtime", () => {
   // Central-site roles resolve their home site through the cached lookup.
   assert.match(
     proxy,
-    /resolveLegacyEmployeeBranchRuntimePath\(\s*claims,\s*pathname,\s*await resolveCentralSiteHomeBranchId\(supabase, claims\),\s*\)/,
+    /const homeBranchId = await resolveCentralSiteHomeBranchId\(supabase, claims\);/,
+  );
+  assert.match(
+    proxy,
+    /resolveLegacyEmployeeBranchRuntimePath\(\s*claims,\s*pathname,\s*homeBranchId,\s*\)/,
   );
   // Redirect happens before module ACL resolution.
   assert.ok(
@@ -156,7 +164,7 @@ test("proxy redirects old /employee entrypoints to branch runtime", () => {
 
 test("old /employee route map mirrors branch runtime pairs", () => {
   const redirectLib = read(
-    "apps/web/app/(protected)/employee/_lib/branch-runtime-redirect.ts",
+    "apps/web/lib/employee/_lib/branch-runtime-redirect.ts",
   );
 
   const cases = [
@@ -168,6 +176,7 @@ test("old /employee route map mirrors branch runtime pairs", () => {
     ["/employee/profile", "profile"],
     ["/employee/leave", "scheduleLeave"],
     ["/employee/payslip", "profilePayslip"],
+    ["/employee/permissions", "profile"],
     ["/employee/count", "stockCount"],
     ["/employee/checkout-approvals", "checkoutApprovals"],
   ] as const;
@@ -180,8 +189,21 @@ test("old /employee route map mirrors branch runtime pairs", () => {
     );
   }
 
-  // Paths outside the map keep their /employee surface.
-  assert.doesNotMatch(redirectLib, /"\/employee\/permissions":/);
+  assert.match(redirectLib, /"\/employee\/permissions": "profile"/);
+});
+
+test("proxy never lets retired /employee paths fall through to pages", () => {
+  const proxy = read("apps/web/proxy.ts");
+
+  assert.match(
+    proxy,
+    /return redirectToDefaultLanding\(request, response, supabase, claims\);/,
+  );
+  assert.ok(
+    proxy.indexOf('if (pathname.startsWith("/employee"))') <
+      proxy.indexOf("resolveModuleFromPath(pathname)"),
+    "retired /employee paths must be handled before module ACL",
+  );
 });
 
 test("proxy preserves query string on old /employee redirects", () => {
@@ -199,7 +221,6 @@ test("employee pages no longer run page-level branch runtime redirects", () => {
     "clock/page.tsx",
     "tasks/page.tsx",
     "schedule/page.tsx",
-    "attendance/page.tsx",
     "profile/page.tsx",
     "leave/page.tsx",
     "payslip/page.tsx",
@@ -207,10 +228,14 @@ test("employee pages no longer run page-level branch runtime redirects", () => {
   ] as const;
 
   for (const path of pages) {
-    const source = read(`apps/web/app/(protected)/employee/${path}`);
+    const source = read(`apps/web/lib/employee/${path}`);
     assert.doesNotMatch(source, /resolveEmployeeBranchRuntimePath/, path);
   }
+  assert.equal(
+    existsSync(resolve(repoRoot, "apps/web/lib/employee/attendance/page.tsx")),
+    false,
+  );
 
-  const employeeHome = read("apps/web/app/(protected)/employee/page.tsx");
+  const employeeHome = read("apps/web/lib/employee/page.tsx");
   assert.doesNotMatch(employeeHome, /OPERATION_HANDOFFS/);
 });

@@ -1,4 +1,4 @@
-import { EmployeeHomePageContent } from "@/(protected)/employee/page";
+import { EmployeeHomePageContent } from "@lib/employee/page";
 
 export default async function OperatorShiftPage({
   params,

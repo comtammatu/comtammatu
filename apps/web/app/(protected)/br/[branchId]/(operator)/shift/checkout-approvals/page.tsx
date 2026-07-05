@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { CheckoutApprovalsPageContent } from "@/(protected)/employee/checkout-approvals/page";
+import { CheckoutApprovalsPageContent } from "@lib/employee/checkout-approvals/page";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;

@@ -393,8 +393,7 @@ export function GrnCreateClient({
   const lineCount = draft.lines.length;
   const canSubmit = lineCount > 0 && !submitting;
   const branchLocked = serverGrnId !== null;
-  const showWarehousePicker =
-    canSwitchBranch && procurementBranches.length > 1;
+  const showWarehousePicker = canSwitchBranch && procurementBranches.length > 1;
 
   const warehouseField = showWarehousePicker ? (
     <div className="flex flex-col gap-1.5">
@@ -656,7 +655,7 @@ export function GrnCreateClient({
   );
 
   const footer = (
-    <div className="sticky chrome-safe-bottom z-10 w-full lg:static">
+    <div className="sticky chrome-safe-bottom z-10 w-full border-t bg-background/95 p-2 backdrop-blur lg:static lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
       <Button
         type="button"
         size="touch-lg"
@@ -678,16 +677,13 @@ export function GrnCreateClient({
     </div>
   );
 
-  const content = (
-    <>
-      {header}
-      {body}
-      {footer}
-    </>
-  );
-
   if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
+    return (
+      <div className="flex w-full flex-col gap-3">
+        {body}
+        {footer}
+      </div>
+    );
   }
 
   return (

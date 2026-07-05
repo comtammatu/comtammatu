@@ -4,27 +4,27 @@ import { join } from "node:path";
 import { test } from "node:test";
 
 const employeeHomeSource = readFileSync(
-  join(process.cwd(), "app/(protected)/employee/page.tsx"),
+  join(process.cwd(), "lib/employee/page.tsx"),
   "utf8",
 );
 const employeeProfileSource = readFileSync(
-  join(process.cwd(), "app/(protected)/employee/profile/page.tsx"),
+  join(process.cwd(), "lib/employee/profile/page.tsx"),
   "utf8",
 );
 const employeeClockActionSource = readFileSync(
-  join(process.cwd(), "app/(protected)/employee/clock/actions.ts"),
+  join(process.cwd(), "lib/employee/clock/actions.ts"),
   "utf8",
 );
 const employeeClockClientSource = readFileSync(
-  join(process.cwd(), "app/(protected)/employee/clock/clock-client.tsx"),
+  join(process.cwd(), "lib/employee/clock/clock-client.tsx"),
   "utf8",
 );
 const employeeClockPageSource = readFileSync(
-  join(process.cwd(), "app/(protected)/employee/clock/page.tsx"),
+  join(process.cwd(), "lib/employee/clock/page.tsx"),
   "utf8",
 );
 const employeeTasksPageSource = readFileSync(
-  join(process.cwd(), "app/(protected)/employee/tasks/page.tsx"),
+  join(process.cwd(), "lib/employee/tasks/page.tsx"),
   "utf8",
 );
 

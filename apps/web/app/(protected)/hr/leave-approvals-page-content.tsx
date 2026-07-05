@@ -9,7 +9,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { AppEmptyState } from "@/components/surface";
 import { messages } from "@lib/messages";
-import { EmployeePage } from "../employee/components/employee-page";
+import { EmployeePage } from "@lib/employee/components/employee-page";
 import { LeaveRequestsTable } from "./leave-requests-table";
 import type { BranchOption } from "./_types";
 

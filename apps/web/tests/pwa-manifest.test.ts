@@ -5,7 +5,7 @@ import { GET as getHubManifest } from "../app/(protected)/br/[branchId]/(operato
 import { GET as getKdsManifest } from "../app/(protected)/br/[branchId]/kds/manifest.webmanifest/route";
 import { GET as getPosManifest } from "../app/(protected)/br/[branchId]/pos/manifest.webmanifest/route";
 
-test("root PWA manifest requests portrait orientation", () => {
+test("root PWA manifest opens Branch Hub instead of the retired employee app", () => {
   const manifest = JSON.parse(
     readFileSync(
       new URL("../public/manifest.webmanifest", import.meta.url),
@@ -21,15 +21,15 @@ test("root PWA manifest requests portrait orientation", () => {
     start_url?: unknown;
   };
 
-  assert.equal(manifest.name, "Cơm Tấm Má Tư - Nhân viên");
+  assert.equal(manifest.name, "Cơm Tấm Má Tư - Chi nhánh");
   assert.equal(manifest.orientation, "portrait");
-  assert.equal(manifest.scope, "/employee");
-  assert.equal(manifest.short_name, "Má Tư NV");
-  assert.equal(manifest.start_url, "/employee");
+  assert.equal(manifest.scope, "/");
+  assert.equal(manifest.short_name, "Má Tư CN");
+  assert.equal(manifest.start_url, "/br");
   assert.deepEqual(manifest.categories, ["business", "productivity"]);
   assert.deepEqual(
     manifest.shortcuts?.map((shortcut) => shortcut.url),
-    ["/employee", "/employee/clock", "/employee/tasks", "/employee/schedule"],
+    ["/br", "/br", "/br", "/br"],
   );
 });
 
@@ -81,9 +81,9 @@ test("KDS PWA manifest requests landscape orientation per branch", async () => {
 
 test("Operator Hub PWA manifest is installable per branch", async () => {
   const response = await getHubManifest(
-    new Request(
-      "https://app.test/br/3/manifest.webmanifest",
-    ) as Parameters<typeof getHubManifest>[0],
+    new Request("https://app.test/br/3/manifest.webmanifest") as Parameters<
+      typeof getHubManifest
+    >[0],
     { params: Promise.resolve({ branchId: "3" }) },
   );
   const manifest = (await response.json()) as {
@@ -97,7 +97,10 @@ test("Operator Hub PWA manifest is installable per branch", async () => {
   };
 
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("Content-Type"), "application/manifest+json; charset=utf-8");
+  assert.equal(
+    response.headers.get("Content-Type"),
+    "application/manifest+json; charset=utf-8",
+  );
   assert.equal(manifest.id, "/br/3");
   assert.equal(manifest.start_url, "/br/3");
   // Hub scopes the whole origin so in-app navigation to shared routes
@@ -117,9 +120,9 @@ test("Operator Hub PWA manifest is installable per branch", async () => {
 
 test("Operator Hub PWA manifest keeps rejecting invalid branch ids", async () => {
   const response = await getHubManifest(
-    new Request(
-      "https://app.test/br/abc/manifest.webmanifest",
-    ) as Parameters<typeof getHubManifest>[0],
+    new Request("https://app.test/br/abc/manifest.webmanifest") as Parameters<
+      typeof getHubManifest
+    >[0],
     { params: Promise.resolve({ branchId: "abc" }) },
   );
 
@@ -193,10 +196,7 @@ test("POS and KDS toolbars render a return-to-hub link; runner never does", () =
     /<PwaToolbarHubLink\s+href=\{`\/br\/\$\{branchId\}`\}\s+label=\{copy\.hubLinkLabel\}/,
   );
   assert.match(toolbarSource, /hubLinkLabel: "Về màn hình chính chi nhánh"/);
-  assert.match(
-    pwaToolbarSource,
-    /<Link href=\{href\} aria-label=\{label\}>/,
-  );
+  assert.match(pwaToolbarSource, /<Link href=\{href\} aria-label=\{label\}>/);
   assert.match(
     pwaToolbarSource,
     /asChild\s+variant="ghost"\s+size="icon-touch"/,
@@ -204,7 +204,10 @@ test("POS and KDS toolbars render a return-to-hub link; runner never does", () =
 
   // Quiet POS/KDS state should not reserve a hub-link-only toolbar row over the
   // operational surface; real offline/update/install banners still carry it.
-  assert.match(pwaToolbarSource, /if \(!showInstallRow\) \{\s*return null;\s*\}/);
+  assert.match(
+    pwaToolbarSource,
+    /if \(!showInstallRow\) \{\s*return null;\s*\}/,
+  );
   assert.doesNotMatch(pwaToolbarSource, /if \(hubLink == null\) return null;/);
 });
 
@@ -254,7 +257,10 @@ test("SW offline fallback (PWA-2) only precaches/serves the Hub shell, never sta
     swSource,
     /handler: new NetworkOnly\(\{ plugins: \[hubOfflineFallback\] \}\)/,
   );
-  assert.match(swSource, /BRANCH_STATION_SEGMENTS = \["pos", "kds", "runner"\]/);
+  assert.match(
+    swSource,
+    /BRANCH_STATION_SEGMENTS = \["pos", "kds", "runner"\]/,
+  );
 
   // The fallback only fires on handlerDidError (network failure), and only
   // returns the precached shell — no data/mutation caching is introduced.
@@ -263,8 +269,8 @@ test("SW offline fallback (PWA-2) only precaches/serves the Hub shell, never sta
     /handlerDidError: async \(\) => serwist\.matchPrecache\("\/offline"\)/,
   );
 
-  // Remaining authed navigations (stations + admin/employee/etc.) are
-  // unchanged: still NetworkOnly with no fallback plugin.
+  // Remaining authed navigations (stations + admin plus retired /employee
+  // redirects) stay NetworkOnly with no fallback plugin.
   assert.match(
     swSource,
     /request\.mode === "navigate" && isAuthedPath\(url\.pathname\),\s*\n\s*handler: new NetworkOnly\(\),/,

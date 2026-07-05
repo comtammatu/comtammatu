@@ -92,7 +92,7 @@ test("Shared permission catalog drops register_shift but keeps checkout-approval
 
 test("Shift-registration surfaces are deleted and no app code links to them", () => {
   for (const gone of [
-    "apps/web/app/(protected)/employee/shift-register",
+    "apps/web/lib/employee/shift-register",
     "apps/web/app/(protected)/hr/shift-request-actions.ts",
     "apps/web/app/(protected)/hr/shift-requests-table.tsx",
   ]) {
@@ -103,8 +103,8 @@ test("Shift-registration surfaces are deleted and no app code links to them", ()
   }
 
   for (const path of [
-    "apps/web/app/(protected)/employee/profile/page.tsx",
-    "apps/web/app/(protected)/employee/schedule/schedule-client.tsx",
+    "apps/web/lib/employee/profile/page.tsx",
+    "apps/web/lib/employee/schedule/schedule-client.tsx",
     "apps/web/lib/messages/employee.ts",
   ]) {
     assert.ok(
@@ -116,7 +116,7 @@ test("Shift-registration surfaces are deleted and no app code links to them", ()
 
 test("Schedule is the single day-axis: leave ranges render and link to leave request", () => {
   const actions = read(
-    "apps/web/app/(protected)/employee/schedule/actions.ts",
+    "apps/web/lib/employee/schedule/actions.ts",
   );
   for (const expected of [
     'from("leave_requests")',
@@ -127,7 +127,7 @@ test("Schedule is the single day-axis: leave ranges render and link to leave req
   }
 
   const client = read(
-    "apps/web/app/(protected)/employee/schedule/schedule-client.tsx",
+    "apps/web/lib/employee/schedule/schedule-client.tsx",
   );
   for (const expected of [
     "expandLeavesByDate",
@@ -141,10 +141,10 @@ test("Schedule is the single day-axis: leave ranges render and link to leave req
 
 test("Checkout approval gate uses hr:approve_checkout (renamed in Phase 2)", () => {
   const clockActions = read(
-    "apps/web/app/(protected)/employee/clock/actions.ts",
+    "apps/web/lib/employee/clock/actions.ts",
   );
   const approvalsPage = read(
-    "apps/web/app/(protected)/employee/checkout-approvals/page.tsx",
+    "apps/web/lib/employee/checkout-approvals/page.tsx",
   );
 
   assert.ok(
@@ -229,10 +229,10 @@ test("P2 app no longer references shift assignments anywhere", () => {
   for (const path of [
     "apps/web/app/(protected)/hr/hr-client.tsx",
     "apps/web/app/(protected)/hr/actions.ts",
-    "apps/web/app/(protected)/employee/clock/actions.ts",
-    "apps/web/app/(protected)/employee/_lib/today-work-state.ts",
-    "apps/web/app/(protected)/employee/schedule/actions.ts",
-    "apps/web/app/(protected)/employee/schedule/page.tsx",
+    "apps/web/lib/employee/clock/actions.ts",
+    "apps/web/lib/employee/_lib/today-work-state.ts",
+    "apps/web/lib/employee/schedule/actions.ts",
+    "apps/web/lib/employee/schedule/page.tsx",
   ]) {
     assert.ok(
       !read(path).includes("shift_assignments"),

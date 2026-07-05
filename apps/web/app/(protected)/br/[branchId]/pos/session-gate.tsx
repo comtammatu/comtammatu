@@ -77,7 +77,10 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
 
   return (
     <div className="relative flex flex-1 flex-col overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
-      <EmployeePortalBackControl className="absolute left-4 top-4 z-10 sm:left-6 sm:top-6" />
+      <EmployeePortalBackControl
+        branchId={branchId}
+        className="absolute left-4 top-4 z-10 sm:left-6 sm:top-6"
+      />
 
       <div className="mx-auto flex w-full max-w-xl flex-1 items-center pt-12 sm:pt-0">
         <AppSection
@@ -116,7 +119,9 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
             {!branchHasTerminals ? (
               <Alert className="border-warning/20 bg-warning/10 text-warning">
                 <IconAlertTriangle />
-                <AlertTitle>{messages.pos.sessionGate.noTerminalTitle}</AlertTitle>
+                <AlertTitle>
+                  {messages.pos.sessionGate.noTerminalTitle}
+                </AlertTitle>
                 <AlertDescription>
                   {messages.pos.sessionGate.noTerminalDescription}
                 </AlertDescription>

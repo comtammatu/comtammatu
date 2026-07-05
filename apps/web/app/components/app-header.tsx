@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { cn } from "@comtammatu/ui";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
 
@@ -6,6 +7,8 @@ interface AppHeaderBrandProps {
   title: ReactNode;
   subtitle?: ReactNode;
   subtitleHiddenOnMobile: boolean;
+  href?: string;
+  ariaLabel?: string;
 }
 
 /**
@@ -19,9 +22,11 @@ function AppHeaderBrand({
   title,
   subtitle,
   subtitleHiddenOnMobile,
+  href,
+  ariaLabel,
 }: AppHeaderBrandProps) {
-  return (
-    <div className="flex min-w-0 items-center gap-2">
+  const content = (
+    <>
       <BrandLogoBox>
         <BrandMark decorative className="size-full" />
       </BrandLogoBox>
@@ -40,7 +45,23 @@ function AppHeaderBrand({
           </p>
         ) : null}
       </div>
-    </div>
+    </>
+  );
+  const className = "flex min-w-0 items-center gap-2";
+
+  return href ? (
+    <Link
+      href={href}
+      aria-label={ariaLabel}
+      className={cn(
+        className,
+        "rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      )}
+    >
+      {content}
+    </Link>
+  ) : (
+    <div className={className}>{content}</div>
   );
 }
 
@@ -53,6 +74,9 @@ export interface AppHeaderProps {
   subtitleHiddenOnMobile?: boolean;
   /** Optional middle slot between the brand block and actions (e.g. desktop tab nav). */
   nav?: ReactNode;
+  /** Optional brand link, used by app-like shells as a home affordance. */
+  homeHref?: string;
+  homeAriaLabel?: string;
   /** Trailing controls (profile/notifications icon buttons, nav, …). */
   actions?: ReactNode;
   /** Row max-width breakpoint step-up; default matches the Branch runtime header. */
@@ -72,6 +96,8 @@ export function AppHeader({
   subtitle,
   subtitleHiddenOnMobile = false,
   nav,
+  homeHref,
+  homeAriaLabel,
   actions,
   wide = false,
   className,
@@ -93,6 +119,8 @@ export function AppHeader({
           title={title}
           subtitle={subtitle}
           subtitleHiddenOnMobile={subtitleHiddenOnMobile}
+          href={homeHref}
+          ariaLabel={homeAriaLabel}
         />
         {nav}
         {actions ? (

@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { LogIn as IconDoorEnter } from "lucide-react";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { HR_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 
-/** Compact back link to the employee portal. */
 export function EmployeePortalBackControl({
+  branchId,
   className,
 }: {
+  branchId: number;
   className?: string;
 }) {
   return (
@@ -23,9 +25,9 @@ export function EmployeePortalBackControl({
       asChild
     >
       <Link
-        href="/employee"
-        title={HR_VI.backToEmployeePortal}
-        aria-label={HR_VI.backToEmployeePortal}
+        href={`/br/${branchId}`}
+        title={APP_COPY_VI.operatorHome}
+        aria-label={APP_COPY_VI.operatorHome}
       >
         <IconDoorEnter className="size-4 shrink-0" />
         <span>{HR_VI.exit}</span>

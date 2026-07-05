@@ -175,9 +175,7 @@ type LoadedAuthState = {
  * Wrapped in React `cache()` so repeated calls within ONE RSC render share
  * the same `{supabase, session, claims}` snapshot — eliminates duplicate
  * `getSession()` cookie parses when both a layout and its page (or multiple
- * helpers like `getEmployeeContext` / `mobile-header`) read auth state.
- * Inventory layout + page used to invoke this twice; Employee home invoked
- * it three times (page + mobile-header + employee-context). Cache scope is
+ * helpers like `getEmployeeContext`) read auth state. Cache scope is
  * per-request; production safety unchanged.
  */
 export const loadAuthState = cache(async (): Promise<LoadedAuthState> => {

@@ -33,6 +33,24 @@ export interface InvoiceRow {
   orders: { order_number: string } | null;
 }
 
+// Preview for the manual "issue HĐĐT for a past paid order" dialog. Read-only
+// snapshot resolved by (branch, order_number); issuance still runs through
+// createTaxInvoice, which re-checks every guard server-side.
+export interface ManualInvoiceOrderPreview {
+  orderId: number;
+  orderNumber: string;
+  branchId: number;
+  totalAmount: number;
+  createdAt: string;
+  paymentStatus: string | null;
+  existingInvoiceStatus: string | null;
+  existingInvoiceNumber: string | null;
+  isDraftRetry: boolean;
+  hasActiveItems: boolean;
+  summaryDate: string | null;
+  issuable: boolean;
+}
+
 export interface FinanceDashboardHealth {
   cashVarianceSessionCount: number;
   cashVarianceAbsAmount: number;

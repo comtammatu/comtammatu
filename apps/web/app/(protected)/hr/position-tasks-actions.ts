@@ -29,7 +29,10 @@ const positionTaskInputSchema = z.object({
   phase: z.enum(POSITION_TASK_PHASES).default("start_of_shift"),
   isRequired: z.boolean().default(true),
   doneDefinition: z.string().trim().max(240).default(""),
-  ingredientIds: z.array(z.coerce.number().int().positive()).max(80).default([]),
+  ingredientIds: z
+    .array(z.coerce.number().int().positive())
+    .max(80)
+    .default([]),
 });
 
 const savePositionTasksSchema = z.object({
@@ -73,9 +76,7 @@ function mapPositionTaskError(message: string | undefined): string {
 
 function revalidatePositionTaskPaths() {
   revalidatePath("/hr");
-  revalidatePath("/employee");
-  revalidatePath("/employee/tasks");
-  revalidatePath("/employee/clock");
+  revalidatePath("/br");
 }
 
 export async function fetchPositionTasksData(): Promise<
@@ -128,8 +129,7 @@ export async function fetchPositionTasksData(): Promise<
   }
 
   const ingredientIdsByTask = new Map<number, number[]>();
-  for (const row of (defaultsResult.data ??
-    []) as ConsumptionDefaultDbRow[]) {
+  for (const row of (defaultsResult.data ?? []) as ConsumptionDefaultDbRow[]) {
     if (row.position_task_id == null) continue;
     const existing = ingredientIdsByTask.get(row.position_task_id) ?? [];
     existing.push(row.ingredient_id);
@@ -167,9 +167,9 @@ export async function fetchPositionTasksData(): Promise<
     }),
   );
 
-  const ingredients = (ingredientsResult.data ?? []).map<
-    PositionTaskIngredientOption
-  >((ingredient) => ({
+  const ingredients = (
+    ingredientsResult.data ?? []
+  ).map<PositionTaskIngredientOption>((ingredient) => ({
     id: ingredient.id,
     name: ingredient.name,
     unit: ingredient.purchase_unit || ingredient.unit,

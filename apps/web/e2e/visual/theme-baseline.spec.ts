@@ -23,7 +23,7 @@ const ROUTES: ReadonlyArray<{ name: string; path: string }> = [
   // Wave 3b: /inventory/dashboard now redirects to /inventory. Snapshot rebaseline pending.
   { name: "inventory-dashboard", path: "/inventory?branchId=1" },
   { name: "inventory-stock", path: "/inventory/stock?branchId=1" },
-  { name: "employee-portal", path: "/employee" },
+  { name: "branch-hub", path: "/br/1" },
 ];
 
 test.describe("Theme baseline — light mode", () => {

@@ -120,8 +120,8 @@ by direct URL or as a redirect target.
 | `branch_settings` | `/br/*/settings` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
 | `branch_menu_limits` | `/br/*/settings/menu-limits` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav; Operator tile (sales_kitchen) |
 | `branch_team` | `/br/*/team` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (my_shift) |
-| `employee` | `/employee` | Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Thu ngân, Bếp, Văn phòng | Operator tile (my_shift) |
-| `employee_checkout_approvals` | `/employee/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals); Operator tile (stock) |
+| `employee` | `/br/*/shift` | Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Thu ngân, Bếp, Văn phòng | Operator tile (my_shift) |
+| `employee_checkout_approvals` | `/br/*/shift/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals); Operator tile (stock) |
 | `employee_leave_approvals` | `/br/*/shift/leave-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals) |
 | `notifications` | `/notifications` | Chủ sở hữu, Quản lý chi nhánh, Quản lý Kho Tổng, Quản lý Bếp Trung Tâm, Thu ngân, Bếp, Văn phòng | (not advertised in nav — direct URL / redirect target only) |
 
@@ -136,7 +136,6 @@ declared before their broader siblings.
 | Family id | Surface | Entry path | Match prefixes | Module keys | Requires branchId |
 | --------- | ------- | ---------- | --------------- | ----------- | ------------------ |
 | `public` | public | `/login` | `/login`, `/access-denied`, `/payment/momo`, `/api/health`, `/api/webhooks`, `/manifest.webmanifest`, `/sw.js` | — | no |
-| `employee` | employee | `/employee` | `/employee` | `employee` | no |
 | `admin` | admin | `/admin/settings` | `/admin` | `settings` | no |
 | `menu` | workspace | `/menu` | `/menu` | `menu` | no |
 | `orders` | workspace | `/orders` | `/orders` | `orders` | no |
@@ -188,7 +187,6 @@ separate gates (route bucket here, permission key at the mutation site).
 
 | Route family | Route prefix(es) | Required route bucket | Action gate keys (from `permissions.ts`) |
 | ------------ | ------------------ | ----------------------- | ------------------------------------------ |
-| employee | `/employee` | branch_manager/cashier/chef/office/production_manager/warehouse_manager | (module-level ACL gate only — no dedicated action-permission namespace) |
 | admin | `/admin` | owner | `settings:branch`, `settings:branch_network`, `settings:integrations`, `settings:tenant` |
 | menu | `/menu` | branch_manager/owner | `menu:manage_category`, `menu:publish`, `menu:read`, `menu:write` |
 | orders | `/orders` | branch_manager/cashier/owner | `orders:read`, `orders:refund`, `orders:refund_approve`, `orders:void`, `orders:write` |

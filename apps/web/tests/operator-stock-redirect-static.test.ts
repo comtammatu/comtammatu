@@ -42,6 +42,9 @@ test("operator stock receive renders inbound transfer list and detail inside the
   const receiveDetailContent = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-content.tsx",
   );
+  const receiveClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx",
+  );
 
   assert.match(receiveRoute, /TransfersPageContent/);
   assert.match(receiveRoute, /routeBranchId=\{branchId\}/);
@@ -87,6 +90,12 @@ test("operator stock receive renders inbound transfer list and detail inside the
     receiveDetailContent,
     /detailHref=\{`\/br\/\$\{branchId\}\/stock\/transfer\/\$\{transferId\}`\}/,
   );
+  assert.match(receiveClient, /Button asChild variant="ghost" size="icon"/);
+  assert.match(receiveClient, /sticky chrome-safe-bottom[\s\S]*border/);
+  assert.match(
+    receiveClient,
+    /initialValue=\{\s*sheetItem\s*\?\s*confirmed\.has\(sheetItem\.ingredientId\)[\s\S]*: null\s*: null\s*\}/,
+  );
 
   assert.match(transfersPage, /export async function TransfersPageContent/);
 });
@@ -95,12 +104,8 @@ test("operator stock count renders employee count inside the branch operator she
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count/page.tsx",
   );
-  const employeeCountPage = read(
-    "apps/web/app/(protected)/employee/count/page.tsx",
-  );
-  const countClient = read(
-    "apps/web/app/(protected)/employee/count/count-client.tsx",
-  );
+  const employeeCountPage = read("apps/web/lib/employee/count/page.tsx");
+  const countClient = read("apps/web/lib/employee/count/count-client.tsx");
 
   assert.match(source, /EmployeeCountPageContent/);
   assert.match(source, /routeBranchId=\{branchId\}/);
@@ -108,7 +113,7 @@ test("operator stock count renders employee count inside the branch operator she
   assert.doesNotMatch(source, /redirect\(`\/inventory\/stocktake/);
   assert.match(
     employeeCountPage,
-    /routeBranchId \? `\/br\/\$\{branchId\}\/stock\/count` : "\/employee\/count"/,
+    /routeBranchId \? `\/br\/\$\{branchId\}\/stock\/count` : "\/br"/,
   );
   assert.match(
     countClient,
@@ -203,10 +208,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
     /<AppPage width="wide" scroll>\s*\{content\}\s*<\/AppPage>/,
   );
   assert.doesNotMatch(stockDetailPageSource, /InventoryPageContent/);
-  assert.match(
-    stockDetailPageSource,
-    /scope\.outOfScope/,
-  );
+  assert.match(stockDetailPageSource, /scope\.outOfScope/);
   assert.match(stockDetailPageSource, /fetchStockBearingLocationIds/);
   assert.match(stockDetailPageSource, /\.from\("stock_levels"\)/);
   assert.match(stockDetailPageSource, /\.from\("stock_movements"\)/);
@@ -232,10 +234,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   // office /inventory/stock href.
   assert.match(stockClientSource, /href: stockDetailHref\(item\.id\)/);
   assert.match(stockClientSource, /href=\{stockDetailHref\(item\.id\)\}/);
-  assert.doesNotMatch(
-    stockClientSource,
-    /router\.push\(`?\/inventory\/stock/,
-  );
+  assert.doesNotMatch(stockClientSource, /router\.push\(`?\/inventory\/stock/);
   assert.match(
     stockClientSource,
     /purchaseSuggestion: branchStockHref\(\s*stockRootPath,\s*"\/purchase-orders\/new",?\s*\)/,
@@ -349,6 +348,10 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   const newPoClient = read(
     "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx",
   );
+  const newPoClientEmbeddedBranch = newPoClient.slice(
+    newPoClient.indexOf("if (embedded)"),
+    newPoClient.indexOf("<DocumentFormFrame"),
+  );
   const poDetailPage = read(
     "apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx",
   );
@@ -432,10 +435,7 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
   assert.match(issuesPage, /listBasePath\?: string/);
   assert.match(issuesClient, /embedded\?: boolean/);
   assert.match(issuesClient, embeddedContentWrapperPattern);
-  assert.match(
-    issuesClient,
-    /listBasePath = "\/inventory\/consumption"/,
-  );
+  assert.match(issuesClient, /listBasePath = "\/inventory\/consumption"/);
   assert.match(
     issuesClient,
     /router\.push\(`\$\{listBasePath\}\/\$\{newId\}`\)/,
@@ -473,6 +473,9 @@ test("operator stock branch-native extensions keep PO, issue, and report actions
     newPoClient,
     /if \(embedded\) \{\s*return \(\s*<div className="flex w-full flex-col gap-3">[\s\S]*?\}\s*return \(\s*<DocumentFormFrame/,
   );
+  assert.doesNotMatch(newPoClientEmbeddedBranch, /\{header\}/);
+  assert.match(newPoClientEmbeddedBranch, /sticky chrome-safe-bottom/);
+  assert.match(newPoClientEmbeddedBranch, /border/);
   assert.match(
     newPoPage,
     /canSwitchBranch=\{routeBranchId == null && !isBranchScoped\}/,
@@ -527,6 +530,10 @@ test("operator stock GRN create routes stay branch-native (D059 §4 slice 1)", (
   const grnCreateClient = read(
     "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
   );
+  const grnCreateEmbeddedBranch = grnCreateClient.slice(
+    grnCreateClient.indexOf("if (embedded)"),
+    grnCreateClient.indexOf("<DocumentFormFrame"),
+  );
 
   assert.match(grnNewRoute, /params: Promise<\{ branchId: string \}>/);
   assert.match(grnNewRoute, /GrnNewPageContent/);
@@ -579,7 +586,13 @@ test("operator stock GRN create routes stay branch-native (D059 §4 slice 1)", (
   assert.match(grnCreateClient, /basePath\?: string/);
   assert.match(grnCreateClient, /grnBasePath\?: string/);
   assert.match(grnCreateClient, /embedded\?: boolean/);
-  assert.match(grnCreateClient, embeddedContentWrapperPattern);
+  assert.match(
+    grnCreateEmbeddedBranch,
+    /if \(embedded\) \{\s*return \(\s*<div className="flex w-full flex-col gap-3">/,
+  );
+  assert.doesNotMatch(grnCreateEmbeddedBranch, /\{header\}/);
+  assert.match(grnCreateEmbeddedBranch, /\{footer\}/);
+  assert.match(grnCreateClient, /sticky chrome-safe-bottom[\s\S]*border/);
   assert.match(
     grnCreateClient,
     /router\.push\(`\$\{grnBasePath\}\/\$\{grnId\}\?review=1`\)/,
@@ -596,9 +609,7 @@ test("branch stock wrappers keep inventory fallbacks inside the branch shell", (
   const wasteRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx",
   );
-  const expiryPage = read(
-    "apps/web/app/(protected)/inventory/expiry/page.tsx",
-  );
+  const expiryPage = read("apps/web/app/(protected)/inventory/expiry/page.tsx");
   const expiryClient = read(
     "apps/web/app/(protected)/inventory/expiry/expiry-list-client.tsx",
   );
@@ -620,7 +631,10 @@ test("branch stock wrappers keep inventory fallbacks inside the branch shell", (
   assert.match(wastePage, /embedded\?: boolean/);
   assert.match(wastePage, embeddedContentWrapperPattern);
   assert.match(wastePage, /if \(routeBranchId == null\)/);
-  assert.doesNotMatch(wastePage, /if \(!flagEnabled\) \{\s*if \(routeBranchId != null\)/);
+  assert.doesNotMatch(
+    wastePage,
+    /if \(!flagEnabled\) \{\s*if \(routeBranchId != null\)/,
+  );
   assert.doesNotMatch(wastePage, /EmployeePage/);
 
   assert.match(expiryRoute, /ExpiryPageContent/);
@@ -651,7 +665,10 @@ test("transfer receive full receipt stays one-click on the existing atomic actio
     "apps/web/app/(protected)/inventory/transfer-actions.ts",
   );
 
-  assert.match(detailClient, /const noteOk = !hasShort \|\| shortNote\.trim\(\)\.length >= 3;/);
+  assert.match(
+    detailClient,
+    /const noteOk = !hasShort \|\| shortNote\.trim\(\)\.length >= 3;/,
+  );
   assert.match(detailClient, /transferReceive\(transfer\.id, payload\)/);
   assert.match(transferActions, /stock_transfer_receive/);
   assert.match(transferActions, /p_items: items \?\? null/);
@@ -673,7 +690,7 @@ test("operator waste approvals render branch-locked inside the branch shell", ()
   const shiftPage = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx",
   );
-  const employeeHome = read("apps/web/app/(protected)/employee/page.tsx");
+  const employeeHome = read("apps/web/lib/employee/page.tsx");
 
   assert.match(route, /params: Promise<\{ branchId: string \}>/);
   assert.match(route, /WasteApprovalsPageContent/);
@@ -845,6 +862,20 @@ test("operator transfer routes keep list, create, detail, and form actions branc
   const transferActions = read(
     "apps/web/app/(protected)/inventory/transfer-actions.ts",
   );
+  const transferNewEmbeddedBranch = transferNewPage.slice(
+    transferNewPage.indexOf("if (embedded)"),
+    transferNewPage.indexOf(
+      "\n\n  return (",
+      transferNewPage.indexOf("if (embedded)"),
+    ),
+  );
+  const transferDetailEmbeddedBranch = transferDetailClient.slice(
+    transferDetailClient.indexOf("const content = embedded ?"),
+    transferDetailClient.indexOf(
+      ") : (",
+      transferDetailClient.indexOf("const content = embedded ?"),
+    ),
+  );
 
   for (const source of [transferRoute, transferNewRoute, transferDetailRoute]) {
     assert.match(
@@ -865,9 +896,10 @@ test("operator transfer routes keep list, create, detail, and form actions branc
   assert.match(transfersPage, /createBasePath=\{createBasePath\}/);
   assert.match(transferNewPage, /basePath=\{basePath\}/);
   assert.match(
-    transferNewPage,
-    /if \(embedded\) \{\s*return \(\s*<div className="flex w-full flex-col gap-3">/,
+    transferNewEmbeddedBranch,
+    /if \(embedded\) \{\s*return \(\s*<div className="flex w-full flex-col gap-3">\s*<CreateTransferForm[\s\S]*?embedded[\s\S]*?<\/div>/,
   );
+  assert.doesNotMatch(transferNewEmbeddedBranch, /AppPageHeader/);
   assert.doesNotMatch(transferNewPage, /EmployeePage/);
   assert.match(
     transferNewPage,
@@ -878,6 +910,19 @@ test("operator transfer routes keep list, create, detail, and form actions branc
     /routeBranchId != null\s*\?\s*basePath\s*:\s*scopedBranchId != null/,
   );
   assert.match(transferDetailClient, /listHref \?\?/);
+  assert.match(
+    transferDetailClient,
+    /const detailTabs = \(\s*<AppPageTabs\s*defaultValue=\{embedded \? "lines" : undefined\}/,
+  );
+  assert.doesNotMatch(transferDetailEmbeddedBranch, /AppPageHeader/);
+  assert.match(
+    transferDetailEmbeddedBranch,
+    /<Badge variant=\{statusBadge\.variant\}/,
+  );
+  assert.match(
+    transferDetailClient,
+    /className=\{\s*embedded\s*\?\s*"sticky chrome-safe-bottom[\s\S]*border/,
+  );
   assert.match(
     createTransferForm,
     /router\.push\(withBranchQuery\(`\$\{basePath\}\/\$\{id\}`, userBranchId\)\)/,
@@ -891,7 +936,10 @@ test("operator transfer routes keep list, create, detail, and form actions branc
   );
   assert.match(transfersListClient, /canCreateInboundRequest/);
   assert.match(transfersListClient, /isBranchManager \? "Yêu cầu hàng"/);
-  assert.match(transfersListClient, /createPathBase = createBasePath \?\? basePath/);
+  assert.match(
+    transfersListClient,
+    /createPathBase = createBasePath \?\? basePath/,
+  );
   assert.match(
     transfersListClient,
     /userRole === "branch_manager" && viewerBranchId === toId/,
@@ -908,6 +956,11 @@ test("operator transfer routes keep list, create, detail, and form actions branc
     createTransferForm,
     /<Link href=\{withBranchQuery\(basePath, userBranchId\)\}>/,
   );
+  assert.match(
+    createTransferForm,
+    /className=\{`flex min-w-0 flex-col \$\{embedded \? "gap-3" : "gap-4"\}`\}/,
+  );
+  assert.match(createTransferForm, /sticky chrome-safe-bottom/);
   assert.doesNotMatch(
     createTransferForm,
     /router\.(?:push|replace)\(\s*["'`]\/inventory\/transfers/,
@@ -936,10 +989,7 @@ test("operator count assignments render branch-native inside the branch operator
   assert.match(route, /embedded/);
   assert.doesNotMatch(route, /redirect\(`\/inventory\/count-assignments/);
 
-  assert.match(
-    officePage,
-    /export async function CountAssignmentsPageContent/,
-  );
+  assert.match(officePage, /export async function CountAssignmentsPageContent/);
   assert.match(officePage, /routeBranchId\?: number/);
   assert.match(officePage, /basePath\?: string/);
   assert.match(officePage, /embedded\?: boolean/);
@@ -991,7 +1041,10 @@ test("operator supplier returns render branch-native inside the branch operator 
   assert.match(newRoute, /SupplierReturnNewPageContent/);
   assert.doesNotMatch(newRoute, /redirect\(`\/inventory\/supplier-returns/);
 
-  assert.match(detailRoute, /params: Promise<\{ branchId: string; id: string \}>/);
+  assert.match(
+    detailRoute,
+    /params: Promise<\{ branchId: string; id: string \}>/,
+  );
   assert.match(detailRoute, /SupplierReturnDetailPageContent/);
   assert.match(detailRoute, /routeBranchId=\{branchId\}/);
   assert.doesNotMatch(detailRoute, /redirect\(`\/inventory\/supplier-returns/);
@@ -1049,7 +1102,10 @@ test("operator production renders branch-native inside the central_kitchen opera
   // over the SAME data loader — no office ProductionPageContent embed, no
   // redirect to the office plane.
   assert.match(route, /ProductionOperatorClient/);
-  assert.match(route, /loadProductionSurfaceData\(\{ routeBranchId: branchId \}\)/);
+  assert.match(
+    route,
+    /loadProductionSurfaceData\(\{ routeBranchId: branchId \}\)/,
+  );
   assert.doesNotMatch(route, /ProductionPageContent/);
   assert.doesNotMatch(route, /redirect\(`\/inventory\/production/);
 
@@ -1065,7 +1121,10 @@ test("operator production renders branch-native inside the central_kitchen opera
     dataSource,
     /hasCurrentProductionBranchAccess[\s\S]*routeBranchId\?: number,/,
   );
-  assert.match(dataSource, /const branchId = routeBranchId \?\? claims\.branch_id;/);
+  assert.match(
+    dataSource,
+    /const branchId = routeBranchId \?\? claims\.branch_id;/,
+  );
   assert.match(
     dataSource,
     /hasCurrentProductionBranchAccess\(supabase, claims, routeBranchId\)/,

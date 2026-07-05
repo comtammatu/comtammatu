@@ -19,7 +19,7 @@ import {
   resolveBranchHubContextFromHeaders,
   resolveCentralSiteHomeBranchId,
 } from "@/_lib/branch-hub-device";
-import { resolveLegacyEmployeeBranchRuntimePath } from "@/(protected)/employee/_lib/branch-runtime-redirect";
+import { resolveLegacyEmployeeBranchRuntimePath } from "@lib/employee/_lib/branch-runtime-redirect";
 import { getClientIp } from "@lib/network/client-ip";
 
 // Module-level flag — emit one warning per warm Edge instance when the POS
@@ -205,22 +205,22 @@ export async function proxy(request: NextRequest) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
 
-  // Old /employee entrypoints: branch-runtime roles are redirected to the
-  // /br/{branchId} equivalent before module ACL runs. Central-site roles
-  // (D055 §1) resolve their home site via the cached branch_kind lookup;
-  // roles without operator_home access (office) fall through and keep using
-  // /employee. Query string is preserved (payslip ?year, count ?location).
+  // Old /employee entrypoints: redirect before module ACL so the retired
+  // employee shell never renders as an independent app. Query string is
+  // preserved for mapped branch-runtime routes (payslip ?year, count ?location).
   if (pathname.startsWith("/employee")) {
+    const homeBranchId = await resolveCentralSiteHomeBranchId(supabase, claims);
     const branchRuntimePath = resolveLegacyEmployeeBranchRuntimePath(
       claims,
       pathname,
-      await resolveCentralSiteHomeBranchId(supabase, claims),
+      homeBranchId,
     );
     if (branchRuntimePath) {
       const url = request.nextUrl.clone();
       url.pathname = branchRuntimePath;
       return redirectWithCookies(url, response);
     }
+    return redirectToDefaultLanding(request, response, supabase, claims);
   }
 
   if (
@@ -251,10 +251,7 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-    if (
-      moduleKey === "inventory_procurement" &&
-      claims.user_role !== "owner"
-    ) {
+    if (moduleKey === "inventory_procurement" && claims.user_role !== "owner") {
       const { data: canReadProcurement, error } = await supabase.rpc(
         "has_permission_any",
         { p_key: PERMISSION_KEYS.PROCUREMENT_READ },

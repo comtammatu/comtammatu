@@ -1,13 +1,13 @@
 {
-  "id": "/employee",
-  "name": "Cơm Tấm Má Tư - Nhân viên",
-  "short_name": "Má Tư NV",
-  "description": "Trang nhân viên Cơm Tấm Má Tư",
+  "id": "/br",
+  "name": "Cơm Tấm Má Tư - Chi nhánh",
+  "short_name": "Má Tư CN",
+  "description": "Branch Hub Cơm Tấm Má Tư",
   "lang": "vi",
   "display": "standalone",
   "orientation": "portrait",
-  "start_url": "/employee",
-  "scope": "/employee",
+  "start_url": "/br",
+  "scope": "/",
   "background_color": "#fff6ee",
   "theme_color": "#fff6ee",
   "categories": ["business", "productivity"],
@@ -24,22 +24,22 @@
   "shortcuts": [
     {
       "name": "Hôm nay",
-      "url": "/employee",
+      "url": "/br",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Chấm công vào",
-      "url": "/employee/clock",
+      "url": "/br",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Việc trong ca",
-      "url": "/employee/tasks",
+      "url": "/br",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Lịch hôm nay",
-      "url": "/employee/schedule",
+      "url": "/br",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]

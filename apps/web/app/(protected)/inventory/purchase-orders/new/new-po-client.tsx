@@ -394,9 +394,10 @@ export function NewPoClient({
   if (embedded) {
     return (
       <div className="flex w-full flex-col gap-3">
-        {header}
-        <div className="flex flex-col gap-4">{body}</div>
-        {footer}
+        <div className="flex flex-col gap-3">{body}</div>
+        <div className="sticky chrome-safe-bottom z-10 border-t bg-background/95 p-2 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+          {footer}
+        </div>
       </div>
     );
   }
@@ -1006,7 +1007,9 @@ function AddLineSheet({
 
               {lineTotal != null ? (
                 <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-3 text-sm">
-                  <span className="text-muted-foreground">{FORM_VI.amount}</span>
+                  <span className="text-muted-foreground">
+                    {FORM_VI.amount}
+                  </span>
                   <span className="text-base font-semibold">
                     {formatVND(lineTotal)}
                   </span>

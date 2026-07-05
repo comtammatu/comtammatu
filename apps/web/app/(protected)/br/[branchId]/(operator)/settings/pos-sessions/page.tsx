@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
-import { EmployeePage } from "@/(protected)/employee/components/employee-page";
+import { EmployeePage } from "@lib/employee/components/employee-page";
 import { loadAuthState } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { messages } from "@lib/messages";

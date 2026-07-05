@@ -15,19 +15,19 @@ const taskKindMigration = readRepo(
   "supabase/migrations/_archive/20260619042223_employee_consumption_task_kind.sql",
 );
 const todayWorkStateSource = readWeb(
-  "app/(protected)/employee/_lib/today-work-state.ts",
+  "lib/employee/_lib/today-work-state.ts",
 );
 const employeeTasksPageSource = readWeb(
-  "app/(protected)/employee/tasks/page.tsx",
+  "lib/employee/tasks/page.tsx",
 );
 const checkoutActionSource = readWeb(
-  "app/(protected)/employee/clock/actions.ts",
+  "lib/employee/clock/actions.ts",
 );
 const checkoutApprovalsPageSource = readWeb(
-  "app/(protected)/employee/checkout-approvals/page.tsx",
+  "lib/employee/checkout-approvals/page.tsx",
 );
 const checkoutApprovalsClientSource = readWeb(
-  "app/(protected)/employee/checkout-approvals/checkout-approvals-client.tsx",
+  "lib/employee/checkout-approvals/checkout-approvals-client.tsx",
 );
 
 test("consumption task kind remains stable but no longer drives Employee tasks", () => {

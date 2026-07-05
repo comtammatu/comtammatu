@@ -22,6 +22,7 @@ import {
   queryActiveInvoiceForOrder,
   type InvoiceQueryClient,
 } from "./_lib/invoice-queries";
+import type { ManualInvoiceOrderPreview } from "./_lib/finance-types";
 
 const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
 const INVOICE_CREATE_ROLES: readonly StaffRole[] = [
@@ -465,6 +466,142 @@ export async function reissueAllDraftInvoices(): Promise<ActionResult> {
     success: true,
     data: { issued, failed, remaining: remaining ?? 0 },
   };
+}
+
+/* ─── HĐĐT: Manual issue for a past paid order ─── */
+
+const manualInvoiceLookupSchema = z.object({
+  orderNumber: z.string().trim().min(1, "Nhập mã đơn").max(64, "Mã đơn quá dài"),
+  branchId: z.coerce.number().int().positive(),
+});
+
+/**
+ * Read-only preview for the manual "issue HĐĐT for a past paid order" dialog.
+ * Resolves an order by (branch_id, order_number) — order_number is unique only
+ * per (branch_id, order_number, tenant_id), so a tenant-wide lookup could match
+ * the wrong branch's order and issue an HĐĐT against a stranger's bill. This
+ * NEVER mutates; issuance runs through createTaxInvoice, which re-checks every
+ * guard. The preview only lets the operator confirm the right order and see
+ * ineligibility (already invoiced / folded into a B2C summary / unpaid) early.
+ */
+export async function resolveOrderForManualInvoice(
+  input: z.infer<typeof manualInvoiceLookupSchema>,
+): Promise<ActionResult<ManualInvoiceOrderPreview>> {
+  const parsed = manualInvoiceLookupSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    INVOICE_CREATE_ROLES,
+    PERMISSION_KEYS.ORDERS_WRITE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (!(await canAccessBranch(supabase, claims, parsed.data.branchId))) {
+    return { success: false, error: "Không có quyền cho chi nhánh này." };
+  }
+
+  // Order numbers are stored upper-case + hyphenated (TC-/MV-YYMMDD-NNN[-BR]);
+  // tolerate a leading "#" and lower-case input copied off the receipt. Match
+  // stays an exact .eq (not fuzzy) — issuance targets one order, not a guess.
+  const orderNumber = parsed.data.orderNumber.replace(/^#+/, "").toUpperCase();
+
+  const { data: order, error: orderErr } = await supabase
+    .from("orders")
+    .select(
+      "id, order_number, branch_id, payment_status, total_amount, created_at, order_items(status)",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", parsed.data.branchId)
+    .eq("order_number", orderNumber)
+    .maybeSingle();
+
+  if (orderErr) {
+    console.error("[finance/actions:resolveOrderForManualInvoice] Fetch order error:", orderErr);
+    return { success: false, error: "Không thể tra đơn." };
+  }
+  if (!order) {
+    return { success: false, error: "Không tìm thấy đơn trong chi nhánh này." };
+  }
+
+  const paid = order.payment_status === "paid";
+  // createTaxInvoice rejects an order whose items are all cancelled
+  // ("Đơn hàng không có món nào để xuất hóa đơn."); surface it in the preview.
+  const hasActiveItems = (order.order_items ?? []).some(
+    (item) => item.status !== "cancelled",
+  );
+
+  // Active per-order invoice — reuse the exact query createTaxInvoice gates on
+  // (excludes cancelled/replaced/not_required). A provider-rejected draft with
+  // no number is a RETRY candidate, not a blocker.
+  const existing = await queryActiveInvoiceForOrder(
+    supabase as unknown as InvoiceQueryClient,
+    claims.tenant_id,
+    order.id,
+  );
+  const existingInvoice = existing.success ? existing.data : null;
+  const isDraftRetry =
+    existingInvoice?.status === "draft" && !existingInvoice.invoice_number;
+  const hasActiveInvoice = existingInvoice != null && !isDraftRetry;
+
+  // B2C daily-summary fold — mirror createTaxInvoice's junction check so the
+  // preview surfaces the summary date before the operator hits the block.
+  const { data: summaryLinks } = await supabase
+    .from("tax_invoice_orders")
+    .select("tax_invoices(summary_date, status)")
+    .eq("order_id", order.id)
+    .eq("tenant_id", claims.tenant_id);
+  const summaryInvoice = (summaryLinks ?? [])
+    .map(
+      (l) =>
+        l.tax_invoices as unknown as {
+          summary_date: string | null;
+          status: string;
+        } | null,
+    )
+    .find(
+      (inv) => inv != null && !["cancelled", "replaced"].includes(inv.status),
+    );
+
+  return {
+    success: true,
+    data: {
+      orderId: order.id,
+      orderNumber: order.order_number,
+      branchId: order.branch_id,
+      totalAmount: Number(order.total_amount),
+      createdAt: order.created_at,
+      paymentStatus: order.payment_status,
+      existingInvoiceStatus: existingInvoice?.status ?? null,
+      existingInvoiceNumber: existingInvoice?.invoice_number ?? null,
+      isDraftRetry: Boolean(isDraftRetry),
+      hasActiveItems,
+      summaryDate: summaryInvoice?.summary_date ?? null,
+      issuable: paid && hasActiveItems && !hasActiveInvoice && !summaryInvoice,
+    },
+  };
+}
+
+/**
+ * Whether the current user can complete the manual-issue flow end-to-end — the
+ * SAME predicate createTaxInvoice enforces (INVOICE_CREATE_ROLES +
+ * orders:write). The /finance/invoices "issue for a past order" button gates on
+ * THIS, not on canManageInvoices (settings:tenant || orders:refund_approve):
+ * those axes differ, so gating on the wrong one shows the button to users the
+ * action then rejects, or hides it from users who can legitimately issue.
+ */
+export async function canIssueManualInvoice(): Promise<boolean> {
+  const ctx = await getAuthContextWithPermission(
+    INVOICE_CREATE_ROLES,
+    PERMISSION_KEYS.ORDERS_WRITE,
+  );
+  return ctx != null;
 }
 
 /* ─── Cancel Invoice ─── */

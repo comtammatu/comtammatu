@@ -380,7 +380,6 @@ const checks = [
       "apps/web/app/(protected)/br/[branchId]/kds/layout.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/layout.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/layout.tsx": 1,
-      "apps/web/app/(protected)/employee/layout.tsx": 1,
       "apps/web/app/(public)/(auth)/login/page.tsx": 1,
       "apps/web/app/(public)/access-denied/layout.tsx": 1,
       "apps/web/app/(public)/payment/momo/return/page.tsx": 1,
@@ -425,7 +424,6 @@ const checks = [
       "apps/web/app/components/app-bottom-nav.tsx": 1,
       "apps/web/app/(public)/access-denied/page.tsx": 1,
       "apps/web/app/(public)/(auth)/login/page.tsx": 1,
-      "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/runner-idle-visual.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 2,
@@ -936,9 +934,6 @@ const perFileCountBudgets = [
       /\bshadow-\[[^\]]+\]|\bboxShadow\b|\bbox-shadow\b|--shadow-[\w-]+/g,
     allowlist: {
       "apps/web/app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx": 1,
-      "apps/web/app/(protected)/employee/components/employee-page.tsx": 2,
-      "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 1,
-      "apps/web/app/(protected)/employee/tasks/tasks-client.tsx": 1,
       "apps/web/app/(protected)/inventory/settings/settings-section-nav.tsx": 1,
       "apps/web/app/components/app-bottom-nav.tsx": 1,
       "apps/web/app/components/data-table/interactive-card.tsx": 1,
@@ -979,12 +974,6 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/br/[branchId]/runner/runner-order-board-client.tsx": 5,
       "apps/web/app/(protected)/branch-settings/_shared/printers/printers-client.tsx": 2,
       "apps/web/app/(protected)/branches/network-config-dialog.tsx": 4,
-      "apps/web/app/(protected)/employee/checkout-approvals/checkout-approvals-client.tsx": 1,
-      "apps/web/app/(protected)/employee/clock/clock-client.tsx": 3,
-      "apps/web/app/(protected)/employee/components/employee-page.tsx": 8,
-      "apps/web/app/(protected)/employee/count/count-client.tsx": 2,
-      "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 5,
-      "apps/web/app/(protected)/employee/tasks/tasks-client.tsx": 3,
       "apps/web/app/(protected)/finance/components/mv-staleness-banner.tsx": 3,
       "apps/web/app/(protected)/finance/components/work-queue-strip.tsx": 4,
       "apps/web/app/(protected)/hr/employee-form-dialog.tsx": 1,
@@ -1243,10 +1232,7 @@ const ACL_PATHS = [
 ].map((match) => match[1]);
 
 // Redirect shims legitimately resolve to no family (they only call redirect()).
-const ROUTE_MANIFEST_SHIM_ROUTES = new Set([
-  "/admin",
-  "/inventory/drafts",
-]);
+const ROUTE_MANIFEST_SHIM_ROUTES = new Set(["/admin", "/inventory/drafts"]);
 // ACL family roots without a landing page still resolve through shared ACL.
 const ROUTE_MANIFEST_NO_PAGE_ACL = new Set();
 
@@ -1367,9 +1353,7 @@ const VALID_ARCHETYPES = new Set([
 
 // Baseline: DOC-WORKFLOW pages that pre-date the DocumentFormFrame mandate
 // (docs/spec/page-archetypes.md § DOC-WORKFLOW). Only shrinks as pages migrate.
-const DOC_WORKFLOW_FRAME_BASELINE = new Set([
-  "apps/web/app/(protected)/employee/count/page.tsx",
-]);
+const DOC_WORKFLOW_FRAME_BASELINE = new Set([]);
 
 const allPageFiles = [
   ...walkFiles("apps/web/app/(protected)", [".tsx"]),
@@ -1520,7 +1504,9 @@ for (const file of LIST_WIDTH_TIER_PINNED_PAGES) {
     failures.push(
       `list-width-tier: ${file} declares LIST width tier(s) ${offTier
         .map((tier) => `"${tier}"`)
-        .join(", ")}, but the LIST recipe pins width="xwide" (page-archetypes.md § 3 LIST / design-system.md § Rhythm Contract).`,
+        .join(
+          ", ",
+        )}, but the LIST recipe pins width="xwide" (page-archetypes.md § 3 LIST / design-system.md § Rhythm Contract).`,
     );
   }
 }
