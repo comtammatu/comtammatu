@@ -87,7 +87,7 @@ function TakeawayOrderTile({
       onClick={() => onViewDetail(order.id, order.order_number, order)}
     >
       <div className="flex w-full min-w-0 items-center justify-between gap-1.5">
-        <p className="shrink-0 text-xs font-semibold uppercase tracking-wide opacity-60 sm:text-sm">
+        <p className="shrink-0 text-xs font-medium uppercase tracking-wide opacity-60">
           {messages.pos.takeawayGate.orderLabel}
         </p>
         <Badge
@@ -174,7 +174,7 @@ function PosTakeawayGateComponent({
                 onClick={onCreateNew}
               >
                 <div className="flex w-full min-w-0 items-center justify-between gap-1.5">
-                  <p className="shrink-0 text-xs font-semibold uppercase tracking-wide opacity-60 sm:text-sm">
+                  <p className="shrink-0 text-xs font-medium uppercase tracking-wide opacity-60">
                     {messages.pos.takeawayGate.title}
                   </p>
                   <Badge variant="success" className="text-xs font-semibold">

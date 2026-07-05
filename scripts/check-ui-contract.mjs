@@ -965,7 +965,6 @@ const perFileCountBudgets = [
       "apps/web/app/_components/notification-item.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/kds/_components/age-badge.tsx": 3,
-      "apps/web/app/(protected)/br/[branchId]/kds/_components/focus-view.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/_components/order-grid.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/_components/unassigned-banner.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/_hooks/use-kds-row-effects.tsx": 5,
@@ -1040,11 +1039,6 @@ const perFileCountBudgets = [
     pattern:
       /className=\{?(?:cn\()?['"](?=[^'"]*\buppercase\b)(?=[^'"]*\b(?:text-sm|text-base)\b)[^'"]*['"]/g,
     allowlist: {
-      "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos-sessions/pos-sessions-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/pos/close-session-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-table-gate.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-takeaway-gate.tsx": 2,
       "apps/web/app/(protected)/inventory/grn/new/supplier-picker.tsx": 1,
     },
   },

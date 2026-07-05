@@ -194,7 +194,7 @@ export function CloseSessionSheet({
                 <div className="flex flex-col gap-2">
                   <Label
                     htmlFor="close-note"
-                    className="text-sm font-semibold uppercase tracking-wide text-muted-foreground font-normal"
+                    className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
                   >
                     Ghi chú ca (tuỳ chọn)
                   </Label>
