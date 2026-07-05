@@ -374,13 +374,13 @@ export function AppShell({
             </p>
           ) : null}
           {pageHeader.mobileTopBar ? (
-            <div className="sticky top-0 z-10 -mx-4 mt-3 w-[calc(100%+2rem)] border-t bg-background px-4 py-2 md:hidden">
+            <div className="sticky top-0 z-10 -mx-4 mt-3 w-[calc(100%+2rem)] border-t bg-background px-4 py-2 lg:hidden">
               {pageHeader.mobileTopBar}
             </div>
           ) : null}
         </header>
 
-        <div className={cn("flex-1 p-3 md:p-4", bottomNav && "pb-24 md:pb-4")}>
+        <div className={cn("flex-1 p-3 md:p-4", bottomNav && "pb-24 lg:pb-4")}>
           <AppShellPaddingBoundary>
             <div className="flex min-h-0 flex-col gap-4">{children}</div>
           </AppShellPaddingBoundary>

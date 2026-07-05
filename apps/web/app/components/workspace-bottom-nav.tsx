@@ -71,7 +71,7 @@ export function WorkspaceBottomNav({
   return (
     <AppBottomNav
       ariaLabel={copy.ariaLabel}
-      className="md:hidden"
+      className="lg:hidden"
       itemClassName="min-w-16"
       items={items.map((item) => ({
         href: item.href,

@@ -83,13 +83,13 @@ test("mobile workspace bottom nav reuses the shell nav model", () => {
   assert.match(bottomNav, /flattenNavGroups\(tier2\)/);
   assert.match(
     bottomNav,
-    /className="md:hidden"/,
-    "management bottom nav must stop at tablet where the sidebar is visible",
+    /className="lg:hidden"/,
+    "management bottom nav spans phone + tablet portrait; only desktop (lg) shows the fixed sidebar (D068 §3)",
   );
   assert.match(
     appShell,
-    /pb-24 md:pb-4/,
-    "AppShell bottom padding must match the mobile-only bottom nav breakpoint",
+    /pb-24 lg:pb-4/,
+    "AppShell bottom padding must reserve bottom-nav space through tablet portrait, matching the lg bottom-nav breakpoint (D068 §3)",
   );
   assert.doesNotMatch(
     bottomNav,

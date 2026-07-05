@@ -646,8 +646,14 @@ contract change; route-local chrome outside this list is drift.
    chrome does not. The single Management sidebar renders primary module tabs
    first and nests the active module's deep nav as sub-tabs under that active
    primary tab. Admin command pages collapse under one "Quản trị" primary tab;
-   Management bottom nav is mobile-only (`<md`); tablet and desktop use the
-   fixed sidebar without a parallel bottom nav.
+   Management bottom nav shows on phone and tablet portrait (`<lg`); only
+   desktop (`≥lg`) uses the fixed sidebar. Tablet portrait therefore gets the
+   bottom nav + `Mô-đun` drawer instead of a desktop sidebar crammed onto a
+   narrow width — the same compact chrome the Branch runtime plane uses at that
+   width, so the two planes no longer diverge at 768–1023px (D068 §3). The
+   sidebar's drawer-vs-fixed cutover is driven by `useIsMobile(1024)` in
+   `app-shell.tsx`; the phone breakpoint (`useIsMobile()` = 768) that governs
+   DataTable/toaster/POS is unchanged.
 2. Branch runtime chrome — the branch-scoped operator layout
    (`apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx`). Covers the
    branch hub, employee daily work under `/br/[branchId]/shift/*`, stock action

@@ -2,21 +2,15 @@ import * as React from "react";
 
 const MOBILE_BREAKPOINT = 768;
 
-let mql: MediaQueryList | null = null;
+const mqlCache = new Map<number, MediaQueryList>();
 
-function getMediaQueryList(): MediaQueryList {
-  mql ??= window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-  return mql;
-}
-
-function subscribe(onStoreChange: () => void): () => void {
-  const list = getMediaQueryList();
-  list.addEventListener("change", onStoreChange);
-  return () => list.removeEventListener("change", onStoreChange);
-}
-
-function getSnapshot(): boolean {
-  return getMediaQueryList().matches;
+function getMediaQueryList(breakpoint: number): MediaQueryList {
+  let list = mqlCache.get(breakpoint);
+  if (!list) {
+    list = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+    mqlCache.set(breakpoint, list);
+  }
+  return list;
 }
 
 // SSR renders desktop; hydration applies the real value in the same
@@ -27,6 +21,21 @@ function getServerSnapshot(): boolean {
   return false;
 }
 
-export function useIsMobile(): boolean {
+// `breakpoint` defaults to the phone cutover (768). The Management sidebar
+// passes a larger value so tablet-portrait resolves to the drawer chrome
+// while data-table/toaster/POS stay on the phone breakpoint.
+export function useIsMobile(breakpoint: number = MOBILE_BREAKPOINT): boolean {
+  const subscribe = React.useCallback(
+    (onStoreChange: () => void): (() => void) => {
+      const list = getMediaQueryList(breakpoint);
+      list.addEventListener("change", onStoreChange);
+      return () => list.removeEventListener("change", onStoreChange);
+    },
+    [breakpoint],
+  );
+  const getSnapshot = React.useCallback(
+    (): boolean => getMediaQueryList(breakpoint).matches,
+    [breakpoint],
+  );
   return React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
