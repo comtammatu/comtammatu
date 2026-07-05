@@ -136,6 +136,7 @@ export async function GrnCreatePageContent({
   const draftRes = await loadActiveGrnDraft({ supplierId });
   const draftRow = (draftRes.success ? draftRes.data : null) as {
     id: number;
+    branch_id: number;
   } | null;
   if (draftRow?.id) {
     const detailRes = await fetchGrnDetail(draftRow.id);
@@ -172,10 +173,19 @@ export async function GrnCreatePageContent({
     }
   }
 
+  // An existing draft is branch-bound (branch_id set at creation), so honor it
+  // over the scope default; a fresh receipt starts on the scope default branch.
+  const initialBranchId = draftRow?.branch_id ?? defaultBranchId;
+  const isBranchScoped =
+    claims.user_role === "warehouse_manager" ||
+    claims.user_role === "production_manager";
+
   return (
     <GrnCreateClient
       supplier={{ id: supplierRes.data.id, name: supplierRes.data.name }}
-      branchId={defaultBranchId}
+      branchId={initialBranchId}
+      procurementBranches={branches.map((b) => ({ id: b.id, name: b.name }))}
+      canSwitchBranch={routeBranchId == null && !isBranchScoped}
       ingredients={ingredients}
       existingDraft={existingDraft}
       basePath={basePath}

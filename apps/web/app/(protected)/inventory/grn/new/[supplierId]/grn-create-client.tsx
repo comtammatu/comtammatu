@@ -82,9 +82,13 @@ type Ingredient = {
 
 type ServerDraftLine = GrnDraftLine & { lineId: number };
 
+type ProcurementBranchOption = { id: number; name: string };
+
 type Props = {
   supplier: { id: number; name: string };
   branchId: number | null;
+  procurementBranches: ProcurementBranchOption[];
+  canSwitchBranch: boolean;
   ingredients: Ingredient[];
   existingDraft: { id: number; lines: ServerDraftLine[] } | null;
   basePath?: string;
@@ -168,7 +172,9 @@ function useIsDesktopLineEdit(): boolean {
 
 export function GrnCreateClient({
   supplier,
-  branchId,
+  branchId: initialBranchId,
+  procurementBranches,
+  canSwitchBranch,
   ingredients,
   existingDraft,
   basePath = "/inventory/grn/new",
@@ -188,12 +194,17 @@ export function GrnCreateClient({
       : `pending-${supplier.id}`,
     supplierId: supplier.id,
     supplierName: supplier.name,
-    branchId,
+    branchId: initialBranchId,
     lines: existingDraft?.lines ?? [],
     updatedAt: new Date().toISOString(),
   }));
   const [serverGrnId, setServerGrnId] = React.useState<number | null>(
     existingDraft?.id ?? null,
+  );
+  // Receiving warehouse for the receipt. Locked once a server draft exists,
+  // since createGrnDraft binds branch_id at creation and never rewrites it.
+  const [branchId, setBranchId] = React.useState<number | null>(
+    initialBranchId,
   );
   const [query, setQuery] = React.useState("");
   const [edit, setEdit] = React.useState<EditState | null>(null);
@@ -381,9 +392,37 @@ export function GrnCreateClient({
   const total = draftTotal(draft);
   const lineCount = draft.lines.length;
   const canSubmit = lineCount > 0 && !submitting;
+  const branchLocked = serverGrnId !== null;
+  const showWarehousePicker =
+    canSwitchBranch && procurementBranches.length > 1;
+
+  const warehouseField = showWarehousePicker ? (
+    <div className="flex flex-col gap-1.5">
+      <Label className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+        {messages.inventory.grn.receivingWarehouse}
+      </Label>
+      <Select
+        value={branchId != null ? String(branchId) : ""}
+        onValueChange={(v) => setBranchId(Number(v) || null)}
+        disabled={branchLocked}
+      >
+        <SelectTrigger className="h-11 w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {procurementBranches.map((b) => (
+            <SelectItem key={b.id} value={String(b.id)}>
+              {b.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  ) : null;
 
   const listColumn = (
     <>
+      {warehouseField}
       {lineCount > 0 ? (
         <AppSection size="sm" contentClassName="gap-2">
           <div className="flex items-center justify-between text-2xs font-medium uppercase tracking-wider text-muted-foreground">
