@@ -33,7 +33,6 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "boneyard-js": "^1.8.1",
-    "class-variance-authority": "^0.7.1",
     "exceljs": "^4.4.0",
     "geist": "^1.7.2",
     "lucide-react": "^1.16.0",

@@ -1,6 +1,6 @@
 # Lộ trình khắc phục hợp nhất — 2026-06-28
 
-> Reconciled-through 49112fa17fec
+> Reconciled-through baa162dcca0b
 
 > Tài liệu này gộp **5 báo cáo audit** ngày 2026-06-28 thành **một chương trình
 > khắc phục duy nhất** cho chủ Cơm Tấm Má Tư. Văn xuôi tiếng Việt; mọi định danh
@@ -166,7 +166,7 @@ caching + decompose POS đi sau Speed Insights để đo INP thật.
 | PERF-2 | P1 | Thêm `<SpeedInsights/>` + `<Analytics/>` vào `layout.tsx` | không có `@vercel/speed-insights` trong package.json | S | agent |
 | PERF-3 | P1 | POS: chuyển fetch **vào trong** Suspense boundary để stream | `pos/page.tsx:56-140,187` | M | agent |
 | SUP-1 | P1 | `get_advisors` diff CI gate (security+perf, baseline allowlist) → WS8 | `ci.yml` không có advisor step; 528 lint | M | agent |
-| PERF-4 | P2 | `optimizePackageImports` thêm `"radix-ui"` (24 barrel import) | `next.config.ts:93` | S | agent |
+| PERF-4 | P2 | ✅ #184 đã thêm `"radix-ui"` vào `optimizePackageImports` | `apps/web/next.config.ts:94` | S | done |
 | PERF-5 | P2 | `'use cache'`+`cacheTag` cho tenant-stable reads (branches/menu/settings) | `rg 'use cache' = 0` | M | agent |
 | PERF-6 | P2 | Decompose `pos-desktop-inner.tsx` (2113 LoC) theo concern + lazy-load | only 4 modal code-split | L | agent |
 | SUP-3 | P2 | `kds-maintenance` cron → `pg_cron`, xoá Vercel route | route chỉ gọi `cleanup_kds_tickets_as_system` | S | agent |

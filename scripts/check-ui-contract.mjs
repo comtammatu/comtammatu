@@ -477,11 +477,69 @@ if (fs.existsSync(path.join(REPO_ROOT, "docs/archive"))) {
   failures.push("legacy-docs: docs/archive must not exist");
 }
 
-for (const blockedRootContextFile of ["PRODUCT.md", "DESIGN.md"]) {
+const blockedRootContextFiles = new Map([
+  ["PRODUCT.md", "use docs/ref/business-context.md"],
+  ["DESIGN.md", "use docs/spec/design-system.md"],
+  [
+    "components.json",
+    "shadcn config is retired; use docs/spec/design-system.md and @comtammatu/ui primitives",
+  ],
+  [
+    ".shadcn.json",
+    "shadcn config is retired; use docs/spec/design-system.md and @comtammatu/ui primitives",
+  ],
+  [
+    "theme.json",
+    "route visual tokens through packages/ui/src/styles/globals.css and docs/spec/design-system.md",
+  ],
+  [
+    "tokens.json",
+    "route visual tokens through packages/ui/src/styles/globals.css and docs/spec/design-system.md",
+  ],
+  [
+    "brand-overrides.css",
+    "route visual overrides through packages/ui/src/styles/globals.css and docs/spec/design-system.md",
+  ],
+]);
+
+for (const [blockedRootContextFile, replacement] of blockedRootContextFiles) {
   if (fs.existsSync(path.join(REPO_ROOT, blockedRootContextFile))) {
     failures.push(
-      `external-design-context: root ${blockedRootContextFile} must not exist; use docs/spec/design-system.md and docs/ref/business-context.md`,
+      `external-design-context: root ${blockedRootContextFile} must not exist; ${replacement}`,
     );
+  }
+}
+
+if (fs.existsSync(path.join(REPO_ROOT, "design-systems"))) {
+  failures.push(
+    "external-design-context: root design-systems/ must not exist; use docs/spec/design-system.md",
+  );
+}
+
+const packageManifestPaths = [
+  path.join(REPO_ROOT, "package.json"),
+  ...walkFiles("apps", ["package.json"]),
+  ...walkFiles("packages", ["package.json"]),
+];
+
+for (const packageManifestPath of packageManifestPaths) {
+  const packageManifest = JSON.parse(fs.readFileSync(packageManifestPath, "utf8"));
+  const relativePath = toPosix(packageManifestPath);
+  for (const dependencyField of [
+    "dependencies",
+    "devDependencies",
+    "peerDependencies",
+    "optionalDependencies",
+  ]) {
+    for (const dependencyName of Object.keys(
+      packageManifest[dependencyField] ?? {},
+    )) {
+      if (dependencyName === "shadcn" || dependencyName.startsWith("@shadcn/")) {
+        failures.push(
+          `external-design-context: ${relativePath} must not depend on ${dependencyName}; shadcn scaffold tooling is retired`,
+        );
+      }
+    }
   }
 }
 
@@ -498,15 +556,25 @@ if (fs.existsSync(webPackagePath)) {
         `matu-ds-boundary: apps/web/package.json must not depend on radix-ui directly; route primitives through @comtammatu/ui`,
       );
     }
+    if (webPackageJson[dependencyField]?.["class-variance-authority"]) {
+      failures.push(
+        `matu-ds-boundary: apps/web/package.json must not depend on class-variance-authority directly; keep variant helpers in @comtammatu/ui or plain app adapter maps`,
+      );
+    }
   }
 }
 
 for (const file of walkFiles("apps/web", [".ts", ".tsx"])) {
   const relativePath = toPosix(file);
   const content = fs.readFileSync(file, "utf8");
-  if (/from\s+["']radix-ui["']/.test(content)) {
+  if (/from\s+["'](?:radix-ui|@radix-ui\/[^"']+)["']/.test(content)) {
     failures.push(
       `matu-ds-boundary: ${relativePath} imports radix-ui directly; route primitives through @comtammatu/ui`,
+    );
+  }
+  if (/from\s+["']class-variance-authority["']/.test(content)) {
+    failures.push(
+      `matu-ds-boundary: ${relativePath} imports class-variance-authority directly; keep variant helpers in @comtammatu/ui or plain app adapter maps`,
     );
   }
 }
