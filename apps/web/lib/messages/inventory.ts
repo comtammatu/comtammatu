@@ -980,6 +980,13 @@ export const inventory = {
       receiveOpenDetail: "Mở phiếu điều chuyển",
       receiveSuccess: "Đã nhận hàng thành công.",
     },
+    createNative: {
+      addLine: "Thêm nguyên liệu",
+      quantityPrompt: "Nhập số lượng",
+      quantityUnset: "Nhập SL",
+      sendFrom: (source: string) => `Gửi từ ${source}`,
+      submit: "Tạo phiếu",
+    },
     list: {
       tabs: {
         receive: "Cần nhận",
