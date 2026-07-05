@@ -29,7 +29,7 @@ Active tracker: [`tasks/todo.md`](tasks/todo.md).
 - **Runtime:** Node.js ≥ 24
 - **Framework:** Next.js 16.2 (App Router, Turbopack dev, Webpack production build)
 - **Language:** TypeScript 6.0 (strict + `noUncheckedIndexedAccess`)
-- **UI:** React 19.2 · Tailwind CSS 4.2 · Com Tam Ma Tu Custom Theme · Má Tư Design System primitives (`@comtammatu/ui`) · Radix
+- **UI:** React 19.2 · Tailwind CSS 4.2 · Com Tam Ma Tu Custom Theme · Má Tư Design System primitives (`@comtammatu/ui`)
 - **Validation:** Zod 4
 - **Database:** Supabase (PostgREST + Auth + RLS), JWT custom claims hook
 - **Monorepo:** Turborepo 2.9 + pnpm 10.33
