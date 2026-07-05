@@ -50,6 +50,7 @@ export {
   PROCUREMENT_PO_ROLES,
   SUPPLIER_RETURN_ROLES,
   isBranchScopedProcurementRole,
+  isProcurementBranchInScope,
 } from "./inventory-roles";
 export type {
   NavItemConfig,

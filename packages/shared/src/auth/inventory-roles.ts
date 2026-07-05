@@ -55,6 +55,23 @@ export function isBranchScopedProcurementRole(role: string): boolean {
   );
 }
 
+/**
+ * Pure own-branch decision for a procurement write (D068 cross-branch guard).
+ * `effectiveBranchId` is the actor's own operable branch — their non-null claim
+ * for a pinned role, or the resolved central home for a tenant-null central
+ * role. A branch-scoped role may write only that branch; a non-scoped role
+ * (owner) is tenant-wide. The real guard (`canAccessProcurementBranch`) calls
+ * this so the decision body itself — not a reconstruction — is unit-tested.
+ */
+export function isProcurementBranchInScope(
+  role: string,
+  effectiveBranchId: number | null,
+  targetBranchId: number,
+): boolean {
+  if (!isBranchScopedProcurementRole(role)) return true;
+  return effectiveBranchId === targetBranchId;
+}
+
 /** Phiếu trả NCC + credit notes. */
 export const SUPPLIER_RETURN_ROLES: readonly StaffRole[] = [
   "owner",

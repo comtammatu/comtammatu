@@ -4,52 +4,46 @@ import {
   PROCUREMENT_PO_ROLES,
   PROCUREMENT_ROLES,
   isBranchScopedProcurementRole,
+  isProcurementBranchInScope,
 } from "../inventory-roles";
-import type { StaffRole } from "../types";
 
-// D068 cross-branch guard. `canAccessProcurementBranch` (grn-actions.ts /
-// purchase-order-actions.ts) is `isBranchScopedProcurementRole(role)
-// ? effectiveBranchId === targetBranchId : true`. For a pinned branch role
-// (branch_manager / warehouse_manager / production_manager) claims carry a
-// non-null branch_id, so `effectiveBranchId` is that claim and the async
-// central-home fallback never fires. This reconstructs that exact decision
-// using the REAL exported predicate, so the test is RED before branch_manager
-// is added to `isBranchScopedProcurementRole` (it would fall through to the
-// tenant-wide `return true` and wrongly admit a foreign-branch write) and
-// GREEN after.
-function canAccessProcurementBranchPinned(
-  role: StaffRole,
-  claimBranchId: number,
-  targetBranchId: number,
-): boolean {
-  if (!isBranchScopedProcurementRole(role)) return true;
-  return claimBranchId === targetBranchId;
-}
+// D068 cross-branch guard. The real guard `canAccessProcurementBranch`
+// (grn-actions.ts) resolves the actor's own operable branch into
+// `effectiveBranchId`, then returns
+// `isProcurementBranchInScope(role, effectiveBranchId, targetBranchId)`. For a
+// pinned branch role (branch_manager / warehouse_manager / production_manager)
+// claims carry a non-null branch_id, so `effectiveBranchId` is that claim and
+// the async central-home fallback never fires. These tests exercise the REAL
+// exported decision function (not a reconstruction), so a regression in the
+// guard body itself is caught: RED before branch_manager is added to
+// `isBranchScopedProcurementRole` (the decision falls through to the
+// tenant-wide `return true` and wrongly admits a foreign-branch write), and
+// RED if the `===` own-branch check is flipped. GREEN after.
 
 test("branch_manager is a branch-scoped procurement role (own-branch equality applies)", () => {
   assert.equal(isBranchScopedProcurementRole("branch_manager"), true);
 });
 
-test("branch_manager (branch_id=X) is REJECTED creating a GRN for a foreign branch Y≠X", () => {
+test("branch_manager (branch_id=X) is REJECTED writing a GRN for a foreign branch Y≠X", () => {
   // The highest-risk gap: without branch_manager in the predicate this returns
   // true and branch A writes a GRN for branch B (client-supplied branch_id).
-  assert.equal(canAccessProcurementBranchPinned("branch_manager", 1, 2), false);
+  assert.equal(isProcurementBranchInScope("branch_manager", 1, 2), false);
 });
 
-test("branch_manager (branch_id=X) is ALLOWED creating a GRN for its own branch X", () => {
-  assert.equal(canAccessProcurementBranchPinned("branch_manager", 1, 1), true);
+test("branch_manager (branch_id=X) is ALLOWED writing a GRN for its own branch X", () => {
+  assert.equal(isProcurementBranchInScope("branch_manager", 1, 1), true);
 });
 
 test("central-site scoped roles keep strict own-branch equality (no regression)", () => {
   for (const role of ["warehouse_manager", "production_manager"] as const) {
-    assert.equal(canAccessProcurementBranchPinned(role, 3, 4), false);
-    assert.equal(canAccessProcurementBranchPinned(role, 3, 3), true);
+    assert.equal(isProcurementBranchInScope(role, 3, 4), false);
+    assert.equal(isProcurementBranchInScope(role, 3, 3), true);
   }
 });
 
 test("owner is tenant-wide — not branch-scoped, any target allowed", () => {
   assert.equal(isBranchScopedProcurementRole("owner"), false);
-  assert.equal(canAccessProcurementBranchPinned("owner", 1, 999), true);
+  assert.equal(isProcurementBranchInScope("owner", 1, 999), true);
 });
 
 // D068 §Conflicts-resolved 2 — PO stays closed to branches. All

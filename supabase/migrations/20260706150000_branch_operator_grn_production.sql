@@ -13,6 +13,11 @@
 --     the permission_keys catalog (verified against PROD 2026-07-05).
 -- ─────────────────────────────────────────────────────────────────────────────
 
+-- The role_templates UPDATE is intentionally NOT tenant-scoped: Má Tư is
+-- single-tenant (D002, tenant id=1), so every branch_manager template row is
+-- this tenant's, and DISTINCT-unnest keeps it idempotent. The staff_permissions
+-- backfill below IS tenant-scoped (via the profiles join). Add `AND tenant_id =
+-- …` here only if this DB ever becomes multi-tenant.
 UPDATE public.role_templates
 SET permission_keys = ARRAY(
   SELECT DISTINCT unnest(

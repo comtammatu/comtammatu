@@ -138,3 +138,29 @@ Flip `branch_manager` rows: `procurement:grn_create` / `grn_confirm` / `read` / 
 and `inventory:production_create` / `production_confirm` from ❌ to ✅ (own-branch). Remove the
 "Production hard-deny branch_manager" note and the corresponding "Open Question" — replace with a
 pointer to D068. Keep `procurement:po_create` = ❌ for branch_manager.
+
+## Review outcome (2026-07-05)
+
+Independent adversarial review (opus code-reviewer) on the committed diff: **PASS-WITH-FIXES**
+— 0 Critical, 0 High, 1 Medium, 3 Low. Security-critical path (cross-branch prevention, PO
+closure, RLS branch-membership, `is_inventory_production_operator` context preservation) verified
+correct + fail-closed against baseline SQL and by fresh test execution.
+
+Applied before merge:
+- **MEDIUM (test fidelity):** extracted the guard decision to a pure shared
+  `isProcurementBranchInScope(role, effectiveBranchId, targetBranchId)`; `canAccessProcurementBranch`
+  now calls it and `procurement-branch-scope.test.ts` exercises the REAL function (not a
+  reconstruction) — a guard-body regression (flipped `===`, wrong predicate) now fails RED.
+- **LOW#1 (migration):** annotated that the `role_templates` UPDATE is intentionally not
+  tenant-scoped (D002 single-tenant); the `staff_permissions` backfill is tenant-scoped.
+
+Deferred, documented + backstopped: LOW#2 (`production_order_items_write` USING-arm places the
+`has_permission` inside the EXISTS — pre-existing, parity-preserving), LOW#3 (defensive branch-scope
+machinery in `purchase-order-actions.ts` is moot now PO is role-closed — belt-and-suspenders per §4).
+Production cross-branch keeps the static test (triple-backstopped: `requireProductionBranch` + RLS +
+`create/confirm_production_order` RPC `has_permission(branch_id,…)`).
+
+Integration note: rebased onto main (D067 W4 catalog surface, #274). Fixed a pre-existing main-HEAD
+red — #274 tripped `check-ui-contract` (operator-embedded button density on `grn-list-client.tsx`) —
+in a separate `#274 follow-up` commit. Full gate (`pnpm lint && pnpm test`) green fresh in the
+worktree post-rebase + post-fixes.

@@ -8,6 +8,7 @@ import {
   PERMISSION_KEYS,
   PROCUREMENT_ROLES,
   isBranchScopedProcurementRole,
+  isProcurementBranchInScope,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
@@ -38,7 +39,11 @@ async function canAccessProcurementBranch(
   const effectiveBranchId =
     claims.branch_id ??
     (await resolveCentralSiteHomeBranchId(supabase, claims));
-  return effectiveBranchId === branchId;
+  return isProcurementBranchInScope(
+    claims.user_role,
+    effectiveBranchId,
+    branchId,
+  );
 }
 
 /* ─── Recent Activity (cross-domain) ─── */
